@@ -1,0 +1,39 @@
+{
+    // "latex-workshop.latex.external.build.command": "make",
+    "latex-workshop.latex.outDir": ".aux",
+    "latex-workshop.latex.autoBuild.run": "never",
+    "latex-workshop.latex.tools": [
+        {
+            "name": "pdflatex",
+            "command": "pdflatex",
+            "args": [
+                "-interaction=nonstopmode",
+                "--shell-escape",
+                "-synctex=1",
+                "-file-line-error",
+                "-recorder",
+                "-output-directory=%OUTDIR%",
+                "%DOC%"
+            ]
+        },
+        {
+            "name": "biber",
+            "command": "biber",
+            "args": [
+                "%OUTDIR%/%DOCFILE%"
+            ]
+        },
+    ],
+    "latex-workshop.latex.recipes": [
+        {
+            "name": "pdflatex for paper",
+            "tools": [
+                "pdflatex",
+                "biber",
+                "pdflatex",
+                "pdflatex"
+            ]
+        }
+    ],
+    "latex-workshop.latex.recipe.default": "lastUsed"
+}
