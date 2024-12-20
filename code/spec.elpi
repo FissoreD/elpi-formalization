@@ -1,0 +1,72 @@
+kind logic type.
+type all (tm -> logic) -> logic.
+type and logic -> logic -> logic.
+type impl logic -> logic -> logic.
+type true logic.
+type functional tm -> logic.
+
+func pp logic -> string.
+pp X S :- name X, std.any->string X S.
+pp (all F) S :- pi x\ S is "∀" ^ {std.any->string x} ^ ", " ^ {pp (F x)}.
+pp (and (impl _ _ as A) B) S :- S is "(" ^ {pp A} ^ ") ∧ " ^ {pp B}.
+pp (and (all _ as A) B) S :- S is "(" ^ {pp A} ^ ") ∧ " ^ {pp B}.
+pp (and A B) S :- S is {pp A} ^ " ∧ " ^ {pp B}.
+pp (impl (impl _ _ as A) B) S :- S is "(" ^ {pp A} ^ ") → " ^ {pp B}.
+pp (impl (all _ as A) B) S :- S is "(" ^ {pp A} ^ ") → " ^ {pp B}.
+pp (impl A B) S :- S is {pp A} ^ " → " ^ {pp B}.
+pp true "T".
+pp (functional X) S :- S is "func (" ^ {pptm X} ^ ")".
+
+func norm logic -> logic.
+norm (and true A) B :- !, norm A B.
+norm (and A true) B :- !, norm A B.
+norm (impl true A) B :- !, norm A B.
+norm (and A A') (and B B') :- norm A B, norm A' B'.
+norm (impl A A') (impl B B') :- norm A B, norm A' B'.
+norm (all F) (all G) :- pi x\ norm (F x) (G x).
+norm true true.
+norm (functional _ as X) X.
+
+func normal logic -> logic.
+normal X Y :- norm X X', same_term X X', !, Y = X.
+normal X Y :- norm X X', normal X' Y.
+
+kind b type.
+type f b.
+type r b.
+
+kind m type.
+type in m.
+type ou m.
+
+kind ty type.
+type pro b -> ty.
+type data ty.
+type arr m -> ty -> ty -> ty.
+
+kind tm type.
+type app tm -> tm -> tm.
+type con string -> tm.
+
+func pptm tm -> string.
+pptm X S :- name X, std.any->string X S.
+pptm (con X) X.
+pptm (app X Y) S :- S is {pptm X} ^ " " ^ {pptm Y}.
+
+kind rul type.
+type rul tm -> list tm -> rul.
+
+func spec tm, logic, ty -> logic.
+spec P F (pro r) F.
+spec P F (pro f) (and F (functional P)).
+spec P F data true.
+spec P F uvar true.
+spec P F (arr in S T) (all x\ impl (H x) (C x)) :-
+  pi x\ spec x true S (H x), spec (app P x) F T (C x).
+spec P F (arr ou S T) (all x\ C x) :-
+  pi x\ spec x true S (H x), spec (app P x) (and F (H x)) T (C x).
+
+macro @tymap A B :- (arr in (arr in A (arr ou B (pro f))) (arr in data (arr ou data (pro f)))).
+
+main :-
+  spec (con "map") true (@tymap A B) MapSpec, print {pp {normal MapSpec}}.
