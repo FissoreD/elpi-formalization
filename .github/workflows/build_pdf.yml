@@ -1,0 +1,35 @@
+name: Build LaTeX document
+on:
+  push:
+    paths:
+      - '**.tex'
+      - '**.bib'
+      - '**.sty'
+      - '**/build_pdf.yml'
+    # branches:
+    #   - main
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build_latex:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Git repository
+        uses: actions/checkout@v3
+      
+      - name: Install tex
+        run: sudo apt-get update && sudo apt-get install texlive-full python3-pygments
+
+      - name: Make
+        run: make ci
+
+      # Push to branch
+      - name: Push to pdf branch
+        uses: s0/git-publish-subdir-action@develop
+        env:
+          REPO: self
+          BRANCH: pdf # The branch name where you want to push the assets
+          FOLDER: pdf # The directory where your assets are generated
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub will automatically add this - you don't need to bother getting a token
+          MESSAGE: "Build pdf: ({sha}) {msg}" # The commit message
