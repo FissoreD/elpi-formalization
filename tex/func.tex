@@ -438,11 +438,20 @@ by the inputs. The first part is called mode analysis. We study both
 in the HO setting, eg $\lambda$Prolog, in the dialect of Elpi that has
 a special runtime input mode.
 
-\subsection{Motivating examples}
+\section{Motivating examples explained}
 
-\subsubsection{Higher order programming}
+We give a short intro to Elpi and functional analysis with examples
+that cover the use cases we want to cover.
 
-A typical HO predicate
+Convention that capitals are parameters, programs are written in rules
+preceeeded by a signature. prop is the type of predicate, eg code that runs.
+List syntax is bla bla. :- separates the head from the body, the head
+is unified with the goal, then each premise is executed.
+
+\subsection{Higher order programming}
+
+A typical HO predicate is map that takes a relation  in A x B
+to a relation in list A x list B.
 
 \begin{elpicode}
 type map (A -> B -> prop) -> list A -> list B -> prop.
@@ -451,9 +460,22 @@ map F [X|XS] [Y|YS] :- F X Y, map F XS YS.
 \end{elpicode}
 
 Explain that unlike functional languages, command and expressions are not
-mixed, and prop stuff is executable.
+mixed, and prop stuff is executable, hence you don't put F X in place of Y
+but rather run F X Y.
 
-We want to annotate with usage info
+Also explain that a relation that can go both sides, but
+that this feature is not very useful, for example it does not always
+work and if one calls passing a wrong relation, it is easy to diverge. 
+
+find a simple example.
+
+\begin{elpicode}
+filter P [] []
+filter P [X|XS] [X|YS] :- P X, !, filter P XS YS.
+filter P [_|XS] YS :- filter P XS YS.
+\end{elpicode}
+  
+We want to annotate with usage info.
 
 \begin{elpicode}
 pred map i:(pred i:A, o:B), i:list A, o:list B.
@@ -473,7 +495,7 @@ Explain syntax (func [name] X, ... -> Y, .. = pred i:X, .. , o:Y, ..).
 
 Note (map succ) is func list int -> list int (assuming succ is a function).
 
-\subsubsection{Higher Order Abstract Syntax programming}
+\subsection{Higher Order Abstract Syntax programming}
 
 In HOAS, we want out analysis to accept this code that adds a dynamic rule
 
@@ -498,12 +520,12 @@ of (app F A) T :- of F (arr S T), of A S.
 of (lam F) (arr S T) :- pi x\ of x S => of (F x) T.
 \end{elpicode}
 
-\subsubsection{Homoiconicity}
+\subsection{Homoiconicity}
 
 Since the language is homoiconic we also want this to pass
 
 \begin{elpicode}
-func comp (func A -> B), (func B -> C) -> (fun A -> C).
+func comp (func A -> B), (func B -> C) -> (func A -> C).
 comp F G X Y :- F X Tmp, G Tmp Y.
 
 func fuse (func A -> B) -> (func A -> B).
@@ -514,8 +536,8 @@ fuse X X.
 But we don't want to break code that uses map as a relation
 
 \begin{elpicode}
-pred do i:list (pred).
-do [] [].
+func do list (func) -> .
+do [].
 do [P|PS] :- P, do PS.
 
 pred do-with-trace i:list (pred).
@@ -528,12 +550,20 @@ spy P (do [print "before", P, print "after"]).
 Finally, we want to take advantage of cut across iterators
 
 \begin{elpicode}
-func once (pred) -> (func).
+func once (pred) -> .
 once P :- P, !.
 
 func do! list (pred) -> .
 do! [] [].
 do! [P|PS] :- once P, do! PS.
+
+% alternative
+
+func tcut (pred) -> (func).
+tcut R F :- F = once R.
+
+func do! list (pred) ->.
+do! LR :- map tcut LR LF, do LF.
 \end{elpicode}
 
 \section{Classic mode and functional analysis}
@@ -551,7 +581,8 @@ dynamic effect of input make the ground
 give the meaning of a type
 
 \begin{verbatim}
-ty := data | m:_ -> _ | prop f
+ty_ := k ty | m:_ -> _ | prop f
+ty := all (ty_ -> ty) | mono ty_
 f  := F | R
 m  := i | o
 tm := tm tm | c
@@ -581,17 +612,6 @@ TODO: how do we do partial application?
 \section{Higher order Abstract syntax}
 
 \begin{verbatim}
-  ty := data | m:_ -> _ | prop f
-  f  := F | R
-  m  := i | o
-  tm := c | tm tm | x\ tm | tm => tm | pi x\ tm
-  rule := tm :- tm*
-  \end{verbatim}
-
-\section{Homoiconicity}
-
-
-\begin{verbatim}
   ty_ := k ty | m:_ -> _ | prop f
   ty := all (ty_ -> ty) | mono ty_
   f  := F | R
@@ -600,6 +620,11 @@ TODO: how do we do partial application?
   rule := tm :- tm*
   \end{verbatim}
 
+\section{Homoiconicity}
+
+not sure we need to change the syntax.
+what was the example where the skema
+parameters had to carry a mode?
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 \newpage
