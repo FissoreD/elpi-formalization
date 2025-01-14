@@ -42,24 +42,39 @@ Fixpoint run bodies n (f : focus) a : option (sub * list alt) :=
         end
   end.
 
-Definition func_bodies (p : predname) pl (q : predname) : list pred :=
+Definition tail_cut (p : predname) pl (q : predname) : list pred :=
   if p == q then [seq and x cut | x <- pl] else [:: fail ].
 
+Definition neck_cut (p : predname) pl (q : predname) : list pred :=
+  if p == q then [seq and cut x | x <- pl] else [:: fail ].
 
-Definition functional n s p :=
-  forall s' a ca a' pl, run (func_bodies p pl) n (Foc s (call p) ca) a = Some (s', a') -> a = a'.
+Definition functional n s p f :=
+  forall s' a ca a', run p n (Foc s (call f) ca) a = Some (s', a') -> a = a'.
 
-Lemma test n s p : functional n s p.
-move=> s' a ca a' pl.
-elim: n => [//|n IH] /=.
-rewrite {1}/func_bodies eqxx.
-elim: pl IH => [_|x xs IH] /=.
-  case: a => // - [sa ga caa] al /=.
-  case: ga.
-    case:n => // n /= [].
+Definition succeed n s p f :=
+  exists a' s', run p n (Foc s (call f) [::]) [::] = Some (s', a').
+
+Lemma func_success_no_alt n s pl f :
+  succeed n s (tail_cut f pl) f -> functional n s (tail_cut f pl) f. (* todo same result *)
+Admitted.
+
+Lemma neck_cut_sound p :
+  disj_heads f p ->
+  run p                  n (Foc s (call f) ca) a  = r -> 
+  run (neck_cut f (p f)) (2*n) (Foc s (call f) ca) a = r.
 
 
-xxxx
+Lemma neck_cut_sound p :
+  prev_overlap f has_bang ->
+  run p                  n (Foc s (call f) ca) a  = r -> 
+  run (last_rule_neck_cut f (p f)) (2*n) (Foc s (call f) ca) a = r.
+
+all (all has_bang & functional) (p f) -> functional n s p f
+
+all (all has_bang & all_after_last_bang functional) (p f) -> functional n s p f
+
+-------------------
+
 
 Inductive pred := true | and of pred & pred | call of pred | cut | fail.
 Definition sub := list unit.
