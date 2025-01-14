@@ -57,10 +57,10 @@ kind rul type.
 type rul tm -> list tm -> rul.
 
 func spec tm, logic, ty -> logic.
-spec P F (pro r) F.
+spec _P F (pro r) F.
 spec P F (pro f) (and F (functional P)).
-spec P F data true.
-spec P F uvar true.
+spec _P _F data true.
+spec _P _F uvar true.
 spec P F (arr in S T) (all x\ impl (H x) (C x)) :-
   pi x\ spec x true S (H x), spec (app P x) F T (C x).
 spec P F (arr ou S T) (all x\ C x) :-
@@ -68,5 +68,5 @@ spec P F (arr ou S T) (all x\ C x) :-
 
 macro @tymap A B :- (arr in (arr in A (arr ou B (pro f))) (arr in data (arr ou data (pro f)))).
 
-main :-
-  spec (con "map") true (@tymap A B) MapSpec, print {pp {normal MapSpec}}.
+% main :-
+%   spec (con "map") true (@tymap A B) MapSpec, print {pp {normal MapSpec}}.
