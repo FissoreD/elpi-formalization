@@ -1,0 +1,9 @@
+**/*.aux
+**/*.vos
+**/*.vok
+**/*.glob
+**/.lia.cache
+**/*.generated*
+**/*.vo
+**/*.generate
+.lia.cache

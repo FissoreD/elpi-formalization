@@ -1,0 +1,13 @@
+-Q . det
+
+-arg -w -arg -notation-overridden
+
+aux.v
+
+program.v
+interpreter.v
+det.v
+semantic.v
+
+
+test.v
