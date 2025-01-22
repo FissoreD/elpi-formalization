@@ -49,3 +49,13 @@ Definition tail_cut_all (m : bodiesT) : bodiesT :=
 (* add neck cut to all clauses of f *)
 Definition neck_cut_all (m : bodiesT) : bodiesT :=
   fun x' => [seq (cons cut x) | x <- m x'].
+
+
+Ltac fold_neck_cut prog f := replace ((fun x' : predname => if f == x' then _ else prog x')) with (neck_cut_pred prog f) by auto.
+Ltac fold_neck_cutH prog f Hyp := replace ((fun x' : predname => if f == x' then _ else prog x')) with (neck_cut_pred prog f) in Hyp by auto.
+
+Ltac fold_neck_cut_all prog := replace (fun x' : predname => [seq cut :: x  | x <- prog x']) with (neck_cut_all prog) by auto.
+Ltac fold_neck_cut_allH prog Hyp := replace (fun x' : predname => [seq cut :: x  | x <- prog x']) with (neck_cut_all prog) in Hyp by auto.
+
+Ltac fold_tail_cut_all prog := replace (fun x' : predname => [seq rcons x cut  | x <- prog x']) with (tail_cut_all prog) by auto.
+Ltac fold_tail_cut_allH prog Hyp := replace (fun x' : predname => [seq rcons x cut  | x <- prog x']) with (tail_cut_all prog) in Hyp by auto.

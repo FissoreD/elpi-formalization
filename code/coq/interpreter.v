@@ -271,3 +271,27 @@ Proof.
   rewrite <-add_1_r.
   by apply pumping.
 Qed.
+
+Lemma pumping_add prog g a r:
+  forall n n' n'', n + n' = n'' ->
+    run prog n g a = Some r ->
+      run prog n'' g a = Some r.
+Proof.
+  intros.
+  apply (pumping) with (k := n') in H0.
+  now subst.
+Qed.
+
+Lemma pumping_leq prog g a r:
+  forall n n', n <= n' ->
+    run prog n g a = Some r ->
+      run prog n' g a = Some r.
+Proof.
+  intros.
+  apply leq_add in H as [].
+  subst.
+  eapply pumping_add.
+  reflexivity.
+  auto.
+Qed.
+

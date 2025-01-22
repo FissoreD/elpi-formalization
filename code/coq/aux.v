@@ -15,3 +15,6 @@ Proof. elim: xs => //. Qed.
 Lemma rev_non_empty {T:Type} (x:T) xs: rev (x :: xs) <> [::].
 Proof. rewrite rev_cons. apply rcons_non_empty. Qed.
 
+Lemma leq_add:
+  forall a b, a <= b -> exists c, a + c = b.
+Admitted.
