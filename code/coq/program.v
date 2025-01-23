@@ -1,8 +1,21 @@
 From mathcomp Require Import all_ssreflect.
 
+Check 3 \in [:: 3 ; 4].
+
+
+From elpi.apps Require Import derive.std.
+From HB Require Import structures.
+
 Definition predname := nat.
-Inductive pred := cut | call of predname.
+Inductive pred := cut | call of nat.
+#[only(eqbOK)] derive pred.
 Inductive goal := Goal (g : pred) (ca : list (list goal)).
+#[only(eqbOK)] derive goal.
+
+
+HB.instance Definition _ := hasDecEq.Build pred pred_eqb_OK.
+HB.instance Definition _ := hasDecEq.Build goal goal_eqb_OK.
+
 Definition alt := seq goal.
 
 Definition bodiesT := predname -> list (list pred).
