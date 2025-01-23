@@ -249,10 +249,7 @@ Proof.
       epose proof (IHn _ _ H0 AC H2) as (?&?&?&?&?).
 
 
-      exists (x.+1), ((Goal (call p) ca :: x0)).
-      simpl.
-      rewrite PP.
-      rewrite cats0.
+      exists (x), (x0).
       
        constructor; auto.
 
@@ -352,9 +349,9 @@ not_alt_goal (g ++ tl)
   
   +
     intros; inversion HeqR; clear HeqR.
-
+(* 
     not_alt_goal (g0) = [seq [seq Goal x0 a  | x0 <- x] ++ tl  | x <- prog p]
-    gs = not_alt_goal tl0 :: [seq [seq Goal x [::]  | x <- b] ++ not_alt_goal tl0  | b <- gs0]
+    gs = not_alt_goal tl0 :: [seq [seq Goal x [::]  | x <- b] ++ not_alt_goal tl0  | b <- gs0] *)
 
 
 

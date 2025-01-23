@@ -350,9 +350,7 @@ not_alt_goal (g ++ tl)
   +
     intros; inversion HeqR; clear HeqR.
 
-xx
-    not_alt_goal (g0) = [seq [seq Goal x0 a  | x0 <- x] ++ tl  | x <- prog p]
-    gs = not_alt_goal tl0 :: [seq [seq Goal x [::]  | x <- b] ++ not_alt_goal tl0  | b <- gs0]
+(* xxtl0 :: [seq [seq Goal x [::]  | x <- b] ++ not_alt_goal tl0  | b <- gs0] *)
 
 
 
