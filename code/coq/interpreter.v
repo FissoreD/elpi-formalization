@@ -18,7 +18,7 @@ match n, gs with
     | [::] => next_alt a (run prog n)
     | [:: b & bs ] => 
       let save_alt b := ([seq Goal x a | x <- b] ++ gs) in
-      run prog n (save_alt b) ([seq (save_alt b) | b <- bs] ++  a)
+      run prog n (save_alt b) ([seq (save_alt b) | b <- bs] ++ a)
     end
   end
 end.
