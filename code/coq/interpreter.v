@@ -6,6 +6,10 @@ Definition next_alt {T:Type} a (k : list goal -> list alt -> option  T) :=
   if a is [:: gl & a] then k gl a
   else None.
 
+Definition save_alt a b gs := ([seq Goal x a | x <- b] ++ gs).
+Definition more_alt a bs gs := [seq (save_alt a b gs) | b <- bs] ++ a.
+
+
 Fixpoint run (prog: bodiesT) n gs a : option (list alt) :=
 match n, gs with
 | O, _ => None
@@ -23,6 +27,28 @@ match n, gs with
   end
 end.
 
+Inductive nur (p: bodiesT) : list goal -> list alt -> (list alt) -> Prop :=
+| Stop a : nur [::] a a
+| Cut a ca r gl : nur gl ca r -> nur [::Goal cut ca & gl] a r
+| Call a ca f b bs gl r : p f = [:: b & bs ] -> nur (save_alt a b gl) (more_alt a bs gl) r -> nur [::Goal (call f) ca & gl] a r
+| Fail a g al r : nur a al r -> nur g (a :: al) r.
+
+
+Lemma correct p g a r n :
+  run p n g a = Some r -> nur p g a r.
+Proof.
+elim: n g a r => //= n IH g a r.
+case: g => [[->]|g gl]; first by apply: Stop.
+case: g => -[|f] ca;first by move/IH=> ?; apply: Cut.
+case E: (p f) => [|c cl]; first by case: a => [//|a1 an /= /IH ?]; apply: Fail.
+by move/IH=> H; apply: Call H.
+Qed.
+
+
+
+
+.
+x
 Section prefix.
   (* Context {T : Type}. *)
 
@@ -138,7 +164,7 @@ Proof.
         auto.
         auto.
       * (*the goal is a call*)
-        simpl; destruct (prog p).
+        simpl; destruct (prog _).
         + (*no solution for prog p*)
           move=> [|A AS] A' HA; inversion HA; subst; auto.
           intros.
@@ -187,7 +213,7 @@ Proof.
         apply H2.
         apply H0.
       + (*g is a call*) 
-        destruct (prog p).
+        destruct (prog _).
         * (*no sol for prog p*)
           move=> [|A AS] A' HA; inversion HA; subst; [by[]|].
           intros.
