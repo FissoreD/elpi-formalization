@@ -98,11 +98,11 @@ Section prefix.
 
   Print nat_rect.
 
-  Inductive prefix: (list (list goal)) -> (list (list goal)) -> Prop :=
-    | prefEmpty : forall l, prefix [::] l
+  Inductive prefix_alt: (list (list goal)) -> (list (list goal)) -> Prop :=
+    | prefEmpty : forall l, prefix_alt [::] l
     | prefCons  :
       forall x xs y ys,
-        prefix_goal y x -> prefix xs ys -> prefix (x::xs) (y::ys) with
+        prefix_goal y x -> prefix_alt xs ys -> prefix_alt (x::xs) (y::ys) with
 
   prefix_goal : (list goal) -> (list goal) -> Prop :=
     | prefgEmpty  : forall l, prefix_goal [::] l
@@ -111,15 +111,15 @@ Section prefix.
         x = y ->
         prefix_goal xs ys -> prefix_goal (x::xs) (y::ys) *)
     | prefgCons g x y xs ys:
-        prefix y x ->
+        prefix_alt y x ->
         prefix_goal xs ys ->
         prefix_goal (Goal g x :: xs) (Goal g y :: ys)
         .
 
-  Scheme prefix_prefix_goal_rec := Induction for prefix Sort Prop
+  Scheme prefix_prefix_goal_rec := Induction for prefix_alt Sort Prop
   with prefix_goal_prefix_rec := Induction for prefix_goal Sort Prop.
 
-  Lemma prefix_id: forall {a}, prefix a a.
+  Lemma prefix_id: forall {a}, prefix_alt a a.
   Proof.
     (* induction a; constructor; auto.
     induction a.
@@ -153,7 +153,7 @@ Section prefix.
   Lemma prefix_goal_hard l:
     forall g1s ys a1 a2,
     prefix_goal g1s ys ->
-      prefix a2 a1 ->
+      prefix_alt a2 a1 ->
         prefix_goal ([seq Goal x a1  | x <- l] ++ g1s) ([seq Goal x a2  | x <- l] ++ ys).
   Proof.
     induction l; auto.
@@ -166,8 +166,8 @@ Section prefix.
   Lemma prefix_hard: 
     forall l0 GS ys A A',
       prefix_goal GS ys ->
-        prefix A' A ->
-          prefix ([seq [seq Goal x0 A'  | x0 <- b] ++ ys  | b <- l0] ++ A')
+        prefix_alt A' A ->
+          prefix_alt ([seq [seq Goal x0 A'  | x0 <- b] ++ ys  | b <- l0] ++ A')
             ([seq [seq Goal x0 A  | x0 <- b] ++ GS  | b <- l0] ++ A).
     Proof.
     induction l0; intros; auto.
@@ -176,7 +176,7 @@ Section prefix.
     eapply prefix_goal_hard; auto.
   Qed.
 
-End prefix.
+End prefix_alt.
 
 (* 
   If the interpretation of a list goals [g1,...,gn] with a list of alternatives [a1,...,an]
@@ -184,13 +184,13 @@ End prefix.
   alternatives [a1,...,ak] (with k <= n) also fails.
   Rephrased, let G is a list of goal with a list of alternatives A
     if run N P G A fail for a given depth and program, then
-      given G' such that G is a prefix of G' (that is we have more goals to solve)
-        and A' such that A' is a prefix of A (that is we have less alternatives) 
+      given G' such that G is a prefix_alt of G' (that is we have more goals to solve)
+        and A' such that A' is a prefix_alt of A (that is we have less alternatives) 
           then run N P G' A' also fails
  *)
 Lemma run_alternatives_none prog n:
   forall G G', prefix_goal G G' ->
-    forall A A', prefix A' A ->
+    forall A A', prefix_alt A' A ->
       run prog n G A = None ->
         run prog n G' A' = None.
 Proof.
@@ -236,7 +236,7 @@ Fixpoint pop_tl {T:Type} (l1: seq T) (l2: seq T) :=
 (* le alternative nell'ipotesi vanno aggiunte alla differenza con le nuove alts *)
 Lemma run_alternatives_some prog n:
   forall G G', prefix_goal G' G ->
-    forall A A', prefix A A' ->
+    forall A A', prefix_alt A A' ->
       forall a1, run prog n G A = Some a1 ->
         exists a2, run prog n G' A' = Some a2.
 Proof.
@@ -276,7 +276,7 @@ Qed.
 
 (* Lemma run_alternatives_some' prog n:
   forall G G', prefix_goal G' G ->
-    forall A A', prefix A A' ->
+    forall A A', prefix_alt A A' ->
       forall a1, run prog n G [::] = Some a1 ->
         exists a2, run prog n G' A' = Some a2.
 Proof.
@@ -309,7 +309,7 @@ Proof.
 Admitted. *)
 
 Lemma run_alternatives_same_goal prog n G:
-  forall A A', prefix A A' ->
+  forall A A', prefix_alt A A' ->
     forall a1, run prog n G A = Some a1 ->
       exists a2, run prog n G A' = Some a2.
 Proof.
@@ -318,6 +318,120 @@ Proof.
   auto.
 Qed.
 
+Inductive prefix {T:Type} : list T -> list T -> Prop :=
+  | prefixNil l1 : prefix [::] l1
+  | prefixCon e l1 l2 : prefix l1 l2 -> prefix (e::l1) (e::l2).
+
+Definition fstT {P Q R: Type} (a: (P * Q * R)) :=
+  match a with (a,_,_) => a end.
+Definition sndT {P Q R: Type} (a: (P * Q * R)) :=
+  match a with (_,a,_) => a end.
+Definition trdT {P Q R: Type} (a: (P * Q * R)) :=
+  match a with (_,_,a) => a end.
+
+
+Lemma run_alternative_success_more_alternatives {prog n g gs l a1} :
+  run prog n (g++gs) a1 = Some l ->
+    forall a2, exists l', run prog n g (a1++a2) = Some l'.
+Proof.
+  revert g l a1 gs.
+  induction n.
+  by [].
+  simpl.
+  destruct g.
+  + inversion 1; subst. intros.
+    now eexists; reflexivity.
+  + destruct g.
+    destruct g; simpl.
+    + intros.
+      specialize (IHn _ _ _ _ H [::]).
+      rewrite cats0 in IHn.
+      auto.
+    + destruct (prog p) eqn:?; intros.
+      - destruct a1; simpl in *.
+        discriminate.
+        rewrite <-(cats0 a) in H.
+        specialize (IHn _ _ _ _ H); auto.
+      -
+        (* Search ((_++_)++_). *)
+        rewrite catA in H.
+        specialize (IHn _ _ _ _ H).
+
+
+        (* assert (prefix ([seq [seq Goal x a1  | x <- b] ++ g0  | b <- l0] ++ a1) ([seq [seq Goal x a1  | x <- b] ++ g0  | b <- l0] ++ a2)) by admit.
+        specialize (IHn _ H1) as [AA IH]. *)
+Admitted.
+  
+
+Lemma run_alternative_success {prog n g al l} :
+  run prog n g al = Some l ->
+   (exists g' l',  In g' (g :: al) /\ run prog n g' [::] = Some l').
+Proof.
+  revert al n l.
+  induction g as [|[gl ca] g']; intros.
+  + destruct n; [by []|].
+    simpl in H.
+    inversion H; subst.
+    exists [::], [::]; simpl; auto.
+  + (*g is now: (Goal gl ca) :: g' *)
+
+    destruct n; [by[]|].
+    simpl in H.
+    destruct gl as [|p].
+    - (*gl is cut*)
+      simpl.
+      exists (Goal cut ca :: g').
+      exists l; auto.
+    - (*gl is call p*)
+      destruct (prog p) as [|sol sols] eqn:?.
+      + (*p has no solution: going into alts*)
+        destruct al as [|alt alts]; [by[]|].
+        (* 
+          alts are non empty: running `prog n alt alts` give Some l
+          The solution is found in the alternatives of the program
+         *)
+        simpl in H.
+        (*MH: The IH is useless...*)
+        admit.
+      + (*p has solution*)
+        eapply run_alternative_success_more_alternatives with (a2:=[::]) in H.
+        destruct H.
+        simpl.
+        exists (Goal (call p) ca :: [::] ).
+        rewrite Heql0.
+        exists x.
+        constructor; auto.
+        (* apply run_alternative_success_more_alternatives in H. *)
+Abort.
+
+Lemma run_alternative_success {prog n g al l} :
+  run prog n g al = Some l ->
+   (exists g' l',  In g' (g :: al) /\ run prog n g' [::] = Some l').
+Proof.
+  revert g al l.
+  induction n.
+  + by [].
+  + destruct g as [|g gs].
+    - simpl; inversion 1; subst.
+      exists [::], [::]; auto.
+    - destruct g as [gl ca].
+      (*g is now: (Goal gl ca) :: gs *)
+      destruct gl as [|p].
+      * (*cut case*)
+        simpl.
+        exists (Goal cut ca :: gs), l; auto.
+      * (*call case*)
+        simpl.
+        destruct (prog p) eqn:PP.
+        ++ (*prog p = [::]*)
+          destruct al; simpl; [by[]|].
+          intros.
+          specialize (IHn _ _ _ H) as (?&?&?&?).
+          destruct H0; subst.
+          assert (l = x0 ++ al) by admit.
+          subst.
+          (*STUCK...*)
+Abort.
 
 Lemma pumping p1 n:
   forall g a ss,

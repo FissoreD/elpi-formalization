@@ -26,3 +26,41 @@ Lemma map_app {T:Type} {Q:Type}:
 Proof.
   induction l1; auto; intros; simpl; f_equal; auto.
 Qed.
+
+Fixpoint In {T: Type} (e:T) l :=
+  match l with
+  | [::] => False
+  | x:: xs => x = e \/ In e xs
+  end.
+
+Fixpoint In' {T: Type} R (l: list T) :=
+  match l with
+  | [::] => False
+  | x:: xs => R x \/ In' R xs
+  end.
+
+Fixpoint for_all {T:Type} (P : T -> Prop) l :=
+  match l with
+  | [::] => True
+  | [::x&xs] => P x /\ for_all P xs
+  end.
+
+Fixpoint exists_ {T:Type} (P : T -> Prop) l :=
+  match l with
+  | [::] => False
+  | [::x&xs] => P x \/ exists_ P xs
+  end.
+
+Lemma exists_split {T : Type}:
+  forall a b P, @exists_ T P a \/ exists_ P b -> exists_ P (a ++ b).
+Proof.
+  induction a.
+  intros.
+  destruct H; try by [].
+  intros.
+  unfold exists_.
+  simpl.
+  inversion H.
+  inversion H0; auto.
+  all:right; apply IHa; auto.
+Qed.
