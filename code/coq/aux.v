@@ -33,6 +33,21 @@ Fixpoint In {T: Type} (e:T) l :=
   | x:: xs => x = e \/ In e xs
   end.
 
+Lemma split_in {T: Type}: forall (e:T) l1 l2,
+  In e l1 \/ In e l2 <-> In e (l1 ++ l2).
+Proof.
+  split.
+  destruct 1.
+  induction l1; simpl; try easy.
+  destruct H; auto.
+  induction l1; simpl; auto.
+  induction l1; auto.
+  inversion 1; simpl; auto.
+  apply or_assoc.
+  right.
+  auto.
+Qed.
+
 Fixpoint In' {T: Type} R (l: list T) :=
   match l with
   | [::] => False
@@ -52,15 +67,40 @@ Fixpoint exists_ {T:Type} (P : T -> Prop) l :=
   end.
 
 Lemma exists_split {T : Type}:
-  forall a b P, @exists_ T P a \/ exists_ P b -> exists_ P (a ++ b).
+  forall a b P, @exists_ T P a \/ exists_ P b <-> exists_ P (a ++ b).
 Proof.
-  induction a.
-  intros.
-  destruct H; try by [].
-  intros.
-  unfold exists_.
-  simpl.
-  inversion H.
-  inversion H0; auto.
-  all:right; apply IHa; auto.
+  constructor.
+  - revert a b.
+    induction a.
+    inversion 1; try by [].
+    inversion 1; try by [].
+    inversion H0.
+    constructor 1.
+    auto.
+    constructor; apply IHa; auto.
+    constructor; apply IHa; auto.
+  - revert b.
+    induction a; auto.
+    inversion 1.
+    now repeat constructor.
+    
+    enough (exists_ P a0 \/ exists_ P b).
+    destruct H1.
+    left; constructor 2; auto.
+    auto.
+    apply IHa; auto.
 Qed.
+
+Lemma forall_split {T:Type}: 
+  forall a b P, @for_all T P a /\ for_all P b <-> for_all P (a ++ b).
+Proof.
+  constructor; revert b; induction a.
+  destruct 1; auto.
+  destruct 1; constructor; inversion H; auto.
+  split; auto.
+  constructor.
+  inversion 1; apply IHa in H1 as []; repeat constructor; auto.
+Qed.
+
+Lemma same_int: forall (a:nat), a == a = true.
+Proof. induction a; auto. Qed.

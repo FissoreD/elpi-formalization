@@ -59,7 +59,7 @@ End Ideal.
 
 Module Elpi.
 
-Inductive nur (p: bodiesT) : list goal -> list alt -> (list alt) -> Type :=
+Inductive nur (p: bodiesT) : list goal -> list alt -> (list alt) -> Prop :=
 | Stop a : nur [::] a a
 | Cut a ca r gl : nur gl ca r -> nur [::Goal cut ca & gl] a r
 | Call a ca f b bs gl r : p f = [:: b & bs ] -> nur (save_alt a b gl) (more_alt a bs gl) r -> nur [::Goal (call f) ca & gl] a r
@@ -92,7 +92,56 @@ Qed.
 
 End Elpi.
 
-x
+
+Section pumping.
+  Lemma pumping p1 n:
+    forall g a ss,
+      run p1 n g a = Some ss ->
+        forall k, run p1 (n+k) g a = Some ss.
+  Proof.
+    elim: n => // n IH [] /=.
+    + inversion 1; auto; subst.
+    + move=> [] [] p; auto.
+      destruct (p1 p) eqn:?.
+      + move=> _ _ [] // /= [] //.
+      + move=> _ l1 a; auto.
+  Qed.
+
+  Lemma pumping1 p1 n:
+    forall g a ss,
+      run p1 n g a = Some (ss) ->
+        run p1 (S n) g a = Some (ss).
+  Proof.
+    intros.
+    rewrite <-add_1_r.
+    by apply pumping.
+  Qed.
+
+  Lemma pumping_add prog g a r:
+    forall n n' n'', n + n' = n'' ->
+      run prog n g a = Some r ->
+        run prog n'' g a = Some r.
+  Proof.
+    intros.
+    apply (pumping) with (k := n') in H0.
+    now subst.
+  Qed.
+
+  Lemma pumping_leq prog g a r:
+    forall n n', n <= n' ->
+      run prog n g a = Some r ->
+        run prog n' g a = Some r.
+  Proof.
+    intros.
+    apply leq_add in H as [].
+    subst.
+    eapply pumping_add.
+    reflexivity.
+    auto.
+  Qed.
+End pumping.
+
+(* x
 Section prefix.
   (* Context {T : Type}. *)
 
@@ -433,49 +482,4 @@ Proof.
           (*STUCK...*)
 Abort.
 
-Lemma pumping p1 n:
-  forall g a ss,
-    run p1 n g a = Some ss ->
-      forall k, run p1 (n+k) g a = Some ss.
-Proof.
-  elim: n => // n IH [] /=.
-  + inversion 1; auto; subst.
-  + move=> [] [] p; auto.
-    destruct (p1 p) eqn:?.
-    + move=> _ _ [] // /= [] //.
-    + move=> _ l1 a; auto.
-Qed.
-
-Lemma pumping1 p1 n:
-  forall g a ss,
-    run p1 n g a = Some (ss) ->
-      run p1 (S n) g a = Some (ss).
-Proof.
-  intros.
-  rewrite <-add_1_r.
-  by apply pumping.
-Qed.
-
-Lemma pumping_add prog g a r:
-  forall n n' n'', n + n' = n'' ->
-    run prog n g a = Some r ->
-      run prog n'' g a = Some r.
-Proof.
-  intros.
-  apply (pumping) with (k := n') in H0.
-  now subst.
-Qed.
-
-Lemma pumping_leq prog g a r:
-  forall n n', n <= n' ->
-    run prog n g a = Some r ->
-      run prog n' g a = Some r.
-Proof.
-  intros.
-  apply leq_add in H as [].
-  subst.
-  eapply pumping_add.
-  reflexivity.
-  auto.
-Qed.
-
+ *)

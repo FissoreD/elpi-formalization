@@ -20,17 +20,6 @@ Definition functional_goal p g :=
 Definition functional_goal' p g :=
   forall n r, run p n (not_alt_goal g) [::] = r -> r = Some [::].
 
-
-Lemma same_int: forall (a:predname), a == a = true.
-Proof. induction a; auto. Qed.
-
-Lemma not_alt_goal_app:
-  forall a b, not_alt_goal a ++ not_alt_goal b = not_alt_goal (a++b).
-Proof.
-  induction a; auto.
-  intros; simpl; f_equal; auto.
-Qed.
-
 Lemma functional_neck_cut_all:
   forall p, functional_prog (neck_cut_all p).
 Proof.
@@ -47,169 +36,110 @@ Proof.
       move => /= H.
       apply pumping1 in H.
       specialize (IH (Some sol) (s ++ gs)).
-      rewrite <-not_alt_goal_app in IH.
+      rewrite <-map_cat in H.
       now apply IH.
 Qed.
 
-Fixpoint has_cut l :=
-  match l with
-  | [::] => False
-  | (cut :: _) => True
-  | _ :: xs => has_cut xs
-  end.
+Definition all_rules_have_cut (p: bodiesT) :=
+  forall f, for_all (exists_ (fun x => x = cut)) (p f).
 
-Fixpoint In {T: Type} (e:T) l :=
-  match l with
-  | [::] => False
-  | x:: xs => x = e \/ In e xs
-  end.
-
-Fixpoint In' {T: Type} R (l: list T) :=
-  match l with
-  | [::] => False
-  | x:: xs => R x \/ In' R xs
-  end.
-
-Fixpoint all_has_cut (l: seq (seq pred)) :=
-  match l with
-  | [::] => True
-  | [::x&xs] =>
-    has_cut x /\ all_has_cut xs
-  end.
-
-Definition all_have_cut (p: bodiesT) :=
-  forall f, all_has_cut (p f).
-
-  Definition altsT:= ((seq (seq (seq goal)))).
-
-Fixpoint for_all {T:Type} (P : T -> Prop) l :=
-  match l with
-  | [::] => True
-  | [::x&xs] => P x /\ for_all P xs
-  end.
-
-Fixpoint exists_ {T:Type} (P : T -> Prop) l :=
-  match l with
-  | [::] => False
-  | [::x&xs] => P x \/ exists_ P xs
-  end.
-
-Definition first_empty l :=
-  match l with
-  | [::] => True
-  | [::Goal _ [::] & _] => True
-  | _ => False
-  end.
-
-Definition had_cut :=
+Definition goal_has_cut :=
   (exists_ (fun g => match g with Goal g _ => g = cut end)).
 
-Definition all_cut_alts l :=
-  for_all (exists_ (fun e => match e with Goal g _ => g = cut end)) l.
+Definition all_goals_have_cut l := for_all (goal_has_cut) l.
 
-Lemma had_cut_cat :
-  forall a b, had_cut b -> had_cut (a ++ b).
+Lemma all_have_cut_save_alt {b a gs} :
+  exists_ (eq^~ cut) b ->
+  goal_has_cut gs ->
+  goal_has_cut (save_alt a b gs).
 Proof.
-  induction a; auto.
-  intros.
-  simpl.
-  unfold had_cut.
-  unfold exists_.
-  destruct a.
-  destruct g; auto.
-  right.
-  now apply IHa.
-  Qed.
-
-Lemma all_cut_alts_cat:
-  forall a b,
-    all_cut_alts a -> all_cut_alts b -> all_cut_alts (a ++ b).
-Proof.
-  induction a; auto.
+  (* revert a. *)
+  unfold save_alt.
+  revert gs.
+  elim: b.
   inversion 1.
-  intro.
+  move=> b bs IH gs [|CUT_B CUT_BS].
+  intros; subst.
+  constructor; auto.
   simpl.
-  unfold all_cut_alts.
-  simpl.
-  split; auto.
-  apply IHa; auto.
+  constructor 2.
+  now apply IH.
 Qed.
 
-Lemma exists_split {T : Type}:
-  forall a b P, @exists_ T P a \/ exists_ P b -> exists_ P (a ++ b).
+Lemma all_have_cut_more_alts {a bs gs} :
+  for_all (exists_ (fun x => x = cut)) (bs) -> 
+    all_goals_have_cut (gs :: a) ->
+      all_goals_have_cut (more_alt a bs gs).
 Proof.
-  induction a.
-  intros.
-  destruct H; try by [].
-  intros.
-  unfold exists_.
+  unfold more_alt.
+  move=> CUT_BS [CUT_GS CUT_A].
+  induction bs as [|b bs]; auto.
+  destruct CUT_BS as [CUT_B CUT_BS].
   simpl.
-  inversion H.
-  inversion H0; auto.
-  all:right; apply IHa; auto.
+  constructor.
+  apply all_have_cut_save_alt; auto.
+  now apply IHbs.
 Qed.
 
-Lemma ddd a gs:
-  has_cut a -> exists_ (fun e : goal => match e with
-| Goal g _ => g = cut
-end) [seq Goal x gs  | x <- a].
+
+Lemma all_goals_with_cut_more_general' {prog g a r}:
+  all_rules_have_cut prog ->
+    all_goals_have_cut (g :: a) ->
+      Elpi.nur prog g a r ->
+      exists g', In g' (g::a) /\ Elpi.nur prog g' [::] r.
 Proof.
-  induction a; auto.
-  simpl.
-  destruct a; auto.
-Qed.
+  move=> ARC AGC RUN.
+  induction RUN.
+  - destruct AGC as [[] ?].
+  - exists ((Goal cut ca :: gl)); repeat constructor; auto.
+  - assert (all_goals_have_cut (gl :: a)).
+    1:{ destruct AGC as [[] ?]; try by []. }
+    clear AGC.
+    specialize (ARC f).
+    rewrite H in ARC.
+    assert (all_goals_have_cut (save_alt a b gl :: more_alt a bs gl)).
+      apply (@all_have_cut_more_alts) with (bs:=b :: bs); auto.
+    specialize (IHRUN H1) as (?&?&?).
+    exists x.
+    constructor; auto.
+    revert H2.
+    unfold more_alt, save_alt.
+    admit.
+  - destruct AGC as [AGC1 AGC2].
+    destruct (IHRUN AGC2) as [?[]].
+    exists x.
+    constructor; auto.
+    simpl.
+    auto.
+Abort.
 
-Lemma bbb l0: forall gs g0,
-   all_has_cut l0 -> all_cut_alts [seq [seq Goal x gs  | x <- b] ++ g0  | b <- l0].
-Proof.
-  induction l0; auto.
-  inversion 1.
-  unfold all_cut_alts.
-  simpl.
-  split.
-  apply exists_split.
-  left.
-  apply ddd; auto.
-  apply IHl0; auto.
-Qed.
 
-Lemma split_in {T: Type}: forall (e:T) l1 l2,
-  In e l1 \/ In e l2 <-> In e (l1 ++ l2).
-Proof.
-  split.
-  destruct 1.
-  induction l1; simpl; try easy.
-  destruct H; auto.
-  induction l1; simpl; auto.
-  induction l1; auto.
-  inversion 1; simpl; auto.
-  apply or_assoc.
-  right.
-  auto.
-Qed.
 
-(* Lemma InRun *)
+
+
+
+
+
+
 Definition inRun prog g gs a :=
   forall n, let r := run prog n g a in In' (fun g' => r = run prog n g' a) gs.
 
 Lemma all_goals_with_cut_more_general' prog n r:
-    all_have_cut prog ->
-  forall g gs, 
-  (* first_empty g -> *)
-    had_cut g ->
-    all_cut_alts gs ->
-      run prog n g gs = r ->
-      exists n' g', inRun prog g' (g::gs) [::] /\ n' <= n /\ run prog n' g' [::] = r.
+  all_rules_have_cut prog ->
+    forall g gs, 
+      all_goals_have_cut (g :: gs) ->
+        run prog n g gs = r ->
+          exists n' g', inRun prog g' (g::gs) [::] /\ n' <= n /\ run prog n' g' [::] = r.
 Proof.
   intro.
   induction n.
   + simpl; intros; subst. exists 0, g; simpl; constructor; auto.
     unfold inRun; simpl; auto.
   + destruct g.
-    solve [intros; subst; inversion H0].
+    solve [intros; inversion H0; inversion H2].
 
     destruct g.
-    destruct g.
+    destruct g as [|p].
     + simpl; intros.
 
       exists (n+1), (Goal cut ca :: g0); simpl.
@@ -217,386 +147,35 @@ Proof.
       rewrite add_1_r.
       simpl.
       auto.
-    + 
+    +
       pose proof (H p) as Hp.
       destruct (prog p) eqn:PP.
 
       destruct gs; simpl; rewrite PP.
       exists 0, (Goal (call p) ca :: g0); unfold inRun; simpl; auto.
       intros.
-      inversion H1.
-      pose proof (IHn _ _ H3 H4 H2) as (?&?&?&?&?).
+      inversion H0.
+      specialize (IHn _ _ H3 H1) as (?&?&?&?&?).
 
       exists x, x0; unfold inRun; simpl; constructor; auto.
-      unfold inRun in H5.
       intro.
-      specialize (H5 n0); simpl in H5; auto.      
+
+      specialize (H4 n0); simpl in H5; auto.      
     +
       simpl.
       rewrite PP.
       intros.
 
-      unfold had_cut, exists_ in H0; destruct H0; try by []; apply had_cut_cat with (a:=[seq Goal x gs  | x <- l]) in H0.
-      destruct Hp as [Hp1 Hp2].
-      epose proof (all_cut_alts_cat _ _ (bbb _ gs g0 Hp2) H1) as AC.
-
-
-
-      (* idtac. *)
-
-
-      (* assert (forall prog n g gs a r, run prog n (g ++ gs) a = r -> ((exists a', run prog n gs a' = r) \/ next_alt a (run prog n) = r)) by admit.
-      apply H3 in H2 as [A|A];
-      clear H3.
-      destruct A as [Aa A].
-      eapply IHn in A as (?&?&?&?&?).
-      exists x,x0; constructor; auto.
-      unfold inRun.
-      intro.
-      destruct (H2 n0).
-      simpl.
-      unfold inRun in H2.
-      simpl in H2.
-      destruct H2.
-      simpl.
-
-      unfold inRun. *)
-
-
-
-
-
-
-      (*REVERT BELOW*)
-      epose proof (IHn _ _ H0 AC H2) as (?&?&?&?&?).
-
-      unfold inRun in H3.
-      unfold inRun; simpl.
-      simpl   in *.
-      exists x, x0.
+      assert (all_goals_have_cut (g0 :: gs)).
+      destruct H0 as [[] B]; try discriminate.
       constructor; auto.
-      unfold inRun.
-      simpl.
-      intro.
-      specialize (H3 n0).
-      simpl in H3.
-      destruct H3.
 
-      destruct n0; auto.
-      simpl run at 2.
-      rewrite PP.
+Abort.
 
-      simpl run at 2.
-      simpl.
-
-
-      admit.
-      Admitted.
-
-
-Inductive IN_IND (b:bodiesT) : list goal -> ( seq (seq goal)) -> Prop :=
-  | IN_IND_OK g gs: IN_IND b g (g::gs)
-  | IN_IND_KO g ign gs: IN_IND b g gs -> IN_IND b g (ign::gs)
-  | IN_IND_RC ca a p g gs tl :
-      IN_IND b g ([seq [seq Goal x a | x <- x] ++ tl | x <- b p] ++ gs)
-      ->
-        IN_IND b g ((Goal (call p) ca :: tl) :: gs)
-  . 
-
-(* Definition INRUN prog g gs :=
-  In' (fun g' => match g' with 
-    |Goal (call p) _ => 
-      match prog p with
-      | [::] => False
-      | x :: x => In' 
-      end
-    | a => a = g
-  end) gs. *)
-
-Lemma all_goals_with_cut_more_general'' prog n r:
-    all_have_cut prog ->
-  forall g gs, 
-  (* first_empty g -> *)
-    had_cut g ->
-    all_cut_alts gs ->
-      run prog n g gs = r ->
-      exists n' g', IN_IND prog g' (g::gs) /\ n' <= n /\ run prog n' g' [::] = r.
-Proof.
-  intro.
-  induction n.
-  + simpl; intros; subst. exists 0, g; simpl; constructor; auto.
-    constructor.
-  + destruct g.
-    solve [intros; subst; inversion H0].
-
-    destruct g.
-    destruct g.
-    + simpl; intros.
-
-      exists (n.+1), (Goal cut ca :: g0); simpl.
-      constructor.
-      constructor.
-      auto.
-    + 
-      pose proof (H p) as Hp.
-      destruct (prog p) eqn:PP.
-
-      destruct gs; simpl; rewrite PP.
-      exists 0, (Goal (call p) ca :: g0); unfold inRun; simpl; auto.
-      constructor; constructor; auto.
-      intros.
-      inversion H1.
-      pose proof (IHn _ _ H3 H4 H2) as (?&?&?&?&?).
-
-      exists x, x0; unfold inRun; simpl; constructor; auto.
-      constructor.
-      auto.
-    +
-      simpl.
-      rewrite PP.
-      intros.
-
-      unfold had_cut, exists_ in H0; destruct H0; try by []; apply had_cut_cat with (a:=[seq Goal x gs  | x <- l]) in H0.
-      destruct Hp as [Hp1 Hp2].
-      epose proof (all_cut_alts_cat _ _ (bbb _ gs g0 Hp2) H1) as AC.
-
-
-
-      (* idtac. *)
-
-
-      (* assert (forall prog n g gs a r, run prog n (g ++ gs) a = r -> ((exists a', run prog n gs a' = r) \/ next_alt a (run prog n) = r)) by admit.
-      apply H3 in H2 as [A|A];
-      clear H3.
-      destruct A as [Aa A].
-      eapply IHn in A as (?&?&?&?&?).
-      exists x,x0; constructor; auto.
-      unfold inRun.
-      intro.
-      destruct (H2 n0).
-      simpl.
-      unfold inRun in H2.
-      simpl in H2.
-      destruct H2.
-      simpl.
-
-      unfold inRun. *)
-
-
-
-
-
-
-      (*REVERT BELOW*)
-      epose proof (IHn _ _ H0 AC H2) as (?&?&?&?&?).
-
-      exists x, x0; constructor; auto.
-      econstructor 3.
-      rewrite PP.
-      simpl.
-      apply H3.
-    Qed.
-
-
-
-
-Lemma all_goals_with_cut_more_general prog n r:
-    all_have_cut prog ->
-  forall g gs, 
-  (* first_empty g -> *)
-    had_cut g ->
-    all_cut_alts gs ->
-      run prog n g gs = r ->
-      exists n' g', In g' (g::gs) /\ n' <= n /\ run prog n' g' [::] = r.
-Proof.
-  (* intros.
-  epose proof (all_goals_with_cut_more_general' prog n r H g gs H0 H1 H2) as [?[?[?[]]]].
-  exists x,x0.
-  constructor; auto.
-  unfold In.
-  unfold inRun in H3.
-  simpl in H3.
-  specialize (H3 n) as[]. *)
-
-  intro.
-  induction n.
-  + simpl; intros; subst. now exists 0, g; simpl; auto.
-  + destruct g.
-    solve [intros; subst; inversion H0].
-
-    destruct g.
-    destruct g.
-    + simpl; intros.
-
-      exists (n+1), (Goal cut ca :: g0); simpl.
-      rewrite add_1_r.
-      simpl.
-      auto.
-    + 
-      pose proof (H p) as Hp.
-      destruct (prog p) eqn:PP.
-
-      destruct gs; simpl; rewrite PP.
-      exists 0, (Goal (call p) ca :: g0); auto.
-      intros.
-      inversion H1.
-      pose proof (IHn _ _ H3 H4 H2) as (?&?&?&?&?).
-
-      exists x, x0; auto.
-    +
-      simpl.
-      rewrite PP.
-      intros.
-
-      
-
-      epose proof (IHn _ _ _ _ H2) as (?&?&?&?&?).
-      Unshelve.
-      2:{ apply had_cut_cat; unfold had_cut in H0; unfold exists_ in H0; destruct H0; by []. }
-      2:{ destruct Hp; apply all_cut_alts_cat; auto; apply bbb; auto. }
-      exists x, x0; constructor; auto.
-
-      destruct H3.
-
-      admit.
-
-Admitted.
-
-
-Lemma all_not_alt_goal g tl gs x0:
-   In x0
-(not_alt_goal g
-:: [seq [seq Goal x [::]  | x <- b] ++ not_alt_goal tl
- | b <- gs]) -> exists y, not_alt_goal y = x0.
-Proof.
-  simpl.
-  intro.
-  destruct H.
-  exists g; auto.
-  induction gs.
-  inversion H.
-  inversion H.
-  rewrite not_alt_goal_app in H0.
-  exists (a++tl); auto.
-  eapply IHgs.
-  auto.
-Qed.
-
-(* Lemma all_not_alt_goal_run prog g tl gs x0:
-   inRun prog x0
-(not_alt_goal (g ++ tl)
-:: [seq [seq Goal x [::]  | x <- b] ++ not_alt_goal tl  | b <- gs]) [::] -> exists y, not_alt_goal y = x0.
-Proof.
-  unfold inRun.
-  simpl.
-  intro.
-  destruct H.
-  exists g; auto.
-  induction gs.
-  inversion H.
-  inversion H.
-  rewrite not_alt_goal_app in H0.
-  exists (a++tl); auto.
-  eapply IHgs.
-  auto.
-Qed. *)
-
-
-
-Lemma all_goals_with_cut prog n r:
-  forall g gs tl, all_have_cut prog ->
-    all_has_cut (g :: gs) ->
-      (* in all goal (g::gs) we have a bang and each of them has no cut-alternatives,
-            therefore, 
-              -if a goal g' in (g::gs) succeeds, we have
-                the same result as running the goal g' alone (the alternative being rejected)
-              -otherwise, if all goals fails, the lemma is trivial
-            
-       *)
-      run prog n (not_alt_goal (g ++ tl)) 
-        [seq [seq Goal x [::]  | x <- b] ++ not_alt_goal tl | b <- gs] = r ->
-      exists g n', n' <= n /\ run prog n' (not_alt_goal g) [::] = r.
-Proof.
-  intros.
-
-
-  epose proof (all_goals_with_cut_more_general prog n r H (not_alt_goal (g++tl)) [seq [seq Goal x [::]  | x <- b] ++ not_alt_goal tl
- | b <- gs] _ _ H1) as (?&?&?&?&?).
-  destruct (all_not_alt_goal _ _ _ _ H2).
-  exists x1, x.
-  rewrite H5; auto.
-  Unshelve.
-  rewrite <-not_alt_goal_app.
-  apply exists_split.
-  left.
-  apply ddd.
-  inversion H0; auto.
-  inversion H0.
-  clear H1 H0 H H2 g.
-  induction gs.
-  auto.
-  simpl.
-  unfold  all_cut_alts.
-  simpl.
-  split.
-  apply exists_split.
-  left.
-    apply ddd.
-    simpl in H3.
-    easy.
-    apply IHgs.
-    simpl in H3.
-    easy.
-
-  (* auto.
-  rewrite H2; auto.
-  destruct gs; simpl in H2.
-  by[].
-  destruct H2.
-  rewrite fold_not_alt_goal in H2.
-  rewrite not_alt_goal_app in H2.
-  rewrite <-H5.
-  auto.
-  admit.
-  subst.
-  exists (g++tl).
- exists x0, x.
-  destruct r as [s|].
-  2:{ intros. exists [::], 0; auto. }
-  (* here r is Some s*)
-  induction n; [by []|].
-  destruct g as [|G GTL].
-    - move=> ??? [] //.
-    - (* here g is not empty: it is the list [G|GTL] *)
-      move=> gs tl ACP ACG.
-      destruct G as [|p].
-      now intros; exists (GTL++tl), n.
-      - (* here G is a call of a predicate p *)
-        assert (all_has_cut (GTL :: gs)) by auto.
-        clear ACG.
-        destruct (prog p) as [|sol sols] eqn:PP.
-        + (*here no solution for prog p*)
-          simpl; rewrite PP.
-          destruct gs; [by[]|].
-          (*here gs is non empty*)
-          simpl.
-          intros.
-          destruct H as [].
-          rewrite not_alt_goal_app in H0.
-          specialize (IHn l gs tl ACP H1 H0) as [?[?[]]].
-          exists x, x0; split; auto.
-        + (*here prog p has some solutions (sol::sols)*)
-          simpl.
-          rewrite PP.
-          pose ([seq [seq Goal x0 [::]  | x0 <- b] ++ not_alt_goal tl | b <- gs]) as GG.
-          fold GG. *)
-
-Qed.
 
 Lemma functional_all_with_cut:
-  forall prog, all_have_cut prog -> functional_prog prog.
+  forall prog, all_rules_have_cut prog -> functional_prog prog.
 Proof.
-  unfold all_have_cut.
   intros prog H n.
   induction n; auto.
   simpl.
@@ -606,30 +185,30 @@ Proof.
   destruct (prog p) eqn:?.
   auto.
   rewrite cats0.
-  rewrite not_alt_goal_app.
+  rewrite <-map_cat.
   intro.
   destruct r; auto.
   pose proof (H p) as Hp.
   rewrite Heql in Hp.
-  apply all_goals_with_cut in H0 as [?[?[]]]; auto.
+
+  (* apply all_goals_with_cut in H0 as [?[?[]]]; auto.
   epose proof (pumping_leq _ _ _ _ _ _ H0 H1).
   eapply IHn.
-  apply H2.
-Qed.
+  apply H2. *)
+Admitted.
 
 Lemma all_have_cut_tail_cut_all:
-  forall p, all_have_cut(tail_cut_all p).
+  forall p, all_rules_have_cut(tail_cut_all p).
 Proof.
-  unfold tail_cut_all.
   intros ??.
+  unfold tail_cut_all.
   destruct (p f); simpl; auto.
   split.
   induction l; simpl; auto.
-  destruct a; auto.
+  
   induction l0; simpl; auto.
   constructor; auto.
   induction a; simpl; auto.
-  destruct a; auto.
 Qed.
 
 Lemma functional_tail_cut_all:
@@ -638,38 +217,3 @@ Proof.
   intro.
   now pose proof (functional_all_with_cut (tail_cut_all p) (all_have_cut_tail_cut_all p)).
 Qed.
-  (*Old incomplete proof without functional_all_with_cut *)
-  (* simpl.
-  intros prog n r.
-  elim: n => /=.
-  - move => _ ->; auto.
-  - move=> n IH; destruct r; auto.
-    assert (IH' : forall g : seq pred, run (tail_cut_all prog) n (not_alt_goal g) [::] = Some l ->
-      Some l = Some [::]).
-    intros; destruct (IH _ H); by[].
-    clear IH.
-
-    destruct g as [|g gs]; auto; simpl.
-    destruct g as [|p].
-    + intros.
-      right; eapply IH'.
-      apply H.
-    + unfold tail_cut_all.
-      destruct (prog p) as [|G GS] eqn:?; auto; simpl.
-      fold_tail_cut_all prog.
-      rewrite not_alt_goal_app.
-      intros.
-      right.
-      rewrite cats0 in H.
-      assert (H':[seq [seq Goal x [::]  | x <- b] ++ not_alt_goal gs  | b <- [seq rcons x cut  | x <- GS]] =
-        [seq (not_alt_goal (b++gs)) | b <- [seq rcons x cut  | x <- GS]]).
-      f_equal.
-      apply functional_extensionality; intros.
-      now rewrite not_alt_goal_app.
-      rewrite H' in H.
-      clear H'. *)
-
-(* Admitted. *)
-
-
-
