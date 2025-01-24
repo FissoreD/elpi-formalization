@@ -27,6 +27,8 @@ match n, gs with
   end
 end.
 
+Module Ideal.
+
 Inductive nur (p: bodiesT) : list goal -> list alt -> (list alt) -> Prop :=
 | Stop a : nur [::] a a
 | Cut a ca r gl : nur gl ca r -> nur [::Goal cut ca & gl] a r
@@ -44,10 +46,52 @@ case E: (p f) => [|c cl]; first by case: a => [//|a1 an /= /IH ?]; apply: Fail.
 by move/IH=> H; apply: Call H.
 Qed.
 
+(*
+
+l'implementazione funzionale usa Fail solo quando le altre non si
+possono usare, mentrce nur lo può fare quando vuole, quindi run non può
+essere completo (e.g. se il programma looppa run non ne esce, nur si).
 
 
+*)
 
-.
+End Ideal.
+
+Module Elpi.
+
+Inductive nur (p: bodiesT) : list goal -> list alt -> (list alt) -> Type :=
+| Stop a : nur [::] a a
+| Cut a ca r gl : nur gl ca r -> nur [::Goal cut ca & gl] a r
+| Call a ca f b bs gl r : p f = [:: b & bs ] -> nur (save_alt a b gl) (more_alt a bs gl) r -> nur [::Goal (call f) ca & gl] a r
+| Fail a al ca f gl r : p f = [::] -> nur a al r -> nur [::Goal (call f) ca & gl] (a :: al) r.
+
+
+Lemma correct p g a r n :
+  run p n g a = Some r -> nur p g a r.
+Proof.
+elim: n g a r => //= n IH g a r.
+case: g => [[->]|g gl]; first by apply: Stop.
+case: g => -[|f] ca;first by move/IH=> ?; apply: Cut.
+case E: (p f) => [|c cl]; first by case: a => [//|a1 an /= /IH ?]; apply: Fail.
+by move/IH=> H; apply: Call H.
+Qed.
+
+Lemma complete p g a r :
+  nur p g a r -> exists n, run p n g a = Some r.
+elim.
+- by exists 1.
+- by move=> a' ca r' gl' H [n Hn]; exists n.+1 => /=.
+- move=> gl1 gl2 f c cl gl r' Df H [n Hn]; exists n.+1 => /=.
+  by rewrite Df.
+- move=> gl1 a11 ca1 f gl r' Df H [n Hn]; exists n.+1 => /=.
+  by rewrite Df.
+Qed.
+
+(* Io proverei a rifare det.v usando Elpi.nur *)
+
+
+End Elpi.
+
 x
 Section prefix.
   (* Context {T : Type}. *)
