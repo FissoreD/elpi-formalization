@@ -10,6 +10,23 @@ Definition save_alt a b gs := ([seq Goal x a | x <- b] ++ gs).
 Definition more_alt a bs gs := [seq (save_alt a b gs) | b <- bs] ++ a.
 
 
+Fixpoint run_old (prog: bodiesT) n gs a : option (list alt) :=
+match n, gs with
+| O, _ => None
+| _, [::] => Some (a)
+| S n, [:: Goal p ca & gs] =>
+  match p with
+  | cut => run_old prog n gs ca
+  | call p =>
+    match prog p with
+    | [::] => next_alt a (run_old prog n)
+    | [:: b & bs ] => 
+      let save_alt b := ([seq Goal x a | x <- b] ++ gs) in
+      run_old prog n (save_alt b) ([seq (save_alt b) | b <- bs] ++ a)
+    end
+  end
+end.
+
 Fixpoint run (prog: bodiesT) n gs a : option (list alt) :=
 match n, gs with
 | O, _ => None
@@ -17,15 +34,20 @@ match n, gs with
 | S n, [:: Goal p ca & gs] =>
   match p with
   | cut => run prog n gs ca
-  | call p =>
-    match prog p with
-    | [::] => next_alt a (run prog n)
-    | [:: b & bs ] => 
-      let save_alt b := ([seq Goal x a | x <- b] ++ gs) in
-      run prog n (save_alt b) ([seq (save_alt b) | b <- bs] ++ a)
-    end
+  | call p => next_alt (more_alt a (prog p) gs) (run prog n)
   end
 end.
+
+Lemma run_same_as_run_old: forall p n gs a, run p n gs a = run_old p n gs a.
+Proof.
+  induction n; auto.
+  simpl.
+  destruct gs; auto.
+  destruct g; auto.
+  destruct g; auto.
+  destruct (p n0) eqn:?; auto; unfold more_alt, save_alt; simpl; intros; auto.
+  destruct a; simpl; auto.
+Qed.
 
 Module Ideal.
 
@@ -104,7 +126,7 @@ Section pumping.
     + move=> [] [] p; auto.
       destruct (p1 p) eqn:?.
       + move=> _ _ [] // /= [] //.
-      + move=> _ l1 a; auto.
+      + move=> _ l1 a; simpl; auto.
   Qed.
 
   Lemma pumping1 p1 n:
