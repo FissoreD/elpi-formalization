@@ -71,15 +71,15 @@ Module Test1.
   Proof.
     destruct g.
     step.
-    constructor;
-    reflexivity.
+    constructor; reflexivity.
     repeat constructor.
 
-    destruct (p0).
+    destruct (n).
     apply b.
 
     constructor 1.
-    destruct n; auto.
+    simpl.
+    destruct n1; auto.
   Qed.
 
   Lemma e: same_semantics p1 p3.
@@ -95,23 +95,23 @@ Module Test1.
         destruct (H n); auto.
         destruct n; auto.
         simpl; destruct (H n); auto.
-      * destruct H.
-        destruct g.
-        econstructor 2 with (n:=1+n) (m:=m.+1) (x:= x) (y:=y); simpl; auto.
-        destruct p0.
-        econstructor 2 with (n:=1+n) (m:=m.+2) (x:= x) (y:=y); simpl; auto.
+      * destruct g.
+          econstructor 2 with (n:=1+n) (m:=m.+1) (x:= x) (y:=y); simpl; auto.
+        destruct n0.
+          econstructor 2 with (n:=1+n) (m:=m.+2) (x:= x) (y:=y); simpl; auto.
         constructor.
-        intros.
-        simpl; destruct n0; auto.
+        intros []; auto.
   Qed.
 
-Lemma xx {T : Type}: forall l0 l1 l2 l3 l4 l5 (e:T),
-  rev (l0 :: l1) = l2 :: l3 ->
-    rcons (rev l3) (e :: l2) = l4 :: l5 ->
-      l0 = l4 /\ exists lk, rcons lk l2 = l1 /\ rcons lk (e :: l2) = l5.
-Proof.
-  intros.
-Admitted.
+  
+
+  Lemma xx {T : Type}: forall l0 l1 l2 l3 l4 l5 (e:T),
+    rev (l0 :: l1) = l2 :: l3 ->
+      rcons (rev l3) (e :: l2) = l4 :: l5 ->
+        l0 = l4 /\ exists lk, rcons lk l2 = l1 /\ rcons lk (e :: l2) = l5.
+  Proof.
+    intros.
+  Admitted.
 
 
   Lemma g: same_semantics p1 (add_last_cut p1).

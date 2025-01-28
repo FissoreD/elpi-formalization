@@ -6,12 +6,12 @@ Inductive same_solutions p1 p2 : seq alt -> seq alt -> Prop :=
   | CNone a1 a2: 
   (* cattura divergenza + fallimento *)
     (forall n, next_alt a1 (run p1 n) = None /\ next_alt a2 (run p2 n) = None) 
-      -> same_solutions p1 p2 a1 a2
+      -> same_solutions a1 a2
   | CSome a1 a2:
       forall n m x y,
         next_alt a1 (run p1 n) = Some (x) /\ next_alt a2 (run p2 m) = Some (y) 
-          -> same_solutions p1 p2 x y (*/\ s1 = s2 *)
-            -> same_solutions p1 p2 a1 a2.
+          -> same_solutions x y (*/\ s1 = s2 *)
+            -> same_solutions a1 a2.
 
 Definition same_semantics p1 p2:=
   forall gs, same_solutions p1 p2 [:: (not_alt_goal gs)] [:: (not_alt_goal gs)].
