@@ -175,43 +175,63 @@ Lemma good_lvl_cat {l1 l2} :
   good_levels (l1++l2) -> good_levels l2.
 Proof.   by elim: l1 => //= x xs IH /andP[_ /IH].  Qed.
 
-Lemma good_cut_cat {gl} {l1 l2} : 
-  good_cut gl (l1++l2) -> good_cut gl l2.
-Proof.   
-  
-  elim: gl => //= [] [] [ ca gl IH /andP | F //]. 
-  Abort.
-
 Lemma xx {ca:seq EQ} {a}: suffix ca a -> good_levels a -> good_levels ca.
 Proof. by move => /suffixP [x] -> /good_lvl_cat /= . Qed.
-
-Lemma yy {ca:seq EQ} {a} {gl}: suffix ca a -> good_cut gl a -> good_cut gl ca.
-Proof.
-  elim: gl => // [[[|F] ca']] gl IH //=.
-   Abort.
 
 Lemma weaken_success {prog g a r}:
   nur' prog g [::] r ->
   exists r1, nur' prog g a r1 /\ r1 = r ++ a.
   Admitted.
 
-Lemma good_cut_more_alt {tl a xx}:
-  good_cut tl a -> good_cut tl (xx++a).
+Lemma good_cut_more_alt {gs tl a tl'}:
+  good_cut tl a -> good_cut tl (more_alt a gs tl').
 Proof.
-  elim: tl xx => //= [] [] [|F] CA gl IH x.
-    move=> /andP [/andP []] SCA GC GL gs.
-    unfold more_alt in IH.
-    unfold save_alt in IH.
-    unfold more_alt.
-    unfold save_alt.
-    rewrite GC GL /= in IH.
-    specialize (IH isT).
-    unfold more_alt; simpl.
-    unfold save_alt; simpl.
-    apply /andP; constructor.
-    now apply suffix_catr.
+  revert gs a tl'.
+  unfold more_alt, save_alt.
+  elim: tl => //= [[[|F]ca]tl] IH gs a tl'.
+    move=> /andP [H H1].
+    apply /andP; split.
+      now apply suffix_catr.
+    eapply IH; auto.
+  intros.
+  eapply IH; auto.
+Qed.
 
-Admitted.
+Lemma good_cut_save_alt {a g1 tl}:
+  good_cut tl a -> good_cut (save_alt a g1 tl) a.
+Proof.
+  unfold save_alt.
+  induction g1; auto; simpl.
+  destruct a0.
+  intros.
+  apply /andP; constructor.
+  apply suffix_refl.
+  auto.
+  apply IHg1.
+Qed.
+
+Lemma good_cut_cat a: forall {b l}, good_cut a l -> good_cut b l -> good_cut (a ++ b) l.
+Proof. 
+  elim: a => //= [[[|F]ca]tl] IH.
+  move=> b l /andP [S_CA GC_TL] GC_B.
+  now apply /andP; auto.
+  auto.
+Qed.
+
+Lemma good_lvl_more_alt {a gs tl}:
+  good_levels a -> good_cut tl a -> good_levels (more_alt a gs tl).
+Proof.
+  unfold more_alt, save_alt.
+  revert a tl.
+  induction gs; auto.
+  simpl.
+  intros.
+  apply /andP; constructor; auto.
+  apply good_cut_more_alt.
+  apply good_cut_cat; auto.
+  rewrite <-(cats0 [seq Goal x a0  | x <- a]).
+  now apply good_cut_save_alt.
+Qed.
 
 Lemma cut_semantic {prog s g alts}:
     (* WC g alts -> *)
@@ -243,43 +263,18 @@ Proof.
     exists x, s'.
     by rewrite inE IN orbT.
   - simpl.
-    move=> a ca f g1 gs tl r PF NUR IH.
-    assert (good_cut (save_alt a g1 tl) (more_alt a gs tl) && good_levels (more_alt a gs tl)) by admit.
-    apply IH in H as [?[?[]]].
+    move=> a ca f g1 gs tl r PF NUR IH /andP [GC GL].
+    rewrite (good_cut_more_alt (good_cut_save_alt GC)) (good_lvl_more_alt GL GC) in IH.
+    specialize (IH isT) as [?[?[]]].
     move: H; rewrite in_cons => /orP.
     case.
-    move => /eqP H _; subst.
-    exists ((Goal (call f) ca :: tl)); eexists.
-    constructor; auto.
-    by rewrite !inE eqxx.
-    apply: Call PF _.
-    have H := weaken_success H0.
-
-
-
-
-
-
-  simpl in IHnur.
-     move=> /= /andP [/andP [/xx H1 H2] /H1 H3].
-    rewrite /= in IHnur.
-
-    simpl in IHnur.
-   simpl. intro GL.
-    simpl in GL.
-    destruct IHnur as (?&?&?&?).
-    destruct H0; subst.
-      exists ((Goal cut ca :: x)).
-      econstructor.
-      split.
-        constructor; auto.
-        apply Elpi.Cut.
-        apply H.
-    exists x, x0.
-    constructor; [|apply H1].
-
-      
-
+      move => /eqP H; subst.
+      exists ((Goal (call f) ca :: tl)); eexists.
+      constructor.
+      by rewrite !inE eqxx.
+      apply: Call PF _.
+      unfold save_alt in H0.
+Admitted.
 
 Lemma cut_semantic {prog s n g alts ca}:
   (* all_pred_have_cut (g :: alts) -> *)
