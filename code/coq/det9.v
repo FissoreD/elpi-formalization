@@ -175,7 +175,7 @@ Qed.
 Lemma weaken_success' {prog a b bs gl sol}:
   nur' prog (save_alt a b gl) (more_alt a bs gl) sol -> 
   forall alts,
-    good_cut gl a -> good_levels a ->
+    good_cut gl a -> good_levels a -> good_levels (gl::alts) ->
       prefix a alts 
       -> exists sol', nur' prog (save_alt alts b gl) (more_alt alts bs gl) sol'.
 Proof.
@@ -191,44 +191,73 @@ Proof.
       exists r; eapply Cut; auto.
     move=> gl' [] H1 H2 H3 H4; subst.
     move: IH => /(_ alts btl [::] gl' Logic.eq_refl Logic.eq_refl) => IH.
-    move=> alts' A B C.
-    move : IH => /(_ _ A B C) [sol' IH].
+    move=> alts' A B C D.
+    move : IH => /(_ _ A B C D) [sol' IH].
     rewrite save_alt_cons.
     exists sol'; eapply Cut, IH.
     apply good_cut_save_alt.
-    admit.
+    by move: C => /andP [].
   + move=> a g al r NUR IH alts b [|bshd bstl].
       case: alts => // x xs gl' ? [] ? ?; subst.
-      move=> [] // a l1 GC /= /andP [GCAXS GLXS] /andP [/eqP xa PREF]; subst.
-      move: IH => /(_ xs [::] [::] a Logic.eq_refl Logic.eq_refl l1 GCAXS GLXS PREF) /= [{}sol IH].
+      move=> [] // a l1 GC /= /andP [GCAXS GLXS] /= /andP [] GC_GL' /andP [GC_A GL_L1] /andP [/eqP] ? PREF; subst.
+      move: IH => /(_ xs [::] [::] a Logic.eq_refl Logic.eq_refl l1 GCAXS GLXS _ PREF).
+      rewrite GC_A GL_L1 => /(_ isT) [{}sol IH].
       by exists sol; apply Fail.
     move=> gl ?; subst.
     rewrite more_alt_cons => [] [] ? ?; subst.
     intros.
     rewrite more_alt_cons.
-    move: IH => /(_ alts bshd bstl gl Logic.eq_refl Logic.eq_refl _ H H0 H1) [{}sol IH].
+    move: IH => /(_ alts bshd bstl gl Logic.eq_refl Logic.eq_refl _ H H0 H1 H2) [{}sol IH].
     by exists sol; apply Fail.
   + move=> a ca f b bs gl r PF NUR IH alts [|bshd bstl] bs0.
-      move=> [] // a0 l1 [] ? ? ? /= alts0; subst;
-      move=> /andP [SCA0 GCL1 GLA PREF].
+      move=> [] // a0 l1 [] ? ? ? /= alts0; subst.
+      move=> /andP [SCA0 GCL1 GLA] /andP [/andP []] A B C D.
       set (more_alt alts bs0 (Goal (call f) ca :: l1)) as XX.
       have AA: good_cut l1 XX.
         now apply good_cut_more_alt.
       have BB: good_levels XX.
         apply good_lvl_more_alt; auto; simpl.
         by rewrite SCA0 GCL1. 
+      set (more_alt alts0 bs0 (Goal (call f) ca :: l1)) as YY.
 
-      have CC: prefix XX (more_alt alts0 bs0 (Goal (call f) ca :: l1)).
-        admit.
-      move: IH => /(_ _ _ _ _ Logic.eq_refl Logic.eq_refl _ AA BB CC) [{}sol H].
-
+      have DD: good_cut l1 YY && good_levels YY.
+        have DD1: good_cut l1 YY.
+          unfold YY.
+          apply good_cut_more_alt.
+          by rewrite B.
+        have DD2: good_levels YY.
+          unfold YY.
+          apply good_lvl_more_alt; auto.
+          simpl.
+          by rewrite A B.
+        by rewrite DD1 DD2.
+      have EE: (prefix XX YY) by admit.
+      unfold XX, YY in EE.
+      move: IH => /(_ _ _ _ _ Logic.eq_refl Logic.eq_refl YY AA BB DD EE) [{}sol IH].
       by exists sol; apply: Call PF _.
     move=> gl0 [] ? ? ? ? //; subst.
     intros.
     rewrite save_alt_cons.
-    eexists; apply: Call PF _.
-    set ((more_alt alts0 bs0 gl0)) as XX.
-    have AA: good_cut ([seq Goal x alts  | x <- bstl] ++ gl0) XX.
+    have AA: (good_cut ([seq Goal x alts  | x <- bstl] ++ gl0) (more_alt alts bs0 gl0)).
+      by apply good_cut_save_alt_more_alt.
+    have BB: good_levels (more_alt alts bs0 gl0).
+      by apply good_lvl_more_alt.
+    have CC : good_cut ([seq Goal x alts  | x <- bstl] ++ gl0) (more_alt alts0 bs0 gl0) && good_levels (more_alt alts0 bs0 gl0).
+      have CC1 :good_cut ([seq Goal x alts  | x <- bstl] ++ gl0) (more_alt alts0 bs0 gl0).
+        apply good_cut_more_alt.
+        move: H1 => /andP [] A B.
+        apply good_cut_cat; auto.
+        elim: bstl {NUR IH H AA BB} => //=; try constructor.
+        intros.
+        rewrite H.
+        admit.
+      move: H1 => /andP [] A B.
+      by rewrite CC1; apply good_lvl_more_alt.
+    move: IH => /(_ _ _ _ _ _ Logic.eq_refl) => /(_ _ erefl (more_alt alts0 bs0 gl0) AA BB CC).
+    assert (prefix (more_alt alts bs0 gl0) (more_alt alts0 bs0 gl0) ) by admit.
+    move => /(_ H3) [{}sol IH].
+    exists sol; apply: Call PF _.
+    unfold save_alt at 2.
 Admitted.
 
 
@@ -258,9 +287,14 @@ Proof.
   + move=> {}a ca f b bs gl {}r PF NUR IH /andP [/andP []] HK1 HK2 HK3.
     have IH1: good_cut (save_alt a b gl) (more_alt a bs gl) && good_levels (more_alt a bs gl).
       by rewrite good_cut_save_alt_more_alt ?good_lvl_more_alt //.
-    move: IH => /(_ IH1 (more_alt a bs gl) ) /(_ (prefix_refl _) IH1) [sol HSol] alts PREF _.
-    epose proof (weaken_success' HSol _ HK2 HK3 PREF) as [sol'].
+    move: IH => /(_ IH1 (more_alt a bs gl) ) /(_ (prefix_refl _) IH1) [sol HSol] alts PREF /andP [/andP] [] A B C.
+
+    epose proof (weaken_success' HSol _ HK2 HK3 _ PREF) as [sol'].
+    (* epose proof (weaken_success' HSol _ HK2 HK3 PREF) as [sol']. *)
     by eexists sol'; apply: Call PF _.
+    Unshelve.
+    simpl.
+    by rewrite B C.
 Qed.
 
 Lemma weaken_success_nil {prog g a r}:
