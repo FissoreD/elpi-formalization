@@ -5,7 +5,6 @@ From det Require Import program.
 From det Require Import interpreter.
 From det Require Import aux.
 
-Definition g2a g := match g with Goal _ a => a end.
 
 Lemma map_cat_deep {T:Type} {R:Type} l gs:
   forall (P:T -> R),
@@ -112,6 +111,7 @@ Proof.   by elim: l1 => //= x xs IH /andP[_ /IH].  Qed.
 Lemma good_lvl_suffix {ca} {a}: suffix ca a -> good_levels a -> good_levels ca.
 Proof. by move => /suffixP [x] -> /good_lvl_cat /= . Qed.
 
+
 Lemma save_alt_cons {a g1 gl l}: save_alt a (g1 :: gl) l = Goal g1 a :: save_alt a gl l.
 Proof. by []. Qed.
 
@@ -156,14 +156,6 @@ Proof.
   by apply /andP; constructor; auto.
 Qed.
 
-Lemma good_cut_catr {a b c}:
-  good_cut (a ++ b) c -> good_cut b c.
-Proof. by elim: a => //= [] [] _ ca l IH /andP []. Qed.
-
-Lemma good_cut_catl {a b c}:
-  good_cut (a ++ b) c -> good_cut a c.
-Proof. elim: a => //= [] [] _ ca l IH /andP [] -> B; simpl; auto. Qed.
-
 Lemma good_lvl_more_alt {a gs tl}:
   good_levels a -> good_cut tl a -> good_levels (more_alt a gs tl).
 Proof.
@@ -173,270 +165,180 @@ Proof.
   by apply good_cut_more_alt, good_cut_save_alt.
 Qed.
 
-(* prefix (more_alt alts bs0 (Goal (call f) ca :: l1)) (more_alt alts0 bs0 (Goal (call f) ca :: l1)) *)
-Lemma more_alt_empty {ys alts l}: more_alt ys alts l = [::] -> ys = [::].
-Proof. case: ys alts  => // la' l' alts.
-  unfold more_alt.
-  move=> H.
-  have:= (erefl (@size ((seq goal)) [::])).
-  rewrite -{1}H.
-  rewrite size_cat /= addnS //.
-Qed.
-
-Inductive forall2 {T R:Type} P : list T -> list R -> Prop := 
-  | forall2_nil : forall2 [::] [::]
-  | forall2_con {x xs y ys} : P x y -> forall2 xs ys -> forall2 (x::xs) (y::ys).
-
-Lemma forall2_refl {T : Type} (P : T -> T -> Prop) l : forall2 P l l.
-Proof. elim l. constructor. Abort. 
-
-(* Lemma forall2_cat {T: Type} (P: T->T->Prop) l1 l2: forall2 P l1 _ -> forall2 P l2 -> forall2 P (l1 ++ l2).  *)
-
-Definition g2p g := match g with Goal g _ => g end.
-Print all2.
-
-(* Fixpoint my_prefix l1 l2 {struct l1} :=
-  match l1, l2 with
-  | [::], _ => true
-  | x::xs, y::ys =>
-    my_prefix xs ys && all2 (fun '(Goal x a1) '(Goal y a2) => (x == y) && my_prefix a1 a2) x y
-  | _, _ => false
-  end.  *)
 
 
-Inductive my_prefix : seq alt -> seq alt -> Prop :=
-  | my_prefix_nil l : my_prefix [::] l
-  | my_prefix_sam {x y xs ys} : 
-      forall2 (fun x y => g2p x = g2p y /\ my_prefix (g2a x) (g2a y)) x y ->
-        my_prefix xs ys -> my_prefix (x :: xs) (y :: ys).
+(* Scopo: se un goal va con L alternative allora va con L+L' alternative
+   usiamo una definizione di prefix che mette in relazione due liste di alternative
+   [prefix_alt L1 L2] ci interessa dire che L2 passa se L1 è un suo prefisso e L1 passa
+  *)
+Inductive prefix_alt : list alt -> list alt -> Prop :=
+  | prefix_alt_nil l : prefix_alt [::] l
+  | prefix_alt_con {x y xs ys} :
+      (* x and y are a list of goals in conjunction *)
+      (* se il goal passa con x (che è più lungo di y) allora passa con y *)
+      prefix_goal y x 
+        -> prefix_alt xs ys 
+          -> prefix_alt (x::xs) (y::ys)
+(* [prefix_goal gl1 gl2] intendiamo dire che gl1 passa se è un prefisso di gl2
+    e gl2 passa. Inoltre dobbiamo vedere che le alternative in gl2i \in gl2
+    siano meno delle alternative in gl1i \in gl1
+ *)
+with prefix_goal : list goal -> list goal -> Prop :=
+  | prefix_goal_nil l : prefix_goal [::] l
+  | prefix_goal_con {g ca1 ca2 gs1 gs2} :
+    (* ca1 and ca2 are alternatives, se ca1 ha meno alternative di ca2 allora ca2 passa *)
+    prefix_alt ca2 ca1 ->
+      prefix_goal gs1 gs2 -> prefix_goal (Goal g ca1 :: gs1) (Goal g ca2 :: gs2).
+(* 
+esempio per prefix_alt:
+se run Fail [p, q] passa allora run Fail [p, q, r] passa, visto che
+prefix_alt [p,q] [p,q,r] 
+qui [p,q] e [p,q,r] sono una disgiunzione di goal
 
+esempio per prefix_goal:
+  se run [p, q, r] [::] passa allora run [p, q] passa, visto che
+    prefix_goal [p, q] [p, q, r]
+qui [p,q] e [p,q,r] sono una congiunzione di goal
+*)
 
+(* Fixpoint prefix_goal_refl L :=
+  match L return prefix_goal L L with
+  | nil => prefix_goal_nil [::]
+  | (Goal _ a :: l) => prefix_goal_con (prefix_alt_refl a) (prefix_goal_refl l)
+  end
+with prefix_alt_refl L :=
+  match L return prefix_alt L L with
+  | nil => prefix_alt_nil [::]
+  | (a :: l) => prefix_alt_con (prefix_goal_refl a) (prefix_alt_refl l)
+  end. *)
 
-Lemma my_prefix_refl l : my_prefix l l.
-Proof. 
-  elim l; constructor; auto.
-  elim a.
-  constructor.
-  intros.
-  constructor.
-  split.
-  auto.
-Abort.
+(* Fixpoint prefix_goal_refl L {struct L} :=
+  match L return prefix_goal L L with
+  | nil => prefix_goal_nil [::]
+  | (Goal _ a :: l) =>
+    let aux := (fix prefix_alt_refl L {struct L} := 
+      match L return prefix_alt L L with
+      | [::] => prefix_alt_nil [::] 
+      | x::xs => prefix_alt_con (prefix_goal_refl x) (prefix_alt_refl xs) end) in
+    prefix_goal_con (aux a) (prefix_goal_refl l)
+  end.
 
-Lemma my_prefix_nil_ra {l}: my_prefix l [::] -> l = [::].
-Proof.
-  remember [::].
-  induction 1; try by [].
-Qed.
+with prefix_alt_refl L :=
+  match L return prefix_alt L L with
+  | nil => prefix_alt_nil [::]
+  | (a :: l) => prefix_alt_con (prefix_goal_refl a) (prefix_alt_refl l)
+  end. *)
 
-Lemma my_prefix_cat {a b c d bs}: my_prefix a b -> forall2 (fun x y => g2p x = g2p y /\ my_prefix (g2a x) (g2a y)) c d -> my_prefix (more_alt a bs c) (more_alt b bs d).
-Proof.
-  Admitted.
+(* ∀ {g : pred} {ca1 ca2 : seq alt} {gs1 gs2 : seq goal},
+prefix_alt ca2 ca1 ->
+prefix_goal gs1 gs2 → prefix_goal (Goal g ca1 :: gs1) (Goal g ca2 :: gs2)
+ *)
+(* ∀ (P : ∀ l l0 : seq goal, prefix_goal l l0 → Prop)
+  (P0 : ∀ l l0 : seq alt, prefix_alt l l0 → Prop),
+(∀ l : seq goal, P [::] l (prefix_goal_nil l)) ->
+(∀ (g : pred) (ca1 ca2 : seq alt) (gs1 gs2 : seq goal)
+   (p : prefix_alt ca2 ca1),
+ P0 ca2 ca1 p ->
+ ∀ p0 : prefix_goal gs1 gs2,
+ P gs1 gs2 p0 ->
+ P (Goal g ca1 :: gs1) (Goal g ca2 :: gs2) (prefix_goal_con p p0)) ->
+(∀ l : seq alt, P0 [::] l (prefix_alt_nil l)) ->
+(∀ (x y : seq goal) (xs ys : seq alt) (p : prefix_goal y x),
+ P y x p ->
+ ∀ p0 : prefix_alt xs ys,
+ P0 xs ys p0 → P0 (x :: xs) (y :: ys) (prefix_alt_con p p0)) ->
+∀ (l l0 : seq goal) (p : prefix_goal l l0), P l l0 p *)
 
-Lemma my_prefix_save_alt {gl ys a alts1 b}:
-  my_prefix a alts1 -> 
-  forall2 (fun x y : goal => g2p x = g2p y /\ my_prefix (g2a x) (g2a y)) gl ys ->
-  forall2 (fun x y : goal => g2p x = g2p y /\ my_prefix (g2a x) (g2a y)) (save_alt a b gl) (save_alt alts1 b ys).
-Admitted.
+Scheme prefix_goal_rec := Induction for prefix_goal Sort Prop
+  with prefix_alt_rec := Induction for prefix_alt Sort Prop.
 
+Print prefix_goal_rec.
 
-Lemma prefix_cat {T:eqType} (common: seq T) l1 l2: prefix l1 l2 -> prefix (common ++ l1) (common ++ l2).
-Proof. elim: common => //= c cs IH H; rewrite eqxx; auto. Qed.
+(* Inductive odd : nat -> Prop :=
+| oddS : forall n : nat, even n -> odd (S n)
+with even : nat -> Prop :=
+| evenO : even 0
+| evenS : forall n : nat, odd n -> even (S n).
 
-Definition prefix_goal :=
-   (fun g1 g2 =>
-    match g1, g2 with
-    | Goal g ca, Goal g' ca' => 
-      g = g' /\ my_prefix ca ca' 
-    end).
+Scheme odd_even := Minimality for odd Sort Prop
+with even_odd := Minimality for even Sort Prop.
 
-Lemma weaken_success' {prog alts g1 sol}:
-  nur' prog g1 alts sol -> 
-  good_cut g1 alts -> good_levels alts -> 
+Print odd_even. *)
 
-  forall G1 alts1,
-    forall2 (fun x y => g2p x = g2p y /\ my_prefix (g2a x) (g2a y)) g1 G1 ->
-      good_cut G1 alts1 -> good_levels alts1 ->
-        my_prefix alts alts1 -> 
-          exists sol', nur' prog G1 alts1 sol'.
-Proof.
-  elim.
-  + inversion 3; subst.
-    repeat econstructor.
-  + move=> a ca r gl GCGL NUR IH GC GL G1 alts1.
-    inversion 1; subst; clear H.
-    destruct y.
-    simpl in H2; destruct H2; subst.
-    repeat econstructor; auto.
-      admit.
-    move: IH => /(_ _ _ _ _ H4 _ _ H0).
-    admit.
-  + move=> a g al r NUR IH.
-    move=> GCG GLAAL G1.
-    inversion 4; subst.
-    eexists. apply Fail.
-
-    move: IH => /(_ _ _ _ _ H5 _ _ H7).
-    admit.
-  + move=> a ca f b bs gl r PF NUR IH.
-    move=> GC GL G1 alts1.
-    inversion 1; subst; clear H.
-    destruct y.
-    simpl in H2.
-    destruct H2; subst.
-    move=> GC11 GL11 PREF.
-    eexists. apply: Call PF _.
-    set (G1:= save_alt alts1 b ys).
-    set (alts':= more_alt alts1 bs ys).
-    have FF: forall2 (fun x y : goal => g2p x = g2p y /\ my_prefix (g2a x) (g2a y)) (save_alt a b gl) G1.
-      unfold G1.
-      now apply my_prefix_save_alt.
-
-    have HH: my_prefix (more_alt a bs gl) alts' .
-      unfold alts'.
-      by apply my_prefix_cat.
+Definition prefix_goal_rec1 :=
+  fun 
+    (PPG : forall l l0 : seq goal, prefix_goal l l0 -> Prop) 
+    (PPA : forall l l0 : seq alt, prefix_alt l l0 -> Prop)
     
-    move: IH => /(_ _ _ G1 alts' FF _ _ HH).
-    admit.
-Admitted.
+    (f : forall l : seq goal, PPG [::] l (prefix_goal_nil l))
+    
+    (f0 : forall g ca1 ca2 gs1 gs2 p,
+        PPA ca2 ca1 p -> forall p0 : prefix_goal gs1 gs2, PPG gs1 gs2 p0 -> PPG (Goal g ca1 :: gs1) (Goal g ca2 :: gs2)
+        (prefix_goal_con p p0))
 
-(* Lemma weaken_success' {prog a b bs gl sol}:
-  nur' prog (save_alt a b gl) (more_alt a bs gl) sol -> 
-  forall alts,
-    good_cut gl a -> good_levels a -> good_levels (gl::alts) ->
-      my_prefix a alts 
-      -> exists sol', nur' prog (save_alt alts b gl) (more_alt alts bs gl) sol'.
+    (f1 : forall l : seq alt, PPA [::] l (prefix_alt_nil l))
+    (f2 : forall x y xs ys p, 
+      PPG y x p -> forall p0, 
+        PPA xs ys p0 -> PPA (x :: xs) (y :: ys) (prefix_alt_con p p0)) 
+    =>
+      fix F (l l0 : seq goal) (p : prefix_goal l l0) : PPG l l0 p :=
+        match p with
+        | prefix_goal_nil l1 => f l1
+        | @prefix_goal_con g ca1 ca2 gs1 gs2 p0 p1 => f0 g ca1 ca2 gs1 gs2 p0 (F0 ca2 ca1 p0) p1 (F gs1 gs2 p1)
+        end
+        with 
+        F0 (l l0 : seq alt) (p : prefix_alt l l0) : PPA l l0 p :=
+        match p with
+        | prefix_alt_nil l1 => f1 l1
+        | @prefix_alt_con x y xs ys p0 p1 => f2 x y xs ys p0 (F y x p0) p1 (F0 xs ys p1)
+        end for F.
+
+(* Definition prefix_goal_refl : forall L, prefix_goal L L :=
+  fix FF L : prefix_goal L L := 
+    match L with
+    | nil => prefix_goal_nil nil
+    | Goal c alts :: xs => prefix_goal_con (par alts) (FF xs)
+    end
+  with
+  par l :=
+    match l return prefix_alt l l with
+    | [::] => prefix_alt_nil [::]
+    | y :: ys => prefix_alt_con (FF y) (par ys)
+    end for FF. *)
+
+Lemma prefix_goal_refl L: prefix_goal L L.
 Proof.
+  induction L; try by constructor.
+  destruct a.
+  constructor; auto.
+    induction ca; try by constructor.
+    constructor; auto.
+    Print list_ind.
+  Show Proof.
 
-Lemma weaken_success' {prog a b bs gl sol}:
-  nur' prog (save_alt a b gl) (more_alt a bs gl) sol -> 
-  forall alts,
-    good_cut gl a -> good_levels a -> good_levels (gl::alts) ->
-      my_prefix a alts 
-      -> exists sol', nur' prog (save_alt alts b gl) (more_alt alts bs gl) sol'.
+  
+
+
+ Abort. 
+
+Lemma prefix_alt_refl L: prefix_alt L L.
+Proof. Admitted.
+
+Lemma prefix_alt_cons {x xs y ys}: 
+  prefix_alt (x::xs) (y::ys) -> prefix_goal y x /\ prefix_alt xs ys.
 Proof.
-  move=> NUR alts GC GL1 GL2 PREF.
-  have: my_prefix (more_alt a bs gl) ((more_alt alts bs gl)).
-  by constructor.
-  remember (save_alt a b gl).
-  remember (more_alt a bs gl).
-  move=> NUR.
-  elim: NUR a b bs gl Heql Heql0 => /=.
-  + move=> aS a [] bs [] //=; repeat econstructor.
-  + move=> a ca r gl GCGL NUR IH alts [|bhd btl] // bs.
-      move=> [|glhd gls] //= [] H1 H2 H3; subst.
-      move=> alts' /andP [SCA GCGLS] GLALTS GLALTS'.
-      unfold save_alt; simpl.
-      exists r; eapply Cut; auto.
-    move=> gl' [] H1 H2 H3 H4; subst.
-    move: IH => /(_ alts btl [::] gl' erefl erefl) => IH.
-    move=> alts' A B C D.
-    move : IH => /(_ _ A B C D) [sol' IH].
-    rewrite save_alt_cons.
-    exists sol'; eapply Cut, IH.
-    apply good_cut_save_alt.
-    by move: C => /andP [].
-  + move=> a g al r NUR IH alts b.
-    move=> [|bshd bstl].
-      case: alts => // x xs gl' ? [] ? ?; subst.
-      move=> [] // a l1 GC /=.
-        move=> /my_prefix_nil_ra //.
-      move=> /andP [GCAXS GLXS] /= /andP [] GC_GL' /andP [GC_A GL_L1].
-      inversion 1; subst.
-        move: IH => /(_ xs [::] [::] a erefl erefl l1 GCAXS GLXS _ H1).
-        rewrite GC_A GL_L1 => /(_ isT) [{}sol IH].
-        by exists sol; apply Fail.
-      rewrite H1.
-      unfold more_alt; simpl.
-      (* eexists.
-      eapply Fail. *)
-      admit.
-      (* move: IH => /(_ _ [::] [::] a _ _ l1).
-
-      rewrite more_alt_cons.
-
-      move: IH => /(_ _ b [::] gl' _ _ (more_alt ys alts l2)) => /(_ (more_alt xs0 alts l2)). *)
-    move=> gl ?; subst.
-    rewrite more_alt_cons => [] [] ? ?; subst.
-    intros.
-    rewrite more_alt_cons.
-    move: IH => /(_ alts bshd bstl gl erefl erefl _ H H0 H1 H2) [{}sol IH].
-    by exists sol; apply Fail.
-  + move=> a ca f b bs gl r PF NUR IH alts [|bshd bstl] bs0.
-      move=> [] // a0 l1 [] ? ? ? /= alts0; subst.
-      move=> /andP [SCA0 GCL1 GLA] /andP [/andP []] A B C D.
-      set (more_alt alts bs0 (Goal (call f) ca :: l1)) as XX.
-      have AA: good_cut l1 XX.
-        now apply good_cut_more_alt.
-      have BB: good_levels XX.
-        apply good_lvl_more_alt; auto; simpl.
-        by rewrite SCA0 GCL1. 
-      set (more_alt alts0 bs0 (Goal (call f) ca :: l1)) as YY.
-
-      have DD: good_cut l1 YY && good_levels YY.
-        have DD1: good_cut l1 YY.
-          unfold YY.
-          apply good_cut_more_alt.
-          by rewrite B.
-        have DD2: good_levels YY.
-          unfold YY.
-          apply good_lvl_more_alt; auto.
-          simpl.
-          by rewrite A B.
-        by rewrite DD1 DD2.
-      have EE: (my_prefix XX YY).
-        unfold XX, YY.
-        by constructor.
-      move: IH => /(_ _ _ _ _ erefl erefl YY AA BB DD EE) [{}sol IH].
-      by exists sol; apply: Call PF _.
-    move=> gl0 [] ? ? ? ? //; subst.
-    intros.
-    rewrite save_alt_cons.
-
-    have AA: (good_cut ([seq Goal x alts  | x <- bstl] ++ gl0) (more_alt alts bs0 gl0)).
-      by apply good_cut_save_alt_more_alt.
-    have BB: good_levels (more_alt alts bs0 gl0).
-      by apply good_lvl_more_alt.
-
-      
-  (* exists sol; apply: Call PF _.  *)
-    (* DA QUI *)
-    have KK : save_alt (more_alt alts bs0 gl0) b ([seq Goal x alts  | x <- bstl] ++ gl0) = save_alt (more_alt alts0 bs0 gl0) b (save_alt alts0 bstl gl0).
-      (* f_equal; auto. *)
-      (* unfold save_alt at 3. *)
-      admit.
-    have JJ : more_alt (more_alt alts bs0 gl0) bs ([seq Goal x alts  | x <- bstl] ++ gl0) = more_alt (more_alt alts0 bs0 gl0) bs (save_alt alts0 bstl gl0).
-      admit.
-    move: IH => /(_ _ b _ (save_alt alts0 bstl gl0) KK JJ (more_alt alts0 bs0 gl0)) .
-    move: H1 => /andP [] A B.
-    have TT: good_cut (save_alt alts0 bstl gl0) (more_alt alts0 bs0 gl0).
-      by apply good_cut_save_alt_more_alt.
-    have D: good_levels (more_alt alts0 bs0 gl0).
-      apply good_lvl_more_alt; auto.
-
-    rewrite D TT => /(_ isT isT isT (my_prefix_refl _)) [{}sol IH].
-    exists sol; apply: Call PF IH.
-    (* A QUI *)
-
-    eapply my_prefix_moa in H2.
-    move: H1 => /andP [] A B.
-    move: IH => /(_ _ _ _ _ erefl erefl _ AA BB) => /(_ (more_alt alts0 bs0 gl0) _ H2).
-    have BA: good_cut ([seq Goal x alts  | x <- bstl] ++ gl0) (more_alt alts0 bs0 gl0).
-      apply good_cut_cat.
-      2:{ by apply good_cut_more_alt. }
-      admit.
-
-    rewrite BA (good_lvl_more_alt B A) => /(_ isT) [{}sol IH].
-    eexists.
-    apply: Call PF _.
-    apply IH.
-
-Admitted.
-
+Abort.
 
 Lemma weaken_success {prog g a r}:
   nur' prog g a r -> good_levels (g::a) -> forall a1, 
-     my_prefix a a1 -> good_levels (g::a1) ->
+     prefix_alt a a1 -> good_levels (g::a1) ->
+      exists r1, nur' prog g a1 r1.
+Proof.
+Abort.
+
+Lemma weaken_success {prog g a r}:
+  nur' prog g a r -> good_levels (g::a) -> forall a1, 
+     prefix a a1 -> good_levels (g::a1) ->
       exists r1, nur' prog g a1 r1.
 Proof.
   move=> NUR.
@@ -444,46 +346,68 @@ Proof.
   + repeat econstructor.
   + move=> {}a ca {}r gl GC_GL NUR' IH /andP [/andP [SCA GCGL] GLA] aext PREF.
     have : good_cut gl ca && good_levels ca.
+      (* NOTA : a + E = aext, W + ca = aext, G + ca = a ==> a + E = W + ca ==> (G + ca) + E = W + ca *)
       rewrite (good_lvl_suffix SCA GLA).
-      by rewrite GC_GL.
-    have GG: good_cut gl ca && good_levels ca.
+      (* We are in a wrong state  *)
+      admit.
+    move=> /IH {}IH.
+    specialize (IH _ (prefix_refl ca)).
+    have : good_cut gl ca && good_levels ca.
       by rewrite GC_GL (good_lvl_suffix SCA GLA).
-    move=> /IH /(_ _ (my_prefix_refl ca) GG) [sol {IH}].
-    by exists sol; repeat constructor.
-  + move=> {}a {}g {}al {}r NUR IH /and3P [GC_G GC_A GL_AL] [|aext1 aext] + /andP [GC_G' GC_aext] //.
-      move=> /my_prefix_nil_r => /(_ (g)) [] [|aa aas] // [] ? ?; subst.
-        admit.
-      
-    have: good_cut (save_alt [::] aa (g)) ([seq save_alt [::] b (g)  | b <- aas] ++ [::]) &&
-good_levels ([seq save_alt [::] b (g)  | b <- aas] ++ [::]) by admit.
-
-    move=> GCAAL.
-    move: IH => /(_ GCAAL).
-    unfold save_alt.
-     aext). PREF GC_aext) [x IH].
-    by exists x; apply Fail.
-  + move=> {}a ca f b bs gl {}r PF NUR IH /andP [/andP []] HK1 HK2 HK3.
+    move=> /IH [] x.
+    do 2 econstructor; auto.
+    apply p.
+  + move=> {}a {}g {}al {}r NUR IH /and3P [GC_G GC_A GL_AL] aext PREF /andP [GC_G' GC_aext].
+    destruct aext.
+      by [].
+    rewrite prefix_cons in PREF.
+    move: PREF => /andP [/eqP H]; subst l.
+    have: good_cut a al && good_levels al.
+      by rewrite GL_AL GC_A.
+    move=> GCAAL PREF.
+    move: IH => /(_ GCAAL aext PREF GC_aext) [x H].
+    exists x; apply Fail; auto.
+  + move=> {}a ca f b bs gl {}r PF NUR IH.
+    intros.
     have IH1: good_cut (save_alt a b gl) (more_alt a bs gl) && good_levels (more_alt a bs gl).
-      by rewrite good_cut_save_alt_more_alt ?good_lvl_more_alt //.
-    move: IH => /(_ IH1 (more_alt a bs gl) ) /(_ (prefix_refl _) IH1) [sol HSol] alts PREF /andP [/andP] [] A B C.
+      1: {
+        move: H => /andP [/andP []] HK1 HK2 HK3.
+        have HG: good_cut (save_alt a b gl) (more_alt a bs gl).
+        by apply good_cut_more_alt, good_cut_save_alt.
+        rewrite HG.
+        by apply good_lvl_more_alt.
+      }
+    move: IH => /(_ IH1 (more_alt a bs gl) ).
+    (* THIS IS A WRONG STATEMENT*)
+    have PREF: prefix (more_alt a bs gl) (more_alt a bs gl) by apply prefix_refl.
+    have Help1: good_cut (save_alt a b gl) (more_alt a bs gl) && good_levels (more_alt a bs gl).
+      1:{ 
+        have HG: good_cut (save_alt a b gl) (more_alt a bs gl).
+          apply good_cut_more_alt, good_cut_save_alt.
+          move: H => /andP [/andP []]; auto.
+        rewrite HG /=.
+        move: H => /andP [/andP []] HK1 HK2 HK3.
+        by apply good_lvl_more_alt.
+      }
+    move=> /(_ PREF Help1) [sol HSol].
+    eexists.
+    apply: Call PF _.
+    admit.
 
-    epose proof (weaken_success' HSol _ HK2 HK3 _ PREF) as [sol'].
-    (* epose proof (weaken_success' HSol _ HK2 HK3 PREF) as [sol']. *)
-    by eexists sol'; apply: Call PF _.
-    Unshelve.
-    simpl.
-    by rewrite B C.
-Qed. *)
+Admitted.
 
 Lemma weaken_success_nil {prog g a r}:
   good_levels (g::a) ->
     nur' prog g [::] r -> good_levels (g::[::]) ->
     exists r1, nur' prog g a r1.
-Proof. move=> GLGA NUR GLG .
-
-  epose proof (weaken_success' NUR _ isT g a).
-
- => /weaken_success /(_ GLG a (prefix0s _) GLGA) //. Qed.
+Proof.
+  intros.
+  eapply weaken_success.
+  apply H0.
+  auto.
+  apply prefix0s.
+  auto.
+Qed.
 
 Definition make_empty_alts g := match g with Goal g _ => Goal g [::] end.
 
@@ -497,6 +421,8 @@ Proof.
   elim: g1 => //= g1 gl IH /=.
   by rewrite save_alt_cons IH.
 Qed.
+
+Definition g2a g := match g with Goal _ a => a end.
 
 Definition less l1 l2 :=
   forall p1 p2 s, p1 ++ s = l1 -> p2 ++ s = l2 -> forall e1 e2, e1 \in p1 -> e2 \in p2 -> suffix (g2a e1) (g2a e2).
@@ -526,9 +452,10 @@ Proof.
   elim: g => [|[] gtl] /=.
     move=> gs; exists gs; constructor.
   move=> ca l IH gs /andP [/andP [SIH  GC]] GS.
-  rewrite in_cons => /orP [] //= NGS.
+  rewrite in_cons => /orP [] //=.
+  intro.
   have b': [::] \in l :: gs.
-    by rewrite in_cons NGS orbC.
+    by rewrite in_cons b orbC.
   have GC_GL: good_cut l gs && good_levels gs.
     by apply /andP.
   specialize (IH _ GC_GL b') as [].
@@ -602,7 +529,17 @@ Lemma run_with_nil_and_all_is_call' {prog alts tl x bef gs}:
         -> exists s' : seq alt,
           nur' prog [seq make_empty_alts i  | i <- tl]
           (more_alt [::] gs [seq make_empty_alts i  | i <- tl]) s'.   
-Proof. Abort.
+Proof.
+  intros.
+  subst.
+  (* epose proof (run_with_nil_and_all_is_call _ H H1 _) as HH. *)
+  (* revert tl.
+  induction x.
+  + destruct tl; try by [].
+    repeat econstructor.
+  + destruct tl; try by []. *)
+
+Abort.
 
 Lemma aa {prog g' s g1 gs a tl}:
   good_cut tl a -> good_levels a ->
@@ -637,6 +574,13 @@ Proof.
         apply Fail.
 
         repeat econstructor.
+
+
+      
+          
+
+
+      
 Abort.
 
 Lemma cons_cat {T:Type} {a b c}: (a:T)::b++c = ([::a]++b)++c. by []. Qed.
@@ -649,11 +593,10 @@ Lemma cut_semantic {prog s g alts}:
             o falliscono prima di raggiungere il cut*) 
             /\  nur' prog g' [::] s'.
 Proof.
-  elim => /=.
+  elim=> [ | a ca r gl GC H /= IH /= /andP [/andP [ H1 H2 ] H3] | | ] /=.
   - exists [::], [::]; repeat constructor; auto.
 
-  - move => a ca r gl GC H /= IH /= /andP [/andP [ H1 H2 ] H3].
-    have IH_p : good_cut gl ca && good_levels ca.
+  - have IH_p : good_cut gl ca && good_levels ca.
       by rewrite (good_lvl_suffix H1) ?GC; auto.
     case: (IH IH_p) => g' [s' [+ NUR]].
     rewrite in_cons => /orP; case.
@@ -668,8 +611,8 @@ Proof.
       case/suffixP: H1 => a' ->. 
       by rewrite map_cat mem_cat g'_ca orbT.
 
-  - move=> g' gl al solution H + /and3P [] p p0 p1.
-    case; first by rewrite p0 p1.
+  - move=> g' gl al solution H IH /and3P [] p p0 p1.
+    case IH ; first by rewrite p0 p1.
     move=> x [s' [IN NUR]].
     exists x, s'.
     split; last by [].
@@ -679,35 +622,31 @@ Proof.
     rewrite (good_cut_more_alt (good_cut_save_alt GC)) (good_lvl_more_alt GL GC) => /(_ isT).
     case=>[g'[s' [+ NUR']]].
     unfold more_alt.
-    rewrite map_cat cons_cat mem_cat => /orP. case.
+    rewrite map_cat cons_cat mem_cat => /orP. 
+    case.
     2:{ exists g', s'; constructor; auto. by rewrite in_cons b orbC. }
     simpl.
     rewrite <-map_cons.
     replace (save_alt a _ _ :: [seq _ | _ <- _]) with [seq save_alt a b tl | b <- g1 :: gs ] by auto.
-    rewrite /= in_cons => /orP GIN.
     exists ((Goal (call f) [::] :: [seq make_empty_alts i  | i <- tl])).
     
     set (empty_tl:= map make_empty_alts tl).
 
-    suffices: exists s, nur' prog (save_alt [::] g1 empty_tl) (more_alt [::] gs empty_tl) s.
-      move=> [sol' H'].
-      eexists; split; auto.
-      by rewrite in_cons eqxx /=.
-      apply: Call PF H'.
-    
-    have {}GIN: (g' = save_alt [::] (g1) (empty_tl) \/ g' \in [seq save_alt [::] b (empty_tl)  | b <- gs]).
-      move: GIN => [/eqP |] H.
+    assert (g' = save_alt [::] (g1) (empty_tl) \/ g' \in [seq save_alt [::] b (empty_tl)  | b <- gs]).
+      move: a0.
+      rewrite /= in_cons => /orP [/eqP |] H.
       rewrite save_alt_with_make_empty_alt in H; auto.
       right.
       congr(g' \in _) : H.
       unfold empty_tl.
       rewrite -map_comp.
       apply: eq_map.
-      move=> ? /=.
+      intros ?.
+      simpl.
       by erewrite save_alt_with_make_empty_alt.
-
+    clear a0.
     have GL_G' : good_levels [:: g'].
-      destruct GIN; subst.
+      destruct H; subst.
         simpl.
         rewrite -(@save_alt_with_make_empty_alt [::]).
         by rewrite good_cut_empty.
@@ -717,6 +656,7 @@ Proof.
         rewrite -(@save_alt_with_make_empty_alt [::]).
         by rewrite good_cut_empty.
       auto.
+    rewrite in_cons eqxx /=.
 
     have GL_G_TL: good_levels (g' :: more_alt [::] gs empty_tl).
       simpl.
@@ -725,20 +665,27 @@ Proof.
       rewrite good_lvl_more_alt //.
       by rewrite good_cut_empty.
 
-    destruct GIN.
+    destruct H.
      have {} NUR' := @weaken_success_nil _ _ (more_alt [::] gs empty_tl) _ GL_G_TL NUR' GL_G'.
+ 
       destruct NUR'. 
-      eexists x.
-      by subst.
+      eexists.
+      split; auto.
+      eapply Call.
+      apply PF.
+      subst.
+      apply H0.
     
     suffices: exists s',  nur' prog (save_alt [::] g1 empty_tl) (more_alt [::] gs empty_tl) s'.
       move=> [sol' H'].
-      by eexists sol'.
+      eexists; split; auto.
+      apply: Call PF H'.
 
-    elim: gs  (save_alt [::] g1 empty_tl) H NUR' {NUR PF GL_G_TL} => [|x xs IH] //= G.
+    clear GL_G_TL.
+    elim: gs  (save_alt [::] g1 empty_tl) H NUR' {NUR PF} => [|x xs IH] //= G.
 
     rewrite in_cons => /orP [/eqP H | ].
-      move=> NUR.
+    move=> NUR.
       have GL_G_TL: good_levels (g' :: more_alt [::] xs empty_tl).
         simpl.
         rewrite /= andbC /= in GL_G'.
@@ -749,12 +696,14 @@ Proof.
       have [sol {}NUR] := @weaken_success_nil _ _ (more_alt [::] xs empty_tl) _ GL_G_TL NUR GL_G'.
       exists sol.
       rewrite more_alt_cons.
-      by apply Fail; subst.
-
+      apply Fail.
+      subst; apply NUR.
     move=> /IH IH' /IH' H.
     destruct (H (save_alt [::] x empty_tl)).
+    exists x0.
     rewrite more_alt_cons.
-    by exists x0; apply Fail.
+    apply Fail.
+    auto.
 Qed.
 
 Print Assumptions cut_semantic.

@@ -184,14 +184,23 @@ Section good_cut_and_level.
 
 End good_cut_and_level.
 
+  From elpi.apps Require Import derive.invert.
 Section nur'.
   Inductive nur' (p: bodiesT) : list goal -> list alt -> (list alt) -> Prop :=
   | Stop a : nur' [::] a a
   | Cut a (ca:list alt) r gl : good_cut1 gl ca -> nur' gl ca r -> nur' [::Goal cut ca & gl] a r
-  | Fail a al ca f gl r : nur' a al r -> nur' [::Goal (call f) ca & gl] (a :: al) r
+  | Fail a al ca f gl r : p f = [::] -> nur' a al r -> nur' [::Goal (call f) ca & gl] (a :: al) r
   | Call {a ca f b bs gl r} : p f = [:: b & bs ] ->
     nur' (save_alt a b gl) (more_alt a bs gl) r -> nur' [::Goal (call f) ca & gl] a r.
-
+  (* Elpi derive.invert nur'.
+  Print nur'_inv.
+  Inductive nur2 (p: bodiesT) : list goal -> list alt -> (list alt) -> Prop :=
+  | Stop a : nur2 [::] a a
+  | Cut a (ca:list alt) r gl : good_cut1 gl ca -> nur2 gl ca r -> nur2 [::Goal cut ca & gl] a r
+  | Fail a al ca f gl r : p f = [::] -> nur2 a al r -> nur2 [::Goal (call f) ca & gl] (a :: al) r
+  | Call {a ca f b bs gl r} : p f = [:: b & bs ] ->
+    nur2 (save_alt a b gl) (more_alt a bs gl) r -> nur2 [::Goal (call f) ca & gl] a r.
+ *)
   Lemma correct p g a r n :
     good_levels1 (g::a) -> run p n g a = Some r -> nur' p g a r.
   Proof.
@@ -429,6 +438,15 @@ Qed.
 
 Lemma cons_cat {T:Type} {a b c}: (a:T)::b++c = ([::a]++b)++c. by []. Qed.
 
+(* Lemma cut_semantic {prog s g alts}:
+    nur' prog g alts s ->
+      good_levels1 (g::alts) ->
+        exists bef g' s', prefix (rcons bef g') (g :: alts) /\ 
+
+            /\  nur' prog g' [::] s'.
+Proof. *)
+
+
 Lemma cut_semantic {prog s g alts}:
     nur' prog g alts s ->
       good_levels1 (g::alts) ->
@@ -478,7 +496,7 @@ Proof.
     
     set (empty_tl:= map make_empty_alts tl).
 
-    have GR: (g' = save_alt [::] (g1) (empty_tl) \/ g' \in [seq save_alt [::] b (empty_tl)  | b <- gs]).
+    have {}IN_IMPL: (g' = save_alt [::] (g1) (empty_tl) \/ g' \in [seq save_alt [::] b (empty_tl)  | b <- gs]).
       move: IN_IMPL.
       rewrite /= in_cons => /orP [/eqP |] H.
       rewrite save_alt_with_make_empty_alt in H; auto.
@@ -492,11 +510,11 @@ Proof.
     
     have GL_G' : good_levels1 [:: g'].
       constructor.
-      destruct GR; subst.
+      destruct IN_IMPL; subst.
         simpl.
         rewrite -(@save_alt_with_make_empty_alt [::]).
         apply good_cut1_empty.
-      elim: gs H {PF NUR GL_SA_MA IN_IMPL} => //=.
+      elim: gs H {PF NUR GL_SA_MA} => //=.
       move=> x xs IH.
       rewrite in_cons => /orP [/eqP H |]; subst.
         rewrite -(@save_alt_with_make_empty_alt [::]).
@@ -513,7 +531,7 @@ Proof.
         constructor.
       apply good_cut1_empty.
 
-    case: GR => [EQ|IN].
+    case: IN_IMPL => [EQ|IN].
       subst.
 
       have [sol {}NUR'] := @weaken_success_nil _ _ (more_alt [::] gs empty_tl) _ GL_G_TL NUR' GL_G'. 
@@ -525,23 +543,24 @@ Proof.
       eexists; split; auto.
       apply: Call PF H'.
 
-    elim: gs  (save_alt [::] g1 empty_tl) IN NUR' {NUR PF GL_G_TL GL_SA_MA IN_IMPL} => [|x xs IH] //= G.
+    elim: gs  (save_alt [::] g1 empty_tl) IN NUR' {NUR PF GL_G_TL GL_SA_MA} => [|x xs IH] //= G.
 
     rewrite in_cons => /orP [/eqP H | ].
-    move=> NUR.
-    have GL_G_TL: good_levels1 (g' :: more_alt [::] xs empty_tl).
-      1:{
-        subst.
-        apply good_lvl1_save_alt_more_alt.
-          constructor.
-        apply good_cut1_empty.
-      }
+      move=> NUR.
+      have GL_G_TL: good_levels1 (g' :: more_alt [::] xs empty_tl).
+        1:{
+          subst.
+          apply good_lvl1_save_alt_more_alt.
+            constructor.
+          apply good_cut1_empty.
+        }
 
-    have [sol {}NUR] := @weaken_success_nil _ _ (more_alt [::] xs empty_tl) _ GL_G_TL NUR GL_G'.
-    exists sol.
-    rewrite more_alt_cons.
-    apply Fail.
-    subst; apply NUR.
+      have [sol {}NUR] := @weaken_success_nil _ _ (more_alt [::] xs empty_tl) _ GL_G_TL NUR GL_G'.
+      exists sol.
+      rewrite more_alt_cons.
+      subst.
+      apply Fail.
+      subst; apply NUR.
     move=> /IH IH' /IH' H.
     destruct (H (save_alt [::] x empty_tl)).
     exists x0.
