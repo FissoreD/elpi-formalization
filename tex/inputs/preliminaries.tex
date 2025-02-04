@@ -1,0 +1,177 @@
+\section{Preliminaries}
+
+Before providing a formal definition of functionality and mode analysis, we
+first describe the language we are working with, namely a dialect of \lamprolog
+called \elpi.
+
+Since we have structured our paper into two main sections: 1) the first
+discusses a basic version of ELPI with only Horn clauses and the cut operator,
+and 2) the second extends this version by introducing hereditary-Harrop
+formulas, we will keep the presentation of the types and functions we need
+simple, expanding them further when needed.
+
+Data are represented by integers. For now, predicate are binary relations and
+have type \\\elpiIn{int -> int -> prop}. The two areguments are respectively 
+considered as its input and output (see \cref{sec:modes}).
+
+An atom is either a fully applied predicate or the cut operator, noted
+\elpiIn{!}.
+
+A variable is a term not yet instantiated. We can assign variables thanks to the
+\texttt{unify} procedure and we note that 2 terms $t_1$ and $t_2$ have to be
+unifed with the notation $t_1 = t_2$. We store the result of variable assignment
+into substitutions, that are mapping from variable name to their assignment $t$.
+We considered that the returned term is the most dereferenced one, ie. $t$ is a
+the dereferenced assignement for the variable $X$ in the subsitution $s$ if any
+variable appearing as a subterm of $X$ is not assigned in $s$.
+
+By convention variables are indicated with capital letters, whereas predicate
+names and constants are indicated with lower case letters.
+
+A clause is made of a predicate name, its two arguments and a body made of a
+list of atoms. The list of these atoms are called premises and should be
+considered as a list of subgoals in conjunction. By convention a clause is noted
+with \elpiIn{p i o :- b} where p is the predicate name i and o are its
+parameters and b is the body. It should be read as follows: if \elpiIn{b} holds
+then \elpiIn{p i o} holds. 
+
+A program is a mapping from predicate name to clauses. These clauses are in
+disjunction and the order of their visit depend on the chronological order in
+which clauses have been declared. We have no builtin \textit{or} operator but
+it's behavior can be replicated by adding several implementation of the same
+rule. There is no builtin \elpiIn{or} operator, it can be however represented by
+adding multiple rules for the same predicate.
+
+Unlike other prolog system, such as \mercury \cite{1996Somogy}, \elpi is not a
+compiled language and we do not build super-homogenous clauses for each
+predicate. This is mainly due to the fact that \elpi is an homoiconic language
+and its program definition can change during the evaluation of the code.
+
+A program is a mapping from predicate name to clauses and a goal is an atom and
+a query is made by a list of goal. 
+
+The interpreter takes a program a query and returns a substitution if the query
+is a consequence of the program. Each time a predicate call has multiple clauses
+implementing it, it commits the first choice and keep the other as global
+alternatives. If choice leads to a failure, the interpreter will try to execute
+of the global alternatives. This non-deterministic behavior can be controlled by
+the user thanks to the cut operator which allows to cut out alternatives (see
+\cref{sec:cut}).
+
+To be more precise, we give below the type structure of each cunstruct we have
+defined above:
+
+\begin{coqcode}
+  Definition pn := string. (*predicate names are strings*)
+  Definition vn := string. (*variable  names are strings*)
+  Inductive atom := 
+    | PN pn nat nat : t. (*binary predicates taking integers*)
+    | CUT : t.           (*binary predicates taking integers*)
+    ...                  (*this is extended in section XX*)
+  Definition clause := pname * int * int * list (atom).
+  Definition sbst := vname -> atom.
+  Definition prog := pname -> list clause.
+  Definition goal := prog * atom * list alt
+  with alt := sbst * list goal.
+\end{coqcode}
+
+Since we have to make backtracking and cut change the 
+
+A goal is a triple made of a program \prog, a substitution $s$, an atom
+$\mathcal{A}$ and a list of alternatives $\mathcal{B}$. In particular,
+$\mathcal{A}$ is evaluated by looking into the clauses inside \prog. $s$ is the
+substitution existing at the creation of the current goal. $\mathcal{B}$
+contains the choice-points used by the interpreter during the evaluation of a
+cut, the aim of this piece of data will be clarified further in the section
+dedicated to the interpreter implementation.
+
+
+Prolog interpreter has a \texttt{run} procedure relating a program, a goal, a list of 
+alternatives to a new list of alternative and a substition
+
+\begin{minted}[autogobble]{coq}
+  Inductive run : prog -> goal -> list alt -> subst -> list alt :=
+    ...
+
+  Definition functional_goal (p: prog) :=
+    forall g s, run p g [::] s -> s = [::].
+\end{minted}
+
+
+\subsection{The role of the cut}
+\label{sec:cut}
+
+Here we give a definition of our cut: \cite{2003Andrews}
+
+Logic programs are known for their non-deterministic behavior. The could be
+several distinct ways to derive a query from a base of knowledge and logic
+programs aims to find these all of this solution. 
+% We have put quotations around
+% the words non-deterministic since of course the interpreter of the prolog system
+% has to make some choice about the order in which the rules of the program are
+% treated. In our case, we consider that the intepreter takes the rules in a
+% chronological way wrt the order in which rules are inserted in the database.
+
+If non-determinism is a key feature, sometimes it is important to let the user
+control if and when alternatives have to be rejected. The cut operator is meant
+to address this problem. It is often used, for example, to provide an
+implementation for the \textit{if-then-else} construct. 
+
+Since we use the elpi dialect of lambda-prolog, it is important to clarify how
+the cut behaves in our development. It is in case that each prolog-ish language
+has its own cut implementation, for example in the official page of
+swi-prolog\footnote{\href{www.swi-prolog.org}{www.swi-prolog.org}} we see that
+there are two different kind of cut implementation: the `soft cut' noted with
+``\texttt{A *-> B ; C}'' runs C if A has no solution otherwise the result is the
+same as running the conjunction of A and B. The `hard cut' noted with the
+``\texttt{!}'', "discards all choice points created since entering the predicate
+in which the cut appears".
+
+In mercury \cite{1996Somogy}\dots Dire anche che molti usano la super-homogenous
+forms invece che regole distinte ma per noi non va bene visto che il programma
+può essere esteso a piacimento
+
+It is also interesting to see that further representations of cut may exists,
+such as the firm cut explained in \cite{2003Andrews} where they provide a
+restricted version of the hard cut which has some concistency properties.
+
+Elpi implementation uses the hard cut definition. Even though the hard cut have
+no equivalent representation from pure logic, we are convinced that from a more
+more programming point of view it is quite practical to cut away not only the
+alternative implementation of a predicate but also to hinder backtracking of all
+choice points born from the begin of the clause-body to the current cut
+position.
+
+\subsection{Functionality in the literature}
+
+\cite{1989Warren,1987vanroy}
+
+\cite{1991Sahlin,1996mogensen}
+
+\cite{king2005,king2006,2011king}
+
+\cite{1996henderson} Mercury
+
+\subsection{Modes in the literature}
+\label{sec:modes}
+
+\cite{2002overton} -> Mercury
+
+\subsection{Summary}
+
+\cref{tab:comparison}
+
+\begin{table}
+  \centering
+  \begin{tabular}{c|c|c|c|c|c}
+    Paper   & Mode check & Determincy check & Cut        & Harrop     & HO unif   \\
+    \hline
+    Mercury & Compile    & \checkmark       & \xmark     & \xmark     & \xmark    \\
+    Mixtus  & Compile    & \checkmark       & \checkmark & \xmark     & \xmark    \\
+    Elpi    & Runtime    & \checkmark       & \checkmark & \checkmark & Partially \\
+  \end{tabular}
+
+  \caption{Comparison}
+  \label{tab:comparison}
+\end{table}
+

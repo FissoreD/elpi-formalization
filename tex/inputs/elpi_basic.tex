@@ -1,68 +1,10 @@
-\section{Basic prolog interpreter}
+\section{Basic prolog}
 
-\subsection{First basic definitions}
-In order to represent the functionality of a program we need to formally
-describe the language we are working with. In this first section we start with a
-first-order version of a logic language. The program represents the knowledge
-and is a mapping between predicates and its implementations. A goal is made by
-predicates calls and cut. A query is a list of goal. The
-typical feature of a logic program is the possibility to have multiple answers
-for the same query. For this porupuse, the interpreter chooses the
-chronologically first rule satisfying the query and solve it until reaching a
-success or a failure. Each time a choice is done, all the alternatives are kept
-in memory together with the current substitution as choice points. 
-In absence of a cut, alternatives are resumed, if the
-committed choice does lead to a failure and are run over the substitution
-on which they were suspended.
-  
-
-\begin{minipage}{.4\textwidth}
-  \begin{elpicode}
-    typeabbrev pname string.
-    typeabbrev vname string.
-    kind atom type.
-    type call pname -> tm -> tm -> atom.
-    type cut atom.
-    typeabbrev subst (vname -> term).
-  \end{elpicode}
-\end{minipage}
-\begin{minipage}{.5\textwidth}
-  \begin{elpicode}
-    typeabbrev program (pname -> list (list atom)).
-    kind goal type.
-    typeabbrev alt (subst * list goal).
-    type goal (program * atom * (list alt)) -> goal.
-    type clause.
-    kind cl pname tm tm (list atom).
-  \end{elpicode}
-\end{minipage}
-
-
-In the snippet above we give the definition of three new types. An atom is the
-smallest unit that can be found in a goal. It is made by the \textit{call}
-constructor representing the call of a predicate and a cut. A predicate is given
-by a string. In our setting, all predicates are binary. Note that this choice
-% does not create a loss in expressivity in this first part of the paper: unary
-% predicates are binary predicate with a dummy parameter, and predicates with
-% arity bigger then two can be recreated by chaining several binary predicates in
-% a conjunction of goals. In the higher-order part of the paper, 
-is a convention to simplify the presentation of our research, by the way, our
-presentation can be esily extented to work with predicate of arbitrary arities.
-A substitution is a mapping from variable names to their assigment.
-
-A program is the strightforword implementation of what have been told in the
-previous paragraph.
-
-A goal is a triple made of a program \prog, a substitution $s$, an atom
-$\mathcal{A}$ and a list of alternatives $\mathcal{B}$. In particular,
-$\mathcal{A}$ is evaluated by looking into the clauses inside \prog. $s$ is the
-substitution existing at the creation of the current goal. $\mathcal{B}$
-contains the choice-points used by the interpreter during the evaluation of a
-cut, the aim of this piece of data will be clarified further in the section
-dedicated to the interpreter implementation.
+\subsection{Some definitions}
 
 
 \subsection{Basic interpreter}
+In this first section we start with a first-order version of a logic language.
 
 The interpreter we are going to show is a system made by the derivation rules
 depicted in \cref{fig:basic-interp}. It's structure is not far from the
@@ -153,20 +95,42 @@ choice points $b_j$ with $i < j \leq | bs |$ will be cut away.
 As an example, let's consider the following program called \prog:
 
 \begin{elpicode}
-p X Z :- q X Y, !, r Y Z.
-p X X.
-q 3 3.
-q 3 4.
-r 4 5.
+p1 X Y :- p2 X Y.           % r1
+p1 3 3.                     % r2
+p2 X Y :- p3 X Y, !, Y = 1. % r3
+p2 1 1.                     % r4
+p3 1 2.                     % r5
 \end{elpicode}
 
-The goal $\mathcal{G} :=\ $\goal{\prog}{call\ (\text{\elpiIn{p X
-Y}})}{\EmptyList}, due to cut has no solution. The only rule that can be run is
-\ruleCall
+{
+\def\goalG{\goal{\prog}{call\ (\text{\elpiIn{p1 3 Z}})}{\EmptyList}}
+
+Let $\mathcal{G} :=\ \goalG$ be a goal, the execution of
+``\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?S}'' will apply \ruleCall
+producing a new goal for the rule $r1$ and an alternative list containing $r2$,
+we leave out details concerning unifications of head terms. The execution of
+$r1$ will try to solve $r3$. This will add three goals \elpiIn{r 1 Y, !, Y = 1}
+with cut-alternatives equal to $r2$ whereas the new alternatives will be $r4 @
+r2$. The execution of $r3$ will solve \elpiIn{p3 1 Y} with substitution $s :=
+\{X \gets 1; Y \gets 2\}$. The \elpiIn{!} will cut away the alternative $r4 @
+r2$ and will keep the cut-alternative $r2$. The failing premise \elpiIn{Y = 1}
+will cause a backtracking thanks to \ruleFail and try to apply $r2$ from the
+empty substitution. This last unification succeed with final substution $?A :=
+\{X \gets 3; Y \gets 3\}$ and final list of alternatives $?A := \EmptyList$.
+
+% \begin{myRule}{1}
+%   \AxiomC{}
+%   \RightLabelM{\ruleCall}
+%   \UnaryInfC{\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?S}}
+% \end{myRule}
+
+}
+
+
+\subsection{Static mode checker}
 
 \subsection{Static functionality checker}
 
 
-\subsection{Static mode checker}
 
 
