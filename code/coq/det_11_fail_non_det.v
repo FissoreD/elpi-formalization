@@ -213,8 +213,8 @@ Section my_prefix.
   Print forall2_ind.
 
 
-  Elpi derive seq.
-  Check  list_induction.
+  (* Elpi derive seq.
+  Check  list_induction. *)
 
   Lemma forall2_refl {T : eqType} (P : T -> T -> Prop) l : (forall x, x \in l -> P x x) -> forall2 P l l.
   Proof. elim l; repeat constructor; auto.
@@ -278,13 +278,51 @@ Section my_prefix.
          my_prefix_con (Px x) (my_prefix_refl_help Px xs)
     end.
 
-  (* #[verbose] Elpi derive goal.
-  #[verbose] Elpi derive alt.
-  Search is_list. *)
+  Import std.Prelude.
 
-  Lemma my_prefix_refl l: my_prefix l l.
-  Proof. 
-  Admitted.
+  (* In order to make this proof compositional we use the _induction principle
+     as in https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ITP.2019.29
+     
+     The key is that induction principle are not ending in forall x : T, P x
+     but rather forall x, is_T x -> P x
+     where is_T is a translation of T into a predicate (param1)
+     eg Inductive is_nat : nat -> Prop :=
+       | is_zero : is_nat 0
+       | is_succ x : is_nat x -> is_nat (S x).
+
+      There induction principles allow to cross containes, eg have the
+      induction hypothesis on the sub terms of type goal that are
+      not immediate subterms (list the list elements)
+        Inductive goal := Goal : .. -> (list (list goal)) -> goal.
+
+      These induction principles don't work with elim, one has to prepare the goal
+      and then apply them.
+      *)
+
+  Lemma my_prefix_refl l:  my_prefix l l.
+  Proof.
+    (* The fuel for _induction *)
+    have H1 : is_list alt (is_list goal is_goal) l.
+      by apply: is_list_inhab _ _ (is_list_inhab _ _ is_goal_inhab) l.
+    (* The real property *)
+    have {H1} H2:  is_list alt (is_list goal (fun x => my_prefix (g2a x) (g2a x))) l.
+      move: l H1.
+      (* The real inductive type is goal *)
+      apply: is_list_functor=> a; apply: is_list_functor=> g {a}.
+      (* induction *)
+      move: g; apply: goal_induction => p Hp /=.
+      apply: list_induction => [|gl Hgl gll Hgll]; first by apply: my_prefix_nil.
+      apply: my_prefix_con Hgll.
+      move: gl Hgl; apply: list_induction => [|g Hg gl Hgl]; first by apply: forall2_nil.
+      apply: forall2_con; first by split.
+      by apply: Hgl.
+    (* maybe we can avoid this last part *)
+    move: l H2; apply: list_induction => [|a Ha l Hl]; first by apply: my_prefix_nil.
+    apply: my_prefix_con; last by apply: Hl.
+    move: a Ha {l Hl}; apply: list_induction=> [|g Hg gl Hgl]; first by apply: forall2_nil.
+    apply: forall2_con; first by split.
+    by apply: Hgl.
+    Qed.
 
   Lemma forall2_my_prefix_refl g: forall2_alts my_prefix g g.
   Proof. apply forall2_refl; split; auto; apply my_prefix_refl. Qed.
