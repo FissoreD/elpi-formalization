@@ -202,17 +202,6 @@
 \DeclareUnicodeCharacter{301A}{\ensuremath{\llbracket}}
 \DeclareUnicodeCharacter{301B}{\ensuremath{\rrbracket}}
 \DeclareUnicodeCharacter{1F329}{\ensuremath{\lightning}}
-\usepackage[newfloat,outputdir=.aux]{minted}
-
-\newenvironment{elpicode}{%
-  \vspace{0.2em}%
-  \VerbatimEnvironment
-    \begin{minted}[fontsize=\small,autogobble,escapeinside=~~,mathescape=true,frame=leftline,framerule=0pt,framesep=1em]{'elpi.py:ElpiLexer -x'}%
-}{%
-  \end{minted}%
-  \vspace{0.2em}%
-}
-\newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
 
 %% Rights management information.  This information is sent to you
 %% when you complete the rights form.  These commands have SAMPLE
@@ -223,6 +212,8 @@
 \copyrightyear{2018}
 \acmYear{2018}
 \acmDOI{XXXXXXX.XXXXXXX}
+
+\usepackage{my_prelude}
 
 %%
 %% These commands are for a JOURNAL article.
@@ -289,67 +280,16 @@
 %% used to denote shared contribution to the research.
 \author{Davide Fissore}
 \authornote{Both authors contributed equally to this research.}
-\email{trovato@corporation.com}
+\email{davide.fissore@inria.fr}
 \orcid{1234-5678-9012}
 \author{Enrico Tassi}
 \authornotemark[1]
-\email{webmaster@marysville-ohio.com}
+\email{enrico.tassi@inria.fr}
 \affiliation{%
-  \institution{Institute for Clarity in Documentation}
-  \city{Dublin}
-  \state{Ohio}
-  \country{USA}
+  \institution{Université Côte d'Azur, Inria}
+  % \city{Nice}
+  \country{France}
 }
-
-% \author{Lars Th{\o}rv{\"a}ld}
-% \affiliation{%
-%   \institution{The Th{\o}rv{\"a}ld Group}
-%   \city{Hekla}
-%   \country{Iceland}}
-% \email{larst@affiliation.org}
-
-% \author{Valerie B\'eranger}
-% \affiliation{%
-%   \institution{Inria Paris-Rocquencourt}
-%   \city{Rocquencourt}
-%   \country{France}
-% }
-
-% \author{Aparna Patel}
-% \affiliation{%
-%  \institution{Rajiv Gandhi University}
-%  \city{Doimukh}
-%  \state{Arunachal Pradesh}
-%  \country{India}}
-
-% \author{Huifen Chan}
-% \affiliation{%
-%   \institution{Tsinghua University}
-%   \city{Haidian Qu}
-%   \state{Beijing Shi}
-%   \country{China}}
-
-% \author{Charles Palmer}
-% \affiliation{%
-%   \institution{Palmer Research Laboratories}
-%   \city{San Antonio}
-%   \state{Texas}
-%   \country{USA}}
-% \email{cpalmer@prl.com}
-
-% \author{John Smith}
-% \affiliation{%
-%   \institution{The Th{\o}rv{\"a}ld Group}
-%   \city{Hekla}
-%   \country{Iceland}}
-% \email{jsmith@affiliation.org}
-
-% \author{Julius P. Kumquat}
-% \affiliation{%
-%   \institution{The Kumquat Consortium}
-%   \city{New York}
-%   \country{USA}}
-% \email{jpkumquat@consortium.net}
 
 %%
 %% By default, the full list of authors will be used in the page
@@ -357,7 +297,7 @@
 %% other information printed in the page headers. This command allows
 %% the author to define a more concise list
 %% of authors' names for this purpose.
-\renewcommand{\shortauthors}{Trovato et al.}
+\renewcommand{\shortauthors}{D. Fissore and E. Tassi}
 
 %%
 %% The abstract is a short summary of the work to be presented in the
@@ -415,156 +355,14 @@
 %% information and builds the first part of the formatted document.
 \maketitle
 
-\section{Introduction}
+\input{inputs/intro.tex}
 
-We have a rule based language integrated in Coq. Rules are useful
-to model a grown knowledge base (extend existing programs) and manage
-the context in HOAS.
+\input{inputs/cut.tex}
 
-We want to add to it some of the benefits of functional programming,
-eg statically enforce the absence of global backtracking. Eg twice the same
-rule can turn linear into exponential. Even worse two overlapping rules can
-inadvertently change the meaning when loading two libraries.
+\input{inputs/basic_prolog.tex}
 
-checking or inferring functionality of relations is studied in the literature,
-but does only partially cover HO programming but no HOAS nor homoiconicity, all features
-that are widely used. The former, as in FP, to reuse code via HO iterators,
-eg map. The second for manipulating syntax with binders. The third to
-have programs that extend themselves by synthesizing rules.
 
-in practice a function is a relation where 1) we identify the arguments
-that are seen as input 2) we prove that the outputs are uniquely determined
-by the inputs. The first part is called mode analysis. We study both
-in the HO setting, eg $\lambda$Prolog, in the dialect of Elpi that has
-a special runtime input mode.
 
-\section{Motivating examples explained}
-
-We give a short intro to Elpi and functional analysis with examples
-that cover the use cases we want to cover.
-
-Convention that capitals are parameters, programs are written in rules
-preceeeded by a signature. prop is the type of predicate, eg code that runs.
-List syntax is bla bla. :- separates the head from the body, the head
-is unified with the goal, then each premise is executed.
-
-\subsection{Higher order programming}
-
-A typical HO predicate is map that takes a relation  in A x B
-to a relation in list A x list B.
-
-\begin{elpicode}
-type map (A -> B -> prop) -> list A -> list B -> prop.
-map _ [] [].
-map F [X|XS] [Y|YS] :- F X Y, map F XS YS.
-\end{elpicode}
-
-Explain that unlike functional languages, command and expressions are not
-mixed, and prop stuff is executable, hence you don't put F X in place of Y
-but rather run F X Y.
-
-Also explain that a relation that can go both sides, but
-that this feature is not very useful, for example it does not always
-work and if one calls passing a wrong relation, it is easy to diverge. 
-
-find a simple example.
-
-\begin{elpicode}
-filter P [] []
-filter P [X|XS] [X|YS] :- P X, !, filter P XS YS.
-filter P [_|XS] YS :- filter P XS YS.
-\end{elpicode}
-  
-We want to annotate with usage info.
-
-\begin{elpicode}
-pred map i:(pred i:A, o:B), i:list A, o:list B.
-\end{elpicode}
-
-Explain syntax (pred [name] X, ... = X -> .. -> prop).
-
-This first step seems to be stringent for little reason, since map can work
-both ways. But it necessary to further refine the annotation with functionality
-assertions.
-
-\begin{elpicode}
-func map (func A -> B), list A -> list B.
-\end{elpicode}
-
-Explain syntax (func [name] X, ... -> Y, .. = pred i:X, .. , o:Y, ..).
-
-Note (map succ) is func list int -> list int (assuming succ is a function).
-
-\subsection{Higher Order Abstract Syntax programming}
-
-In HOAS, we want out analysis to accept this code that adds a dynamic rule
-
-\begin{elpicode}
-kind tm type.
-type app tm -> tm -> tm.
-type lam (tm -> tm) -> tm.
-
-func copy tm -> tm.
-copy (app F A) (app G B) :- copy F G, copy A B.
-copy (lam F) (lam G) :- pi x\ copy x x => copy (F x) (G x).
-
-func whd tm -> tm.
-whd (app H A) R :- whd H (lam F), whd (F A) R.
-whd (lam _ as X) X.
-
-kind ty type.
-type arr ty -> ty -> ty.
-
-func of tm -> ty.
-of (app F A) T :- of F (arr S T), of A S.
-of (lam F) (arr S T) :- pi x\ of x S => of (F x) T.
-\end{elpicode}
-
-\subsection{Homoiconicity}
-
-Since the language is homoiconic we also want this to pass
-
-\begin{elpicode}
-func comp (func A -> B), (func B -> C) -> (func A -> C).
-comp F G X Y :- F X Tmp, G Tmp Y.
-
-func fuse (func A -> B) -> (func A -> B).
-fuse (comp (map F) (map G)) (map H) :- fuse (comp F G) H.
-fuse X X.
-\end{elpicode}
-
-But we don't want to break code that uses map as a relation
-
-\begin{elpicode}
-func do list (func) -> .
-do [].
-do [P|PS] :- P, do PS.
-
-pred do-with-trace i:list (pred).
-do-with-trace Code :- map spy Code InstrumentedCode, do Code.
-  
-func spy (pred) -> (pred).
-spy P (do [print "before", P, print "after"]).
-\end{elpicode}
-
-Finally, we want to take advantage of cut across iterators
-
-\begin{elpicode}
-func once (pred) -> .
-once P :- P, !.
-
-func do! list (pred) -> .
-do! [] [].
-do! [P|PS] :- once P, do! PS.
-
-% alternative
-
-func tcut (pred) -> (func).
-tcut R F :- F = once R.
-
-func do! list (pred) ->.
-do! LR :- map tcut LR LF, do LF.
-\end{elpicode}
 
 \section{Classic mode and functional analysis}
 

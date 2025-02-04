@@ -1,0 +1,172 @@
+\section{Basic prolog interpreter}
+
+\subsection{First basic definitions}
+In order to represent the functionality of a program we need to formally
+describe the language we are working with. In this first section we start with a
+first-order version of a logic language. The program represents the knowledge
+and is a mapping between predicates and its implementations. A goal is made by
+predicates calls and cut. A query is a list of goal. The
+typical feature of a logic program is the possibility to have multiple answers
+for the same query. For this porupuse, the interpreter chooses the
+chronologically first rule satisfying the query and solve it until reaching a
+success or a failure. Each time a choice is done, all the alternatives are kept
+in memory together with the current substitution as choice points. 
+In absence of a cut, alternatives are resumed, if the
+committed choice does lead to a failure and are run over the substitution
+on which they were suspended.
+  
+
+\begin{minipage}{.4\textwidth}
+  \begin{elpicode}
+    typeabbrev pname string.
+    typeabbrev vname string.
+    kind atom type.
+    type call pname -> tm -> tm -> atom.
+    type cut atom.
+    typeabbrev subst (vname -> term).
+  \end{elpicode}
+\end{minipage}
+\begin{minipage}{.5\textwidth}
+  \begin{elpicode}
+    typeabbrev program (pname -> list (list atom)).
+    kind goal type.
+    typeabbrev alt (subst * list goal).
+    type goal (program * atom * (list alt)) -> goal.
+    type clause.
+    kind cl pname tm tm (list atom).
+  \end{elpicode}
+\end{minipage}
+
+
+In the snippet above we give the definition of three new types. An atom is the
+smallest unit that can be found in a goal. It is made by the \textit{call}
+constructor representing the call of a predicate and a cut. A predicate is given
+by a string. In our setting, all predicates are binary. Note that this choice
+% does not create a loss in expressivity in this first part of the paper: unary
+% predicates are binary predicate with a dummy parameter, and predicates with
+% arity bigger then two can be recreated by chaining several binary predicates in
+% a conjunction of goals. In the higher-order part of the paper, 
+is a convention to simplify the presentation of our research, by the way, our
+presentation can be esily extented to work with predicate of arbitrary arities.
+A substitution is a mapping from variable names to their assigment.
+
+A program is the strightforword implementation of what have been told in the
+previous paragraph.
+
+A goal is a triple made of a program \prog, a substitution $s$, an atom
+$\mathcal{A}$ and a list of alternatives $\mathcal{B}$. In particular,
+$\mathcal{A}$ is evaluated by looking into the clauses inside \prog. $s$ is the
+substitution existing at the creation of the current goal. $\mathcal{B}$
+contains the choice-points used by the interpreter during the evaluation of a
+cut, the aim of this piece of data will be clarified further in the section
+dedicated to the interpreter implementation.
+
+
+\subsection{Basic interpreter}
+
+The interpreter we are going to show is a system made by the derivation rules
+depicted in \cref{fig:basic-interp}. It's structure is not far from the
+operational semantic in \cite{1990Vink}.
+
+\begin{figure}
+  
+  \ruleStopM{.45}
+  \ruleFailM{.45}
+  \vspace{0.3em}%
+  
+  \ruleUnifM{.50}
+  \ruleBangM{.40}
+  \vspace{0.3em}%
+  
+  \ruleCallM{1}
+  
+  \caption{Basic derivation rules}
+  \label{fig:basic-interp}
+\end{figure}
+
+The small-step semantics expressed by \runCmd{g}{a}{s}{a'}{s'} relates a list of
+goals $g$, a list of alternatives $a$ and an initial substitution $s$ with a
+new substitution $s'$ and a new list of alternatives $a'$. The list of goals
+should be understood as a list of goal put in cunjunction, whereas the
+alternatives represent a disjunction of goals. In the derivation above we use
+the two colon symbol ($::$) has separator between the head of a list and its tail;
+$@$ stands for list concatenation; $[\ ]$ is the empty list. $\prog p$ is the
+application of \prog to the predicate $p$; it returns a list of clauses. The
+function $\mathcal{F}$ is defined as follows:
+%
+$$
+\mathcal{F}(r, i, o, s, a) := [(s, (\Cons{(p, i = i', a)}\Cons{(p, o = o', a)}{[(p, g, a) \mid g \in bs]})) \mid cl\ i'\ o'\ bs \in r]
+$$
+
+It takes a list of clauses, two terms, i.e. $i$ and $o$ representing the two
+arguments of the predicate call a substitution $s$ and a list of alternatives $a$. For each clause
+$(cl\ i'\ o'\ bs)$, it builds a new list of pairs where the first argument
+is the substitution $s$ and the second are goals made by 1) the unification of
+the first argument $i'$ with the first argument $i$ of the predicate call 2) the
+unification between the second arguments $o'$ and $o$ 3) the map of each premise
+$g$ in the body $bs$ which return a new list of goals having the program $p$,
+the atom $g$ and the list of alternatives $a$.
+
+The behaviour of the program depends on the shape of the list of goal and its
+alternatives. Starting from a configuration it is possible to execute the
+program. It means that it exists a sequence of reductions allowing to reach the
+\textit{stop rule}, symbolyzed with \ruleStop.
+
+More precisely, \textit{stop rule} caputres the
+configurations with an empty list of goals. By convention, this configuration is
+the final one: there are no more goal to treat; therefore, we can stop and
+return the same alternatives and substitution received in input.
+
+The \textit{fail rule} (\ruleFail) is used to consume the list of alternatives,
+if for example, the current goal leads to a failure or a loop. In fact, this
+rule allows to break loop since it can non-determinalistically applied on any
+configuration, provided that the list of alternatives is not empty. It is
+possible to make the algorithm deterministic by chainging \ruleFail so that it
+is applied if the current goal is a call to a predicate with no alternatives,
+but we prefer to simplify our rule system.
+
+The \textit{unify rule} (\ruleUnif) is applied when a unification $t1 = t2$
+occurs in the head of the current goal list. It calls the unification algorithm
+between the two terms $t1$ and $t2$ under the current substitution $s$ and
+returns the updated substitution $s'$. Finally the \run procedure is called the
+list of remaining goals $gs$ and the new substitution $s'$.
+
+The \textit{cut rule} (\ruleBang) refers to goals where the first conjunct is is
+the \texttt{!} atom. This is where the cut-alternatives $ca$ become interesting.
+The rule tells that the list of goal $gl$ can be launched using $ca$ and the
+new list of alternatives.
+
+The \textit{call rule} (\ruleCall) deals with goals starting with a predicate
+call. In this case the function $\mathcal{F}$ is called with the parameters as
+explained above and if the result of this operation is the list
+\ConsHd{b}\ConsTl{bs}, then a recursive call to \run is done by prepending $b$ to
+the list of remaining goals $gl$ and $bs$ is prepended to the list of
+alternatives $a$.
+
+The combination of the \ruleCall and \ruleBang are crucial to reproduce the
+behaviour of the hard cut. When a call to a predicate gives several rules as new
+choice points, thanks to the function $\mathcal{F}$ we can associate each atom
+of each body of $\prog p$ to the current alternatives $a$. If a clause $b_i$ in
+\ConsHd{b}\ConsTl{bs} with $0 \leq i \leq | bs |$ has a cut, then all the
+choice points $b_j$ with $i < j \leq | bs |$ will be cut away.
+
+As an example, let's consider the following program called \prog:
+
+\begin{elpicode}
+p X Z :- q X Y, !, r Y Z.
+p X X.
+q 3 3.
+q 3 4.
+r 4 5.
+\end{elpicode}
+
+The goal $\mathcal{G} :=\ $\goal{\prog}{call\ (\text{\elpiIn{p X
+Y}})}{\EmptyList}, due to cut has no solution. The only rule that can be run is
+\ruleCall
+
+\subsection{Static functionality checker}
+
+
+\subsection{Static mode checker}
+
+

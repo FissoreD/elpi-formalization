@@ -1,0 +1,42 @@
+\section{The role of the cut}
+
+Here we give a definition of our cut: \cite{2003Andrews}
+
+Logic programs are known for their non-deterministic behavior. The could be
+several distinct ways to derive a query from a base of knowledge and logic
+programs aims to find these all of this solution. 
+% We have put quotations around
+% the words non-deterministic since of course the interpreter of the prolog system
+% has to make some choice about the order in which the rules of the program are
+% treated. In our case, we consider that the intepreter takes the rules in a
+% chronological way wrt the order in which rules are inserted in the database.
+
+If non-determinism is a key feature, sometimes it is important to let the user
+control if and when alternatives have to be rejected. The cut operator is meant
+to address this problem. It is often used, for example, to provide an
+implementation for the \textit{if-then-else} construct. 
+
+Since we use the elpi dialect of lambda-prolog, it is important to clarify how
+the cut behaves in our development. It is in case that each prolog-ish language
+has its own cut implementation, for example in the official page of
+swi-prolog\footnote{\href{www.swi-prolog.org}{www.swi-prolog.org}} we see that
+there are two different kind of cut implementation: the `soft cut' noted with
+``\texttt{A *-> B ; C}'' runs C if A has no solution otherwise the result is the
+same as running the conjunction of A and B. The `hard cut' noted with the
+``\texttt{!}'', "discards all choice points created since entering the predicate
+in which the cut appears".
+
+In mercury \cite{1996Somogy}\dots Dire anche che molti usano la super-homogenous
+forms invece che regole distinte ma per noi non va bene visto che il programma
+può essere esteso a piacimento
+
+It is also interesting to see that further representations of cut may exists,
+such as the firm cut explained in \cite{2003Andrews} where they provide a
+restricted version of the hard cut which has some concistency properties.
+
+Elpi implementation uses the hard cut definition. Even though the hard cut have
+no equivalent representation from pure logic, we are convinced that from a more
+more programming point of view it is quite practical to cut away not only the
+alternative implementation of a predicate but also to hinder backtracking of all
+choice points born from the begin of the clause-body to the current cut
+position.

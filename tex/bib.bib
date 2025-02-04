@@ -1,0 +1,64 @@
+@inproceedings{1990Vink,
+  author    = {de Bruin, A.
+               and de Vink, E. P.},
+  editor    = {Rovan, Branislav},
+  title     = {Retractions in comparing prolog semantics (extended abstract)},
+  booktitle = {Mathematical Foundations of Computer Science 1990},
+  year      = {1990},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {180--186},
+  abstract  = {We present an operational model O and a continuation based denotational model D for a uniform variant of Prolog, including the cut operator. The two semantical definitions make use of higher order transformations $\Phi$ and $\Psi$, respectively. We prove O and D equivalent in a novel way by comparing yet another pair of higher order transformations $\Phi$ and $\Psi$, that yield $\Phi$ and $\Psi$, respectively, by application of a suitable abstraction operator.},
+  isbn      = {978-3-540-47185-1}
+}
+
+@inproceedings{1989Vink,
+  author    = {de Bruin, A.
+               and de Vink, E. P.},
+  editor    = {D{\'i}az, Josep
+               and Orejas, Fernando},
+  title     = {Continuation semantics for PROLOG with cut},
+  booktitle = {TAPSOFT '89},
+  year      = {1989},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  pages     = {178--192},
+  abstract  = {We present a denotational continuation semantics for PROLOG with cut. First a uniform language ℬ is studied, which captures the control flow aspects of PROLOG. The denotational semantics for ℬ is proven equivalent to a transition system based operational semantics. The congruence proof relies on the representation of the operational semantics as a chain of approximations and on a convenient induction principle. Finally, we interpret the abstract language ℬ such that we obtain equivalent denotational and operational models for PROLOG itself.},
+  isbn      = {978-3-540-46116-6}
+}
+
+
+@article{2003Andrews,
+  author     = {Andrews, James H.},
+  title      = {The witness properties and the semantics of the Prolog cut},
+  year       = {2003},
+  issue_date = {January 2003},
+  publisher  = {Cambridge University Press},
+  address    = {USA},
+  volume     = {3},
+  number     = {1},
+  issn       = {1471-0684},
+  url        = {https://doi.org/10.1017/S1471068402001540},
+  doi        = {10.1017/S1471068402001540},
+  abstract   = {The semantics of the Prolog ‘cut’ construct is explored in the context of some desirable properties of logic programming systems, referred to as the witness properties. The witness properties concern the operational consistency of responses to queries. A generalization of Prolog with negation as failure and cut is described, and shown not to have the witness properties. A restriction of the system is then described, which preserves the choice and first-solution behaviour of cut but allows the system to have the witness properties. The notion of cut in the restricted system is more restricted than the Prolog hard cut, but retains the useful first-solution behaviour of hard cut, not retained by other proposed cuts such as the ‘soft cut’. It is argued that the restricted system achieves a good compromise between the power and utility of the Prolog cut and the need for internal consistency in logic programming systems. The restricted system is given an abstract semantics, which depends on the witness properties; this semantics suggests that the restricted system has a deeper connection to logic than simply permitting some computations which are logical. Parts of this paper appeared previously in a different form in the Proceedings of the 1995 International Logic Programming Symposium (Andrews, 1995).},
+  journal    = {Theory Pract. Log. Program.},
+  month      = jan,
+  pages      = {1–59},
+  numpages   = {59},
+  keywords   = {abstract semantics, cut, depth-first search, negation as failure, operational semantics}
+}
+
+@article{1996Somogy,
+  title    = {The execution algorithm of mercury, an efficient purely declarative logic programming language},
+  journal  = {The Journal of Logic Programming},
+  volume   = {29},
+  number   = {1},
+  pages    = {17-64},
+  year     = {1996},
+  note     = {High-Performance Implementations of Logic Programming Systems},
+  issn     = {0743-1066},
+  doi      = {https://doi.org/10.1016/S0743-1066(96)00068-4},
+  url      = {https://www.sciencedirect.com/science/article/pii/S0743106696000684},
+  author   = {Zoltan Somogyi and Fergus Henderson and Thomas Conway},
+  abstract = {We introduce Mercury, a new purely declarative logic programming language designed to provide the support that groups of application programmers need when building large programs. Mercury's strong type, mode, and determinism systems improve program reliability by catching many errors at compile time. We present a new and relatively simple execution model that takes advantage of the information these systems provide, yielding very efficient code. The Mercury compiler uses this execution model to generate portable C code. Our benchmarking shows that the code generated by our implementation is significantly faster than the code generated by mature optimizing implementations of other logic programming languages.}
+}

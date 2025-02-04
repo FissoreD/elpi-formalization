@@ -1,0 +1,107 @@
+\usepackage[newfloat,outputdir=.aux]{minted}
+\usepackage{bussproofs}
+\usepackage{cleveref}
+\usepackage{xspace}
+\usepackage{mathtools}
+\usepackage{multicol}
+
+\newenvironment{elpicode}{%
+  \vspace{0.2em}%
+  \VerbatimEnvironment
+  \begin{minted}[fontsize=\small,autogobble,escapeinside=~~,mathescape=true,frame=leftline,framerule=0pt,framesep=1em]{'elpi.py:ElpiLexer -x'}%
+}{%
+  \end{minted}%
+  \vspace{0.2em}%
+}
+\newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
+
+% goal{program}{goal}{alternatives}
+\newcommand{\goal}[3]{\ensuremath{(#1, #2, #3)}}
+\newcommand{\run}{\texttt{run}}
+\newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \to (#4, #5)}}
+
+\newcommand{\Cons}[1]{\ensuremath{#1::}}
+\newcommand{\ConsHd}[1]{\ensuremath{(#1::}\xspace}
+\newcommand{\ConsTl}[1]{\ensuremath{#1)}\xspace}
+\newcommand{\EmptyList}{\ensuremath{[\ ]}}
+
+\newcommand{\prog}{\ensuremath{\mathcal{P}}\xspace}
+\newcommand{\call}[3]{\ensuremath{call\ #1\ #2\ #3}\xspace}
+\newcommand{\evdash}{\ensuremath{\colondash}\xspace}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Derivation system: start
+\newenvironment{myRule}[1]{%
+   \begin{minipage}{#1\textwidth}
+   \centering
+   \begin{prooftree}%
+  } % Here will be put the body
+  {
+    \end{prooftree}
+    \end{minipage}
+  }
+
+\newcommand{\ruleName}[1]{\ensuremath{r_{#1}}\xspace}
+\newcommand{\RightLabelM}[1]{\RightLabel{\scriptsize #1}}
+
+\newcommand{\ruleFail}{\ruleName{\bot}}
+\newcommand{\ruleCall}{\ruleName{call}}
+\newcommand{\ruleBang}{\ruleName{!}}
+\newcommand{\ruleStop}{\ruleName{\EmptyList}}
+\newcommand{\ruleUnif}{\ruleName{=}}
+
+\newcommand{\ruleStopM}[1]{
+  \begin{myRule}{#1}
+    % STOP
+    \AxiomC{}
+    \RightLabelM{\ruleStop}
+    \UnaryInfC{\runCmd{\EmptyList}{a}{s}{a}{s}}
+  \end{myRule}
+}
+
+\newcommand{\ruleUnifM}[1]{
+  \begin{myRule}{#1}
+    % UNIF
+    \AxiomC{$unify\ x\ y\ s\ s'$}
+    \AxiomC{\runCmd{gs}{a}{s'}{a'}{s''}}
+    \RightLabelM{\ruleUnif}
+    \BinaryInfC{\runCmd{\ConsHd{\goal{\_}{x = y}{\_}}\ConsTl{gs}}{a}{s}{a'}{s''}}
+  \end{myRule}
+}
+
+\newcommand{\ruleFailM}[1]{
+  \begin{myRule}{#1}
+    % FAIL
+    \AxiomC{\runCmd{x}{xs}{s}{a'}{s'}}
+    \RightLabelM{\ruleFail}
+    \UnaryInfC{\runCmd{\_}{\ConsHd{s,x}\ConsTl{xs}}{\_}{a'}{s'}}
+  \end{myRule}%
+}
+
+\newcommand{\ruleBangM}[1]{
+  \begin{myRule}{#1}
+    % CUT
+    \AxiomC{\runCmd{gl}{ca}{s}{a}{s'}}
+    \RightLabelM{\ruleBang}
+    \UnaryInfC{\runCmd{\ConsHd{\goal{\_}{!}{ca}}\ConsTl{gl}}{\_}{s}{a}{s'}}
+  \end{myRule}
+}
+
+\newcommand{\ruleCallM}[1]{
+  \begin{myRule}{#1}
+    % CALL
+    % \AxiomC{\prog p = \ConsHd{(p\ i'\ o' \evdash b)}\ConsTl{bs}}
+    % \AxiomC{$\mathcal{U} \gets {[i = i', o = o']}$}
+    % \AxiomC{\runCmd{(({\mathcal{U}\ @\ b})_a\ @\ gl)}{(bs_a\ @\ a)}{s}{a'}{s'}}
+    % \RightLabelM{\ruleCall}
+    % \TrinaryInfC{\runCmd{\ConsHd{(\prog, \call{p}{i}{o}, \_)}\ConsTl{gl}}{a}{s}{a'}{s'}}
+    % 
+    \AxiomC{$\mathcal{F}(\prog p, i, o, a) = \ConsHd{b}\ConsTl{bs}$}
+    \AxiomC{\runCmd{(b\ @\ gl)}{(bs\ @\ a)}{s}{a'}{s'}}
+    \RightLabelM{\ruleCall}
+    \BinaryInfC{\runCmd{\ConsHd{\goal{\prog}{\call{p}{i}{o}}{\_}}\ConsTl{gl}}{a}{s}{a'}{s'}}
+  \end{myRule}
+}
+
+% Derivation system: end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
