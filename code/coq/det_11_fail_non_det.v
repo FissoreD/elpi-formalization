@@ -186,7 +186,7 @@ End good_cut_and_level.
 
 Inductive nur' (p: bodiesT) : list goal -> list alt -> (list alt) -> Prop :=
 | Stop a : nur' [::] a a
-| Cut a (ca:list alt) r gl : good_cut1 gl ca -> nur' gl ca r -> nur' [::Goal cut ca & gl] a r
+| Cut a (ca:list alt) r gl : nur' gl ca r -> nur' [::Goal cut ca & gl] a r
 | Fail a g al r : nur' a al r -> nur' g (a :: al) r
 | Call {a ca f b bs gl r} : p f = [:: b & bs ] ->
   nur' (save_alt a b gl) (more_alt a bs gl) r -> nur' [::Goal (call f) ca & gl] a r.
@@ -369,7 +369,7 @@ Proof.
   + inversion 2; subst.
     repeat econstructor.
   
-  + move=> a ca r gl GCH NUR IH // GL G1 ALTS H.
+  + move=> a ca r gl NUR IH // GL G1 ALTS H.
     inversion H as [|X Y [G1_p G1_ca] G1_gl [MP_g2p MP] F2].
     simpl in MP_g2p, MP; subst; clear H.
     move=> H; inversion H; subst; clear H.
@@ -380,10 +380,12 @@ Proof.
     simpl in *.
 
     have GL_gl_ca: good_levels1 (gl :: ca).
-      constructor; auto.
-      inversion GL; subst.
-      inversion H1; subst.
-      by inversion H8; subst.
+      1:{
+        inversion GL; subst.
+        inversion H1; subst.
+        inversion H8; subst.
+        constructor; auto.
+      }
 
     have GL_ys_ca: good_levels1 (G1_gl :: G1_ca).
       1:{
@@ -396,7 +398,7 @@ Proof.
 
     move: IH => /(_ GL_gl_ca G1_gl G1_ca F2 GL_ys_ca GG) [{}sol IH].
     inversion GL_ys_ca; subst.
-    exists sol; apply: Cut H1 IH.
+    exists sol; apply: Cut IH.
 
   + move=> a g al r NUR IH GL G1 ALTS F2 GL_G1.
     inversion 1; subst; inversion H5; subst.
@@ -458,7 +460,7 @@ Proof.
   elim => /=.
   - exists [::], [::]; repeat constructor; auto.
 
-  - move => a ca r gl GC H /= IH /= GL. 
+  - move => a ca r gl H /= IH /= GL. 
     inversion GL as [|gs alts' GC1 GL1 C]; subst; clear GL.
     inversion GC1 as [| P CA TL ALTS GL2 SUFF GC2]; subst; clear GC1.
     case: (IH GL2) => g' [s' [+ NUR]].
@@ -574,18 +576,45 @@ Print Assumptions cut_semantic.
 
 
 
+Sotto delirio.
 
 (* nur' p s0 (rcons gl (Goal cut ca) ++ d) (a::al) alts' s1 -> 
   good_levels () -> 
     ((nur' p s0 gl _ alts'' s01 -> nur' p s01 d ca s1) \/ (nur' p s0 a al s t'' s1)). *)
 
-Lemma run_cut_middle {gl ca tl a al s}:
-good_levels ((rcons gl (Goal cut ca) ++ tl) :: (a::al)) -> 
-  nur' p (rcons gl (Goal cut ca) ++ tl) (a::al) s -> (nur' p tl ca s' \/ nur' p a al s).
+Lemma run_cut_middle {p gl ca tl a al s}:
+  nur' p (rcons gl (Goal cut ca) ++ tl) (a::al) s -> 
+    good_levels1 ((rcons gl (Goal cut ca) ++ tl) :: (a::al)) -> 
+      (nur' p tl ca s \/ nur' p a al s).
 Proof.
-  Admitted.
+(*   
+  elim: gl => [|gl0 gl].
+  + by inversion 1; auto.
+  + move=> IH H1 H2.
+    inversion H2; subst; clear H2.
+    inversion H1; subst; auto.
+    inversion H3; subst; clear H3.
+    inversion H4; subst; clear H4.
+    inversion H5; subst; clear H5.
+    inversion H9; subst; clear H9.
 
-Lemma run_cut_end:
+
+
+  move=> H.
+  remember (rcons gl (Goal cut ca) ++ tl); remember (a :: al).
+  elim: H gl ca tl a al Heql0 Heql.
+  + by move=> ? [].
+  + (*cut case*)
+    move=> a ca r gl NUR' IH [|gl0 gls] ca0 tl0 a0 al0 ? [] ? ? H; subst.
+    inversion H; subst; clear H.
+    inversion H2; subst; clear H2.
+    inversion H3; subst; clear H3.
+    inversion H4; subst; clear H4.
+    move: H6 => /suffixP /= [pref H]. *)
+
+Admitted.
+
+(* Lemma run_cut_end:
 nur' p (rcons gl (Goal cut ca)) (a::al) s -> good_levels () -> (nur' p d ca s' \/ nur' p a al s).
 Proof.
 Admitted.
@@ -599,15 +628,118 @@ Admitted.
 Lemma run_cut_end:
 nur' p (rcons gl (Goal cut ca)) a s -> good_levels () -> (s = [::] \/ nur' p a al s).
 Proof.
-Admitted.
+Admitted. *)
 
-
-
-Lemma run_cut_ent_empty_alts:
-good_levels (rcons gl (Goal cut ca) :: [::]) ->
-nur' p (rcons gl (Goal cut ca)) [::] s -> s = ca.
+Lemma skip_pref {p t1 tl ca suff r}:
+  all (fun x => match g2p x with cut => false | _ => true end) suff ->
+  nur' p (t1 ++ Goal cut ca :: suff) ([seq x ++ Goal cut ca :: suff | x <- tl]) r ->
+    nur' p suff ca r.
 Proof.
-Admitted.
+  remember (Goal cut ca :: suff).
+  remember (t1 ++ l).
+  remember ([seq x ++ l  | x <- tl]).
+  move=> + H.
+  move: t1 tl ca suff l Heql Heql0 Heql1.
+  elim: H.
+  + move=> a [] // tl ca suff [] //.
+  + move=> a ca {}r gl NUR IH [|t10 t1s] tl ca0 suff l H //=; subst;
+    move=> []??? ALL; subst; auto.
+    
+
+    eapply IH.
+    apply erefl.
+    apply erefl.
+
+    inversion NUR.
+    move: IH => /(_ _ _ _ _ _ erefl erefl).
+    
+
+
+Lemma aa {p gl ca tl r}:
+  nur' p (rcons gl (Goal cut ca) ++ tl) [::] r ->
+    good_levels1 ((rcons gl (Goal cut ca) ++ tl) :: [::]) ->
+      nur' p tl ca r.
+Proof.
+  remember (rcons gl (Goal cut ca) ++ tl).
+  remember [::].
+  move=> H.
+  move: gl ca tl Heql Heql0.
+  elim: H.
+  + move=> ?[] //.
+  + move=> a ca {}r gl NUR IH [|gl0 gl0s] /= ca0 tl [] ???; subst; auto.
+    inversion 1; subst.
+    inversion H2; subst.
+    clear H H2.
+    move: H7 => /suffixP /= [pref H].
+    destruct pref, ca => //.
+    move: IH => /(_ _ _ _ erefl erefl H5) //.
+  + move=> //.
+  + move=> a ca f b bs gl {}r PF NUR' IH [|gl0 gls] /= ca0 tl [] ??? // H; subst.
+    inversion H; subst; clear H.
+    inversion H2; clear H2; subst.
+    move: H6 => /suffixP /= [pref H].
+    clear IH.
+    clear H3.
+    destruct pref, ca => //.
+    clear H.
+    inversion H7; subst; clear H7.
+    destruct gls => //.
+    rewrite more_alt_empty_alts in NUR'.
+    induction b.
+    inversion NUR'.
+    destruct gls => //.
+    destruct H; subst.
+    move: H1 => /suffixP /= [pref H].
+    destruct pref, ca => //.
+    inversion H2.
+    admit.
+    subst.
+    inversion H7; subst.
+    destruct gls => //.
+    move: H2 => /suffixP /= [pref H2].
+    destruct pref, ca => //.
+
+    subst.
+    inversion NUR'.
+
+
+
+
+
+  
+
+
+
+Lemma run_cut_ent_empty_alts {p gl ca tl a al s}:
+  nur' p (rcons gl (Goal cut ca) ++ tl) [::] s -> 
+    good_levels1 ((rcons gl (Goal cut ca) ++ tl) :: [::]) -> 
+      (nur' p tl ca s \/ nur' p a al s).
+Proof.
+  remember (rcons gl (Goal cut ca) ++ tl).
+  remember [::].
+  move=> H.
+  move: ca tl a al Heql0 Heql.
+  elim: H.
+  + case: gl => //.
+  + case: gl => [|gl0 gl] /= a ca r gl' NUR IH ca0 tl0 a0 al0 H; subst;
+    inversion 1; subst; clear Heql; auto.
+    move=> H.
+    inversion H; subst; clear H.
+    inversion H2; clear H2; subst.
+    inversion H4; clear H4; subst.
+    move: H6 => /suffixP /= [pref H].
+    destruct pref, ca => //.
+    simpl in *.
+
+
+  + move=> //.
+  + move => //.
+    auto.
+  auto.
+
+
+
+  
 
 Definition functional_goal'' p :=
   forall g s, nur' p (map make_empty_alts g) [::] s -> s = [::].
