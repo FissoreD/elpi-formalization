@@ -5,25 +5,35 @@ first describe the language we are working with, namely a dialect of \lamprolog
 called \elpi.
 
 Since we have structured our paper into two main sections: 1) the first
-discusses a basic version of ELPI with only Horn clauses and the cut operator,
+discusses a basic version of \elpi with only Horn clauses and the cut operator,
 and 2) the second extends this version by introducing hereditary-Harrop
 formulas, we will keep the presentation of the types and functions we need
 simple, expanding them further when needed.
 
 Data are represented by integers. For now, predicate are binary relations and
 have type \\\elpiIn{int -> int -> prop}. The two areguments are respectively 
-considered as its input and output (see \cref{sec:modes}).
+considered as its input and output to better represent mode analysis
+(see \cref{sec:modes}).
+
+TODO: dare la definizione di termine: per ora è sufficiente dire che un termine
+è un predicate applicato a due interi? Altrimenti potremmo avere un argomenti
+di tipo prop che rompono la functionality. + dire che Una variabile è un termine
 
 An atom is either a fully applied predicate or the cut operator, noted
 \elpiIn{!}.
 
+TODO: spiegare meglio la unify: quali sono le sue proprietà, ad esempio
+transitività.
+
 A variable is a term not yet instantiated. We can assign variables thanks to the
-\texttt{unify} procedure and we note that 2 terms $t_1$ and $t_2$ have to be
-unifed with the notation $t_1 = t_2$. We store the result of variable assignment
-into substitutions, that are mapping from variable name to their assignment $t$.
-We considered that the returned term is the most dereferenced one, ie. $t$ is a
-the dereferenced assignement for the variable $X$ in the subsitution $s$ if any
-variable appearing as a subterm of $X$ is not assigned in $s$.
+\texttt{unify} procedure. The notation $t_1 = t_2$ is the unification between
+the terms $t_1$ and $t_2$. We store the result of variable assignment into
+substitutions. A substitution is a mapping from variable name to its assignment
+$t$. We considered that the returned assignment is the most dereferenced one,
+ie. $t$ is the dereferenced assignement for the variable $X$ in the subsitution
+$s$ if $X$ maps to $t'$ in the mapping and all variables in $t'$ 
+are dereferenced, if the variable does not appear in the substitution then
+the same variable is returned.
 
 By convention variables are indicated with capital letters, whereas predicate
 names and constants are indicated with lower case letters.
@@ -31,11 +41,11 @@ names and constants are indicated with lower case letters.
 A clause is made of a predicate name, its two arguments and a body made of a
 list of atoms. The list of these atoms are called premises and should be
 considered as a list of subgoals in conjunction. By convention a clause is noted
-with \elpiIn{p i o :- b} where p is the predicate name i and o are its
+with ``\elpiIn{p i o :- b}'' where p is the predicate name i and o are its
 parameters and b is the body. It should be read as follows: if \elpiIn{b} holds
 then \elpiIn{p i o} holds. 
 
-A program is a mapping from predicate name to clauses. These clauses are in
+A program is a mapping from predicate names to clauses. These clauses are in
 disjunction and the order of their visit depend on the chronological order in
 which clauses have been declared. We have no builtin \textit{or} operator but
 it's behavior can be replicated by adding several implementation of the same
@@ -47,14 +57,21 @@ compiled language and we do not build super-homogenous clauses for each
 predicate. This is mainly due to the fact that \elpi is an homoiconic language
 and its program definition can change during the evaluation of the code.
 
-A program is a mapping from predicate name to clauses and a goal is an atom and
-a query is made by a list of goal. 
+A program is a mapping from predicate name to clauses.
+
+A goal is a triple made of a program \prog, an atom
+$\mathcal{A}$ and a list of alternatives $\mathcal{B}$. In particular,
+$\mathcal{A}$ is evaluated by looking into the clauses inside \prog. $s$ is the
+substitution existing at the creation of the current goal. $\mathcal{B}$
+contains the choice-points used by the interpreter during the evaluation of a
+cut, the aim of this piece of data will be clarified further in the section
+dedicated to the interpreter implementation (see \cref{sec:basic-elpi}).
 
 The interpreter takes a program a query and returns a substitution if the query
 is a consequence of the program. Each time a predicate call has multiple clauses
 implementing it, it commits the first choice and keep the other as global
-alternatives. If choice leads to a failure, the interpreter will try to execute
-of the global alternatives. This non-deterministic behavior can be controlled by
+alternatives. If that choice leads to a failure, the interpreter will try to execute
+the first alternative. This non-deterministic behavior can be controlled by
 the user thanks to the cut operator which allows to cut out alternatives (see
 \cref{sec:cut}).
 
@@ -62,50 +79,44 @@ To be more precise, we give below the type structure of each cunstruct we have
 defined above:
 
 \begin{coqcode}
+  Definition tm := Set.
   Definition pn := string. (*predicate names are strings*)
   Definition vn := string. (*variable  names are strings*)
   Inductive atom := 
-    | PN pn nat nat : t. (*binary predicates taking integers*)
-    | CUT : t.           (*binary predicates taking integers*)
-    ...                  (*this is extended in section XX*)
-  Definition clause := pname * int * int * list (atom).
-  Definition sbst := vname -> atom.
-  Definition prog := pname -> list clause.
-  Definition goal := prog * atom * list alt
+    | Call (p:pn) (i:tm) (o:tm) : t  (*binary predicates taking integers*)
+    | Cut : t                        (*binary predicates taking integers*)
+    ...                              (*this is extended in section XX*)
+  Inductive clause := Clause (p:pn) (i:tm) (i:tm) (A:list atom) : Clause.
+  Notation "P I O :- Bo" := (Clause P I O Bo) (at level 200, right associativity).
+  Definition sbst := T.
+  Definition prog := pn -> list clause.
+  Inductive goal := Goal (P:prog) (A:atom) (A:list alt) -> goal.
   with alt := sbst * list goal.
 \end{coqcode}
 
-Since we have to make backtracking and cut change the 
-
-A goal is a triple made of a program \prog, a substitution $s$, an atom
-$\mathcal{A}$ and a list of alternatives $\mathcal{B}$. In particular,
-$\mathcal{A}$ is evaluated by looking into the clauses inside \prog. $s$ is the
-substitution existing at the creation of the current goal. $\mathcal{B}$
-contains the choice-points used by the interpreter during the evaluation of a
-cut, the aim of this piece of data will be clarified further in the section
-dedicated to the interpreter implementation.
-
-
-Prolog interpreter has a \texttt{run} procedure relating a program, a goal, a list of 
-alternatives to a new list of alternative and a substition
-
+Below we provide the signature of the intepreter which is expressed by
+the \run predicate. Its implementation will be provided thanks to derivation
+rules in \cref{sec:basic-elpi} and \cref{sec:full-elpi}.
+%
 \begin{minted}[autogobble]{coq}
-  Inductive run : prog -> goal -> list alt -> subst -> list alt :=
-    ...
-
-  Definition functional_goal (p: prog) :=
-    forall g s, run p g [::] s -> s = [::].
+  Inductive run : goal -> list alt -> subst -> list alt -> subst := ...
 \end{minted}
 
+This predicate should be read as a relation between a goal \g, a list of
+alternative \alt (which are in disjunction with the current goal) and an initial
+substitution \subst. These three objects produce a new list of alternatives
+\alt['] and a new substitution \subst[']. The idea is that the intepreter stop
+when it finds the first solution, which is a valid substitutions for the query
+wrt the program. In order to find all the solution of query from the current
+program, that is all the valid substutions for the query, it is sufficient to
+iterate over all the alternatives \alt[1].
 
-\subsection{The role of the cut}
+\subsection{The cut operator}
 \label{sec:cut}
 
-Here we give a definition of our cut: \cite{2003Andrews}
-
-Logic programs are known for their non-deterministic behavior. The could be
+Logic programs are known for their non-deterministic behavior: there could be
 several distinct ways to derive a query from a base of knowledge and logic
-programs aims to find these all of this solution. 
+programs aims to find all of these solutions. 
 % We have put quotations around
 % the words non-deterministic since of course the interpreter of the prolog system
 % has to make some choice about the order in which the rules of the program are
@@ -114,33 +125,105 @@ programs aims to find these all of this solution.
 
 If non-determinism is a key feature, sometimes it is important to let the user
 control if and when alternatives have to be rejected. The cut operator is meant
-to address this problem. It is often used, for example, to provide an
-implementation for the \textit{if-then-else} construct. 
+to address this problem.
 
 Since we use the elpi dialect of lambda-prolog, it is important to clarify how
 the cut behaves in our development. It is in case that each prolog-ish language
 has its own cut implementation, for example in the official page of
 swi-prolog\footnote{\href{www.swi-prolog.org}{www.swi-prolog.org}} we see that
-there are two different kind of cut implementation: the `soft cut' noted with
-``\texttt{A *-> B ; C}'' runs C if A has no solution otherwise the result is the
-same as running the conjunction of A and B. The `hard cut' noted with the
+there are two different kind of cut implementation: the \textit{soft cut} noted with
+``\texttt{C *-> T ; E}'' runs E if C has no solution otherwise the result is the
+same as running the conjunction of C and T. The \textit{hard cut} noted with the
 ``\texttt{!}'', "discards all choice points created since entering the predicate
 in which the cut appears".
 
-In mercury \cite{1996Somogy}\dots Dire anche che molti usano la super-homogenous
-forms invece che regole distinte ma per noi non va bene visto che il programma
-può essere esteso a piacimento
+The \mercury system \cite{1996Somogy} is meant to be a pure programming language
+extended with types, modes, determinism and module systems. In order to satisfy
+its purity, \Mercury only accepts a version of the soft cut.
 
 It is also interesting to see that further representations of cut may exists,
 such as the firm cut explained in \cite{2003Andrews} where they provide a
 restricted version of the hard cut which has some concistency properties.
 
-Elpi implementation uses the hard cut definition. Even though the hard cut have
-no equivalent representation from pure logic, we are convinced that from a more
-more programming point of view it is quite practical to cut away not only the
+\Elpi implementation uses the hard cut definition. Even though the hard cut have
+no equivalent representation from pure logic, we are convinced that, from a
+programming point of view, it is quite practical to cut away not only the
 alternative implementation of a predicate but also to hinder backtracking of all
 choice points born from the begin of the clause-body to the current cut
 position.
+
+For example, in \elpi, the \textit{if-then-else} construct, which is not a
+primitive of the language, can be impelented as follows:
+\begin{elpicode}
+  if C T E :- C, !, T. % if1
+  if _ _ E :- E.       % if2
+\end{elpicode}
+Due to the hard cut, the query \elpiIn{if C T E} executes the \texttt{if1} rule.
+If \elpiIn{C} has $n > 0$ solutions then only the first is kept, the other being
+cut away as the rule \texttt{if2}. The call then succeeds only if \elpiIn{T} has
+a solution. The rule \texttt{if2} will be run only if \elpiIn{C} has no
+solution.
+
+For example, in the following database:
+
+\begin{elpicode}
+  p 1.
+  p 2.
+  q 2.
+\end{elpicode}
+The query \elpiIn{if (p X) (q X) (false)} fails. Note that the usage of the
+soft-cut would make the same query to have a solution, since the backtracking in
+the condition would be authorized.
+
+\subsection{Modes in the literature}
+\label{sec:modes}
+
+Before talking about functionality and the impact that hard-cut has on it. We
+prefer to spend some few words about the definition of modes, because as
+explained in \cite{1989Warren,1996Somogy} modes are the basis for determinim.
+
+The general idea is that a logic program allows to express relation, but,
+sometimes it is also needed to express directed relation where arguments are
+differenciated between inputs and output. Said in an other way, output arguments
+can be derived from input arguments. It is often the case that the user of a
+logic programming langauge tend, in most of cases, to express directed
+predicates. The typical example of this need is the \texttt{append} predicate
+aiming to concatate two lists.
+
+In a prolog-ish program without modes, the following program:
+
+\begin{elpicode}
+append [X|Xs] L [X|L'] :- append Xs L L'. % app1
+append [] L L.                            % app2
+\end{elpicode}
+
+\noindent
+makes the query ``\elpiIn{append Y [] L, 0 = 1}'' to diverge. This is a
+classical case where the variable \elpiIn{Y} is unified with a list of infinite
+length, the rule \texttt{app1} being continously applied.
+
+Modes are there to avoid this situation. In the literature we find several
+papers \cite{1989Warren,1996Somogy} distinguishing two kinds of modes, an input
+mode and an output mode. The idea is that each predicate is decorated with a
+mode signature. Then the static mode checker verifies that the clauses of the
+program are consistent with the mode declrations of the predicates. Essentially,
+in the head of a clause, 1) terms appearing in input position are supposed to be
+ground whereas 2) terms in output position must become ground in the body of the
+clause. In each premise of the body, 3) terms appering in output position become
+ground while 4) terms appearing in input position are checked to be ground. If
+condition 2) or 4) are not satisfied a mode compilation error is raised.
+
+In \twelf \cite{1996pfenning}, which is an implementation of \lamprolog, mode
+checking is extended to work with local nominal variables and higher-order
+variable unification within the pattern fragment.
+
+
+Modes have other benefits, such as guarantee the absence of occur check
+\cite{1994apt-oc}
+
+Modes 
+\cite{2002overton} -> Mercury
+
 
 \subsection{Functionality in the literature}
 
@@ -152,10 +235,12 @@ position.
 
 \cite{1996henderson} Mercury
 
-\subsection{Modes in the literature}
-\label{sec:modes}
+\begin{coqcode}
+Definition functional_goal (p: prog) :=
+  forall g s, run p g [::] s -> s = [::].
+\end{coqcode}
 
-\cite{2002overton} -> Mercury
+
 
 \subsection{Summary}
 

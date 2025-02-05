@@ -10,24 +10,27 @@
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
 
+\newcommand{\subst}[1][]{\ensuremath{\sigma#1}\xspace}
+\newcommand{\alt}[1][]{\ensuremath{\mathcal{A}#1}\xspace}
+\newcommand{\g}[1][]{\ensuremath{\mathcal{G}#1}\xspace}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Languages: start
 
 \newcommand{\lang}[1]{\texttt{#1}\xspace}
 
 \newcommand{\mercury}{\lang{mercury}}
+\newcommand{\twelf}{\lang{twelf}}
 \newcommand{\elpi}{\lang{elpi}}
 \newcommand{\coq}{\lang{coq}}
 
+\newcommand{\Mercury}{\lang{Mercury}}
 \newcommand{\Elpi}{\lang{Elpi}}
 \newcommand{\Coq}{\lang{Coq}}
 \newcommand{\lamprolog}{\lang{$\lambda$prolog}}
 
-
-
 % Languages: end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 \newenvironment{elpicode}{%
   \vspace{0.2em}%
@@ -52,9 +55,12 @@
 % goal{program}{goal}{alternatives}
 \newcommand{\goal}[3]{\ensuremath{(#1, #2, #3)}}
 \newcommand{\run}{\texttt{run}}
+\newcommand{\call}{\texttt{Call}}
+\newcommand{\cut}{\texttt{Cut}}
 
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
 \newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \to (#4, #5)}}
+\newcommand{\callCmd}[3]{\ensuremath{call\ #1\ #2\ #3}\xspace}
 
 \newcommand{\Cons}[1]{\ensuremath{#1::}}
 \newcommand{\ConsHd}[1]{\ensuremath{(#1::}\xspace}
@@ -64,7 +70,6 @@
 \newcommand{\EmptySubst}{\ensuremath{\varepsilon}}
 
 \newcommand{\prog}{\ensuremath{\mathcal{P}}\xspace}
-\newcommand{\call}[3]{\ensuremath{call\ #1\ #2\ #3}\xspace}
 \newcommand{\evdash}{\ensuremath{\colondash}\xspace}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -134,10 +139,10 @@
     % \RightLabelM{\ruleCall}
     % \TrinaryInfC{\runCmd{\ConsHd{(\prog, \call{p}{i}{o}, \_)}\ConsTl{gl}}{a}{s}{a'}{s'}}
     % 
-    \AxiomC{$\mathcal{F}(\prog p, i, o, s, a) = \ConsHd{b}\ConsTl{bs}$}
-    \AxiomC{\runCmd{(b\ @\ gl)}{(bs\ @\ a)}{s}{a'}{s'}}
+    \AxiomC{$\mathcal{F}(\prog p, i, o, s, a) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
+    \AxiomC{\runCmd{(g\ @\ gl)}{(new\_alt\ @\ a)}{s}{a'}{s'}}
     \RightLabelM{\ruleCall}
-    \BinaryInfC{\runCmd{\ConsHd{\goal{\prog}{\call{p}{i}{o}}{\_}}\ConsTl{gl}}{a}{s}{a'}{s'}}
+    \BinaryInfC{\runCmd{\ConsHd{\goal{\prog}{\callCmd{p}{i}{o}}{\_}}\ConsTl{gl}}{a}{s}{a'}{s'}}
   \end{myRule}
 }
 
