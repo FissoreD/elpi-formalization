@@ -1,0 +1,54 @@
+% tlpguide.tex
+% v1.0, released 24 Mar 2021
+% Copyright 2021 Cambridge University Press
+
+\documentclass{tlp}
+
+\usepackage{my_prelude}
+\bibliographystyle{tlplike}
+
+\begin{document}
+
+\lefttitle{Davide Fissore and Enrico Tassi}
+
+\jnlPage{1}{8}
+\jnlDoiYr{2021}
+\doival{10.1017/xxxxx}
+
+\title[Theory and Practice of Logic Programming]{Theory and Practice of Logic Programming: \LaTeX\ Guidelines for~authors\thanks{Research partially funded by
+      MINECO
+      MICINN PID2019-108528RB-C21 \emph{ProCode} project, FPU grant
+      16/04811}}
+
+\begin{authgrp}
+\author{\gn{Davide Fissore}}
+\affiliation{Université Côte d'Azur, Inria}
+\author{\gn{Ernico Tassi}}
+\affiliation{Université Côte d'Azur, Inria}
+\end{authgrp}
+
+\history{\sub{xx xx xxxx;} \rev{xx xx xxxx;} \acc{xx xx xxxx}}
+
+\maketitle
+
+\begin{abstract}
+This guide is for authors who are preparing papers for the {\em Theory and Practice of Logic Programming} journal using the \LaTeX\ document preparation
+system and the CUP TLP style file.
+\end{abstract}
+
+\begin{keywords}
+Mode Analysis, Determinacy Analysis, Higher Order, Logic Programming
+\end{keywords}
+
+
+\input{inputs/intro.tex}
+
+\input{inputs/preliminaries.tex}
+
+\input{inputs/elpi_basic.tex}
+\input{inputs/elpi_full.tex}
+\input{inputs/conclusion.tex}
+
+\input{inputs/enrico.tex}
+\bibliography{bib}
+\end{document}

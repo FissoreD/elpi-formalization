@@ -1,22 +1,23 @@
 OUTPUTDIR = .aux
 LATEX = pdflatex --shell-escape -output-directory=$(OUTPUTDIR) -synctex=1 -file-line-error -recorder
-BIBER = biber --output-directory=$(OUTPUTDIR)
-FNAME = func
+FNAME = main
+
+LATEX_BUILD_FULL = ${LATEX} ${FNAME}.tex -interaction=nonstopmode
 
 main: clean
 	mkdir -p $(OUTPUTDIR) && \
-	# make -C code/ && \
 	echo "---------------- 0 --------------------" && \
-	${LATEX} ${FNAME}.tex -interaction=nonstopmode && \
+	${LATEX_BUILD_FULL} && \
 	echo "---------------- 1 --------------------" && \
-	# read a && \
-	${BIBER} ${FNAME} && \
-	echo "---------------- 2 --------------------" && \
-	# read a && \
-	${LATEX} ${FNAME}.tex -f && \
+	${MAKE} bib && \
 	echo "---------------- 3 --------------------" && \
-	# read a && \
-	${LATEX} ${FNAME}.tex
+	${LATEX_BUILD_FULL} && \
+	echo "---------------- 4 --------------------" && \
+	${LATEX_BUILD_FULL}
+
+bib:
+	cp bib.bib ${OUTPUTDIR} && cp tlplike.bst ${OUTPUTDIR} && \
+	cd ${OUTPUTDIR} && bibtex ${FNAME}
 
 clean:
 	rm -rf $(OUTPUTDIR)
