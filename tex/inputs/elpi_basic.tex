@@ -1,16 +1,18 @@
-\section{Basic prolog}
+\section{First-order prolog}
 \label{sec:basic-elpi}
 
-\subsection{Basic interpreter}
+\subsection{First-order interpreter}
 In this first section we start with a first-order version of a logic language.
 
-The interpreter we are going to show is a system made by the derivation rules
-depicted in \cref{fig:basic-interp}. It's structure is not far from the
-operational semantic in \cite{1990Vink}.
-
-TODO: diverse semantiche a confronto: KING, ANDREWS,
-https://arxiv.org/pdf/0911.5203 (forse), VINK -> denotational vs operation quindi
-mi porto una funzione vs mi porto uno lista
+The interpreter we are going to present is a system based on the derivation
+rules depicted in \cref{fig:basic-interp}. Its structure is similar to the
+operational semantics in \cite{1990Vink}. The choice to use operational
+semantics, rather than denotational semantics (as in \cite{2011king}), is due to
+our preference for maintaining a concrete representation of the objects we are
+manipulating. Instead of using continuations to store the state of a choice
+point, we prefer to represent this information as lists containing the
+alternatives, along with the substitution existing at the moment the choice
+point was created.
 
 \begin{figure}
   
@@ -28,7 +30,7 @@ mi porto una funzione vs mi porto uno lista
   \label{fig:basic-interp}
 \end{figure}
 
-The small-step semantics expressed by \runCmd{g}{a}{s}{a'}{s'} relates a list of
+The semantics expressed by \runCmd{g}{a}{s}{a'}{s'} relates a list of
 goals $g$, a list of alternatives $a$ and an initial substitution $s$ with a
 new substitution $s'$ and a new list of alternatives $a'$. The list of goals
 should be understood as a list of goal put in cunjunction, whereas the
@@ -105,7 +107,7 @@ p3 1 2.                     % r5
 \end{elpicode}
 
 {
-\def\goalG{\goal{\prog}{call\ (\text{\elpiIn{p1 3 Z}})}{\EmptyList}}
+\def\goalG{\goalCmd{\prog}{call\ (\text{\elpiIn{p1 3 Z}})}{\EmptyList}}
 
 Let $\mathcal{G} :=\ \goalG$ be a goal, the execution of
 ``\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?S}'' will apply \ruleCall
@@ -129,10 +131,20 @@ empty substitution. This last unification succeed with final substution $?A :=
 }
 
 
-\subsection{Static mode checker}
+\subsection{First-order mode checker}
 
-\subsection{Static functionality checker}
+Mode checking in this setting is performed using the classical groundness
+verification where term groundness is derived from their flow in the body of a
+clause. We start with the hypothesis that a term in input position in the head
+of a clause is ground. The premises in the body representing calls to predicates
+must be called with ground input terms, while output are supposed to become
+ground. At the end of the body analyse, we check that the output terms in the
+head of the clause has become ground. If this is not the case, or if a call in
+the body is done with a non-ground term in input position a mode-checking error
+is raised.
 
+\subsection{First-order functionality checker}
 
+As anticipated, functionality checking can be performed in 
 
 

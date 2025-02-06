@@ -10,8 +10,9 @@ and 2) the second extends this version by introducing hereditary-Harrop
 formulas, we will keep the presentation of the types and functions we need
 simple, expanding them further when needed.
 
-Data are represented by integers. For now, predicate are binary relations and
-have type \\\elpiIn{int -> int -> prop}. The two areguments are respectively 
+Data are represented by terms. For now, a term is an opaque data representing
+terms living in the datatype predicate are binary relations and
+have type \\\elpiIn{int -> int -> prop}. The two arguments are respectively 
 considered as its input and output to better represent mode analysis
 (see \cref{sec:modes}).
 
@@ -90,7 +91,7 @@ defined above:
   Notation "P I O :- Bo" := (Clause P I O Bo) (at level 200, right associativity).
   Definition sbst := T.
   Definition prog := pn -> list clause.
-  Inductive goal := Goal (P:prog) (A:atom) (A:list alt) -> goal.
+  Inductive goal := Goal (P:prog) (a:atom) (A:list alt) -> goal.
   with alt := sbst * list goal.
 \end{coqcode}
 
@@ -109,7 +110,7 @@ substitution \subst. These three objects produce a new list of alternatives
 when it finds the first solution, which is a valid substitutions for the query
 wrt the program. In order to find all the solution of query from the current
 program, that is all the valid substutions for the query, it is sufficient to
-iterate over all the alternatives \alt[1].
+iterate over all the alternatives \alt['].
 
 \subsection{The cut operator}
 \label{sec:cut}
@@ -127,7 +128,7 @@ If non-determinism is a key feature, sometimes it is important to let the user
 control if and when alternatives have to be rejected. The cut operator is meant
 to address this problem.
 
-Since we use the elpi dialect of lambda-prolog, it is important to clarify how
+Since we use the elpi dialect of \lamprolog, it is important to clarify how
 the cut behaves in our development. It is in case that each prolog-ish language
 has its own cut implementation, for example in the official page of
 swi-prolog\footnote{\href{www.swi-prolog.org}{www.swi-prolog.org}} we see that
@@ -158,7 +159,7 @@ primitive of the language, can be impelented as follows:
   if C T E :- C, !, T. % if1
   if _ _ E :- E.       % if2
 \end{elpicode}
-Due to the hard cut, the query \elpiIn{if C T E} executes the \texttt{if1} rule.
+Due to the hard cut, the query ``\elpiIn{if C T E}'' executes the \texttt{if1} rule.
 If \elpiIn{C} has $n > 0$ solutions then only the first is kept, the other being
 cut away as the rule \texttt{if2}. The call then succeeds only if \elpiIn{T} has
 a solution. The rule \texttt{if2} will be run only if \elpiIn{C} has no
@@ -171,11 +172,11 @@ For example, in the following database:
   p 2.
   q 2.
 \end{elpicode}
-The query \elpiIn{if (p X) (q X) (false)} fails. Note that the usage of the
+The query ``\elpiIn{if (p X) (q X) (0 = 1)}'' fails. Note that the usage of the
 soft-cut would make the same query to have a solution, since the backtracking in
 the condition would be authorized.
 
-\subsection{Modes in the literature}
+\subsection{Concerning modes}
 \label{sec:modes}
 
 Before talking about functionality and the impact that hard-cut has on it. We
@@ -217,46 +218,119 @@ In \twelf \cite{1996pfenning}, which is an implementation of \lamprolog, mode
 checking is extended to work with local nominal variables and higher-order
 variable unification within the pattern fragment.
 
+It is interesting to note that mode checking under the groundness condition is
+sometime too restrictive. In some situation it is in fact sufficient to work
+with term that are "enough" ground to guarantee the wanted properties. As an
+example, both \cite{1994apt-oc} and \cite{2002overton}, even though they
+researches concern different areas, present a version of this mode checking with
+"enough" instantiated terms together with some condition of variable linearty.
 
-Modes have other benefits, such as guarantee the absence of occur check
-\cite{1994apt-oc}
+In our paper, we will combine all of these ideas, as \elpi is used as a
+meta-language for proof verification
+\cite{tassi2018,tassi2019,tassi2023,fissore2023,fissore2024}. In particular, we
+need to work with a higher-order setup where inputs (and outputs) may not be
+fully instantiated: the role of the search engine is to potentially assign
+unification variables. In the first part of the paper, mode verification is not
+particularly relevant since we present a first-order version of the language.
+However, in the second part, we allow predicate arguments to receive not only
+objects living in the datatype space but also propositions.
 
-Modes 
-\cite{2002overton} -> Mercury
+\subsection{Concerning functionality}
 
 
-\subsection{Functionality in the literature}
+Determinacy, as anticipated, is the property of a predicate that returns at most
+one solution per call. Determinism checking statically ensures that a predicate
+marked as determinate respects this condition with respect to the clauses
+implementing it. In the literature, several papers discuss this topic, although
+they provide different descriptions and different usages of it.
 
-\cite{1989Warren,1987vanroy}
+Determinacy checking (or inference) is statically performed on a program on
+predicates annotated (or inferred) as determinate. A predicate is functional if
+all of the clauses implmenting it have mutually-exclusive heads, that is they
+cannot be applied at the same time. By the way, non-mutually exclusive clauses
+$c_0, \dots, c_n$ are accepted if all clauses $c_i$ with $0 \leq i < n$ have
+a cut. Thanks to these two conditions we are sure that at most one clause can
+be applied successfully per predicate call. The second important condition
+for determinacy is that all the premises of a clauses after the last cut are
+call to determinate predicate, and, if the clause has no cut all its premises
+are call to determinate predicate.
 
-\cite{1991Sahlin,1996mogensen}
+In \cite{1989Warren}, Debray and Warren describe a property subsuming
+determinism: they describe functionality. A predicate (clause or query) is
+functional if it produces at most one \textit{distinct} solution per predicate
+call. The key word here is \textit{distinct}, since, in the determinacy setting,
+a predicate call producing the same solution twice is not considered as
+determinate, while, it is functional. In the paper they explain that mutual
+exclusivness of clauses can be improved not only by looking at the head and at
+the presence of the cut but also by instructing the checker that premises can
+put clauses in mutual exclusivness.1`'
 
-\cite{king2005,king2006,2011king}
+In \cite{1991Sahlin}, and more formally in \cite{1996mogensen}, determinacy is
+used to work with \mixtus, a partial evaluator of \prolog. In that case,
+determinacy was inferred so that it was possible to derive a new specialiezed,
+and therefore more efficient, version of the original program under the
+guarantee that the two program share the same semantics.
 
-\cite{1996henderson} Mercury
+Finally, in \cite{1996henderson}, a determinacy checker for \mercury allows to
+capture different kind of behaviour of a predicate. A predicate can return
+exactly zero and/or one solution, zero and/or multiple solution. In \mercury the
+user is allowed to annotate predicates with determinacy information. A
+non-annotated predicate will be inferred with the lowest derived tag.
+Determinacy, in \mercury, besides giving a guarantee on the program, allows to
+specialized it so that a faster routine can be used in the compiled program.
+
+Several work of King et al \cite{king2005, king2006, 2011king} had been pursued
+in order to build an inference model for determinacy in \prolog system with cut.
+Moreover, they explain that mode inference subsume mode checking. This claim is
+quite intuitive, however, we will present a determinacy checker.
+
+Our idea it's up to the user to choose what should be the behavior of a
+predicate wrt determinacy. The checker, in fact, assists the user by rejecting,
+a predicate, that, for example, is not to detected as determinate. Moreover,
+since \elpi is an interpreted language, it seems quite useless a mode inference
+engine. This is because local rules can be charged \textit{à la volée} during
+the evaluation of the program. 
+
+As explained in some of the previously cited papers, determinacy (and so
+functionality) checking is an undecidable problem. The checking property is
+sound: if a predicate passes the analysis then it is for sure determinate.
+However, it is not complete since there could exists false negatives. We are
+convinced, that completeness, is not a big deal, since, as also claimed in ...
+the clases of every determinate predicate can be rewritten in a equivalnet form
+so that they are no more classified as non-determinate.
 
 \begin{coqcode}
-Definition functional_goal (p: prog) :=
-  forall g s, run p g [::] s -> s = [::].
+Definition determinate_pred (~\prog~: prog) (p: pn) :=
+  forall ~$i$~ ~$o$~ ~$a$~ ~\subst~(H : ~\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst}~), ~$a$~ = ~\EmptyList~.
 \end{coqcode}
 
+The definition above explains what it means for a predicate to be determinate. 
+The idea is that in a given program \prog and a predicate $p$,
+if for any call to $p$ with arbitrary input and output terms
+starting with the empty substitution and the empty list of alternatives,
+we have a solution, i.e. the couple $(a, \subst)$ then the list of
+alternatives $a$ is empty. This essentailly means that any functional
+predicate produces no choice points.
 
+\subsection{Contributions and paper structure}
 
-\subsection{Summary}
+In our paper we will provide a description about a new mode and functionality
+checkers to verify that clauses are consistent wrt the user annotation. We
+introduce these concepts with the \elpi programming language. We start by a
+light version of \elpi in the first-order setting, i.e. with no $\lambda$-terms.
+Here we provide the derivation system allowing to evaluate a query. Few words
+will be spent on the mode checker in this subset of the \elpi language. These
+derivation rule, together with the mode checker, are used to prove that any
+functional predicate can be rewritten so that all of its rules have at least one
+cut by keeping the semantics of the original program. 
 
-\cref{tab:comparison}
-
-\begin{table}
-  \centering
-  \begin{tabular}{c|c|c|c|c|c}
-    Paper   & Mode check & Determincy check & Cut        & Harrop     & HO unif   \\
-    \hline
-    Mercury & Compile    & \checkmark       & \xmark     & \xmark     & \xmark    \\
-    Mixtus  & Compile    & \checkmark       & \checkmark & \xmark     & \xmark    \\
-    Elpi    & Runtime    & \checkmark       & \checkmark & \checkmark & Partially \\
-  \end{tabular}
-
-  \caption{Comparison}
-  \label{tab:comparison}
-\end{table}
-
+In the second part of the paper we will extend the intepreter so that it can
+work with higher-order variables, hereditary-arrop clauses insertion and local
+$\forall$-quantified variable declaration. Here predicates will also take
+propositions as arguments. Thanks to this extention we will propose a new mode
+checking algorithm working with a new definition of groundness, called
+\textit{input-ground}. The signature of a predicate can be annotated so that
+output arguments are guaranteed to be determinate. This will make the
+determinacy checker to analyse not only determinate clauses but also relational
+one, since a check should be performed wrt the determinacy annotation of its
+outputs.

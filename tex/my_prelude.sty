@@ -4,6 +4,7 @@
 \usepackage{mathtools}
 \usepackage{multicol}
 \usepackage{cleveref}
+\usepackage{todonotes}
 
 % \usepackage{amssymb}% http://ctan.org/pkg/amssymb
 \usepackage{pifont}% http://ctan.org/pkg/pifont
@@ -19,6 +20,8 @@
 
 \newcommand{\lang}[1]{\texttt{#1}\xspace}
 
+\newcommand{\prolog}{\lang{prolog}}
+\newcommand{\mixtus}{\lang{mixtus}}
 \newcommand{\mercury}{\lang{mercury}}
 \newcommand{\twelf}{\lang{twelf}}
 \newcommand{\elpi}{\lang{elpi}}
@@ -53,14 +56,15 @@
 
 
 % goal{program}{goal}{alternatives}
-\newcommand{\goal}[3]{\ensuremath{(#1, #2, #3)}}
 \newcommand{\run}{\texttt{run}}
 \newcommand{\call}{\texttt{Call}}
 \newcommand{\cut}{\texttt{Cut}}
+\newcommand{\goal}{\texttt{Goal}}
 
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
 \newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \to (#4, #5)}}
-\newcommand{\callCmd}[3]{\ensuremath{call\ #1\ #2\ #3}\xspace}
+\newcommand{\callCmd}[3]{\ensuremath{(\call\ #1\ #2\ #3)}\xspace}
+\newcommand{\goalCmd}[3]{\ensuremath{\goal\ #1\ #2\ #3}\xspace}
 
 \newcommand{\Cons}[1]{\ensuremath{#1::}}
 \newcommand{\ConsHd}[1]{\ensuremath{(#1::}\xspace}
@@ -108,7 +112,7 @@
     \AxiomC{$\text{unify}\ x\ y\ s\ s'$}
     \AxiomC{\runCmd{gs}{a}{s'}{a'}{s''}}
     \RightLabelM{\ruleUnif}
-    \BinaryInfC{\runCmd{\ConsHd{\goal{\_}{x = y}{\_}}\ConsTl{gs}}{a}{s}{a'}{s''}}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{x = y}{\_}}\ConsTl{gs}}{a}{s}{a'}{s''}}
   \end{myRule}
 }
 
@@ -126,7 +130,7 @@
     % CUT
     \AxiomC{\runCmd{gl}{ca}{s}{a}{s'}}
     \RightLabelM{\ruleBang}
-    \UnaryInfC{\runCmd{\ConsHd{\goal{\_}{!}{ca}}\ConsTl{gl}}{\_}{s}{a}{s'}}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{!}{ca}}\ConsTl{gl}}{\_}{s}{a}{s'}}
   \end{myRule}
 }
 
@@ -142,7 +146,7 @@
     \AxiomC{$\mathcal{F}(\prog p, i, o, s, a) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
     \AxiomC{\runCmd{(g\ @\ gl)}{(new\_alt\ @\ a)}{s}{a'}{s'}}
     \RightLabelM{\ruleCall}
-    \BinaryInfC{\runCmd{\ConsHd{\goal{\prog}{\callCmd{p}{i}{o}}{\_}}\ConsTl{gl}}{a}{s}{a'}{s'}}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{p}{i}{o}}{\_}}\ConsTl{gl}}{a}{s}{a'}{s'}}
   \end{myRule}
 }
 
