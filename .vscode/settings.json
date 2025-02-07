@@ -3,37 +3,27 @@
     "latex-workshop.latex.outDir": ".aux",
     "latex-workshop.latex.autoBuild.run": "never",
     "latex-workshop.latex.tools": [
-        {
-            "name": "pdflatex",
-            "command": "pdflatex",
+        { 
+            "name": "latexmk",
+            "command": "latexmk",
             "args": [
+                "-pdf",
                 "-interaction=nonstopmode",
                 "--shell-escape",
                 "-synctex=1",
                 "-file-line-error",
                 "-recorder",
-                "-output-directory=%OUTDIR%",
-                "%DOC%"
+                "-outdir=%OUTDIR%"
             ]
-        },
-        {
-            "name": "biber",
-            "command": "biber",
-            "args": [
-                "%OUTDIR%/%DOCFILE%"
-            ]
-        },
+        }
     ],
     "latex-workshop.latex.recipes": [
         {
-            "name": "pdflatex for paper",
+            "name": "make tex",
             "tools": [
-                "pdflatex",
-                "biber",
-                "pdflatex",
-                "pdflatex"
+                "latexmk"
             ]
-        }
+        },
     ],
     "latex-workshop.latex.recipe.default": "lastUsed",
 
