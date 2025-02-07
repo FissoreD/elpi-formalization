@@ -7,6 +7,10 @@
 \usepackage{blindtext}
 \usepackage{hyperref}
 \usepackage{cleveref}
+\usepackage{mdframed}  % For creating a bordered box
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
 
 % \usepackage{amssymb}% http://ctan.org/pkg/amssymb
 \usepackage{pifont}% http://ctan.org/pkg/pifont
@@ -16,6 +20,11 @@
 \newcommand{\subst}[1][]{\ensuremath{\sigma#1}\xspace}
 \newcommand{\alt}[1][]{\ensuremath{\mathcal{A}#1}\xspace}
 \newcommand{\g}[1][]{\ensuremath{\mathcal{G}#1}\xspace}
+
+\newenvironment{boxedproof}
+{\begin{mdframed}\begin{proof}}
+      {\end{proof}\end{mdframed}}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Languages: start
@@ -46,6 +55,8 @@
   \vspace{0.2em}%
 }
 \newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
+\newcommand{\modeAlone}[1]{\elpiIn{~\PYG{k+kMode}{#1:}~}}
+\newcommand{\uvar}{\elpiIn{uvar}\xspace}
 
 \newenvironment{coqcode}{%
   \vspace{0.2em}%
@@ -55,6 +66,7 @@
   \end{minted}%
   \vspace{0.2em}%
 }
+\newcommand{\coqIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{coq}{#1}}
 
 
 % goal{program}{goal}{alternatives}
@@ -62,6 +74,7 @@
 \newcommand{\call}{\texttt{Call}}
 \newcommand{\cut}{\texttt{Cut}}
 \newcommand{\goal}{\texttt{Goal}}
+\newcommand{\unify}{\texttt{unify}\xspace}
 
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
 \newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \to (#4, #5)}}
@@ -111,7 +124,7 @@
 \newcommand{\ruleUnifM}[1]{
   \begin{myRule}{#1}
     % UNIF
-    \AxiomC{$\text{unify}\ x\ y\ s\ s'$}
+    \AxiomC{$\text{\unify}\ x\ y\ s\ s'$}
     \AxiomC{\runCmd{gs}{a}{s'}{a'}{s''}}
     \RightLabelM{\ruleUnif}
     \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{x = y}{\_}}\ConsTl{gs}}{a}{s}{a'}{s''}}
@@ -145,7 +158,7 @@
     % \RightLabelM{\ruleCall}
     % \TrinaryInfC{\runCmd{\ConsHd{(\prog, \call{p}{i}{o}, \_)}\ConsTl{gl}}{a}{s}{a'}{s'}}
     % 
-    \AxiomC{$\mathcal{F}(\prog p, i, o, s, a) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
+    \AxiomC{$\mathcal{F}(\prog, p, i, o, s, a) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
     \AxiomC{\runCmd{(g\ @\ gl)}{(new\_alt\ @\ a)}{s}{a'}{s'}}
     \RightLabelM{\ruleCall}
     \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{p}{i}{o}}{\_}}\ConsTl{gl}}{a}{s}{a'}{s'}}

@@ -41,7 +41,7 @@ application of \prog to the predicate $p$; it returns a list of clauses. The
 function $\mathcal{F}$ is defined as follows:
 %
 $$
-\mathcal{F}(r, i, o, s, a) := [(s, (\Cons{(p, i = i', a)}\Cons{(p, o = o', a)}{[(p, g, a) \mid g \in bs]})) \mid cl\ i'\ o'\ bs \in r]
+\mathcal{F}(\prog, p, i, o, s, a) := [(s, (\Cons{(\prog, i = i', a)}\Cons{(\prog, o = o', a)}{[(\prog, g, a) \mid g \in bs]})) \mid p\ i'\ o'\ \text{\elpiIn{:-} } bs \in \prog\ p]
 $$
 
 It takes a list of clauses, two terms, i.e. $i$ and $o$ representing the two
@@ -110,7 +110,7 @@ p3 1 2.                     % r5
 \def\goalG{\goalCmd{\prog}{call\ (\text{\elpiIn{p1 3 Z}})}{\EmptyList}}
 
 Let $\mathcal{G} :=\ \goalG$ be a goal, the execution of
-``\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?S}'' will apply \ruleCall
+``\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?\subst}'' will apply \ruleCall
 producing a new goal for the rule $r1$ and an alternative list containing $r2$,
 we leave out details concerning unifications of head terms. The execution of
 $r1$ will try to solve $r3$. This will add three goals \elpiIn{r 1 Y, !, Y = 1}
@@ -119,7 +119,7 @@ r2$. The execution of $r3$ will solve \elpiIn{p3 1 Y} with substitution $s :=
 \{X \gets 1; Y \gets 2\}$. The \elpiIn{!} will cut away the alternative $r4 @
 r2$ and will keep the cut-alternative $r2$. The failing premise \elpiIn{Y = 1}
 will cause a backtracking thanks to \ruleFail and try to apply $r2$ from the
-empty substitution. This last unification succeed with final substution $?A :=
+empty substitution. This last unification succeed with final substution $?\subst :=
 \{X \gets 3; Y \gets 3\}$ and final list of alternatives $?A := \EmptyList$.
 
 % \begin{myRule}{1}
@@ -131,20 +131,179 @@ empty substitution. This last unification succeed with final substution $?A :=
 }
 
 
-\subsection{First-order mode checker}
+\subsection{Modes in the first-order setting}
 
-Mode checking in this setting is performed using the classical groundness
-verification where term groundness is derived from their flow in the body of a
-clause. We start with the hypothesis that a term in input position in the head
-of a clause is ground. The premises in the body representing calls to predicates
-must be called with ground input terms, while output are supposed to become
-ground. At the end of the body analyse, we check that the output terms in the
-head of the clause has become ground. If this is not the case, or if a call in
-the body is done with a non-ground term in input position a mode-checking error
-is raised.
+% Mode checking in this setting is performed using the classical groundness
+% verification where term groundness is derived from their flow in the body of a
+% clause. We start with the hypothesis that a term in input position in the head
+% of a clause is ground. The premises in the body representing calls to predicates
+% must be called with ground input terms, while output are supposed to become
+% ground. At the end of the body analyse, we check that the output terms in the
+% head of the clause has become ground. If this is not the case, or if a call in
+% the body is done with a non-ground term in input position a mode-checking error
+% is raised.
 
-\subsection{First-order functionality checker}
+The modes we authorize in this setting are two, namely the input and the output
+modes. Since we want our predicates the be called with non-ground input terms,
+the meaning we attach to our modes is quite particuar. In this setting, the user
+is free to pass any term (even variables) in input position. Therefore, no real
+static check is performed on the clauses of the database: in this stage of our
+first-order version of the langauge, we give the user high freedom on the shape
+that its predicate call may have.
 
-As anticipated, functionality checking can be performed in 
+Our interpretation of mode follows the idea of the read and write modes
+explained in \cite{1991ait-wam}. Essentially, we consider an input argument as
+an object received in read mode in the head of the clause. For example, if the
+entry term is a variable and the corresponding term in the head of the clause is
+a rigid term, the unification will fail. This is because, the \unify procedure
+of the interpreter cannot write in input head-arguments. On the other hand, it
+is always possible to unify a non-flex input term with a variable if this
+variable appears in the head of the clause. Finally no constraint is put on
+output terms, which can be read and written at any time.
+
+Formally, let $\texttt{unifyc}\ t_1\ t_2 \to \subst$ be the standard unification
+relation between two terms $t_1$ and $t_2$ returning the most general unifier
+$\subst$ if it exists; let $\texttt{vars}\ t$ be a function returning
+the list of variables name appearing in the term $t$; let $p$ be a predicate of
+arity $N$, $p\ \vec{x}$ a call to that predicate and $p\ \vec{y}$ the head of a
+clause implementing $p$. Then for any index $i$, $0 \leq i < N$, such that $i$
+is an input argument of $p$, then, if $\texttt{unifyc}\ x_i\ y_i \to \subst$,
+then no variable in $\texttt{vars}\ x_i$ has been assigned in $\subst$.
+
+As a mean of example, consider following program.
+
+\begin{elpicode}
+  pred p i:int, o:int.
+  p 1 1.          % p1
+  p X 2 :- X = 7. % pX
+\end{elpicode}
 
 
+The predicate \elpiIn{p} is decorated with a type\&mode signature. It tells not
+only that the first two arguments should be of type \elpiIn{int}, but also that
+the first argument is an input (\modeAlone{i}) and the second an output
+(\modeAlone{o}). This means that the query \elpiIn{p Y Z} succeed exactly once:
+the rule \elpiIn{p1} could not be applied, since the variable \elpiIn{Y} is in
+input (i.e. read mode) and cannot be instantiated to $1$ in the head of the
+clause. Note, that the application of \elpiIn{pX} on the query succeed and
+producing the substitution $\subst = \{Y \mapsto 7, Z \mapsto 2\}$: \elpiIn{Y}
+can be instantiated in the body of a clause. Moreover, the query
+\elpiIn{p 1 Z} has one solution with $\subst = \{Z \mapsto 1\}$ due to the
+application of \elpiIn{p1}. Note that the rule \elpiIn{pX} is a valid choice
+point for the query: the head unifies with the query assigning the local
+$\exists$variable \elpiIn{X} to $1$, but a failure will occur in the body
+while unifying the value of \elpiIn{X} and \elpiIn{7}.
+
+Moreover, \elpi provides a way to further control the unification on input
+arguments. The user can put the \uvar keyword in front of a variable name in a
+input argument. This tells the unification engine to unify this head term with
+only flexible term. For example, we can add the rule ``\elpiIn{pUX} := \elpiIn{p
+(uvar X) 2 :- X = 7}'' to the previous database. The \uvar keyword does not
+allow the call \elpiIn{p 1 Z} to be unified with \elpiIn{pUX} since \elpiIn{1}
+is not a variable.
+
+We think that the combination of the input mode and the \uvar keyword give
+the user a powerful tool to  control how unification is dynamically performed
+at runtime.
+
+\subsection{First-order determinacy checker}
+
+Mode checking is an essentially ingredient from which determinacy checker can be
+performed. Before explaining the interaction between these two, we need to take
+some time to talk about mutual clauses exclusiveness.
+
+From \cite{1989Warren}, we know that at most one clause can be applied
+successfully for any determinate predicate.
+
+In order to satisfy this (necessary by not sufficient) condition, we need that
+all the clauses of a determinate predicate $p$ are mutually exclusive, i.e. for
+any pair of clauses $p\ \vec{x} \text{ \elpiIn{:-} } b1$ and $p\ \vec{y} \text{
+\elpiIn{:-} } b2$ there exists an input position $i$ such that $\forall \sigma,
+\sigma\ t_1 \neq \sigma\ t_2$.  Equivalently, no two clauses can exist without
+at least one overlapping input term.
+
+Thank to the (hard-)cut operator, we can relax a bit this strong condition, by
+saying that two clauses that are non-mutually exclusive for a determinate
+predicate may exists, only if the chronological antecedent has a cut in it. This
+ensures that if we reach the cut operator in the first clause, the second clause
+is not considered as a choice point. Conversely, if one of the premises before
+the cut fails, then the second clause will be tried. In both situations, the two
+clauses cannot be applied simultaneously to the same predicate call.
+
+In \cite{1996henderson}\todo{mercury non ha cut}, mode checking combined with
+mutual exclusive clause test, ensures that at most one clause can be applied to
+any predicate call. This is because, thanks to mode checking, we know that
+output arguments become ground terms after a call. Since output terms are
+ground, they can be used as new input in future queries guaranteeing that any
+call to a determinate predicate gives at most one clause unifying with it.\\
+It is quite simple to have non-determinism without mode checking: a non gruond
+output (in a classic prolog engine without dynamic mode checking) can used in an
+input position allowing two potentially mutually exclusive clauses to be applied
+on the same query, resulting in multiple solutions for the same query.
+
+\todo{AAA}SPIEGARE COME FUNZIONA IL NOSTRO EXCLUSIVE-CLAUSE modulo CUT CHECKING
+considerando VARIABILI, TERMINI RIGIDI e UVAR keyword.
+
+
+The second, but no less important, condition for a predicate to be determinate
+is that for each clause, the premises after the last cut must involve calls to
+functional predicates, otherwise multiple solutions may be produced.
+
+\todo{BBB}SPIEGARE COME FUNZIONA IL NOSTRO: all premises after the last cut are
+call to determinate predicates.
+
+From now on determinacy checking ensures that clauses have been tested for
+mutual-exclusion modulo cut, and that all premises after the last cut are
+call to determinate predicates.
+
+Before continuing our discussion about determinacy, we prove an auxiliary
+lemma.
+%
+\begin{lemma}
+  For each determinate predicate $p$, after mutual-clause modulo cut checking,
+  it always exists an implementation so that each clause of $p$ have at least
+  one cut in its body without loosing in expressiveness.
+  \label{th:all-cut}
+\end{lemma}
+
+\def\clauseL{\ensuremath{\mathcal{L}}\xspace}
+\begin{proof}
+  Let \clauseL be the list of clauses implementating a determinate predicate. We
+  can reason by induction on the length of the elements in \clauseL. If \clauseL
+  is empty, then the claim is trivially true. Otherwise, we have a clause $c$
+  follwed by a list \clauseL of clauses. If $c$ has a cut then we are done.
+  Otherwise, by hypothesis, the head $c$ is mutual exclusive from all other
+  clauses in \clauseL. Therefore, adding a cut as first atom of the body of $c$
+  will maintain the semantics of the original program: if a goal $g$ unifies
+  with the head of $c$, then by hypothesis, no clause $c' \in \clauseL$ has a
+  head unifying with $g$. The insertion of the head-cut in the body of $c$
+  simply tells the interpreter to discard all clauses in \clauseL that anyway
+  could not unify with the goal. If, finally, a goal $g$ does not unify with the
+  head of $g$ then adding leading cut in its body does not affect the behavior
+  of the program. This completes the proof.
+\end{proof}
+
+\Cref{th:all-cut} helps us to give a common structure to all the clause $c$ of
+a determinate predicate: we are free to assume that $c$ always has at least one
+cut.
+
+\begin{lemma}
+  All clauses have cut $\to$ al massimo una regola si applica
+  \label{th:only-one-clause}
+\end{lemma}
+
+In our scenario, we show that static mode checking is not needed if the dynamic
+input-output modes of \elpi are used at runtime. 
+%
+\begin{theorem}
+  Let $\prog$ be a determinacy-checked program, then, using \elpi input/output
+  modes, for any determinate predicate $p$, \texttt{\ref{detpred}~\prog~p}
+  holds.
+\end{theorem}
+
+% Before giving the proof, we just want to point out that using input/output modes
+% of \elpi, no hypothesis on the groundness of terms can be done. 
+
+\begin{proof}
+  By \cref{th:all-cut} \cref{th:only-one-clause}
+\end{proof}

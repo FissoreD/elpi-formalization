@@ -131,7 +131,7 @@ to address this problem.
 Since we use the elpi dialect of \lamprolog, it is important to clarify how
 the cut behaves in our development. It is in case that each prolog-ish language
 has its own cut implementation, for example in the official page of
-swi-prolog\footnote{\href{www.swi-prolog.org}{www.swi-prolog.org}} we see that
+swi-prolog (\href{www.swi-prolog.org}{www.swi-prolog.org}) we see that
 there are two different kind of cut implementation: the \textit{soft cut} noted with
 ``\texttt{C *-> T ; E}'' runs E if C has no solution otherwise the result is the
 same as running the conjunction of C and T. The \textit{hard cut} noted with the
@@ -175,6 +175,8 @@ For example, in the following database:
 The query ``\elpiIn{if (p X) (q X) (0 = 1)}'' fails. Note that the usage of the
 soft-cut would make the same query to have a solution, since the backtracking in
 the condition would be authorized.
+
+DIRE DEL CUT DI TEYJUS, NON SO ANCORA BENE COME FUNZIONA
 
 \subsection{Concerning modes}
 \label{sec:modes}
@@ -225,15 +227,15 @@ example, both \cite{1994apt-oc} and \cite{2002overton}, even though they
 researches concern different areas, present a version of this mode checking with
 "enough" instantiated terms together with some condition of variable linearty.
 
-In our paper, we will combine all of these ideas, as \elpi is used as a
+In our paper, we will combine these ideas, as \elpi is used as a
 meta-language for proof verification
 \cite{tassi2018,tassi2019,tassi2023,fissore2023,fissore2024}. In particular, we
 need to work with a higher-order setup where inputs (and outputs) may not be
 fully instantiated: the role of the search engine is to potentially assign
-unification variables. In the first part of the paper, mode verification is not
-particularly relevant since we present a first-order version of the language.
-However, in the second part, we allow predicate arguments to receive not only
-objects living in the datatype space but also propositions.
+unification variables. In the first part of the paper, we will introduce the
+seamantics of the input mode which is used in \elpi. 
+In the second part, we extend it so that it works with predicates taking
+predicate calls as arguments.
 
 \subsection{Concerning functionality}
 
@@ -299,8 +301,15 @@ convinced, that completeness, is not a big deal, since, as also claimed in ...
 the clases of every determinate predicate can be rewritten in a equivalnet form
 so that they are no more classified as non-determinate.
 
+\makeatletter
+\newcommand{\customlabel}[2]{%
+   \protected@write \@auxout {}{\string \newlabel {#1}{{\ensuremath{#2}}{\thepage}{#2}{#1}{}} }%
+   \hypertarget{#1}{\ensuremath{#2}}
+}
+\makeatother
+
 \begin{coqcode}
-Definition determinate_pred (~\prog~: prog) (p: pn) :=
+Definition ~\customlabel{detpred}{\texttt{determinate\_pred}}~(~\prog~: prog) (p: pn) :=
   forall ~$i$~ ~$o$~ ~$a$~ ~\subst~(H : ~\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst}~), ~$a$~ = ~\EmptyList~.
 \end{coqcode}
 
