@@ -364,6 +364,24 @@ lemma.
   \label{th:all-cut}
 \end{lemma}
 
+\begin{lemma}
+  Forall list of goals $gs$ and list of alternatives $alts$ and $a$ such that
+  they share a program \prog,
+  $$
+  \begin{array}{l}
+  \forall \subst\ \subst' i\ o\ p, \mathtt{pred\_functional}(p)\\
+  \runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{a'}{\subst'} \iff \\
+  \runCmd{[\goalCmd{\mathtt{tailcut}(\prog(p))}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{a'}{\subst'}
+  \end{array}
+  $$
+  
+  such that all clauses of each
+  determinate predicate in $\prog'$ has a \cut and $gs', alts'$ and $a'$ are
+  list of goals and alternatives build from resp. $gs, alts$ and $a$ where the
+  \prog has been by $\prog'$.
+  \label{th:all-cut2}
+\end{lemma}
+
 \def\clauseL{\ensuremath{\mathcal{L}}\xspace}
 \begin{proof}
   Let \clauseL be the list of clauses implementating a determinate predicate. We
@@ -391,6 +409,12 @@ least one cut.
   If all clauses of a predicate have a cut, then at most one of
   these clauses can be applied successfully on the goal, the other being
   cut away.
+  $$
+  \begin{array}{l}
+  \forall \subst\ \subst' i\ o\ p,\\
+  \runCmd{[\goalCmd{\mathtt{tailcut}(\prog(p))}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{x'}{\subst'} \rightarrow [] = x'
+  \end{array}
+  $$
   \label{th:only-one-clause}
 \end{corollary}
 
@@ -399,10 +423,16 @@ least one cut.
 \end{proof}
 
 %
-\begin{theorem}
+\begin{theorem}[determinacy check $\to$ determinate pred]
   Let $\prog$ be a determinacy-checked program, then, using \elpi input/output
   modes, for any determinate predicate $p$, \texttt{\ref{detpred}~\prog~p}
   holds.
+  $$
+  \begin{array}{l}
+  \forall \subst\ \subst' i\ o\ p, \mathtt{det\_check}(p) \to \mathtt{well\_moded}(p,i) \to \\
+  \runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{[]}{\subst'} \to
+  \end{array}
+  $$
 \end{theorem}
 
 % Before giving the proof, we just want to point out that using input/output modes

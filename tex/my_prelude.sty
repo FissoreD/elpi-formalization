@@ -8,7 +8,7 @@
 \usepackage{hyperref}
 \usepackage{cleveref}
 \usepackage{mdframed}  % For creating a bordered box
-
+\usepackage{amsmath}
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
 \newtheorem{definition}{Definition}
@@ -80,7 +80,7 @@
 \newcommand{\cdash}{\text{\elpiIn{:-}}} % colon-dash
 
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
-\newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \Rightarrow (#4, #5)}}
+\newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \Rightarrow  (#4, #5)}}
 \newcommand{\callCmd}[3]{\ensuremath{(\call\ #1\ #2\ #3)}\xspace}
 \newcommand{\goalCmd}[3]{\ensuremath{\goal\ #1\ #2\ #3}\xspace}
 \newcommand{\clauseCmd}[3]{\ensuremath{#1\ #2\ \cdash\ #3}}
