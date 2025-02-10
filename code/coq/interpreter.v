@@ -84,8 +84,8 @@ Module Elpi.
 Inductive nur (p: bodiesT) : list goal -> list alt -> (list alt) -> Prop :=
 | Stop a : nur [::] a a
 | Cut a ca r gl : nur gl ca r -> nur [::Goal cut ca & gl] a r
-| Call a ca f b bs gl r : p f = [:: b & bs ] -> nur (save_alt a b gl) (more_alt a bs gl) r -> nur [::Goal (call f) ca & gl] a r
-| Fail a al ca f gl r : p f = [::] -> nur a al r -> nur [::Goal (call f) ca & gl] (a :: al) r.
+| Fail a al ca f gl r : p f = [::] -> nur a al r -> nur [::Goal (call f) ca & gl] (a :: al) r
+| Call a ca f b bs gl r : p f = [:: b & bs ] -> nur (save_alt a b gl) (more_alt a bs gl) r -> nur [::Goal (call f) ca & gl] a r.
 
 
 Lemma correct p g a r n :
@@ -103,9 +103,9 @@ Lemma complete p g a r :
 elim.
 - by exists 1.
 - by move=> a' ca r' gl' H [n Hn]; exists n.+1 => /=.
-- move=> gl1 gl2 f c cl gl r' Df H [n Hn]; exists n.+1 => /=.
-  by rewrite Df.
 - move=> gl1 a11 ca1 f gl r' Df H [n Hn]; exists n.+1 => /=.
+  by rewrite Df.
+- move=> gl1 gl2 f c cl gl r' Df H [n Hn]; exists n.+1 => /=.
   by rewrite Df.
 Qed.
 
