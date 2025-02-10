@@ -41,7 +41,11 @@ application of \prog to the predicate $p$; it returns a list of clauses. The
 function $\mathcal{F}$ is defined as follows:
 %
 $$
-\mathcal{F}(\prog, p, i, o, s, a) := [(s, (\Cons{(\prog, i = i', a)}\Cons{(\prog, o = o', a)}{[(\prog, g, a) \mid g \in bs]})) \mid p\ i'\ o'\ \text{\elpiIn{:-} } bs \in \prog\ p]
+\mathcal{F}(\prog, p, i, o, s, a) := 
+  [(s, (
+      \Cons{(\prog, i =_i i', a)}
+        \Cons{(\prog, o =_o o', a)}
+          {[(\prog, g, a) \mid g \in bs]})) \mid \clauseCmd{p}{i'\ o'}{bs} \in \prog\ p]
 $$
 
 It takes a list of clauses, two terms, i.e. $i$ and $o$ representing the two
@@ -151,7 +155,7 @@ static check is performed on the clauses of the database: in this stage of our
 first-order version of the langauge, we give the user high freedom on the shape
 that its predicate call may have.
 
-Our interpretation of mode follows the idea of the read and write modes
+Our interpretation of mode follows the idea of the read and write modes\todo{usare la parola match}
 explained in \cite{1991ait-wam}. Essentially, we consider an input argument as
 an object received in read mode in the head of the clause. For example, if the
 entry term is a variable and the corresponding term in the head of the clause is
@@ -208,61 +212,155 @@ at runtime.
 
 \subsection{First-order determinacy checker}
 
-Mode checking is an essentially ingredient from which determinacy checker can be
+Mode checking is an essential ingredient from which determinacy checking can be
 performed. Before explaining the interaction between these two, we need to take
 some time to talk about mutual clauses exclusiveness.
-
+%
+% \paragraph{Mutual exclusive clauses}
 From \cite{1989Warren}, we know that at most one clause can be applied
 successfully for any determinate predicate.
 
-In order to satisfy this (necessary by not sufficient) condition, we need that
-all the clauses of a determinate predicate $p$ are mutually exclusive, i.e. for
-any pair of clauses $p\ \vec{x} \text{ \elpiIn{:-} } b1$ and $p\ \vec{y} \text{
-\elpiIn{:-} } b2$ there exists an input position $i$ such that $\forall \sigma,
-\sigma\ t_1 \neq \sigma\ t_2$.  Equivalently, no two clauses can exist without
-at least one overlapping input term.
+In order to satisfy this (necessary by not sufficient) condition, we need 
+that all the clauses of a determinate predicate $p$ are mutually exclusive.
+Mutual exclusiveness can be stated as follows:
 
-Thank to the (hard-)cut operator, we can relax a bit this strong condition, by
-saying that two clauses that are non-mutually exclusive for a determinate
-predicate may exists, only if the chronological antecedent has a cut in it. This
-ensures that if we reach the cut operator in the first clause, the second clause
-is not considered as a choice point. Conversely, if one of the premises before
-the cut fails, then the second clause will be tried. In both situations, the two
-clauses cannot be applied simultaneously to the same predicate call.
+\begin{definition}[Non-overlapping clauses]
+  For any pair of clauses of the same predicate ``\clauseCmd{p}{\vec{x}}{b1}''
+  and ``\clauseCmd{p}{\vec{y}}{b2}'', we say that they are non-overlapping if
+  there exists an input position $i$ such that $\forall \sigma, \sigma\ x_i \neq
+  \sigma\ y_i$
+  \label{def:mut-excl}
+\end{definition}
 
-In \cite{1996henderson}\todo{mercury non ha cut}, mode checking combined with
-mutual exclusive clause test, ensures that at most one clause can be applied to
-any predicate call. This is because, thanks to mode checking, we know that
-output arguments become ground terms after a call. Since output terms are
-ground, they can be used as new input in future queries guaranteeing that any
-call to a determinate predicate gives at most one clause unifying with it.\\
-It is quite simple to have non-determinism without mode checking: a non gruond
-output (in a classic prolog engine without dynamic mode checking) can used in an
-input position allowing two potentially mutually exclusive clauses to be applied
-on the same query, resulting in multiple solutions for the same query.
-
-\todo{AAA}SPIEGARE COME FUNZIONA IL NOSTRO EXCLUSIVE-CLAUSE modulo CUT CHECKING
-considerando VARIABILI, TERMINI RIGIDI e UVAR keyword.
+In \cite{1996henderson}, mode checking (with groundness check)
+ensures that at most one clause can be applied to
+any predicate such that its clauses respect \cref{def:mut-excl}. 
+In fact, thanks to mode checking,
+any call is validated if its terms in input position are ground.
+Groundness, thanks to \cref{def:mut-excl}, ensures that it exists at most one clause 
+which can be executed on that call.\\
+Note also that the groundness check ensures that outputs become ground. This is
+a fundamental property; otherwise, outputs would be pointless. If an output does
+not become ground, it cannot serve as the input for another predicate call.
+Otherwise, two clauses could potentially be applied to the same predicate call.
 
 
+In our setting, we slightly extend this definition so that the \elpi's \uvar
+keyword is taken into account.
+
+\begin{definition}[Mutual exclusiveness with \uvar]
+  A clause with an input term marked with the \elpiIn{uvar} keyword,
+  does not overlap with any other rigid-head term.
+  \label{def:mut-excl-uvar}
+\end{definition}
+
+This means that a term marked with the \uvar keyword in the head of a clause
+overlaps only with unification variables or with another term marked with
+\uvar.
+
+\begin{theorem}
+  The \elpi input/ouput modes and the (hard-)cut operator guarantee that for any
+  predicate $p$ whose clauses respect
+  \cref{def:mut-excl,def:mut-excl-uvar}, there exists at most
+  one succeeding clause for any call to $p$.
+\end{theorem}
+
+\begin{proof}
+  Without loss of generality, we take a program \prog with only binary
+  predicates representing respectively an input and an output. Let $p$ be a
+  predicate in \prog such that all clauses respect
+  \cref{def:mut-excl,def:mut-excl-uvar}. Let
+  ``$p\ t_1\ t_2$'' be a valid call for $p$. Let ``$c_1 :=
+  \clauseCmd{p}{t_1'\ t_2'}{b_1}$'' and ``$c_2 := \clauseCmd{p}{t_1''\
+  t_2''}{b_2}$'' be two clauses implementing $p$.  We need to prove that the head
+  of $c_1$ and $c_2$ cannot unify both with the call. Note that the absence of
+  groundness check avoid us from saying that $t_1$, which is the input of the
+  call, is a ground term. We reason by induction on the shape of $t_1$ and show
+  that it cannot unify simultaneously with $t_1'$ and $t_1''$, i.e. at most one
+  between $c_1$ and $c_2$ can be applied on the goal.
+  \begin{itemize}
+    \item Case 1: $t_1$ is a constant. A constant, in input position, matches with
+          the same constant of a variable. By the definition of our unification
+          of input terms, $t_1$ only matches with a input terms which is either
+          the same constant or a variable (but not a term marked with \uvar).
+          Due to \cref{def:mut-excl}, $t_1'$ and $t_1''$ cannot be neither the
+          constant $t_1$ nor a unification variable nor a combination of the
+          two. Therefore $c_1$ and $c_2$ cannot be applied both of the call to
+          $p$.
+    \item Case 2: $t_1$ is a variable. A variable, in input position, matches
+          with another variable or a term marked with \uvar (but not a rigid
+          term). By \cref{def:mut-excl}, $t_1'$ and $t_1''$ cannot be both
+          unification variables and, by \cref{def:mut-excl-uvar}, they cannot be
+          a combination of a unification variable and a term marked with the
+          \uvar keyword. This means that at most one of the two clauses 
+          can be applied on the call to $p$.
+    \item Case 3: $t_1$ is a compond term: a term starting with rigid head with
+          potentially flexible subterms. If the heads of $t_1'$ and $t_1''$ have
+          the same head as $t_1$ then the unification of $t_1$ proceed on the
+          subterms, but, by induction hypothesis, only one between $t_1'$ and
+          $t_1''$ can unify with $t_1$. If the heads of $t_1'$ and $t_1''$ are
+          different then only we are sure that at most one of the two clause
+          can be applied on the call.
+  \end{itemize}
+\end{proof}
+
+
+As explained in \cite{1989Warren}, thanks to the (hard-)cut operator, mutual
+exclusiveness can be relaxed.
+
+\begin{definition}[Mutual exclusiveness with \cut]
+  Two clauses for the same predicate are mutually exclusive if the
+  chronological antecedent has a cut in its body.
+  \label{def:mut-excl-cut}
+\end{definition}
+
+% This ensures that if we reach the cut
+% operator in the first clause, the second clause is not considered as a choice
+% point. Conversely, if one of the premises before the cut fails, then the second
+% clause will be tried. In both situations, the two clauses cannot be applied
+% simultaneously to the same predicate call.
+
+This definition allows overlapping clauses to
+exist in a database under the condition that the antecedent has a cut
+guaranteeing that at most one clause can be applied on a predicate call. 
+
+% \paragraph{Determinate clauses after last \cut}
 The second, but no less important, condition for a predicate to be determinate
-is that for each clause, the premises after the last cut must involve calls to
-functional predicates, otherwise multiple solutions may be produced.
+is the following:
 
-\todo{BBB}SPIEGARE COME FUNZIONA IL NOSTRO: all premises after the last cut are
-call to determinate predicates.
+\begin{definition}[Determinate premises after last \cut]
+  In each clause of a determinate predicate, the premises after the last \cut
+  operator are only calls to determinate predicates. 
+  \label{def:det-prem-cut}
+\end{definition}
 
-From now on determinacy checking ensures that clauses have been tested for
-mutual-exclusion modulo cut, and that all premises after the last cut are
-call to determinate predicates.
+This guarantees that any output produced is uniquely determined, i.e. no two
+solutions can be produced on the same call.
+
+Thanks to this last definition, we can give our definition of determinacy
+checking:
+
+\begin{definition}[Determinacy checking]
+  Determinacy checking is the combination of mutual-exclusive check up to
+  \cref{def:mut-excl,def:mut-excl-uvar,def:mut-excl-cut} and
+  \cref{def:det-prem-cut}.
+  \label{def:det-check}
+\end{definition}
 
 Before continuing our discussion about determinacy, we prove an auxiliary
 lemma.
-%
+% {goal[]}{alts[]}{subst}{alts_res}{subst_res}
 \begin{lemma}
-  For each determinate predicate $p$, after mutual-clause modulo cut checking,
+  For each determinate predicate $p$,
   it always exists an implementation so that each clause of $p$ have at least
-  one cut in its body without loosing in expressiveness.
+  one \cut in its body without loosing in expressiveness.
+  % Forall list of goals $gs$ and list of alternatives $alts$ and $a$ such that
+  % they share a program \prog, $\forall \subst\ \subst',
+  % \runCmd{gs}{alts}{\subst}{a}{\subst'} \to \exists \prog',
+  % \runCmd{gs'}{alts'}{\subst}{a'}{\subst'}$ such that all clauses of each
+  % determinate predicate in $\prog'$ has a \cut and $gs', alts'$ and $a'$ are
+  % list of goals and alternatives build from resp. $gs, alts$ and $a$ where the
+  % \prog has been by $\prog'$.
   \label{th:all-cut}
 \end{lemma}
 
@@ -279,21 +377,27 @@ lemma.
   head unifying with $g$. The insertion of the head-cut in the body of $c$
   simply tells the interpreter to discard all clauses in \clauseL that anyway
   could not unify with the goal. If, finally, a goal $g$ does not unify with the
-  head of $g$ then adding leading cut in its body does not affect the behavior
-  of the program. This completes the proof.
+  head of $g$ then adding a head-cut in its body does not affect the behavior
+  of the program: the head of the clause fails to be unified with the goal
+  and by induction hypothesis, \clauseL is a program where all clauses
+  of the determinated predicates have a \cut. This completes the proof.
 \end{proof}
 
-\Cref{th:all-cut} helps us to give a common structure to all the clause $c$ of
-a determinate predicate: we are free to assume that $c$ always has at least one
-cut.
+Thanks to \cref{th:all-cut}, we can give a common structure to all the clauses
+of a determinate predicate: we are free to assume that $c$ always has at
+least one cut.
 
-\begin{lemma}
-  All clauses have cut $\to$ al massimo una regola si applica
+\begin{corollary}
+  If all clauses of a predicate have a cut, then at most one of
+  these clauses can be applied successfully on the goal, the other being
+  cut away.
   \label{th:only-one-clause}
-\end{lemma}
+\end{corollary}
 
-In our scenario, we show that static mode checking is not needed if the dynamic
-input-output modes of \elpi are used at runtime. 
+\begin{proof}
+  By a slightly modified version of \cite{1989Warren}
+\end{proof}
+
 %
 \begin{theorem}
   Let $\prog$ be a determinacy-checked program, then, using \elpi input/output
@@ -307,3 +411,6 @@ input-output modes of \elpi are used at runtime.
 \begin{proof}
   By \cref{th:all-cut} \cref{th:only-one-clause}
 \end{proof}
+
+
+

@@ -10,41 +10,40 @@ and 2) the second extends this version by introducing hereditary-Harrop
 formulas, we will keep the presentation of the types and functions we need
 simple, expanding them further when needed.
 
-Data are represented by terms. For now, a term is an opaque data representing
-terms living in the datatype predicate are binary relations and
-have type \\\elpiIn{int -> int -> prop}. The two arguments are respectively 
-considered as its input and output to better represent mode analysis
-(see \cref{sec:modes}).
-
-TODO: dare la definizione di termine: per ora è sufficiente dire che un termine
-è un predicate applicato a due interi? Altrimenti potremmo avere un argomenti
-di tipo prop che rompono la functionality. + dire che Una variabile è un termine
+Data are represented by terms. For now, terms live in the datatype, they are
+variables, constants or compound terms. A compound term is a predicate name
+applied to two terms. The type of predicates is \\\elpiIn{tm -> tm -> prop}
+where \elpiIn{tm} is the type of terms. The first argument of a predicate is
+considered has its input and the second is its output. This choice aims to ease
+the presentation of mode checking (see \cref{sec:modes}). By convention
+variables are indicated with capital letters, whereas predicate names and
+constants are indicated with lower case letters.
 
 An atom is either a fully applied predicate or the cut operator, noted
-\elpiIn{!}.
-
-TODO: spiegare meglio la unify: quali sono le sue proprietà, ad esempio
-transitività.
+\cut.
 
 A variable is a term not yet instantiated. We can assign variables thanks to the
 \texttt{unify} procedure. The notation $t_1 = t_2$ is the unification between
-the terms $t_1$ and $t_2$. We store the result of variable assignment into
-substitutions. A substitution is a mapping from variable name to its assignment
-$t$. We considered that the returned assignment is the most dereferenced one,
-ie. $t$ is the dereferenced assignement for the variable $X$ in the subsitution
-$s$ if $X$ maps to $t'$ in the mapping and all variables in $t'$ 
-are dereferenced, if the variable does not appear in the substitution then
-the same variable is returned.
+the terms $t_1$ and $t_2$. A substitution is a mapping from variable name to its
+assignment $t$. Unification provides, when possible, a most general substitution
+between the two terms. If this substitution, sometime called unifier, does not
+exists, then the following property holds:
 
-By convention variables are indicated with capital letters, whereas predicate
-names and constants are indicated with lower case letters.
+\begin{definition}[Unification negation]
+  $(\forall \subst, \subst t_1 \neq \subst t_2) \to (\neg (\exists t_3~\subst_1~\subst_2,
+  \subst_1 t_1 = \subst_1 t_3 \land \subst_2 t_2 = \subst_2 t_3))$
+\end{definition}
+
+The notation $\subst t$ is the application of a term to a substitution.
+It returns a new term where al variables in $t$ have been recursively been
+replaced by heir assignment in \subst.
 
 A clause is made of a predicate name, its two arguments and a body made of a
 list of atoms. The list of these atoms are called premises and should be
 considered as a list of subgoals in conjunction. By convention a clause is noted
-with ``\elpiIn{p i o :- b}'' where p is the predicate name i and o are its
-parameters and b is the body. It should be read as follows: if \elpiIn{b} holds
-then \elpiIn{p i o} holds. 
+with ``\clauseCmd{p}{i\ o}{b}'' where p is the predicate name i and o are its
+parameters and b is the body. It should be read as follows: if $b$ holds
+then $p\ i\ o$ holds. 
 
 A program is a mapping from predicate names to clauses. These clauses are in
 disjunction and the order of their visit depend on the chronological order in
@@ -54,9 +53,11 @@ rule. There is no builtin \elpiIn{or} operator, it can be however represented by
 adding multiple rules for the same predicate.
 
 Unlike other prolog system, such as \mercury \cite{1996Somogy}, \elpi is not a
-compiled language and we do not build super-homogenous clauses for each
-predicate. This is mainly due to the fact that \elpi is an homoiconic language
-and its program definition can change during the evaluation of the code.
+compiled language and we do not transform the list $\mathcal{L}$ of clauses of a
+predicate $p$ in super-homogenous form, i.e. a sole clause containing the
+disjunction of $\mathcal{L}$. This is mainly due to the fact that \elpi is an
+homoiconic language and its program definition can change during the evaluation
+of the code.
 
 A program is a mapping from predicate name to clauses.
 
@@ -103,7 +104,7 @@ rules in \cref{sec:basic-elpi} and \cref{sec:full-elpi}.
   Inductive run : goal -> list alt -> subst -> list alt -> subst := ...
 \end{minted}
 
-This predicate should be read as a relation between a goal \g, a list of
+The inductive \coqIn{run} should be read as a relation between a goal \g, a list of
 alternative \alt (which are in disjunction with the current goal) and an initial
 substitution \subst. These three objects produce a new list of alternatives
 \alt['] and a new substitution \subst[']. The idea is that the intepreter stop
@@ -115,24 +116,18 @@ iterate over all the alternatives \alt['].
 \subsection{The cut operator}
 \label{sec:cut}
 
-Logic programs are known for their non-deterministic behavior: there could be
-several distinct ways to derive a query from a base of knowledge and logic
-programs aims to find all of these solutions. 
-% We have put quotations around
-% the words non-deterministic since of course the interpreter of the prolog system
-% has to make some choice about the order in which the rules of the program are
-% treated. In our case, we consider that the intepreter takes the rules in a
-% chronological way wrt the order in which rules are inserted in the database.
-
-If non-determinism is a key feature, sometimes it is important to let the user
-control if and when alternatives have to be rejected. The cut operator is meant
-to address this problem.
+Logic programs are known for their non-deterministic behavior: there can be
+multiple distinct ways to derive a query from a knowledge base, and logic
+programs aim to find all of these solutions. While non-determinism is a key
+feature, it is sometimes important to allow the user to control if and when
+alternatives should be rejected. The cut operator is designed to address this
+problem.
 
 Since we use the elpi dialect of \lamprolog, it is important to clarify how
-the cut behaves in our development. It is in case that each prolog-ish language
+the cut behaves in our development. It is that case that each prolog-ish language
 has its own cut implementation, for example in the official page of
 swi-prolog (\href{www.swi-prolog.org}{www.swi-prolog.org}) we see that
-there are two different kind of cut implementation: the \textit{soft cut} noted with
+there are two different cut implementations: the \textit{soft cut} noted with
 ``\texttt{C *-> T ; E}'' runs E if C has no solution otherwise the result is the
 same as running the conjunction of C and T. The \textit{hard cut} noted with the
 ``\texttt{!}'', "discards all choice points created since entering the predicate
@@ -148,9 +143,9 @@ restricted version of the hard cut which has some concistency properties.
 
 \Elpi implementation uses the hard cut definition. Even though the hard cut have
 no equivalent representation from pure logic, we are convinced that, from a
-programming point of view, it is quite practical to cut away not only the
-alternative implementation of a predicate but also to hinder backtracking of all
-choice points born from the begin of the clause-body to the current cut
+programming perspective, it is quite practical. It allows us to eliminate not
+only alternative implementations of a predicate but also to prevent backtracking
+of all choice points born from the begin of the clause-body to the current cut
 position.
 
 For example, in \elpi, the \textit{if-then-else} construct, which is not a
@@ -175,18 +170,17 @@ For example, in the following database:
 The query ``\elpiIn{if (p X) (q X) (0 = 1)}'' fails. Note that the usage of the
 soft-cut would make the same query to have a solution, since the backtracking in
 the condition would be authorized.
-
-DIRE DEL CUT DI TEYJUS, NON SO ANCORA BENE COME FUNZIONA
+\todo{cut di teyjus}
 
 \subsection{Concerning modes}
 \label{sec:modes}
 
-Before talking about functionality and the impact that hard-cut has on it. We
+Before talking about determinacy and the impact that hard-cut has on it. We
 prefer to spend some few words about the definition of modes, because as
 explained in \cite{1989Warren,1996Somogy} modes are the basis for determinim.
 
 The general idea is that a logic program allows to express relation, but,
-sometimes it is also needed to express directed relation where arguments are
+sometimes it is also needed to express directed relations, where arguments are
 differenciated between inputs and output. Said in an other way, output arguments
 can be derived from input arguments. It is often the case that the user of a
 logic programming langauge tend, in most of cases, to express directed
@@ -201,19 +195,19 @@ append [] L L.                            % app2
 \end{elpicode}
 
 \noindent
-makes the query ``\elpiIn{append Y [] L, 0 = 1}'' to diverge. This is a
-classical case where the variable \elpiIn{Y} is unified with a list of infinite
+makes the query ``\elpiIn{append Y [] L, 0 = 1}'' to diverge. 
+Here the variable \elpiIn{Y} is unified with a list of infinite
 length, the rule \texttt{app1} being continously applied.
 
-Modes are there to avoid this situation. In the literature we find several
-papers \cite{1989Warren,1996Somogy} distinguishing two kinds of modes, an input
-mode and an output mode. The idea is that each predicate is decorated with a
-mode signature. Then the static mode checker verifies that the clauses of the
+Modes are there to avoid this situation. The most widespread mode definition
+in the literature are two: the input
+mode and the output mode. The idea is that each predicate is annotated with a
+mode signature, and a static mode checker verifies that the clauses of the
 program are consistent with the mode declrations of the predicates. Essentially,
 in the head of a clause, 1) terms appearing in input position are supposed to be
 ground whereas 2) terms in output position must become ground in the body of the
-clause. In each premise of the body, 3) terms appering in output position become
-ground while 4) terms appearing in input position are checked to be ground. If
+clause. Within each premise of the body, 3) terms appering in output positions become
+ground while 4) terms appearing in input positions are checked to be ground. If
 condition 2) or 4) are not satisfied a mode compilation error is raised.
 
 In \twelf \cite{1996pfenning}, which is an implementation of \lamprolog, mode
@@ -227,9 +221,10 @@ example, both \cite{1994apt-oc} and \cite{2002overton}, even though they
 researches concern different areas, present a version of this mode checking with
 "enough" instantiated terms together with some condition of variable linearty.
 
-In our paper, we will combine these ideas, as \elpi is used as a
+In our paper, we will combine these ideas. In particular,
+since \elpi is used as a
 meta-language for proof verification
-\cite{tassi2018,tassi2019,tassi2023,fissore2023,fissore2024}. In particular, we
+\cite{tassi2018,tassi2019,tassi2023,fissore2023,fissore2024}, we
 need to work with a higher-order setup where inputs (and outputs) may not be
 fully instantiated: the role of the search engine is to potentially assign
 unification variables. In the first part of the paper, we will introduce the
@@ -257,7 +252,7 @@ for determinacy is that all the premises of a clauses after the last cut are
 call to determinate predicate, and, if the clause has no cut all its premises
 are call to determinate predicate.
 
-In \cite{1989Warren}, Debray and Warren describe a property subsuming
+In \cite{1989Warren}, the authors describe a property subsuming
 determinism: they describe functionality. A predicate (clause or query) is
 functional if it produces at most one \textit{distinct} solution per predicate
 call. The key word here is \textit{distinct}, since, in the determinacy setting,

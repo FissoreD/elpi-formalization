@@ -11,6 +11,8 @@
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{corollary}{Corollary}
 
 % \usepackage{amssymb}% http://ctan.org/pkg/amssymb
 \usepackage{pifont}% http://ctan.org/pkg/pifont
@@ -75,11 +77,13 @@
 \newcommand{\cut}{\texttt{Cut}}
 \newcommand{\goal}{\texttt{Goal}}
 \newcommand{\unify}{\texttt{unify}\xspace}
+\newcommand{\cdash}{\text{\elpiIn{:-}}} % colon-dash
 
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
-\newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \to (#4, #5)}}
+\newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \Rightarrow (#4, #5)}}
 \newcommand{\callCmd}[3]{\ensuremath{(\call\ #1\ #2\ #3)}\xspace}
 \newcommand{\goalCmd}[3]{\ensuremath{\goal\ #1\ #2\ #3}\xspace}
+\newcommand{\clauseCmd}[3]{\ensuremath{#1\ #2\ \cdash\ #3}}
 
 \newcommand{\Cons}[1]{\ensuremath{#1::}}
 \newcommand{\ConsHd}[1]{\ensuremath{(#1::}\xspace}
@@ -127,7 +131,7 @@
     \AxiomC{$\text{\unify}\ x\ y\ s\ s'$}
     \AxiomC{\runCmd{gs}{a}{s'}{a'}{s''}}
     \RightLabelM{\ruleUnif}
-    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{x = y}{\_}}\ConsTl{gs}}{a}{s}{a'}{s''}}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{(x = y)}{\_}}\ConsTl{gs}}{a}{s}{a'}{s''}}
   \end{myRule}
 }
 
@@ -145,7 +149,7 @@
     % CUT
     \AxiomC{\runCmd{gl}{ca}{s}{a}{s'}}
     \RightLabelM{\ruleBang}
-    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{!}{ca}}\ConsTl{gl}}{\_}{s}{a}{s'}}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{\cut}{ca}}\ConsTl{gl}}{\_}{s}{a}{s'}}
   \end{myRule}
 }
 
