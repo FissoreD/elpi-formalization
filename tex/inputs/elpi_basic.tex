@@ -148,14 +148,15 @@ empty substitution. This last unification succeed with final substution $?\subst
 % is raised.
 
 The modes we authorize in this setting are two, namely the input and the output
-modes. Since we want our predicates the be called with non-ground input terms,
-the meaning we attach to our modes is quite particuar. In this setting, the user
-is free to pass any term (even variables) in input position. Therefore, no real
+modes. As explained at the very end of \cref{sec:modes}, we want predicate
+to be called with non-ground input terms, therefore
+the meaning we attach to our modes is quite particuar. This means that
+no real
 static check is performed on the clauses of the database: in this stage of our
 first-order version of the langauge, we give the user high freedom on the shape
-that its predicate call may have.
+that the ipnut of its predicate call may have.
 
-Our interpretation of mode follows the idea of the read and write modes\todo{usare la parola match}
+Our interpretation of mode follows the idea of the read and write modes
 explained in \cite{1991ait-wam}. Essentially, we consider an input argument as
 an object received in read mode in the head of the clause. For example, if the
 entry term is a variable and the corresponding term in the head of the clause is
@@ -163,16 +164,20 @@ a rigid term, the unification will fail. This is because, the \unify procedure
 of the interpreter cannot write in input head-arguments. On the other hand, it
 is always possible to unify a non-flex input term with a variable if this
 variable appears in the head of the clause. Finally no constraint is put on
-output terms, which can be read and written at any time.
+output terms, which can be read and written at any time. We will call this
+special unification \match which, similarly to the \unify procedure uses the
+notation \matchCmd{t_1}{t_2}{\subst}{\subst[']} to signify the \match
+between two terms $t_1$ and $t_2$ from an intial substition \subst to a final
+substitution \subst['].
+Formally, let \coqIn{vars(t)} be a function returning the variables in a 
+term \coqIn{t} and \coqIn{is_var(t)} be a function tell if the term \coqIn{t}
+is flexible, then:
 
-Formally, let $\texttt{unifyc}\ t_1\ t_2 \to \subst$ be the standard unification
-relation between two terms $t_1$ and $t_2$ returning the most general unifier
-$\subst$ if it exists; let $\texttt{vars}\ t$ be a function returning
-the list of variables name appearing in the term $t$; let $p$ be a predicate of
-arity $N$, $p\ \vec{x}$ a call to that predicate and $p\ \vec{y}$ the head of a
-clause implementing $p$. Then for any index $i$, $0 \leq i < N$, such that $i$
-is an input argument of $p$, then, if $\texttt{unifyc}\ x_i\ y_i \to \subst$,
-then no variable in $\texttt{vars}\ x_i$ has been assigned in $\subst$.
+\begin{coqcode}
+  Definition ~\matchCmd{t_1}{t_2}{\subst}{\subst[']}~ :=
+    ~\unifyCmd{t_1}{t_2}{\subst}{\subst[']}~ /\ 
+      ~$\forall$~ v, v \in vars(~$t_1$~) -> is_var ~(\subst['] $t_1$)~
+\end{coqcode}
 
 As a mean of example, consider following program.
 
@@ -198,70 +203,86 @@ point for the query: the head unifies with the query assigning the local
 $\exists$variable \elpiIn{X} to $1$, but a failure will occur in the body
 while unifying the value of \elpiIn{X} and \elpiIn{7}.
 
-Moreover, \elpi provides a way to further control the unification on input
-arguments. The user can put the \uvar keyword in front of a variable name in a
-input argument. This tells the unification engine to unify this head term with
-only flexible term. For example, we can add the rule ``\elpiIn{pUX} := \elpiIn{p
-(uvar X) 2 :- X = 7}'' to the previous database. The \uvar keyword does not
-allow the call \elpiIn{p 1 Z} to be unified with \elpiIn{pUX} since \elpiIn{1}
-is not a variable.
+% Moreover, \elpi provides a way to further control the unification on input
+% arguments. The user can put the \uvar keyword in front of a variable name in a
+% input argument. This tells the unification engine to unify this head term with
+% only flexible term. For example, we can add the rule ``\elpiIn{pUX} := \elpiIn{p
+% (uvar X) 2 :- X = 7}'' to the previous database. The \uvar keyword does not
+% allow the call \elpiIn{p 1 Z} to be unified with \elpiIn{pUX} since \elpiIn{1}
+% is not a variable.
 
-We think that the combination of the input mode and the \uvar keyword give
-the user a powerful tool to  control how unification is dynamically performed
-at runtime.
+% We think that the combination of the input mode and the \uvar keyword give
+% the user a powerful tool to  control how unification is dynamically performed
+% at runtime.
 
 \subsection{First-order determinacy checker}
 
-Mode checking is an essential ingredient from which determinacy checking can be
-performed. Before explaining the interaction between these two, we need to take
-some time to talk about mutual clauses exclusiveness.
-%
-% \paragraph{Mutual exclusive clauses}
-From \cite{1989Warren}, we know that at most one clause can be applied
-successfully for any determinate predicate.
+Mode checking is an essential ingredient from which determinacy can be
+guaranteed. 
+% Before explaining the interaction between these two, we need to take
+% some time to talk about mutual clauses exclusiveness.
+% %
+% % \paragraph{Mutual exclusive clauses}
+% From \cite{1989Warren}, we know that at most one clause can be applied
+% successfully for any determinate predicate.
 
-In order to satisfy this (necessary by not sufficient) condition, we need 
-that all the clauses of a determinate predicate $p$ are mutually exclusive.
-Mutual exclusiveness can be stated as follows:
+% In order to satisfy this (necessary by not sufficient) condition, we need 
+% that all the clauses of a determinate predicate $p$ are mutually exclusive.
+% Mutual exclusiveness can be stated as follows:
 
-\begin{definition}[Non-overlapping clauses]
-  For any pair of clauses of the same predicate ``\clauseCmd{p}{\vec{x}}{b1}''
-  and ``\clauseCmd{p}{\vec{y}}{b2}'', we say that they are non-overlapping if
-  there exists an input position $i$ such that $\forall \sigma, \sigma\ x_i \neq
-  \sigma\ y_i$
-  \label{def:mut-excl}
-\end{definition}
+% \begin{definition}[Non-overlapping clauses]
+%   For any pair of clauses of the same predicate ``\clauseCmd{p}{\vec{x}}{b1}''
+%   and ``\clauseCmd{p}{\vec{y}}{b2}'', we say that they are non-overlapping if
+%   there exists an input position $i$ such that $\forall \sigma, \sigma\ x_i \neq
+%   \sigma\ y_i$
+%   \label{def:mut-excl}
+% \end{definition}
 
 In \cite{1996henderson}, mode checking (with groundness check)
 ensures that at most one clause can be applied to
-any predicate such that its clauses respect \cref{def:mut-excl}. 
+any predicate. Note the hypotheses called \coqIn{HG} in \cref{def:mut-excl}
+and \ref{detpred}. 
 In fact, thanks to mode checking,
 any call is validated if its terms in input position are ground.
-Groundness, thanks to \cref{def:mut-excl}, ensures that it exists at most one clause 
-which can be executed on that call.\\
-Note also that the groundness check ensures that outputs become ground. This is
-a fundamental property; otherwise, outputs would be pointless. If an output does
+Groundness (modulo \cut, see \cref{def:mut-excl+cut}) ensures that it exists at most one clause 
+that can be executed successfully on that call.\\
+We want to point out that mode-checking also
+ensures that outputs become ground. This is
+a fundamental property; otherwise, outputs would be pointless: if an output does
 not become ground, it cannot serve as the input for another predicate call.
-Otherwise, two clauses could potentially be applied to the same predicate call.
 
 
-In our setting, we slightly extend this definition so that the \elpi's \uvar
-keyword is taken into account.
+% In our setting, we slightly extend this definition so that the \elpi's \uvar
+% keyword is taken into account.
 
-\begin{definition}[Mutual exclusiveness with \uvar]
-  A clause with an input term marked with the \elpiIn{uvar} keyword,
-  does not overlap with any other rigid-head term.
-  \label{def:mut-excl-uvar}
+% \begin{definition}[Mutual exclusiveness with \uvar]
+%   A clause with an input term marked with the \elpiIn{uvar} keyword,
+%   does not overlap with any other rigid-head term.
+%   \label{def:mut-excl-uvar}
+% \end{definition}
+
+% This means that a term marked with the \uvar keyword in the head of a clause
+% overlaps only with unification variables or with another term marked with
+% \uvar.
+
+In our first-order \elpi, we don't perform any static mode analyse. Rather, we
+repose on \match operation that is done on the input arguments at runtime.
+
+\begin{definition}[Mutual-exclusion on heads in \elpi]
+  \begin{coqcode}
+    Definition ~\customlabel{emutexcl}{\texttt{emutual\_exclusive}}\prog \pred\!\!~:
+      ~$\forall$~ i, ~$!\exists$~ i' o bo, (~\clauseCmd{\pred}{\texttt{i' o}}{\texttt{bo}}~) \in ~\prog~p -> unify i i'
+  \end{coqcode}   
+  \label{def:emut-excl} 
 \end{definition}
 
-This means that a term marked with the \uvar keyword in the head of a clause
-overlaps only with unification variables or with another term marked with
-\uvar.
+The main difference between this last definition and \cref{def:mut-excl} is the
+absence of the \coqIn{HG} hypothesis.
 
 \begin{theorem}
-  The \elpi input/ouput modes and the (hard-)cut operator guarantee that for any
+  The \elpi input/ouput modes guarantee that for any
   predicate $p$ whose clauses respect
-  \cref{def:mut-excl,def:mut-excl-uvar}, there exists at most
+  \cref{def:emut-excl}, there exists at most
   one succeeding clause for any call to $p$.
 \end{theorem}
 
@@ -269,30 +290,28 @@ overlaps only with unification variables or with another term marked with
   Without loss of generality, we take a program \prog with only binary
   predicates representing respectively an input and an output. Let $p$ be a
   predicate in \prog such that all clauses respect
-  \cref{def:mut-excl,def:mut-excl-uvar}. Let
+  \cref{def:mut-excl}. Let
   ``$p\ t_1\ t_2$'' be a valid call for $p$. Let ``$c_1 :=
   \clauseCmd{p}{t_1'\ t_2'}{b_1}$'' and ``$c_2 := \clauseCmd{p}{t_1''\
-  t_2''}{b_2}$'' be two clauses implementing $p$.  We need to prove that the head
-  of $c_1$ and $c_2$ cannot unify both with the call. Note that the absence of
+  t_2''}{b_2}$'' be two clauses implementing $p$. 
+  Note that the absence of
   groundness check avoid us from saying that $t_1$, which is the input of the
   call, is a ground term. We reason by induction on the shape of $t_1$ and show
-  that it cannot unify simultaneously with $t_1'$ and $t_1''$, i.e. at most one
+  that it cannot \match simultaneously with $t_1'$ and $t_1''$, i.e. at most one
   between $c_1$ and $c_2$ can be applied on the goal.
   \begin{itemize}
     \item Case 1: $t_1$ is a constant. A constant, in input position, matches with
-          the same constant of a variable. By the definition of our unification
-          of input terms, $t_1$ only matches with a input terms which is either
-          the same constant or a variable (but not a term marked with \uvar).
+          the same constant or a variable. By the definition of \match
+          $t_1$ only matches with
+          the same constant or a variable.
           Due to \cref{def:mut-excl}, $t_1'$ and $t_1''$ cannot be neither the
           constant $t_1$ nor a unification variable nor a combination of the
           two. Therefore $c_1$ and $c_2$ cannot be applied both of the call to
           $p$.
     \item Case 2: $t_1$ is a variable. A variable, in input position, matches
-          with another variable or a term marked with \uvar (but not a rigid
-          term). By \cref{def:mut-excl}, $t_1'$ and $t_1''$ cannot be both
-          unification variables and, by \cref{def:mut-excl-uvar}, they cannot be
-          a combination of a unification variable and a term marked with the
-          \uvar keyword. This means that at most one of the two clauses 
+          only with another variable. 
+          By \cref{def:mut-excl}, $t_1'$ and $t_1''$ cannot be both
+          unification variables. This means that at most one of the two clauses 
           can be applied on the call to $p$.
     \item Case 3: $t_1$ is a compond term: a term starting with rigid head with
           potentially flexible subterms. If the heads of $t_1'$ and $t_1''$ have
@@ -305,14 +324,14 @@ overlaps only with unification variables or with another term marked with
 \end{proof}
 
 
-As explained in \cite{1989Warren}, thanks to the (hard-)cut operator, mutual
-exclusiveness can be relaxed.
+% As explained in \cite{1989Warren}, thanks to the (hard-)cut operator, mutual
+% exclusiveness can be relaxed.
 
-\begin{definition}[Mutual exclusiveness with \cut]
-  Two clauses for the same predicate are mutually exclusive if the
-  chronological antecedent has a cut in its body.
-  \label{def:mut-excl-cut}
-\end{definition}
+% \begin{definition}[Mutual exclusiveness with \cut]
+%   Two clauses for the same predicate are mutually exclusive if the
+%   chronological antecedent has a cut in its body.
+%   \label{def:mut-excl-cut}
+% \end{definition}
 
 % This ensures that if we reach the cut
 % operator in the first clause, the second clause is not considered as a choice
@@ -320,126 +339,124 @@ exclusiveness can be relaxed.
 % clause will be tried. In both situations, the two clauses cannot be applied
 % simultaneously to the same predicate call.
 
-This definition allows overlapping clauses to
-exist in a database under the condition that the antecedent has a cut
-guaranteeing that at most one clause can be applied on a predicate call. 
+% This definition allows overlapping clauses to
+% exist in a database under the condition that the antecedent has a cut
+% guaranteeing that at most one clause can be applied on a predicate call. 
 
-% \paragraph{Determinate clauses after last \cut}
-The second, but no less important, condition for a predicate to be determinate
-is the following:
+% \begin{definition}[Mutual-exclusion + \cut]
+%   Same as \cref{def:det-prem-cut}
+% \end{definition}
 
-\begin{definition}[Determinate premises after last \cut]
-  In each clause of a determinate predicate, the premises after the last \cut
-  operator are only calls to determinate predicates. 
-  \label{def:det-prem-cut}
+% % \paragraph{Determinate clauses after last \cut}
+% The second, but no less important, condition for a predicate to be determinate
+% is the following:
+
+% \begin{definition}[Determinate premises after last \cut]
+%   In each clause of a determinate predicate, the premises after the last \cut
+%   operator are only calls to determinate predicates. 
+%   \label{def:det-prem-cut}
+% \end{definition}
+
+% This guarantees that any output produced is uniquely determined, i.e. no two
+% solutions can be produced on the same call.
+
+\begin{definition}[Deterministic\_pred in \elpi]
+  \begin{coqcode}
+    Definition ~\customlabel{edetpred}{\texttt{edeterminate\_pred}}~(~\prog~: prog) (p: pn) :=
+      forall ~$i$~ ~$o$~ ~$a$~
+        (H : ~\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst}~), ~$a$~ = ~\EmptyList~.
+  \end{coqcode}
+  \label{def:edt-pred}  
 \end{definition}
 
-This guarantees that any output produced is uniquely determined, i.e. no two
-solutions can be produced on the same call.
+Our definition of \ref{edetpred} (with a leading \coqIn{e} for
+\elpi) changes from \ref{detpred} in \cref{sec:det}: we do not need the \coqIn{HG}
+hypothesis: the usage of \elpi modes allows to pass any (even not ground)
+term in input position.
 
-Thanks to this last definition, we can give our definition of determinacy
-checking:
-
-\begin{definition}[Determinacy checking]
-  Determinacy checking is the combination of mutual-exclusive check up to
-  \cref{def:mut-excl,def:mut-excl-uvar,def:mut-excl-cut} and
-  \cref{def:det-prem-cut}.
+\begin{definition}[Determinacy checking in \elpi]
+  Determinacy checking (noted \coqIn{edet_check}) on a program
+  \prog is equivalent by the combination of 
+  \cref{def:emut-excl,def:mut-excl+cut,def:det-prem}
   \label{def:det-check}
 \end{definition}
 
-Before continuing our discussion about determinacy, we prove an auxiliary
-lemma.
-% {goal[]}{alts[]}{subst}{alts_res}{subst_res}
-\begin{lemma}
-  For each determinate predicate $p$,
-  it always exists an implementation so that each clause of $p$ have at least
-  one \cut in its body without loosing in expressiveness.
-  % Forall list of goals $gs$ and list of alternatives $alts$ and $a$ such that
-  % they share a program \prog, $\forall \subst\ \subst',
-  % \runCmd{gs}{alts}{\subst}{a}{\subst'} \to \exists \prog',
-  % \runCmd{gs'}{alts'}{\subst}{a'}{\subst'}$ such that all clauses of each
-  % determinate predicate in $\prog'$ has a \cut and $gs', alts'$ and $a'$ are
-  % list of goals and alternatives build from resp. $gs, alts$ and $a$ where the
-  % \prog has been by $\prog'$.
-  \label{th:all-cut}
-\end{lemma}
+The following lemma says that in a determinacy-checked program, if \pred is
+a determinate-annotated program and the \run\ of a call to \pred gives a 
+solution, then the same solution is returned by a run of the same goal
+in a program where all of the clauses of \pred are rewritten such
+that thier last atom is a cut.
 
 \begin{lemma}
-  Forall list of goals $gs$ and list of alternatives $alts$ and $a$ such that
-  they share a program \prog,
-  $$
-  \begin{array}{l}
-  \forall \subst\ \subst' i\ o\ p, \mathtt{pred\_functional}(p)\\
-  \runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{a'}{\subst'} \iff \\
-  \runCmd{[\goalCmd{\mathtt{tailcut}(\prog(p))}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{a'}{\subst'}
-  \end{array}
-  $$
-  
-  such that all clauses of each
-  determinate predicate in $\prog'$ has a \cut and $gs', alts'$ and $a'$ are
-  list of goals and alternatives build from resp. $gs, alts$ and $a$ where the
-  \prog has been by $\prog'$.
-  \label{th:all-cut2}
+  Let \tailcut be a function taking a program \prog and predicate \pred
+  returning a new program \prog['] such that the bodies of all clauses of \pred
+  in \prog have been added a \cut\ as last atom.
+
+  Let \pred be a determinate-annotated predicate,
+  \begin{coqcode}
+    Lemma det_tail_cut ~\prog \alt~:
+      forall i o a ~\subst \subst[']~ (H: det_check ~\prog\!\!~)
+        (HR: ~\runCmd{[\goalCmd{\prog}{\callCmd{\pred}{i}{o}}{\alt}]}{[]}{\subst}{a}{\subst'}~),
+          ~\runCmd{[\goalCmd{(\tailcutCmd{\prog}{\pred})}{\callCmd{\pred}{i}{o}}{\alt}]}{[]}{\subst}{a}{\subst'}~.
+  \end{coqcode}
+  \label{lemma:prog-all-cut}
 \end{lemma}
 
 \def\clauseL{\ensuremath{\mathcal{L}}\xspace}
 \begin{proof}
-  Let \clauseL be the list of clauses implementating a determinate predicate. We
-  can reason by induction on the length of the elements in \clauseL. If \clauseL
-  is empty, then the claim is trivially true. Otherwise, we have a clause $c$
-  follwed by a list \clauseL of clauses. If $c$ has a cut then we are done.
-  Otherwise, by hypothesis, the head $c$ is mutual exclusive from all other
-  clauses in \clauseL. Therefore, adding a cut as first atom of the body of $c$
-  will maintain the semantics of the original program: if a goal $g$ unifies
-  with the head of $c$, then by hypothesis, no clause $c' \in \clauseL$ has a
-  head unifying with $g$. The insertion of the head-cut in the body of $c$
-  simply tells the interpreter to discard all clauses in \clauseL that anyway
-  could not unify with the goal. If, finally, a goal $g$ does not unify with the
-  head of $g$ then adding a head-cut in its body does not affect the behavior
-  of the program: the head of the clause fails to be unified with the goal
-  and by induction hypothesis, \clauseL is a program where all clauses
-  of the determinated predicates have a \cut. This completes the proof.
+  TODO: induction on the derivation in HR
 \end{proof}
 
-Thanks to \cref{th:all-cut}, we can give a common structure to all the clauses
-of a determinate predicate: we are free to assume that $c$ always has at
-least one cut.
+% Thanks to \cref{th:all-cut}, we can give a common structure to all the clauses
+% of a determinate predicate: we are free to assume that $c$ always has at
+% least one cut.
 
-\begin{corollary}
-  If all clauses of a predicate have a cut, then at most one of
-  these clauses can be applied successfully on the goal, the other being
-  cut away.
+The following lemma says that if all clauses of a predicate \pred have a cut as
+last atom in their body, if the \run\ of a call to this predicate as a goal with
+an empty list of alternatives gives an output, then the alternatives of the
+ouput are the empty list.
+
+\begin{lemma}[Tail-cut and cut-alternatives]
   $$
   \begin{array}{l}
   \forall \subst\ \subst' i\ o\ p,\\
-  \runCmd{[\goalCmd{\mathtt{tailcut}(\prog(p))}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{x'}{\subst'} \rightarrow [] = x'
+  \runCmd{[\goalCmd{(\tailcutCmd{\prog}{\pred})}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{x'}{\subst'} \rightarrow [] = x'
   \end{array}
   $$
-  \label{th:only-one-clause}
-\end{corollary}
+  \label{lemma:cut-cat-alt}
+\end{lemma}
 
 \begin{proof}
-  By a slightly modified version of \cite{1989Warren}
+  INTUITION: The cut-alternative of the last cut is the empty list
 \end{proof}
+
+% \begin{corollary}
+%   If all clauses of a predicate have a cut, then at most one of
+%   these clauses can be applied successfully on the goal, the other being
+%   cut away.
+%   \label{cor:only-one-clause}
+% \end{corollary}
+
+% \begin{proof}
+%   By a slightly modified version of \cite{1989Warren}
+% \end{proof}
 
 %
 \begin{theorem}[determinacy check $\to$ determinate pred]
-  Let $\prog$ be a determinacy-checked program, then, using \elpi input/output
-  modes, for any determinate predicate $p$, \texttt{\ref{detpred}~\prog~p}
-  holds.
-  $$
-  \begin{array}{l}
-  \forall \subst\ \subst' i\ o\ p, \mathtt{det\_check}(p) \to \mathtt{well\_moded}(p,i) \to \\
-  \runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{[]}{\subst'} \to
-  \end{array}
-  $$
+  For any determinate-annotated predicate \pred,
+  \begin{coqcode}
+    Theorem det_check_det_pred ~\prog~ (H: edet_check ~\prog\!\!~):
+      ~\ref{edetpred} \prog \pred~.
+  \end{coqcode}
 \end{theorem}
 
 % Before giving the proof, we just want to point out that using input/output modes
 % of \elpi, no hypothesis on the groundness of terms can be done. 
 
 \begin{proof}
-  By \cref{th:all-cut} \cref{th:only-one-clause}
+  By \cref{lemma:prog-all-cut} and the hypothesis \coqIn{H}, the conclusion can
+  be rewritten such that all clauses of \pred have a cut as last atom in their
+  bodies. Finally, thanks to \cref{lemma:cut-cat-alt} we can conclude the proof.
 \end{proof}
 
 

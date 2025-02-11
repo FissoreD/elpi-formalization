@@ -23,8 +23,9 @@ An atom is either a fully applied predicate or the cut operator, noted
 \cut.
 
 A variable is a term not yet instantiated. We can assign variables thanks to the
-\texttt{unify} procedure. The notation $t_1 = t_2$ is the unification between
-the terms $t_1$ and $t_2$. A substitution is a mapping from variable name to its
+\texttt{unify} procedure. The notation \unifyCmd{t_1}{t_2}{\subst}{\subst[']} represents
+the unification between the terms $t_1$ and $t_2$ from an intial substitution \subst
+to a final substition \subst[']. A substitution is a mapping from variable name to its
 assignment $t$. Unification provides, when possible, a most general substitution
 between the two terms. If this substitution, sometime called unifier, does not
 exists, then the following property holds:
@@ -49,8 +50,7 @@ A program is a mapping from predicate names to clauses. These clauses are in
 disjunction and the order of their visit depend on the chronological order in
 which clauses have been declared. We have no builtin \textit{or} operator but
 it's behavior can be replicated by adding several implementation of the same
-rule. There is no builtin \elpiIn{or} operator, it can be however represented by
-adding multiple rules for the same predicate.
+rule.
 
 Unlike other prolog system, such as \mercury \cite{1996Somogy}, \elpi is not a
 compiled language and we do not transform the list $\mathcal{L}$ of clauses of a
@@ -76,6 +76,9 @@ alternatives. If that choice leads to a failure, the interpreter will try to exe
 the first alternative. This non-deterministic behavior can be controlled by
 the user thanks to the cut operator which allows to cut out alternatives (see
 \cref{sec:cut}).
+
+TODO: dire cosa significa che una clausola can be applied successfully on a
+goal.
 
 To be more precise, we give below the type structure of each cunstruct we have
 defined above:
@@ -112,6 +115,10 @@ when it finds the first solution, which is a valid substitutions for the query
 wrt the program. In order to find all the solution of query from the current
 program, that is all the valid substutions for the query, it is sufficient to
 iterate over all the alternatives \alt['].
+
+In the following we use the following notation for call to the run predicate:
+%
+$$ \runCmd{\mathcal{G}}{\mathcal{A}}{\subst}{\mathcal{A}'}{\subst'} $$
 
 \subsection{The cut operator}
 \label{sec:cut}
@@ -214,6 +221,19 @@ In \twelf \cite{1996pfenning}, which is an implementation of \lamprolog, mode
 checking is extended to work with local nominal variables and higher-order
 variable unification within the pattern fragment.
 
+\begin{coqcode}
+  Definition ~\customlabel{wellmoded}{\texttt{well\_moded}}~ ~\prog\!\!~:
+    forall p i o (HG: ground i) ~\subst \subst[']~, 
+      (H: ~\runCmd{[\goalCmd{\prog}{\callCmd{\texttt{p}}{\texttt{i}}{\texttt{o}}}{\EmptyList}]}{\EmptyList}{\subst}{a}{\subst[']}~),
+        ground (~\subst' ~o).
+\end{coqcode}
+
+The definition above can be rephrased as follows: a program \prog is well moded
+if for any (binary in our setup) predicate \pred called with a ground input
+\texttt{i} and any output term \texttt{o}, if the call succeeds producing a
+substitution \subst['] then the application of that substitution to \texttt{o}
+is a ground term.
+
 It is interesting to note that mode checking under the groundness condition is
 sometime too restrictive. In some situation it is in fact sufficient to work
 with term that are "enough" ground to guarantee the wanted properties. As an
@@ -232,25 +252,58 @@ seamantics of the input mode which is used in \elpi.
 In the second part, we extend it so that it works with predicates taking
 predicate calls as arguments.
 
-\subsection{Concerning functionality}
+\subsection{Concerning determinacy}
+\label{sec:det}
 
 
 Determinacy, as anticipated, is the property of a predicate that returns at most
 one solution per call. Determinism checking statically ensures that a predicate
-marked as determinate respects this condition with respect to the clauses
-implementing it. In the literature, several papers discuss this topic, although
+the clauses implementing a determinate predicate respects this condition.
+In the literature, several papers discuss this topic, although
 they provide different descriptions and different usages of it.
 
 Determinacy checking (or inference) is statically performed on a program on
-predicates annotated (or inferred) as determinate. A predicate is functional if
-all of the clauses implmenting it have mutually-exclusive heads, that is they
-cannot be applied at the same time. By the way, non-mutually exclusive clauses
-$c_0, \dots, c_n$ are accepted if all clauses $c_i$ with $0 \leq i < n$ have
-a cut. Thanks to these two conditions we are sure that at most one clause can
-be applied successfully per predicate call. The second important condition
-for determinacy is that all the premises of a clauses after the last cut are
-call to determinate predicate, and, if the clause has no cut all its premises
-are call to determinate predicate.
+predicates annotated (or inferred) as determinate. Under the hypothesis to work
+with program statically mode-checked, a necessary condition for a predicate
+predicate to be determinate is that no two clauses can be applied successfully
+on the same predicate call. Two clauses respecting this property are called
+mutually-exclusive or non-overlapping.
+
+\begin{definition}[Mutual-exclusion on heads]
+  \begin{coqcode}
+    Definition ~\customlabel{mutexcl}{\texttt{mutual\_exclusive}}\prog \pred\!\!~:
+      ~$\forall$~ i (HG: ground i), 
+        ~$!\exists$~ i' o bo, (~\clauseCmd{\pred}{\texttt{i' o}}{\texttt{bo}}~) \in ~\prog~p -> unify i i'
+  \end{coqcode}   
+  \label{def:mut-excl} 
+\end{definition}
+
+\begin{definition}[Mutual-exclusion with \cut]
+  Given a program \prog and deterministic predicate \pred, let $c_0, \dots, c_n$
+  be the non-mutually exclusive clauses of \pred in \prog, then mutual exclusion
+  is guaranteed if all clauses $c_i$ with $0 \leq i < n$ have a \cut\ as a
+  premise in their body.
+  \label{def:mut-excl+cut}
+\end{definition}
+
+The second important condition
+for determinacy is the following: 
+
+\begin{definition}[Determinate premises]
+  Let \prog be a program and \pred a determinate-annotated predicate, then let
+  $p_1,...p_n$ be the premises in the bodies of all the clauses of \pred in
+  \prog. If there is no cut in $p_1 ... p_n$ then all $p_i$ for $1 \leq i \leq n$
+  are calls to deterministic predicates, else, le $i$ be the position of the
+  last \cut in the premises list, then all $p_j$ $i+1 \leq j \leq n$ is a call
+  to a deterministic predicate.
+  \label{def:det-prem}
+\end{definition}
+
+\begin{definition}[Determinacy checking]
+  Determinacy checking (noted \coqIn{det_check}) on a program
+  \prog is defined as the combination of 
+  \cref{def:mut-excl,def:mut-excl+cut,def:det-prem}
+\end{definition}
 
 In \cite{1989Warren}, the authors describe a property subsuming
 determinism: they describe functionality. A predicate (clause or query) is
@@ -260,7 +313,7 @@ a predicate call producing the same solution twice is not considered as
 determinate, while, it is functional. In the paper they explain that mutual
 exclusivness of clauses can be improved not only by looking at the head and at
 the presence of the cut but also by instructing the checker that premises can
-put clauses in mutual exclusivness.1`'
+put clauses in mutual exclusivness.
 
 In \cite{1991Sahlin}, and more formally in \cite{1996mogensen}, determinacy is
 used to work with \mixtus, a partial evaluator of \prolog. In that case,
@@ -268,8 +321,8 @@ determinacy was inferred so that it was possible to derive a new specialiezed,
 and therefore more efficient, version of the original program under the
 guarantee that the two program share the same semantics.
 
-Finally, in \cite{1996henderson}, a determinacy checker for \mercury allows to
-capture different kind of behaviour of a predicate. A predicate can return
+Finally, in \cite{1996henderson}, a determinacy checker for \mercury 
+captures different behaviours of a predicate. A predicate can return
 exactly zero and/or one solution, zero and/or multiple solution. In \mercury the
 user is allowed to annotate predicates with determinacy information. A
 non-annotated predicate will be inferred with the lowest derived tag.
@@ -278,34 +331,32 @@ specialized it so that a faster routine can be used in the compiled program.
 
 Several work of King et al \cite{king2005, king2006, 2011king} had been pursued
 in order to build an inference model for determinacy in \prolog system with cut.
-Moreover, they explain that mode inference subsume mode checking. This claim is
-quite intuitive, however, we will present a determinacy checker.
+Moreover, they explain that determinacy inference subsume determinacy checking.
+Even though this last claim, we think that an inference model does not fit
+well with our language.
 
-Our idea it's up to the user to choose what should be the behavior of a
-predicate wrt determinacy. The checker, in fact, assists the user by rejecting,
-a predicate, that, for example, is not to detected as determinate. Moreover,
-since \elpi is an interpreted language, it seems quite useless a mode inference
-engine. This is because local rules can be charged \textit{à la volée} during
-the evaluation of the program. 
+The first motivation is that since \elpi is an interpreted dialect of \lamprolog,
+program can change dynamically on the run of a program. This means that
+rules can be added \textit{à la volée} making impossible to infer
+determinacy as the user expects. 
+It's 
+up to the user to choose what should be the behavior of a predicate wrt
+determinacy. The checker is meant to assist the user by rejecting, a predicate,
+that does not respect the declared determinacy. 
 
 As explained in some of the previously cited papers, determinacy (and so
 functionality) checking is an undecidable problem. The checking property is
 sound: if a predicate passes the analysis then it is for sure determinate.
-However, it is not complete since there could exists false negatives. We are
+However, it is not complete: there could exists false negatives. We are
 convinced, that completeness, is not a big deal, since, as also claimed in ...
-the clases of every determinate predicate can be rewritten in a equivalnet form
-so that they are no more classified as non-determinate.
-
-\makeatletter
-\newcommand{\customlabel}[2]{%
-   \protected@write \@auxout {}{\string \newlabel {#1}{{\ensuremath{#2}}{\thepage}{#2}{#1}{}} }%
-   \hypertarget{#1}{\ensuremath{#2}}
-}
-\makeatother
+every determinate predicate not passing the determinacy check,
+can be rewritten in a equivalent way
+so that it is no more classified as non-determinate.
 
 \begin{coqcode}
 Definition ~\customlabel{detpred}{\texttt{determinate\_pred}}~(~\prog~: prog) (p: pn) :=
-  forall ~$i$~ ~$o$~ ~$a$~ ~\subst~(H : ~\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst}~), ~$a$~ = ~\EmptyList~.
+  forall ~$i$~ ~$o$~ ~$a$~ ~\subst~(HG: ground i) 
+    (H : ~\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst}~), ~$a$~ = ~\EmptyList~.
 \end{coqcode}
 
 The definition above explains what it means for a predicate to be determinate. 
@@ -315,6 +366,21 @@ starting with the empty substitution and the empty list of alternatives,
 we have a solution, i.e. the couple $(a, \subst)$ then the list of
 alternatives $a$ is empty. This essentailly means that any functional
 predicate produces no choice points.
+
+Following the literature, this claim is proven true:
+
+\begin{theorem}
+  Let \pred be a deterministic-annotated predicate, the following holds
+  \begin{coqcode}
+    Theorem ~\customlabel{is_detpred}{\texttt{determinate\_pred\_prop}}~(~\prog~: prog) (p: pn) :=
+      forall (HM : well_moded ~\prog\!\!~) (HD: det_check ~\prog\!\!~),
+          determinate_pred ~\prog~p
+  \end{coqcode}    
+\end{theorem}
+
+This to say that for any well-moded (hypothesis \coqIn{HM}) and
+determinacy-checked (hypothesis \coqIn{HD}) program and a predicate \pred such,
+then \pred is a deterministic predicate.
 
 \subsection{Contributions and paper structure}
 
