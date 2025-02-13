@@ -10,10 +10,19 @@
 \usepackage{mdframed}  % For creating a bordered box
 \usepackage{amsmath}
 \usepackage{amssymb}
+% \usepackage{amsthm}
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
 \newtheorem{definition}{Definition}
 \newtheorem{corollary}{Corollary}
+
+% \expandafter\def\expandafter\normalsize\expandafter{%
+% \normalsize%
+% \setlength{\belowdisplayskip}{3pt}%
+% \setlength{\abovedisplayskip}{3pt}%
+% \setlength{\abovedisplayshortskip}{3pt}%
+% \setlength{\belowdisplayshortskip}{3pt}%
+% }
 
 % \usepackage{amssymb}% http://ctan.org/pkg/amssymb
 \usepackage{pifont}% http://ctan.org/pkg/pifont
@@ -28,7 +37,7 @@
 
 \newenvironment{boxedproof}
 {\begin{mdframed}\begin{proof}}
-      {\end{proof}\end{mdframed}}
+{\end{proof}\end{mdframed}}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -88,6 +97,17 @@
 \newcommand{\tailcut}{\texttt{tail\_cut}\xspace}
 \newcommand{\arr}{\rightsquigarrow}
 
+\def\mutExclHeads{\texttt{mut\_excl\_heads}}
+\def\mutExcl{\texttt{mut\_excl}}
+\def\mutExclM{\texttt{mut\_exclM}}
+\def\detCheck{\texttt{det\_check}}
+\def\detCheckM{\texttt{det\_checkM}}
+
+\def\mutExclCut{\texttt{mut\_excl\_cut}}
+\def\detPrem{\texttt{det\_prem}}
+\def\wellModed{\texttt{well\_moded}}
+\newcommand{\ground}[1]{\texttt{ground }#1}
+
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
 \newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \arr (#4, #5)}}
 \newcommand{\callCmd}[3]{\ensuremath{(\call\ #1\ #2\ #3)}\xspace}
@@ -134,6 +154,7 @@
 \newcommand{\ruleUnif}{\ruleName{=}}
 \newcommand{\ruleImpl}{\ruleName{\Rightarrow}}
 \newcommand{\rulePi}{\ruleName{\forall}}
+\newcommand{\ruleMatch}{\ruleName{m}}
 
 \newcommand{\ruleStopM}[1]{
   \begin{myRule}{#1}
@@ -147,9 +168,19 @@
 \newcommand{\ruleUnifM}[1]{
   \begin{myRule}{#1}
     % UNIF
-    \AxiomC{$\text{\unify}\ m\ x\ y\ \subst\ \subst[']$}
+    \AxiomC{\unifyCmd{x}{y}{\subst}{\subst[']}}
     \AxiomC{\runCmd{\g}{\alt}{\subst[']}{\alt[']}{\subst['']}}
     \RightLabelM{\ruleUnif}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{(x = y)}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst['']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleMatchM}[1]{
+  \begin{myRule}{#1}
+    % UNIF
+    \AxiomC{\matchCmd{x}{y}{\subst}{\subst[']}}
+    \AxiomC{\runCmd{\g}{\alt}{\subst[']}{\alt[']}{\subst['']}}
+    \RightLabelM{\ruleMatch}
     \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{(x =_m y)}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst['']}}
   \end{myRule}
 }
@@ -176,16 +207,16 @@
 \newcommand{\ruleCallM}[1]{
   \begin{myRule}{#1}
     % CALL
-    % \AxiomC{\prog p = \ConsHd{(p\ i'\ o' \evdash b)}\ConsTl{bs}}
+    % \AxiomC{\prog \pred = \ConsHd{(\pred\ i'\ o' \evdash b)}\ConsTl{bs}}
     % \AxiomC{$\mathcal{U} \gets {[i = i', o = o']}$}
     % \AxiomC{\runCmd{(({\mathcal{U}\ @\ b})_a\ @\ gl)}{(bs_a\ @\ a)}{s}{a'}{s'}}
     % \RightLabelM{\ruleCall}
-    % \TrinaryInfC{\runCmd{\ConsHd{(\prog, \call{p}{i}{o}, \_)}\ConsTl{gl}}{a}{s}{a'}{s'}}
+    % \TrinaryInfC{\runCmd{\ConsHd{(\prog, \call{\pred}{i}{o}, \_)}\ConsTl{gl}}{a}{s}{a'}{s'}}
     % 
-    \AxiomC{$\mathcal{F}(\prog, p, i, o, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
+    \AxiomC{$\mathcal{F}(\prog, \pred, i, o, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
     \AxiomC{\runCmd{(g\ @\ \g)}{(new\_alt\ @\ \alt)}{\subst}{\alt[']}{\subst[']}}
     \RightLabelM{\ruleCall}
-    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{p}{i}{o}}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{\pred}{i}{o}}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
   \end{myRule}
 }
 
@@ -215,4 +246,9 @@
   \protected@write \@auxout {}{\string \newlabel {#1}{{\ensuremath{#2}}{\thepage}{#2}{#1}{}} }%
   \hypertarget{#1}{\ensuremath{#2}}
 }
+\makeatother
+
+\makeatletter
+\def\thm@space@setup{\thm@preskip=0pt
+  \thm@postskip=0pt}
 \makeatother
