@@ -30,32 +30,32 @@ point was created.
   \label{fig:basic-interp}
 \end{figure}
 
-The semantics expressed by \runCmd{g}{a}{s}{a'}{s'} relates a list of
-goals $g$, a list of alternatives $a$ and an initial substitution $s$ with a
-new substitution $s'$ and a new list of alternatives $a'$. The list of goals
+The procedure \runCmd{\g}{\alt}{\subst}{\alt[']}{\subst[']} relates a list of
+goals \g, a list of alternatives \alt and an initial substitution \subst with a
+new substitution \subst['] and a new list of alternatives \alt[']. The list of goals
 should be understood as a list of goal put in cunjunction, whereas the
-alternatives represent a disjunction of goals. In the derivation above we use
+alternatives represent a disjunction of goals. In the derivation system, we use
 the two colon symbol ($::$) has separator between the head of a list and its tail;
 $@$ stands for list concatenation; $[\ ]$ is the empty list. $\prog p$ is the
 application of \prog to the predicate $p$; it returns a list of clauses. The
 function $\mathcal{F}$ is defined as follows:
 %
 $$
-\mathcal{F}(\prog, p, i, o, s, a) := 
-  [(s, (
-      \Cons{(\prog, i =_i i', a)}
-        \Cons{(\prog, o =_o o', a)}
-          {[(\prog, g, a) \mid g \in bs]})) \mid \clauseCmd{p}{i'\ o'}{bs} \in \prog\ p]
+\mathcal{F}(\prog, p, i, o, \subst, \alt) := 
+  [(\subst, (
+      \Cons{(\prog, i =_i i', \alt)}
+        \Cons{(\prog, o =_o o', \alt)}
+          {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{p}{i'\ o'}{bs} \in \prog\ p]
 $$
 
 It takes a list of clauses, two terms, i.e. $i$ and $o$ representing the two
-arguments of the predicate call a substitution $s$ and a list of alternatives $a$. For each clause
-$(cl\ i'\ o'\ bs)$, it builds a new list of pairs where the first argument
-is the substitution $s$ and the second are goals made by 1) the unification of
+arguments of the predicate call a substitution $\subst$ and a list of alternatives \alt. For each clause
+\clauseCmd{p}{i'\ o'}{bs}, it builds a new list of pairs where the first argument
+is the substitution $\subst$ and the second are goals made by 1) the unification of
 the first argument $i'$ with the first argument $i$ of the predicate call 2) the
 unification between the second arguments $o'$ and $o$ 3) the map of each premise
 $g$ in the body $bs$ which return a new list of goals having the program $p$,
-the atom $g$ and the list of alternatives $a$.
+the atom $g$ and the list of alternatives \alt.
 
 The behaviour of the program depends on the shape of the list of goal and its
 alternatives. Starting from a configuration it is possible to execute the
@@ -67,36 +67,40 @@ configurations with an empty list of goals. By convention, this configuration is
 the final one: there are no more goal to treat; therefore, we can stop and
 return the same alternatives and substitution received in input.
 
-The \textit{fail rule} (\ruleFail) is used to consume the list of alternatives,
-if for example, the current goal leads to a failure or a loop. In fact, this
-rule allows to break loop since it can non-determinalistically applied on any
-configuration, provided that the list of alternatives is not empty. It is
-possible to make the algorithm deterministic by chainging \ruleFail so that it
-is applied if the current goal is a call to a predicate with no alternatives,
-but we prefer to simplify our rule system.
+The \textit{fail rule} (\ruleFail) consumes the list of alternatives if the
+first goal fails. A failure occurs if the goal is a call to a predicate
+with no clauses in the associated program or if a unification in the head
+cannot be performed starting from the given substitution.
+% In fact, this
+% rule allows to break loop since it can non-determinalistically applied on any
+% configuration, provided that the list of alternatives is not empty. It is
+% possible to make the algorithm deterministic by chainging \ruleFail so that it
+% is applied if the current goal is a call to a predicate with no alternatives,
+% but we prefer to simplify our rule system.
 
-The \textit{unify rule} (\ruleUnif) is applied when a unification $t1 = t2$
-occurs in the head of the current goal list. It calls the unification algorithm
-between the two terms $t1$ and $t2$ under the current substitution $s$ and
-returns the updated substitution $s'$. Finally the \run procedure is called the
-list of remaining goals $gs$ and the new substitution $s'$.
+The \textit{unify rule} (\ruleUnif) is applied when a unification $t_1 =_m t_2$
+occurs in the head of the current goal list. Depending on $m$, which can be
+either $i$ or $o$, it calls respectively the \unify or the \match (see \cref{sec:elpi-modes}) algorithm
+between the two terms $t_1$ and $t_2$ from the substitution \subst and
+returns the updated substitution \subst[']. Finally the \run\ procedure is called the
+list of remaining goals \g and the new substitution \subst['].
 
 The \textit{cut rule} (\ruleBang) refers to goals where the first conjunct is is
-the \texttt{!} atom. This is where the cut-alternatives $ca$ become interesting.
-The rule tells that the list of goal $gl$ can be launched using $ca$ and the
-new list of alternatives.
+the \cut atom. This is where the cut-alternatives \alt become interesting.
+The rule tells that the list of goal \g can be launched using \alt as the
+new list of alternatives.\todo{explain better}
 
 The \textit{call rule} (\ruleCall) deals with goals starting with a predicate
 call. In this case the function $\mathcal{F}$ is called with the parameters as
 explained above and if the result of this operation is the list
-\ConsHd{b}\ConsTl{bs}, then a recursive call to \run is done by prepending $b$ to
-the list of remaining goals $gl$ and $bs$ is prepended to the list of
-alternatives $a$.
+\ConsHd{b}\ConsTl{bs}, then a recursive call to \run\ is done by prepending $b$ to
+the list of remaining goals \g and $bs$ is prepended to the list of
+alternatives \alt.
 
 The combination of the \ruleCall and \ruleBang are crucial to reproduce the
 behaviour of the hard cut. When a call to a predicate gives several rules as new
 choice points, thanks to the function $\mathcal{F}$ we can associate each atom
-of each body of $\prog p$ to the current alternatives $a$. If a clause $b_i$ in
+of each body of $\prog p$ to the current alternatives \alt. If a clause $b_i$ in
 \ConsHd{b}\ConsTl{bs} with $0 \leq i \leq | bs |$ has a cut, then all the
 choice points $b_j$ with $i < j \leq | bs |$ will be cut away.
 
@@ -111,7 +115,7 @@ p3 1 2.                     % r5
 \end{elpicode}
 
 {
-\def\goalG{\goalCmd{\prog}{call\ (\text{\elpiIn{p1 3 Z}})}{\EmptyList}}
+\def\goalG{\goalCmd{\prog}{\callCmd{p1}{3}{Z}}{\EmptyList}}
 
 Let $\mathcal{G} :=\ \goalG$ be a goal, the execution of
 ``\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?\subst}'' will apply \ruleCall
@@ -136,6 +140,7 @@ empty substitution. This last unification succeed with final substution $?\subst
 
 
 \subsection{Modes in the first-order setting}
+\label{sec:elpi-modes}
 
 % Mode checking in this setting is performed using the classical groundness
 % verification where term groundness is derived from their flow in the body of a
@@ -147,37 +152,42 @@ empty substitution. This last unification succeed with final substution $?\subst
 % the body is done with a non-ground term in input position a mode-checking error
 % is raised.
 
-The modes we authorize in this setting are two, namely the input and the output
-modes. As explained at the very end of \cref{sec:modes}, we want predicate
+The modes we authorize in this setting are two, even though we call them
+the input and the output
+mode, we give them a different interpretation. 
+As explained at the very end of \cref{sec:modes}, we want predicates
 to be called with non-ground input terms, therefore
-the meaning we attach to our modes is quite particuar. This means that
-no real
-static check is performed on the clauses of the database: in this stage of our
-first-order version of the langauge, we give the user high freedom on the shape
-that the ipnut of its predicate call may have.
+the meaning we attach to our modes is quite particuar wrt what
+can be found in the literature.
 
-Our interpretation of mode follows the idea of the read and write modes
-explained in \cite{1991ait-wam}. Essentially, we consider an input argument as
-an object received in read mode in the head of the clause. For example, if the
-entry term is a variable and the corresponding term in the head of the clause is
-a rigid term, the unification will fail. This is because, the \unify procedure
-of the interpreter cannot write in input head-arguments. On the other hand, it
-is always possible to unify a non-flex input term with a variable if this
-variable appears in the head of the clause. Finally no constraint is put on
-output terms, which can be read and written at any time. We will call this
-special unification \match which, similarly to the \unify procedure uses the
-notation \matchCmd{t_1}{t_2}{\subst}{\subst[']} to signify the \match
-between two terms $t_1$ and $t_2$ from an intial substition \subst to a final
-substitution \subst['].
-Formally, let \coqIn{vars(t)} be a function returning the variables in a 
-term \coqIn{t} and \coqIn{is_var(t)} be a function tell if the term \coqIn{t}
-is flexible, then:
+Our interpretation of modes follows the concept of read and write as
+explained in \cite{1991ait-wam}. Essentially, in a call, a term in input position is an
+object received in read mode. Therefore, if the entry
+term is a variable and the corresponding term in the head of the clause is a
+rigid term, unification fails. This is because the \unify procedure of the
+interpreter cannot write inside it.
 
-\begin{coqcode}
-  Definition ~\matchCmd{t_1}{t_2}{\subst}{\subst[']}~ :=
-    ~\unifyCmd{t_1}{t_2}{\subst}{\subst[']}~ /\ 
-      ~$\forall$~ v, v \in vars(~$t_1$~) -> is_var ~(\subst['] $t_1$)~
-\end{coqcode}
+On the other hand, it is always possible to unify a non-flexible input term with
+a variable if that variable appears in the head of the clause. Finally, no
+constraints are imposed on output terms, which can be read and written at any
+time.
+
+We refer to this special type of unification as \match. Similar to the \unify
+procedure, we use the notation \matchCmd{t_1}{t_2}{\subst}{\subst[']} to denote
+the \match\!ing between two terms $t_1$ and $t_2$, transforming, if
+possibile, an initial substitution \subst into a final substitution \subst['].
+
+
+\begin{definition}[The \match procedure]
+  Let \coqIn{vars(t)} be a function that returns the variables in a term
+  \coqIn{t}, and let \coqIn{is_var(t)} be a function that determines whether the
+  term \coqIn{t} is flexible. Then:
+  \begin{coqcode}
+    Definition ~\matchCmd{t_1}{t_2}{\subst}{\subst[']}~ :=
+      ~\unifyCmd{t_1}{t_2}{\subst}{\subst[']}~ /\ 
+        ~$\forall$~ v, v \in vars(~$t_1$~) -> is_var ~(\subst['] $t_1$)~
+  \end{coqcode}
+\end{definition}
 
 As a mean of example, consider following program.
 
@@ -217,17 +227,17 @@ while unifying the value of \elpiIn{X} and \elpiIn{7}.
 
 \subsection{First-order determinacy checker}
 
-Mode checking is an essential ingredient from which determinacy can be
-guaranteed. 
+Mode checking is an essential ingredient for ensuring determinacy.
+
 % Before explaining the interaction between these two, we need to take
 % some time to talk about mutual clauses exclusiveness.
 % %
 % % \paragraph{Mutual exclusive clauses}
 % From \cite{1989Warren}, we know that at most one clause can be applied
-% successfully for any determinate predicate.
+% successfully for any deterministic predicate.
 
 % In order to satisfy this (necessary by not sufficient) condition, we need 
-% that all the clauses of a determinate predicate $p$ are mutually exclusive.
+% that all the clauses of a deterministic predicate $p$ are mutually exclusive.
 % Mutual exclusiveness can be stated as follows:
 
 % \begin{definition}[Non-overlapping clauses]
@@ -238,18 +248,20 @@ guaranteed.
 %   \label{def:mut-excl}
 % \end{definition}
 
-In \cite{1996henderson}, mode checking (with groundness check)
-ensures that at most one clause can be applied to
-any predicate. Note the hypotheses called \coqIn{HG} in \cref{def:mut-excl}
-and \ref{detpred}. 
-In fact, thanks to mode checking,
-any call is validated if its terms in input position are ground.
-Groundness (modulo \cut, see \cref{def:mut-excl+cut}) ensures that it exists at most one clause 
-that can be executed successfully on that call.\\
-We want to point out that mode-checking also
-ensures that outputs become ground. This is
-a fundamental property; otherwise, outputs would be pointless: if an output does
-not become ground, it cannot serve as the input for another predicate call.
+In \cite{1996henderson}, mode checking (with groundness checking) ensures that
+at most one clause can be applied to any given predicate. Note the hypotheses
+referred to as \coqIn{HG} in \cref{def:mut-excl} and \ref{detpred}.
+
+Thanks to mode checking, any call is validated only if its terms in input
+positions are ground. Groundness % (modulo \cut, see \cref{def:mut-excl+cut})
+guarantees that at most one clause can be executed successfully for a given
+call.
+
+We also emphasize that mode checking ensures that output terms become ground.
+This is a fundamental property; otherwise, outputs would be meaningless—if an
+output does not become ground, it cannot serve as the input for another
+predicate call.
+
 
 
 % In our setting, we slightly extend this definition so that the \elpi's \uvar
@@ -265,19 +277,20 @@ not become ground, it cannot serve as the input for another predicate call.
 % overlaps only with unification variables or with another term marked with
 % \uvar.
 
-In our first-order \elpi, we don't perform any static mode analyse. Rather, we
-repose on \match operation that is done on the input arguments at runtime.
+In our first-order \elpi, we do not perform any static mode analysis. Instead,
+we rely on the \match operation, which is dynamically applied to input arguments at runtime.
 
 \begin{definition}[Mutual-exclusion on heads in \elpi]
   \begin{coqcode}
     Definition ~\customlabel{emutexcl}{\texttt{emutual\_exclusive}}\prog \pred\!\!~:
-      ~$\forall$~ i, ~$!\exists$~ i' o bo, (~\clauseCmd{\pred}{\texttt{i' o}}{\texttt{bo}}~) \in ~\prog~p -> unify i i'
+      ~$\forall$~ i, ~$!\exists$~ i' o bo, (~\clauseCmd{\pred}{\texttt{i' o}}{\texttt{bo}}~) \in ~\prog~p -> exists ~\subst\!\!~, ~\matchCmd{i}{i'}{\EmptySubst}{\subst}~ 
   \end{coqcode}   
   \label{def:emut-excl} 
 \end{definition}
 
 The main difference between this last definition and \cref{def:mut-excl} is the
-absence of the \coqIn{HG} hypothesis.
+absence of the \coqIn{HG} hypothesis and the usage of the \match procedure
+instead of \unify in the conclusion.
 
 \begin{theorem}
   The \elpi input/ouput modes guarantee that for any
@@ -347,32 +360,34 @@ absence of the \coqIn{HG} hypothesis.
 %   Same as \cref{def:det-prem-cut}
 % \end{definition}
 
-% % \paragraph{Determinate clauses after last \cut}
-% The second, but no less important, condition for a predicate to be determinate
+% % \paragraph{deterministic clauses after last \cut}
+% The second, but no less important, condition for a predicate to be deterministic
 % is the following:
 
-% \begin{definition}[Determinate premises after last \cut]
-%   In each clause of a determinate predicate, the premises after the last \cut
-%   operator are only calls to determinate predicates. 
+% \begin{definition}[deterministic premises after last \cut]
+%   In each clause of a deterministic predicate, the premises after the last \cut
+%   operator are only calls to deterministic predicates. 
 %   \label{def:det-prem-cut}
 % \end{definition}
 
 % This guarantees that any output produced is uniquely determined, i.e. no two
 % solutions can be produced on the same call.
 
-\begin{definition}[Deterministic\_pred in \elpi]
+\begin{definition}[Deterministic predicate in \elpi]
   \begin{coqcode}
-    Definition ~\customlabel{edetpred}{\texttt{edeterminate\_pred}}~(~\prog~: prog) (p: pn) :=
+    Definition ~\customlabel{edetpred}{\texttt{edet\_pred}}~(~\prog~: prog) (p: pn) :=
       forall ~$i$~ ~$o$~ ~$a$~
         (H : ~\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst}~), ~$a$~ = ~\EmptyList~.
   \end{coqcode}
   \label{def:edt-pred}  
 \end{definition}
 
-Our definition of \ref{edetpred} (with a leading \coqIn{e} for
-\elpi) changes from \ref{detpred} in \cref{sec:det}: we do not need the \coqIn{HG}
-hypothesis: the usage of \elpi modes allows to pass any (even not ground)
-term in input position.
+Our definition of deterministic predicate in \elpi (called \ref{edetpred} with a
+leading \coqIn{e} for \elpi) changes from \ref{detpred} in \cref{sec:det}: we do
+not need the \coqIn{HG} hypothesis: the usage of \elpi modes allows to pass any
+(even not ground) term in input position. The derivation rule \ruleCall allows
+makes the difference between terms that should be unified with the \unify or
+the \match procedure at runtime.
 
 \begin{definition}[Determinacy checking in \elpi]
   Determinacy checking (noted \coqIn{edet_check}) on a program
@@ -382,7 +397,7 @@ term in input position.
 \end{definition}
 
 The following lemma says that in a determinacy-checked program, if \pred is
-a determinate-annotated program and the \run\ of a call to \pred gives a 
+a deterministic-annotated program and the \run\ of a call to \pred gives a 
 solution, then the same solution is returned by a run of the same goal
 in a program where all of the clauses of \pred are rewritten such
 that thier last atom is a cut.
@@ -392,23 +407,39 @@ that thier last atom is a cut.
   returning a new program \prog['] such that the bodies of all clauses of \pred
   in \prog have been added a \cut\ as last atom.
 
-  Let \pred be a determinate-annotated predicate,
+  Let \pred be a deterministic-annotated predicate,
   \begin{coqcode}
     Lemma det_tail_cut ~\prog \alt~:
       forall i o a ~\subst \subst[']~ (H: det_check ~\prog\!\!~)
         (HR: ~\runCmd{[\goalCmd{\prog}{\callCmd{\pred}{i}{o}}{\alt}]}{[]}{\subst}{a}{\subst'}~),
-          ~\runCmd{[\goalCmd{(\tailcutCmd{\prog}{\pred})}{\callCmd{\pred}{i}{o}}{\alt}]}{[]}{\subst}{a}{\subst'}~.
+          ~\runCmd{[\goalCmd{(\tailcutCmd{\prog}{\pred})}{\callCmd{\pred}{i}{o}}{\alt}}{[]}{\subst}{a}{\subst'}~.
   \end{coqcode}
   \label{lemma:prog-all-cut}
 \end{lemma}
 
 \def\clauseL{\ensuremath{\mathcal{L}}\xspace}
 \begin{proof}
-  TODO: induction on the derivation in HR
+  We reason by induction on \coqIn{HR}: $5$ cases should be taken
+  one per derication rule in \cref{fig:basic-interp}.
+  \begin{itemize}
+    \item Case \ruleStop: cannot be applied since the list of goals is not empty.
+    \item Case \ruleFail: the \texttt{fail} hypothesis tells that no
+          there is no implementation for the predicate \pred, therefore
+          adding a tail-cut to the rules of \pred does not change the behaviour
+          of the program.
+    \item Case \ruleUnif: cannot be applied since the first goal is not a
+          unification or a match.
+    \item Case \ruleBang: same problem as before with the \cut operator.
+    \item Case \ruleCall: there exists at least one rule implementating \pred.  
+          Due to the \tailcut function the list of new goal, together with the
+          alternatives have a \cut\ has their last atom. Moreover, the list
+          of cut-alternatives in each of these atoms is the empty list.
+          By the hypothesis \coqIn{H}, we know that ...
+  \end{itemize}
 \end{proof}
 
 % Thanks to \cref{th:all-cut}, we can give a common structure to all the clauses
-% of a determinate predicate: we are free to assume that $c$ always has at
+% of a deterministic predicate: we are free to assume that $c$ always has at
 % least one cut.
 
 The following lemma says that if all clauses of a predicate \pred have a cut as
@@ -419,7 +450,7 @@ ouput are the empty list.
 \begin{lemma}[Tail-cut and cut-alternatives]
   $$
   \begin{array}{l}
-  \forall \subst\ \subst' i\ o\ p,\\
+  \forall \subst\ \subst[']\ i\ o\ p,\\
   \runCmd{[\goalCmd{(\tailcutCmd{\prog}{\pred})}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{x'}{\subst'} \rightarrow [] = x'
   \end{array}
   $$
@@ -442,8 +473,8 @@ ouput are the empty list.
 % \end{proof}
 
 %
-\begin{theorem}[determinacy check $\to$ determinate pred]
-  For any determinate-annotated predicate \pred,
+\begin{theorem}[determinacy check $\to$ deterministic pred]
+  For any deterministic-annotated predicate \pred,
   \begin{coqcode}
     Theorem det_check_det_pred ~\prog~ (H: edet_check ~\prog\!\!~):
       ~\ref{edetpred} \prog \pred~.
@@ -458,6 +489,8 @@ ouput are the empty list.
   be rewritten such that all clauses of \pred have a cut as last atom in their
   bodies. Finally, thanks to \cref{lemma:cut-cat-alt} we can conclude the proof.
 \end{proof}
+
+TODO: add the uvar to the terms
 
 
 

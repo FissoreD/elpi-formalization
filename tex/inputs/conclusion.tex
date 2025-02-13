@@ -5,11 +5,12 @@
 \begin{table}[h]
   \centering
   \begin{tabular}{c|c|c|c|c|c}
-    Paper   & Mode check & Determincy check & Hard Cut        & Harrop     & HO unif   \\
+    Paper       & Mode check        & Determincy check & Hard Cut & Harrop & HO unif   \\
     \hline
-    Mercury & Compile    & \cmark       & \xmark     & \xmark     & \xmark    \\
-    Mixtus  & Compile    & \cmark       & \cmark & \xmark     & \xmark    \\
-    Elpi    & Runtime    & \cmark       & \cmark & \cmark & Partially \\
+    Mercury     & Compile           & \cmark           & \xmark   & \xmark & \xmark    \\
+    Mixtus      & Compile           & \cmark           & \cmark   & \xmark & \xmark    \\
+    Simple Elpi & Runtime           & \cmark           & \cmark   & \xmark & \xmark    \\
+    Full Elpi   & Runtime + Compile & \cmark           & \cmark   & \cmark & Partially \\
   \end{tabular}
 
   \caption{Comparison}

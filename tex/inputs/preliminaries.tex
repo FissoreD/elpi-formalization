@@ -1,6 +1,6 @@
 \section{Preliminaries}
 
-Before providing a formal definition of functionality and mode analysis, we
+Before providing a formal definition of determinacy and mode analysis, we
 first describe the language we are working with, namely a dialect of \lamprolog
 called \elpi.
 
@@ -11,21 +11,22 @@ formulas, we will keep the presentation of the types and functions we need
 simple, expanding them further when needed.
 
 Data are represented by terms. For now, terms live in the datatype, they are
-variables, constants or compound terms. A compound term is a predicate name
-applied to two terms. The type of predicates is \\\elpiIn{tm -> tm -> prop}
-where \elpiIn{tm} is the type of terms. The first argument of a predicate is
+variables, constants or compound terms. A compound term is term with a rigid
+head followed by a list of other terms. 
+Predicates are binary relations of type \\\elpiIn{tm -> tm -> prop}
+where \elpiIn{tm} is a notation for term. The first argument of a predicate is
 considered has its input and the second is its output. This choice aims to ease
 the presentation of mode checking (see \cref{sec:modes}). By convention
 variables are indicated with capital letters, whereas predicate names and
-constants are indicated with lower case letters.
+terms are indicated with lower case letters.
 
 An atom is either a fully applied predicate or the cut operator, noted
 \cut.
 
 A variable is a term not yet instantiated. We can assign variables thanks to the
-\texttt{unify} procedure. The notation \unifyCmd{t_1}{t_2}{\subst}{\subst[']} represents
+unification procedure. The notation \unifyCmd{t_1}{t_2}{\subst}{\subst[']} represents
 the unification between the terms $t_1$ and $t_2$ from an intial substitution \subst
-to a final substition \subst[']. A substitution is a mapping from variable name to its
+to a final substition \subst[']. A substitution is a mapping from a variable name to its
 assignment $t$. Unification provides, when possible, a most general substitution
 between the two terms. If this substitution, sometime called unifier, does not
 exists, then the following property holds:
@@ -36,7 +37,7 @@ exists, then the following property holds:
 \end{definition}
 
 The notation $\subst t$ is the application of a term to a substitution.
-It returns a new term where al variables in $t$ have been recursively been
+It returns a new term where all variables in $t$ have been recursively been
 replaced by heir assignment in \subst.
 
 A clause is made of a predicate name, its two arguments and a body made of a
@@ -62,9 +63,9 @@ of the code.
 A program is a mapping from predicate name to clauses.
 
 A goal is a triple made of a program \prog, an atom
-$\mathcal{A}$ and a list of alternatives $\mathcal{B}$. In particular,
-$\mathcal{A}$ is evaluated by looking into the clauses inside \prog. $s$ is the
-substitution existing at the creation of the current goal. $\mathcal{B}$
+\g and a list of alternatives \alt. In particular,
+\g is evaluated by looking into the clauses inside \prog.
+\alt
 contains the choice-points used by the interpreter during the evaluation of a
 cut, the aim of this piece of data will be clarified further in the section
 dedicated to the interpreter implementation (see \cref{sec:basic-elpi}).
@@ -155,7 +156,7 @@ only alternative implementations of a predicate but also to prevent backtracking
 of all choice points born from the begin of the clause-body to the current cut
 position.
 
-For example, in \elpi, the \textit{if-then-else} construct, which is not a
+For example, in \elpi, the \textit{if-then-else} construct, which is not a\todo{wrong if pred are bin + no prop as arg}
 primitive of the language, can be impelented as follows:
 \begin{elpicode}
   if C T E :- C, !, T. % if1
@@ -186,8 +187,8 @@ Before talking about determinacy and the impact that hard-cut has on it. We
 prefer to spend some few words about the definition of modes, because as
 explained in \cite{1989Warren,1996Somogy} modes are the basis for determinim.
 
-The general idea is that a logic program allows to express relation, but,
-sometimes it is also needed to express directed relations, where arguments are
+The general idea is that a logic program allows to express relations, but,
+sometimes it is also needed to express \textit{directed} relations, where arguments are
 differenciated between inputs and output. Said in an other way, output arguments
 can be derived from input arguments. It is often the case that the user of a
 logic programming langauge tend, in most of cases, to express directed
@@ -256,27 +257,41 @@ predicate calls as arguments.
 \label{sec:det}
 
 
-Determinacy, as anticipated, is the property of a predicate that returns at most
-one solution per call. Determinism checking statically ensures that a predicate
-the clauses implementing a determinate predicate respects this condition.
+Determinacy, as anticipated, is the property of a predicate that returns at most\todo{dire che funciton == determistic predicate}
+one solution per call. Determinism checking statically ensures that
+the clauses implementing a deterministic predicate respects this condition.
 In the literature, several papers discuss this topic, although
 they provide different descriptions and different usages of it.
 
 Determinacy checking (or inference) is statically performed on a program on
-predicates annotated (or inferred) as determinate. Under the hypothesis to work
-with program statically mode-checked, a necessary condition for a predicate
-predicate to be determinate is that no two clauses can be applied successfully
+predicates annotated (or inferred) as deterministic. Under the hypothesis to work
+with program statically mode-checked, a necessary condition for a
+predicate to be deterministic is that no two clauses can be applied successfully
 on the same predicate call. Two clauses respecting this property are called
-mutually-exclusive or non-overlapping.
+mutually-exclusive.
 
 \begin{definition}[Mutual-exclusion on heads]
   \begin{coqcode}
     Definition ~\customlabel{mutexcl}{\texttt{mutual\_exclusive}}\prog \pred\!\!~:
-      ~$\forall$~ i (HG: ground i), 
-        ~$!\exists$~ i' o bo, (~\clauseCmd{\pred}{\texttt{i' o}}{\texttt{bo}}~) \in ~\prog~p -> unify i i'
+      ~$\forall\ i1\ o1\ bo1\ i2\ o2\ bo2$~ (H1: ~\clauseCmd{p}{i1\ o1}{bo1}~ \in ~$\prog\ p$~) (H2: ~\clauseCmd{p}{i2\ o2}{bo2}~ \in ~$\prog\ p$~),
+          not (exists ~\subst\!\!~, ~\unifyCmd{i1}{i2}{\EmptySubst}{\subst}~)
   \end{coqcode}   
   \label{def:mut-excl} 
 \end{definition}
+
+% \begin{coqcode}
+%   Definition mutual_exclusive_head '(p i _ :- _) '(p i' _ :- _) :=
+%     not (exists ~\subst\!\!~, ~\unifyCmd{i1}{i2}{\EmptySubst}{\subst}~)
+
+%   Definition mutual_exclusive_cut c1 c2 :=
+%     before c1 c2 -> with_cut c1
+    
+%   Definition mutual_exclusive prog p :=
+%     forall c1 c2, c1 <> c2 -> c1 \in prog p -> c2 \in prog p ->
+%       mutual_exclusive_clause c1 c2 \/ mutual_exclusive_cut c1 c2
+
+% \end{coqcode}
+
 
 \begin{definition}[Mutual-exclusion with \cut]
   Given a program \prog and deterministic predicate \pred, let $c_0, \dots, c_n$
@@ -286,11 +301,12 @@ mutually-exclusive or non-overlapping.
   \label{def:mut-excl+cut}
 \end{definition}
 
+
 The second important condition
 for determinacy is the following: 
 
-\begin{definition}[Determinate premises]
-  Let \prog be a program and \pred a determinate-annotated predicate, then let
+\begin{definition}[Deterministic premises]
+  Let \prog be a program and \pred a deterministic-annotated predicate, then let
   $p_1,...p_n$ be the premises in the bodies of all the clauses of \pred in
   \prog. If there is no cut in $p_1 ... p_n$ then all $p_i$ for $1 \leq i \leq n$
   are calls to deterministic predicates, else, le $i$ be the position of the
@@ -310,14 +326,14 @@ determinism: they describe functionality. A predicate (clause or query) is
 functional if it produces at most one \textit{distinct} solution per predicate
 call. The key word here is \textit{distinct}, since, in the determinacy setting,
 a predicate call producing the same solution twice is not considered as
-determinate, while, it is functional. In the paper they explain that mutual
+deterministic, while, it is functional. In the paper they explain that mutual
 exclusivness of clauses can be improved not only by looking at the head and at
 the presence of the cut but also by instructing the checker that premises can
 put clauses in mutual exclusivness.
 
 In \cite{1991Sahlin}, and more formally in \cite{1996mogensen}, determinacy is
 used to work with \mixtus, a partial evaluator of \prolog. In that case,
-determinacy was inferred so that it was possible to derive a new specialiezed,
+determinacy is inferred so that it is possible to derive a new specialiezed,
 and therefore more efficient, version of the original program under the
 guarantee that the two program share the same semantics.
 
@@ -329,7 +345,7 @@ non-annotated predicate will be inferred with the lowest derived tag.
 Determinacy, in \mercury, besides giving a guarantee on the program, allows to
 specialized it so that a faster routine can be used in the compiled program.
 
-Several work of King et al \cite{king2005, king2006, 2011king} had been pursued
+Several work of King et al \cite{king2005, king2006, 2011king} has been pursued
 in order to build an inference model for determinacy in \prolog system with cut.
 Moreover, they explain that determinacy inference subsume determinacy checking.
 Even though this last claim, we think that an inference model does not fit
@@ -346,20 +362,20 @@ that does not respect the declared determinacy.
 
 As explained in some of the previously cited papers, determinacy (and so
 functionality) checking is an undecidable problem. The checking property is
-sound: if a predicate passes the analysis then it is for sure determinate.
+sound: if a predicate passes the analysis then it is for sure deterministic.
 However, it is not complete: there could exists false negatives. We are
 convinced, that completeness, is not a big deal, since, as also claimed in ...
-every determinate predicate not passing the determinacy check,
+every deterministic predicate not passing the determinacy check,
 can be rewritten in a equivalent way
-so that it is no more classified as non-determinate.
+so that it is no more classified as non-deterministic.
 
 \begin{coqcode}
-Definition ~\customlabel{detpred}{\texttt{determinate\_pred}}~(~\prog~: prog) (p: pn) :=
+Definition ~\customlabel{detpred}{\texttt{det\_pred}}~(~\prog~: prog) (p: pn) :=
   forall ~$i$~ ~$o$~ ~$a$~ ~\subst~(HG: ground i) 
     (H : ~\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst}~), ~$a$~ = ~\EmptyList~.
 \end{coqcode}
 
-The definition above explains what it means for a predicate to be determinate. 
+The definition above explains what it means for a predicate to be deterministic. 
 The idea is that in a given program \prog and a predicate $p$,
 if for any call to $p$ with arbitrary input and output terms
 starting with the empty substitution and the empty list of alternatives,
@@ -372,9 +388,9 @@ Following the literature, this claim is proven true:
 \begin{theorem}
   Let \pred be a deterministic-annotated predicate, the following holds
   \begin{coqcode}
-    Theorem ~\customlabel{is_detpred}{\texttt{determinate\_pred\_prop}}~(~\prog~: prog) (p: pn) :=
+    Theorem ~\customlabel{is_detpred}{\texttt{det\_pred\_prop}}~(~\prog~: prog) (p: pn) :=
       forall (HM : well_moded ~\prog\!\!~) (HD: det_check ~\prog\!\!~),
-          determinate_pred ~\prog~p
+          det_pred ~\prog~p
   \end{coqcode}    
 \end{theorem}
 
@@ -400,7 +416,7 @@ $\forall$-quantified variable declaration. Here predicates will also take
 propositions as arguments. Thanks to this extention we will propose a new mode
 checking algorithm working with a new definition of groundness, called
 \textit{input-ground}. The signature of a predicate can be annotated so that
-output arguments are guaranteed to be determinate. This will make the
-determinacy checker to analyse not only determinate clauses but also relational
+output arguments are guaranteed to be deterministic. This will make the
+determinacy checker to analyse not only deterministic clauses but also relational
 one, since a check should be performed wrt the determinacy annotation of its
 outputs.

@@ -23,6 +23,7 @@
 \newcommand{\subst}[1][]{\ensuremath{\sigma#1}\xspace}
 \newcommand{\alt}[1][]{\ensuremath{\mathcal{A}#1}\xspace}
 \newcommand{\g}[1][]{\ensuremath{\mathcal{G}#1}\xspace}
+\newcommand{\clause}[1][]{\ensuremath{\mathcal{C}#1}\xspace}
 \newcommand{\pred}[1][]{\texttt{p#1}\xspace}
 
 \newenvironment{boxedproof}
@@ -46,6 +47,7 @@
 \newcommand{\Elpi}{\lang{Elpi}}
 \newcommand{\Coq}{\lang{Coq}}
 \newcommand{\lamprolog}{\lang{$\lambda$prolog}}
+\newcommand{\pf}{\ensuremath{L_\lambda}}
 
 % Languages: end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -80,17 +82,22 @@
 \newcommand{\goal}{\texttt{Goal}}
 \newcommand{\unify}{\texttt{unify}\xspace}
 \newcommand{\match}{\texttt{match}\xspace}
+\newcommand{\impl}{\texttt{=>}}
+\renewcommand{\pi}{\texttt{pi}}
 \newcommand{\cdash}{\texttt{:-}} % colon-dash
 \newcommand{\tailcut}{\texttt{tail\_cut}\xspace}
+\newcommand{\arr}{\rightsquigarrow}
 
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
-\newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \rightsquigarrow (#4, #5)}}
+\newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \arr (#4, #5)}}
 \newcommand{\callCmd}[3]{\ensuremath{(\call\ #1\ #2\ #3)}\xspace}
 \newcommand{\goalCmd}[3]{\ensuremath{\goal\ #1\ #2\ #3}\xspace}
 \newcommand{\clauseCmd}[3]{\ensuremath{#1\ #2\ \cdash\ #3}}
+\newcommand{\implCmd}[2]{\ensuremath{#1\ \impl\ #2}}
+\newcommand{\piCmd}[2]{\ensuremath{\pi\ #1\text{\textbackslash}\ #2}}
 
-\newcommand{\unifyCmd}[4]{\ensuremath{\unify\ #1\ #2\ #3 \Rightarrow #4}}
-\newcommand{\matchCmd}[4]{\ensuremath{\match\ #1\ #2\ #3 \Rightarrow #4}}
+\newcommand{\unifyCmd}[4]{\ensuremath{\unify\ #1\ #2\ #3 \arr #4}}
+\newcommand{\matchCmd}[4]{\ensuremath{\match\ #1\ #2\ #3 \arr #4}}
 
 \newcommand{\tailcutCmd}[2]{\ensuremath{\tailcut\ #1\ #2}\xspace}
 
@@ -113,6 +120,7 @@
   } % Here will be put the body
   {
     \end{prooftree}
+    \vspace{2pt}
     \end{minipage}
   }
 
@@ -132,35 +140,36 @@
     % STOP
     \AxiomC{}
     \RightLabelM{\ruleStop}
-    \UnaryInfC{\runCmd{\EmptyList}{a}{s}{a}{s}}
+    \UnaryInfC{\runCmd{\EmptyList}{\alt}{\subst}{\alt}{\subst}}
   \end{myRule}
 }
 
 \newcommand{\ruleUnifM}[1]{
   \begin{myRule}{#1}
     % UNIF
-    \AxiomC{$\text{\unify}\ x\ y\ s\ s'$}
-    \AxiomC{\runCmd{gs}{a}{s'}{a'}{s''}}
+    \AxiomC{$\text{\unify}\ m\ x\ y\ \subst\ \subst[']$}
+    \AxiomC{\runCmd{\g}{\alt}{\subst[']}{\alt[']}{\subst['']}}
     \RightLabelM{\ruleUnif}
-    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{(x = y)}{\_}}\ConsTl{gs}}{a}{s}{a'}{s''}}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{(x =_m y)}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst['']}}
   \end{myRule}
 }
 
 \newcommand{\ruleFailM}[1]{
   \begin{myRule}{#1}
     % FAIL
-    \AxiomC{\runCmd{x}{xs}{s}{a'}{s'}}
+    \AxiomC{\texttt{fail} \subst g}
+    \AxiomC{\runCmd{a}{\alt}{\subst[']}{\alt[']}{\subst['']}}
     \RightLabelM{\ruleFail}
-    \UnaryInfC{\runCmd{\_}{\ConsHd{s,x}\ConsTl{xs}}{\_}{a'}{s'}}
+    \BinaryInfC{\runCmd{\ConsHd{g}\ConsTl{\_}}{\ConsHd{\subst['],a}\ConsTl{\alt}}{\subst}{\alt[']}{\subst['']}}
   \end{myRule}%
 }
 
 \newcommand{\ruleBangM}[1]{
   \begin{myRule}{#1}
     % CUT
-    \AxiomC{\runCmd{gl}{ca}{s}{a}{s'}}
+    \AxiomC{\runCmd{\g}{\alt}{\subst}{\alt[']}{\subst[']}}
     \RightLabelM{\ruleBang}
-    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{\cut}{ca}}\ConsTl{gl}}{\_}{s}{a}{s'}}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{\cut}{\alt}}\ConsTl{\g}}{\_}{\subst}{\alt[']}{\subst[']}}
   \end{myRule}
 }
 
@@ -173,28 +182,28 @@
     % \RightLabelM{\ruleCall}
     % \TrinaryInfC{\runCmd{\ConsHd{(\prog, \call{p}{i}{o}, \_)}\ConsTl{gl}}{a}{s}{a'}{s'}}
     % 
-    \AxiomC{$\mathcal{F}(\prog, p, i, o, s, a) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
-    \AxiomC{\runCmd{(g\ @\ gl)}{(new\_alt\ @\ a)}{s}{a'}{s'}}
+    \AxiomC{$\mathcal{F}(\prog, p, i, o, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
+    \AxiomC{\runCmd{(g\ @\ \g)}{(new\_alt\ @\ \alt)}{\subst}{\alt[']}{\subst[']}}
     \RightLabelM{\ruleCall}
-    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{p}{i}{o}}{\_}}\ConsTl{gl}}{a}{s}{a'}{s'}}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{p}{i}{o}}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
   \end{myRule}
 }
 
 \newcommand{\ruleImplM}[1]{
   \begin{myRule}{#1}
     % IMPL
-    \AxiomC{TODO}
+    \AxiomC{\runCmd{\ConsHd{(\goalCmd{(H + \prog)}{B}{\alt})}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
     \RightLabelM{\ruleImpl}
-    \UnaryInfC{TODO}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{(\implCmd{H}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
   \end{myRule}
 }
 
 \newcommand{\rulePiM}[1]{
   \begin{myRule}{#1}
     % PI
-    \AxiomC{TODO}
+    \AxiomC{\runCmd{\ConsHd{\goalCmd{((\texttt{local }x) +\prog)}{B}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
     \RightLabelM{\rulePi}
-    \UnaryInfC{TODO}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{(\piCmd{x}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
   \end{myRule}
 }
 
