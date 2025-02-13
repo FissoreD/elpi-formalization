@@ -40,6 +40,7 @@ class ElpiLexer(RegexLexer):
     symbol_re = r"(,|<=>|->|:-|;|\?-|->|&|=>|\bas\b|\buvar\b|<|=<|=|==|>=|>|\bi<|\bi=<|\bi>=|\bi>|\bis\b|\br<|\br=<|\br>=|\br>|\bs<|\bs=<|\bs>=|\bs>|@|::|\[\]|`->|`:|`:=|\^|-|\+|\bi-|\bi\+|r-|r\+|/|\*|\bdiv\b|\bi\*|\bmod\b|\br\*|~|\bi~|\br~)"
     escape_re = rf"\(({constant_re}|{symbol_re})\)"
     const_sym_re = rf"({constant_re}|{symbol_re}|{escape_re})"
+    pred_func_re = rf"(?:func|pred)"
 
     tokens = {
         'root': [
@@ -54,7 +55,7 @@ class ElpiLexer(RegexLexer):
              'elpi-string'),
             (r"(:index)(\s*)(\()", bygroups(Keyword.Mode, Text.Whitespace, Punctuation),
              'elpi-indexing-expr'),
-            (rf"\b(external pred|pred)(\s+)({const_sym_re})",
+            (rf"\b(external {pred_func_re}|{pred_func_re})(\s+)({const_sym_re})",
              bygroups(Keyword.Declaration, Text.Whitespace, Name.Function),
              'elpi-pred-item'),
             (rf"\b(func)(\s+)({const_sym_re})",
