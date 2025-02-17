@@ -60,7 +60,7 @@ possibile, an initial substitution \subst into a final substitution \subst['].
   \coqIn{t}. Then \match is defined as follows:
   \vspace{-1em}
   $$\forall\ t_1\ t_2\ \subst\ \subst['], \unifyCmd{t_1}{t_2}{\subst}{\subst[']} \land \vars\ (\sigma t_1) = \vars\ (\subst['] t_1)$$
-  \vspace{-2em}\todo{dire che match non è refl}
+  \vspace{-2em}
   % \begin{coqcode}
   %   Definition ~\matchCmd{t_1}{t_2}{\subst}{\subst[']}~ :=
   %     ~\unifyCmd{t_1}{t_2}{\subst}{\subst[']}~ /\ 
@@ -279,11 +279,15 @@ We start therefore to state a new version of
   \cref{fig:basic-interp,fig:interp-match}. The interesting case is the
   \ruleCall. Due to \detCheck\ \prog \pred, we know from \cref{th:mut-excl1}
   that at most one clause \( c \) successfully applies to the call to \pred. By
-  the definition of \( \mathcal{F} \) \todo{add also match and unif}, the new goals \( \g \) are formed from
-  the atoms in \( c \), and all these goals have the empty list as
-  cut-alternatives.
-  We need to consider two cases:
-  1) \( \g \) contains a \cut. If all the goals preceding the \cut\ succeed, then all the choice points generated are cut away. Moreover, since, by hypothesis, all goals following the \cut\ are calls to deterministic predicates, we can apply the induction hypothesis to the remaining goals. This ensures that, in the end, the empty list of alternatives is produced, completing the proof for this case.  
+  the definition of \( \mathcal{F} \) \todo{add also match and unif}, the new
+  goals \( \g \) are formed from the atoms in \( c \), and all these goals have
+  the empty list as cut-alternatives. We need to consider two cases:  
+  1) \( \g \) contains a \cut. If all the goals preceding the \cut\ succeed,
+  then the execution of the \cut will cut away any potential choice points. Moreover, since, by
+  hypothesis, all goals following the \cut\ are calls to deterministic
+  predicates, we can apply the induction hypothesis to the remaining goals. This
+  ensures that, in the end, the empty list of alternatives is preserved,
+  completing the proof for this case.  
   2) \( \g \) does not contain a \cut. The proof follows similarly to the
   previous case after reaching the cut.
 \end{proof}

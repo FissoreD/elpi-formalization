@@ -61,26 +61,22 @@
 % Languages: end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\newenvironment{elpicode}{%
+\newenvironment{myminted}[1][~~]{
   \vspace{0.2em}%
   \VerbatimEnvironment
-  \begin{minted}[fontsize=\small,autogobble,escapeinside=~~,mathescape=true,frame=leftline,framerule=0pt,framesep=1em]{'elpi.py:ElpiLexer -x'}%
-}{%
+  \begin{minted}[fontsize=\small,autogobble,escapeinside=~~,mathescape=true,frame=leftline,framerule=0pt,framesep=1em]{#1}%
+}{
   \end{minted}%
   \vspace{0.2em}%
 }
+
+\newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}['elpi.py:ElpiLexer -x']}{\end{myminted}}
+\newenvironment{coqcode}{\VerbatimEnvironment\begin{myminted}[coq]}{\end{myminted}}
+
 \newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
 \newcommand{\modeAlone}[1]{\elpiIn{~\PYG{k+kMode}{#1:}~}}
 \newcommand{\uvar}{\elpiIn{uvar}\xspace}
 
-\newenvironment{coqcode}{%
-  \vspace{0.2em}%
-  \VerbatimEnvironment
-  \begin{minted}[fontsize=\small,autogobble,escapeinside=~~,mathescape=true,frame=leftline,framerule=0pt,framesep=1em,texcomments]{coq}%
-}{%
-  \end{minted}%
-  \vspace{0.2em}%
-}
 \newcommand{\coqIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{coq}{#1}}
 
 

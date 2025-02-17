@@ -32,8 +32,14 @@ between the two terms. If this substitution, sometime called unifier, does not
 exists, then the following property holds:
 
 \begin{definition}[Unification negation]
-  $(\forall \subst, \subst t_1 \neq \subst t_2) \to (\neg (\exists t_3~\subst_1~\subst_2,
-  \subst_1 t_1 = \subst_1 t_3 \land \subst_2 t_2 = \subst_2 t_3))$
+  \vspace{-1em}
+  $$(\forall \subst, \subst t_1 \neq \subst t_2) \to (\neg (\exists t_3~\subst_1~\subst_2,
+  \subst_1 t_1 = \subst_1 t_3 \land \subst_2 t_2 = \subst_2 t_3))$$
+\end{definition}
+
+\begin{definition}[Substitution union]
+  \vspace{-1em}
+  $$\subst_1 \cap \subst_2  = \varnothing \to \subst_1\ t_1 = \subst_2\ t_2 \to (\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$$
 \end{definition}
 
 The notation $\subst t$ is the application of a term to a substitution.
@@ -91,11 +97,11 @@ defined above:
   Definition pn := string. (*predicate names are strings*)
   Definition vn := string. (*variable  names are strings*)
   Inductive atom := 
-    | Call (p:pn) (i:tm) (o:tm) : atom  (*binary predicates taking integers*)
-    | Cut : atom                        (*the cut operator*)
-    | Unify (t1:tm) (t2:tm) : atom      (*unification between t1 and t2*)
+    | Call (p:pn) (i:tm) (o:tm)  (*binary predicates taking integers*)
+    | Cut                        (*the cut operator*)
+    | Unify (t1:tm) (t2:tm)      (*unification between t1 and t2*)
     ...                                 (*this is extended in section XX*)
-  Inductive clause := Clause (p:pn) (i:tm) (i:tm) (A:list atom) : Clause.
+  Inductive clause := Clause (p:pn) (i:tm) (i:tm) (A:list atom).
   Notation "P I O :- Bo" := (Clause P I O Bo).
   Notation "t1 = t2" := (Unify t1 t2).
   Definition sbst := T.
@@ -601,7 +607,7 @@ predicates.
 \end{definition}
 
 \begin{theorem}[Determinacy checking property]
-  Given a program \prog and a predicat \pred
+  Given a program \prog and a predicate \pred
   \begin{align*}
     &\wellModed\ \prog \to \detCheck\ \prog\ \pred \to \\
     &\forall i\ o, \ground i\ \to \runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList    

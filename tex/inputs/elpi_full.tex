@@ -7,20 +7,62 @@ hareditary-harrop formulas and higher-order pattern unification
 by the insertion of local clauses, moreover, local universally quantified
 terms can be quantified within a clause.
 
-In order to pass to the full \elpi language, we add two constructor to the atom
-type: 1) \elpiIn{A => B} introduces a clause \elpiIn{A} locally in the scope of
-an atom \elpiIn{B}, by convention this new inserted clause has the
-highest priority wrt the clauses existing in the scope of \elpiIn{B}; 2)
-\elpiIn{pi x\ B} introduces the fresh variable nominal variable \elpiIn{x} in
-\elpiIn{B}.
+% In order to pass to the full \elpi language, we need to change the way terms and clauses are 
+% represented. We give, therefore, their implementation below.
 
-Moreover, from now on we consider that applied predicates are terms, therefore a
-predicate can be passed as argument of another predicate call. The type of a
-fully applied predicate is the type of propositions and is noted \elpiIn{prop}.
-This means that a clause can have the shape ``\elpiIn{apply X Y :- X Y}'': the\todo{The arity of X is 1, it is not a binary predicate}
-output of the predicate \elpiIn{apply} is deduced by calling \elpiIn{X} to
-\elpiIn{Y}. Moreover, \elpiIn{X} is a higher-order variable of type \elpiIn{A ->
-prop}.
+% \begin{coqcode}
+%   Inductive tpos := 
+%     | a (i:base)            
+%     | impl (c:tneg) (b:tpos)   
+%     | pi   (n:string) (b: tpos)
+%     | conj (l:list tpos)       
+%     | cut                      
+%     | unif  (x:any) (y:any)    
+%     | match (x:any) (y:any)    
+%   with tneg :=
+%     | hb  (h: base) (b: list tpos)
+%     | piN (x: string) (b : tneg)  
+%   with base :=
+%     | c (c : pn) (l:list any)
+%     | v (v : vn) (l:list any)
+%   with any := 
+%     | p (i:tpos) 
+%     | n (i:tneg) 
+%     | b (i:base) 
+%     | s (i:string).
+% \end{coqcode}
+
+% NOTA: mi sembra sia più facile avere predicati di arità qualsiasi
+In order to represent these two new constructs of the language,\todo{pred of arity N}
+we add two new constructors to the inductive \coqIn{atom}: \todo{aggiungere lam-abstr?}
+\begin{coqcode}
+  | Impl (c:clause) (a:atom)
+  | Pi (x:vn) (a:atom)
+\end{coqcode}
+
+The former constructor is noted with the syntax \implCmd{c}{a} and introduces
+the clause \texttt{c}\todo{$c$ is mutual-excl check} locally in the scope of an atom \texttt{a}, by convention
+this new inserted clause has the highest priority wrt the clauses existing in
+the scope of \coqIn{a}. The \coqIn{pi} constractor is noted \piCmd{x}{a}
+introduces the fresh variable nominal variable \coqIn{x} in \coqIn{a}.
+
+A further modification to our language is the \coqIn{tm} type. Now, a term
+consists not only of primitive data but also of atoms and clauses. Unlike
+functional languages, logic programs do not mix commands and expressions; an
+expression is not executable code, whereas a command, called a proposition, is.
+
+In basic \elpi, predicates had expressions as parameters. In this new setting,
+with the extension of \coqIn{tm}, a predicate can receive (or return) a command
+as an argument -- a command that can be executed as a new piece of code.\todo{mettere esempio?}
+
+% Moreover, from now on we consider that applied predicates are terms, therefore a
+% predicate can be passed as argument of another predicate call. The type of a
+% fully applied predicate is the type of propositions and is noted \elpiIn{prop}.
+% This means that a clause can have the shape ``\elpiIn{apply X Y :- X Y}'': the\todo{The arity of X is 1, it is not a binary predicate}
+% output of the predicate \elpiIn{apply} is deduced by calling \elpiIn{X} to
+% \elpiIn{Y}. Moreover, \elpiIn{X} is a higher-order variable of type \elpiIn{A ->
+% prop}.
+
 
 
 \subsection{Interpreter}
@@ -36,9 +78,9 @@ we extend the interpreter. The new rules are depicted in \cref{fig:full-interp}
   \label{fig:full-interp}
 \end{figure}
 
-The symbol $+$ inserts a clause \clause in a program \prog so that \clause has
+The notation $\clause + \prog$ stands for the insertion of the clause \clause in the program \prog so that \clause has
 the highest priority in \prog. The rule \ruleImpl deals with the atom
-\implCmd{H}{B} and its transition tries to solve the atom \elpiIn{B} under a
+\implCmd{H}{B} and its derivation rule tries to solve \elpiIn{B} under a
 program \prog which has been expanded with the $H$ clause. The rule \rulePi
 inserts the name of the fresh variable in the program. The \texttt{local}
 predicate is a special unary predicate having as output the new inserted
@@ -46,90 +88,171 @@ universally quantified. The \unify and \match procedures use \texttt{local} to
 make the \pf\ unification since this unification on higher-order variables works
 on variables applied to a distinct list of local variables.
 
-\subsection{Determinacy in higher-order context: \elpi's syntax}
+\subsection{Determinacy in higher-order context}
 
-Since predicate parameters can now be passed both as input and output to
-predicate calls, we need to extend our syntax so that the user can instruct the
+Since the parameters of predicates can be passed both as input and output to
+predicate calls, we need to extend the syntax of signatures so that the user can instruct the
 \elpi's compiler\todo{compiler vs interpreter in \elpi} about if an input (resp.
-an output) should be considered as a deterministic predicate.
+an output) should be considered as a deterministic proposition.
+
+% \begin{elpicode}
+%   pred divisor i:int, o:int.
+%   pred help i:int, i:int, o:int.
+
+%   divisor N R :- help N 1 R.
+%   help N X X :- 0 is N mod X.
+%   help N X R :- X < N, X' is X + 1, help N X' R. 
+
+%   [(pi N R\ divisor N R :- help N 1 R),
+%   (pi N X\ help N X X :- 0 is N mod X),
+%   (pi N X R X'\ help N X R :- X < N, X' is X + 1, help N X' R)] => divisor 10 R. 
+% \end{elpicode}
+
+From now on let \elpiIn{divisor} be the predicate from \elpiIn{int} to
+\elpiIn{int} taking an integer and returning its divisors, one by one in
+increasing order.
 
 Let \elpiIn{once} be a predicate with only one clause ``\elpiIn{once P (P, !)}''.
 From this implementation, we see that the \elpiIn{once} predicate has
 the following property: it takes a proposition and returns its deterministic
 version, i.e. the output is the call to \elpiIn{P} where all of its choice
-points cut away (note the presence of the \cut). To be more concrete, the query
+points have been cut away (note the presence of the \cut\ in the second argument). To be more concrete, the query
 \elpiIn{once (divisor 5 X) P, P} will instantiate \elpiIn{X} only once
-to\todo{what is divisor} \elpiIn{1} (note that the query \elpiIn{divisor 5 X}
+to \elpiIn{1} (note that the query \elpiIn{divisor 5 X}
 has two solutions for \elpiIn{X}, namely \elpiIn{1} and \elpiIn{5}). Another
 information about \elpiIn{once} is that it is a deterministic predicate, that
 is, not only its output is a function but \elpiIn{once} itself is a function.
 
 To provide the compiler all of these pieces of information about the predicate
-\elpiIn{once}, the user can add a signature. \Elpi's signatures are as follows:
+\elpiIn{once}, the user should add a signature to the predicate. 
+\Elpi's signatures are as follows:
 GRAMMAR
 
+TODO: dire che func sta per funzionale e rel sta per relazionale
+
 So the signature of \elpiIn{once} will be: ``\elpiIn{func once i:prop, o:func}''
-where \elpiIn{once} is a deterministic predicate: it takes a
-proposition as entry and returns a function from it.
+where \elpiIn{once} is a function, it takes a
+proposition and returns a function.
 
 % Since predicate parameters can now be passed to other predicate calls, and since
 % these calls may affect the determinacy of a predicate, we need to specialize
 % our determinacy checker.
+\begin{elpicode}
+  func apply5 i:(func int -> int) o:int.
+  apply5 F R :- F 5 R.
+\end{elpicode}
 
-Consider now, the \elpiIn{apply} predicate depicted above. What happens if we
-annotate it as a deterministic predicate and execute the query \elpiIn{apply
-(divisors 5) X}? We see that its output is not deterministic: the assignment for
+Consider now, the \elpiIn{apply5} predicate depicted above. It is a function
+that takes a function from \elpiIn{int} to \elpiIn{int} and returns the result of
+applying that function to \elpiIn{5}. What happens if we
+execute the query \elpiIn{apply
+divisors X}? We see that its output is not deterministic: the assignment for
 \elpiIn{X} is not deterministically determined -- there are, in fact, two
-possible assignments: one where \elpiIn{X} is assigned \elpiIn{1} and another
+possible assignments: one where \elpiIn{X} is assigned to \elpiIn{1} and another
 where it is assigned \elpiIn{5}.
 
-Another problem showed by the followig code:
+Another problem is showed by the followig code:
 \begin{elpicode}
   func idF i:(func A -> B), o:(func A -> B).
   idF X X.
-  func p i:(func int -> int), o:(pred i:int, o:int).
-  p X X :- X = divisors.
 \end{elpicode}
+  % func p i:(func int -> int), o:(pred i:int, o:int).
+  % p X X :- X = divisors.
 
-In the snippet we define two predicates, the identity function over
-functions and a predicate \elpiIn{p} taking a function from \elpiIn{int} to
-\elpiIn{int} returning a relation with same type. The determinacy checker
-validates the program. However, with \elpi's dynamic mode system, the
-call ``\elpiIn{id Y Y, p Y Z, Y 5 X}'' is accepted: we can pass flexible terms in
-input positions. The determinacy analysis ensures that \elpiIn{Y} is a function
-from \elpiIn{int} to \elpiIn{int} due to the output of the \elpiIn{id} function.
-The call to \elpiIn{p} instantiate \elpiIn{Y} to a relation, therefore the query
-\elpiIn{Y 5 X} is not deterministic as one would expect.
+In the snippet, we define the identity function over functions.
 
-To solve this issue, we could statically detect and prevent (by fatal errors)
-unification between terms with mismatching deterministic annotation. This
-solution is not very appealing, since it avoids the user from calling
-\elpiIn{idF divisors X} even though this call would have a solution with the
-output's determinacy different from the expected one.
+With \elpi's dynamic mode system, the call ``\elpiIn{idF Y Y, Y = divisor, Y 5
+X}'' succeeds because we can pass flexible terms in input positions. The problem
+here is that, based on the signature of \elpiIn{idF}, its output is a function.
+This allows us to assume that the variable \elpiIn{Y} is a function. However,
+when \elpiIn{Y} is unified with the \elpiIn{divisor} predicate, we lose that
+property: the goal \elpiIn{Y 5 X} produces several results.
+
+To address this issue, we could statically detect and prevent unification
+between terms with mismatched determinacy annotations by raising fatal errors.
+In the example above, \elpiIn{Y = divisor} would be rejected, as each variable
+would carry a tag indicating its determinacy. This approach would work similarly
+to static mode checking, tracking the flow of input-output terms while
+preserving the labeling procedure.
+
+Although this solution is promising, it is not particularly appealing to us.
+% Instead, our approach is to interpret a predicate's signature as a property conditional
+% property of the predicate. That is, if a predicate is called with arguments
+% corresponding to its signature, then its output will repsect the expected
+% output signature. On the other hand, since no guarantee can be given on the
+% determinacy of the output, the label of the output will be considered to have
+% the lowest determinacy constraints.
+%
+% Moreover, when unification between two terms is performed, the 
+%
+Our idea is that the family of deterministic predicates is a subset of the
+family of relational predicates. %That is, \elpiIn{divisor} is relational,
+% \elpiIn{once} and \elpiIn{apply5} are functional, and therefore relational. 
+% This to say, that we should be allowed to pass a function in place of a
+% relation, invalidating our first determinacy-checking algorithm. Note also that
+% we can go further since we can have higher level of determinacy, namely, we may
+% pass terms with type \elpiIn{func x (func int -> int) -> (pred i:int, o:int)} to
+% arguments with expected determinacy \elpiIn{pred y (func int -> int) -> (func
+% int -> int)}
+This definition of ordering can be improved to worked with arguments with nested
+arrow types.
+
+Below we define the partial ordering relation $\leq$ between two given
+determinacy properties.
+\begin{myminted}[ocaml]
+let rec a ~$\leq$~ b :=
+  match a, b with
+  | Rel, Func -> false
+  | Func, Rel | Rel, Rel | Func, Func -> true
+  | A => B, A' => B' -> List.forall2 ~($\leq$)~ A' A && List.forall2 ~($\leq$)~ B B'
+\end{myminted}
+
+It is clear that in the base cases that the failing case of the $\leq$ predicate
+is 
+%
+\def\func{\texttt{func}}%
+\def\rel{\texttt{rel}}%
+%
+% $$ \min\ A\ B =
+% \begin{cases}
+% \func & A = \func \lor B = \func \\
+% \rel & A = \rel \land B = \rel \\
+% \max A_1\ B_1 \to \min B_2\ A_2 & A = A_1 \to A_2 \land B = B_1 \to B_2
+% \end{cases} $$
+% \begin{elpicode}
+%   min func func func.
+%   min func rel  func.
+%   min rel func  rel.
+%   min (A -> B) (A' -> B') (A'' -> B''):- 
+%     min B B' B'', min B' B B''.
+% \end{elpicode}
+
+The interesting case is the recursive one where the type of the two entries
+is the arrow. 
+
+% \begin{elpicode}
+%   min func func func.
+%   min func rel  func.
+%   min rel func  rel.
+%   min (A -> B) (A' -> B') (A'' -> B''):- 
+%     min B B' B'', min B' B B''.
+% \end{elpicode}
 
 
+For instance, we would like that the call \elpiIn{idF divisors X} is valid for
+determinacy, but, since the input has not the expected determinacy, then the
+output will not be a deterministic predicate. Indeed, we propose the following
+ordering relation between deterministic and relational predicates.
 
+TODO: presentare l'algoritmo di static check of determinacy with varaible flow.
 
-
-Queste argomenti possono essere annotati (spiegare la sintassi). Un input
-annotato come un prop deterministic significa che quanto questo input viene
-chiamato non produce più di due soluzioni. Per gli output dobbiamo verificare
-che quello che restituiamo verifica l'annotazione nella signatura del predicato.
-
-Usare i modi dinamici di elpi non è sufficiente per garantire questa properietà
-
-
-Usando il 
-
-Nota che possiamo chiamare predicati in modo sbagliato, ma di conseguenza,
-non avremo nessuna garanzia sulla determinacy degli output. Questo perchè,
-come sempre, vogliamo che il nostro linguaggio sia il più espressivo possibile.
-
-Dire che c'è una relazione min/max tra deterministic and relational predicates.
-
+Dare un esempio in cui l'input ground non è garantito e in cui il checkin viene
+invalidato
 
 \subsection{Mode checking: input-ground mode}
 
+Dire come funziona il mode checking e spiegare che è una condizione sufficiente
+perchè, combinato con il 
 
 \subsection{Determinacy checker}
 Polarity check: inner clauses when using the impl construct
