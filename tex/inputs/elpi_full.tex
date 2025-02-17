@@ -130,9 +130,9 @@ GRAMMAR
 
 TODO: dire che func sta per funzionale e rel sta per relazionale
 
-So the signature of \elpiIn{once} will be: ``\elpiIn{func once i:prop, o:func}''
+So the signature of \elpiIn{once} will be: ``\elpiIn{func once i:pred, o:func}''
 where \elpiIn{once} is a function, it takes a
-proposition and returns a function.
+relation and returns a function.
 
 % Since predicate parameters can now be passed to other predicate calls, and since
 % these calls may affect the determinacy of a predicate, we need to specialize
@@ -175,6 +175,12 @@ would carry a tag indicating its determinacy. This approach would work similarly
 to static mode checking, tracking the flow of input-output terms while
 preserving the labeling procedure.
 
+\newcommand{\detT}[1]{\text{\mlIn{~\PYG{n+nc}{#1}~}}}
+
+The labels we put on variables are essentially $3$: 1) \detT{Det} representing
+relations, 2) \detT{Fun} representing functions and 3) \detT{Exp} representing
+expressions, i.e. non exectuable terms. \todo{det\&fun have args.}
+
 Although this solution is promising, it is not particularly appealing to us.
 % Instead, our approach is to interpret a predicate's signature as a property conditional
 % property of the predicate. That is, if a predicate is called with arguments
@@ -198,46 +204,48 @@ This definition of ordering can be improved to worked with arguments with nested
 arrow types.
 
 Below we define the partial ordering relation $\leq$ between two given
-determinacy properties.
+determinacy properties.\todo{if preds are binary remove forall2, otherwise what is forall2?}
 \begin{myminted}[ocaml]
 let rec a ~$\leq$~ b :=
   match a, b with
   | Rel, Func -> false
   | Func, Rel | Rel, Rel | Func, Func -> true
-  | A => B, A' => B' -> List.forall2 ~($\leq$)~ A' A && List.forall2 ~($\leq$)~ B B'
+  | Exp, Exp -> true
+  | a ~\texttt{->}~ b, a' ~\texttt{->}~ b' -> List.forall2 ~($\leq$)~ a' a && List.forall2 ~($\leq$)~ b b'
 \end{myminted}
 
-It is clear that in the base cases that the failing case of the $\leq$ predicate
-is 
-%
-\def\func{\texttt{func}}%
-\def\rel{\texttt{rel}}%
-%
-% $$ \min\ A\ B =
-% \begin{cases}
-% \func & A = \func \lor B = \func \\
-% \rel & A = \rel \land B = \rel \\
-% \max A_1\ B_1 \to \min B_2\ A_2 & A = A_1 \to A_2 \land B = B_1 \to B_2
-% \end{cases} $$
-% \begin{elpicode}
-%   min func func func.
-%   min func rel  func.
-%   min rel func  rel.
-%   min (A -> B) (A' -> B') (A'' -> B''):- 
-%     min B B' B'', min B' B B''.
-% \end{elpicode}
+\todo{add the no prop case}
+The base cases are quite intuitive: a relation is not less than a function. Note
+that $\leq$ is not complete, as we expect type-checking to validate the
+program before performing determinacy checking. Therefore, it is not possible to
+have \detT{Exp} compared with any other determinacy type except \detT{Exp}. 
+For the same reason an arrow can never appear against a \detT{Rel}, \detT{Func}
+or \detT{Exp}.
 
-The interesting case is the recursive one where the type of the two entries
-is the arrow. 
+The interesting case is the arrow type. Here, we are comparing two functions,
+Concerning inputs, the relation $\leq$ is satisfied if the inputs of the left
+are at least as restrictive as the right one and if the outputs of the left are
+at most as restrictive as the right one.
 
-% \begin{elpicode}
-%   min func func func.
-%   min func rel  func.
-%   min rel func  rel.
-%   min (A -> B) (A' -> B') (A'' -> B''):- 
-%     min B B' B'', min B' B B''.
-% \end{elpicode}
+As an example consider two terms $t_1 \coloneq \texttt{idF}$ and $t_2 \coloneq
+\texttt{once}$. The determinacy of $t_1$ is $\detT{Func} \to \detT{Func}$ and
+the determinacy of $t_2$ is $\detT{Rel} \to \detT{Func}$. We intuitively remark
+that $\forall p_1\ p_2, \texttt{once}\ p_1\ p_2 \leq \texttt{idF}\ p_1\ p_2$.\todo{più o meno}
 
+Thanks to the $\leq$ relation we can define a min (resp. max) relation between
+two determinacy relations returning the minimal (resp. max) determinacy relation
+between them.
+
+\begin{myminted}[ocaml]
+  let rec min a b = match a, b with
+    | a ~\texttt{->}~ b, a' ~\texttt{->}~ b' -> List.map2 max a' a && List.map2 min b b'
+    | a, b -> if a ~$\leq$~ b then a else b
+  and max a b = match a, b with
+    | a ~\texttt{->}~ b, a' ~\texttt{->}~ b' -> List.map2 min a' a && List.map2 max b b'
+    | a, b -> if a ~$\leq$~ b then b else a
+\end{myminted}
+
+$$-----$$
 
 For instance, we would like that the call \elpiIn{idF divisors X} is valid for
 determinacy, but, since the input has not the expected determinacy, then the
@@ -250,13 +258,14 @@ Dare un esempio in cui l'input ground non è garantito e in cui il checkin viene
 invalidato
 
 \subsection{Mode checking: input-ground mode}
-
+\label{sec:mc}
 Dire come funziona il mode checking e spiegare che è una condizione sufficiente
-perchè, combinato con il 
+per avere la determinacy.
 
 \subsection{Determinacy checker}
 Polarity check: inner clauses when using the impl construct
 
+Da spostare prima della sezione \cref{sec:mc}
 
 \subsection{Input-ground polymorphism}
 
