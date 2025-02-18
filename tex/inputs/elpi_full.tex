@@ -40,16 +40,21 @@ we add two new constructors to the inductive \coqIn{atom}: \todo{aggiungere lam-
   | Pi (x:vn) (a:atom)
 \end{coqcode}
 
+\todo{a call can have a variable has functor}
+
 The former constructor is noted with the syntax \implCmd{c}{a} and introduces
 the clause \texttt{c}\todo{$c$ is mutual-excl check} locally in the scope of an atom \texttt{a}, by convention
 this new inserted clause has the highest priority wrt the clauses existing in
-the scope of \coqIn{a}. The \coqIn{pi} constractor is noted \piCmd{x}{a}
+the scope of \coqIn{a}. The \coqIn{pi} constructor is noted \piCmd{x}{a}
 introduces the fresh variable nominal variable \coqIn{x} in \coqIn{a}.
 
 A further modification to our language is the \coqIn{tm} type. Now, a term
-consists not only of primitive data but also of atoms and clauses. Unlike
+consists not only of primitive data but also of atoms. %and clauses. 
+Unlike
 functional languages, logic programs do not mix commands and expressions; an
 expression is not executable code, whereas a command, called a proposition, is.
+
+TODO: dore che typechecking assicura che non ci siano di questi errori
 
 In basic \elpi, predicates had expressions as parameters. In this new setting,
 with the extension of \coqIn{tm}, a predicate can receive (or return) a command
@@ -124,7 +129,7 @@ information about \elpiIn{once} is that it is a deterministic predicate, that
 is, not only its output is a function but \elpiIn{once} itself is a function.
 
 To provide the compiler all of these pieces of information about the predicate
-\elpiIn{once}, the user should add a signature to the predicate. 
+\elpiIn{once}, the user should add a signature to the predicate.  
 \Elpi's signatures are as follows:
 GRAMMAR
 
@@ -138,7 +143,7 @@ relation and returns a function.
 % these calls may affect the determinacy of a predicate, we need to specialize
 % our determinacy checker.
 \begin{elpicode}
-  func apply5 i:(func int -> int) o:int.
+  func apply5 i:(func int -> int), o:int.
   apply5 F R :- F 5 R.
 \end{elpicode}
 
@@ -153,7 +158,7 @@ where it is assigned \elpiIn{5}.
 
 Another problem is showed by the followig code:
 \begin{elpicode}
-  func idF i:(func A -> B), o:(func A -> B).
+  func idF i:func, o:func.
   idF X X.
 \end{elpicode}
   % func p i:(func int -> int), o:(pred i:int, o:int).
@@ -161,90 +166,144 @@ Another problem is showed by the followig code:
 
 In the snippet, we define the identity function over functions.
 
-With \elpi's dynamic mode system, the call ``\elpiIn{idF Y Y, Y = divisor, Y 5
-X}'' succeeds because we can pass flexible terms in input positions. The problem
+With \elpi's dynamic mode system, the call ``\elpiIn{idF Y Y, Y = divisor 5
+X, Y}'' succeeds because we can pass flexible terms in input positions. The problem
 here is that, based on the signature of \elpiIn{idF}, its output is a function.
 This allows us to assume that the variable \elpiIn{Y} is a function. However,
-when \elpiIn{Y} is unified with the \elpiIn{divisor} predicate, we lose that
-property: the goal \elpiIn{Y 5 X} produces several results.
+after the unification between \elpiIn{Y} and \elpiIn{divisor 5 X}, we lose that
+property: calling \elpiIn{Y} produces several results for \elpiIn{X}.
 
-To address this issue, we could statically detect and prevent unification
-between terms with mismatched determinacy annotations by raising fatal errors.
-In the example above, \elpiIn{Y = divisor} would be rejected, as each variable
-would carry a tag indicating its determinacy. This approach would work similarly
-to static mode checking, tracking the flow of input-output terms while
-preserving the labeling procedure.
+DIRE CHE DIAMO L'ALGORITMO DI DETERMINACY CHECKING, PRIMA ATTRAVERSO ESEMPI E POI
+RIASSIUMIAMO TUTTO
 
-\newcommand{\detT}[1]{\text{\mlIn{~\PYG{n+nc}{#1}~}}}
+To address this issue, we could statically annotate terms with their determinacy
+status in a way similar to the static mode checking for ground terms. Then,
+when a unification is performed between two terms, a compilation error
+could be raise if their determinacy tag mismatch.
+In the example above, \elpiIn{Y = divisor} would be rejected since \elpiIn{Y}
+would be annotated as a function and \elpiIn{divsor} is a relation.
 
-The labels we put on variables are essentially $3$: 1) \detT{Det} representing
-relations, 2) \detT{Fun} representing functions and 3) \detT{Exp} representing
-expressions, i.e. non exectuable terms. \todo{det\&fun have args.}
+% \newcommand{\detT}[1]{\text{\mlIn{~\PYG{n+nc}{#1}~}}}
+\newcommand{\detT}[1]{\texttt{#1}}
+\newcommand{\detI}{\detT{Det}}
+\newcommand{\relI}{\detT{Rel}}
+\newcommand{\expI}{\detT{Exp}}
+\newcommand{\myTo}{\ensuremath{\mathbin{\detT{->}}}}
+\newcommand{\mySub}{\ensuremath{\subseteq}}
+\newcommand{\detlab}{\texttt{detlab}}
 
-Although this solution is promising, it is not particularly appealing to us.
-% Instead, our approach is to interpret a predicate's signature as a property conditional
-% property of the predicate. That is, if a predicate is called with arguments
-% corresponding to its signature, then its output will repsect the expected
-% output signature. On the other hand, since no guarantee can be given on the
-% determinacy of the output, the label of the output will be considered to have
-% the lowest determinacy constraints.
-%
-% Moreover, when unification between two terms is performed, the 
-%
-Our idea is that the family of deterministic predicates is a subset of the
-family of relational predicates. %That is, \elpiIn{divisor} is relational,
-% \elpiIn{once} and \elpiIn{apply5} are functional, and therefore relational. 
-% This to say, that we should be allowed to pass a function in place of a
-% relation, invalidating our first determinacy-checking algorithm. Note also that
-% we can go further since we can have higher level of determinacy, namely, we may
-% pass terms with type \elpiIn{func x (func int -> int) -> (pred i:int, o:int)} to
-% arguments with expected determinacy \elpiIn{pred y (func int -> int) -> (func
-% int -> int)}
-This definition of ordering can be improved to worked with arguments with nested
-arrow types.
+The labels we need are defined with the following inductive:
 
-Below we define the partial ordering relation $\leq$ between two given
-determinacy properties.\todo{if preds are binary remove forall2, otherwise what is forall2?}
-\begin{myminted}[ocaml]
-let rec a ~$\leq$~ b :=
-  match a, b with
+\begin{coqcode}
+  Inductive ~\detlab~ := Exp | Rel | Det | arr (i:detlab) (o:detlab).
+\end{coqcode}
+
+A term is either an expression (an non executable peice of code), a relational
+or a deterministic predicate or finally an arrow (just like the arrow used for
+the types of functions) between two \detlab. For the last constructor we
+will use the notation $d_1 \myTo d_2$ where $d_1$ and $d_2$ are instances of\todo{i:detlab list if multiple args}
+\detlab, moreover we consider $d_1$ to be an input and $d_2$ to be an output.
+We are again considering binary relations. This can always be generalized to
+functions (or relations) of any arity by slightly changing the signature of
+the \coqIn{arr} constructor.
+
+The problem of this first algorithm of determinacy check is that it does not
+take into account a natural relation that exists between functions and
+relations, i.e. a function is a relation such that all of the member in its
+domain points to a unique value in its codomain. This means that a fuction can
+be always passed in place of a relation. We define below the inclusion relation
+between two \detlab.
+
+\begin{coqcode}
+  Fixpoint a ~\mySub~ b := match a, b with
   | Rel, Func -> false
-  | Func, Rel | Rel, Rel | Func, Func -> true
-  | Exp, Exp -> true
-  | a ~\texttt{->}~ b, a' ~\texttt{->}~ b' -> List.forall2 ~($\leq$)~ a' a && List.forall2 ~($\leq$)~ b b'
-\end{myminted}
+  | Func, Rel | Rel, Rel | Func, Func | Exp, Exp -> true
+  | a ~\myTo~ b, a' ~\myTo~ b' -> a' ~\mySub~ a && b ~\mySub~ b'
+  end.
+\end{coqcode}
 
-\todo{add the no prop case}
-The base cases are quite intuitive: a relation is not less than a function. Note
-that $\leq$ is not complete, as we expect type-checking to validate the
-program before performing determinacy checking. Therefore, it is not possible to
-have \detT{Exp} compared with any other determinacy type except \detT{Exp}. 
-For the same reason an arrow can never appear against a \detT{Rel}, \detT{Func}
-or \detT{Exp}.
+The \mySub\ relation is intentionally non-complete since we suppose that before
+performing any determinacy checking the program has been type-checked. This
+means that it is never possible to have unification between, for example,
+expressions and relations, this would lead to a fatal type-error.
 
-The interesting case is the arrow type. Here, we are comparing two functions,
-Concerning inputs, the relation $\leq$ is satisfied if the inputs of the left
-are at least as restrictive as the right one and if the outputs of the left are
-at most as restrictive as the right one.
+The base cases of \mySub\ are quite intuitive: a relation is not a function. The
+interesting case is the \coqIn{arr} constructor. Here, we are comparing two
+propositions and therefore some attention should be paid for its inputs and
+outputs: the inputs of the left memeber should be at least as restrictive as the
+right one and the outputs of the left memeber are at most as restrictive as the
+right one.
 
 As an example consider two terms $t_1 \coloneq \texttt{idF}$ and $t_2 \coloneq
-\texttt{once}$. The determinacy of $t_1$ is $\detT{Func} \to \detT{Func}$ and
-the determinacy of $t_2$ is $\detT{Rel} \to \detT{Func}$. We intuitively remark
-that $\forall p_1\ p_2, \texttt{once}\ p_1\ p_2 \leq \texttt{idF}\ p_1\ p_2$.\todo{più o meno}
+\texttt{once}$. The determinacy of $t_1$ is $\detT{Func} \myTo \detT{Func}$ and
+the determinacy of $t_2$ is $\detT{Rel} \myTo \detT{Func}$. We intuitively
+remark that $\forall p_1\ p_2\ p_3, \texttt{once}\ p_1\ p_2 \to \texttt{idF}\
+p_1\ p_3 \to p_2 \mySub p_3$. This is because the two predicates can be called
+with a relation and the output of \texttt{idF} is still a relation whereas the
+output of \texttt{once} is still a function, i.e. the determinacy type of
+\texttt{once} is more constraining. Said in other words, $\detT{Rel} \myTo
+\detT{Func} \mySub \detT{Func} \myTo \detT{Func}$.
 
-Thanks to the $\leq$ relation we can define a min (resp. max) relation between
-two determinacy relations returning the minimal (resp. max) determinacy relation
-between them.
+What may seem weird at first sight is that in the example above, we call
+\texttt{idF} with a relation in input position. This creates a mismatch
+between the dtype of the signature and the dtype of the argument.\todo{dtype := determinacy type}
+However, we want our system to be as expressive as possible. This means that
+we allows the user the wrongly call a predicate. In that particular case the dtype of the
+outputs will not be guaranteed to have the expected determinacy: they will be labeled 
+with the less restrictive determinacy for its type. To continue our example,
+the query \elpiIn{idF (divisor 3 X) Y} will label \elpiIn{Y} with the \relI\
+tag, since the determinacy of \elpiIn{divisor 3 X} is \relI\ and $\relI \not\mySub \detI$.
 
-\begin{myminted}[ocaml]
-  let rec min a b = match a, b with
-    | a ~\texttt{->}~ b, a' ~\texttt{->}~ b' -> List.map2 max a' a && List.map2 min b b'
-    | a, b -> if a ~$\leq$~ b then a else b
-  and max a b = match a, b with
-    | a ~\texttt{->}~ b, a' ~\texttt{->}~ b' -> List.map2 min a' a && List.map2 max b b'
-    | a, b -> if a ~$\leq$~ b then b else a
-\end{myminted}
+Thanks to the \mySub\ relation we can define a min (resp. max) relation between
+two determinacy relations.
 
+\begin{coqcode}
+  Fixpoint min a b = match a, b with
+    | a ~\myTo~ b, a' ~\myTo~ b' -> max a' a && min b b'
+    | a, b -> if a ~\mySub~ b then a else b
+  end with max a b = match a, b with
+    | a ~\myTo~ b, a' ~\myTo~ b' -> min a' a && max b b'
+    | a, b -> if a ~\mySub~ b then b else a
+  end.
+\end{coqcode}
+
+These two functions become particularly useful
+when trying to determine the determinacy of unification variables. Let's
+take the following example.
+
+\begin{elpicode}
+  pred give_rel i:int, o:pred.
+  func give_fun i:int, o:func.
+  give_rel _ (divisors 5 X).
+  give_rel _ (succ 1 X).
+  give_fun _ (succ 1 X).
+\end{elpicode}
+
+In the snippet above, both \txt{give\_rel} and \txt{give\_fun} are functions
+that take a dummy integer as input (we conventionally work with binary
+predicates) and return, respectively, a relation and a function. 
+
+Now, consider the following query: \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}.
+The first goal tells us that \elpiIn{Z} is \relI, while the second tells us that
+\elpiIn{Y} is \detI. After unifying the two variables, what determinacy label
+should they have? Unification succeeds if the two terms are unifiable, meaning
+that, in the end, \elpiIn{Z} and \elpiIn{Y} will be the same term and will
+therefore share the same \detlab. Their label will be updated and set to the
+minimum determinacy between them, which is \coqIn{min Rel Fun} $=$ \detI. 
+
+If we take back the query \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}, we may
+want to statically determine if it create choice points. The determinacy of each
+goal is \detI, \relI, \detI, the determinay of the query is the maximum of them,
+that is \relI.
+
+With this, we now have all the ingredients needed to propose the full static
+determinacy checker for the higher-order setting. This checker is implemented in
+\detCheck, which ensures that a deterministic predicate has at most one solution
+per call. Furthermore, it is extended to certify that each output of a clause
+has the expected determinacy, which is crucial since outputs can be used as new
+queries in the program.
+
+TODO: redifine \cref{def:det-prem}: we can have variables has props.
 $$-----$$
 
 For instance, we would like that the call \elpiIn{idF divisors X} is valid for
@@ -262,7 +321,7 @@ invalidato
 Dire come funziona il mode checking e spiegare che è una condizione sufficiente
 per avere la determinacy.
 
-\subsection{Determinacy checker}
+\subsection{Mutual exclusion for local clauses}
 Polarity check: inner clauses when using the impl construct
 
 Da spostare prima della sezione \cref{sec:mc}
