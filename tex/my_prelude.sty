@@ -122,7 +122,7 @@
 \newcommand{\Cons}[1]{\ensuremath{#1::}}
 \newcommand{\ConsHd}[1]{\ensuremath{(#1::}\xspace}
 \newcommand{\ConsTl}[1]{\ensuremath{#1)}\xspace}
-\newcommand{\EmptyList}{\ensuremath{[\ ]}}
+\newcommand{\EmptyList}{\ensuremath{\varnothing}}
 
 \newcommand{\EmptySubst}{\ensuremath{\varepsilon}}
 
@@ -238,6 +238,145 @@
 
 % Derivation system: end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Static check rule system: start
+\newcommand{\detT}[1]{\texttt{#1}}
+\newcommand{\maxT}{\texttt{max}}
+\newcommand{\minT}{\texttt{min}}
+\newcommand{\detI}{\detT{Det}}
+\newcommand{\relI}{\detT{Rel}}
+\newcommand{\expI}{\detT{Exp}}
+\newcommand{\myTo}{\ensuremath{\mathbin{\detT{->}}}}
+\newcommand{\mySub}{\ensuremath{\subseteq}}
+\newcommand{\detlab}{\texttt{detlab}}
+\newcommand{\toF}{\texttt{toF}}
+\newcommand{\U}{\mathcal{U}}
+\newcommand{\UCmd}[3]{\U(#1, #2, #3)}
+
+\newcommand{\ctx}[1][]{\ensuremath{\Gamma#1}}
+\newcommand{\func}[1][]{\ensuremath{\mathcal{F}#1}}
+\newcommand{\get}[1]{\ensuremath{\texttt{get}_\texttt{#1}}}
+\newcommand{\getI}[1]{\ensuremath{\get{i}\ #1}}
+\newcommand{\getO}[1]{\ensuremath{\get{o}\ #1}}
+\newcommand{\getF}[1]{\ensuremath{\get{F}\ #1}}
+\newcommand{\infer}{\texttt{infer}}
+\newcommand{\checkk}{\texttt{check}}
+\newcommand{\checkc}{\texttt{check\_clause}}
+
+\newcommand{\inferCmd}[2]{\ensuremath{\infer\ #1\ #2}}
+\newcommand{\subCmd}[2]{\ensuremath{#1 \mySub #2}}
+\newcommand{\notSubCmd}[2]{\ensuremath{#1 \not\mySub #2}}
+
+% [checkCmd ctx1 func1 tm ctx2 func2]
+\newcommand{\checkCmd}[5]{\ensuremath{(#1, #2) \vdash \checkk\ #3 \arr (#4, #5)}}
+\newcommand{\checkClause}[2]{\ensuremath{#1 \vdash \checkc\ #2}}
+
+\newcommand{\ruleCheckName}[1]{\ensuremath{C_{#1}}\xspace}
+
+
+\newcommand{\ruleCheckClause}{\ruleCheckName{c}}
+\newcommand{\ruleCheckClauseM}[1]{
+  \begin{myRule}{#1}
+    % Clause
+    \AxiomC{\subCmd{\inferCmd{\ctx}{i}}{\getI{\pred}}}
+    \AxiomC{\checkCmd{\ctx}{\detI}{B}{\ctx[']}{\func[']}}
+    \AxiomC{\subCmd{\inferCmd{\ctx}{o}}{\getO{\pred}}}
+    \AxiomC{\subCmd{\func[']}{\getF{\pred}}}
+    \RightLabelM{\ruleCheckClause}
+    \QuaternaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{i\ o}{B})}}
+  \end{myRule}
+}
+
+\newcommand{\ruleCheckCut}{\ruleCheckName{!}}
+\newcommand{\ruleCheckCutM}[1]{
+  \begin{myRule}{#1}
+    % CUT
+    \AxiomC{\checkCmd{\ctx}{\detI}{L}{\ctx[']}{\func[']}}
+    \RightLabelM{\ruleCheckCut}
+    \UnaryInfC{\checkCmd{\ctx}{\_}{\ConsHd{\cut}\ConsTl{L}}{\ctx[']}{\func[']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleCheckImpl}{\ruleCheckName{\Rightarrow}}
+\newcommand{\ruleCheckImplM}[1]{
+  \begin{myRule}{#1}
+    % IMPL
+    \AxiomC{\checkClause{\ctx}{H}}
+    \AxiomC{\checkCmd{\ctx}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \RightLabelM{\ruleCheckImpl}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\implCmd{H}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleCheckUnif}{\ruleCheckName{=}}
+\newcommand{\ruleCheckUnifM}[1]{
+  \begin{myRule}{#1}
+    % UNIF
+    \AxiomC{\checkCmd{\ctx + \{A \mapsto \ctx\ B; B \mapsto \min A\ B\}}{\func}{L}{\ctx[']}{\func[']}}
+    \RightLabelM{\ruleCheckUnif}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{A = B}\ConsTl{L}}{\ctx[']}{\func[']}}
+  \end{myRule}
+}
+
+% \newcommand{\ruleCheckMatch}{\ruleCheckName{m}}
+% \newcommand{\ruleCheckMatchM}[1]{
+%   \begin{myRule}{#1}
+%     % MATCH
+%     \AxiomC{\checkCmd{\ctx + \{A \mapsto B; B \mapsto \min A\ B\}}{\func}{L}{\ctx[']}{\func[']}}
+%     \RightLabelM{\ruleCheckMatch}
+%     \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{A = B}\ConsTl{L}}{\ctx[']}{\func[']}}
+%   \end{myRule}
+% }
+
+\newcommand{\ruleCheckPi}{\ruleCheckName{\forall}}
+\newcommand{\ruleCheckPiM}[1]{
+  \begin{myRule}{#1}
+    % PI
+    \AxiomC{\checkCmd{\ctx + \{x \mapsto \toF\ x\}}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \RightLabelM{\ruleCheckPi}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\piCmd{x}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
+  \end{myRule}
+}
+
+\newcommand{\predVar}{\texttt{N}}
+
+\newcommand{\ruleCheckCall}{\ruleCheckName{c}}
+\newcommand{\ruleCheckCallM}[1]{
+  \begin{myRule}{#1}
+    % CALL SUCC
+    \AxiomC{\subCmd{\inferCmd{\ctx}{i}}{\getI{\predVar}}}
+    \AxiomC{\checkCmd{\ctx + \UCmd{\ctx}{\predVar}{o}}{\maxT\ \func\ (\getF{\predVar})}{L}{\ctx[']}{\func[']}}
+    \RightLabelM{\ruleCheckCall}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\callCmd{\predVar}{i}{o}}\ConsTl{L}}{\ctx[']}{\func[']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleCheckCallFail}{\ruleCheckName{\bot}}
+\newcommand{\ruleCheckCallFailM}[1]{
+  \begin{myRule}{#1}
+    % CALL FAIL
+    \AxiomC{\notSubCmd{\inferCmd{\ctx}{i}}{\getI{\predVar}}}
+    \AxiomC{\checkCmd{\ctx + \UCmd{\ctx}{\bot}{o}}{\relI}{L}{\ctx[']}{\func[']}}
+    \RightLabelM{\ruleCheckCallFail}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\callCmd{\predVar}{i}{o}}\ConsTl{L}}{\ctx[']}{\func[']}}
+  \end{myRule}
+}
+
+
+\newcommand{\ruleCheckEmpty}{\ruleCheckName{\EmptyList}}
+\newcommand{\ruleCheckEmptyM}[1]{
+  \begin{myRule}{#1}
+    % EMPTY
+    \AxiomC{}
+    \RightLabelM{\ruleCheckEmpty}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{\EmptyList}{\ctx}{\func}}
+  \end{myRule}
+}
+
+% Static check rule system: end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 \makeatletter
 \newcommand{\customlabel}[2]{%

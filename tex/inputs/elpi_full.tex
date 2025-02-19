@@ -156,6 +156,10 @@ divisors X}? We see that its output is not deterministic: the assignment for
 possible assignments: one where \elpiIn{X} is assigned to \elpiIn{1} and another
 where it is assigned \elpiIn{5}.
 
+RIUTILIZZARE CODICE!!
+
+SEPARARE IL CHIAMARE GIUSTO UN PREDICATO (per riusare codice)
+
 Another problem is showed by the followig code:
 \begin{elpicode}
   func idF i:func, o:func.
@@ -184,13 +188,7 @@ In the example above, \elpiIn{Y = divisor} would be rejected since \elpiIn{Y}
 would be annotated as a function and \elpiIn{divsor} is a relation.
 
 % \newcommand{\detT}[1]{\text{\mlIn{~\PYG{n+nc}{#1}~}}}
-\newcommand{\detT}[1]{\texttt{#1}}
-\newcommand{\detI}{\detT{Det}}
-\newcommand{\relI}{\detT{Rel}}
-\newcommand{\expI}{\detT{Exp}}
-\newcommand{\myTo}{\ensuremath{\mathbin{\detT{->}}}}
-\newcommand{\mySub}{\ensuremath{\subseteq}}
-\newcommand{\detlab}{\texttt{detlab}}
+
 
 The labels we need are defined with the following inductive:
 
@@ -259,10 +257,10 @@ two determinacy relations.
 
 \begin{coqcode}
   Fixpoint min a b = match a, b with
-    | a ~\myTo~ b, a' ~\myTo~ b' -> max a' a && min b b'
+    | a ~\myTo~ b, a' ~\myTo~ b' => max a' a && min b b'
     | a, b -> if a ~\mySub~ b then a else b
   end with max a b = match a, b with
-    | a ~\myTo~ b, a' ~\myTo~ b' -> min a' a && max b b'
+    | a ~\myTo~ b, a' ~\myTo~ b' => min a' a && max b b'
     | a, b -> if a ~\mySub~ b then b else a
   end.
 \end{coqcode}
@@ -304,6 +302,30 @@ has the expected determinacy, which is crucial since outputs can be used as new
 queries in the program.
 
 TODO: redifine \cref{def:det-prem}: we can have variables has props.
+
+
+\begin{figure}
+  \centering
+  
+  \ruleCheckClauseM{1}
+
+  
+  \ruleCheckCutM{.45}
+  \ruleCheckEmptyM{.35}
+  
+  \ruleCheckPiM{.7}
+  \ruleCheckImplM{.7}
+
+  \ruleCheckUnifM{.7}
+
+  % \ruleCheckMatchM{.7}
+  \ruleCheckCallM{1}
+  \ruleCheckCallFailM{1}
+  
+  \caption{Static check rules}
+  \label{fig:static-check}
+\end{figure}
+
 $$-----$$
 
 For instance, we would like that the call \elpiIn{idF divisors X} is valid for
@@ -326,7 +348,7 @@ Polarity check: inner clauses when using the impl construct
 
 Da spostare prima della sezione \cref{sec:mc}
 
-\subsection{Input-ground polymorphism}
+\subsection{Determinacy polymorphism}
 
 Il problema è ad esmepio la funzione identità
 
