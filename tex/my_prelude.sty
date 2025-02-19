@@ -105,6 +105,7 @@
 \def\detPrem{\texttt{det\_prem}}
 \def\wellModed{\texttt{well\_moded}}
 \newcommand{\ground}[1]{\texttt{ground }#1}
+\newcommand{\bs}{\text{\textbackslash}}
 
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
 \newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \arr (#4, #5)}}
@@ -112,7 +113,8 @@
 \newcommand{\goalCmd}[3]{\ensuremath{\goal\ #1\ #2\ #3}\xspace}
 \newcommand{\clauseCmd}[3]{\ensuremath{#1\ #2\ \cdash\ #3}}
 \newcommand{\implCmd}[2]{\ensuremath{#1\ \impl\ #2}}
-\newcommand{\piCmd}[2]{\ensuremath{\pi\ #1\text{\textbackslash}\ #2}}
+\newcommand{\piCmd}[2]{\ensuremath{\pi\ #1\bs\ #2}}
+\newcommand{\lamCmd}[2]{\ensuremath{\lambda#1\bs\ #2}}
 
 \newcommand{\unifyCmd}[4]{\ensuremath{\unify\ #1\ #2\ #3 \arr #4}}
 \newcommand{\matchCmd}[4]{\ensuremath{\match\ #1\ #2\ #3 \arr #4}}
@@ -218,21 +220,33 @@
   \end{myRule}
 }
 
+\newcommand{\ctx}[1][]{\ensuremath{\Gamma#1}}
+
 \newcommand{\ruleImplM}[1]{
   \begin{myRule}{#1}
     % IMPL
-    \AxiomC{\runCmd{\ConsHd{(\goalCmd{(H + \prog)}{B}{\alt})}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+    \AxiomC{\runCmd{\ConsHd{(\goalCmd{(H + \ctx)}{B}{\alt})}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
     \RightLabelM{\ruleImpl}
-    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{(\implCmd{H}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{(\implCmd{H}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
   \end{myRule}
 }
 
 \newcommand{\rulePiM}[1]{
   \begin{myRule}{#1}
     % PI
-    \AxiomC{\runCmd{\ConsHd{\goalCmd{((\texttt{local }x) +\prog)}{B}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+    \AxiomC{\runCmd{\ConsHd{\goalCmd{(x \uplus \ctx)}{B}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
     \RightLabelM{\rulePi}
-    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{(\piCmd{x}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{(\piCmd{x}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleLam}{\ruleName{\lambda}}
+\newcommand{\ruleLamM}[1]{
+  \begin{myRule}{#1}
+    % PI
+    \AxiomC{\runCmd{\ConsHd{\goalCmd{\ctx}{(B[x\backslash T])}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+    \RightLabelM{\ruleLam}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{((\lambda x. B) T)}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
   \end{myRule}
 }
 
@@ -254,7 +268,6 @@
 \newcommand{\U}{\mathcal{U}}
 \newcommand{\UCmd}[3]{\U(#1, #2, #3)}
 
-\newcommand{\ctx}[1][]{\ensuremath{\Gamma#1}}
 \newcommand{\func}[1][]{\ensuremath{\mathcal{F}#1}}
 \newcommand{\get}[1]{\ensuremath{\texttt{get}_\texttt{#1}}}
 \newcommand{\getI}[1]{\ensuremath{\get{i}\ #1}}

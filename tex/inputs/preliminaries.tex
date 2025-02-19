@@ -66,7 +66,12 @@ disjunction of $\mathcal{L}$. This is mainly due to the fact that \elpi is an
 homoiconic language and its program definition can change during the evaluation
 of the code.
 
-A program is a mapping from predicate name to clauses.
+A program is a mapping from predicate names to clauses. By hypothesis, we assume
+that every program we work with from now on has been type-checked (see
+\cite{1992nadathur}). One of the role of type-checking is to ensure that
+commands and expressions are not mixed: commands, also called propositions, are
+pieces of executable code, whereas expressions are not. Instead, expressions
+serve to carry pieces of information during the execution of commands.
 
 A goal is a triple made of a program \prog, an atom
 \g and the list of alternatives \alt existing at moment of the creation of 
@@ -93,20 +98,20 @@ To be more precise, we give below the type structure of each cunstruct we have
 defined above:
 
 \begin{coqcode}
-  Definition tm := Set.
   Definition pn := string. (*predicate names are strings*)
   Definition vn := string. (*variable  names are strings*)
-  Inductive atom := 
+  Inductive tm := 
     | Call (p:pn) (i:tm) (o:tm)  (*binary predicates taking integers*)
     | Cut                        (*the cut operator*)
     | Unify (t1:tm) (t2:tm)      (*unification between t1 and t2*)
-    ...                                 (*this is extended in section XX*)
-  Inductive clause := Clause (p:pn) (i:tm) (i:tm) (A:list atom).
+    | Var (n:vname)              (*a variable*)
+    ...                          (*this is extended in section XX*)
+  Inductive clause := Clause (p:pn) (i:tm) (i:tm) (A:list tm).
   Notation "P I O :- Bo" := (Clause P I O Bo).
   Notation "t1 = t2" := (Unify t1 t2).
   Definition sbst := T.
   Definition prog := pn -> list clause.
-  Inductive goal := Goal (P:prog) (a:atom) (A:list alt) -> goal.
+  Inductive goal := Goal (P:prog) (a:tm) (A:list alt) -> goal.
   with alt := sbst * list goal.
 \end{coqcode}
 
@@ -226,6 +231,10 @@ explained above and if the result of this operation is the list
 \ConsHd{b}\ConsTl{bs}, then a recursive call to \run\ is done by prepending $b$ to
 the list of remaining goals \g and $bs$ is prepended to the list of
 alternatives \alt.
+
+Note that we have intentionally kept out form \cref{fig:basic-interp}
+the rule for variables appearing as goals. Variables will play an important role
+in \cref{sec:vars}. 
 
 The combination of the \ruleCall and \ruleBang rules is crucial for replicating
 the behavior of the cut. When a call to a predicate generates multiple rules as

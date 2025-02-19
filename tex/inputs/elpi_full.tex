@@ -1,11 +1,14 @@
-\section{Full elpi}
-\label{sec:full-elpi}
+\section{HOAS}
+\label{sec:hoas}
 
 The full potential of \elpi comes with the fact that the language accepts
 hareditary-harrop formulas and higher-order pattern unification
-(\cite{1991miller-pf}), noted \pf. This extension allows program to be dynamically modified
-by the insertion of local clauses, moreover, local universally quantified
-terms can be quantified within a clause.
+(\cite{1991miller-pf}), noted \pf. This extension allows the declaration of
+anonymous functions together with the possibility of dynamically modifying the
+program by inserting fresh variables and clauses. $\lambda$-abstraction are
+often used to represent higher-order abstract syntax (HOAS \cite{1988pfenning})
+which is intensively used in meta-programming to represent terms of the
+target language. For example, \elpi + CITE
 
 % In order to pass to the full \elpi language, we need to change the way terms and clauses are 
 % represented. We give, therefore, their implementation below.
@@ -33,32 +36,27 @@ terms can be quantified within a clause.
 % \end{coqcode}
 
 % NOTA: mi sembra sia più facile avere predicati di arità qualsiasi
-In order to represent these two new constructs of the language,\todo{pred of arity N}
-we add two new constructors to the inductive \coqIn{atom}: \todo{aggiungere lam-abstr?}
+In order to represent these new constructs of the language,
+we add three constructors to \coqIn{tm}:
 \begin{coqcode}
-  | Impl (c:clause) (a:atom)
-  | Pi (x:vn) (a:atom)
+  | Impl (c:clause) (b:tm)
+  | Pi (x:vn) (b:tm)
+  | Lam (x: vn) (b:tm)
 \end{coqcode}
 
-\todo{a call can have a variable has functor}
-
-The former constructor is noted with the syntax \implCmd{c}{a} and introduces
-the clause \texttt{c}\todo{$c$ is mutual-excl check} locally in the scope of an atom \texttt{a}, by convention
+The first constructor is noted with the syntax \implCmd{c}{b} and introduces
+the clause \texttt{c} locally in the scope of an atom \texttt{b}, by convention
 this new inserted clause has the highest priority wrt the clauses existing in
-the scope of \coqIn{a}. The \coqIn{pi} constructor is noted \piCmd{x}{a}
-introduces the fresh variable nominal variable \coqIn{x} in \coqIn{a}.
+the scope of \coqIn{b}. The \coqIn{pi} constructor is noted \piCmd{x}{b}
+introduces the fresh variable nominal variable \coqIn{x} in \coqIn{b}.
+Finally the \coqIn{Lam} constructors
+is used to define anonymous functions, the notation ``\lamCmd{x}{B}''
+stands for the $\lambda$-abstraction binding a local variable $x$ in the scope of
+$B$.
 
-A further modification to our language is the \coqIn{tm} type. Now, a term
-consists not only of primitive data but also of atoms. %and clauses. 
-Unlike
-functional languages, logic programs do not mix commands and expressions; an
-expression is not executable code, whereas a command, called a proposition, is.
-
-TODO: dore che typechecking assicura che non ci siano di questi errori
-
-In basic \elpi, predicates had expressions as parameters. In this new setting,
-with the extension of \coqIn{tm}, a predicate can receive (or return) a command
-as an argument -- a command that can be executed as a new piece of code.\todo{mettere esempio?}
+% In basic \elpi, predicates had expressions as parameters. In this new setting,
+% with the extension of \coqIn{tm}, a predicate can receive (or return) a command
+% as an argument -- a command that can be executed as a new piece of code.\todo{mettere esempio?}
 
 % Moreover, from now on we consider that applied predicates are terms, therefore a
 % predicate can be passed as argument of another predicate call. The type of a
@@ -70,30 +68,73 @@ as an argument -- a command that can be executed as a new piece of code.\todo{me
 
 
 
-\subsection{Interpreter}
+\subsection{Interpreter for HOAS}
 
-To keep into account these two new constructs of the language,
-we extend the interpreter. The new rules are depicted in \cref{fig:full-interp}
+\newcommand{\env}{\ensuremath{\mathcal{E}}}
+
+To account for the new constructors in the language, we extend our interpreter.
+The updated rules are shown in \cref{fig:full-interp}.  
+
+We modify the signature of a \goal, which now takes a context \ctx instead of
+just a program \prog. This context, denoted as \ctx, consists of a pair: a
+program \prog and a set of local variables \env. Consequently, all occurrences
+of \prog in \cref{fig:basic-interp} should now be read as \ctx.  
+
+When the function $\mathcal{F}$ searches for the implementation of a predicate,
+it should extract the first component of \ctx to obtain the expected output.
 
 \begin{figure}
   \ruleImplM{.85}
   
   \rulePiM{.85}
+
+  \ruleLamM{.85}
   \caption{Higher-order derivation rules}
   \label{fig:full-interp}
 \end{figure}
 
-The notation $\clause + \prog$ stands for the insertion of the clause \clause in the program \prog so that \clause has
-the highest priority in \prog. The rule \ruleImpl deals with the atom
-\implCmd{H}{B} and its derivation rule tries to solve \elpiIn{B} under a
-program \prog which has been expanded with the $H$ clause. The rule \rulePi
-inserts the name of the fresh variable in the program. The \texttt{local}
-predicate is a special unary predicate having as output the new inserted
-universally quantified. The \unify and \match procedures use \texttt{local} to
-make the \pf\ unification since this unification on higher-order variables works
-on variables applied to a distinct list of local variables.
+The notation $H + \ctx \stackrel{\mathrm{def}}{=} H + (\prog, \env)$ is the insertion of the clause \clause 
+in the program \prog so that \clause has
+the highest priority in \prog. The notation
+$x \uplus \ctx \stackrel{\mathrm{def}}{=} H \uplus (\prog, \env)$
+is the insertion of the local variable $x$ inside the set of local binders \env
+provided that $x \notin \env$. The notation $B[x\bs T]$ produces a new terms
+where all the free occurrences of $x$ in $B$ have been replaced with the term
+$T$.
 
-\subsection{Determinacy in higher-order context}
+The rule \ruleImpl handles the atom \implCmd{H}{B}, and its derivation rule
+attempts to solve \( B \) under a program extended with the clause \( H \). The
+rule \rulePi introduces the name of the fresh variable into the program.  
+
+The \unify and \match procedures must now consider \env\ to perform \pf\
+unification, which is required when a term is a local variable.
+
+Finally the \ruleLam makes a $\beta$-reduction step and keep solving the goal.
+
+\subsection{Determinacy checker with HOAS}
+
+The insertion of the new rules make the determinacy checker to change
+accordingly. In particular, the \ruleImpl\ inserts a new rule, this rule may
+break \cref{def:mut-excl} and \ruleLam\ may create a $\beta$-reduced term which
+may break \cref{def:det-prem}.
+
+In order to address the first problem, we need to ensure that the dynamic
+insertion of new clause $H$ in the program is such that $H$ successfully applies
+on a goal then all the other clause fails. To ensure this propery, we check
+that the body of each local clause has a \cut as a premise. This condition
+is sufficient to make \cref{th:mut-excl} to work again.
+% Attenzione, guardare che la regola abbia alemno una variabile local in posizione
+% di input non è sufficiente: esempio `pi x\ f x 1 => f x 2 => ...
+
+To address the second problem, we need to ensure that if a predicate is
+deterministic and has a $\beta$-reduction after the last call, then the reduced
+term is still a call to a deterministic predicate. This check can be performed
+by looking to the 
+
+\section{Variable comes into the game}
+\label{sec:vars}
+
+TODO: add the rule for variable interpretation in the run system
 
 Since the parameters of predicates can be passed both as input and output to
 predicate calls, we need to extend the syntax of signatures so that the user can instruct the
@@ -255,15 +296,30 @@ tag, since the determinacy of \elpiIn{divisor 3 X} is \relI\ and $\relI \not\myS
 Thanks to the \mySub\ relation we can define a min (resp. max) relation between
 two determinacy relations.
 
-\begin{coqcode}
-  Fixpoint min a b = match a, b with
-    | a ~\myTo~ b, a' ~\myTo~ b' => max a' a && min b b'
-    | a, b -> if a ~\mySub~ b then a else b
-  end with max a b = match a, b with
-    | a ~\myTo~ b, a' ~\myTo~ b' => min a' a && max b b'
-    | a, b -> if a ~\mySub~ b then b else a
-  end.
-\end{coqcode}
+$$
+\minT\ f_1\ f_2 = \begin{cases}
+  \maxT\ a'\ a \myTo \minT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
+  f_1 & \text{else if } f_1 \mySub f_2\\
+  f_2 & \text{otherwise}
+\end{cases}
+$$
+$$
+\maxT\ f_1\ f_2 = \begin{cases}
+  \minT\ a'\ a \myTo \maxT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
+  f_1 & \text{else if } f_2 \mySub f_1\\
+  f_2 & \text{otherwise}
+\end{cases}
+$$
+
+% \begin{coqcode}
+%   Fixpoint min a b = match a, b with
+%     | a ~\myTo~ b, a' ~\myTo~ b' => max a' a && min b b'
+%     | a, b -> if a ~\mySub~ b then a else b
+%   end with max a b = match a, b with
+%     | a ~\myTo~ b, a' ~\myTo~ b' => min a' a && max b b'
+%     | a, b -> if a ~\mySub~ b then b else a
+%   end.
+% \end{coqcode}
 
 These two functions become particularly useful
 when trying to determine the determinacy of unification variables. Let's

@@ -325,11 +325,28 @@
   isbn      = {978-3-540-46879-0}
 }
 
-@techreport{1992nadathur,
+@inproceedings{1992nadathur,
   author    = {Nadathur, Gopalan and Pfenning, Frank},
   title     = {The Type System of a Higher-Order Logic Programming Language},
   year      = {1992},
   publisher = {Duke University},
   address   = {USA},
   abstract  = {The type system of the logic programming language $lambda$Prolog is discussed. The incorporation of higher-order notions within this language requires the use of a typing scheme to distinguish between expressions of different function types. Thus $lambda$Prolog is a (strongly) typed language, in contrast to the typeless language that underlies the idea of descriptive types in logic programming. The typing discipline that is employed in the language is based on the notion of simple types in the $lambda$-calculus. This form of typing enforces arity restrictions on functions and predicates and provides a builtin functional hierarchy over terms. The language contains a facility for defining new primitive types and thus permits finer grained distinctions to be introduced by the user. Further, the use of type variables and type constructors provides a form of polymorphism that is similar in certain respects to that present in the language ML. The notion of type checking in $lambda$Prolog is discussed and shown to be an operation that can be performed at the time of compilation. The value of typing distinctions in determining the clarity of programs and their usefulness in conjunction with type checking in preventing run-time errors due to type violations is also discussed. In addition to their function in type checking, types also have a major role in determining computations in the logic programming context. We discuss this aspect of types that is in contrast to their behavior in other programming paradigms and we show how this leads to a presence of types in the runtime environment. While typing has several advantages, it is sometimes to the programmer''s advantage to be able to omit their mention. Type reconstruction provides a means for filling missing type information in and we discuss issues pertinent to this process in the context of $lambda$Prolog.}
+}
+
+@inproceedings{1988pfenning,
+  author    = {Pfenning, F. and Elliott, C.},
+  title     = {Higher-order abstract syntax},
+  year      = {1988},
+  isbn      = {0897912691},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://doi.org/10.1145/53990.54010},
+  doi       = {10.1145/53990.54010},
+  abstract  = {We describe motivation, design, use, and implementation of higher-order abstract syntax as a central representation for programs, formulas, rules, and other syntactic objects in program manipulation and other formal systems where matching and substitution or unification are central operations. Higher-order abstract syntax incorporates name binding information in a uniform and language generic way. Thus it acts as a powerful link integrating diverse tools in such formal environments. We have implemented higher-order abstract syntax, a supporting matching and unification algorithm, and some clients in Common Lisp in the framework of the Ergo project at Carnegie Mellon University.},
+  booktitle = {Proceedings of the ACM SIGPLAN 1988 Conference on Programming Language Design and Implementation},
+  pages     = {199–208},
+  numpages  = {10},
+  location  = {Atlanta, Georgia, USA},
+  series    = {PLDI '88}
 }
