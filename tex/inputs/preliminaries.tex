@@ -105,6 +105,7 @@ defined above:
     | Cut                        (*the cut operator*)
     | Unify (t1:tm) (t2:tm)      (*unification between t1 and t2*)
     | Var (n:vname)              (*a variable*)
+    | Lam (x: vn) (b:tm)         (*lam abstraction*)
     ...                          (*this is extended in section XX*)
   Inductive clause := Clause (p:pn) (i:tm) (i:tm) (A:list tm).
   Notation "P I O :- Bo" := (Clause P I O Bo).
@@ -579,7 +580,7 @@ for determinacy is the following:
   Let \prog be a program and \pred a deterministic-annotated predicate, then let
   $\prog\ \pred = c_1, \dots\ c_n$. For any body $b_i = a_1,\dots,a_m$ of any
   clause $c_i$,
-  $$(\exists j, a_j = \cut \to \forall k, k > j \to \detAtom\ a_k) \lor (\forall j, \detAtom\ a_j)$$
+  $$(\exists j, a_j = \cut \land \forall k, k > j \to \detAtom\ a_k) \lor (\forall j, \detAtom\ a_j)$$
   \vspace{-2em}
   \label{def:det-prem}
 \end{definition}

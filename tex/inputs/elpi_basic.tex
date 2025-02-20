@@ -266,7 +266,7 @@ We start therefore to state a new version of
 \end{proof}
 
 \begin{theorem}[Determinacy checking with \match property]
-  Given a program \prog and a predicat \pred
+  Given a program \prog and a predicate \pred
   \begin{align*}
     &\detCheck\ \prog\ \pred \to \forall i\ o,\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList    
   \end{align*}

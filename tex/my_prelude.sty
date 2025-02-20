@@ -96,10 +96,12 @@
 \newcommand{\arr}{\rightsquigarrow}
 
 \def\mutExclHeads{\texttt{mut\_excl\_heads}}
+\def\locExcl{\texttt{loc\_excl}}
 \def\mutExcl{\texttt{mut\_excl}}
-\def\mutExclM{\texttt{mut\_exclM}}
+\def\mutExclHO{\texttt{mut\_excl\_HO}}
 \def\detCheck{\texttt{det\_check}}
-\def\detCheckM{\texttt{det\_checkM}}
+\def\detCheckHO{\texttt{det\_check\_HO}}
+\newcommand{\lam}{\ensuremath{\lambda}}
 
 \def\mutExclCut{\texttt{mut\_excl\_cut}}
 \def\detPrem{\texttt{det\_prem}}
@@ -114,7 +116,9 @@
 \newcommand{\clauseCmd}[3]{\ensuremath{#1\ #2\ \cdash\ #3}}
 \newcommand{\implCmd}[2]{\ensuremath{#1\ \impl\ #2}}
 \newcommand{\piCmd}[2]{\ensuremath{\pi\ #1\bs\ #2}}
-\newcommand{\lamCmd}[2]{\ensuremath{\lambda#1\bs\ #2}}
+\newcommand{\lamCmd}[2]{\ensuremath{\lambda#1. #2}}
+
+\newcommand{\piImplCmd}[3]{\piCmd{#1}{\implCmd{#2}{#3}}}
 
 \newcommand{\unifyCmd}[4]{\ensuremath{\unify\ #1\ #2\ #3 \arr #4}}
 \newcommand{\matchCmd}[4]{\ensuremath{\match\ #1\ #2\ #3 \arr #4}}
@@ -221,34 +225,45 @@
 }
 
 \newcommand{\ctx}[1][]{\ensuremath{\Gamma#1}}
+\newcommand{\env}{\ensuremath{\mathcal{E}}}
 
-\newcommand{\ruleImplM}[1]{
+% \newcommand{\ruleImplM}[1]{
+%   \begin{myRule}{#1}
+%     % IMPL
+%     \AxiomC{\runCmd{\ConsHd{(\goalCmd{(H + \ctx)}{B}{\alt})}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \RightLabelM{\ruleImpl}
+%     \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{(\implCmd{H}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%   \end{myRule}
+% }
+
+% \newcommand{\rulePiM}[1]{
+%   \begin{myRule}{#1}
+%     % PI
+%     \AxiomC{\runCmd{\ConsHd{\goalCmd{(x \uplus \ctx)}{B}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \RightLabelM{\rulePi}
+%     \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{(\piCmd{x}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%   \end{myRule}
+% }
+
+\newcommand{\rulePiImpl}{\ruleName{{\forall\Rightarrow}}}
+\newcommand{\rulePiImplM}[1]{
   \begin{myRule}{#1}
     % IMPL
-    \AxiomC{\runCmd{\ConsHd{(\goalCmd{(H + \ctx)}{B}{\alt})}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
-    \RightLabelM{\ruleImpl}
-    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{(\implCmd{H}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+    \AxiomC{\runCmd{\ConsHd{(\goalCmd{(x \uplus \env, H + \prog)}{B}{\alt})}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+    \RightLabelM{\rulePiImpl}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\env,\prog}{(\piCmd{x}{\implCmd{H}{B}})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
   \end{myRule}
 }
 
-\newcommand{\rulePiM}[1]{
-  \begin{myRule}{#1}
-    % PI
-    \AxiomC{\runCmd{\ConsHd{\goalCmd{(x \uplus \ctx)}{B}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
-    \RightLabelM{\rulePi}
-    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{(\piCmd{x}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
-  \end{myRule}
-}
-
-\newcommand{\ruleLam}{\ruleName{\lambda}}
-\newcommand{\ruleLamM}[1]{
-  \begin{myRule}{#1}
-    % PI
-    \AxiomC{\runCmd{\ConsHd{\goalCmd{\ctx}{(B[x\backslash T])}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
-    \RightLabelM{\ruleLam}
-    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{((\lambda x. B) T)}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
-  \end{myRule}
-}
+% \newcommand{\ruleLam}{\ruleName{\lambda}}
+% \newcommand{\ruleLamM}[1]{
+%   \begin{myRule}{#1}
+%     % PI
+%     \AxiomC{\runCmd{\ConsHd{\goalCmd{\ctx}{(B[x\backslash T])}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \RightLabelM{\ruleLam}
+%     \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{((\lambda x. B) T)}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%   \end{myRule}
+% }
 
 % Derivation system: end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

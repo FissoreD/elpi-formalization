@@ -16,3 +16,17 @@
   \caption{Comparison}
   \label{tab:comparison}
 \end{table}
+
+\subsection{Future work}
+
+\paragraph{Problem of charging local clauses with weaker conditions}
+Overlapping check che rompe:
+
+\begin{elpicode}
+  pi x\ (pi Y\ f x Y) => (pi y => f x y) => Bo
+\end{elpicode}
+
+Dove i modi per f sono input, input.
+
+In questo esempio se Bo = ``f x y'' allora ci sono due soluzioni,
+in quanto entrambe le regole caricate colla freccia si applicherebbero 
