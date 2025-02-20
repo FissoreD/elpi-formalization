@@ -142,7 +142,7 @@ procedure between two terms.
 The introduction of dynamic modes requires modifying the interpreter so that the
 \match procedure is called when unification is performed on input terms. To
 achieve this, we need to slightly adjust the $\mathcal{F}$ function used by the
-\ruleCall, as follows:%
+\ref{rule:call}, as follows:%
 $$
 \mathcal{F}(\prog, \pred, i, o, \subst, \alt) := 
   [(\subst, (
@@ -277,7 +277,7 @@ We start therefore to state a new version of
 \begin{proof}
   We can reason by induction on the derivations in
   \cref{fig:basic-interp,fig:interp-match}. The interesting case is the
-  \ruleCall. Due to \detCheck\ \prog \pred, we know from \cref{th:mut-excl1}
+  \ref{rule:call}. Due to \detCheck\ \prog \pred, we know from \cref{th:mut-excl1}
   that at most one clause \( c \) successfully applies to the call to \pred. By
   the definition of \( \mathcal{F} \) \todo{add also match and unif}, the new
   goals \( \g \) are formed from the atoms in \( c \), and all these goals have

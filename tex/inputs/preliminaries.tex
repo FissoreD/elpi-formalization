@@ -193,14 +193,14 @@ the atom $g$ and the list of alternatives \alt.
 
 The behaviour of the program depends on the shape of the list of goal and its
 alternatives. A query succeed if exists a sequence of reductions allowing to reach the
-\textit{stop rule}, symbolyzed with \ruleStop.
+\textit{stop rule}, symbolyzed with \ref{rule:stop}.
 
 More precisely, the \textit{stop rule} captures configurations with an empty
 list of goals. By convention, this configuration is final: there are no more
 goals to process, so we stop and return the same alternatives and substitution
 received as input.
 
-The \textit{fail rule} (\ruleFail) consumes the list of alternatives if the
+The \textit{fail rule} (\ref{rule:fail}) consumes the list of alternatives if the
 first goal fails. A failure occurs if the goal at the head of the list is a call
 to a predicate with no clauses in the associated program or if it is a
 failing unification under the given substitution.
@@ -211,14 +211,14 @@ failing unification under the given substitution.
 % is applied if the current goal is a call to a predicate with no alternatives,
 % but we prefer to simplify our rule system.
 
-The \textit{unify rule} (\ruleUnif) is applied when a unification $t_1 = t_2$
+The \textit{unify rule} (\ref{rule:unif}) is applied when a unification $t_1 = t_2$
 appears at the head of the current goal list. It invokes the \unify algorithm on
 the two terms $t_1$ and $t_2$ using the substitution \subst and returns the
 updated substitution \subst[']. Finally, if the unification succeeds, the \run\
 procedure is called with the list of remaining goals \g and the new substitution
 \subst['].
 
-The \textit{cut rule} (\ruleBang) refers to goals where the first goal has the
+The \textit{cut rule} (\ref{rule:cut}) refers to goals where the first goal has the
 \cut as atom. Since in our implementation we use the \textit{hard-cut} operator,
 we proceed in solving the list of remaining goals but the alternatives we keep
 are the one stored in the goal. This alternatives are called cut-alternatives.
@@ -226,7 +226,7 @@ As said in \cite{2003Andrews}, (hard-)cut is a non-logical operator ``cutting
 away not only the later clauses of the same predicate, but also the alternative
 clauses for subgoals that appear earlier in the clause''.
 
-The \textit{call rule} (\ruleCall) deals with goals starting with a predicate
+The \textit{call rule} (\ref{rule:call}) deals with goals starting with a predicate
 call. In this case the function $\mathcal{F}$ is called with the parameters as
 explained above and if the result of this operation is the list
 \ConsHd{b}\ConsTl{bs}, then a recursive call to \run\ is done by prepending $b$ to
@@ -237,7 +237,7 @@ Note that we have intentionally kept out form \cref{fig:basic-interp}
 the rule for variables appearing as goals. Variables will play an important role
 in \cref{sec:vars}. 
 
-The combination of the \ruleCall and \ruleBang rules is crucial for replicating
+The combination of the \ref{rule:call} and \ref{rule:cut} rules is crucial for replicating
 the behavior of the cut. When a call to a predicate generates multiple rules as
 new choice points, the function $\mathcal{F}$ creates future disjunctive goals
 where the cut alternatives are set to the current list of alternatives \alt. In
@@ -249,6 +249,10 @@ consists of the atoms $a_1, \dots, a_k, !, a_{k+2}, \dots, a_m$, then all choice
 points created during the evaluation of $a_1, \dots, a_k$ will also be pruned.
 This pruning consist simply in setting the cut alternatives to \alt.
 
+TODO: aggiungere nota: l'interprete lavora su termini che sono in canonical
+form. La sostizione fa la beta reduction, nell'interprete di base questo succede
+solo nel momento di chiamata a \unify. Nell'interpreter in \cref{sec:vars} si va
+più lontano perchè il deref è fatto anche nelle call
 
 As an example, let's consider the following program called \prog:
 
@@ -264,7 +268,7 @@ p3 1 2.                     % r5
 \def\goalG{\goalCmd{\prog}{\callCmd{p1}{3}{Z}}{\EmptyList}}
 
 Let $\mathcal{G} :=\ \goalG$ be a goal, the execution of
-``\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?\subst}'' will apply \ruleCall
+``\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?\subst}'' will apply \ref{rule:call}
 producing a new goal for the rule $r1$ and an alternative list containing $r2$,
 we leave out details concerning unifications of head terms. The execution of
 $r1$ will try to solve $r3$. This will add three goals \elpiIn{r 1 Y, !, Y = 1}
@@ -272,7 +276,7 @@ with cut-alternatives equal to $r2$ whereas the new alternatives will be $r4 @
 r2$. The execution of $r3$ will solve \elpiIn{p3 1 Y} with substitution $s :=
 \{X \gets 1; Y \gets 2\}$. The \elpiIn{!} will cut away the alternative $r4 @
 r2$ and will keep the cut-alternative $r2$. The failing premise \elpiIn{Y = 1}
-will cause a backtracking thanks to \ruleFail and try to apply $r2$ from the
+will cause a backtracking thanks to \ref{rule:fail} and try to apply $r2$ from the
 empty substitution. This last unification succeed with final substution $?\subst :=
 \{X \gets 3; Y \gets 3\}$ and final list of alternatives $?A := \EmptyList$.
 
@@ -539,7 +543,7 @@ an input and output.
 
 \begin{proof}
   By induction on the derivation rules (\cref{fig:basic-interp}). The interesting case is the rule
-  \ruleCall when the heads $c_1$ and $c_2$ unify both with the current goal. If
+  \ref{rule:call} when the heads $c_1$ and $c_2$ unify both with the current goal. If
   this is the case, then two cases should be taken into account: 1) the \cut\
   inside the body of $c_1$ is reached while running the program. In this case
   the \cut, will cut away the clause $c_2$ since, by contruction, it cannot
@@ -628,7 +632,7 @@ predicates.
 
 \begin{proof}
   We can reason by induction on the derivations in \cref{fig:basic-interp}. The
-  interesting case is the \ruleCall. Due to \detCheck\ \prog \pred, we know, by
+  interesting case is the \ref{rule:call}. Due to \detCheck\ \prog \pred, we know, by
   \cref{th:mut-excl} that at most one clause $c$ successfully applies on the
   call to \pred. By definition of $\mathcal{F}$\todo{there are also unif}, the new goals \g are made from
   the atoms in $c$ and all of this goals have the empty list as
@@ -678,7 +682,7 @@ so that it is no more classified as non-deterministic.
 % if for any call to $p$ with arbitrary input and output terms
 % starting with the empty substitution and the empty list of alternatives,
 % we have a solution, i.e. the couple $(a, \subst)$ then the list of
-% alternatives $a$ is empty. This essentailly means that any functional
+% alternatives $a$ is empty. This essentially means that any functional
 % predicate produces no choice points.
 
 % Following the literature, this claim is proven true:

@@ -1,10 +1,10 @@
 \section{HOAS}
 \label{sec:hoas}
 
-The full potential of \elpi comes with the fact that the language accepts
-hareditary-harrop formulas and higher-order pattern unification
-(\cite{1991miller-pf}), noted \pf. This extension allows to dynamically modify
-the program by inserting fresh variables and clauses.
+An improvement of the current version of the interpreter comes with the fact
+that the \elpi accepts hareditary-harrop formulas and higher-order pattern
+unification (\cite{1991miller-pf}), noted \pf. This extension allows to
+dynamically modify the program by inserting fresh variables and clauses.
 
 % In order to pass to the full \elpi language, we need to change the way terms and clauses are 
 % represented. We give, therefore, their implementation below.
@@ -81,7 +81,7 @@ provided that $x \notin \env$.
 % attempts to solve \( B \) under a program extended with the clause \( H \). The
 % rule \rulePi introduces the name of the fresh variable into the program.  
 
-The rule \rulePiImpl in \cref{fig:full-interp} is interpreted by running the
+The rule \ref{rule:piimpl} in \cref{fig:full-interp} is interpreted by running the
 goal under the \pi and the \impl charging both the local variable and clause
 inside its scope.
 
@@ -146,7 +146,7 @@ setting.
 \begin{proof}
   The proof is similar to \cref{th:det1}. We only need to prove that the
   property holds in a program where some rules for  \pred\ may be loaded locally
-  during the exectution of a subgoal. By definition of \rulePiImpl, any new
+  during the exectution of a subgoal. By definition of \ref{rule:piimpl}, any new
   added local clause $c$ for \pred has the highest priority, therefore, to
   ensure that \pred remains deterministic we need to consider two cases: 1) $c$
   successfully applies on the current goal and 2) $c$ does not successfully

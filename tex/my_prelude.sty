@@ -24,6 +24,13 @@
 % \setlength{\belowdisplayshortskip}{3pt}%
 % }
 
+\makeatletter
+\newcommand{\customlabel}[2]{%
+  \protected@write \@auxout {}{\string \newlabel {#1}{{\ensuremath{#2}}{\thepage}{#2}{#1}{}} }%
+  \hypertarget{#1}{\ensuremath{#2}}
+}
+\makeatother
+
 % \usepackage{amssymb}% http://ctan.org/pkg/amssymb
 \usepackage{pifont}% http://ctan.org/pkg/pifont
 \newcommand{\cmark}{\ding{51}}%
@@ -148,17 +155,18 @@
     \end{minipage}
   }
 
-\newcommand{\ruleName}[1]{\ensuremath{r_{#1}}\xspace}
+\newcommand{\ruleName}[2]{\customlabel{#1}{\ensuremath{r_{#2}}}}
 \newcommand{\RightLabelM}[1]{\RightLabel{\scriptsize #1}}
 
-\newcommand{\ruleFail}{\ruleName{\bot}}
-\newcommand{\ruleCall}{\ruleName{c}}
-\newcommand{\ruleBang}{\ruleName{!}}
-\newcommand{\ruleStop}{\ruleName{\EmptyList}}
-\newcommand{\ruleUnif}{\ruleName{=}}
-\newcommand{\ruleImpl}{\ruleName{\Rightarrow}}
-\newcommand{\rulePi}{\ruleName{\forall}}
-\newcommand{\ruleMatch}{\ruleName{m}}
+\newcommand{\ruleFail}{\ruleName{rule:fail}{\bot}}
+\newcommand{\ruleCall}{\ruleName{rule:call}{c}}
+\newcommand{\ruleBang}{\ruleName{rule:cut}{!}}
+\newcommand{\ruleStop}{\ruleName{rule:stop}{\EmptyList}}
+\newcommand{\ruleUnif}{\ruleName{rule:unif}{=}}
+\newcommand{\ruleImpl}{\ruleName{rule:impl}{\Rightarrow}}
+\newcommand{\rulePi}{\ruleName{rule:pi}{\forall}}
+\newcommand{\ruleMatch}{\ruleName{rule:match}{m}}
+\newcommand{\rulePiImpl}{\ruleName{rule:piimpl}{{\forall\Rightarrow}}}
 
 \newcommand{\ruleStopM}[1]{
   \begin{myRule}{#1}
@@ -245,7 +253,6 @@
 %   \end{myRule}
 % }
 
-\newcommand{\rulePiImpl}{\ruleName{{\forall\Rightarrow}}}
 \newcommand{\rulePiImplM}[1]{
   \begin{myRule}{#1}
     % IMPL
@@ -404,14 +411,6 @@
 
 % Static check rule system: end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-\makeatletter
-\newcommand{\customlabel}[2]{%
-  \protected@write \@auxout {}{\string \newlabel {#1}{{\ensuremath{#2}}{\thepage}{#2}{#1}{}} }%
-  \hypertarget{#1}{\ensuremath{#2}}
-}
-\makeatother
 
 \makeatletter
 \def\thm@space@setup{\thm@preskip=0pt
