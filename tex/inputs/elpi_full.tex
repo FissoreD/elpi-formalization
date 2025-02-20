@@ -52,11 +52,14 @@ We provide some examples to illustrate this point:
 
 \begin{itemize}
   \item In a program with a predicate \elpiIn{once}, defined as \elpiIn{once P
-        :- P, !}, we observe that \elpiIn{once} behaves deterministically
+          :- P, !}, we observe that \elpiIn{once} behaves deterministically
         regardless of the determinacy of its argument.
-  \item In a program with a predicate \elpiIn{give-once}, defined as
-        \elpiIn{give-once P (once P)}, we see that for any input proposition
+  \item In a program with a predicate \elpiIn{make-det}, defined as
+        \elpiIn{make-det P (once P)}, we see that for any input proposition
         \elpiIn{P}, the output is deterministic.
+  \item In a program with a predicate \elpiIn{do}, defined as
+        \elpiIn{do P :- P}, we see that if \elpiIn{do} is called with a
+        deterministic predicate, then \elpiIn{do} is deterministic.
   \item Finally, in a program with a predicate \elpiIn{idF}, defined as
         \elpiIn{idF A A}, we note that when \elpiIn{idF} is called with a
         deterministic input, its output remains deterministic.
@@ -64,154 +67,118 @@ We provide some examples to illustrate this point:
 
 To provide this information to the compiler we give the user the possibility to
 provide expressive type signatures for constants. The grammar is
-as follows: 
+as follows:
 %
-\begin{align*}
-  ty & ::= data \mid pred\\
-  data & ::= \texttt{c}\ data^\ast \mid data \to data \mid \texttt{v}\\
-  pred & ::= \relI\ ty^\ast \mid \detI\ ty^\ast \funsep ty^\ast
-\end{align*}
+\begin{align}
+  ty   & ::= data \mid pred                                    \label{eq:ty}          \\
+  data & ::= \texttt{c}\ data^\ast \mid data \to data \mid \texttt{v} \label{eq:data} \\
+  % pred & ::= \relI\ ty^\ast \mid \detI\ ty^\ast \funsep ty^\ast \label{eq:pred}
+  pred & ::= [\detI \mid \relI]\ ty^\ast \funsep ty^\ast \label{eq:pred}
+\end{align}
 
 A type ($ty$) is a disjunction of the two sorts: on one sides we have the type
-for expressions ($data$) and the type of executable piece of code ($pred$).
-The nonterminal $data$ represents the 
+for expressions ($data$) and the type of executable piece of code ($pred$). The
+nonterminal $data$ is for expressions, it is either the application of a type
+constant to a list of data, a function ($\to$) or a variable. The nonterminal
+$pred$ is the type of predicates. A predicate is relational (\relI) or
+functional (\detI). A relation is followed by the types of the arguments of the
+predicate being defined. A function has two list of types separated by the
+\funsep\ operator. On the left we have the type of the inputs and on the right
+the type of the outputs.
 
-The entry point is $sg$ which declares a predicate name \texttt{pn} which can be
-either a relational (\relI) or a deterministic (\detI) predicate. A predicate is
-followed by a list (also empty) of arguments ($ag$) that are marked as input
-(\texttt{i:}) or output (\texttt{o:}) and are followed by the type ($ty$) of the
-argument. The type is either a base type (\texttt{bt}) which is a sort or an
-anonymnous predicate (\texttt{ap}). An anonymnous is defined as the nonterminal
-symbol $sg$ without the name predicate \texttt{pn}.
+Thanks to this, we can define the signature of the predicates above:
+%
+% \begin{equation}  
+\begin{align*}
+  \texttt{once}     & : \detI\ [\relI] \funsep []      & \texttt{do}  & : \detI\ [\detI] \funsep []      \\
+  \texttt{make-det} & : \detI\ [\relI] \funsep [\detI] & \texttt{idF} & : \detI\ [\detI] \funsep [\detI]
+\end{align*}
+% \label{eq:ty}
+% \end{equation}
 
-Thanks to this, we can define the signature of the three predicate 
-\elpiIn{once}, \elpiIn{give-once}, and \elpiIn{idF} can be phrased as follows:
+In the code abode we use brackets to delimit lists. The idea is that, thanks to
+type signatures, the checker of elpi code ensure the a predicate is a function
+when it should be and returns outputs with the right determinacy.
 
-% \begin{elpicode}
-%   pred divisor i:int, o:int.
-%   pred help i:int, i:int, o:int.
+Thanks to this certification, for example, let \elpiIn{f} be a binary,
+relational predicate, then the query ``\elpiIn{make-det (f 1 X) F, do F}'' is
+deterministic. This is because \elpiIn{make-det} is deterministic, \elpiIn{F} is
+deterministic and \elpiIn{do} behaves deterministically when it receives
+functions as input.
 
-%   divisor N R :- help N 1 R.
-%   help N X X :- 0 is N mod X.
-%   help N X R :- X < N, X' is X + 1, help N X' R. 
+The checker should also accepts predicates that are \textit{wrongly} called. For
+example, \elpiIn{do (f 1 X)} should be accepted as a call, however, since the
+argument of \elpiIn{do} has not the expected determinacy, we loose the guarantee
+that the call behaves deterministically. Similarly, the query \elpiIn{idF (f 1 X)
+  R} is \textit{wrongly} called and therefore we have no guarantee that \elpiIn{R} is
+deterministic and that the whole call behaves deterministically. The choice to
+accepts wrong calls allows to have \textit{code reusability}.
 
-%   [(pi N R\ divisor N R :- help N 1 R),
-%   (pi N X\ help N X X :- 0 is N mod X),
-%   (pi N X R X'\ help N X R :- X < N, X' is X + 1, help N X' R)] => divisor 10 R. 
-% \end{elpicode}
+On the other hand, the signature of \elpiIn{make-det} should reject
+\elpiIn{make-det A (once A) :- A}. Since we cannot guarantee that the whole rule
+is a function: \elpiIn{A} could be a relation and calling it in the body may
+create choice points.
 
-From now on let \elpiIn{divisor} be the predicate from \elpiIn{int} to
-\elpiIn{int} taking an integer and returning its divisors, one by one in
-increasing order.
-
-Let \elpiIn{once} be a predicate with only one clause ``\elpiIn{once P (P, !)}''.
-From this implementation, we see that the \elpiIn{once} predicate has
-the following property: it takes a proposition and returns its deterministic
-version, i.e. the output is the call to \elpiIn{P} where all of its choice
-points have been cut away (note the presence of the \cut\ in the second argument). To be more concrete, the query
-\elpiIn{once (divisor 5 X) P, P} will instantiate \elpiIn{X} only once
-to \elpiIn{1} (note that the query \elpiIn{divisor 5 X}
-has two solutions for \elpiIn{X}, namely \elpiIn{1} and \elpiIn{5}). Another
-information about \elpiIn{once} is that it is a deterministic predicate, that
-is, not only its output is a function but \elpiIn{once} itself is a function.
-
-To provide the compiler all of these pieces of information about the predicate
-\elpiIn{once}, the user should add a signature to the predicate.
-\Elpi's signatures are as follows:
-GRAMMAR
-
-TODO: dire che func sta per funzionale e rel sta per relazionale
-
-So the signature of \elpiIn{once} will be: ``\elpiIn{func once i:pred, o:func}''
-where \elpiIn{once} is a function, it takes a
-relation and returns a function.
-
-% Since predicate parameters can now be passed to other predicate calls, and since
-% these calls may affect the determinacy of a predicate, we need to specialize
-% our determinacy checker.
-\begin{elpicode}
-  func apply5 i:(func int -> int), o:int.
-  apply5 F R :- F 5 R.
-\end{elpicode}
-
-Consider now, the \elpiIn{apply5} predicate depicted above. It is a function
-that takes a function from \elpiIn{int} to \elpiIn{int} and returns the result of
-applying that function to \elpiIn{5}. What happens if we
-execute the query \elpiIn{apply
-  divisors X}? We see that its output is not deterministic: the assignment for
-\elpiIn{X} is not deterministically determined -- there are, in fact, two
-possible assignments: one where \elpiIn{X} is assigned to \elpiIn{1} and another
-where it is assigned \elpiIn{5}.
-
-RIUTILIZZARE CODICE!!
-
-SEPARARE IL CHIAMARE GIUSTO UN PREDICATO (per riusare codice)
-
-Another problem is showed by the followig code:
-\begin{elpicode}
-  func idF i:func, o:func.
-  idF X X.
-\end{elpicode}
-% func p i:(func int -> int), o:(pred i:int, o:int).
-% p X X :- X = divisors.
-
-In the snippet, we define the identity function over functions.
-
-With \elpi's dynamic mode system, the call ``\elpiIn{idF Y Y, Y = divisor 5
-  X, Y}'' succeeds because we can pass flexible terms in input positions. The problem
-here is that, based on the signature of \elpiIn{idF}, its output is a function.
-This allows us to assume that the variable \elpiIn{Y} is a function. However,
-after the unification between \elpiIn{Y} and \elpiIn{divisor 5 X}, we lose that
-property: calling \elpiIn{Y} produces several results for \elpiIn{X}.
-
-DIRE CHE DIAMO L'ALGORITMO DI DETERMINACY CHECKING, PRIMA ATTRAVERSO ESEMPI E POI
-RIASSIUMIAMO TUTTO
-
-To address this issue, we could statically annotate terms with their determinacy
-status in a way similar to the static mode checking for ground terms. Then,
-when a unification is performed between two terms, a compilation error
-could be raise if their determinacy tag mismatch.
-In the example above, \elpiIn{Y = divisor} would be rejected since \elpiIn{Y}
-would be annotated as a function and \elpiIn{divsor} is a relation.
-
-% \newcommand{\detT}[1]{\text{\mlIn{~\PYG{n+nc}{#1}~}}}
+To address all of these issues we implement a static checker labelling variables
+with their determinacy. Labels are instances of $ty$ in \cref{eq:ty}, to
+simplify our presentation, $data$s in \cref{eq:data} are represented with the
+\expI\ tag.
 
 
-The labels we need are defined with the following inductive:
+% A term is either an expression (an non executable peice of code), a relational
+% or a deterministic predicate or finally an arrow (just like the arrow used for
+% the types of functions) between two \detlab. For the last constructor we
+% will use the notation $d_1 \myTo d_2$ where $d_1$ and $d_2$ are instances of\todo{i:detlab list if multiple args}
+% \detlab, moreover we consider $d_1$ to be an input and $d_2$ to be an output.
+% We are again considering binary relations. This can always be generalized to
+% functions (or relations) of any arity by slightly changing the signature of
+% the \coqIn{arr} constructor.
 
-\begin{coqcode}
-  Inductive ~\detlab~ := Exp | Rel | Det | arr (i:detlab) (o:detlab).
-\end{coqcode}
-
-A term is either an expression (an non executable peice of code), a relational
-or a deterministic predicate or finally an arrow (just like the arrow used for
-the types of functions) between two \detlab. For the last constructor we
-will use the notation $d_1 \myTo d_2$ where $d_1$ and $d_2$ are instances of\todo{i:detlab list if multiple args}
-\detlab, moreover we consider $d_1$ to be an input and $d_2$ to be an output.
-We are again considering binary relations. This can always be generalized to
-functions (or relations) of any arity by slightly changing the signature of
-the \coqIn{arr} constructor.
-
-The problem of this first algorithm of determinacy check is that it does not
-take into account a natural relation that exists between functions and
-relations, i.e. a function is a relation such that all of the member in its
-domain points to a unique value in its codomain. This means that a fuction can
+% The problem of this first algorithm of determinacy check is that it does not
+% take into account 
+A natural property that exists between functions and relations is that a
+function is a particular relation such that all of the members in its domain
+points to at most a unique value in its codomain. This means that a fuction can
 be always passed in place of a relation. We define below the inclusion relation
-between two \detlab.
-
-\begin{coqcode}
-  Fixpoint a ~\mySub~ b := match a, b with
-  | Rel, Func -> false
-  | Func, Rel | Rel, Rel | Func, Func | Exp, Exp -> true
-  | a ~\myTo~ b, a' ~\myTo~ b' -> a' ~\mySub~ a && b ~\mySub~ b'
-  end.
-\end{coqcode}
+between two determinacies.
+\begin{equation}
+  f_1 \mySub f_2 =
+  \begin{cases}
+    false                                                         & \text{if } f_1 = \relI\ \_\ \land f_2 = \detI\ \_         \\
+    % (\forall i, a'_i \mySub a_i) \land (\forall j, b_j \mySub b'_j)      & \text{else if } f_1 = \detI\ a\ b \land f_2 = \detI\ a'\ b' \\
+    % (\forall i, a'_i \mySub c_i) \land (\forall j, b_j \mySub c_{|a|+j}) & \text{else if } f_1 = \detI\ a\ b \land f_2 = \relI\ c      \\
+    % \forall i, a_i \mySub b_i                                            & \text{else if } f_1 = \relI\ a\ \land f_2 = \relI\ b        \\
+    % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{else if } f_1 = [\detI\mid \relI]\ a\ b \land f_2 = [\detI\mid \relI]\ c\ d \\
+    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \detI\ a\ b \land f_2 = \detI\ c\ d \\
+    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \detI\ a\ b \land f_2 = \relI\ c\ d \\
+    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
+    true                                                          & \text{if } f_1 = \expI \land f_2 = \expI
+  \end{cases}
+  \label{eq:sub-def}
+\end{equation}
+% \begin{coqcode}
+%   Fixpoint a ~\mySub~ b := match a, b with
+%   | Rel, Func -> false
+%   | Func, Rel | Rel, Rel | Func, Func | Exp, Exp -> true
+%   | a ~\myTo~ b, a' ~\myTo~ b' -> a' ~\mySub~ a && b ~\mySub~ b'
+%   end.
+% \end{coqcode}
 
 The \mySub\ relation is intentionally non-complete since we suppose that before
 performing any determinacy checking the program has been type-checked. This
 means that it is never possible to have unification between, for example,
-expressions and relations, this would lead to a fatal type-error.
+datatypes and predicates, this would lead to a fatal type-error. Moreover, when
+comparing predicates $p_1$ and $p_2$, we assume that ther input lists have same
+lengths and that their output lists have same lengths: predicates with different
+lists of input and output are not comparable.
 
+The idea of \mySub\ is that a relation, by definition, is not a function, the
+other combinations of functions and relations works if some conditions holds on
+their inputs and outputs.
+
+$$---$$
+
+and therefore
 The base cases of \mySub\ are quite intuitive: a relation is not a function. The
 interesting case is the \coqIn{arr} constructor. Here, we are comparing two
 propositions and therefore some attention should be paid for its inputs and
