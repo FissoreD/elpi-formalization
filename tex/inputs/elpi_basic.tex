@@ -1,4 +1,4 @@
-\section{First-order prolog}
+\section{Prolog with \match unification}
 \label{sec:basic-elpi}
 
 As anticipated in the end of \cref{sec:modes}, the hypothesis that input
@@ -12,7 +12,7 @@ In our first-order prolog system we work with the same data structures described
 in the previous section, however, we change the unification algorithm wrt the
 mode of the terms that are being unified.
 
-\subsection{Modes in the first-order setting}
+\subsection{Modes and \match}
 \label{sec:elpi-modes}
 
 % Mode checking in this setting is performed using the classical groundness
@@ -161,7 +161,7 @@ rule in \cref{fig:interp-match}.
   
   \ruleMatchM{1}
   
-  \caption{Basic derivation rules}
+  \caption{Dynamic semantics: rule for \match}
   \label{fig:interp-match}
 \end{figure}
 
@@ -177,7 +177,7 @@ rule in \cref{fig:interp-match}.
 % \run\ procedure is called the list of remaining goals \g and the new
 % substitution \subst['].
 
-\subsection{First-order determinacy checker}
+\subsection{Determinacy checker for prolog with \match}
 
 Mode checking is an essential ingredient for ensuring determinacy.
 

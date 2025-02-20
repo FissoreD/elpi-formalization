@@ -11,6 +11,8 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 % \usepackage{amsthm}
+\usepackage{simplebnf}
+
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
 \newtheorem{definition}{Definition}
@@ -69,17 +71,17 @@
 % Languages: end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\newenvironment{myminted}[1][~~]{
+\newenvironment{myminted}[2][~~]{
   \vspace{0.2em}%
   \VerbatimEnvironment
-  \begin{minted}[fontsize=\small,autogobble,escapeinside=~~,mathescape=true,frame=leftline,framerule=0pt,framesep=1em]{#1}%
+  \begin{minted}[fontsize=\small,autogobble,escapeinside=#1,mathescape=true,frame=leftline,framerule=0pt,framesep=1em]{#2}%
 }{
   \end{minted}%
   \vspace{0.2em}%
 }
 
-\newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}['elpi.py:ElpiLexer -x']}{\end{myminted}}
-\newenvironment{coqcode}{\VerbatimEnvironment\begin{myminted}[coq]}{\end{myminted}}
+\newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}{'elpi.py:ElpiLexer -x'}}{\end{myminted}}
+\newenvironment{coqcode}{\VerbatimEnvironment\begin{myminted}{coq}}{\end{myminted}}
 
 \newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
 \newcommand{\modeAlone}[1]{\elpiIn{~\PYG{k+kMode}{#1:}~}}
@@ -160,6 +162,7 @@
 
 \newcommand{\ruleFail}{\ruleName{rule:fail}{\bot}}
 \newcommand{\ruleCall}{\ruleName{rule:call}{c}}
+\newcommand{\ruleCallB}{\ruleName{rule:call1}{c'}}
 \newcommand{\ruleBang}{\ruleName{rule:cut}{!}}
 \newcommand{\ruleStop}{\ruleName{rule:stop}{\EmptyList}}
 \newcommand{\ruleUnif}{\ruleName{rule:unif}{=}}
@@ -219,16 +222,21 @@
 \newcommand{\ruleCallM}[1]{
   \begin{myRule}{#1}
     % CALL
-    % \AxiomC{\prog \pred = \ConsHd{(\pred\ i'\ o' \evdash b)}\ConsTl{bs}}
-    % \AxiomC{$\mathcal{U} \gets {[i = i', o = o']}$}
-    % \AxiomC{\runCmd{(({\mathcal{U}\ @\ b})_a\ @\ gl)}{(bs_a\ @\ a)}{s}{a'}{s'}}
-    % \RightLabelM{\ruleCall}
-    % \TrinaryInfC{\runCmd{\ConsHd{(\prog, \call{\pred}{i}{o}, \_)}\ConsTl{gl}}{a}{s}{a'}{s'}}
-    % 
     \AxiomC{$\mathcal{F}(\prog, \pred, i, o, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
     \AxiomC{\runCmd{(g\ @\ \g)}{(new\_alt\ @\ \alt)}{\subst}{\alt[']}{\subst[']}}
     \RightLabelM{\ruleCall}
     \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{\pred}{i}{o}}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleCallBM}[1]{
+  \begin{myRule}{#1}
+    % CALLB
+    \AxiomC{$(\subst h)\ t_1\ t_2 = \pred\ i\ o$}
+    \AxiomC{$\mathcal{F}(\prog, \pred, i, o, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
+    \AxiomC{\runCmd{(g\ @\ \g)}{(new\_alt\ @\ \alt)}{\subst}{\alt[']}{\subst[']}}
+    \RightLabelM{\ruleCallB}
+    \TrinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{(h\ t_1\ t_2)}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
   \end{myRule}
 }
 
@@ -280,9 +288,10 @@
 \newcommand{\detT}[1]{\texttt{#1}}
 \newcommand{\maxT}{\texttt{max}}
 \newcommand{\minT}{\texttt{min}}
-\newcommand{\detI}{\detT{Det}}
-\newcommand{\relI}{\detT{Rel}}
-\newcommand{\expI}{\detT{Exp}}
+\newcommand{\detI}{\detT{fun}}
+\newcommand{\relI}{\detT{rel}}
+\newcommand{\expI}{\detT{exp}}
+\newcommand{\funsep}{\ensuremath{\triangleright}}
 \newcommand{\myTo}{\ensuremath{\mathbin{\detT{->}}}}
 \newcommand{\mySub}{\ensuremath{\subseteq}}
 \newcommand{\detlab}{\texttt{detlab}}

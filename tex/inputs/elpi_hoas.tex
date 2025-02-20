@@ -1,4 +1,4 @@
-\section{HOAS}
+\section{Prolog with higher-order variables in datatype}
 \label{sec:hoas}
 
 An improvement of the current version of the interpreter comes with the fact
@@ -46,7 +46,7 @@ DIRE CHE NON PERDIAMO IN ESPRESSIVITA, possiamo quantificare un pi che non
 è usato in its body, oppure possiamo caricare una regola dummy che non è
 usata in its body
 
-\subsection{Interpreter for HOAS}
+\subsection{Interpreter for prolog with higher-order variables in datatype}
 
 
 To account for the new constructor in the language, we extend our interpreter.
@@ -66,7 +66,7 @@ it should extract the first component of \ctx\ to obtain the expected output.
   % \rulePiM{.85}
 
   % \ruleLamM{.85}
-  \caption{Higher-order derivation rules}
+  \caption{Dynamic semantics: rule for higher-order prolog}
   \label{fig:full-interp}
 \end{figure}
 
@@ -90,7 +90,7 @@ unification. \env is required to know if a term is in the pattern fragment.
 
 % Finally the \ruleLam makes a $\beta$-reduction step and keep solving the goal.
 
-\subsection{Determinacy checker with HOAS}
+\subsection{Determinacy checker for prolog with higher-order variables in datatype}
 
 The insertion of the new rule makes the determinacy checker to change
 accordingly. In particular, the rule $H$ charged by \impl\ in

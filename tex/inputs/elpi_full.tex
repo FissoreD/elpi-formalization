@@ -1,12 +1,91 @@
-\section{Variable comes into the game}
+\section{Prolog with higher-order variables in prop}
 \label{sec:vars}
 
-TODO: add the rule for variable interpretation in the run system
+In order to fully capture the potential of a \lamprolog language like \elpi, we
+need to delve deeper into the concept of variables. Until now, we have
+intentionally avoided discussing them in detail. They were implicitly taken into
+account in the \ref{rule:unif} and \ref{rule:match} rules, however, a query like
+\elpiIn{p = X, X 1 3} was not accepted by the run procedure. The only
+application we authorized was caputered by the \call\ constructor and was an
+application of a predicate name to two terms. Here we want that this same
+application works when a variable name applied to terms.
 
-Since the parameters of predicates can be passed both as input and output to
-predicate calls, we need to extend the syntax of signatures so that the user can instruct the
-\elpi's compiler\todo{compiler vs interpreter in \elpi} about if an input (resp.
-an output) should be considered as a deterministic proposition.
+\begin{coqcode}
+  | Call (hd : vn | tn) (t1:tm) (t2:tm)
+\end{coqcode}
+
+The notation $(h\ t_1\ t_2)$ is used to represent the \call\ constructor.
+
+\begin{figure}
+  \ruleCallBM{1}
+
+  %   \vspace{-2em}
+  % $$
+  % \mathcal{F}'(\prog, h, i, o, \subst, \alt) := 
+  %   [(\subst, (
+  %       \Cons{(\prog, i = i', \alt)}
+  %         \Cons{(\prog, o = o', \alt)}
+  %           {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{(\subst h)}{i'\ o'}{bs} \in \prog\ (\subst h)]
+  % $$
+  %   \vspace{-2em}
+
+  \caption{Dynamic semantics: update of \ref{rule:call}}
+  \label{fig:new-call}
+\end{figure}
+
+To account for this change, rule \ref{rule:call} is modified to accommodate the
+new application, as shown in \cref{fig:new-call}. The main difference from
+\ref{rule:call} is that in \ref{rule:call1}, before invoking the function
+$\mathcal{F}$, we first look up the value of $h$ in \subst. If $h$ is a
+variable, this dereferencing operation may return a \lam-term, which, when
+applied to $t_1$ and $t_2$, is $\beta$-reduced (thanks to the hereditary
+substitution principle) to a canonical value in the form of a predicate name
+applied to two terms.
+
+This change significantly impacts our static determinacy checker: variables can
+now be passed as predicate arguments and may have a propositional type, meaning
+they can be called within clause bodies. However, additional properties can be
+enforced by the checker. For instance, users may want to ensure that a
+predicate's output is verified as a deterministic proposition.
+
+We provide some examples to illustrate this point:
+
+\begin{itemize}
+  \item In a program with a predicate \elpiIn{once}, defined as \elpiIn{once P
+        :- P, !}, we observe that \elpiIn{once} behaves deterministically
+        regardless of the determinacy of its argument.
+  \item In a program with a predicate \elpiIn{give-once}, defined as
+        \elpiIn{give-once P (once P)}, we see that for any input proposition
+        \elpiIn{P}, the output is deterministic.
+  \item Finally, in a program with a predicate \elpiIn{idF}, defined as
+        \elpiIn{idF A A}, we note that when \elpiIn{idF} is called with a
+        deterministic input, its output remains deterministic.
+\end{itemize}
+
+To provide this information to the compiler we give the user the possibility to
+provide expressive type signatures for constants. The grammar is
+as follows: 
+%
+\begin{align*}
+  ty & ::= data \mid pred\\
+  data & ::= \texttt{c}\ data^\ast \mid data \to data \mid \texttt{v}\\
+  pred & ::= \relI\ ty^\ast \mid \detI\ ty^\ast \funsep ty^\ast
+\end{align*}
+
+A type ($ty$) is a disjunction of the two sorts: on one sides we have the type
+for expressions ($data$) and the type of executable piece of code ($pred$).
+The nonterminal $data$ represents the 
+
+The entry point is $sg$ which declares a predicate name \texttt{pn} which can be
+either a relational (\relI) or a deterministic (\detI) predicate. A predicate is
+followed by a list (also empty) of arguments ($ag$) that are marked as input
+(\texttt{i:}) or output (\texttt{o:}) and are followed by the type ($ty$) of the
+argument. The type is either a base type (\texttt{bt}) which is a sort or an
+anonymnous predicate (\texttt{ap}). An anonymnous is defined as the nonterminal
+symbol $sg$ without the name predicate \texttt{pn}.
+
+Thanks to this, we can define the signature of the three predicate 
+\elpiIn{once}, \elpiIn{give-once}, and \elpiIn{idF} can be phrased as follows:
 
 % \begin{elpicode}
 %   pred divisor i:int, o:int.
@@ -37,7 +116,7 @@ information about \elpiIn{once} is that it is a deterministic predicate, that
 is, not only its output is a function but \elpiIn{once} itself is a function.
 
 To provide the compiler all of these pieces of information about the predicate
-\elpiIn{once}, the user should add a signature to the predicate.  
+\elpiIn{once}, the user should add a signature to the predicate.
 \Elpi's signatures are as follows:
 GRAMMAR
 
@@ -59,7 +138,7 @@ Consider now, the \elpiIn{apply5} predicate depicted above. It is a function
 that takes a function from \elpiIn{int} to \elpiIn{int} and returns the result of
 applying that function to \elpiIn{5}. What happens if we
 execute the query \elpiIn{apply
-divisors X}? We see that its output is not deterministic: the assignment for
+  divisors X}? We see that its output is not deterministic: the assignment for
 \elpiIn{X} is not deterministically determined -- there are, in fact, two
 possible assignments: one where \elpiIn{X} is assigned to \elpiIn{1} and another
 where it is assigned \elpiIn{5}.
@@ -73,13 +152,13 @@ Another problem is showed by the followig code:
   func idF i:func, o:func.
   idF X X.
 \end{elpicode}
-  % func p i:(func int -> int), o:(pred i:int, o:int).
-  % p X X :- X = divisors.
+% func p i:(func int -> int), o:(pred i:int, o:int).
+% p X X :- X = divisors.
 
 In the snippet, we define the identity function over functions.
 
 With \elpi's dynamic mode system, the call ``\elpiIn{idF Y Y, Y = divisor 5
-X, Y}'' succeeds because we can pass flexible terms in input positions. The problem
+  X, Y}'' succeeds because we can pass flexible terms in input positions. The problem
 here is that, based on the signature of \elpiIn{idF}, its output is a function.
 This allows us to assume that the variable \elpiIn{Y} is a function. However,
 after the unification between \elpiIn{Y} and \elpiIn{divisor 5 X}, we lose that
@@ -141,21 +220,21 @@ right one and the outputs of the left memeber are at most as restrictive as the
 right one.
 
 As an example consider two terms $t_1 \coloneq \texttt{idF}$ and $t_2 \coloneq
-\texttt{once}$. The determinacy of $t_1$ is $\detT{Func} \myTo \detT{Func}$ and
+  \texttt{once}$. The determinacy of $t_1$ is $\detT{Func} \myTo \detT{Func}$ and
 the determinacy of $t_2$ is $\detT{Rel} \myTo \detT{Func}$. We intuitively
 remark that $\forall p_1\ p_2\ p_3, \texttt{once}\ p_1\ p_2 \to \texttt{idF}\
-p_1\ p_3 \to p_2 \mySub p_3$. This is because the two predicates can be called
+  p_1\ p_3 \to p_2 \mySub p_3$. This is because the two predicates can be called
 with a relation and the output of \texttt{idF} is still a relation whereas the
 output of \texttt{once} is still a function, i.e. the determinacy type of
 \texttt{once} is more constraining. Said in other words, $\detT{Rel} \myTo
-\detT{Func} \mySub \detT{Func} \myTo \detT{Func}$.
+  \detT{Func} \mySub \detT{Func} \myTo \detT{Func}$.
 
 What may seem weird at first sight is that in the example above, we call
 \texttt{idF} with a relation in input position. This creates a mismatch
 between the dtype of the signature and the dtype of the argument.\todo{dtype := determinacy type}
 However, we want our system to be as expressive as possible. This means that
 we allows the user the wrongly call a predicate. In that particular case the dtype of the
-outputs will not be guaranteed to have the expected determinacy: they will be labeled 
+outputs will not be guaranteed to have the expected determinacy: they will be labeled
 with the less restrictive determinacy for its type. To continue our example,
 the query \elpiIn{idF (divisor 3 X) Y} will label \elpiIn{Y} with the \relI\
 tag, since the determinacy of \elpiIn{divisor 3 X} is \relI\ and $\relI \not\mySub \detI$.
@@ -164,18 +243,18 @@ Thanks to the \mySub\ relation we can define a min (resp. max) relation between
 two determinacy relations.
 
 $$
-\minT\ f_1\ f_2 = \begin{cases}
-  \maxT\ a'\ a \myTo \minT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
-  f_1 & \text{else if } f_1 \mySub f_2\\
-  f_2 & \text{otherwise}
-\end{cases}
+  \minT\ f_1\ f_2 = \begin{cases}
+    \maxT\ a'\ a \myTo \minT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
+    f_1                             & \text{else if } f_1 \mySub f_2                     \\
+    f_2                             & \text{otherwise}
+  \end{cases}
 $$
 $$
-\maxT\ f_1\ f_2 = \begin{cases}
-  \minT\ a'\ a \myTo \maxT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
-  f_1 & \text{else if } f_2 \mySub f_1\\
-  f_2 & \text{otherwise}
-\end{cases}
+  \maxT\ f_1\ f_2 = \begin{cases}
+    \minT\ a'\ a \myTo \maxT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
+    f_1                             & \text{else if } f_2 \mySub f_1                     \\
+    f_2                             & \text{otherwise}
+  \end{cases}
 $$
 
 % \begin{coqcode}
@@ -202,7 +281,7 @@ take the following example.
 
 In the snippet above, both \txt{give\_rel} and \txt{give\_fun} are functions
 that take a dummy integer as input (we conventionally work with binary
-predicates) and return, respectively, a relation and a function. 
+predicates) and return, respectively, a relation and a function.
 
 Now, consider the following query: \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}.
 The first goal tells us that \elpiIn{Z} is \relI, while the second tells us that
@@ -210,7 +289,7 @@ The first goal tells us that \elpiIn{Z} is \relI, while the second tells us that
 should they have? Unification succeeds if the two terms are unifiable, meaning
 that, in the end, \elpiIn{Z} and \elpiIn{Y} will be the same term and will
 therefore share the same \detlab. Their label will be updated and set to the
-minimum determinacy between them, which is \coqIn{min Rel Fun} $=$ \detI. 
+minimum determinacy between them, which is \coqIn{min Rel Fun} $=$ \detI.
 
 If we take back the query \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}, we may
 want to statically determine if it create choice points. The determinacy of each
@@ -229,13 +308,13 @@ TODO: redifine \cref{def:det-prem}: we can have variables has props.
 
 \begin{figure}
   \centering
-  
+
   \ruleCheckClauseM{1}
 
-  
+
   \ruleCheckCutM{.45}
   \ruleCheckEmptyM{.35}
-  
+
   \ruleCheckPiM{.7}
   \ruleCheckImplM{.7}
 
@@ -244,7 +323,7 @@ TODO: redifine \cref{def:det-prem}: we can have variables has props.
   % \ruleCheckMatchM{.7}
   \ruleCheckCallM{1}
   \ruleCheckCallFailM{1}
-  
+
   \caption{Static check rules}
   \label{fig:static-check}
 \end{figure}

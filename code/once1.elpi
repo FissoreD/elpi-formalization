@@ -1,0 +1,14 @@
+pred once i:prop, o:prop.
+once P (P, !).
+
+pred p o:int.
+p 1.
+p 2.
+
+pred f o:int.
+f X :- once (p X) Y, Y.
+f 3.
+
+main :- f X, print X.
+
+
