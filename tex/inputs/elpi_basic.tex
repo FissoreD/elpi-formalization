@@ -267,9 +267,7 @@ We start therefore to state a new version of
 
 \begin{theorem}[Determinacy checking with \match property]
   Given a program \prog and a predicate \pred
-  \begin{align*}
-    &\detCheck\ \prog\ \pred \to \forall i\ o,\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList    
-  \end{align*}
+  $$\detCheck\ \prog\ \pred \to \forall i\ o, \isdet\ \prog\ \pred\ i\ o$$
   \vspace{-2em}
   \label{th:det1}
 \end{theorem}
