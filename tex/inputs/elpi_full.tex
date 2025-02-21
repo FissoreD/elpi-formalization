@@ -70,7 +70,7 @@ provide expressive type signatures for constants. The grammar is
 as follows:
 %
 \begin{align}
-  ty   & ::= data \mid pred                                    \label{eq:ty}          \\
+  ty   & ::= data \mid pred                                    \label{eq:ty}        \\
   data & ::= \texttt{c}\ data^\ast \mid data \to data \mid \predVar \label{eq:data} \\
   % pred & ::= \relI\ ty^\ast \mid \detI\ ty^\ast \funsep ty^\ast \label{eq:pred}
   pred & ::= [\detI \mid \relI]\ ty^\ast \funsep ty^\ast \label{eq:pred}
@@ -81,10 +81,10 @@ for expressions ($data$) and the type of executable piece of code ($pred$). The
 nonterminal $data$ is for expressions, it is either the application of a type
 constant to a list of data, a function ($\to$) or a variable. The nonterminal
 $pred$ is the type of predicates. A predicate is relational (\relI) or
-functional (\detI). A relation is followed by the types of the arguments of the
-predicate being defined. A function has two list of types separated by the
+functional (\detI) and is followed by two lists of determinacy types separated by the
 \funsep\ operator. On the left we have the type of the inputs and on the right
-the type of the outputs.
+the type of the outputs. In the following a predicate with $0$ argument
+will be note as \detI\ (resp. \relI) instead of $\detI\ []\ []$ (resp. $\relI\ []\ []$).
 
 Thanks to this, we can define the signature of the predicates above:
 %
@@ -144,7 +144,7 @@ relation between two determinacies.
 \begin{equation}
   f_1 \mySub f_2 =
   \begin{cases}
-    false                                                         & \text{if } f_1 = \relI\ \_\ \land f_2 = \detI\ \_         \\
+    false                                                         & \text{if } f_1 = \relI\ \_\ \land f_2 = \detI\ \_    \\
     % (\forall i, a'_i \mySub a_i) \land (\forall j, b_j \mySub b'_j)      & \text{else if } f_1 = \detI\ a\ b \land f_2 = \detI\ a'\ b' \\
     % (\forall i, a'_i \mySub c_i) \land (\forall j, b_j \mySub c_{|a|+j}) & \text{else if } f_1 = \detI\ a\ b \land f_2 = \relI\ c      \\
     % \forall i, a_i \mySub b_i                                            & \text{else if } f_1 = \relI\ a\ \land f_2 = \relI\ b        \\
@@ -182,9 +182,9 @@ The converse property should hold for the inputs of two terms, that is, if we if
 we have $t_1 \mySub t_2$ then the outputs of $t_2$ should be \mySub\ than the
 outputs $t_1$. For example, let's consider the signatures of \elpiIn{make-det}
 and \elpiIn{idF}. We intuitively remark that $\forall p_1\ p_2\ p_3,
-\texttt{make-det}\ p_1\ p_2 \to \texttt{idF}\ p_1\ p_3 \to p_2 \mySub p_3$.
+  \texttt{make-det}\ p_1\ p_2 \to \texttt{idF}\ p_1\ p_3 \to p_2 \mySub p_3$.
 Therefore, we can safely claim that $\detI\ [\relI] \funsep [\detI] \mySub
-\detI\ [\detI] \funsep [\detI]$. In a way, a predicate going from relations to
+  \detI\ [\detI] \funsep [\detI]$. In a way, a predicate going from relations to
 functions is less expressive than a predicate from functions to functions,
 especially because the latter predicate can recieve relations as inputs.
 
@@ -199,9 +199,9 @@ maximum) between two determinacies.
   \minT\ f_1 f_2 =
   \begin{cases}
     \detI\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d) & \text{if } f_k = \relI\ a\ b \land f_{2-k} = \detI\ c\ d \\
-    \detI\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d) & \text{if } f_1 = \detI\ a\ b \land f_2 = \detI\ c\ d \\
-    \relI\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
-    \expI                                                          & \text{if } f_1 = \expI \land f_2 = \expI
+    D\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d)     & \text{if } f_1 = D\ a\ b \land f_2 = D\ c\ d             \\
+    % \relI\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
+    \expI                                                                 & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}
   \label{eq:min}
 \end{equation}
@@ -209,9 +209,9 @@ maximum) between two determinacies.
   \maxT\ f_1 f_2 =
   \begin{cases}
     \detI\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d) & \text{if } f_k = \relI\ a\ b \land f_{2-k} = \detI\ c\ d \\
-    \detI\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d) & \text{if } f_1 = \detI\ a\ b \land f_2 = \detI\ c\ d \\
-    \relI\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
-    \expI                                                          & \text{if } f_1 = \expI \land f_2 = \expI
+    D\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d)     & \text{if } f_1 = D\ a\ b \land f_2 = D\ c\ d             \\
+    % \relI\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
+    \expI                                                                 & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}
   \label{eq:max}
 \end{equation}
@@ -234,9 +234,9 @@ maximum) between two determinacies.
 The main usage of the \minT\ and \maxT\ comes with the fact that unification is
 possibile between variable with different determinacy annotation. For example,
 let \elpiIn{get-det} and \elpiIn{get-rel} be two relations returning
-respectively a function and a relation. In a query like \elpiIn{get-det X,
-det-rel Y, X = Y} we have three goals to solve, the first allows to label
-\elpiIn{X} with the tag \detI, the second allows to label \elpiIn{Y} with 
+respectively a function and a relation (both with zero arguments). In a query like \elpiIn{get-det X,
+  det-rel Y, X = Y} we have three goals to solve, the first allows to label
+\elpiIn{X} with the tag \detI, the second allows to label \elpiIn{Y} with
 the tag \relI. The third goal is interesting since we are unifying two\todo{not true if output are flex}
 predicates with different determinacy labels. Now, the only way that this unificaton
 succeeds at runtime is that \elpiIn{Y} is a function.
@@ -344,13 +344,33 @@ unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=
   \label{fig:static-check}
 \end{figure}
 
-In \cref{fig:static-check} we present the derivation system for the the static
-checker for determinacy. \ctx\ stands for a context and is a mapping from
-variable and predicate names to their determinacy signature. Variables
-signatures are added during the checking operation. In the system we use some
-auxiliary functions. 1) \infer which takes a context and a term and returns the
-determinacy of the term. The entry point of the
-checker is \ref{rule:check-clause}.
+We can now present the inference rules for determinacy (in
+\cref{fig:det-inference}) and those for the static checker (in
+\cref{fig:static-check}).
+
+TODO: dire che lavoriamo con predicati e applicazioni binarie
+
+Determinacy inference aims to determine the determinacy of a term given a
+mapping \ctx\ from predicate names to their determinacy type. Rules
+\ref{rule:infer-cut} and \ref{rule:infer-unif} are intuitive: the \cut\ and the
+unification are deterministic predicate. Rule \ref{rule:infer-piimpl} works with
+the \coqIn{PiImpl} constructor. It adds in \ctx\ a mapping going from the local
+variable $x$ to the determinacy type deduced from the type of $x$. Finally
+\ref{rule:infer-app} deals with terms applications. It checks that the input has
+a determinacy which is \mySub\ then the exepected one. If it is the case the
+determinacy of the term is the determinacy of its head. Otherwise, the predicate
+is wrongly called and therefore the call will behaves has a relation.
+
+From \infer we define three auxiliary functions: given a mapping \ctx\ and a
+predicate name \predVar, if ``\inferCmdArr{\ctx}{\predVar}{D\ [D_i]\ [D_o]}''
+then ``$\getF\ \ctx\ \predVar = D$'', ``$\getI\ \ctx\ \predVar = D_i$'' and
+``$\getO\ \ctx\ \predVar = D_o$''.
+
+In \cref{fig:static-check} we present the derivation system for the determinacy
+static checker. \ctx\ stands for a context and is a mapping from variable and
+predicate names to their determinacy signature. Variables signatures are added
+during the checking operation.
+The entry point of the checker is \ref{rule:check-clause}.
 
 
 TODO: check\_clause in \ref{rule:check-ho} does not work if the head is a var,

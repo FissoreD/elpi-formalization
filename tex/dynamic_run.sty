@@ -1,0 +1,122 @@
+\newcommand{\ruleName}[2]{\customlabel{#1}{\ensuremath{r_{#2}}}}
+\newcommand{\RightLabelM}[1]{\RightLabel{\scriptsize #1}}
+
+\newcommand{\ruleFail}{\ruleName{rule:fail}{\bot}}
+\newcommand{\ruleCall}{\ruleName{rule:call}{c}}
+\newcommand{\ruleCallB}{\ruleName{rule:call1}{c'}}
+\newcommand{\ruleBang}{\ruleName{rule:cut}{!}}
+\newcommand{\ruleStop}{\ruleName{rule:stop}{\EmptyList}}
+\newcommand{\ruleUnif}{\ruleName{rule:unif}{=}}
+\newcommand{\ruleImpl}{\ruleName{rule:impl}{\Rightarrow}}
+\newcommand{\rulePi}{\ruleName{rule:pi}{\forall}}
+\newcommand{\ruleMatch}{\ruleName{rule:match}{m}}
+\newcommand{\rulePiImpl}{\ruleName{rule:piimpl}{{\piimpl}}}
+
+\newcommand{\ruleStopM}[1]{
+  \begin{myRule}{#1}
+    % STOP
+    \AxiomC{}
+    \RightLabelM{\ruleStop}
+    \UnaryInfC{\runCmd{\EmptyList}{\alt}{\subst}{\alt}{\subst}}
+  \end{myRule}
+}
+
+\newcommand{\ruleUnifM}[1]{
+  \begin{myRule}{#1}
+    % UNIF
+    \AxiomC{\unifyCmd{x}{y}{\subst}{\subst[']}}
+    \AxiomC{\runCmd{\g}{\alt}{\subst[']}{\alt[']}{\subst['']}}
+    \RightLabelM{\ruleUnif}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{(x = y)}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst['']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleMatchM}[1]{
+  \begin{myRule}{#1}
+    % UNIF
+    \AxiomC{\matchCmd{x}{y}{\subst}{\subst[']}}
+    \AxiomC{\runCmd{\g}{\alt}{\subst[']}{\alt[']}{\subst['']}}
+    \RightLabelM{\ruleMatch}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{(x =_m y)}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst['']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleFailM}[1]{
+  \begin{myRule}{#1}
+    % FAIL
+    \AxiomC{\texttt{fail} \subst g}
+    \AxiomC{\runCmd{a}{\alt}{\subst[']}{\alt[']}{\subst['']}}
+    \RightLabelM{\ruleFail}
+    \BinaryInfC{\runCmd{\ConsHd{g}\ConsTl{\_}}{\ConsHd{\subst['],a}\ConsTl{\alt}}{\subst}{\alt[']}{\subst['']}}
+  \end{myRule}%
+}
+
+\newcommand{\ruleBangM}[1]{
+  \begin{myRule}{#1}
+    % CUT
+    \AxiomC{\runCmd{\g}{\alt}{\subst}{\alt[']}{\subst[']}}
+    \RightLabelM{\ruleBang}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{\cut}{\alt}}\ConsTl{\g}}{\_}{\subst}{\alt[']}{\subst[']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleCallM}[1]{
+  \begin{myRule}{#1}
+    % CALL
+    \AxiomC{$\mathcal{F}(\prog, \pred, i, o, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
+    \AxiomC{\runCmd{(g\ @\ \g)}{(new\_alt\ @\ \alt)}{\subst}{\alt[']}{\subst[']}}
+    \RightLabelM{\ruleCall}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{\pred}{i}{o}}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleCallBM}[1]{
+  \begin{myRule}{#1}
+    % CALLB
+    \AxiomC{$(\subst h)\ t_1\ t_2 = \pred\ i\ o$}
+    \AxiomC{$\mathcal{F}(\prog, \pred, i, o, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
+    \AxiomC{\runCmd{(g\ @\ \g)}{(new\_alt\ @\ \alt)}{\subst}{\alt[']}{\subst[']}}
+    \RightLabelM{\ruleCallB}
+    \TrinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{(h\ t_1\ t_2)}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
+  \end{myRule}
+}
+
+\newcommand{\ctx}[1][]{\ensuremath{\Gamma#1}}
+\newcommand{\env}{\ensuremath{\mathcal{E}}}
+
+% \newcommand{\ruleImplM}[1]{
+%   \begin{myRule}{#1}
+%     % IMPL
+%     \AxiomC{\runCmd{\ConsHd{(\goalCmd{(H + \ctx)}{B}{\alt})}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \RightLabelM{\ruleImpl}
+%     \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{(\implCmd{H}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%   \end{myRule}
+% }
+
+% \newcommand{\rulePiM}[1]{
+%   \begin{myRule}{#1}
+%     % PI
+%     \AxiomC{\runCmd{\ConsHd{\goalCmd{(x \uplus \ctx)}{B}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \RightLabelM{\rulePi}
+%     \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{(\piCmd{x}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%   \end{myRule}
+% }
+
+\newcommand{\rulePiImplM}[1]{
+  \begin{myRule}{#1}
+    % IMPL
+    \AxiomC{\runCmd{\ConsHd{(\goalCmd{(x \uplus \env, H + \prog)}{B}{\alt})}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+    \RightLabelM{\rulePiImpl}
+    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\env,\prog}{(\piCmd{x}{\implCmd{H}{B}})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+  \end{myRule}
+}
+
+% \newcommand{\ruleLam}{\ruleName{\lambda}}
+% \newcommand{\ruleLamM}[1]{
+%   \begin{myRule}{#1}
+%     % PI
+%     \AxiomC{\runCmd{\ConsHd{\goalCmd{\ctx}{(B[x\backslash T])}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \RightLabelM{\ruleLam}
+%     \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{((\lambda x. B) T)}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%   \end{myRule}
+% }
