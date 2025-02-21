@@ -139,8 +139,8 @@ simplify our presentation, $data$s in \cref{eq:data} are represented with the
 A natural property that exists between functions and relations is that a
 function is a particular relation such that all of the members in its domain
 points to at most a unique value in its codomain. This means that a fuction can
-be always passed in place of a relation. We define below the inclusion relation
-between two determinacies.
+be always passed in place of a relation. We define below the partial ordering
+relation between two determinacies.
 \begin{equation}
   f_1 \mySub f_2 =
   \begin{cases}
@@ -174,55 +174,104 @@ lists of input and output are not comparable.
 
 The idea of \mySub\ is that a relation, by definition, is not a function, the
 other combinations of functions and relations works if some conditions holds on
-their inputs and outputs.
+their inputs and outputs. In particular if we have $t_1 \mySub t_2$ then the
+outputs of $t_1$ should be \mySub\ than the outputs $t_2$.
+TODO: fare un esempio.
 
-$$---$$
+The converse property should hold for the inputs of two terms, that is, if we if
+we have $t_1 \mySub t_2$ then the outputs of $t_2$ should be \mySub\ than the
+outputs $t_1$. For example, let's consider the signatures of \elpiIn{make-det}
+and \elpiIn{idF}. We intuitively remark that $\forall p_1\ p_2\ p_3,
+\texttt{make-det}\ p_1\ p_2 \to \texttt{idF}\ p_1\ p_3 \to p_2 \mySub p_3$.
+Therefore, we can safely claim that $\detI\ [\relI] \funsep [\detI] \mySub
+\detI\ [\detI] \funsep [\detI]$. In a way, a predicate going from relations to
+functions is less expressive than a predicate from functions to functions,
+especially because the latter predicate can recieve relations as inputs.
 
-and therefore
-The base cases of \mySub\ are quite intuitive: a relation is not a function. The
-interesting case is the \coqIn{arr} constructor. Here, we are comparing two
-propositions and therefore some attention should be paid for its inputs and
-outputs: the inputs of the left memeber should be at least as restrictive as the
-right one and the outputs of the left memeber are at most as restrictive as the
-right one.
+\begin{lemma}[\mySub\ is a partial order]
+  Ha sesnso farlo?
+\end{lemma}
 
-As an example consider two terms $t_1 \coloneq \texttt{idF}$ and $t_2 \coloneq
-  \texttt{once}$. The determinacy of $t_1$ is $\detT{Func} \myTo \detT{Func}$ and
-the determinacy of $t_2$ is $\detT{Rel} \myTo \detT{Func}$. We intuitively
-remark that $\forall p_1\ p_2\ p_3, \texttt{once}\ p_1\ p_2 \to \texttt{idF}\
-  p_1\ p_3 \to p_2 \mySub p_3$. This is because the two predicates can be called
-with a relation and the output of \texttt{idF} is still a relation whereas the
-output of \texttt{once} is still a function, i.e. the determinacy type of
-\texttt{once} is more constraining. Said in other words, $\detT{Rel} \myTo
-  \detT{Func} \mySub \detT{Func} \myTo \detT{Func}$.
+Two further relations can be defined to find the least common minimun (resp.
+maximum) between two determinacies.
 
-What may seem weird at first sight is that in the example above, we call
-\texttt{idF} with a relation in input position. This creates a mismatch
-between the dtype of the signature and the dtype of the argument.\todo{dtype := determinacy type}
-However, we want our system to be as expressive as possible. This means that
-we allows the user the wrongly call a predicate. In that particular case the dtype of the
-outputs will not be guaranteed to have the expected determinacy: they will be labeled
-with the less restrictive determinacy for its type. To continue our example,
-the query \elpiIn{idF (divisor 3 X) Y} will label \elpiIn{Y} with the \relI\
-tag, since the determinacy of \elpiIn{divisor 3 X} is \relI\ and $\relI \not\mySub \detI$.
-
-Thanks to the \mySub\ relation we can define a min (resp. max) relation between
-two determinacy relations.
-
-$$
-  \minT\ f_1\ f_2 = \begin{cases}
-    \maxT\ a'\ a \myTo \minT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
-    f_1                             & \text{else if } f_1 \mySub f_2                     \\
-    f_2                             & \text{otherwise}
+\begin{equation}
+  \minT\ f_1 f_2 =
+  \begin{cases}
+    \detI\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d) & \text{if } f_k = \relI\ a\ b \land f_{2-k} = \detI\ c\ d \\
+    \detI\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d) & \text{if } f_1 = \detI\ a\ b \land f_2 = \detI\ c\ d \\
+    \relI\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
+    \expI                                                          & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}
-$$
-$$
-  \maxT\ f_1\ f_2 = \begin{cases}
-    \minT\ a'\ a \myTo \maxT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
-    f_1                             & \text{else if } f_2 \mySub f_1                     \\
-    f_2                             & \text{otherwise}
+  \label{eq:min}
+\end{equation}
+\begin{equation}
+  \maxT\ f_1 f_2 =
+  \begin{cases}
+    \detI\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d) & \text{if } f_k = \relI\ a\ b \land f_{2-k} = \detI\ c\ d \\
+    \detI\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d) & \text{if } f_1 = \detI\ a\ b \land f_2 = \detI\ c\ d \\
+    \relI\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
+    \expI                                                          & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}
-$$
+  \label{eq:max}
+\end{equation}
+
+% $$
+%   \minT\ f_1\ f_2 = \begin{cases}
+%     \maxT\ a'\ a \myTo \minT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
+%     f_1                             & \text{else if } f_1 \mySub f_2                     \\
+%     f_2                             & \text{otherwise}
+%   \end{cases}
+% $$
+% $$
+%   \maxT\ f_1\ f_2 = \begin{cases}
+%     \minT\ a'\ a \myTo \maxT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
+%     f_1                             & \text{else if } f_2 \mySub f_1                     \\
+%     f_2                             & \text{otherwise}
+%   \end{cases}
+% $$
+
+The main usage of the \minT\ and \maxT\ comes with the fact that unification is
+possibile between variable with different determinacy annotation. For example,
+let \elpiIn{get-det} and \elpiIn{get-rel} be two relations returning
+respectively a function and a relation. In a query like \elpiIn{get-det X,
+det-rel Y, X = Y} we have three goals to solve, the first allows to label
+\elpiIn{X} with the tag \detI, the second allows to label \elpiIn{Y} with 
+the tag \relI. The third label is interesting since we are unifying two\todo{not true if output are flex}
+predicate with different determinacy labels. Now, if we want unification to
+succeed, we need that ,\elpiIn{Y} is a particular relation, that is a function.
+Said in another way, a unification may change the labels of the two terms being
+unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=$
+\minT\ $($\detlab\ \elpiIn{X}$)$ $($\detlab\ \elpiIn{Y}$)$.
+
+
+
+% $$---$$
+
+% and therefore
+% The base cases of \mySub\ are quite intuitive: a relation is not a function. The
+% interesting case is the \coqIn{arr} constructor. Here, we are comparing two
+% propositions and therefore some attention should be paid for its inputs and
+% outputs: the inputs of the left memeber should be at least as restrictive as the
+% right one and the outputs of the left memeber are at most as restrictive as the
+% right one.
+
+% As an example consider two terms $t_1 \coloneq \texttt{idF}$ and $t_2 \coloneq
+%   \texttt{once}$. 
+
+% What may seem weird at first sight is that in the example above, we call
+% \texttt{idF} with a relation in input position. This creates a mismatch
+% between the dtype of the signature and the dtype of the argument.\todo{dtype := determinacy type}
+% However, we want our system to be as expressive as possible. This means that
+% we allows the user the wrongly call a predicate. In that particular case the dtype of the
+% outputs will not be guaranteed to have the expected determinacy: they will be labeled
+% with the less restrictive determinacy for its type. To continue our example,
+% the query \elpiIn{idF (divisor 3 X) Y} will label \elpiIn{Y} with the \relI\
+% tag, since the determinacy of \elpiIn{divisor 3 X} is \relI\ and $\relI \not\mySub \detI$.
+
+% Thanks to the \mySub\ relation we can define a min (resp. max) relation between
+% two determinacy relations.
+
 
 % \begin{coqcode}
 %   Fixpoint min a b = match a, b with
@@ -234,44 +283,41 @@ $$
 %   end.
 % \end{coqcode}
 
-These two functions become particularly useful
-when trying to determine the determinacy of unification variables. Let's
-take the following example.
+% These two functions become particularly useful
+% when trying to determine the determinacy of unification variables. Let's
+% take the following example.
 
-\begin{elpicode}
-  pred give_rel i:int, o:pred.
-  func give_fun i:int, o:func.
-  give_rel _ (divisors 5 X).
-  give_rel _ (succ 1 X).
-  give_fun _ (succ 1 X).
-\end{elpicode}
+% \begin{elpicode}
+%   pred give_rel i:int, o:pred.
+%   func give_fun i:int, o:func.
+%   give_rel _ (divisors 5 X).
+%   give_rel _ (succ 1 X).
+%   give_fun _ (succ 1 X).
+% \end{elpicode}
 
-In the snippet above, both \txt{give\_rel} and \txt{give\_fun} are functions
-that take a dummy integer as input (we conventionally work with binary
-predicates) and return, respectively, a relation and a function.
+% In the snippet above, both \txt{give\_rel} and \txt{give\_fun} are functions
+% that take a dummy integer as input (we conventionally work with binary
+% predicates) and return, respectively, a relation and a function.
 
-Now, consider the following query: \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}.
-The first goal tells us that \elpiIn{Z} is \relI, while the second tells us that
-\elpiIn{Y} is \detI. After unifying the two variables, what determinacy label
-should they have? Unification succeeds if the two terms are unifiable, meaning
-that, in the end, \elpiIn{Z} and \elpiIn{Y} will be the same term and will
-therefore share the same \detlab. Their label will be updated and set to the
-minimum determinacy between them, which is \coqIn{min Rel Fun} $=$ \detI.
+% Now, consider the following query: \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}.
+% The first goal tells us that \elpiIn{Z} is \relI, while the second tells us that
+% \elpiIn{Y} is \detI. After unifying the two variables, what determinacy label
+% should they have? Unification succeeds if the two terms are unifiable, meaning
+% that, in the end, \elpiIn{Z} and \elpiIn{Y} will be the same term and will
+% therefore share the same \detlab. Their label will be updated and set to the
+% minimum determinacy between them, which is \coqIn{min Rel Fun} $=$ \detI.
 
-If we take back the query \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}, we may
-want to statically determine if it create choice points. The determinacy of each
-goal is \detI, \relI, \detI, the determinay of the query is the maximum of them,
-that is \relI.
+% If we take back the query \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}, we may
+% want to statically determine if it create choice points. The determinacy of each
+% goal is \detI, \relI, \detI, the determinay of the query is the maximum of them,
+% that is \relI.
 
-With this, we now have all the ingredients needed to propose the full static
-determinacy checker for the higher-order setting. This checker is implemented in
-\detCheck, which ensures that a deterministic predicate has at most one solution
-per call. Furthermore, it is extended to certify that each output of a clause
-has the expected determinacy, which is crucial since outputs can be used as new
-queries in the program.
-
-TODO: redifine \cref{def:det-prem}: we can have variables has props.
-
+% With this, we now have all the ingredients needed to propose the full static
+% determinacy checker for the higher-order setting. This checker is implemented in
+% \detCheck, which ensures that a deterministic predicate has at most one solution
+% per call. Furthermore, it is extended to certify that each output of a clause
+% has the expected determinacy, which is crucial since outputs can be used as new
+% queries in the program.
 
 \begin{figure}
   \centering
@@ -295,17 +341,17 @@ TODO: redifine \cref{def:det-prem}: we can have variables has props.
   \label{fig:static-check}
 \end{figure}
 
-$$-----$$
+% $$-----$$
 
-For instance, we would like that the call \elpiIn{idF divisors X} is valid for
-determinacy, but, since the input has not the expected determinacy, then the
-output will not be a deterministic predicate. Indeed, we propose the following
-ordering relation between deterministic and relational predicates.
+% For instance, we would like that the call \elpiIn{idF divisors X} is valid for
+% determinacy, but, since the input has not the expected determinacy, then the
+% output will not be a deterministic predicate. Indeed, we propose the following
+% ordering relation between deterministic and relational predicates.
 
-TODO: presentare l'algoritmo di static check of determinacy with varaible flow.
+% TODO: presentare l'algoritmo di static check of determinacy with varaible flow.
 
-Dare un esempio in cui l'input ground non è garantito e in cui il checkin viene
-invalidato
+% Dare un esempio in cui l'input ground non è garantito e in cui il checkin viene
+% invalidato
 
 \subsection{Mode checking: input-ground mode}
 \label{sec:mc}
