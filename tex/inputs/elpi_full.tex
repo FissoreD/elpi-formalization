@@ -71,7 +71,7 @@ as follows:
 %
 \begin{align}
   ty   & ::= data \mid pred                                    \label{eq:ty}          \\
-  data & ::= \texttt{c}\ data^\ast \mid data \to data \mid \texttt{v} \label{eq:data} \\
+  data & ::= \texttt{c}\ data^\ast \mid data \to data \mid \predVar \label{eq:data} \\
   % pred & ::= \relI\ ty^\ast \mid \detI\ ty^\ast \funsep ty^\ast \label{eq:pred}
   pred & ::= [\detI \mid \relI]\ ty^\ast \funsep ty^\ast \label{eq:pred}
 \end{align}
@@ -194,7 +194,7 @@ especially because the latter predicate can recieve relations as inputs.
 
 Two further relations can be defined to find the least common minimun (resp.
 maximum) between two determinacies.
-
+%
 \begin{equation}
   \minT\ f_1 f_2 =
   \begin{cases}
@@ -237,13 +237,12 @@ let \elpiIn{get-det} and \elpiIn{get-rel} be two relations returning
 respectively a function and a relation. In a query like \elpiIn{get-det X,
 det-rel Y, X = Y} we have three goals to solve, the first allows to label
 \elpiIn{X} with the tag \detI, the second allows to label \elpiIn{Y} with 
-the tag \relI. The third label is interesting since we are unifying two\todo{not true if output are flex}
-predicate with different determinacy labels. Now, if we want unification to
-succeed, we need that ,\elpiIn{Y} is a particular relation, that is a function.
+the tag \relI. The third goal is interesting since we are unifying two\todo{not true if output are flex}
+predicates with different determinacy labels. Now, the only way that this unificaton
+succeeds at runtime is that \elpiIn{Y} is a function.
 Said in another way, a unification may change the labels of the two terms being
 unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=$
 \minT\ $($\detlab\ \elpiIn{X}$)$ $($\detlab\ \elpiIn{Y}$)$.
-
 
 
 % $$---$$
@@ -319,6 +318,10 @@ unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=
 % has the expected determinacy, which is crucial since outputs can be used as new
 % queries in the program.
 
+\subsection{Static determinacy checker}
+
+\inferFig
+
 \begin{figure}
   \centering
 
@@ -328,8 +331,8 @@ unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=
   \ruleCheckCutM{.45}
   \ruleCheckEmptyM{.35}
 
-  \ruleCheckPiM{.7}
-  \ruleCheckImplM{.7}
+  % \ruleCheckPiM{.5}
+  \ruleCheckPiImplM{1}
 
   \ruleCheckUnifM{.7}
 
@@ -337,9 +340,21 @@ unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=
   \ruleCheckCallM{1}
   \ruleCheckCallFailM{1}
 
-  \caption{Static check rules}
+  \caption{Static determinacy checker rules}
   \label{fig:static-check}
 \end{figure}
+
+In \cref{fig:static-check} we present the derivation system for the the static
+checker for determinacy. \ctx\ stands for a context and is a mapping from
+variable and predicate names to their determinacy signature. Variables
+signatures are added during the checking operation. In the system we use some
+auxiliary functions. 1) \infer which takes a context and a term and returns the
+determinacy of the term. The entry point of the
+checker is \ref{rule:check-clause}.
+
+
+TODO: check\_clause in \ref{rule:check-ho} does not work if the head is a var,
+we should perform a deref of $\ctx$
 
 % $$-----$$
 
@@ -366,7 +381,7 @@ Da spostare prima della sezione \cref{sec:mc}
 \subsection{Mix data with ty}
 
 \begin{align}
-  data & ::= \texttt{c}\ ty^\ast \mid data \to data \mid \texttt{v} \label{eq:data1}
+  data & ::= \texttt{c}\ ty^\ast \mid data \to data \mid \predVar \label{eq:data1}
 \end{align}
 
 \subsection{Determinacy polymorphism}

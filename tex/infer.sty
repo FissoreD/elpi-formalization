@@ -1,0 +1,67 @@
+\newcommand{\inferCmdArr}[3]{\ensuremath{\inferCmd{#1}{#2} \arr #3}}
+
+\newcommand{\ruleInfer}[2]{\customlabel{#1}{\ensuremath{I_{#2}}}}
+
+\newcommand{\ruleInferCut}{\ruleInfer{rule:infer-cut}{!}}
+\newcommand{\inferCut}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{}
+    \RightLabelM{\ruleInferCut}
+    \UnaryInfC{\inferCmdArr{\ctx}{\cut}{\detI}}
+  \end{myRule}
+}
+
+\newcommand{\ruleInferPiImpl}{\ruleInfer{rule:infer-piimpl}{\piimpl}}
+\newcommand{\inferPiImpl}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{\inferCmdArr{(\ctx + \{x \mapsto \toF x\})}{B}{D}}
+    \RightLabelM{\ruleInferPiImpl}
+    \UnaryInfC{\inferCmdArr{\ctx}{\piImplCmd{x}{H}{B}}{D}}
+  \end{myRule}
+}
+
+\newcommand{\ruleInferUnif}{\ruleInfer{rule:infer-unif}{=}}
+\newcommand{\inferUnif}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{}
+    \RightLabelM{\ruleInferUnif}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\_ = \_)}{\detI}}
+  \end{myRule}
+}
+
+\newcommand{\ruleInferApp}{\ruleInfer{rule:infer-app}{c}}
+\newcommand{\inferApp}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{\inferCmdArr{\ctx}{t_1}{D}}
+    \AxiomC{\inferCmdArr{\ctx}{\predVar}{D'\ [D_i]\ \_}}
+    % \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
+    % \AxiomC{$D_1 \mySub \get{i} \predVar$}
+    \RightLabelM{\ruleInferApp}
+    \BinaryInfC{\inferCmdArr{\ctx}{(\predVar\ t_1\ t_2)}{\text{if } D \mySub D_i \predVar \text{ then } D' \text{ else } \relI}}
+  \end{myRule}
+}
+
+% \newcommand{\ruleInferAppFail}{\ruleInfer{rule:infer-app-fail}{c}}
+% \newcommand{\inferAppFail}[1]{
+%   \begin{myRule}{#1}
+%     \AxiomC{\inferCmdArr{\ctx}{t_1}{D_1}}
+%     \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
+%     \AxiomC{$D_1^E \not\mySub D_1$}
+%     \RightLabelM{\ruleInferAppFail}
+%     \TrinaryInfC{\inferCmdArr{\ctx}{(\predVar\ t_1\ t_2)}{\relI}}
+%   \end{myRule}
+% }
+
+\newcommand{\inferFig}{
+  \begin{figure}
+    \centering
+    \inferCut{0.4}
+    \inferUnif{0.4}
+
+    \inferPiImpl{0.5}
+    \inferApp{1}
+    % \inferAppFail{1}
+    \caption{Determinacy inference}
+    \label{fig:det-inference}
+  \end{figure}
+}

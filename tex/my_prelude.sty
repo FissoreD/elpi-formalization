@@ -143,6 +143,7 @@
 
 \newcommand{\prog}[1][]{\ensuremath{\mathcal{P}#1}\xspace}
 \newcommand{\evdash}{\ensuremath{\colondash}\xspace}
+\newcommand{\piimpl}{{\ensuremath{\forall\Rightarrow}}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Derivation system: start
@@ -169,7 +170,7 @@
 \newcommand{\ruleImpl}{\ruleName{rule:impl}{\Rightarrow}}
 \newcommand{\rulePi}{\ruleName{rule:pi}{\forall}}
 \newcommand{\ruleMatch}{\ruleName{rule:match}{m}}
-\newcommand{\rulePiImpl}{\ruleName{rule:piimpl}{{\forall\Rightarrow}}}
+\newcommand{\rulePiImpl}{\ruleName{rule:piimpl}{{\piimpl}}}
 
 \newcommand{\ruleStopM}[1]{
   \begin{myRule}{#1}
@@ -317,10 +318,10 @@
 \newcommand{\checkCmd}[5]{\ensuremath{(#1, #2) \vdash \checkk\ #3 \arr (#4, #5)}}
 \newcommand{\checkClause}[2]{\ensuremath{#1 \vdash \checkc\ #2}}
 
-\newcommand{\ruleCheckName}[1]{\ensuremath{C_{#1}}\xspace}
+% \newcommand{\ruleCheckName}[1]{\ensuremath{C_{#1}}\xspace}
+\newcommand{\ruleCheckName}[2]{\customlabel{#1}{\ensuremath{C_{#2}}}}
 
-
-\newcommand{\ruleCheckClause}{\ruleCheckName{c}}
+\newcommand{\ruleCheckClause}{\ruleCheckName{rule:check-clause}{\cdash}}
 \newcommand{\ruleCheckClauseM}[1]{
   \begin{myRule}{#1}
     % Clause
@@ -333,7 +334,7 @@
   \end{myRule}
 }
 
-\newcommand{\ruleCheckCut}{\ruleCheckName{!}}
+\newcommand{\ruleCheckCut}{\ruleCheckName{rule:check-cut}{!}}
 \newcommand{\ruleCheckCutM}[1]{
   \begin{myRule}{#1}
     % CUT
@@ -343,22 +344,11 @@
   \end{myRule}
 }
 
-\newcommand{\ruleCheckImpl}{\ruleCheckName{\Rightarrow}}
-\newcommand{\ruleCheckImplM}[1]{
-  \begin{myRule}{#1}
-    % IMPL
-    \AxiomC{\checkClause{\ctx}{H}}
-    \AxiomC{\checkCmd{\ctx}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
-    \RightLabelM{\ruleCheckImpl}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\implCmd{H}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
-  \end{myRule}
-}
-
-\newcommand{\ruleCheckUnif}{\ruleCheckName{=}}
+\newcommand{\ruleCheckUnif}{\ruleCheckName{rule:check-unif}{=}}
 \newcommand{\ruleCheckUnifM}[1]{
   \begin{myRule}{#1}
     % UNIF
-    \AxiomC{\checkCmd{\ctx + \{A \mapsto \ctx\ B; B \mapsto \min A\ B\}}{\func}{L}{\ctx[']}{\func[']}}
+    \AxiomC{\checkCmd{\ctx + \{A \mapsto \ctx\ B; B \mapsto \minT\ A\ B\}}{\func}{L}{\ctx[']}{\func[']}}
     \RightLabelM{\ruleCheckUnif}
     \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{A = B}\ConsTl{L}}{\ctx[']}{\func[']}}
   \end{myRule}
@@ -374,42 +364,64 @@
 %   \end{myRule}
 % }
 
-\newcommand{\ruleCheckPi}{\ruleCheckName{\forall}}
-\newcommand{\ruleCheckPiM}[1]{
+% \newcommand{\ruleCheckImpl}{\ruleCheckName{\Rightarrow}}
+% \newcommand{\ruleCheckImplM}[1]{
+%   \begin{myRule}{#1}
+%     % IMPL
+%     % \AxiomC{\checkClause{\ctx}{H}}
+%     \AxiomC{\checkCmd{\ctx}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
+%     \RightLabelM{\ruleCheckImpl}
+%     \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\implCmd{H}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
+%   \end{myRule}
+% }
+
+% \newcommand{\ruleCheckPi}{\ruleCheckName{\forall}}
+% \newcommand{\ruleCheckPiM}[1]{
+%   \begin{myRule}{#1}
+%     % PI
+%     \AxiomC{\checkCmd{\ctx + \{x \mapsto \toF\ x\}}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
+%     \RightLabelM{\ruleCheckPi}
+%     \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\piCmd{x}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
+%   \end{myRule}
+% }
+
+\newcommand{\ruleCheckPiImpl}{\ruleCheckName{rule:check-ho}{\piimpl}}
+\newcommand{\ruleCheckPiImplM}[1]{
   \begin{myRule}{#1}
-    % PI
+    % PiImpl
+    \AxiomC{\checkClause{\ctx}{H}}
     \AxiomC{\checkCmd{\ctx + \{x \mapsto \toF\ x\}}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
-    \RightLabelM{\ruleCheckPi}
-    \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\piCmd{x}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \RightLabelM{\ruleCheckPiImpl}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\piImplCmd{x}{H}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
   \end{myRule}
 }
 
-\newcommand{\predVar}{\texttt{N}}
+\newcommand{\predVar}{\texttt{v}}
 
-\newcommand{\ruleCheckCall}{\ruleCheckName{c}}
+\newcommand{\ruleCheckCall}{\ruleCheckName{rule:check-callOK}{c}}
 \newcommand{\ruleCheckCallM}[1]{
   \begin{myRule}{#1}
     % CALL SUCC
     \AxiomC{\subCmd{\inferCmd{\ctx}{i}}{\getI{\predVar}}}
     \AxiomC{\checkCmd{\ctx + \UCmd{\ctx}{\predVar}{o}}{\maxT\ \func\ (\getF{\predVar})}{L}{\ctx[']}{\func[']}}
     \RightLabelM{\ruleCheckCall}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\callCmd{\predVar}{i}{o}}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\predVar\ i\ o}\ConsTl{L}}{\ctx[']}{\func[']}}
   \end{myRule}
 }
 
-\newcommand{\ruleCheckCallFail}{\ruleCheckName{\bot}}
+\newcommand{\ruleCheckCallFail}{\ruleCheckName{rule:check-callKO}{\bot}}
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
     \AxiomC{\notSubCmd{\inferCmd{\ctx}{i}}{\getI{\predVar}}}
     \AxiomC{\checkCmd{\ctx + \UCmd{\ctx}{\bot}{o}}{\relI}{L}{\ctx[']}{\func[']}}
     \RightLabelM{\ruleCheckCallFail}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\callCmd{\predVar}{i}{o}}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \BinaryInfC{\checkCmd{\ctx}{\_}{\ConsHd{\predVar\ i\ o}\ConsTl{L}}{\ctx[']}{\func[']}}
   \end{myRule}
 }
 
 
-\newcommand{\ruleCheckEmpty}{\ruleCheckName{\EmptyList}}
+\newcommand{\ruleCheckEmpty}{\ruleCheckName{rule:check-stop}{\EmptyList}}
 \newcommand{\ruleCheckEmptyM}[1]{
   \begin{myRule}{#1}
     % EMPTY
