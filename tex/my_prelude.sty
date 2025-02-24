@@ -126,7 +126,7 @@
 \newcommand{\clauseCmd}[3]{\ensuremath{#1\ #2\ \cdash\ #3}}
 \newcommand{\implCmd}[2]{\ensuremath{#1\ \impl\ #2}}
 \newcommand{\piCmd}[3][]{\ensuremath{\pi\ #2\expandafter\ifx\expandafter\relax
-      \detokenize{#1}\relax\else\textnormal{\ :\ #1}\fi\bs\ #3}}
+      \detokenize{#1}\relax\else{ : #1}\fi\bs\ #3}}
 \newcommand{\lamCmd}[2]{\ensuremath{\lambda#1. #2}}
 
 \newcommand{\piImplCmd}[4][]{\piCmd[#1]{#2}{\implCmd{#3}{#4}}}

@@ -329,28 +329,53 @@ unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=
 \staticCheckFig
 
 
-We can now present the inference rules for determinacy (in
-\cref{fig:det-inference}) and those for the static checker (in
-\cref{fig:static-check}).
+We can now present the static checker for determinacy. It is depicted in
+\cref{fig:static-check} and uses the rules in
+\cref{fig:det-inference,fig:det-assume} as auxiliary relations.
 
-TODO: dire che lavoriamo con predicati e applicazioni binarie
+We assume that the typechecker annotates each term with its corresponding type.
+This association between terms and their determinacy types (dtypes) is stored in
+a mapping called \ctx.
 
-Determinacy inference aims to determine the determinacy of a term given a
-mapping \ctx\ from predicate names to their determinacy type. Rules
-\ref{rule:infer-cut} and \ref{rule:infer-unif} are intuitive: the \cut\ and the
-unification are deterministic predicate. Rule \ref{rule:infer-piimpl} works with
-the \coqIn{PiImpl} constructor. It adds in \ctx\ a mapping going from the local
-variable $x$ to the determinacy type deduced from the type of $x$. Finally
-\ref{rule:infer-app} deals with terms applications. It checks that the input has
-a determinacy which is \mySub\ then the exepected one. If it is the case the
-determinacy of the term is the determinacy of its head. Otherwise, the predicate
-is wrongly called and therefore the call will behaves has a relation.
+When the typechecker encounters a variable, its dtype is approximated to the
+maximum dtype allowed for the given type. For example, in the query
+\elpiIn{X 3}, the variable \elpiIn{X} is assigned the determinacy \relI\
+[\expI]\ \EmptyList, representing the most general approximation for its type.
 
-From \infer\ we define three auxiliary functions: given a mapping \ctx\ and a
-predicate name \predVar, if ``\inferCmdArr{\ctx}{\predVar}{D\ [D_i]\ [D_o]}''
-then ``$\getF\ \ctx\ \predVar = D$'', ``$\getI\ \ctx\ \predVar = D_i$'' and
-``$\getO\ \ctx\ \predVar = D_o$''.
+\paragraph{Infer}
+The \infer\ relation in \cref{fig:det-inference} aims to produce the
+dtype of a term (potentially applied) given a
+mapping \ctx. Rule \ref{rule:infer-hd} handles variables or predicate names by
+retrieving their determinacy from the context. 
 
+Rules \ref{rule:infer-cut} and \ref{rule:infer-unif} are straightforward: both
+the \cut\ operation and unification are considered deterministic terms.  
+
+Rule \ref{rule:infer-piimpl} handles the \coqIn{PiImpl} constructor by extending
+\ctx\ with a mapping from the local variable $x$ to its dtype.  
+
+Finally, rule \ref{rule:infer-app} addresses term applications. It verifies that
+the input’s determinacy is less than or equal to the expected
+determinacy. If this condition holds, the determinacy of the term corresponds to
+the determinacy of its head. For simplicity, we focus on binary applications,
+such that the first and second parameters are an input and an output.
+
+\paragraph{Assume}
+The \assume\ relation takes a mapping \ctx\, a determinacy type \func\, and a
+term $t$. The output is a new mapping \ctx[']\ where the variables in
+$t$ have been updated wrt \func.
+
+The basic case of this derivation system is the rule \ref{rule:assume-hd} which
+takes a variable or predicate name \predVar\ as input. It updates by setting the
+\predVar\ to the given determinacy if \predVar\ is a variable or if it is a
+predicate with the same determinacy in \ctx.
+
+Rule \ref{rule:assume-cut} and \ref{rule:assume-unif} are intuitive: no change
+has to be performed in \ctx.
+
+
+
+\paragraph{Static check}
 In \cref{fig:static-check} we present the derivation system for the determinacy
 static checker. The \checkc\ routine aims to verify that a clause respects the
 signature, i.e. the output terms and its body have the expected determinacy type

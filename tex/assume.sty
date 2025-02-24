@@ -39,37 +39,51 @@
   \end{myRule}
 }
 
-\newcommand{\ruleAssumeApp}{\ruleAssume{rule:assume-app}{@}}
-\newcommand{\assumeApp}[1]{
-  \begin{myRule}{#1}
-    \AxiomC{\assumeCmd{\ctx}{\func}{t}{\ctx[']}}
-    \RightLabelM{\ruleAssumeApp}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{(t\ t_1\ t_2)}{\ctx[']}}
-  \end{myRule}
-}
+% \newcommand{\ruleAssumeApp}{\ruleAssume{rule:assume-app}{@}}
+% \newcommand{\assumeApp}[1]{
+%   \begin{myRule}{#1}
+%     \AxiomC{\assumeCmd{\ctx}{\func}{t}{\ctx[']}}
+%     \RightLabelM{\ruleAssumeApp}
+%     \UnaryInfC{\assumeCmd{\ctx}{\func}{(t\ t_1\ t_2)}{\ctx[']}}
+%   \end{myRule}
+% }
 
-\newcommand{\ruleAssumeHd}{\ruleAssume{rule:infer-hd}{\predVar}}
+\newcommand{\ruleAssumeHd}{\ruleAssume{rule:assume-hd}{\predVar}}
 \newcommand{\assumeHd}[1]{
   \begin{myRule}{#1}
     % \AxiomC{\inferCmdArr{\ctx}{t_1}{\func}}
     % \AxiomC{\inferCmdArr{\ctx}{\predVar}{\func[']\ [\func[_i]]\ \_}}
     % \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
     % \AxiomC{$D_1 \mySub \get{i} \predVar$}
-    \AxiomC{\texttt{is\_var\ \predVar}}
+    \AxiomC{$\texttt{is\_var\ \predVar} \lor \ctx\ \predVar = \func$ }
     \RightLabelM{\ruleAssumeHd}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{\predVar}{\ctx\ + \{\predVar \mapsto \func\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{\predVar}{\ctx + \{\predVar \mapsto \func\}}}
+  \end{myRule}
+}
+
+
+\newcommand{\ruleAssumeApp}{\ruleAssume{rule:assume-app}{@}}
+\newcommand{\assumeApp}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{\inferCmdArr{\ctx}{t}{\func\ [\func_i]\ \_}}
+    \AxiomC{\assumeCmd{\ctx}{\func[_i]}{t_1}{\ctx[']}}
+    \RightLabelM{\ruleAssumeApp}
+    \BinaryInfC{\assumeCmd{\ctx}{\func}{(t\ t_1\ t_2)}{\ctx[']}}
   \end{myRule}
 }
 
 \newcommand{\assumeFig}{
   \begin{figure}
     \centering
-    \assumeCut{0.28}
-    \assumeUnif{0.32}
-    \assumeApp{0.33}
- 
+
     \assumeHd{0.35}
+    \assumeUnif{0.32}
+
+    \assumeCut{0.28}
     \assumePiImpl{0.5}
+
+    % \assumeApp{0.33} 
+    \assumeApp{1}
  
     \caption{Determinacy assumption}
     \label{fig:det-assume}
