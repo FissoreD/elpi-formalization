@@ -10,10 +10,10 @@
 \newcommand{\ruleCheckClauseM}[1]{
   \begin{myRule}{#1}
     % Clause
-    \AxiomC{\subCmd{\inferCmd{\ctx}{i}}{\getI{\pred}}}
-    \AxiomC{\checkCmd{\ctx}{\detI}{B}{\ctx[']}{\func[']}}
-    \AxiomC{\subCmd{\inferCmd{\ctx}{o}}{\getO{\pred}}}
-    \AxiomC{\subCmd{\func[']}{\getF{\pred}}}
+    \AxiomC{\assumeCmd{\ctx}{(\get{i}\ \pred)}{i}{\ctx[']}}
+    \AxiomC{\checkCmd{\ctx[']}{\detI}{B}{\ctx['']}{\func}}
+    \AxiomC{\subCmd{\inferCmd{\ctx['']}{o}}{\getO{\pred}}}
+    \AxiomC{\subCmd{\func}{\getF{\pred}}}
     \RightLabelM{\ruleCheckClause}
     \QuaternaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{i\ o}{B})}}
   \end{myRule}
@@ -33,9 +33,20 @@
 \newcommand{\ruleCheckUnifM}[1]{
   \begin{myRule}{#1}
     % UNIF
-    \AxiomC{\checkCmd{\ctx + \{A \mapsto \ctx\ B; B \mapsto \minT\ A\ B\}}{\func}{L}{\ctx[']}{\func[']}}
+    \AxiomC{
+      \stackanchor
+      {\ensuremath{\inferCmdArr{\ctx}{A}{\func[_A]}}}
+      {\ensuremath{\inferCmdArr{\ctx}{B}{\func[_B]}}}}
+    % \AxiomC{\ensuremath{\func{_{AB}} = \minT\ \func{_A}\ \func{_B}}}
+    \AxiomC{
+      \stackanchor
+      {\ensuremath{\func{_{AB}} = \minT\ \func{_A}\ \func{_B}}}
+      {\stackanchor
+      {\ensuremath{\assumeCmd{\ctx}{\func{_{AB}}}{A}{\func[']}}}
+      {\ensuremath{\assumeCmd{\ctx}{\func{_{AB}}}{B}{\func[''']}}}}}
+    \AxiomC{\checkCmd{\ctx[''']}{\func}{L}{\ctx[']}{\func[']}}
     \RightLabelM{\ruleCheckUnif}
-    \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{A = B}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \TrinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{A = B}\ConsTl{L}}{\ctx[']}{\func[']}}
   \end{myRule}
 }
 
@@ -75,22 +86,23 @@
   \begin{myRule}{#1}
     % PiImpl
     \AxiomC{\checkClause{\ctx}{H}}
-    \AxiomC{\checkCmd{\ctx + \{x \mapsto \toF\ x\}}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \AxiomC{\checkCmd{\ctx + \{x \mapsto ty\}}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
     \RightLabelM{\ruleCheckPiImpl}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\piImplCmd{x}{H}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\piImplCmd[ty]{x}{H}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
   \end{myRule}
 }
 
 \newcommand{\predVar}{\texttt{v}}
 
-\newcommand{\ruleCheckCall}{\ruleCheckName{rule:check-callOK}{c}}
+\newcommand{\ruleCheckCall}{\ruleCheckName{rule:check-callOK}{@}}
 \newcommand{\ruleCheckCallM}[1]{
   \begin{myRule}{#1}
     % CALL SUCC
-    \AxiomC{\subCmd{\inferCmd{\ctx}{i}}{\getI{\predVar}}}
-    \AxiomC{\checkCmd{\ctx + \UCmd{\ctx}{\predVar}{o}}{\maxT\ \func\ (\getF{\predVar})}{L}{\ctx[']}{\func[']}}
+    \AxiomC{\inferCmdArr{\ctx}{(\predVar\ i\ o)}{\func[']}}
+    \AxiomC{\assumeCmd{\ctx}{(\get{o}\ \predVar)}{o}{\ctx[']}}
+    \AxiomC{\checkCmd{\ctx[']}{\maxT\ \func\ \func[']}{L}{\ctx['']}{\func['']}}
     \RightLabelM{\ruleCheckCall}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\predVar\ i\ o}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \TrinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\predVar\ i\ o}\ConsTl{L}}{\ctx['']}{\func['']}}
   \end{myRule}
 }
 
@@ -98,7 +110,7 @@
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
-    \AxiomC{\notSubCmd{\inferCmd{\ctx}{i}}{\getI{\predVar}}}
+    \AxiomC{$\lnot (\inferCmdArr{\ctx}{(\predVar\ i\ o)}{\_})$}
     \AxiomC{\checkCmd{\ctx + \UCmd{\ctx}{\bot}{o}}{\relI}{L}{\ctx[']}{\func[']}}
     \RightLabelM{\ruleCheckCallFail}
     \BinaryInfC{\checkCmd{\ctx}{\_}{\ConsHd{\predVar\ i\ o}\ConsTl{L}}{\ctx[']}{\func[']}}

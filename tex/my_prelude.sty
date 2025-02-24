@@ -12,6 +12,7 @@
 \usepackage{amssymb}
 % \usepackage{amsthm}
 \usepackage{simplebnf}
+\usepackage{stackengine}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
@@ -41,12 +42,12 @@
 \newcommand{\subst}[1][]{\ensuremath{\sigma#1}\xspace}
 \newcommand{\alt}[1][]{\ensuremath{\mathcal{A}#1}\xspace}
 \newcommand{\g}[1][]{\ensuremath{\mathcal{G}#1}\xspace}
-\newcommand{\clause}[1][]{\ensuremath{\mathcal{C}#1}\xspace}
+\newcommand{\clause}[1][]{\ensuremath{\mathcal{@}#1}\xspace}
 \newcommand{\pred}[1][]{\texttt{p#1}\xspace}
 
 \newenvironment{boxedproof}
 {\begin{mdframed}\begin{proof}}
-{\end{proof}\end{mdframed}}
+      {\end{proof}\end{mdframed}}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -102,7 +103,7 @@
 \renewcommand{\pi}{\texttt{pi}}
 \newcommand{\cdash}{\texttt{:-}} % colon-dash
 \newcommand{\tailcut}{\texttt{tail\_cut}\xspace}
-\newcommand{\arr}{\rightsquigarrow}
+\newcommand{\arr}{\ensuremath{\rightsquigarrow}}
 
 \def\mutExclHeads{\texttt{mut\_excl\_heads}}
 \def\locExcl{\texttt{loc\_excl}}
@@ -124,10 +125,11 @@
 \newcommand{\goalCmd}[3]{\ensuremath{\goal\ #1\ #2\ #3}\xspace}
 \newcommand{\clauseCmd}[3]{\ensuremath{#1\ #2\ \cdash\ #3}}
 \newcommand{\implCmd}[2]{\ensuremath{#1\ \impl\ #2}}
-\newcommand{\piCmd}[2]{\ensuremath{\pi\ #1\bs\ #2}}
+\newcommand{\piCmd}[3][]{\ensuremath{\pi\ #2\expandafter\ifx\expandafter\relax
+      \detokenize{#1}\relax\else\textnormal{\ :\ #1}\fi\bs\ #3}}
 \newcommand{\lamCmd}[2]{\ensuremath{\lambda#1. #2}}
 
-\newcommand{\piImplCmd}[3]{\piCmd{#1}{\implCmd{#2}{#3}}}
+\newcommand{\piImplCmd}[4][]{\piCmd[#1]{#2}{\implCmd{#3}{#4}}}
 
 \newcommand{\unifyCmd}[4]{\ensuremath{\unify\ #1\ #2\ #3 \arr #4}}
 \newcommand{\matchCmd}[4]{\ensuremath{\match\ #1\ #2\ #3 \arr #4}}
@@ -146,15 +148,15 @@
 \newcommand{\piimpl}{{\ensuremath{\forall\Rightarrow}}}
 
 \newenvironment{myRule}[1]{%
-   \begin{minipage}{#1\textwidth}
-   \centering
-   \begin{prooftree}%
-  } % Here will be put the body
-  {
+  \begin{minipage}{#1\textwidth}
+    \centering
+    \begin{prooftree}%
+      } % Here will be put the body
+      {
     \end{prooftree}
     \vspace{2pt}
-    \end{minipage}
-  }
+  \end{minipage}
+}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Static check rule system: start
@@ -182,7 +184,7 @@
 \newcommand{\checkk}{\texttt{check}}
 \newcommand{\checkc}{\texttt{check\_clause}}
 
-\newcommand{\inferCmd}[2]{\ensuremath{#1\ \vdash\infer\ #2}}
+\newcommand{\inferCmd}[2]{\ensuremath{\infer\ #1\ #2}}
 \newcommand{\subCmd}[2]{\ensuremath{#1 \mySub #2}}
 \newcommand{\notSubCmd}[2]{\ensuremath{#1 \not\mySub #2}}
 

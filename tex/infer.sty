@@ -1,3 +1,5 @@
+%              inp  inp  out
+% \inferCmdArr{ctx}{trm}{det}
 \newcommand{\inferCmdArr}[3]{\ensuremath{\inferCmd{#1}{#2} \arr #3}}
 
 \newcommand{\ruleInfer}[2]{\customlabel{#1}{\ensuremath{I_{#2}}}}
@@ -14,14 +16,15 @@
 \newcommand{\ruleInferPiImpl}{\ruleInfer{rule:infer-piimpl}{\piimpl}}
 \newcommand{\inferPiImpl}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\inferCmdArr{(\ctx + \{x \mapsto \toF\ x\})}{B}{\func}}
+    \AxiomC{\inferCmdArr{(\ctx + \{x \mapsto ty\})}{B}{\func}}
     \RightLabelM{\ruleInferPiImpl}
-    \UnaryInfC{\inferCmdArr{\ctx}{(\piImplCmd{x}{H}{B})}{\func}}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\piImplCmd[ty]{x}{H}{B})}{\func}}
   \end{myRule}
 }
 
 \newcommand{\ruleInferUnif}{\ruleInfer{rule:infer-unif}{=}}
 \newcommand{\inferUnif}[1]{
+  % UNIF
   \begin{myRule}{#1}
     \AxiomC{}
     \RightLabelM{\ruleInferUnif}
@@ -29,37 +32,42 @@
   \end{myRule}
 }
 
-\newcommand{\ruleInferApp}{\ruleInfer{rule:infer-app}{c}}
+\newcommand{\ruleInferApp}{\ruleInfer{rule:infer-app}{@}}
 \newcommand{\inferApp}[1]{
+  % APP
   \begin{myRule}{#1}
     \AxiomC{\inferCmdArr{\ctx}{t_1}{\func}}
-    \AxiomC{\inferCmdArr{\ctx}{\predVar}{\func[']\ [\func[_i]]\ \_}}
+    \AxiomC{\inferCmdArr{\ctx}{t}{\func[']\ [\func[_i]]\ \_}}
+    \AxiomC{\ensuremath{\func \mySub \func[_i]}}
     % \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
     % \AxiomC{$D_1 \mySub \get{i} \predVar$}
     \RightLabelM{\ruleInferApp}
-    \BinaryInfC{\inferCmdArr{\ctx}{(\predVar\ t_1\ t_2)}{\text{if } \func \mySub \func[_i] \text{ then } \func['] \text{ else } \relI}}
+    \TrinaryInfC{\inferCmdArr{\ctx}{(t\ t_1\ t_2)}{\func[']}}
   \end{myRule}
 }
 
-% \newcommand{\ruleInferAppFail}{\ruleInfer{rule:infer-app-fail}{c}}
-% \newcommand{\inferAppFail}[1]{
-%   \begin{myRule}{#1}
-%     \AxiomC{\inferCmdArr{\ctx}{t_1}{D_1}}
-%     \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
-%     \AxiomC{$D_1^E \not\mySub D_1$}
-%     \RightLabelM{\ruleInferAppFail}
-%     \TrinaryInfC{\inferCmdArr{\ctx}{(\predVar\ t_1\ t_2)}{\relI}}
-%   \end{myRule}
-% }
+\newcommand{\ruleInferHd}{\ruleInfer{rule:infer-hd}{\predVar}}
+\newcommand{\inferHd}[1]{
+  \begin{myRule}{#1}
+    % \AxiomC{\inferCmdArr{\ctx}{t_1}{\func}}
+    % \AxiomC{\inferCmdArr{\ctx}{\predVar}{\func[']\ [\func[_i]]\ \_}}
+    % \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
+    % \AxiomC{$D_1 \mySub \get{i} \predVar$}
+    \AxiomC{\textbf{TODO: \ctx\ \predVar\ fails?}}
+    \RightLabelM{\ruleInferHd}
+    \UnaryInfC{\inferCmdArr{\ctx}{\predVar}{\ctx\ \predVar}}
+  \end{myRule}
+}
 
 \newcommand{\inferFig}{
   \begin{figure}
     \centering
-    \inferCut{0.4}
-    \inferUnif{0.4}
+    \inferHd{0.24}
+    \inferUnif{0.28}
+    \inferPiImpl{0.4}
 
-    \inferPiImpl{1}
-    \inferApp{1}
+    \inferCut{0.27}
+    \inferApp{0.67}
     % \inferAppFail{1}
     \caption{Determinacy inference}
     \label{fig:det-inference}

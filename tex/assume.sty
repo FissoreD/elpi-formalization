@@ -1,0 +1,77 @@
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ASSUME
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\assume}{\texttt{assume}}
+
+%         inp     inp       inp    out
+% \assumeCmd{ctx}{determinacy}{term}{new_ctx}
+\newcommand{\assumeCmd}[4]{\ensuremath{\assume\ #1\ #2\ #3 \arr #4}}
+
+\newcommand{\ruleAssume}[2]{\customlabel{#1}{\ensuremath{A_{#2}}}}
+
+\newcommand{\ruleAssumeCut}{\ruleAssume{rule:assume-cut}{!}}
+\newcommand{\assumeCut}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{}
+    \RightLabelM{\ruleInferCut}
+    \UnaryInfC{\assumeCmd{\ctx}{\_}{\cut}{\ctx}}
+  \end{myRule}
+}
+
+\newcommand{\ruleAssumePiImpl}{\ruleAssume{rule:assume-piimpl}{\piimpl}}
+\newcommand{\assumePiImpl}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{\assumeCmd{(\ctx + \{x \mapsto ty\})}{\func}{B}{\ctx[']}}
+    \RightLabelM{\ruleAssumePiImpl}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{H}{B})}{\ctx[']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleAssumeUnif}{\ruleAssume{rule:assume-unif}{=}}
+\newcommand{\assumeUnif}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{}
+    \RightLabelM{\ruleAssumeUnif}
+    \UnaryInfC{\assumeCmd{\ctx}{\_}{(\_ = \_)}{\ctx}}
+  \end{myRule}
+}
+
+\newcommand{\ruleAssumeApp}{\ruleAssume{rule:assume-app}{@}}
+\newcommand{\assumeApp}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{\assumeCmd{\ctx}{\func}{t}{\ctx[']}}
+    \RightLabelM{\ruleInferApp}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(t\ t_1\ t_2)}{\ctx[']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleAssumeHd}{\ruleAssume{rule:infer-hd}{\predVar}}
+\newcommand{\assumeHd}[1]{
+  \begin{myRule}{#1}
+    % \AxiomC{\inferCmdArr{\ctx}{t_1}{\func}}
+    % \AxiomC{\inferCmdArr{\ctx}{\predVar}{\func[']\ [\func[_i]]\ \_}}
+    % \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
+    % \AxiomC{$D_1 \mySub \get{i} \predVar$}
+    \AxiomC{\texttt{is\_var\ \predVar}}
+    \RightLabelM{\ruleAssumeHd}
+    \UnaryInfC{\inferCmdArr{\ctx}{\predVar}{\ctx\ + \{\predVar \mapsto \func\}}}
+  \end{myRule}
+}
+
+\newcommand{\assumeFig}{
+  \begin{figure}
+    \centering
+    \assumeCut{0.28}
+    \assumeUnif{0.32}
+    \assumeApp{0.33}
+ 
+    \assumeHd{0.35}
+    \assumePiImpl{0.5}
+ 
+    \caption{Determinacy assumption}
+    \label{fig:det-assume}
+  \end{figure}
+}
