@@ -16,7 +16,7 @@
 \newcommand{\assumeCut}[1]{
   \begin{myRule}{#1}
     \AxiomC{}
-    \RightLabelM{\ruleInferCut}
+    \RightLabelM{\ruleAssumeCut}
     \UnaryInfC{\assumeCmd{\ctx}{\_}{\cut}{\ctx}}
   \end{myRule}
 }
@@ -43,7 +43,7 @@
 \newcommand{\assumeApp}[1]{
   \begin{myRule}{#1}
     \AxiomC{\assumeCmd{\ctx}{\func}{t}{\ctx[']}}
-    \RightLabelM{\ruleInferApp}
+    \RightLabelM{\ruleAssumeApp}
     \UnaryInfC{\assumeCmd{\ctx}{\func}{(t\ t_1\ t_2)}{\ctx[']}}
   \end{myRule}
 }
@@ -57,7 +57,7 @@
     % \AxiomC{$D_1 \mySub \get{i} \predVar$}
     \AxiomC{\texttt{is\_var\ \predVar}}
     \RightLabelM{\ruleAssumeHd}
-    \UnaryInfC{\inferCmdArr{\ctx}{\predVar}{\ctx\ + \{\predVar \mapsto \func\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{\predVar}{\ctx\ + \{\predVar \mapsto \func\}}}
   \end{myRule}
 }
 

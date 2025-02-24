@@ -42,11 +42,11 @@
       \stackanchor
       {\ensuremath{\func{_{AB}} = \minT\ \func{_A}\ \func{_B}}}
       {\stackanchor
-      {\ensuremath{\assumeCmd{\ctx}{\func{_{AB}}}{A}{\func[']}}}
-      {\ensuremath{\assumeCmd{\ctx}{\func{_{AB}}}{B}{\func[''']}}}}}
-    \AxiomC{\checkCmd{\ctx[''']}{\func}{L}{\ctx[']}{\func[']}}
+        {\ensuremath{\assumeCmd{\ctx}{\func{_{AB}}}{A}{\ctx[']}}}
+        {\ensuremath{\assumeCmd{\ctx[']}{\func{_{AB}}}{B}{\ctx['']}}}}}
+    \AxiomC{\checkCmd{\ctx['']}{\func}{L}{\ctx[''']}{\func[']}}
     \RightLabelM{\ruleCheckUnif}
-    \TrinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{A = B}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \TrinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{A = B}\ConsTl{L}}{\ctx[''']}{\func[']}}
   \end{myRule}
 }
 
@@ -128,3 +128,26 @@
   \end{myRule}
 }
 
+\newcommand{\staticCheckFig}{
+  \begin{figure}
+    \centering
+
+    \ruleCheckClauseM{1}
+
+
+    \ruleCheckCutM{.45}
+    \ruleCheckEmptyM{.35}
+
+    % \ruleCheckPiM{.5}
+    \ruleCheckPiImplM{1}
+
+    \ruleCheckUnifM{1}
+
+    % \ruleCheckMatchM{.7}
+    \ruleCheckCallM{1}
+    \ruleCheckCallFailM{1}
+
+    \caption{Static determinacy checker rules}
+    \label{fig:static-check}
+  \end{figure}
+}

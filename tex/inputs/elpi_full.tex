@@ -326,28 +326,8 @@ unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=
 
 \inferFig
 \assumeFig
+\staticCheckFig
 
-\begin{figure}
-  \centering
-
-  \ruleCheckClauseM{1}
-
-
-  \ruleCheckCutM{.45}
-  \ruleCheckEmptyM{.35}
-
-  % \ruleCheckPiM{.5}
-  \ruleCheckPiImplM{1}
-
-  \ruleCheckUnifM{1}
-
-  % \ruleCheckMatchM{.7}
-  \ruleCheckCallM{1}
-  \ruleCheckCallFailM{1}
-
-  \caption{Static determinacy checker rules}
-  \label{fig:static-check}
-\end{figure}
 
 We can now present the inference rules for determinacy (in
 \cref{fig:det-inference}) and those for the static checker (in
