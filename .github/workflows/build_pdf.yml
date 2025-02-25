@@ -17,14 +17,10 @@ jobs:
     steps:
       - name: Set up Git repository
         uses: actions/checkout@v3
-      
-      - name: Install tex
-        run: sudo apt-get update && sudo apt-get install texlive-full python3-pygments
 
-      - name: Make
+      - name: Build tex
         run: make ci
 
-      # Push to branch
       - name: Push to pdf branch
         uses: s0/git-publish-subdir-action@develop
         env:

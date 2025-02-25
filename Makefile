@@ -13,4 +13,11 @@ mv-pdf:
 
 all: paper
 
-ci: all mv-pdf
+clean-docker:
+	docker rm -v -f $$(docker ps -qa)
+
+ci:
+	docker create --name latex dfissore/latex2023:latest && \
+	docker cp tex/ latex:/data/ && docker ps -a && \
+	mkdir pdf && \
+	docker start -i latex && docker cp latex:/data/tex/.aux/main.pdf pdf
