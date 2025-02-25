@@ -12,12 +12,22 @@
 \newcommand{\ruleCheckClauseM}[1]{
   \begin{myRule}{#1}
     % Clause
-    \AxiomC{\assumeCmd{\ctx}{(\get{i}\ \pred)}{i}{\ctx[']}}
-    \AxiomC{\checkCmd{\ctx[']}{\detI}{B}{\ctx['']}{\func}}
-    \AxiomC{\ensuremath{\inferCmdArr{\ctx['']}{o}{\func[_o]}{\_} \land {\func[_o] \mySub \getO{\pred}}}}
-    \AxiomC{\subCmd{\func}{\getF{\pred}}}
+    \AxiomC{
+      \stackanchor
+        {$\ctx\ \predVar = \dtype{\func}{[\func[_i]]}{[\func[_o]]}$}
+        {\assumeCmd{\ctx}{\func[_i]}{i}{\ctx[']}}
+    }
+    \AxiomC{
+      \stackanchor
+      {\checkLCmd{\ctx[']}{\detI}{B}{\ctx['']}{\func[']}}
+      {\ensuremath{\inferCmdArr{\ctx['']}{o}{\func[_o']}{\_}}}}
+    \AxiomC{
+      \stackanchor
+      {\subCmd{\func'}{\func}}
+      {\func[_o'] \mySub \func[_o]}
+    }
     \RightLabelM{\ruleCheckClause}
-    \QuaternaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{i\ o}{B})}}
+    \TrinaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{i\ o}{B})}}
   \end{myRule}
 }
 

@@ -437,13 +437,63 @@ then the output determinacy is set to relational.
 
 \subsection{Determinacy checking for clauses}
 
-Know that we know how terms can be deduced, inferred, or checker for
-determinacy, we can illustrate how a clause be checked so that it respects the
-signature of the predicate being implemented. 
-
 \staticCheckFig
 
 
+Know that we know how terms can be deduced, inferred, or checker for
+determinacy, we can illustrate how a clause be checked so that it respects the
+signature of the predicate being implemented. In \cref{fig:static-check} we
+present our last derivation system. In a clase, we consider inputs as terms that
+are assumed to respect the determinacy of the signature. Therefore in
+\ref{rule:check-clause}, we start by making this assumption. From the new
+obtained context we call the \checkL\ rule which is essentially an iterator over
+the list of terms in the body of the clause. At each iteration \checkL\ calls
+\checkk\ until reaching the end of the list. \checkL\ is called with a
+determinacy which, in the beginning, is set to \detI. While reading the premises
+of the clause, if one of them is relation, thanks to \checkk\ the determinacy
+will be set to \relI. The result of the call to \checkL\ is used to verify that
+the dtype of the ouput is less or equal to the expected value: this is what our
+static checker aims to ensure. Finally the checker ensures that the whole
+determinacy of the clause, i.e. the determinacy of the premises match the
+expectation in the signature.
+
+We provide an example of this checker in the following database.
+
+\begin{elpicode}
+give-fun X (succ X Y).
+give-fun X (pred X Y).
+good :- give-fun 3 Res, !, Res.
+\end{elpicode}
+
+The signatures of the predicates in the snippet above are the following:
+%
+\begin{align*}
+  \texttt{succ} &: \dtype{\detI}{\expI}{\expI} & \texttt{pred} &: \dtype{\detI}{\expI}{\expI} \\
+  \texttt{give-fun} &: \dtype{\relI}{[\expI]}{[\detI]} & \texttt{good} &: \detI
+\end{align*}
+
+The static checker for determinacy starts by analysing the first rule for
+\texttt{give-fun}. The input is an expression, the body is empty, so in the end
+we only have to check that the output has the output and the body have the right
+determinacy. Now, the determinacy of the body is $\detI \mySub \relI$, the
+determinacy (deduced) for the ouput term is $\detI \mySub \detI$. Therefore the
+rule respect the contract of the signature: the rule is valid. A very similar
+reasonment can be do on the second rule for \texttt{give-fun}. It is now more
+interesting to analyze the clause for \texttt{good}. We have no input, thereofre
+we keep analyze the body. The context on which \checkL\ is launched is $\ctx =
+\{\text{\elpiIn{Res}}\mapsto \relI\}$ since in the wrost case the determinacy of
+a term with type \texttt{prop} is \relI. The iteration on the terms in the body
+starts by analysing ``\elpiIn{give-fun 3 Res}'' which makes the determinacy of
+the term relational and sets updates the context to
+$\{\text{\elpiIn{Res}}\mapsto \detI\}$, since it is a correct call and its
+output is \assume d to have the functionality of the output in the dype of
+\elpiIn{give-fun}. The \cut\ operator, makes \func\ to become \detI: intuitively
+the \cut discards all choice points, that's way \ref{rule:check-cut} puts the
+determinacy to \detI. Finally we execute a term which, by
+\ref{rule:check-callOK} is deterministic. We conclude the execution of \checkL\
+with $\func = \detI$ and $\ctx = \{\text{\elpiIn{Res}}\mapsto \detI\}$. This is
+exactly what the signature of \texttt{good} expects and therefore the rule
+passes the check.
 
 % $$-----$$
 
@@ -459,8 +509,8 @@ signature of the predicate being implemented.
 
 \subsection{Mode checking: input-ground mode}
 \label{sec:mc}
-Dire come funziona il mode checking e spiegare che è una condizione sufficiente
-per avere la determinacy.
+
+The last but not least important point to treat in the 
 
 \subsection{Mix data with ty}
 
