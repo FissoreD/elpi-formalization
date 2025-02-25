@@ -1,6 +1,8 @@
 
 % [checkCmd ctx1 func1 tm ctx2 func2]
+\newcommand{\checkL}{\texttt{check}\ensuremath{_L}}
 \newcommand{\checkCmd}[5]{\ensuremath{(#1, #2) \vdash \checkk\ #3 \arr (#4, #5)}}
+\newcommand{\checkLCmd}[5]{\ensuremath{(#1, #2) \vdash \checkL\ #3 \arr (#4, #5)}}
 \newcommand{\checkClause}[2]{\ensuremath{#1 \vdash \checkc\ #2}}
 
 % \newcommand{\ruleCheckName}[1]{\ensuremath{C_{#1}}\xspace}
@@ -23,9 +25,9 @@
 \newcommand{\ruleCheckCutM}[1]{
   \begin{myRule}{#1}
     % CUT
-    \AxiomC{\checkCmd{\ctx}{\detI}{L}{\ctx[']}{\func[']}}
+    \AxiomC{}
     \RightLabelM{\ruleCheckCut}
-    \UnaryInfC{\checkCmd{\ctx}{\_}{\ConsHd{\cut}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \UnaryInfC{\checkCmd{\ctx}{\_}{\cut}{\ctx}{\detI}}
   \end{myRule}
 }
 
@@ -37,16 +39,14 @@
       \stackanchor
       {\ensuremath{\inferCmdArr{\ctx}{A}{\func[_A]}}}
       {\ensuremath{\inferCmdArr{\ctx}{B}{\func[_B]}}}}
+    \AxiomC{\ensuremath{\func{_{AB}} = \minT\ \func{_A}\ \func{_B}}}
     % \AxiomC{\ensuremath{\func{_{AB}} = \minT\ \func{_A}\ \func{_B}}}
     \AxiomC{
       \stackanchor
-      {\ensuremath{\func{_{AB}} = \minT\ \func{_A}\ \func{_B}}}
-      {\stackanchor
         {\ensuremath{\assumeCmd{\ctx}{\func{_{AB}}}{A}{\ctx[']}}}
-        {\ensuremath{\assumeCmd{\ctx[']}{\func{_{AB}}}{B}{\ctx['']}}}}}
-    \AxiomC{\checkCmd{\ctx['']}{\func}{L}{\ctx[''']}{\func[']}}
+        {\ensuremath{\assumeCmd{\ctx[']}{\func{_{AB}}}{B}{\ctx['']}}}}
     \RightLabelM{\ruleCheckUnif}
-    \TrinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{A = B}\ConsTl{L}}{\ctx[''']}{\func[']}}
+    \TrinaryInfC{\checkCmd{\ctx}{\func}{(A = B)}{\ctx['']}{\func}}
   \end{myRule}
 }
 
@@ -86,9 +86,9 @@
   \begin{myRule}{#1}
     % PiImpl
     \AxiomC{\checkClause{\ctx}{H}}
-    \AxiomC{\checkCmd{\ctx + \{x \mapsto ty\}}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \AxiomC{\checkCmd{\ctx + \{x \mapsto ty\}}{\func}{B}{\ctx[']}{\func[']}}
     \RightLabelM{\ruleCheckPiImpl}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\piImplCmd[ty]{x}{H}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{H}{B})}{\ctx[']}{\func[']\bs \{x\}}}
   \end{myRule}
 }
 
@@ -98,11 +98,12 @@
 \newcommand{\ruleCheckCallM}[1]{
   \begin{myRule}{#1}
     % CALL SUCC
-    \AxiomC{\inferCmdArr{\ctx}{(\predVar\ i\ o)}{\func[']}}
-    \AxiomC{\assumeCmd{\ctx}{(\get{o}\ \predVar)}{o}{\ctx[']}}
-    \AxiomC{\checkCmd{\ctx[']}{\maxT\ \func\ \func[']}{L}{\ctx['']}{\func['']}}
+    \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]}}}
+    \AxiomC{\inferCmdArr{\ctx}{i}{\func[_i']}}
+    \AxiomC{\ensuremath{\func[_i'] \mySub \func[_i]}}
+    \AxiomC{\assumeCmd{\ctx}{\func[_o]}{o}{\ctx[']}}
     \RightLabelM{\ruleCheckCall}
-    \TrinaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\predVar\ i\ o}\ConsTl{L}}{\ctx['']}{\func['']}}
+    \QuaternaryInfC{\checkCmd{\ctx}{\func}{(\predVar\ i\ o)}{\ctx[']}{\maxT\ \func\ \func[']}}
   \end{myRule}
 }
 
@@ -110,44 +111,72 @@
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
-    \AxiomC{$\lnot (\inferCmdArr{\ctx}{(\predVar\ i\ o)}{\_})$}
-    \AxiomC{\checkCmd{\ctx + \UCmd{\ctx}{\bot}{o}}{\relI}{L}{\ctx[']}{\func[']}}
+    \AxiomC{$\lnot (\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]} \land \inferCmdArr{\ctx}{i}{\_})$}
     \RightLabelM{\ruleCheckCallFail}
-    \BinaryInfC{\checkCmd{\ctx}{\_}{\ConsHd{\predVar\ i\ o}\ConsTl{L}}{\ctx[']}{\func[']}}
+    \UnaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ i\ o)}{\ctx + \UCmd{\ctx}{\bot}{o}}{\relI}}
   \end{myRule}
 }
 
 
+% \newcommand{\ruleCheckEmptyM}[1]{
+%   \begin{myRule}{#1}
+%     % EMPTY
+%     \AxiomC{}
+%     \RightLabelM{\ruleCheckEmpty}
+%     \UnaryInfC{\checkCmd{\ctx}{\func}{\EmptyList}{\ctx}{\func}}
+%   \end{myRule}
+% }
+
 \newcommand{\ruleCheckEmpty}{\ruleCheckName{rule:check-stop}{\EmptyList}}
-\newcommand{\ruleCheckEmptyM}[1]{
+\newcommand{\ruleCheckListEmpty}[1]{
+  % EMPTY
   \begin{myRule}{#1}
-    % EMPTY
     \AxiomC{}
     \RightLabelM{\ruleCheckEmpty}
-    \UnaryInfC{\checkCmd{\ctx}{\func}{\EmptyList}{\ctx}{\func}}
+    \UnaryInfC{\checkLCmd{\ctx}{\func}{\EmptyList}{\ctx}{\func}}
   \end{myRule}
+}
+
+\newcommand{\ruleCheckCons}{\ruleCheckName{rule:check-cons}{::}}
+\newcommand{\ruleCheckListCons}[1]{
+  % CONS
+  \begin{myRule}{#1}
+    \AxiomC{\checkCmd{\ctx}{\func}{\EmptyList}{\ctx[']}{\func[']}}
+    \AxiomC{\checkLCmd{\ctx[']}{\func[']}{\EmptyList}{\ctx['']}{\func['']}}
+    \RightLabelM{\ruleCheckCons}
+    \BinaryInfC{\checkLCmd{\ctx}{\func}{\ConsHd{h}\ConsTl{t}}{\ctx['']}{\func['']}}
+  \end{myRule}
+}
+
+\newcommand{\checkTermFig}{
+  \begin{subfigure}[b]{1\textwidth}
+    \centering
+    
+    \ruleCheckCutM{.45}
+  
+    % \ruleCheckPiM{.5}
+    \ruleCheckPiImplM{1}
+  
+    \ruleCheckUnifM{1}
+  
+    % \ruleCheckMatchM{.7}
+    \ruleCheckCallM{1}
+    \ruleCheckCallFailM{1}
+  
+    \caption{\checkk\ relation}
+    \label{fig:static-check-term}
+  \end{subfigure}
 }
 
 \newcommand{\staticCheckFig}{
   \begin{figure}
     \centering
-
     \ruleCheckClauseM{1}
 
+    \ruleCheckListEmpty{.38}
+    \ruleCheckListCons{1}
 
-    \ruleCheckCutM{.45}
-    \ruleCheckEmptyM{.35}
-
-    % \ruleCheckPiM{.5}
-    \ruleCheckPiImplM{1}
-
-    \ruleCheckUnifM{1}
-
-    % \ruleCheckMatchM{.7}
-    \ruleCheckCallM{1}
-    \ruleCheckCallFailM{1}
-
-    \caption{Static determinacy checker rules}
+    \caption{Determinacy clause checking}
     \label{fig:static-check}
   \end{figure}
 }

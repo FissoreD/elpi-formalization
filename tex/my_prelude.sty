@@ -13,6 +13,7 @@
 % \usepackage{amsthm}
 \usepackage{simplebnf}
 \usepackage{stackengine}
+\usepackage{subcaption}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
@@ -168,6 +169,7 @@
 \newcommand{\relI}{\detT{rel}}
 \newcommand{\expI}{\detT{exp}}
 \newcommand{\funsep}{\ensuremath{\triangleright}}
+\newcommand{\dtype}[3]{\ensuremath{#1\ #2 \funsep #3}}
 \newcommand{\myTo}{\ensuremath{\mathbin{\detT{->}}}}
 \newcommand{\mySub}{\ensuremath{\subseteq}}
 \newcommand{\detlab}{\texttt{detlab}}
@@ -180,7 +182,7 @@
 \newcommand{\getI}[1]{\ensuremath{\get{i}\ #1}}
 \newcommand{\getO}[1]{\ensuremath{\get{o}\ #1}}
 \newcommand{\getF}[1]{\ensuremath{\get{D}\ #1}}
-\newcommand{\infer}{\texttt{infer}}
+\newcommand{\infer}{\texttt{deduce}}
 \newcommand{\checkk}{\texttt{check}}
 \newcommand{\checkc}{\texttt{check\_clause}}
 

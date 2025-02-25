@@ -92,8 +92,8 @@ Thanks to this, we can define the signature of the predicates above:
 %
 % \begin{equation}  
 \begin{align*}
-  \texttt{once}     & : \detI\ [\relI] \funsep []      & \texttt{do}  & : \detI\ [\detI] \funsep []      \\
-  \texttt{make-det} & : \detI\ [\relI] \funsep [\detI] & \texttt{idF} & : \detI\ [\detI] \funsep [\detI]
+  \texttt{once}     & : \dtype{\detI}{[\relI]}{[]}      & \texttt{do}  & : \dtype{\detI}{[\detI]}{[]}      \\
+  \texttt{make-det} & : \dtype{\detI}{[\relI]}{[\detI]} & \texttt{idF} & : \dtype{\detI}{[\detI]}{[\detI]}
 \end{align*}
 % \label{eq:ty}
 % \end{equation}
@@ -322,10 +322,42 @@ unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=
 % has the expected determinacy, which is crucial since outputs can be used as new
 % queries in the program.
 
-\subsection{Static determinacy checker}
+\subsection{Determinacy checker for terms and subtyping}
 
-\inferFig
-\assumeFig
+\begin{figure}
+  \fbox{\inferFig}
+  \fbox{\assumeFig}
+  \fbox{\checkTermFig}
+  \caption{Determinacy checking for terms}
+  \label{fig:full-det-check-terms}
+\end{figure}
+
+From the \mySub, \minT\ and \maxT\ relations, we can deduce a system of rules
+allowing to check what is the determinacy of a term. This check relation is not
+far from a subtyping checker where the subtyping relation is \mySub. The checker
+is made by the three systems of rules shown in \cref{fig:full-det-check-terms}.
+We note \ctx\ to be a mapping from variable names to their
+determinacy type (dtype). Each variable \predVar\ appearing in a term $t$ has a
+dtype in \ctx\ since either \predVar\ is the name of a predicate and its dtype
+can be retrived from its signature, or \predVar\ is a quantified variable and
+its dtype is derived from the type inferred by the type checker. In the latter
+case, the typechecker infers the worst determinacy from the type, i.e. if
+\predVar\ should be a predicate from int to int, then \predVar\ is considered as
+relational, i.e. the typechecker has no way to statically guarantee it behaves
+as a function. Moreover, even though, in the end \predVar\ happens to be a
+function, by definition we know that a function can always be used in place of a
+relation.
+
+The determinacy checker (the \checkk) for terms takes a context \ctx\, an expected determinacy
+\func\ and a term $t$. It returns the inferred determinacy of $t$ and an updated
+version of \ctx[']\ where the values of some quantified variables in \ctx\ may
+have been updated. The simplest rule is \ref{rule:check-cut}: for any \ctx and
+and expected determinacy \func, the determinacy of \cut\ is \detI with an
+unchanged context.
+
+
+\subsection{Determinacy checking for clauses}
+
 \staticCheckFig
 
 
@@ -346,13 +378,13 @@ maximum dtype allowed for the given type. For example, in the query
 The \infer\ relation in \cref{fig:det-inference} aims to produce the
 dtype of a term (potentially applied) given a
 mapping \ctx. Rule \ref{rule:infer-hd} handles variables or predicate names by
-retrieving their determinacy from the context. 
+retrieving their determinacy from the context.
 
 Rules \ref{rule:infer-cut} and \ref{rule:infer-unif} are straightforward: both
-the \cut\ operation and unification are considered deterministic terms.  
+the \cut\ operation and unification are considered deterministic terms.
 
 Rule \ref{rule:infer-piimpl} handles the \coqIn{PiImpl} constructor by extending
-\ctx\ with a mapping from the local variable $x$ to its dtype.  
+\ctx\ with a mapping from the local variable $x$ to its dtype.
 
 Finally, rule \ref{rule:infer-app} addresses term applications. It verifies that
 the input’s determinacy is less than or equal to the expected
@@ -370,9 +402,23 @@ takes a variable or predicate name \predVar\ as input. It updates by setting the
 \predVar\ to the given determinacy if \predVar\ is a variable or if it is a
 predicate with the same determinacy in \ctx.
 
-Rule \ref{rule:assume-cut} and \ref{rule:assume-unif} are intuitive: no change
+Rules \ref{rule:assume-cut} and \ref{rule:assume-unif} are intuitive: no change
 has to be performed in \ctx.
 
+Rule \ref{rule:assume-piimpl} adds in the local context the type of the binder
+$x$ and keeps calling \assume\ in the term under the implication.
+
+\textbf{TODO: the variable x should be removed from \ctx otherwise it is returned}
+
+Rule \ref{rule:assume-app} is particularly interesting as it deals with the
+application of a term to two arguments, $t_1$ and $t_2$, which we consider as
+its input and output, respectively. Our goal is for this term to assume it has
+the determinacy \func. This is valid if the inferred dtype of the head $t$ is
+$\func[']\ [\func_i]\ [\func_o]$, such that $\func['] \mySub \func$. In other
+words, the term we are assuming to be have a certain determinacy already
+possesses the appropriate determinacy. The only requirement is that its input,
+$t_1$, matches the determinacy expected by the function's signature in the input
+position.
 
 
 \paragraph{Static check}

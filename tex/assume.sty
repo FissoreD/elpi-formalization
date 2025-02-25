@@ -26,7 +26,7 @@
   \begin{myRule}{#1}
     \AxiomC{\assumeCmd{(\ctx + \{x \mapsto ty\})}{\func}{B}{\ctx[']}}
     \RightLabelM{\ruleAssumePiImpl}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{H}{B})}{\ctx[']}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{H}{B})}{\ctx[']\bs \{x\}}}
   \end{myRule}
 }
 
@@ -51,10 +51,6 @@
 \newcommand{\ruleAssumeHd}{\ruleAssume{rule:assume-hd}{\predVar}}
 \newcommand{\assumeHd}[1]{
   \begin{myRule}{#1}
-    % \AxiomC{\inferCmdArr{\ctx}{t_1}{\func}}
-    % \AxiomC{\inferCmdArr{\ctx}{\predVar}{\func[']\ [\func[_i]]\ \_}}
-    % \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
-    % \AxiomC{$D_1 \mySub \get{i} \predVar$}
     \AxiomC{$\texttt{is\_var\ \predVar} \lor \ctx\ \predVar = \func$ }
     \RightLabelM{\ruleAssumeHd}
     \UnaryInfC{\assumeCmd{\ctx}{\func}{\predVar}{\ctx + \{\predVar \mapsto \func\}}}
@@ -65,15 +61,17 @@
 \newcommand{\ruleAssumeApp}{\ruleAssume{rule:assume-app}{@}}
 \newcommand{\assumeApp}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\inferCmdArr{\ctx}{t}{\func\ [\func_i]\ \_}}
+    % APP
+    \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{\_}}}
+    \AxiomC{\ensuremath{\func['] \mySub \func}}
     \AxiomC{\assumeCmd{\ctx}{\func[_i]}{t_1}{\ctx[']}}
     \RightLabelM{\ruleAssumeApp}
-    \BinaryInfC{\assumeCmd{\ctx}{\func}{(t\ t_1\ t_2)}{\ctx[']}}
+    \TrinaryInfC{\assumeCmd{\ctx}{\func}{(\predVar\ t_1\ t_2)}{\ctx[']}}
   \end{myRule}
 }
 
 \newcommand{\assumeFig}{
-  \begin{figure}
+  \begin{subfigure}[b]{1\textwidth}
     \centering
 
     \assumeHd{0.35}
@@ -85,7 +83,7 @@
     % \assumeApp{0.33} 
     \assumeApp{1}
  
-    \caption{Determinacy assumption}
+    \caption{\assume\ relation}
     \label{fig:det-assume}
-  \end{figure}
+  \end{subfigure}
 }
