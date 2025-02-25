@@ -1,24 +1,25 @@
-%              inp  inp  out
-% \inferCmdArr{ctx}{trm}{det}
-\newcommand{\inferCmdArr}[3]{\ensuremath{\inferCmd{#1}{#2} \arr #3}}
 
-\newcommand{\ruleInfer}[2]{\customlabel{#1}{\ensuremath{I_{#2}}}}
+%              inp  inp  out   out
+% \inferCmdArr{ctx}{trm}{det}{good-call}
+\newcommand{\inferCmdArr}[4]{\ensuremath{\infer\ #1\ #2 \arr (#3, #4)}}
+
+\newcommand{\ruleInfer}[2]{\customlabel{#1}{\ensuremath{D_{#2}}}}
 
 \newcommand{\ruleInferCut}{\ruleInfer{rule:infer-cut}{!}}
 \newcommand{\inferCut}[1]{
   \begin{myRule}{#1}
     \AxiomC{}
     \RightLabelM{\ruleInferCut}
-    \UnaryInfC{\inferCmdArr{\ctx}{\cut}{\detI}}
+    \UnaryInfC{\inferCmdArr{\ctx}{\cut}{\detI}{\top}}
   \end{myRule}
 }
 
 \newcommand{\ruleInferPiImpl}{\ruleInfer{rule:infer-piimpl}{\piimpl}}
 \newcommand{\inferPiImpl}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\inferCmdArr{(\ctx + \{x \mapsto ty\})}{B}{\func}}
+    \AxiomC{\inferCmdArr{(\ctx + \{x \mapsto ty\})}{B}{\func}{\mathcal{R}}}
     \RightLabelM{\ruleInferPiImpl}
-    \UnaryInfC{\inferCmdArr{\ctx}{(\piImplCmd[ty]{x}{H}{B})}{\func}}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\piImplCmd[ty]{x}{H}{B})}{\func}{\mathcal{R}}}
   \end{myRule}
 }
 
@@ -28,7 +29,7 @@
   \begin{myRule}{#1}
     \AxiomC{}
     \RightLabelM{\ruleInferUnif}
-    \UnaryInfC{\inferCmdArr{\ctx}{(\_ = \_)}{\detI}}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\_ = \_)}{\detI}{\top}}
   \end{myRule}
 }
 
@@ -37,37 +38,33 @@
   % APP
   \begin{myRule}{#1}
     \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{\_}}}
-    \AxiomC{\inferCmdArr{\ctx}{i}{\func[_i']}}
-    \AxiomC{\ensuremath{\func[_i'] \mySub \func[_i]}}
+    \AxiomC{\inferCmdArr{\ctx}{i}{\func[_i']}{\_}}
+    % \AxiomC{\ensuremath{\func[_i'] \mySub \func[_i]}}
     % \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
     % \AxiomC{$D_1 \mySub \get{i} \predVar$}
     \RightLabelM{\ruleInferApp}
-    \TrinaryInfC{\inferCmdArr{\ctx}{(\predVar\ i\ o)}{\func[']}}
+    \BinaryInfC{\inferCmdArr{\ctx}{(\predVar\ i\ o)}{\func[']}{\func[_i'] \mySub \func[_i]}}
   \end{myRule}
 }
 
 \newcommand{\ruleInferHd}{\ruleInfer{rule:infer-hd}{\predVar}}
 \newcommand{\inferHd}[1]{
   \begin{myRule}{#1}
-    % \AxiomC{\inferCmdArr{\ctx}{t_1}{\func}}
-    % \AxiomC{\inferCmdArr{\ctx}{\predVar}{\func[']\ [\func[_i]]\ \_}}
-    % \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
-    % \AxiomC{$D_1 \mySub \get{i} \predVar$}
     \AxiomC{}
     \RightLabelM{\ruleInferHd}
-    \UnaryInfC{\inferCmdArr{\ctx}{\predVar}{\ctx\ \predVar}}
+    \UnaryInfC{\inferCmdArr{\ctx}{\predVar}{\ctx\ \predVar}{\top}}
   \end{myRule}
 }
 
 \newcommand{\inferFig}{
   \begin{subfigure}[b]{1\textwidth}
     \centering
-    \inferHd{0.24}
-    \inferUnif{0.28}
-    \inferPiImpl{0.4}
-
-    \inferCut{0.27}
-    \inferApp{0.67}
+    \inferHd{0.27}
+    \inferCut{0.30}
+    \inferUnif{0.31}
+    
+    \inferPiImpl{0.46}
+    \inferApp{0.49}
     % \inferAppFail{1}
     \caption{\infer\ relation}
     \label{fig:det-inference}

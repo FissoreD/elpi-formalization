@@ -14,7 +14,7 @@
     % Clause
     \AxiomC{\assumeCmd{\ctx}{(\get{i}\ \pred)}{i}{\ctx[']}}
     \AxiomC{\checkCmd{\ctx[']}{\detI}{B}{\ctx['']}{\func}}
-    \AxiomC{\subCmd{\inferCmd{\ctx['']}{o}}{\getO{\pred}}}
+    \AxiomC{\ensuremath{\inferCmdArr{\ctx['']}{o}{\func[_o]}{\_} \land {\func[_o] \mySub \getO{\pred}}}}
     \AxiomC{\subCmd{\func}{\getF{\pred}}}
     \RightLabelM{\ruleCheckClause}
     \QuaternaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{i\ o}{B})}}
@@ -37,73 +37,77 @@
     % UNIF
     \AxiomC{
       \stackanchor
-      {\ensuremath{\inferCmdArr{\ctx}{A}{\func[_A]}}}
-      {\ensuremath{\inferCmdArr{\ctx}{B}{\func[_B]}}}}
+      {\ensuremath{\inferCmdArr{\ctx}{A}{\func[_A]}{\top}}}
+      {\ensuremath{\inferCmdArr{\ctx}{B}{\func[_B]}{\top}}}}
     \AxiomC{\ensuremath{\func{_{AB}} = \minT\ \func{_A}\ \func{_B}}}
     % \AxiomC{\ensuremath{\func{_{AB}} = \minT\ \func{_A}\ \func{_B}}}
     \AxiomC{
       \stackanchor
-        {\ensuremath{\assumeCmd{\ctx}{\func{_{AB}}}{A}{\ctx[']}}}
-        {\ensuremath{\assumeCmd{\ctx[']}{\func{_{AB}}}{B}{\ctx['']}}}}
+      {\ensuremath{\assumeCmd{\ctx}{\func{_{AB}}}{A}{\ctx[']}}}
+      {\ensuremath{\assumeCmd{\ctx[']}{\func{_{AB}}}{B}{\ctx['']}}}}
     \RightLabelM{\ruleCheckUnif}
     \TrinaryInfC{\checkCmd{\ctx}{\func}{(A = B)}{\ctx['']}{\func}}
   \end{myRule}
 }
 
-% \newcommand{\ruleCheckMatch}{\ruleCheckName{m}}
-% \newcommand{\ruleCheckMatchM}[1]{
-%   \begin{myRule}{#1}
-%     % MATCH
-%     \AxiomC{\checkCmd{\ctx + \{A \mapsto B; B \mapsto \min A\ B\}}{\func}{L}{\ctx[']}{\func[']}}
-%     \RightLabelM{\ruleCheckMatch}
-%     \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{A = B}\ConsTl{L}}{\ctx[']}{\func[']}}
-%   \end{myRule}
-% }
+\newcommand{\ruleCheckUnifFail}{\ruleCheckName{rule:check-unifFail}{{\neq}}}
+\newcommand{\ruleCheckUnifFailM}[1]{
+  \begin{myRule}{#1}
+    % UNIF FAIL
+    \AxiomC{\ensuremath{\inferCmdArr{\ctx}{A}{\_}{\bot} \lor \inferCmdArr{\ctx}{B}{\_}{\bot}}}
+    \RightLabelM{\ruleCheckUnifFail}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{(A = B)}{\ctx}{\func}}
+  \end{myRule}
+}
 
-% \newcommand{\ruleCheckImpl}{\ruleCheckName{\Rightarrow}}
-% \newcommand{\ruleCheckImplM}[1]{
-%   \begin{myRule}{#1}
-%     % IMPL
-%     % \AxiomC{\checkClause{\ctx}{H}}
-%     \AxiomC{\checkCmd{\ctx}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
-%     \RightLabelM{\ruleCheckImpl}
-%     \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\implCmd{H}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
-%   \end{myRule}
-% }
-
-% \newcommand{\ruleCheckPi}{\ruleCheckName{\forall}}
-% \newcommand{\ruleCheckPiM}[1]{
-%   \begin{myRule}{#1}
-%     % PI
-%     \AxiomC{\checkCmd{\ctx + \{x \mapsto \toF\ x\}}{\func}{\ConsHd{B}\ConsTl{L}}{\ctx[']}{\func[']}}
-%     \RightLabelM{\ruleCheckPi}
-%     \UnaryInfC{\checkCmd{\ctx}{\func}{\ConsHd{\piCmd{x}{B}}\ConsTl{L}}{\ctx[']}{\func[']}}
-%   \end{myRule}
-% }
-
-\newcommand{\ruleCheckPiImpl}{\ruleCheckName{rule:check-ho}{\piimpl}}
+\newcommand{\ruleCheckPiImpl}{\ruleCheckName{rule:check-piimpl}{\piimpl}}
 \newcommand{\ruleCheckPiImplM}[1]{
   \begin{myRule}{#1}
     % PiImpl
     \AxiomC{\checkClause{\ctx}{H}}
     \AxiomC{\checkCmd{\ctx + \{x \mapsto ty\}}{\func}{B}{\ctx[']}{\func[']}}
     \RightLabelM{\ruleCheckPiImpl}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{H}{B})}{\ctx[']}{\func[']\bs \{x\}}}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{H}{B})}{\ctx[']\bs \{x\}}{\func[']}}
   \end{myRule}
 }
 
 \newcommand{\predVar}{\texttt{v}}
 
+% \newcommand{\ruleCheckCall}{\ruleCheckName{rule:check-callOK}{@}}
+% \newcommand{\ruleCheckCallM}[1]{
+%   \begin{myRule}{#1}
+%     % CALL SUCC
+%     \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]}}}
+%     \AxiomC{\inferCmdArr{\ctx}{i}{\func[_i']}{\top}}
+%     \AxiomC{\ensuremath{\func[_i'] \mySub \func[_i]}}
+%     \AxiomC{\assumeCmd{\ctx}{\func[_o]}{o}{\ctx[']}}
+%     \RightLabelM{\ruleCheckCall}
+%     \QuaternaryInfC{\checkCmd{\ctx}{\func}{(\predVar\ i\ o)}{\ctx[']}{\maxT\ \func\ \func[']}}
+%   \end{myRule}
+% }
+\def\stackalignment{l}
 \newcommand{\ruleCheckCall}{\ruleCheckName{rule:check-callOK}{@}}
 \newcommand{\ruleCheckCallM}[1]{
   \begin{myRule}{#1}
     % CALL SUCC
-    \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]}}}
-    \AxiomC{\inferCmdArr{\ctx}{i}{\func[_i']}}
-    \AxiomC{\ensuremath{\func[_i'] \mySub \func[_i]}}
-    \AxiomC{\assumeCmd{\ctx}{\func[_o]}{o}{\ctx[']}}
+    \AxiomC{
+      \stackanchor{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]}}}
+      {\inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}}
+    \AxiomC{
+        \stackanchor
+        {\ensuremath{\text{if } \func[_i'] \mySub \func[_i] \land \mathcal{R}}}
+        {\stackanchor
+          {then $(\assumeCmd{\ctx}{\func[_o]}{o}{\ctx[']}) \land (\func[''] = \maxT\ \func\ \func['])$}
+          {else $\ctx['] = \ctx \land \func[''] = \relI$}}
+      }
+    % \AxiomC{
+    %   \stackanchor
+    %   {\ensuremath{\text{if } \mathcal{R}}}
+    %   {\stackanchor
+    %     {then $\func[''] = \maxT\ \func\ \func[']$}
+    %     {else $\func[''] = \relI$}}}
     \RightLabelM{\ruleCheckCall}
-    \QuaternaryInfC{\checkCmd{\ctx}{\func}{(\predVar\ i\ o)}{\ctx[']}{\maxT\ \func\ \func[']}}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{(\predVar\ i\ o)}{\ctx[']}{\func['']}}
   \end{myRule}
 }
 
@@ -111,9 +115,9 @@
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
-    \AxiomC{$\lnot (\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]} \land \inferCmdArr{\ctx}{i}{\_})$}
+    \AxiomC{\inferCmdArr{\ctx}{i}{\_}{\bot}}
     \RightLabelM{\ruleCheckCallFail}
-    \UnaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ i\ o)}{\ctx + \UCmd{\ctx}{\bot}{o}}{\relI}}
+    \UnaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ i\ o)}{\ctx}{\relI}}
   \end{myRule}
 }
 
@@ -151,18 +155,19 @@
 \newcommand{\checkTermFig}{
   \begin{subfigure}[b]{1\textwidth}
     \centering
-    
+
     \ruleCheckCutM{.45}
-  
+
     % \ruleCheckPiM{.5}
     \ruleCheckPiImplM{1}
-  
+
     \ruleCheckUnifM{1}
-  
+    \ruleCheckUnifFailM{0.52}
+    
     % \ruleCheckMatchM{.7}
     \ruleCheckCallM{1}
-    \ruleCheckCallFailM{1}
-  
+    % \ruleCheckCallFailM{0.44}
+
     \caption{\checkk\ relation}
     \label{fig:static-check-term}
   \end{subfigure}

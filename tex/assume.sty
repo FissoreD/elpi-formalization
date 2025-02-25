@@ -51,9 +51,18 @@
 \newcommand{\ruleAssumeHd}{\ruleAssume{rule:assume-hd}{\predVar}}
 \newcommand{\assumeHd}[1]{
   \begin{myRule}{#1}
-    \AxiomC{$\texttt{is\_var\ \predVar} \lor \ctx\ \predVar = \func$ }
+    \AxiomC{$\texttt{is\_var\ \predVar}$ }
     \RightLabelM{\ruleAssumeHd}
     \UnaryInfC{\assumeCmd{\ctx}{\func}{\predVar}{\ctx + \{\predVar \mapsto \func\}}}
+  \end{myRule}
+}
+
+\newcommand{\ruleAssumeHdP}{\ruleAssume{rule:assume-hdP}{\pred}}
+\newcommand{\assumeHdP}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{$\lnot \texttt{is\_var\ \predVar} \land \ctx\ \predVar \mySub \func$ }
+    \RightLabelM{\ruleAssumeHdP}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{\predVar}{\ctx}}
   \end{myRule}
 }
 
@@ -74,15 +83,16 @@
   \begin{subfigure}[b]{1\textwidth}
     \centering
 
-    \assumeHd{0.35}
-    \assumeUnif{0.32}
+    \assumeHd{0.33}
+    \assumeHdP{0.35}
+    \assumeCut{0.25}
 
-    \assumeCut{0.28}
+    \assumeUnif{0.3}
     \assumePiImpl{0.5}
 
     % \assumeApp{0.33} 
     \assumeApp{1}
- 
+
     \caption{\assume\ relation}
     \label{fig:det-assume}
   \end{subfigure}
