@@ -507,10 +507,43 @@ passes the check.
 % Dare un esempio in cui l'input ground non è garantito e in cui il checkin viene
 % invalidato
 
+\newcommand{\pgc}{\texttt{pgCheck}}
+\newcommand{\pgcC}{\texttt{pgCheckC}}
+\newcommand{\pgcP}{\texttt{pgCheckP}}
+
 \subsection{Mode checking: input-ground mode}
 \label{sec:mc}
 
 The last but not least important point to treat in the 
+
+\begin{definition}[Proposiotions ground check (\pgc)] 
+  ground check: \pgc.
+\end{definition}
+
+\begin{definition}[Clause prop ground check (\pgcC)]
+  Given a clause, we use the same algorithm as the mode ground checker from
+  the literature, but, instead of using the ground condition on terms, we
+  use the definition of input ground check (\pgc)
+\end{definition}
+
+\begin{definition}[Program ground check (\pgcP)] 
+  Given a program \prog,
+  $$\forall p\ c, c \in \prog p \to \pgcC\ c$$
+\end{definition}
+
+
+\subsection{The final theorems}
+
+\begin{theorem}[Determinacy checking property]
+  Given a program \prog and a predicate \pred
+  \begin{align*}
+    &\pgcP\ \prog \to \detCheck\ \prog\ \pred \to \\ 
+      &\quad \forall i\ o, \pgc\ i\ \to \isdet\ \prog\ \pred\ i\ o \\
+        &\qquad\land \pgc\ o \land \infer\ o = \get{o}p
+  \end{align*}
+  \vspace{-20pt}
+  \label{th:det3}
+\end{theorem}
 
 \subsection{Mix data with ty}
 
