@@ -9,55 +9,63 @@ discusses a basic version of \elpi with only Horn clauses and the cut operator,
 and 2) the second extends this version by introducing hereditary-Harrop
 formulas, we will keep the presentation of the types and functions we need
 simple, expanding them further when needed.
+%
+\begin{align}
+  tm     & ::= \cut \mid \predVar\ \vec{tm} \mid tm = tm \mid \lambda x.tm \label{eq:tm} \\
+  clause & ::= \clauseCmd{\predVar}{\vec{tm}}{\vec{tm}}                  \label{eq:cl}   \\
+  goal   & ::= \goalCmd{\prog}{tm}{\vec{alt}}                                                            \\
+  alt    & ::= \texttt{subst} * \vec{goal}
+\end{align}
 
-Data are represented by terms. For now, terms live in the datatype, they are
-variables, constants or compound terms. A compound term is term with a rigid
-head followed by a list of other terms. 
-Predicates are binary relations of type \\\elpiIn{tm -> tm -> prop}
-where \elpiIn{tm} is a notation for term. The first argument of a predicate is
-considered has its input and the second is its output. This choice aims to ease
-the presentation of mode checking (see \cref{sec:modes}). By convention
-variables are indicated with capital letters, whereas predicate names and
-terms are indicated with lower case letters.
-
-An atom is either a fully applied predicate or the cut operator, noted
-\cut.
+Terms are shown in \cref{eq:tm}. They are made by the \cut\ operator
+(usually noted \elpiIn{!}); term application, we use the symbol \predVar\
+to indicate variable names, they can be either predicate names, i.e. constants
+of the program, or quantified variables. An application is followed by a 
+vector of terms. Term unification is a special case of term application,
+we prefer to have a special case for it. Finally we have lambda-abstractions,
+where the notation $\lambda x.tm$ is the abstraction of the variable $x$ inside
+$tm$.
+By convention we differentiate unification variables from constants
+by indicating the former with capital letters and the latters
+with lower case letters.
 
 A variable is a term not yet instantiated. We can assign variables thanks to the
-unification procedure. The notation \unifyCmd{t_1}{t_2}{\subst}{\subst[']} represents
-the unification between the terms $t_1$ and $t_2$ from an intial substitution \subst
-to a final substition \subst[']. A substitution is a mapping from a variable name to its
-assignment $t$. Unification provides, when possible, a most general substitution
-between the two terms. If this substitution, sometime called unifier, does not
-exists, then the following property holds:
+\unify\ procedure. It is used each time a term like $t_1 = t_2$ is encountered
+while solving a goal. The notation \unifyCmd{t_1}{t_2}{\subst}{\subst[']} is
+the unification and between the terms $t_1$ and $t_2$. It also takes an initial substitution \subst
+which is updated into the final substition \subst[']. A substitution is a mapping from variables name to their
+assignment. An assignment is a term. Unification provides, when possible, a most general unifier
+between the two terms. The notation $\subst t$ is the application of a substitution
+to a term.
+It returns a new term where all the variables in $t$ have been recursively
+replaced by heir assignment in \subst. If the variable as no assignment
+in \subst\ then the same variable is returned.
+
+Unification has some interesting properties
 
 \begin{definition}[Unification negation]
-  \vspace{-1em}
-  $$(\forall \subst, \subst t_1 \neq \subst t_2) \to (\neg (\exists t_3~\subst_1~\subst_2,
-  \subst_1 t_1 = \subst_1 t_3 \land \subst_2 t_2 = \subst_2 t_3))$$
+  \vspace{-1em}\todo{qui = è il same term}
+  $$(\forall \subst, \lnot (\exists \subst['], \unifyCmd{t_1}{t_2}{\subst}{\subst[']}) \to (\neg (\exists t_3~\subst_1~\subst_2,
+      \subst_1 t_1 = \subst_1 t_3 \land \subst_2 t_2 = \subst_2 t_3))$$
 \end{definition}
 
 \begin{definition}[Substitution union]
-  \vspace{-1em}
+  \vspace{-1em}\todo{qui = è il same term}
   $$\subst_1 \cap \subst_2  = \varnothing \to \subst_1\ t_1 = \subst_2\ t_2 \to (\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$$
 \end{definition}
 
-The notation $\subst t$ is the application of a term to a substitution.
-It returns a new term where all variables in $t$ have been recursively been
-replaced by heir assignment in \subst.
+A clause (\cref{eq:cl}) is made of a variable name, its list of arguments and a body made of a
+list of terms. This list of terms are called \textit{premises} and should be
+considered as a list of subgoals in conjunction.
 
-A clause is made of a predicate name, its two arguments and a body made of a
-list of atoms. The list of these atoms are called premises and should be
-considered as a list of subgoals in conjunction. By convention a clause is noted
-with ``\clauseCmd{p}{i\ o}{b}'' where p is the predicate name i and o are its
-parameters and b is the body. It should be read as follows: if $b$ holds
-then $p\ i\ o$ holds. 
-
-A program is a mapping from predicate names to clauses. These clauses are in
-disjunction and the order of their visit depend on the chronological order in
-which clauses have been declared. We have no builtin \textit{or} operator but
-it's behavior can be replicated by adding several implementation of the same
-rule.
+A program is a mapping from predicate names to clauses. These clauses are
+disjunctive, and the order in which they are explored follows the chronological
+order of their declaration.
+In our approach, we do not include built-in operators, keeping the language as
+minimalist as possible. For instance, there is no built-in \textit{or} operator.
+However, its behavior can be replicated by defining a custom \textit{or}
+predicate with two arguments and providing two implementations: one invoking the
+first argument and the other invoking the second.
 
 Unlike other prolog system, such as \mercury \cite{1996Somogy}, \elpi is not a
 compiled language and we do not transform the list $\mathcal{L}$ of clauses of a
@@ -66,16 +74,17 @@ disjunction of $\mathcal{L}$. This is mainly due to the fact that \elpi is an
 homoiconic language and its program definition can change during the evaluation
 of the code.
 
-A program is a mapping from predicate names to clauses. By hypothesis, we assume
-that every program we work with from now on has been type-checked (see
-\cite{1992nadathur}). One of the role of type-checking is to ensure that
-commands and expressions are not mixed: commands, also called propositions, are
-pieces of executable code, whereas expressions are not. Instead, expressions
-serve to carry pieces of information during the execution of commands.
+% A program is a mapping from predicate names to clauses. By hypothesis, we assume
+% that every program we work with from now on has been type-checked (see
+% \cite{1992nadathur}). One of the role of type-checking is to ensure that
+% commands and expressions are not mixed: commands, also called propositions, are
+% pieces of executable code, whereas expressions are not. Instead, expressions
+% serve to carry pieces of information during the execution of commands.
 
-A goal is a triple made of a program \prog, an atom
-\g and the list of alternatives \alt existing at moment of the creation of 
-the goal. We provide more details in some paragraph. 
+A goal is a triple made of a program \prog, a term
+and the list of alternatives \alt existing at moment of the creation of
+the goal. A query is a list of goals (noted \g in the following) in conjunction, whereas alternatives
+ (noted \alt in the following) represent a disjunction of goals.
 % In particular,
 % \g is evaluated by looking into the clauses inside \prog.
 % \alt
@@ -86,61 +95,62 @@ the goal. We provide more details in some paragraph.
 The interpreter takes a program a query and returns a substitution if the query
 is a consequence of the program. Each time a predicate call has multiple clauses
 implementing it, it commits the first choice and keep the other as global
-alternatives. If that choice leads to a failure, the interpreter will try to
+alternatives. If the committed choice leads to a failure, the interpreter will try to
 execute the first alternative. This non-deterministic behavior can be controlled
 by the user thanks to the cut operator which allows to cut away unwanted choice
 points.
 
-TODO: dire cosa significa che una clausola can be applied successfully on a
-goal.
+We say that a clause applies on the goal if its head unifies with a goal
+and we say that it \textit{successfully} unifies with a goal if the clause
+applies on the goal and all premises in its body succeed.
 
-To be more precise, we give below the type structure of each cunstruct we have
-defined above:
+% \begin{coqcode}
+%   Definition pn := string. (*predicate names are strings*)
+%   Definition vn := string. (*variable  names are strings*)
+%   Inductive tm := 
+%     | Call (p:pn) (i:tm) (o:tm)  (*binary predicates taking integers*)
+%     | Cut                        (*the cut operator*)
+%     | Unify (t1:tm) (t2:tm)      (*unification between t1 and t2*)
+%     | Var (n:vname)              (*a variable*)
+%     | Lam (x: vn) (b:tm)         (*lam abstraction*)
+%     ...                          (*this is extended in section XX*)
+%   Inductive clause := Clause (p:pn) (i:tm) (i:tm) (A:list tm).
+%   Notation "P I O :- Bo" := (Clause P I O Bo).
+%   Notation "t1 = t2" := (Unify t1 t2).
+%   Definition sbst := T.
+%   Definition prog := pn -> list clause.
+%   Inductive goal := Goal (P:prog) (a:tm) (A:list alt) -> goal.
+%   with alt := sbst * list goal.
+% \end{coqcode}
 
-\begin{coqcode}
-  Definition pn := string. (*predicate names are strings*)
-  Definition vn := string. (*variable  names are strings*)
-  Inductive tm := 
-    | Call (p:pn) (i:tm) (o:tm)  (*binary predicates taking integers*)
-    | Cut                        (*the cut operator*)
-    | Unify (t1:tm) (t2:tm)      (*unification between t1 and t2*)
-    | Var (n:vname)              (*a variable*)
-    | Lam (x: vn) (b:tm)         (*lam abstraction*)
-    ...                          (*this is extended in section XX*)
-  Inductive clause := Clause (p:pn) (i:tm) (i:tm) (A:list tm).
-  Notation "P I O :- Bo" := (Clause P I O Bo).
-  Notation "t1 = t2" := (Unify t1 t2).
-  Definition sbst := T.
-  Definition prog := pn -> list clause.
-  Inductive goal := Goal (P:prog) (a:tm) (A:list alt) -> goal.
-  with alt := sbst * list goal.
-\end{coqcode}
-
-The evaluation of a program is done through the \run\ predicate.
+The evaluation of a program is done through the \run\ predicate. It is a
+function with the following signature:
 %
-\begin{minted}[autogobble]{coq}
-  Inductive run : goal -> list alt -> subst -> list alt -> subst := ...
-\end{minted}
+$$run : goal \to \vec{alt} \to subst \to (\vec{alt} * subst)$$
+%
+% \begin{minted}[autogobble]{coq}
+%   Inductive run : goal -> list alt -> subst -> list alt -> subst := ...
+% \end{minted}
 
-The inductive \coqIn{run} should be read as a relation between a goal \g, a list of
-alternative \alt (which are in disjunction with the current goal) and an initial
-substitution \subst. These three objects produce a new list of alternatives
-\alt['] and a new substitution \subst[']. 
+\coqIn{run} should be understood as a relation between a goal \g, a list of
+alternatives \alt (which are disjunctive with the current goal), and an initial
+substitution \subst. These three components produce a new list of alternatives
+\alt['] and an updated substitution \subst['].
 The notation \runCmd{\mathcal{G}}{\mathcal{A}}{\subst}{\mathcal{A}'}{\subst'}
-stands for the a call to \run. Its system of rules is shown in \cref{fig:basic-interp}.
-
+represents calls to \run. The corresponding system of rules is presented in
+\cref{fig:basic-interp}.
 \begin{figure}
-  
+
   \ruleStopM{.45}
   \ruleFailM{.45}
   \vspace{0.3em}%
-  
+
   \ruleUnifM{.50}
   \ruleBangM{.40}
   \vspace{0.3em}%
-  
+
   \ruleCallM{1}
-  
+
   \caption{Dynamic semantics}
   \label{fig:basic-interp}
 \end{figure}
@@ -166,20 +176,18 @@ continuations to store the state of a choice point, we represent this
 information as lists containing the alternatives, along with the substitution
 that existed at the moment the choice point was created.
 
-
-A query is a list of goals (noted with \g) put in cunjunction, whereas the
-alternatives (noted \alt) represent a disjunction of goals. In the derivation
-system, we use the two colon symbol ($::$) has separator between the head of a
+In the derivation
+system, we use the two-colon symbol ($::$) as separator between the head of a
 list and its tail; $@$ stands for list concatenation; $\EmptyList$ is the empty list.
-``$\prog\ \pred$'' is the application of \prog to the predicate $p$; it returns a list of
-clauses. The function $\mathcal{F}$ is defined as follows:
+``$\prog\ \pred$'' is the application of \prog to the predicate \pred; it returns the list of
+clauses for \pred\ in the program. The function $\mathcal{F}$ is defined as follows:
 %
 $$
-\mathcal{F}(\prog, \pred, i, o, \subst, \alt) := 
+  \mathcal{F}(\prog, \pred, i, o, \subst, \alt) :=
   [(\subst, (
-      \Cons{(\prog, i = i', \alt)}
-        \Cons{(\prog, o = o', \alt)}
-          {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{\pred}{i'\ o'}{bs} \in \prog\ \pred]
+  \Cons{(\prog, i = i', \alt)}
+  \Cons{(\prog, o = o', \alt)}
+  {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{\pred}{i'\ o'}{bs} \in \prog\ \pred]
 $$
 
 It takes a list of clauses, two terms $i$ and $o$,
@@ -235,7 +243,7 @@ alternatives \alt.
 
 Note that we have intentionally kept out form \cref{fig:basic-interp}
 the rule for variables appearing as goals. Variables will play an important role
-in \cref{sec:vars}. 
+in \cref{sec:vars}.
 
 The combination of the \ref{rule:call} and \ref{rule:cut} rules is crucial for replicating
 the behavior of the cut. When a call to a predicate generates multiple rules as
@@ -257,11 +265,11 @@ più lontano perchè il deref è fatto anche nelle call
 As an example, let's consider the following program called \prog:
 
 \begin{elpicode}
-p1 X Y :- p2 X Y.           % r1
-p1 3 3.                     % r2
-p2 X Y :- p3 X Y, !, Y = 1. % r3
-p2 1 1.                     % r4
-p3 1 2.                     % r5
+  p1 X Y :- p2 X Y.           % r1
+  p1 3 3.                     % r2
+  p2 X Y :- p3 X Y, !, Y = 1. % r3
+  p2 1 1.                     % r4
+  p3 1 2.                     % r5
 \end{elpicode}
 
 {
@@ -273,12 +281,12 @@ producing a new goal for the rule $r1$ and an alternative list containing $r2$,
 we leave out details concerning unifications of head terms. The execution of
 $r1$ will try to solve $r3$. This will add three goals \elpiIn{r 1 Y, !, Y = 1}
 with cut-alternatives equal to $r2$ whereas the new alternatives will be $r4 @
-r2$. The execution of $r3$ will solve \elpiIn{p3 1 Y} with substitution $s :=
-\{X \gets 1; Y \gets 2\}$. The \elpiIn{!} will cut away the alternative $r4 @
-r2$ and will keep the cut-alternative $r2$. The failing premise \elpiIn{Y = 1}
+  r2$. The execution of $r3$ will solve \elpiIn{p3 1 Y} with substitution $s :=
+  \{X \gets 1; Y \gets 2\}$. The \elpiIn{!} will cut away the alternative $r4 @
+  r2$ and will keep the cut-alternative $r2$. The failing premise \elpiIn{Y = 1}
 will cause a backtracking thanks to \ref{rule:fail} and try to apply $r2$ from the
 empty substitution. This last unification succeed with final substution $?\subst :=
-\{X \gets 3; Y \gets 3\}$ and final list of alternatives $?A := \EmptyList$.
+  \{X \gets 3; Y \gets 3\}$ and final list of alternatives $?A := \EmptyList$.
 
 % \begin{myRule}{1}
 %   \AxiomC{}
@@ -365,12 +373,12 @@ aiming to concatate two lists.
 In a prolog-ish program without modes, the following program:
 
 \begin{elpicode}
-append [X|Xs] L [X|L'] :- append Xs L L'. % app1
-append [] L L.                            % app2
+  append [X|Xs] L [X|L'] :- append Xs L L'. % app1
+  append [] L L.                            % app2
 \end{elpicode}
 
 \noindent
-makes the query ``\elpiIn{append Y [] L, 0 = 1}'' to diverge. 
+makes the query ``\elpiIn{append Y [] L, 0 = 1}'' to diverge.
 Here the variable \elpiIn{Y} is unified with a list of infinite
 length, the rule \texttt{app1} being continously applied.
 
@@ -392,9 +400,9 @@ variable unification within the pattern fragment.
 \begin{definition}[Well-moded program (\wellModed)]
   \begin{coqcode}
     Definition ~\customlabel{wellmoded}{\texttt{well\_moded}}~ ~\prog\!\!~:
-      forall p i o (HG: ground i) ~\subst \subst[']~, 
-        (H: ~\runCmd{[\goalCmd{\prog}{\callCmd{\texttt{p}}{\texttt{i}}{\texttt{o}}}{\EmptyList}]}{\EmptyList}{\subst}{a}{\subst[']}~),
-          ground (~\subst' ~o).
+    forall p i o (HG: ground i) ~\subst \subst[']~,
+    (H: ~\runCmd{[\goalCmd{\prog}{\callCmd{\texttt{p}}{\texttt{i}}{\texttt{o}}}{\EmptyList}]}{\EmptyList}{\subst}{a}{\subst[']}~),
+    ground (~\subst' ~o).
   \end{coqcode}
   \label{def:well-moded}
 \end{definition}
@@ -419,7 +427,7 @@ meta-language for proof verification
 need to work with a higher-order setup where inputs (and outputs) may not be
 fully instantiated: the role of the search engine is to potentially assign
 unification variables. In the first part of the paper, we will introduce the
-seamantics of the input mode which is used in \elpi. 
+seamantics of the input mode which is used in \elpi.
 In the second part, we extend it so that it works with predicates taking
 predicate calls as arguments.
 
@@ -493,7 +501,7 @@ To define this property, we first need to introduce some auxiliary definitions:
     \forall \subst, \lnot (\exists \subst['], \unifyCmd{i_1}{i_2}{\EmptySubst}{\subst[']})
   \end{align*}
   \vspace{-2em}
-  \label{def:mut-excl-head} 
+  \label{def:mut-excl-head}
 \end{definition}
 
 That is, two clauses have mutually-exclusive heads if it does not exists a
@@ -504,8 +512,8 @@ an input and output.
 \begin{lemma}[Mutually-exclusive heads property]
   Given two clauses $c_1$ and $c_2$ with head respectively $h_1$ and $h_2$ then
   $$\mutExclHeads\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists t,
-  \ground{t} \to \unifyCmd{t}{h_1}{\EmptySubst}{\subst_1} \land
-  \unifyCmd{t}{h_2}{\EmptySubst}{\subst_2})$$
+    \ground{t} \to \unifyCmd{t}{h_1}{\EmptySubst}{\subst_1} \land
+    \unifyCmd{t}{h_2}{\EmptySubst}{\subst_2})$$
   \vspace{-2em}
   \label{th:mut-excl-head}
 \end{lemma}
@@ -513,12 +521,12 @@ an input and output.
 \begin{proof}
   By contradiction, let $t$ be a term unifying with both $h_1$ and $h_2$. This
   means that there exists two substitutions such that $\subst_1\ t = \subst_1\
-  h_1$ and $\subst_2\ t = \subst_2\ h_2$. Since t is ground the equations can be
+    h_1$ and $\subst_2\ t = \subst_2\ h_2$. Since t is ground the equations can be
   simplified into: $t = \subst_1\ h_1$ and $t = \subst_2\ h_2$, implying that
   $\subst_1\ h_1 = \subst_2\ h_2$. Hoever, due to $\mutExclHeads\ c_1\ c_2$,
   $h_1$ and $h_2$ cannot be unified, therefore for any substituions
   $\subst[']_1$ and $\subst[']_2$, we have $\subst[']_1\ h_1 \neq \subst[']_2\
-  h_2$, a contradiction.
+    h_2$, a contradiction.
 \end{proof}
 
 % \begin{coqcode}
@@ -527,7 +535,7 @@ an input and output.
 
 %   Definition mutual_exclusive_cut c1 c2 :=
 %     before c1 c2 -> with_cut c1
-    
+
 %   Definition mutual_exclusive prog p :=
 %     forall c1 c2, c1 <> c2 -> c1 \in prog p -> c2 \in prog p ->
 %       mutual_exclusive_clause c1 c2 \/ mutual_exclusive_cut c1 c2
@@ -562,7 +570,7 @@ an input and output.
 
 \begin{definition}[Mutual-exclusion (\mutExcl)]
   Given a program \prog and a predicate \pred. The clauses of \pred inside \pred
-  are mutually exclusive if for any two pair of clauses, 
+  are mutually exclusive if for any two pair of clauses,
   $$\mutExclHeads\ c_1\ c_2 \lor \mutExclCut\ c_1\ c_2$$
   \vspace{-2em}
   \label{def:mut-excl}
@@ -579,7 +587,7 @@ an input and output.
 \end{proof}
 
 The second important condition
-for determinacy is the following: 
+for determinacy is the following:
 
 \newcommand{\detAtom}{\texttt{det\_atom}}
 
@@ -660,11 +668,11 @@ well with our language.
 The first motivation is that since \elpi is an interpreted dialect of \lamprolog,
 program can change dynamically on the run of a program. This means that
 rules can be added \textit{à la volée} making impossible to infer
-determinacy as the user expects. 
-It's 
+determinacy as the user expects.
+It's
 up to the user to choose what should be the behavior of a predicate wrt
 determinacy. The checker is meant to assist the user by rejecting, a predicate,
-that does not respect the declared determinacy. 
+that does not respect the declared determinacy.
 
 As explained in some of the previously cited papers, determinacy (and so
 functionality) checking is an undecidable problem. The checking property is
