@@ -33,7 +33,7 @@
 
 \newcommand{\ruleMatchM}[1]{
   \begin{myRule}{#1}
-    % UNIF
+    % MATCH
     \AxiomC{\matchCmd{x}{y}{\subst}{\subst[']}}
     \AxiomC{\runCmd{\g}{\alt}{\subst[']}{\alt[']}{\subst['']}}
     \RightLabelM{\ruleMatch}
@@ -63,10 +63,10 @@
 \newcommand{\ruleCallM}[1]{
   \begin{myRule}{#1}
     % CALL
-    \AxiomC{$\mathcal{F}(\prog, \pred, i, o, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
+    \AxiomC{$\mathcal{F}(\prog, \pred,\vec{i}, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
     \AxiomC{\runCmd{(g\ @\ \g)}{(new\_alt\ @\ \alt)}{\subst}{\alt[']}{\subst[']}}
     \RightLabelM{\ruleCall}
-    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{\pred}{i}{o}}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
+    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{\pred}{\vec{i}}}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
   \end{myRule}
 }
 

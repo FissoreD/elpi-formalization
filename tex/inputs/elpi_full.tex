@@ -511,10 +511,26 @@ passes the check.
 \newcommand{\pgcC}{\texttt{pgCheckC}}
 \newcommand{\pgcP}{\texttt{pgCheckP}}
 
-\subsection{Mode checking: input-ground mode}
+\subsection{Mode checking: propositional-ground mode}
 \label{sec:mc}
 
-The last but not least important point to treat in the 
+\begin{leftbar}{red}
+
+The last but not least important point to treat is the mode checker. Similarly
+to the determinacy checker in the literature, the determinacy checker extended
+with higher-order propositional variable need a guarantee on the terms that are
+manipulated during the resolution of a goal. If we take back the predicate
+\elpiIn{idF}, defined at the beginning of \cref{sec:vars} and the predicate
+\elpiIn{give-fun}, defined and the end of the previous paragraph, we can create
+a list of premises contradicting the hypothesis the static checker performs on
+terms.
+
+The list of goal we may be interested in is \elpiIn{idF X X, X = give-fun 3 Y}.
+This goal naturally succeeds at runtime, but what breaks the checker is the
+hypothesis made on the variable \elpiIn{X}. If we perform a \checkk\ on the
+first atom we realize that 
+
+As we have sketched in \cref{sec:basic-elpi}, we don't want to perform 
 
 \begin{definition}[Proposiotions ground check (\pgc)] 
   ground check: \pgc.
@@ -530,20 +546,34 @@ The last but not least important point to treat in the
   Given a program \prog,
   $$\forall p\ c, c \in \prog p \to \pgcC\ c$$
 \end{definition}
+\end{leftbar}
 
 
 \subsection{The final theorems}
 
+The final theorem we want to prove is the following.
+
 \begin{theorem}[Determinacy checking property]
-  Given a program \prog and a predicate \pred
+  Given a context \ctx, a program \prog and a predicate \pred
+  % \begin{align*}
+  %   &\pgcP\ \prog \to \detCheck\ \prog\ \to \\ 
+  %     &\quad \forall i\ o, \pgc\ i\ \to \isdet\ \prog\ \pred\ i\ o \\
+  %       &\qquad\land \pgc\ o \land \infer\ o = \get{o}p
+  % \end{align*}
   \begin{align*}
-    &\pgcP\ \prog \to \detCheck\ \prog\ \pred \to \\ 
-      &\quad \forall i\ o, \pgc\ i\ \to \isdet\ \prog\ \pred\ i\ o \\
-        &\qquad\land \pgc\ o \land \infer\ o = \get{o}p
+    &\detCheck\ \prog\ \to \\ 
+      &\quad(\forall p\ c, c \in \prog\ p \to \checkc\ \ctx\ c) \to \\
+        &\qquad \isdet\ \prog\ \pred\ i\ o \land \infer\ o = \get{o}p
   \end{align*}
   \vspace{-20pt}
   \label{th:det3}
 \end{theorem}
+
+$$\isdet := \isDetCmd{i}$$
+
+\begin{proof}
+  We reason on the derivation 
+\end{proof}
 
 \subsection{Mix data with ty}
 

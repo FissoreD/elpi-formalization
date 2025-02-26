@@ -137,7 +137,7 @@ setting.
 \begin{theorem}[Determinacy checking in HOAS]
   Given a program \prog and a predicate \pred
   \begin{align*}
-    &\detCheckHO\ \prog\ \pred \to \forall i\ o,\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList    
+    &\detCheckHO\ \prog\ \pred \to \forall i\ o,\runCmd{[\goalCmd{\prog}{\callCmd{p}{i\ o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList    
   \end{align*}
   \vspace{-2em}
   \label{th:det2}

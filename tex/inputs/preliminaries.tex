@@ -11,10 +11,10 @@ formulas, we will keep the presentation of the types and functions we need
 simple, expanding them further when needed.
 %
 \begin{align}
-  tm     & ::= \cut \mid \predVar\ \vec{tm} \mid tm = tm \mid \lambda x.tm \label{eq:tm} \\
-  clause & ::= \clauseCmd{\predVar}{\vec{tm}}{\vec{tm}}                  \label{eq:cl}   \\
-  goal   & ::= \goalCmd{\prog}{tm}{\vec{alt}}                                                            \\
-  alt    & ::= \texttt{subst} * \vec{goal}
+  tm     & ::= \cut \mid \predVar\ \vecL{tm} \mid tm = tm \mid \lambda x.tm \label{eq:tm} \\
+  clause & ::= \clauseCmd{\predVar}{\vecL{tm}}{\vecL{tm}}                  \label{eq:cl}   \\
+  goal   & ::= \goalCmd{\prog}{tm}{\vecL{alt}} \label{eq:goal}                                                  \\
+  alt    & ::= \texttt{subst} * \vecL{goal} \label{eq:alt}
 \end{align}
 
 Terms are shown in \cref{eq:tm}. They are made by the \cut\ operator
@@ -81,10 +81,10 @@ of the code.
 % pieces of executable code, whereas expressions are not. Instead, expressions
 % serve to carry pieces of information during the execution of commands.
 
-A goal is a triple made of a program \prog, a term
+A goal (\cref{eq:goal}) is a triple made of a program \prog, a term
 and the list of alternatives \alt existing at moment of the creation of
-the goal. A query is a list of goals (noted \g in the following) in conjunction, whereas alternatives
- (noted \alt in the following) represent a disjunction of goals.
+the goal. A query is a list of goals (noted \g in the following) in conjunction, whereas alternatives 
+ (\cref{eq:alt}, noted \alt in the following) represent a disjunction of goals.
 % In particular,
 % \g is evaluated by looking into the clauses inside \prog.
 % \alt
@@ -126,7 +126,7 @@ applies on the goal and all premises in its body succeed.
 The evaluation of a program is done through the \run\ predicate. It is a
 function with the following signature:
 %
-$$run : goal \to \vec{alt} \to subst \to (\vec{alt} * subst)$$
+$$run : goal \to \vecL{alt} \to subst \to (\vecL{alt} * subst)$$
 %
 % \begin{minted}[autogobble]{coq}
 %   Inductive run : goal -> list alt -> subst -> list alt -> subst := ...
@@ -183,24 +183,24 @@ list and its tail; $@$ stands for list concatenation; $\EmptyList$ is the empty 
 clauses for \pred\ in the program. The function $\mathcal{F}$ is defined as follows:
 %
 $$
-  \mathcal{F}(\prog, \pred, i, o, \subst, \alt) :=
-  [(\subst, (
-  \Cons{(\prog, i = i', \alt)}
-  \Cons{(\prog, o = o', \alt)}
-  {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{\pred}{i'\ o'}{bs} \in \prog\ \pred]
+  \mathcal{F}(\prog, \pred, \vec{t}, \subst, \alt) :=
+  \Bigg[\bigg(\subst, 
+    \Big(
+      \big[(\prog, i_x = i_x', \alt) \mid x \in \text{len }t\big] @
+      \big[(\prog, g, \alt) \mid g \in bs\big]
+    \Big)\bigg) \mid \clauseCmd{\pred}{\vec{t'}}{bs} \in \prog\ \pred\Bigg]
 $$
 
-It takes a list of clauses, two terms $i$ and $o$,
+It takes program \prog, a predicate name \pred, a list of terms,
 a substitution $\subst$ and a list of alternatives \alt. For each clause
-\clauseCmd{p}{i'\ o'}{bs}, it builds a new list of pairs where the first argument
-is the substitution $\subst$ and the second are goals made by 1) the unification of
-the first argument $i'$ with the first argument $i$ of the predicate call 2) the
-unification between the second arguments $o'$ and $o$ 3) the map of each premise
-$g$ in the body $bs$ which return a new list of goals having the program $p$,
-the atom $g$ and the list of alternatives \alt.
+\clauseCmd{p}{\vec{t'}}{bs}, it builds a new list of pairs where the first argument
+is the substitution $\subst$ and the second is the list of new goals to treat.
+This list is made by all the unification between the terms received at call
+time and the argument of the clause and is followd by the premises
+of the clause that have been transformed in a goal. 
 
-The behaviour of the program depends on the shape of the list of goal and its
-alternatives. A query succeed if exists a sequence of reductions allowing to reach the
+The behaviour of the \run\ procedure depends on the shape of the list of goal and its
+alternatives. A query succeed if it exists a sequence of reductions allowing to reach the
 \textit{stop rule}, symbolyzed with \ref{rule:stop}.
 
 More precisely, the \textit{stop rule} captures configurations with an empty
@@ -235,14 +235,18 @@ away not only the later clauses of the same predicate, but also the alternative
 clauses for subgoals that appear earlier in the clause''.
 
 The \textit{call rule} (\ref{rule:call}) deals with goals starting with a predicate
-call. In this case the function $\mathcal{F}$ is called with the parameters as
+call, \pred\ is the notation to represent predicate name. In this case the function $\mathcal{F}$ is called with the parameters as
 explained above and if the result of this operation is the list
 \ConsHd{b}\ConsTl{bs}, then a recursive call to \run\ is done by prepending $b$ to
 the list of remaining goals \g and $bs$ is prepended to the list of
 alternatives \alt.
 
-Note that we have intentionally kept out form \cref{fig:basic-interp}
-the rule for variables appearing as goals. Variables will play an important role
+We can remark that the terms accepted by the interpreter are terms in the
+canonical form, i.e. no lambda abstraction can appear in the head of a
+application. Moreover, we intentionally keep out from \cref{fig:basic-interp}
+application with head being variables. This essentially means that variables
+are never evaluated, in this first part of the paper.  Variables will play an 
+important role
 in \cref{sec:vars}.
 
 The combination of the \ref{rule:call} and \ref{rule:cut} rules is crucial for replicating
@@ -257,11 +261,6 @@ consists of the atoms $a_1, \dots, a_k, !, a_{k+2}, \dots, a_m$, then all choice
 points created during the evaluation of $a_1, \dots, a_k$ will also be pruned.
 This pruning consist simply in setting the cut alternatives to \alt.
 
-TODO: aggiungere nota: l'interprete lavora su termini che sono in canonical
-form. La sostizione fa la beta reduction, nell'interprete di base questo succede
-solo nel momento di chiamata a \unify. Nell'interpreter in \cref{sec:vars} si va
-più lontano perchè il deref è fatto anche nelle call
-
 As an example, let's consider the following program called \prog:
 
 \begin{elpicode}
@@ -273,7 +272,7 @@ As an example, let's consider the following program called \prog:
 \end{elpicode}
 
 {
-\def\goalG{\goalCmd{\prog}{\callCmd{p1}{3}{Z}}{\EmptyList}}
+\def\goalG{\goalCmd{\prog}{\callCmd{\texttt{p1}}{3\ Z}}{\EmptyList}}
 
 Let $\mathcal{G} :=\ \goalG$ be a goal, the execution of
 ``\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?\subst}'' will apply \ref{rule:call}
@@ -401,7 +400,7 @@ variable unification within the pattern fragment.
   \begin{coqcode}
     Definition ~\customlabel{wellmoded}{\texttt{well\_moded}}~ ~\prog\!\!~:
     forall p i o (HG: ground i) ~\subst \subst[']~,
-    (H: ~\runCmd{[\goalCmd{\prog}{\callCmd{\texttt{p}}{\texttt{i}}{\texttt{o}}}{\EmptyList}]}{\EmptyList}{\subst}{a}{\subst[']}~),
+    (H: ~\runCmd{[\goalCmd{\prog}{\callCmd{\texttt{p}}{\texttt{i}\ \texttt{o}}}{\EmptyList}]}{\EmptyList}{\subst}{a}{\subst[']}~),
     ground (~\subst' ~o).
   \end{coqcode}
   \label{def:well-moded}
@@ -471,7 +470,7 @@ TODO: place the following definition somewhere
 \begin{definition}[Deterministacy (\isdet)]
   Given a program \prog, a predicate \pred, an input $i$ and an output $o$ terms,
   \isdet is defined as follows:
-  $\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList$
+  $$\isDetCmd{i}$$
 \end{definition}
 
 
