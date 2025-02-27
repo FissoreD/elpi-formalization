@@ -475,6 +475,7 @@ The following notation helps us to capture the definition of determinacy.
   Given a program \prog and a term $t$,
   \isdet\ is defined as follows:
   $$\forall a\ \subst, \isDetCmd{t}$$
+  \label{def:is-det}
 \end{definition}
 
 The determinacy definition that adhere the most to our need is the one
@@ -578,16 +579,16 @@ formula retrives the $n^{th}$ argument in a vector of terms.
 \end{proof}
 
 \begin{definition}[Mutual-exclusion (\mutExcl)]
-  Given a program \prog, for all deterministic predicate \pred in \prog,
-  the clauses in \pred\
-  are mutually exclusive if for any two pair of clauses,
+  Given a program \prog and a deterministic predicate \pred,
+  for any two pair of clauses $c_1$ and $c_2$ in \prog\ \pred, then
+  \vspace{-0.5em}
   $$\mutExclHeads\ c_1\ c_2 \lor \mutExclCut\ c_1\ c_2$$
   \vspace{-2em}
   \label{def:mut-excl}
 \end{definition}
 
 \begin{lemma}[Mutually-exclusion property]
-  Forall program \prog, such that $\mutExcl\ \prog$, and predicate \pred, at
+  Given program \prog and predicate \pred, if $\mutExcl\ \prog\ \pred$ then at
   most one clause can be successfully applied fron any call to \pred with ground
   inputs.
   \label{th:mut-excl}
@@ -642,8 +643,9 @@ predicates.
 % \end{proof}
 
 \begin{definition}[Determinacy checking (\detCheck)]
-  For any program \prog and any deterministic predicate \pred,
+  Given a program \prog, for all deterministic predicate \pred,
   $$\mutExcl\ \prog\ \pred \land \detPrem\ \prog\ \pred$$
+  \label{def:det-check}
 \end{definition}
 
 \begin{theorem}[Determinacy checking property]

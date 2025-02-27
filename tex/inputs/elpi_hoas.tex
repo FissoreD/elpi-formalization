@@ -126,11 +126,12 @@ Thanks to this we can define the mutual-exlusion definition in the higher-order
 setting.
 
 \begin{definition}[Mutual-exclusion in HOAS (\mutExclHO)]
-  Given a program \prog and a predicate \pred, mutual exclusion is defined as
-  $$\mutExcl\footnote{see \cref{def:mut-excl}}\ \prog\ \pred \land (\forall \pred[']\
+  Given a program \prog, forall deterministic predicate \pred, mutual exclusion is defined as
+  follows:
+  $$\mutExcl\ \prog \land (\forall \pred[']\
   c, c\in \prog\ \pred['] \to \locExcl\ c\ \pred)$$
   \vspace{-2em}
-  \label{def:mut-exclHO}
+  \label{def:det-check-ho}
 \end{definition}
 
 

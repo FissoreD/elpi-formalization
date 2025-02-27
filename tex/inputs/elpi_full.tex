@@ -561,8 +561,8 @@ The final theorem we want to prove is the following.
   %       &\qquad\land \pgc\ o \land \infer\ o = \get{o}p
   % \end{align*}
   \begin{align*}
-    % &\detCheck\ \prog\ \to \\ 
-    (\forall p\ c, c \in \prog\ p \to \checkc\ \ctx\ c) \to \isdet\ \prog\ (\pred\ \vec{t}) %\land \infer\ \vec{t}_o = \get{o}p
+    \hyperref[def:det-check-ho]{\detCheckHO}\ \prog\ \to
+    (\forall p\ c, c \in \prog\ p \to \hyperref[fig:static-check]{\checkc}\ \ctx\ c) \to \forall \vec{t}, \hyperref[def:is-det]{\isdet}\ \prog\ (\pred\ \vec{t}) %\land \infer\ \vec{t}_o = \get{o}p
   \end{align*}
   \vspace{-20pt}
   \label{th:det3}
@@ -572,8 +572,9 @@ The final theorem we want to prove is the following.
 
 \begin{proof}
   We reason on the derivations in \cref{fig:basic-interp} extended with
-  \cref{fig:interp-match,fig:interp-piimpl}.
-  The 
+  \cref{fig:interp-match,fig:interp-piimpl}. The interesting case is the rule
+  \ref{rule:call} since we have an application in our call the \run.
+  By 
 \end{proof}
 
 \subsection{Mix data with ty}
