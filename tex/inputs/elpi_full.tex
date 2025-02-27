@@ -70,8 +70,8 @@ provide expressive type signatures for constants. The grammar is
 as follows:
 %
 \begin{align}
-  ty   & ::= data \mid pred                                    \label{eq:ty}        \\
-  data & ::= \texttt{c}\ data^\ast \mid data \to data \mid \predVar \label{eq:data} \\
+  ty   & ::= data \mid pred                                    \label{eq:ty1}        \\
+  data & ::= \texttt{c}\ data^\ast \mid data \to data \mid \predVar \label{eq:data1} \\
   % pred & ::= \relI\ ty^\ast \mid \detI\ ty^\ast \funsep ty^\ast \label{eq:pred}
   pred & ::= [\detI \mid \relI]\ ty^\ast \funsep ty^\ast \label{eq:pred}
 \end{align}
@@ -96,7 +96,7 @@ Thanks to this, we can define the signature of the predicates above:
   \texttt{once}     & : \dtype{\detI}{[\relI]}{[]}      & \texttt{do}  & : \dtype{\detI}{[\detI]}{[]}      \\
   \texttt{make-det} & : \dtype{\detI}{[\relI]}{[\detI]} & \texttt{idF} & : \dtype{\detI}{[\detI]}{[\detI]}
 \end{align*}
-% \label{eq:ty}
+% \label{eq:ty1}
 % \end{equation}
 
 In the code abode we use brackets to delimit lists. The idea is that, thanks to
@@ -123,8 +123,8 @@ is a function: \elpiIn{A} could be a relation and calling it in the body may
 create choice points.
 
 To address all of these issues we implement a static checker labelling variables
-with their determinacy. Labels are instances of $ty$ in \cref{eq:ty}, to
-simplify our presentation, $data$s in \cref{eq:data} are represented with the
+with their determinacy. Labels are instances of $ty$ in \cref{eq:ty1}, to
+simplify our presentation, $data$s in \cref{eq:data1} are represented with the
 \expI\ tag.
 
 
@@ -580,7 +580,7 @@ The final theorem we want to prove is the following.
 \subsection{Mix data with ty}
 
 \begin{align}
-  data & ::= \texttt{c}\ ty^\ast \mid data \to data \mid \predVar \label{eq:data1}
+  data & ::= \texttt{c}\ ty^\ast \mid data \to data \mid \predVar \label{eq:data11}
 \end{align}
 
 \subsection{Determinacy polymorphism}

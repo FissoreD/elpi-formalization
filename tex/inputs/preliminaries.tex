@@ -7,24 +7,32 @@ called \elpi.
 Since we have structured our paper into two main sections: 1) the first
 discusses a basic version of \elpi with only Horn clauses and the cut operator,
 and 2) the second extends this version by introducing hereditary-Harrop
-formulas, we will keep the presentation of the types and functions we need
-simple, expanding them further when needed.
-%
-\begin{align}
-  tm     & ::= \cut \mid \predVar\ \vecL{tm} \mid tm = tm \mid \lambda x.tm \label{eq:tm} \\
-  clause & ::= \clauseCmd{\predVar}{\vecL{tm}}{\vecL{tm}}                  \label{eq:cl}  \\
-  goal   & ::= \goalCmd{\prog}{tm}{\vecL{alt}} \label{eq:goal}                            \\
-  alt    & ::= \texttt{subst} * \vecL{goal} \label{eq:alt}
-\end{align}
+formulas. Below we give a simple presentation of some basic 
+objects of our language, they will be expanded in next section when needed.
+\\
+\begin{minipage}{0.45\textwidth}%
+  \vspace{-1em}
+  \begin{align}
+    tm     & ::= \cut \mid \predVar\ \vecL{tm} \mid tm = tm \label{eq:tm} \\
+    ty     & ::= data \mid \texttt{pred}\ data\ast \label{eq:ty} \\
+    data   & ::= \texttt{c}\ data^\ast \mid \predVar \label{eq:data}
+  \end{align}  
+\end{minipage}
+\begin{minipage}{0.45\textwidth}
+  \vspace{-1em}
+  \begin{align}
+    clause & ::= \clauseCmd{\pred}{\vecL{tm}}{\vecL{tm}}                  \label{eq:cl}  \\
+    goal   & ::= \goalCmd{\prog}{tm}{\vecL{alt}} \label{eq:goal}                            \\
+    alt    & ::= \texttt{subst} * \vecL{goal} \label{eq:alt}
+  \end{align}  
+\end{minipage}
 
 Terms are shown in \cref{eq:tm}. They are made by the \cut\ operator
 (usually noted \elpiIn{!}); term application, we use the symbol \predVar\
 to indicate variable names, they can be either predicate names, i.e. constants
 of the program, or quantified variables. An application is followed by a
 vector of terms. Term unification is a special case of term application,
-we prefer to have a special case for it. Finally we have lambda-abstractions,
-where the notation $\lambda x.tm$ is the abstraction of the variable $x$ inside
-$tm$.
+we prefer to have a special case for it. 
 By convention we differentiate unification variables from constants
 by indicating the former with capital letters and the latters
 with lower case letters.
@@ -53,6 +61,14 @@ Unification has some interesting properties
   \vspace{-1em}\todo{qui = è il same term}
   $$\subst_1 \cap \subst_2  = \varnothing \to \subst_1\ t_1 = \subst_2\ t_2 \to (\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$$
 \end{definition}
+
+Each term in the language has a type (\cref{eq:ty}). The type is either a
+$data$, that is the type of expressions or a $pred$ the type for predicates,
+that is the type of executable piece of code. Predicates are parametrized by
+arguments whose type are of type $data$. $data$ (\cref{eq:data}) are made by
+constants applied to list of data, we have for example the type \elpiIn{int} or
+\elpiIn{list}, and \predVar\ stands for variables, allowing therefore to have
+polymorphism.
 
 A clause (\cref{eq:cl}) is made of a variable name, its list of arguments and a body made of a
 list of terms. This list of terms are called \textit{premises} and should be
@@ -480,10 +496,28 @@ The following notation helps us to capture the definition of determinacy.
 
 The determinacy definition that adhere the most to our need is the one
 considering the arguments marked as input as terms that are consumed by the
-interpreter and that allow to produce determinalistically the output. In order
-to differenciate input from output in an application like $\predVar\ \vec{t}$,
-we use the notation $t_i$ and $t_o$ to respectively separate the input and the
-output arguments of \predVar.
+interpreter and that allow to produce determinalistically the output. %In order
+% to differenciate input from output in an application like $\predVar\ \vec{t}$,
+% we use the notation $t_i$ and $t_o$ to respectively separate the input and the
+% output arguments of \predVar.
+
+In order to differenciate relations from deterministic predicates, and also
+to distinguish input from output arguments, we change the signature of predicate
+as follows:
+%
+\begin{align}
+  pred ::= [\detI \mid \relI]\ data^\ast \funsep data^\ast
+\end{align}
+
+A predicate is either deterministic (\detI) or relational (\relI). The symbol
+\funsep\ separates input from output arguments. We let \expI\ be a shortcut for
+for all terms of type $data$ and let \ctx\ be a mapping from predicate names to
+their determinacy type (dtype). For now, the dtype is simply the type of the
+predicate where all $data$ have been replaced with \expI. For example, if
+\elpiIn{succ} is a function two arguments of type \elpiIn{int} the first being
+the input the second being the output, then ``$\ctx\ \texttt{succ} =
+\dtype{\detI}{[\expI]}{[\expI]}$''. By convention we say that in a predicate
+signature all inputs comes before outputs.
 
 We resume below the definitions and the properties
 that are needed for determinacy checking.
@@ -494,8 +528,8 @@ that are needed for determinacy checking.
 % on the same predicate call. Two clauses respecting this property are called
 % mutually-exclusive.
 %
-To define this property, we first need to introduce some auxiliary definitions:
-\cref{def:mut-excl,def:det-prem}.
+To define this property, we first need to introduce some the auxiliary
+definitions.
 
 
 \begin{definition}[Mutually-exclusive heads (\mutExclHeads)]
@@ -504,32 +538,34 @@ To define this property, we first need to introduce some auxiliary definitions:
   %     ~$\forall\ i1\ o1\ bo1\ i2\ o2\ bo2$~ (H1: ~\clauseCmd{p}{i1\ o1}{bo1}~ \in ~$\prog\ p$~) (H2: ~\clauseCmd{p}{i2\ o2}{bo2}~ \in ~$\prog\ p$~),
   %         not (exists ~\subst\!\!~, ~\unifyCmd{i1}{i2}{\EmptySubst}{\subst}~)
   % \end{coqcode}
-  Given two clauses
+  Given a context \ctx\ and two clauses
   $c_1 = \clauseCmd{\pred}{\vec{t}}{bo_1}$ and
-  $c_2 = \clauseCmd{\pred}{\vec{u}}{bo_2}$ we have
+  $c_2 = \clauseCmd{\pred}{\vec{u}}{bo_2}$. Let $\ctx\ \pred = \dtype{\_}{i}{\_}$
+  and $k$ being the length of $i$, then
   \begin{align*}
-    \forall \subst \exists n, \lnot (\exists \subst['], \unifyCmd{(\vec{t}_i)_n}{(\vec{u}_i)_n}{\subst}{\subst[']})
+    \forall \subst \exists n, 0 \leq n < k \land \lnot (\exists \subst['], \unifyCmd{\vec{t}_n}{\vec{u}_n}{\subst}{\subst[']})
   \end{align*}
   \vspace{-2em}
   \label{def:mut-excl-head}
 \end{definition}
 
-That is, two clauses have mutually-exclusive heads if it does exists an
+That is, two clauses have mutually-exclusive heads if it does exists a
 term in input position discriminating them, the subscript $n$ in the
 formula retrives the $n^{th}$ argument in a vector of terms.
 
 \begin{lemma}[Mutually-exclusive heads property]
   Given two clauses $c_1 = \clauseCmd{\predVar}{\vec{t}}{b_1}$ and $c_2 = \clauseCmd{\predVar}{\vec{u}}{b_2}$ then
+  let $\vec{t}_i$ and $\vec{u}_i$ the inputs arguments of $\vec{t}$ and $\vec u$ respectively.
   % forall vector of \textit{ground} terms $\vec{v}$,
   $$\mutExclHeads\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
-    \ground\ \vec{v} \to \unifyCmd{\vec{v}}{\vec{t}_i}{\EmptySubst}{\subst_1} \land
-    \unifyCmd{\vec{v}}{\vec{u}_i}{\EmptySubst}{\subst_2})$$
+    \vecL{\ground\ v} \to \unifyCmd[1]{v}{t_i}{\EmptySubst}{\subst_1} \land
+    \unifyCmd[1]{v}{u_i}{\EmptySubst}{\subst_2})$$
   \vspace{-2em}
   \label{th:mut-excl-head}
 \end{lemma}
 
 \begin{proof}
-  By contradiction, let $\vec{v}$ be a term unifying with both $\vec{t}_i$ and $\vec{u}_i$. This
+  By contradiction, let $\vec{v}$ be a ground vector unifying with both $\vec{t}_i$ and $\vec{u}_i$. This
   means that there exists two substitutions such that $\subst_1\ \vec{v} = \subst_1\
     \vec{t}_i$ and $\subst_2\ \vec{v} = \subst_2\ \vec{u}_i$. Since $\vec{v}$ is ground the equations can be
   simplified into: $\vec{v} = \subst_1\ \vec{t}_i$ and $\vec{v} = \subst_2\ \vec{u}_i$, implying that
@@ -579,10 +615,11 @@ formula retrives the $n^{th}$ argument in a vector of terms.
 \end{proof}
 
 \begin{definition}[Mutual-exclusion (\mutExcl)]
-  Given a program \prog and a deterministic predicate \pred,
+  Given a context \ctx and a program \prog, forall predicate \pred, such
+  that $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ and
   for any two pair of clauses $c_1$ and $c_2$ in \prog\ \pred, then
   \vspace{-0.5em}
-  $$\mutExclHeads\ c_1\ c_2 \lor \mutExclCut\ c_1\ c_2$$
+  $$\mutExclHeads\ \ctx\ c_1\ c_2 \lor \mutExclCut\ c_1\ c_2$$
   \vspace{-2em}
   \label{def:mut-excl}
 \end{definition}
@@ -604,14 +641,15 @@ for determinacy is the following:
 \newcommand{\detAtom}{\texttt{det\_call}}
 
 \begin{definition}[Deterministic term application (\detAtom)]
-  A term application $\pred\ \vec{t}$ is if $t$ is a deterministic predicate.
+  Given a context \ctx\, the term $\pred\ \vec{t}$ is a deterministic
+  call if $\ctx\ \pred = \dtype{\detI}{\_}{\_}$
 \end{definition}
 
 \begin{definition}[Deterministic premises (\detPrem)]
-  Let \prog be a program and \pred be a deterministic predicate, then let
-  $\prog\ \pred = c_1, \dots\ c_n$. For any body $b_i = a_1,\dots,a_m$ of any
-  clause $c_i$,
-  $$(\exists j, a_j = \cut \land \forall k, k > j \to \detAtom\ a_k) \lor (\forall j, \detAtom\ a_j)$$
+  Given a context \ctx\ and a program \prog, forall predicate \pred, such that
+  $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ and forall clause
+  $(\clauseCmd{\pred}{\vec{t}}{b_1\dots b_n}) \in \prog\ \pred$,
+  $$(\exists j, b_j = \cut \land \forall k, k > j \to \detAtom\ b_k) \lor (\forall j, \detAtom\ b_j)$$
   \vspace{-2em}
   \label{def:det-prem}
 \end{definition}

@@ -139,7 +139,10 @@
 
 \newcommand{\piImplCmd}[4][]{\piCmd[#1]{#2}{\implCmd{#3}{#4}}}
 
-\newcommand{\unifyCmd}[4]{\ensuremath{\unify\ #1\ #2\ #3 \arr #4}}
+\newcommand{\unifyCmd}[5][]{\ensuremath{
+  \ifstrequal{#1}{1}
+    {\vecL{\unify\ #2\ #3}}
+    {\unify\ #2\ #3}\ #4 \arr #5}}
 \newcommand{\matchCmd}[4]{\ensuremath{\match\ #1\ #2\ #3 \arr #4}}
 
 \newcommand{\tailcutCmd}[2]{\ensuremath{\tailcut\ #1\ #2}\xspace}
