@@ -186,9 +186,9 @@ $$
   \mathcal{F}(\prog, \pred, \vec{t}, \subst, \alt) :=
   \Bigg[\bigg(\subst,
     \Big(
-    \big[(\prog, i_x = i_x', \alt) \mid x \in \text{len }t\big] @
+    \big[(\prog, \vec{t}_x = \vec{u}_x, \alt) \mid x \in \text{len }t\big] @
     \big[(\prog, g, \alt) \mid g \in bs\big]
-    \Big)\bigg) \mid \clauseCmd{\pred}{\vec{t'}}{bs} \in \prog\ \pred\Bigg]
+    \Big)\bigg) \mid \clauseCmd{\pred}{\vec{u}}{bs} \in \prog\ \pred\Bigg]
 $$
 
 It takes program \prog, a predicate name \pred, a list of terms,
@@ -472,9 +472,9 @@ specialized it so that a faster routine can be used in the compiled program.
 The following notation helps us to capture the definition of determinacy.
 
 \begin{definition}[Deterministacy (\isdet)]
-  Given a program \prog, a predicate \pred, and a list of terms $\vec{t}$,
+  Given a program \prog and a term $t$,
   \isdet\ is defined as follows:
-  $$\forall a\ \subst, \isDetCmd{\vec{t}}$$
+  $$\forall a\ \subst, \isDetCmd{t}$$
 \end{definition}
 
 The determinacy definition that adhere the most to our need is the one
@@ -514,7 +514,7 @@ To define this property, we first need to introduce some auxiliary definitions:
 \end{definition}
 
 That is, two clauses have mutually-exclusive heads if it does exists an
-term in input position discriminating them, the subscript $n$ in the 
+term in input position discriminating them, the subscript $n$ in the
 formula retrives the $n^{th}$ argument in a vector of terms.
 
 \begin{lemma}[Mutually-exclusive heads property]

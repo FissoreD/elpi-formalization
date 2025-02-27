@@ -147,7 +147,7 @@ relation between two determinacies.
 \begin{equation}
   f_1 \mySub f_2 =
   \begin{cases}
-    \bot                                                         & \text{if } f_1 = \relI\ \_\ \land f_2 = \detI\ \_    \\
+    \bot                                                          & \text{if } f_1 = \relI\ \_\ \land f_2 = \detI\ \_    \\
     % (\forall i, a'_i \mySub a_i) \land (\forall j, b_j \mySub b'_j)      & \text{else if } f_1 = \detI\ a\ b \land f_2 = \detI\ a'\ b' \\
     % (\forall i, a'_i \mySub c_i) \land (\forall j, b_j \mySub c_{|a|+j}) & \text{else if } f_1 = \detI\ a\ b \land f_2 = \relI\ c      \\
     % \forall i, a_i \mySub b_i                                            & \text{else if } f_1 = \relI\ a\ \land f_2 = \relI\ b        \\
@@ -340,7 +340,7 @@ allowing to \infer\ (\cref{fig:det-inference}) the dtype of a term, to \assume\
 \cref{fig:det-assume}
 the dtype of a term, that is, update a given mapping such that the wanted
 quantified variable has a given determinacy, to \checkk\
-(\cref{fig:static-check}) a propositional term. 
+(\cref{fig:static-check}) a propositional term.
 
 % This check relation is not
 % far from a subtyping checker where the subtyping relation is \mySub. The checker
@@ -362,11 +362,11 @@ $t$ and a boolean. The bollean tells if the term is well dtyped, the only intere
 case for it is \ref{rule:infer-app}.
 
 In particular, rule \ref{rule:infer-hd} handles variables or predicate names by
-retrieving their determinacy from the context.  
+retrieving their determinacy from the context.
 Rules \ref{rule:infer-cut} and \ref{rule:infer-unif} are straightforward: both
-the \cut\ operation and unification are considered deterministic predicates.  
+the \cut\ operation and unification are considered deterministic predicates.
 Rule \ref{rule:infer-piimpl} handles the \coqIn{PiImpl} constructor by extending
-\ctx\ with a mapping from the local variable $x$ to its dtype.  
+\ctx\ with a mapping from the local variable $x$ to its dtype.
 Finally, rule \ref{rule:infer-app} addresses term applications. It returns if
 the application stands for a call to a deterministic or relational predicate.
 Together with this piece of information we have the boolean which tests if the
@@ -384,7 +384,7 @@ variables \predVar. It updates its dtype in \ctx\ is updated to \func. In
 determinacy should be less or equal than the one received in entry. Rules
 \ref{rule:assume-cut} and \ref{rule:assume-unif} does not change the context,
 both the \cut and the $=$ operators are deterministic terms and $\forall d,
-\detI \mySub d$. Rule \ref{rule:assume-piimpl} goes under the implication with a
+  \detI \mySub d$. Rule \ref{rule:assume-piimpl} goes under the implication with a
 recursive call charging in the context the local binder $x$. This same binder is
 removed from the result in the output. Finally the rule for term application
 \ref{rule:assume-app} tries to assume that the application has a determinacy
@@ -397,7 +397,7 @@ the inputs, giving the new the output.
 The \checkk\ procedure combines both \infer\ and \assume. The goal is to check
 that if we execute a terms, given a context \ctx and a entry determinacy \func\,
 the execution produces a new context \ctx['] updating simulatneously the
-determinacy of the term. 
+determinacy of the term.
 
 For example see \ref{rule:check-cut}, if the term we have to execute is a \cut,
 then we know that no matter what is the entry determinacy, we know that in the
@@ -460,16 +460,16 @@ expectation in the signature.
 We provide an example of this checker in the following database.
 
 \begin{elpicode}
-give-fun X (succ X Y).
-give-fun X (pred X Y).
-good :- give-fun 3 Res, !, Res.
+  give-fun X (succ X Y).
+  give-fun X (pred X Y).
+  good :- give-fun 3 Res, !, Res.
 \end{elpicode}
 
 The signatures of the predicates in the snippet above are the following:
 %
 \begin{align*}
-  \texttt{succ} &: \dtype{\detI}{\expI}{\expI} & \texttt{pred} &: \dtype{\detI}{\expI}{\expI} \\
-  \texttt{give-fun} &: \dtype{\relI}{[\expI]}{[\detI]} & \texttt{good} &: \detI
+  \texttt{succ}     & : \dtype{\detI}{\expI}{\expI}     & \texttt{pred} & : \dtype{\detI}{\expI}{\expI} \\
+  \texttt{give-fun} & : \dtype{\relI}{[\expI]}{[\detI]} & \texttt{good} & : \detI
 \end{align*}
 
 The static checker for determinacy starts by analysing the first rule for
@@ -481,7 +481,7 @@ rule respect the contract of the signature: the rule is valid. A very similar
 reasonment can be do on the second rule for \texttt{give-fun}. It is now more
 interesting to analyze the clause for \texttt{good}. We have no input, thereofre
 we keep analyze the body. The context on which \checkL\ is launched is $\ctx =
-\{\text{\elpiIn{Res}}\mapsto \relI\}$ since in the wrost case the determinacy of
+  \{\text{\elpiIn{Res}}\mapsto \relI\}$ since in the wrost case the determinacy of
 a term with type \texttt{prop} is \relI. The iteration on the terms in the body
 starts by analysing ``\elpiIn{give-fun 3 Res}'' which makes the determinacy of
 the term relational and sets updates the context to
@@ -511,68 +511,69 @@ passes the check.
 \newcommand{\pgcC}{\texttt{pgCheckC}}
 \newcommand{\pgcP}{\texttt{pgCheckP}}
 
-\subsection{Mode checking: propositional-ground mode}
-\label{sec:mc}
+% \subsection{Mode checking: propositional-ground mode}
+% \label{sec:mc}
 
-\begin{leftbar}{red}
+% \begin{leftbar}{red}
 
-The last but not least important point to treat is the mode checker. Similarly
-to the determinacy checker in the literature, the determinacy checker extended
-with higher-order propositional variable need a guarantee on the terms that are
-manipulated during the resolution of a goal. If we take back the predicate
-\elpiIn{idF}, defined at the beginning of \cref{sec:vars} and the predicate
-\elpiIn{give-fun}, defined and the end of the previous paragraph, we can create
-a list of premises contradicting the hypothesis the static checker performs on
-terms.
+% The last but not least important point to treat is the mode checker. Similarly
+% to the determinacy checker in the literature, the determinacy checker extended
+% with higher-order propositional variable need a guarantee on the terms that are
+% manipulated during the resolution of a goal. If we take back the predicate
+% \elpiIn{idF}, defined at the beginning of \cref{sec:vars} and the predicate
+% \elpiIn{give-fun}, defined and the end of the previous paragraph, we can create
+% a list of premises contradicting the hypothesis the static checker performs on
+% terms.
 
-The list of goal we may be interested in is \elpiIn{idF X X, X = give-fun 3 Y}.
-This goal naturally succeeds at runtime, but what breaks the checker is the
-hypothesis made on the variable \elpiIn{X}. If we perform a \checkk\ on the
-first atom we realize that 
+% The list of goal we may be interested in is \elpiIn{idF X X, X = give-fun 3 Y}.
+% This goal naturally succeeds at runtime, but what breaks the checker is the
+% hypothesis made on the variable \elpiIn{X}. If we perform a \checkk\ on the
+% first atom we realize that 
 
-As we have sketched in \cref{sec:basic-elpi}, we don't want to perform 
+% As we have sketched in \cref{sec:basic-elpi}, we don't want to perform 
 
-\begin{definition}[Proposiotions ground check (\pgc)] 
-  ground check: \pgc.
-\end{definition}
+% \begin{definition}[Proposiotions ground check (\pgc)] 
+%   ground check: \pgc.
+% \end{definition}
 
-\begin{definition}[Clause prop ground check (\pgcC)]
-  Given a clause, we use the same algorithm as the mode ground checker from
-  the literature, but, instead of using the ground condition on terms, we
-  use the definition of input ground check (\pgc)
-\end{definition}
+% \begin{definition}[Clause prop ground check (\pgcC)]
+%   Given a clause, we use the same algorithm as the mode ground checker from
+%   the literature, but, instead of using the ground condition on terms, we
+%   use the definition of input ground check (\pgc)
+% \end{definition}
 
-\begin{definition}[Program ground check (\pgcP)] 
-  Given a program \prog,
-  $$\forall p\ c, c \in \prog p \to \pgcC\ c$$
-\end{definition}
-\end{leftbar}
+% \begin{definition}[Program ground check (\pgcP)] 
+%   Given a program \prog,
+%   $$\forall p\ c, c \in \prog p \to \pgcC\ c$$
+% \end{definition}
+% \end{leftbar}
 
 
-\subsection{The final theorems}
+\subsection{The final theorem}
 
 The final theorem we want to prove is the following.
 
 \begin{theorem}[Determinacy checking property]
-  Given a context \ctx, a program \prog and a predicate \pred
+  Given a context \ctx, a program \prog and a deterministic predicate \pred
   % \begin{align*}
   %   &\pgcP\ \prog \to \detCheck\ \prog\ \to \\ 
   %     &\quad \forall i\ o, \pgc\ i\ \to \isdet\ \prog\ \pred\ i\ o \\
   %       &\qquad\land \pgc\ o \land \infer\ o = \get{o}p
   % \end{align*}
   \begin{align*}
-    &\detCheck\ \prog\ \to \\ 
-      &\quad(\forall p\ c, c \in \prog\ p \to \checkc\ \ctx\ c) \to \\
-        &\qquad \isdet\ \prog\ \pred\ i\ o \land \infer\ o = \get{o}p
+    % &\detCheck\ \prog\ \to \\ 
+    (\forall p\ c, c \in \prog\ p \to \checkc\ \ctx\ c) \to \isdet\ \prog\ (\pred\ \vec{t}) %\land \infer\ \vec{t}_o = \get{o}p
   \end{align*}
   \vspace{-20pt}
   \label{th:det3}
 \end{theorem}
 
-$$\isdet := \isDetCmd{i}$$
+% $$\isdet := \isDetCmd{i}$$
 
 \begin{proof}
-  We reason on the derivation 
+  We reason on the derivations in \cref{fig:basic-interp} extended with
+  \cref{fig:interp-match,fig:interp-piimpl}.
+  The 
 \end{proof}
 
 \subsection{Mix data with ty}

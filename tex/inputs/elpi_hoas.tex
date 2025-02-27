@@ -50,7 +50,7 @@ usata in its body
 
 
 To account for the new constructor in the language, we extend our interpreter.
-The updated rule is shown in \cref{fig:full-interp}.  
+The updated rule is shown in \cref{fig:interp-piimpl}.  
 
 We modify the signature of a \goal, which now takes a context \ctx instead of
 just a program \prog. This context, denoted as \ctx, consists of a pair: a
@@ -67,7 +67,7 @@ it should extract the first component of \ctx\ to obtain the expected output.
 
   % \ruleLamM{.85}
   \caption{Dynamic semantics: rule for higher-order prolog}
-  \label{fig:full-interp}
+  \label{fig:interp-piimpl}
 \end{figure}
 
 The notation $H + \prog$ is the insertion of the clause $H$ 
@@ -81,7 +81,7 @@ provided that $x \notin \env$.
 % attempts to solve \( B \) under a program extended with the clause \( H \). The
 % rule \rulePi introduces the name of the fresh variable into the program.  
 
-The rule \ref{rule:piimpl} in \cref{fig:full-interp} is interpreted by running the
+The rule \ref{rule:piimpl} in \cref{fig:interp-piimpl} is interpreted by running the
 goal under the \pi and the \impl charging both the local variable and clause
 inside its scope.
 
@@ -94,7 +94,7 @@ unification. \env is required to know if a term is in the pattern fragment.
 
 The insertion of the new rule makes the determinacy checker to change
 accordingly. In particular, the rule $H$ charged by \impl\ in
-\cref{fig:full-interp} may break \cref{def:mut-excl}. This is because the rule
+\cref{fig:interp-piimpl} may break \cref{def:mut-excl}. This is because the rule
 being added may overlap with other existing rules. This means that the execution of $B$ may
 produce several results which is not the desired behavior if the $B$ should be
 deterministic.

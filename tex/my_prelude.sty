@@ -49,7 +49,7 @@
 \newcommand{\g}[1][]{\ensuremath{\mathcal{G}#1}\xspace}
 \newcommand{\clause}[1][]{\ensuremath{\mathcal{@}#1}\xspace}
 \newcommand{\pred}[1][]{\texttt{p#1}\xspace}
-\newcommand{\isDetCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{\callCmd{p}{#1}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList}}
+\newcommand{\isDetCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList}}
 
 \newenvironment{boxedproof}
 {\begin{mdframed}\begin{proof}}

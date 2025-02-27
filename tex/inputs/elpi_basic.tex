@@ -143,13 +143,23 @@ The introduction of dynamic modes requires modifying the interpreter so that the
 \match procedure is called when unification is performed on input terms. To
 achieve this, we need to slightly adjust the $\mathcal{F}$ function used by the
 \ref{rule:call}, as follows:%
-$$
-\mathcal{F}(\prog, \pred, i, o, \subst, \alt) := 
-  [(\subst, (
-      \Cons{(\prog, i =_m i', \alt)}
-        \Cons{(\prog, o = o', \alt)}
-          {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{\pred}{i'\ o'}{bs} \in \prog\ \pred]
-$$
+% $$
+% \mathcal{F}(\prog, \pred, i, o, \subst, \alt) := 
+%   [(\subst, (
+%       \Cons{(\prog, i =_m i', \alt)}
+%         \Cons{(\prog, o = o', \alt)}
+%           {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{\pred}{i'\ o'}{bs} \in \prog\ \pred]
+% $$
+%
+\begin{align*}
+  \mathcal{F}(\prog, \pred, \vec{t}, \subst, \alt) :=
+  \Bigg[\bigg(\subst,
+    \Big(
+    &\big[(\prog, (\vec{t}_i)_x =_m (\vec{u}_i)_x, \alt) \mid 0 \leq x < \text{len }\vec{t}_i\big] @ \\
+    &\quad\big[(\prog, (\vec{t}_o)_x = (\vec{u}_o)_x, \alt) \mid 0 \leq x < \text{len }\vec{t}_o\big] @\\
+    &\qquad\big[(\prog, g, \alt) \mid g \in bs\big]
+    \Big)\bigg) \mid \clauseCmd{\pred}{\vec{u}}{bs} \in \prog\ \pred\Bigg]
+\end{align*}
 
 The main difference is that the usage of the $=_m$ to indicate that the
 first unification should be performed with the \match procedure.
