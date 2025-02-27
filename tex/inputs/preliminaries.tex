@@ -12,15 +12,15 @@ simple, expanding them further when needed.
 %
 \begin{align}
   tm     & ::= \cut \mid \predVar\ \vecL{tm} \mid tm = tm \mid \lambda x.tm \label{eq:tm} \\
-  clause & ::= \clauseCmd{\predVar}{\vecL{tm}}{\vecL{tm}}                  \label{eq:cl}   \\
-  goal   & ::= \goalCmd{\prog}{tm}{\vecL{alt}} \label{eq:goal}                                                  \\
+  clause & ::= \clauseCmd{\predVar}{\vecL{tm}}{\vecL{tm}}                  \label{eq:cl}  \\
+  goal   & ::= \goalCmd{\prog}{tm}{\vecL{alt}} \label{eq:goal}                            \\
   alt    & ::= \texttt{subst} * \vecL{goal} \label{eq:alt}
 \end{align}
 
 Terms are shown in \cref{eq:tm}. They are made by the \cut\ operator
 (usually noted \elpiIn{!}); term application, we use the symbol \predVar\
 to indicate variable names, they can be either predicate names, i.e. constants
-of the program, or quantified variables. An application is followed by a 
+of the program, or quantified variables. An application is followed by a
 vector of terms. Term unification is a special case of term application,
 we prefer to have a special case for it. Finally we have lambda-abstractions,
 where the notation $\lambda x.tm$ is the abstraction of the variable $x$ inside
@@ -83,8 +83,8 @@ of the code.
 
 A goal (\cref{eq:goal}) is a triple made of a program \prog, a term
 and the list of alternatives \alt existing at moment of the creation of
-the goal. A query is a list of goals (noted \g in the following) in conjunction, whereas alternatives 
- (\cref{eq:alt}, noted \alt in the following) represent a disjunction of goals.
+the goal. A query is a list of goals (noted \g in the following) in conjunction, whereas alternatives
+(\cref{eq:alt}, noted \alt in the following) represent a disjunction of goals.
 % In particular,
 % \g is evaluated by looking into the clauses inside \prog.
 % \alt
@@ -184,10 +184,10 @@ clauses for \pred\ in the program. The function $\mathcal{F}$ is defined as foll
 %
 $$
   \mathcal{F}(\prog, \pred, \vec{t}, \subst, \alt) :=
-  \Bigg[\bigg(\subst, 
+  \Bigg[\bigg(\subst,
     \Big(
-      \big[(\prog, i_x = i_x', \alt) \mid x \in \text{len }t\big] @
-      \big[(\prog, g, \alt) \mid g \in bs\big]
+    \big[(\prog, i_x = i_x', \alt) \mid x \in \text{len }t\big] @
+    \big[(\prog, g, \alt) \mid g \in bs\big]
     \Big)\bigg) \mid \clauseCmd{\pred}{\vec{t'}}{bs} \in \prog\ \pred\Bigg]
 $$
 
@@ -197,7 +197,7 @@ a substitution $\subst$ and a list of alternatives \alt. For each clause
 is the substitution $\subst$ and the second is the list of new goals to treat.
 This list is made by all the unification between the terms received at call
 time and the argument of the clause and is followd by the premises
-of the clause that have been transformed in a goal. 
+of the clause that have been transformed in a goal.
 
 The behaviour of the \run\ procedure depends on the shape of the list of goal and its
 alternatives. A query succeed if it exists a sequence of reductions allowing to reach the
@@ -245,7 +245,7 @@ We can remark that the terms accepted by the interpreter are terms in the
 canonical form, i.e. no lambda abstraction can appear in the head of a
 application. Moreover, we intentionally keep out from \cref{fig:basic-interp}
 application with head being variables. This essentially means that variables
-are never evaluated, in this first part of the paper.  Variables will play an 
+are never evaluated, in this first part of the paper.  Variables will play an
 important role
 in \cref{sec:vars}.
 
@@ -392,25 +392,28 @@ clause. Within each premise of the body, 3) terms appering in output positions b
 ground while 4) terms appearing in input positions are checked to be ground. If
 condition 2) or 4) are not satisfied a mode compilation error is raised.
 
+\begin{definition}[Well-moded program (\wellModed)]
+  Given a program \prog, for any clause $c$ in \prog, we say that \prog\
+  is well moded if it respect the informal description we have given above
+  % TODO: da rifare
+  % \begin{coqcode}
+  %   Definition ~\customlabel{wellmoded}{\texttt{well\_moded}}~ ~\prog\!\!~:
+  %   forall p i o (HG: ground i) ~\subst \subst[']~,
+  %   (H: ~\runCmd{[\goalCmd{\prog}{\callCmd{\texttt{p}}{\texttt{i}\ \texttt{o}}}{\EmptyList}]}{\EmptyList}{\subst}{a}{\subst[']}~),
+  %   ground (~\subst' ~o).
+  % \end{coqcode}
+  \label{def:well-moded}
+\end{definition}
+
 In \twelf \cite{1996pfenning}, which is an implementation of \lamprolog, mode
 checking is extended to work with local nominal variables and higher-order
 variable unification within the pattern fragment.
 
-\begin{definition}[Well-moded program (\wellModed)]
-  \begin{coqcode}
-    Definition ~\customlabel{wellmoded}{\texttt{well\_moded}}~ ~\prog\!\!~:
-    forall p i o (HG: ground i) ~\subst \subst[']~,
-    (H: ~\runCmd{[\goalCmd{\prog}{\callCmd{\texttt{p}}{\texttt{i}\ \texttt{o}}}{\EmptyList}]}{\EmptyList}{\subst}{a}{\subst[']}~),
-    ground (~\subst' ~o).
-  \end{coqcode}
-  \label{def:well-moded}
-\end{definition}
-
-The definition above can be rephrased as follows: a program \prog is well moded
-if for any (binary in our setup) predicate \pred called with a ground input
-\texttt{i} and any output term \texttt{o}, if the call succeeds producing a
-substitution \subst['] then the application of that substitution to \texttt{o}
-is a ground term.
+% The definition above can be rephrased as follows: a program \prog is well moded
+% if for any (binary in our setup) predicate \pred called with a ground input
+% \texttt{i} and any output term \texttt{o}, if the call succeeds producing a
+% substitution \subst['] then the application of that substitution to \texttt{o}
+% is a ground term.
 
 It is interesting to note that mode checking under the groundness condition is
 sometime too restrictive. In some situation it is in fact sufficient to work
@@ -443,9 +446,9 @@ numerous discussions on this topic, offering various descriptions and
 applications of determinism.
 
 In \cite{1989Warren}, the authors describe a property subsuming
-determinism: they describe functionality. A predicate (clause or query) is
+determinism: they describe functionality. A predicate is
 functional if it produces at most one \textit{distinct} solution per predicate
-call. The key word here is \textit{distinct}, since, in the determinacy setting,
+call. The keyword here is \textit{distinct}, since, in the determinacy setting,
 a predicate call producing the same solution twice is not considered as
 deterministic, while, it is functional. %In the paper they explain that mutual
 % exclusivness of clauses can be improved not only by looking at the head and at
@@ -466,13 +469,20 @@ non-annotated predicate will be inferred with the lowest derived tag.
 Determinacy, in \mercury, besides giving a guarantee on the program, allows to
 specialized it so that a faster routine can be used in the compiled program.
 
-TODO: place the following definition somewhere
+The following notation helps us to capture the definition of determinacy.
+
 \begin{definition}[Deterministacy (\isdet)]
-  Given a program \prog, a predicate \pred, an input $i$ and an output $o$ terms,
-  \isdet is defined as follows:
-  $$\isDetCmd{i}$$
+  Given a program \prog, a predicate \pred, and a list of terms $\vec{t}$,
+  \isdet\ is defined as follows:
+  $$\forall a\ \subst, \isDetCmd{\vec{t}}$$
 \end{definition}
 
+The determinacy definition that adhere the most to our need is the one
+considering the arguments marked as input as terms that are consumed by the
+interpreter and that allow to produce determinalistically the output. In order
+to differenciate input from output in an application like $\predVar\ \vec{t}$,
+we use the notation $t_i$ and $t_o$ to respectively separate the input and the
+output arguments of \predVar.
 
 We resume below the definitions and the properties
 that are needed for determinacy checking.
@@ -494,38 +504,38 @@ To define this property, we first need to introduce some auxiliary definitions:
   %         not (exists ~\subst\!\!~, ~\unifyCmd{i1}{i2}{\EmptySubst}{\subst}~)
   % \end{coqcode}
   Given two clauses
-  $c_1 = \clauseCmd{\pred}{i_1\ o_1}{bo_1}$ and
-  $c_2 = \clauseCmd{\pred}{i_2\ o_2}{bo_2}$ we have
+  $c_1 = \clauseCmd{\pred}{\vec{t}}{bo_1}$ and
+  $c_2 = \clauseCmd{\pred}{\vec{u}}{bo_2}$ we have
   \begin{align*}
-    \forall \subst, \lnot (\exists \subst['], \unifyCmd{i_1}{i_2}{\EmptySubst}{\subst[']})
+    \forall \subst \exists n, \lnot (\exists \subst['], \unifyCmd{(\vec{t}_i)_n}{(\vec{u}_i)_n}{\subst}{\subst[']})
   \end{align*}
   \vspace{-2em}
   \label{def:mut-excl-head}
 \end{definition}
 
-That is, two clauses have mutually-exclusive heads if it does not exists a
-substitution allowing to unify their inputs. Note that our clauses are
-implementations of binary predicates whose areguments represent respectively
-an input and output.
+That is, two clauses have mutually-exclusive heads if it does exists an
+term in input position discriminating them, the subscript $n$ in the 
+formula retrives the $n^{th}$ argument in a vector of terms.
 
 \begin{lemma}[Mutually-exclusive heads property]
-  Given two clauses $c_1$ and $c_2$ with head respectively $h_1$ and $h_2$ then
-  $$\mutExclHeads\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists t,
-    \ground{t} \to \unifyCmd{t}{h_1}{\EmptySubst}{\subst_1} \land
-    \unifyCmd{t}{h_2}{\EmptySubst}{\subst_2})$$
+  Given two clauses $c_1 = \clauseCmd{\predVar}{\vec{t}}{b_1}$ and $c_2 = \clauseCmd{\predVar}{\vec{u}}{b_2}$ then
+  % forall vector of \textit{ground} terms $\vec{v}$,
+  $$\mutExclHeads\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
+    \ground\ \vec{v} \to \unifyCmd{\vec{v}}{\vec{t}_i}{\EmptySubst}{\subst_1} \land
+    \unifyCmd{\vec{v}}{\vec{u}_i}{\EmptySubst}{\subst_2})$$
   \vspace{-2em}
   \label{th:mut-excl-head}
 \end{lemma}
 
 \begin{proof}
-  By contradiction, let $t$ be a term unifying with both $h_1$ and $h_2$. This
-  means that there exists two substitutions such that $\subst_1\ t = \subst_1\
-    h_1$ and $\subst_2\ t = \subst_2\ h_2$. Since t is ground the equations can be
-  simplified into: $t = \subst_1\ h_1$ and $t = \subst_2\ h_2$, implying that
-  $\subst_1\ h_1 = \subst_2\ h_2$. Hoever, due to $\mutExclHeads\ c_1\ c_2$,
-  $h_1$ and $h_2$ cannot be unified, therefore for any substituions
-  $\subst[']_1$ and $\subst[']_2$, we have $\subst[']_1\ h_1 \neq \subst[']_2\
-    h_2$, a contradiction.
+  By contradiction, let $\vec{v}$ be a term unifying with both $\vec{t}_i$ and $\vec{u}_i$. This
+  means that there exists two substitutions such that $\subst_1\ \vec{v} = \subst_1\
+    \vec{t}_i$ and $\subst_2\ \vec{v} = \subst_2\ \vec{u}_i$. Since $\vec{v}$ is ground the equations can be
+  simplified into: $\vec{v} = \subst_1\ \vec{t}_i$ and $\vec{v} = \subst_2\ \vec{u}_i$, implying that
+  $\subst_1\ \vec{t}_i = \subst_2\ \vec{u}_i$. However, due to $\mutExclHeads\ c_1\ c_2$,
+  $\vec{t}_i$ and $\vec{u}_i$ cannot be unified: for any substituions
+  $\subst[']_1$ and $\subst[']_2$, we have $\subst[']_1\ \vec{t}_i \neq \subst[']_2\
+    \vec{u}_i$, a contradiction.
 \end{proof}
 
 % \begin{coqcode}
@@ -568,7 +578,8 @@ an input and output.
 \end{proof}
 
 \begin{definition}[Mutual-exclusion (\mutExcl)]
-  Given a program \prog and a predicate \pred. The clauses of \pred inside \pred
+  Given a program \prog, for all deterministic predicate \pred in \prog,
+  the clauses in \pred\
   are mutually exclusive if for any two pair of clauses,
   $$\mutExclHeads\ c_1\ c_2 \lor \mutExclCut\ c_1\ c_2$$
   \vspace{-2em}
@@ -576,8 +587,9 @@ an input and output.
 \end{definition}
 
 \begin{lemma}[Mutually-exclusion property]
-  Forall program \prog and predicate \pred, such that $\mutExcl\ \prog\ \pred$,
-  at most one clause can be run fron any call to \pred with ground input.
+  Forall program \prog, such that $\mutExcl\ \prog$, and predicate \pred, at
+  most one clause can be successfully applied fron any call to \pred with ground
+  inputs.
   \label{th:mut-excl}
 \end{lemma}
 
@@ -588,14 +600,14 @@ an input and output.
 The second important condition
 for determinacy is the following:
 
-\newcommand{\detAtom}{\texttt{det\_atom}}
+\newcommand{\detAtom}{\texttt{det\_call}}
 
-\begin{definition}[Deterministic atom (\detAtom)]
-  A atom is deterministic if it is a call deterministic-annotated predicate.
+\begin{definition}[Deterministic term application (\detAtom)]
+  A term application $\pred\ \vec{t}$ is if $t$ is a deterministic predicate.
 \end{definition}
 
 \begin{definition}[Deterministic premises (\detPrem)]
-  Let \prog be a program and \pred a deterministic-annotated predicate, then let
+  Let \prog be a program and \pred be a deterministic predicate, then let
   $\prog\ \pred = c_1, \dots\ c_n$. For any body $b_i = a_1,\dots,a_m$ of any
   clause $c_i$,
   $$(\exists j, a_j = \cut \land \forall k, k > j \to \detAtom\ a_k) \lor (\forall j, \detAtom\ a_j)$$
@@ -630,35 +642,35 @@ predicates.
 % \end{proof}
 
 \begin{definition}[Determinacy checking (\detCheck)]
-  For any program \prog and any deterministic-annotated predicate \pred,
+  For any program \prog and any deterministic predicate \pred,
   $$\mutExcl\ \prog\ \pred \land \detPrem\ \prog\ \pred$$
 \end{definition}
 
 \begin{theorem}[Determinacy checking property]
-  Given a program \prog and a predicate \pred\todo{la det\_check è su tutto il programma, non solo sulle regole per p}
-  $$\wellModed\ \prog \to \detCheck\ \prog\ \pred \to \forall i\ o, \ground i\ \to \isdet\ \prog\ \pred\ i\ o$$
+  Given a program \prog and a deterministic predicate \pred
+  $$\wellModed\ \prog \to \detCheck\ \prog \to \forall \vec{t}, \ground\ \vec{t}_i\ \to \isdet\ \prog\ \pred\ \vec{t}$$
   \vspace{-20pt}
   \label{th:det}
 \end{theorem}
 
 \begin{proof}
   We can reason by induction on the derivations in \cref{fig:basic-interp}. The
-  interesting case is the \ref{rule:call}. Due to \detCheck\ \prog \pred, we know, by
+  interesting case is the \ref{rule:call}. Due to \detCheck\ \prog, we know, by
   \cref{th:mut-excl} that at most one clause $c$ successfully applies on the
   call to \pred. By definition of $\mathcal{F}$\todo{there are also unif}, the new goals \g are made from
-  the atoms in $c$ and all of this goals have the empty list as
+  the term in the body of $c$ and all of them will have by construction the empty list as
   cut-alternatives. We need to treat two cases. 1) \g has a cut. If all the
-  goals before the \cut\ succeeds, then all the choice points generated are cut
+  goals before the \cut\ succeed, then all the choice points generated are cut
   away. Moreover, since, by hypothesis, all the goals after the \cut\ are calls
   to deterministic predicates, and since, \wellModed\ \prog,
-  we know that all of these call have at most one applying clause.
+  we know that all of these calls have at most one solution.
   We can now use the induction hypothesis on the remaining goals
   claiming that in the end the empty list of alternatives is produced,
   completing the proof for this case. 2) \g has not cut. The proof is similar
-  to the previous one after haveing reached the cut.
+  to the previous one after having reached the cut.
 \end{proof}
 
-Several work of King et al \cite{king2005, king2006, 2011king} has been pursued
+Several works \cite{king2005, king2006, 2011king} have been pursued
 in order to build an inference model for determinacy in \prolog system with \cut.
 Moreover, they explain that determinacy inference subsume determinacy checking.
 Even though this last claim, we think that an inference model does not fit
@@ -713,17 +725,18 @@ so that it is no more classified as non-deterministic.
 
 \subsection{Contributions and paper structure}
 
-In our paper we will provide a description about a new mode and functionality
-checkers to verify that clauses are consistent wrt the user annotation. We
+In our paper we will provide a description about a new dynamic mode and
+a new static determinacy
+checkers to verify that clauses are consistent wrt the signature the predicate has. We
 introduce these concepts with the \elpi programming language. We start by a
-light version of \elpi in the first-order setting, i.e. with no $\lambda$-terms.
+light version of \elpi in the first-order setting, i.e. with no higher-order variables.
 In this part we explain our notion of modes, which have an inpact
-on the dynamic evaluation of the program. This will force us to slightly
-modify our interpreter. Moreover, thanks to these modes, we show that
+on the dynamic interpretation of the program. This will force us to slightly
+modify the interpreter in \cref{fig:basic-interp}. Moreover, thanks to these modes, we show that
 to statically guarantee the determinacy property of deterministic predicates
 we don't need any static mode analysis.
 
-In the second part of the paper we will extend the intepreter so that it can
+In the second part of the paper we will extend the intepreter so that it can\todo{there are 3 parts}
 work with higher-order variables, hereditary-arrop clauses insertion and local
 $\forall$-quantified variable declaration. Here predicates will also take
 propositions as arguments. Thanks to this extention we will propose a new mode
