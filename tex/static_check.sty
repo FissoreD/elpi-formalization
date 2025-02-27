@@ -96,20 +96,19 @@
 %   \end{myRule}
 % }
 \def\stackalignment{l}
-\newcommand{\ruleCheckCall}{\ruleCheckName{rule:check-callOK}{@}}
+\newcommand{\ruleCheckCall}{\ruleCheckName{rule:check-callOK}{@^\top}}
 \newcommand{\ruleCheckCallM}[1]{
   \begin{myRule}{#1}
     % CALL SUCC
-    \AxiomC{
-      \stackanchor{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]}}}
-      {\inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}}
-    \AxiomC{
-        \stackanchor
-        {\ensuremath{\text{if } \func[_i'] \mySub \func[_i] \land \mathcal{R}}}
-        {\stackanchor
-          {then $(\assumeCmd{\ctx}{\func[_o]}{o}{\ctx[']}) \land (\func[''] = \maxT\ \func\ \func['])$}
-          {else $\ctx['] = \ctx \land \func[''] = \relI$}}
-      }
+    % \AxiomC{
+    %   \stackanchor{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]}}}
+    %   {\inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}}
+    \AxiomC{\ensuremath{
+          \ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]} \qquad
+          \inferCmdArr{\ctx}{i}{\func[_i']}{\top} \qquad
+          \func[_i'] \mySub \func[_i] \qquad
+          \assumeCmd{\ctx}{\func[_o]}{o}{\ctx[']}}}
+      
     % \AxiomC{
     %   \stackanchor
     %   {\ensuremath{\text{if } \mathcal{R}}}
@@ -117,17 +116,19 @@
     %     {then $\func[''] = \maxT\ \func\ \func[']$}
     %     {else $\func[''] = \relI$}}}
     \RightLabelM{\ruleCheckCall}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{(\predVar\ i\ o)}{\ctx[']}{\func['']}}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{(\predVar\ i\ o)}{\ctx[']}{\maxT\ \func\ \func[']}}
   \end{myRule}
 }
 
-\newcommand{\ruleCheckCallFail}{\ruleCheckName{rule:check-callKO}{\bot}}
+\newcommand{\ruleCheckCallFail}{\ruleCheckName{rule:check-callKO}{@^\bot}}
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
-    \AxiomC{\inferCmdArr{\ctx}{i}{\_}{\bot}}
+    \AxiomC{\ensuremath{ \ctx\ \predVar = \dtype{\_}{[\func[_i]]}{\_} }}
+    \AxiomC{ \inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}
+    \AxiomC{$ \func[_i'] \not\mySub \func[_i] \lor \mathcal{R} = \bot$}
     \RightLabelM{\ruleCheckCallFail}
-    \UnaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ i\ o)}{\ctx}{\relI}}
+    \TrinaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ i\ o)}{\ctx}{\relI}}
   \end{myRule}
 }
 
@@ -176,7 +177,7 @@
     
     % \ruleCheckMatchM{.7}
     \ruleCheckCallM{1}
-    % \ruleCheckCallFailM{0.44}
+    \ruleCheckCallFailM{1}
 
     \caption{\checkk\ relation}
     \label{fig:static-check-term}

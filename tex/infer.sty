@@ -47,24 +47,25 @@
   \end{myRule}
 }
 
-\newcommand{\ruleInferHd}{\ruleInfer{rule:infer-hd}{\predVar}}
-\newcommand{\inferHd}[1]{
+\newcommand{\ruleInferExp}{\ruleInfer{rule:infer-hd}{\expr}}
+\newcommand{\InferExp}[1]{
   \begin{myRule}{#1}
-    \AxiomC{}
-    \RightLabelM{\ruleInferHd}
-    \UnaryInfC{\inferCmdArr{\ctx}{\predVar}{\ctx\ \predVar}{\top}}
+    \AxiomC{  }
+    \RightLabelM{\ruleInferExp}
+    \UnaryInfC{\inferCmdArr{\ctx}{\expr}{\expI}{\top}}
   \end{myRule}
 }
 
 \newcommand{\inferFig}{
   \begin{subfigure}[b]{1\textwidth}
     \centering
-    \inferHd{0.27}
+    \InferExp{0.27}
     \inferCut{0.30}
     \inferUnif{0.31}
     
     \inferPiImpl{0.46}
     \inferApp{0.49}
+
     % \inferAppFail{1}
     \caption{\infer\ relation}
     \label{fig:det-inference}

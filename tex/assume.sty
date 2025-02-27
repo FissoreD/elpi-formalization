@@ -21,6 +21,15 @@
   \end{myRule}
 }
 
+\newcommand{\ruleAssumeExpr}{\ruleAssume{rule:assume-expr}{\expr}}
+\newcommand{\assumeExpr}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{}
+    \RightLabelM{\ruleAssumeExpr}
+    \UnaryInfC{\assumeCmd{\ctx}{\_}{\expr}{\ctx}}
+  \end{myRule}
+}
+
 \newcommand{\ruleAssumePiImpl}{\ruleAssume{rule:assume-piimpl}{\piimpl}}
 \newcommand{\assumePiImpl}[1]{
   \begin{myRule}{#1}
@@ -51,9 +60,9 @@
 \newcommand{\ruleAssumeHd}{\ruleAssume{rule:assume-hd}{\predVar}}
 \newcommand{\assumeHd}[1]{
   \begin{myRule}{#1}
-    \AxiomC{$\texttt{is\_var\ \predVar}$ }
+    \AxiomC{$\texttt{is\_var\ \predVar} \qquad \func['] = \minT\ \func\ (\ctx\ \predVar) $ }
     \RightLabelM{\ruleAssumeHd}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{\predVar}{\ctx + \{\predVar \mapsto \func\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{\predVar}{\ctx + \{\predVar \mapsto \func[']\}}}
   \end{myRule}
 }
 
@@ -92,6 +101,8 @@
 
     % \assumeApp{0.33} 
     \assumeApp{1}
+
+    \assumeExpr{1}
 
     \caption{\assume\ relation}
     \label{fig:det-assume}
