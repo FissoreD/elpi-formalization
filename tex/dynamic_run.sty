@@ -3,7 +3,7 @@
 
 \newcommand{\ruleFail}{\ruleName{rule:fail}{\bot}}
 \newcommand{\ruleCall}{\ruleName{rule:call}{@}}
-\newcommand{\ruleCallB}{\ruleName{rule:call1}{c'}}
+\newcommand{\ruleCallB}{\ruleName{rule:call1}{@'}}
 \newcommand{\ruleBang}{\ruleName{rule:cut}{!}}
 \newcommand{\ruleStop}{\ruleName{rule:stop}{\EmptyList}}
 \newcommand{\ruleUnif}{\ruleName{rule:unif}{=}}
@@ -73,11 +73,11 @@
 \newcommand{\ruleCallBM}[1]{
   \begin{myRule}{#1}
     % CALLB
-    \AxiomC{$(\subst h)\ t_1\ t_2 = \pred\ i\ o$}
-    \AxiomC{$\mathcal{F}(\prog, \pred, i, o, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
+    \AxiomC{$(\subst h)\ \vec{t} =_\beta \pred\ \vec{u}$}
+    \AxiomC{$\mathcal{F}(\prog, \pred, \vec{u}, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
     \AxiomC{\runCmd{(g\ @\ \g)}{(new\_alt\ @\ \alt)}{\subst}{\alt[']}{\subst[']}}
     \RightLabelM{\ruleCallB}
-    \TrinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{(h\ t_1\ t_2)}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
+    \TrinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{(h\ \vec{t})}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
   \end{myRule}
 }
 

@@ -257,14 +257,6 @@ explained above and if the result of this operation is the list
 the list of remaining goals \g and $bs$ is prepended to the list of
 alternatives \alt.
 
-We can remark that the terms accepted by the interpreter are terms in the
-canonical form, i.e. no lambda abstraction can appear in the head of a
-application. Moreover, we intentionally keep out from \cref{fig:basic-interp}
-application with head being variables. This essentially means that variables
-are never evaluated, in this first part of the paper.  Variables will play an
-important role
-in \cref{sec:vars}.
-
 The combination of the \ref{rule:call} and \ref{rule:cut} rules is crucial for replicating
 the behavior of the cut. When a call to a predicate generates multiple rules as
 new choice points, the function $\mathcal{F}$ creates future disjunctive goals
@@ -507,6 +499,7 @@ as follows:
 %
 \begin{align}
   pred ::= [\detI \mid \relI]\ data^\ast \funsep data^\ast
+  \label{eq:pred}
 \end{align}
 
 A predicate is either deterministic (\detI) or relational (\relI). The symbol
@@ -554,10 +547,10 @@ term in input position discriminating them, the subscript $n$ in the
 formula retrives the $n^{th}$ argument in a vector of terms.
 
 \begin{lemma}[Mutually-exclusive heads property]
-  Given two clauses $c_1 = \clauseCmd{\predVar}{\vec{t}}{b_1}$ and $c_2 = \clauseCmd{\predVar}{\vec{u}}{b_2}$ then
+  Given a context \ctx and two clauses $c_1 = \clauseCmd{\predVar}{\vec{t}}{b_1}$ and $c_2 = \clauseCmd{\predVar}{\vec{u}}{b_2}$ then
   let $\vec{t}_i$ and $\vec{u}_i$ the inputs arguments of $\vec{t}$ and $\vec u$ respectively.
   % forall vector of \textit{ground} terms $\vec{v}$,
-  $$\mutExclHeads\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
+  $$\mutExclHeads\ \ctx\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
     \vecL{\ground\ v} \to \unifyCmd[1]{v}{t_i}{\EmptySubst}{\subst_1} \land
     \unifyCmd[1]{v}{u_i}{\EmptySubst}{\subst_2})$$
   \vspace{-2em}
@@ -569,7 +562,7 @@ formula retrives the $n^{th}$ argument in a vector of terms.
   means that there exists two substitutions such that $\subst_1\ \vec{v} = \subst_1\
     \vec{t}_i$ and $\subst_2\ \vec{v} = \subst_2\ \vec{u}_i$. Since $\vec{v}$ is ground the equations can be
   simplified into: $\vec{v} = \subst_1\ \vec{t}_i$ and $\vec{v} = \subst_2\ \vec{u}_i$, implying that
-  $\subst_1\ \vec{t}_i = \subst_2\ \vec{u}_i$. However, due to $\mutExclHeads\ c_1\ c_2$,
+  $\subst_1\ \vec{t}_i = \subst_2\ \vec{u}_i$. However, due to $\mutExclHeads\ \ctx\ c_1\ c_2$,
   $\vec{t}_i$ and $\vec{u}_i$ cannot be unified: for any substituions
   $\subst[']_1$ and $\subst[']_2$, we have $\subst[']_1\ \vec{t}_i \neq \subst[']_2\
     \vec{u}_i$, a contradiction.
@@ -625,9 +618,9 @@ formula retrives the $n^{th}$ argument in a vector of terms.
 \end{definition}
 
 \begin{lemma}[Mutually-exclusion property]
-  Given program \prog and predicate \pred, if $\mutExcl\ \prog\ \pred$ then at
-  most one clause can be successfully applied fron any call to \pred with ground
-  inputs.
+  Given a context \ctx\ and a program \prog, if $\mutExcl\ \ctx\ \prog$ then for
+  any call $\pred\ \vec{t}$ with ground inputs, it exists at most one clause that can be
+  successfully applied on $\pred\ \vec{t}$.
   \label{th:mut-excl}
 \end{lemma}
 
@@ -681,14 +674,15 @@ predicates.
 % \end{proof}
 
 \begin{definition}[Determinacy checking (\detCheck)]
-  Given a program \prog, for all deterministic predicate \pred,
-  $$\mutExcl\ \prog\ \pred \land \detPrem\ \prog\ \pred$$
+  Given a context $\ctx$ and a program \prog,
+  $$\mutExcl\ \ctx\ \prog \land \detPrem\ \ctx\ \prog$$
   \label{def:det-check}
 \end{definition}
 
 \begin{theorem}[Determinacy checking property]
-  Given a program \prog and a deterministic predicate \pred
-  $$\wellModed\ \prog \to \detCheck\ \prog \to \forall \vec{t}, \ground\ \vec{t}_i\ \to \isdet\ \prog\ \pred\ \vec{t}$$
+  Given a contxt \ctx and a program \prog, forall predicate \pred, such that
+  $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ then
+  $$\wellModed\ \prog \to \detCheck\ \ctx\ \prog \to \forall \vec{t}, \vecL{\ground\ t_i}\ \to \isdet\ \prog\ (\pred\ \vec{t})$$
   \vspace{-20pt}
   \label{th:det}
 \end{theorem}

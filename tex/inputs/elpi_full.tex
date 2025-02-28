@@ -3,18 +3,20 @@
 
 In order to fully capture the potential of a \lamprolog language like \elpi, we
 need to delve deeper into the concept of variables. Until now, we have
-intentionally avoided discussing them in detail. They were implicitly taken into
-account in the \ref{rule:unif} and \ref{rule:match} rules, however, a query like
+intentionally avoided discussing them in detail. They were %implicitly taken into
+%account in the \ref{rule:unif} and \ref{rule:match} rules, 
+used in term unifications, however, a query like
 \elpiIn{p = X, X 1 3} was not accepted by the run procedure. The only
-application we authorized was caputered by the \call\ constructor and was an
-application of a predicate name to two terms. Here we want that this same
-application works when a variable name applied to terms.
+application we authorized was caputered by calls to terms with rigid heads.
+% Here we extend terms application and replace it as follows
 
-\begin{coqcode}
-  | Call (hd : vn | tn) (t1:tm) (t2:tm)
-\end{coqcode}
+% \begin{coqcode}
+%   | Call (hd : vn | tn) (t1:tm) (t2:tm)
+% \end{coqcode}
 
-The notation $(h\ t_1\ t_2)$ is used to represent the \call\ constructor.
+% The notation $(h\ t_1\ t_2)$ is used to represent the \call\ constructor.
+
+\newcommand{\sbeta}{\ensuremath{\mathcal{S}_\beta}}
 
 \begin{figure}
   \ruleCallBM{1}
@@ -28,6 +30,10 @@ The notation $(h\ t_1\ t_2)$ is used to represent the \call\ constructor.
   %           {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{(\subst h)}{i'\ o'}{bs} \in \prog\ (\subst h)]
   % $$
   %   \vspace{-2em}
+  % \begin{align*}
+  %   \sbeta\ \subst\ (\lambda x.b)\ (a::\vec{as}) &= \sbeta\ \subst\ (b [x\bs a])\ \vec{as}\\
+  %   \sbeta\ \subst\ (\pred\ \vec{t})\ \vec{a} &= \pred\ \vec{t}\ \vec{a}
+  % \end{align*}
 
   \caption{Dynamic semantics: update of \ref{rule:call}}
   \label{fig:new-call}
@@ -38,15 +44,15 @@ new application, as shown in \cref{fig:new-call}. The main difference from
 \ref{rule:call} is that in \ref{rule:call1}, before invoking the function
 $\mathcal{F}$, we first look up the value of $h$ in \subst. If $h$ is a
 variable, this dereferencing operation may return a \lam-term, which, when
-applied to $t_1$ and $t_2$, is $\beta$-reduced (thanks to the hereditary
-substitution principle) to a canonical value in the form of a predicate name
-applied to two terms.
+applied to $\vec{t}$ is $\beta$-reduced (thanks to the hereditary substitution
+principle) to a canonical value in the form of a predicate name applied
+a new vector of terms $\vec{u}$.
 
 This change significantly impacts our static determinacy checker: variables can
-now be passed as predicate arguments and may have a propositional type, meaning
-they can be called within clause bodies. However, additional properties can be
-enforced by the checker. For instance, users may want to ensure that a
-predicate's output is verified as a deterministic proposition.
+now be passed as arguments and may have a propositional type, meaning
+they can be called within clause bodies. Therefore, additional properties can be
+enforced by the checker. For example, users may want to ensure that a
+predicate's output is verified to be a deterministic predicate.
 
 We provide some examples to illustrate this point:
 
@@ -66,28 +72,20 @@ We provide some examples to illustrate this point:
 \end{itemize}
 
 To provide this information to the compiler we give the user the possibility to
-provide expressive type signatures for constants. The grammar is
+provide more expressive type signatures for constants. The non-terminal $pred$
+from \cref{eq:pred} changes as follows:
 as follows:
 %
 \begin{align}
-  ty   & ::= data \mid pred                                    \label{eq:ty1}        \\
-  data & ::= \texttt{c}\ data^\ast \mid data \to data \mid \predVar \label{eq:data1} \\
-  % pred & ::= \relI\ ty^\ast \mid \detI\ ty^\ast \funsep ty^\ast \label{eq:pred}
-  pred & ::= [\detI \mid \relI]\ ty^\ast \funsep ty^\ast \label{eq:pred}
+  pred & ::= [\detI \mid \relI]\ ty^\ast \funsep ty^\ast \label{eq:pred1}
 \end{align}
 
-A type ($ty$) is a disjunction of the two sorts: on one sides we have the type
-for expressions ($data$) and the type of executable piece of code ($pred$). The
-nonterminal $data$ is for expressions, it is either the application of a type
-constant to a list of data, a function ($\to$) or a variable. The nonterminal
-$pred$ is the type of predicates. A predicate is relational (\relI) or
-functional (\detI) and is followed by two lists of determinacy types separated by the
-\funsep\ operator. On the left we have the type of the inputs and on the right
-the type of the outputs. In the following a predicate with $0$ argument
-will be note as \detI\ (resp. \relI) instead of $\detI\ []\ []$ (resp. $\relI\ []\ []$).
+The arguments of a predicate, now, are no more objects living in the datatype,
+but they can also have propositional type. In the following a predicate with $0$
+argument will be note as \detI\ (resp. \relI) instead of $\detI\ []\ []$ (resp.
+$\relI\ []\ []$).
 
-\textbf{TODO: dire che adesso il pi ha il type sul binder}\\
-\textbf{TODO: typechecker: types to dtypes}
+% \textbf{TODO: typechecker: types to dtypes}
 
 Thanks to this, we can define the signature of the predicates above:
 %
@@ -100,11 +98,11 @@ Thanks to this, we can define the signature of the predicates above:
 % \end{equation}
 
 In the code abode we use brackets to delimit lists. The idea is that, thanks to
-type signatures, the checker of elpi code ensure the a predicate is a function
-when it should be and returns outputs with the right determinacy.
+type signatures, the \elpi's checker ensures that a predicate behaves as a 
+function and returns output with the declared determinacy in the signature
+if they are called with inputs having the expected determinacy.
 
-Thanks to this certification, for example, let \elpiIn{f} be a binary,
-relational predicate, then the query ``\elpiIn{make-det (f 1 X) F, do F}'' is
+Thanks to this certification, for example, if \elpiIn{f} be a binary relation, then the query ``\elpiIn{make-det (f 1 X) F, do F}'' is
 deterministic. This is because \elpiIn{make-det} is deterministic, \elpiIn{F} is
 deterministic and \elpiIn{do} behaves deterministically when it receives
 functions as input.
@@ -112,20 +110,21 @@ functions as input.
 The checker should also accepts predicates that are \textit{wrongly} called. For
 example, \elpiIn{do (f 1 X)} should be accepted as a call, however, since the
 argument of \elpiIn{do} has not the expected determinacy, we loose the guarantee
-that the call behaves deterministically. Similarly, the query \elpiIn{idF (f 1 X)
-  R} is \textit{wrongly} called and therefore we have no guarantee that \elpiIn{R} is
+that the call behaves deterministically. Similarly, in the query \elpiIn{idF (f 1 X)
+  R}, \elpiIn{idF} is \textit{wrongly} called and therefore we have no guarantee that \elpiIn{R} is
 deterministic and that the whole call behaves deterministically. The choice to
 accepts wrong calls allows to have \textit{code reusability}.
 
 On the other hand, the signature of \elpiIn{make-det} should reject
 \elpiIn{make-det A (once A) :- A}. Since we cannot guarantee that the whole rule
-is a function: \elpiIn{A} could be a relation and calling it in the body may
-create choice points.
+is a function: \elpiIn{A} could be a relation and calling it in the body of a
+predicate expected to behave deterministically, may create choice points.
 
-To address all of these issues we implement a static checker labelling variables
-with their determinacy. Labels are instances of $ty$ in \cref{eq:ty1}, to
-simplify our presentation, $data$s in \cref{eq:data1} are represented with the
-\expI\ tag.
+To address all of these issues we implement a static checker which labels variables
+with their determinacy type (dtype). Labels are simpler instantces of \cref{eq:ty}:
+all terms living in the datatype will be labelled with \expI. The checker
+rejects the clauses of a predicate if the labels that have been updated in a
+given context \ctx\ do not respect the signature of the predicate.
 
 
 % A term is either an expression (an non executable peice of code), a relational
@@ -147,14 +146,14 @@ relation between two determinacies.
 \begin{equation}
   f_1 \mySub f_2 =
   \begin{cases}
-    \bot                                                          & \text{if } f_1 = \relI\ \_\ \land f_2 = \detI\ \_    \\
+    \bot                                                          & \text{if } f_1 = \dtype{\relI}{\_}{\_} \land f_2 = \dtype{\detI}{\_}{\_}    \\
     % (\forall i, a'_i \mySub a_i) \land (\forall j, b_j \mySub b'_j)      & \text{else if } f_1 = \detI\ a\ b \land f_2 = \detI\ a'\ b' \\
     % (\forall i, a'_i \mySub c_i) \land (\forall j, b_j \mySub c_{|a|+j}) & \text{else if } f_1 = \detI\ a\ b \land f_2 = \relI\ c      \\
     % \forall i, a_i \mySub b_i                                            & \text{else if } f_1 = \relI\ a\ \land f_2 = \relI\ b        \\
     % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{else if } f_1 = [\detI\mid \relI]\ a\ b \land f_2 = [\detI\mid \relI]\ c\ d \\
-    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \detI\ a\ b \land f_2 = \detI\ c\ d \\
-    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \detI\ a\ b \land f_2 = \relI\ c\ d \\
-    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
+    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \dtype{\func}{a}{b} \land f_2 = \dtype{\func}{c}{d} \\
+    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \dtype{\detI}{a}{b} \land f_2 = \dtype{\relI}{c}{d} \\
+    % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
     \top                                                          & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}
   \label{eq:sub-def}
@@ -167,24 +166,26 @@ relation between two determinacies.
 %   end.
 % \end{coqcode}
 
-\textbf{TODO: dire legame con subtyping}.\\
-The \mySub\ relation is intentionally non-complete since we suppose that before
-performing any determinacy checking the program has been type-checked. This
-means that it is never possible to have unification between, for example,
-datatypes and predicates, this would lead to a fatal type-error. Moreover, when
-comparing predicates $p_1$ and $p_2$, we assume that ther input lists have same
-lengths and that their output lists have same lengths: predicates with different
-lists of input and output are not comparable.
+
+The \mySub\ relation is intentionally incomplete, as we assume that the program
+has undergone type-checking before any determinacy verification. This guarantees
+that no comparison between, for instance, expressions and predicates can
+occur—such a comparison would result in a fatal type error. Moreover, when
+comparing predicates $p_1$ and $p_2$, we assume that their input lists have the
+same length, as do their output lists: predicates with differing input or output
+list lengths are considered incomparable.
 
 The idea of \mySub\ is that a relation, by definition, is not a function, the
 other combinations of functions and relations works if some conditions holds on
 their inputs and outputs. In particular if we have $t_1 \mySub t_2$ then the
-outputs of $t_1$ should be \mySub\ than the outputs $t_2$.
-\textbf{TODO: fare un esempio.}
-
-The converse property should hold for the inputs of two terms, that is, if
+outputs of $t_1$ should be \mySub\ than the outputs $t_2$ and
+the converse property should hold for the inputs of two terms, that is, if
 we have $t_1 \mySub t_2$ then the outputs of $t_2$ should be \mySub\ than the
-outputs $t_1$. For example, let's consider the signatures of \elpiIn{make-det}
+outputs $t_1$. 
+The idea is similar to a subtyping relation where inputs should be
+contravariant and outputs covariant.
+
+For example, let's consider the signatures of \elpiIn{make-det}
 and \elpiIn{idF}. We intuitively remark that $\forall p_1\ p_2\ p_3,
   \texttt{make-det}\ p_1\ p_2 \to \texttt{idF}\ p_1\ p_3 \to p_2 \mySub p_3$.
 Therefore, we can safely claim that $\detI\ [\relI] \funsep [\detI] \mySub
@@ -202,8 +203,8 @@ maximum) between two determinacies.
 \begin{equation}
   \minT\ f_1 f_2 =
   \begin{cases}
-    \detI\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d) & \text{if } f_k = \relI\ a\ b \land f_{2-k} = \detI\ c\ d \\
-    D\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d)     & \text{if } f_1 = D\ a\ b \land f_2 = D\ c\ d             \\
+    \dtype{\detI}{(\overrightarrow{\maxT}\ a\ c)}{(\overrightarrow{\minT}\ b\ d)} & \text{if } f_k = \dtype{\relI}{a}{b} \land f_{2-k} = \dtype{\detI}{c}{d}\\
+    \dtype{D}{(\overrightarrow{\maxT}\ a\ c)}{(\overrightarrow{\minT}\ b\ d)}     & \text{if } f_1 = \dtype{D}{a}{b} \land f_2 = \dtype{D}{c}{d}             \\
     % \relI\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
     \expI                                                                 & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}
@@ -212,8 +213,8 @@ maximum) between two determinacies.
 \begin{equation}
   \maxT\ f_1 f_2 =
   \begin{cases}
-    \detI\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d) & \text{if } f_k = \relI\ a\ b \land f_{2-k} = \detI\ c\ d \\
-    D\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d)     & \text{if } f_1 = D\ a\ b \land f_2 = D\ c\ d             \\
+    \dtype{\detI}{(\overrightarrow{\minT}\ a\ c)}{(\overrightarrow{\maxT}\ b\ d)} & \text{if } f_k = \dtype{\relI}{a}{b} \land f_{2-k} = \dtype{\detI}{c}{d} \\
+    \dtype{D}{(\overrightarrow{\minT}\ a\ c)}{(\overrightarrow{\maxT}\ b\ d)}     & \text{if } f_1 = \dtype{D}{a}{b} \land f_2 = \dtype{D}{c}{d}             \\
     % \relI\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
     \expI                                                                 & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}

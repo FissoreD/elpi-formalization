@@ -143,7 +143,10 @@
   \ifstrequal{#1}{1}
     {\vecL{\unify\ #2\ #3}}
     {\unify\ #2\ #3}\ #4 \arr #5}}
-\newcommand{\matchCmd}[4]{\ensuremath{\match\ #1\ #2\ #3 \arr #4}}
+\newcommand{\matchCmd}[5][]{\ensuremath{
+  \ifstrequal{#1}{1}
+  {\vecL{\match\ #2\ #3}}
+  {\match\ #2\ #3}\ #4 \arr #5}}
 
 \newcommand{\tailcutCmd}[2]{\ensuremath{\tailcut\ #1\ #2}\xspace}
 

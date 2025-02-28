@@ -5,10 +5,12 @@ An improvement of the current version of the interpreter comes with the fact
 that the \elpi accepts hareditary-harrop formulas and higher-order pattern
 unification (\cite{1991miller-pf}), noted \pf. This extension allows to
 dynamically modify the program by inserting fresh variables and clauses.
-
+Moreover, in order to express using the higher-order abstract syntax (HOAS,
+\cite{1988pfenning}) we also add $\lambda$-abstractions to the language.
+% 
 % In order to pass to the full \elpi language, we need to change the way terms and clauses are 
 % represented. We give, therefore, their implementation below.
-
+% 
 % \begin{coqcode}
 %   Inductive tpos := 
 %     | a (i:base)            
@@ -30,35 +32,33 @@ dynamically modify the program by inserting fresh variables and clauses.
 %     | b (i:base) 
 %     | s (i:string).
 % \end{coqcode}
-
+% 
 % NOTA: mi sembra sia più facile avere predicati di arità qualsiasi
-In order to represent these new constructs of the language,
-we add a new constructor to \coqIn{tm}:
-\begin{coqcode}
-  | PiImpl (x:vn) (c:clause) (b:tm)
-\end{coqcode}
+% 
+% \begin{coqcode}
+%   | PiImpl (x:vn) (c:clause) (b:tm)
+% \end{coqcode}
+%
+\begin{align}
+  data &::= ... \mid data \to data\\
+  tm &::= ... \mid \piImplCmd[type]{\predVar}{clause}{tm} \mid \lambda \predVar: type.tm
+\end{align}
 
-We note this constructor as follows: \piImplCmd{x}{H}{B}. It introduces $x$ as a
-local fresh variable inside \implCmd{H}{B} and adds in the scope of $B$
-the hypothesis $H$.
-
-DIRE CHE NON PERDIAMO IN ESPRESSIVITA, possiamo quantificare un pi che non
-è usato in its body, oppure possiamo caricare una regola dummy che non è
-usata in its body
+The term \piImplCmd[ty]{x}{H}{B} introduces $x$ as a local fresh variable with
+type $ty$ inside \implCmd{H}{B}. Then the clause $H$ is added in the scope of
+$B$ with highest priority. Note that this constructor can be split in two, one
+talking about the $\pi$, the other talking about the $\impl$ operator, we prefer
+however to have a sole constructor. It is always possible, in fact, to quantify
+dummy variables and hypothesis, reproducing exactly the behaviors of the single
+operators. Finally, the $\lambda x: ty.t$ construct allows to abstract the
+variable $x$ with type $ty$ inside $t$. We also have extended the non-terminal
+$data$ so that the type of $\lambda$-expressions can be represented.
 
 \subsection{Interpreter for prolog with higher-order variables in datatype}
 
 
 To account for the new constructor in the language, we extend our interpreter.
 The updated rule is shown in \cref{fig:interp-piimpl}.  
-
-We modify the signature of a \goal, which now takes a context \ctx instead of
-just a program \prog. This context, denoted as \ctx, consists of a pair: a
-program \prog and a set of local variables \env. Consequently, all occurrences
-of \prog in \cref{fig:basic-interp} should now be read as \ctx.  
-
-When the function $\mathcal{F}$ searches for the implementation of a predicate,
-it should extract the first component of \ctx\ to obtain the expected output.
 
 \begin{figure}
   \rulePiImplM{.85}
@@ -70,10 +70,26 @@ it should extract the first component of \ctx\ to obtain the expected output.
   \label{fig:interp-piimpl}
 \end{figure}
 
+We can remark that the terms accepted by the interpreter are still terms in the
+canonical form, i.e. no lambda abstraction can appear in the head of a
+application. Moreover, we intentionally keep out from the interpreter
+application with head being variables. This essentially means that variables are
+still not executable piece of code.  Variables will play an important role in
+\cref{sec:vars}.
+
+
+We modify the signature of a \goal, which now takes a context \ctx instead of
+just a program \prog. This context, denoted as \ctx, consists of a pair: a
+program \prog and a set of local variables \env. Consequently, all occurrences
+of \prog in \cref{fig:basic-interp} should now be read as \ctx.  
+
+When the function $\mathcal{F}$ searches for the implementation of a predicate,
+it should extract the first component of \ctx\ to obtain the expected output.
+
 The notation $H + \prog$ is the insertion of the clause $H$ 
 in the program \prog so that $H$ has
 the highest priority in \prog. The notation
-$x \uplus \env$
+$x \uplus \env$\todo{penso si possa togliere}
 is the insertion of the local variable $x$ inside the set of local binders \env
 provided that $x \notin \env$.
 
@@ -82,7 +98,7 @@ provided that $x \notin \env$.
 % rule \rulePi introduces the name of the fresh variable into the program.  
 
 The rule \ref{rule:piimpl} in \cref{fig:interp-piimpl} is interpreted by running the
-goal under the \pi and the \impl charging both the local variable and clause
+goal under the \pi\ and the \impl\ charging both the local variable and clause
 inside its scope.
 
 The \unify and \match procedures now consider \env\ to perform \pf\
@@ -94,7 +110,7 @@ unification. \env is required to know if a term is in the pattern fragment.
 
 The insertion of the new rule makes the determinacy checker to change
 accordingly. In particular, the rule $H$ charged by \impl\ in
-\cref{fig:interp-piimpl} may break \cref{def:mut-excl}. This is because the rule
+\cref{fig:interp-piimpl} may break \cref{th:mut-excl}. This is because the rule
 being added may overlap with other existing rules. This means that the execution of $B$ may
 produce several results which is not the desired behavior if the $B$ should be
 deterministic.

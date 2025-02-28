@@ -131,18 +131,16 @@ while unifying the value of \elpiIn{X} and \elpiIn{7}.
 % the user a powerful tool to  control how unification is dynamically performed
 % at runtime.
 
-We add the new atom:
-\begin{coqcode}
-  | UnifyM (t1:tm) (t2:tm) : atom
-\end{coqcode}
-
-with its corresponding notation $t_1 =_m t_2$ standing for the the \match
-procedure between two terms.
+We add the new term to the language:
+% \begin{coqcode}
+%   | UnifyM (t1:tm) (t2:tm) : atom
+% \end{coqcode}
+$$tm ::= ... \mid tm =_m tm$$
 
 The introduction of dynamic modes requires modifying the interpreter so that the
 \match procedure is called when unification is performed on input terms. To
 achieve this, we need to slightly adjust the $\mathcal{F}$ function used by the
-\ref{rule:call}, as follows:%
+\ref{rule:call}, as follows:\todo{riscrivere con indici diversi}%
 % $$
 % \mathcal{F}(\prog, \pred, i, o, \subst, \alt) := 
 %   [(\subst, (
@@ -162,7 +160,8 @@ achieve this, we need to slightly adjust the $\mathcal{F}$ function used by the
 \end{align*}
 
 The main difference is that the usage of the $=_m$ to indicate that the
-first unification should be performed with the \match procedure.
+unification between input arguments in the goal and in the head of the clause
+should be performed using the \match procedure.
 
 Finally the derivation system in \cref{fig:basic-interp} is extended with the
 rule in \cref{fig:interp-match}.
@@ -211,7 +210,7 @@ Mode checking is an essential ingredient for ensuring determinacy.
 % \end{definition}
 
 \Cref{th:det} ensures that at most one clause can be applied to any given
-predicate, provided that the input term is ground. However, since we no longer
+predicate, provided that the input terms are ground. However, since we no longer
 perform mode-checking and our inputs are not necessarily ground, the theorem is
 no longer valid.
 %
@@ -246,10 +245,12 @@ We start therefore to state a new version of
 %BBB
 
 \begin{lemma}[Mutually-exclusive heads with \match property]
-  Given two clauses $c_1$ and $c_2$ with head respectively $h_1$ and $h_2$ then
-  $$\mutExclHeads\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists t,
-  \matchCmd{t}{h_1}{\EmptySubst}{\subst_1} \land
-  \matchCmd{t}{h_2}{\EmptySubst}{\subst_2})$$
+  Given a context \ctx and two clauses $c_1 = \clauseCmd{\predVar}{\vec{t}}{b_1}$ and $c_2 = \clauseCmd{\predVar}{\vec{u}}{b_2}$ then
+  let $\vec{t}_i$ and $\vec{u}_i$ be the inputs arguments of $\vec{t}$ and $\vec u$ respectively.
+  % forall vector of \textit{ground} terms $\vec{v}$,
+  $$\mutExclHeads\ \ctx\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
+    \matchCmd[1]{v}{t_i}{\EmptySubst}{\subst_1} \land
+    \matchCmd[1]{v}{u_i}{\EmptySubst}{\subst_2})$$
   \vspace{-2em}
   \label{th:mut-excl-head1}
 \end{lemma}
@@ -258,16 +259,15 @@ We start therefore to state a new version of
   By contradiction, let $t$ be a term matching with both $h_1$ and $h_2$. By
   \cref{th:match-right}, we have that $\subst_1 h_1 = \subst_2 h_2$, this
   implies that $(\subst_1 \cup \subst_2) h_1 = (\subst_1 \cup \subst_2) h_2$\todo{prove this}. By
-  the hypothesis $\mutExclHeads\ c_1\ c_2$, and by \cref{def:mut-excl}, it does
+  the hypothesis $\mutExclHeads\ \ctx\ c_1\ c_2$, and by \cref{def:mut-excl}, it does
   not exists a substitution allowing to unify the head of the two clause. This
   is a contradiction.
 \end{proof}
 
 \begin{lemma}[Mutually-exclusion with \match property]
-  Forall program \prog and predicate \pred, such that $\mutExcl\ \prog\ \pred$,
-  at most one clause can be successfully applied fron any call to \pred. (Note
-  that the absence of the groundness of the input which was an hypothesis of
-  \cref{th:mut-excl}).
+  Given a context \ctx\ and a program \prog, if $\mutExcl\ \ctx\ \prog$ then for
+  any call $\pred\ \vec{t}$, it exists at most one clause that can be
+  successfully applied on $\pred\ \vec{t}$. 
   \label{th:mut-excl1}
 \end{lemma}
 
@@ -276,8 +276,9 @@ We start therefore to state a new version of
 \end{proof}
 
 \begin{theorem}[Determinacy checking with \match property]
-  Given a program \prog and a predicate \pred
-  $$\detCheck\ \prog\ \pred \to \forall i\ o, \isdet\ \prog\ \pred\ i\ o$$
+  Given a contxt \ctx and a program \prog, forall predicate \pred, such that
+  $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ then
+  $$\detCheck\ \ctx\ \prog \to \forall \vec{t}, \isdet\ \prog\ (\pred\ \vec{t})$$
   \vspace{-2em}
   \label{th:det1}
 \end{theorem}
