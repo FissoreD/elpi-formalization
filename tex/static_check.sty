@@ -15,19 +15,19 @@
     \AxiomC{
       \stackanchor
         {$\ctx\ \predVar = \dtype{\func}{[\func[_i]]}{[\func[_o]]}$}
-        {\assumeCmd{\ctx}{\func[_i]}{i}{\ctx[']}}
+        {\assumeCmd[1]{\ctx}{\func[_i]}{t_i}{\ctx[']}}
     }
     \AxiomC{
       \stackanchor
       {\checkLCmd{\ctx[']}{\detI}{B}{\ctx['']}{\func[']}}
-      {\ensuremath{\inferCmdArr{\ctx['']}{o}{\func[_o']}{\_}}}}
+      {\ensuremath{\inferCmdArr[1]{\ctx['']}{t_i}{\func[_o']}{\top}}}}
     \AxiomC{
       \stackanchor
       {\subCmd{\func'}{\func}}
       {\func[_o'] \mySub \func[_o]}
     }
     \RightLabelM{\ruleCheckClause}
-    \TrinaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{i\ o}{B})}}
+    \TrinaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{\vec{t}}{B})}}
   \end{myRule}
 }
 
@@ -104,10 +104,10 @@
     %   \stackanchor{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]}}}
     %   {\inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}}
     \AxiomC{\ensuremath{
-          \ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]} \qquad
-          \inferCmdArr{\ctx}{i}{\func[_i']}{\top} \qquad
-          \func[_i'] \mySub \func[_i] \qquad
-          \assumeCmd{\ctx}{\func[_o]}{o}{\ctx[']}}}
+          \ctx\ \predVar = \dtype{\func[']}{\func[_i]}{\func[_o]} \qquad
+          \inferCmdArr[1]{\ctx}{t_i}{\func[_i']}{\top} \qquad
+          \vecL{\func[_i'] \mySub \func[_i]} \qquad
+          \assumeCmd[1]{\ctx}{\func[_o]}{t_o}{\ctx[']}}}
       
     % \AxiomC{
     %   \stackanchor
@@ -116,7 +116,7 @@
     %     {then $\func[''] = \maxT\ \func\ \func[']$}
     %     {else $\func[''] = \relI$}}}
     \RightLabelM{\ruleCheckCall}
-    \UnaryInfC{\checkCmd{\ctx}{\func}{(\predVar\ i\ o)}{\ctx[']}{\maxT\ \func\ \func[']}}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{(\predVar\ \vec{t})}{\ctx[']}{\maxT\ \func\ \func[']}}
   \end{myRule}
 }
 
@@ -124,11 +124,11 @@
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
-    \AxiomC{\ensuremath{ \ctx\ \predVar = \dtype{\_}{[\func[_i]]}{\_} }}
-    \AxiomC{ \inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}
-    \AxiomC{$ \func[_i'] \not\mySub \func[_i] \lor \mathcal{R} = \bot$}
+    \AxiomC{\ensuremath{ \ctx\ \predVar = \dtype{\_}{\func[_i]}{\_} }}
+    \AxiomC{ \inferCmdArr[1]{\ctx}{t_i}{\func[_i']}{\mathcal{R}}}
+    \AxiomC{$ \lnot (\vecL{\func[_i'] \mySub \func[_i]}) \lor \mathcal{R} = \bot$}
     \RightLabelM{\ruleCheckCallFail}
-    \TrinaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ i\ o)}{\ctx}{\relI}}
+    \TrinaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ \vec{t})}{\ctx}{\relI}}
   \end{myRule}
 }
 

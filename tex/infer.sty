@@ -1,7 +1,11 @@
 
 %              inp  inp  out   out
 % \inferCmdArr{ctx}{trm}{det}{good-call}
-\newcommand{\inferCmdArr}[4]{\ensuremath{\infer\ #1\ #2 \arr (#3, #4)}}
+\newcommand{\inferCmdArr}[5][]{\ensuremath{
+  \ifstrequal{#1}{1}
+  {\vecL{\infer\ #2\ #3}}
+  {\infer\ #2\ #3} \arr (#4, #5)
+}}
 
 \newcommand{\ruleInfer}[2]{\customlabel{#1}{\ensuremath{D_{#2}}}}
 
@@ -37,13 +41,10 @@
 \newcommand{\inferApp}[1]{
   % APP
   \begin{myRule}{#1}
-    \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{\_}}}
-    \AxiomC{\inferCmdArr{\ctx}{i}{\func[_i']}{\_}}
-    % \AxiomC{\ensuremath{\func[_i'] \mySub \func[_i]}}
-    % \AxiomC{\ensuremath{\get{i}\ \predVar = D\ [D_1^E, \_]}}
-    % \AxiomC{$D_1 \mySub \get{i} \predVar$}
+    \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{\func[_i]}{\_}}}
+    \AxiomC{\inferCmdArr[1]{\ctx}{t_i}{\func[_i']}{\_}}
     \RightLabelM{\ruleInferApp}
-    \BinaryInfC{\inferCmdArr{\ctx}{(\predVar\ i\ o)}{\func[']}{\func[_i'] \mySub \func[_i]}}
+    \BinaryInfC{\inferCmdArr{\ctx}{(\predVar\ \vec{t})}{\func[']}{\func[_i'] \mySub \func[_i]}}
   \end{myRule}
 }
 
@@ -56,6 +57,15 @@
   \end{myRule}
 }
 
+\newcommand{\ruleInferLam}{\ruleInfer{rule:infer-lam}{\lambda}}
+\newcommand{\inferLam}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{\inferCmdArr{(\ctx + \{x:ty\})}{t}{\dtype{\func[']}{\func[_i]}{\func[_o]}}{\mathcal{R}}}
+    \RightLabelM{\ruleInferLam}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\lambda x^i:ty.t)}{\dtype{\func[']}{(ty::\func[_i])}{\func[_o]}}{\mathcal{R}}}
+  \end{myRule}
+}
+
 \newcommand{\inferFig}{
   \begin{subfigure}[b]{1\textwidth}
     \centering
@@ -65,6 +75,7 @@
     
     \inferPiImpl{0.46}
     \inferApp{0.49}
+    \inferLam{1}
 
     % \inferAppFail{1}
     \caption{\infer\ relation}

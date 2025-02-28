@@ -8,7 +8,10 @@
 
 %         inp     inp       inp    out
 % \assumeCmd{ctx}{determinacy}{term}{new_ctx}
-\newcommand{\assumeCmd}[4]{\ensuremath{\assume\ #1\ #2\ #3 \arr #4}}
+\newcommand{\assumeCmd}[5][]{\ensuremath{
+  \ifstrequal{#1}{1}
+  {\vecL{\assume\ #2\ #3\ #4}}
+  {\assume\ #2\ #3\ #4} \arr #5}}
 
 \newcommand{\ruleAssume}[2]{\customlabel{#1}{\ensuremath{A_{#2}}}}
 
@@ -80,11 +83,20 @@
 \newcommand{\assumeApp}[1]{
   \begin{myRule}{#1}
     % APP
-    \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{\_}}}
+    \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{\func[_i]}{\_}}}
     \AxiomC{\ensuremath{\func['] \mySub \func}}
-    \AxiomC{\assumeCmd{\ctx}{\func[_i]}{t_1}{\ctx[']}}
+    \AxiomC{\assumeCmd[1]{\ctx}{\func[_i]}{t_1}{\ctx[']}}
     \RightLabelM{\ruleAssumeApp}
-    \TrinaryInfC{\assumeCmd{\ctx}{\func}{(\predVar\ t_1\ t_2)}{\ctx[']}}
+    \TrinaryInfC{\assumeCmd{\ctx}{\func}{(\predVar\ \vec{t})}{\ctx[']}}
+  \end{myRule}
+}
+
+\newcommand{\ruleAssumeLam}{\ruleAssume{rule:assume-lam}{\lambda}}
+\newcommand{\assumeLam}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{\ensuremath{ty \mySub \func[_x] \quad \assumeCmd{(\ctx + \{x:ty\})}{(\dtype{\func}{\func[_i]}{\func[_o]})}{t}{\ctx[']}}}
+    \RightLabelM{\ruleAssumeLam}
+    \UnaryInfC{\assumeCmd{\ctx}{(\dtype{\func}{(\func[_x]::\func[_i])}{\func[_o]})}{(\lambda x:ty.t)}{\ctx['] \bs \{x\}}}
   \end{myRule}
 }
 
@@ -102,7 +114,8 @@
     % \assumeApp{0.33} 
     \assumeApp{1}
 
-    \assumeExpr{1}
+    \assumeExpr{0.25}
+    \assumeLam{0.6}
 
     \caption{\assume\ relation}
     \label{fig:det-assume}
