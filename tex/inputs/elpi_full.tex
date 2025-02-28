@@ -462,14 +462,14 @@ We provide an example of this checker in the following database.
 
 \begin{elpicode}
   give-fun X (succ X Y).
-  give-fun X (pred X Y).
+  give-fun X (~\texttt{pred}~ X Y).
   good :- give-fun 3 Res, !, Res.
 \end{elpicode}
 
 The signatures of the predicates in the snippet above are the following:
 %
 \begin{align*}
-  \texttt{succ}     & : \dtype{\detI}{\expI}{\expI}     & \texttt{pred} & : \dtype{\detI}{\expI}{\expI} \\
+  \texttt{succ}     & : \dtype{\detI}{[\expI]}{[\expI]}     & \texttt{pred} & : \dtype{\detI}{[\expI]}{[\expI]} \\
   \texttt{give-fun} & : \dtype{\relI}{[\expI]}{[\detI]} & \texttt{good} & : \detI
 \end{align*}
 
