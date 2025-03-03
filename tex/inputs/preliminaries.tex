@@ -12,178 +12,184 @@
 % objects of our language, they will be expanded in next section when needed.
 % \\
 
+This section lays the foundation for our static analysis of Elpi by
+focusing the fragment of Horn clauses with cut.
+
 \subsection{Syntax}
 
-by convention all inputs then outputs, hence triangle.
+By convention we say that predicates take first all input arguments and
+then output arguments and we separather those with $\funsep$, omitting
+the symbols when both are absent.
+We use \pred{} for redicate names, \predVar{} for functor names
+and \texttt{X} for unification variable names.
+%and \texttt{c} for data types names.
+In the syntax we single out the cut and equality predicates since they
+have dedicated treatment in the operational semantics.
 
-\begin{minipage}{0.48\textwidth}%
-  \vspace{-1em}
-  \begin{align}
-    tm     & ::= \cut \mid \predVar\ \vecL{tm} \mid tm = tm \label{eq:tm} \\
-    ty     & ::= data \mid \dtype{\relI}{data^\ast}{data^\ast} \ \label{eq:ty} \\
-    data   & ::= \texttt{c}\ data^\ast \mid \predVar \label{eq:data}
-  \end{align}  
-\end{minipage}
-\begin{minipage}{0.48\textwidth}
-  \vspace{-1em}
-  \begin{align}
-    clause & ::= \clauseCmd{\pred}{\vecL{tm}}{\vecL{tm}}                  \label{eq:cl}  \\
-    goal   & ::= \goalCmd{\prog}{tm}{\vecL{alt}} \label{eq:goal}                            \\
-    alt    & ::= \texttt{subst} * \vecL{goal} \label{eq:alt}
-  \end{align}  
-\end{minipage}
+$$
+  \begin{array}{c|c}
+    syntax & types \\\hline
+      \begin{array}{rl}
+        atom   & ::= \cut \mid \pred\ \vecL{tm} \mid tm = tm \label{eq:atom} \\
+        tm     & ::= \predVar\ \vecL{tm} \mid \texttt{X} \label{eq:tm} \\
+        clause & ::= \clauseCmd{\pred}{\vecL{tm}}{\vecL{atom}} \nonumber %\label{eq:cl} 
+      \end{array} 
+      \quad
+      &
+      \quad
+      \begin{array}{rl}
+        psign   & ::= \dtype{\relI}{ty^\ast}{ty^\ast} \ \label{eq:ty} \\
+        ty   & ::= \texttt{exp} %\texttt{c}\ data^\ast \label{eq:data} 
+      \end{array}  
+    \\
+  \end{array}
+$$  
+~\\
+In this simple setting
+all atoms have type \relI{},
+all terms $tm$ have type \texttt{exp},
+and a context \ctx{} assigns to each predicate symbol \pred{} a predicate signature $psign$.
+For example, looking back at section~\ref{sec:examples},
+we have that $\ctx~\texttt{likes} = \dtype{\relI}{\texttt{exp}}{\texttt{exp}}$.
 
-Terms are shown in \cref{eq:tm}. They are made by the \cut\ operator
-(usually noted \elpiIn{!}); term application, we use the symbol \predVar\
-to indicate variable names, they can be either predicate names, i.e. constants
-of the program, or quantified variables. An application is followed by a
-vector of terms. Term unification is a special case of term application,
-we prefer to have a special case for it. 
-By convention we differentiate unification variables from constants
-by indicating the former with capital letters and the latters
-with lower case letters.
+% \begin{minipage}{0.48\textwidth}%
+%   \vspace{-1em}
+%   \begin{align}
+%     tm     & ::= \cut \mid \predVar\ \vecL{tm} \mid tm = tm \label{eq:tm} \\
+%     ty     & ::= data \mid \dtype{\relI}{data^\ast}{data^\ast} \ \label{eq:ty} \\
+%     data   & ::= \texttt{c}\ data^\ast \mid \predVar \label{eq:data}
+%   \end{align}  
+% \end{minipage}
+% \begin{minipage}{0.48\textwidth}
+%   \vspace{-1em}
+%   \begin{align}
+%     clause & ::= \clauseCmd{\pred}{\vecL{tm}}{\vecL{tm}}                  \label{eq:cl}  \\
+%     goal   & ::= \goalCmd{\prog}{tm}{\vecL{alt}} \label{eq:goal}                            \\
+%     alt    & ::= \texttt{subst} * \vecL{goal} \label{eq:alt}
+%   \end{align}  
+% \end{minipage}
+
+% In this simple
+
+% Terms are shown in \cref{eq:tm}. They are made by the \cut\ operator
+% (usually noted \elpiIn{!}); term application, we use the symbol \predVar\
+% to indicate variable names, they can be either predicate names, i.e. constants
+% of the program, or quantified variables. An application is followed by a
+% vector of terms. Term unification is a special case of term application,
+% we prefer to have a special case for it. 
+% By convention we differentiate unification variables from constants
+% by indicating the former with capital letters and the latters
+% with lower case letters.
 
 
 
-Each term in the language has a type (\cref{eq:ty}). The type is either a
-$data$, that is the type of expressions or a $pred$ the type for predicates,
-that is the type of executable piece of code. Predicates are parametrized by
-arguments whose type are of type $data$. $data$ (\cref{eq:data}) are made by
-constants applied to list of data, we have for example the type \elpiIn{int} or
-\elpiIn{list}, and \predVar\ stands for variables, allowing therefore to have
-polymorphism.
+% Each term in the language has a type (\cref{eq:ty}). The type is either a
+% $data$, that is the type of expressions or a $pred$ the type for predicates,
+% that is the type of executable piece of code. Predicates are parametrized by
+% arguments whose type are of type $data$. $data$ (\cref{eq:data}) are made by
+% constants applied to list of data, we have for example the type \elpiIn{int} or
+% \elpiIn{list}, and \predVar\ stands for variables, allowing therefore to have
+% polymorphism.
 
-A clause (\cref{eq:cl}) is made of a variable name, its list of arguments and a body made of a
-list of terms. This list of terms are called \textit{premises} and should be
-considered as a list of subgoals in conjunction.
+% A clause (\cref{eq:cl}) is made of a variable name, its list of arguments and a body made of a
+% list of terms. This list of terms are called \textit{premises} and should be
+% considered as a list of subgoals in conjunction.
 
-\subsection{Dynamic semantics}
+\subsection{Operational semantics}
 
-A program \prog is a mapping from predicate names to clauses. These clauses are
-disjunctive, and the order in which they are explored follows the chronological
-order of their declaration.
-In our approach, we do not include built-in operators, keeping the language as
-minimalist as possible. For instance, there is no built-in \textit{or} operator.
-However, its behavior can be replicated by defining a custom \textit{or}
-predicate with two arguments and providing two implementations: one invoking the
-first argument and the other invoking the second.
-
+A program \prog is a mapping from predicate names to an ordered
+list of clauses; we write $\prog~\pred$ for the clauses for
+predicate \pred.
+% These clauses are
+% disjunctive, and the order in which they are explored follows the chronological
+% order of their declaration.
+%
+% In our approach, we do not include built-in operators, keeping the language as
+% minimalist as possible. For instance, there is no built-in \textit{or} operator.
+% However, its behavior can be replicated by defining a custom \textit{or}
+% predicate with two arguments and providing two implementations: one invoking the
+% first argument and the other invoking the second.
+%
 % A program is a mapping from predicate names to clauses. By hypothesis, we assume
 % that every program we work with from now on has been type-checked (see
 % \cite{1992nadathur}). One of the role of type-checking is to ensure that
 % commands and expressions are not mixed: commands, also called propositions, are
 % pieces of executable code, whereas expressions are not. Instead, expressions
 % serve to carry pieces of information during the execution of commands.
-
-A goal (\cref{eq:goal}) is a triple made of a program \prog, a term
-and the list of alternatives \alt existing at moment of the creation of
-the goal. A query is a list of goals (noted \g in the following) in conjunction, whereas alternatives
-(\cref{eq:alt}, noted \alt in the following) represent a disjunction of goals.
-% In particular,
-% \g is evaluated by looking into the clauses inside \prog.
-% \alt
-% contains the choice-points used by the interpreter during the evaluation of a
-% cut, the aim of this piece of data will be clarified further in the section
-% dedicated to the interpreter implementation (see \cref{sec:basic-elpi}).
-
-The interpreter takes a program a query and returns a substitution if the query
-is a consequence of the program. Each time a predicate call has multiple clauses
-implementing it, it commits the first choice and keep the other as global
-alternatives. If the committed choice leads to a failure, the interpreter will try to
-execute the first alternative. This non-deterministic behavior can be controlled
-by the user thanks to the cut operator which allows to cut away unwanted choice
-points.
-
-We say that a clause applies on the goal if its head unifies with a goal
-and we say that it \textit{successfully} unifies with a goal if the clause
-applies on the goal and all premises in its body succeed.
-
-% \begin{coqcode}
-%   Definition pn := string. (*predicate names are strings*)
-%   Definition vn := string. (*variable  names are strings*)
-%   Inductive tm := 
-%     | Call (p:pn) (i:tm) (o:tm)  (*binary predicates taking integers*)
-%     | Cut                        (*the cut operator*)
-%     | Unify (t1:tm) (t2:tm)      (*unification between t1 and t2*)
-%     | Var (n:vname)              (*a variable*)
-%     | Lam (x: vn) (b:tm)         (*lam abstraction*)
-%     ...                          (*this is extended in section XX*)
-%   Inductive clause := Clause (p:pn) (i:tm) (i:tm) (A:list tm).
-%   Notation "P I O :- Bo" := (Clause P I O Bo).
-%   Notation "t1 = t2" := (Unify t1 t2).
-%   Definition sbst := T.
-%   Definition prog := pn -> list clause.
-%   Inductive goal := Goal (P:prog) (a:tm) (A:list alt) -> goal.
-%   with alt := sbst * list goal.
-% \end{coqcode}
-
-The evaluation of a program is done through the \run\ predicate. It is a
-function with the following signature:
 %
-$$run : goal \to \vecL{alt} \to subst \to (\vecL{alt} * subst)$$
+%   \begin{align}
+%     clause & ::= \clauseCmd{\pred}{\vecL{tm}}{\vecL{tm}}                  \label{eq:cl}  \\
+%     goal   & ::= \goalCmd{\prog}{tm}{\vecL{alt}} \label{eq:goal}                            \\
+%     alt    & ::= \texttt{subst} * \vecL{goal} \label{eq:alt}
+%   \end{align}  
 %
-% \begin{minted}[autogobble]{coq}
-%   Inductive run : goal -> list alt -> subst -> list alt -> subst := ...
-% \end{minted}
+%
+A goal $\g = \goalCmd{\prog}{g}{\alt}$ is a triple made of a program \prog,
+an atom $g$ and a list of cut-alternatives \alt. An alternative is a list of goals
+paired with a substitution $\subst$. A substitution is a mapping from
+unification variables to terms.
+The operational semantics to our language is given by a relation
+$\run{} \subseteq \g \times \alt \times \subst \times \alt \times \subst$.
+We write \runCmd{\g}{\alt}{\subst}{\alt'}{\subst'}
+when a goal $\g$ under a substitution \subst and alternatives \alt
+terminates with a substitution $\subst'$ and a remaining list of
+(still unexplored) alternatives $\mathcal{A}'$.
+The rules for \run are given in~\cref{fig:basic-interp} where
+use $::$ for list cons; $@$ for list concatenation; $\EmptyList$ is the empty list;
+$[e|x \in \vec{x}]$ for list comprehension.
+An initial query looks like \runCmd{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyList}]}{\EmptyList}{\EmptyList}{\_}{\_}
 
-\coqIn{run} should be understood as a relation between a goal \g, a list of
-alternatives \alt (which are disjunctive with the current goal), and an initial
-substitution \subst. These three components produce a new list of alternatives
-\alt['] and an updated substitution \subst['].
-The notation \runCmd{\mathcal{G}}{\mathcal{A}}{\subst}{\mathcal{A}'}{\subst'}
-represents calls to \run. The corresponding system of rules is presented in
-\cref{fig:basic-interp}.
-\begin{figure}
+Note that in this simple settings the
+program never changes during execution, but it does in section~\ref{sec:hoas}
+where the implication operator \elpiIn{=>} is introduced.
 
-  \ruleStopM{.45}
+
+
+\begin{figure}[!h]
+
+  \ruleBangM{.50}
   \ruleFailM{.45}
   \vspace{0.3em}%
 
   \ruleUnifM{.50}
-  \ruleBangM{.40}
+  \ruleStopM{.45}
   \vspace{0.3em}%
 
   \ruleCallM{1}
+  $$
+  \mathcal{F}(\prog, \pred, \vec{t}, \subst, \alt) :=
+  \bigg[
+    %\bigg(
+    \subst,
+    %\Big(
+    \big[\goalCmd \prog (t = u) ~\alt \mid (t,u) \in \vecL{t,u}\big] @
+    \big[\goalCmd \prog g ~\alt \mid g \in \vecL{g}\big]
+    %\Big)
+    %\bigg)
+    \mid \clauseCmd{\pred}{\vec{u}}{\vecL{g}} \in \prog\ \pred
+    \bigg]
+  $$
 
-  \caption{Dynamic semantics}
+  \caption{Operational semantics}
   \label{fig:basic-interp}
 \end{figure}
 
+The first rule to look at is the one for cut (\ref{rule:cut}).
+Remark that
+the cut-alternatives stored in each goal are a suffix
+of the (global-)alternatives to that goal: If the atom in the goal
+is a cut, then the global alternatives are shortened to the cut ones.
+This semantics amounts to a \textit{hard-cut} operator
+in the sense of~\cite{2003Andrews}: it is cutting
+away not only the later clauses of the same predicate, but also the alternative
+clauses for subgoals that appear earlier in the clause.
 
-% The idea is that the intepreter stops
-% when it finds the first solution, which is a valid substitutions for the query
-% wrt the program. In order to find all the solution of query from the current
-% program, that is all the valid substutions for the query, it is sufficient to
-% iterate over all the alternatives \alt['].
 
-% In the following we use the following notation for call to the run predicate:
-% %
-% $$ \runCmd{\mathcal{G}}{\mathcal{A}}{\subst}{\mathcal{A}'}{\subst'} $$
-% In this first section we start with a first-order version of a logic language.
 
-It is an operational semantics similar to \cite{1990Vink}, where rules represent
-the evolution from one configuration (below the line) to the next (above the
-line). The choice to use operational semantics rather than denotational
-semantics (as in \cite{2011king}) stems from our preference for maintaining a
-concrete representation of the objects we manipulate. Instead of using
-continuations to store the state of a choice point, we represent this
-information as lists containing the alternatives, along with the substitution
-that existed at the moment the choice point was created.
+FINQUI
 
-In the derivation
-system, we use the two-colon symbol ($::$) as separator between the head of a
-list and its tail; $@$ stands for list concatenation; $\EmptyList$ is the empty list.
-``$\prog\ \pred$'' is the application of \prog to the predicate \pred; it returns the list of
-clauses for \pred\ in the program. The function $\mathcal{F}$ is defined as follows:
-%
-$$
-  \mathcal{F}(\prog, \pred, \vec{t}, \subst, \alt) :=
-  \Bigg[\bigg(\subst,
-    \Big(
-    \big[(\prog, \vec{t}_x = \vec{u}_x, \alt) \mid x \in \text{len }t\big] @
-    \big[(\prog, g, \alt) \mid g \in bs\big]
-    \Big)\bigg) \mid \clauseCmd{\pred}{\vec{u}}{bs} \in \prog\ \pred\Bigg]
-$$
+
+
 
 It takes program \prog, a predicate name \pred, a list of terms,
 a substitution $\subst$ and a list of alternatives \alt. For each clause
@@ -246,13 +252,6 @@ Unification has some interesting properties
 \end{definition}
 
 
-The \textit{cut rule} (\ref{rule:cut}) refers to goals where the first goal has the
-\cut as atom. Since in our implementation we use the \textit{hard-cut} operator,
-we proceed in solving the list of remaining goals but the alternatives we keep
-are the one stored in the goal. This alternatives are called cut-alternatives.
-As said in \cite{2003Andrews}, (hard-)cut is a non-logical operator ``cutting
-away not only the later clauses of the same predicate, but also the alternative
-clauses for subgoals that appear earlier in the clause''.
 
 The \textit{call rule} (\ref{rule:call}) deals with goals starting with a predicate
 call, \pred\ is the notation to represent predicate name. In this case the function $\mathcal{F}$ is called with the parameters as
@@ -273,39 +272,119 @@ consists of the atoms $a_1, \dots, a_k, !, a_{k+2}, \dots, a_m$, then all choice
 points created during the evaluation of $a_1, \dots, a_k$ will also be pruned.
 This pruning consist simply in setting the cut alternatives to \alt.
 
-As an example, let's consider the following program called \prog:
 
-\begin{elpicode}
-  p1 X Y :- p2 X Y.           % r1
-  p1 3 3.                     % r2
-  p2 X Y :- p3 X Y, !, Y = 1. % r3
-  p2 1 1.                     % r4
-  p3 1 2.                     % r5
-\end{elpicode}
+% existing at moment of the creation of
+% the goal. A query is a list of goals (noted \g in the following) in conjunction, whereas alternatives
+% (\cref{eq:alt}, noted \alt in the following) represent a disjunction of goals.
+% In particular,
+% \g is evaluated by looking into the clauses inside \prog.
+% \alt
+% contains the choice-points used by the interpreter during the evaluation of a
+% cut, the aim of this piece of data will be clarified further in the section
+% dedicated to the interpreter implementation (see \cref{sec:basic-elpi}).
 
-{
-\def\goalG{\goalCmd{\prog}{\callCmd{\texttt{p1}}{3\ Z}}{\EmptyList}}
+% The interpreter takes a program a query and returns a substitution if the query
+% is a consequence of the program. Each time a predicate call has multiple clauses
+% implementing it, it commits the first choice and keep the other as global
+% alternatives. If the committed choice leads to a failure, the interpreter will try to
+% execute the first alternative. This non-deterministic behavior can be controlled
+% by the user thanks to the cut operator which allows to cut away unwanted choice
+% points.
 
-Let $\mathcal{G} :=\ \goalG$ be a goal, the execution of
-``\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?\subst}'' will apply \ref{rule:call}
-producing a new goal for the rule $r1$ and an alternative list containing $r2$,
-we leave out details concerning unifications of head terms. The execution of
-$r1$ will try to solve $r3$. This will add three goals \elpiIn{r 1 Y, !, Y = 1}
-with cut-alternatives equal to $r2$ whereas the new alternatives will be $r4 @
-  r2$. The execution of $r3$ will solve \elpiIn{p3 1 Y} with substitution $s :=
-  \{X \gets 1; Y \gets 2\}$. The \elpiIn{!} will cut away the alternative $r4 @
-  r2$ and will keep the cut-alternative $r2$. The failing premise \elpiIn{Y = 1}
-will cause a backtracking thanks to \ref{rule:fail} and try to apply $r2$ from the
-empty substitution. This last unification succeed with final substution $?\subst :=
-  \{X \gets 3; Y \gets 3\}$ and final list of alternatives $?A := \EmptyList$.
+% We say that a clause applies on the goal if its head unifies with a goal
+% and we say that it \textit{successfully} unifies with a goal if the clause
+% applies on the goal and all premises in its body succeed.
 
-% \begin{myRule}{1}
-%   \AxiomC{}
-%   \RightLabelM{\ruleCall}
-%   \UnaryInfC{\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?S}}
-% \end{myRule}
+% \begin{coqcode}
+%   Definition pn := string. (*predicate names are strings*)
+%   Definition vn := string. (*variable  names are strings*)
+%   Inductive tm := 
+%     | Call (p:pn) (i:tm) (o:tm)  (*binary predicates taking integers*)
+%     | Cut                        (*the cut operator*)
+%     | Unify (t1:tm) (t2:tm)      (*unification between t1 and t2*)
+%     | Var (n:vname)              (*a variable*)
+%     | Lam (x: vn) (b:tm)         (*lam abstraction*)
+%     ...                          (*this is extended in section XX*)
+%   Inductive clause := Clause (p:pn) (i:tm) (i:tm) (A:list tm).
+%   Notation "P I O :- Bo" := (Clause P I O Bo).
+%   Notation "t1 = t2" := (Unify t1 t2).
+%   Definition sbst := T.
+%   Definition prog := pn -> list clause.
+%   Inductive goal := Goal (P:prog) (a:tm) (A:list alt) -> goal.
+%   with alt := sbst * list goal.
+% \end{coqcode}
 
-}
+% The evaluation of a program is done through the \run\ predicate. It is a
+% function with the following signature:
+% %
+% $$run : goal \to \vecL{alt} \to subst \to (\vecL{alt} * subst)$$
+%
+% \begin{minted}[autogobble]{coq}
+%   Inductive run : goal -> list alt -> subst -> list alt -> subst := ...
+% \end{minted}
+
+% \coqIn{run} should be understood as a relation between a goal \g, a list of
+% alternatives \alt (which are disjunctive with the current goal), and an initial
+% substitution \subst. These three components produce a new list of alternatives
+% \alt['] and an updated substitution \subst['].
+% The notation \runCmd{\mathcal{G}}{\mathcal{A}}{\subst}{\mathcal{A}'}{\subst'}
+% represents calls to \run. 
+
+
+
+% The idea is that the intepreter stops
+% when it finds the first solution, which is a valid substitutions for the query
+% wrt the program. In order to find all the solution of query from the current
+% program, that is all the valid substutions for the query, it is sufficient to
+% iterate over all the alternatives \alt['].
+
+% In the following we use the following notation for call to the run predicate:
+% %
+% $$ \runCmd{\mathcal{G}}{\mathcal{A}}{\subst}{\mathcal{A}'}{\subst'} $$
+% In this first section we start with a first-order version of a logic language.
+
+It is an operational semantics similar to \cite{1990Vink}, where rules represent
+the evolution from one configuration (below the line) to the next (above the
+line). The choice to use operational semantics rather than denotational
+semantics (as in \cite{2011king}) stems from our preference for maintaining a
+concrete representation of the objects we manipulate. Instead of using
+continuations to store the state of a choice point, we represent this
+information as lists containing the alternatives, along with the substitution
+that existed at the moment the choice point was created.
+
+% As an example, let's consider the following program called \prog:
+
+% \begin{elpicode}
+%   p1 X Y :- p2 X Y.           % r1
+%   p1 3 3.                     % r2
+%   p2 X Y :- p3 X Y, !, Y = 1. % r3
+%   p2 1 1.                     % r4
+%   p3 1 2.                     % r5
+% \end{elpicode}
+
+% {
+% \def\goalG{\goalCmd{\prog}{\callCmd{\texttt{p1}}{3\ Z}}{\EmptyList}}
+
+% Let $\mathcal{G} :=\ \goalG$ be a goal, the execution of
+% ``\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?\subst}'' will apply \ref{rule:call}
+% producing a new goal for the rule $r1$ and an alternative list containing $r2$,
+% we leave out details concerning unifications of head terms. The execution of
+% $r1$ will try to solve $r3$. This will add three goals \elpiIn{r 1 Y, !, Y = 1}
+% with cut-alternatives equal to $r2$ whereas the new alternatives will be $r4 @
+%   r2$. The execution of $r3$ will solve \elpiIn{p3 1 Y} with substitution $s :=
+%   \{X \gets 1; Y \gets 2\}$. The \elpiIn{!} will cut away the alternative $r4 @
+%   r2$ and will keep the cut-alternative $r2$. The failing premise \elpiIn{Y = 1}
+% will cause a backtracking thanks to \ref{rule:fail} and try to apply $r2$ from the
+% empty substitution. This last unification succeed with final substution $?\subst :=
+%   \{X \gets 3; Y \gets 3\}$ and final list of alternatives $?A := \EmptyList$.
+
+% % \begin{myRule}{1}
+% %   \AxiomC{}
+% %   \RightLabelM{\ruleCall}
+% %   \UnaryInfC{\runCmd{\mathcal{G}}{\EmptyList}{\EmptySubst}{?A}{?S}}
+% % \end{myRule}
+
+% }
 
 % \subsection{The cut operator}
 % \label{sec:cut}
