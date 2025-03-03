@@ -108,7 +108,7 @@ deterministic and \elpiIn{do} behaves deterministically when it receives
 functions as input.
 
 The checker should also accepts predicates that are \textit{wrongly} called. For
-example, \elpiIn{do (f 1 X)} should be accepted as a call, however, since the
+example, \elpiIn{do (f 1 X)} should be accepted as a call, however, since the\todo{cambiare f con queen}
 argument of \elpiIn{do} has not the expected determinacy, we loose the guarantee
 that the call behaves deterministically. Similarly, in the query \elpiIn{idF (f 1 X)
   R}, \elpiIn{idF} is \textit{wrongly} called and therefore we have no guarantee that \elpiIn{R} is
