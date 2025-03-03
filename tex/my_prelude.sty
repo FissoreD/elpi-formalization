@@ -87,8 +87,17 @@
   \end{minted}%
   \vspace{0.2em}%
 }
+\newenvironment{mymintedln}[2][~~]{
+  \vspace{0.2em}%
+  \VerbatimEnvironment
+  \begin{minted}[linenos,fontsize=\small,autogobble,escapeinside=#1,mathescape=true,frame=leftline,framerule=0pt,framesep=1em]{#2}%
+}{
+  \end{minted}%
+  \vspace{0.2em}%
+}
 
 \newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}{'elpi.py:ElpiLexer -x'}}{\end{myminted}}
+\newenvironment{elpicodeln}{\VerbatimEnvironment\begin{mymintedln}{'elpi.py:ElpiLexer -x'}}{\end{mymintedln}}
 \newenvironment{coqcode}{\VerbatimEnvironment\begin{myminted}{coq}}{\end{myminted}}
 
 \newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
