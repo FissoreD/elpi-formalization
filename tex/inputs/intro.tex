@@ -50,8 +50,8 @@ map F [X|XS] [Y|YS] :- F X Y, map F XS YS.
 
 This code happens to compute a function of the first two arguments, that we
 consider inputs, if and only if the higher order predicate \elpiIn{F} is a
-function and if the first list is ground. We want to author of this code
-to be able to ascribe a more precise signature on the code above, namely:
+function and if the first list is ground. We want tho author of this code
+to be able to ascribe a more precise signature to the code above, namely:
 
 \begin{elpicode}
 func map (func A -> B), list A -> list B.
@@ -78,9 +78,9 @@ func likes! guest -> dish.
 likes! G D :- likes D G, !.
 
 pred meal i:list guest, o:list dish.
-meal Gs M :- map likes! Gs Ds.     % a function
-meal Gs M :- map likes Gs Ds, !.   % also a function
-meal Gs M :- map likes Gs Ds.      % not really a function
+meal Gs M :- map likes! Gs M.     % a function
+meal Gs M :- map likes Gs M, !.   % also a function
+meal Gs M :- map likes Gs M.      % not really a function
 \end{elpicode}
 
 \noindent All three implementation validate the signature above, but only the
@@ -90,18 +90,19 @@ first two validate the one below.
 func meal list guest -> list dish.
 \end{elpicode}
 
-\noindent The first one is accepted since \elpiIn{like!} is a function, hence also
-\elpiIn{map likes! Gs Ds} is. The second implementation miscalls \elpiIn{map}
-but then commits to the first solution, hence it is a function.
+\noindent The first one is accepted since \elpiIn{likes!} is a function, hence also
+\elpiIn{map likes! Gs M} is. The second implementation miscalls \elpiIn{map}
+by passing the relation \elpiIn{likes}, but then commits to the first solution,
+hence it is a function.
 The third one is rejected since it miscalls \elpiIn{map} without
 compensating for it.
 
-The cut operator is the immediate way to impose functionality on a relation
-by committing to its first result, as in the body of \elpiIn{like}, but it
-not necessary to explicitly use it.\\
-The language of predicate signatures we introduce is expressive enough to
-encapsulate its behavior.
-For example the signature of \elpiIn{once}
+The cut operator lets one impose functionality on a relation
+by committing to its first result, as in the body of \elpiIn{like}, but it also
+discards the clauses following the current one.
+Luckily the higher order nature of Elpi and the language of signatures we
+introduce is expressive enough to encapsulate the desired ``tail cut'' behavior
+into a predicate: The signature of \elpiIn{once}
 states that the higher order argument \elpiIn{P} can be any predicate, not
 necessarily functional, but still \elpiIn{once P} acts as a function.
 
@@ -109,24 +110,31 @@ necessarily functional, but still \elpiIn{once P} acts as a function.
 func once (pred) -> .
 once P :- P, !.
 
-meal Gs M :- map (once likes) Gs Ds. % ok
+meal Gs M :- map (once likes) Gs Ds. % ok, "once likes" is a function
 \end{elpicode}
 
-\noindent  The determinacy analysis we
-present tracks functionality of the outputs of (well) called predicates,
-that can be themselves predicates.
+\noindent Not only the inputs, but also the outputs of predicates
+can be predicates, and the determinacy analysis we present tracks their
+functional status.
     
 \begin{elpicode}
-func commit (pred) -> (func).
-commit P (once P).
+func commit (pred) -> (func).               func id (func) -> (func).
+commit P (once P).                          id F F.
 
 meal Gs M :- commit likes F, map Gs F M. % ok
+meal Gs M :- id likes F, map Gs F M.     % nope
 \end{elpicode}
 
 \noindent Here the output of \elpiIn{commit} is a function \elpiIn{F} that
-in turn makes \elpiIn{map Gs F M} produce a single value for \elpiIn{M}. Moreover
-\elpiIn{commit} is a function, so the whole body of \elpiIn{meal} also is.
+in turn makes \elpiIn{map Gs F M} produce a single value for \elpiIn{M}.
+Moreover \elpiIn{commit} is a function, so the whole body of \elpiIn{meal} also
+is. Of the outputs are considered functional only if the predicate is
+well called.
 
+\begin{elpicode}
+
+\end{elpicode}
+    
 
 The real business of Elpi is the manipulation of higher order data via the so
 called $\lambda$-tree syntax (also known as HOAS~\cite{1988pfenning,Miller2018MechanizedMR}).
