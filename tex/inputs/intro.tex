@@ -22,16 +22,6 @@ many works on the subject~\cite{robaDescrittaDopoNeiRelatedWorks} but none of th
 works can be applied to Elpi due to its higher order nature, inherited from
 $\lambda$Prolog, and its nonstandard notion of input.
 
-Our contributions is a  determinacy checking algorithm that
-\begin{itemize}
-\item covers logic programs with cut
-\item covers higher order logic programming constructs such as first class predicates and clauses
-\item can be applied to pre-existing code bases, i.e. tracks miscalled functions rather than aborting
-\end{itemize}
-Last but not least we provide an operational semantics for higher order logic programs
-with cut that poses the bases for our definition of \emph{functional} and
-paves the way to a mechanization of the determinacy checking algorithm.
-
 \subsection{Motivating examples}
 
 A first motivating example is the \elpiIn{map} predicate, widely used in
@@ -174,6 +164,28 @@ The two predicates are functions even if they dynamically add copy rules
 at run time: Since \elpiIn{x} is fresh it does not unify
 with \elpiIn{app}, \elpiIn{lam} or any previously generated fresh \elpiIn{x}.
 Our static analysis accepts this programming pattern.
+
+\subsection{Contributions and paper structure}
+
+Our contributions is a  determinacy checking algorithm that
+\begin{itemize}
+\item covers logic programs with cut
+\item covers higher order logic programming constructs such as first class predicates and clauses
+\item can be applied to pre-existing code bases, i.e. tracks miscalled functions rather than aborting
+\end{itemize}
+Last but not least we provide an operational semantics for higher order logic programs
+with cut that poses the bases for our definition of \emph{functional} and
+paves the way to a mechanization of the determinacy checking algorithm.
+
+The paper gives a big step semantics and static functional-analsys for
+the Horn-Clauses fragment of the Elpi language in section~\ref{sec:basic}.
+Then it adapts the analysis to the non-standard input mode of Elpi in
+section~\ref{sec:basic-elpi}. Finally it covers higher order
+predicate and data types sections~\ref{sec:vars} and~\ref{sec:hoas}.
+
+% TO BE REMOVED
+\tableofcontents
+\newpage
 
 % We have a rule based language integrated in Coq. Rules are useful
 % to model a grown knowledge base (extend existing programs) and manage

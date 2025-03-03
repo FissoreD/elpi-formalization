@@ -1,4 +1,4 @@
-\section{Prolog with higher-order variables in prop}
+\section{Static analysis for Higher Order predicates} % Prolog with higher-order variables in prop}
 \label{sec:vars}
 
 In order to fully capture the potential of a \lamprolog language like \elpi, we
@@ -578,45 +578,45 @@ The final theorem we want to prove is the following.
   By 
 \end{proof}
 
-\subsection{Mix data with ty}
+% \subsection{Mix data with ty}
 
-\begin{align}
-  data & ::= \texttt{c}\ ty^\ast \mid data \to data \mid \predVar \label{eq:data11}
-\end{align}
+% \begin{align}
+%   data & ::= \texttt{c}\ ty^\ast \mid data \to data \mid \predVar \label{eq:data11}
+% \end{align}
 
-\subsection{Determinacy polymorphism}
+% \subsection{Determinacy polymorphism}
 
-Il problema è ad esmepio la funzione identità
+% Il problema è ad esmepio la funzione identità
 
-\begin{elpicode}
-  pred id i:A, o:A.
-\end{elpicode}
+% \begin{elpicode}
+%   pred id i:A, o:A.
+% \end{elpicode}
 
-Se id viene chiamato con una deterministic-predicate, allora l'output sarà
-anch'esso deterministic. Il problema è che non è sempre vero che la determinacy
-è passata tra due oggetti che hanno lo stesso tipo.
+% Se id viene chiamato con una deterministic-predicate, allora l'output sarà
+% anch'esso deterministic. Il problema è che non è sempre vero che la determinacy
+% è passata tra due oggetti che hanno lo stesso tipo.
 
-Per esempio:
+% Per esempio:
 
-\begin{elpicode}
-  pred wrong_id i:A, o:A.
-  wrong_id fun rel.
-\end{elpicode}
+% \begin{elpicode}
+%   pred wrong_id i:A, o:A.
+%   wrong_id fun rel.
+% \end{elpicode}
 
-Per l'identià si potrebbe definire versioni specializzate:
+% Per l'identià si potrebbe definire versioni specializzate:
 
-\begin{elpicode}
-  pred id1 i:(func A -> A) (func A -> A).
-  id1 X X.
-\end{elpicode}
+% \begin{elpicode}
+%   pred id1 i:(func A -> A) (func A -> A).
+%   id1 X X.
+% \end{elpicode}
 
-Ma ovviamente questo è tedioso, ci vorrebbe la possibilità di avere un
-polimorphismo di determinacy.
-Qualcosa tipo:
+% Ma ovviamente questo è tedioso, ci vorrebbe la possibilità di avere un
+% polimorphismo di determinacy.
+% Qualcosa tipo:
 
-\begin{elpicode}
-  pred id2 i:X~$^\texttt{Y}$~, o:X~$^\texttt{Y}$~.
-\end{elpicode}
+% \begin{elpicode}
+%   pred id2 i:X~$^\texttt{Y}$~, o:X~$^\texttt{Y}$~.
+% \end{elpicode}
 
-Dove $^\texttt{Y}$ trasmette l'informazione che i due argomenti di id2 hanno
-la stessa funzionalità.
+% Dove $^\texttt{Y}$ trasmette l'informazione che i due argomenti di id2 hanno
+% la stessa funzionalità.

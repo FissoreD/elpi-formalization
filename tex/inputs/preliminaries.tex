@@ -1,15 +1,19 @@
-\section{Preliminaries}
+\section{Static analysis for Horn Clauses with cut}
+\label{sec:basic}
 
-Before providing a formal definition of determinacy and mode analysis, we
-first describe the language we are working with, namely a dialect of \lamprolog
-called \elpi.
+% Before providing a formal definition of determinacy and mode analysis, we
+% first describe the language we are working with, namely a dialect of \lamprolog
+% called \elpi.
 
-Since we have structured our paper into two main sections: 1) the first
-discusses a basic version of \elpi with only Horn clauses and the cut operator,
-and 2) the second extends this version by introducing hereditary-Harrop
-formulas. Below we give a simple presentation of some basic 
-objects of our language, they will be expanded in next section when needed.
-\\
+% Since we have structured our paper into two main sections: 1) the first
+% discusses a basic version of \elpi with only Horn clauses and the cut operator,
+% and 2) the second extends this version by introducing hereditary-Harrop
+% formulas. Below we give a simple presentation of some basic 
+% objects of our language, they will be expanded in next section when needed.
+% \\
+
+\subsection{Syntax}
+
 \begin{minipage}{0.45\textwidth}%
   \vspace{-1em}
   \begin{align}
@@ -37,30 +41,7 @@ By convention we differentiate unification variables from constants
 by indicating the former with capital letters and the latters
 with lower case letters.
 
-A variable is a term not yet instantiated. We can assign variables thanks to the
-\unify\ procedure. It is used each time a term like $t_1 = t_2$ is encountered
-while solving a goal. The notation \unifyCmd{t_1}{t_2}{\subst}{\subst[']} is
-the unification and between the terms $t_1$ and $t_2$. It also takes an initial substitution \subst
-which is updated into the final substition \subst[']. A substitution is a mapping from variables name to their
-assignment. An assignment is a term. Unification provides, when possible, a most general unifier
-between the two terms. The notation $\subst t$ is the application of a substitution
-to a term.
-It returns a new term where all the variables in $t$ have been recursively
-replaced by heir assignment in \subst. If the variable as no assignment
-in \subst\ then the same variable is returned.
 
-Unification has some interesting properties
-
-\begin{definition}[Unification negation]
-  \vspace{-1em}\todo{qui = è il same term}
-  $$(\forall \subst, \lnot (\exists \subst['], \unifyCmd{t_1}{t_2}{\subst}{\subst[']}) \to (\neg (\exists t_3~\subst_1~\subst_2,
-      \subst_1 t_1 = \subst_1 t_3 \land \subst_2 t_2 = \subst_2 t_3))$$
-\end{definition}
-
-\begin{definition}[Substitution union]
-  \vspace{-1em}\todo{qui = è il same term}
-  $$\subst_1 \cap \subst_2  = \varnothing \to \subst_1\ t_1 = \subst_2\ t_2 \to (\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$$
-\end{definition}
 
 Each term in the language has a type (\cref{eq:ty}). The type is either a
 $data$, that is the type of expressions or a $pred$ the type for predicates,
@@ -89,6 +70,8 @@ predicate $p$ in super-homogenous form, i.e. a sole clause containing the
 disjunction of $\mathcal{L}$. This is mainly due to the fact that \elpi is an
 homoiconic language and its program definition can change during the evaluation
 of the code.
+
+\subsection{Dynamic semantics}
 
 % A program is a mapping from predicate names to clauses. By hypothesis, we assume
 % that every program we work with from now on has been type-checked (see
@@ -242,6 +225,32 @@ updated substitution \subst[']. Finally, if the unification succeeds, the \run\
 procedure is called with the list of remaining goals \g and the new substitution
 \subst['].
 
+A variable is a term not yet instantiated. We can assign variables thanks to the
+\unify\ procedure. It is used each time a term like $t_1 = t_2$ is encountered
+while solving a goal. The notation \unifyCmd{t_1}{t_2}{\subst}{\subst[']} is
+the unification and between the terms $t_1$ and $t_2$. It also takes an initial substitution \subst
+which is updated into the final substition \subst[']. A substitution is a mapping from variables name to their
+assignment. An assignment is a term. Unification provides, when possible, a most general unifier
+between the two terms. The notation $\subst t$ is the application of a substitution
+to a term.
+It returns a new term where all the variables in $t$ have been recursively
+replaced by heir assignment in \subst. If the variable as no assignment
+in \subst\ then the same variable is returned.
+
+Unification has some interesting properties
+
+\begin{definition}[Unification negation]
+  \vspace{-1em}\todo{qui = è il same term}
+  $$(\forall \subst, \lnot (\exists \subst['], \unifyCmd{t_1}{t_2}{\subst}{\subst[']}) \to (\neg (\exists t_3~\subst_1~\subst_2,
+      \subst_1 t_1 = \subst_1 t_3 \land \subst_2 t_2 = \subst_2 t_3))$$
+\end{definition}
+
+\begin{definition}[Substitution union]
+  \vspace{-1em}\todo{qui = è il same term}
+  $$\subst_1 \cap \subst_2  = \varnothing \to \subst_1\ t_1 = \subst_2\ t_2 \to (\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$$
+\end{definition}
+
+
 The \textit{cut rule} (\ref{rule:cut}) refers to goals where the first goal has the
 \cut as atom. Since in our implementation we use the \textit{hard-cut} operator,
 we proceed in solving the list of remaining goals but the alternatives we keep
@@ -362,7 +371,7 @@ empty substitution. This last unification succeed with final substution $?\subst
 % the condition would be authorized.
 % \todo{cut di teyjus}
 
-\subsection{Concerning modes}
+\subsection{Static analysis: modes}
 \label{sec:modes}
 
 Before talking about determinacy and the impact that hard-cut has on it. We
@@ -441,7 +450,7 @@ seamantics of the input mode which is used in \elpi.
 In the second part, we extend it so that it works with predicates taking
 predicate calls as arguments.
 
-\subsection{Concerning determinacy}
+\subsection{Static analysis: functionality}
 \label{sec:det}
 
 
@@ -757,26 +766,26 @@ so that it is no more classified as non-deterministic.
 % determinacy-checked (hypothesis \coqIn{HD}) program and a predicate \pred such,
 % then \pred is a deterministic predicate.
 
-\subsection{Contributions and paper structure}
+% \subsection{Contributions and paper structure}
 
-In our paper we will provide a description about a new dynamic mode and
-a new static determinacy
-checkers to verify that clauses are consistent wrt the signature the predicate has. We
-introduce these concepts with the \elpi programming language. We start by a
-light version of \elpi in the first-order setting, i.e. with no higher-order variables.
-In this part we explain our notion of modes, which have an inpact
-on the dynamic interpretation of the program. This will force us to slightly
-modify the interpreter in \cref{fig:basic-interp}. Moreover, thanks to these modes, we show that
-to statically guarantee the determinacy property of deterministic predicates
-we don't need any static mode analysis.
+% In our paper we will provide a description about a new dynamic mode and
+% a new static determinacy
+% checkers to verify that clauses are consistent wrt the signature the predicate has. We
+% introduce these concepts with the \elpi programming language. We start by a
+% light version of \elpi in the first-order setting, i.e. with no higher-order variables.
+% In this part we explain our notion of modes, which have an inpact
+% on the dynamic interpretation of the program. This will force us to slightly
+% modify the interpreter in \cref{fig:basic-interp}. Moreover, thanks to these modes, we show that
+% to statically guarantee the determinacy property of deterministic predicates
+% we don't need any static mode analysis.
 
-In the second part of the paper we will extend the intepreter so that it can\todo{there are 3 parts}
-work with higher-order variables, hereditary-arrop clauses insertion and local
-$\forall$-quantified variable declaration. Here predicates will also take
-propositions as arguments. Thanks to this extention we will propose a new mode
-checking algorithm working with a new definition of groundness, called
-\textit{input-ground}. The signature of a predicate can be annotated so that
-output arguments are guaranteed to be deterministic. This will make the
-determinacy checker to analyse not only deterministic clauses but also relational
-one, since a check should be performed wrt the determinacy annotation of its
-outputs.
+% In the second part of the paper we will extend the intepreter so that it can\todo{there are 3 parts}
+% work with higher-order variables, hereditary-arrop clauses insertion and local
+% $\forall$-quantified variable declaration. Here predicates will also take
+% propositions as arguments. Thanks to this extention we will propose a new mode
+% checking algorithm working with a new definition of groundness, called
+% \textit{input-ground}. The signature of a predicate can be annotated so that
+% output arguments are guaranteed to be deterministic. This will make the
+% determinacy checker to analyse not only deterministic clauses but also relational
+% one, since a check should be performed wrt the determinacy annotation of its
+% outputs.
