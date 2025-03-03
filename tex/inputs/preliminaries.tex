@@ -1,4 +1,4 @@
-\section{Determinacy analysis for Horn Clauses with cut}
+\section{Determinacy analysis for Horn Clauses with modes and cut}
 \label{sec:basic}
 
 % Before providing a formal definition of determinacy and mode analysis, we
@@ -14,15 +14,17 @@
 
 \subsection{Syntax}
 
-\begin{minipage}{0.45\textwidth}%
+by convention all inputs then outputs, hence triangle.
+
+\begin{minipage}{0.48\textwidth}%
   \vspace{-1em}
   \begin{align}
     tm     & ::= \cut \mid \predVar\ \vecL{tm} \mid tm = tm \label{eq:tm} \\
-    ty     & ::= data \mid \texttt{pred}\ data\ast \label{eq:ty} \\
+    ty     & ::= data \mid \dtype{\relI}{data^\ast}{data^\ast} \ \label{eq:ty} \\
     data   & ::= \texttt{c}\ data^\ast \mid \predVar \label{eq:data}
   \end{align}  
 \end{minipage}
-\begin{minipage}{0.45\textwidth}
+\begin{minipage}{0.48\textwidth}
   \vspace{-1em}
   \begin{align}
     clause & ::= \clauseCmd{\pred}{\vecL{tm}}{\vecL{tm}}                  \label{eq:cl}  \\
@@ -500,7 +502,7 @@ to distinguish input from output arguments, we change the signature of predicate
 as follows:
 %
 \begin{align}
-  pred ::= [\detI \mid \relI]\ data^\ast \funsep data^\ast
+  ty & ::= data \mid [\detI \mid \relI]\ data^\ast \funsep data^\ast
   \label{eq:pred}
 \end{align}
 
