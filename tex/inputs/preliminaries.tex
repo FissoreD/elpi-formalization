@@ -1,4 +1,4 @@
-\section{Static analysis for Horn Clauses with cut}
+\section{Determinacy analysis for Horn Clauses with cut}
 \label{sec:basic}
 
 % Before providing a formal definition of determinacy and mode analysis, we
@@ -55,7 +55,9 @@ A clause (\cref{eq:cl}) is made of a variable name, its list of arguments and a 
 list of terms. This list of terms are called \textit{premises} and should be
 considered as a list of subgoals in conjunction.
 
-A program is a mapping from predicate names to clauses. These clauses are
+\subsection{Dynamic semantics}
+
+A program \prog is a mapping from predicate names to clauses. These clauses are
 disjunctive, and the order in which they are explored follows the chronological
 order of their declaration.
 In our approach, we do not include built-in operators, keeping the language as
@@ -63,15 +65,6 @@ minimalist as possible. For instance, there is no built-in \textit{or} operator.
 However, its behavior can be replicated by defining a custom \textit{or}
 predicate with two arguments and providing two implementations: one invoking the
 first argument and the other invoking the second.
-
-Unlike other prolog system, such as \mercury \cite{1996Somogy}, \elpi is not a
-compiled language and we do not transform the list $\mathcal{L}$ of clauses of a
-predicate $p$ in super-homogenous form, i.e. a sole clause containing the
-disjunction of $\mathcal{L}$. This is mainly due to the fact that \elpi is an
-homoiconic language and its program definition can change during the evaluation
-of the code.
-
-\subsection{Dynamic semantics}
 
 % A program is a mapping from predicate names to clauses. By hypothesis, we assume
 % that every program we work with from now on has been type-checked (see
@@ -688,10 +681,29 @@ predicates.
   \label{def:det-check}
 \end{definition}
 
+\begin{definition}[\ensuremath{\prog[^!]}]
+TODO: add neck cut after all rules that do not have cut already
+\end{definition}
+
+
+
+\begin{elpicode}
+p 1 3.
+p 2 3.
+% faccio call p T con T ground, ho una alternativa. ma so che
+% fallirà perche 1 e 2 non unificano in met excl. Quindi P!
+p 1 3 :- !.
+p 2 3.
+\end{elpicode}
+
+\begin{theorem}[P! = P]
+  run P iff run P!
+\end{theorem}
+
 \begin{theorem}[Determinacy checking property]
   Given a contxt \ctx and a program \prog, forall predicate \pred, such that
   $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ then
-  $$\wellModed\ \prog \to \detCheck\ \ctx\ \prog \to \forall \vec{t}, \vecL{\ground\ t_i}\ \to \isdet\ \prog\ (\pred\ \vec{t})$$
+  $$\wellModed\ \prog \to \detCheck\ \ctx\ \prog \to \forall \vec{t}, \vecL{\ground\ t_i}\ \to \isdet\ \prog[^!]\ (\pred\ \vec{t})$$
   \vspace{-20pt}
   \label{th:det}
 \end{theorem}

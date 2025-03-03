@@ -17,7 +17,7 @@ by different teams is combined together, reused in order to lower the cost
 of mechanization.
 
 As of typday Elpi comes with a quite standard type checker~\cite{1992nadathur} but
-features no mode nor determinacy analisys. The literature provides
+features no determinacy analisys. The literature provides
 many works on the subject~\cite{robaDescrittaDopoNeiRelatedWorks} but none of these
 works can be applied to Elpi due to its higher order nature, inherited from
 $\lambda$Prolog, and its nonstandard notion of input.
@@ -96,20 +96,27 @@ into a predicate: The signature of \elpiIn{once}
 states that the higher order argument \elpiIn{P} can be any predicate, not
 necessarily functional, but still \elpiIn{once P} acts as a function.
 
+% func once (pred) -> .
+% once P :- P, !.
+
 \begin{elpicode}
-func once (pred) -> .
-once P :- P, !.
+func once (pred i:A, o:B), A -> B.
+once P X R :- P X R, !.
 
 meal Gs M :- map (once likes) Gs Ds. % ok, "once likes" is a function
 \end{elpicode}
+% meal Gs M :- map (g\d\once (likes g d)) Gs Ds. % ok, "once likes" is a function
 
 \noindent Not only the inputs, but also the outputs of predicates
 can be predicates, and the determinacy analysis we present tracks their
 functional status.
     
 \begin{elpicode}
-func commit (pred) -> (func).               func id (func) -> (func).
-commit P (once P).                          id F F.
+func commit (pred i:A, o:B) -> (func A -> B).          
+commit P (once P).                             
+
+func id (func A -> B) -> (func A -> B).
+id F F.
 
 meal Gs M :- commit likes F, map Gs F M. % ok
 meal Gs M :- id likes F, map Gs F M.     % nope
