@@ -37,10 +37,8 @@ class ElpiLexer(RegexLexer):
     idcharstarns_re = rf"({idchar_re}*(\.({lcase_re}|{ucase_re}){idchar_re}*)*)"
     symbchar_re = rf"({lcase_re}|{ucase_re}|{digit_re}|{schar_re}|:)"
     constant_re = rf"({ucase_re}{idchar_re}*|{lcase_re}{idcharstarns_re}|{schar2_re}{symbchar_re}*|_{idchar_re}+)"
-    symbol_re = r"(,|<=>|->|:-|;|\?-|->|&|=>|\bas\b|\buvar\b|<|=<|=|==|>=|>|\bi<|\bi=<|\bi>=|\bi>|\bis\b|\br<|\br=<|\br>=|\br>|\bs<|\bs=<|\bs>=|\bs>|@|::|\[\]|`->|`:|`:=|\^|-|\+|\bi-|\bi\+|r-|r\+|/|\*|\bdiv\b|\bi\*|\bmod\b|\br\*|~|\bi~|\br~)"
-    escape_re = rf"\(({constant_re}|{symbol_re})\)"
-    const_sym_re = rf"({constant_re}|{symbol_re}|{escape_re})"
-    pred_func_re = rf"(?:func|pred)"
+    symbol_re = r"(,|<=>|-->|:-|:>|;|\?-|->|&|=>|\bas\b|\buvar\b|<|=<|=|==|>=|>|\bi<|\bi=<|\bi>=|\bi>|\bis\b|\br<|\br=<|\br>=|\br>|\bs<|\bs=<|\bs>=|\bs>|@|::|\[\]|`->|`:|`:=|\^|-|\+|\bi-|\bi\+|r-|r\+|/|\*|\bdiv\b|\bi\*|\bmod\b|\br\*|~|\bi~|\br~)"
+    const_sym_re = rf"({constant_re}|{symbol_re}|\({symbol_re}\))"
 
     tokens = {
         'root': [
@@ -55,7 +53,7 @@ class ElpiLexer(RegexLexer):
              'elpi-string'),
             (r"(:index)(\s*)(\()", bygroups(Keyword.Mode, Text.Whitespace, Punctuation),
              'elpi-indexing-expr'),
-            (rf"\b(external {pred_func_re}|{pred_func_re})(\s+)({const_sym_re})",
+            (rf"\b(external pred|pred)(\s+)({const_sym_re})",
              bygroups(Keyword.Declaration, Text.Whitespace, Name.Function),
              'elpi-pred-item'),
             (rf"\b(func)(\s+)({const_sym_re})",
@@ -152,8 +150,8 @@ class ElpiLexer(RegexLexer):
             include('_elpi-type-item'),
         ],
         '_elpi-inner-pred-fun': [
-            (r"(\()\s*(pred)", bygroups(Keyword.Mode,Keyword.Declaration), 'elpi-pred-item'),
-            (r"(\()\s*(func)", bygroups(Keyword.Mode,Keyword.Declaration), 'elpi-func-item'),
+            (r"(\()(\s*)(pred)", bygroups(Keyword.Mode,Text.Whitespace,Keyword.Declaration), 'elpi-pred-item'),
+            (r"(\()(\s*)(func)", bygroups(Keyword.Mode,Text.Whitespace,Keyword.Declaration), 'elpi-func-item'),
         ],
         '_elpi-type-item': [
             (r'->', Keyword.Type),
@@ -182,8 +180,9 @@ class ElpiLexer(RegexLexer):
             (r'\}\}', Punctuation, '#pop'),
             (r"\s+", Text.Whitespace),
             (r"(lp:)(\{\{)", bygroups(Number, Punctuation), 'elpi-quote-exit'),
-            (rf"(lp:)((?=[A-Z_]){constant_re})", bygroups(Number, Name.Variable)),
-            (r"((?!lp:|\}\}).)+", using(CoqLexer)),
+            (rf"(lp:)((?=[A-Za-z_]){constant_re})", bygroups(Number, Name.Variable)),
+            (r"(lp:\()([A-Za-z]+)( )([^)]*)(\))", bygroups(Number, Name.Variable, Text.Whitespace, Text, Number)),
+            (r"((?!lp:|\}\})(.|\n))+", using(CoqLexer)),
         ],
         'elpi-quote-exit': [
             include('elpi'),

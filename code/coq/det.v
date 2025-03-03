@@ -149,8 +149,19 @@ Section good_cut_and_level.
     elim: g1 => //= p L + GC GL => /(_ GC GL) IH.
     rewrite save_alt_cons.
     apply: good_cut_con => //; rewrite ?suffix_refl //.
-    apply: good_levels1_con => //.
+    by apply: good_levels1_con => //.
   Qed.
+(* 
+  Lemma good_cut1_save_alt2 {a a' g1 tl}:
+    suffix a' a -> good_cut1 tl a' -> good_levels1 a -> good_cut1 (save_alt a' g1 tl) a.
+  Proof.
+    elim: g1 => //= p L + GC GL. => /(_ GC GL) IH /[dup] /IH ? H.
+    rewrite save_alt_cons.
+    apply: good_cut_con => //; rewrite ?suffix_refl //.
+    apply: good_levels1_con; last by apply: good_lvl1_suffix GC _.
+    apply: good_cut1_save_alt; last by apply: good_lvl1_suffix GC _.
+  Qed. *)
+
 
   Lemma good_cut1_save_alt_more_alt {a b bs gl}:
     good_cut1 gl a -> good_levels1 a -> good_cut1 (save_alt a b gl) (more_alt a bs gl).
@@ -188,6 +199,7 @@ End good_cut_and_level.
  Notation Fail := Elpi.Fail. 
  Notation Cut := Elpi.Cut. 
  Notation Call := Elpi.Call. 
+ Notation Stop := Elpi.Stop. 
 
 (* Inductive nur' (p: bodiesT) : list goal -> list alt -> (list alt) -> Prop :=
 | Stop a : nur' [::] a a
@@ -463,41 +475,164 @@ Qed.
 
 Lemma cons_cat {T:Type} {a b c}: (a:T)::b++c = ([::a]++b)++c. by []. Qed.
 
-Lemma cut_semantic {prog s g alts}:
+Lemma call_lemma prog g' f g1 gs s' tl: prog f = g1 :: gs ->
+  g'  \in [seq save_alt [::] b (map make_empty_alts tl)  | b <- gs] ->
+  nur' prog g' [::] s' ->
+    exists s'0 : seq alt, nur' prog (Goal (call f) [::] :: (map make_empty_alts tl)) [::] s'0.
+
+set e_tl := map make_empty_alts tl.
+Abort.
+(*
+    elim: gs  (save_alt [::] g1 empty_tl) IN NUR' {NUR PF GL_G_TL GL_SA_MA IN_IMPL} => [|x xs IH] //= G.
+
+    rewrite in_cons => /orP [/eqP H | ].
+
+    move=> NUR.
+    have GL_G_TL: good_levels1 (g' :: more_alt [::] xs empty_tl).
+      1:{
+        subst.
+        apply good_lvl1_save_alt_more_alt.
+          constructor.
+        apply good_cut1_empty.
+      }
+    have [sol {}NUR] := @weaken_success_nil _ _ (more_alt [::] xs empty_tl) _ GL_G_TL NUR GL_G'.
+    exists sol.
+    rewrite more_alt_cons.
+    apply Fail.
+    subst; apply NUR.
+
+    move=> /IH IH' /IH' H.
+    destruct (H (save_alt [::] x empty_tl)).
+    exists x0.
+    rewrite more_alt_cons.
+    apply Fail.
+    auto. *)
+
+Fixpoint ex_first T (P : T -> Prop) l :=
+  match l with
+  | [::] => False
+  | [:: x & xs] => P x \/ (~ P x /\ ex_first T P xs)
+  end.
+
+Lemma ex_first_cons T P x xs : ex_first T P (x :: xs) = (P x \/ (~ P x /\ ex_first T P xs)).
+Proof. by []. Qed.
+
+
+Definition zap_alts := map make_empty_alts.
+
+Lemma zap_save a1 g2 tl1 : zap_alts (save_alt a1 g2 tl1) = save_alt [::] g2 (zap_alts tl1).
+by rewrite /save_alt/zap_alts map_cat -map_comp; congr (_ ++ _); apply: eq_map.
+Qed.
+
+Definition works prog a := fun g' => exists s', nur' prog g' a s'.
+
+Axiom EM : forall p a x, works p a x \/ ~ works p a x.
+
+Lemma worksP p g1 g2 : (forall s, nur' p g1 [::] s -> exists s', nur' p g2 [::] s') -> works p [::] g1 -> works p [::] g2.
+by move=> H [s /H [s' ?]]; exists s'.
+Qed.
+
+Lemma nur_comp p g gl a s s' : nur' p [:: g] a s -> nur' p gl s s' -> nur' p ([:: g] ++ gl) a s \/ nur' p ([:: g] ++ gl) a s'.
+remember [::g].
+elim.
+  by intros; right.
+  by move=> {}a ca r g1 H IH /IH [x|x]; [left|right]; apply: Cut x.
+  move=> {}a al ca f bs {}s Df H IH /IH [x|x]; by left; apply: Fail Df _.
+
+Lemma w_cons p g gl a : ~ works p a (g :: gl) -> ~ works p a [::g] \/ exists s, nur' p [::g] a s /\ ~ works p s gl.
+elim: gl. by intro;left.
+move=> g1 gl IH.
+case: (EM p a [::g]).
+  move=> [s Wg] H; right; exists s; split => // => -[s' Wg1gl]; apply: H; exists s'.
+
+Lemma nW_nur p g l : ~ @works p g -> ex_first _ (@works p) l -> exists s, nur' p g l s.
+elim: g => //=. case. exists [::]. apply: Stop.
+move=> g gl IH.
+
+elim: l => //= a al IH /[dup] /IH {}IH nW.
+
+Lemma cut_semantic {prog s g alts}
+  (works := fun g' => exists s', nur' prog g' [::] s')
+  :
     nur' prog g alts s ->
       good_levels1 (g::alts) ->
-        exists g' s', g' \in (map (map make_empty_alts) (g :: alts)) 
-            /\  nur' prog g' [::] s'.
+      ex_first _ works (map zap_alts (g :: alts)).
 Proof.
   elim => /=.
-  - exists [::], [::]; repeat constructor; auto.
 
-  - move => a ca r gl H /= IH /= GL. 
-    inversion GL as [|gs alts' GC1 GL1 C]; subst; clear GL.
-    inversion GC1 as [| P CA TL ALTS GL2 SUFF GC2]; subst; clear GC1.
-    case: (IH GL2) => g' [s' [+ NUR]].
-    rewrite in_cons => /orP; case.
-    - move=> /eqP?; subst.
-      exists (map make_empty_alts (Goal cut ca :: gl)), s'; constructor; auto.
-        by rewrite inE eqxx.
-      by simpl; apply: Cut => //; apply: good_cut1_empty.
-    - move=> g'_ca.
-      exists g', s'.
-      split; last by [].
-      rewrite inE orbC.
-      case/suffixP: SUFF => a' ->. 
-      by rewrite map_cat mem_cat g'_ca orbT.
+  - move=> a GLa; left; exists [::]; apply: Stop.
 
-  - move=> {}g gl al solution g1 ca D H + GL.
-    inversion GL as [|g' a2 GC1 GL1]; subst; clear GL.
-    move=> /(_ GL1) [g' [sol ]] [] IN NUR'.
-    exists g', sol; auto.
-    by rewrite in_cons IN orbC.
+  - move => a ca {}s gl H /= IH /= GL.
 
-  - move=> a ca f g1 gs tl r PF NUR + GL.
+    have [GL_gl_a SUFF] : good_levels1 (gl :: ca) /\ suffix ca a.
+      inversion GL as [|gs alts' GC1 GL1 C]; subst; clear GL.
+      by inversion GC1 as [| P CA TL ALTS GL2 SUFF GC2]; subst; split.
+    have {IH} [Wgl|[nWgl Wca]] := IH GL_gl_a.
+      by left; case: Wgl => {H}s H; exists s; apply: Cut.
+
+    case/suffixP: SUFF => /= a' ->.
+    elim: a'. 
+      right; split.
+        move=> [{H}s H]; apply: nWgl.
+        by inversion H; exists s.
+      by [].
+    move=> x xs IH /=.
+    case: IH => [ | [H1 H2]]; first by left.
+    right; split => //.
+    have [Wx|nWx] := EM prog (zap_alts x).
+    - by left.
+    by right; split.
+
+  - move=> {}g gl al f g1 {}s D H IH GL.
+
+    have GL_g_gl : good_levels1 (g :: gl).
+      by inversion GL as [|g' a2 GC1 GL1]; subst; clear GL.
+
+    right; split.
+      move=> [ABS {}H]; inversion H; subst.
+      by rewrite D in H5.
+    have {IH} [Wg|[nWg Wgl]] := IH GL_g_gl.
+      by left.
+    by right; split.
+
+  - move=> a ca f g1 gs tl r PF NUR IH GL.
     inversion GL as [|gs' alts' GC1 GL1 C]; subst; clear GL.
     inversion GC1 as [| P CA TL ALTS GL2 SUFF GC2]; subst; clear GC1.
-    have GL_SA_MA: good_levels1 (save_alt a g1 tl :: more_alt a gs tl) by apply good_lvl1_save_alt_more_alt.
+    (* have GL_SA_MA: good_levels1 (save_alt a g1 tl :: more_alt a gs tl) by apply good_lvl1_save_alt_more_alt. *)
+
+   rewrite !zap_save in IH *.
+   
+   have {IH} [Wf|[nWf Wa]] := IH (good_lvl1_save_alt_more_alt GL1 GC2).
+    - left.
+      apply: worksP _ Wf => s' /(@weaken_success_nil _ _ (more_alt [::] gs (zap_alts tl)) ) [||{}s H]; last exists s.
+        
+        admit.
+
+        
+        admit.
+      by apply: Call PF H.
+
+    left. eexists. apply: Call PF _.
+
+    right; split.
+      move=> [{}s H]; inversion H; subst.
+      rewrite PF in H5; injection H5 => *; subst.
+      apply: nWf; exists s.
+
+      move: H6; rewrite /save_alt/zap_alts map_cat -map_comp.
+      have E : (make_empty_alts \o  Goal^~ a) =1 (fun x => Goal x [::]).
+        by move=> x /=.
+       rewrite (eq_map E).
+       admit.
+
+      elim: a Wa {PF NUR GL1 SUFF GC2 nWf} => //=. x xs IH. [|].
+
+      have [W|nW] := EM prog (zap_alts (save_alt a x tl)).
+      - left.
+
+       exists s. apply: Call PF _.
+weaken_success_nil.
+
     move=> /(_ (good_lvl1_save_alt_more_alt GL1 GC2)) [g' [s' [+ NUR']]].
     unfold more_alt.
     rewrite map_cat cons_cat mem_cat => /orP.
@@ -508,7 +643,7 @@ Proof.
     replace (save_alt a _ _ :: [seq _ | _ <- _]) with [seq save_alt a b tl | b <- g1 :: gs ] by auto.
 
     move=> IN_IMPL.
-    exists ((Goal (call f) [::] :: [seq make_empty_alts i  | i <- tl])).
+
     
     set (empty_tl:= map make_empty_alts tl).
 
@@ -537,7 +672,7 @@ Proof.
         apply good_cut1_empty.
       auto.
       constructor.
-    rewrite in_cons eqxx /=.
+
 
     have GL_G_TL: good_levels1 (g' :: more_alt [::] gs empty_tl).
       constructor.
@@ -546,6 +681,13 @@ Proof.
       apply good_lvl1_more_alt.
         constructor.
       apply good_cut1_empty.
+
+
+
+    exists ((Goal (call f) [::] :: [seq make_empty_alts i  | i <- tl])).
+
+    rewrite /= in_cons eqxx /=.
+
 
     case: GR => [EQ|IN].
       subst.
@@ -558,6 +700,7 @@ Proof.
       move=> [sol' H'].
       eexists; split; auto.
       apply: Call PF H'.
+
 
     elim: gs  (save_alt [::] g1 empty_tl) IN NUR' {NUR PF GL_G_TL GL_SA_MA IN_IMPL} => [|x xs IH] //= G.
 

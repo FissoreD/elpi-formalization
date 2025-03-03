@@ -1,4 +1,134 @@
-% \section{Introduction}
+\section{Introduction}
+
+We are interested in the static analsysis of Elpi programs, in particular
+in checking their determinacy. Elpi is a higher oreder logic programming
+language, a dialect of $\lambda$Prolog~\cite{dale} well suited to manipulate
+incomplete syntax trees with binders~\cite{lpar,journal}.
+Elpi finds applications as an extension
+language for The Rocq\footnote{formerly known as Coq} Interactive prover, where
+Elpi has been used for program and proof synthesis~\cite{derive1,derive2,hb} and more recently
+as the target language for type class resolution~\cite{coqws,ppdp}.
+Type class resolution is typically used to implement overloading~\cite{haskell,ms}
+where the solution to a query provides the meaning of the overloaded symbol.
+In this context it is of paramount importance that this solution is unique,
+i.e. non ambiguous. A static check for this property is of particular
+interest in the context of the platform of Rocq libraries: code developed
+by different teams is combined together, reused in order to lower the cost
+of mechanization.
+
+As of typday Elpi comes with a quite standard type checker~\cite{pf} but
+features no mode nor determinacy analisys. The literature provides
+many works on the subject~\cite{robadescrittadopo} but none of these
+works can be applied to Elpi due to its higher order nature, inherited from
+$\lambda$Prolog, and its nonstandard notion of input.
+
+Our contributions is a  determinacy checking algorithm that
+\begin{itemize}
+\item covers logic programs with cut
+\item covers higher order logic programming constructs such as first class predicates and clauses
+\item can be applied to pre-existing code bases, i.e. tracks miscalled functions rather than aborting
+\end{itemize}
+Last but not least we provide an operational semantics for higher order logic programs
+with cut that poses the bases for our definitions and paves the way to a
+mechanization of the determinacy checking algorithm.
+
+\subsection{Motivating examples}
+
+A first motivating example is the \elpiIn{map} predicate, widely used in
+all Elpi applications. The first line gives the signature of \elpiIn{map}:
+given a predicate between any types \elpiIn{A} and \elpiIn{B},
+it relates a list of \elpiIn{A} with a list of \elpiIn{B}. Elpi
+follows the $\lambda$Prolog convention ($\lambda$-0calculus actually) of
+writing application with no parentheses, e.g. \elpiIn{map F L R}
+can be understood as the atom \elpiIn{map(F, L, R)}.
+
+\begin{elpicode}
+pred map i:(pred i:A, o:B), i:list A, o:list B.
+map _ [] [].
+map F [X|XS] [Y|YS] :- F X Y, map F XS YS.
+\end{elpicode}
+
+This code happens to compute a function of the first two arguments, that we
+consider inputs, if and only if the higher order predicate \elpiIn{F} is a
+function and if the first list is ground. We want to author of this code
+to be able to ascribe a more precise signature on the code above, namely:
+
+\begin{elpicode}
+func map (func A -> B), list A -> list B.
+\end{elpicode}
+
+The syntax \elpiIn{func name? inputs -> outputs} asserts that name is
+a function of the inputs (before the arrow) to the outputs if all the
+requirements on the inputs are satisfied, in this specific case if the
+first input is a functional, binary, predicate. We need this ascription to
+be given on an existing code base where \elpiIn{map} is potentially
+called by passing a relation as the first argument, say \elpiIn{P}.
+In this case the call to \elpiIn{map P L R} has to be accepted but not
+coinsidered to be functional for the analisys of the surrounding code.
+
+
+\begin{elpicode}
+func mask! list A, list A -> list bool.
+mask! Bad L R :- map (x\y\ if mem! x Bad then y = ff else y = tt) L R. % ok
+
+func mask list A, list A -> list bool. % error
+pred mask i:list A, i:list A, o:list bool. % ok
+mask Bad L R :- map (x\y\ if mem X Bad then Y = ff else Y = tt) L R.
+\end{elpicode}
+
+The cut oeprator is the privileged way to impose functionality on a relation
+by committing to its first result.
+
+\begin{elpicode}
+func once (pred) -> .
+once P :- P, !.
+
+pred mem i:A, i:list A.
+mem X [X|_].
+mem X [_|XS] :- mem X XS.
+
+func mem! A, list A -> .
+mem! X XS :- once (mem X XS).
+\end{elpicode}
+
+The signature of \elpiIn{once} states that the higher order argument
+\elpiIn{P} can be a predicate, but still \elpiIn{once P} acts as a function.
+The determinacy analysis we present tracks functionality from the inputs
+to outputs, that can be themselves predicates.
+
+    
+\begin{elpicode}
+func force (pred) -> (func).
+force P (once P).
+
+func foo (pred), list A -> list B.
+foo P L R :- force P F, map L F R.
+\end{elpicode}
+
+Here the output of \elpiIn{force} is a function \elpiIn{F} and in turn
+makes \elpiIn{map L F R} produce a single value for \elpiIn{R} out
+of \elpiIn{P} and \elpiIn{L}, making \elpiIn{foo} itself a function.
+
+The higher order term in Elpi (and $\lambda$Prolog) also applies to data
+via the so called $\lambda$-tree syntax (also known as HOAS~\cite{dalemechaniz}).
+ 
+\begin{elpicode}
+kind tm type.
+type app tm -> tm -> tm.
+type lam (tm -> tm) -> tm.
+
+func copy tm -> tm.
+copy (app A B) (app C D) :- copy A C, copy B D.
+copy (lam F) (lam G) :- pi x\ copy x x => copy (F x) (G x).
+
+func whd tm -> tm.
+whd (app H A) R :- whd H (lam F), !, pi x\ copy x A => copy (F x) R.
+whd X X.
+\end{elpicode}
+
+todo explain, can we have the ad hoc rule for pi x?
+
+
 
 % We have a rule based language integrated in Coq. Rules are useful
 % to model a grown knowledge base (extend existing programs) and manage
