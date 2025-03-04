@@ -119,7 +119,7 @@
 \newcommand{\run}{\texttt{run}}
 \newcommand{\call}{\texttt{Call}}
 \newcommand{\cut}{\texttt{Cut}}
-\newcommand{\goal}{\texttt{Goal}}
+%\newcommand{\goal}{\texttt{Goal}}
 \newcommand{\unify}{\texttt{unify}\xspace}
 \newcommand{\match}{\texttt{match}\xspace}
 \newcommand{\impl}{\texttt{=>}}
@@ -143,10 +143,10 @@
 \newcommand{\bs}{\text{\textbackslash}}
 
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
-\newcommand{\runCmd}[5]{\ensuremath{\run\ #1\ #2\ #3 \arr (#4, #5)}}
+\newcommand{\runCmd}[5]{\ensuremath{\run\ (#3, #1)\ #2 \arr (#4, #5)}}
 % \newcommand{\callCmd}[3]{\ensuremath{(\call\ #1\ #2\ #3)}\xspace}
 \newcommand{\callCmd}[2]{\ensuremath{(#1\ #2)}\xspace}
-\newcommand{\goalCmd}[3]{\ensuremath{\goal\ #1\ #2\ #3}\xspace}
+\newcommand{\goalCmd}[3]{\ensuremath{(#1,\ #2,\ #3)}\xspace}
 \newcommand{\clauseCmd}[3]{\ensuremath{#1\ #2\ \cdash\ #3}}
 \newcommand{\implCmd}[2]{\ensuremath{#1\ \impl\ #2}}
 \newcommand{\piCmd}[3][]{\ensuremath{\pi\ #2\expandafter\ifx\expandafter\relax

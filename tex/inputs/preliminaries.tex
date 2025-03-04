@@ -125,15 +125,16 @@ predicate \pred.
 %
 %
 A goal $\g = \goalCmd{\prog}{g}{\alt}$ is a triple made of a program \prog,
-an atom $g$ and a list of cut-alternatives \alt. An alternative is a list of goals
-paired with a substitution $\subst$. A substitution is a mapping from
-unification variables to terms.
-The operational semantics to our language is given by a relation
-$\run{} \subseteq \g \times \alt \times \subst \times \alt \times \subst$.
-We write \runCmd{\g}{\alt}{\subst}{\alt'}{\subst'}
-when a goal $\g$ under a substitution \subst and alternatives \alt
+an atom $g$ and a list of alternatives \alt that we refer to as cut-to alternatives.
+An alternative is a pair $(\subst, \vecL{\g})$ where \subst is a substitution
+and $\vecL{\g}$ a list of goals. A substitution \subst is a mapping
+from unification variables \texttt{X} to terms $tm$.\\
+The operational semantics is given by a relation
+$\run{} \subseteq \alt \times \vecL{\alt} \times \vecL{\alt} \times \subst$.
+We write \runCmd{\vecL{\g}}{\alt}{\subst}{\alt'}{\subst'}
+when a goal list $\vecL{\g}$ under a substitution \subst and alternatives \alt
 terminates with a substitution $\subst'$ and a remaining list of
-(still unexplored) alternatives $\mathcal{A}'$.
+(still unexplored) alternatives $\alt'$.
 The rules for \run are given in~\cref{fig:basic-interp} where
 use $::$ for list cons; $@$ for list concatenation; $\EmptyList$ is the empty list;
 $[e|x \in \vec{x}]$ for list comprehension.
@@ -151,38 +152,64 @@ where the implication operator \elpiIn{=>} is introduced.
   \ruleFailM{.45}
   \vspace{0.3em}%
 
-  \ruleUnifM{.50}
-  \ruleStopM{.45}
-  \vspace{0.3em}%
-
   \ruleCallM{1}
   $$
-  \mathcal{F}(\prog, \pred, \vec{t}, \subst, \alt) :=
+  \mathcal{F}(\prog, \pred, \vec{t}, \g, \subst, \alt) :=
   \bigg[
     %\bigg(
     \subst,
     %\Big(
     \big[\goalCmd \prog (t = u) ~\alt \mid (t,u) \in \vecL{t,u}\big] @
-    \big[\goalCmd \prog g ~\alt \mid g \in \vecL{g}\big]
+    \big[\goalCmd \prog g ~\alt \mid g \in \vecL{g}\big] @ ~ \g
     %\Big)
     %\bigg)
-    \mid \clauseCmd{\pred}{\vec{u}}{\vecL{g}} \in \prog\ \pred
+    ~\bigg\rvert~
+    \clauseCmd{\pred}{\vec{u}}{\vecL{g}} \in \prog\ \pred
     \bigg]
   $$
 
-  \caption{Operational semantics}
+  \ruleUnifM{.50}
+  \ruleStopM{.45}
+  \vspace{0.3em}%
+
+  \caption{Operational natural semantics}
   \label{fig:basic-interp}
 \end{figure}
 
 The first rule to look at is the one for cut (\ref{rule:cut}).
-Remark that
-the cut-alternatives stored in each goal are a suffix
-of the (global-)alternatives to that goal: If the atom in the goal
-is a cut, then the global alternatives are shortened to the cut ones.
+Remark that the cut-to alternatives stored in each goal are a suffix
+of the (global) alternatives to that goal: If the atom in the goal
+is a cut, then the global alternatives are shortened to the cut-to ones.
+
+This rule goes hand in hand with~\ref{rule:call} that stores in the subgoals
+the alternatives before calling the predicate. Indeed the function $\mathcal{F}$
+creates a list of new alternatives, the former is directly evaluated while
+the rest prepended to the existing set of alternatives.
+
 This semantics amounts to a \textit{hard-cut} operator
 in the sense of~\cite{2003Andrews}: it is cutting
 away not only the later clauses of the same predicate, but also the alternative
 clauses for subgoals that appear earlier in the clause.
+
+% The \textit{call rule} (\ref{rule:call}) deals with goals starting with a predicate
+% call, \pred\ is the notation to represent predicate name. In this case the function $\mathcal{F}$ is called with the parameters as
+% explained above and if the result of this operation is the list
+% \ConsHd{b}\ConsTl{bs}, then a recursive call to \run\ is done by prepending $b$ to
+% the list of remaining goals \g and $bs$ is prepended to the list of
+% alternatives \alt.
+
+% The combination of the \ref{rule:call} and \ref{rule:cut} rules is crucial for replicating
+% the behavior of the cut. When a call to a predicate generates multiple rules as
+% new choice points, the function $\mathcal{F}$ creates future disjunctive goals
+% where the cut alternatives are set to the current list of alternatives \alt. In
+% other words, if the alternatives before reaching a call to a predicate \pred are
+% \alt and \prog is the current program, then if ``\prog \pred'' results in
+% clauses $c_0, \dots, c_n$, any clause $c_j$ with $i < j \leq n$ will be
+% discarded if clause $c_i$ contains a cut. Furthermore, if the body of $c_i$
+% consists of the atoms $a_1, \dots, a_k, !, a_{k+2}, \dots, a_m$, then all choice
+% points created during the evaluation of $a_1, \dots, a_k$ will also be pruned.
+% This pruning consist simply in setting the cut alternatives to \alt.
+
 
 
 
@@ -251,26 +278,6 @@ Unification has some interesting properties
   $$\subst_1 \cap \subst_2  = \varnothing \to \subst_1\ t_1 = \subst_2\ t_2 \to (\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$$
 \end{definition}
 
-
-
-The \textit{call rule} (\ref{rule:call}) deals with goals starting with a predicate
-call, \pred\ is the notation to represent predicate name. In this case the function $\mathcal{F}$ is called with the parameters as
-explained above and if the result of this operation is the list
-\ConsHd{b}\ConsTl{bs}, then a recursive call to \run\ is done by prepending $b$ to
-the list of remaining goals \g and $bs$ is prepended to the list of
-alternatives \alt.
-
-The combination of the \ref{rule:call} and \ref{rule:cut} rules is crucial for replicating
-the behavior of the cut. When a call to a predicate generates multiple rules as
-new choice points, the function $\mathcal{F}$ creates future disjunctive goals
-where the cut alternatives are set to the current list of alternatives \alt. In
-other words, if the alternatives before reaching a call to a predicate \pred are
-\alt and \prog is the current program, then if ``\prog \pred'' results in
-clauses $c_0, \dots, c_n$, any clause $c_j$ with $i < j \leq n$ will be
-discarded if clause $c_i$ contains a cut. Furthermore, if the body of $c_i$
-consists of the atoms $a_1, \dots, a_k, !, a_{k+2}, \dots, a_m$, then all choice
-points created during the evaluation of $a_1, \dots, a_k$ will also be pruned.
-This pruning consist simply in setting the cut alternatives to \alt.
 
 
 % existing at moment of the creation of
