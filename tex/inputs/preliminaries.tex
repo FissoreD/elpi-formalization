@@ -762,29 +762,39 @@ predicates.
   \label{def:det-check}
 \end{definition}
 
-\begin{definition}[\ensuremath{\prog[^!]}]
-TODO: add neck cut after all rules that do not have cut already
-\end{definition}
+% \begin{definition}[Neck-cut program: \ensuremath{\progCut}]  
+%   Given a context \ctx\ and program \prog, we note \progCut to be a the same
+%   program as \prog where all clauses ``\clauseCmd{\pred}{\vec{t}}{\vec{b}}'' with no
+%   \cut\ in $\vec{b}$ such that \pred\ is noted deterministic in \ctx\ have been
+%   replaced by the clauses with the shape ``\clauseCmd{\pred}{\vec{t}}{\cut,
+%   \vec{b}}''.
+% \end{definition}
+% {goal[]}{alts[]}{subst}{alts_res}{subst_res}
+% \begin{theorem}[\ensuremath{\progCut} with \mutExcl]  
+%   % Il programma deve essere well moded, i goal devono avere input ground\dots
 
+%   Given a context \ctx\ and a program \prog, if $\mutExcl\ \ctx\ \prog$ and
+%   \runCmd{[\goalCmd{\prog}{(\pred\ \vec{t})}{\EmptyList}]}{\EmptyList}{\subst}{\alt}{\subst[']}\ 
+%   % with goals using \prog\ as program
+%   hold then
+%   \runCmd{[\goalCmd{\prog[^!]}{(\pred\ \vec{t})}{\EmptyList}]}{\EmptyList}{\subst}{\EmptyList}{\subst[']}, 
+%   % $suffix (clean(\alt['])) \alt$.
+%   % $$\mutExcl\ \ctx\ \prog \to 
+%   % \forall \g\ \alt\ \subst\ \alt[_1]\ \subst[_1],
+%   % \runCmd{\g}{\alt}{\subst}{\alt[_1]}{\subst[_1]} \to
+%   % \runCmd{\g}{\alt}{\subst}{\alt[_2]}{\subst[_2]} \to
+%   % (\alt[_1], \subst[_1]) = (\alt[_2], \subst[_2])$$
+% \end{theorem}
 
-
-\begin{elpicode}
-p 1 3.
-p 2 3.
-% faccio call p T con T ground, ho una alternativa. ma so che
-% fallirà perche 1 e 2 non unificano in met excl. Quindi P!
-p 1 3 :- !.
-p 2 3.
-\end{elpicode}
-
-\begin{theorem}[P! = P]
-  run P iff run P!
-\end{theorem}
+% \begin{proof}
+%   We have two cases to analyse.
+%   Case 1: the run with \prog implies the run with \progCut. We 
+% \end{proof}
 
 \begin{theorem}[Determinacy checking property]
   Given a contxt \ctx and a program \prog, forall predicate \pred, such that
   $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ then
-  $$\wellModed\ \prog \to \detCheck\ \ctx\ \prog \to \forall \vec{t}, \vecL{\ground\ t_i}\ \to \isdet\ \prog[^!]\ (\pred\ \vec{t})$$
+  $$\wellModed\ \prog \to \detCheck\ \ctx\ \prog \to \forall \vec{t}, \vecL{\ground\ t_i}\ \to \isdet\ \progCut\ (\pred\ \vec{t})$$
   \vspace{-20pt}
   \label{th:det}
 \end{theorem}

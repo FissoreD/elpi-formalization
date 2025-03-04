@@ -50,7 +50,14 @@
 \newcommand{\clause}[1][]{\ensuremath{\mathcal{@}#1}\xspace}
 \newcommand{\pred}[1][]{\texttt{p#1}\xspace}
 \newcommand{\expr}[1][]{\texttt{e#1}\xspace}
-\newcommand{\isDetCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList}}
+\newcommand{\isDetCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to 
+  \forall a_i \in a, \lnot 
+  (\exists \alt\ \subst['], \runCmd{a_i}{\EmptyList}{\EmptySubst}{\alt}{\subst[']})
+  % )
+% 
+% 
+% a = \EmptyList
+}}
 
 \newenvironment{boxedproof}
 {\begin{mdframed}\begin{proof}}
@@ -167,6 +174,7 @@
 \newcommand{\EmptySubst}{\ensuremath{\varepsilon}}
 
 \newcommand{\prog}[1][]{\ensuremath{\mathcal{P}#1}\xspace}
+\newcommand{\progCut}{\ensuremath{\prog[^!]}\xspace}
 \newcommand{\evdash}{\ensuremath{\colondash}\xspace}
 \newcommand{\piimpl}{{\ensuremath{\forall\Rightarrow}}}
 
