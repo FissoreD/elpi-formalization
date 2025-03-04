@@ -124,10 +124,10 @@ predicate \pred.
 %   \end{align}  
 %
 %
-A goal $\g = \goalCmd{\prog}{g}{\alt}$ is a triple made of a program \prog,
-an atom $g$ and a list of alternatives \alt that we refer to as cut-to alternatives.
-An alternative is a pair $(\subst, \vecL{\g})$ where \subst is a substitution
-and $\vecL{\g}$ a list of goals. A substitution \subst is a mapping
+A goal $\g = \goalCmd{\prog}{g}{\vecL{\alt}}$ is a triple made of a program \prog,
+an atom $g$ and a list of alternatives $\vecL{\alt}$ that we refer to as cut-to alternatives.
+An alternative $\alt = (\subst, \vecL{\g})$ is a pair made of a substitution
+and a list of goals. A substitution \subst is a mapping
 from unification variables \texttt{X} to terms $tm$.\\
 The operational semantics is given by a relation
 $\run{} \subseteq \alt \times \vecL{\alt} \times \vecL{\alt} \times \subst$.
@@ -135,9 +135,9 @@ We write \runCmd{\vecL{\g}}{\alt}{\subst}{\alt'}{\subst'}
 when a goal list $\vecL{\g}$ under a substitution \subst and alternatives \alt
 terminates with a substitution $\subst'$ and a remaining list of
 (still unexplored) alternatives $\alt'$.
-The rules for \run are given in~\cref{fig:basic-interp} where
+The rules for \run{} are given in~\cref{fig:basic-interp} where
 use $::$ for list cons; $@$ for list concatenation; $\EmptyList$ is the empty list;
-$[e|x \in \vec{x}]$ for list comprehension.
+$[e|x \in \vec{x}]$ for list comprehension; $\subst in \Sigma$; $\alts \in \alt$; $al \in \vecL{\alt}$; $g \in \g$; $gl \in \vecL{\g}$.
 An initial query looks like \runCmd{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyList}]}{\EmptyList}{\EmptyList}{\_}{\_}
 
 Note that in this simple settings the
@@ -149,27 +149,27 @@ where the implication operator \elpiIn{=>} is introduced.
 \begin{figure}[!h]
 
   \ruleBangM{.50}
-  \ruleFailM{.45}
+  % \ruleFailM{.45}
+  \ruleStopM{.45}
   \vspace{0.3em}%
 
   \ruleCallM{1}
   $$
-  \mathcal{F}(\prog, \pred, \vec{t}, \g, \subst, \alt) :=
+  \mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
   \bigg[
     %\bigg(
     \subst,
     %\Big(
-    \big[\goalCmd \prog (t = u) ~\alt \mid (t,u) \in \vecL{t,u}\big] @
-    \big[\goalCmd \prog g ~\alt \mid g \in \vecL{g}\big] @ ~ \g
+    \underbrace{\big[(\prog, t = u, ~a) \mid (t,u) \in \vecL{t,u}\big]}_{\mathrm{head\ unification}} @
+    \underbrace{\big[(\prog, g, ~a) \mid g \in \vecL{g}\big]}_{\mathrm{premises}} @ ~ gl
     %\Big)
     %\bigg)
     ~\bigg\rvert~
-    \clauseCmd{\pred}{\vec{u}}{\vecL{g}} \in \prog\ \pred
+    (\clauseCmd{\pred}{\vec{u}}{\vecL{g}}) \in \prog\ \pred
     \bigg]
   $$
 
   \ruleUnifM{.50}
-  \ruleStopM{.45}
   \vspace{0.3em}%
 
   \caption{Operational natural semantics}
@@ -181,10 +181,21 @@ Remark that the cut-to alternatives stored in each goal are a suffix
 of the (global) alternatives to that goal: If the atom in the goal
 is a cut, then the global alternatives are shortened to the cut-to ones.
 
-This rule goes hand in hand with~\ref{rule:call} that stores in the subgoals
-the alternatives before calling the predicate. Indeed the function $\mathcal{F}$
-creates a list of new alternatives, the former is directly evaluated while
+This rule goes hand in hand with~\ref{rule:call} that stores
+the current alternatives \alts in all the subgoals via
+the function $\mathcal{F}$. This function is in charge of creating the
+new alternatives $\alts['] :: al$,
+the former is directly evaluated while
 the rest prepended to the existing set of alternatives.
+Each alternative is made of a prefix of unifications, one for each argument
+of the predicate, followed by the premises of the clause and by the pre-existing
+goals $gl$. All new goals 
+
+The stop rule~\ref{rule:stop} terminates as there are no more goals to be
+solved.
+
+The unify rule (\ref{rule:unif}) invokes the \unify algorithm on
+the two terms $t_1$ and $t_2$ obtaining the updated substitution \subst['].
 
 This semantics amounts to a \textit{hard-cut} operator
 in the sense of~\cite{2003Andrews}: it is cutting
@@ -210,35 +221,19 @@ clauses for subgoals that appear earlier in the clause.
 % points created during the evaluation of $a_1, \dots, a_k$ will also be pruned.
 % This pruning consist simply in setting the cut alternatives to \alt.
 
+% It takes program \prog, a predicate name \pred, a list of terms,
+% a substitution $\subst$ and a list of alternatives \alt. For each clause
+% \clauseCmd{p}{\vec{t'}}{bs}, it builds a new list of pairs where the first argument
+% is the substitution $\subst$ and the second is the list of new goals to treat.
+% This list is made by all the unification between the terms received at call
+% time and the argument of the clause and is followd by the premises
+% of the clause that have been transformed in a goal.
 
 
-
-FINQUI
-
-
-
-
-It takes program \prog, a predicate name \pred, a list of terms,
-a substitution $\subst$ and a list of alternatives \alt. For each clause
-\clauseCmd{p}{\vec{t'}}{bs}, it builds a new list of pairs where the first argument
-is the substitution $\subst$ and the second is the list of new goals to treat.
-This list is made by all the unification between the terms received at call
-time and the argument of the clause and is followd by the premises
-of the clause that have been transformed in a goal.
-
-The behaviour of the \run\ procedure depends on the shape of the list of goal and its
-alternatives. A query succeed if it exists a sequence of reductions allowing to reach the
-\textit{stop rule}, symbolyzed with \ref{rule:stop}.
-
-More precisely, the \textit{stop rule} captures configurations with an empty
-list of goals. By convention, this configuration is final: there are no more
-goals to process, so we stop and return the same alternatives and substitution
-received as input.
-
-The \textit{fail rule} (\ref{rule:fail}) consumes the list of alternatives if the
-first goal fails. A failure occurs if the goal at the head of the list is a call
-to a predicate with no clauses in the associated program or if it is a
-failing unification under the given substitution.
+% The \textit{fail rule} (\ref{rule:fail}) consumes the list of alternatives if the
+% first goal fails. A failure occurs if the goal at the head of the list is a call
+% to a predicate with no clauses in the associated program or if it is a
+% failing unification under the given substitution.
 % In fact, this
 % rule allows to break loop since it can non-determinalistically applied on any
 % configuration, provided that the list of alternatives is not empty. It is
@@ -246,12 +241,6 @@ failing unification under the given substitution.
 % is applied if the current goal is a call to a predicate with no alternatives,
 % but we prefer to simplify our rule system.
 
-The \textit{unify rule} (\ref{rule:unif}) is applied when a unification $t_1 = t_2$
-appears at the head of the current goal list. It invokes the \unify algorithm on
-the two terms $t_1$ and $t_2$ using the substitution \subst and returns the
-updated substitution \subst[']. Finally, if the unification succeeds, the \run\
-procedure is called with the list of remaining goals \g and the new substitution
-\subst['].
 
 A variable is a term not yet instantiated. We can assign variables thanks to the
 \unify\ procedure. It is used each time a term like $t_1 = t_2$ is encountered
@@ -259,25 +248,7 @@ while solving a goal. The notation \unifyCmd{t_1}{t_2}{\subst}{\subst[']} is
 the unification and between the terms $t_1$ and $t_2$. It also takes an initial substitution \subst
 which is updated into the final substition \subst[']. A substitution is a mapping from variables name to their
 assignment. An assignment is a term. Unification provides, when possible, a most general unifier
-between the two terms. The notation $\subst t$ is the application of a substitution
-to a term.
-It returns a new term where all the variables in $t$ have been recursively
-replaced by heir assignment in \subst. If the variable as no assignment
-in \subst\ then the same variable is returned.
-
-Unification has some interesting properties
-
-\begin{definition}[Unification negation]
-  \vspace{-1em}\todo{qui = è il same term}
-  $$(\forall \subst, \lnot (\exists \subst['], \unifyCmd{t_1}{t_2}{\subst}{\subst[']}) \to (\neg (\exists t_3~\subst_1~\subst_2,
-      \subst_1 t_1 = \subst_1 t_3 \land \subst_2 t_2 = \subst_2 t_3))$$
-\end{definition}
-
-\begin{definition}[Substitution union]
-  \vspace{-1em}\todo{qui = è il same term}
-  $$\subst_1 \cap \subst_2  = \varnothing \to \subst_1\ t_1 = \subst_2\ t_2 \to (\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$$
-\end{definition}
-
+between the two terms. 
 
 
 % existing at moment of the creation of
@@ -458,41 +429,112 @@ that existed at the moment the choice point was created.
 Before talking about determinacy and the impact that hard-cut has on it. We
 prefer to spend some few words about the definition of modes, because as
 explained in \cite{1989Warren,1996Somogy} modes are the basis for determinim.
+Predicate arguments are classified as input or output and mode analysis
+ensures that at call time inputs are ground and that the outputs are bound
+to gound terms when the call ends. In turn a ground input is necessary
+to justify the following check.
 
-The general idea is that a logic program allows to express relations, but,
-sometimes it is also needed to express \textit{directed} relations, where arguments are
-differenciated between inputs and output. Said in an other way, output arguments
-can be derived from input arguments. It is often the case that the user of a
-logic programming langauge tend, in most of cases, to express directed
-predicates. The typical example of this need is the \texttt{append} predicate
-aiming to concatate two lists.
+\begin{definition}[Mutually-exclusive heads (\mutExclHeads)]
+  % \begin{coqcode}
+  %   Definition ~\customlabel{mutexcl}{\texttt{mutual\_exclusive}}\prog \pred\!\!~:
+  %     ~$\forall\ i1\ o1\ bo1\ i2\ o2\ bo2$~ (H1: ~\clauseCmd{p}{i1\ o1}{bo1}~ \in ~$\prog\ p$~) (H2: ~\clauseCmd{p}{i2\ o2}{bo2}~ \in ~$\prog\ p$~),
+  %         not (exists ~\subst\!\!~, ~\unifyCmd{i1}{i2}{\EmptySubst}{\subst}~)
+  % \end{coqcode}
+  Given a context \ctx\ and two clauses
+  $c_1 = \clauseCmd{\pred}{t_1 \ldots t_n}{bo_1}$ and
+  $c_2 = \clauseCmd{\pred}{u_1 \ldots u_n}{bo_2}$.
+  Let $\ctx\ \pred = \dtype{\pred}{i_1 \ldots i_k}{\_}$
+  \begin{align*}
+    \exists d \leq k\ s.t.\ \forall \subst \ \neg \exists\ \subst['] s.t.\ \unifyCmd{\vec{t}_d}{\vec{u}_d}{\subst}{\subst[']}
+  \end{align*}
+  \vspace{-2em}
+  \label{def:mut-excl-head}
+\end{definition}
 
-In a prolog-ish program without modes, the following program:
+This static check is used to justify the fact that, at run time, either
+$c_1$ or $c_2$ is used for a given goal. For this to be true one needs
+its discriminating argument $d$ to be ground. The reasoning goes as follows.
+We write $\subst t$ the application of a substitution \subst to a term $t$.
 
-\begin{elpicode}
-  append [X|Xs] L [X|L'] :- append Xs L L'. % app1
-  append [] L L.                            % app2
-\end{elpicode}
+Unification has some interesting properties
 
-\noindent
-makes the query ``\elpiIn{append Y [] L, 0 = 1}'' to diverge.
-Here the variable \elpiIn{Y} is unified with a list of infinite
-length, the rule \texttt{app1} being continously applied.
+\begin{definition}[Unification negation]
+  \vspace{-1em}\todo{qui = è il same term}
+  $$(\forall \subst, \lnot (\exists \subst['], \unifyCmd{t_1}{t_2}{\subst}{\subst[']}) \to (\neg (\exists t_3~\subst_1~\subst_2,
+      \subst_1 t_1 = \subst_1 t_3 \land \subst_2 t_2 = \subst_2 t_3))$$
+\end{definition}
 
-Modes are there to avoid this situation. The most widespread mode definition
-in the literature are two: the input
-mode and the output mode. The idea is that each predicate is annotated with a
-mode signature, and a static mode checker verifies that the clauses of the
-program are consistent with the mode declrations of the predicates. Essentially,
-in the head of a clause, 1) terms appearing in input position are supposed to be
-ground whereas 2) terms in output position must become ground in the body of the
-clause. Within each premise of the body, 3) terms appering in output positions become
-ground while 4) terms appearing in input positions are checked to be ground. If
-condition 2) or 4) are not satisfied a mode compilation error is raised.
+\begin{definition}[Substitution union]
+  \vspace{-1em}\todo{qui = è il same term}
+  $$\subst_1 \cap \subst_2  = \varnothing \to \subst_1\ t_1 = \subst_2\ t_2 \to (\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$$
+\end{definition}
+
+\begin{lemma}[Mutually-exclusive heads property]
+  Given a context \ctx and two clauses $c_1 = \clauseCmd{\predVar}{\vec{t}}{b_1}$ and $c_2 = \clauseCmd{\predVar}{\vec{u}}{b_2}$ then
+  let $\vec{t}_i$ and $\vec{u}_i$ the inputs arguments of $\vec{t}$ and $\vec u$ respectively.
+  % forall vector of \textit{ground} terms $\vec{v}$,
+  $$\mutExclHeads\ \ctx\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
+    \vecL{\ground\ v} \to \unifyCmd[1]{v}{t_i}{\EmptySubst}{\subst_1} \land
+    \unifyCmd[1]{v}{u_i}{\EmptySubst}{\subst_2})$$
+  \vspace{-2em}
+  \label{th:mut-excl-head}
+\end{lemma}
+
+\begin{proof}
+  By contradiction, let $\vec{v}$ be a ground vector unifying with both $\vec{t}_i$ and $\vec{u}_i$. This
+  means that there exists two substitutions such that $\subst_1\ \vec{v} = \subst_1\
+    \vec{t}_i$ and $\subst_2\ \vec{v} = \subst_2\ \vec{u}_i$. Since $\vec{v}$ is ground the equations can be
+  simplified into: $\vec{v} = \subst_1\ \vec{t}_i$ and $\vec{v} = \subst_2\ \vec{u}_i$, implying that
+  $\subst_1\ \vec{t}_i = \subst_2\ \vec{u}_i$. However, due to $\mutExclHeads\ \ctx\ c_1\ c_2$,
+  $\vec{t}_i$ and $\vec{u}_i$ cannot be unified: for any substituions
+  $\subst[']_1$ and $\subst[']_2$, we have $\subst[']_1\ \vec{t}_i \neq \subst[']_2\
+    \vec{u}_i$, a contradiction.
+\end{proof}
+
+
+
+% The general idea is that a logic program allows to express relations, but,
+% sometimes it is also needed to express \textit{directed} relations, where arguments are
+% differenciated between inputs and output. Said in an other way, output arguments
+% can be derived from input arguments. It is often the case that the user of a
+% logic programming langauge tend, in most of cases, to express directed
+% predicates. The typical example of this need is the \texttt{append} predicate
+% aiming to concatate two lists.
+
+% In a prolog-ish program without modes, the following program:
+
+% \begin{elpicode}
+%   append [X|Xs] L [X|L'] :- append Xs L L'. % app1
+%   append [] L L.                            % app2
+% \end{elpicode}
+
+% \noindent
+% makes the query ``\elpiIn{append Y [] L, 0 = 1}'' to diverge.
+% Here the variable \elpiIn{Y} is unified with a list of infinite
+% length, the rule \texttt{app1} being continously applied.
+
+In \twelf \cite{1996pfenning}, which is an implementation of \lamprolog, mode
+checking is extended to work with local nominal variables and higher-order
+variable unification within the pattern fragment,
+
+% Modes are there to avoid this situation. The most widespread mode definition
+% in the literature are two: the input
+% mode and the output mode. The idea is that each predicate is annotated with a
+% mode signature, and a static mode checker verifies that the clauses of the
+% program are consistent with the mode declrations of the predicates. Essentially,
+% in the head of a clause, 1) terms appearing in input position are supposed to be
+% ground whereas 2) terms in output position must become ground in the body of the
+% clause. Within each premise of the body, 3) terms appering in output positions become
+% ground while 4) terms appearing in input positions are checked to be ground. If
+% condition 2) or 4) are not satisfied a mode compilation error is raised.
 
 \begin{definition}[Well-moded program (\wellModed)]
-  Given a program \prog, for any clause $c$ in \prog, we say that \prog\
-  is well moded if it respect the informal description we have given above
+  
+  In \twelf \cite{1996pfenning}, which is an implementation of \lamprolog, mode
+checking is extended to work with local nominal variables and higher-order
+variable unification within the pattern fragment.
+
+  % 
   % TODO: da rifare
   % \begin{coqcode}
   %   Definition ~\customlabel{wellmoded}{\texttt{well\_moded}}~ ~\prog\!\!~:
@@ -503,9 +545,6 @@ condition 2) or 4) are not satisfied a mode compilation error is raised.
   \label{def:well-moded}
 \end{definition}
 
-In \twelf \cite{1996pfenning}, which is an implementation of \lamprolog, mode
-checking is extended to work with local nominal variables and higher-order
-variable unification within the pattern fragment.
 
 % The definition above can be rephrased as follows: a program \prog is well moded
 % if for any (binary in our setup) predicate \pred called with a ground input
@@ -530,6 +569,7 @@ unification variables. In the first part of the paper, we will introduce the
 seamantics of the input mode which is used in \elpi.
 In the second part, we extend it so that it works with predicates taking
 predicate calls as arguments.
+
 
 \subsection{Static analysis: functionality}
 \label{sec:det}
@@ -613,50 +653,6 @@ that are needed for determinacy checking.
 %
 To define this property, we first need to introduce some the auxiliary
 definitions.
-
-
-\begin{definition}[Mutually-exclusive heads (\mutExclHeads)]
-  % \begin{coqcode}
-  %   Definition ~\customlabel{mutexcl}{\texttt{mutual\_exclusive}}\prog \pred\!\!~:
-  %     ~$\forall\ i1\ o1\ bo1\ i2\ o2\ bo2$~ (H1: ~\clauseCmd{p}{i1\ o1}{bo1}~ \in ~$\prog\ p$~) (H2: ~\clauseCmd{p}{i2\ o2}{bo2}~ \in ~$\prog\ p$~),
-  %         not (exists ~\subst\!\!~, ~\unifyCmd{i1}{i2}{\EmptySubst}{\subst}~)
-  % \end{coqcode}
-  Given a context \ctx\ and two clauses
-  $c_1 = \clauseCmd{\pred}{\vec{t}}{bo_1}$ and
-  $c_2 = \clauseCmd{\pred}{\vec{u}}{bo_2}$. Let $\ctx\ \pred = \dtype{\_}{i}{\_}$
-  and $k$ being the length of $i$, then
-  \begin{align*}
-    \forall \subst \exists n, 0 \leq n < k \land \lnot (\exists \subst['], \unifyCmd{\vec{t}_n}{\vec{u}_n}{\subst}{\subst[']})
-  \end{align*}
-  \vspace{-2em}
-  \label{def:mut-excl-head}
-\end{definition}
-
-That is, two clauses have mutually-exclusive heads if it does exists a
-term in input position discriminating them, the subscript $n$ in the
-formula retrives the $n^{th}$ argument in a vector of terms.
-
-\begin{lemma}[Mutually-exclusive heads property]
-  Given a context \ctx and two clauses $c_1 = \clauseCmd{\predVar}{\vec{t}}{b_1}$ and $c_2 = \clauseCmd{\predVar}{\vec{u}}{b_2}$ then
-  let $\vec{t}_i$ and $\vec{u}_i$ the inputs arguments of $\vec{t}$ and $\vec u$ respectively.
-  % forall vector of \textit{ground} terms $\vec{v}$,
-  $$\mutExclHeads\ \ctx\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
-    \vecL{\ground\ v} \to \unifyCmd[1]{v}{t_i}{\EmptySubst}{\subst_1} \land
-    \unifyCmd[1]{v}{u_i}{\EmptySubst}{\subst_2})$$
-  \vspace{-2em}
-  \label{th:mut-excl-head}
-\end{lemma}
-
-\begin{proof}
-  By contradiction, let $\vec{v}$ be a ground vector unifying with both $\vec{t}_i$ and $\vec{u}_i$. This
-  means that there exists two substitutions such that $\subst_1\ \vec{v} = \subst_1\
-    \vec{t}_i$ and $\subst_2\ \vec{v} = \subst_2\ \vec{u}_i$. Since $\vec{v}$ is ground the equations can be
-  simplified into: $\vec{v} = \subst_1\ \vec{t}_i$ and $\vec{v} = \subst_2\ \vec{u}_i$, implying that
-  $\subst_1\ \vec{t}_i = \subst_2\ \vec{u}_i$. However, due to $\mutExclHeads\ \ctx\ c_1\ c_2$,
-  $\vec{t}_i$ and $\vec{u}_i$ cannot be unified: for any substituions
-  $\subst[']_1$ and $\subst[']_2$, we have $\subst[']_1\ \vec{t}_i \neq \subst[']_2\
-    \vec{u}_i$, a contradiction.
-\end{proof}
 
 % \begin{coqcode}
 %   Definition mutual_exclusive_head '(p i _ :- _) '(p i' _ :- _) :=

@@ -17,7 +17,7 @@
     % STOP
     \AxiomC{}
     \RightLabelM{\ruleStop}
-    \UnaryInfC{\runCmd{\EmptyList}{\alt}{\subst}{\alt}{\subst}}
+    \UnaryInfC{\runCmd{\EmptyList}{\alts}{\subst}{\alts}{\subst}}
   \end{myRule}
 }
 
@@ -25,9 +25,9 @@
   \begin{myRule}{#1}
     % UNIF
     \AxiomC{\unifyCmd{x}{y}{\subst}{\subst[']}}
-    \AxiomC{\runCmd{\g}{\alt}{\subst[']}{\alt[']}{\subst['']}}
+    \AxiomC{\runCmd{\gl}{\alts}{\subst[']}{\alts[']}{\subst['']}}
     \RightLabelM{\ruleUnif}
-    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{(x = y)}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst['']}}
+    \BinaryInfC{\runCmd{\ConsHdNP{\goalCmd{\_}{x = y}{\_}}\ConsTlNP{\gl}}{\alts}{\subst}{\alts[']}{\subst['']}}
   \end{myRule}
 }
 
@@ -35,9 +35,9 @@
   \begin{myRule}{#1}
     % MATCH
     \AxiomC{\matchCmd{x}{y}{\subst}{\subst[']}}
-    \AxiomC{\runCmd{\g}{\alt}{\subst[']}{\alt[']}{\subst['']}}
+    \AxiomC{\runCmd{\gl}{\alts}{\subst[']}{\alts[']}{\subst['']}}
     \RightLabelM{\ruleMatch}
-    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{(x =_m y)}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst['']}}
+    \BinaryInfC{\runCmd{\ConsHdNP{\goalCmd{\_}{(x =_m y)}{\_}}\ConsTlNP{\gl}}{\alts}{\subst}{\alts[']}{\subst['']}}
   \end{myRule}
 }
 
@@ -45,28 +45,28 @@
   \begin{myRule}{#1}
     % FAIL
     \AxiomC{\texttt{fail} \subst g}
-    \AxiomC{\runCmd{a}{\alt}{\subst[']}{\alt[']}{\subst['']}}
+    \AxiomC{\runCmdQ{\alts}{al}{\alts[']}{\subst[']}}
     \RightLabelM{\ruleFail}
-    \BinaryInfC{\runCmd{\ConsHd{g}\ConsTl{\_}}{\ConsHd{\subst['],a}\ConsTl{\alt}}{\subst}{\alt[']}{\subst['']}}
+    \BinaryInfC{\runCmd{\ConsHdNP{g}\ConsTlNP{\_}}{\ConsHd{\alts}\ConsTl{al}}{\subst}{\alts[']}{\subst[']}}
   \end{myRule}%
 }
 
 \newcommand{\ruleBangM}[1]{
   \begin{myRule}{#1}
     % CUT
-    \AxiomC{\runCmd{\g}{\alt}{\subst}{\alt[']}{\subst[']}}
+    \AxiomC{\runCmd{\gl}{\alts}{\subst}{\alts[']}{\subst[']}}
     \RightLabelM{\ruleBang}
-    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\_}{\cut}{\alt}}\ConsTl{\g}}{\_}{\subst}{\alt[']}{\subst[']}}
+    \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\_}{\cut}{\alts}}\ConsTlNP{\gl}}{\_}{\subst}{\alts[']}{\subst[']}}
   \end{myRule}
 }
 
 \newcommand{\ruleCallM}[1]{
   \begin{myRule}{#1}
     % CALL
-    \AxiomC{$\mathcal{F}(\prog, \pred,\vec{t}, \subst, \alt) = \ConsHd{(\subst,g)}\ConsTl{\alt'}$}
-    \AxiomC{\runCmd{(\g)}{(\alt'\ @\ \alt)}{\subst}{\alt[']}{\subst[']}}
+    \AxiomC{$\mathcal{F}(\prog, \pred\ \vec{t}, \subst, \alts) = \ConsHdNP{\alts[']}\ConsTlNP{al}$}
+    \AxiomC{\runCmdQ{\alts[']}{(al\ @\ \alts)}{\alts['']}{\subst[']}}
     \RightLabelM{\ruleCall}
-    \BinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{\callCmd{\pred}{\vec{t}}}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
+    \BinaryInfC{\runCmd{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vec{t}}}{\_}}\ConsTlNP{\gl}}{\alts}{\subst}{\alts['']}{\subst[']}}
   \end{myRule}
 }
 
@@ -74,10 +74,10 @@
   \begin{myRule}{#1}
     % CALLB
     \AxiomC{$(\subst h)\ \vec{t} =_\beta \pred\ \vec{u}$}
-    \AxiomC{$\mathcal{F}(\prog, \pred, \vec{u}, \subst, \alt) = \ConsHd{(\_,g)}\ConsTl{new\_alt}$}
-    \AxiomC{\runCmd{(g\ @\ \g)}{(new\_alt\ @\ \alt)}{\subst}{\alt[']}{\subst[']}}
+    \AxiomC{$\mathcal{F}(\prog, \pred\ \vec{u}, \subst, \alts) = \ConsHdNP{g}\ConsTlNP{new\_alt}$}
+    \AxiomC{\runCmd{(g\ @\ \gl)}{(new\_alt\ @\ \alts)}{\subst}{\alts[']}{\subst[']}}
     \RightLabelM{\ruleCallB}
-    \TrinaryInfC{\runCmd{\ConsHd{\goalCmd{\prog}{(h\ \vec{t})}{\_}}\ConsTl{\g}}{\alt}{\subst}{\alt[']}{\subst[']}}
+    \TrinaryInfC{\runCmd{\ConsHdNP{\goalCmd{\prog}{(h\ \vec{t})}{\_}}\ConsTlNP{\gl}}{\alts}{\subst}{\alts[']}{\subst[']}}
   \end{myRule}
 }
 
@@ -87,27 +87,27 @@
 % \newcommand{\ruleImplM}[1]{
 %   \begin{myRule}{#1}
 %     % IMPL
-%     \AxiomC{\runCmd{\ConsHd{(\goalCmd{(H + \ctx)}{B}{\alt})}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \AxiomC{\runCmd{\ConsHdNP{(\goalCmd{(H + \ctx)}{B}{\alts})}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %     \RightLabelM{\ruleImpl}
-%     \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{(\implCmd{H}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{(\implCmd{H}{B})}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %   \end{myRule}
 % }
 
 % \newcommand{\rulePiM}[1]{
 %   \begin{myRule}{#1}
 %     % PI
-%     \AxiomC{\runCmd{\ConsHd{\goalCmd{(x \uplus \ctx)}{B}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \AxiomC{\runCmd{\ConsHdNP{\goalCmd{(x \uplus \ctx)}{B}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %     \RightLabelM{\rulePi}
-%     \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{(\piCmd{x}{B})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{(\piCmd{x}{B})}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %   \end{myRule}
 % }
 
 \newcommand{\rulePiImplM}[1]{
   \begin{myRule}{#1}
     % IMPL
-    \AxiomC{\runCmd{\ConsHd{(\goalCmd{(x \uplus \env, H + \prog)}{B}{\alt})}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+    \AxiomC{\runCmd{\ConsHdNP{(\goalCmd{(x \uplus \env, H + \prog)}{B}{\alts})}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
     \RightLabelM{\rulePiImpl}
-    \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\env,\prog}{(\piCmd{x}{\implCmd{H}{B}})}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+    \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\env,\prog}{(\piCmd{x}{\implCmd{H}{B}})}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
   \end{myRule}
 }
 
@@ -115,8 +115,8 @@
 % \newcommand{\ruleLamM}[1]{
 %   \begin{myRule}{#1}
 %     % PI
-%     \AxiomC{\runCmd{\ConsHd{\goalCmd{\ctx}{(B[x\backslash T])}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \AxiomC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{(B[x\backslash T])}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %     \RightLabelM{\ruleLam}
-%     \UnaryInfC{\runCmd{\ConsHd{\goalCmd{\ctx}{((\lambda x. B) T)}{\alt}}\ConsTl{\g}}{\alt[']}{\subst}{\alt['']}{\subst[']}}
+%     \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{((\lambda x. B) T)}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %   \end{myRule}
 % }
