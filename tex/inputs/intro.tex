@@ -103,9 +103,9 @@ necessarily functional, but still \elpiIn{once P} acts as a function.
 func once (pred i:A, o:B), A -> B.
 once P X R :- P X R, !.
 
-meal Gs M :- map (once likes) Gs Ds. % ok, "once likes" is a function
+meal Gs M :- map (once likes) Gs M. % ok, "once likes" is a function
 \end{elpicode}
-% meal Gs M :- map (g\d\once (likes g d)) Gs Ds. % ok, "once likes" is a function
+% meal Gs M :- map (g\d\once (likes g d)) Gs M. % ok, "once likes" is a function
 
 \noindent Not only the inputs, but also the outputs of predicates
 can be predicates, and the determinacy analysis we present tracks their
@@ -118,8 +118,8 @@ commit P (once P).
 func id (func A -> B) -> (func A -> B).
 id F F.
 
-meal Gs M :- commit likes F, map Gs F M. % ok
-meal Gs M :- id likes F, map Gs F M.     % nope
+meal Gs M :- commit likes F, map F Gs M. % ok
+meal Gs M :- id likes F, map F Gs M.     % nope
 \end{elpicode}
 
 \noindent Here the output of \elpiIn{commit} is a function \elpiIn{F} that
