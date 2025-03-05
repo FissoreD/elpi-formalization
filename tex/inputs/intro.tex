@@ -8,7 +8,7 @@ Elpi finds applications as an extension
 language for The Rocq\footnote{formerly known as Coq} Interactive prover, where
 Elpi has been used for program and proof synthesis~\cite{tassi2018,tassi2019,tassi2023,cohen_et_al:LIPIcs.FSCD.2020.34} and more recently
 as the target language for type class resolution~\cite{fissore2023,fissore2024}.
-Type class resolution is typically used to implement overloading~\cite{haskell,ms}
+Type-class resolution is typically used to implement overloading~\cite{wadler1996-hs,sozeau2008-tc}
 where the solution to a query provides the meaning of the overloaded symbol.
 In this context it is of paramount importance that this solution is unique,
 i.e. non ambiguous. A static check for this property is of particular
@@ -91,7 +91,7 @@ The cut operator lets one impose functionality on a relation
 by committing to its first result, as in the body of \elpiIn{like}, but it also
 discards the clauses following the current one.
 Luckily the higher order nature of Elpi and the language of signatures we
-introduce is expressive enough to encapsulate the desired ``tail cut'' behavior
+introduce is expressive enough to encapsulate the desired ``tail cut''\todo{sotto hard-cut} behavior
 into a predicate: The signature of \elpiIn{once}
 states that the higher order argument \elpiIn{P} can be any predicate, not
 necessarily functional, but still \elpiIn{once P} acts as a function.

@@ -135,9 +135,9 @@ We write \runCmd{\vecL{\g}}{\alt}{\subst}{\alt'}{\subst'}
 when a goal list $\vecL{\g}$ under a substitution \subst and alternatives \alt
 terminates with a substitution $\subst'$ and a remaining list of
 (still unexplored) alternatives $\alt'$.
-The rules for \run{} are given in~\cref{fig:basic-interp} where
+The rules for \run{} are given in~\cref{fig:basic-interp}\todo{rule per fail?} where
 use $::$ for list cons; $@$ for list concatenation; $\EmptyList$ is the empty list;
-$[e|x \in \vec{x}]$ for list comprehension; $\subst in \Sigma$; $\alts \in \alt$; $al \in \vecL{\alt}$; $g \in \g$; $gl \in \vecL{\g}$.
+$[e|x \in \vec{x}]$ for list comprehension; $\subst \in \Sigma$; $\alts \in \alt$; $al \in \vecL{\alt}$; $g \in \g$; $gl \in \vecL{\g}$.
 An initial query looks like \runCmd{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyList}]}{\EmptyList}{\EmptyList}{\_}{\_}
 
 Note that in this simple settings the
@@ -161,7 +161,7 @@ where the implication operator \elpiIn{=>} is introduced.
     \subst,
     %\Big(
     \underbrace{\big[(\prog, t = u, ~a) \mid (t,u) \in \vecL{t,u}\big]}_{\mathrm{head\ unification}} @
-    \underbrace{\big[(\prog, g, ~a) \mid g \in \vecL{g}\big]}_{\mathrm{premises}} @ ~ gl
+    \underbrace{\big[(\prog, g, a) \mid g \in \vecL{g}\big]}_{\mathrm{premises}} @ ~ gl
     %\Big)
     %\bigg)
     ~\bigg\rvert~
@@ -443,7 +443,7 @@ to justify the following check.
   Given a context \ctx\ and two clauses
   $c_1 = \clauseCmd{\pred}{t_1 \ldots t_n}{bo_1}$ and
   $c_2 = \clauseCmd{\pred}{u_1 \ldots u_n}{bo_2}$.
-  Let $\ctx\ \pred = \dtype{\pred}{i_1 \ldots i_k}{\_}$
+  Let $\ctx\ \pred = \dtype{\pred}{i_1 \ldots i_k}{\_}$\todo{!!}
   \begin{align*}
     \exists d \leq k\ s.t.\ \forall \subst \ \neg \exists\ \subst['] s.t.\ \unifyCmd{\vec{t}_d}{\vec{u}_d}{\subst}{\subst[']}
   \end{align*}
@@ -453,7 +453,7 @@ to justify the following check.
 
 This static check is used to justify the fact that, at run time, either
 $c_1$ or $c_2$ is used for a given goal. For this to be true one needs
-its discriminating argument $d$ to be ground. The reasoning goes as follows.
+its discriminating argument $d$\todo{d is a pos} to be ground. The reasoning goes as follows.
 We write $\subst t$ the application of a substitution \subst to a term $t$.
 
 Unification has some interesting properties
@@ -473,7 +473,7 @@ Unification has some interesting properties
   Given a context \ctx and two clauses $c_1 = \clauseCmd{\predVar}{\vec{t}}{b_1}$ and $c_2 = \clauseCmd{\predVar}{\vec{u}}{b_2}$ then
   let $\vec{t}_i$ and $\vec{u}_i$ the inputs arguments of $\vec{t}$ and $\vec u$ respectively.
   % forall vector of \textit{ground} terms $\vec{v}$,
-  $$\mutExclHeads\ \ctx\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
+  $$\hyperref[def:mut-excl-head]{\mutExclHeads}\ \ctx\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
     \vecL{\ground\ v} \to \unifyCmd[1]{v}{t_i}{\EmptySubst}{\subst_1} \land
     \unifyCmd[1]{v}{u_i}{\EmptySubst}{\subst_2})$$
   \vspace{-2em}
