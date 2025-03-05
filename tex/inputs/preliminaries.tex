@@ -473,12 +473,6 @@ $t_3$ and substitutions $\subst_1$ and $\subst_2$
 such that $\subst_1 t_1 = \subst_1 t_3\ \land\ \subst_2 t_2 = \subst_2 t_3$.
 \end{lemma}
 
-\begin{lemma}[Substitution union] Given two substitutions $\subst_1$ and $\subst_2$
-such that $\dom\ \subst_1 \cap \dom\ \subst_2  = \varnothing$, then
-$\subst_1\ t_1 = \subst_2\ t_2$ implies that $(\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$.
-\end{lemma}
-\todo{serve?}
-
 \begin{lemma}[Mutually-exclusive heads property]
   \label{th:mut-excl-head}
   Given a context $\ctx\ $and two clauses $c_1$ and $c_2$
@@ -558,8 +552,8 @@ $$
     
   \label{th:mut-excl-head}
 \end{theorem}
-\begin{proof}Follows from \ref{th:mut-excl-head}
-\end{proof}
+% \begin{proof}Follows from \ref{th:mut-excl-head}
+% \end{proof}
 
 
 
@@ -574,26 +568,28 @@ $$
 \subsection{Static analysis: functionality}
 \label{sec:det}
 
-The objective is to indentify predicates that repsent mathamtical
+Our objective is to indentify predicates that repsent mathamtical
 functions rather than relations.
-The literature on determinacy analysis goes beyond this coarse categorization
-by identifying functions with an empty domain~\cite{1996henderson} or
-predicate that are observably functions in the sense that
+The literature on determinacy analysis goes beyond this coarse categorization,
+for example by identifying functions with an empty or full
+domain~\cite{1996henderson} or predicate that are observably functions in the sense that
 that can return multiple times the same result, or diverge~\cite{1989Warren}.
 
-We are interested in identifying predicates that leave no choice points,
-or that leave choice points that certainly fail.
+We are interested in identifying predicates that leave no choice points~\ref{def:is-ded}
+called \emph{semidet} in \cite{1996henderson},
+(or that leave choice points that certainly fail ~\ref{def:is-func}).
+
 \todo{visto che abbiamo una bigstep la definizione di sotto non mi piace
 perche include anche la divergenza}
 \todo{incoltre se ucciadiamo tutti punti di scelta abbiamo
 anche una garanzia sulla complessità}
 
-\begin{definition}[Functionality (\isfunc)]\label{def:is-det}
+\begin{definition}[Functionality (\isfunc)]\label{def:is-func}
   Given a program \prog and a term $t$,
   \isdet\ is defined as follows:
   $$\forall a\ \subst, \isFuncCmd{t}$$
 \end{definition}
-\begin{definition}[Determinacy (\isdet)]\label{def:is-det}
+\begin{definition}[(Semidet)erminacy (\isdet)]\label{def:is-det}
   Given a program \prog and a term $t$,
   \isdet\ is defined as follows:
   $$\forall a\ \subst, \isDetCmd{t}$$
@@ -619,6 +615,11 @@ as follows:
   ty & ::= data \mid [\detI \mid \relI]\ data^\ast \funsep data^\ast
   \label{eq:pred}
 \end{align}
+
+Eg: a TC instance may not exist, or may exist and be granted to be unique
+without exploring any other choice point. Come mettere once intorno a ogni call
+e dare errore se l'utilizzatore aggiunge a un certo punto una clausola
+che rende questa "ottimizzazione" falsa.
 
 A predicate is either deterministic (\detI) or relational (\relI). The symbol
 \funsep\ separates input from output arguments. We let \expI\ be a shortcut for

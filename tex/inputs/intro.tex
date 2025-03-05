@@ -128,10 +128,26 @@ Moreover \elpiIn{commit} is a function, so the whole body of \elpiIn{meal} also
 is. Of the outputs are considered functional only if the predicate is
 well called.
 
-\begin{elpicode}
+TO BE DECIDED
 
+fail fast is important in our TC case
+
+avoid silly computational complexity coming from "unexpected"
+backtracking.
+
+\begin{elpicode}
+func mem A, list A -> .
+mem X [X|_] :- !. % ok
+mem X [X|_]. % nope
+mem X [_|XS] :- mem X XS.
+
+%           O(L)     O(L)
+pred p L :- mem 1 L, len L 1. % comlexity failure p L = O(L*L) for L <> [1]
+pred p L :- once(mem 1 L), len L 1. % comlexity failure p L = O(L) for L <> [1]
 \end{elpicode}
     
+
+OPTIONAL
 
 The real business of Elpi is the manipulation of higher order data via the so
 called $\lambda$-tree syntax (also known as HOAS~\cite{1988pfenning,Miller2018MechanizedMR}).

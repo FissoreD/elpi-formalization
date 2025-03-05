@@ -259,6 +259,12 @@ no longer valid.
 % In our first-order \elpi, we do not perform any static mode analysis. Instead,
 % we rely on the \match operation, which is dynamically applied to input arguments at runtime.
 
+\begin{lemma}[Substitution union] Given two substitutions $\subst_1$ and $\subst_2$
+  such that $\dom\ \subst_1 \cap \dom\ \subst_2  = \varnothing$, then
+  $\subst_1\ t_1 = \subst_2\ t_2$ implies that $(\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$.
+  \end{lemma}
+  
+  
 We start therefore to state a new version of
 \cref{th:mut-excl-head,th:mut-excl}
 %BBB
