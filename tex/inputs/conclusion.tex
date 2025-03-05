@@ -8,6 +8,39 @@ disjunction of $\mathcal{L}$. This is mainly due to the fact that \elpi is an
 homoiconic language and its program definition can change during the evaluation
 of the code.
 
+In \cite{1991Sahlin}, and more formally in \cite{1996mogensen}, determinacy is
+used to work with \mixtus, a partial evaluator of \prolog. In that case,
+determinacy is inferred so that it is possible to derive a new specialiezed,
+and therefore more efficient, version of the original program under the
+guarantee that the two program share the same semantics.
+
+Finally, in \cite{1996henderson}, a determinacy checker for \mercury
+captures different behaviours of a predicate. A predicate can return
+exactly zero and/or one solution, zero and/or multiple solution. In \mercury the
+user is allowed to annotate predicates with determinacy information. A
+non-annotated predicate will be inferred with the lowest derived tag.
+Determinacy, in \mercury, besides giving a guarantee on the program, allows to
+specialized it so that a faster routine can be used in the compiled program.
+
+Determinacy, as previously mentioned, is the property of a predicate that
+returns at most one solution per call. Such a predicate behaves like a function,
+which is why we refer to it as a deterministic predicate or simply a function.
+Determinism checking statically ensures that the clauses implementing a
+deterministic predicate adhere to this condition. The literature contains
+numerous discussions on this topic, offering various descriptions and
+applications of determinism.
+
+In \cite{1989Warren}, the authors describe a property subsuming
+determinism: they describe functionality. A predicate is
+functional if it produces at most one \textit{distinct} solution per predicate
+call. The keyword here is \textit{distinct}, since, in the determinacy setting,
+a predicate call producing the same solution twice is not considered as
+deterministic, while, it is functional. %In the paper they explain that mutual
+% exclusivness of clauses can be improved not only by looking at the head and at
+% the presence of the cut but also by instructing the checker that premises can
+% put clauses in mutual exclusivness.
+
+
 
 \cref{tab:comparison}
 

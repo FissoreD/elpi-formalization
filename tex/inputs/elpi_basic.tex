@@ -1,6 +1,25 @@
 \section{Determinacy analysis of Horn Clauses with input matching}
 \label{sec:basic-elpi}
 
+It is interesting to note that mode checking under the groundness condition is
+sometime too restrictive. In some situation it is in fact sufficient to work
+with term that are "enough" ground to guarantee the wanted properties. As an
+example, both \cite{1994apt-oc} and \cite{2002overton}, even though they
+researches concern different areas, present a version of this mode checking with
+"enough" instantiated terms together with some condition of variable linearty.
+
+In our paper, we will combine these ideas. In particular,
+since \elpi is used as a
+meta-language for proof verification
+\cite{tassi2018,tassi2019,tassi2023,fissore2023,fissore2024}, we
+need to work with a higher-order setup where inputs (and outputs) may not be
+fully instantiated: the role of the search engine is to potentially assign
+unification variables. In the first part of the paper, we will introduce the
+seamantics of the input mode which is used in \elpi.
+In the second part, we extend it so that it works with predicates taking
+predicate calls as arguments.
+
+
 As anticipated in the end of \cref{sec:modes}, the hypothesis that input
 argument are ground, such as in \cref{th:det} is a too strong condition for our
 use case. In automatic proof search, the input arguments may contain flexible
