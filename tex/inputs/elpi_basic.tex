@@ -1,6 +1,10 @@
 \section{Determinacy analysis of Horn Clauses with input matching}
 \label{sec:basic-elpi}
 
+\begin{elpicode}
+  once (p X). % mercury fails ground, elpi OK.
+\end{elpicode}
+
 It is interesting to note that mode checking under the groundness condition is
 sometime too restrictive. In some situation it is in fact sufficient to work
 with term that are "enough" ground to guarantee the wanted properties. As an

@@ -464,7 +464,7 @@ We say that $\nUnify\ t_1\ t_2$ if an only if
 
 This static check is used to justify the fact that, at run time, either
 $c_1$ or $c_2$ is used for a given goal. For this to be true one needs
-its discriminating argument $d$ to be ground in the call.
+its discriminating argument at position $d$ to be ground in the call.
 The reasoning goes as follows.
 
 \begin{lemma}[Split transitivity] Given a substitution \subst and
@@ -589,7 +589,7 @@ anche una garanzia sulla complessità}
   \isdet\ is defined as follows:
   $$\forall a\ \subst, \isFuncCmd{t}$$
 \end{definition}
-\begin{definition}[(Semidet)erminacy (\isdet)]\label{def:is-det}
+\begin{definition}[(Semi-)determinacy (\isdet)]\label{def:is-det}
   Given a program \prog and a term $t$,
   \isdet\ is defined as follows:
   $$\forall a\ \subst, \isDetCmd{t}$$
