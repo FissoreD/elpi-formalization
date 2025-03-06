@@ -20,7 +20,7 @@
     \AxiomC{
       \stackanchor
       {\checkLCmd{\ctx[']}{\detI}{B}{\ctx['']}{\func[']}}
-      {\ensuremath{\inferCmdArr[1]{\ctx['']}{t_i}{\func[_o']}{\top}}}}
+      {\ensuremath{\inferCmdArr[1]{\ctx['']}{t_i}{(\func[_o'],\top)}}}}
     \AxiomC{
       \stackanchor
       {\subCmd{\func'}{\func}}
@@ -47,8 +47,8 @@
     % UNIF
     \AxiomC{
       \stackanchor
-      {\ensuremath{\inferCmdArr{\ctx}{A}{\func[_A]}{\top}}}
-      {\ensuremath{\inferCmdArr{\ctx}{B}{\func[_B]}{\top}}}}
+      {\ensuremath{\inferCmdArr{\ctx}{A}{(\func[_A],\top)}}}
+      {\ensuremath{\inferCmdArr{\ctx}{B}{(\func[_B],\top)}}}}
     \AxiomC{\ensuremath{\func{_{AB}} = \minT\ \func{_A}\ \func{_B}}}
     % \AxiomC{\ensuremath{\func{_{AB}} = \minT\ \func{_A}\ \func{_B}}}
     \AxiomC{
@@ -64,7 +64,7 @@
 \newcommand{\ruleCheckUnifFailM}[1]{
   \begin{myRule}{#1}
     % UNIF FAIL
-    \AxiomC{\ensuremath{\inferCmdArr{\ctx}{A}{\_}{\bot} \lor \inferCmdArr{\ctx}{B}{\_}{\bot}}}
+    \AxiomC{\ensuremath{\inferCmdArr{\ctx}{A}{(\_,\bot)} \lor \inferCmdArr{\ctx}{B}{(\_,\bot)}}}
     \RightLabelM{\ruleCheckUnifFail}
     \UnaryInfC{\checkCmd{\ctx}{\func}{(A = B)}{\ctx}{\func}}
   \end{myRule}
@@ -105,7 +105,7 @@
     %   {\inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}}
     \AxiomC{\ensuremath{
           \ctx\ \predVar = \dtype{\func[']}{\func[_i]}{\func[_o]} \qquad
-          \inferCmdArr[1]{\ctx}{t_i}{\func[_i']}{\top} \qquad
+          \inferCmdArr[1]{\ctx}{t_i}{(\func[_i'],\top)} \qquad
           \vecL{\func[_i'] \mySub \func[_i]} \qquad
           \assumeCmd[1]{\ctx}{\func[_o]}{t_o}{\ctx[']}}}
       
@@ -125,8 +125,8 @@
   \begin{myRule}{#1}
     % CALL FAIL
     \AxiomC{\ensuremath{ \ctx\ \predVar = \dtype{\_}{\func[_i]}{\_} }}
-    \AxiomC{ \inferCmdArr[1]{\ctx}{t_i}{\func[_i']}{\mathcal{R}}}
-    \AxiomC{$ \lnot (\vecL{\func[_i'] \mySub \func[_i]}) \lor \mathcal{R} = \bot$}
+    \AxiomC{ \inferCmdArr[1]{\ctx}{t_i}{(\func[_i'],\bool)}}
+    \AxiomC{$ \lnot (\vecL{\func[_i'] \mySub \func[_i]}) \lor \bool = \bot$}
     \RightLabelM{\ruleCheckCallFail}
     \TrinaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ \vec{t})}{\ctx}{\relI}}
   \end{myRule}
