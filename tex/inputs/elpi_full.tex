@@ -98,7 +98,7 @@ Thanks to this, we can define the signature of the predicates above:
 % \end{equation}
 
 In the code abode we use brackets to delimit lists. The idea is that, thanks to
-type signatures, the \elpi's checker ensures that a predicate behaves as a 
+type signatures, the \elpi's checker ensures that a predicate behaves as a
 function and returns output with the declared determinacy in the signature
 if they are called with inputs having the expected determinacy.
 
@@ -146,13 +146,13 @@ relation between two determinacies.
 \begin{equation}
   f_1 \mySub f_2 =
   \begin{cases}
-    \bot                                                          & \text{if } f_1 = \dtype{\relI}{\_}{\_} \land f_2 = \dtype{\detI}{\_}{\_}    \\
+    \bot                                                          & \text{if } f_1 = \dtype{\relI}{\_}{\_} \land f_2 = \dtype{\detI}{\_}{\_} \\
     % (\forall i, a'_i \mySub a_i) \land (\forall j, b_j \mySub b'_j)      & \text{else if } f_1 = \detI\ a\ b \land f_2 = \detI\ a'\ b' \\
     % (\forall i, a'_i \mySub c_i) \land (\forall j, b_j \mySub c_{|a|+j}) & \text{else if } f_1 = \detI\ a\ b \land f_2 = \relI\ c      \\
     % \forall i, a_i \mySub b_i                                            & \text{else if } f_1 = \relI\ a\ \land f_2 = \relI\ b        \\
     % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{else if } f_1 = [\detI\mid \relI]\ a\ b \land f_2 = [\detI\mid \relI]\ c\ d \\
-    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \dtype{\func}{a}{b} \land f_2 = \dtype{\func}{c}{d} \\
-    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \dtype{\detI}{a}{b} \land f_2 = \dtype{\relI}{c}{d} \\
+    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \dtype{\func}{a}{b} \land f_2 = \dtype{\func}{c}{d}     \\
+    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \dtype{\detI}{a}{b} \land f_2 = \dtype{\relI}{c}{d}     \\
     % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
     \top                                                          & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}
@@ -181,7 +181,7 @@ their inputs and outputs. In particular if we have $t_1 \mySub t_2$ then the
 outputs of $t_1$ should be \mySub\ than the outputs $t_2$ and
 the converse property should hold for the inputs of two terms, that is, if
 we have $t_1 \mySub t_2$ then the outputs of $t_2$ should be \mySub\ than the
-outputs $t_1$. 
+outputs $t_1$.
 The idea is similar to a subtyping relation where inputs should be
 contravariant and outputs covariant.
 
@@ -203,20 +203,20 @@ maximum) between two determinacies.
 \begin{equation}
   \minT\ f_1 f_2 =
   \begin{cases}
-    \dtype{\detI}{(\overrightarrow{\maxT}\ a\ c)}{(\overrightarrow{\minT}\ b\ d)} & \text{if } f_k = \dtype{\relI}{a}{b} \land f_{2-k} = \dtype{\detI}{c}{d}\\
-    \dtype{D}{(\overrightarrow{\maxT}\ a\ c)}{(\overrightarrow{\minT}\ b\ d)}     & \text{if } f_1 = \dtype{D}{a}{b} \land f_2 = \dtype{D}{c}{d}             \\
-    % \relI\ (\overrightarrow{\maxT}\ a\ c)\ (\overrightarrow{\minT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
-    \expI                                                                 & \text{if } f_1 = \expI \land f_2 = \expI
+    \dtype{\detI}{(\vecL{\maxT}\ a\ c)}{(\vecL{\minT}\ b\ d)} & \text{if } f_k = \dtype{\relI}{a}{b} \land f_{2-k} = \dtype{\detI}{c}{d} \\
+    \dtype{D}{(\vecL{\maxT}\ a\ c)}{(\vecL{\minT}\ b\ d)}     & \text{if } f_1 = \dtype{D}{a}{b} \land f_2 = \dtype{D}{c}{d}             \\
+    % \relI\ (\vecL{\maxT}\ a\ c)\ (\vecL{\minT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
+    \expI                                                     & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}
   \label{eq:min}
 \end{equation}
 \begin{equation}
   \maxT\ f_1 f_2 =
   \begin{cases}
-    \dtype{\detI}{(\overrightarrow{\minT}\ a\ c)}{(\overrightarrow{\maxT}\ b\ d)} & \text{if } f_k = \dtype{\relI}{a}{b} \land f_{2-k} = \dtype{\detI}{c}{d} \\
-    \dtype{D}{(\overrightarrow{\minT}\ a\ c)}{(\overrightarrow{\maxT}\ b\ d)}     & \text{if } f_1 = \dtype{D}{a}{b} \land f_2 = \dtype{D}{c}{d}             \\
-    % \relI\ (\overrightarrow{\minT}\ a\ c)\ (\overrightarrow{\maxT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
-    \expI                                                                 & \text{if } f_1 = \expI \land f_2 = \expI
+    \dtype{\detI}{(\vecL{\minT}\ a\ c)}{(\vecL{\maxT}\ b\ d)} & \text{if } f_k = \dtype{\relI}{a}{b} \land f_{2-k} = \dtype{\detI}{c}{d} \\
+    \dtype{D}{(\vecL{\minT}\ a\ c)}{(\vecL{\maxT}\ b\ d)}     & \text{if } f_1 = \dtype{D}{a}{b} \land f_2 = \dtype{D}{c}{d}             \\
+    % \relI\ (\vecL{\minT}\ a\ c)\ (\vecL{\maxT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
+    \expI                                                     & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}
   \label{eq:max}
 \end{equation}
@@ -249,7 +249,30 @@ Said in another way, a unification may change the labels of the two terms being
 unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=$
 \minT\ $($\detlab\ \elpiIn{X}$)$ $($\detlab\ \elpiIn{Y}$)$.
 
+\newcommand{\maximize}{\texttt{maximize}\xspace}
+\newcommand{\minimize}{\texttt{minimize}\xspace}
 
+Below we define the functions \maximize and \minimize.
+
+\begin{equation}
+  \maximize\ f =
+  \begin{cases}
+    \dtype{\relI}{(\vecL{\minimize}\ a)}{(\vecL{\minimize}\ b)} & \text{if } f = \dtype{\_}{a}{b} \\
+    \expI                                                       & \text{if } f = \expI
+  \end{cases}
+  \label{eq:maximize}
+\end{equation}
+\begin{equation}
+  \minimize\ f_1 =
+  \begin{cases}
+    \dtype{\detI}{(\vecL{\maximize}\ a)}{(\vecL{\maximize}\ b)} & \text{if } f = \dtype{\_}{a}{b} \\
+    \expI                                                       & \text{if } f = \expI
+  \end{cases}
+  \label{eq:minimize}
+\end{equation}
+
+The two fonctions respectively return the maximal and minimal dtype of a given
+dtype. This is used \dots
 
 % $$---$$
 
@@ -469,7 +492,7 @@ We provide an example of this checker in the following database.
 The signatures of the predicates in the snippet above are the following:
 %
 \begin{align*}
-  \texttt{succ}     & : \dtype{\detI}{[\expI]}{[\expI]}     & \texttt{pred} & : \dtype{\detI}{[\expI]}{[\expI]} \\
+  \texttt{succ}     & : \dtype{\detI}{[\expI]}{[\expI]} & \texttt{pred} & : \dtype{\detI}{[\expI]}{[\expI]} \\
   \texttt{give-fun} & : \dtype{\relI}{[\expI]}{[\detI]} & \texttt{good} & : \detI
 \end{align*}
 
@@ -575,7 +598,7 @@ The final theorem we want to prove is the following.
   We reason on the derivations in \cref{fig:basic-interp} extended with
   \cref{fig:interp-match,fig:interp-piimpl}. The interesting case is the rule
   \ref{rule:call} since we have an application in our call the \run.
-  By 
+  By
 \end{proof}
 
 % \subsection{Mix data with ty}
