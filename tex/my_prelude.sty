@@ -53,8 +53,7 @@
 \newcommand{\pred}[1][]{\texttt{p#1}\xspace}
 \newcommand{\expr}[1][]{\texttt{e#1}\xspace}
 \newcommand{\isFuncCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to 
-  \forall a_i \in a, \lnot 
-  (\exists \alt\ \subst['], \runCmd{a_i}{\EmptyList}{\EmptySubst}{\alt}{\subst[']})
+  \forall a_i \in a, \runCmdFQ{a_i}{\EmptyList}
 }}
 \newcommand{\isDetCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to 
  a = \EmptyList
@@ -116,7 +115,9 @@
 
 
 % goal{program}{goal}{alternatives}
+\newcommand{\vars}{\texttt{vars}}
 \newcommand{\run}{\texttt{run}}
+% \newcommand{\fail}{\texttt{fail}}
 \newcommand{\call}{\texttt{Call}}
 \newcommand{\cut}{\texttt{Cut}}
 %\newcommand{\goal}{\texttt{Goal}}
@@ -132,7 +133,7 @@
 
 \def\mutExclHeads{\texttt{split\_heads}}
 \def\locExcl{\texttt{loc\_excl}}
-\def\mutExcl{\texttt{mut\_excl}}
+\def\mutExcl{\texttt{mut\_excl\_clauses}}
 \def\mutExclHO{\texttt{mut\_excl\_HO}}
 \def\detCheck{\texttt{det\_check}}
 \def\detCheckHO{\texttt{det\_check\_HO}}
@@ -142,12 +143,15 @@
 \def\detPrem{\texttt{det\_prem}}
 \def\wellModed{\texttt{well\_moded}}
 \newcommand{\ground}{\texttt{ground}}
-\newcommand{\dom}{\texttt{dom}}
+\newcommand{\dom}{\texttt{vars}}
 \newcommand{\bs}{\text{\textbackslash}}
 
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
 \newcommand{\runCmd}[5]{\ensuremath{\run\ (#3,\ #1)\ #2 \arr (#4, #5)}}
 \newcommand{\runCmdQ}[4]{\ensuremath{\run\ #1\ #2 \arr (#3, #4)}}
+\newcommand{\runQuery}[2]{\ensuremath{\run\ (\EmptySubst,\ #1)\ #2 \arr \_}}
+\newcommand{\runCmdF}[3]{\ensuremath{\run\ (#3,\ #1)\ #2 \arr \bot}}
+\newcommand{\runCmdFQ}[2]{\ensuremath{\run\ #1\ #2 \arr \bot}}
 % \newcommand{\callCmd}[3]{\ensuremath{(\call\ #1\ #2\ #3)}\xspace}
 \newcommand{\callCmd}[2]{\ensuremath{(#1\ #2)}\xspace}
 \newcommand{\goalCmd}[3]{\ensuremath{(#1,\ #2,\ #3)}\xspace}

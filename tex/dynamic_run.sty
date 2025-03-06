@@ -1,11 +1,12 @@
 \newcommand{\ruleName}[2]{\customlabel{#1}{\ensuremath{r_{#2}}}}
 \newcommand{\RightLabelM}[1]{\RightLabel{\scriptsize #1}}
 
-\newcommand{\ruleFail}{\ruleName{rule:fail}{\bot}}
+\newcommand{\ruleFail}{\ruleName{rule:backtrack}{\circlearrowright }}
+\newcommand{\ruleAbort}{\ruleName{rule:abort}{\bot}}
 \newcommand{\ruleCall}{\ruleName{rule:call}{@}}
 \newcommand{\ruleCallB}{\ruleName{rule:call1}{@'}}
 \newcommand{\ruleBang}{\ruleName{rule:cut}{!}}
-\newcommand{\ruleStop}{\ruleName{rule:stop}{\EmptyList}}
+\newcommand{\ruleStop}{\ruleName{rule:stop}{\top}}
 \newcommand{\ruleUnif}{\ruleName{rule:unif}{=}}
 \newcommand{\ruleImpl}{\ruleName{rule:impl}{\Rightarrow}}
 \newcommand{\rulePi}{\ruleName{rule:pi}{\forall}}
@@ -44,10 +45,19 @@
 \newcommand{\ruleFailM}[1]{
   \begin{myRule}{#1}
     % FAIL
-    \AxiomC{\texttt{fail} \subst g}
+    \AxiomC{\unifyCmd{x}{y}{\subst}{\bot}}
     \AxiomC{\runCmdQ{\alts}{al}{\alts[']}{\subst[']}}
     \RightLabelM{\ruleFail}
-    \BinaryInfC{\runCmd{\ConsHdNP{g}\ConsTlNP{\_}}{\ConsHd{\alts}\ConsTl{al}}{\subst}{\alts[']}{\subst[']}}
+    \BinaryInfC{\runCmd{\ConsHdNP{\goalCmd{\_}{x = y}{\_}}\ConsTlNP{\_}}{\ConsHd{\alts}\ConsTl{al}}{\subst}{\alts[']}{\subst[']}}
+  \end{myRule}%
+}
+
+\newcommand{\ruleAbortM}[1]{
+  \begin{myRule}{#1}
+    % FAIL
+    \AxiomC{\unifyCmd{x}{y}{\subst}{\bot}}
+    \RightLabelM{\ruleAbort}
+    \UnaryInfC{\runCmdF{\ConsHdNP{\goalCmd{\_}{x = y}{\_}}\ConsTlNP{\_}}{\EmptyList}{\subst}}
   \end{myRule}%
 }
 
