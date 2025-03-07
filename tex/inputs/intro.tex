@@ -25,9 +25,9 @@ $\lambda$Prolog, and its nonstandard notion of input.
 \subsection{Motivating examples}\label{sec:examples}
 
 A first motivating example is the \elpiIn{map} predicate, widely used in
-all Elpi applications. The first line gives the signature of \elpiIn{map}:
-given a predicate between any types \elpiIn{A} and \elpiIn{B},
-it relates a list of \elpiIn{A} with a list of \elpiIn{B}. Elpi
+all Elpi applications. The predicaet signature reads: 
+given a (directed) predicate from \elpiIn{A} to \elpiIn{B}, \elpiIn{map}
+relates a list of \elpiIn{A} with a list of \elpiIn{B}. Elpi
 follows the $\lambda$Prolog convention ($\lambda$-calculus actually) of
 writing application with no parentheses, e.g. \elpiIn{map F L R}
 can be understood as the atom \elpiIn{map(F, L, R)}.
@@ -38,43 +38,36 @@ map _ [] [].
 map F [X|XS] [Y|YS] :- F X Y, map F XS YS.
 \end{elpicode}
 
-This code happens to compute a function of the first two arguments, that we
-consider inputs, if and only if the higher order predicate \elpiIn{F} is a
-function and if the first list is ground. We want tho author of this code
-to be able to ascribe a more precise signature to the code above, namely:
-\elpiIn{func map (func A -> B), list A -> list B.}
+We want the programmer be able to ascribe the more precise signature
+\elpiIn{func map (func A -> B), list A -> list B} and have Elpi check
+the implementation validates it. The code above indeed
+happens to compute a function of the first two arguments, that we
+consider inputs, if and only if the higher order predicate \elpiIn{F} is
+itself a function (we will more be precise on what function means in~\ref{sec:thm}).
 
-
-\noindent The syntax ``\elpiIn{func name inputs -> outputs}'' asserts that name is
-a function of the inputs (before the arrow) to the outputs if all the
-requirements on the inputs are satisfied, in this specific case if the
-first input is a functional, binary, predicate. We need this ascription to
-be added to an existing code base where \elpiIn{map} is potentially
-called by passing a relation as the first argument, say \elpiIn{P}.
+We need this ascription to be added to an existing code base where
+\elpiIn{map} is potentially called by passing a relation as the first
+argument, say \elpiIn{P}.
 In this case the call to \elpiIn{map P L R} has to be accepted but not
 considered to be functional for the analisys of the surrounding code.
-
-In the examples below we give three (alternatives) 1-line
+In the examples below we give three (alternatives) one-liner
 implementations for a \elpiIn{meal} predicate building a list of dishes
 to satisfy the guests.
 
 \begin{elpicode}
 pred likes i:guest, o:dish.
 ... % same guest may lake more than one dish ...
-
 func likes! guest -> dish.
 likes! G D :- likes D G, !.
-
 pred meal i:list guest, o:list dish.
 meal Gs M :- map likes! Gs M.     % a function
 meal Gs M :- map likes Gs M, !.   % also a function
 meal Gs M :- map likes Gs M.      % not really a function
 \end{elpicode}
 
-\noindent All three implementation validate the signature above, but only the
-first two validate this one: \elpiIn{func meal list guest -> list dish}.
-
-\noindent The first one is accepted since \elpiIn{likes!} is a function, hence also
+\noindent All three implementations validate the signature above, but only the
+first two validate \elpiIn{func meal list guest -> list dish}.
+The first one is accepted since \elpiIn{likes!} is a function, hence also
 \elpiIn{map likes! Gs M} is. The second implementation miscalls \elpiIn{map}
 by passing the relation \elpiIn{likes}, but then commits to the first solution,
 hence it is a function.
@@ -82,13 +75,13 @@ The third one is rejected since it miscalls \elpiIn{map} without
 compensating for it.
 
 The cut operator lets one impose functionality on a relation
-by committing to its first result, as in the body of \elpiIn{like}, but it also
+by committing to its first result, as in the body of \elpiIn{like!}, but it also
 discards the clauses following the current one.
-Luckily the higher order nature of Elpi and the language of signatures we
+Luckily the higher-order nature of Elpi and the language of signatures we
 introduce is expressive enough to encapsulate the desired ``tail cut''\todo{sotto hard-cut} behavior
-into a predicate: The signature of \elpiIn{once}
+into the \elpiIn{once} predicate. Its signature
 states that the higher order argument \elpiIn{P} can be any predicate, not
-necessarily functional, but still \elpiIn{once P} acts as a function.
+necessarily a function, but still \elpiIn{once P} acts as a function.
 
 % func once (pred) -> .
 % once P :- P, !.
@@ -96,7 +89,6 @@ necessarily functional, but still \elpiIn{once P} acts as a function.
 \begin{elpicode}
 func once (pred i:A, o:B), A -> B.
 once P X R :- P X R, !.
-
 meal Gs M :- map (once likes) Gs M. % ok, "once likes" is a function
 \end{elpicode}
 % meal Gs M :- map (g\d\once (likes g d)) Gs M. % ok, "once likes" is a function
@@ -108,10 +100,8 @@ functional status.
 \begin{elpicode}
 func commit (pred i:A, o:B) -> (func A -> B).          
 commit P (once P).                             
-
 func id (func A -> B) -> (func A -> B).
 id F F.
-
 meal Gs M :- commit likes F, map F Gs M. % ok
 meal Gs M :- id likes F, map F Gs M.     % nope
 \end{elpicode}
@@ -119,8 +109,8 @@ meal Gs M :- id likes F, map F Gs M.     % nope
 \noindent Here the output of \elpiIn{commit} is a function \elpiIn{F} that
 in turn makes \elpiIn{map Gs F M} produce a single value for \elpiIn{M}.
 Moreover \elpiIn{commit} is a function, so the whole body of \elpiIn{meal} also
-is. Of the outputs are considered functional only if the predicate is
-well called.
+is. The last example is rejected since \elpiIn{id} is miscalled: the outputs
+are considered functional only if signature is respected.
 
 % TO BE DECIDED
 
@@ -143,9 +133,9 @@ well called.
 
 % OPTIONAL
 
-The real business of Elpi is the manipulation of higher order data via the so
-called $\lambda$-tree syntax (also known as HOAS~\cite{1988pfenning,Miller2018MechanizedMR}).
-Such data is pervasive in interactive provers based on type theory.
+The real domain where Elpi shines is the manipulation of higher order data
+via the so called $\lambda$-tree syntax~\cite{Miller2018MechanizedMR} (also known as HOAS~\cite{1988pfenning}).
+Such data is pervasive in interactive provers based on type theory
 such as Rocq. The paradigmatic example is reported below where \elpiIn{tm} is
 the data type for $\lambda$-terms. For example \elpiIn{lam (x\ lam (y\ x))}
 represents the first projection, where \elpiIn{x\_} is the built in
@@ -155,11 +145,9 @@ $\lambda$-abstraction of $\lambda$Prolog.
 kind tm type.
 type app tm -> tm -> tm.
 type lam (tm -> tm) -> tm.
-
 func copy tm -> tm.
 copy (app A B) (app C D) :- copy A C, copy B D.
 copy (lam F) (lam G) :- pi x\ copy x x => copy (F x) (G x).
-
 func whd tm -> tm.
 whd (app H A) R :- whd H (lam F), !, (pi x\ copy x A => copy (F x) S), whd S R.
 whd X X.

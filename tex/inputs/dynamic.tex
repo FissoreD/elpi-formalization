@@ -16,69 +16,81 @@
 \section{Preliminaries}
 \label{sec:basic}
 
-By convention we say that predicates take first all input arguments and
-then output arguments and we separather those with $\funsep$, omitting
-the symbols when both are absent.
-We use \pred{} for redicate names, \predVar{} for functor names
-and \X for variable names. We write $\vecL{t}$ 
-for $t_1 \ldots t_n$ (a possibly empty list of $t$s).
-%and \texttt{c} for data types names.
-In the syntax we single out the cut operator since it has a dedicated treatment
-in the operational semantics. All other constructs are seen as predicate calls,
-i.e. the usual $t_1 = t_2$ is encoded as $eq~t_1~t_2$ for a predicate $eq$
-with a single clause $eq~X~X$.
-
-$$
-  \begin{array}{c|c}
-    syntax & types \\\hline
-      \begin{array}{rl}
-        P & ::= p, q, \ldots \\
-        K & ::= c, f, \ldots \\
-        \X & ::= \mathrm{X}, \mathrm{Y}, \ldots \\
-        \A & ::= \cut \mid P\ \vecL{\T} \mid \X\ \vecL{\T} \mid \piImplCmd[ty]{\X}{\CL}{\A} \!\!\!\!\label{eq:atom} \\ % \mid \T = \T \label{eq:atom} \\
-        \T & ::= K\ \vecL{\T} \mid P \ \vecL{\T} \mid \X\ \vecL{\T} \mid \lambda \X\!\!: ty \bs\ \T\label{eq:tm} \\
-        \CL & ::= \clauseCmd{P}{\vecL{\T}}{\vecL{\A}} \nonumber %\label{eq:cl} 
-      \end{array} 
-      \quad
-      &
-      \quad
-      \begin{array}{rl}
-        \V & ::= \mathrm{A}, \mathrm{B}, \ldots \\
-        \!\!\!sig & ::= [\detI \mid \relI]\ \vecL{ty} \funsep \vecL{ty} \ \label{eq:ty} \\
-        ty   & ::= \texttt{exp} \mid sig \mid \V \\ %\texttt{c}\ data^\ast \label{eq:data}
-        ~ & ~ \\
-        ~ & ~ \\
-        ~ & ~ 
-      \end{array}  
-    \\
-  \end{array}
-$$  
-~\\
-In this simple setting
-all atoms have type \relI{},
-all terms \T have type \texttt{exp},
-and a context \ctx{} assigns to each predicate symbol \pred{} a predicate signature $sig$.
-For example, looking back at section~\ref{sec:examples},
-we have that $\ctx~\texttt{likes} = \dtype{\relI}{\texttt{exp}}{\texttt{exp}}$
-and $\ctx\ \texttt{true} = \relI$.
-By convention given a call $\pred\ \vecL{t}$ to a n-ary predicate where
-$\ctx\ \pred = \dtype{\relI}{{ty}_1 \ldots {ty}_k~}{~{ty}_{k+1} \ldots {ty}_n}$ we
-write $\vecL{t_i}$ for the input arguments ${t}_1 \ldots {t}_k$
-and $\vecL{t_o}$ for the output arguments ${t}_{k+1} \ldots {t}_n$.
-
 We use $\EmptyList$ is the empty list and $x :: xs $ for prepending an element $x$
 to a list $xs$; $@$ for list concatenation;
 $[e|x \in \vec{x}]$ for list comprehension and $[e\ \mathbf{if}\ p|x \in \vec{x}]$ 
 for list filtering. We shall fold $f$ over a list of pairs
 using the combinator \fold defined by these equations:
-
 $$
 \fold\ \_\ \_\ \bot = \bot
-\quad
-\fold\ ((t,u) :: l)\ f\ x = \fold\ l\ f\ (f\ t\ u\ x)
-\quad
-\fold\ \EmptyList\ \_\ x = x
+\qquad
+\fold\ (x :: xs)\ f\ a = \fold\ xs\ f\ (f\ x\ a)
+\qquad
+\fold\ \EmptyList\ \_\ a = a
 $$
+
+We asume a set $P$ of predicate names, a set $K$ of term constructors (e.g. nil
+and cons), a set \X of variables and by convention we use capitals for
+unification variables and small letters for bound variables.
+As this paper does not really focuses on type checking (the interested reader can
+refer to~\cite{1992nadathur}) we collaps all non-predicate types to
+a single node \texttt{exp}.
+
+We focus on predicate signatures: By convention we say that predicates take first
+all input arguments and then output arguments and we separather those with $\funsep$,
+omitting the symbol when both are absent. \detI{} stands for deterministic (the
+precise meaning is given in~\ref{sec:thm}) while \relI{} for non-deterministic.
+
+We write $\vecL{t}$  for $t_1 \ldots t_n$ (a possibly empty list of $t$s)
+and we write $\vecL{tu}$ for the zipping of $\vecL{t}$ and $\vecL{u}$
+into a list of pairs.
+
+\newcommand{\syntaxFig}{
+  \begin{subfigure}[b]{1\textwidth}
+    \centering
+  $$
+  \begin{array}{rlr}
+    P & ::= p, q, \ldots & \mathrm{predicate}\\
+    K & ::= c, f, \ldots & \mathrm{data\ constructor}\\
+    \X & ::= \mathrm{X}, \mathrm{Y} \ldots x, y, \ldots & \mathrm{variable}\\
+    \A & ::= \cut \mid P\ \vecL{\T} \mid \X\ \vecL{\T} \mid \piImplCmd[\texttt{exp}]{\X}{\CL}{\A} & \mathrm{atom} \\
+    \T & ::= K\ \vecL{\T} \mid P \ \vecL{\T} \mid \X\ \vecL{\T} \mid \lambda \X\!\!: ty \bs\ \T & \mathrm{term}\\
+    \CL & ::= \clauseCmd{P}{\vecL{\T}}{\vecL{\A}} & \mathrm{clause} \\
+    \V & ::= \mathrm{A}, \mathrm{B}, \ldots & \mathrm{type\ variable} \\
+    sig & ::= [\detI \mid \relI]\ \vecL{ty} \funsep \vecL{ty} & \mathrm{predicate\ signature} \\
+    ty   & ::= \texttt{exp} \mid sig \mid \V & \mathrm{type} \\
+  \end{array}
+  $$
+  \caption{Syntax of Elpi}
+  \label{fig:syntax}
+\end{subfigure}
+}
+
+\begin{figure}
+  \fbox{\syntaxFig}
+\end{figure}
+
+The user provides a context \ctx{} that assigns to each predicate symbol \pred{} a
+signature $sig$. For example, looking back at section~\ref{sec:examples},
+we have that $\ctx~\texttt{likes} = \dtype{\relI}{\texttt{exp}}{\texttt{exp}}$
+and $\ctx\ \texttt{true} = \relI$.
+We single out the cut operator since it has a dedicated treatment
+in the operational semantics. Unification of \elpiIn{s} with \elpiIn{t} can be
+encoded as \elpiIn{eq s t} for a predicate with a single clause
+$\prog\ \texttt{eq} =$\elpiIn{(eq X X :- .)} with signature
+$\ctx\ \texttt{eq} = \dtype{\detI}{}{A\ A}$: a deterministic predicate
+with two outputs of the same type.
+Given a call $\pred\ \vecL{t}$ to a n-ary predicate where
+$\ctx\ \pred = \dtype{\relI}{{ty}_1 \ldots {ty}_k~}{~{ty}_{k+1} \ldots {ty}_n}$ we
+write $\vecL{t_i}$ for the input arguments ${t}_1 \ldots {t}_k$
+and $\vecL{t_o}$ for the output arguments ${t}_{k+1} \ldots {t}_n$.
+
+$\lambda$ and \texttt{pi} are binders in the $\lambda$ calculus sense. We write
+$t[x/y]$ the usual, capture avoiding, operation or replacing the variable $y$
+with $x$ inside $t$.
+We say that $\vars\ t \subseteq \mathcal{P}(\X)$ is the set
+of free variables occurring in $t$. When $\vars\ t = \emptyset$ we way that
+$t$ is \ground.
 
 % \begin{minipage}{0.48\textwidth}%
 %   \vspace{-1em}
@@ -125,9 +137,12 @@ $$
 
 \section{Operational semantics} % Horn Clauses with modes and cut}
 
-A program \prog is a mapping from predicate names to an ordered
-list of clauses; we write $\prog~\pred$ for the clauses for
-predicate \pred.
+A program $\prog = (\aleph, \mathcal{I})$ holds a set of names $\aleph$ and a
+mapping $\mathcal{I}$ from predicate names to an ordered list of clauses.
+We write $\prog~\pred$ for the clauses for predicate \pred in $\mathcal{I}$
+and $(x,h) + \prog$ to add an extra clause $h$ to $\mathcal{I}$ and
+name $x$ to $\aleph$. We write $x \# \prog$ to find a name fresh in $\aleph$.
+
 % We assume all predicates have at least one clause, in particular
 % $\prog\ \texttt{fail} = [\clauseCmd{\texttt{fail}}{\!\!}{0 = 1}]$.
 % These clauses are
@@ -154,14 +169,10 @@ predicate \pred.
 %   \end{align}  
 %
 %
-A goal $g \in \g \subseteq \prog \times atom \times \vecL{\alt}$
+A goal $\g \subseteq \prog \times \A \times \vecL{\alt}$
 is a triple made of a program, an atom $g$ and a list of \emph{cut-to} alternatives.
 An alternative $a \in \alt \subseteq \Sigma \times \vecL{\g}$ is a
 pair made of a substitution and a list of goals.
-
-We say that $\vars\ t \subseteq \mathcal{P}(\X)$ is the set
-of variables occurring in $t$. When $\vars\ t = \emptyset$ we way that
-$t$ is \ground.
 A substitution $\subst : \X \to tm$ is a mapping from unification variables
 to terms. 
 We write $\subst t$ the application of a substitution \subst to a term $t$,
@@ -175,13 +186,13 @@ When two substitutions have disjoint domains we write $\sigma_1 \cup \sigma_2$
 as the (disjoint) union of two substitutions.
 
 We assume the unifier $\unify : tm \times tm \times \Sigma \to \Sigma \uplus \bot$
-such that if $\matchCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
-and $\subst[']$ is the most general extension in the usual sense of  $\subst$
+such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
+and $\subst[']$ is the most general extension $\subst$
 as in~\cite{1991miller-pf}.
 We assume a matcher $\match : tm \times tm \times \Sigma \to \Sigma \uplus \bot$
 such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \subst['] p$
 and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\subst$,
-i.e. \match{} does not assign variables in $t$ but only in the term $p$ that acts as a pattern.
+i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as a pattern.
 
 
 
@@ -192,16 +203,17 @@ when a goal list $gl$ under a substitution \subst and alternatives $a$
 terminates with a substitution $\subst'$ and a remaining list of
 (still unexplored) alternatives $a'$. We write  \runCmdF{gl}{a}{\subst}
 when the execution halts: fails to solve one of the given goals and runs out of
-alternatives.
-
-The rules for \run{} are given in~\cref{fig:basic-interp}\todo{rule per fail?}.
+alternatives. 
 An initial query looks like \runQuery{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyList}]}{\EmptyList}
+
 % In this section the program never changes during execution hence storing it
 % in the goal seems useless, but the program will change dynamically
 % in section~\ref{sec:hoas} where the implication operator \elpiIn{=>} is
 % introduced.
 
-\begin{figure}[!h]
+\newcommand{\runFig}{
+  \begin{subfigure}[b]{1\textwidth}
+    \centering
 
   \ruleBangM{.50}
   \ruleStopM{.45}
@@ -224,7 +236,6 @@ An initial query looks like \runQuery{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyLi
     (\clauseCmd{\pred}{\vec{u}}{\vecL{g}}) \in \prog\ \pred
     \bigg]
   $$
-
   $$
   \mathcal{H}(\vecL{tu},\ ol,\ \subst) = \fold\ \vecL{tu_o}\ \unify\ (\fold\ \vecL{tu_i}\ \match\ \subst)
   $$
@@ -235,7 +246,14 @@ An initial query looks like \runQuery{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyLi
   \rulePiImplM{.7}
   \ruleCallBeta{0.44}
 
+  \caption{Operational natural semantics}
+  \label{fig:basic-interp}
+\end{subfigure}
+}
 
+\begin{figure}
+  \fbox{\runFig}
+\end{figure}
 
   % $$
   % \mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
@@ -256,12 +274,10 @@ An initial query looks like \runQuery{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyLi
   % \ruleUnifM{.6}
   % \ruleFailM{.55}
   % \ruleAbortM{.4}
-  \vspace{0.3em}%
+  
+  %\vspace{0.3em}%
 
-  \caption{Operational natural semantics}
-  \label{fig:basic-interp}
-\end{figure}
-
+The rules for \run{} are given in~\cref{fig:basic-interp}.
 The first rule to look at is the one for cut (\ref{rule:cut}).
 Remark that the cut-to alternatives stored in each goal are a suffix
 of the (global) alternatives to that goal: If the atom in the goal
@@ -273,61 +289,56 @@ the function $\mathcal{F}$. This function is in charge of creating the
 new alternatives $\alts['] :: al$;
 the former is directly evaluated while
 the rest prepended to the existing set of alternatives.
-Each alternative is made of a prefix of unifications, one for each argument
-of the predicate, followed by the premises of the clause and by the pre-existing
-goals $gl$. 
+$\mathcal{H}$ filters applicable clauses by unifying their heads with
+the goal. If no clause applies rule ~\ref{rule:callbacktrack} moves
+to the next alternative (backtracks to the most recent choice point) is
+any, otherwise rule ~\ref{rule:callabort} terminates.
+A peciluarity of Elpi is that input arguments are \emph{matched} against
+the corresponding terms in the head of the rule, while outputs are unified.
 
 The stop rule~\ref{rule:stop} terminates as there are no more goals to be
 solved and produces the current susbtitution and the yet to be explored
 alternatives.
 
-Rules \ref{rule:unif}, \ref{rule:abort} and \ref{rule:backtrack} deal
-with equational goals by calling \unify algorithm. If it succeeds
-then we move to the next goal. If it fails we move to the next alternative.
-If no alternative is available we halt.
+Rule~\ref{piimpl} loads into the current program the new clause $h$
+after having postulated a fresh symbol $y$ and replaced the bound $x$ for
+$y$ everywhere.
 
-The notation $H + \prog$ is the insertion of the clause $H$ 
-in the program \prog so that $H$ has
-the highest priority in \prog. The notation
-$x \uplus \env$\todo{penso si possa togliere}
-is the insertion of the local variable $x$ inside the set of local binders \env
-provided that $x \notin \env$.
+The last rule~\ref{rule:beta} deals with the fact that an atom can be
+a variable. If that variable is assgined in $\subst$ to a term
+that happens to be a predicate, then it proceeds. We write $=_\beta\eta$
+since the equational theory of $\lambda$Prolog (hence Elpi) requires
+that~\cite{1991miller-pf} but plays no role in this paper.
 
 % The rule \ruleImpl handles the atom \implCmd{H}{B}, and its derivation rule
 % attempts to solve \( B \) under a program extended with the clause \( H \). The
 % rule \rulePi introduces the name of the fresh variable into the program.  
 
-The rule \ref{rule:piimpl} in \cref{fig:interp-piimpl} is interpreted by running the
-goal under the \pi\ and the \impl\ charging both the local variable and clause
-inside its scope.
-
-The \unify and \match procedures now consider \env\ to perform \pf\
-unification. \env is required to know if a term is in the pattern fragment.
 
 This operational semantisc is essentially a big-step version of
-the one given in~\cite{1990Vink} extended to HO\todo{chiarire}. The choice to use operational semantics
+the one given in~\cite{1990Vink} extended to the higher order
+constructs of $\lambda$Prolog and the input-matching behavior of Elpi.
+The choice to use operational semantics
 rather than denotational semantics (as in \cite{2011king}) stems from our
 preference for maintaining a concrete representation of the current choice
 points as well as the cut-to ones (the ones obtained when a cut is performed).
-\todo{se is\_det usasse $\EmptyList$ sarebbe mglio...}
 This semantics describes an SLD search strategy with a \textit{hard-cut} operator
 in the sense of~\cite{2003Andrews}: it is cutting
 away not only the later clauses of the same predicate, but also the alternative
 clauses for subgoals that appear earlier in the clause premises.
 
-\subsection{Digression on  the eagher H}
+\subsection{Digression on  the eagherness of $\mathcal{H}$}
 
-The contruction $\prog^!$ inserts in $\prog$ cuts that corresponds to
-an \emph{eager} version of $\mathcal{F}$, that instead of always
-generating an alternative for each clause filters upfront clauses
-whose head unifies with the goal. Most implementations of 
-logic programming languages index clauses so to discard upfront as many
-rules as possible, for example using a rete algorithm.
-The eager operational semantics is faithful to an implementation that indexes
-clauses on all input deep enough to discriminate them whenever the \mutExclHeads
-check does. This semantics would make theorem \ref{th:det} hold for \prog
-rather than $\prog^!$.
-\todo{sistema}
+The function $\mathcal{H}$ eagerly unifies all clauses with the goal while
+a more natural (and efficient) semantics would be to just create the
+alternatives and prepend to the list of goals unification the same unification
+problems. The choice simplifies the formal threatment of determinacy we
+provide in~\ref{sec:thm} and in particular it matches the \mutExclHeads condition.
+
+From a practical stanpoint a
+logic programming languages implementation can either index clauses
+deep enough, or perform a program transformation consisting in putting
+a tail cut in each clause for a deterministic predicate.
 
 
 % The \textit{call rule} (\ref{rule:call}) deals with goals starting with a predicate

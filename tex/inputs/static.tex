@@ -1,5 +1,4 @@
-\section{Static analysis}
-\label{sec:modes}
+\section{The meaning of a predicate signature}
 
 % \section{Determinacy checking for Higher Order predicates} % Prolog with higher-order variables in prop}
 % \label{sec:vars}
@@ -51,11 +50,11 @@
 % principle) to a canonical value in the form of a predicate name applied
 % a new vector of terms $\vec{u}$.
 
-This change significantly impacts our static determinacy checker: variables can
-now be passed as arguments and may have a propositional type, meaning
-they can be called within clause bodies. Therefore, additional properties can be
-enforced by the checker. For example, users may want to ensure that a
-predicate's output is verified to be a deterministic predicate.
+% This change significantly impacts our static determinacy checker: variables can
+% now be passed as arguments and may have a propositional type, meaning
+% they can be called within clause bodies. Therefore, additional properties can be
+% enforced by the checker. For example, users may want to ensure that a
+% predicate's output is verified to be a deterministic predicate.
 
 % We provide some examples to illustrate this point:
 
@@ -110,9 +109,14 @@ predicate's output is verified to be a deterministic predicate.
 % deterministic and \elpiIn{do} behaves deterministically when it receives
 % functions as input.
 
-\subsection{Comparing predicate signatures}
+% \subsection{Comparing predicate signatures}
 
-The checker should also accepts predicates that are \textit{wrongly} called. For
+It is one of our objective that the determinacy checker should accept
+predicates that are \textit{wrongly} called.
+
+FINQUI
+
+For
 example, \elpiIn{do (f 1 X)} should be accepted as a call, however, since the\todo{cambiare f con queen}
 argument of \elpiIn{do} has not the expected determinacy, we loose the guarantee
 that the call behaves deterministically. Similarly, in the query \elpiIn{idF (f 1 X)
@@ -352,7 +356,7 @@ dtype. This is used \dots
 % has the expected determinacy, which is crucial since outputs can be used as new
 % queries in the program.
 
-\subsection{Operational determinacy checking algorithm}
+\section{Determinacy checking algorithm}
 
 \begin{figure}
   \fbox{\inferFig}
