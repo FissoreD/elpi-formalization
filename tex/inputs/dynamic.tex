@@ -35,7 +35,8 @@ and cons), a set \X of variables and by convention we use capitals for
 unification variables and small letters for bound variables.
 As this paper does not really focuses on type checking (the interested reader can
 refer to~\cite{1992nadathur}) we collaps all non-predicate types to
-a single node \texttt{exp}.
+a single node \texttt{exp}. We also rule out predicates inside data,
+eg a list of predicates, for space constraints.
 
 We focus on predicate signatures: By convention we say that predicates take first
 all input arguments and then output arguments and we separather those with $\funsep$,
