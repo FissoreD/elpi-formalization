@@ -257,7 +257,7 @@ Below we define the functions \maximize and \minimize.
 \begin{equation}
   \maximize\ f =
   \begin{cases}
-    \dtype{\relI}{(\vecL{\minimize}\ a)}{(\vecL{\minimize}\ b)} & \text{if } f = \dtype{\_}{a}{b} \\
+    \dtype{\relI}{(\vecL{\minimize}\ a)}{(\vecL{\maximize}\ b)} & \text{if } f = \dtype{\_}{a}{b} \\
     \expI                                                       & \text{if } f = \expI
   \end{cases}
   \label{eq:maximize}
@@ -265,7 +265,7 @@ Below we define the functions \maximize and \minimize.
 \begin{equation}
   \minimize\ f_1 =
   \begin{cases}
-    \dtype{\detI}{(\vecL{\maximize}\ a)}{(\vecL{\maximize}\ b)} & \text{if } f = \dtype{\_}{a}{b} \\
+    \dtype{\detI}{(\vecL{\maximize}\ a)}{(\vecL{\minimize}\ b)} & \text{if } f = \dtype{\_}{a}{b} \\
     \expI                                                       & \text{if } f = \expI
   \end{cases}
   \label{eq:minimize}
@@ -390,8 +390,8 @@ In particular, rule \ref{rule:infer-hd} handles variables or predicate names by
 retrieving their determinacy from the context.
 Rules \ref{rule:infer-cut} and \ref{rule:infer-unif} are straightforward: both
 the \cut\ operation and unification are considered deterministic predicates.
-Rule \ref{rule:infer-piimpl} handles the \coqIn{PiImpl} constructor by extending
-\ctx\ with a mapping from the local variable $x$ to its dtype.
+% Rule \ref{rule:infer-piimpl} handles the \coqIn{PiImpl} constructor by extending
+% \ctx\ with a mapping from the local variable $x$ to its dtype.
 Finally, rule \ref{rule:infer-app} addresses term applications. It returns if
 the application stands for a call to a deterministic or relational predicate.
 Together with this piece of information we have the boolean which tests if the
@@ -409,9 +409,11 @@ variables \predVar. It updates its dtype in \ctx\ is updated to \func. In
 determinacy should be less or equal than the one received in entry. Rules
 \ref{rule:assume-cut} and \ref{rule:assume-unif} does not change the context,
 both the \cut and the $=$ operators are deterministic terms and $\forall d,
-  \detI \mySub d$. Rule \ref{rule:assume-piimpl} goes under the implication with a
-recursive call charging in the context the local binder $x$. This same binder is
-removed from the result in the output. Finally the rule for term application
+\detI \mySub d$. 
+% Rule \ref{rule:assume-piimpl} goes under the implication with a
+% recursive call charging in the context the local binder $x$. This same binder is
+% removed from the result in the output. 
+Finally the rule for term application
 \ref{rule:assume-app} tries to assume that the application has a determinacy
 \func. This is possible only if the determinacy of the head term is less or
 equal than the given one. If it is the case, \assume is called recursibely on
@@ -428,9 +430,9 @@ For example see \ref{rule:check-cut}, if the term we have to execute is a \cut,
 then we know that no matter what is the entry determinacy, we know that in the
 and we have a deterministic behavior (\detI). The context is never touched.
 
-Rule \ref{rule:check-piimpl} behaves similarly to \ref{rule:assume-piimpl}. It
-also makes some check on the hypothesis $H$. But we delay it to the next
-section.
+% Rule \ref{rule:check-piimpl} behaves similarly to \ref{rule:assume-piimpl}. It
+% also makes some check on the hypothesis $H$. But we delay it to the next
+% section.
 
 If the term is a unification the determinacy \func\ is transmitted from the
 input to the output. What may change is the context, since, during unification
