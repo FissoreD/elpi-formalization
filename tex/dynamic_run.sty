@@ -102,7 +102,7 @@
 
 \newcommand{\ruleCallBeta}[1]{
   \begin{myRule}{#1}
-    \AxiomC{$\subst (X\ \vec{t}) =_\beta\eta g$}
+    \AxiomC{$\subst (X\ \vec{t}) =_{\beta\eta} g$}
     \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{g}{a}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
     \RightLabelM{\ruleBeta}
     \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(X\ \vec{t})}{a}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
