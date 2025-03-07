@@ -42,10 +42,8 @@ This code happens to compute a function of the first two arguments, that we
 consider inputs, if and only if the higher order predicate \elpiIn{F} is a
 function and if the first list is ground. We want tho author of this code
 to be able to ascribe a more precise signature to the code above, namely:
+\elpiIn{func map (func A -> B), list A -> list B.}
 
-\begin{elpicode}
-func map (func A -> B), list A -> list B.
-\end{elpicode}
 
 \noindent The syntax ``\elpiIn{func name inputs -> outputs}'' asserts that name is
 a function of the inputs (before the arrow) to the outputs if all the
@@ -74,11 +72,7 @@ meal Gs M :- map likes Gs M.      % not really a function
 \end{elpicode}
 
 \noindent All three implementation validate the signature above, but only the
-first two validate the one below.
-
-\begin{elpicode}
-func meal list guest -> list dish.
-\end{elpicode}
+first two validate this one: \elpiIn{func meal list guest -> list dish}.
 
 \noindent The first one is accepted since \elpiIn{likes!} is a function, hence also
 \elpiIn{map likes! Gs M} is. The second implementation miscalls \elpiIn{map}
@@ -128,26 +122,26 @@ Moreover \elpiIn{commit} is a function, so the whole body of \elpiIn{meal} also
 is. Of the outputs are considered functional only if the predicate is
 well called.
 
-TO BE DECIDED
+% TO BE DECIDED
 
-fail fast is important in our TC case
+% fail fast is important in our TC case
 
-avoid silly computational complexity coming from "unexpected"
-backtracking.
+% avoid silly computational complexity coming from "unexpected"
+% backtracking.
 
-\begin{elpicode}
-func mem A, list A -> .
-mem X [X|_] :- !. % ok
-mem X [X|_]. % nope
-mem X [_|XS] :- mem X XS.
+% \begin{elpicode}
+% func mem A, list A -> .
+% mem X [X|_] :- !. % ok
+% mem X [X|_]. % nope
+% mem X [_|XS] :- mem X XS.
 
-%           O(L)     O(L)
-pred p L :- mem 1 L, len L 1. % comlexity failure p L = O(L*L) for L <> [1]
-pred p L :- once(mem 1 L), len L 1. % comlexity failure p L = O(L) for L <> [1]
-\end{elpicode}
+% %           O(L)     O(L)
+% pred p L :- mem 1 L, len L 1. % comlexity failure p L = O(L*L) for L <> [1]
+% pred p L :- once(mem 1 L), len L 1. % comlexity failure p L = O(L) for L <> [1]
+% \end{elpicode}
     
 
-OPTIONAL
+% OPTIONAL
 
 The real business of Elpi is the manipulation of higher order data via the so
 called $\lambda$-tree syntax (also known as HOAS~\cite{1988pfenning,Miller2018MechanizedMR}).
@@ -188,27 +182,25 @@ at run time: Since \elpiIn{x} is fresh it does not unify
 with \elpiIn{app}, \elpiIn{lam} or any previously generated fresh \elpiIn{x}.
 Our static analysis accepts this programming pattern.
 
-\subsection{Contributions and paper structure}
+\paragraph{Contributions and paper structure}
 
-Our contributions is a  determinacy checking algorithm that
+Our contributions are a det check that:
 \begin{itemize}
-\item covers logic programs with cut
-\item covers higher order logic programming constructs such as first class predicates and clauses
+\item covers covers higher order logic programming constructs such as first class predicates and clauses
 \item can be applied to pre-existing code bases, i.e. tracks miscalled functions rather than aborting
 \end{itemize}
 Last but not least we provide an operational semantics for higher order logic programs
-with cut that poses the bases for our definition of \emph{functional} and
-paves the way to a mechanization of the determinacy checking algorithm.
+with cut and match i.e Elpi.
 
-The paper gives a big step semantics and static functional-analsys for
-the Horn-Clauses fragment of the Elpi language in section~\ref{sec:basic}.
-Then it adapts the analysis to the non-standard input mode of Elpi in
-section~\ref{sec:basic-elpi}. Finally it covers higher order
-predicate and data types sections~\ref{sec:vars} and~\ref{sec:hoas}.
+% The paper gives a big step semantics and static functional-analsys for
+% the Horn-Clauses fragment of the Elpi language in section~\ref{sec:basic}.
+% Then it adapts the analysis to the non-standard input mode of Elpi in
+% section~\ref{sec:basic-elpi}. Finally it covers higher order
+% predicate and data types sections~\ref{sec:vars} and~\ref{sec:hoas}.
 
 % TO BE REMOVED
-\tableofcontents
-\newpage
+%\tableofcontents
+%\newpage
 
 % We have a rule based language integrated in Coq. Rules are useful
 % to model a grown knowledge base (extend existing programs) and manage

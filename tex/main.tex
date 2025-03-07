@@ -20,14 +20,12 @@
 \jnlDoiYr{2021}
 \doival{10.1017/xxxxx}
 
-\title[Theory and Practice of Logic Programming]{Theory and Practice of Logic Programming: \LaTeX\ Guidelines for~authors\thanks{Research partially funded by
-      MINECO
-      MICINN PID2019-108528RB-C21 \emph{ProCode} project, FPU grant
-      16/04811}}
+\title[Determinacy Checking for HO Prolog with Cut]{
+  Determinacy Checking for Elpi}
 
 \begin{authgrp}
 \author{\gn{Davide Fissore}}
-\affiliation{Université Côte d'Azur, Inria}
+\affiliation{Université Côte d'Azur, Inria\thanks{Funding by DS4H}}
 \author{\gn{Enrico Tassi}}
 \affiliation{Université Côte d'Azur, Inria}
 \end{authgrp}
@@ -37,24 +35,33 @@
 \maketitle
 
 \begin{abstract}
-We study the determinacy analysis of higher order logic programs with cut.
+We study the determinacy checker for a higher-order logic programming language
+with cut and matching.
+We study the determinacy checker for a higher-order logic programming language
+with cut and matching.
+We study the determinacy checker for a higher-order logic programming language
+with cut and matching.
+We study the determinacy checker for a higher-order logic programming language
+with cut and matching.
+
 \end{abstract}
 
 \begin{keywords}
-Mode Analysis, Functionality, Determinacy Analysis, Higher Order, Logic Programming
+Functionality, Determinacy Analysis, Higher Order, Logic Programming, Cut
 \end{keywords}
 
 
 
 \input{inputs/intro.tex}
-\input{inputs/preliminaries.tex}
+\input{inputs/dynamic.tex}
+\input{inputs/static.tex}
+\input{inputs/theorems.tex}
 
-\input{inputs/elpi_full.tex}
-\input{inputs/elpi_hoas.tex}
-\input{inputs/elpi_basic.tex}
+% \input{inputs/elpi_hoas.tex}
+%\input{inputs/elpi_basic.tex}
 \input{inputs/conclusion.tex}
 
 %\input{inputs/intro.tex}
-\input{inputs/enrico.tex}
+% \input{inputs/enrico.tex}
 \bibliography{bib}
 \end{document}

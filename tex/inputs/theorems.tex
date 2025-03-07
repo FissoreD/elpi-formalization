@@ -1,0 +1,517 @@
+
+\section{theorems}
+% Before talking about determinacy and the impact that hard-cut has on it. We
+% prefer to spend some few words about the definition of modes, because
+As explained in \cite{1989Warren,1996Somogy} modes are the basis for determinim.
+Predicate arguments are classified as input or output and mode analysis
+ensures that at call time inputs are ground and that the outputs are eventually
+bound to ground terms. In turn a ground input is necessary
+to justify the following check.
+
+\begin{definition}[Unifiable (\unifiable) and not unifyable (\nUnify)]
+We say that $\unifiable\ t_1\ t_2$ iff
+  $\exists\ \subst\ s.t.\ \unifyCmd{t_1}{t_2}{\EmptySubst}{\subst}$.
+We say that $\nUnify\ t_1\ t_2$ iff
+  $\forall \subst \ \unifyCmd{t_1}{t_2}{\subst}{\bot}$ (equivalently, since
+  \unify is complete, $\neg \exists \subst\ s.t. \subst t_1 = \subst t_2$).
+\end{definition}
+
+Mode checking is an essential ingredient for ensuring determinacy.
+
+% Before explaining the interaction between these two, we need to take
+% some time to talk about mutual clauses exclusiveness.
+% %
+% % \paragraph{Mutual exclusive clauses}
+% From \cite{1989Warren}, we know that at most one clause can be applied
+% successfully for any deterministic predicate.
+
+% In order to satisfy this (necessary by not sufficient) condition, we need 
+% that all the clauses of a deterministic predicate $p$ are mutually exclusive.
+% Mutual exclusiveness can be stated as follows:
+
+% \begin{definition}[Non-overlapping clauses]
+%   For any pair of clauses of the same predicate ``\clauseCmd{p}{\vec{x}}{b1}''
+%   and ``\clauseCmd{p}{\vec{y}}{b2}'', we say that they are non-overlapping if
+%   there exists an input position $i$ such that $\forall \sigma, \sigma\ x_i \neq
+%   \sigma\ y_i$
+%   \label{def:mut-excl}
+% \end{definition}
+
+\Cref{th:det} ensures that at most one clause can be applied to any given
+predicate, provided that the input terms are ground. However, since we no longer
+perform mode-checking and our inputs are not necessarily ground, the theorem is
+no longer valid.
+%
+% Thanks to mode checking, any call is validated only if its terms in input
+% positions are ground. Groundness % (modulo \cut, see \cref{def:mut-excl+cut})
+% guarantees that at most one clause can be executed successfully for a given
+% call.
+%
+% We also emphasize that mode checking ensures that output terms become ground.
+% This is a fundamental property; otherwise, outputs would be meaningless—if an
+% output does not become ground, it cannot serve as the input for another
+% predicate call.
+%
+% In our setting, we slightly extend this definition so that the \elpi's \uvar
+% keyword is taken into account.
+%
+% \begin{definition}[Mutual exclusiveness with \uvar]
+%   A clause with an input term marked with the \elpiIn{uvar} keyword,
+%   does not overlap with any other rigid-head term.
+%   \label{def:mut-excl-uvar}
+% \end{definition}
+%
+% This means that a term marked with the \uvar keyword in the head of a clause
+% overlaps only with unification variables or with another term marked with
+% \uvar.
+%
+% In our first-order \elpi, we do not perform any static mode analysis. Instead,
+% we rely on the \match operation, which is dynamically applied to input arguments at runtime.
+
+\begin{lemma}[Substitution union] Given two substitutions $\subst_1$ and $\subst_2$
+  such that $\dom\ \subst_1 \cap \dom\ \subst_2  = \varnothing$, then
+  $\subst_1\ t_1 = \subst_2\ t_2$ implies that $(\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$.
+  \end{lemma}
+  
+  
+We start therefore to state a new version of
+\cref{th:mut-excl-head,th:mut-excl}
+%BBB
+
+\begin{lemma}[Mutually-exclusive heads with \match property]
+  Given a context \ctx and two clauses $c_1 = \clauseCmd{\predVar}{\vec{t}}{b_1}$ and $c_2 = \clauseCmd{\predVar}{\vec{u}}{b_2}$ then
+  let $\vec{t}_i$ and $\vec{u}_i$ be the inputs arguments of $\vec{t}$ and $\vec u$ respectively.
+  % forall vector of \textit{ground} terms $\vec{v}$,
+  $$\mutExclHeads\ \ctx\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
+    \matchCmd[1]{v}{t_i}{\EmptySubst}{\subst_1} \land
+    \matchCmd[1]{v}{u_i}{\EmptySubst}{\subst_2})$$
+  \vspace{-2em}
+  \label{th:mut-excl-head1}
+\end{lemma}
+
+\begin{proof}
+  By contradiction, let $t$ be a term matching with both $h_1$ and $h_2$. By
+  \cref{th:match-right}, we have that $\subst_1 h_1 = \subst_2 h_2$, this
+  implies that $(\subst_1 \cup \subst_2) h_1 = (\subst_1 \cup \subst_2) h_2$\todo{prove this}. By
+  the hypothesis $\mutExclHeads\ \ctx\ c_1\ c_2$, and by \cref{def:mut-excl}, it does
+  not exists a substitution allowing to unify the head of the two clause. This
+  is a contradiction.
+\end{proof}
+
+\begin{lemma}[Mutually-exclusion with \match property]
+  Given a context \ctx\ and a program \prog, if $\mutExcl\ \ctx\ \prog$ then for
+  any call $\pred\ \vec{t}$, it exists at most one clause that can be
+  successfully applied on $\pred\ \vec{t}$. 
+  \label{th:mut-excl1}
+\end{lemma}
+
+\begin{proof}
+  By \cref{th:mut-excl-head1,th:mut-excl+cut}
+\end{proof}
+
+In order to address this problem, we need to ensure that the dynamic insertion
+of the new clause $H$ in the program is such that if $H$ successfully applies on a goal
+then all the other clause fails. To ensure this propery to following condition
+should be granted.
+
+\begin{definition}[Local clauses: mutually-exclusion + det. premises (\locExcl)]
+  Given a clause $c$ and a predicate \pred, for any subterm $s$ of $c$, then
+  $$s = \piImplCmd{x}{(\clauseCmd{\pred}{i\ o}{t_1, \dots, t_n})}{D} \to \exists
+  i, t_i = \cut \land (\forall k, k > i \to \detAtom\ a_i)$$
+  \vspace{-2em}
+\end{definition}
+
+% NOTA:
+% \begin{definition}[Mutually-exclusive local clauses (\locExcl)]
+%   Given a clause $c$, for any subterm in $c$ with the shape
+%   $\piImplCmd{x}{(\clauseCmd{\pred}{i\ o}{B})}{D}$ then $x = i$ or a \cut is in
+%   $B$. 
+% \end{definition}
+% È sbagliato per la mutual exclusion: controesempio
+% programma `f Z 3`
+% goal: pi x\ f x 1 :- body_with_no_bang => f x R
+% Per backtracking potrei istanziare R a 1 o 3
+
+Thanks to this we can define the mutual-exlusion definition in the higher-order
+setting.
+
+\begin{definition}[Mutual-exclusion in HOAS (\mutExclHO)]
+  Given a program \prog, forall deterministic predicate \pred, mutual exclusion is defined as
+  follows:
+  $$\mutExcl\ \prog \land (\forall \pred[']\
+  c, c\in \prog\ \pred['] \to \locExcl\ c\ \pred)$$
+  \vspace{-2em}
+  \label{def:det-check-ho}
+\end{definition}
+
+
+\begin{theorem}[Determinacy checking in HOAS]
+  Given a program \prog and a predicate \pred
+  \begin{align*}
+    &\detCheckHO\ \prog\ \pred \to \forall i\ o,\runCmd{[\goalCmd{\prog}{\callCmd{p}{i\ o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList    
+  \end{align*}
+  \vspace{-2em}
+  \label{th:det2}
+\end{theorem}
+
+\begin{proof}
+  The proof is similar to \cref{th:det1}. We only need to prove that the
+  property holds in a program where some rules for  \pred\ may be loaded locally
+  during the exectution of a subgoal. By definition of \ref{rule:piimpl}, any new
+  added local clause $c$ for \pred has the highest priority, therefore, to
+  ensure that \pred remains deterministic we need to consider two cases: 1) $c$
+  successfully applies on the current goal and 2) $c$ does not successfully
+  apply on the goal. The latter case is easy to prove since it is the induction
+  hypothesis. On the other hand, if $c$ successfully applies then, by the
+  hypothesis, we know that a \cut\ is in the body of $c$, this means that all
+  choice points are cut away, moreover, since, by the same hypothesis, all terms
+  after this cut are deterministic, it means that at most on solution is
+  returned for the call to \pred.
+\end{proof}
+
+
+\begin{theorem}[Determinacy checking with \match property]
+  Given a context \ctx\ and a program \prog, forall deterministic predicate \pred in \ctx,
+  we have
+  $$\hyperref[def:det-check]{\detCheck}\ \ctx\ \prog \to \forall \vec{t}, \hyperref[def:is-det]{\isdet}\ \prog\ (\pred\ \vec{t})$$
+  \vspace{-2em}
+  \label{th:det1}
+\end{theorem}
+
+\begin{proof}
+  We proceed by induction on the derivations in
+  \cref{fig:basic-interp,fig:interp-match}. The structure of the proof closely
+  follows the one in \cref{th:det}, with a few notable differences. In
+  particular, this proof does not rely on the \wellModed\ hypothesis for the
+  program, nor does it assume the groundness of input arguments in the call to
+  \pred. The crucial insight lies in the use of the \match\ procedure, combined
+  with the result from \cref{th:mut-excl-head1}, which strengthens the proof.
+  %The
+  % most significant case to consider is \ref{rule:call}. Let $\vec{c}$ denote the
+  % result of $\prog\ \pred$. The function $\mathcal{F}$ produces a list of
+  % alternatives $\alt$, where each $a_i \in \alt$ consists of the unification
+  % between each term in $\vec{t}$ and the corresponding terms in the head of $c_i$,
+  % followed by the body of $c_i$.
+  % 
+  % Let $\alt = a_1, \dots, a_s, \dots, a_n$, where $a_s$ is the first alternative that
+  % can be successfully applied to the initial goal. We distinguish between two
+  % cases:  
+  % 1) $a_s$ contains a \cut.
+  % 2) $a_s$ does not contain a \cut.
+  % 
+  % In the first case, by hypothesis $\detPrem\ \ctx\ \prog$, the alternative
+  % $a_s$ has the form $b_1, \dots, b_x, \dots, b_m$, where $b_x = \cut$, and for
+  % all $b_j \in b_{x+1},\dots,b_m$, $b_j$ is a call to a deterministic predicate.
+  % The presence of the \cut\ discards the alternatives $a_{s+1},\dots,a_n$ as
+  % well as all choice points generated by the execution of the goals
+  % $b_1,\dots,b_{x-1}$. By the induction hypothesis, the execution of the goals
+  % $b_{x+1},\dots,b_m$ produces alternatives with no solution. Consequently, the
+  % goal is proved in this case.
+  % 
+  % In the second case, where $a_s$ does not contain a \cut, the hypothesis
+  % guarantees that all goals in $c_i$ are calls to deterministic predicates. By
+  % the induction hypothesis, the execution of these goals produces alternatives
+  % $\alt[']$ with no solution. The final list of alternatives returned by the
+  % call to \run is the concatenation of $\alt[']$ and $a_{s+1},\dots,a_n$. We need
+  % to prove that:
+  % $$\forall a_i \in \alt['] @ (a_{s+1},\dots,a_n), \lnot (\exists \alt\
+  % \subst['], \runCmd{a_i}{\EmptyList}{\EmptySubst}{\alt}{\subst[']})$$
+  % 
+  % 
+  % This holds for the alternatives in $\alt[']$. For any alternative $a_k \in
+  % (a_{s+1},\dots,a_n)$, the mutual exclusion hypothesis \mutExcl\ \ctx\ \prog\
+  % ensures that no alternative derived from clauses of \pred\ declared
+  % chronologically after $c_s$ can unify with the goal $\pred\ \vec{t}$, since
+  % every term in input position in $\vec{t}$ is ground. This completes the proof.
+\end{proof}
+
+% The main difference between this last definition and \cref{def:mut-excl} is the
+% absence of the \coqIn{HG} hypothesis and the usage of the \match procedure
+% instead of \unify in the conclusion.
+
+% \begin{theorem}
+%   The \elpi input/ouput modes guarantee that for any
+%   predicate $p$ whose clauses respect
+%   \cref{def:emut-excl}, there exists at most
+%   one succeeding clause for any call to $p$.
+% \end{theorem}
+
+% \begin{proof}
+%   Without loss of generality, we take a program \prog with only binary
+%   predicates representing respectively an input and an output. Let $p$ be a
+%   predicate in \prog such that all clauses respect
+%   \cref{def:mut-excl}. Let
+%   ``$p\ t_1\ t_2$'' be a valid call for $p$. Let ``$c_1 :=
+%   \clauseCmd{p}{t_1'\ t_2'}{b_1}$'' and ``$c_2 := \clauseCmd{p}{t_1''\
+%   t_2''}{b_2}$'' be two clauses implementing $p$. 
+%   Note that the absence of
+%   groundness check avoid us from saying that $t_1$, which is the input of the
+%   call, is a ground term. We reason by induction on the shape of $t_1$ and show
+%   that it cannot \match simultaneously with $t_1'$ and $t_1''$, i.e. at most one
+%   between $c_1$ and $c_2$ can be applied on the goal.
+%   \begin{itemize}
+%     \item Case 1: $t_1$ is a constant. A constant, in input position, matches with
+%           the same constant or a variable. By the definition of \match
+%           $t_1$ only matches with
+%           the same constant or a variable.
+%           Due to \cref{def:mut-excl}, $t_1'$ and $t_1''$ cannot be neither the
+%           constant $t_1$ nor a unification variable nor a combination of the
+%           two. Therefore $c_1$ and $c_2$ cannot be applied both of the call to
+%           $p$.
+%     \item Case 2: $t_1$ is a variable. A variable, in input position, matches
+%           only with another variable. 
+%           By \cref{def:mut-excl}, $t_1'$ and $t_1''$ cannot be both
+%           unification variables. This means that at most one of the two clauses 
+%           can be applied on the call to $p$.
+%     \item Case 3: $t_1$ is a compond term: a term starting with rigid head with
+%           potentially flexible subterms. If the heads of $t_1'$ and $t_1''$ have
+%           the same head as $t_1$ then the unification of $t_1$ proceed on the
+%           subterms, but, by induction hypothesis, only one between $t_1'$ and
+%           $t_1''$ can unify with $t_1$. If the heads of $t_1'$ and $t_1''$ are
+%           different then only we are sure that at most one of the two clause
+%           can be applied on the call.
+%   \end{itemize}
+% \end{proof}
+
+
+% As explained in \cite{1989Warren}, thanks to the (hard-)cut operator, mutual
+% exclusiveness can be relaxed.
+
+% \begin{definition}[Mutual exclusiveness with \cut]
+%   Two clauses for the same predicate are mutually exclusive if the
+%   chronological antecedent has a cut in its body.
+%   \label{def:mut-excl-cut}
+% \end{definition}
+
+% This ensures that if we reach the cut
+% operator in the first clause, the second clause is not considered as a choice
+% point. Conversely, if one of the premises before the cut fails, then the second
+% clause will be tried. In both situations, the two clauses cannot be applied
+% simultaneously to the same predicate call.
+
+% This definition allows overlapping clauses to
+% exist in a database under the condition that the antecedent has a cut
+% guaranteeing that at most one clause can be applied on a predicate call. 
+
+% \begin{definition}[Mutual-exclusion + \cut]
+%   Same as \cref{def:det-prem-cut}
+% \end{definition}
+
+% % \paragraph{deterministic clauses after last \cut}
+% The second, but no less important, condition for a predicate to be deterministic
+% is the following:
+
+% \begin{definition}[deterministic premises after last \cut]
+%   In each clause of a deterministic predicate, the premises after the last \cut
+%   operator are only calls to deterministic predicates. 
+%   \label{def:det-prem-cut}
+% \end{definition}
+
+% This guarantees that any output produced is uniquely determined, i.e. no two
+% solutions can be produced on the same call.
+
+% \begin{definition}[Deterministic predicate in \elpi]
+%   \begin{coqcode}
+%     Definition ~\customlabel{edetpred}{\texttt{edet\_pred}}~(~\prog~: prog) (p: pn) :=
+%       forall ~$i$~ ~$o$~ ~$a$~
+%         (H : ~\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst}~), ~$a$~ = ~\EmptyList~.
+%   \end{coqcode}
+%   \label{def:edt-pred}  
+% \end{definition}
+
+% Our definition of deterministic predicate in \elpi (called \ref{edetpred} with a
+% leading \coqIn{e} for \elpi) changes from \ref{detpred} in \cref{sec:det}: we do
+% not need the \coqIn{HG} hypothesis: the usage of \elpi modes allows to pass any
+% (even not ground) term in input position. The derivation rule \ruleCall allows
+% makes the difference between terms that should be unified with the \unify or
+% the \match procedure at runtime.
+
+% \begin{definition}[Determinacy checking in \elpi]
+%   Determinacy checking (noted \coqIn{edet_check}) on a program
+%   \prog is equivalent by the combination of 
+%   \cref{def:emut-excl,def:mut-excl+cut,def:det-prem}
+%   \label{def:det-check}
+% \end{definition}
+
+% The following lemma says that in a determinacy-checked program, if \pred is
+% a deterministic-annotated program and the \run\ of a call to \pred gives a 
+% solution, then the same solution is returned by a run of the same goal
+% in a program where all of the clauses of \pred are rewritten such
+% that thier last atom is a cut.
+
+% \begin{lemma}
+%   Let \tailcut be a function taking a program \prog and predicate \pred
+%   returning a new program \prog['] such that the bodies of all clauses of \pred
+%   in \prog have been added a \cut\ as last atom.
+
+%   Let \pred be a deterministic-annotated predicate,
+%   \begin{coqcode}
+%     Lemma det_tail_cut ~\prog \alt~:
+%       forall i o a ~\subst \subst[']~ (H: det_check ~\prog\!\!~)
+%         (HR: ~\runCmd{[\goalCmd{\prog}{\callCmd{\pred}{i}{o}}{\alt}]}{[]}{\subst}{a}{\subst'}~),
+%           ~\runCmd{[\goalCmd{(\tailcutCmd{\prog}{\pred})}{\callCmd{\pred}{i}{o}}{\alt}}{[]}{\subst}{a}{\subst'}~.
+%   \end{coqcode}
+%   \label{lemma:prog-all-cut}
+% \end{lemma}
+
+% \def\clauseL{\ensuremath{\mathcal{L}}\xspace}
+% \begin{proof}
+%   We reason by induction on \coqIn{HR}: $5$ cases should be taken
+%   one per derication rule in \cref{fig:basic-interp}.
+%   \begin{itemize}
+%     \item Case \ruleStop: cannot be applied since the list of goals is not empty.
+%     \item Case \ruleFail: the \texttt{fail} hypothesis tells that no
+%           there is no implementation for the predicate \pred, therefore
+%           adding a tail-cut to the rules of \pred does not change the behaviour
+%           of the program.
+%     \item Case \ruleUnif: cannot be applied since the first goal is not a
+%           unification or a match.
+%     \item Case \ruleBang: same problem as before with the \cut operator.
+%     \item Case \ruleCall: there exists at least one rule implementating \pred.  
+%           Due to the \tailcut function the list of new goal, together with the
+%           alternatives have a \cut\ has their last atom. Moreover, the list
+%           of cut-alternatives in each of these atoms is the empty list.
+%           By the hypothesis \coqIn{H}, we know that ...
+%   \end{itemize}
+% \end{proof}
+
+% % Thanks to \cref{th:all-cut}, we can give a common structure to all the clauses
+% % of a deterministic predicate: we are free to assume that $c$ always has at
+% % least one cut.
+
+% The following lemma says that if all clauses of a predicate \pred have a cut as
+% last atom in their body, if the \run\ of a call to this predicate as a goal with
+% an empty list of alternatives gives an output, then the alternatives of the
+% ouput are the empty list.
+
+% \begin{lemma}[Tail-cut and cut-alternatives]
+%   $$
+%   \begin{array}{l}
+%   \forall \subst\ \subst[']\ i\ o\ p,\\
+%   \runCmd{[\goalCmd{(\tailcutCmd{\prog}{\pred})}{\callCmd{p}{i}{o}}{a}]}{[]}{\subst}{x'}{\subst'} \rightarrow [] = x'
+%   \end{array}
+%   $$
+%   \label{lemma:cut-cat-alt}
+% \end{lemma}
+
+% \begin{proof}
+%   INTUITION: The cut-alternative of the last cut is the empty list
+% \end{proof}
+
+% % \begin{corollary}
+% %   If all clauses of a predicate have a cut, then at most one of
+% %   these clauses can be applied successfully on the goal, the other being
+% %   cut away.
+% %   \label{cor:only-one-clause}
+% % \end{corollary}
+
+% % \begin{proof}
+% %   By a slightly modified version of \cite{1989Warren}
+% % \end{proof}
+
+% %
+% \begin{theorem}[determinacy check $\to$ deterministic pred]
+%   For any deterministic-annotated predicate \pred,
+%   \begin{coqcode}
+%     Theorem det_check_det_pred ~\prog~ (H: edet_check ~\prog\!\!~):
+%       ~\ref{edetpred} \prog \pred~.
+%   \end{coqcode}
+% \end{theorem}
+
+% % Before giving the proof, we just want to point out that using input/output modes
+% % of \elpi, no hypothesis on the groundness of terms can be done. 
+
+% \begin{proof}
+%   By \cref{lemma:prog-all-cut} and the hypothesis \coqIn{H}, the conclusion can
+%   be rewritten such that all clauses of \pred have a cut as last atom in their
+%   bodies. Finally, thanks to \cref{lemma:cut-cat-alt} we can conclude the proof.
+% \end{proof}
+
+
+\subsection{Digression on \isdet}
+
+We insist on \isdet{} rather than \isfunc{} or functional as in~\cite{1989Warren}
+becase the former gives the programmer a more precise indication of the
+run time behavior of a predicate labelled as \func. If \texttt{mem} and \texttt{len}
+are flagged as such, then the programmer knows that this silly piece of
+code terminate in linear time.
+
+\begin{elpicode}
+silly L V :- mem 1 L, len L N, N = V.
+\end{elpicode}
+
+Upon failure under a notation of functional as in~\cite{1989Warren} the complexity
+could be quadratic since a mem (without a cut) is still a function. If mem
+was \isfunc{} the code would still be linear but with the cost of a choice point.
+With \isdet{} the code is operationally equivalent to the following code where
+the complexity, even in case of failure, is very apparent.
+
+\begin{elpicode}
+once P :- P, !.
+silly L V :- once (mem 1 L), once (len L N), N = V.
+\end{elpicode}
+
+We are so concerned with failure in case of performance because of Elpi's
+application as the runtime for type class resolution in the interactive prover
+Rocq: the user experience crytically relies on quick feedback from the system.
+
+% A definition of functional as in warren, or like 
+% \begin{definition}[Functionality (\isfunc)]\label{def:is-func}
+%   Given a program \prog and a term $t$,
+%   \isdet\ is defined as follows:
+%   $$\forall a\ \subst, \isFuncCmd{t}$$
+% \end{definition}
+% does not have this guarantee.
+
+% \begin{coqcode}
+% Definition ~\customlabel{detpred}{\texttt{det\_pred}}~(~\prog~: prog) (p: pn) :=
+%   forall ~$i$~ ~$o$~ ~$a$~ ~\subst~(HG: ground i) 
+%     (H : ~\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst}~), ~$a$~ = ~\EmptyList~.
+% \end{coqcode}
+
+% The definition above explains what it means for a predicate to be deterministic. 
+% The idea is that in a given program \prog and a predicate $p$,
+% if for any call to $p$ with arbitrary input and output terms
+% starting with the empty substitution and the empty list of alternatives,
+% we have a solution, i.e. the couple $(a, \subst)$ then the list of
+% alternatives $a$ is empty. This essentially means that any functional
+% predicate produces no choice points.
+
+% Following the literature, this claim is proven true:
+
+% \begin{theorem}
+%   Let \pred be a deterministic-annotated predicate, the following holds
+%   \begin{coqcode}
+%     Theorem ~\customlabel{is_detpred}{\texttt{det\_pred\_prop}}~(~\prog~: prog) (p: pn) :=
+%       forall (HM : well_moded ~\prog\!\!~) (HD: det_check ~\prog\!\!~),
+%           det_pred ~\prog~p
+%   \end{coqcode}    
+% \end{theorem}
+
+% This to say that for any well-moded (hypothesis \coqIn{HM}) and
+% determinacy-checked (hypothesis \coqIn{HD}) program and a predicate \pred such,
+% then \pred is a deterministic predicate.
+
+% \subsection{Contributions and paper structure}
+
+% In our paper we will provide a description about a new dynamic mode and
+% a new static determinacy
+% checkers to verify that clauses are consistent wrt the signature the predicate has. We
+% introduce these concepts with the \elpi programming language. We start by a
+% light version of \elpi in the first-order setting, i.e. with no higher-order variables.
+% In this part we explain our notion of modes, which have an inpact
+% on the dynamic interpretation of the program. This will force us to slightly
+% modify the interpreter in \cref{fig:basic-interp}. Moreover, thanks to these modes, we show that
+% to statically guarantee the determinacy property of deterministic predicates
+% we don't need any static mode analysis.
+
+% In the second part of the paper we will extend the intepreter so that it can\todo{there are 3 parts}
+% work with higher-order variables, hereditary-arrop clauses insertion and local
+% $\forall$-quantified variable declaration. Here predicates will also take
+% propositions as arguments. Thanks to this extention we will propose a new mode
+% checking algorithm working with a new definition of groundness, called
+% \textit{input-ground}. The signature of a predicate can be annotated so that
+% output arguments are guaranteed to be deterministic. This will make the
+% determinacy checker to analyse not only deterministic clauses but also relational
+% one, since a check should be performed wrt the determinacy annotation of its
+% outputs.

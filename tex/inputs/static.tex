@@ -1,52 +1,55 @@
-\section{Determinacy checking for Higher Order predicates} % Prolog with higher-order variables in prop}
-\label{sec:vars}
+\section{Static analysis}
+\label{sec:modes}
 
-In order to fully capture the potential of a \lamprolog language like \elpi, we
-need to delve deeper into the concept of variables. Until now, we have
-intentionally avoided discussing them in detail. They were %implicitly taken into
-%account in the \ref{rule:unif} and \ref{rule:match} rules, 
-used in term unifications, however, a query like
-\elpiIn{p = X, X 1 3} was not accepted by the run procedure. The only
-application we authorized was caputered by calls to terms with rigid heads.
-% Here we extend terms application and replace it as follows
+% \section{Determinacy checking for Higher Order predicates} % Prolog with higher-order variables in prop}
+% \label{sec:vars}
 
-% \begin{coqcode}
-%   | Call (hd : vn | tn) (t1:tm) (t2:tm)
-% \end{coqcode}
+% In order to fully capture the potential of a \lamprolog language like \elpi, we
+% need to delve deeper into the concept of variables. Until now, we have
+% intentionally avoided discussing them in detail. They were %implicitly taken into
+% %account in the \ref{rule:unif} and \ref{rule:match} rules, 
+% used in term unifications, however, a query like
+% \elpiIn{p = X, X 1 3} was not accepted by the run procedure. The only
+% application we authorized was caputered by calls to terms with rigid heads.
+% % Here we extend terms application and replace it as follows
 
-% The notation $(h\ t_1\ t_2)$ is used to represent the \call\ constructor.
+% % \begin{coqcode}
+% %   | Call (hd : vn | tn) (t1:tm) (t2:tm)
+% % \end{coqcode}
 
-\newcommand{\sbeta}{\ensuremath{\mathcal{S}_\beta}}
+% % The notation $(h\ t_1\ t_2)$ is used to represent the \call\ constructor.
 
-\begin{figure}
-  \ruleCallBM{1}
+% % \newcommand{\sbeta}{\ensuremath{\mathcal{S}_\beta}}
 
-  %   \vspace{-2em}
-  % $$
-  % \mathcal{F}'(\prog, h, i, o, \subst, \alt) := 
-  %   [(\subst, (
-  %       \Cons{(\prog, i = i', \alt)}
-  %         \Cons{(\prog, o = o', \alt)}
-  %           {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{(\subst h)}{i'\ o'}{bs} \in \prog\ (\subst h)]
-  % $$
-  %   \vspace{-2em}
-  % \begin{align*}
-  %   \sbeta\ \subst\ (\lambda x.b)\ (a::\vec{as}) &= \sbeta\ \subst\ (b [x\bs a])\ \vec{as}\\
-  %   \sbeta\ \subst\ (\pred\ \vec{t})\ \vec{a} &= \pred\ \vec{t}\ \vec{a}
-  % \end{align*}
+% % \begin{figure}
+% %   \ruleCallBM{1}
 
-  \caption{Dynamic semantics: update of \ref{rule:call}}
-  \label{fig:new-call}
-\end{figure}
+% %   %   \vspace{-2em}
+% %   % $$
+% %   % \mathcal{F}'(\prog, h, i, o, \subst, \alt) := 
+% %   %   [(\subst, (
+% %   %       \Cons{(\prog, i = i', \alt)}
+% %   %         \Cons{(\prog, o = o', \alt)}
+% %   %           {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{(\subst h)}{i'\ o'}{bs} \in \prog\ (\subst h)]
+% %   % $$
+% %   %   \vspace{-2em}
+% %   % \begin{align*}
+% %   %   \sbeta\ \subst\ (\lambda x.b)\ (a::\vec{as}) &= \sbeta\ \subst\ (b [x\bs a])\ \vec{as}\\
+% %   %   \sbeta\ \subst\ (\pred\ \vec{t})\ \vec{a} &= \pred\ \vec{t}\ \vec{a}
+% %   % \end{align*}
 
-To account for this change, rule \ref{rule:call} is modified to accommodate the
-new application, as shown in \cref{fig:new-call}. The main difference from
-\ref{rule:call} is that in \ref{rule:call1}, before invoking the function
-$\mathcal{F}$, we first look up the value of $h$ in \subst. If $h$ is a
-variable, this dereferencing operation may return a \lam-term, which, when
-applied to $\vec{t}$ is $\beta$-reduced (thanks to the hereditary substitution
-principle) to a canonical value in the form of a predicate name applied
-a new vector of terms $\vec{u}$.
+% %   \caption{Dynamic semantics: update of \ref{rule:call}}
+% %   \label{fig:new-call}
+% % \end{figure}
+
+% To account for this change, rule \ref{rule:call} is modified to accommodate the
+% new application, as shown in \cref{fig:new-call}. The main difference from
+% \ref{rule:call} is that in \ref{rule:call1}, before invoking the function
+% $\mathcal{F}$, we first look up the value of $h$ in \subst. If $h$ is a
+% variable, this dereferencing operation may return a \lam-term, which, when
+% applied to $\vec{t}$ is $\beta$-reduced (thanks to the hereditary substitution
+% principle) to a canonical value in the form of a predicate name applied
+% a new vector of terms $\vec{u}$.
 
 This change significantly impacts our static determinacy checker: variables can
 now be passed as arguments and may have a propositional type, meaning
@@ -54,58 +57,60 @@ they can be called within clause bodies. Therefore, additional properties can be
 enforced by the checker. For example, users may want to ensure that a
 predicate's output is verified to be a deterministic predicate.
 
-We provide some examples to illustrate this point:
+% We provide some examples to illustrate this point:
 
-\begin{itemize}
-  \item In a program with a predicate \elpiIn{once}, defined as \elpiIn{once P
-          :- P, !}, we observe that \elpiIn{once} behaves deterministically
-        regardless of the determinacy of its argument.
-  \item In a program with a predicate \elpiIn{make-det}, defined as
-        \elpiIn{make-det P (once P)}, we see that for any input proposition
-        \elpiIn{P}, the output is deterministic.
-  \item In a program with a predicate \elpiIn{do}, defined as
-        \elpiIn{do P :- P}, we see that if \elpiIn{do} is called with a
-        deterministic predicate, then \elpiIn{do} is deterministic.
-  \item Finally, in a program with a predicate \elpiIn{idF}, defined as
-        \elpiIn{idF A A}, we note that when \elpiIn{idF} is called with a
-        deterministic input, its output remains deterministic.
-\end{itemize}
+% \begin{itemize}
+%   \item In a program with a predicate \elpiIn{once}, defined as \elpiIn{once P
+%           :- P, !}, we observe that \elpiIn{once} behaves deterministically
+%         regardless of the determinacy of its argument.
+%   \item In a program with a predicate \elpiIn{make-det}, defined as
+%         \elpiIn{make-det P (once P)}, we see that for any input proposition
+%         \elpiIn{P}, the output is deterministic.
+%   \item In a program with a predicate \elpiIn{do}, defined as
+%         \elpiIn{do P :- P}, we see that if \elpiIn{do} is called with a
+%         deterministic predicate, then \elpiIn{do} is deterministic.
+%   \item Finally, in a program with a predicate \elpiIn{idF}, defined as
+%         \elpiIn{idF A A}, we note that when \elpiIn{idF} is called with a
+%         deterministic input, its output remains deterministic.
+% \end{itemize}
 
-To provide this information to the compiler we give the user the possibility to
-provide more expressive type signatures for constants. The non-terminal $pred$
-from \cref{eq:pred} changes as follows:
-as follows:
-%
-\begin{align}
-  ty & ::= data \mid [\detI \mid \relI]\ ty^\ast \funsep ty^\ast \label{eq:pred1}
-\end{align}
+% To provide this information to the compiler we give the user the possibility to
+% provide more expressive type signatures for constants. The non-terminal $pred$
+% from \cref{eq:pred} changes as follows:
+% as follows:
+% %
+% \begin{align}
+%   ty & ::= data \mid [\detI \mid \relI]\ ty^\ast \funsep ty^\ast \label{eq:pred1}
+% \end{align}
 
-The arguments of a predicate, now, are no more objects living in the datatype,
-but they can also have propositional type. In the following a predicate with $0$
-argument will be note as \detI\ (resp. \relI) instead of $\detI\ []\ []$ (resp.
-$\relI\ []\ []$).
+% The arguments of a predicate, now, are no more objects living in the datatype,
+% but they can also have propositional type. In the following a predicate with $0$
+% argument will be note as \detI\ (resp. \relI) instead of $\detI\ []\ []$ (resp.
+% $\relI\ []\ []$).
 
-% \textbf{TODO: typechecker: types to dtypes}
+% % \textbf{TODO: typechecker: types to dtypes}
 
-Thanks to this, we can define the signature of the predicates above:
-%
-% \begin{equation}  
-\begin{align*}
-  \texttt{once}     & : \dtype{\detI}{[\relI]}{[]}      & \texttt{do}  & : \dtype{\detI}{[\detI]}{[]}      \\
-  \texttt{make-det} & : \dtype{\detI}{[\relI]}{[\detI]} & \texttt{idF} & : \dtype{\detI}{[\detI]}{[\detI]}
-\end{align*}
-% \label{eq:ty1}
-% \end{equation}
+% Thanks to this, we can define the signature of the predicates above:
+% %
+% % \begin{equation}  
+% \begin{align*}
+%   \texttt{once}     & : \dtype{\detI}{[\relI]}{[]}      & \texttt{do}  & : \dtype{\detI}{[\detI]}{[]}      \\
+%   \texttt{make-det} & : \dtype{\detI}{[\relI]}{[\detI]} & \texttt{idF} & : \dtype{\detI}{[\detI]}{[\detI]}
+% \end{align*}
+% % \label{eq:ty1}
+% % \end{equation}
 
-In the code abode we use brackets to delimit lists. The idea is that, thanks to
-type signatures, the \elpi's checker ensures that a predicate behaves as a
-function and returns output with the declared determinacy in the signature
-if they are called with inputs having the expected determinacy.
+% In the code abode we use brackets to delimit lists. The idea is that, thanks to
+% type signatures, the \elpi's checker ensures that a predicate behaves as a
+% function and returns output with the declared determinacy in the signature
+% if they are called with inputs having the expected determinacy.
 
-Thanks to this certification, for example, if \elpiIn{f} be a binary relation, then the query ``\elpiIn{make-det (f 1 X) F, do F}'' is
-deterministic. This is because \elpiIn{make-det} is deterministic, \elpiIn{F} is
-deterministic and \elpiIn{do} behaves deterministically when it receives
-functions as input.
+% Thanks to this certification, for example, if \elpiIn{f} be a binary relation, then the query ``\elpiIn{make-det (f 1 X) F, do F}'' is
+% deterministic. This is because \elpiIn{make-det} is deterministic, \elpiIn{F} is
+% deterministic and \elpiIn{do} behaves deterministically when it receives
+% functions as input.
+
+\subsection{Comparing predicate signatures}
 
 The checker should also accepts predicates that are \textit{wrongly} called. For
 example, \elpiIn{do (f 1 X)} should be accepted as a call, however, since the\todo{cambiare f con queen}
@@ -120,11 +125,11 @@ On the other hand, the signature of \elpiIn{make-det} should reject
 is a function: \elpiIn{A} could be a relation and calling it in the body of a
 predicate expected to behave deterministically, may create choice points.
 
-To address all of these issues we implement a static checker which labels variables
-with their determinacy type (dtype). Labels are simpler instantces of \cref{eq:ty}:
-all terms living in the datatype will be labelled with \expI. The checker
-rejects the clauses of a predicate if the labels that have been updated in a
-given context \ctx\ do not respect the signature of the predicate.
+% To address all of these issues we implement a static checker which labels variables
+% with their determinacy type (dtype). Labels are simpler instantces of \cref{eq:ty}:
+% all terms living in the datatype will be labelled with \expI. The checker
+% rejects the clauses of a predicate if the labels that have been updated in a
+% given context \ctx\ do not respect the signature of the predicate.
 
 
 % A term is either an expression (an non executable peice of code), a relational
@@ -347,7 +352,7 @@ dtype. This is used \dots
 % has the expected determinacy, which is crucial since outputs can be used as new
 % queries in the program.
 
-\subsection{Determinacy checker for terms and subtyping}
+\subsection{Operational determinacy checking algorithm}
 
 \begin{figure}
   \fbox{\inferFig}
@@ -462,10 +467,10 @@ then the output determinacy is set to relational.
 
 \textbf{TODO: make an example}
 
-\subsection{Determinacy checking for clauses}
+% \subsection{Determinacy checking for clauses}
 
 \staticCheckFig
-
+\todo{fai con fold}
 
 Know that we know how terms can be deduced, inferred, or checker for
 determinacy, we can illustrate how a clause be checked so that it respects the
@@ -484,43 +489,43 @@ static checker aims to ensure. Finally the checker ensures that the whole
 determinacy of the clause, i.e. the determinacy of the premises match the
 expectation in the signature.
 
-We provide an example of this checker in the following database.
+% We provide an example of this checker in the following database.
 
-\begin{elpicode}
-  give-fun X (succ X Y).
-  give-fun X (~\texttt{pred}~ X Y).
-  good :- give-fun 3 Res, !, Res.
-\end{elpicode}
+% \begin{elpicode}
+%   give-fun X (succ X Y).
+%   give-fun X (~\texttt{pred}~ X Y).
+%   good :- give-fun 3 Res, !, Res.
+% \end{elpicode}
 
-The signatures of the predicates in the snippet above are the following:
-%
-\begin{align*}
-  \texttt{succ}     & : \dtype{\detI}{[\expI]}{[\expI]} & \texttt{pred} & : \dtype{\detI}{[\expI]}{[\expI]} \\
-  \texttt{give-fun} & : \dtype{\relI}{[\expI]}{[\detI]} & \texttt{good} & : \detI
-\end{align*}
+% The signatures of the predicates in the snippet above are the following:
+% %
+% \begin{align*}
+%   \texttt{succ}     & : \dtype{\detI}{[\expI]}{[\expI]} & \texttt{pred} & : \dtype{\detI}{[\expI]}{[\expI]} \\
+%   \texttt{give-fun} & : \dtype{\relI}{[\expI]}{[\detI]} & \texttt{good} & : \detI
+% \end{align*}
 
-The static checker for determinacy starts by analysing the first rule for
-\texttt{give-fun}. The input is an expression, the body is empty, so in the end
-we only have to check that the output has the output and the body have the right
-determinacy. Now, the determinacy of the body is $\detI \mySub \relI$, the
-determinacy (deduced) for the ouput term is $\detI \mySub \detI$. Therefore the
-rule respect the contract of the signature: the rule is valid. A very similar
-reasonment can be do on the second rule for \texttt{give-fun}. It is now more
-interesting to analyze the clause for \texttt{good}. We have no input, thereofre
-we keep analyze the body. The context on which \checkL\ is launched is $\ctx =
-  \{\text{\elpiIn{Res}}\mapsto \relI\}$ since in the wrost case the determinacy of
-a term with type \texttt{prop} is \relI. The iteration on the terms in the body
-starts by analysing ``\elpiIn{give-fun 3 Res}'' which makes the determinacy of
-the term relational and sets updates the context to
-$\{\text{\elpiIn{Res}}\mapsto \detI\}$, since it is a correct call and its
-output is \assume d to have the functionality of the output in the dype of
-\elpiIn{give-fun}. The \cut\ operator, makes \func\ to become \detI: intuitively
-the \cut discards all choice points, that's way \ref{rule:check-cut} puts the
-determinacy to \detI. Finally we execute a term which, by
-\ref{rule:check-callOK} is deterministic. We conclude the execution of \checkL\
-with $\func = \detI$ and $\ctx = \{\text{\elpiIn{Res}}\mapsto \detI\}$. This is
-exactly what the signature of \texttt{good} expects and therefore the rule
-passes the check.
+% The static checker for determinacy starts by analysing the first rule for
+% \texttt{give-fun}. The input is an expression, the body is empty, so in the end
+% we only have to check that the output has the output and the body have the right
+% determinacy. Now, the determinacy of the body is $\detI \mySub \relI$, the
+% determinacy (deduced) for the ouput term is $\detI \mySub \detI$. Therefore the
+% rule respect the contract of the signature: the rule is valid. A very similar
+% reasonment can be do on the second rule for \texttt{give-fun}. It is now more
+% interesting to analyze the clause for \texttt{good}. We have no input, thereofre
+% we keep analyze the body. The context on which \checkL\ is launched is $\ctx =
+%   \{\text{\elpiIn{Res}}\mapsto \relI\}$ since in the wrost case the determinacy of
+% a term with type \texttt{prop} is \relI. The iteration on the terms in the body
+% starts by analysing ``\elpiIn{give-fun 3 Res}'' which makes the determinacy of
+% the term relational and sets updates the context to
+% $\{\text{\elpiIn{Res}}\mapsto \detI\}$, since it is a correct call and its
+% output is \assume d to have the functionality of the output in the dype of
+% \elpiIn{give-fun}. The \cut\ operator, makes \func\ to become \detI: intuitively
+% the \cut discards all choice points, that's way \ref{rule:check-cut} puts the
+% determinacy to \detI. Finally we execute a term which, by
+% \ref{rule:check-callOK} is deterministic. We conclude the execution of \checkL\
+% with $\func = \detI$ and $\ctx = \{\text{\elpiIn{Res}}\mapsto \detI\}$. This is
+% exactly what the signature of \texttt{good} expects and therefore the rule
+% passes the check.
 
 % $$-----$$
 
@@ -576,33 +581,33 @@ passes the check.
 % \end{leftbar}
 
 
-\subsection{The final theorem}
+% \subsection{The final theorem}
 
-The final theorem we want to prove is the following.
+% The final theorem we want to prove is the following.
 
-\begin{theorem}[Determinacy checking property]
-  Given a context \ctx, a program \prog and a deterministic predicate \pred
-  % \begin{align*}
-  %   &\pgcP\ \prog \to \detCheck\ \prog\ \to \\ 
-  %     &\quad \forall i\ o, \pgc\ i\ \to \isdet\ \prog\ \pred\ i\ o \\
-  %       &\qquad\land \pgc\ o \land \infer\ o = \get{o}p
-  % \end{align*}
-  \begin{align*}
-    \hyperref[def:det-check-ho]{\detCheckHO}\ \prog\ \to
-    (\forall p\ c, c \in \prog\ p \to \hyperref[fig:static-check]{\checkc}\ \ctx\ c) \to \forall \vec{t}, \hyperref[def:is-det]{\isdet}\ \prog\ (\pred\ \vec{t}) %\land \infer\ \vec{t}_o = \get{o}p
-  \end{align*}
-  \vspace{-20pt}
-  \label{th:det3}
-\end{theorem}
+% \begin{theorem}[Determinacy checking property]
+%   Given a context \ctx, a program \prog and a deterministic predicate \pred
+%   % \begin{align*}
+%   %   &\pgcP\ \prog \to \detCheck\ \prog\ \to \\ 
+%   %     &\quad \forall i\ o, \pgc\ i\ \to \isdet\ \prog\ \pred\ i\ o \\
+%   %       &\qquad\land \pgc\ o \land \infer\ o = \get{o}p
+%   % \end{align*}
+%   \begin{align*}
+%     \hyperref[def:det-check-ho]{\detCheckHO}\ \prog\ \to
+%     (\forall p\ c, c \in \prog\ p \to \hyperref[fig:static-check]{\checkc}\ \ctx\ c) \to \forall \vec{t}, \hyperref[def:is-det]{\isdet}\ \prog\ (\pred\ \vec{t}) %\land \infer\ \vec{t}_o = \get{o}p
+%   \end{align*}
+%   \vspace{-20pt}
+%   \label{th:det3}
+% \end{theorem}
 
-% $$\isdet := \isDetCmd{i}$$
+% % $$\isdet := \isDetCmd{i}$$
 
-\begin{proof}
-  We reason on the derivations in \cref{fig:basic-interp} extended with
-  \cref{fig:interp-match,fig:interp-piimpl}. The interesting case is the rule
-  \ref{rule:call} since we have an application in our call the \run.
-  By
-\end{proof}
+% \begin{proof}
+%   We reason on the derivations in \cref{fig:basic-interp} extended with
+%   \cref{fig:interp-match,fig:interp-piimpl}. The interesting case is the rule
+%   \ref{rule:call} since we have an application in our call the \run.
+%   By
+% \end{proof}
 
 % \subsection{Mix data with ty}
 
@@ -647,7 +652,7 @@ The final theorem we want to prove is the following.
 % Dove $^\texttt{Y}$ trasmette l'informazione che i due argomenti di id2 hanno
 % la stessa funzionalità.
 
-\subsection{Inference v.s. checking}
+\subsection{Digression: inference v.s. checking}
 
 Several works \cite{king2005, king2006, 2011king} have been pursued
 in order to build an inference model for determinacy in \prolog system with \cut.
