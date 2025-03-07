@@ -1,4 +1,4 @@
-\section{Determinacy analysis for Higher Order predicates} % Prolog with higher-order variables in prop}
+\section{Determinacy checking for Higher Order predicates} % Prolog with higher-order variables in prop}
 \label{sec:vars}
 
 In order to fully capture the potential of a \lamprolog language like \elpi, we
@@ -646,3 +646,30 @@ The final theorem we want to prove is the following.
 
 % Dove $^\texttt{Y}$ trasmette l'informazione che i due argomenti di id2 hanno
 % la stessa funzionalità.
+
+\subsection{Inference v.s. checking}
+
+Several works \cite{king2005, king2006, 2011king} have been pursued
+in order to build an inference model for determinacy in \prolog system with \cut.
+Moreover, they explain that determinacy inference subsume determinacy checking.
+Even though this last claim, we think that an inference model does not fit
+well with our language.
+
+The first motivation is that since \elpi is an interpreted dialect of \lamprolog,
+program can change dynamically on the run of a program. This means that
+rules can be added \textit{à la volée} making impossible to infer
+determinacy as the user expects.
+It's
+up to the user to choose what should be the behavior of a predicate wrt
+determinacy. The checker is meant to assist the user by rejecting, a predicate,
+that does not respect the declared determinacy.
+
+As explained in some of the previously cited papers, determinacy (and so
+functionality) checking is an undecidable problem. The checking property is
+sound: if a predicate passes the analysis then it is for sure deterministic.
+However, it is not complete: there could exists false negatives. We are
+convinced, that completeness, is not a big deal, since, as also claimed in ...
+every deterministic predicate not passing the determinacy check,
+can be rewritten in a equivalent way
+so that it is no more classified as non-deterministic.
+

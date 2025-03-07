@@ -16,7 +16,7 @@
 \usepackage{subcaption}
 \usepackage{framed}
 \usepackage{accents}
-
+\hypersetup{colorlinks,citecolor=red,linkcolor=blue!60!green,urlcolor=blue}
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
 \newtheorem{definition}{Definition}
@@ -44,6 +44,7 @@
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
 
+\newcommand{\X}[1][]{\ensuremath{\mathcal{X}#1}\xspace}
 \newcommand{\subst}[1][]{\ensuremath{\sigma#1}\xspace}
 \newcommand{\alt}[1][]{\ensuremath{\mathcal{A}#1}\xspace}
 \newcommand{\alts}[1][]{\ensuremath{a#1}\xspace}
@@ -147,8 +148,10 @@
 \newcommand{\bs}{\text{\textbackslash}}
 
 % runCmd{goal[]}{alts[]}{subst}{alts_res}{subst_res}
+\newcommand{\runCmdR}[3]{\ensuremath{\run\ (#3,\ #1)\ #2 \arr r}}
 \newcommand{\runCmd}[5]{\ensuremath{\run\ (#3,\ #1)\ #2 \arr (#4, #5)}}
 \newcommand{\runCmdQ}[4]{\ensuremath{\run\ #1\ #2 \arr (#3, #4)}}
+\newcommand{\runCmdQR}[2]{\ensuremath{\run\ #1\ #2 \arr r}}
 \newcommand{\runQuery}[2]{\ensuremath{\run\ (\EmptySubst,\ #1)\ #2 \arr \_}}
 \newcommand{\runCmdF}[3]{\ensuremath{\run\ (#3,\ #1)\ #2 \arr \bot}}
 \newcommand{\runCmdFQ}[2]{\ensuremath{\run\ #1\ #2 \arr \bot}}
@@ -166,11 +169,11 @@
 \newcommand{\unifyCmd}[5][]{\ensuremath{
   \ifstrequal{#1}{1}
     {\vecL{\unify\ #2\ #3}}
-    {\unify\ #2\ #3}\ #4 \arr #5}}
+    {\unify\ #2\ #3}\ #4 = #5}}
 \newcommand{\matchCmd}[5][]{\ensuremath{
   \ifstrequal{#1}{1}
   {\vecL{\match\ #2\ #3}}
-  {\match\ #2\ #3}\ #4 \arr #5}}
+  {\match\ #2\ #3}\ #4 = #5}}
 
 \newcommand{\tailcutCmd}[2]{\ensuremath{\tailcut\ #1\ #2}\xspace}
 
@@ -205,8 +208,8 @@
 \newcommand{\maxT}{\texttt{max}}
 \newcommand{\minT}{\texttt{min}}
 \newcommand{\detI}{\detT{func}}
-\newcommand{\isdet}{\detT{is\_det}}
-\newcommand{\isfunc}{\detT{is\_func}}
+\newcommand{\isdet}{\detT{is\_odet}}
+\newcommand{\isfunc}{\detT{is\_tfunc}}
 \newcommand{\relI}{\detT{pred}}
 \newcommand{\expI}{\detT{exp}}
 \newcommand{\funsep}{\ensuremath{\triangleright}}

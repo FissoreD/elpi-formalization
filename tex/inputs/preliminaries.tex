@@ -21,7 +21,7 @@ By convention we say that predicates take first all input arguments and
 then output arguments and we separather those with $\funsep$, omitting
 the symbols when both are absent.
 We use \pred{} for redicate names, \predVar{} for functor names
-and \texttt{X} for unification variable names. We write $\vecL{t}$ 
+and $X$ for unification variable names. We write $\vecL{t}$ 
 for $t_1 \ldots t_n$ (a possibly empty list of $t$s).
 %and \texttt{c} for data types names.
 In the syntax we single out the cut and equality predicates since they
@@ -32,7 +32,7 @@ $$
     syntax & types \\\hline
       \begin{array}{rl}
         atom   & ::= \cut \mid \pred\ \vecL{tm} \mid tm = tm \label{eq:atom} \\
-        tm     & ::= \predVar\ \vecL{tm} \mid \texttt{X} \label{eq:tm} \\
+        tm     & ::= \predVar\ \vecL{tm} \mid \X \label{eq:tm} \\
         clause & ::= \clauseCmd{\pred}{\vecL{tm}}{\vecL{atom}} \nonumber %\label{eq:cl} 
       \end{array} 
       \quad
@@ -59,7 +59,7 @@ write $\vecL{t_i}$ for the input arguments ${t}_1 \ldots {t}_k$
 and $\vecL{t_o}$ for the output arguments ${t}_{k+1} \ldots {t}_n$.
 
 We use $::$ for list cons; $@$ for list concatenation; $\EmptyList$ is the empty list;
-$[e|x \in \vec{x}]$ for list comprehension and $[e\ \mathrm{if}\ p|x \in \vec{x}]$ 
+$[e|x \in \vec{x}]$ for list comprehension and $[e\ \mathbf{if}\ p|x \in \vec{x}]$ 
 for list filtering.
 
 % \begin{minipage}{0.48\textwidth}%
@@ -141,10 +141,10 @@ is a triple made of a program, an atom $g$ and a list of \emph{cut-to} alternati
 An alternative $a \in \alt \subseteq \Sigma \times \vecL{\g}$ is a
 pair made of a substitution and a list of goals.
 
-We say that $\vars\ t \subset \texttt{X}$ is the set
+We say that $\vars\ t \subset \X$ is the set
 of variables occurring in $t$. When $\vars\ t = \emptyset$ we way that
 $t$ is \ground.
-A substitution $\subst : \texttt{X} \to tm$ is a mapping from unification variables
+A substitution $\subst : \X \to tm$ is a mapping from unification variables
 to terms. 
 We write $\subst t$ the application of a substitution \subst to a term $t$,
 and we remark that $t$ is \ground{} iff $\forall \subst, \subst t = t$.
@@ -157,7 +157,22 @@ When two substitutions have disjoint domains we write $\sigma_1 \cup \sigma_2$
 as the (disjoint) union of two substitutions.
 
 We assume a unifier $\unify : tm \times tm \times \Sigma \to \Sigma \uplus \bot$
-with the usual properties. 
+such that if $\matchCmd{t_1}{_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
+and $\subst[']$ is the most general extension (in the usual sense) of  $\subst$.
+We assume a matcher $\match : tm \times tm \times \Sigma \to \Sigma \uplus \bot$
+such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \subst['] p$
+and $\subst[']t = t$ and $\subst[']$ is the most general extension of  $\subst$,
+i.e. \match{} does not assign variables in $t$ but only in the (pattern) $p$.
+We shall fold \unify{} and \match{} over a list of pairs of terms
+using the combinator defined by these equations:
+
+$$
+\texttt{fold}(\_,\ \_,\ \bot) = \bot
+\quad
+\texttt{fold}((t,u) :: l,\ f,\ x) = \texttt{fold}(l,\ f,\ f\ t\ u\ x)
+\quad
+\texttt{fold}(\EmptyList,\ \_,\ x) = x
+$$
 
 The operational semantics of our language is given by a relation
 $\run{} \subseteq \alt \times \vecL{\alt} \times (\vecL{\alt} \times \Sigma ~\uplus~ \bot)$.
@@ -186,10 +201,12 @@ introduced.
   \mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
   \bigg[
     %\bigg(
-    \subst,
+    \subst['],
     %\Big(
-    \underbrace{\big[(\prog, t = u, ~a) \mid (t,u) \in \vecL{t,u}\big]}_{\mathrm{head\ unification}} @
-    \underbrace{\big[(\prog, g, a) \mid g \in \vecL{g}\big]}_{\mathrm{premises}} @ ~ gl
+    %\underbrace{
+      \big[(\prog, g, a) \mid g \in \vecL{g}\big]
+    %}_{\mathrm{premises}} @ ~ gl
+    \ \mathbf{if}\ \mathcal{H}(\vecL{tu}, \subst) = \subst['] \not= \bot,
     %\Big)
     %\bigg)
     ~\bigg\rvert~
@@ -197,9 +214,37 @@ introduced.
     \bigg]
   $$
 
-  \ruleUnifM{.6}
-  \ruleFailM{.55}
-  \ruleAbortM{.4}
+  $$
+  \mathcal{H}(\vecL{tu},\ ol,\ \subst) = \texttt{fold}(\vecL{tu_o},\ \unify,\ \texttt{fold}(\vecL{tu_i},\ \match,\ \subst))
+  $$
+
+  \ruleCallMF{0.5}
+  \ruleCallMFH{0.44}
+
+  \rulePiImplM{.7}
+  \ruleCallBeta{0.44}
+
+
+
+  % $$
+  % \mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
+  % \bigg[
+  %   %\bigg(
+  %   \subst,
+  %   %\Big(
+  %   \underbrace{\big[(\prog, t = u, ~a) \mid (t,u) \in \vecL{t,u}\big]}_{\mathrm{head\ unification}} @
+  %   \underbrace{\big[(\prog, g, a) \mid g \in \vecL{g}\big]}_{\mathrm{premises}} @ ~ gl
+  %   %\Big)
+  %   %\bigg)
+  %   ~\bigg\rvert~
+  %   (\clauseCmd{\pred}{\vec{u}}{\vecL{g}}) \in \prog\ \pred
+  %   \bigg]
+  % $$
+
+
+  % \ruleUnifM{.6}
+  % \ruleFailM{.55}
+  % \ruleAbortM{.4}
   \vspace{0.3em}%
 
   \caption{Operational natural semantics}
@@ -524,8 +569,11 @@ The reasoning goes as follows.
   % $\subst[']_1$ and $\subst[']_2$, we have $\subst[']_1\ t_d \neq \subst[']_2\ u_d$,
   a contradiction since $\subst_1 \cup \subst_2$ unifies $t_d$ with $u_d$ and
   we can form that substitution since
-  $\dom\ \subst_1 \cap \dom\ \subst_2 = \emptyset$,
-  $\vars\ t_d \cap \vars\ u_d = \emptyset$ and since $\vars\ v = \emptyset$.
+  $\dom\ \subst_1 \cap \dom\ \subst_2 = \emptyset$ because
+  the domains 
+  $\vars\ t_d$ and $\vars\ u_d$ are disjoint (the clause variables are fresh
+  at each application) and since the there are no variabels in the codomain,
+  since all terms are subterms of $v$ that is ground.
 \end{proof}
 
 
@@ -601,7 +649,7 @@ $$
 % substitution \subst['] then the application of that substitution to \texttt{o}
 % is a ground term.
 
-\subsection{Static analysis: functionality}
+\subsection{Static analysis: Operational determinacy}
 \label{sec:det}
 
 Our objective is to indentify predicates that repsent mathamtical
@@ -611,31 +659,28 @@ for example by identifying functions with an empty or full
 domain~\cite{1996henderson} or predicate that are observably functions in the sense that
 that can return multiple times the same result, or diverge~\cite{1989Warren}.
 
-We are interested in identifying predicates that leave no choice points~\ref{def:is-ded}
-called \emph{semidet} in \cite{1996henderson}. % (or that leave choice points that certainly fail ~\ref{def:is-func}).
+We are interested in identifying predicates that leave no choice points~\ref{def:is-def}
+called \emph{semidet} in \cite{1996henderson}, or in the wording of \cite{nakamura1986}
+are \emph{operationally deterministic}.
 
-
-\todo{visto che abbiamo una bigstep la definizione di sotto non mi piace
-perche include anche la divergenza}
-\todo{incoltre se ucciadiamo tutti punti di scelta abbiamo
-anche una garanzia sulla complessità}
-
-\textcolor{red}{\textbf{TODO: \cite{nakamura1986} $\to$ differenza tra program logically deterministic
-vs program operationally deterministic}}
-
-
-\begin{definition}[Functionality (\isfunc)]\label{def:is-func}
-  Given a program \prog and a term $t$,
-  \isdet\ is defined as follows:
-  $$\forall a\ \subst, \isFuncCmd{t}$$
-\end{definition}
-\begin{definition}[(Semi-)determinacy (\isdet)]\label{def:is-det}
-  Given a program \prog and a term $t$,
-  \isdet\ is defined as follows:
-  $$\forall a\ \subst, \isDetCmd{t}$$
+\begin{definition}[Terminating functionality (\isfunc)]\label{def:is-func}
+  Given a program \prog and an atom $g$ we say that
+  $\isfunc\ \prog\ g$ iff $\isFuncCmd{t}$. It is stronger than
+  functional in the sense of~\cite{1989Warren} since no alternative
+  diverges and is equivalent to Merciry's \emph{semidet} adjective.
 \end{definition}
 
-We augment the grammar for types as follows:
+\begin{definition}[Operational determinacy (\isdet)]\label{def:is-det}
+  Given a program \prog and an atom $g$ we say that
+  $\isdet\ \prog\ g$ iff $\isDetCmd{t}$. It is even stronger than
+  $\isfunc\ \prog\ g$ since it leaves no choice points at all.
+\end{definition}
+
+The analysis we propose guarantees terminating functionality on
+the original program \prog and operational determinacy on a tranformation
+$\prog^!$ or the original \prog if the runtime indexes clauses deep enough.
+
+We augment the grammar for predicate signatures as follows:
 
 % The determinacy definition that adhere the most to our need is the one
 % considering the arguments marked as input as terms that are consumed by the
@@ -643,7 +688,6 @@ We augment the grammar for types as follows:
 % % to differenciate input from output in an application like $\predVar\ \vec{t}$,
 % % we use the notation $t_i$ and $t_o$ to respectively separate the input and the
 % % output arguments of \predVar.
-
 % In order to differenciate relations from deterministic predicates, and also
 % to distinguish input from output arguments, we change the signature of predicate
 % as follows:
@@ -702,7 +746,7 @@ definitions.
 \end{definition}
 
 \begin{lemma}[Mutually-exclusive \cut\ property]
-  Given any $\ctx$ and any predicate $\prog$ that holds two clauses $c_1$ and
+  Given any $\ctx$ and any program $\prog$ that holds two clauses $c_1$ and
   $c_2$ for $\pred$ such that $\mutExclCut\ \ctx\ c_1\ c_2$,
   then any $\wellModed\ (\pred\ \vec{t})$ is such that
   $$
@@ -841,7 +885,7 @@ predicates.
 \begin{definition}[Index-cut erasure $|\cdot|$]
   Given an alternative $a = (\subst, \vecL{gl})$ we write
   $|a|$ the procedure of filtering out index-cuts, i.e.
-  $|a| = (\subst,\ [ (\prog^!,\ g,\ \vecL{|al|})\ \mathrm{if}\ g \not\in I^! \ \mid\ (\prog^!,\ g,\ al) \in \vecL{gl}])$
+  $|a| = (\subst,\ [ (\prog^!,\ g,\ \vecL{|al|})\ \mathbf{if}\ g \not\in I^! \ \mid\ (\prog^!,\ g,\ al) \in \vecL{gl}])$
 \end{definition}
 
 \begin{lemma}[Same exec $\prog$ and $\prog^!$]
@@ -911,11 +955,10 @@ predicates.
 \end{proof}
 
 
-\begin{theorem}[Determinacy checking property]
+\begin{theorem}[Determinacy checking property]\label{th:det}
   For all predicate \pred such that $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ we
   have that
   $$\wellModed\ \prog\ \land\ \wellModed\ (\pred\ \vec{t})\ \land\ \detCheck\ \ctx\ \prog\ \to \isdet\ \prog^!\ (\pred\ \vec{t})$$
-  \label{th:det}
 \end{theorem}
 \begin{proof}
 since all rules have a cut, and that \ref{rule:call} stored in the goal
@@ -926,80 +969,54 @@ of det predicates (det check premise), hence by induction they also return the
 empty alternative list.
 \end{proof}
 
-\paragraph{digression on P!}
+\subsection{Digression on  $\prog^!$}
 
-P! amounts to this F
+The contruction $\prog^!$ inserts in $\prog$ cuts that corresponds to
+an \emph{eager} version of $\mathcal{F}$, that instead of always
+generating an alternative for each clause filters upfront clauses
+whose head unifies with the goal. Most implementations of 
+logic programming languages index clauses so to discard upfront as many
+rules as possible, for example using a rete algorithm.
+The eager operational semantics is faithful to an implementation that indexes
+clauses on all input deep enough to discriminate them whenever the \mutExclHeads
+check does. This semantics would make theorem \ref{th:det} hold for \prog
+rather than $\prog^!$.
+\todo{e allora perchè non la facciamo così subito?}
 
-$$
-\mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
-\bigg[
-  %\bigg(
-  \subst,
-  %\Big(
-  \underbrace{\big[(\prog, t = u, ~a) \mid (t,u) \in \vecL{t,u}\big]}_{\mathrm{head\ unification}} @
-  \underbrace{\big[(\prog, g, a) \mid g \in \vecL{g}\big]}_{\mathrm{premises}} @ ~ gl
-  %\Big)
-  %\bigg)
-  ~\bigg\rvert~
-  (\clauseCmd{\pred}{\vec{u}}{\vecL{g}}) \in \prog\ \pred
-  \bigg]
-$$
+\subsection{Digression on \isdet}
 
-allternatively P! amounts to a semantics with an indexing that is as deep
-as head split.
-
-\paragraph{digression on inference vs checking}
-
-Several works \cite{king2005, king2006, 2011king} have been pursued
-in order to build an inference model for determinacy in \prolog system with \cut.
-Moreover, they explain that determinacy inference subsume determinacy checking.
-Even though this last claim, we think that an inference model does not fit
-well with our language.
-
-The first motivation is that since \elpi is an interpreted dialect of \lamprolog,
-program can change dynamically on the run of a program. This means that
-rules can be added \textit{à la volée} making impossible to infer
-determinacy as the user expects.
-It's
-up to the user to choose what should be the behavior of a predicate wrt
-determinacy. The checker is meant to assist the user by rejecting, a predicate,
-that does not respect the declared determinacy.
-
-As explained in some of the previously cited papers, determinacy (and so
-functionality) checking is an undecidable problem. The checking property is
-sound: if a predicate passes the analysis then it is for sure deterministic.
-However, it is not complete: there could exists false negatives. We are
-convinced, that completeness, is not a big deal, since, as also claimed in ...
-every deterministic predicate not passing the determinacy check,
-can be rewritten in a equivalent way
-so that it is no more classified as non-deterministic.
-
-\paragraph{digression on our definition}
-
-This choice makes the definition quite strict but with a better computational
-behavior, and in order to satisfy it we will use the semantics to justify some
-optimizations to programs, such as inserting cuts (or better once)
-that are not semantically needed since they result is observationally equal
-programs. One motivation is that in our use case fast failure is important
-and the absence of potential backtracking makes the behavior of code easier
-to predict. The code above can have a very bad complexity if \texttt{mem}
-is defined without a cut. In particular its complexity is not the sum
-of the two premises, but rather their product. By flagging \texttt{mem} as
-a function the static checker forces mem to contain the cut, or equivalently
-its call to behave computationally to \texttt{once(mem 1 L)}. In this case
-the complexity is linear in L.
+We insist on \isdet{} rather than \isfunc{} or functional as in~\cite{1989Warren}
+becase the former gives the programmer a more precise indication of the
+run time behavior of a predicate labelled as \func. If \texttt{mem} and \texttt{len}
+are flagged as such, then the programmer knows that this silly piece of
+code terminate in linear time.
 
 \begin{elpicode}
 silly L V :- mem 1 L, len L N, N = V.
 \end{elpicode}
 
-A definition of functional as in warren, or like 
-\begin{definition}[Functionality (\isfunc)]\label{def:is-func}
-  Given a program \prog and a term $t$,
-  \isdet\ is defined as follows:
-  $$\forall a\ \subst, \isFuncCmd{t}$$
-\end{definition}
-does not have this guarantee.
+Upon failure under a notation of functional as in~\cite{1989Warren} the complexity
+could be quadratic since a mem (without a cut) is still a function. If mem
+was \isfunc{} the code would still be linear but with the cost of a choice point.
+With \isdet{} the code is operationally equivalent to the following code where
+the complexity, even in case of failure, is very apparent.
+
+\begin{elpicode}
+once P :- P, !.
+silly L V :- once (mem 1 L), once (len L N), N = V.
+\end{elpicode}
+
+We are so concerned with failure in case of performance because of Elpi's
+application as the runtime for type class resolution in the interactive prover
+Rocq: the user experience crytically relies on quick feedback from the system.
+
+% A definition of functional as in warren, or like 
+% \begin{definition}[Functionality (\isfunc)]\label{def:is-func}
+%   Given a program \prog and a term $t$,
+%   \isdet\ is defined as follows:
+%   $$\forall a\ \subst, \isFuncCmd{t}$$
+% \end{definition}
+% does not have this guarantee.
 
 % \begin{coqcode}
 % Definition ~\customlabel{detpred}{\texttt{det\_pred}}~(~\prog~: prog) (p: pn) :=
