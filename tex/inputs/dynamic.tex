@@ -17,7 +17,7 @@
 \label{sec:basic}
 \todo{check for dead cod here if we hide the proofs}
 
-We use $\EmptyList$ is the empty list and $x :: xs $ for prepending an element $x$
+We use $\EmptyList$ for the empty list and $x :: xs$ for prepending an element $x$
 to a list $xs$; $@$ for list concatenation;
 $[e|x \in \vec{x}]$ for list comprehension and $[e\ \mathbf{if}\ p|x \in \vec{x}]$ 
 for list filtering. We shall fold $f$ over a list of pairs
@@ -30,8 +30,8 @@ $$
 \fold\ \EmptyList\ \_\ a = a
 $$
 
-We asume a set $P$ of predicate names, a set $K$ of term constructors (e.g. nil
-and cons), a set \X of variables and by convention we use capitals for
+We asume a set $P$ of predicate names, a set $K$ of term constructors (e.g. \textit{nil}
+and \textit{cons}), a set \X of variables and by convention we use capitals for
 unification variables and small letters for bound variables.
 As this paper does not really focuses on type checking (the interested reader can
 refer to~\cite{1992nadathur}) we collaps all non-predicate types to
@@ -39,9 +39,9 @@ a single node \texttt{exp}. We also rule out predicates inside data,
 eg a list of predicates, for space constraints.
 
 We focus on predicate signatures: By convention we say that predicates take first
-all input arguments and then output arguments and we separather those with $\funsep$,
+all input arguments and then output arguments and we separate them with $\funsep$,
 omitting the symbol when both are absent. \detI{} stands for deterministic (the
-precise meaning is given in~\ref{sec:thm}) while \relI{} for non-deterministic.
+precise meaning is given in~\cref{sec:thm}) while \relI{} for non-deterministic.
 
 We write $\vecL{t}$  for $t_1 \ldots t_n$ (a possibly empty list of $t$s)
 and we write $\vecL{tu}$ for the zipping of $\vecL{t}$ and $\vecL{u}$
@@ -72,8 +72,8 @@ into a list of pairs.
   \fbox{\syntaxFig}
 \end{figure}
 
-The user provides a context \ctx{} that assigns to each predicate symbol \pred{} a
-signature $sig$. For example, looking back at section~\ref{sec:examples},
+The user provides a context \ctx{} that assigns a
+signature $sig$ to each predicate symbol \pred{}. For example, looking back at section~\ref{sec:examples},
 we have that $\ctx~\texttt{likes} = \dtype{\relI}{\texttt{exp}}{\texttt{exp}}$
 and $\ctx\ \texttt{true} = \relI$.
 We single out the cut operator since it has a dedicated treatment
@@ -87,11 +87,11 @@ $\ctx\ \pred = \dtype{\relI}{{ty}_1 \ldots {ty}_k~}{~{ty}_{k+1} \ldots {ty}_n}$ 
 write $\vecL{t_i}$ for the input arguments ${t}_1 \ldots {t}_k$
 and $\vecL{t_o}$ for the output arguments ${t}_{k+1} \ldots {t}_n$.
 
-$\lambda$ and \texttt{pi} are binders in the $\lambda$ calculus sense. We write
+$\lambda$ and \texttt{pi} are binders in the $\lambda$-calculus sense. We write
 $t[x/y]$ the usual, capture avoiding, operation or replacing the variable $y$
 with $x$ inside $t$.
 We say that $\vars\ t \subseteq \mathcal{P}(\X)$ is the set
-of free variables occurring in $t$. When $\vars\ t = \emptyset$ we way that
+of free variables occurring in $t$. When $\vars\ t = \emptyset$ we say that
 $t$ is \ground.
 
 % \begin{minipage}{0.48\textwidth}%
@@ -141,9 +141,57 @@ $t$ is \ground.
 
 A program $\prog = (\aleph, \mathcal{I})$ holds a set of names $\aleph$ and a
 mapping $\mathcal{I}$ from predicate names to an ordered list of clauses.
-We write $\prog~\pred$ for the clauses for predicate \pred in $\mathcal{I}$
+We write $\prog~\pred$ for the clauses of predicate \pred in $\mathcal{I}$
 and $(x,h) + \prog$ to add an extra clause $h$ to $\mathcal{I}$ and
-name $x$ to $\aleph$. We write $x \# \prog$ to find a name fresh in $\aleph$.
+name $x$ to $\aleph$.\todo{change order} We write $x \# \prog$ to find a name fresh in $\aleph$.
+
+
+
+\newcommand{\runFig}{
+  % \begin{subfigure}[b]{1\textwidth}
+    \centering
+
+  \ruleBangM{.50}
+  \ruleStopM{.45}
+  \vspace{0.3em}%
+
+  \ruleCallM{1}
+  $$
+  \mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
+  \bigg[
+    %\bigg(
+    \subst['],
+    %\Big(
+    %\underbrace{
+      \big[(\prog, g, a) \mid g \in \vecL{g}\big]
+    %}_{\mathrm{premises}} @ ~ gl
+    \ \mathbf{if}\ \mathcal{H}(\vecL{tu}, \subst) = \subst['] \not= \bot,
+    %\Big)
+    %\bigg)
+    ~\bigg\rvert~
+    (\clauseCmd{\pred}{\vec{u}}{\vecL{g}}) \in \prog\ \pred
+    \bigg]
+  $$
+  $$
+  \mathcal{H}(\vecL{tu},\ ol,\ \subst) = \fold\ \vecL{tu_o}\ \unify\ (\fold\ \vecL{tu_i}\ \match\ \subst)
+  $$
+
+  \ruleCallMF{0.5}
+  \ruleCallMFH{0.44}
+
+  \rulePiImplM{.7}
+  \ruleCallBeta{0.44}
+
+  \caption{Operational natural semantics}
+  \label{fig:basic-interp}
+% \end{subfigure}
+}
+
+\begin{figure}[t]
+  \begin{framed}
+  \runFig
+  \end{framed}
+\end{figure}
 
 % We assume all predicates have at least one clause, in particular
 % $\prog\ \texttt{fail} = [\clauseCmd{\texttt{fail}}{\!\!}{0 = 1}]$.
@@ -213,49 +261,6 @@ An initial query looks like \runQuery{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyLi
 % in section~\ref{sec:hoas} where the implication operator \elpiIn{=>} is
 % introduced.
 
-\newcommand{\runFig}{
-  \begin{subfigure}[b]{1\textwidth}
-    \centering
-
-  \ruleBangM{.50}
-  \ruleStopM{.45}
-  \vspace{0.3em}%
-
-  \ruleCallM{1}
-  $$
-  \mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
-  \bigg[
-    %\bigg(
-    \subst['],
-    %\Big(
-    %\underbrace{
-      \big[(\prog, g, a) \mid g \in \vecL{g}\big]
-    %}_{\mathrm{premises}} @ ~ gl
-    \ \mathbf{if}\ \mathcal{H}(\vecL{tu}, \subst) = \subst['] \not= \bot,
-    %\Big)
-    %\bigg)
-    ~\bigg\rvert~
-    (\clauseCmd{\pred}{\vec{u}}{\vecL{g}}) \in \prog\ \pred
-    \bigg]
-  $$
-  $$
-  \mathcal{H}(\vecL{tu},\ ol,\ \subst) = \fold\ \vecL{tu_o}\ \unify\ (\fold\ \vecL{tu_i}\ \match\ \subst)
-  $$
-
-  \ruleCallMF{0.5}
-  \ruleCallMFH{0.44}
-
-  \rulePiImplM{.7}
-  \ruleCallBeta{0.44}
-
-  \caption{Operational natural semantics}
-  \label{fig:basic-interp}
-\end{subfigure}
-}
-
-\begin{figure}
-  \fbox{\runFig}
-\end{figure}
 
   % $$
   % \mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
@@ -293,22 +298,22 @@ the former is directly evaluated while
 the rest prepended to the existing set of alternatives.
 $\mathcal{H}$ filters applicable clauses by unifying their heads with
 the goal. If no clause applies rule ~\ref{rule:callbacktrack} moves
-to the next alternative (backtracks to the most recent choice point) is
+to the next alternative (backtracks to the most recent choice point) if
 any, otherwise rule ~\ref{rule:callabort} terminates.
-A peciluarity of Elpi is that input arguments are \emph{matched} against
+A peculiarity of Elpi is that input arguments are \emph{matched} against
 the corresponding terms in the head of the rule, while outputs are unified.
 
 The stop rule~\ref{rule:stop} terminates as there are no more goals to be
 solved and produces the current susbtitution and the yet to be explored
 alternatives.
 
-Rule~\ref{piimpl} loads into the current program the new clause $h$
+Rule~\ref{rule:piimpl} loads into the current program the new clause $h$
 after having postulated a fresh symbol $y$ and replaced the bound $x$ for
 $y$ everywhere.
 
 The last rule~\ref{rule:beta} deals with the fact that an atom can be
 a variable. If that variable is assgined in $\subst$ to a term
-that happens to be a predicate, then it proceeds. We write $=_\beta\eta$
+that happens to be a predicate, then it proceeds. We write $=_{\beta\eta}$
 since the equational theory of $\lambda$Prolog (hence Elpi) requires
 that~\cite{1991miller-pf} but plays no role in this paper.
 
@@ -318,7 +323,7 @@ that~\cite{1991miller-pf} but plays no role in this paper.
 
 
 This operational semantisc is essentially a big-step version of
-the one given in~\cite{1990Vink} extended to the higher order
+the one given in~\cite{1990Vink} extended to the higher-order
 constructs of $\lambda$Prolog and the input-matching behavior of Elpi.
 The choice to use operational semantics
 rather than denotational semantics (as in \cite{2011king}) stems from our
@@ -334,8 +339,8 @@ clauses for subgoals that appear earlier in the clause premises.
 The function $\mathcal{H}$ eagerly unifies all clauses with the goal while
 a more natural (and efficient) semantics would be to just create the
 alternatives and prepend to the list of goals unification the same unification
-problems. The choice simplifies the formal threatment of determinacy we
-provide in~\ref{sec:thm} and in particular it matches the \mutExclHeads condition.
+problems. The choice simplifies the formal threatment of determinacy 
+in~\cref{sec:thm} and in particular it matches the \mutExclHeads condition.
 
 From a practical stanpoint a
 logic programming languages implementation can either index clauses
