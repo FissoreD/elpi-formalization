@@ -1,63 +1,15 @@
 \section{Conclusion and related works}
 
-SE NON HO MATCH
-\todo{fare P! + well moded}
-
-SE FACCIAMO PI IMPL:
-Unlike other prolog system, such as \mercury \cite{1996Somogy}, \elpi is not a
-compiled language and we do not transform the list $\mathcal{L}$ of clauses of a
-predicate $p$ in super-homogenous form, i.e. a sole clause containing the
-disjunction of $\mathcal{L}$. This is mainly due to the fact that \elpi is an
-homoiconic language and its program definition can change during the evaluation
-of the code.
-
-In \cite{1991Sahlin}, and more formally in \cite{1996mogensen}, determinacy is
-used to work with \mixtus, a partial evaluator of \prolog. In that case,
-determinacy is inferred so that it is possible to derive a new specialiezed,
-and therefore more efficient, version of the original program under the
-guarantee that the two program share the same semantics.
-
-Finally, in \cite{1996henderson}, a determinacy checker for \mercury
-captures different behaviours of a predicate. A predicate can return
-exactly zero and/or one solution, zero and/or multiple solution. In \mercury the
-user is allowed to annotate predicates with determinacy information. A
-non-annotated predicate will be inferred with the lowest derived tag.
-Determinacy, in \mercury, besides giving a guarantee on the program, allows to
-specialized it so that a faster routine can be used in the compiled program.
-
-Determinacy, as previously mentioned, is the property of a predicate that
-returns at most one solution per call. Such a predicate behaves like a function,
-which is why we refer to it as a deterministic predicate or simply a function.
-Determinism checking statically ensures that the clauses implementing a
-deterministic predicate adhere to this condition. The literature contains
-numerous discussions on this topic, offering various descriptions and
-applications of determinism.
-
-In \cite{1989Warren}, the authors describe a property subsuming
-determinism: they describe functionality. A predicate is
-functional if it produces at most one \textit{distinct} solution per predicate
-call. The keyword here is \textit{distinct}, since, in the determinacy setting,
-a predicate call producing the same solution twice is not considered as
-deterministic, while, it is functional. %In the paper they explain that mutual
-% exclusivness of clauses can be improved not only by looking at the head and at
-% the presence of the cut but also by instructing the checker that premises can
-% put clauses in mutual exclusivness.
-
-\todo{look at 1,2,5 of \url{https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=b52fc2c62a2f78b8565e96f97dc7cbf6c86b45d4}}
-
-TABLING cache entry for func only requires 2 cases, ongoing and done with 1 solution
-
-\cref{tab:comparison}
-
-\begin{table}[h]
+\begin{table}
   \centering
-  \begin{tabular}{c|c|c|c|c|c}
-    Paper       & Mode check        & Determincy check & Hard Cut & Harrop & HO unif   \\
+  \begin{tabular}{c|c|c|c|c|c|c}
+    Paper         & Mode check & Hard Cut & HO prog         & HHF    & HO unif & SubT.           \\
     \hline
-    Mercury     & Compile           & \cmark           & \xmark   & \xmark & \xmark    \\
-    Mixtus      & Compile           & \cmark           & \cmark   & \xmark & \xmark    \\
-    Simple Elpi & Runtime           & \cmark           & \cmark   & \xmark & \xmark    \\
-    Full Elpi   & Runtime + Compile & \cmark           & \cmark   & \cmark & Partially \\
+    Warren et al. & Assumed    & \cmark   & \xmark          & \xmark & \xmark  & \xmark          \\
+    Mercury       & \cmark     & \xmark   & \nicefrac{1}{2} & \xmark & \xmark  & \nicefrac{1}{2} \\
+    Mixtus        & \cmark     & \cmark   & \xmark          & \xmark & \xmark  & \nicefrac{1}{2} \\
+    RedAlert      & \cmark     & \cmark   & \xmark          & \xmark & \xmark  & \xmark          \\
+    Elpi          & \xmark     & \cmark   & \cmark          & \cmark & \cmark  & \cmark          \\
   \end{tabular}
 
   \caption{Comparison}
@@ -65,16 +17,95 @@ TABLING cache entry for func only requires 2 cases, ongoing and done with 1 solu
 \end{table}
 
 
-\subsection{Future work}
+Several studies have explored determinacy analysis in logic programs.
+\Cref{tab:comparison} summarizes the main differences between our approach to
+determinacy checking and existing work from the literature.
 
-\paragraph{Problem of charging local clauses with weaker conditions}
-Overlapping check che rompe:
+Determinacy analysis can be applied to \textit{open} or \textit{closed}
+programs. Closed programs allow determinacy inference by analyzing clauses and
+tracking predicate calls throughout the program. In a closed-world setting, it
+is sometimes possible to compile a program into a more efficient form using the
+\textit{super-homogeneous} transformation, where all clauses of a predicate are
+collapsed into a single clause containing a disjunction for each replaced
+clause. This approach is central to works such as
+\cite{1996Somogy,king2006,1991Sahlin}.
 
-\begin{elpicode}
-  pi x\ (pi Y\ f x Y) => (pi y => f x y) => Bo
-\end{elpicode}
+In contrast, a \textit{higher-order} setting introduces the implication
+operator, making programs \textit{open} -- i.e., local clauses may be
+dynamically loaded. This is the case in Elpi, where a static determinacy checker
+is necessary to handle such scenarios. Our operational semantics closely follows
+\cite{1990Vink}, interpreting logic programs with the non-logical \cut\
+operator. This approach allows us to work with concrete objects, making it
+easier to define the meaning of a deterministic predicate. This choice contrasts
+with \cite{2011king}, where a denotational semantics is used.
 
-Dove i modi per f sono input, input.
+Regarding modes, Elpi's integration with an interactive theorem prover like Rocq
+prevents us from relying on ground input terms. However, the non-standard
+unification dynamically applied to input terms allows our theorem to dispense
+with the requirement of working with a well-moded program -- a fundamental
+assumption in works such as \cite{1989Warren,1996Somogy,2011king}.
 
-In questo esempio se Bo = ``f x y'' allora ci sono due soluzioni,
-in quanto entrambe le regole caricate colla freccia si applicherebbero 
+
+
+% SE NON HO MATCH
+% \todo{fare P! + well moded}
+
+% SE FACCIAMO PI IMPL:
+% Unlike other prolog system, such as \mercury \cite{1996Somogy}, \elpi is not a
+% compiled language and we do not transform the list $\mathcal{L}$ of clauses of a
+% predicate $p$ in super-homogenous form, i.e. a sole clause containing the
+% disjunction of $\mathcal{L}$. This is mainly due to the fact that \elpi is an
+% homoiconic language and its program definition can change during the evaluation
+% of the code.
+
+% In \cite{1991Sahlin}, and more formally in \cite{1996mogensen}, determinacy is
+% used to work with \mixtus, a partial evaluator of \prolog. In that case,
+% determinacy is inferred so that it is possible to derive a new specialiezed,
+% and therefore more efficient, version of the original program under the
+% guarantee that the two program share the same semantics.
+
+% Finally, in \cite{1996henderson}, a determinacy checker for \mercury
+% captures different behaviours of a predicate. A predicate can return
+% exactly zero and/or one solution, zero and/or multiple solution. In \mercury the
+% user is allowed to annotate predicates with determinacy information. A
+% non-annotated predicate will be inferred with the lowest derived tag.
+% Determinacy, in \mercury, besides giving a guarantee on the program, allows to
+% specialized it so that a faster routine can be used in the compiled program.
+
+% Determinacy, as previously mentioned, is the property of a predicate that
+% returns at most one solution per call. Such a predicate behaves like a function,
+% which is why we refer to it as a deterministic predicate or simply a function.
+% Determinism checking statically ensures that the clauses implementing a
+% deterministic predicate adhere to this condition. The literature contains
+% numerous discussions on this topic, offering various descriptions and
+% applications of determinism.
+
+% In \cite{1989Warren}, the authors describe a property subsuming
+% determinism: they describe functionality. A predicate is
+% functional if it produces at most one \textit{distinct} solution per predicate
+% call. The keyword here is \textit{distinct}, since, in the determinacy setting,
+% a predicate call producing the same solution twice is not considered as
+% deterministic, while, it is functional. %In the paper they explain that mutual
+% exclusivness of clauses can be improved not only by looking at the head and at
+% the presence of the cut but also by instructing the checker that premises can
+% put clauses in mutual exclusivness.
+
+% \todo{look at 1,2,5 of \url{https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=b52fc2c62a2f78b8565e96f97dc7cbf6c86b45d4}}
+
+% TABLING cache entry for func only requires 2 cases, ongoing and done with 1 solution
+
+
+
+% \subsection{Future work}
+
+% \paragraph{Problem of charging local clauses with weaker conditions}
+% Overlapping check che rompe:
+
+% \begin{elpicode}
+%   pi x\ (pi Y\ f x Y) => (pi y => f x y) => Bo
+% \end{elpicode}
+
+% Dove i modi per f sono input, input.
+
+% In questo esempio se Bo = ``f x y'' allora ci sono due soluzioni,
+% in quanto entrambe le regole caricate colla freccia si applicherebbero
