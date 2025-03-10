@@ -1,31 +1,31 @@
 \section{Introduction}
 
 We are interested in the static analsysis of Elpi programs, in particular
-in checking their determinacy. Elpi is a higher oreder logic programming
+in checking their determinacy. Elpi is a higher-order logic programming
 language, a dialect of $\lambda$Prolog~\cite{1991miller-pf,Miller_Nadathur_2012} well suited to manipulate
 incomplete syntax trees with binders~\cite{dunchev15lpar,TASSI_2019}.
 Elpi finds applications as an extension
 language for The Rocq\footnote{formerly known as Coq} Interactive prover, where
 Elpi has been used for program and proof synthesis~\cite{tassi2018,tassi2019,tassi2023,cohen_et_al:LIPIcs.FSCD.2020.34} and more recently
-as the target language for type class resolution~\cite{fissore2023,fissore2024}.
+as the target language for type-class resolution~\cite{fissore2023,fissore2024}.
 Type-class resolution is typically used to implement overloading~\cite{wadler1996-hs,sozeau2008-tc}
 where the solution to a query provides the meaning of the overloaded symbol.
-In this context it is of paramount importance that this solution is unique,
+In this context it is of paramount\todo{dipende, no?} importance that this solution is unique,
 i.e. non ambiguous. A static check for this property is of particular
 interest in the context of the platform of Rocq libraries: code developed
 by different teams is combined together, reused in order to lower the cost
 of mechanization.
 
-As of typday Elpi comes with a quite standard type checker~\cite{1992nadathur} but
+As of today Elpi comes with a quite standard type-checker~\cite{1992nadathur} but
 features no determinacy analisys. The literature provides
 many works on the subject~\cite{robaDescrittaDopoNeiRelatedWorks} but none of these
-works can be applied to Elpi due to its higher order nature, inherited from
+works can be applied to Elpi due to its higher-order nature, inherited from
 $\lambda$Prolog, and its nonstandard notion of input.
 
 \subsection{Motivating examples}\label{sec:examples}
 
 A first motivating example is the \elpiIn{map} predicate, widely used in
-all Elpi applications. The predicaet signature reads: 
+all Elpi applications. The predicate signature reads: 
 given a (directed) predicate from \elpiIn{A} to \elpiIn{B}, \elpiIn{map}
 relates a list of \elpiIn{A} with a list of \elpiIn{B}. Elpi
 follows the $\lambda$Prolog convention ($\lambda$-calculus actually) of
@@ -42,7 +42,7 @@ We want the programmer be able to ascribe the more precise signature
 \elpiIn{func map (func A -> B), list A -> list B} and have Elpi check
 the implementation validates it. The code above indeed
 happens to compute a function of the first two arguments, that we
-consider inputs, if and only if the higher order predicate \elpiIn{F} is
+consider inputs, if and only if the higher-order predicate \elpiIn{F} is
 itself a function (we will more be precise on what function means in~\ref{sec:thm}).
 
 We need this ascription to be added to an existing code base where
@@ -50,7 +50,7 @@ We need this ascription to be added to an existing code base where
 argument, say \elpiIn{P}.
 In this case the call to \elpiIn{map P L R} has to be accepted but not
 considered to be functional for the analisys of the surrounding code.
-In the examples below we give three (alternatives) one-liner
+In the examples below we give three (alternatives) one-line
 implementations for a \elpiIn{meal} predicate building a list of dishes
 to satisfy the guests.
 
@@ -80,7 +80,7 @@ discards the clauses following the current one.
 Luckily the higher-order nature of Elpi and the language of signatures we
 introduce is expressive enough to encapsulate the desired ``tail cut''\todo{sotto hard-cut} behavior
 into the \elpiIn{once} predicate. Its signature
-states that the higher order argument \elpiIn{P} can be any predicate, not
+states that the higher-order argument \elpiIn{P} can be any predicate, not
 necessarily a function, but still \elpiIn{once P} acts as a function.
 
 % func once (pred) -> .
@@ -133,12 +133,12 @@ are considered functional only if signature is respected.
 
 % OPTIONAL
 
-The real domain where Elpi shines is the manipulation of higher order data
-via the so called $\lambda$-tree syntax~\cite{Miller2018MechanizedMR} (also known as HOAS~\cite{1988pfenning}).
+The real domain where Elpi shines is the manipulation of higher-order data
+via the so-called $\lambda$-tree syntax~\cite{Miller2018MechanizedMR} (also known as HOAS~\cite{1988pfenning}).
 Such data is pervasive in interactive provers based on type theory
 such as Rocq. The paradigmatic example is reported below where \elpiIn{tm} is
 the data type for $\lambda$-terms. For example \elpiIn{lam (x\ lam (y\ x))}
-represents the first projection, where \elpiIn{x\_} is the built in
+represents the first projection, where \elpiIn{x\_} is the built for
 $\lambda$-abstraction of $\lambda$Prolog.
 
 \begin{elpicode}
@@ -161,23 +161,23 @@ This \elpiIn{x} stands for the bound variable in the function body
 rule crafts a (dynamic) clause for copying \elpiIn{x} to itself and adds it to
 the program via the \elpiIn{=>} operator before recursing.
 The \elpiIn{whd} predicate computes the weak head normal form of a term by
-contracting the application of a lambda abstraction to an argument.
+contracting the application of a $\lambda$-abstraction to an argument.
 The argument is put in place of the abstracted variable by running \elpiIn{copy}
 with the addition of a special clause for the variable in question.
 
 The two predicates are functions even if they dynamically add copy rules
-at run time: Since \elpiIn{x} is fresh it does not unify
+at runtime: Since \elpiIn{x} is fresh it does not unify
 with \elpiIn{app}, \elpiIn{lam} or any previously generated fresh \elpiIn{x}.
 Our static analysis accepts this programming pattern.
 
 \paragraph{Contributions and paper structure}
 
-Our contributions are a det check that:
+Our contributions is a determinacy checker that:
 \begin{itemize}
-\item covers covers higher order logic programming constructs such as first class predicates and clauses
+\item covers higher-order logic programming constructs such as first-class predicates and clauses
 \item can be applied to pre-existing code bases, i.e. tracks miscalled functions rather than aborting
 \end{itemize}
-Last but not least we provide an operational semantics for higher order logic programs
+Last but not least we provide an operational semantics for higher-order logic programs
 with cut and match i.e Elpi.
 
 % The paper gives a big step semantics and static functional-analsys for
