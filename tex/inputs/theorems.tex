@@ -1,13 +1,19 @@
 
 \section{Theorems}\label{sec:thm}
 
-% Before talking about determinacy and the impact that hard-cut has on it. We
-% prefer to spend some few words about the definition of modes, because
-As explained in \cite{1989Warren,1996Somogy} modes are the basis for determinim.
-Predicate arguments are classified as input or output and mode analysis
-ensures that at call time inputs are ground and that the outputs are eventually
-bound to ground terms. In turn a ground input is necessary
-to justify the following check.
+\begin{definition}[Functionality (\isfunc)]\label{def:is-func}
+  Given a program \prog and a term $t$,
+  \isdet\ is defined as follows:
+  $$\forall a\ \subst, \isFuncCmd{t}$$
+\end{definition}
+\begin{definition}[(Semi-)determinacy (\isdet)]\label{def:is-det}
+  Given a program \prog and a term $t$,
+  \isdet\ is defined as follows:
+  $$\forall a\ \subst, \isDetCmd{t}$$
+\end{definition}
+
+The first static check of all determinacy analysis is about the mutual
+exclusion between the heads of rules
 
 \begin{definition}[Unifiable (\unifiable) and not unifyable (\nUnify)]
 We say that $\unifiable\ t_1\ t_2$ iff
@@ -17,7 +23,7 @@ We say that $\nUnify\ t_1\ t_2$ iff
   \unify is complete, $\neg \exists \subst\ s.t. \subst t_1 = \subst t_2$).
 \end{definition}
 
-Mode checking is an essential ingredient for ensuring determinacy.
+
 
 % Before explaining the interaction between these two, we need to take
 % some time to talk about mutual clauses exclusiveness.
@@ -38,10 +44,10 @@ Mode checking is an essential ingredient for ensuring determinacy.
 %   \label{def:mut-excl}
 % \end{definition}
 
-\Cref{th:det} ensures that at most one clause can be applied to any given
-predicate, provided that the input terms are ground. However, since we no longer
-perform mode-checking and our inputs are not necessarily ground, the theorem is
-no longer valid.
+% \Cref{th:det} ensures that at most one clause can be applied to any given
+% predicate, provided that the input terms are ground. However, since we no longer
+% perform mode-checking and our inputs are not necessarily ground, the theorem is
+% no longer valid.
 %
 % Thanks to mode checking, any call is validated only if its terms in input
 % positions are ground. Groundness % (modulo \cut, see \cref{def:mut-excl+cut})
@@ -69,51 +75,114 @@ no longer valid.
 % In our first-order \elpi, we do not perform any static mode analysis. Instead,
 % we rely on the \match operation, which is dynamically applied to input arguments at runtime.
 
-\begin{lemma}[Substitution union] Given two substitutions $\subst_1$ and $\subst_2$
-  such that $\dom\ \subst_1 \cap \dom\ \subst_2  = \varnothing$, then
-  $\subst_1\ t_1 = \subst_2\ t_2$ implies that $(\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$.
-  \end{lemma}
+% \begin{lemma}[Substitution union] Given two substitutions $\subst_1$ and $\subst_2$
+%   such that $\dom\ \subst_1 \cap \dom\ \subst_2  = \varnothing$, then
+%   $\subst_1\ t_1 = \subst_2\ t_2$ implies that $(\subst_1 \cup \subst_2)\ t_1 = (\subst_1 \cup \subst_2)\ t_2$.
+%   \end{lemma}
   
   
-We start therefore to state a new version of
-\cref{th:mut-excl-head,th:mut-excl}
-%BBB
+% We start therefore to state a new version of
+% \cref{th:mut-excl-head,th:mut-excl}
+% %BBB
+
+\begin{definition}[Mutually-exclusive heads (\mutExclHeads) at $d$]
+  \label{def:mut-excl-head}
+  % \begin{coqcode}
+  %   Definition ~\customlabel{mutexcl}{\texttt{mutual\_exclusive}}\prog \pred\!\!~:
+  %     ~$\forall\ i1\ o1\ bo1\ i2\ o2\ bo2$~ (H1: ~\clauseCmd{p}{i1\ o1}{bo1}~ \in ~$\prog\ p$~) (H2: ~\clauseCmd{p}{i2\ o2}{bo2}~ \in ~$\prog\ p$~),
+  %         not (exists ~\subst\!\!~, ~\unifyCmd{i1}{i2}{\EmptySubst}{\subst}~)
+  % \end{coqcode}
+  Given a context \ctx\ and two clauses $c_1$ and $c_2$ with head,
+  respectively, $\pred\ t_1 \ldots t_n$ and $\pred\ u_1 \ldots u_n$.
+  Let $\ctx\ \pred = \dtype{\relI}{i_1 \ldots i_k}{\_}$, then we say that
+  $\mutExclHeads\ c_1\ c_2\ d$ holds iff $d \leq k\ \land\ \nUnify\ t_d\ u_d$.
+\end{definition}
+
+As explained in \cite{1989Warren,1996Somogy} modes are the basis for determinim.
+In particular the groudness of input arguments at call time is essential
+to statically check the mutual exclusiveness of two rules: if two
+input arguments do not unify, there is no ground terms that can unify
+with both.
+Since Elpi performs matching the groundness condition is not required: if
+the goal is a variable it will not match any non variable input argument,
+and two variable input arguments are not \nUnify.
 
 \begin{lemma}[Mutually-exclusive heads with \match property]
-  Given a context \ctx and two clauses $c_1 = \clauseCmd{\predVar}{\vec{t}}{b_1}$ and $c_2 = \clauseCmd{\predVar}{\vec{u}}{b_2}$ then
-  let $\vec{t}_i$ and $\vec{u}_i$ be the inputs arguments of $\vec{t}$ and $\vec u$ respectively.
+  Given a context \ctx and two clauses $c_1$ and $c_2$ with heads,
+  respectively,  $\predVar\ \vec{t}$ and $\predVar\ \vec{u}$ then
   % forall vector of \textit{ground} terms $\vec{v}$,
-  $$\mutExclHeads\ \ctx\ c_1\ c_2 \to \forall \subst_1\ \subst_2, \lnot (\exists \vec{v},
-    \matchCmd[1]{v}{t_i}{\EmptySubst}{\subst_1} \land
-    \matchCmd[1]{v}{u_i}{\EmptySubst}{\subst_2})$$
+  $$\mutExclHeads\ \ctx\ c_1\ c_2\ d \to
+    \lnot (\exists \vec{v}\ \subst_1\ \subst_2\ s.t.\ 
+    \matchCmd{v}{t_d}{\subst}{\subst_1} \land
+    \matchCmd{v}{u_d}{\subst}{\subst_2})$$
   \vspace{-2em}
   \label{th:mut-excl-head1}
 \end{lemma}
 
-\begin{proof}
-  By contradiction, let $t$ be a term matching with both $h_1$ and $h_2$. By
-  \cref{th:match-right}, we have that $\subst_1 h_1 = \subst_2 h_2$, this
-  implies that $(\subst_1 \cup \subst_2) h_1 = (\subst_1 \cup \subst_2) h_2$\todo{prove this}. By
-  the hypothesis $\mutExclHeads\ \ctx\ c_1\ c_2$, and by \cref{def:mut-excl}, it does
-  not exists a substitution allowing to unify the head of the two clause. This
-  is a contradiction.
-\end{proof}
+% \begin{proof}
+%   By contradiction, let $t$ be a term matching with both $h_1$ and $h_2$. By
+%   \cref{th:match-right}, we have that $\subst_1 h_1 = \subst_2 h_2$, this
+%   implies that $(\subst_1 \cup \subst_2) h_1 = (\subst_1 \cup \subst_2) h_2$\todo{prove this}. By
+%   the hypothesis $\mutExclHeads\ \ctx\ c_1\ c_2$, and by \cref{def:mut-excl}, it does
+%   not exists a substitution allowing to unify the head of the two clause. This
+%   is a contradiction.
+% \end{proof}
 
-\begin{lemma}[Mutually-exclusion with \match property]
-  Given a context \ctx\ and a program \prog, if $\mutExcl\ \ctx\ \prog$ then for
-  any call $\pred\ \vec{t}$, it exists at most one clause that can be
-  successfully applied on $\pred\ \vec{t}$. 
-  \label{th:mut-excl1}
-\end{lemma}
+% \begin{theorem}[Mutually-exclusive clauses property]
+%   Given any $\ctx$ and any predicate $\prog$ that holds two clauses $c_1$ and
+%   $c_2$ for $\pred$ such that $\mutExclHeads\ \ctx\ c_1\ c_2\ d$,
+%   then % any $\wellModed\ (\pred\ \vec{t})$ is such that
+%   $$
+%     \mathcal{F}(\prog, \pred\ \vec{t}, \subst, \alts) = [\alts[_1], a_2]
+%     \to
+%     \runCmdQ{a_1}{\EmptyList}{\subst}{a'} \to
+%     \lnot \exists \subst' a'', \runCmdQ{a_2}{\EmptyList}{\subst[']}{a''}
+% $$
+    
+%   \label{th:mut-excl-head}
+% \end{theorem}
+% % \begin{lemma}[Mutually-exclusion with \match property]
+% %   Given a context \ctx\ and a program \prog, if $\mutExcl\ \ctx\ \prog$ then for
+% %   any call $\pred\ \vec{t}$, it exists at most one clause that can be
+% %   successfully applied on $\pred\ \vec{t}$. 
+% %   \label{th:mut-excl1}
+% % \end{lemma}
 
-\begin{proof}
-  By \cref{th:mut-excl-head1,th:mut-excl+cut}
-\end{proof}
+% \begin{proof}
+%   By \cref{th:mut-excl-head1,th:mut-excl+cut}
+% \end{proof}
 
-In order to address this problem, we need to ensure that the dynamic insertion
-of the new clause $H$ in the program is such that if $H$ successfully applies on a goal
-then all the other clause fails. To ensure this propery to following condition
-should be granted.
+We want to allow for some overlapping when one rule cuts the other
+
+\begin{definition}[Mutual-exclusion with \cut\ (\mutExclCut)]
+  Given two clauses
+  $c_1$ and $c_2$ such that $c_1$ is defined before $c_2$,
+  the body of $c_1$ contains a \cut.
+  \label{def:mut-excl+cut}
+\end{definition}
+
+\begin{definition}[Deterministic term application (\detAtom)]
+  Given a context \ctx\, the term $\pred\ \vec{t}$ is a deterministic
+  call if $\ctx\ \pred = \dtype{\detI}{\_}{\_}$
+\end{definition}
+
+We want some calls to follow the cut
+
+\begin{definition}[Deterministic premises (\detPrem)]
+  Given a context \ctx\ and a program \prog, forall predicate \pred, such that
+  $\detAtom\ (\predVar\ \vec{u})$ and forall clause
+  $(\clauseCmd{\pred}{\vec{t}}{b_1\dots b_n}) \in \prog\ \pred$,
+  $$(\exists j, b_j = \cut \land \forall k, k > j \to \detAtom\ b_k) \lor (\forall j, \detAtom\ b_j)$$
+  \vspace{-2em}
+  \label{def:det-prem}
+\end{definition}
+
+And we want to allow pi impl
+
+% In order to address this problem, we need to ensure that the dynamic insertion
+% of the new clause $H$ in the program is such that if $H$ successfully applies on a goal
+% then all the other clause fails. To ensure this propery to following condition
+% should be granted.
 
 \begin{definition}[Local clauses: mutually-exclusion + det. premises (\locExcl)]
   Given a clause $c$ and a predicate \pred, for any subterm $s$ of $c$, then
@@ -136,6 +205,16 @@ should be granted.
 Thanks to this we can define the mutual-exlusion definition in the higher-order
 setting.
 
+\begin{definition}[Mutual-exclusion (\mutExcl)]
+  Given a context \ctx and a program \prog, forall predicate \pred, such
+  that $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ and
+  for any two pair of clauses $c_1$ and $c_2$ in \prog\ \pred, then
+  \vspace{-0.5em}
+  $$\mutExclHeads\ \ctx\ c_1\ c_2 \lor \mutExclCut\ c_1\ c_2$$
+  \vspace{-2em}
+  \label{def:mut-excl}
+\end{definition}
+
 \begin{definition}[Mutual-exclusion in HOAS (\mutExclHO)]
   Given a program \prog, forall deterministic predicate \pred, mutual exclusion is defined as
   follows:
@@ -146,85 +225,85 @@ setting.
 \end{definition}
 
 
-\begin{theorem}[Determinacy checking in HOAS]
+\begin{theorem}[Determinacy checking]
   Given a program \prog and a predicate \pred
   \begin{align*}
-    &\detCheckHO\ \prog\ \pred \to \forall i\ o,\runCmd{[\goalCmd{\prog}{\callCmd{p}{i\ o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to a = \EmptyList    
+    &\detCheckHO\ \prog\ \pred \to \isdet\ \prog\ (\pred\ \vec{t})
   \end{align*}
   \vspace{-2em}
   \label{th:det2}
 \end{theorem}
 
-\begin{proof}
-  The proof is similar to \cref{th:det1}. We only need to prove that the
-  property holds in a program where some rules for  \pred\ may be loaded locally
-  during the exectution of a subgoal. By definition of \ref{rule:piimpl}, any new
-  added local clause $c$ for \pred has the highest priority, therefore, to
-  ensure that \pred remains deterministic we need to consider two cases: 1) $c$
-  successfully applies on the current goal and 2) $c$ does not successfully
-  apply on the goal. The latter case is easy to prove since it is the induction
-  hypothesis. On the other hand, if $c$ successfully applies then, by the
-  hypothesis, we know that a \cut\ is in the body of $c$, this means that all
-  choice points are cut away, moreover, since, by the same hypothesis, all terms
-  after this cut are deterministic, it means that at most on solution is
-  returned for the call to \pred.
-\end{proof}
+% \begin{proof}
+%   The proof is similar to \cref{th:det1}. We only need to prove that the
+%   property holds in a program where some rules for  \pred\ may be loaded locally
+%   during the exectution of a subgoal. By definition of \ref{rule:piimpl}, any new
+%   added local clause $c$ for \pred has the highest priority, therefore, to
+%   ensure that \pred remains deterministic we need to consider two cases: 1) $c$
+%   successfully applies on the current goal and 2) $c$ does not successfully
+%   apply on the goal. The latter case is easy to prove since it is the induction
+%   hypothesis. On the other hand, if $c$ successfully applies then, by the
+%   hypothesis, we know that a \cut\ is in the body of $c$, this means that all
+%   choice points are cut away, moreover, since, by the same hypothesis, all terms
+%   after this cut are deterministic, it means that at most on solution is
+%   returned for the call to \pred.
+% \end{proof}
 
 
-\begin{theorem}[Determinacy checking with \match property]
-  Given a context \ctx\ and a program \prog, forall deterministic predicate \pred in \ctx,
-  we have
-  $$\hyperref[def:det-check]{\detCheck}\ \ctx\ \prog \to \forall \vec{t}, \hyperref[def:is-det]{\isdet}\ \prog\ (\pred\ \vec{t})$$
-  \vspace{-2em}
-  \label{th:det1}
-\end{theorem}
+% \begin{theorem}[Determinacy checking with \match property]
+%   Given a context \ctx\ and a program \prog, forall deterministic predicate \pred in \ctx,
+%   we have
+%   $$\hyperref[def:det-check]{\detCheck}\ \ctx\ \prog \to \forall \vec{t}, \hyperref[def:is-det]{\isdet}\ \prog\ (\pred\ \vec{t})$$
+%   \vspace{-2em}
+%   \label{th:det1}
+% \end{theorem}
 
-\begin{proof}
-  We proceed by induction on the derivations in
-  \cref{fig:basic-interp,fig:interp-match}. The structure of the proof closely
-  follows the one in \cref{th:det}, with a few notable differences. In
-  particular, this proof does not rely on the \wellModed\ hypothesis for the
-  program, nor does it assume the groundness of input arguments in the call to
-  \pred. The crucial insight lies in the use of the \match\ procedure, combined
-  with the result from \cref{th:mut-excl-head1}, which strengthens the proof.
-  %The
-  % most significant case to consider is \ref{rule:call}. Let $\vec{c}$ denote the
-  % result of $\prog\ \pred$. The function $\mathcal{F}$ produces a list of
-  % alternatives $\alt$, where each $a_i \in \alt$ consists of the unification
-  % between each term in $\vec{t}$ and the corresponding terms in the head of $c_i$,
-  % followed by the body of $c_i$.
-  % 
-  % Let $\alt = a_1, \dots, a_s, \dots, a_n$, where $a_s$ is the first alternative that
-  % can be successfully applied to the initial goal. We distinguish between two
-  % cases:  
-  % 1) $a_s$ contains a \cut.
-  % 2) $a_s$ does not contain a \cut.
-  % 
-  % In the first case, by hypothesis $\detPrem\ \ctx\ \prog$, the alternative
-  % $a_s$ has the form $b_1, \dots, b_x, \dots, b_m$, where $b_x = \cut$, and for
-  % all $b_j \in b_{x+1},\dots,b_m$, $b_j$ is a call to a deterministic predicate.
-  % The presence of the \cut\ discards the alternatives $a_{s+1},\dots,a_n$ as
-  % well as all choice points generated by the execution of the goals
-  % $b_1,\dots,b_{x-1}$. By the induction hypothesis, the execution of the goals
-  % $b_{x+1},\dots,b_m$ produces alternatives with no solution. Consequently, the
-  % goal is proved in this case.
-  % 
-  % In the second case, where $a_s$ does not contain a \cut, the hypothesis
-  % guarantees that all goals in $c_i$ are calls to deterministic predicates. By
-  % the induction hypothesis, the execution of these goals produces alternatives
-  % $\alt[']$ with no solution. The final list of alternatives returned by the
-  % call to \run is the concatenation of $\alt[']$ and $a_{s+1},\dots,a_n$. We need
-  % to prove that:
-  % $$\forall a_i \in \alt['] @ (a_{s+1},\dots,a_n), \lnot (\exists \alt\
-  % \subst['], \runCmd{a_i}{\EmptyList}{\EmptySubst}{\alt}{\subst[']})$$
-  % 
-  % 
-  % This holds for the alternatives in $\alt[']$. For any alternative $a_k \in
-  % (a_{s+1},\dots,a_n)$, the mutual exclusion hypothesis \mutExcl\ \ctx\ \prog\
-  % ensures that no alternative derived from clauses of \pred\ declared
-  % chronologically after $c_s$ can unify with the goal $\pred\ \vec{t}$, since
-  % every term in input position in $\vec{t}$ is ground. This completes the proof.
-\end{proof}
+% \begin{proof}
+%   We proceed by induction on the derivations in
+%   \cref{fig:basic-interp,fig:interp-match}. The structure of the proof closely
+%   follows the one in \cref{th:det}, with a few notable differences. In
+%   particular, this proof does not rely on the \wellModed\ hypothesis for the
+%   program, nor does it assume the groundness of input arguments in the call to
+%   \pred. The crucial insight lies in the use of the \match\ procedure, combined
+%   with the result from \cref{th:mut-excl-head1}, which strengthens the proof.
+%   %The
+%   % most significant case to consider is \ref{rule:call}. Let $\vec{c}$ denote the
+%   % result of $\prog\ \pred$. The function $\mathcal{F}$ produces a list of
+%   % alternatives $\alt$, where each $a_i \in \alt$ consists of the unification
+%   % between each term in $\vec{t}$ and the corresponding terms in the head of $c_i$,
+%   % followed by the body of $c_i$.
+%   % 
+%   % Let $\alt = a_1, \dots, a_s, \dots, a_n$, where $a_s$ is the first alternative that
+%   % can be successfully applied to the initial goal. We distinguish between two
+%   % cases:  
+%   % 1) $a_s$ contains a \cut.
+%   % 2) $a_s$ does not contain a \cut.
+%   % 
+%   % In the first case, by hypothesis $\detPrem\ \ctx\ \prog$, the alternative
+%   % $a_s$ has the form $b_1, \dots, b_x, \dots, b_m$, where $b_x = \cut$, and for
+%   % all $b_j \in b_{x+1},\dots,b_m$, $b_j$ is a call to a deterministic predicate.
+%   % The presence of the \cut\ discards the alternatives $a_{s+1},\dots,a_n$ as
+%   % well as all choice points generated by the execution of the goals
+%   % $b_1,\dots,b_{x-1}$. By the induction hypothesis, the execution of the goals
+%   % $b_{x+1},\dots,b_m$ produces alternatives with no solution. Consequently, the
+%   % goal is proved in this case.
+%   % 
+%   % In the second case, where $a_s$ does not contain a \cut, the hypothesis
+%   % guarantees that all goals in $c_i$ are calls to deterministic predicates. By
+%   % the induction hypothesis, the execution of these goals produces alternatives
+%   % $\alt[']$ with no solution. The final list of alternatives returned by the
+%   % call to \run is the concatenation of $\alt[']$ and $a_{s+1},\dots,a_n$. We need
+%   % to prove that:
+%   % $$\forall a_i \in \alt['] @ (a_{s+1},\dots,a_n), \lnot (\exists \alt\
+%   % \subst['], \runCmd{a_i}{\EmptyList}{\EmptySubst}{\alt}{\subst[']})$$
+%   % 
+%   % 
+%   % This holds for the alternatives in $\alt[']$. For any alternative $a_k \in
+%   % (a_{s+1},\dots,a_n)$, the mutual exclusion hypothesis \mutExcl\ \ctx\ \prog\
+%   % ensures that no alternative derived from clauses of \pred\ declared
+%   % chronologically after $c_s$ can unify with the goal $\pred\ \vec{t}$, since
+%   % every term in input position in $\vec{t}$ is ground. This completes the proof.
+% \end{proof}
 
 % The main difference between this last definition and \cref{def:mut-excl} is the
 % absence of the \coqIn{HG} hypothesis and the usage of the \match procedure
