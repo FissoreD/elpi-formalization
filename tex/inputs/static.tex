@@ -112,22 +112,24 @@
 % \subsection{Comparing predicate signatures}
 
 It is one of our objective that the determinacy checker should accept
-predicates that are \textit{wrongly} called.
+predicates that are \textit{wrongly} called so that we can, incrementally,
+make the predicate signatures more precise and also avoid code duplication\footnote{require multiple copies of the same code just because they differ in signature}.
 
-FINQUI
 
-For
-example, \elpiIn{do (f 1 X)} should be accepted as a call, however, since the\todo{cambiare f con queen}
-argument of \elpiIn{do} has not the expected determinacy, we loose the guarantee
-that the call behaves deterministically. Similarly, in the query \elpiIn{idF (f 1 X)
-  R}, \elpiIn{idF} is \textit{wrongly} called and therefore we have no guarantee that \elpiIn{R} is
-deterministic and that the whole call behaves deterministically. The choice to
-accepts wrong calls allows to have \textit{code reusability}.
+% FINQUI
 
-On the other hand, the signature of \elpiIn{make-det} should reject
-\elpiIn{make-det A (once A) :- A}. Since we cannot guarantee that the whole rule
-is a function: \elpiIn{A} could be a relation and calling it in the body of a
-predicate expected to behave deterministically, may create choice points.
+% For
+% example, \elpiIn{do (f 1 X)} should be accepted as a call, however, since the\todo{cambiare f con queen}
+% argument of \elpiIn{do} has not the expected determinacy, we loose the guarantee
+% that the call behaves deterministically. Similarly, in the query \elpiIn{idF (f 1 X)
+%   R}, \elpiIn{idF} is \textit{wrongly} called and therefore we have no guarantee that \elpiIn{R} is
+% deterministic and that the whole call behaves deterministically. The choice to
+% accepts wrong calls allows to have \textit{code reusability}.
+
+% On the other hand, the signature of \elpiIn{make-det} should reject
+% \elpiIn{make-det A (once A) :- A}. Since we cannot guarantee that the whole rule
+% is a function: \elpiIn{A} could be a relation and calling it in the body of a
+% predicate expected to behave deterministically, may create choice points.
 
 % To address all of these issues we implement a static checker which labels variables
 % with their determinacy type (dtype). Labels are simpler instantces of \cref{eq:ty}:
@@ -147,11 +149,12 @@ predicate expected to behave deterministically, may create choice points.
 
 % The problem of this first algorithm of determinacy check is that it does not
 % take into account 
-A natural property that exists between functions and relations is that a
-function is a particular relation such that all of the members in its domain
-points to at most a unique value in its codomain. This means that a fuction can
-be always passed in place of a relation. We define below the partial ordering
-relation between two determinacies.
+% A natural property that exists between functions and relations is that a
+% function is a particular relation such that all of the members in its domain
+% points to at most a unique value in its codomain. This means that a fuction can
+% be always passed in place of a relation. 
+
+We define below the partial ordering test between two predicate signature $f_1$ and $f_2$.
 \begin{equation}
   f_1 \mySub f_2 =
   \begin{cases}
@@ -160,8 +163,11 @@ relation between two determinacies.
     % (\forall i, a'_i \mySub c_i) \land (\forall j, b_j \mySub c_{|a|+j}) & \text{else if } f_1 = \detI\ a\ b \land f_2 = \relI\ c      \\
     % \forall i, a_i \mySub b_i                                            & \text{else if } f_1 = \relI\ a\ \land f_2 = \relI\ b        \\
     % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{else if } f_1 = [\detI\mid \relI]\ a\ b \land f_2 = [\detI\mid \relI]\ c\ d \\
-    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \dtype{\func}{a}{b} \land f_2 = \dtype{\func}{c}{d}     \\
-    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \dtype{\detI}{a}{b} \land f_2 = \dtype{\relI}{c}{d}     \\
+    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) &
+    \!\!\!
+    \begin{array}{l} \text{if } f_1 = \dtype{\func}{a}{b} \land f_2 = \dtype{\func}{c}{d} \ \lor    \\
+     \ \ \  f_1 = \dtype{\detI}{a}{b} \land f_2 = \dtype{\relI}{c}{d} 
+    \end{array}    \\
     % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
     \top                                                          & \text{if } f_1 = \expI \land f_2 = \expI
   \end{cases}
@@ -175,39 +181,75 @@ relation between two determinacies.
 %   end.
 % \end{coqcode}
 
+The \mySub extend the intuitive inclusion of mathematical functions
+into relations to the recursive nature of predicate signatures, and rejects the
+converse inclusion. The definition assumes type checking as in~\cite{1992nadathur}:
+we only compare signatures that agree in their arity and number of inputs (hence outputs)
+and we ignore the case in which datatypes are compared to predicate signatures.
 
-The \mySub\ relation is intentionally incomplete, as we assume that the program
-has undergone type-checking before any determinacy verification. This guarantees
-that no comparison between, for instance, expressions and predicates can
-occur—such a comparison would result in a fatal type error. Moreover, when
-comparing predicates $p_1$ and $p_2$, we assume that their input lists have the
-same length, as do their output lists: predicates with differing input or output
-list lengths are considered incomparable.
+In the spirit of subtyping the input arguments of predicate signature
+are compared in a contravariant way.
+The intuition is that the meaning of a 
+predicate signature
 
-The idea of \mySub\ is that a relation, by definition, is not a function, the
-other combinations of functions and relations works if some conditions holds on
-their inputs and outputs. In particular if we have $t_1 \mySub t_2$ then the
-outputs of $t_1$ should be \mySub\ than the outputs $t_2$ and
-the converse property should hold for the inputs of two terms, that is, if
-we have $t_1 \mySub t_2$ then the outputs of $t_2$ should be \mySub\ than the
-outputs $t_1$.
-The idea is similar to a subtyping relation where inputs should be
-contravariant and outputs covariant.
+\newcommand{\sem}[1]{\ensuremath{[\![#1]\!]}}
 
-For example, let's consider the signatures of \elpiIn{make-det}
-and \elpiIn{idF}. We intuitively remark that $\forall p_1\ p_2\ p_3,
-  \texttt{make-det}\ p_1\ p_2 \to \texttt{idF}\ p_1\ p_3 \to p_2 \mySub p_3$.
-Therefore, we can safely claim that $\detI\ [\relI] \funsep [\detI] \mySub
-  \detI\ [\detI] \funsep [\detI]$. In a way, a predicate going from relations to
-functions is less expressive than a predicate from functions to functions,
-especially because the latter predicate can recieve relations as inputs.
+\begin{definition}[Meaning of a signature (\sem{\cdot})]
+$$
+\begin{array}{rl}
+\sem{\dtype{\func_1}{\func_2}{\func_3}}\ \pred & =
+  \forall t\ u, \sem{\func_2}\ t \Rightarrow \sem{\func_1}\ (\pred\ t\ u) \land \sem{\func_3}\ u\\
+\sem{\detI}\ \pred & = \isdet\ \pred \\
+\sem{\expI}\ \pred & = \top 
+\end{array}
+$$
+\end{definition}
+If the preconditions of a signature are satisfied then the call is
+functional and the post conditions on the out hold.
+The order relation \mySub is such that $f_1 \mySub f_2 = \sem{f_1} \Rightarrow \sem{f_2}$,
+hence the contravariance, the post of 11 are stronger than the ones of f2, while
+the pre must be in the converse relation.
+\todo{is odet is defined later}
 
-\begin{lemma}[\mySub\ is a partial order]
-  Ha sesnso farlo?
-\end{lemma}
+% The \mySub\ relation is intentionally incomplete, as we assume that the program
+% has undergone type-checking before any determinacy verification. This guarantees
+% that no comparison between, for instance, expressions and predicates can
+% occur—such a comparison would result in a fatal type error. Moreover, when
+% comparing predicates $p_1$ and $p_2$, we assume that their input lists have the
+% same length, as do their output lists: predicates with differing input or output
+% list lengths are considered incomparable.
 
-Two further relations can be defined to find the least common minimun (resp.
-maximum) between two determinacies.
+% The idea of \mySub\ is that a relation, by definition, is not a function, the
+% other combinations of functions and relations works if some conditions holds on
+% their inputs and outputs. In particular if we have $t_1 \mySub t_2$ then the
+% outputs of $t_1$ should be \mySub\ than the outputs $t_2$ and
+% the converse property should hold for the inputs of two terms, that is, if
+% we have $t_1 \mySub t_2$ then the outputs of $t_2$ should be \mySub\ than the
+% outputs $t_1$.
+% The idea is similar to a subtyping relation where inputs should be
+% contravariant and outputs covariant.
+
+% For example, let's consider the signatures of \elpiIn{make-det}
+% and \elpiIn{idF}. We intuitively remark that $\forall p_1\ p_2\ p_3,
+%   \texttt{make-det}\ p_1\ p_2 \to \texttt{idF}\ p_1\ p_3 \to p_2 \mySub p_3$.
+% Therefore, we can safely claim that $\detI\ [\relI] \funsep [\detI] \mySub
+%   \detI\ [\detI] \funsep [\detI]$. In a way, a predicate going from relations to
+% functions is less expressive than a predicate from functions to functions,
+% especially because the latter predicate can recieve relations as inputs.
+
+% \begin{lemma}[\mySub\ is a partial order]
+%   Ha sesnso farlo?
+% \end{lemma}
+
+\section{Determinacy checking algorithm}
+
+The algorithm is a dataflow analsysis algorith a bit like mode checking.
+It stores in \ctx the predicate signature of each variable: it uses it to
+check if it satisfies the precondition of a call and possibly refines if
+the signature if the post condition of a call holds.
+
+These updates use the following two operators
+
 %
 \begin{equation}
   \minT\ f_1 f_2 =
@@ -230,6 +272,14 @@ maximum) between two determinacies.
   \label{eq:max}
 \end{equation}
 
+\newcommand{\maximize}{\texttt{maximize}\xspace}
+\newcommand{\minimize}{\texttt{minimize}\xspace}
+
+% Below we define the functions \maximize and \minimize.
+
+We assume all variables appear in \ctx with a signature upfront, generated from
+the type checker as follows: TODO explain \maximize and \minimize.
+
 % $$
 %   \minT\ f_1\ f_2 = \begin{cases}
 %     \maxT\ a'\ a \myTo \minT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
@@ -245,23 +295,21 @@ maximum) between two determinacies.
 %   \end{cases}
 % $$
 
-The main usage of the \minT\ and \maxT\ comes with the fact that unification is
-possibile between variable with different determinacy annotation. For example,
-let \elpiIn{get-det} and \elpiIn{get-rel} be two relations returning
-respectively a function and a relation (both with zero arguments). In a query like \elpiIn{get-det X,
-  det-rel Y, X = Y} we have three goals to solve, the first allows to label
-\elpiIn{X} with the tag \detI, the second allows to label \elpiIn{Y} with
-the tag \relI. The third goal is interesting since we are unifying two\todo{not true if output are flex}
-predicates with different determinacy labels. Now, the only way that this unificaton
-succeeds at runtime is that \elpiIn{Y} is a function.
-Said in another way, a unification may change the labels of the two terms being
-unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=$
-\minT\ $($\detlab\ \elpiIn{X}$)$ $($\detlab\ \elpiIn{Y}$)$.
+% The main usage of the \minT\ and \maxT\ comes with the fact that unification is
+% possibile between variable with different determinacy annotation. For example,
+% let \elpiIn{get-det} and \elpiIn{get-rel} be two relations returning
+% respectively a function and a relation (both with zero arguments). In a query like \elpiIn{get-det X,
+%   det-rel Y, X = Y} we have three goals to solve, the first allows to label
+% \elpiIn{X} with the tag \detI, the second allows to label \elpiIn{Y} with
+% the tag \relI. The third goal is interesting since we are unifying two\todo{not true if output are flex}
+% predicates with different determinacy labels. Now, the only way that this unificaton
+% succeeds at runtime is that \elpiIn{Y} is a function.
+% Said in another way, a unification may change the labels of the two terms being
+% unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=$
+% \minT\ $($\detlab\ \elpiIn{X}$)$ $($\detlab\ \elpiIn{Y}$)$.
 
-\newcommand{\maximize}{\texttt{maximize}\xspace}
-\newcommand{\minimize}{\texttt{minimize}\xspace}
+% finally when a predcate is miscalled we need a way to deal with its post conditions
 
-Below we define the functions \maximize and \minimize.
 
 \begin{equation}
   \maximize\ f =
@@ -280,8 +328,8 @@ Below we define the functions \maximize and \minimize.
   \label{eq:minimize}
 \end{equation}
 
-The two fonctions respectively return the maximal and minimal dtype of a given
-dtype. This is used \dots
+% The two fonctions respectively return the maximal and minimal dtype of a given
+% dtype. This is used \dots
 
 % $$---$$
 
@@ -356,58 +404,74 @@ dtype. This is used \dots
 % has the expected determinacy, which is crucial since outputs can be used as new
 % queries in the program.
 
-\section{Determinacy checking algorithm}
+The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
+\assume\ (\cref{fig:det-assume}) the signature of a predicate and finally to
+\checkk\ (\cref{fig:static-check}) if a rule matches a declared signature.
 
 \begin{figure}
   \fbox{\inferFig}
-  \fbox{\inferAppFig}
+  % \fbox{\inferAppFig}
   \fbox{\assumeFig}
-  \fbox{\checkTermFig}
-  \caption{Determinacy checking for terms}
+  \caption{Handling of pre and post conditions}
   \label{fig:full-det-check-terms}
 \end{figure}
 
-% \textbf{TODO: dire che si parla di termini che devono essere valutati, cioè di oggetti con tipo prop}
+$$\infer : \ctx \to \A \to sig \times \bool$$
+$$\dapp : \ctx \to \vecL{sig} \to \vecL{sig} \to \vecL{tm} \to \bool \to sig \times sig \times \bool$$
 
-From the \mySub, \minT\ and \maxT\ relations, we can deduce a system of rules
-allowing to \infer\ (\cref{fig:det-inference}) the dtype of a term, to \assume\
-\cref{fig:det-assume}
-the dtype of a term, that is, update a given mapping such that the wanted
-quantified variable has a given determinacy, to \checkk\
-(\cref{fig:static-check}) a propositional term.
+The \infer\ procedure is in charge of inferring the signature of an input
+argument. Since predicate calls are part of the term syntax, these ``calls''
+can as well be miscalled. In that case the procedure returns, as the second
+value, $\bot$.
 
-% This check relation is not
-% far from a subtyping checker where the subtyping relation is \mySub. The checker
-% is made by the three systems of rules shown in \cref{fig:full-det-check-terms}.
-We let \ctx\ to be a context which is a mapping from variable names to their
-dtype. Each variable \predVar\ appearing in a term $t$ has a
-dtype in \ctx\ since either \predVar\ is the name of a predicate and its dtype
-can be retrieved from its signature, or \predVar\ is a quantified variable and
-its dtype is derived from the type inferred by the type checker. In the latter
-case, the typechecker infers the wrost determinacy from the type, i.e. if
-\predVar\ should be a predicate from int to int, then \predVar\ is considered as
-relational, i.e. the typechecker has no way to statically guarantee it behaves
-as a function. Moreover, even though, in the end \predVar\ happens to be a
-function, by definition we know that a function can always be used in place of a
-relation.
+EXAMPLE: lambda and partial application
 
-The \infer\ procedure takes a context \ctx and a term $t$ and returns the dtype of
-$t$ and a boolean. The bollean tells if the term is well dtyped, the only interesting
-case for it is \ref{rule:infer-app}.
-
-In particular, rule \ref{rule:infer-hd} handles variables or predicate names by
-retrieving their determinacy from the context.
-Rules \ref{rule:infer-cut} and \ref{rule:infer-unif} are straightforward: both
-the \cut\ operation and unification are considered deterministic predicates.
-% Rule \ref{rule:infer-piimpl} handles the \coqIn{PiImpl} constructor by extending
-% \ctx\ with a mapping from the local variable $x$ to its dtype.
 Finally, rule \ref{rule:infer-app} addresses term applications. It returns if
 the application stands for a call to a deterministic or relational predicate.
 Together with this piece of information we have the boolean which tests if the
 deduced type of the input has a determinacy less or equal to the expected one.
 
-The boolean is particularly useful since it allows to detect wrong calls to
-predicates.
+% takes a context \ctx and a term $t$ and returns the dtype of
+% $t$ and a boolean. The boolean tells if the term is well dtyped, the only interesting
+% case for it is \ref{rule:infer-app}.
+% In particular, rule \ref{rule:infer-hd} handles variables or predicate names by
+% retrieving their determinacy from the context.
+% Rules \ref{rule:infer-cut} and \ref{rule:infer-unif} are straightforward: both
+% the \cut\ operation and unification are considered deterministic predicates.
+% % Rule \ref{rule:infer-piimpl} handles the \coqIn{PiImpl} constructor by extending
+% % \ctx\ with a mapping from the local variable $x$ to its dtype.
+% Finally, rule \ref{rule:infer-app} addresses term applications. It returns if
+% the application stands for a call to a deterministic or relational predicate.
+% Together with this piece of information we have the boolean which tests if the
+% deduced type of the input has a determinacy less or equal to the expected one.
+
+% The boolean is particularly useful since it allows to detect wrong calls to
+% predicates.
+
+
+% \textbf{TODO: dire che si parla di termini che devono essere valutati, cioè di oggetti con tipo prop}
+
+% Based on the \mySub, \minT\ and \maxT\ relations we present a system of rules
+% allowing to \infer\ (\cref{fig:det-inference}) or \assume\ (\cref{fig:det-assume})
+% the signature of a predicate and finally to \checkk\ (\cref{fig:static-check})
+% if a rule matches a declared signature.
+
+% % This check relation is not
+% % far from a subtyping checker where the subtyping relation is \mySub. The checker
+% % is made by the three systems of rules shown in \cref{fig:full-det-check-terms}.
+% We let \ctx\ to be a context which is a mapping from variable names to their
+% dtype. Each variable \predVar\ appearing in a term $t$ has a
+% dtype in \ctx\ since either \predVar\ is the name of a predicate and its dtype
+% can be retrieved from its signature, or \predVar\ is a quantified variable and
+% its dtype is derived from the type inferred by the type checker. In the latter
+% case, the typechecker infers the wrost determinacy from the type, i.e. if
+% \predVar\ should be a predicate from int to int, then \predVar\ is considered as
+% relational, i.e. the typechecker has no way to statically guarantee it behaves
+% as a function. Moreover, even though, in the end \predVar\ happens to be a
+% function, by definition we know that a function can always be used in place of a
+% relation.
+
+
 
 \textbf{EXAMPLE: for \infer}
 
@@ -443,6 +507,13 @@ and we have a deterministic behavior (\detI). The context is never touched.
 % also makes some check on the hypothesis $H$. But we delay it to the next
 % section.
 
+\begin{figure}
+  \fbox{\checkTermFig}
+  % \fbox{\staticCheckFig}
+  \caption{Determinacy checking for terms}
+  \label{fig:full-det-check-rules}
+\end{figure}
+
 If the term is a unification the determinacy \func\ is transmitted from the
 input to the output. What may change is the context, since, during unification
 some variables may be assigned. In \ref{rule:check-unif} we are in the case
@@ -469,12 +540,16 @@ the determinacy is the \maxT\ between the one received in entry and the
 determinacy of the head of the application. If, otherwise, the call is wrong,
 then the output determinacy is set to relational.
 
+$$
+\checkk : \A \times (\ctx \times \F) \to (\ctx \times \F)
+$$
+
 \textbf{TODO: make an example}
 
 % \subsection{Determinacy checking for clauses}
 
-\staticCheckFig
-\todo{fai con fold}
+% \staticCheckFig
+% \todo{fai con fold}
 
 Know that we know how terms can be deduced, inferred, or checker for
 determinacy, we can illustrate how a clause be checked so that it respects the

@@ -3,10 +3,10 @@
 % \inferCmdArr{ctx}{trm}{det}{good-call}
 \newcommand{\inferCmdArr}[4][]{\ensuremath{
     \ifstrequal{#1}{1}
-    {\vecL{\infer\ #2\ #3}}
+    {(\infer\ #2)\ #3}
     {\infer\ #2\ #3} \arr #4
   }}
-\newcommand{\dapp}{\texttt{d\_app}\xspace}
+\newcommand{\dapp}{\ensuremath{\texttt{deduce}_@\xspace}}
 
 \newcommand{\ruleInfer}[2]{\customlabel{#1}{\ensuremath{D_{#2}}}}
 
@@ -113,7 +113,7 @@
     \centering
     \InferExp{0.27}
     \inferCut{0.30}
-    \inferUnif{0.31}
+    % \inferUnif{0.31}
 
     % \inferPiImpl{0.44}
     \inferLam{.5}
@@ -121,19 +121,20 @@
     \inferApp{1}
 
     % \inferAppFail{1}
-    \caption{\infer\ relation}
-    \label{fig:det-inference}
-  \end{subfigure}
-}
+%     \caption{\infer\ relation}
+%     \label{fig:det-inference}
+%   \end{subfigure}
+% }
 
-\newcommand{\inferAppFig}{
-  \begin{subfigure}[b]{1\textwidth}
+% \newcommand{\inferAppFig}{
+%   \begin{subfigure}[b]{1\textwidth}
+
     \inferAppEmpty{.45}
     \inferAppEmptyDO{.45}
     \inferAppEmptyDI{1}
     \inferAppEmptyDIOK{1}
 
-    \caption{\dapp relation}
-    \label{fig:det-inference-app}
+    \caption{\infer}
+    \label{fig:det-inference}
   \end{subfigure}
 }

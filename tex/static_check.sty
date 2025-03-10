@@ -1,9 +1,9 @@
 
 % [checkCmd ctx1 func1 tm ctx2 func2]
 \newcommand{\checkL}{\texttt{check}\ensuremath{_L}}
-\newcommand{\checkCmd}[5]{\ensuremath{(#1, #2) \vdash \checkk\ #3 \arr (#4, #5)}}
-\newcommand{\checkLCmd}[5]{\ensuremath{(#1, #2) \vdash \checkL\ #3 \arr (#4, #5)}}
-\newcommand{\checkClause}[2]{\ensuremath{#1 \vdash \checkc\ #2}}
+\newcommand{\checkCmd}[5]{\ensuremath{\checkk\ #3\ (#1,\ #2)\ \arr (#4, #5)}}
+\newcommand{\checkLCmd}[5]{\ensuremath{\checkL\ #3\ #1\ #2\ \arr (#4, #5)}}
+\newcommand{\checkClause}[2]{\ensuremath{\checkc\ #1\ #2}}
 
 % \newcommand{\ruleCheckName}[1]{\ensuremath{C_{#1}}\xspace}
 \newcommand{\ruleCheckName}[2]{\customlabel{#1}{\ensuremath{C_{#2}}}}
@@ -15,19 +15,19 @@
     \AxiomC{
       \stackanchor
         {$\ctx\ \predVar = \dtype{\func}{[\func[_i]]}{[\func[_o]]}$}
-        {\assumeCmd[1]{\ctx}{\func[_i]}{t_i}{\ctx[']}}
+        {\fold\ \assumeCmd{\ctx}{\vecL{(\func[_i],t_i)}}{\!\!}{\ctx[']}}
     }
     \AxiomC{
       \stackanchor
-      {\checkLCmd{\ctx[']}{\detI}{B}{\ctx['']}{\func[']}}
-      {\ensuremath{\inferCmdArr[1]{\ctx['']}{t_i}{(\func[_o'],\top)}}}}
+      {\fold\ \checkCmd{\ctx[']}{\detI}{\vecL{bs}}{\ctx['']}{\func[']}}
+      {\ensuremath{\map\ \inferCmdArr[1]{\ctx['']}{\vecL{t_o}}{(\func[_o'],\top)}}}}
     \AxiomC{
       \stackanchor
       {\subCmd{\func'}{\func}}
       {\func[_o'] \mySub \func[_o]}
     }
     \RightLabelM{\ruleCheckClause}
-    \TrinaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{\vec{t}}{B})}}
+    \TrinaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{\vec{t}}{\vecL{bs}})}}
   \end{myRule}
 }
 
@@ -103,11 +103,13 @@
     % \AxiomC{
     %   \stackanchor{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{[\func[_i]]}{[\func[_o]]}}}
     %   {\inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}}
-    \AxiomC{\ensuremath{
+    \AxiomC{
+      \stackanchor{\ensuremath{%
           \ctx\ \predVar = \dtype{\func[']}{\func[_i]}{\func[_o]} \qquad
-          \inferCmdArr[1]{\ctx}{t_i}{(\func[_i'],\top)} \qquad
-          \vecL{\func[_i'] \mySub \func[_i]} \qquad
-          \assumeCmd[1]{\ctx}{\func[_o]}{t_o}{\ctx[']}}}
+          \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func[_i'],\top)}}}
+        }{\ensuremath{%
+          \vecL{\func[_i'] \mySub \func[_i]} \qquad\qquad\quad\ \ \ \!
+          \fold\ \assumeCmd{\ctx}{\vecL{(\func[_o],t_o)}}{\!\!\!}{\ctx[']}}}}
       
     % \AxiomC{
     %   \stackanchor
@@ -120,13 +122,13 @@
   \end{myRule}
 }
 
-\newcommand{\ruleCheckCallFail}{\ruleCheckName{rule:check-callKO}{@^\bot}}
+\newcommand{\ruleCheckCallFail}{\ruleCheckName{rule:check-callKO}{@_\bot}}
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
     \AxiomC{\ensuremath{ \ctx\ \predVar = \dtype{\_}{\func[_i]}{\_} }}
-    \AxiomC{ \inferCmdArr[1]{\ctx}{t_i}{(\func[_i'],\bool)}}
-    \AxiomC{$ \lnot (\vecL{\func[_i'] \mySub \func[_i]}) \lor \bool = \bot$}
+    \AxiomC{ \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func[_i'],\bool_i)}}}
+    \AxiomC{$ \exists i,\func[_i'] \not\mySub \func[_i]\ \lor\ \exists i, \bool_i = \bot$}
     \RightLabelM{\ruleCheckCallFail}
     \TrinaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ \vec{t})}{\ctx}{\relI}}
   \end{myRule}
@@ -172,27 +174,27 @@
     % \ruleCheckPiM{.5}
     % \ruleCheckPiImplM{1}
 
-    \ruleCheckUnifM{1}
-    \ruleCheckUnifFailM{0.52}
+    % \ruleCheckUnifM{1}
+    % \ruleCheckUnifFailM{0.52}
     
     % \ruleCheckMatchM{.7}
     \ruleCheckCallM{1}
     \ruleCheckCallFailM{1}
 
-    \caption{\checkk\ relation}
-    \label{fig:static-check-term}
-  \end{subfigure}
-}
+%     \caption{\checkk\ relation}
+%     \label{fig:static-check-term}
+%   \end{subfigure}
+% }
 
-\newcommand{\staticCheckFig}{
-  \begin{figure}
-    \centering
+% \newcommand{\staticCheckFig}{
+%   \begin{subfigure}[b]{1\textwidth}
+%     \centering
     \ruleCheckClauseM{1}
 
-    \ruleCheckListEmpty{.38}
-    \ruleCheckListCons{1}
+    % \ruleCheckListEmpty{.38}
+    % \ruleCheckListCons{1}
 
     \caption{Determinacy clause checking}
     \label{fig:static-check}
-  \end{figure}
+  \end{subfigure}
 }

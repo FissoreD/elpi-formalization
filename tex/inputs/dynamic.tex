@@ -21,13 +21,12 @@ We use $\EmptyList$ for the empty list and $x :: xs$ for prepending an element $
 to a list $xs$; $@$ for list concatenation;
 $[e|x \in \vec{x}]$ for list comprehension and $[e\ \mathbf{if}\ p|x \in \vec{x}]$ 
 for list filtering. We shall fold $f$ over a list of pairs
-using the combinator \fold defined by these equations:
+using the combinators \fold and \map defined by these equations:
 $$
-\fold\ \_\ \_\ \bot = \bot
-\qquad
-\fold\ (x :: xs)\ f\ a = \fold\ xs\ f\ (f\ x\ a)
-\qquad
-\fold\ \EmptyList\ \_\ a = a
+\begin{array}{lll}
+\fold\ \_\ \_\ \bot = \bot & \fold\ f\ (x :: xs)\ a = \fold\ f\ xs\ (f\ x\ a) & \fold\ \_\ \EmptyList\ a = a \\
+\map\ \_\ \EmptyList = \EmptyList & \map\ f\ (x :: xs) = f\ x :: \map\ f\ xs
+\end{array}
 $$
 
 We asume a set $P$ of predicate names, a set $K$ of term constructors (e.g. \textit{nil}
@@ -54,12 +53,13 @@ into a list of pairs.
   \begin{array}{rlr}
     P & ::= p, q, \ldots & \mathrm{predicate}\\
     K & ::= c, f, \ldots & \mathrm{data\ constructor}\\
+    \F & ::= \detI \mid \relI & \mathrm{determinacy} \\
     \X & ::= \mathrm{X}, \mathrm{Y} \ldots x, y, \ldots & \mathrm{variable}\\
     \A & ::= \cut \mid P\ \vecL{\T} \mid \X\ \vecL{\T} \mid \piImplCmd[\texttt{exp}]{\X}{\CL}{\A} & \mathrm{atom} \\
     \T & ::= K\ \vecL{\T} \mid P \ \vecL{\T} \mid \X\ \vecL{\T} \mid \lambda \X\!\!: ty \bs\ \T & \mathrm{term}\\
     \CL & ::= \clauseCmd{P}{\vecL{\T}}{\vecL{\A}} & \mathrm{clause} \\
     \V & ::= \mathrm{A}, \mathrm{B}, \ldots & \mathrm{type\ variable} \\
-    sig & ::= [\detI \mid \relI]\ \vecL{ty} \funsep \vecL{ty} & \mathrm{predicate\ signature} \\
+    sig & ::= \F\ \vecL{ty} \funsep \vecL{ty} & \mathrm{predicate\ signature} \\
     ty   & ::= \texttt{exp} \mid sig \mid \V & \mathrm{type} \\
   \end{array}
   $$
@@ -173,7 +173,7 @@ name $x$ to $\aleph$.\todo{change order} We write $x \# \prog$ to find a name fr
     \bigg]
   $$
   $$
-  \mathcal{H}(\vecL{tu},\ ol,\ \subst) = \fold\ \vecL{tu_o}\ \unify\ (\fold\ \vecL{tu_i}\ \match\ \subst)
+  \mathcal{H}(\vecL{tu},\ ol,\ \subst) = \fold\ \unify\ \vecL{tu_o}\ (\fold\ \match\ \vecL{tu_i}\ \subst)
   $$
 
   \ruleCallMF{0.5}
