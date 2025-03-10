@@ -241,7 +241,7 @@ the pre must be in the converse relation.
 %   Ha sesnso farlo?
 % \end{lemma}
 
-\section{Determinacy checking algorithm}
+\section{Signature checking}
 
 The algorithm is a dataflow analsysis algorith a bit like mode checking.
 It stores in \ctx the predicate signature of each variable: it uses it to
@@ -540,9 +540,7 @@ the determinacy is the \maxT\ between the one received in entry and the
 determinacy of the head of the application. If, otherwise, the call is wrong,
 then the output determinacy is set to relational.
 
-$$
-\checkk : \A \times (\ctx \times \F) \to (\ctx \times \F)
-$$
+$$\checkk : \A \times (\ctx \times \F) \to (\ctx \times \F)$$
 
 \textbf{TODO: make an example}
 
