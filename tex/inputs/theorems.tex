@@ -1,28 +1,42 @@
 
 \section{Theorems}\label{sec:thm}
 
-\begin{definition}[Functionality (\isfunc)]\label{def:is-func}
-  Given a program \prog and a term $t$,
-  \isdet\ is defined as follows:
-  $$\forall a\ \subst, \isFuncCmd{t}$$
-\end{definition}
+% \begin{definition}[Functionality (\isfunc)]\label{def:is-func}
+%   Given a program \prog and a term $t$,
+%   \isdet\ is defined as follows:
+%   $$\forall a\ \subst, \isFuncCmd{t}$$
+% \end{definition}
+
+Taking into account the interpreter we have depicted in \cref{fig:basic-interp},
+we can give the definition of determinacy.
+
 \begin{definition}[(Semi-)determinacy (\isdet)]\label{def:is-det}
-  Given a program \prog and a term $t$,
+  Given a program \prog and a predicate $\pred$,
   \isdet\ is defined as follows:
-  $$\forall a\ \subst, \isDetCmd{t}$$
+  $$\forall a\ \vec{t}\ \subst, \isDetCmd{\pred\ \vec{t}}$$
 \end{definition}
 
-The first static check of all determinacy analysis is about the mutual
-exclusion between the heads of rules
+The essence of the definition is that when interpreting any call to a given
+predicate \pred within a program \prog, starting from an empty substitution and
+an empty list of alternatives, no new choice points should be generated. This means
+that the returned alternatives must be an empty list.
 
-\begin{definition}[Unifiable (\unifiable) and not unifyable (\nUnify)]
+In order to guarantee that a predicate behaves determinalistically in a given
+program, we need to ensure some sufficient conditions. We start by giving some
+definition of terms that are .
+
+\begin{definition}[Unifiable (\unifiable)]
 We say that $\unifiable\ t_1\ t_2$ iff
   $\exists\ \subst\ s.t.\ \unifyCmd{t_1}{t_2}{\EmptySubst}{\subst}$.
-We say that $\nUnify\ t_1\ t_2$ iff
-  $\forall \subst \ \unifyCmd{t_1}{t_2}{\subst}{\bot}$ (equivalently, since
-  \unify is complete, $\neg \exists \subst\ s.t. \subst t_1 = \subst t_2$).
+% We say that $\nUnify\ t_1\ t_2$ iff
+%   $\forall \subst \ \unifyCmd{t_1}{t_2}{\subst}{\bot}$ (equivalently, since
+%   \unify is complete, $\neg \exists \subst\ s.t. \subst t_1 = \subst t_2$).
 \end{definition}
 
+Thanks to this first definition, we can state a key property of a predicate to
+be deterministic. We need that the head of its clauses in the program are
+mutually exclusive (or equivalently non-overlapping), i.e. at most one clause
+can be used on a given query.
 
 
 % Before explaining the interaction between these two, we need to take
@@ -85,38 +99,42 @@ We say that $\nUnify\ t_1\ t_2$ iff
 % \cref{th:mut-excl-head,th:mut-excl}
 % %BBB
 
-\begin{definition}[Mutually-exclusive heads (\mutExclHeads) at $d$]
+\begin{definition}[Mutually-exclusive heads (\mutExclHd) at index $d$]
   \label{def:mut-excl-head}
   % \begin{coqcode}
   %   Definition ~\customlabel{mutexcl}{\texttt{mutual\_exclusive}}\prog \pred\!\!~:
   %     ~$\forall\ i1\ o1\ bo1\ i2\ o2\ bo2$~ (H1: ~\clauseCmd{p}{i1\ o1}{bo1}~ \in ~$\prog\ p$~) (H2: ~\clauseCmd{p}{i2\ o2}{bo2}~ \in ~$\prog\ p$~),
   %         not (exists ~\subst\!\!~, ~\unifyCmd{i1}{i2}{\EmptySubst}{\subst}~)
   % \end{coqcode}
-  Given a context \ctx\ and two clauses $c_1$ and $c_2$ with head,
-  respectively, $\pred\ t_1 \ldots t_n$ and $\pred\ u_1 \ldots u_n$.
-  Let $\ctx\ \pred = \dtype{\relI}{i_1 \ldots i_k}{\_}$, then we say that
-  $\mutExclHeads\ c_1\ c_2\ d$ holds iff $d \leq k\ \land\ \nUnify\ t_d\ u_d$.
+  Given a context \ctx\, an index $d$ and two clauses $c_1$ and $c_2$ with head,
+  respectively, $\pred\ u_1 \ldots u_n$ and $\pred\ v_1 \ldots v_n$.
+  If $\ctx\ \pred = \dtype{\relI}{i_1 \ldots i_k}{\_}$,
+  then we say that
+  $\mutExclHd\ c_1\ c_2\ d$ holds iff $1 \leq d \leq k \land\ \lnot(\unifiable\ u_d\ v_d)$.
 \end{definition}
 
-As explained in \cite{1989Warren,1996Somogy} modes are the basis for determinim.
-In particular the groudness of input arguments at call time is essential
-to statically check the mutual exclusiveness of two rules: if two
-input arguments do not unify, there is no ground terms that can unify
-with both.
-Since Elpi performs matching the groundness condition is not required: if
-the goal is a variable it will not match any non variable input argument,
-and two variable input arguments are not \nUnify.
+As shown in \cite{1989Warren,1996Somogy}, ensuring determinacy also requires
+verifying that calls to deterministic predicates receive ground input terms.
+This is achieved through a static mode checker, which tracks the flow of ground
+variables within a clause. Additionally, mode checking plays a crucial role in
+guaranteeing the mutual exclusiveness of rules: if two input arguments do not
+unify, no ground term can unify with both. However, since Elpi performs matching
+rather than full unification on input terms, the groundness condition is not
+necessary to ensure that at most one clause applies. The following lemma states
+this property.
 
 \begin{lemma}[Mutually-exclusive heads with \match property]
-  Given a context \ctx and two clauses $c_1$ and $c_2$ with heads,
-  respectively,  $\predVar\ \vec{t}$ and $\predVar\ \vec{u}$ then
+  Given a context \ctx\ and two clauses $c_1$ and $c_2$ with heads,
+  respectively,  $\pred\ \vec{u}$ and $\pred\ \vec{v}$ then
   % forall vector of \textit{ground} terms $\vec{v}$,
-  $$\mutExclHeads\ \ctx\ c_1\ c_2\ d \to
-    \lnot (\exists \vec{v}\ \subst_1\ \subst_2\ s.t.\ 
-    \matchCmd{v}{t_d}{\subst}{\subst_1} \land
-    \matchCmd{v}{u_d}{\subst}{\subst_2})$$
+  $$\forall d, \mutExclHd\ \ctx\ c_1\ c_2\ d \to \forall \subst,
+    \lnot (\exists t\ \subst_1\ \subst_2\ s.t.\ 
+    \matchCmd{t}{u_d}{\subst}{\subst_1} \land
+    \matchCmd{t}{v_d}{\subst}{\subst_2})
+    % \forall t, \nUnify\ t\ \vec{u}_d \lor \nUnify\ t\ \vec{v}_d 
+    $$
   \vspace{-2em}
-  \label{th:mut-excl-head1}
+  \label{th:mut-excl-head}
 \end{lemma}
 
 % \begin{proof}
@@ -152,43 +170,83 @@ and two variable input arguments are not \nUnify.
 %   By \cref{th:mut-excl-head1,th:mut-excl+cut}
 % \end{proof}
 
-We want to allow for some overlapping when one rule cuts the other
+Since, in Elpi, we have the hard cut operator, overlapping clauses may exists,
+if we can ensure that at most one of them can be used on a given query, the
+other being cut away.
 
 \begin{definition}[Mutual-exclusion with \cut\ (\mutExclCut)]
   Given two clauses
   $c_1$ and $c_2$ such that $c_1$ is defined before $c_2$,
-  the body of $c_1$ contains a \cut.
-  \label{def:mut-excl+cut}
+  a \cut\ is in the body of $c_1$.
+  \label{def:mut-excl-cut}
 \end{definition}
+
+We can finally combine \cref{def:mut-excl-head} and \cref{def:mut-excl-cut}
+to obtain the definition of mutually exclusive clauses in a program.
+
+\begin{definition}[Mutual-exclusion (\mutExcl)]
+  Given a context \ctx\ and a program \prog, forall predicate \pred, such
+  that $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ and
+  for any two pair of clauses $c_1$ and $c_2$ in \prog\ \pred, then
+  \vspace{-0.5em}
+  $$((\exists d, \mutExclHeads\ \ctx\ c_1\ c_2\ d) \lor \mutExclCut\ c_1\ c_2)$$
+  \vspace{-2em}
+  \label{def:mut-excl}
+\end{definition}
+
+Mutual exclusion ensures that at most one clause is applied on a query, however,
+this is not sufficient to have the guarantee that no new choice point is left
+after the execution of a clause. We need therefore the following two definitions.
 
 \begin{definition}[Deterministic term application (\detAtom)]
-  Given a context \ctx\, the term $\pred\ \vec{t}$ is a deterministic
-  call if $\ctx\ \pred = \dtype{\detI}{\_}{\_}$
+  Given a context \ctx\ and a term $t$, $t$ is a deterministic
+  call if $t = \pred\ \vec{u} \land \ctx\ \pred = \dtype{\detI}{\_}{\_}$
 \end{definition}
-
-We want some calls to follow the cut
 
 \begin{definition}[Deterministic premises (\detPrem)]
   Given a context \ctx\ and a program \prog, forall predicate \pred, such that
-  $\detAtom\ (\predVar\ \vec{u})$ and forall clause
+  $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ and forall clause
   $(\clauseCmd{\pred}{\vec{t}}{b_1\dots b_n}) \in \prog\ \pred$,
-  $$(\exists j, b_j = \cut \land \forall k, k > j \to \detAtom\ b_k) \lor (\forall j, \detAtom\ b_j)$$
+  $$(\exists j, b_j = \cut \land (\forall k, k > j \to \detAtom\ \ctx\ b_k)) \lor (\forall j, \detAtom\ \ctx\ b_j)$$
   \vspace{-2em}
   \label{def:det-prem}
 \end{definition}
 
-And we want to allow pi impl
+Since in Elpi we can dynamically load local clauses thank to the \impl\
+constructor, we need to ensure that the new inserted clause does not hinder the
+determinacy of the predicate being extented.
 
-% In order to address this problem, we need to ensure that the dynamic insertion
-% of the new clause $H$ in the program is such that if $H$ successfully applies on a goal
-% then all the other clause fails. To ensure this propery to following condition
-% should be granted.
-
-\begin{definition}[Local clauses: mutually-exclusion + det. premises (\locExcl)]
-  Given a clause $c$ and a predicate \pred, for any subterm $s$ of $c$, then
-  $$s = \piImplCmd{x}{(\clauseCmd{\pred}{i\ o}{t_1, \dots, t_n})}{D} \to \exists
-  i, t_i = \cut \land (\forall k, k > i \to \detAtom\ a_i)$$
+\begin{definition}[Local clauses with bang (\locExcl)]
+  Given a context \ctx\ and a program \prog, forall clause $c$ in \prog and
+  forall predicate \pred, forall subterm $s$ of $c$ such that
+  $s~=~\piImplCmd{x}{(\clauseCmd{\pred}{\vec{v}}{t_1, \dots, t_n})}{\_}$, if
+  $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ then
+  $$\exists i, t_i = \cut \land (\forall k, k > i \to \detAtom\ t_i)$$
   \vspace{-2em}
+\end{definition}
+
+This means that all local clauses should have a cut if they are clauses of a
+deterministic predicate and after this cut all premises left are call to
+deterministic predicates. This definition is a combination of
+\cref{def:mut-excl-head,def:mut-excl-cut} in the context of local clauses.
+
+Finally, the two definitions we need to be verified on a program are the one
+that uses the \checkc\ and \checkk\ procedure in
+\cref{fig:static-check,fig:det-assume} so that we have the guarantee that
+the body of all clauses respect the determinacy declared in the signature, the
+same check is performed on the outputs. Moreover we define what is the meaning
+of a good call to a predicate.
+
+\begin{definition}[Check clauses (\checkc)]
+  Given a context \ctx\ and program \prog, forall clause $c$ in \prog,
+  $$\checkc\ \ctx\ c$$
+\end{definition}
+
+\begin{definition}[Good call (\checkk)]
+  Given a context \ctx\, program \prog and a term $t$,
+  if $t = \pred\ \vec{u}$ and $\ctx\ \pred = \dtype{\_}{d_1, \dots, d_n}{\_}$
+  then 
+  $$\inferCmdArr{\ctx}{t}{(\_, \bool)} \to \bool = \top$$ 
 \end{definition}
 
 % NOTA:
@@ -202,33 +260,25 @@ And we want to allow pi impl
 % goal: pi x\ f x 1 :- body_with_no_bang => f x R
 % Per backtracking potrei istanziare R a 1 o 3
 
-Thanks to this we can define the mutual-exlusion definition in the higher-order
-setting.
 
-\begin{definition}[Mutual-exclusion (\mutExcl)]
-  Given a context \ctx and a program \prog, forall predicate \pred, such
-  that $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ and
-  for any two pair of clauses $c_1$ and $c_2$ in \prog\ \pred, then
-  \vspace{-0.5em}
-  $$\mutExclHeads\ \ctx\ c_1\ c_2 \lor \mutExclCut\ c_1\ c_2$$
-  \vspace{-2em}
-  \label{def:mut-excl}
-\end{definition}
-
-\begin{definition}[Mutual-exclusion in HOAS (\mutExclHO)]
-  Given a program \prog, forall deterministic predicate \pred, mutual exclusion is defined as
-  follows:
-  $$\mutExcl\ \prog \land (\forall \pred[']\
-  c, c\in \prog\ \pred['] \to \locExcl\ c\ \pred)$$
-  \vspace{-2em}
-  \label{def:det-check-ho}
-\end{definition}
+% \begin{definition}[Mutual-exclusion in HOAS (\mutExclHO)]
+%   Given a program \prog, forall deterministic predicate \pred, mutual exclusion is defined as
+%   follows:
+%   $$\mutExcl\ \prog \land (\forall \pred[']\
+%   c, c\in \prog\ \pred['] \to \locExcl\ c\ \pred)$$
+%   \vspace{-2em}
+%   \label{def:det-check-ho}
+% \end{definition}
 
 
 \begin{theorem}[Determinacy checking]
-  Given a program \prog and a predicate \pred
+  Given a context \ctx\ and a program \prog, then for any predicate \pred\ and
+  any list of terms $\vec{t}$,
   \begin{align*}
-    &\detCheckHO\ \prog\ \pred \to \isdet\ \prog\ (\pred\ \vec{t})
+    &\mutExcl\ \ctx\ \prog \to \detPrem\ \ctx\ \prog \to \\
+     &\quad   \locExcl\ \ctx\ \prog\ \to \checkc\ \ctx\ \prog \to\\
+     &\quad\quad       \checkk\ \ctx\ \prog\ (\pred\ \vec{t}) \to \ctx\ \pred = \dtype{\detI}{\_}{\_} \to\\
+     &\quad\quad\quad \isdet\ \prog\ (\pred\ \vec{t})
   \end{align*}
   \vspace{-2em}
   \label{th:det2}
