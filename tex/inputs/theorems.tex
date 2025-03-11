@@ -245,7 +245,7 @@ the top of the program, before any other clause.
 
 \begin{definition}[Determinacy check (\staticcheck)]
   $\staticcheck\ \ctx\ \prog$ holds iff
-  for all clause $c$ in \prog, $\checkc\ \ctx\ c$ holds (see Fig~\ref{fig:full-det-check-rules}).
+  for all clause $c$ in \prog, $\checkc\ \ctx\ c$ holds.% (see Fig~\ref{fig:full-det-check-rules}).
 \end{definition}
 
 \begin{definition}[Deterministic program (\detprog)]
@@ -256,7 +256,7 @@ the top of the program, before any other clause.
 
 \begin{definition}[Deterministic query (\staticcheckq)]
  $\staticcheckq\ ctx\ \prog\ (\pred\ \vec{t})$ holds iff
-  $\detAtom\ \ctx\ (\pred\ \vec{t})\ \land\ \checkCmd{\ctx}{\detI}{t}{\_}{\detI}$ (see Fig~\ref{fig:full-det-check-terms}).
+  $\detAtom\ \ctx\ (\pred\ \vec{t})\ \land\ \checkCmd{\ctx}{\detI}{t}{\_}{\detI}$.% (see Fig~\ref{fig:full-det-check-terms}).
 \end{definition}
 
 % NOTA:

@@ -6,14 +6,14 @@ language, a dialect of $\lambda$Prolog~\cite{1991miller-pf,Miller_Nadathur_2012}
 incomplete syntax trees with binders~\cite{dunchev15lpar,TASSI_2019}.
 Elpi finds applications as an extension
 language for The Rocq\footnote{formerly known as Coq} Interactive prover, where
-Elpi has been used for program and proof synthesis~\cite{tassi2018,tassi2019,tassi2023,cohen_et_al:LIPIcs.FSCD.2020.34} and more recently
+it has been used for program and proof synthesis~\cite{tassi2018,tassi2019,tassi2023,cohen_et_al:LIPIcs.FSCD.2020.34} and more recently
 as the target language for type-class resolution~\cite{fissore2023,fissore2024}.
 Type-class resolution is typically used to implement overloading~\cite{wadler1996-hs,sozeau2008-tc}
 where the solution to a query provides the meaning of the overloaded symbol.
 In this context it is of paramount\todo{dipende, no?} importance that this solution is unique,
 i.e. non ambiguous. A static check for this property is of particular
 interest in the context of the platform of Rocq libraries: code developed
-by different teams is combined together, reused in order to lower the cost
+by different teams is combined together in order to lower the cost
 of mechanization.
 
 As of today Elpi comes with a quite standard type-checker~\cite{1992nadathur} but
@@ -25,33 +25,34 @@ $\lambda$Prolog, and its nonstandard notion of input.
 \subsection{Motivating examples}\label{sec:examples}
 
 A first motivating example is the \elpiIn{map} predicate, widely used in
-all Elpi applications. The predicate signature reads: 
-given a (directed) predicate from \elpiIn{A} to \elpiIn{B}, \elpiIn{map}
-relates a list of \elpiIn{A} with a list of \elpiIn{B}. Elpi
-follows the $\lambda$Prolog convention ($\lambda$-calculus actually) of
-writing application with no parentheses, e.g. \elpiIn{map F L R}
-can be understood as the atom \elpiIn{map(F, L, R)}.
+all Elpi applications. Elpi
+follows the $\lambda$Prolog convention of
+writing application with no parentheses: \elpiIn{map F L R}
+should be understood as the atom \elpiIn{map(F, L, R)}.
 
 \begin{elpicode}
-pred map i:(pred i:A, o:B), i:list A, o:list B.
-map _ [] [].
-map F [X|XS] [Y|YS] :- F X Y, map F XS YS.
+pred map i:(pred i:A, o:B), i:list A, o:list B. % basic signature
+func map (func A -> B), list A -> list B.       % better signature (this paper)
+map _ [] [].                                    % code  
+map F [X|XS] [Y|YS] :- F X Y, map F XS YS.      % code
 \end{elpicode}
 
-We want the programmer be able to ascribe the more precise signature
-\elpiIn{func map (func A -> B), list A -> list B} and have Elpi check
-the implementation validates it. The code above indeed
-happens to compute a function of the first two arguments, that we
-consider inputs, if and only if the higher-order predicate \elpiIn{F} is
-itself a function (we will more be precise on what function means in~\ref{sec:thm}).
+The basic predicate signature says that \elpiIn{map} has two input arguments
+and one output. The first argument is a higher order predicate with an inupt
+of type \elpiIn{A} and an output of type \elpi{B}, while the other two
+arguments are respectively of type \elpiIn{list A} and \elpiIn{list B}.
+The better signature we describe in this paper additionally states that
+if the higher order argument is a function, then also \elpiIn{map} is.
+While we will be more precise in section~\ref{sec:thm},
+in the reasoning above ``function'' just means single-valued relation.
 
-We need this ascription to be added to an existing code base where
+We need this new signature to be added to an existing code base where
 \elpiIn{map} is potentially called by passing a relation as the first
 argument, say \elpiIn{P}.
 In this case the call to \elpiIn{map P L R} has to be accepted but not
-considered to be functional for the analisys of the surrounding code.
-In the examples below we give three (alternatives) one-line
-implementations for a \elpiIn{meal} predicate building a list of dishes
+considered to be a function for the analisys of the surrounding code.
+In the examples below we give three (alternative) one-line
+implementations of a \elpiIn{meal} predicate building a list of dishes
 to satisfy the guests.
 
 \begin{elpicode}
@@ -59,42 +60,37 @@ pred likes i:guest, o:dish.
 ... % same guest may lake more than one dish ...
 func likes! guest -> dish.
 likes! G D :- likes D G, !.
-pred meal i:list guest, o:list dish.
+func meal list guest -> list dish.
 meal Gs M :- map likes! Gs M.     % a function
 meal Gs M :- map likes Gs M, !.   % also a function
 meal Gs M :- map likes Gs M.      % not really a function
 \end{elpicode}
 
-\noindent All three implementations validate the signature above, but only the
-first two validate \elpiIn{func meal list guest -> list dish}.
-The first one is accepted since \elpiIn{likes!} is a function, hence also
-\elpiIn{map likes! Gs M} is. The second implementation miscalls \elpiIn{map}
-by passing the relation \elpiIn{likes}, but then commits to the first solution,
+\noindent The first implementation is accepted since \elpiIn{likes!} is a
+function, hence also \elpiIn{map likes! Gs M} is.
+The second implementation miscalls \elpiIn{map} by passing the relation
+\elpiIn{likes}, but then commits to the first solution,
 hence it is a function.
 The third one is rejected since it miscalls \elpiIn{map} without
 compensating for it.
 
-The cut operator lets one impose functionality on a relation
+The hard-cut operator of Elpi lets one turn a relation into a function
 by committing to its first result, as in the body of \elpiIn{like!}, but it also
 discards the clauses following the current one.
-Luckily the higher-order nature of Elpi and the language of signatures we
-introduce is expressive enough to encapsulate the desired ``tail cut''\todo{sotto hard-cut} behavior
-into the \elpiIn{once} predicate. Its signature
+Luckily the language of signatures we
+introduce is expressive enough to encapsulate the desired ``if-then''
+behavior into the \elpiIn{once} predicate. Its signature
 states that the higher-order argument \elpiIn{P} can be any predicate, not
 necessarily a function, but still \elpiIn{once P} acts as a function.
-
-% func once (pred) -> .
-% once P :- P, !.
 
 \begin{elpicode}
 func once (pred i:A, o:B), A -> B.
 once P X R :- P X R, !.
-meal Gs M :- map (once likes) Gs M. % ok, "once likes" is a function
+meal Gs M :- map (once likes) Gs M. % ok since (once likes) is a function
 \end{elpicode}
-% meal Gs M :- map (g\d\once (likes g d)) Gs M. % ok, "once likes" is a function
 
 \noindent Not only the inputs, but also the outputs of predicates
-can be predicates, and the determinacy analysis we present tracks their
+can be predicates. The determinacy analysis we present tracks their
 functional status.
     
 \begin{elpicode}
@@ -107,39 +103,17 @@ meal Gs M :- id likes F, map F Gs M.     % nope
 \end{elpicode}
 
 \noindent Here the output of \elpiIn{commit} is a function \elpiIn{F} that
-in turn makes \elpiIn{map Gs F M} produce a single value for \elpiIn{M}.
+in turn makes \elpiIn{map F Gs M} produce a single value for \elpiIn{M}.
 Moreover \elpiIn{commit} is a function, so the whole body of \elpiIn{meal} also
 is. The last example is rejected since \elpiIn{id} is miscalled: the outputs
-are considered functional only if signature is respected.
-
-% TO BE DECIDED
-
-% fail fast is important in our TC case
-
-% avoid silly computational complexity coming from "unexpected"
-% backtracking.
-
-% \begin{elpicode}
-% func mem A, list A -> .
-% mem X [X|_] :- !. % ok
-% mem X [X|_]. % nope
-% mem X [_|XS] :- mem X XS.
-
-% %           O(L)     O(L)
-% pred p L :- mem 1 L, len L 1. % comlexity failure p L = O(L*L) for L <> [1]
-% pred p L :- once(mem 1 L), len L 1. % comlexity failure p L = O(L) for L <> [1]
-% \end{elpicode}
-    
-
-% OPTIONAL
+are considered as functions only if the signature of the inputs is respected.
 
 The real domain where Elpi shines is the manipulation of higher-order data
-via the so-called $\lambda$-tree syntax~\cite{Miller2018MechanizedMR} (also known as HOAS~\cite{1988pfenning}).
+via the so-called $\lambda$-tree syntax by~\cite{Miller2018MechanizedMR}
+also called HOAS by~\cite{1988pfenning}.
 Such data is pervasive in interactive provers based on type theory
-such as Rocq. The paradigmatic example is reported below where \elpiIn{tm} is
-the data type for $\lambda$-terms. For example \elpiIn{lam (x\ lam (y\ x))}
-represents the first projection, where \elpiIn{x\_} is the built for
-$\lambda$-abstraction of $\lambda$Prolog.
+such as Rocq. In the paradigmatic example below \elpiIn{tm} is
+the data type for $\lambda$-terms.
 
 \begin{elpicode}
 kind tm type.
@@ -155,186 +129,29 @@ whd X X.
 
 The copy \elpiIn{predicate} behaves like the identity.
 Each time a \elpiIn{lam} node is crossed the second clause creates a fresh
-symbol \elpiIn{x} via the \elpiIn{pi} operator.
+symbol \elpiIn{x} via the \elpiIn{pi} operator:
 This \elpiIn{x} stands for the bound variable in the function body
-\elpiIn{F x}. Since no (static) clause handles this new \elpiIn{x}, the second
-rule crafts a (dynamic) clause for copying \elpiIn{x} to itself and adds it to
-the program via the \elpiIn{=>} operator before recursing.
+\elpiIn{F x}. Since no (static) clause handles this new symbol \elpiIn{x},
+the second rule crafts a (dynamic) clause for copying \elpiIn{x} to itself
+and adds it to the program via the \elpiIn{=>} operator (intuitively a
+local \texttt{assert}).
 The \elpiIn{whd} predicate computes the weak head normal form of a term by
 contracting the application of a $\lambda$-abstraction to an argument.
-The argument is put in place of the abstracted variable by running \elpiIn{copy}
-with the addition of a special clause for the variable in question.
-
-The two predicates are functions even if they dynamically add copy rules
-at runtime: Since \elpiIn{x} is fresh it does not unify
+The argument is put in place of the abstracted variable by running
+\elpiIn{copy} with the addition of a special clause for the variable
+being reduced away.
+The two predicates are functions even if they dynamically add copy rules:
+Since \elpiIn{x} is fresh it does not unify
 with \elpiIn{app}, \elpiIn{lam} or any previously generated fresh \elpiIn{x}.
-Our static analysis accepts this programming pattern.
+Our static analysis understands this programming pattern.
 
 \paragraph{Contributions and paper structure}
 
 Our contributions is a determinacy checker that:
 \begin{itemize}
-\item covers higher-order logic programming constructs such as first-class predicates and clauses
-\item can be applied to pre-existing code bases, i.e. tracks miscalled functions rather than aborting
+\item covers higher-order logic programming constructs such as first-class predicates and dynamic clauses
+\item can be applied incrementally to pre-existing code bases since it tracks miscalled higher-order functions rather than aborting
 \end{itemize}
-Last but not least we provide an operational semantics for higher-order logic programs
-with cut and match i.e Elpi.
-
-% The paper gives a big step semantics and static functional-analsys for
-% the Horn-Clauses fragment of the Elpi language in section~\ref{sec:basic}.
-% Then it adapts the analysis to the non-standard input mode of Elpi in
-% section~\ref{sec:basic-elpi}. Finally it covers higher order
-% predicate and data types sections~\ref{sec:vars} and~\ref{sec:hoas}.
-
-% TO BE REMOVED
-%\tableofcontents
-%\newpage
-
-% We have a rule based language integrated in Coq. Rules are useful
-% to model a grown knowledge base (extend existing programs) and manage
-% the context in HOAS.
-
-% We want to add to it some of the benefits of functional programming,
-% eg statically enforce the absence of global backtracking. Eg twice the same
-% rule can turn linear into exponential. Even worse two overlapping rules can
-% inadvertently change the meaning when loading two libraries.
-
-% checking or inferring functionality of relations is studied in the literature,
-% but does only partially cover HO programming but no HOAS nor homoiconicity, all features
-% that are widely used. The former, as in FP, to reuse code via HO iterators,
-% eg map. The second for manipulating syntax with binders. The third to
-% have programs that extend themselves by synthesizing rules.
-
-% in practice a function is a relation where 1) we identify the arguments
-% that are seen as input 2) we prove that the outputs are uniquely determined
-% by the inputs. The first part is called mode analysis. We study both
-% in the HO setting, eg $\lambda$Prolog, in the dialect of Elpi that has
-% a special runtime input mode.
-
-% \section{Motivating examples explained}
-
-% We give a short intro to Elpi and functional analysis with examples
-% that cover the use cases we want to cover.
-
-% Convention that capitals are parameters, programs are written in rules
-% preceeeded by a signature. prop is the type of predicate, eg code that runs.
-% List syntax is bla bla. :- separates the head from the body, the head
-% is unified with the goal, then each premise is executed.
-
-% \subsection{Higher order programming}
-
-% A typical HO predicate is map that takes a relation  in A x B
-% to a relation in list A x list B.
-
-% \begin{elpicode}
-% type map (A -> B -> prop) -> list A -> list B -> prop.
-% map _ [] [].
-% map F [X|XS] [Y|YS] :- F X Y, map F XS YS.
-% \end{elpicode}
-
-% Explain that unlike functional languages, command and expressions are not
-% mixed, and prop stuff is executable, hence you don't put F X in place of Y
-% but rather run F X Y.
-
-% Also explain that a relation that can go both sides, but
-% that this feature is not very useful, for example it does not always
-% work and if one calls passing a wrong relation, it is easy to diverge. 
-
-% find a simple example.
-
-% \begin{elpicode}
-% filter P [] []
-% filter P [X|XS] [X|YS] :- P X, !, filter P XS YS.
-% filter P [_|XS] YS :- filter P XS YS.
-% \end{elpicode}
-  
-% We want to annotate with usage info.
-
-% \begin{elpicode}
-% pred map i:(pred i:A, o:B), i:list A, o:list B.
-% \end{elpicode}
-
-% Explain syntax (pred [name] X, ... = X -> .. -> prop).
-
-% This first step seems to be stringent for little reason, since map can work
-% both ways. But it necessary to further refine the annotation with functionality
-% assertions.
-
-% \begin{elpicode}
-% func map (func A -> B), list A -> list B.
-% \end{elpicode}
-
-% Explain syntax (func [name] X, ... -> Y, .. = pred i:X, .. , o:Y, ..).
-
-% Note (map succ) is func list int -> list int (assuming succ is a function).
-
-% \subsection{Higher Order Abstract Syntax programming}
-
-% In HOAS, we want out analysis to accept this code that adds a dynamic rule
-
-% \begin{elpicode}
-% kind tm type.
-% type app tm -> tm -> tm.
-% type lam (tm -> tm) -> tm.
-
-% func copy tm -> tm.
-% copy (app F A) (app G B) :- copy F G, copy A B.
-% copy (lam F) (lam G) :- pi x\ copy x x => copy (F x) (G x).
-
-% func whd tm -> tm.
-% whd (app H A) R :- whd H (lam F), whd (F A) R.
-% whd (lam _ as X) X.
-
-% kind ty type.
-% type arr ty -> ty -> ty.
-
-% func of tm -> ty.
-% of (app F A) T :- of F (arr S T), of A S.
-% of (lam F) (arr S T) :- pi x\ of x S => of (F x) T.
-% \end{elpicode}
-
-% \subsection{Homoiconicity}
-
-% Since the language is homoiconic we also want this to pass
-
-% \begin{elpicode}
-% func comp (func A -> B), (func B -> C) -> (func A -> C).
-% comp F G X Y :- F X Tmp, G Tmp Y.
-
-% func fuse (func A -> B) -> (func A -> B).
-% fuse (comp (map F) (map G)) (map H) :- fuse (comp F G) H.
-% fuse X X.
-% \end{elpicode}
-
-% But we don't want to break code that uses map as a relation
-
-% \begin{elpicode}
-% func do list (func) -> .
-% do [].
-% do [P|PS] :- P, do PS.
-
-% pred do-with-trace i:list (pred).
-% do-with-trace Code :- map spy Code InstrumentedCode, do Code.
-  
-% func spy (pred) -> (pred).
-% spy P (do [print "before", P, print "after"]).
-% \end{elpicode}
-
-% Finally, we want to take advantage of cut across iterators
-
-% \begin{elpicode}
-% func once (pred) -> .
-% once P :- P, !.
-
-% func do! list (pred) -> .
-% do! [] [].
-% do! [P|PS] :- once P, do! PS.
-
-% % alternative
-
-% func tcut (pred) -> (func).
-% tcut R F :- F = once R.
-
-% func do! list (pred) ->.
-% do! LR :- map tcut LR LF, do LF.
-% \end{elpicode}
+Last but not least we provide an operational semantics for
+the Elpi dialect of $\lambda$Prolog: a higher-order logic programming language
+with cut.
