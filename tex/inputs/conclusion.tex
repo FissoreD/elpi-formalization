@@ -2,14 +2,14 @@
 
 \begin{table}
   \centering
-  \begin{tabular}{c|c|c|c|c|c|c}
-    Paper         & Mode check & Hard Cut & HO prog         & HHF    & HO unif & SubT.           \\
+  \begin{tabular}{c|c|c|c|c|c}
+    Paper         & Mode check & Hard Cut & HO prog         & SubT.           & HHF    \\
     \hline
-    Warren et al. & Assumed    & \cmark   & \xmark          & \xmark & \xmark  & \xmark          \\
-    Mercury       & \cmark     & \xmark   & \nicefrac{1}{2} & \xmark & \xmark  & \nicefrac{1}{2} \\
-    Mixtus        & \cmark     & \cmark   & \xmark          & \xmark & \xmark  & \nicefrac{1}{2} \\
-    RedAlert      & \cmark     & \cmark   & \xmark          & \xmark & \xmark  & \xmark          \\
-    Elpi          & \xmark     & \cmark   & \cmark          & \cmark & \cmark  & \cmark          \\
+    Warren et al. & Assumed    & \cmark   & \xmark          & \xmark          & \xmark \\
+    Mercury       & \cmark     & \xmark   & \nicefrac{1}{2} & \nicefrac{1}{2} & \xmark \\
+    % Mixtus        & \cmark     & \cmark   & \xmark          & \nicefrac{1}{2} & \xmark  & \xmark \\
+    RedAlert      & \cmark     & \cmark   & \xmark          & \xmark          & \xmark \\
+    Elpi          & \xmark     & \cmark   & \cmark          & \cmark          & \cmark \\
   \end{tabular}
 
   \caption{Comparison}
@@ -21,29 +21,61 @@ Several studies have explored determinacy analysis in logic programs.
 \Cref{tab:comparison} summarizes the main differences between our approach to
 determinacy checking and existing work from the literature.
 
-Determinacy analysis can be applied to \textit{open} or \textit{closed}
-programs. Closed programs allow determinacy inference by analyzing clauses and
-tracking predicate calls throughout the program. In a closed-world setting, it
-is sometimes possible to compile a program into a more efficient form using the
-\textit{super-homogeneous} transformation, where all clauses of a predicate are
-collapsed into a single clause containing a disjunction for each replaced
-clause. This approach is central to works such as
-\cite{1996Somogy,king2006,1991Sahlin}.
+The papers referenced in the first column of the table correspond to
+\cite{1989Warren,1996Somogy,2011king}. One key difference between our work and
+these studies is that prior research primarily focuses on \textit{closed}
+programs, i.e., programs that do not evolve during query execution. In contrast,
+our approach, leveraging the \impl\ operator, allows clauses to be dynamically
+loaded in subqueries, making the program mutable.
 
-In contrast, a \textit{higher-order} setting introduces the implication
-operator, making programs \textit{open} -- i.e., local clauses may be
-dynamically loaded. This is the case in Elpi, where a static determinacy checker
-is necessary to handle such scenarios. Our operational semantics closely follows
-\cite{1990Vink}, interpreting logic programs with the non-logical \cut\
-operator. This approach allows us to work with concrete objects, making it
-easier to define the meaning of a deterministic predicate. This choice contrasts
-with \cite{2011king}, where a denotational semantics is used.
+For closed programs, a transformation into \textit{super-homogeneous} form is
+possible, where all clauses of a predicate are collapsed into a single clause
+containing a disjunction for each original clause. This transformation
+facilitates determinacy inference and can sometimes yield more efficient
+programs. However, in our open-world setting, such a transformation is not
+feasible.
 
-Regarding modes, Elpi's integration with an interactive theorem prover like Rocq
-prevents us from relying on ground input terms. However, the non-standard
-unification dynamically applied to input terms allows our theorem to dispense
-with the requirement of working with a well-moded program -- a fundamental
-assumption in works such as \cite{1989Warren,1996Somogy,2011king}.
+The mutability of programs also impacts our operational semantics: rule
+\ref{rule:piimpl} must add local clauses to the program dynamically. Our
+operational semantics shares similarities with \cite{1990Vink}, where a list of
+alternatives is maintained -- these alternatives are consumed on failure and
+discarded upon encountering a \cut\ operator. The primary distinction between
+our semantics and that of \cite{1990Vink} (beyond the acceptance of hereditary
+Harrop formulas in our system) is that we do not require special built-in
+predicates for \textit{fail} and \textit{or}. Instead, we encode them directly
+in our language: \textit{fail} is represented as a predicate with no
+implementation; \textit{or} is a predicate with two propositional arguments
+$p_1$ and $p_2$, and two clauses: the first executes $p_1$, while the second
+retains the execution of $p_2$ as a choice point.
+
+Our operational semantics enables reasoning with concrete objects, making it
+easier to define what it means for a predicate to be deterministic. This
+approach differs from \cite{2011king}, which employs a denotational semantics.
+
+Regarding modes, Elpi’s matching procedure over input arguments allows us to
+dispense with explicit mode checking—an essential component in the other works.
+Additionally, Elpi’s strong integration with an interactive theorem prover like
+Rocq prevents us from relying on ground input terms.
+
+Finally, in higher-order programming, the \mySub\ relation allows predicates to
+be wrongly applied, as illustrated by the \elpiIn{map} procedure. In Mercury,
+this notion of a "wrong call" does not exist. Instead, the language enforces
+correctness by requiring higher-order functions to be annotated with explicit
+mode and determinacy signatures for each possible behavior. As a result, Mercury
+requires $11$ mode signatures for the \textit{foldr} predicate
+(\href{https://github.com/Mercury-Language/mercury/blob/5900de3e8c1bc1dcc75799b350b381ff9b9774f2/library/list.m#L1587C1-L1597C75}{source
+here}), and any call that does not match an exact mode signature results in a
+compilation failure. For instance, \textit{list.filter\_map\_corresponding} fails
+if the higher-order function is deterministic rather than semi-deterministic.
+
+Elpi takes a more high-level approach, defining fewer determinacy classes and
+immediately classifying wrong calls as non-deterministic. For instance,
+\elpiIn{foldr} has only the signature
+\dtype{\detI}{[(\dtype{\detI}{[L,A]}{[A]}), \mathrm{list } L, A]}{A}. This
+design choice aligns with our goal of providing static guarantees on programs
+rather than producing specialized program transformations based on predicate
+usage.
+
 
 
 
