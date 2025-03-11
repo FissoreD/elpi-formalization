@@ -272,8 +272,8 @@ The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
   \label{fig:full-det-check-terms}
 \end{figure}
 
-$$\infer : \ctx \to \A \to sig \times \bool$$
-$$\dapp : \ctx \to \vecL{sig} \to \vecL{sig} \to \vecL{tm} \to \bool \to sig \times sig \times \bool$$
+$$\infer : \ctx \to \A \to sig \times \B$$
+$$\dapp : \ctx \to \vecL{sig} \to \vecL{sig} \to \vecL{tm} \to \B \to sig \times sig \times \B$$
 
 The \infer\ procedure is in charge of inferring the signature of an input
 argument. Since predicate calls are part of the term syntax, these ``calls''
