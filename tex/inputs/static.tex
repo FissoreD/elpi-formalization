@@ -1,160 +1,15 @@
 \section{The meaning of a predicate signature}
 
-% \section{Determinacy checking for Higher Order predicates} % Prolog with higher-order variables in prop}
-% \label{sec:vars}
-
-% In order to fully capture the potential of a \lamprolog language like \elpi, we
-% need to delve deeper into the concept of variables. Until now, we have
-% intentionally avoided discussing them in detail. They were %implicitly taken into
-% %account in the \ref{rule:unif} and \ref{rule:match} rules, 
-% used in term unifications, however, a query like
-% \elpiIn{p = X, X 1 3} was not accepted by the run procedure. The only
-% application we authorized was caputered by calls to terms with rigid heads.
-% % Here we extend terms application and replace it as follows
-
-% % \begin{coqcode}
-% %   | Call (hd : vn | tn) (t1:tm) (t2:tm)
-% % \end{coqcode}
-
-% % The notation $(h\ t_1\ t_2)$ is used to represent the \call\ constructor.
-
-% % \newcommand{\sbeta}{\ensuremath{\mathcal{S}_\beta}}
-
-% % \begin{figure}
-% %   \ruleCallBM{1}
-
-% %   %   \vspace{-2em}
-% %   % $$
-% %   % \mathcal{F}'(\prog, h, i, o, \subst, \alt) := 
-% %   %   [(\subst, (
-% %   %       \Cons{(\prog, i = i', \alt)}
-% %   %         \Cons{(\prog, o = o', \alt)}
-% %   %           {[(\prog, g, \alt) \mid g \in bs]})) \mid \clauseCmd{(\subst h)}{i'\ o'}{bs} \in \prog\ (\subst h)]
-% %   % $$
-% %   %   \vspace{-2em}
-% %   % \begin{align*}
-% %   %   \sbeta\ \subst\ (\lambda x.b)\ (a::\vec{as}) &= \sbeta\ \subst\ (b [x\bs a])\ \vec{as}\\
-% %   %   \sbeta\ \subst\ (\pred\ \vec{t})\ \vec{a} &= \pred\ \vec{t}\ \vec{a}
-% %   % \end{align*}
-
-% %   \caption{Dynamic semantics: update of \ref{rule:call}}
-% %   \label{fig:new-call}
-% % \end{figure}
-
-% To account for this change, rule \ref{rule:call} is modified to accommodate the
-% new application, as shown in \cref{fig:new-call}. The main difference from
-% \ref{rule:call} is that in \ref{rule:call1}, before invoking the function
-% $\mathcal{F}$, we first look up the value of $h$ in \subst. If $h$ is a
-% variable, this dereferencing operation may return a \lam-term, which, when
-% applied to $\vec{t}$ is $\beta$-reduced (thanks to the hereditary substitution
-% principle) to a canonical value in the form of a predicate name applied
-% a new vector of terms $\vec{u}$.
-
-% This change significantly impacts our static determinacy checker: variables can
-% now be passed as arguments and may have a propositional type, meaning
-% they can be called within clause bodies. Therefore, additional properties can be
-% enforced by the checker. For example, users may want to ensure that a
-% predicate's output is verified to be a deterministic predicate.
-
-% We provide some examples to illustrate this point:
-
-% \begin{itemize}
-%   \item In a program with a predicate \elpiIn{once}, defined as \elpiIn{once P
-%           :- P, !}, we observe that \elpiIn{once} behaves deterministically
-%         regardless of the determinacy of its argument.
-%   \item In a program with a predicate \elpiIn{make-det}, defined as
-%         \elpiIn{make-det P (once P)}, we see that for any input proposition
-%         \elpiIn{P}, the output is deterministic.
-%   \item In a program with a predicate \elpiIn{do}, defined as
-%         \elpiIn{do P :- P}, we see that if \elpiIn{do} is called with a
-%         deterministic predicate, then \elpiIn{do} is deterministic.
-%   \item Finally, in a program with a predicate \elpiIn{idF}, defined as
-%         \elpiIn{idF A A}, we note that when \elpiIn{idF} is called with a
-%         deterministic input, its output remains deterministic.
-% \end{itemize}
-
-% To provide this information to the compiler we give the user the possibility to
-% provide more expressive type signatures for constants. The non-terminal $pred$
-% from \cref{eq:pred} changes as follows:
-% as follows:
-% %
-% \begin{align}
-%   ty & ::= data \mid [\detI \mid \relI]\ ty^\ast \funsep ty^\ast \label{eq:pred1}
-% \end{align}
-
-% The arguments of a predicate, now, are no more objects living in the datatype,
-% but they can also have propositional type. In the following a predicate with $0$
-% argument will be note as \detI\ (resp. \relI) instead of $\detI\ []\ []$ (resp.
-% $\relI\ []\ []$).
-
-% % \textbf{TODO: typechecker: types to dtypes}
-
-% Thanks to this, we can define the signature of the predicates above:
-% %
-% % \begin{equation}  
-% \begin{align*}
-%   \texttt{once}     & : \dtype{\detI}{[\relI]}{[]}      & \texttt{do}  & : \dtype{\detI}{[\detI]}{[]}      \\
-%   \texttt{make-det} & : \dtype{\detI}{[\relI]}{[\detI]} & \texttt{idF} & : \dtype{\detI}{[\detI]}{[\detI]}
-% \end{align*}
-% % \label{eq:ty1}
-% % \end{equation}
-
-% In the code abode we use brackets to delimit lists. The idea is that, thanks to
-% type signatures, the \elpi's checker ensures that a predicate behaves as a
-% function and returns output with the declared determinacy in the signature
-% if they are called with inputs having the expected determinacy.
-
-% Thanks to this certification, for example, if \elpiIn{f} be a binary relation, then the query ``\elpiIn{make-det (f 1 X) F, do F}'' is
-% deterministic. This is because \elpiIn{make-det} is deterministic, \elpiIn{F} is
-% deterministic and \elpiIn{do} behaves deterministically when it receives
-% functions as input.
-
-% \subsection{Comparing predicate signatures}
-
 It is one of our objective that the determinacy checker should accept
 predicates that are \textit{wrongly} called so that we can, incrementally,
-make the predicate signatures more precise and also avoid code duplication\footnote{require multiple copies of the same code just because they differ in signature}.
+make the predicate signatures more precise.
+%  and also avoid code duplication\footnote{require multiple copies of the same code just because they differ in signature}.
 
 
-% FINQUI
+The \mySub\ relation extend the intuitive inclusion of mathematical functions
+into relations to the recursive nature of predicate signatures, and rejects the
+converse inclusion. 
 
-% For
-% example, \elpiIn{do (f 1 X)} should be accepted as a call, however, since the\todo{cambiare f con queen}
-% argument of \elpiIn{do} has not the expected determinacy, we loose the guarantee
-% that the call behaves deterministically. Similarly, in the query \elpiIn{idF (f 1 X)
-%   R}, \elpiIn{idF} is \textit{wrongly} called and therefore we have no guarantee that \elpiIn{R} is
-% deterministic and that the whole call behaves deterministically. The choice to
-% accepts wrong calls allows to have \textit{code reusability}.
-
-% On the other hand, the signature of \elpiIn{make-det} should reject
-% \elpiIn{make-det A (once A) :- A}. Since we cannot guarantee that the whole rule
-% is a function: \elpiIn{A} could be a relation and calling it in the body of a
-% predicate expected to behave deterministically, may create choice points.
-
-% To address all of these issues we implement a static checker which labels variables
-% with their determinacy type (dtype). Labels are simpler instantces of \cref{eq:ty}:
-% all terms living in the datatype will be labelled with \expI. The checker
-% rejects the clauses of a predicate if the labels that have been updated in a
-% given context \ctx\ do not respect the signature of the predicate.
-
-
-% A term is either an expression (an non executable peice of code), a relational
-% or a deterministic predicate or finally an arrow (just like the arrow used for
-% the types of functions) between two \detlab. For the last constructor we
-% will use the notation $d_1 \myTo d_2$ where $d_1$ and $d_2$ are instances of\todo{i:detlab list if multiple args}
-% \detlab, moreover we consider $d_1$ to be an input and $d_2$ to be an output.
-% We are again considering binary relations. This can always be generalized to
-% functions (or relations) of any arity by slightly changing the signature of
-% the \coqIn{arr} constructor.
-
-% The problem of this first algorithm of determinacy check is that it does not
-% take into account 
-% A natural property that exists between functions and relations is that a
-% function is a particular relation such that all of the members in its domain
-% points to at most a unique value in its codomain. This means that a fuction can
-% be always passed in place of a relation. 
-
-We define below the partial ordering test between two predicate signature $f_1$ and $f_2$.
 \begin{equation}
   f_1 \mySub f_2 =
   \begin{cases}
@@ -181,16 +36,15 @@ We define below the partial ordering test between two predicate signature $f_1$ 
 %   end.
 % \end{coqcode}
 
-The \mySub extend the intuitive inclusion of mathematical functions
-into relations to the recursive nature of predicate signatures, and rejects the
-converse inclusion. The definition assumes type checking as in~\cite{1992nadathur}:
-we only compare signatures that agree in their arity and number of inputs (hence outputs)
-and we ignore the case in which datatypes are compared to predicate signatures.
+% The definition of \mySub\  type checking as in~\cite{1992nadathur}:
+% we only compare signatures that agree in their arity and number of inputs (hence outputs)
+% and we ignore the case in which datatypes are compared to predicate signatures.
 
 In the spirit of subtyping the input arguments of predicate signature
-are compared in a contravariant way.
-The intuition is that the meaning of a 
-predicate signature
+are compared in a contravariant way. The intuition is that the meaning of a 
+predicate signature is given by the following formula where
+\isdet is an uninterpreted predicate (the definition we give in section~\ref{sec:thm}
+does not matter).
 
 \newcommand{\sem}[1]{\ensuremath{[\![#1]\!]}}
 
@@ -200,16 +54,18 @@ $$
 \sem{\dtype{\func_1}{\func_2}{\func_3}}\ \pred & =
   \forall t\ u, \sem{\func_2}\ t \Rightarrow \sem{\func_1}\ (\pred\ t\ u) \land \sem{\func_3}\ u\\
 \sem{\detI}\ \pred & = \isdet\ \pred \\
+\sem{\relI}\ \pred & = \top \\
 \sem{\expI}\ \pred & = \top 
 \end{array}
 $$
 \end{definition}
 If the preconditions of a signature are satisfied then the call is
-functional and the post conditions on the out hold.
-The order relation \mySub is such that $f_1 \mySub f_2 = \sem{f_1} \Rightarrow \sem{f_2}$,
-hence the contravariance, the post of 11 are stronger than the ones of f2, while
-the pre must be in the converse relation.
-\todo{is odet is defined later}
+functional and the post conditions on the outputs hold.
+The relation \mySub\ is such that $f_1 \mySub f_2 = \sem{f_1} \Rightarrow \sem{f_2}$,
+hence the contravariance:
+the post conditions of $f_1$ can be stronger than the ones of $f_2$ while
+the pre conditions of $f_1$ must be wekaer than the ones of $f_2$.
+% \todo{is odet is defined later}
 
 % The \mySub\ relation is intentionally incomplete, as we assume that the program
 % has undergone type-checking before any determinacy verification. This guarantees

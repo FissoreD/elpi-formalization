@@ -656,3 +656,18 @@ Rocq: the user experience crytically relies on quick feedback from the system.
 % determinacy checker to analyse not only deterministic clauses but also relational
 % one, since a check should be performed wrt the determinacy annotation of its
 % outputs.
+
+\subsection{Digression on  the eagherness of $\mathcal{H}$}
+
+The function $\mathcal{H}$ eagerly unifies all clauses with the.
+A more natural and possibly more efficient semantics would be to just create the
+alternatives and prepend to the list of goals the same unification
+problems. Our choice simplifies the formal threatment of determinacy 
+in~\cref{sec:thm} and in particular it matches the \mutExclHeads\ condition.
+
+From a practical stanpoint a implementation of the semantics
+above with efficiency concerns can make $\mathcal{H}$ lazy
+without compromising the \mutExclHeads\ condition
+can either index clauses deep enough
+or perform a program transformation consisting in inserting
+\elpiIn{once} around each call to a deterministic predicate.
