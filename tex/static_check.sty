@@ -127,7 +127,7 @@
   \begin{myRule}{#1}
     % CALL FAIL
     \AxiomC{\ensuremath{ \ctx\ \predVar = \dtype{\_}{\func[_i]}{\_} }}
-    \AxiomC{ \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func[_i'],\bool_i)}}}
+    \AxiomC{ \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func['],\bool)}}}
     \AxiomC{$ \exists i,\func[_i'] \not\mySub \func[_i]\ \lor\ \exists i, \bool_i = \bot$}
     \RightLabelM{\ruleCheckCallFail}
     \TrinaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ \vec{t})}{\ctx}{\relI}}
