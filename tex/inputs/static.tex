@@ -1,14 +1,17 @@
 \section{The meaning of a predicate signature}
 
-It is one of our objective that the determinacy checker should accept
+It is one of our objectives that the determinacy checker should accept
 predicates that are \textit{wrongly} called so that we can, incrementally,
 make the predicate signatures more precise.
 %  and also avoid code duplication\footnote{require multiple copies of the same code just because they differ in signature}.
 
 
-The \mySub\ relation extend the intuitive inclusion of mathematical functions
+The \mySub\ relation subsumes signature equality and
+extend the intuitive inclusion of mathematical functions
 into relations to the recursive nature of predicate signatures, and rejects the
 converse inclusion. 
+In the spirit of subtyping the input arguments of predicate signature
+are compared in a contravariant way. 
 
 \begin{equation}
   f_1 \mySub f_2 =
@@ -40,14 +43,11 @@ converse inclusion.
 % we only compare signatures that agree in their arity and number of inputs (hence outputs)
 % and we ignore the case in which datatypes are compared to predicate signatures.
 
-In the spirit of subtyping the input arguments of predicate signature
-are compared in a contravariant way. The intuition is that the meaning of a 
+\newcommand{\sem}[1]{\ensuremath{[\![#1]\!]}}
+The intuition is that the meaning of a 
 predicate signature is given by the following formula where
 \isdet is an uninterpreted predicate (the definition we give in section~\ref{sec:thm}
 does not matter).
-
-\newcommand{\sem}[1]{\ensuremath{[\![#1]\!]}}
-
 \begin{definition}[Meaning of a signature (\sem{\cdot})]
 $$
 \begin{array}{rl}
@@ -61,7 +61,7 @@ $$
 \end{definition}
 If the preconditions of a signature are satisfied then the call is
 functional and the post conditions on the outputs hold.
-The relation \mySub\ is such that $f_1 \mySub f_2 = \sem{f_1} \Rightarrow \sem{f_2}$,
+The relation \mySub\ is such that if $f_1 \mySub f_2$ then $\sem{f_1} \Rightarrow \sem{f_2}$,
 hence the contravariance:
 the post conditions of $f_1$ can be stronger than the ones of $f_2$ while
 the pre conditions of $f_1$ must be wekaer than the ones of $f_2$.
@@ -99,12 +99,12 @@ the pre conditions of $f_1$ must be wekaer than the ones of $f_2$.
 
 \section{Signature checking}
 
-The algorithm is a dataflow analsysis algorith a bit like mode checking.
-It stores in \ctx the predicate signature of each variable: it uses it to
-check if it satisfies the precondition of a call and possibly refines if
-the signature if the post condition of a call holds.
+The checking performs dataflow analsysis.It stores in \ctx the predicate
+signature of each variable and it uses it to test if it satisfies the
+precondition of predicate call and possibly refines it to
+the signature of a post condition a predicate call.
 
-These updates use the following two operators
+These updates use the following two operators:
 
 %
 \begin{equation}
@@ -132,7 +132,7 @@ These updates use the following two operators
 \newcommand{\minimize}{\texttt{minimize}\xspace}
 
 % Below we define the functions \maximize and \minimize.
-
+~\\
 We assume all variables appear in \ctx with a signature upfront, generated from
 the type checker as follows: TODO explain \maximize and \minimize.
 

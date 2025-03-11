@@ -128,7 +128,7 @@ necessary.
   Given a context \ctx\ and two clauses $c_1$ and $c_2$ with heads,
   respectively,  $\pred\ \vec{u}$ and $\pred\ \vec{v}$ then
   % forall vector of \textit{ground} terms $\vec{v}$,
-  $$\forall d, \mutExclHeads\ \ctx\ c_1\ c_2\ d \to
+  $$\forall d, \mutExclHeads\ \ctx\ c_1\ c_2\ d \Rightarrow
     \lnot (\exists t\ \subst_1\ \subst_2\ s.t.\ 
     \matchCmd{t}{u_d}{\EmptySubst}{\subst_1} \land
     \matchCmd{t}{v_d}{\EmptySubst}{\subst_2})
@@ -153,8 +153,8 @@ necessary.
 %   then % any $\wellModed\ (\pred\ \vec{t})$ is such that
 %   $$
 %     \mathcal{F}(\prog, \pred\ \vec{t}, \subst, \alts) = [\alts[_1], a_2]
-%     \to
-%     \runCmdQ{a_1}{\EmptyList}{\subst}{a'} \to
+%     \Rightarrow
+%     \runCmdQ{a_1}{\EmptyList}{\subst}{a'} \Rightarrow
 %     \lnot \exists \subst' a'', \runCmdQ{a_2}{\EmptyList}{\subst[']}{a''}
 % $$
     
@@ -275,7 +275,7 @@ the top of the program, before any other clause.
 %   Given a program \prog, forall deterministic predicate \pred, mutual exclusion is defined as
 %   follows:
 %   $$\mutExcl\ \prog \land (\forall \pred[']\
-%   c, c\in \prog\ \pred['] \to \locExcl\ c\ \pred)$$
+%   c, c\in \prog\ \pred['] \Rightarrow \locExcl\ c\ \pred)$$
 %   \vspace{-2em}
 %   \label{def:det-check-ho}
 % \end{definition}
@@ -284,7 +284,7 @@ the top of the program, before any other clause.
 \begin{theorem}[Deterministic execution] \label{th:det2}
   $$
   \detprog\ \ctx\ \prog \land
-  \staticcheckq\ \ctx\ \prog\ (\pred\ \vec{t}) \to
+  \staticcheckq\ \ctx\ \prog\ (\pred\ \vec{t}) \Rightarrow
   \isdet\ \prog\ (\pred\ \vec{t})
   $$
 \end{theorem}
@@ -308,7 +308,7 @@ the top of the program, before any other clause.
 % \begin{theorem}[Determinacy checking with \match property]
 %   Given a context \ctx\ and a program \prog, forall deterministic predicate \pred in \ctx,
 %   we have
-%   $$\hyperref[def:det-check]{\detCheck}\ \ctx\ \prog \to \forall \vec{t}, \hyperref[def:is-det]{\isdet}\ \prog\ (\pred\ \vec{t})$$
+%   $$\hyperref[def:det-check]{\detCheck}\ \ctx\ \prog \Rightarrow \forall \vec{t}, \hyperref[def:is-det]{\isdet}\ \prog\ (\pred\ \vec{t})$$
 %   \vspace{-2em}
 %   \label{th:det1}
 % \end{theorem}
@@ -545,7 +545,7 @@ the top of the program, before any other clause.
 % % \end{proof}
 
 % %
-% \begin{theorem}[determinacy check $\to$ deterministic pred]
+% \begin{theorem}[determinacy check $\Rightarrow$ deterministic pred]
 %   For any deterministic-annotated predicate \pred,
 %   \begin{coqcode}
 %     Theorem det_check_det_pred ~\prog~ (H: edet_check ~\prog\!\!~):

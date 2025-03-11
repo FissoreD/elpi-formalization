@@ -66,14 +66,17 @@ $t$ is \ground.
     ty   & ::= \texttt{exp} \mid sig \mid \V & \mathrm{type} \\
   \end{array}
   $$
-  \caption{Syntax of Elpi}
-  \label{fig:syntax}
 \end{subfigure}
 }
 
 \begin{figure}[b]
-  \fbox{\syntaxFig}
+  \begin{framed}
+  \syntaxFig
+  \end{framed}
+  \caption{Syntax}
+  \label{fig:syntax}
 \end{figure}
+\todo{serve \V per eq, ma poi exp?}
 
 
 A substitution $\subst \in \Sigma $ is a mapping from unification variables
@@ -88,23 +91,24 @@ substition s.t. $\dom\ \EmptySubst = \emptyset$.
 % When two substitutions have disjoint domains we write $\sigma_1 \cup \sigma_2$
 % as the (disjoint) union of two substitutions.
 
-We assume a unifier $\unify : tm \times tm \times \Sigma \to \Sigma \uplus \bot$
+We denote with $\_\times\_$, $\_+\_$, $\vecL{\phantom{i}\_~}$ and $\_\to\_$ the product, disjoint union, list and
+function space of types, respectively, and with $\B = \{ \top, \bot\}$ the booleans.
+We assume a function $\unify$ of type $tm \times tm \times \Sigma \to \Sigma + \B$
 such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
-and $\subst[']$ is the most general extension $\subst$
+and $\subst[']$ is the most general extension of $\subst$
 as in~\cite{1991miller-pf}.
-We assume a matcher $\match : tm \times tm \times \Sigma \to \Sigma \uplus \bot$
+We assume a function $\match$ of type $tm \times tm \times \Sigma \to \Sigma + \B$
 such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \subst['] p$
 and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\subst$,
 i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as a pattern.
-We denote failure with $\bot$.
 
 As this paper does not really focuses on type checking (the interested reader can
-refer to~\cite{1992nadathur}) we collaps all non-predicate types to
-a single node \texttt{exp}.
+refer to~\cite{1992nadathur}) we collapsw all non-predicate types to
+a single node \texttt{exp}.\todo{what about \V?}
 %  At the same time we enrich the $o$ type
 % of propositions with a marker in \D and  
 We also rule out predicates inside data,
-eg a list of predicates, for space constraints.
+list a list of predicates, for space constraints.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -143,6 +147,10 @@ name $x$ to $\aleph$.\todo{change order} We write $x \# \prog$ to find a name fr
   \vspace{0.3em}%
 
   \ruleCallM{1}
+
+  \ruleCallMF{0.5}
+  \ruleCallMFH{0.44}
+
   $$
   \mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
   \bigg[
@@ -162,15 +170,11 @@ name $x$ to $\aleph$.\todo{change order} We write $x \# \prog$ to find a name fr
   $$
   \mathcal{H}(\vecL{tu},\ ol,\ \subst) = \fold\ \unify\ \vecL{tu_o}\ (\fold\ \match\ \vecL{tu_i}\ \subst)
   $$
-
-  \ruleCallMF{0.5}
-  \ruleCallMFH{0.44}
+  ~\\
 
   \rulePiImplM{.7}
   \ruleCallBeta{0.44}
 
-  \caption{Operational natural semantics}
-  \label{fig:basic-interp}
 % \end{subfigure}
 }
 
@@ -178,6 +182,8 @@ name $x$ to $\aleph$.\todo{change order} We write $x \# \prog$ to find a name fr
   \begin{framed}
   \runFig
   \end{framed}
+  \caption{Operational natural semantics}
+  \label{fig:basic-interp}
 \end{figure}
 
 A goal $\g \subseteq \prog \times \A \times \vecL{\alt}$
@@ -187,7 +193,7 @@ An alternative $a \in \alt \subseteq \Sigma \times \vecL{\g}$ is a
 pair made of a substitution and a list of goals.
 
 The operational semantics of our language is given by a relation
-$\run{} \subseteq \alt \times \vecL{\alt} \times (\vecL{\alt} \times \Sigma ~\uplus~ \bot)$.
+$\run{} \subseteq \alt \times \vecL{\alt} \times (\vecL{\alt} \times \Sigma ~+~ \bot)$.
 We write \runCmd{gl}{a}{\subst}{a'}{\subst'}
 when a goal list $gl$ under a substitution \subst and alternatives $a$
 terminates with a substitution $\subst'$ and a remaining list of

@@ -61,10 +61,10 @@
 \newcommand{\clause}[1][]{\ensuremath{\mathcal{@}#1}\xspace}
 \newcommand{\pred}[1][]{\texttt{p#1}\xspace}
 \newcommand{\expr}[1][]{\texttt{e#1}\xspace}
-\newcommand{\isFuncCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to 
+\newcommand{\isFuncCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \Rightarrow 
   \forall a_i \in a, \runCmdFQ{a_i}{\EmptyList}
 }}
-\newcommand{\isDetCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \to 
+\newcommand{\isDetCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \Rightarrow 
  a = \EmptyList
 }}
 \newenvironment{boxedproof}
