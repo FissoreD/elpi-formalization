@@ -104,37 +104,48 @@ signature of each variable and it uses it to test if it satisfies the
 precondition of predicate call and possibly refines it to
 the signature of a post condition a predicate call.
 
-These updates use the following two operators:
+These updates use the ``dual'' operators \minT\ and \maxT.
+In their mutual definition below we denote one of them
+with $f$ and $g$ the other one:
 
 %
 \begin{equation}
-  \minT\ f_1 f_2 =
+  f\ s_1\ s_2 =\ 
   \begin{cases}
-    \dtype{\detI}{(\vecL{\maxT}\ a\ c)}{(\vecL{\minT}\ b\ d)} & \text{if } f_k = \dtype{\relI}{a}{b} \land f_{2-k} = \dtype{\detI}{c}{d} \\
-    \dtype{D}{(\vecL{\maxT}\ a\ c)}{(\vecL{\minT}\ b\ d)}     & \text{if } f_1 = \dtype{D}{a}{b} \land f_2 = \dtype{D}{c}{d}             \\
-    % \relI\ (\vecL{\maxT}\ a\ c)\ (\vecL{\minT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
-    \expI                                                     & \text{if } f_1 = \expI \land f_2 = \expI
+    \ \dtype{\detI}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})} & \text{if } s_k = \dtype{\relI}{a}{b} \land s_{3-k} = \dtype{\detI}{c}{d} \\
+    \ \dtype{D}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})}     & \text{if } s_1 = \dtype{D}{a}{b} \land s_2 = \dtype{D}{c}{d}             \\
+    % \relI\ (\vecL{g}\ a\ c)\ (\vecL{f}\ b\ d) & \text{if } s_1 = \relI\ a\ b \land s_2 = \relI\ c\ d \\
+    \ \expI                                                     & \text{if } s_1 = \expI \land s_2 = \expI
   \end{cases}
   \label{eq:min}
 \end{equation}
-\begin{equation}
-  \maxT\ f_1 f_2 =
-  \begin{cases}
-    \dtype{\detI}{(\vecL{\minT}\ a\ c)}{(\vecL{\maxT}\ b\ d)} & \text{if } f_k = \dtype{\relI}{a}{b} \land f_{2-k} = \dtype{\detI}{c}{d} \\
-    \dtype{D}{(\vecL{\minT}\ a\ c)}{(\vecL{\maxT}\ b\ d)}     & \text{if } f_1 = \dtype{D}{a}{b} \land f_2 = \dtype{D}{c}{d}             \\
-    % \relI\ (\vecL{\minT}\ a\ c)\ (\vecL{\maxT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
-    \expI                                                     & \text{if } f_1 = \expI \land f_2 = \expI
-  \end{cases}
-  \label{eq:max}
-\end{equation}
+\vspace{0.3em}
 
-\newcommand{\maximize}{\texttt{maximize}\xspace}
-\newcommand{\minimize}{\texttt{minimize}\xspace}
+% \begin{equation}
+%   \maxT\ f_1 f_2 =
+%   \begin{cases}
+%     \dtype{\detI}{(\vecL{\minT}\ a\ c)}{(\vecL{\maxT}\ b\ d)} & \text{if } f_k = \dtype{\relI}{a}{b} \land f_{3-k} = \dtype{\detI}{c}{d} \\
+%     \dtype{D}{(\vecL{\minT}\ a\ c)}{(\vecL{\maxT}\ b\ d)}     & \text{if } f_1 = \dtype{D}{a}{b} \land f_2 = \dtype{D}{c}{d}             \\
+%     % \relI\ (\vecL{\minT}\ a\ c)\ (\vecL{\maxT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
+%     \expI                                                     & \text{if } f_1 = \expI \land f_2 = \expI
+%   \end{cases}
+%   \label{eq:max}
+% \end{equation}
+
+\newcommand{\maximize}{\texttt{weaken}\xspace}
+\newcommand{\minimize}{\texttt{strenghten}\xspace}
 
 % Below we define the functions \maximize and \minimize.
-~\\
-We assume all variables appear in \ctx with a signature upfront, generated from
-the type checker as follows: TODO explain \maximize and \minimize.
+
+We assume each rule to have been typechecked by an algorithm that
+traverses all clauses and in particular all variables in \X\ that
+represent predicates, e.g. the higher order parameter of \elpiIn{map}.
+Since we want to keep typecheck separated from determinacy checking,
+the former identified \relI\ with \detI\ and in particular assigns
+to the variables the output of \maximize\ of its declared signature.
+That function is defined by mutual recursion with its dual \minimize\ 
+and in the definition below we denote one of them
+with $f$ and $g$ the other one:
 
 % $$
 %   \minT\ f_1\ f_2 = \begin{cases}
@@ -168,21 +179,21 @@ the type checker as follows: TODO explain \maximize and \minimize.
 
 
 \begin{equation}
-  \maximize\ f =
+  f\ s =
   \begin{cases}
-    \dtype{\relI}{(\vecL{\minimize}\ a)}{(\vecL{\maximize}\ b)} & \text{if } f = \dtype{\_}{a}{b} \\
-    \expI                                                       & \text{if } f = \expI
+    \dtype{\relI}{(\vecL{g\ a})}{(\vecL{f\ b})} & \text{if } s = \dtype{\func}{a}{b} \\
+    \expI                                                       & \text{if } s = \expI
   \end{cases}
   \label{eq:maximize}
 \end{equation}
-\begin{equation}
-  \minimize\ f_1 =
-  \begin{cases}
-    \dtype{\detI}{(\vecL{\maximize}\ a)}{(\vecL{\minimize}\ b)} & \text{if } f = \dtype{\_}{a}{b} \\
-    \expI                                                       & \text{if } f = \expI
-  \end{cases}
-  \label{eq:minimize}
-\end{equation}
+% \begin{equation}
+%   \minimize\ f_1 =
+%   \begin{cases}
+%     \dtype{\detI}{(\vecL{\maximize}\ a)}{(\vecL{\minimize}\ b)} & \text{if } f = \dtype{\func}{a}{b} \\
+%     \expI                                                       & \text{if } f = \expI
+%   \end{cases}
+%   \label{eq:minimize}
+% \end{equation}
 
 % The two fonctions respectively return the maximal and minimal dtype of a given
 % dtype. This is used \dots
