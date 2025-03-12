@@ -291,6 +291,16 @@ The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
 $$\infer : \ctx \to \A \to sig \times \B$$
 $$\dapp : \ctx \to \vecL{sig} \to \vecL{sig} \to \vecL{tm} \to \B \to sig \times sig \times \B$$
 
+TODO: rule for lambda assumes lambdas are ordered according to
+the convetion of input first and that their mode is somehow given.
+We have an heuristic in the type checker for that\todo{Davide?}.
+
+TODO: rule for app handles partial application like
+the \elpiIn{commit likes V} in the intro and check if
+sigs are respected.
+
+
+
 The \infer\ procedure is in charge of inferring the signature of an input
 argument. Since predicate calls are part of the term syntax, these ``calls''
 can as well be miscalled. In that case the procedure returns, as the second
