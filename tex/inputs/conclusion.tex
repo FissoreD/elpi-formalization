@@ -43,10 +43,15 @@ discarded upon encountering a \cut\ operator. The primary distinction between
 our semantics and that of \cite{1990Vink} (beyond the acceptance of hereditary
 Harrop formulas in our system) is that we do not require special built-in
 predicates for \textit{fail} and \textit{or}. Instead, we encode them directly
-in our language: \textit{fail} is represented as a predicate with no
-implementation; \textit{or} is a predicate with two propositional arguments
-$p_1$ and $p_2$, and two clauses: the first executes $p_1$, while the second
-retains the execution of $p_2$ as a choice point.
+in our language: for example \textit{fail} is represented as a predicate with no
+implementation. % \textit{or} is a predicate with two propositional arguments
+% $p_1$ and $p_2$, and two clauses: the first executes $p_1$, while the second
+% retains the execution of $p_2$ as a choice point.
+We would also point out that our semantics is the concrete semantics of the Elpi
+language from \cite{dunchev15lpar}, except for the $\mathcal{H}$ function. In
+Elpi we can perform some fast indexing clause retrieval, but complete
+unification is kept lazy in the stack of alternatives, as explained in
+\cref{sec:digression-h}.
 
 Our operational semantics enables reasoning with concrete objects, making it
 easier to define what it means for a predicate to be deterministic. This
@@ -59,22 +64,21 @@ Rocq prevents us from relying on ground input terms.
 
 Finally, in higher-order programming, the \mySub\ relation allows predicates to
 be wrongly applied, as illustrated by the \elpiIn{map} procedure. In Mercury,
-this notion of a "wrong call" does not exist. Instead, the language enforces
+this notion of a ``wrong call'' does not exist. Instead, the language enforces
 correctness by requiring higher-order functions to be annotated with explicit
 mode and determinacy signatures for each possible behavior. As a result, Mercury
 requires $11$ mode signatures for the \textit{foldr} predicate
 (\href{https://github.com/Mercury-Language/mercury/blob/5900de3e8c1bc1dcc75799b350b381ff9b9774f2/library/list.m#L1587C1-L1597C75}{source
 here}), and any call that does not match an exact mode signature results in a
-compilation failure. For instance, \textit{list.filter\_map\_corresponding} fails
-if the higher-order function is deterministic rather than semi-deterministic.
+compilation failure. % For instance, \textit{list.filter\_map\_corresponding} fails
+% if the higher-order function is deterministic rather than semi-deterministic.
 
-Elpi takes a more high-level approach, defining fewer determinacy classes and
-immediately classifying wrong calls as non-deterministic. For instance,
-\elpiIn{foldr} has only the signature
-\dtype{\detI}{[(\dtype{\detI}{[L,A]}{[A]}), \mathrm{list } L, A]}{A}. This
-design choice aligns with our goal of providing static guarantees on programs
-rather than producing specialized program transformations based on predicate
-usage.
+Elpi targets less technically includes users hence we strieve for simplicty,
+defining fewer determinacy classes and immediately classifying wrong calls as
+non-deterministic. For instance, \elpiIn{foldr} has only the signature
+\elpiIn{func foldr (func L A -> A) (list L) A -> A}. This design choice aligns
+with our goal of providing static guarantees on programs rather than producing
+efficient, specialized, machine code depending on the pred usage.
 
 
 

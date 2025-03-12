@@ -4,14 +4,14 @@
 % ASSUME
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\newcommand{\assume}{\texttt{assume}}
+\newcommand{\assume}{\texttt{assume}\xspace}
 
 %         inp     inp       inp    out
 % \assumeCmd{ctx}{determinacy}{term}{new_ctx}
 \newcommand{\assumeCmd}[5][]{\ensuremath{
-  \ifstrequal{#1}{1}
-  {\vecL{\assume\ #3\ #4\ #2}}
-  {\assume\ #3\ #4\ #2} \arr #5}}
+    \ifstrequal{#1}{1}
+    {\vecL{\assume\ #3\ #4\ #2}}
+    {\assume\ #3\ #4\ #2} \arr #5}}
 
 \newcommand{\ruleAssume}[2]{\customlabel{#1}{\ensuremath{A_{#2}}}}
 
@@ -24,21 +24,21 @@
   \end{myRule}
 }
 
-\newcommand{\ruleAssumeExpr}{\ruleAssume{rule:assume-expr}{\expr}}
-\newcommand{\assumeExpr}[1]{
-  \begin{myRule}{#1}
-    \AxiomC{}
-    \RightLabelM{\ruleAssumeExpr}
-    \UnaryInfC{\assumeCmd{\ctx}{\_}{\expr}{\ctx}}
-  \end{myRule}
-}
+% \newcommand{\ruleAssumeExpr}{\ruleAssume{rule:assume-expr}{\expr}}
+% \newcommand{\assumeExpr}[1]{
+%   \begin{myRule}{#1}
+%     \AxiomC{}
+%     \RightLabelM{\ruleAssumeExpr}
+%     \UnaryInfC{\assumeCmd{\ctx}{\_}{\expr}{\ctx}}
+%   \end{myRule}
+% }
 
 \newcommand{\ruleAssumePiImpl}{\ruleAssume{rule:assume-piimpl}{\piimpl}}
 \newcommand{\assumePiImpl}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\assumeCmd{(\ctx + \{x \mapsto ty\})}{\func}{B}{\ctx[']}}
+    \AxiomC{\assumeCmd{(\ctx + \{x \mapsto sig\})}{\func}{B}{\ctx[']}}
     \RightLabelM{\ruleAssumePiImpl}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{H}{B})}{\ctx[']\bs \{x\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\piImplCmd[sig]{x}{H}{B})}{\ctx[']\bs \{x\}}}
   \end{myRule}
 }
 
@@ -60,21 +60,21 @@
 %   \end{myRule}
 % }
 
-\newcommand{\ruleAssumeHd}{\ruleAssume{rule:assume-hd}{\predVar}}
+\newcommand{\ruleAssumeHd}{\ruleAssume{rule:assume-hd}{\X}}
 \newcommand{\assumeHd}[1]{
   \begin{myRule}{#1}
-    \AxiomC{$\texttt{is\_var\ \predVar} \qquad \func['] = \minT\ \func\ (\ctx\ \predVar) $ }
+    \AxiomC{$\texttt{\func['] = \minT\ \func\ (\ctx\ \predVar) }$}
     \RightLabelM{\ruleAssumeHd}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{\predVar}{\ctx + \{\predVar \mapsto \func[']\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{\X}{\ctx + \{\predVar \mapsto \func[']\}}}
   \end{myRule}
 }
 
-\newcommand{\ruleAssumeHdP}{\ruleAssume{rule:assume-hdP}{\pred}}
-\newcommand{\assumeHdP}[1]{
+\newcommand{\ruleAssumeExpr}{\ruleAssume{rule:assume-expr}{K}}
+\newcommand{\assumeExpr}[1]{
   \begin{myRule}{#1}
-    \AxiomC{$\lnot \texttt{is\_var\ \predVar} \land \ctx\ \predVar \mySub \func$ }
-    \RightLabelM{\ruleAssumeHdP}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{\predVar}{\ctx}}
+    \AxiomC{}% \quad \ctx\ \predVar \mySub \func$ }
+    \RightLabelM{\ruleAssumeExpr}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(K\ \vecL{\T})}{\ctx}}
   \end{myRule}
 }
 
@@ -83,41 +83,50 @@
 \newcommand{\assumeApp}[1]{
   \begin{myRule}{#1}
     % APP
-    \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{\func[_i]}{\_}}}
-    \AxiomC{\ensuremath{\func['] \mySub \func}}
-    \AxiomC{\assumeCmd[1]{\ctx}{\func[_i]}{t_i}{\ctx[']}}
+    \AxiomC{\ensuremath{
+      \ctx\ P = \dtype{\func[']}{\func[_i]}{\_}\qquad
+      \textbf{if } \func['] \mySub \func
+      \textbf{ then }\assumeCmd[1]{\ctx}{\func[_i]}{\T_i}{\ctx[']}
+      \textbf{ else }\ctx['] = \ctx  
+    }}
     \RightLabelM{\ruleAssumeApp}
-    \TrinaryInfC{\assumeCmd{\ctx}{\func}{(\predVar\ \vec{t})}{\ctx[']}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(P\ \vecL{\T})}{\ctx[']}}
   \end{myRule}
 }
 
 \newcommand{\ruleAssumeLam}{\ruleAssume{rule:assume-lam}{\lambda}}
 \newcommand{\assumeLam}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\ensuremath{ty \mySub \func[_x] \quad \assumeCmd{(\ctx + \{x:ty\})}{(\dtype{\func}{\func[_i]}{\func[_o]})}{t}{\ctx[']}}}
+    \AxiomC{\ensuremath{
+        \textbf{if } sig \mySub \func[_x] 
+        \textbf{ then } \assumeCmd{(\ctx + \{x:sig\})}{(\dtype{\func}{\func[_i]}{\func[_o]})}{\T}{\ctx[']}
+        \textbf{ else } \ctx['] = \ctx}}
     \RightLabelM{\ruleAssumeLam}
-    \UnaryInfC{\assumeCmd{\ctx}{(\dtype{\func}{(\func[_x]::\func[_i])}{\func[_o]})}{(\lambda x:ty.t)}{\ctx['] \bs \{x\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{(\dtype{\func}{(\func[_x]::\func[_i])}{\func[_o]})}{(\lambda x:sig.\T)}{\ctx['] \bs \{x\}}}
   \end{myRule}
 }
 
 \newcommand{\assumeFig}{
-  \begin{subfigure}[b]{1\textwidth}
-    \centering
+  % \begin{subfigure}[b]{1\textwidth}
+  \begin{figure}
+    \vspace{-2.1em}
+    \begin{framed}
 
-    \assumeHd{0.33}
-    \assumeHdP{0.35}
-    \assumeCut{0.25}
+      \centering
 
-    % \assumeUnif{0.3}
-    % \assumePiImpl{0.5}
+      \assumeHd{0.45}
+      \assumeExpr{0.45}
+      \assumeCut{0.4}
+      \assumePiImpl{0.55}
+            
+      % \assumeUnif{0.3}
 
-    % \assumeApp{0.33} 
-    \assumeApp{1}
+      \assumeLam{1}
+      \assumeApp{1}
 
-    \assumeExpr{0.25}
-    \assumeLam{0.6}
-
-    % \caption{\assume\ relation}
-    \label{fig:det-assume}
-  \end{subfigure}
+      \vspace{-1em}
+      \caption{\assume\ routine}
+      \label{fig:det-assume}
+    \end{framed}
+  \end{figure}
 }

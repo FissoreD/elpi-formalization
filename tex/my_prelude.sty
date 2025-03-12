@@ -122,6 +122,7 @@
 \newcommand{\coqIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{coq}{#1}}
 \newcommand{\mlIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{ocaml}{#1}}
 
+\newcommand{\ctx}[1][]{\ensuremath{\Gamma#1}\xspace}
 
 % goal{program}{goal}{alternatives}
 \newcommand{\vars}{\texttt{vars}}
@@ -219,17 +220,22 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Static check rule system: start
 \newcommand{\detT}[1]{\texttt{#1}}
-\newcommand{\maxT}{\texttt{max}}
-\newcommand{\minT}{\texttt{min}}
+\newcommand{\maxT}{\texttt{max}\xspace}
+\newcommand{\minT}{\texttt{min}\xspace}
+% \newcommand{\maximize}{\texttt{sup}\xspace}
+% \newcommand{\minimize}{\texttt{inf}\xspace}
+\newcommand{\maximize}{\texttt{weaken}\xspace}
+\newcommand{\minimize}{\texttt{strenghten}\xspace}
+
 \newcommand{\detI}{\detT{func}}
-\newcommand{\isdet}{\detT{is\_odet}}
+\newcommand{\isdet}{\detT{is\_odet}\xspace}
 \newcommand{\isfunc}{\detT{is\_tfunc}}
 \newcommand{\relI}{\detT{pred}}
 \newcommand{\expI}{\detT{exp}}
 \newcommand{\funsep}{\ensuremath{\triangleright}}
 \newcommand{\dtype}[3]{\ensuremath{#1\ #2 \funsep #3}}
 \newcommand{\myTo}{\ensuremath{\mathbin{\detT{->}}}}
-\newcommand{\mySub}{\ensuremath{\subseteq}}
+\newcommand{\mySub}{\ensuremath{\subseteq}\xspace}
 \newcommand{\detlab}{\texttt{detlab}}
 \newcommand{\toF}{\texttt{ty\_to\_det}\xspace}
 \newcommand{\U}{\mathcal{U}}
@@ -243,8 +249,8 @@
 \newcommand{\getI}[1]{\ensuremath{\get{i}\ #1}}
 \newcommand{\getO}[1]{\ensuremath{\get{o}\ #1}}
 \newcommand{\getF}[1]{\ensuremath{\get{D}\ #1}}
-\newcommand{\infer}{\texttt{infer}}
-\newcommand{\checkk}{\texttt{check}}
+\newcommand{\infer}{\texttt{infer}\xspace}
+\newcommand{\checkk}{\texttt{check}\xspace}
 \newcommand{\checkc}{\texttt{check\_clause}}
 \newcommand{\staticcheck}{\texttt{det\_check}}
 \newcommand{\detprog}{\texttt{det\_program}}

@@ -6,7 +6,7 @@
     {(\infer\ #2)\ #3}
     {\infer\ #2\ #3} \arr #4
   }}
-\newcommand{\dapp}{\ensuremath{\texttt{deduce}_@\xspace}}
+\newcommand{\dapp}{\ensuremath{\texttt{\infer}_@}\xspace}
 
 \newcommand{\ruleInfer}[2]{\customlabel{#1}{\ensuremath{D_{#2}}}}
 
@@ -22,9 +22,9 @@
 \newcommand{\ruleInferPiImpl}{\ruleInfer{rule:infer-piimpl}{\piimpl}}
 \newcommand{\inferPiImpl}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\inferCmdArr{(\ctx + \{x \mapsto ty\})}{B}{\res}}
+    \AxiomC{\inferCmdArr{(\ctx + \{x \mapsto sig\})}{\T}{\res}}
     \RightLabelM{\ruleInferPiImpl}
-    \UnaryInfC{\inferCmdArr{\ctx}{(\piImplCmd[ty]{x}{H}{B})}{\res}}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\piImplCmd[sig]{x}{\CL}{\T})}{\res}}
   \end{myRule}
 }
 
@@ -44,32 +44,32 @@
   \begin{myRule}{#1}
     % \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{\func[_i]}{\_}}}
     % \AxiomC{\inferCmdArr[1]{\ctx}{t_i}{\func[_i']}{\_}}
-    \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func}{\func[_i]}{\func[_o]}}}
-    \AxiomC{\dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vec{t}}{\top}{(\func['_i],\func['_o],\bool)}}
+    \AxiomC{\ensuremath{\ctx\ P = \dtype{\func}{\func[_i]}{\func[_o]}}}
+    \AxiomC{\dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vecL{\T}}{\top}{(\func['_i],\func['_o],\bool)}}
     \RightLabelM{\ruleInferApp}
-    \BinaryInfC{\inferCmdArr{\ctx}{(\predVar\ \vec{t})}{(\dtype{\func}{\func['_i]}{\func['_o]}, \bool)}}
+    \BinaryInfC{\inferCmdArr{\ctx}{(P\ \vecL{\T})}{(\dtype{\func}{\func['_i]}{\func['_o]}, \bool)}}
   \end{myRule}
 }
 
-\newcommand{\ruleInferExp}{\ruleInfer{rule:infer-hd}{\expr}}
+\newcommand{\ruleInferExp}{\ruleInfer{rule:inferK}{K}}
 \newcommand{\InferExp}[1]{
   \begin{myRule}{#1}
     \AxiomC{  }
     \RightLabelM{\ruleInferExp}
-    \UnaryInfC{\inferCmdArr{\ctx}{\expr}{(\expI,\top)}}
+    \UnaryInfC{\inferCmdArr{\ctx}{(K\ \vecL{\T})}{(\expI,\top)}}
   \end{myRule}
 }
 
 \newcommand{\ruleInferLam}{\ruleInfer{rule:infer-lam}{\lambda}}
 \newcommand{\inferLam}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\inferCmdArr{(\ctx + \{x:ty\})}{t}{(\func, \bool)}}
+    \AxiomC{\inferCmdArr{(\ctx + \{\vecL{x:\func[_i]}\})}{\T}{(\func, \bool)}}
     \RightLabelM{\ruleInferLam}
-    \UnaryInfC{\inferCmdArr{\ctx}{(\lambda x:\func[_i].\lambda y:\func[_o].t)}{(\dtype{\func}{\func[_i]}{\func[_o]},\bool)}}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\lambda \vecL{x:\func[_i]}.\lambda \vecL{y:\func[_o]}.\T)}{(\dtype{\func}{\func[_i]}{\func[_o]},\bool)}}
   \end{myRule}
 }
 
-\newcommand{\ruleInferAppRef}[2]{\customlabel{#1}{\ensuremath{D@_{#2}}}}
+\newcommand{\ruleInferAppRef}[2]{\customlabel{#1}{\ensuremath{D_{#2}}}}
 % dappCmd[ctx][detInput][detOutput][args][goodCall][res]
 \newcommand{\dappCmd}[6]{\ensuremath{\dapp\ #1\ #2\ #3\ #4\ #5 \arr #6}}
 \newcommand{\inferAppEmptyRef}{\ruleInferAppRef{rule:inferAppEmpty}{\EmptyList}}
@@ -81,60 +81,82 @@
   \end{myRule}
 }
 
-\newcommand{\inferAppEmptyDORef}{\ruleInferAppRef{rule:inferAppEmptyDO}{o}}
-\newcommand{\inferAppEmptyDO}[1]{
+\newcommand{\inferAppEmptyDORef}{\ruleInferAppRef{rule:inferAppOutput}{o}}
+\newcommand{\inferAppOutput}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\dappCmd{\ctx}{\EmptyList}{\func[_o]}{\vec{t}}{\bool}{\res}}
+    \AxiomC{\dappCmd{\ctx}{\EmptyList}{\func[_o]}{\vecL{\T}}{\bool}{\res}}
     \RightLabelM{\inferAppEmptyDORef}
-    \UnaryInfC{\dappCmd{\ctx}{\EmptyList}{(\_ :: \func[_o])}{(\_ :: \vec{t})}{\bool}{\res}}
+    \UnaryInfC{\dappCmd{\ctx}{\EmptyList}{(\_ :: \func[_o])}{(\_ :: \vecL{\T})}{\bool}{\res}}
   \end{myRule}
 }
 
-\newcommand{\inferAppEmptyDIRef}{\ruleInferAppRef{rule:inferAppEmptyDI}{\bot}}
-\newcommand{\inferAppEmptyDI}[1]{
-  \begin{myRule}{#1}
-    \AxiomC{\ensuremath{\bool = \bot \quad \dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vec{t}}{\bot}{\res}}}
-    \RightLabelM{\inferAppEmptyDIRef}
-    \UnaryInfC{\dappCmd{\ctx}{(\_ :: \func[_i])}{\func[_o]}{(t :: \vec{t})}{\bool}{\res}}
-  \end{myRule}
-}
+% \newcommand{\inferAppEmptyDIRef}{\ruleInferAppRef{rule:inferAppInputKO}{\bot}}
+% \newcommand{\inferAppInputKO}[1]{
+%   \begin{myRule}{#1}
+%     \AxiomC{\ensuremath{\bool = \bot \quad \dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vec{t}}{\bot}{\res}}}
+%     \RightLabelM{\inferAppEmptyDIRef}
+%     \UnaryInfC{\dappCmd{\ctx}{(\_ :: \func[_i])}{\func[_o]}{(t :: \vec{t})}{\bool}{\res}}
+%   \end{myRule}
+% }
 
-\newcommand{\inferAppEmptyDIOKRef}{\ruleInferAppRef{rule:inferAppEmptyDIOK}{\bot}}
-\newcommand{\inferAppEmptyDIOK}[1]{
+\newcommand{\inferAppEmptyDIOKRef}{\ruleInferAppRef{rule:inferAppInputOK}{i}}
+\newcommand{\inferAppInputOK}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\ensuremath{\bool = \top \quad \inferCmdArr{\ctx}{t}{\func[']}{\bool'} \quad \dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vec{t}}{(\bool' \land \func' \mySub \func)}{\res}}}
+    \AxiomC{\ensuremath{\bool = \top \quad \inferCmdArr{\ctx}{t}{(\func['],\bool')} \quad \dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vecL{\T}}{(\bool' \land \func' \mySub \func)}{\res}}}
     \RightLabelM{\inferAppEmptyDIOKRef}
-    \UnaryInfC{\dappCmd{\ctx}{(\func :: \func[_i])}{\func[_o]}{(t :: \vec{t})}{\bool}{\res}}
+    \UnaryInfC{\dappCmd{\ctx}{(\func :: \func[_i])}{\func[_o]}{(t :: \vecL{\T})}{\bool}{\res}}
   \end{myRule}
 }
 
-\newcommand{\inferFig}{
-  \begin{subfigure}[b]{1\textwidth}
-    \centering
-    \InferExp{0.27}
-    \inferCut{0.30}
-    % \inferUnif{0.31}
+% \newcommand{\inferFig}{
+%   \begin{subfigure}[b]{1\textwidth}
+%     \centering
+%     \InferExp{0.27}
+%     \inferCut{0.30}
+%     % \inferUnif{0.31}
 
-    % \inferPiImpl{0.44}
-    \inferLam{.5}
+%     % \inferPiImpl{0.44}
+%     \inferLam{.5}
 
-    \inferApp{1}
+%     \inferApp{1}
 
-    % \inferAppFail{1}
-%     \caption{\infer\ relation}
+%     % \inferAppFail{1}
+% %     \caption{\infer\ relation}
+% %     \label{fig:det-inference}
+% %   \end{subfigure}
+% % }
+
+% % \newcommand{\inferAppFig}{
+% %   \begin{subfigure}[b]{1\textwidth}
+
+%     \inferAppEmpty{.45}
+%     \inferAppOutput{.45}
+%     \inferAppInputKO{1}
+%     \inferAppInputOK{1}
+
+%     \caption{\infer}
 %     \label{fig:det-inference}
 %   \end{subfigure}
 % }
 
-% \newcommand{\inferAppFig}{
-%   \begin{subfigure}[b]{1\textwidth}
+\newcommand{\inferFig}{
+  \begin{figure}
+    \begin{framed}
 
-    \inferAppEmpty{.45}
-    \inferAppEmptyDO{.45}
-    \inferAppEmptyDI{1}
-    \inferAppEmptyDIOK{1}
-
-    % \caption{\infer}
-    \label{fig:det-inference}
-  \end{subfigure}
+      \centering
+      \InferExp{0.45}
+      \inferPiImpl{0.50}
+      \inferCut{0.4}
+      \inferLam{0.56}
+      
+      \inferApp{1}
+      \inferAppEmpty{.47}
+      \inferAppOutput{.47}
+      % \inferAppInputKO{1}
+      \inferAppInputOK{1}
+      \vspace{-1em}
+      \caption{\infer routine}
+      \label{fig:det-inference}
+    \end{framed}
+  \end{figure}
 }

@@ -14,20 +14,22 @@
     % Clause
     \AxiomC{
       \stackanchor
-        {$\ctx\ \predVar = \dtype{\func}{\func[_i]}{\func[_o]}$}
-        {\fold\ \assumeCmd{\ctx}{\vecL{(\func[_i],t_i)}}{\!\!}{\ctx[']}}
-    }
-    \AxiomC{
-      \stackanchor
-      {\fold\ \checkCmd{\ctx[']}{\detI}{\vecL{bs}}{\ctx['']}{\func[']}}
-      {\ensuremath{\map\ \inferCmdArr[1]{\ctx['']}{\vecL{t_o}}{(\func[_o'],\top)}}}}
-    \AxiomC{
-      \stackanchor
-      {\subCmd{\func'}{\func}}
-      {\func[_o'] \mySub \func[_o]}
+      {
+        \ensuremath{
+          \ctx\ \predVar = \dtype{\func}{\func[_i]}{\func[_o]} 
+          \qquad\qquad\qquad \fold\ \checkCmd{\ctx[']}{\detI}{\vecL{bs}}{\ctx['']}{\func[']}
+          \quad\ \subCmd{\func'}{\func}
+        }
+      }
+      {
+        \ensuremath{
+          \fold\ \assumeCmd{\ctx}{\vecL{(\func[_i],t_i)}}{\!\!}{\ctx[']}
+          \quad \map\ \inferCmdArr[1]{\ctx['']}{\vecL{t_o}}{(\func[_o'],\top)}}
+          \qquad\qquad \func[_o'] \mySub \func[_o]
+        }
     }
     \RightLabelM{\ruleCheckClause}
-    \TrinaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{\vec{t}}{\vecL{bs}})}}
+    \UnaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{\vec{t}}{\vecL{bs}})}}
   \end{myRule}
 }
 
@@ -105,12 +107,12 @@
     %   {\inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}}
     \AxiomC{
       \stackanchor{\ensuremath{%
-          \ctx\ \predVar = \dtype{\func[']}{\func[_i]}{\func[_o]} \qquad
-          \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func[_i'],\top)}}}
-        }{\ensuremath{%
+          \ctx\ P = \dtype{\func[']}{\func[_i]}{\func[_o]} \qquad
+          \map\ \inferCmdArr[1]{\ctx}{\vecL{\T_i}}{\vecL{(\func[_i'],\top)}}}
+      }{\ensuremath{%
           \vecL{\func[_i'] \mySub \func[_i]} \qquad\qquad\quad\ \ \ \!
           \fold\ \assumeCmd{\ctx}{\vecL{(\func[_o],t_o)}}{\!\!\!}{\ctx[']}}}}
-      
+
     % \AxiomC{
     %   \stackanchor
     %   {\ensuremath{\text{if } \mathcal{R}}}
@@ -118,7 +120,7 @@
     %     {then $\func[''] = \maxT\ \func\ \func[']$}
     %     {else $\func[''] = \relI$}}}
     \RightLabelM{\ruleCheckCall}
-    \UnaryInfC{\checkCmd{\ctx}{\func}{(\predVar\ \vec{t})}{\ctx[']}{\maxT\ \func\ \func[']}}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{(P\ \vecL{\T})}{\ctx[']}{\maxT\ \func\ \func[']}}
   \end{myRule}
 }
 
@@ -126,11 +128,11 @@
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
-    \AxiomC{\ensuremath{ \ctx\ \predVar = \dtype{\_}{\func[_i]}{\_} }}
+    \AxiomC{\ensuremath{ \ctx\ P = \dtype{\_}{\func[_i]}{\_} }}
     \AxiomC{ \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func['],\bool)}}}
-    \AxiomC{$ \exists i,\func[_i'] \not\mySub \func[_i]\ \lor\ \exists i, \bool_i = \bot$}
+    \AxiomC{$ \exists i, \func[_i'] \not\mySub \func[_i]\ \lor\ \bool_i = \bot$}
     \RightLabelM{\ruleCheckCallFail}
-    \TrinaryInfC{\checkCmd{\ctx}{\_}{(\predVar\ \vec{t})}{\ctx}{\relI}}
+    \TrinaryInfC{\checkCmd{\ctx}{\_}{(P\ \vec{t})}{\ctx}{\relI}}
   \end{myRule}
 }
 
@@ -166,35 +168,38 @@
 }
 
 \newcommand{\checkTermFig}{
-  \begin{subfigure}[b]{1\textwidth}
-    \centering
+  \begin{figure}
+    \begin{framed}
+      \centering
 
-    \ruleCheckCutM{.45}
+      \ruleCheckCutM{.45}
 
-    % \ruleCheckPiM{.5}
-    % \ruleCheckPiImplM{1}
+      % \ruleCheckPiM{.5}
+      % \ruleCheckPiImplM{1}
 
-    % \ruleCheckUnifM{1}
-    % \ruleCheckUnifFailM{0.52}
-    
-    % \ruleCheckMatchM{.7}
-    \ruleCheckCallM{1}
-    \ruleCheckCallFailM{1}
+      % \ruleCheckUnifM{1}
+      % \ruleCheckUnifFailM{0.52}
 
-%     \caption{\checkk\ relation}
-%     \label{fig:static-check-term}
-%   \end{subfigure}
-% }
+      % \ruleCheckMatchM{.7}
+      \ruleCheckCallM{1}
+      \ruleCheckCallFailM{1}
 
-% \newcommand{\staticCheckFig}{
-%   \begin{subfigure}[b]{1\textwidth}
-%     \centering
-    \ruleCheckClauseM{1}
+      %     \caption{\checkk\ relation}
+      %     \label{fig:static-check-term}
+      %   \end{subfigure}
+      % }
 
-    % \ruleCheckListEmpty{.38}
-    % \ruleCheckListCons{1}
+      % \newcommand{\staticCheckFig}{
+      %   \begin{subfigure}[b]{1\textwidth}
+      %     \centering
+      \ruleCheckClauseM{1}
 
-    % \caption{Determinacy clause checking}
-    \label{fig:static-check}
-  \end{subfigure}
+      % \ruleCheckListEmpty{.38}
+      % \ruleCheckListCons{1}
+
+      \vspace{-1em}
+      \caption{Determinacy checking}
+      \label{fig:static-check}
+    \end{framed}
+  \end{figure}
 }
