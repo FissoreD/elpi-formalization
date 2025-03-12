@@ -14,20 +14,20 @@ In the spirit of subtyping the input arguments of predicate signature
 are compared in a contravariant way. 
 
 \begin{equation}
-  f_1 \mySub f_2 =
+  f_1 \mySub f_2 =\ 
   \begin{cases}
-    \bot                                                          & \text{if } f_1 = \dtype{\relI}{\_}{\_} \land f_2 = \dtype{\detI}{\_}{\_} \\
+   \ \bot                                                          & \text{if } f_1 = \dtype{\relI}{\_}{\_}\ \land\ f_2 = \dtype{\detI}{\_}{\_} \\
     % (\forall i, a'_i \mySub a_i) \land (\forall j, b_j \mySub b'_j)      & \text{else if } f_1 = \detI\ a\ b \land f_2 = \detI\ a'\ b' \\
     % (\forall i, a'_i \mySub c_i) \land (\forall j, b_j \mySub c_{|a|+j}) & \text{else if } f_1 = \detI\ a\ b \land f_2 = \relI\ c      \\
     % \forall i, a_i \mySub b_i                                            & \text{else if } f_1 = \relI\ a\ \land f_2 = \relI\ b        \\
     % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{else if } f_1 = [\detI\mid \relI]\ a\ b \land f_2 = [\detI\mid \relI]\ c\ d \\
-    (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) &
+   \ (\forall i, c_i \mySub a_i)\ \land\ (\forall j, b_j \mySub d_j) &
     \!\!\!
-    \begin{array}{l} \text{if } f_1 = \dtype{\func}{a}{b} \land f_2 = \dtype{\func}{c}{d} \ \lor    \\
-     \ \ \  f_1 = \dtype{\detI}{a}{b} \land f_2 = \dtype{\relI}{c}{d} 
+    \begin{array}{l} \text{if } f_1 = \dtype{\func}{a}{b}\ \land\ f_2 = \dtype{\func}{c}{d} \ \lor    \\
+     \ \ \  f_1 = \dtype{\detI}{a}{b}\ \land\ f_2 = \dtype{\relI}{c}{d} 
     \end{array}    \\
     % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
-    \top                                                          & \text{if } f_1 = \expI \land f_2 = \expI
+   \ \top                                                          & \text{if } f_1 = \expI\ \land\ f_2 = \expI
   \end{cases}
   \label{eq:sub-def}
 \end{equation}
@@ -112,10 +112,10 @@ with $f$ and $g$ the other one:
 \begin{equation}
   f\ s_1\ s_2 =\ 
   \begin{cases}
-    \ \dtype{\detI}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})} & \text{if } s_k = \dtype{\relI}{a}{b} \land s_{3-k} = \dtype{\detI}{c}{d} \\
-    \ \dtype{D}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})}     & \text{if } s_1 = \dtype{D}{a}{b} \land s_2 = \dtype{D}{c}{d}             \\
+    \ \dtype{\detI}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})} & \text{if } s_k = \dtype{\relI}{a}{b}\ \land\ s_{3-k} = \dtype{\detI}{c}{d} \\
+    \ \dtype{D}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})}     & \text{if } s_1 = \dtype{D}{a}{b}\ \land\ s_2 = \dtype{D}{c}{d}             \\
     % \relI\ (\vecL{g}\ a\ c)\ (\vecL{f}\ b\ d) & \text{if } s_1 = \relI\ a\ b \land s_2 = \relI\ c\ d \\
-    \ \expI                                                     & \text{if } s_1 = \expI \land s_2 = \expI
+    \ \expI                                                     & \text{if } s_1 = \expI\ \land\ s_2 = \expI
   \end{cases}
   \label{eq:min}
 \end{equation}
@@ -137,15 +137,17 @@ with $f$ and $g$ the other one:
 
 % Below we define the functions \maximize and \minimize.
 
-We assume each rule to have been typechecked by an algorithm that
-traverses all clauses and in particular all variables in \X\ that
+We assume each clause has been typechecked by an algorithm that
+traverses terms including variables in \X\ that
 represent predicates, e.g. the higher order parameter of \elpiIn{map}.
 Since we want to keep typecheck separated from determinacy checking,
 the former identified \relI\ with \detI\ and in particular assigns
-to the variables the output of \maximize\ of its declared signature.
-That function is defined by mutual recursion with its dual \minimize\ 
-and in the definition below we denote one of them
-with $f$ and $g$ the other one:
+to these variables the signature obtained by weakening their
+declared signature:
+It is up to the determinacy analsysis to assume or prove stronger signatures.
+The \maximize\ function is defined mutually with its
+dual \minimize. In the definition below we denote one of them
+with $f$ and $g$ its dual:
 
 % $$
 %   \minT\ f_1\ f_2 = \begin{cases}
@@ -179,10 +181,10 @@ with $f$ and $g$ the other one:
 
 
 \begin{equation}
-  f\ s =
+  f\ s =\ 
   \begin{cases}
-    \dtype{\relI}{(\vecL{g\ a})}{(\vecL{f\ b})} & \text{if } s = \dtype{\func}{a}{b} \\
-    \expI                                                       & \text{if } s = \expI
+    \ \dtype{\relI}{(\vecL{g\ a})}{(\vecL{f\ b})} & \text{if } s = \dtype{\func}{a}{b} \\
+    \ \expI                                                       & \text{if } s = \expI
   \end{cases}
   \label{eq:maximize}
 \end{equation}
