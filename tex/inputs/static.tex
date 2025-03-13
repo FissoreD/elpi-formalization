@@ -3,7 +3,6 @@
 It is one of our objectives that the determinacy checker should accept
 predicates that are \textit{wrongly} called so that we can, incrementally,
 make the predicate signatures more precise.
-%  and also avoid code duplication\footnote{require multiple copies of the same code just because they differ in signature}.
 
 
 The \mySub\ relation subsumes signature equality and
@@ -31,22 +30,11 @@ are compared in a contravariant way.
   \end{cases}
   \label{eq:sub-def}
 \end{equation}
-% \begin{coqcode}
-%   Fixpoint a ~\mySub~ b := match a, b with
-%   | Rel, Func -> false
-%   | Func, Rel | Rel, Rel | Func, Func | Exp, Exp -> true
-%   | a ~\myTo~ b, a' ~\myTo~ b' -> a' ~\mySub~ a && b ~\mySub~ b'
-%   end.
-% \end{coqcode}
-
-% The definition of \mySub\  type checking as in~\cite{1992nadathur}:
-% we only compare signatures that agree in their arity and number of inputs (hence outputs)
-% and we ignore the case in which datatypes are compared to predicate signatures.
 
 \newcommand{\sem}[1]{\ensuremath{[\![#1]\!]}}
 The intuition is that the meaning of a 
 predicate signature is given by the following formula where
-\isdet is an uninterpreted predicate (the definition we give in section~\ref{sec:thm}
+\isdet\ is an uninterpreted predicate (the definition we give in section~\ref{sec:thm}
 does not matter).
 \begin{definition}[Meaning of a signature (\sem{\cdot})]
 $$
@@ -99,15 +87,14 @@ the pre conditions of $f_1$ must be wekaer than the ones of $f_2$.
 
 \section{Signature checking}
 
-The checking performs dataflow analsysis.It stores in \ctx the predicate
+The checking performs dataflow analsysis. It stores in \ctx the predicate
 signature of each variable and it uses it to test if it satisfies the
 precondition of predicate call and possibly refines it to
 the signature of a post condition a predicate call.
 
-These updates use the ``dual'' operators \minT\ and \maxT.
-In their mutual definition below we denote one of them
-with $f$ and $g$ the other one:
-
+Refinements use the ``dual'' operators \(\minT\) and \(\maxT\).  
+In their mutual definition below, we denote one of them as \( f \) and the other
+as \( g \):
 %
 \begin{equation}
   f\ s_1\ s_2 =\ 
@@ -135,14 +122,28 @@ with $f$ and $g$ the other one:
 %   \label{eq:max}
 % \end{equation}
 
-\newcommand{\maximize}{\texttt{weaken}\xspace}
-\newcommand{\minimize}{\texttt{strenghten}\xspace}
+% We construct the transitive closure of \mySub to form a directed acyclic graph
+% (DAG) of signatures, where an arc from \( s_1 \) to \( s_2 \) indicates that \(
+% s_1 \mySub s_2 \). The \minT (respectively, \maxT) function between two
+% signatures, if it exists, determines their lowest common predecessor
+% (respectively, successor). We will later discuss the impact of these functions.
+% Notably, the \minT relation plays a key role in \ref{rule:assume-hd}.
+
+% To ensure the correctness of the static checker, each variable must be mapped to
+% a signature in \ctx. The signature \( s \) assigned to a variable \( v \) is
+% computed using the \maximize function, which derives a signature from the type
+% \( ty \) inferred by the type checker. Specifically, \(\maximize\ s = s'\) is
+% defined such that \(\forall s'', \maxT\ s\ s'' = s'\), meaning that each
+% variable is assigned the weakest determinacy within its class. Due to space
+% constraints, we omit the description of the \maximize function. However, it can
+% be easily defined in a manner similar to the \maxT function.
+
 
 % Below we define the functions \maximize and \minimize.
 
 We assume each clause has been typechecked by an algorithm that
 traverses terms including variables in \X\ that
-represent predicates, e.g. the higher order parameter of \elpiIn{map}.
+represent predicates, e.g. the higher-order parameter of \elpiIn{map}.
 Since we want to keep typecheck separated from determinacy checking,
 the former identified \relI\ with \detI\ and in particular assigns
 to these variables the signature obtained by weakening their
@@ -151,22 +152,23 @@ It is up to the determinacy analsysis to assume or prove stronger signatures.
 The \maximize\ function is defined mutually with its
 dual \minimize. In the definition below we denote one of them
 with $f$ and $g$ its dual:
-
+%
 % $$
 %   \minT\ f_1\ f_2 = \begin{cases}
 %     \maxT\ a'\ a \myTo \minT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
 %     f_1                             & \text{else if } f_1 \mySub f_2                     \\
 %     f_2                             & \text{otherwise}
 %   \end{cases}
-% $$
-% $$
-%   \maxT\ f_1\ f_2 = \begin{cases}
-%     \minT\ a'\ a \myTo \maxT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
-%     f_1                             & \text{else if } f_2 \mySub f_1                     \\
-%     f_2                             & \text{otherwise}
+%   \label{eq:maximize}
+% \end{equation}
+% \begin{equation}
+%   \minimize\ f =
+%   \begin{cases}
+%     \dtype{\detI}{(\vecL{\maximize}\ a)}{(\vecL{\minimize}\ b)} & \text{if } f = \dtype{\_}{a}{b} \\
+%     \expI                                                       & \text{if } f = \expI
 %   \end{cases}
 % $$
-
+%
 % The main usage of the \minT\ and \maxT\ comes with the fact that unification is
 % possibile between variable with different determinacy annotation. For example,
 % let \elpiIn{get-det} and \elpiIn{get-rel} be two relations returning
@@ -179,10 +181,10 @@ with $f$ and $g$ its dual:
 % Said in another way, a unification may change the labels of the two terms being
 % unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=$
 % \minT\ $($\detlab\ \elpiIn{X}$)$ $($\detlab\ \elpiIn{Y}$)$.
-
+%
 % finally when a predcate is miscalled we need a way to deal with its post conditions
-
-
+%
+%
 \begin{equation}
   f\ s =\ 
   \begin{cases}
@@ -199,12 +201,12 @@ with $f$ and $g$ its dual:
 %   \end{cases}
 %   \label{eq:minimize}
 % \end{equation}
-
+%
 % The two fonctions respectively return the maximal and minimal dtype of a given
 % dtype. This is used \dots
-
+%
 % $$---$$
-
+%
 % and therefore
 % The base cases of \mySub\ are quite intuitive: a relation is not a function. The
 % interesting case is the \coqIn{arr} constructor. Here, we are comparing two
@@ -212,10 +214,10 @@ with $f$ and $g$ its dual:
 % outputs: the inputs of the left memeber should be at least as restrictive as the
 % right one and the outputs of the left memeber are at most as restrictive as the
 % right one.
-
+%
 % As an example consider two terms $t_1 \coloneq \texttt{idF}$ and $t_2 \coloneq
 %   \texttt{once}$. 
-
+%
 % What may seem weird at first sight is that in the example above, we call
 % \texttt{idF} with a relation in input position. This creates a mismatch
 % between the dtype of the signature and the dtype of the argument.\todo{dtype := determinacy type}
@@ -225,11 +227,11 @@ with $f$ and $g$ its dual:
 % with the less restrictive determinacy for its type. To continue our example,
 % the query \elpiIn{idF (divisor 3 X) Y} will label \elpiIn{Y} with the \relI\
 % tag, since the determinacy of \elpiIn{divisor 3 X} is \relI\ and $\relI \not\mySub \detI$.
-
+%
 % Thanks to the \mySub\ relation we can define a min (resp. max) relation between
 % two determinacy relations.
-
-
+%
+%
 % \begin{coqcode}
 %   Fixpoint min a b = match a, b with
 %     | a ~\myTo~ b, a' ~\myTo~ b' => max a' a && min b b'
@@ -239,11 +241,11 @@ with $f$ and $g$ its dual:
 %     | a, b -> if a ~\mySub~ b then b else a
 %   end.
 % \end{coqcode}
-
+%
 % These two functions become particularly useful
 % when trying to determine the determinacy of unification variables. Let's
 % take the following example.
-
+%
 % \begin{elpicode}
 %   pred give_rel i:int, o:pred.
 %   func give_fun i:int, o:func.
@@ -251,11 +253,11 @@ with $f$ and $g$ its dual:
 %   give_rel _ (succ 1 X).
 %   give_fun _ (succ 1 X).
 % \end{elpicode}
-
+%
 % In the snippet above, both \txt{give\_rel} and \txt{give\_fun} are functions
 % that take a dummy integer as input (we conventionally work with binary
 % predicates) and return, respectively, a relation and a function.
-
+%
 % Now, consider the following query: \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}.
 % The first goal tells us that \elpiIn{Z} is \relI, while the second tells us that
 % \elpiIn{Y} is \detI. After unifying the two variables, what determinacy label
@@ -263,168 +265,145 @@ with $f$ and $g$ its dual:
 % that, in the end, \elpiIn{Z} and \elpiIn{Y} will be the same term and will
 % therefore share the same \detlab. Their label will be updated and set to the
 % minimum determinacy between them, which is \coqIn{min Rel Fun} $=$ \detI.
-
+%
 % If we take back the query \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}, we may
 % want to statically determine if it create choice points. The determinacy of each
 % goal is \detI, \relI, \detI, the determinay of the query is the maximum of them,
 % that is \relI.
-
+%
 % With this, we now have all the ingredients needed to propose the full static
 % determinacy checker for the higher-order setting. This checker is implemented in
 % \detCheck, which ensures that a deterministic predicate has at most one solution
 % per call. Furthermore, it is extended to certify that each output of a clause
 % has the expected determinacy, which is crucial since outputs can be used as new
 % queries in the program.
-
+%
+\inferFig
+%
+\assumeFig
+%
+\paragraph{The static checker} We can now exibit the static checker.
 The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
 \assume\ (\cref{fig:det-assume}) the signature of a predicate and finally to
-\checkk\ (\cref{fig:static-check}) if a rule matches a declared signature.
-
-\begin{figure}
-  \fbox{\inferFig}
-  % \fbox{\inferAppFig}
-  \fbox{\assumeFig}
-  \caption{Handling of pre and post conditions}
-  \label{fig:full-det-check-terms}
-\end{figure}
-
+\checkk\ (\cref{fig:static-check}) if a rule matches a declared signature.\todo{in sig of deduce: \A and also tm}
+%
 $$\infer : \ctx \to \A \to sig \times \B$$
 $$\dapp : \ctx \to \vecL{sig} \to \vecL{sig} \to \vecL{tm} \to \B \to sig \times sig \times \B$$
 
-TODO: rule for lambda assumes lambdas are ordered according to
-the convetion of input first and that their mode is somehow given.
-We have an heuristic in the type checker for that\todo{Davide?}.
+% TODO: rule for lambda assumes lambdas are ordered according to
+% the convetion of input first and that their mode is somehow given.
+% We have an heuristic in the type checker for that\todo{Davide?}.
 
-TODO: rule for app handles partial application like
-the \elpiIn{commit likes V} in the intro and check if
-sigs are respected.
+% TODO: rule for app handles partial application like
+% the \elpiIn{commit likes V} in the intro and check if
+% sigs are respected.
 
+The \infer\ procedure is responsible for inferring the signature of a term. 
+It returns a pair containing its signature and a boolean value
+indicating whether all of its sub-terms representing a subterm which i predicate calls are correct. Since predicate calls are part
+of the term syntax, they can also be miscalled.  
 
+The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK})
+are straightforward. Rule \ref{rule:infer-piimpl} introduces a new mapping in
+the context, associating the binder with its signature and performing a
+recursive call to \infer. $\lambda$-abstractions are handled by
+\ref{rule:infer-lam}. We distinguish between binders corresponding to inputs and
+those corresponding to outputs. Binders in input positions are added to \ctx\
+and mapped to their corresponding signature.  
 
-The \infer\ procedure is in charge of inferring the signature of an input
-argument. Since predicate calls are part of the term syntax, these ``calls''
-can as well be miscalled. In that case the procedure returns, as the second
-value, $\bot$.
+The rule \ref{rule:infer-app}, combined with the \dapp\ procedure, infers the signature
+of a term application when the head of the term is a variable or a predicate.
+This routine also accounts for partial applications.  
 
-EXAMPLE: lambda and partial application
+For example, consider the term $t =\ $\elpiIn{map likes!}. Its inferred
+signature is obtained by calling \ref{rule:infer-app}. The signature of
+\elpiIn{map} expects a binary function as the first input argument. Thanks to
+\ref{rule:inferAppInputOK}, we can infer the signature of \elpiIn{likes!}, which
+falls into the category of partial application (in fact, this term is not
+applied at all). Ultimately, the signature of \elpiIn{likes!} is a subtype of
+the expected signature for the first argument of \elpiIn{map}. The result of the
+call to \infer\ on $t$ is the pair $(\dtype{\detI}{\expI}{\expI},\top)$: the
+Boolean value indicates that the predicate call is correct, and the first
+position of the pair expresses the signature of the partially applied term.  
+% 
+$$\assume : sig \to tm \to \ctx \to \ctx$$  
 
-Finally, rule \ref{rule:infer-app} addresses term applications. It returns if
-the application stands for a call to a deterministic or relational predicate.
-Together with this piece of information we have the boolean which tests if the
-deduced type of the input has a determinacy less or equal to the expected one.
+The \assume\ procedure aims to assume a term $t$ to have an expected determinacy
+\func. It takes and updates a context \ctx\ where
+variable mappings may change according to \func. The rule
+governing this change is \ref{rule:assume-hd}, which states that whenever a
+non-applied variable is encountered, its signature is set to the \minT\ between
+its current signature in \ctx\ and \func. The use of \minT\ is justified by the
+fact that \assume\ represents runtime unification. For unification to succeed,
+the variable signature must be the strongest between the one in the context and
+the expected one.  
 
-% takes a context \ctx and a term $t$ and returns the dtype of
-% $t$ and a boolean. The boolean tells if the term is well dtyped, the only interesting
-% case for it is \ref{rule:infer-app}.
-% In particular, rule \ref{rule:infer-hd} handles variables or predicate names by
-% retrieving their determinacy from the context.
-% Rules \ref{rule:infer-cut} and \ref{rule:infer-unif} are straightforward: both
-% the \cut\ operation and unification are considered deterministic predicates.
-% % Rule \ref{rule:infer-piimpl} handles the \coqIn{PiImpl} constructor by extending
-% % \ctx\ with a mapping from the local variable $x$ to its dtype.
-% Finally, rule \ref{rule:infer-app} addresses term applications. It returns if
-% the application stands for a call to a deterministic or relational predicate.
-% Together with this piece of information we have the boolean which tests if the
-% deduced type of the input has a determinacy less or equal to the expected one.
+The rules \ref{rule:assume-cut} and \ref{rule:assume-expr} are intuitive, as
+they do not require any modifications to the context. In rules
+\ref{rule:assume-lam} and \ref{rule:assume-piimpl}, we extend the context by
+mapping the binder to its signature and making a recursive call to \assume.
+Finally, \ref{rule:assume-app} performs a fold over the input arguments of the
+predicate being called, under the assumption that the determinacy of the
+predicate is smaller than the received one.  
+% 
+$$\checkk : \A \to (\ctx \times sig) \to (\ctx \times sig)$$  
 
-% The boolean is particularly useful since it allows to detect wrong calls to
-% predicates.
+\checkTermFig  
 
+The \checkk\ procedure combines both \infer\ and \assume. Its purpose is to
+check the execution of a query under a given context and determinacy. The result
+is a new context and an updated determinacy.  
 
-% \textbf{TODO: dire che si parla di termini che devono essere valutati, cioè di oggetti con tipo prop}
+For example, as shown in \ref{rule:check-cut}, if the term to be executed is a
+\cut, then the context remains unchanged, and the determinacy becomes \detI. If
+a predicate $p$ is called (\ref{rule:check-callOK} and \ref{rule:check-callKO}),
+we first verify whether the call is correct -- i.e., whether the inferred
+signature of the inputs is at least as strong as the expected one. If the call
+is correct, the terms in the output position are assigned the signature of $p$'s
+outputs. If $p$ is miscalled, then the behavior of the call is
+non-deterministic, and we output \relI.  
 
-% Based on the \mySub, \minT\ and \maxT\ relations we present a system of rules
-% allowing to \infer\ (\cref{fig:det-inference}) or \assume\ (\cref{fig:det-assume})
-% the signature of a predicate and finally to \checkk\ (\cref{fig:static-check})
-% if a rule matches a declared signature.
+If the call is correct, the behavior of the call is determined by the maximum of
+the predicate's determinacy and the input determinacy. For example, if we are in
+a deterministic context and correctly call a relation, then the resulting
+behavior of the query is the maximum of the two, i.e., relational.  
 
-% % This check relation is not
-% % far from a subtyping checker where the subtyping relation is \mySub. The checker
-% % is made by the three systems of rules shown in \cref{fig:full-det-check-terms}.
-% We let \ctx\ to be a context which is a mapping from variable names to their
-% dtype. Each variable \predVar\ appearing in a term $t$ has a
-% dtype in \ctx\ since either \predVar\ is the name of a predicate and its dtype
-% can be retrieved from its signature, or \predVar\ is a quantified variable and
-% its dtype is derived from the type inferred by the type checker. In the latter
-% case, the typechecker infers the wrost determinacy from the type, i.e. if
-% \predVar\ should be a predicate from int to int, then \predVar\ is considered as
-% relational, i.e. the typechecker has no way to statically guarantee it behaves
-% as a function. Moreover, even though, in the end \predVar\ happens to be a
-% function, by definition we know that a function can always be used in place of a
-% relation.
-
-
-
-\textbf{EXAMPLE: for \infer}
-
-The \assume\ procedure aims to update a context so that a term $t$ has an
-expected determinacy \func. Rule \ref{rule:assume-hd} deals with quantified
-variables \predVar. It updates its dtype in \ctx\ is updated to \func. In
-\ref{rule:assume-hdP}, we consider terms that are predicate names. Their
-determinacy should be less or equal than the one received in entry. Rules
-\ref{rule:assume-cut} and \ref{rule:assume-unif} does not change the context,
-both the \cut and the $=$ operators are deterministic terms and $\forall d,
-\detI \mySub d$. 
-% Rule \ref{rule:assume-piimpl} goes under the implication with a
-% recursive call charging in the context the local binder $x$. This same binder is
-% removed from the result in the output. 
-Finally the rule for term application
-\ref{rule:assume-app} tries to assume that the application has a determinacy
-\func. This is possible only if the determinacy of the head term is less or
-equal than the given one. If it is the case, \assume is called recursibely on
-the inputs, giving the new the output.
-
-\textbf{EXAMPLE: for \assume}
-
-The \checkk\ procedure combines both \infer\ and \assume. The goal is to check
-that if we execute a terms, given a context \ctx and a entry determinacy \func\,
-the execution produces a new context \ctx['] updating simulatneously the
-determinacy of the term.
-
-For example see \ref{rule:check-cut}, if the term we have to execute is a \cut,
-then we know that no matter what is the entry determinacy, we know that in the
-and we have a deterministic behavior (\detI). The context is never touched.
+xxx
 
 % Rule \ref{rule:check-piimpl} behaves similarly to \ref{rule:assume-piimpl}. It
 % also makes some check on the hypothesis $H$. But we delay it to the next
 % section.
 
-\begin{figure}
-  \fbox{\checkTermFig}
-  % \fbox{\staticCheckFig}
-  \caption{Determinacy checking}
-  \label{fig:full-det-check-rules}
-\end{figure}
 
-If the term is a unification the determinacy \func\ is transmitted from the
-input to the output. What may change is the context, since, during unification
-some variables may be assigned. In \ref{rule:check-unif} we are in the case
-where it is possible to successfully deduce the dtype of the left and the right
-terms of the equality operator. At runitime, unification succeeds if the two
-terms are unifiable. This means that in the end the two terms will share the
-same determinacy. The determinacy the will have is the minimum between the
-determinacy of the two terms. Imagine that we are unifying a function with a
-relation, then the more restrictive condition for both terms should be taken
-into account. Therefore, the \assume\ procedure is called on both terms so that
-their determinacy is set to the minimum. If on the contrary, it is not possible
-to \infer\ a valid dtype for at least one of the two terms (rule
-\ref{rule:check-unifFail}), we cannot deduce much more on the variables in the
-two terms, therefore, we do nothing on the context \ctx, which is returned as it
-was in input.
+% If the term is a unification the determinacy \func\ is transmitted from the
+% input to the output. What may change is the context, since, during unification
+% some variables may be assigned. In \ref{rule:check-unif} we are in the case
+% where it is possible to successfully deduce the dtype of the left and the right
+% terms of the equality operator. At runitime, unification succeeds if the two
+% terms are unifiable. This means that in the end the two terms will share the
+% same determinacy. The determinacy the will have is the minimum between the
+% determinacy of the two terms. Imagine that we are unifying a function with a
+% relation, then the more restrictive condition for both terms should be taken
+% into account. Therefore, the \assume\ procedure is called on both terms so that
+% their determinacy is set to the minimum. If on the contrary, it is not possible
+% to \infer\ a valid dtype for at least one of the two terms (rule
+% \ref{rule:check-unifFail}), we cannot deduce much more on the variables in the
+% two terms, therefore, we do nothing on the context \ctx, which is returned as it
+% was in input.
 
-The \checkk\ rule for application (see \ref{rule:check-callOK}) starts by
-deducing the type of the input term. If its dtype \func[_i'] can be derived
-(i.e. the booleans is $\top$) and if \func[_i'] is less or equal than the
-expected one in the signature, then the output can be assumed to be the one
-inscribed the signature. If these two conditions are not validated, then the
-rule context is not modified. Concerning determinacy, if the call is valid, then
-the determinacy is the \maxT\ between the one received in entry and the
-determinacy of the head of the application. If, otherwise, the call is wrong,
-then the output determinacy is set to relational.
+% The \checkk\ rule for application (see \ref{rule:check-callOK}) starts by
+% deducing the type of the input term. If its dtype \func[_i'] can be derived
+% (i.e. the booleans is $\top$) and if \func[_i'] is less or equal than the
+% expected one in the signature, then the output can be assumed to be the one
+% inscribed the signature. If these two conditions are not validated, then the
+% rule context is not modified. Concerning determinacy, if the call is valid, then
+% the determinacy is the \maxT\ between the one received in entry and the
+% determinacy of the head of the application. If, otherwise, the call is wrong,
+% then the output determinacy is set to relational.
 
-$$\checkk : \A \times (\ctx \times \F) \to (\ctx \times \F)$$
+% $$\checkk : \A \times (\ctx \times \F) \to (\ctx \times \F)$$
 
-\textbf{TODO: make an example}
+% \textbf{TODO: make an example}
 
 % \subsection{Determinacy checking for clauses}
 
