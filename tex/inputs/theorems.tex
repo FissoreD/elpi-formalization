@@ -563,111 +563,51 @@ the top of the program, before any other clause.
 % \end{proof}
 
 
-\subsection{Digression on \isdet}
+\paragraph{\textbf{Digression on \isdet}.}
 
-\begin{definition}[Functionality (\isfunc)]\label{def:is-func}
-  Given a program \prog and a term $t$,
-  \isdet\ is defined as follows:
-  $$\forall a\ \subst, \isFuncCmd{t}$$
-\end{definition}
-
-We insist on \isdet{} rather than \isfunc{} or functional as in~\cite{1989Warren}
-becase the former gives the programmer a more precise indication of the
-run time behavior of a predicate labelled as \func. If \texttt{mem} and \texttt{len}
-are flagged as such, then the programmer knows that this silly piece of
-code terminate in linear time.
+In the logic programming literature the notion of ``function'' is
+not necessarily the one we picked in \isdet. In particular a
+program that produces infinetly many times the same result
+is undeniably representing a mathematical function, but with
+a programmer hat one is nothing like a program that terminates
+by returning its (only) result. Our notion captures the latter
+on purpose because it makes the computational complexity of
+programs more apparent, especially in case of failure.
 
 \begin{elpicode}
+func silly list int -> int.
 silly L V :- mem 1 L, len L N, N = V.
 \end{elpicode}
 
-Upon failure under a notation of functional as in~\cite{1989Warren} the complexity
-could be quadratic since a mem (without a cut) is still a function. If mem
-was \isfunc{} the code would still be linear but with the cost of a choice point.
-With \isdet{} the code is operationally equivalent to the following code where
-the complexity, even in case of failure, is very apparent.
+Given the signature of \elpiIn{silly} the program is accepted only
+if both both \elpiIn{mem} and \elpiIn{len} are observationally
+deterministic hence the code is operationally
+equivalent to the following one whose complexity is clealy
+the sum of its parts.
 
 \begin{elpicode}
-once P :- P, !.
-silly L V :- once (mem 1 L), once (len L N), N = V.
+once P :- P, !. % encoding of if-then cut using Elpi's hard cut
+silly L V :- once (mem 1 L), once (len L N), once (N = V).
 \end{elpicode}
 
-We are so concerned with failure in case of performance because of Elpi's
-application as the runtime for type class resolution in the interactive prover
-Rocq: the user experience crytically relies on quick feedback from the system.
+The complexity could have been, on failure, the product of its parts if we had chosen a more
+relaxed definition of function, since the programmer could have called a
+(cut free) implementation of \elpiIn{mem} that gives multiple
+times the same result.
+\todo{una delle robe di mercury può fare lo stesso?}
 
-% A definition of functional as in warren, or like 
-% \begin{definition}[Functionality (\isfunc)]\label{def:is-func}
-%   Given a program \prog and a term $t$,
-%   \isdet\ is defined as follows:
-%   $$\forall a\ \subst, \isFuncCmd{t}$$
-% \end{definition}
-% does not have this guarantee.
+\paragraph{\textbf{Digression on  the eagherness of $\mathcal{H}$}}
 
-% \begin{coqcode}
-% Definition ~\customlabel{detpred}{\texttt{det\_pred}}~(~\prog~: prog) (p: pn) :=
-%   forall ~$i$~ ~$o$~ ~$a$~ ~\subst~(HG: ground i) 
-%     (H : ~\runCmd{[\goalCmd{\prog}{\callCmd{p}{i}{o}}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst}~), ~$a$~ = ~\EmptyList~.
-% \end{coqcode}
-
-% The definition above explains what it means for a predicate to be deterministic. 
-% The idea is that in a given program \prog and a predicate $p$,
-% if for any call to $p$ with arbitrary input and output terms
-% starting with the empty substitution and the empty list of alternatives,
-% we have a solution, i.e. the couple $(a, \subst)$ then the list of
-% alternatives $a$ is empty. This essentially means that any functional
-% predicate produces no choice points.
-
-% Following the literature, this claim is proven true:
-
-% \begin{theorem}
-%   Let \pred be a deterministic-annotated predicate, the following holds
-%   \begin{coqcode}
-%     Theorem ~\customlabel{is_detpred}{\texttt{det\_pred\_prop}}~(~\prog~: prog) (p: pn) :=
-%       forall (HM : well_moded ~\prog\!\!~) (HD: det_check ~\prog\!\!~),
-%           det_pred ~\prog~p
-%   \end{coqcode}    
-% \end{theorem}
-
-% This to say that for any well-moded (hypothesis \coqIn{HM}) and
-% determinacy-checked (hypothesis \coqIn{HD}) program and a predicate \pred such,
-% then \pred is a deterministic predicate.
-
-% \subsection{Contributions and paper structure}
-
-% In our paper we will provide a description about a new dynamic mode and
-% a new static determinacy
-% checkers to verify that clauses are consistent wrt the signature the predicate has. We
-% introduce these concepts with the \elpi programming language. We start by a
-% light version of \elpi in the first-order setting, i.e. with no higher-order variables.
-% In this part we explain our notion of modes, which have an inpact
-% on the dynamic interpretation of the program. This will force us to slightly
-% modify the interpreter in \cref{fig:basic-interp}. Moreover, thanks to these modes, we show that
-% to statically guarantee the determinacy property of deterministic predicates
-% we don't need any static mode analysis.
-
-% In the second part of the paper we will extend the intepreter so that it can\todo{there are 3 parts}
-% work with higher-order variables, hereditary-arrop clauses insertion and local
-% $\forall$-quantified variable declaration. Here predicates will also take
-% propositions as arguments. Thanks to this extention we will propose a new mode
-% checking algorithm working with a new definition of groundness, called
-% \textit{input-ground}. The signature of a predicate can be annotated so that
-% output arguments are guaranteed to be deterministic. This will make the
-% determinacy checker to analyse not only deterministic clauses but also relational
-% one, since a check should be performed wrt the determinacy annotation of its
-% outputs.
-
-\subsection{Digression on  the eagherness of $\mathcal{H}$}
-
-The function $\mathcal{H}$ eagerly unifies all clauses with the.
+The function $\mathcal{H}$ in the operational semantics (Figure~\ref{fig:basic-interp})
+eagerly unifies all clauses with the.
 A more natural and possibly more efficient semantics would be to just create the
 alternatives and prepend to the list of goals the same unification
 problems. Our choice simplifies the formal threatment of determinacy 
 in~\cref{sec:thm} and in particular it matches the \mutExclHeads\ condition.
 
-From a practical stanpoint a implementation of the semantics
-above with efficiency concerns can make $\mathcal{H}$ lazy
-without compromising the \mutExclHeads\ condition
-can either index clauses deep enough
-or perform a program transformation consisting in inserting
-\elpiIn{once} around each call to a deterministic predicate.
+From a practical stanpoint an efficient implementation of that semantics
+can make $\mathcal{H}$ lazy without compromising the \mutExclHeads\ condition
+if either it indexes clauses deep enough
+or performs a program transformation consisting inserting
+\elpiIn{once} around each call to a deterministic predicate (as we manually did
+in silly example above).
