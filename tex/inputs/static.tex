@@ -87,14 +87,14 @@ the pre conditions of $f_1$ must be wekaer than the ones of $f_2$.
 
 \section{Signature checking}
 
-The checking performs dataflow analsysis. It stores in \ctx the predicate
-signature of each variable and it uses it to test if it satisfies the
-precondition of predicate call and possibly refines it to
-the signature of a post condition a predicate call.
+The checking process performs dataflow analysis. It stores the predicate
+signature of each variable in \ctx\ and uses it to verify whether the variable
+satisfies the precondition of a predicate call. Additionally, it may refine the
+variable's signature to match the postcondition of the predicate call.
 
 Refinements use the ``dual'' operators \(\minT\) and \(\maxT\).  
 In their mutual definition below, we denote one of them as \( f \) and the other
-as \( g \):
+as \( g \):\todo{f per max è sbagliata}
 %
 \begin{equation}
   f\ s_1\ s_2 =\ 
@@ -298,10 +298,10 @@ $$\dapp : \ctx \to \vecL{sig} \to \vecL{sig} \to \vecL{tm} \to \B \to sig \times
 % the \elpiIn{commit likes V} in the intro and check if
 % sigs are respected.
 
-The \infer\ procedure is responsible for inferring the signature of a term. 
-It returns a pair containing its signature and a boolean value
-indicating whether all of its sub-terms representing a subterm which i predicate calls are correct. Since predicate calls are part
-of the term syntax, they can also be miscalled.  
+The \infer\ procedure is responsible for inferring the signature of a term. It
+returns a pair containing its signature and a boolean value indicating whether
+all of its sub-terms representing predicate calls are correct. Since predicate
+calls are part of the term syntax, they can also be miscalled.  
 
 The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK})
 are straightforward. Rule \ref{rule:infer-piimpl} introduces a new mapping in
@@ -335,14 +335,14 @@ governing this change is \ref{rule:assume-hd}, which states that whenever a
 non-applied variable is encountered, its signature is set to the \minT\ between
 its current signature in \ctx\ and \func. The use of \minT\ is justified by the
 fact that \assume\ represents runtime unification. For unification to succeed,
-the variable signature must be the strongest between the one in the context and
-the expected one.  
+the variable's signature must be the strongest between the one in the context and
+the expected one.  \todo{enrico help}
 
 The rules \ref{rule:assume-cut} and \ref{rule:assume-expr} are intuitive, as
 they do not require any modifications to the context. In rules
 \ref{rule:assume-lam} and \ref{rule:assume-piimpl}, we extend the context by
-mapping the binder to its signature and making a recursive call to \assume.
-Finally, \ref{rule:assume-app} performs a fold over the input arguments of the
+mapping the binder to its signature and making a recursive call to \assume.\todo{rule for lambda mh}
+Finally, \ref{rule:assume-app} performs a fold\todo{quasi fold} over the input arguments of the
 predicate being called, under the assumption that the determinacy of the
 predicate is smaller than the received one.  
 % 
@@ -350,7 +350,7 @@ $$\checkk : \A \to (\ctx \times sig) \to (\ctx \times sig)$$
 
 \checkTermFig  
 
-The \checkk\ procedure combines both \infer\ and \assume. Its purpose is to
+The \checkk\ procedure (in \cref{fig:static-check}) combines both \infer\ and \assume. Its purpose is to
 check the execution of a query under a given context and determinacy. The result
 is a new context and an updated determinacy.  
 
@@ -368,7 +368,16 @@ the predicate's determinacy and the input determinacy. For example, if we are in
 a deterministic context and correctly call a relation, then the resulting
 behavior of the query is the maximum of the two, i.e., relational.  
 
-xxx
+The final step of the static checking procedure concerns the validation of
+clauses. In \ref{rule:check-clause}, we begin by assuming that the input terms
+have the determinacy specified in the signature. Then, we analyze the premises
+of the clause, assuming its behavior is deterministic. Finally, we infer the
+type of the output terms, ensuring that all have their boolean value set to
+$\top$ and that their signature is \mySub compared to the expected determinacy.
+Additionally, we verify that the determinacy of the body (\func['] in the rule)
+is \mySub relative to the expected determinacy (\func\ in the rule).
+
+% xxx
 
 % Rule \ref{rule:check-piimpl} behaves similarly to \ref{rule:assume-piimpl}. It
 % also makes some check on the hypothesis $H$. But we delay it to the next
@@ -409,23 +418,6 @@ xxx
 
 % \staticCheckFig
 % \todo{fai con fold}
-
-Know that we know how terms can be deduced, inferred, or checker for
-determinacy, we can illustrate how a clause be checked so that it respects the
-signature of the predicate being implemented. In \cref{fig:static-check} we
-present our last derivation system. In a clase, we consider inputs as terms that
-are assumed to respect the determinacy of the signature. Therefore in
-\ref{rule:check-clause}, we start by making this assumption. From the new
-obtained context we call the \checkL\ rule which is essentially an iterator over
-the list of terms in the body of the clause. At each iteration \checkL\ calls
-\checkk\ until reaching the end of the list. \checkL\ is called with a
-determinacy which, in the beginning, is set to \detI. While reading the premises
-of the clause, if one of them is relation, thanks to \checkk\ the determinacy
-will be set to \relI. The result of the call to \checkL\ is used to verify that
-the dtype of the ouput is less or equal to the expected value: this is what our
-static checker aims to ensure. Finally the checker ensures that the whole
-determinacy of the clause, i.e. the determinacy of the premises match the
-expectation in the signature.
 
 % We provide an example of this checker in the following database.
 
