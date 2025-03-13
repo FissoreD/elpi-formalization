@@ -1,12 +1,12 @@
 \section{The meaning of a predicate signature}
 
-It is one of our objectives that the determinacy checker should accept
+It is one of our objectives that the determinacy checker accepts
 predicates that are \textit{wrongly} called so that we can, incrementally,
 make the predicate signatures more precise.
 
 
 The \mySub\ relation subsumes signature equality and
-extend the intuitive inclusion of mathematical functions
+extends the intuitive inclusion of mathematical functions
 into relations to the recursive nature of predicate signatures, and rejects the
 converse inclusion. 
 In the spirit of subtyping the input arguments of predicate signature
@@ -36,63 +36,36 @@ The intuition is that the meaning of a
 predicate signature is given by the following formula where
 \isdet\ is an uninterpreted predicate (the definition we give in section~\ref{sec:thm}
 does not matter).
-\begin{definition}[Meaning of a signature (\sem{\cdot})]
+\begin{definition}[Meaning of a signature ($\sem{\func}\pred$ for $\ctx\ \pred = \func$)]\label{def:sem}
 $$
 \begin{array}{rl}
-\sem{\dtype{\func_1}{\func_2}{\func_3}}\ \pred & =
-  \forall t\ u, \sem{\func_2}\ t \Rightarrow \sem{\func_1}\ (\pred\ t\ u) \land \sem{\func_3}\ u\\
-\sem{\detI}\ \pred & = \isdet\ \pred \\
-\sem{\relI}\ \pred & = \top \\
-\sem{\expI}\ \pred & = \top 
+\sem{\dtype{\func_1}{\func_2}{\func_3}}\ \pred{}\!\!& =\ \forall \vecL{t_i}\ \vecL{t_o}, \bigwedge \vecL{\sem{\func_2}\ t_i} \Rightarrow \sem{\func_1}\ (\pred\ t_i\ t_o) \land \bigwedge \vecL{\sem{\func_3}\ t_o}\\
+% \sem{\dtype{\func_1}{\func_2}{\func_3}}\ \pred & = \forall t\ u, \overbrace{\sem{\func_2}\ t}^{\mathrm{pre-conditions}} \Rightarrow \overbrace{\sem{\func_1}\ (\pred\ t\ u) \land \sem{\func_3}\ u}{\mathrm{post-conditions}}\\
+\sem{\detI}\ \pred{}\!\!& =\ \isdet\ \pred \\
+\sem{\relI}\ \pred{}\!\!& =\ \top \\
+\sem{\expI}\ \pred{}\!\!& =\ \top 
 \end{array}
 $$
 \end{definition}
-If the preconditions of a signature are satisfied then the call is
+The first equation states tht if the preconditions of a signature are satisfied
+then the call to a predicate of that signature is
 functional and the post conditions on the outputs hold.
 The relation \mySub\ is such that if $f_1 \mySub f_2$ then $\sem{f_1} \Rightarrow \sem{f_2}$,
 hence the contravariance:
 the post conditions of $f_1$ can be stronger than the ones of $f_2$ while
 the pre conditions of $f_1$ must be wekaer than the ones of $f_2$.
-% \todo{is odet is defined later}
-
-% The \mySub\ relation is intentionally incomplete, as we assume that the program
-% has undergone type-checking before any determinacy verification. This guarantees
-% that no comparison between, for instance, expressions and predicates can
-% occur—such a comparison would result in a fatal type error. Moreover, when
-% comparing predicates $p_1$ and $p_2$, we assume that their input lists have the
-% same length, as do their output lists: predicates with differing input or output
-% list lengths are considered incomparable.
-
-% The idea of \mySub\ is that a relation, by definition, is not a function, the
-% other combinations of functions and relations works if some conditions holds on
-% their inputs and outputs. In particular if we have $t_1 \mySub t_2$ then the
-% outputs of $t_1$ should be \mySub\ than the outputs $t_2$ and
-% the converse property should hold for the inputs of two terms, that is, if
-% we have $t_1 \mySub t_2$ then the outputs of $t_2$ should be \mySub\ than the
-% outputs $t_1$.
-% The idea is similar to a subtyping relation where inputs should be
-% contravariant and outputs covariant.
-
-% For example, let's consider the signatures of \elpiIn{make-det}
-% and \elpiIn{idF}. We intuitively remark that $\forall p_1\ p_2\ p_3,
-%   \texttt{make-det}\ p_1\ p_2 \to \texttt{idF}\ p_1\ p_3 \to p_2 \mySub p_3$.
-% Therefore, we can safely claim that $\detI\ [\relI] \funsep [\detI] \mySub
-%   \detI\ [\detI] \funsep [\detI]$. In a way, a predicate going from relations to
-% functions is less expressive than a predicate from functions to functions,
-% especially because the latter predicate can recieve relations as inputs.
-
-% \begin{lemma}[\mySub\ is a partial order]
-%   Ha sesnso farlo?
-% \end{lemma}
 
 \section{Signature checking}
 
-The checking process performs dataflow analysis. It stores the predicate
+The checking process performs a form of dataflow analysis:
+It stores the predicate
 signature of each variable in \ctx\ and uses it to verify whether the variable
-satisfies the precondition of a predicate call. Additionally, it may refine the
-variable's signature to match the postcondition of the predicate call.
+satisfies the precondition of a predicate call or not.
+Additionally, it may update the
+variable's signature to match the postcondition of
+the predicate call.
 
-Refinements use the ``dual'' operators \(\minT\) and \(\maxT\).  
+Updates use the dual operators \(\minT\) and \(\maxT\).  
 In their mutual definition below, we denote one of them as \( f \) and the other
 as \( g \):\todo{f per max è sbagliata}
 %
@@ -111,47 +84,18 @@ as \( g \):\todo{f per max è sbagliata}
 \end{equation}
 \vspace{0.3em}
 
-% \begin{equation}
-%   \maxT\ f_1 f_2 =
-%   \begin{cases}
-%     \dtype{\detI}{(\vecL{\minT}\ a\ c)}{(\vecL{\maxT}\ b\ d)} & \text{if } f_k = \dtype{\relI}{a}{b} \land f_{3-k} = \dtype{\detI}{c}{d} \\
-%     \dtype{D}{(\vecL{\minT}\ a\ c)}{(\vecL{\maxT}\ b\ d)}     & \text{if } f_1 = \dtype{D}{a}{b} \land f_2 = \dtype{D}{c}{d}             \\
-%     % \relI\ (\vecL{\minT}\ a\ c)\ (\vecL{\maxT}\ b\ d) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
-%     \expI                                                     & \text{if } f_1 = \expI \land f_2 = \expI
-%   \end{cases}
-%   \label{eq:max}
-% \end{equation}
 
-% We construct the transitive closure of \mySub to form a directed acyclic graph
-% (DAG) of signatures, where an arc from \( s_1 \) to \( s_2 \) indicates that \(
-% s_1 \mySub s_2 \). The \minT (respectively, \maxT) function between two
-% signatures, if it exists, determines their lowest common predecessor
-% (respectively, successor). We will later discuss the impact of these functions.
-% Notably, the \minT relation plays a key role in \ref{rule:assume-hd}.
-
-% To ensure the correctness of the static checker, each variable must be mapped to
-% a signature in \ctx. The signature \( s \) assigned to a variable \( v \) is
-% computed using the \maximize function, which derives a signature from the type
-% \( ty \) inferred by the type checker. Specifically, \(\maximize\ s = s'\) is
-% defined such that \(\forall s'', \maxT\ s\ s'' = s'\), meaning that each
-% variable is assigned the weakest determinacy within its class. Due to space
-% constraints, we omit the description of the \maximize function. However, it can
-% be easily defined in a manner similar to the \maxT function.
-
-
-% Below we define the functions \maximize and \minimize.
-
-We assume each clause has been typechecked by an algorithm that
+We assume each clause has been type checked by an algorithm that
 traverses terms including variables in \X\ that
 represent predicates, e.g. the higher-order parameter of \elpiIn{map}.
-Since we want to keep typecheck separated from determinacy checking,
-the former identified \relI\ with \detI\ and in particular assigns
+Since we want to keep type checking separated from determinacy checking,
+the former identifies \relI\ with \detI\ and in particular assigns
 to these variables the signature obtained by weakening their
 declared signature:
 It is up to the determinacy analsysis to assume or prove stronger signatures.
 The \maximize\ function is defined mutually with its
 dual \minimize. In the definition below we denote one of them
-with $f$ and $g$ its dual:
+with $f$ and with $g$ its dual:
 %
 % $$
 %   \minT\ f_1\ f_2 = \begin{cases}
@@ -298,10 +242,13 @@ $$\dapp : \ctx \to \vecL{sig} \to \vecL{sig} \to \vecL{tm} \to \B \to sig \times
 % the \elpiIn{commit likes V} in the intro and check if
 % sigs are respected.
 
-The \infer\ procedure is responsible for inferring the signature of a term. It
-returns a pair containing its signature and a boolean value indicating whether
-all of its sub-terms representing predicate calls are correct. Since predicate
-calls are part of the term syntax, they can also be miscalled.  
+The \infer\ procedure 
+%is responsible for inferring the signature of a term. It
+returns a pair containing the signature of the given
+atom and a boolean value indicating whether
+it contains miscalled predicates.
+%  Since predicate
+% calls are part of the term syntax, they can also be miscalled.  
 
 The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK})
 are straightforward. Rule \ref{rule:infer-piimpl} introduces a new mapping in
@@ -311,71 +258,95 @@ recursive call to \infer. $\lambda$-abstractions are handled by
 those corresponding to outputs. Binders in input positions are added to \ctx\
 and mapped to their corresponding signature.  
 
-The rule \ref{rule:infer-app}, combined with the \dapp\ procedure, infers the signature
-of a term application when the head of the term is a variable or a predicate.
-This routine also accounts for partial applications.  
+The rule \ref{rule:infer-app}, combined with the \dapp\ procedure,
+handles call when the head is a variable or a predicate
+and  accounts for partial applications.  
 
-For example, consider the term $t =\ $\elpiIn{map likes!}. Its inferred
-signature is obtained by calling \ref{rule:infer-app}. The signature of
-\elpiIn{map} expects a binary function as the first input argument. Thanks to
-\ref{rule:inferAppInputOK}, we can infer the signature of \elpiIn{likes!}, which
-falls into the category of partial application (in fact, this term is not
-applied at all). Ultimately, the signature of \elpiIn{likes!} is a subtype of
-the expected signature for the first argument of \elpiIn{map}. The result of the
-call to \infer\ on $t$ is the pair $(\dtype{\detI}{\expI}{\expI},\top)$: the
-Boolean value indicates that the predicate call is correct, and the first
-position of the pair expresses the signature of the partially applied term.  
+For example, consider the term \elpiIn{(once likes)} from the
+introduction has an inferred signature \elpiIn{func guest -> dish}
+given \elpiIn{func once (pred i:A, o:B), A -> B}.
+
+% $t =\ $\elpiIn{map likes!}. Its inferred
+% signature is obtained by calling \ref{rule:infer-app}. The signature of
+% \elpiIn{map} expects a binary function as the first input argument. Thanks to
+% \ref{rule:inferAppInputOK}, we can infer the signature of \elpiIn{likes!}, which
+% falls into the category of partial application (in fact, this term is not
+% applied at all). Ultimately, the signature of \elpiIn{likes!} is a subtype of
+% the expected signature for the first argument of \elpiIn{map}. The result of the
+% call to \infer\ on $t$ is the pair $(\dtype{\detI}{\expI}{\expI},\top)$: the
+% Boolean value indicates that the predicate call is correct, and the first
+% position of the pair expresses the signature of the partially applied term.  
 % 
 $$\assume : sig \to tm \to \ctx \to \ctx$$  
 
-The \assume\ procedure aims to assume a term $t$ to have an expected determinacy
-\func. It takes and updates a context \ctx\ where
-variable mappings may change according to \func. The rule
+The \assume\ procedure strenghtens the signature
+of variables occurring in the given term by
+updates a context \ctx\ according to \func. The rule
 governing this change is \ref{rule:assume-hd}, which states that whenever a
 non-applied variable is encountered, its signature is set to the \minT\ between
-its current signature in \ctx\ and \func. The use of \minT\ is justified by the
-fact that \assume\ represents runtime unification. For unification to succeed,
-the variable's signature must be the strongest between the one in the context and
-the expected one.  \todo{enrico help}
+its current signature in \ctx\ and \func.
+The intuition is given by definition~ref{def:sem}: when the
+preconditions are satisfied we know the post conditions hold. 
+% The use of \minT\ is justified by the
+% fact that \assume\ represents runtime unification.
+% For unification to succeed,
+% the variable's signature must be the strongest between the one in the context and
+% the expected one.  \todo{enrico help}
 
 The rules \ref{rule:assume-cut} and \ref{rule:assume-expr} are intuitive, as
 they do not require any modifications to the context. In rules
 \ref{rule:assume-lam} and \ref{rule:assume-piimpl}, we extend the context by
-mapping the binder to its signature and making a recursive call to \assume.\todo{rule for lambda mh}
+mapping the binder to its signature. % and making a recursive call to \assume.\todo{rule for lambda mh}
 Finally, \ref{rule:assume-app} performs a fold\todo{quasi fold} over the input arguments of the
 predicate being called, under the assumption that the determinacy of the
 predicate is smaller than the received one.  
 % 
-$$\checkk : \A \to (\ctx \times sig) \to (\ctx \times sig)$$  
+$$\checkk : \A \to (\ctx \times \F) \to (\ctx \times \F)$$  
 
 \checkTermFig  
 
-The \checkk\ procedure (in \cref{fig:static-check}) combines both \infer\ and \assume. Its purpose is to
-check the execution of a query under a given context and determinacy. The result
-is a new context and an updated determinacy.  
+The \checkk\ procedure (in \cref{fig:static-check})
+tries to prove, in the sense of~\ref{def:sem} the determinacy
+of an atom by checkig if the pre conditions and deducing new
+knowledge from the post conditions.
 
-For example, as shown in \ref{rule:check-cut}, if the term to be executed is a
-\cut, then the context remains unchanged, and the determinacy becomes \detI. If
-a predicate $p$ is called (\ref{rule:check-callOK} and \ref{rule:check-callKO}),
-we first verify whether the call is correct -- i.e., whether the inferred
-signature of the inputs is at least as strong as the expected one. If the call
-is correct, the terms in the output position are assigned the signature of $p$'s
-outputs. If $p$ is miscalled, then the behavior of the call is
-non-deterministic, and we output \relI.  
+% combines both \infer\ and \assume
+% to determine if an atom is fu
 
-If the call is correct, the behavior of the call is determined by the maximum of
-the predicate's determinacy and the input determinacy. For example, if we are in
-a deterministic context and correctly call a relation, then the resulting
-behavior of the query is the maximum of the two, i.e., relational.  
+% . Its purpose is to
+% check the execution of a query under a given context and determinacy. The result
+% is a new context and an updated determinacy.  
 
-The final step of the static checking procedure concerns the validation of
-clauses. In \ref{rule:check-clause}, we begin by assuming that the input terms
-have the determinacy specified in the signature. Then, we analyze the premises
-of the clause, assuming its behavior is deterministic. Finally, we infer the
-type of the output terms, ensuring that all have their boolean value set to
-$\top$ and that their signature is \mySub compared to the expected determinacy.
-Additionally, we verify that the determinacy of the body (\func['] in the rule)
-is \mySub relative to the expected determinacy (\func\ in the rule).
+% For example, as shown in \ref{rule:check-cut}, if the term to be executed is a
+% \cut, then the context remains unchanged, and the determinacy becomes \detI. If
+% a predicate $p$ is called (\ref{rule:check-callOK} and \ref{rule:check-callKO}),
+% we first verify whether the call is correct -- i.e., whether the inferred
+% signature of the inputs is at least as strong as the expected one. If the call
+% is correct, the terms in the output position are assigned the signature of $p$'s
+% outputs. If $p$ is miscalled, then the behavior of the call is
+% non-deterministic, and we output \relI.  
+
+% If the call is correct, the behavior of the call is determined by the maximum of
+% the predicate's determinacy and the input determinacy. For example, if we are in
+% a deterministic context and correctly call a relation, then the resulting
+% behavior of the query is the maximum of the two, i.e., relational.  
+
+% The ~ref{rule:check-clause} rule concerns the validation of
+% an entire clause: It begins by assuming that the input terms
+% have the determinacy specified in the signature and
+% it analyzes all premises in order, accumulating in \ctx
+% all post conditions \checkk\ was able to prove.
+% Finally it checks that the determinacy of the body
+% matches the declared one, as well as that all output
+% signatures are consequences of the body.
+% \todo{sucks}
+
+%  Then, we analyze the premises
+% of the clause, assuming its behavior is deterministic. Finally, we infer the
+% type of the output terms, ensuring that all have their boolean value set to
+% $\top$ and that their signature is \mySub compared to the expected determinacy.
+% Additionally, we verify that the determinacy of the body (\func['] in the rule)
+% is \mySub relative to the expected determinacy (\func\ in the rule).
 
 % xxx
 
@@ -582,29 +553,30 @@ is \mySub relative to the expected determinacy (\func\ in the rule).
 % Dove $^\texttt{Y}$ trasmette l'informazione che i due argomenti di id2 hanno
 % la stessa funzionalità.
 
-\subsection{Digression: inference v.s. checking}
+% \paragraph{\textbf{Digression: inference v.s. checking}}
 
-Several works \cite{king2005, king2006, 2011king} have been pursued
-in order to build an inference model for determinacy in \prolog system with \cut.
-Moreover, they explain that determinacy inference subsume determinacy checking.
-Even though this last claim, we think that an inference model does not fit
-well with our language.
+% Several works \cite{king2005, king2006, 2011king}
+% study the inference of determinacy in \prolog system with \cut.
+% They explain that determinacy inference subsume determinacy checking.
+% We think that an inference algorithm does not fit
+% well with our language.
 
-The first motivation is that since \elpi is an interpreted dialect of \lamprolog,
-program can change dynamically on the run of a program. This means that
-rules can be added \textit{à la volée} making impossible to infer
-determinacy as the user expects.
-It's
-up to the user to choose what should be the behavior of a predicate wrt
-determinacy. The checker is meant to assist the user by rejecting, a predicate,
-that does not respect the declared determinacy.
+% % The first motivation is that since an \elpi
+% % %is an interpreted dialect of \lamprolog,
+% % program can change dynamically due to the \impl operator.
+% % This means that rules can be added \textit{à la volée} making impossible to infer
+% % determinacy as the user expects.
+% % It's
+% % up to the user to choose what should be the behavior of a predicate wrt
+% % determinacy. The checker is meant to assist the user by rejecting, a predicate,
+% % that does not respect the declared determinacy.
 
-As explained in some of the previously cited papers, determinacy (and so
-functionality) checking is an undecidable problem. The checking property is
-sound: if a predicate passes the analysis then it is for sure deterministic.
-However, it is not complete: there could exists false negatives. We are
-convinced, that completeness, is not a big deal, since, as also claimed in ...
-every deterministic predicate not passing the determinacy check,
-can be rewritten in a equivalent way
-so that it is no more classified as non-deterministic.
+% As explained in some of the previously cited papers, determinacy (and so
+% functionality) checking is an undecidable problem. The checking property is
+% sound: if a predicate passes the analysis then it is for sure deterministic.
+% However, it is not complete: there could exists false negatives. We are
+% convinced, that completeness, is not a big deal, since, as also claimed in ...
+% every deterministic predicate not passing the determinacy check,
+% can be rewritten in a equivalent way
+% so that it is no more classified as non-deterministic.
 

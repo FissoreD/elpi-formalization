@@ -2,7 +2,7 @@
 \label{sec:basic}
 
 We assume a set $P$ of predicate names,\todo{pradicate with piimpl as arg?}
-a set $K$ of term constructors,
+a set $K$ of functors (term constructors),
 a set of type variables \V
 and a set of term variables \X.
 By convention we use capitals for
@@ -43,7 +43,7 @@ write $\vecL{t_i}$ for the input arguments ${t}_1 \ldots {t}_k$
 and $\vecL{t_o}$ for the output arguments ${t}_{k+1} \ldots {t}_n$.
 
 $\lambda$ and \texttt{pi} are binders in the $\lambda$-calculus sense. We write
-$t[x/y]$ the usual, capture avoiding, operation or replacing the variable $y$
+$t[x/y]$ for the usual, capture avoiding, operation or replacing the variable $y$
 with $x$ inside $t$.
 We say that $\vars\ t \subseteq \mathcal{P}(\X)$ is the set
 of free variables occurring in $t$. When $\vars\ t = \emptyset$ we say that
@@ -105,7 +105,7 @@ and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\
 i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as a pattern.
 
 As this paper does not really focuses on type checking (the interested reader can
-refer to~\cite{1992nadathur}) we collapsw all non-predicate types to
+refer to~\cite{1992nadathur}) we collapse all non-predicate types to
 a single node \texttt{exp}.\todo{what about \V?}
 %  At the same time we enrich the $o$ type
 % of propositions with a marker in \D and  
@@ -195,7 +195,7 @@ so called \emph{cut-to} alternatives.
 An alternative $a \in \alt \subseteq \Sigma \times \vecL{\g}$ is a
 pair made of a substitution and a list of goals.
 
-The operational semantics of our language is given by a relation
+The operational semantics of Elpi is given by a relation
 $\run{} \subseteq \alt \times \vecL{\alt} \times (\vecL{\alt} \times \Sigma ~+~ \bot)$.
 We write \runCmd{gl}{a}{\subst}{a'}{\subst'}
 when a goal list $gl$ under a substitution \subst and alternatives $a$
@@ -237,16 +237,16 @@ The rules for \run{} are given in~\cref{fig:basic-interp}.
 The first rule to look at is the one for cut (\ref{rule:cut}).
 Remark that the cut-to alternatives stored in each goal are a suffix
 of the (global) alternatives to that goal: If the atom in the goal
-is a cut, then the global alternatives are shortened to the cut-to ones.
+is a cut then the global alternatives are shortened to the cut-to ones.
 
 The cut rule goes hand in hand with~\ref{rule:call} that stores
 the current alternatives \alts in all the subgoals via
 the function $\mathcal{F}$. This function is in charge of creating the
 new alternatives $\alts['] :: al$;
 the former is directly evaluated while
-the rest prepended to the existing set of alternatives.
+the rest prepended to the existing list of alternatives.
 $\mathcal{H}$ filters applicable clauses by unifying their heads with
-the goal. If no clause applies rule ~\ref{rule:callbacktrack} moves
+the goal. If no clause applies, then rule ~\ref{rule:callbacktrack} moves
 to the next alternative (backtracks to the most recent choice point) if
 any, otherwise rule ~\ref{rule:callabort} terminates.
 A peculiarity of Elpi is that input arguments are \emph{matched} against
