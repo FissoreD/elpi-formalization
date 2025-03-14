@@ -262,10 +262,11 @@ The rule \ref{rule:infer-app}, combined with the \dapp\ procedure,
 handles call when the head is a variable or a predicate
 and  accounts for partial applications.  
 
-For example, consider the term \elpiIn{(once likes)} from the
-introduction has an inferred signature \elpiIn{func guest -> dish}
-given \elpiIn{func once (pred i:A, o:B), A -> B}.
-
+For example given \elpiIn{func once (pred i:A, o:B), A -> B} as in
+the introduction, the partial application \elpiIn{(once likes)}
+has the inferred signature
+\elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{guest}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{dish}~}.
+%
 % $t =\ $\elpiIn{map likes!}. Its inferred
 % signature is obtained by calling \ref{rule:infer-app}. The signature of
 % \elpiIn{map} expects a binary function as the first input argument. Thanks to

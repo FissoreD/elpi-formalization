@@ -255,8 +255,9 @@ the top of the program, before any other clause.
 \end{definition}
 
 \begin{definition}[Deterministic query (\staticcheckq)]
- $\staticcheckq\ ctx\ \prog\ (\pred\ \vec{t})$ holds iff
-  $\detAtom\ \ctx\ (\pred\ \vec{t})\ \land\ \checkCmd{\ctx}{\detI}{t}{\_}{\detI}$.% (see Fig~\ref{fig:full-det-check-terms}).
+ $\staticcheckq\ \ctx\ \prog\ (\pred\ \vec{t})$ holds iff
+  $\detAtom\ \ctx\ (\pred\ \vec{t})\ \land\
+   \checkCmd{\ctx}{\detI}{(\pred\ \vec{t})}{\_}{\detI}$.% (see Fig~\ref{fig:full-det-check-terms}).
 \end{definition}
 
 % NOTA:
