@@ -48,11 +48,7 @@
 \newcommand{\X}[1][]{\ensuremath{\mathcal{X}#1}\xspace}
 \newcommand{\T}[1][]{\ensuremath{tm#1}\xspace}
 \newcommand{\V}[1][]{\ensuremath{\mathcal{V}#1}\xspace}
-% \newcommand{\CL}[1][]{\ensuremath{C_L#1}\xspace}
-% \newcommand{\CL}[1][]{\ensuremath{C_L#1}\xspace}
-% \newcommand{\CL}[1][]{\ensuremath{C_L#1}\xspace}
-\newcommand{\CL}[1][]{\ensuremath{\textit{{CL}}#1}\xspace}
-% \newcommand{\CL}[1][]{\ensuremath{C_L#1}\xspace}
+\newcommand{\CL}[1][]{\ensuremath{\text{\Keyword{CL}}#1}\xspace}
 \def\CALL{\ensuremath{\mathcal{C}}\xspace}
 \newcommand{\A}[1][]{\ensuremath{\Lambda#1}\xspace}
 \newcommand{\bool}[1][]{b}
@@ -268,3 +264,9 @@
 \def\thm@space@setup{\thm@preskip=0pt
   \thm@postskip=0pt}
 \makeatother
+
+\newcommand{\Keyword}[1]{{\fontfamily{qcr}\selectfont #1}}
+
+\newcommand{\kIF}{\Keyword{if}}
+\newcommand{\kTHEN}{\Keyword{then}}
+\newcommand{\kELSE}{\Keyword{else}}
