@@ -66,11 +66,13 @@ variable's signature to match the postcondition of
 the predicate call.
 
 Updates use the dual operators \(\minT\) and \(\maxT\).  
-In their mutual definition below, we denote one of them as \( f \) and the other
-as \( g \) they are parameterized by determinacy $d$ (either \detI or \relI) --
-\detI is used for \minT and \relI for \maxT. We note $\overline{d}$ to denote
-the negation of $d$, switching its determinacy value. The definition of these
-functions are as follows:
+In their mutual definition below, we encode them thourgh the function \( f \),
+parameterized by the determinacy \( d \) (either \(\detI\) or \(\relI\)).
+Specifically, \( f_\detI \) represents \(\minT\), while \( f_\relI \)
+corresponds to \(\maxT\). We use \( \overline{d} \) to denote the negation of \(
+d \), which inverts its determinacy value. The definitions of these functions
+are as follows:  
+
 %
 \begin{equation}
   f\ s_1\ s_2 =\ 
@@ -96,8 +98,8 @@ to these variables the signature obtained by weakening their
 declared signature:
 It is up to the determinacy analsysis to assume or prove stronger signatures.
 The \maximize\ function is defined mutually with its
-dual \minimize. In the definition below we denote one of them
-with $f$ and with $g$ its dual:
+dual \minimize. Similarly to the \minT and \maxT, we encode them with the
+function $f$ parametrized by a determinacy $d$:
 %
 % $$
 %   \minT\ f_1\ f_2 = \begin{cases}
@@ -132,9 +134,9 @@ with $f$ and with $g$ its dual:
 %
 %
 \begin{equation}
-  f\ s =\ 
+  f_d\ s =\ 
   \begin{cases}
-    \ \dtype{\relI}{(\vecL{g\ a})}{(\vecL{f\ b})} & \text{if } s = \dtype{D}{a}{b} \\
+    \ \dtype{d}{(\map\ f_{\overline{d}}\ a)}{(\map\ f_d\ b)} & \text{if } s = \dtype{\_}{a}{b} \\
     \ \expI                                                       & \text{if } s = \expI
   \end{cases}
   \label{eq:maximize}
