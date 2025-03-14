@@ -138,7 +138,9 @@ $$
 
 \noindent
 By a slight abuse of notation, we assume that the currification operation for
-the function \( f \) is applied whenever necessary.
+the function \( f \) is applied whenever necessary. For example, $\map\ f\
+\vecL{tu} = \map\ (\lambda x.f\ (\text{fst}\ x)\ (\text{snd}\ x))\ \vecL{tu}$ if
+$f : A \to B \to C$.
 
 A program $\prog = (\aleph, \mathcal{I})$ holds a set of names $\aleph$ and a
 mapping $\mathcal{I}$ from predicate names to an \emph{ordered list} of clauses.

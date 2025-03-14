@@ -90,7 +90,7 @@
       \textbf{ else }\ctx['] = \ctx  
     }}
     \RightLabelM{\ruleAssumeApp}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\CALL\ \vecL{t})}{\ctx[']}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\CALL\ \vec{t})}{\ctx[']}}
   \end{myRule}
 }
 
@@ -125,7 +125,7 @@
       \assumeApp{1}
 
       \vspace{-1em}
-      \caption{\assume\ routine}
+      \caption{$\assume\ : \func \to (\A + \T) \to \ctx \to \ctx$}
       \label{fig:det-assume}
     \end{framed}
   \end{figure}

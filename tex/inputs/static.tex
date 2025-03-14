@@ -233,8 +233,8 @@ The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
 \assume\ (\cref{fig:det-assume}) the signature of a predicate and finally to
 \checkk\ (\cref{fig:static-check}) if a rule matches a declared signature.
 %
-$$\infer : \ctx \to (\A + \T) \to \func \times \B$$
-$$\dapp : \ctx \to \vecL{\func} \to \vecL{\func} \to \vecL{tm} \to \B \to \func \times \func \times \B$$
+% $$\infer : \ctx \to (\A + \T) \to \func \times \B$$
+% $$\dapp : \ctx \to \vecL{\func} \to \vecL{\func} \to \vecL{tm} \to \B \to \func \times \func \times \B$$
 
 % TODO: rule for lambda assumes lambdas are ordered according to
 % the convetion of input first and that their mode is somehow given.
@@ -280,7 +280,7 @@ has the inferred signature
 % Boolean value indicates that the predicate call is correct, and the first
 % position of the pair expresses the signature of the partially applied term.  
 % 
-$$\assume : \func \to (\A + \T) \to \ctx \to \ctx$$  
+% $$\assume : \func \to (\A + \T) \to \ctx \to \ctx$$  
 
 The \assume\ procedure strenghtens the signature
 of variables occurring in the given term by
@@ -300,11 +300,11 @@ The rules \ref{rule:assume-cut} and \ref{rule:assume-expr} are intuitive, as
 they do not require any modifications to the context. In rules
 \ref{rule:assume-lam} and \ref{rule:assume-piimpl}, we extend the context by
 mapping the binder to its signature. % and making a recursive call to \assume.\todo{rule for lambda mh}
-Finally, \ref{rule:assume-app} performs a fold\todo{quasi fold} over the input arguments of the
+Finally, \ref{rule:assume-app} performs a fold over the input arguments of the
 predicate being called, under the assumption that the determinacy of the
 predicate is smaller than the received one.  
 % 
-$$\checkk : \A \to (\ctx \times \F) \to (\ctx \times \F)$$  
+% $$\checkk : \A \to (\ctx \times \F) \to (\ctx \times \F)$$  
 
 \checkTermFig  
 
