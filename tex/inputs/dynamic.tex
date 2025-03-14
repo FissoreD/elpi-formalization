@@ -1,12 +1,13 @@
 \section{Preliminaries}
 \label{sec:basic}
 
-We assume a set $P$ of predicate names,\todo{pradicate with piimpl as arg?}
+We assume a set $P$ of predicate names,%\todo{pradicate with piimpl as arg?}
 a set $K$ of functors (term constructors),
 a set of type variables \V
 and a set of term variables \X.
 By convention we use capitals for
-unification variables and small letters for bound variables.\todo{mi serve un NT = $\X \mid P $}
+unification variables and small letters for bound variables.
+\todo{mi serve un NT = $\X \mid P $}
 
 The programmer provides a context \ctx{} that assigns a
 signature $sig$ to each predicate. By convention predicates take
@@ -78,7 +79,7 @@ $t$ is \ground.
   \label{fig:syntax}
   \end{framed}
 \end{figure}
-\todo{serve \V per eq, ma poi exp?}
+% \todo{serve \V per eq, ma poi exp?}
 
 
 A substitution $\subst \in \Sigma $ is a mapping from unification variables
@@ -106,7 +107,8 @@ i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as a pa
 
 As this paper does not really focuses on type checking (the interested reader can
 refer to~\cite{1992nadathur}) we collapse all non-predicate types to
-a single node \texttt{exp}.\todo{what about \V?}
+a single node \texttt{exp} for regular data or \V{} for polymorphic data.
+%\todo{what about \V?}
 %  At the same time we enrich the $o$ type
 % of propositions with a marker in \D and  
 We also rule out predicates inside data,
