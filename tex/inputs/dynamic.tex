@@ -267,9 +267,9 @@ The stop rule~\ref{rule:stop} terminates as there are no more goals to be
 solved and returns the current susbtitution and the yet to be explored
 alternatives.
 
-Rule~\ref{rule:piimpl} loads into the current program the new clause $h$
-after having postulated a fresh symbol $y$ and replaced the bound $x$ for
-$y$ everywhere.
+Rule~\ref{rule:piimpl} postulates a fresh symbol $y$ and replaces the bound $x$
+for $y$ everywhere, then it loads the new clause $h$ into the program,
+so that it has the highest priority.
 
 The last rule~\ref{rule:beta} deals with the fact that an atom can be
 a variable. If that variable is assgined in $\subst$ to a term
