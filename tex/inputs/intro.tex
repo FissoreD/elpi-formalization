@@ -8,10 +8,17 @@ Elpi finds applications as an extension
 language for The Rocq\footnote{formerly known as Coq} Interactive prover, where
 it has been used for program and proof synthesis~\cite{tassi2018,tassi2019,tassi2023,cohen_et_al:LIPIcs.FSCD.2020.34} and more recently
 as the target language for type-class resolution~\cite{fissore2023,fissore2024}.
-Type-class resolution is typically used to implement overloading~\cite{wadler1996-hs,sozeau2008-tc}
-where the solution to a query provides the meaning of the overloaded symbol.
-In this context it is of paramount\todo{dipende, no?} importance that this solution is unique,
-i.e. non ambiguous. A static check for this property is of particular
+
+In Rocq type-class resolution is used for multiple purposes, from automatic
+proof search as in~\cite{sozeau2008-tc} to Haskell-style symbol overloading as in~\cite{wadler1996-hs}.
+For this last application
+% Type-class resolution
+% is typically used to implement overloading~\cite{wadler1996-hs,sozeau2008-tc}
+% where 
+the solution to a query provides the formal meaning of the overloaded symbol
+and it is of paramount importance that this solution is unique, otherwise
+the meaning is ambiguous.
+A static check for this property is of particular
 interest in the context of the platform of Rocq libraries: code developed
 by different teams is combined together in order to lower the cost
 of mechanization.
