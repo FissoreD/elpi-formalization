@@ -67,15 +67,18 @@ the predicate call.
 
 Updates use the dual operators \(\minT\) and \(\maxT\).  
 In their mutual definition below, we denote one of them as \( f \) and the other
-as \( g \):\todo{f per max è sbagliata}
+as \( g \) they are parameterized by determinacy $d$ (either \detI or \relI) --
+\detI is used for \minT and \relI for \maxT. We note $\overline{d}$ to denote
+the negation of $d$, switching its determinacy value. The definition of these
+functions are as follows:
 %
 \begin{equation}
-  f\ s_1\ s_2 =\ 
+  f_d\ s_1\ s_2 =\ 
   \begin{cases}
     %\ \dtype{\detI}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})} & \text{if } s_k = \dtype{\relI}{a}{b}\ \land\ s_{3-k} = \dtype{\detI}{c}{d} \\
-    \ \dtype{\detI}{(\map\ g\ \vecL{ac})}{(\map\ f\ \vecL{bd})} & \text{if } s_k = \dtype{\relI}{\vec a}{\vec b}\ \land\ s_{3-k} = \dtype{\detI}{\vec c}{\vec d} \\
+    \ \dtype{d}{(\map\ g_{\overline{d}}\ \vecL{ac})}{(\map\ f_d\ \vecL{bd})} & \text{if } s_k = \dtype{\relI}{\vec a}{\vec b}\ \land\ s_{3-k} = \dtype{\detI}{\vec c}{\vec d} \\
     %\ \dtype{D}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})}     & \text{if } s_1 = \dtype{D}{a}{b}\ \land\ s_2 = \dtype{D}{c}{d}             \\
-    \ \dtype{D}{(\map\ g\ \vecL{ac})}{(\map\ f\ \vecL{bd})}     & \text{if } s_1 = \dtype{D}{\vec a}{\vec b}\ \land\ s_2 = \dtype{D}{\vec c}{\vec d}             \\
+    \ \dtype{\func}{(\map\ g_{\overline{d}}\ \vecL{ac})}{(\map\ f_d\ \vecL{bd})}     & \text{if } s_1 = \dtype{\func}{\vec a}{\vec b}\ \land\ s_2 = \dtype{\func}{\vec c}{\vec d}             \\
     % \relI\ (\vecL{g}\ a\ c)\ (\vecL{f}\ b\ d) & \text{if } s_1 = \relI\ a\ b \land s_2 = \relI\ c\ d \\
     \ \expI                                                     & \text{if } s_1 = \expI\ \land\ s_2 = \expI
   \end{cases}
@@ -83,7 +86,6 @@ as \( g \):\todo{f per max è sbagliata}
   \label{eq:min}
 \end{equation}
 \vspace{0.3em}
-
 
 We assume each clause has been type checked by an algorithm that
 traverses terms including variables in \X\ that
