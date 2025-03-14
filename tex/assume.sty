@@ -36,7 +36,7 @@
 \newcommand{\ruleAssumePiImpl}{\ruleAssume{rule:assume-piimpl}{\piimpl}}
 \newcommand{\assumePiImpl}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\assumeCmd{(\ctx + \{x \mapsto \func\})}{\func[']}{B}{\ctx[']}}
+    \AxiomC{\checkClause{\ctx}{\CL} \quad \assumeCmd{(\ctx + \{x \mapsto \func\})}{\func[']}{B}{\ctx[']}}
     \RightLabelM{\ruleAssumePiImpl}
     \UnaryInfC{\assumeCmd{\ctx}{\func[']}{(\piImplCmd[\func]{x}{H}{B})}{\ctx[']\bs \{x\}}}
   \end{myRule}
@@ -116,8 +116,8 @@
 
       \assumeHd{0.45}
       \assumeExpr{0.45}
-      \assumeCut{0.4}
-      \assumePiImpl{0.55}
+      \assumeCut{0.3}
+      \assumePiImpl{0.65}
             
       % \assumeUnif{0.3}
 
