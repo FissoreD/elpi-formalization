@@ -36,9 +36,9 @@
 \newcommand{\ruleAssumePiImpl}{\ruleAssume{rule:assume-piimpl}{\piimpl}}
 \newcommand{\assumePiImpl}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\assumeCmd{(\ctx + \{x \mapsto sig\})}{\func}{B}{\ctx[']}}
+    \AxiomC{\assumeCmd{(\ctx + \{x \mapsto \func\})}{\func[']}{B}{\ctx[']}}
     \RightLabelM{\ruleAssumePiImpl}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\piImplCmd[sig]{x}{H}{B})}{\ctx[']\bs \{x\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func[']}{(\piImplCmd[\func]{x}{H}{B})}{\ctx[']\bs \{x\}}}
   \end{myRule}
 }
 
@@ -84,13 +84,13 @@
   \begin{myRule}{#1}
     % APP
     \AxiomC{\ensuremath{
-      \ctx\ P = \dtype{\func[']}{\func[_i]}{\_}\qquad
+      \ctx\ \CALL = \dtype{\func[']}{\func[_i]}{\_}\qquad
       \textbf{if } \func['] \mySub \func
       \textbf{ then }\assumeCmd[1]{\ctx}{\func[_i]}{\T_i}{\ctx[']}
       \textbf{ else }\ctx['] = \ctx  
     }}
     \RightLabelM{\ruleAssumeApp}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{(P\ \vecL{\T})}{\ctx[']}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\CALL\ \vecL{\T})}{\ctx[']}}
   \end{myRule}
 }
 
@@ -98,11 +98,11 @@
 \newcommand{\assumeLam}[1]{
   \begin{myRule}{#1}
     \AxiomC{\ensuremath{
-        \textbf{if } sig \mySub \func[_x] 
-        \textbf{ then } \assumeCmd{(\ctx + \{x:sig\})}{(\dtype{\func}{\func[_i]}{\func[_o]})}{\T}{\ctx[']}
+        \textbf{if } \func[_x'] \mySub \func[_x] 
+        \textbf{ then } \assumeCmd{(\ctx + \{x:\func[_x']\})}{(\dtype{\func}{\func[_i]}{\func[_o]})}{\T}{\ctx[']}
         \textbf{ else } \ctx['] = \ctx}}
     \RightLabelM{\ruleAssumeLam}
-    \UnaryInfC{\assumeCmd{\ctx}{(\dtype{\func}{(\func[_x]::\func[_i])}{\func[_o]})}{(\lambda x:sig.\T)}{\ctx['] \bs \{x\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{(\dtype{\func}{(\func[_x]::\func[_i])}{\func[_o]})}{(\lambda x:\func[_x'].\T)}{\ctx['] \bs \{x\}}}
   \end{myRule}
 }
 

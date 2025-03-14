@@ -22,9 +22,9 @@
 \newcommand{\ruleInferPiImpl}{\ruleInfer{rule:infer-piimpl}{\piimpl}}
 \newcommand{\inferPiImpl}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\inferCmdArr{(\ctx + \{x \mapsto sig\})}{\T}{\res}}
+    \AxiomC{\inferCmdArr{(\ctx + \{x \mapsto \func\})}{\T}{\res}}
     \RightLabelM{\ruleInferPiImpl}
-    \UnaryInfC{\inferCmdArr{\ctx}{(\piImplCmd[sig]{x}{\CL}{\T})}{\res}}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\piImplCmd[\func]{x}{\CL}{\T})}{\res}}
   \end{myRule}
 }
 
@@ -44,10 +44,10 @@
   \begin{myRule}{#1}
     % \AxiomC{\ensuremath{\ctx\ \predVar = \dtype{\func[']}{\func[_i]}{\_}}}
     % \AxiomC{\inferCmdArr[1]{\ctx}{t_i}{\func[_i']}{\_}}
-    \AxiomC{\ensuremath{\ctx\ P = \dtype{\func}{\func[_i]}{\func[_o]}}}
+    \AxiomC{\ensuremath{\ctx\ \CALL = \dtype{\func}{\func[_i]}{\func[_o]}}}
     \AxiomC{\dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vecL{\T}}{\top}{(\func['_i],\func['_o],\bool)}}
     \RightLabelM{\ruleInferApp}
-    \BinaryInfC{\inferCmdArr{\ctx}{(P\ \vecL{\T})}{(\dtype{\func}{\func['_i]}{\func['_o]}, \bool)}}
+    \BinaryInfC{\inferCmdArr{\ctx}{(\CALL\ \vecL{\T})}{(\dtype{\func}{\func['_i]}{\func['_o]}, \bool)}}
   \end{myRule}
 }
 

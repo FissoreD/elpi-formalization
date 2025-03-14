@@ -229,10 +229,10 @@ with $f$ and with $g$ its dual:
 \paragraph{The static checker} We can now exibit the static checker.
 The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
 \assume\ (\cref{fig:det-assume}) the signature of a predicate and finally to
-\checkk\ (\cref{fig:static-check}) if a rule matches a declared signature.\todo{in sig of deduce: \A and also tm}
+\checkk\ (\cref{fig:static-check}) if a rule matches a declared signature.
 %
-$$\infer : \ctx \to \A \to sig \times \B$$
-$$\dapp : \ctx \to \vecL{sig} \to \vecL{sig} \to \vecL{tm} \to \B \to sig \times sig \times \B$$
+$$\infer : \ctx \to (\A + \T) \to \func \times \B$$
+$$\dapp : \ctx \to \vecL{\func} \to \vecL{\func} \to \vecL{tm} \to \B \to \func \times \func \times \B$$
 
 % TODO: rule for lambda assumes lambdas are ordered according to
 % the convetion of input first and that their mode is somehow given.
@@ -277,7 +277,7 @@ given \elpiIn{func once (pred i:A, o:B), A -> B}.
 % Boolean value indicates that the predicate call is correct, and the first
 % position of the pair expresses the signature of the partially applied term.  
 % 
-$$\assume : sig \to tm \to \ctx \to \ctx$$  
+$$\assume : \func \to tm \to \ctx \to \ctx$$  
 
 The \assume\ procedure strenghtens the signature
 of variables occurring in the given term by

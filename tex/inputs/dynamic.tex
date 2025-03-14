@@ -10,10 +10,10 @@ unification variables and small letters for bound variables.
 \todo{mi serve un NT = $\X \mid P $}
 
 The programmer provides a context \ctx{} that assigns a
-signature $sig$ to each predicate. By convention predicates take
+signature $\func$ to each predicate. By convention predicates take
 all input arguments first and then the output ones:
 We separate them with $\funsep$ and we omit the symbols when there are no arguments
-(i.e. $sign$ degenerates to \F).
+(i.e. $\func$ degenerates to \F).
 The determinacy marker \detI{} stands for deterministic (the
 precise meaning is given in~\cref{sec:thm}) while
 \relI{} for non-deterministic. Be convention
@@ -57,14 +57,15 @@ $t$ is \ground.
   \begin{array}{rlr}
     P & ::= p, q, \ldots & \mathrm{predicate}\\
     K & ::= c, f, \ldots & \mathrm{data\ constructor}\\
-    \F & ::= \detI \mid \relI & \mathrm{determinacy} \\
     \X & ::= \mathrm{X}, \mathrm{Y} \ldots x, y, \ldots & \mathrm{variable}\\
-    \A & ::= \cut \mid P\ \vecL{\T} \mid \X\ \vecL{\T} \mid \piImplCmd[\texttt{exp}]{\X}{\CL}{\A} & \mathrm{atom} \\
-    \T & ::= K\ \vecL{\T} \mid P \ \vecL{\T} \mid \X\ \vecL{\T} \mid \lambda \X\!\!: ty \bs\ \T & \mathrm{term}\\
+    \CALL & ::= P \mid  \X & \mathrm{call\ head}\\
+    \F & ::= \detI \mid \relI & \mathrm{determinacy} \\
+    \A & ::= \cut \mid \CALL\ \vecL{\T} \mid \piImplCmd[\texttt{exp}]{\X}{\CL}{\A} & \mathrm{atom} \\
+    \T & ::= K\ \vecL{\T} \mid \CALL\ \vecL{\T} \mid \lambda \X\!\!: ty \bs\ \T & \mathrm{term}\\
     \CL & ::= \clauseCmd{P}{\vecL{\T}}{\vecL{\A}} & \mathrm{clause} \\
     \V & ::= \mathrm{A}, \mathrm{B}, \ldots & \mathrm{type\ variable} \\
-    sig & ::= \F\ \vecL{ty} \funsep \vecL{ty} & \mathrm{predicate\ signature} \\
-    ty   & ::= \texttt{exp} \mid sig \mid \V & \mathrm{type} \\
+    \func & ::= \F\ \vecL{ty} \funsep \vecL{ty} & \mathrm{predicate\ signature} \\
+    ty   & ::= \texttt{exp} \mid \func \mid \V & \mathrm{type} \\
   \end{array}
   $$
 \end{subfigure}

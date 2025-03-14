@@ -98,7 +98,7 @@
 %   \end{myRule}
 % }
 \def\stackalignment{l}
-\newcommand{\ruleCheckCall}{\ruleCheckName{rule:check-callOK}{@^\top}}
+\newcommand{\ruleCheckCall}{\ruleCheckName{rule:check-callOK}{@_\top}}
 \newcommand{\ruleCheckCallM}[1]{
   \begin{myRule}{#1}
     % CALL SUCC
@@ -175,7 +175,7 @@
       \ruleCheckCutM{.45}
 
       % \ruleCheckPiM{.5}
-      % \ruleCheckPiImplM{1}
+      \ruleCheckPiImplM{1}
 
       % \ruleCheckUnifM{1}
       % \ruleCheckUnifFailM{0.52}
