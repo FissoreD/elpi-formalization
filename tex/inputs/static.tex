@@ -73,12 +73,12 @@ the negation of $d$, switching its determinacy value. The definition of these
 functions are as follows:
 %
 \begin{equation}
-  f_d\ s_1\ s_2 =\ 
+  f\ s_1\ s_2 =\ 
   \begin{cases}
     %\ \dtype{\detI}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})} & \text{if } s_k = \dtype{\relI}{a}{b}\ \land\ s_{3-k} = \dtype{\detI}{c}{d} \\
-    \ \dtype{d}{(\map\ g_{\overline{d}}\ \vecL{ac})}{(\map\ f_d\ \vecL{bd})} & \text{if } s_k = \dtype{\relI}{\vec a}{\vec b}\ \land\ s_{3-k} = \dtype{\detI}{\vec c}{\vec d} \\
+    \ \dtype{d}{(\map\ f_{\overline{d}}\ \vecL{ac})}{(\map\ f_d\ \vecL{bd})} & \text{if } s_k = \dtype{\relI}{\vec a}{\vec b}\ \land\ s_{3-k} = \dtype{\detI}{\vec c}{\vec d} \\
     %\ \dtype{D}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})}     & \text{if } s_1 = \dtype{D}{a}{b}\ \land\ s_2 = \dtype{D}{c}{d}             \\
-    \ \dtype{\func}{(\map\ g_{\overline{d}}\ \vecL{ac})}{(\map\ f_d\ \vecL{bd})}     & \text{if } s_1 = \dtype{\func}{\vec a}{\vec b}\ \land\ s_2 = \dtype{\func}{\vec c}{\vec d}             \\
+    \ \dtype{\func}{(\map\ f_{\overline{d}}\ \vecL{ac})}{(\map\ f_d\ \vecL{bd})}     & \text{if } s_1 = \dtype{\func}{\vec a}{\vec b}\ \land\ s_2 = \dtype{\func}{\vec c}{\vec d}             \\
     % \relI\ (\vecL{g}\ a\ c)\ (\vecL{f}\ b\ d) & \text{if } s_1 = \relI\ a\ b \land s_2 = \relI\ c\ d \\
     \ \expI                                                     & \text{if } s_1 = \expI\ \land\ s_2 = \expI
   \end{cases}
