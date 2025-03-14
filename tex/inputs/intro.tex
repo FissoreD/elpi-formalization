@@ -25,7 +25,7 @@ of mechanization.
 
 As of today Elpi comes with a quite standard type-checker~\cite{1992nadathur} but
 features no determinacy analisys. The literature provides
-many works on the subject~\cite{robaDescrittaDopoNeiRelatedWorks} but none of these
+many works on the subject~(among them \cite{1989Warren,1996Somogy,2011king}) but none of these
 works can be applied to Elpi due to its higher-order nature, inherited from
 $\lambda$Prolog, and its nonstandard notion of input.
 
@@ -45,14 +45,14 @@ map F [X|XS] [Y|YS] :- F X Y, map F XS YS.      % code
 \end{elpicode}
 
 The basic predicate signature says that \elpiIn{map} has two input arguments
-and one output. The first argument is a higher order predicate with an inupt
+and one output. The first argument is a higher-order predicate with an inupt
 of type \elpiIn{A} and an output of type \elpiIn{B}, while the other two
 arguments are respectively of type \elpiIn{list A} and \elpiIn{list B}.
 The better signature we describe in this paper subsumes the  basic one by
 additionally asserting that
 if the higher order argument \elpiIn{F} is a function, then also \elpiIn{map F} is.
 In this reasoning ``function'' means single-valued relation,
-we will give amore precise, operational, meaning in section~\ref{sec:thm}.
+we will give a more precise, operational, meaning in section~\ref{sec:thm}.
 
 We need this new signature to be added to an existing code base where
 \elpiIn{map} is potentially called by passing a relation as the first
@@ -83,7 +83,7 @@ The third one is rejected since it miscalls \elpiIn{map} without
 compensating for it.
 
 The hard-cut operator of Elpi lets one turn a relation into a function
-by committing to its first result, as in the body of \elpiIn{like!}, but it also
+by committing to its first result, as in the body of \elpiIn{likes!}, but it also
 discards the clauses following the current one.
 Luckily the language of signatures we
 introduce is expressive enough to encapsulate the desired ``if-then''

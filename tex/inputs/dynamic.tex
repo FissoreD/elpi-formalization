@@ -1,7 +1,7 @@
 \section{Preliminaries}
 \label{sec:basic}
 
-We assume a set $P$ of predicate names,%\todo{pradicate with piimpl as arg?}
+We assume a set $P$ of predicate names, %\todo{pradicate with piimpl as arg?}
 a set $K$ of functors (term constructors),
 a set of type variables \V
 and a set of term variables \X.
@@ -32,7 +32,7 @@ The usual =/2 operator can be
 encoded as a regular predicate \texttt{eq} with a single clause
 \elpiIn{(eq X X :- .)} and signature
 $\ctx\ \texttt{eq} = \dtype{\detI}{}{A\ A}$: a deterministic predicate
-with two outputs of the same type $A$.
+with two outputs of the same type $A$.\todo{input,output?}
 
 We write \(\vecL{t}\) to denote \(t_1, \ldots, t_n\), representing a (possibly
 empty) list of \(t\)s. Similarly, we write \(\vecL{tu}\) to denote the
@@ -40,15 +40,15 @@ element-wise pairing (zipping) of \(\vecL{t}\) and \(\vecL{u}\) into a list of
 pairs. The zipping process continues up to the length of the shorter list.
 
 \todo{check for dead cod here if we hide the proofs}
-Given a call $\pred\ \vecL{t}$ to a n-ary predicate where
+Given a call $\pred \vecL{t}$ to a n-ary predicate where
 $\ctx\ \pred = \dtype{\func}{{ty}_1 \ldots {ty}_k~}{~{ty}_{k+1} \ldots {ty}_n}$ we
 write $\vecL{t_i}$ for the input arguments ${t}_1 \ldots {t}_k$
 and $\vecL{t_o}$ for the output arguments ${t}_{k+1} \ldots {t}_n$.
 
 $\lambda$ and \texttt{pi} are binders in the $\lambda$-calculus sense. We write
-$t[x/y]$ for the usual, capture avoiding, operation or replacing the variable $y$
+$t[x/y]$ for the usual, capture avoiding, operation of replacing the variable $y$
 with $x$ inside $t$.
-We say that $\vars\ t \subseteq \mathcal{P}(\X)$ is the set
+We say that $\vars\ t \subseteq \mathcal{P}(\X)$\todo{\prog is program?} is the set
 of free variables occurring in $t$. When $\vars\ t = \emptyset$ we say that
 $t$ is \ground.
 
@@ -101,12 +101,12 @@ We denote with $\_\times\_$, $\_+\_$, $\vecL{\phantom{i}\_~}$ and $\_\to\_$ the 
 function space of types, respectively, and with $\B = \{ \top, \bot\}$ the booleans.
 We assume a function $\unify$ of type $tm \times tm \times \Sigma \to \Sigma + \B$
 such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
-and $\subst[']$ is the most general extension of $\subst$
+and $\subst[']$ is the most general extension of $\subst$\todo{extension=unifier?}
 as in~\cite{1991miller-pf}.
 We assume a function $\match$ of type $tm \times tm \times \Sigma \to \Sigma + \B$
 such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \subst['] p$
 and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\subst$,
-i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as a pattern.
+i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as a pattern.\todo{consumer?}
 
 As this paper does not really focuses on type checking (the interested reader can
 refer to~\cite{1992nadathur}) we collapse all non-predicate types to
@@ -140,14 +140,15 @@ $$
 By a slight abuse of notation, we assume that the currification operation for
 the function \( f \) is applied whenever necessary. For example, $\map\ f\
 \vecL{tu} = \map\ (\lambda x.f\ (\text{fst}\ x)\ (\text{snd}\ x))\ \vecL{tu}$ if
-$f : A \to B \to C$.
+$f : A \to B \to C$ and $A$ is not the product type.
 
 A program $\prog = (\aleph, \mathcal{I})$ holds a set of names $\aleph$ and a
 mapping $\mathcal{I}$ from predicate names to an \emph{ordered list} of clauses.
 We write $x \# \prog$ to find a name fresh in $\aleph$.
 We write $\prog~\pred$ for the clauses of predicate \pred in $\mathcal{I}$
 and $(x,h) + \prog$ to add
-the name $x$ to $\aleph$ and the extra clause $h$ to $\mathcal{I}$.
+the name $x$ to $\aleph$ and the extra clause $h$ on top of $\mathcal{I}$,
+i.e. $h$ has the histest priority in the program.
 
 
 
