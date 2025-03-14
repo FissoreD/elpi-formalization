@@ -86,11 +86,11 @@
     \AxiomC{\ensuremath{
       \ctx\ \CALL = \dtype{\func[']}{\func[_i]}{\_}\qquad
       \textbf{if } \func['] \mySub \func
-      \textbf{ then }\assumeCmd[1]{\ctx}{\func[_i]}{\T_i}{\ctx[']}
+      \textbf{ then } \fold\ \assumeCmd{\ctx}{\vecL{(\func[_i],t_i)}}{\!\!}{\ctx[']} 
       \textbf{ else }\ctx['] = \ctx  
     }}
     \RightLabelM{\ruleAssumeApp}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\CALL\ \vecL{\T})}{\ctx[']}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\CALL\ \vecL{t})}{\ctx[']}}
   \end{myRule}
 }
 

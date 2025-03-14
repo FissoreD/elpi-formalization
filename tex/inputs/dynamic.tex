@@ -7,7 +7,7 @@ a set of type variables \V
 and a set of term variables \X.
 By convention we use capitals for
 unification variables and small letters for bound variables.
-\todo{mi serve un NT = $\X \mid P $}
+\CALL is the union of $P$ and \X.
 
 The programmer provides a context \ctx{} that assigns a
 signature $\func$ to each predicate. By convention predicates take
@@ -21,9 +21,9 @@ we use \func, \func['], $\func[_1] \ldots$ to denote signatures
 or determinacy markers.
 Looking back at section~\ref{sec:examples}
 we have that
-$\ctx~\texttt{likes} = \dtype{\relI}{\texttt{exp}}{\texttt{exp}}$,
+$\ctx~\texttt{likes} = \dtype{\relI}{\expI}{\expI}$,
 that
-$\ctx~\texttt{likes!} = \dtype{\detI}{\texttt{exp}}{\texttt{exp}}$
+$\ctx~\texttt{likes!} = \dtype{\detI}{\expI}{\expI}$
 and $\ctx\ \texttt{true} = \relI$.
 
 In the syntax of atoms \A we single out the cut operator since it has a
@@ -34,9 +34,11 @@ encoded as a regular predicate \texttt{eq} with a single clause
 $\ctx\ \texttt{eq} = \dtype{\detI}{}{A\ A}$: a deterministic predicate
 with two outputs of the same type $A$.
 
-We write $\vecL{t}$  for $t_1 \ldots t_n$ (a possibly empty list of $t$s)
-and we write $\vecL{tu}$ for the zipping of $\vecL{t}$ and $\vecL{u}$
-into a list of pairs.
+We write \(\vecL{t}\) to denote \(t_1, \ldots, t_n\), representing a (possibly
+empty) list of \(t\)s. Similarly, we write \(\vecL{tu}\) to denote the
+element-wise pairing (zipping) of \(\vecL{t}\) and \(\vecL{u}\) into a list of
+pairs. The zipping process continues up to the length of the shorter list.
+
 \todo{check for dead cod here if we hide the proofs}
 Given a call $\pred\ \vecL{t}$ to a n-ary predicate where
 $\ctx\ \pred = \dtype{\func}{{ty}_1 \ldots {ty}_k~}{~{ty}_{k+1} \ldots {ty}_n}$ we
