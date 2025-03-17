@@ -76,7 +76,7 @@ compilation failure. % For instance, \textit{list.filter\_map\_corresponding} fa
 Elpi targets less technically includes users hence we strieve for simplicty,
 defining fewer determinacy classes and immediately classifying wrong calls as
 non-deterministic. For instance, \elpiIn{foldr} has only the signature
-\elpiIn{func foldr (func L A -> A) (list L) A -> A}. This design choice aligns
+\elpiIn{func foldr (func L, A -> A), list L, A -> A}. This design choice aligns
 with our goal of providing static guarantees on programs rather than producing
 efficient, specialized, machine code depending on the pred usage.
 
