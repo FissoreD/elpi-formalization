@@ -102,10 +102,10 @@
 
 \newcommand{\ruleCallBeta}[1]{
   \begin{myRule}{#1}
-    \AxiomC{$\subst (X\ \vec{t}) =_{\beta\eta} \pred\ \vec{u}$}
+    \AxiomC{$\subst (\X\ \vec{t}) =_{\beta\eta} \pred\ \vec{u}$}
     \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\pred\ \vec{u}}{a}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
     \RightLabelM{\ruleBeta}
-    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(X\ \vec{t})}{a}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
+    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(\X\ \vec{t})}{a}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
   \end{myRule}
 }
 
@@ -145,9 +145,9 @@
   \begin{myRule}{#1}
     % IMPL
     \AxiomC{$y \# \prog$}
-    \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{(y, h[y/x]) + \prog}{g[y/x]}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
+    \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{(y, \CL{}[y/x]) + \prog}{g[y/x]}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
     \RightLabelM{\rulePiImpl}
-    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(\piCmd{x}{\implCmd{h}{g}})}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
+    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(\piCmd{x}{\implCmd{\CL }{g}})}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
   \end{myRule}
 }
 
