@@ -279,16 +279,19 @@ since the equational theory of $\lambda$Prolog (hence Elpi) requires
 that but plays no role in this paper (the reference
 for the equational theory of $\lambda$Prolog is~\cite{1991miller-pf}).
 
-The operational semantisc we present is essentially a big-step version of
-the one given in~\cite{1990Vink} extended to the higher-order
-constructs of $\lambda$Prolog and the input-matching behavior
-specific to Elpi.
-This semantics describes an SLD search strategy with a \textit{hard-cut} operator
-in the sense of~\cite{2003Andrews}: it is cutting
-away not only the later clauses of the same predicate, but also the alternative
-clauses for subgoals that appear earlier in the clause premises.
-The choice of an operational semantics
-rather than a denotational one (as in~\cite{2011king}) stems from our
-preference for maintaining a concrete representation of the current choice
-points and is a prerequisite for the precise notion of
-function we pick in section~\ref{sec:thm}.
+The operational semantics we present is essentially a big-step version of the
+one given in~\cite{1990Vink}, extended to accommodate the higher-order
+constructs of $\lambda$Prolog and the input-matching behavior specific to Elpi.
+It is also worth mentioning \cite{qi2009}, where the author proposes a semantics
+for an implementation of a higher-order \textit{pure} $\lambda$Prolog, which,
+therefore, has no equivalent for the cut operator and lacks the notion of clause
+priorities. 
+Our semantics describes an SLD search strategy with a \textit{hard-cut} operator
+in the sense of~\cite{2003Andrews}: it not only prunes later clauses of the same
+predicate but also eliminates alternative clauses for subgoals that appear
+earlier in the clause premises. 
+We opted for an operational semantics rather than a denotational one (as
+in~\cite{2011king}) to maintain a concrete representation of the current choice
+points. This choice is also essential for the precise notion of function we
+define in Section~\ref{sec:thm}.
+
