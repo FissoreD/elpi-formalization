@@ -8,7 +8,7 @@
   }}
 \newcommand{\dapp}{\ensuremath{\texttt{\infer}_@}\xspace}
 
-\newcommand{\ruleInfer}[2]{\customlabel{#1}{\ensuremath{D_{#2}}}}
+\newcommand{\ruleInfer}[2]{\customlabel{#1}{\ensuremath{I_{#2}}}}
 
 \newcommand{\ruleInferCut}{\ruleInfer{rule:infer-cut}{!}}
 \newcommand{\inferCut}[1]{
@@ -63,13 +63,19 @@
 \newcommand{\ruleInferLam}{\ruleInfer{rule:infer-lam}{\lambda}}
 \newcommand{\inferLam}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\inferCmdArr{(\ctx + \{\vecL{x:\func[_i]}\})}{\T}{(\func, \bool)}}
+    \AxiomC{
+    \ensuremath{\kIF\ \func \neq \expI\ \kTHEN\ \checkc
+    {\ (\ctx + \{\pred\mapsto \dtype{\func}{\func[_i]}{\func[_o]}\})}
+    {\ (\clauseCmd{\pred}{\vec{x}\ \vec{y}}{\T})}  
+    % \ensuremath{\inferCmdArr{(\ctx + \{\vecL{x:\func[_i]}\})}{\T}{(\func, \bool)} \qquad \checkInferLamCmd{\ctx}{\func}{t}}
+    }}
     \RightLabelM{\ruleInferLam}
-    \UnaryInfC{\inferCmdArr{\ctx}{(\lambda \vecL{x:\func[_i]}.\lambda \vecL{y:\func[_o]}.\T)}{(\dtype{\func}{\func[_i]}{\func[_o]},\bool)}}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\lambda \vecL{x:\func[_i]}.\lambda \vecL{y:\func[_o]}.\T : \func)}{(\dtype{\func}{\func[_i]}{\func[_o]},\top)}}
   \end{myRule}
 }
 
-\newcommand{\ruleInferAppRef}[2]{\customlabel{#1}{\ensuremath{D_{#2}}}}
+% \newcommand{\ruleInferAppRef}[2]{\customlabel{#1}{\ensuremath{I_{#2}}}}
+\newcommand{\ruleInferAppRef}[2]{\ruleInfer{#1}{#2}}
 % dappCmd[ctx][detInput][detOutput][args][goodCall][res]
 \newcommand{\dappCmd}[6]{\ensuremath{\dapp\ #1\ #2\ #3\ #4\ #5 \arr #6}}
 \newcommand{\inferAppEmptyRef}{\ruleInferAppRef{rule:inferAppEmpty}{\EmptyList}}
@@ -102,7 +108,7 @@
 \newcommand{\inferAppEmptyDIOKRef}{\ruleInferAppRef{rule:inferAppInputOK}{i}}
 \newcommand{\inferAppInputOK}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\ensuremath{\bool = \top \quad \inferCmdArr{\ctx}{t}{(\func['],\bool')} \quad \dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vecL{\T}}{(\bool' \land \func' \mySub \func)}{\res}}}
+    \AxiomC{\ensuremath{\inferCmdArr{\ctx}{t}{(\func['],\bool')} \qquad \dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vecL{\T}}{(\bool \land \bool' \land \func' \mySub \func)}{\res}}}
     \RightLabelM{\inferAppEmptyDIOKRef}
     \UnaryInfC{\dappCmd{\ctx}{(\func :: \func[_i])}{\func[_o]}{(t :: \vecL{\T})}{\bool}{\res}}
   \end{myRule}
@@ -147,7 +153,7 @@
       \InferExp{0.35}
       \inferPiImpl{0.60}
       \inferCut{0.4}
-      \inferLam{0.56}
+      \inferLam{1}
       
       \inferApp{1}
       \inferAppEmpty{.47}

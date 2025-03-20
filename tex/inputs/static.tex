@@ -260,7 +260,7 @@ the context, associating the binder with its signature and performing a
 recursive call to \infer. $\lambda$-abstractions are handled by
 \ref{rule:infer-lam}. We distinguish between binders corresponding to inputs and
 those corresponding to outputs. Binders in input positions are added to \ctx\
-and mapped to their corresponding signature.  
+and mapped to their corresponding signature. We then check the term to be a 
 
 The rule \ref{rule:infer-app}, combined with the \dapp\ procedure,
 handles call when the head is a variable or a predicate

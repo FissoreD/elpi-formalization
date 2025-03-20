@@ -31,7 +31,7 @@ dedicated treatment in the operational semantics.
 The usual =/2 operator can be
 encoded as a regular predicate \texttt{eq} with a single clause
 \elpiIn{(eq X X :- .)} and signature
-$\ctx\ \texttt{eq} = \dtype{\detI}{}{A\ A}$: a deterministic predicate
+$\ctx\ \texttt{eq} = \dtype{\detI}{}{A\ A}$: a deterministic predicate\todo{should add var to static check}
 with two outputs of the same type $A$.\todo{input,output?}
 
 We write \(\vecL{t}\) to denote \(t_1, \ldots, t_n\), representing a (possibly
@@ -45,12 +45,17 @@ $\ctx\ \pred = \dtype{\func}{{ty}_1 \ldots {ty}_k~}{~{ty}_{k+1} \ldots {ty}_n}$ 
 write $\vecL{t_i}$ for the input arguments ${t}_1 \ldots {t}_k$
 and $\vecL{t_o}$ for the output arguments ${t}_{k+1} \ldots {t}_n$.
 
-$\lambda$ and \texttt{pi} are binders in the $\lambda$-calculus sense. We write
+$\lambda$ and \texttt{pi} are binders in the $\lambda$-calculus sense. In our syntax
+we impose the user to explicitly type binders and the body of $\lambda$-abstractions.
+We can note that this piece of information can be inferred by the type-checker,
+but we prefer to keep our simple. We write
 $t[x/y]$ for the usual, capture avoiding, operation of replacing the variable $y$
 with $x$ inside $t$.
 We say that $\vars\ t \subseteq \mathcal{P}(\X)$\todo{\prog is program?} is the set
 of free variables occurring in $t$. When $\vars\ t = \emptyset$ we say that
 $t$ is \ground.
+
+\newcommand{\base}{\ensuremath{\mathcal{B}}}
 
 \newcommand{\syntaxFig}{
   \begin{subfigure}[b]{1\textwidth}
@@ -62,12 +67,13 @@ $t$ is \ground.
     \X & ::= \mathrm{X}, \mathrm{Y} \ldots x, y, \ldots & \mathrm{variable}\\
     \CALL & ::= P \mid  \X & \mathrm{call\ head}\\
     \F & ::= \detI \mid \relI & \mathrm{determinacy} \\
-    \A & ::= \cut \mid \CALL\ \vecL{\T} \mid \piImplCmd[\texttt{exp}]{\X}{\CL}{\A} & \mathrm{atom} \\
-    \T & ::= K\ \vecL{\T} \mid \CALL\ \vecL{\T} \mid \lambda \X\!\!: ty \bs\ \T & \mathrm{term}\\
+    \A & ::= \cut \mid \CALL\ \vecL{\T} \mid \piImplCmd[ty]{\X}{\CL}{\A} & \mathrm{atom} \\
+    \T & ::= K\ \vecL{\T} \mid \CALL\ \vecL{\T} \mid \lambda \X\!\!: ty \bs\ \T\!\!: \base & \mathrm{term}\\
     \CL & ::= \clauseCmd{P}{\vecL{\T}}{\vecL{\A}} & \mathrm{clause} \\
     \V & ::= \mathrm{A}, \mathrm{B}, \ldots & \mathrm{type\ variable} \\
     \func & ::= \F\ \vecL{ty} \funsep \vecL{ty} & \mathrm{predicate\ signature} \\
-    ty   & ::= \texttt{exp} \mid \func \mid \V & \mathrm{type} \\
+    \base & ::= \expI \mid \F & \mathrm{base\ determinacy} \\
+    ty   & ::= \base \func \mid \V & \mathrm{type} 
   \end{array}
   $$
 \end{subfigure}
