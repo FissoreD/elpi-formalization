@@ -46,9 +46,10 @@ write $\vecL{t_i}$ for the input arguments ${t}_1 \ldots {t}_k$
 and $\vecL{t_o}$ for the output arguments ${t}_{k+1} \ldots {t}_n$.
 
 $\lambda$ and \texttt{pi} are binders in the $\lambda$-calculus sense. In our syntax
-we impose the user to explicitly type binders and the body of $\lambda$-abstractions.
-We can note that this piece of information can be inferred by the type-checker,
-but we prefer to keep our simple. We write
+we impose the user to explicitly type binders and the body of $\lambda$-abstractions,
+the body is never a paritial application, i.e. $lambda$-term are always in the $\eta$-long form.
+Note that this piece of information can be inferred by the type-checker,
+but we prefer to keep our presentation simple. We write
 $t[x/y]$ for the usual, capture avoiding, operation of replacing the variable $y$
 with $x$ inside $t$.
 We say that $\vars\ t \subseteq \mathcal{P}(\X)$\todo{\prog is program?} is the set
@@ -73,7 +74,7 @@ $t$ is \ground.
     \V & ::= \mathrm{A}, \mathrm{B}, \ldots & \mathrm{type\ variable} \\
     \func & ::= \F\ \vecL{ty} \funsep \vecL{ty} & \mathrm{predicate\ signature} \\
     \base & ::= \expI \mid \F & \mathrm{base\ determinacy} \\
-    ty   & ::= \base \func \mid \V & \mathrm{type} 
+    ty   & ::= \base \mid \func \mid \V & \mathrm{type} 
   \end{array}
   $$
 \end{subfigure}

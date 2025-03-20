@@ -254,13 +254,16 @@ it contains miscalled predicates.
 %  Since predicate
 % calls are part of the term syntax, they can also be miscalled.  
 
-The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK})
-are straightforward. Rule \ref{rule:infer-piimpl} introduces a new mapping in
-the context, associating the binder with its signature and performing a
-recursive call to \infer. $\lambda$-abstractions are handled by
-\ref{rule:infer-lam}. We distinguish between binders corresponding to inputs and
-those corresponding to outputs. Binders in input positions are added to \ctx\
-and mapped to their corresponding signature. We then check the term to be a 
+The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK}) are
+straightforward. Rule \ref{rule:infer-piimpl} introduces a new mapping in the
+context, associating the binder with its signature and performing a recursive
+call to \infer. $\lambda$-abstractions are handled by \ref{rule:infer-lam} and
+are transformed to clauses that must be valided by the \checkc routine. In this
+case, we ensure that both the output and the term beneath the spine of
+$\lambda$s conform to the expected type; otherwise, the checker raises an error.
+This strict verification is necessary because anonymous functions can appear as
+the head of atoms and its behavior should match the determinacy specified in the
+signature. For example: \elpiIn{X = (x\y\ commit x y), X like F, F paul Z}.
 
 The rule \ref{rule:infer-app}, combined with the \dapp\ procedure,
 handles call when the head is a variable or a predicate
