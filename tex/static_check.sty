@@ -16,7 +16,7 @@
       \stackanchor
       {
         \ensuremath{
-          \ctx\ \predVar = \dtype{\func}{\func[_i]}{\func[_o]} 
+          \ctx\ P = \dtype{\func}{\func[_i]}{\func[_o]} 
           \qquad\qquad\qquad \fold\ \checkCmd{\ctx[']}{\detI}{\vecL{bs}}{\ctx['']}{\func[']}
           \quad\ \subCmd{\func'}{\func}
         }
@@ -29,7 +29,7 @@
         }
     }
     \RightLabelM{\ruleCheckClause}
-    \UnaryInfC{\checkClause{\ctx}{(\clauseCmd{\pred}{\vec{t}}{\vecL{bs}})}}
+    \UnaryInfC{\checkClause{\ctx}{(\clauseCmd{P}{\vec{t}}{\vecL{bs}})}}
   \end{myRule}
 }
 
@@ -77,9 +77,9 @@
   \begin{myRule}{#1}
     % PiImpl
     \AxiomC{\checkClause{\ctx}{\CL}}
-    \AxiomC{\checkCmd{\ctx + \{x \mapsto ty\}}{\func}{\T}{\ctx[']}{\func[']}}
+    \AxiomC{\checkCmd{\ctx + \{x \mapsto ty\}}{\func}{t}{\ctx[']}{\func[']}}
     \RightLabelM{\ruleCheckPiImpl}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{\CL}{\T})}{\ctx[']\bs \{x\}}{\func[']}}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{\CL}{t})}{\ctx[']\bs \{x\}}{\func[']}}
   \end{myRule}
 }
 
@@ -107,8 +107,8 @@
     %   {\inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}}
     \AxiomC{
       \stackanchor{\ensuremath{%
-          \ctx\ P = \dtype{\func[']}{\func[_i]}{\func[_o]} \qquad
-          \map\ \inferCmdArr[1]{\ctx}{\vecL{\T_i}}{\vecL{(\func[_i'],\top)}}}
+          \ctx\ \CALL = \dtype{\func[']}{\func[_i]}{\func[_o]} \qquad
+          \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func[_i'],\top)}}}
       }{\ensuremath{%
           \vecL{\func[_i'] \mySub \func[_i]} \qquad\qquad\quad\ \ \ \!
           \fold\ \assumeCmd{\ctx}{\vecL{(\func[_o],t_o)}}{\!\!\!}{\ctx[']}}}}
@@ -120,7 +120,7 @@
     %     {then $\func[''] = \maxT\ \func\ \func[']$}
     %     {else $\func[''] = \relI$}}}
     \RightLabelM{\ruleCheckCall}
-    \UnaryInfC{\checkCmd{\ctx}{\func}{(P\ \vecL{\T})}{\ctx[']}{\maxT\ \func\ \func[']}}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{(\CALL\ \vecL{t})}{\ctx[']}{\maxT\ \func\ \func[']}}
   \end{myRule}
 }
 
@@ -128,11 +128,11 @@
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
-    \AxiomC{\ensuremath{ \ctx\ P = \dtype{\_}{\func[_i]}{\_} }}
+    \AxiomC{\ensuremath{ \ctx\ \CALL = \dtype{\_}{\func[_i]}{\_} }}
     \AxiomC{ \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func['],\bool)}}}
     \AxiomC{$ \exists i, \func[_i'] \not\mySub \func[_i]\ \lor\ \bool_i = \bot$}
     \RightLabelM{\ruleCheckCallFail}
-    \TrinaryInfC{\checkCmd{\ctx}{\_}{(P\ \vec{t})}{\ctx}{\relI}}
+    \TrinaryInfC{\checkCmd{\ctx}{\_}{(\CALL\ \vec{t})}{\ctx}{\relI}}
   \end{myRule}
 }
 
