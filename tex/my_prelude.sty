@@ -1,4 +1,16 @@
-\usepackage[newfloat,outputdir=.aux]{minted}
+\ifdefined\istwentytwentyfive
+  \usepackage[newfloat]{minted}
+  \newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}{elpi.py:ElpiLexer}}{\end{myminted}}
+  \newenvironment{elpicodeln}{\VerbatimEnvironment\begin{mymintedln}{elpi.py:ElpiLexer}}{\end{mymintedln}}
+  \newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{elpi.py:ElpiLexer}{#1}}
+\else
+  \usepackage[newfloat,outputdir=.aux]{minted}
+  \newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}{'elpi.py:ElpiLexer -x'}}{\end{myminted}}
+  \newenvironment{elpicodeln}{\VerbatimEnvironment\begin{mymintedln}{'elpi.py:ElpiLexer -x'}}{\end{mymintedln}}
+  \newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
+\fi
+
+
 \usepackage{bussproofs}
 \usepackage{xspace}
 \usepackage{mathtools}
@@ -112,11 +124,8 @@
   \vspace{0.2em}%
 }
 
-\newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}{'elpi.py:ElpiLexer -x'}}{\end{myminted}}
-\newenvironment{elpicodeln}{\VerbatimEnvironment\begin{mymintedln}{'elpi.py:ElpiLexer -x'}}{\end{mymintedln}}
 \newenvironment{coqcode}{\VerbatimEnvironment\begin{myminted}{coq}}{\end{myminted}}
 
-\newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
 \newcommand{\modeAlone}[1]{\elpiIn{~\PYG{k+kMode}{#1:}~}}
 \newcommand{\uvar}{\elpiIn{uvar}\xspace}
 
