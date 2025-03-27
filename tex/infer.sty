@@ -64,13 +64,14 @@
 \newcommand{\inferLam}[1]{
   \begin{myRule}{#1}
     \AxiomC{
-    \ensuremath{\kIF\ \func \neq \expI\ \kTHEN\ \checkc
+    \ensuremath{\kIF\ \checkc
     {\ (\ctx + \{\pred\mapsto \dtype{\func}{\func[_i]}{\func[_o]}\})}
-    {\ (\clauseCmd{\pred}{\vec{x}\ \vec{y}}{\T})}  
+    {\ (\clauseCmd{\pred}{\vec{x}\ \vec{y}}{\T})}
+    \ \kTHEN\ b = \top\ \kELSE\ b = \bot
     % \ensuremath{\inferCmdArr{(\ctx + \{\vecL{x:\func[_i]}\})}{\T}{(\func, \bool)} \qquad \checkInferLamCmd{\ctx}{\func}{t}}
     }}
     \RightLabelM{\ruleInferLam}
-    \UnaryInfC{\inferCmdArr{\ctx}{(\lambda \vecL{x:\func[_i]}.\lambda \vecL{y:\func[_o]}.\T : \func)}{(\dtype{\func}{\func[_i]}{\func[_o]},\top)}}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\lambda \vecL{x:\func[_i]}.\lambda \vecL{y:\func[_o]}.\T : \func)}{(\dtype{\func}{\func[_i]}{\func[_o]},\bot)}}
   \end{myRule}
 }
 

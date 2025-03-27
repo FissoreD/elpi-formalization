@@ -9,7 +9,7 @@ language for The Rocq\footnote{formerly known as Coq} Interactive prover, where
 it has been used for program and proof synthesis~\cite{tassi2018,tassi2019,tassi2023,cohen_et_al:LIPIcs.FSCD.2020.34} and more recently
 as the target language for type-class resolution~\cite{fissore2023,fissore2024}.
 
-In Rocq type-class resolution is used for multiple purposes, from automatic
+In Rocq, type-class resolution is used for multiple purposes, from automatic
 proof search as in~\cite{sozeau2008-tc} to Haskell-style symbol overloading as in~\cite{wadler1996-hs}.
 For this last application
 % Type-class resolution
@@ -23,9 +23,9 @@ interest in the context of the platform of Rocq libraries: code developed
 by different teams is combined together in order to lower the cost
 of mechanization.
 
-As of today Elpi comes with a quite standard type-checker~\cite{1992nadathur} but
+As of today, Elpi comes with a quite standard type-checker~\cite{1992nadathur}, but
 features no determinacy analisys. The literature provides
-many works on the subject~(among them \cite{1989Warren,1996Somogy,2011king}) but none of these
+many works on the subject~(among them \cite{1989Warren,1996Somogy,2011king}), but none of these
 works can be applied to Elpi due to its higher-order nature, inherited from
 $\lambda$Prolog, and its nonstandard notion of input.
 
@@ -50,7 +50,7 @@ of type \elpiIn{A} and an output of type \elpiIn{B}, while the other two
 arguments are respectively of type \elpiIn{list A} and \elpiIn{list B}.
 The better signature we describe in this paper subsumes the  basic one by
 additionally asserting that
-if the higher order argument \elpiIn{F} is a function, then also \elpiIn{map F} is.
+if the higher-order argument \elpiIn{F} is a function, then also \elpiIn{map F} is.
 In this reasoning ``function'' means single-valued relation,
 we will give a more precise, operational, meaning in section~\ref{sec:thm}.
 

@@ -2,7 +2,7 @@
 
 It is one of our objectives that the determinacy checker accepts
 predicates that are \textit{wrongly} called so that we can, incrementally,
-make the predicate signatures more precise.
+make the predicate signatures more precise.\todo{??}
 
 
 The \mySub\ relation subsumes signature equality and
@@ -11,7 +11,7 @@ into relations to the recursive nature of predicate signatures, and rejects the
 converse inclusion. 
 In the spirit of subtyping the input arguments of predicate signature
 are compared in a contravariant way. 
-
+%
 \begin{equation}
   f_1 \mySub f_2 =\ 
   \begin{cases}
@@ -32,7 +32,7 @@ are compared in a contravariant way.
 \end{equation}
 
 \newcommand{\sem}[1]{\ensuremath{[\![#1]\!]}}
-The intuition is that the meaning of a 
+The intuition of a 
 predicate signature is given by the following formula where
 \isdet\ is an uninterpreted predicate (the definition we give in section~\ref{sec:thm}
 does not matter).\todo{is-odet prende un programma e un termine}
@@ -89,10 +89,10 @@ are as follows:
 \end{equation}
 \vspace{0.1em}
 
-We assume each clause has been type checked by an algorithm that
+We assume each clause has been type-checked by an algorithm that
 traverses terms including variables in \X\ that
 represent predicates, e.g. the higher-order parameter of \elpiIn{map}.
-Since we want to keep type checking separated from determinacy checking,
+Since we want to keep type checking separated from determinacy checking,\todo{not sure}
 the former identifies \relI\ with \detI\ and in particular assigns
 to these variables the signature obtained by weakening their
 declared signature:
@@ -232,8 +232,8 @@ function $f$ parametrized by a determinacy $d$:
 %
 \paragraph{The static checker} We can now exibit the static checker.
 The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
-\assume\ (\cref{fig:det-assume}) the signature of a predicate and finally to
-\checkk\ (\cref{fig:static-check}) if a rule matches a declared signature.
+\assume\ (\cref{fig:det-assume}) the signature of a term (or atom) and finally to
+\checkk\ (\cref{fig:static-check}) if it matches (via \mySub) the expected signature.
 %
 % $$\infer : \ctx \to (\A + \T) \to \func \times \B$$
 % $$\dapp : \ctx \to \vecL{\func} \to \vecL{\func} \to \vecL{tm} \to \B \to \func \times \func \times \B$$
@@ -249,7 +249,7 @@ The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
 The \infer\ procedure 
 %is responsible for inferring the signature of a term. It
 returns a pair containing the signature of the given
-atom and a boolean value indicating whether
+a term (or atom) and a boolean value indicating whether
 it contains miscalled predicates.
 %  Since predicate
 % calls are part of the term syntax, they can also be miscalled.  
@@ -258,12 +258,12 @@ The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK}) are
 straightforward. Rule \ref{rule:infer-piimpl} introduces a new mapping in the
 context, associating the binder with its signature and performing a recursive
 call to \infer. $\lambda$-abstractions are handled by \ref{rule:infer-lam} and
-are transformed to clauses that must be valided by the \checkc routine. In this
+are transformed to clauses that must be validated by the \checkc\ routine. In this\todo{split \ref{rule:infer-lam}}
 case, we ensure that both the output and the term beneath the spine of
-$\lambda$s conform to the expected type; otherwise, the checker raises an error.
+$\lambda$s conform to the expected type; otherwise, we return the boolean $\bot$.
 This strict verification is necessary because anonymous functions can appear as
 the head of atoms and its behavior should match the determinacy specified in the
-signature. For example: \elpiIn{X = (x\y\ commit x y), X like F, F paul Z}.
+signature. For example: \elpiIn{X = (x:func\y:func\ (commit x y):func), X like F, F paul Z}.
 
 The rule \ref{rule:infer-app}, combined with the \dapp\ procedure,
 handles call when the head is a variable or a predicate
@@ -289,7 +289,7 @@ has the inferred signature
 
 The \assume\ procedure strenghtens the signature
 of variables occurring in the given term by
-updates a context \ctx\ according to \func. The rule
+updating a context \ctx\ according to \func. The rule
 governing this change is \ref{rule:assume-hd}, which states that whenever a
 non-applied variable is encountered, its signature is set to the \minT\ between
 its current signature in \ctx\ and \func.
@@ -314,9 +314,9 @@ predicate is smaller than the received one.
 \checkTermFig  
 
 The \checkk\ procedure (in \cref{fig:static-check})
-tries to prove, in the sense of~\ref{def:sem} the determinacy
-of an atom by checkig if the pre conditions and deducing new
-knowledge from the post conditions.
+tries to prove, in the sense of~\cref{def:sem} the determinacy
+of an atom by checkig the pre-conditions and deducing new
+knowledge from the post-conditions.
 
 % combines both \infer\ and \assume
 % to determine if an atom is fu

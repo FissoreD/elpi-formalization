@@ -85,7 +85,7 @@ class ElpiLexer(RegexLexer):
              'elpi-chr-rule-start'),
 
             (rf"(?=[A-Z_]){constant_re}", Name.Variable),
-            (rf"(?=[a-z_])({constant_re}|_)\\", Name.Variable),
+            (rf"(?=[a-z_])({constant_re}|_)(:[A-Za-z0-9_ ]*)?(\\)", Name.Variable),
             (r"_", Name.Variable),
             (rf"({symbol_re}|!|=>|;)", Keyword.Declaration),
             (constant_re, Text),
@@ -196,6 +196,6 @@ class ElpiLexer(RegexLexer):
         'elpi-in-parens': [
             (r"\(", Punctuation, '#push'),
             include('elpi'),
-            (r"\)", Punctuation, '#pop'),
+            (rf"(\))(:[A-Za-z0-9_ ]*)?", bygroups(Punctuation,Name.Variable), '#pop'),
         ],
     }

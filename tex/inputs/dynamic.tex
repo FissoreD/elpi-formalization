@@ -115,9 +115,10 @@ such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \s
 and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\subst$,
 i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as a pattern.\todo{consumer?}
 
-As this paper does not really focuses on type checking (the interested reader can
+As this paper does not really focus on type checking (the interested reader can
 refer to~\cite{1992nadathur}) we collapse all non-predicate types to
-a single node \texttt{exp} for regular data or \V{} for polymorphic data.
+a single node \texttt{exp} %for regular data or \V{} for 
+and polymorphic data.
 %\todo{what about \V?}
 %  At the same time we enrich the $o$ type
 % of propositions with a marker in \D and  
@@ -147,7 +148,7 @@ $$
 By a slight abuse of notation, we assume that the currification operation for
 the function \( f \) is applied whenever necessary. For example, $\map\ f\
 \vecL{tu} = \map\ (\lambda x.f\ (\text{fst}\ x)\ (\text{snd}\ x))\ \vecL{tu}$ if
-$f : A \to B \to C$ and $A$ is not the product type.
+$f : A \to B \to C$ and $\vecL{tu} : list (A*B)$.
 
 A program $\prog = (\aleph, \mathcal{I})$ holds a set of names $\aleph$ and a
 mapping $\mathcal{I}$ from predicate names to an \emph{ordered list} of clauses.
@@ -267,11 +268,11 @@ the rest prepended to the existing list of alternatives.
 $\mathcal{H}$ filters applicable clauses by unifying their heads with
 the goal. If no clause applies, then rule ~\ref{rule:callbacktrack} moves
 to the next alternative (backtracks to the most recent choice point) if
-any, otherwise rule ~\ref{rule:callabort} terminates.
+any, otherwise rule ~\ref{rule:callabort} terminates with failure.
 A peculiarity of Elpi is that input arguments are \emph{matched} against
 the corresponding terms in the head of the rule, while outputs are unified.
 
-The stop rule~\ref{rule:stop} terminates as there are no more goals to be
+The stop rule~\ref{rule:stop} terminates the goal with success as there are no more goals to be
 solved and returns the current susbtitution and the yet to be explored
 alternatives.
 
