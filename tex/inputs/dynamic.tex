@@ -27,12 +27,12 @@ $\ctx~\texttt{likes!} = \dtype{\detI}{\expI}{\expI}$
 and $\ctx\ \texttt{true} = \relI$.
 
 In the syntax of atoms \A we single out the cut operator since it has a
-dedicated treatment in the operational semantics.
-The usual =/2 operator can be
+dedicated treatment in the operational semantics. We note $\Ainst \in \A$.
+The usual =/2 operator is
 encoded as a regular predicate \texttt{eq} with a single clause
-\elpiIn{(eq X X :- .)} and signature
-$\ctx\ \texttt{eq} = \dtype{\detI}{}{A\ A}$: a deterministic predicate\todo{should add var to static check}
-with two outputs of the same type $A$.\todo{input,output?}
+\elpiIn{(eq X X :- .)} and signature\todo{dire che poly è solo su exp}
+$\ctx\ \texttt{eq} = \dtype{\detI}{}{\expI\ \expI}$: a deterministic predicate\todo{should add var to static check}
+with two outputs of the same type.
 
 We write \(\vecL{t}\) to denote \(t_1, \ldots, t_n\), representing a (possibly
 empty) list of \(t\)s. Similarly, we write \(\vecL{tu}\) to denote the

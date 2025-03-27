@@ -12,9 +12,9 @@ called \emph{semidet} in \cite{1996henderson}, or in the wording of \cite{nakamu
 are \emph{operationally deterministic}.
 
 \begin{definition}[Operational determinacy (\isdet)]\label{def:is-det}
-  Given a program \prog and an atom \A,
+  Given a program \prog and a term $\predt$,
   \isdet\ is defined as follows:
-  $$\forall a\ \subst, \isDetCmd{\A}$$
+  $$\forall a\ \subst, \isDetCmd{\predt}$$
 \end{definition}
 
 % The essence of the definition is that when interpreting any call to a given
@@ -201,18 +201,18 @@ if the following condition holds.
 Mutual exclusion ensures that at most one clause is applied on a query, however,
 we still have to ensure no clause body leaves choice points.
 
-\begin{definition}[Call to a deterministic predicate (\detAtom)]
-  We say that an atom $t$ is a call to
-  a deterministic predicate iff $t = \pred\ \vec{u}\ \land\ \ctx\ \pred = \dtype{\detI}{\_}{\_}$
-\end{definition}
+% \begin{definition}[Call to a deterministic predicate (\detAtom)]
+%   We say that an atom $t$ is a call to
+%   a deterministic predicate iff $t = \pred\ \vec{u}\ \land\ \ctx\ \pred = \dtype{\detI}{\_}{\_}$
+% \end{definition}
 
-\begin{definition}[Deterministic premises (\detPrem)] \label{def:det-prem}
-  We say that $\detPrem\ \ctx\ \prog$ holds iff for all predicate \pred such that
-  $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ and forall clause\todo{mi sembra inutile, incluso da det\_check}
-  $(\clauseCmd{\pred}{\vec{t}}{b_1\dots b_n}) \in \prog\ \pred$ the
-  following holds:
-  $$(\exists j\ s.t.\  b_j = \cut \land \forall k > j, \detAtom\ \ctx\ b_k) \lor (\forall j, \detAtom\ \ctx\ b_j)$$
-\end{definition}
+% \begin{definition}[Deterministic premises (\detPrem)] \label{def:det-prem}
+%   We say that $\detPrem\ \ctx\ \prog$ holds iff for all predicate \pred such that
+%   $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ and forall clause\todo{mi sembra inutile, incluso da det\_check}
+%   $(\clauseCmd{\pred}{\vec{t}}{b_1\dots b_n}) \in \prog\ \pred$ the
+%   following holds:
+%   $$(\exists j\ s.t.\  b_j = \cut \land \forall k > j, \detAtom\ \ctx\ b_k) \lor (\forall j, \detAtom\ \ctx\ b_j)$$
+% \end{definition}
 
 \noindent
 Since one can load clauses dynamically via the implication operator we
@@ -223,11 +223,17 @@ the top of the program, before any other clause.
 \begin{definition}[Mutually exclusive hypothetical clauses (\locExcl)]
   We say that $\locExcl\ \ctx\ \prog$ iff
   forall clause $c$ in $\prog$, forall subterm $\piImplCmd{x}{\clauseCmd{\pred}{\vec{v}}{t_1, \dots, t_n}}{\_}$ in $c$,
-  $$exists\ i\ s.t.\ t_i = \cut$$
+  s.t $\ctx\ \pred = \dtype{\func}{\_}{\_}$, then
+  $\exists\ i\ s.t.\ t_i = \cut$
   % such that $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ occurring to the
   % left of \impl\ (i.e. \piImplCmd{x}{c}{\_}) we have that
   % $$\exists i\ s.t.\ t_i = \cut \land \forall k > i, \detAtom\ t_i$$
   % \vspace{-2em}
+\end{definition}
+
+\begin{definition}[\mutExclAll]
+  Given a context \ctx and a program \prog, then \mutExclAll\ \ctx\ \prog  is defined as follows
+  $$\mutExcl\ \ctx\ \prog \land \locExcl\ \ctx\ \prog$$
 \end{definition}
 
 % \noindent
@@ -243,22 +249,31 @@ the top of the program, before any other clause.
 % same check is performed on the outputs. Moreover we define what is the meaning
 % of a good call to a predicate.
 
-\begin{definition}[Determinacy check (\staticcheck)]
-  $\staticcheck\ \ctx\ \prog$ holds iff
-  for all clause $c$ in \prog, $\checkc\ \ctx\ c$ holds.% (see Fig~\ref{fig:full-det-check-rules}).
-\end{definition}
+% \begin{definition}[Determinacy check (\staticcheck)]
+%   $\staticcheck\ \ctx\ \prog$ holds iff
+%   for all clause $c$ in \prog, $\checkc\ \ctx\ c$ holds.% (see Fig~\ref{fig:full-det-check-rules}).
+% \end{definition}
 
 \begin{definition}[Deterministic program (\detprog)]
- $\detprog\ \ctx\ \prog$ holds iff
- $\staticcheck\ \ctx\ \prog \land \mutExcl\ \ctx\ \prog \land \detPrem\ \ctx\ \prog
-  \land \locExcl\ \ctx\ \prog$ holds.
+%  $\detprog\ \ctx\ \prog$ holds iff
+%  $\staticcheck\ \ctx\ \prog \land \mutExcl\ \ctx\ \prog \land \detPrem\ \ctx\ \prog
+%   \land \locExcl\ \ctx\ \prog$ holds.
+  Given a context \ctx and a program \prog,  \detprog\ \ctx \prog is defined as follows
+  $$\forall\ clause \in \prog, \checkc\ \ctx\ clause$$ 
 \end{definition}
 
-\begin{definition}[Deterministic query (\staticcheckq)]
- $\staticcheckq\ \ctx\ \prog\ (\pred\ \vec{t})$ holds iff
-  $\detAtom\ \ctx\ (\pred\ \vec{t})\ \land\
-   \checkCmd{\ctx}{\detI}{(\pred\ \vec{t})}{\_}{\detI}$.% (see Fig~\ref{fig:full-det-check-terms}).
+\newcommand{\goodCall}{\texttt{good\_call}}
+
+\begin{definition}[Good call (\goodCall)]
+  Given a term $\pred\ \vec{u}\ \vec{v}$ and a context \ctx, then $\pred$ is well called if
+  $$\ctx \pred = \dtype{\_}{\func}{\_} \Rightarrow \forall d, \inferCmdArr{\ctx}{u_d}{(\func_d',\top)} \Rightarrow \func_d' \mySub \func_d$$
 \end{definition}
+
+% \begin{definition}[Deterministic query (\staticcheckq)]
+%  $\staticcheckq\ \ctx\ \prog\ (\pred\ \vec{t})$ holds iff
+%   $\detAtom\ \ctx\ (\pred\ \vec{t})\ \land\
+%    \checkCmd{\ctx}{\detI}{(\pred\ \vec{t})}{\_}{\detI}$.% (see Fig~\ref{fig:full-det-check-terms}).
+% \end{definition}
 
 % NOTA:
 % \begin{definition}[Mutually-exclusive local clauses (\locExcl)]
@@ -281,11 +296,15 @@ the top of the program, before any other clause.
 %   \label{def:det-check-ho}
 % \end{definition}
 
-
+The theorem we want to prove is the following
 \begin{theorem}[Deterministic execution] \label{th:det2}
+  Given a predicate context \ctx, a program \prog\ and a predicate \pred, s.t.
+  $\ctx \pred = \dtype{\detI}{\_}{\_}$, then
   $$
+  \mutExclAll\ \ctx\ \prog \land
   \detprog\ \ctx\ \prog \land
-  \staticcheckq\ \ctx\ \prog\ (\pred\ \vec{t}) \Rightarrow
+  \goodCall\ \ctx\ (\pred\ \vec{t})
+  \Rightarrow
   \isdet\ \prog\ (\pred\ \vec{t})
   $$
 \end{theorem}

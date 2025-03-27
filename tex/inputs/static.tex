@@ -32,21 +32,43 @@ are compared in a contravariant way.
 \end{equation}
 
 \newcommand{\sem}[1]{\ensuremath{[\![#1]\!]}}
+\newcommand{\semi}[1]{\ensuremath{[\![#1]\!]_i}}
+\newcommand{\semt}[1]{\ensuremath{[\![#1]\!]_t}}
 The intuition of a 
 predicate signature is given by the following formula where
 \isdet\ is an uninterpreted predicate (the definition we give in section~\ref{sec:thm}
 does not matter).\todo{is-odet prende un programma e un termine}
-\begin{definition}[Meaning of a signature ($\sem{\func}\pred$ for $\ctx\ \pred = \func$)]\label{def:sem}
-$$
-\begin{array}{rl}
-\sem{\dtype{\func_1}{\func_2}{\func_3}}\ \pred{}\!\!& =\ \forall \vecL{t_i}\ \vecL{t_o}, \bigwedge \vecL{\sem{\func_2}\ t_i} \Rightarrow \sem{\func_1}\ (\pred\ t_i\ t_o) \land \bigwedge \vecL{\sem{\func_3}\ t_o}\\
-% \sem{\dtype{\func_1}{\func_2}{\func_3}}\ \pred & = \forall t\ u, \overbrace{\sem{\func_2}\ t}^{\mathrm{pre-conditions}} \Rightarrow \overbrace{\sem{\func_1}\ (\pred\ t\ u) \land \sem{\func_3}\ u}{\mathrm{post-conditions}}\\
-\sem{\detI}\ \pred{}\!\!& =\ \isdet\ \pred \\
-\sem{\relI}\ \pred{}\!\!& =\ \top \\
-\sem{\expI}\ \pred{}\!\!& =\ \top 
-\end{array}
-$$
-\end{definition}
+% \begin{definition}[Meaning of a signature ($\sem{\func}\pred$ for $\ctx\ \pred = \func$)]\label{def:sem}
+% $$
+% \begin{array}{rl}
+% \sem{\dtype{\func_1}{\func_2}{\func_3}}\ \pred{}\!\!& =\ \forall \vecL{t_i}\ \vecL{t_o}, \bigwedge \vecL{\sem{\func_2}\ t_i} \Rightarrow \sem{\func_1}\ (\pred\ t_i\ t_o) \land \bigwedge \vecL{\sem{\func_3}\ t_o}\\
+% % \sem{\dtype{\func_1}{\func_2}{\func_3}}\ \pred & = \forall t\ u, \overbrace{\sem{\func_2}\ t}^{\mathrm{pre-conditions}} \Rightarrow \overbrace{\sem{\func_1}\ (\pred\ t\ u) \land \sem{\func_3}\ u}{\mathrm{post-conditions}}\\
+% \sem{\detI}\ \pred{}\!\!& =\ \isdet\ \pred \\
+% \sem{\relI}\ \pred{}\!\!& =\ \top \\
+% \sem{\expI}\ \pred{}\!\!& =\ \top 
+% \end{array}
+% $$
+% \end{definition}
+\newcommand{\predt}{\ensuremath{\pred{}\ \vec{t}}}
+% \begin{definition}[Meaning of a signature $(\sem{\func}\predt)$ in a given program \prog]\label{def:sem}
+  \begin{definition}[Meaning of a signature $(\sem{\func}\ \pred)$ given a context \ctx and a program \prog]\label{def:sem}
+  % $$
+  % \begin{array}{rll}
+  %   \sem{\predt} & = \bigwedge \vecL{\semi{t_i}} \Rightarrow \semt{\func, \predt} \land \vecL{\semi{t_o}} & \mathrm{with\ } \ctx\ \pred{} = \dtype{\func}{\_}{\_}\\
+  %   \semi{\predt} & = \bigwedge \vecL{\semi{\func_i, t_i}} & \mathrm{with\ } \ctx\ \pred{} = \dtype{\_}{\func_i}{\_} \\
+  %   \semt{\detI, \predt} & = \isdet \prog (\predt) & \\
+  %   \semt{\relI, \predt} & = \top &
+  % \end{array}
+  % $$
+  $$
+  \begin{array}{rl}
+    \sem{\dtype{\func}{\func_i}{\func_o}}\ \pred & = \forall t_i\ t_o, \bigwedge \vecL{\semi{\func_i}\ t_i} \Rightarrow \semt{\func}\ (\predt) \land \bigwedge \vecL{\semi{\func_o}\ t_o}  \\
+    \semi{\func}\ (\predt) & = \bigwedge \vecL{\semi{\func_i}\ t_i} \qquad \mathrm{with\ } \ctx\ \pred{} = \dtype{\_}{\func_i}{\_} \\
+    \semt{\detI}\ (\predt) & = \isdet\ \prog\ (\predt)  \\
+    \semt{\relI}\ (\predt) & = \top 
+  \end{array}
+  $$
+  \end{definition}
 The first equation states tht if the preconditions of a signature are satisfied
 then the call to a predicate of that signature is
 functional and the post conditions on the outputs hold.
