@@ -12,9 +12,9 @@ called \emph{semidet} in \cite{1996henderson}, or in the wording of \cite{nakamu
 are \emph{operationally deterministic}.
 
 \begin{definition}[Operational determinacy (\isdet)]\label{def:is-det}
-  Given a program \prog and a predicate $\pred$,\todo{non pred, ma term}
+  Given a program \prog and an atom \A,
   \isdet\ is defined as follows:
-  $$\forall a\ \vec{t}\ \subst, \isDetCmd{\pred\ \vec{t}}$$
+  $$\forall a\ \subst, \isDetCmd{\A}$$
 \end{definition}
 
 % The essence of the definition is that when interpreting any call to a given
@@ -28,7 +28,7 @@ operationally deterministic.
 
 \begin{definition}[Unifiable (\unifiable)]
 We say that $\unifiable\ t_1\ t_2$ holds iff
-  $\exists\ \subst\ s.t.\ \unifyCmd{t_1}{t_2}{\EmptySubst}{\subst}$.
+  $\exists\ \subst\ s.t.\ \unifyCmd{t_1}{t_2}{\EmptySubst}{\subst} \land \subst \neq \bot$.
 % We say that $\nUnify\ t_1\ t_2$ iff
 %   $\forall \subst \ \unifyCmd{t_1}{t_2}{\subst}{\bot}$ (equivalently, since
 %   \unify is complete, $\neg \exists \subst\ s.t. \subst t_1 = \subst t_2$).
@@ -107,7 +107,7 @@ We say that $\unifiable\ t_1\ t_2$ holds iff
   %     ~$\forall\ i1\ o1\ bo1\ i2\ o2\ bo2$~ (H1: ~\clauseCmd{p}{i1\ o1}{bo1}~ \in ~$\prog\ p$~) (H2: ~\clauseCmd{p}{i2\ o2}{bo2}~ \in ~$\prog\ p$~),
   %         not (exists ~\subst\!\!~, ~\unifyCmd{i1}{i2}{\EmptySubst}{\subst}~)
   % \end{coqcode}
-  Given a context \ctx\, an index $d$ and two clauses $c_1$ and $c_2$ with head,
+  Given a context \ctx, an index $d$ and two clauses $c_1$ and $c_2$ with head,
   respectively, $\pred\ u_1 \ldots u_n$ and $\pred\ v_1 \ldots v_n$.
   If $\ctx\ \pred = \dtype{\detI}{i_1 \ldots i_k}{\_}$,
   then we say that
@@ -208,24 +208,25 @@ we still have to ensure no clause body leaves choice points.
 
 \begin{definition}[Deterministic premises (\detPrem)] \label{def:det-prem}
   We say that $\detPrem\ \ctx\ \prog$ holds iff for all predicate \pred such that
-  $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ and forall clause
+  $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ and forall clause\todo{mi sembra inutile, incluso da det\_check}
   $(\clauseCmd{\pred}{\vec{t}}{b_1\dots b_n}) \in \prog\ \pred$ the
   following holds:
   $$(\exists j\ s.t.\  b_j = \cut \land \forall k > j, \detAtom\ \ctx\ b_k) \lor (\forall j, \detAtom\ \ctx\ b_j)$$
 \end{definition}
 
 \noindent
-Since one can load clauses dynamically vial the implication operator we
+Since one can load clauses dynamically via the implication operator we
 need to ensure that these hypothetical clauses are mutually exclusive
 with the ensiting ones. Recall that hypothetical clauses are added at
 the top of the program, before any other clause.
 
 \begin{definition}[Mutually exclusive hypothetical clauses (\locExcl)]
   We say that $\locExcl\ \ctx\ \prog$ iff
-  for all clause $c = \clauseCmd{\pred}{\vec{v}}{t_1, \dots, t_n}$ in \prog
-  such that $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ occurring to the
-  left of \impl\ (i.e. \piImplCmd{x}{c}{\_}) we have that
-  $$\exists i\ s.t.\ t_i = \cut \land \forall k > i, \detAtom\ t_i$$
+  forall clause $c$ in $\prog$, forall subterm $\piImplCmd{x}{\clauseCmd{\pred}{\vec{v}}{t_1, \dots, t_n}}{\_}$ in $c$,
+  $$exists\ i\ s.t.\ t_i = \cut$$
+  % such that $\ctx\ \pred = \dtype{\detI}{\_}{\_}$ occurring to the
+  % left of \impl\ (i.e. \piImplCmd{x}{c}{\_}) we have that
+  % $$\exists i\ s.t.\ t_i = \cut \land \forall k > i, \detAtom\ t_i$$
   % \vspace{-2em}
 \end{definition}
 

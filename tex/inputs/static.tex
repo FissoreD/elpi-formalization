@@ -258,7 +258,7 @@ The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK}) are
 straightforward. Rule \ref{rule:infer-piimpl} introduces a new mapping in the
 context, associating the binder with its signature and performing a recursive
 call to \infer. $\lambda$-abstractions are handled by \ref{rule:infer-lam} and
-are transformed to clauses that must be validated by the \checkc\ routine. In this\todo{split \ref{rule:infer-lam}}
+are transformed to clauses that must be validated by the \checkc\ routine (in \cref{fig:static-check}). In this\todo{split \ref{rule:infer-lam}}
 case, we ensure that both the output and the term beneath the spine of
 $\lambda$s conform to the expected type; otherwise, we return the boolean $\bot$.
 This strict verification is necessary because anonymous functions can appear as
@@ -313,11 +313,10 @@ predicate is smaller than the received one.
 
 \checkTermFig  
 
-The \checkk\ procedure (in \cref{fig:static-check})
-tries to prove, in the sense of~\cref{def:sem} the determinacy
-of an atom by checkig the pre-conditions and deducing new
-knowledge from the post-conditions.
-
+The \checkk\ procedure (in \cref{fig:static-check}) attempts to prove, in the
+sense of~\cref{def:sem}, the determinacy of an atom by checking the
+preconditions and deducing new knowledge from the postconditions. The \checkc\
+procedure verifies the validity of a clause.
 % combines both \infer\ and \assume
 % to determine if an atom is fu
 
