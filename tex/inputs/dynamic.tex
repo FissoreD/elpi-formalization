@@ -182,7 +182,7 @@ i.e. $h$ has the histest priority in the program.
     %\underbrace{
       \big[(\prog, g, a) \mid g \in \vecL{g}\big]
     %}_{\mathrm{premises}} @ ~ gl
-    \ \mathbf{if}\ \mathcal{H}(\vecL{tu}, \subst) = \subst['] \not= \bot,
+    \ \kIF\ \mathcal{H}(\vecL{tu}, \subst) = \subst['] \not= \bot,
     %\Big)
     %\bigg)
     ~\bigg\rvert~
@@ -261,7 +261,7 @@ is a cut then the global alternatives are shortened to the cut-to ones.
 
 The cut rule goes hand in hand with~\ref{rule:call} that stores
 the current alternatives \alts in all the subgoals via
-the function $\mathcal{F}$. This function is in charge of creating the
+the function $\mathcal{F}$. This function is in charge of creating the\todo{dire che F le restituisce in ordine}
 new alternatives $\alts['] :: al$;
 the former is directly evaluated while
 the rest prepended to the existing list of alternatives.

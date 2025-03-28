@@ -265,7 +265,7 @@ the top of the program, before any other clause.
 \newcommand{\goodCall}{\texttt{good\_call}}
 
 \begin{definition}[Good call (\goodCall)]
-  Given a term $\pred\ \vec{u}\ \vec{v}$ and a context \ctx, then $\pred$ is well called if
+  Given a context \ctx and a term $\pred\ \vec{u}\ \vec{v}$, then $\pred$ is well called if
   $$\ctx \pred = \dtype{\_}{\func}{\_} \Rightarrow \forall d, \inferCmdArr{\ctx}{u_d}{(\func_d',\top)} \Rightarrow \func_d' \mySub \func_d$$
 \end{definition}
 
@@ -307,7 +307,147 @@ The theorem we want to prove is the following
   \Rightarrow
   \isdet\ \prog\ (\pred\ \vec{t})
   $$
+  \label{th:main}
 \end{theorem}
+
+To prove this theorem, we need some auxiliary lemmas.
+
+\begin{lemma}
+  Given a context \ctx and a term \predt,
+  $$\goodCall\ \ctx (\predt) \Rightarrow \semi{??} (\predt)$$
+  \label{th:goodCall}
+\end{lemma}
+
+\begin{proof}
+  TODO: ???
+\end{proof}
+
+\begin{lemma}
+  Given a context \ctx\ and a program \prog, for all predicates \pred such that
+  $\prog\ \pred = \dtype{\detI}{\_}{\_}$, if $\mutExclAll\ \ctx\ \prog$ holds
+  and $\forall \subst, a$, $\mathcal{F}(\prog, \pred\ \vec{t}, \EmptyList,
+  \subst, a) = L$, then each list of goals (except possibly the last) in $L$
+  contains a \cut.
+  \label{th:mut-excl-F}
+\end{lemma}
+
+\begin{proof}
+  
+  Let \( L = l_1, \dots, l_n \). Assume, for contradiction, that there exists a
+  list of goals \( l_i \) (with \( 1 \leq i < n \)) such that \( l_i \) does not
+  contain a \cut. The list \( l_i \) is constructed from the premises of a
+  clause \( c \) in \prog, while \( l_n \) is constructed from the premises of a
+  clause \( c_n \) in \prog. Moreover, since the order of clauses in the program
+  is significant, \( c \) appears chronologically before \( c_n \).
+  
+  If \( l_i \) does not contain a \cut, then \( c \) is not a clause loaded with
+  the \( \impl \) operator; otherwise, this would contradict the assumption that
+  \( \locExcl\ \prog\ \ctx \) holds, i.e., we cannot have local clauses for a
+  deterministic predicate without a \cut. 
+  
+  Two cases should be taken into account if \( c \) is not a local clause, i.e.
+  a clause in \prog declared by the user, then either:  
+  \( H: \mutExclCut\ c\ c_n \), or  
+  \( H1: \exists d, \mutExclHeads\ \ctx\ c\ c_n\ d \).  
+  
+  If \( H \) holds, we reach a contradiction because \( c \) is defined
+  chronologically before \( c_n \) and does not contain a \cut. 
+  
+  If \( H1 \) holds, then, by \cref{th:mut-excl-head}, the two clauses must have
+  an input argument that discriminates them. This implies that the filtering
+  performed by \( \mathcal{F} \) cannot use both \( c \) and \( c_n \) to solve
+  the same goal, meaning \( l_i \) and \( l_n \) could not coexist in \( L \).
+  This results in a final contradiction.
+\end{proof}
+
+\begin{lemma}
+  Given a context \ctx\ and a program \prog, for all predicates \pred such that
+  $\prog\ \pred = \dtype{\detI}{\_}{\_}$, if $\mutExclAll\ \ctx\ \prog$ holds,
+  then at most one clause in \prog exists that allows \runCmdR{(\prog,
+  \pred\ \vec{t}, \EmptyList)}{\EmptyList}{\subst} to succeed (i.e. $r \neq \bot$).
+  \label{th:mut-excl-one-clause}
+\end{lemma}
+
+\begin{proof}
+  By rule \ref{rule:call}, we know that the \run\ procedure invokes the \(
+  \mathcal{F} \) routine to derive the new list of goals. Since the list of
+  alternatives is empty, the newly generated goals have their cut-to
+  alternatives set to an empty list. 
+  
+  From \cref{th:mut-excl-F}, we know that all generated alternatives contain a
+  \cut, except possibly the last one. Since the \run\ procedure succeeds, at
+  least one of these alternatives must lead to the goal \( \predt \) succeeding.
+  Let \( g \) be the first such alternative in \( a \) that satisfies the goal. 
+  
+  If \( g \) contains a \cut\, then it has the empty cut-to alternatives list,
+  all alternatives appearing after \( g \) are pruned. Consequently, the only
+  clause \( c \) responsible for generating \( g \) is the one that can be used
+  to solve the original goal.
+
+  If \( g \) does not contain a \cut, then it must be the last alternative in \(
+  a \), meaning that all preceding alternatives have failed. Consequently, the
+  clause \( c \) that generated \( g \) is the only one that allows the goal to
+  succeed.  
+\end{proof}
+
+\begin{lemma}
+  Given a context \ctx and a term \predt, if
+  $\checkCmd{\ctx}{\detI}{(\predt)}{\func}{\top}$ then $\sem{\ctx\ \pred}\ \pred$ 
+  \label{th:check-to-sem}
+\end{lemma}
+
+\begin{proof}
+  Let $\ctx\ \pred = \dtype{\func}{\func_i}{\func_o}$. If \checkk succeeds,
+  that is the boolean is $\top$, 
+  TODO:
+\end{proof}
+
+\begin{lemma}
+  Given a context \ctx and a clause $c =
+  \clauseCmd{\pred}{\vec{t}}{a_1,\dots,a_n}$ then $$\goodCall (\pred\ \vec{t})
+  \Rightarrow 
+  % \bigwedge\limits_{i=1}^{n} \checkCmd{\ctx}{\detI}{a_i}{\func}{\top} \land
+  \checkCmd{\ctx}{\detI}{(\predt)}{\func}{\top}$$
+  \label{th:checkc-to-sem}
+\end{lemma}
+
+\begin{proof}
+  TODO:
+\end{proof}
+
+We can now prove \cref{th:main}.
+
+\begin{proof}
+  By \cref{th:mut-excl-one-clause} and given that the hypothesis $\mutExclAll\
+  \ctx\ \prog$ holds, there exists exactly one clause  
+$c = \clauseCmd{\pred}{\vec{t}}{a_1,\dots,a_n}$ that satisfies the query
+$\predt$ in the program \prog.  
+
+Applying this clause in \cref{th:checkc-to-sem}, and using the hypothesis
+$\goodCall\ \ctx\ (\predt)$, we obtain  
+$\checkCmd{\ctx}{\detI}{(\predt)}{\func}{\top}$.  
+
+Let $\ctx\ \pred = \dtype{\detI}{\func_i}{\func_o}$. Using
+\cref{th:check-to-sem} on this, we derive  
+$\sem{\dtype{\detI}{\func_i}{\func_o}}\ \pred$. Expanding this expression, we obtain:  
+\begin{equation}  
+\bigwedge \vecL{\semi{\func_i}\ t_i} \Rightarrow \semt{\detI}\ (\predt) \land \bigwedge \vecL{\semi{\func_o}\ t_o}
+\label{eq:xx}
+\end{equation}
+
+where \( t_i \) and \( t_o \) represent, respectively, the inputs and outputs of
+\( \pred \) in \( \vec{t} \).  
+
+Thanks to \cref{th:goodCall}, along with the hypothesis $\goodCall\ \ctx\
+(\predt)$, we establish that  
+\[
+\bigwedge \vecL{\semi{\func_i}\ t_i}
+\]
+holds. This, in turn, combined with \cref{eq:xx} gives us $\semt{\detI} (\predt)$, which is equivalent to
+$\isdet\ \prog\ (\predt)$.  
+Thus, we have proven our theorem.
+\end{proof}
+
 
 % \begin{proof}
 %   The proof is similar to \cref{th:det1}. We only need to prove that the
