@@ -3,7 +3,7 @@
 
 We assume a set $P$ of predicate names, %\todo{pradicate with piimpl as arg?}
 a set $K$ of functors (term constructors),
-a set of type variables \V
+% a set of type variables \V
 and a set of term variables \X.
 By convention we use capitals for
 unification variables and small letters for bound variables.
@@ -71,10 +71,10 @@ $t$ is \ground.
     \A & ::= \cut \mid \CALL\ \vecL{\T} \mid \piImplCmd[ty]{\X}{\CL}{\A} & \mathrm{atom} \\
     \T & ::= K\ \vecL{\T} \mid \CALL\ \vecL{\T} \mid \lambda \X\!\!: ty \bs\ \T\!\!: \base & \mathrm{term}\\
     \CL & ::= \clauseCmd{P}{\vecL{\T}}{\vecL{\A}} & \mathrm{clause} \\
-    \V & ::= \mathrm{A}, \mathrm{B}, \ldots & \mathrm{type\ variable} \\
+    % \V & ::= \mathrm{A}, \mathrm{B}, \ldots & \mathrm{type\ variable} \\
     \func & ::= \F\ \vecL{ty} \funsep \vecL{ty} & \mathrm{predicate\ signature} \\
     \base & ::= \expI \mid \F & \mathrm{base\ determinacy} \\
-    ty   & ::= \base \mid \func \mid \V & \mathrm{type} 
+    ty   & ::= \base \mid \func & \mathrm{type} 
   \end{array}
   $$
 \end{subfigure}
