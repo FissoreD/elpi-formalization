@@ -206,7 +206,7 @@ function $f$ parametrized by a determinacy $d$:
 %
 \paragraph{The static checker} We can now exibit the static checker.
 The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
-\assume\ (\cref{fig:det-assume}) the signature of a term (or atom) and finally to
+\assume\ (\cref{fig:det-assume}) the signature of a term and finally to
 \checkk\ (\cref{fig:static-check}) if it matches (via \mySub) the expected signature.
 %
 % $$\infer : \ctx \to (\A + \T) \to \func \times \B$$
@@ -223,25 +223,38 @@ The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
 The \infer\ procedure 
 %is responsible for inferring the signature of a term. It
 returns a pair containing the signature of the given
-a term (or atom) and a boolean value indicating whether
+a term and a boolean value indicating whether
 it contains miscalled predicates.
 %  Since predicate
 % calls are part of the term syntax, they can also be miscalled.  
 
-The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK}) are
-straightforward. Rule \ref{rule:infer-piimpl} introduces a new mapping in the
-context, associating the binder with its signature and performing a recursive
-call to \infer. $\lambda$-abstractions are handled by \ref{rule:infer-lam} and
-are transformed to clauses that must be validated by the \checkc\ routine (in \cref{fig:static-check}). In this\todo{split \ref{rule:infer-lam}}
-case, we ensure that both the output and the term beneath the spine of
-$\lambda$s conform to the expected type; otherwise, we return the boolean $\bot$.
+The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK} and \ref{rule:inferKL}) are
+straightforward. %Rule \ref{rule:infer-piimpl} introduces a new mapping in the
+% context, associating the binder with its signature and performing a recursive
+% call to \infer. 
+$\lambda$-abstractions are handled by \ref{rule:infer-lam}. This rules
+transforms the $lambda$-term in a clause for a fresh clause which is checked
+thanks to \checkc (\ref{rule:check-clause}). This checking phase is needed to
+ensure that the term under the spine of lambda is functional if it should be and
+that the outputs becomes terms with the expected signature. 
+% As an example,
+% consider the query \elpiIn{X = (x\y\ commit likes y), map X Y Z}. Since
+% \elpiIn{X} is passed in the input of \elpiIn{map}, we need to be sure that its
+% signature reflects expected determinacy, that is 
+% \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{A}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{B}~}. 
+% To have
+% this guarantee, we check a rule with fresh predicate name \elpiIn{fresh_name x y
+% :- commit likes y} with \elpiIn{func fresh_name A -> B}.
+
 This strict verification is necessary because anonymous functions can appear as
 the head of atoms and its behavior should match the determinacy specified in the
 signature. For example: \elpiIn{X = (x:func\y:func\ (commit x y):func), X like F, F paul Z}.
 
 The rule \ref{rule:infer-app}, combined with the \dapp\ procedure,
-handles call when the head is a variable or a predicate
-and  accounts for partial applications.  
+handles calls when the head is a variable or a predicate
+and accounts both for full and partial applications. \dapp\ aims essentially
+to verify that the inferred signature of the inputs of a term respect the
+expected signature. If it is not the case, it returns $\bot$.
 
 For example given \elpiIn{func once (pred i:A, o:B), A -> B} as in
 the introduction, the partial application \elpiIn{(once likes)}
@@ -261,24 +274,24 @@ has the inferred signature
 % 
 % $$\assume : \func \to (\A + \T) \to \ctx \to \ctx$$  
 
-The \assume\ procedure strenghtens the signature
-of variables occurring in the given term by
-updating a context \ctx\ according to \func. The rule
-governing this change is \ref{rule:assume-hd}, which states that whenever a
-non-applied variable is encountered, its signature is set to the \minT\ between
+The \assume\ procedure is meant to strenghten the signature\todo{role of input}
+of variables occurring in a given term. This strengthening is made
+by exploring a term $t$ together with an assumed determinacy $\func$.
+If a variable is ever encountered in $t$ and the assumed determinacy
+is $\func$, then its mapping in \ctx is set to the minimum between
 its current signature in \ctx\ and \func.
-The intuition is given by definition~ref{def:sem}: when the
-preconditions are satisfied we know the post conditions hold. 
-% The use of \minT\ is justified by the
-% fact that \assume\ represents runtime unification.
-% For unification to succeed,
-% the variable's signature must be the strongest between the one in the context and
-% the expected one.  \todo{enrico help}
+
+% The intuition is given by definition~ref{def:sem}: when the
+% preconditions are satisfied we know the post conditions hold. 
+The use of \minT\ is justified by the fact that \assume\ represents runtime
+unification. For unification to succeed, the variable's signature must be the
+strongest between the one in the context and the expected one. For example,
+if \elpiIn{X = Y, X = commit likes F} with $\ctx\ Y = \relI$. 
 
 The rules \ref{rule:assume-cut} and \ref{rule:assume-expr} are intuitive, as
 they do not require any modifications to the context. In rules
-\ref{rule:assume-lam} and \ref{rule:assume-piimpl}, we extend the context by
-mapping the binder to its signature. % and making a recursive call to \assume.\todo{rule for lambda mh}
+\ref{rule:assume-lam}, we extend the context by
+mapping the binder to its signature and making a recursive call to \assume
 Finally, \ref{rule:assume-app} performs a fold over the input arguments of the
 predicate being called, under the assumption that the determinacy of the
 predicate is smaller than the received one.  
@@ -289,8 +302,11 @@ predicate is smaller than the received one.
 
 The \checkk\ procedure (in \cref{fig:static-check}) attempts to prove, in the
 sense of~\cref{def:sem}, the determinacy of an atom by checking the
-preconditions and deducing new knowledge from the postconditions. The \checkc\
-procedure verifies the validity of a clause.
+preconditions (i.e. if it is possible to infer the input argument to have a
+determinacy \mySub wrt the expected signature) and if they are satisfied
+assuming new knowledge for the postconditions (i.e. are assumed
+to have the expected determinacy). The \checkc\ procedure verifies
+the validity of a clause.
 % combines both \infer\ and \assume
 % to determine if an atom is fu
 
