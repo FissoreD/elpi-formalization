@@ -33,20 +33,27 @@ investment plan managed by the Agence Nationale de la Recherche, as part of the
 \affiliation{Université Côte d'Azur, Inria}
 \end{authgrp}
 
-\history{\sub{xx xx xxxx;} \rev{xx xx xxxx;} \acc{xx xx xxxx}}
+%\history{\sub{xx xx xxxx;} \rev{xx xx xxxx;} \acc{xx xx xxxx}}
 
 \maketitle
 
 \begin{abstract}
-We study the determinacy checker for a higher-order logic programming language
-with cut and matching.
-We study the determinacy checker for a higher-order logic programming language
-with cut and matching.
-We study the determinacy checker for a higher-order logic programming language
-with cut and matching.
-We study the determinacy checker for a higher-order logic programming language
-with cut and matching.
+We study the determinacy checker for Elpi, a Higher-Order logic programming
+language: Predicates can receive predicates as arguments
+and can locally assert clauses.
 
+We give an operational semantics for Elpi that accounts for
+the cut operator and local asserts. The semantics makes
+choice points explicit, allowing us to
+call operationally determinate (or functional) predicates that do not leave any
+choice points. 
+
+We design a language of signatures with preconditions
+that allows determinate predicates to be miscalled. The static
+checker tracks miscalled functions and considers them
+relations (non-determinate predicates) for the analisys of the surrounding code.
+As a result we can add signatures without breaking existing code, progressively increasing
+ staic guarantees.
 \end{abstract}
 
 \begin{keywords}
