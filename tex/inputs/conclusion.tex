@@ -1,4 +1,4 @@
-\section{Conclusion and related works}
+\section{Related work and conclusions}
 
 \begin{table}
   \centering
@@ -59,26 +59,31 @@ approach differs from \cite{2011king}, which employs a denotational semantics.
 
 Regarding modes, Elpi’s matching procedure over input arguments allows us to
 dispense with explicit mode checking—an essential component in the other works.
-Additionally, Elpi’s strong integration with an interactive theorem prover like
-Rocq prevents us from relying on ground input terms.
+% Additionally, Elpi’s strong integration with an interactive theorem prover like
+% Rocq prevents us from relying on ground input terms.
 
 Finally, in Higher-Order programming, the \mySub\ relation allows predicates to
 be wrongly applied, as illustrated by the \elpiIn{map} procedure. In Mercury,
 this notion of a ``wrong call'' does not exist. Instead, the language enforces
 correctness by requiring Higher-Order functions to be annotated with explicit
 mode and determinacy signatures for each possible behavior. As a result, Mercury
-requires $11$ mode signatures for the \textit{foldr} predicate
-(\href{https://github.com/Mercury-Language/mercury/blob/5900de3e8c1bc1dcc75799b350b381ff9b9774f2/library/list.m#L1587C1-L1597C75}{source
-here}), and any call that does not match an exact mode signature results in a
+ascribes 
+\href{https://github.com/Mercury-Language/mercury/blob/5900de3e8c1bc1dcc75799b350b381ff9b9774f2/library/list.m#L1587C1-L1597C75}{$11$ signatures}
+to the \texttt{foldr} predicate
+and any call that does not match exactly one of these signatures results in a
 compilation failure. % For instance, \textit{list.filter\_map\_corresponding} fails
 % if the Higher-Order function is deterministic rather than semi-deterministic.
 
-Elpi targets less technically includes users hence we strieve for simplicty,
-defining fewer determinacy classes and immediately classifying wrong calls as
-non-deterministic. For instance, \elpiIn{foldr} has only the signature
-\elpiIn{func foldr (func L, A -> A), list L, A -> A}. This design choice aligns
-with our goal of providing static guarantees on programs rather than producing
-efficient, specialized, machine code depending on the pred usage.
+Elpi targets less technically inclined users, more familiar with functional programming languages
+than logic ones, hence we strieve for simplicty,
+defining only one determinacy class and immediately classifying wrong calls as
+non-deterministic.
+As a result \elpiIn{foldr} is decorated with just the following, familiar to our audience,
+signature: \elpiIn{func foldr (func L, A -> A), list L, A -> A}.
+Finally this design choice aligns
+with our goal of providing static guarantees on programs rather than
+helping the compiler to produce
+efficient, specialized, machine code.
 
 
 
