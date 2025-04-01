@@ -116,9 +116,9 @@ The theorem we want to prove is the following.
 Note that $\iprog[\EmptyList]$ holds.
 
 \begin{lemma}[key]
-  Given a context \ctx and an atom $t$, such that all local clauses for
-  deterministic predicates have a \cut, then
-  $$\forall \prog, \iprog \Rightarrow \checkCmd{\ctx}{\detI}{t}{\_}{\detI} \Rightarrow \isdet\ \prog\ t$$
+  Given a context \ctx and an atom $t$, then\todo{mh}
+  $$\forall \prog, \iprog \land \checkCmd{\ctx}{\detI}{t}{\_}{\detI}
+  \Rightarrow \isdet\ \prog\ t$$
   \label{th:1}
 \end{lemma}
 
