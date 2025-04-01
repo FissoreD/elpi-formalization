@@ -288,8 +288,10 @@ unification. For unification to succeed, the variable's signature must be the
 strongest between the one in the context and the expected one. For example,
 if \elpiIn{X = Y, X = commit likes F} with $\ctx\ Y = \relI$. 
 
-The rules \ref{rule:assume-cut} and \ref{rule:assume-expr} are intuitive, as
-they do not require any modifications to the context. In rules
+The rules \ref{rule:assume-cut}, \ref{rule:assume-expr} and \ref{rule:assume-exprl} are intuitive, as
+they do not require any modifications to the context, for the two last cases
+there is no need to make assumption on expressions, since expressions
+play no role in the checker (only propositional terms do). In rules
 \ref{rule:assume-lam}, we extend the context by
 mapping the binder to its signature and making a recursive call to \assume
 Finally, \ref{rule:assume-app} performs a fold over the input arguments of the
@@ -300,13 +302,63 @@ predicate is smaller than the received one.
 
 \checkTermFig  
 
+
 The \checkk\ procedure (in \cref{fig:static-check}) attempts to prove, in the
-sense of~\cref{def:sem}, the determinacy of an atom by checking the
-preconditions (i.e. if it is possible to infer the input argument to have a
-determinacy \mySub wrt the expected signature) and if they are satisfied
-assuming new knowledge for the postconditions (i.e. are assumed
-to have the expected determinacy). The \checkc\ procedure verifies
-the validity of a clause.
+sense of~\cref{def:sem}, the determinacy of an atom by verifying the
+preconditions—i.e., whether the input argument can be inferred to have a
+determinacy \mySub consistent with the expected signature. If the preconditions
+are satisfied, the procedure assumes new knowledge for the postconditions,
+meaning they are expected to maintain the prescribed determinacy. \checkk also
+is charged to update the determinacy of the atom wrt a given determinacy
+$\func$. In a way, it tries to track what is the behavior (relational or
+deterministic) after the exectution of the program. Note that in the case of
+\ref{rule:check-cut}, we set the determinacy to \detI. In the case the \piimpl
+operator, we add the new clause in the program and check that it is in
+mutual-exclusion (\mutExclAll, see \cref{def:mut-excl} below) wrt the other
+clause in the current program. 
+
+\begin{definition}[Mutual exclusion \mutExclAll]
+  Given a program \prog and a clause $r = \clauseCmd{p}{\vecL{t}}{\vec{bs}}$,
+  $\mutExclAll\ \prog\ r$ holds iff there is a \cut in the body of $r$ or forall
+  clauses $r' = \clauseCmd{p}{\vecL{t'}}{\vec{bs'}}$ declared after $r$ in
+  \prog, there exists an input position $d$ discriminating them, i.e. 
+  $\forall \subst, \unifyCmd{t_d}{t_d'}{\subst}{\bot}$
+  \label{def:mut-excl}
+\end{definition}
+
+\ref{rule:check-callOK} and \ref{rule:check-callKO} deals
+with term applications, and if the terms has valid inputs, then the output are
+assumed to have the expected signature, otherwise, nothing can be deduced on the
+output and the execution of the atom becomes relational.
+
+The \checkc\ procedure validates a clause by ensuring that its input respects
+the signature of the implemented predicate. It then verifies the list of
+premises, ensuring that the context is updated correctly according to the flow
+of variables in input and output positions while maintaining the functionality
+of the body. The clause is validated if it its output are inferred to have a 
+determinacy \mySub then the one in the signature. The same test is done
+with the determinacy of the body with the expected.
+
+\subsection{Inference and Assumptions only on terms in input position}
+
+We want to point out why in the \infer and \assume routine, we only deal with
+input arguments. In both cases, applications reason with the input terms.
+The inference is launched on atoms in negative position, i.e. atoms that
+are called in the program. In order to respect the semantics of pre-conditions,
+we need to be sure the ...
+
+Potrebbe avere senso:
+
+\begin{elpicode}
+  func p -> (func).
+  p (commit id Y).
+\end{elpicode}
+
+Consider the query: \elpiIn{p (commit X Y)}.
+We make no assumption on Y, since it is an output of commit, but `X' is 
+considered function. Note that otherwise the checker would have rejected the
+clause.
+
 % combines both \infer\ and \assume
 % to determine if an atom is fu
 
