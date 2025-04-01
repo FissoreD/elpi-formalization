@@ -78,7 +78,7 @@
 \newcommand{\isFuncCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \Rightarrow 
   \forall a_i \in a, \runCmdFQ{a_i}{\EmptyList}
 }}
-\newcommand{\isDetCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \Rightarrow 
+\newcommand{\isDetCmd}[2][\prog]{\ensuremath{\runCmd{[\goalCmd{#1}{#2}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \Rightarrow 
  a = \EmptyList
 }}
 \newenvironment{boxedproof}
@@ -104,6 +104,12 @@
 \newcommand{\Coq}{\lang{Coq}}
 \newcommand{\lamprolog}{\lang{$\lambda$Prolog}}
 \newcommand{\pf}{\ensuremath{L_\lambda}}
+
+
+\newcommand{\sem}[1]{\ensuremath{[\![#1]\!]}}
+\newcommand{\semi}[1]{\ensuremath{[\![#1]\!]_{i}}}
+\newcommand{\semt}[1]{\ensuremath{[\![#1]\!]_t}}
+\newcommand{\predt}{\ensuremath{\pred{}\ \vec{t}}}
 
 % Languages: end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -191,6 +197,7 @@
       \detokenize{#1}\relax\else{ : #1}\fi\bs\ #3}}
 \newcommand{\lamCmd}[2]{\ensuremath{\lambda#1. #2}}
 
+% piimplCmd[optional type][binder name][clause][body]
 \newcommand{\piImplCmd}[4][]{\piCmd[#1]{#2}{\implCmd{#3}{#4}}}
 
 \newcommand{\unifyCmd}[5][]{\ensuremath{
@@ -240,7 +247,8 @@
 \newcommand{\minimize}{\texttt{strenghten}\xspace}
 
 \newcommand{\detI}{\detT{func}\xspace}
-\newcommand{\isdet}{\detT{is\_odet}\xspace}
+\newcommand{\isdet}{\detT{is\_det}\xspace}
+\newcommand{\isdetE}{\detT{is\_det$_e$}\xspace}
 \newcommand{\isfunc}{\detT{is\_tfunc}}
 \newcommand{\relI}{\detT{pred}\xspace}
 \newcommand{\expI}{\detT{exp}\xspace}
