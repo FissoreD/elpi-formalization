@@ -48,9 +48,8 @@ reconstructing the same program referenced in \cref{def:is-det}.
 
 Thanks to the definition of \isdet, we can provide the semantics of determinacy
 signatures.
+The intuition is given by the following formula.
 
-The intuition of a 
-predicate signature is given by the following formula.
 \begin{definition}[Meaning of a signature $(\sem{\func}\ (\predt))$ given a context \ctx and a program \prog]\label{def:sem}
 \vspace{-1em}
 \newcommand{\funcF}[1][]{\ensuremath{\mathcal{F}#1}}
@@ -117,8 +116,9 @@ of the program is the so-called mutual-clause exclusion.
 
 \begin{definition}[Mutual exclusion \mutExclAll]
   Given a clause $c$ and a program \prog. $\mutExclAll\ \prog\ c$ holds iff forall
-  clauses $c'$ declared after $c$ in \prog, there exists an input argument that
-  discriminating them.
+  clauses $c'$ declared after $c$ in \prog, there exists an input position that
+  discriminating them, i.e. s.t. the inputs in $c$ and $c'$ respectively do not
+  unify.
 \end{definition}
 
 % \begin{lemma}[\mutExcl]
