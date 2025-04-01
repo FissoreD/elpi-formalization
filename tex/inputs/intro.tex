@@ -1,7 +1,7 @@
 \section{Introduction}
 
 We are interested in the static analsysis of Elpi programs, in particular
-in checking their determinacy. Elpi is a higher-order logic programming
+in checking their determinacy. Elpi is a Higher-Order logic programming
 language, a dialect of $\lambda$Prolog well suited to manipulate
 incomplete syntax trees with binders (see
 \cite{1991miller-pf,Miller_Nadathur_2012} and \cite{dunchev15lpar,TASSI_2019}).
@@ -17,16 +17,18 @@ For this last application
 % is typically used to implement overloading~\cite{wadler1996-hs,sozeau2008-tc}
 % where 
 the solution to a query provides the formal meaning of the overloaded symbol
-and it is of paramount importance that this solution is unique, ruling out ambiguities.
+and it is of paramount importance that this solution is unique.
+% ruling out ambiguities.
 A static check for this property is of particular
 interest in the context of the platform of Rocq libraries where code developed
-by different teams is combined together in order to lower the cost
-of mechanization.
+by different teams is combined together.
+%  in order to lower the cost of mechanization.
 
-As of today, Elpi comes equipped with a standard type-checker~\cite{1992nadathur} but
+As of today, Elpi comes equipped with a standard type checker~\cite{1992nadathur} but
 features no determinacy analisys. The literature provides
-many works on the subject~(among them \cite{1989Warren,1996Somogy,2011king}), but none of these
-works can be applied to Elpi due to its higher-order nature.
+many works on the subject~(among them \cite{1989Warren,1996Somogy,2011king}), but none
+% of these works
+can be applied to Elpi due to its Higher-Order nature.
 %, inherited from $\lambda$Prolog. %, 
 % and its non-standard notion of input.
 
@@ -46,13 +48,13 @@ map F [X|XS] [Y|YS] :- F X Y, map F XS YS.      % code
 \end{elpicode}
 
 The basic predicate signature says that \elpiIn{map} has two input arguments
-and one output. The first argument is a higher-order predicate with an inupt
+and one output. The first argument is a predicate with an inupt
 of type \elpiIn{A} and an output of type \elpiIn{B}, while the other two
 arguments are respectively of type \elpiIn{list A} and \elpiIn{list B}.
 The better signature we describe in this paper subsumes the  basic one by
 %additionally 
 asserting that
-if the higher-order argument \elpiIn{F} is a function, then also \elpiIn{map F} is.
+if the Higher-Order argument \elpiIn{F} is a function, then also \elpiIn{map F} is.
 In this section ``function'' intuitively means single-valued relation; 
 we will give a more precise definition in section~\ref{sec:thm}.
 
@@ -80,7 +82,7 @@ meal Gs M :- map likes Gs M.      % rejected: meal is not a function
 function, hence also \elpiIn{map likes! Gs M} is.
 The second implementation miscalls \elpiIn{map} by passing the relation
 \elpiIn{likes}, but then commits to the first solution,
-hence it behaves like function.
+hence it behaves like as function.
 The third one is rejected since it miscalls \elpiIn{map} without
 compensating for it.
 
@@ -90,7 +92,7 @@ discards the clauses following the current one.
 The language of signatures we
 introduce is expressive enough to encapsulate the desired ``if-then''
 behavior into the \elpiIn{once} predicate. Its signature
-states that the higher-order argument \elpiIn{P} can be any predicate, not
+states that the Higher-Order argument \elpiIn{P} can be any predicate, not
 necessarily a function, but still \elpiIn{once P} acts as a function.
 
 \begin{elpicode}
@@ -105,7 +107,7 @@ functional status.
     
 \begin{elpicode}
 func commit (pred i:A, o:B) -> (func A -> B).          
-commit P (once P).  % wraps a predicate P into once
+commit P (once P).                       % wraps a predicate P into once
 func id (func A -> B) -> (func A -> B).
 id F F.
 meal Gs M :- commit likes F, map F Gs M. % accepted: F is a function
@@ -119,7 +121,7 @@ Moreover \elpiIn{commit} is a function, so the whole body of \elpiIn{meal} also
 is. The last example is rejected since \elpiIn{id} is miscalled: the outputs
 are considered functions only if the signature of the inputs is respected.
 
-The domain where Elpi really shines is the manipulation of higher-order data
+The domain where Elpi really shines is the manipulation of Higher-Order data
 via the so-called $\lambda$-tree syntax by~\cite{Miller2018MechanizedMR}
 also called HOAS by~\cite{1988pfenning}.
 Such data is pervasive in interactive provers based on type theory
@@ -163,11 +165,11 @@ Our static analysis understands this programming pattern.
 
 Our main contribution is a determinacy checker that:
 \begin{itemize}
-\item covers higher-order logic programming constructs such as first-class
+\item covers Higher-Order logic programming constructs such as first-class
       predicates and dynamic clauses,
 \item can be applied incrementally to a pre-existing code bases since it tracks
-      miscalled higher-order functions rather than aborting.
+      miscalled Higher-Order functions rather than aborting.
 \end{itemize}
 Last, but not least, we provide an operational semantics for
-the Elpi dialect of $\lambda$Prolog: a higher-order logic programming language
+the Elpi dialect of $\lambda$Prolog: a Higher-Order logic programming language
 with cut.
