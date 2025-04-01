@@ -9,7 +9,7 @@
 
 We are interested in identifying predicates that leave no choice points
 called \emph{semidet} in \cite{1996henderson}, or in the wording of \cite{nakamura1986}
-are \emph{operationally deterministic}. Due to the lack of space, we leave the
+predicates that are \emph{operationally deterministic}. Due to the lack of space, we leave the
 proofs of the following theorems in the appendix.
 
 \begin{definition}[Operational determinacy (\isdet)]\label{def:is-det}
@@ -66,10 +66,10 @@ $$
 $$
 $$
 \arraycolsep=1.4pt
-\begin{array}{rl}
-  \semi{\detI}\ (\predt) = & \isdet\ \prog\ (\predt) \\
-  \semi{\relI}\ (\predt) = & \top \\
-  \semi{\expI}\ (\predt) = & \top \vspace{0.5em}
+\begin{array}{ccc}
+  \semi{\detI}\ (\predt) = \isdet\ \prog\ (\predt) &
+  \qquad \semi{\relI}\ (\predt) = \top &
+  \qquad \semi{\expI}\ (\predt) = \top \vspace{0.5em}
 \end{array}
 $$
 In order to handle partial application like \elpiIn{once likes} in the introduction
@@ -177,3 +177,54 @@ Finally, we can generalize \cref{th:1} as follows.
   We can prove this final lemma thank to \cref{th:run-empty}, combining the
 
 \end{proof}
+
+\paragraph{\textbf{Digression on \isdet}.}
+
+In the logic programming literature the notion of ``function'' is
+not necessarily the one we picked in \isdet. In particular a
+program that produces infinetly many times the same result
+is undeniably representing a mathematical function, but with
+a programmer hat one is nothing like a program that terminates
+by returning its (only) result. Our notion captures the latter
+on purpose because it makes the computational complexity of
+programs more apparent, especially in case of failure.
+
+\begin{elpicode}
+func silly list int -> int.
+silly L V :- mem 1 L, len L N, N = V.
+\end{elpicode}
+
+Given the signature of \elpiIn{silly} the program is accepted only
+if both both \elpiIn{mem} and \elpiIn{len} are observationally
+deterministic hence the code is operationally
+equivalent to the following one whose complexity is clealy
+the sum of its parts.
+
+\begin{elpicode}
+once P :- P, !. % encoding of if-then cut using Elpi's hard cut
+silly L V :- once (mem 1 L), once (len L N), once (N = V).
+\end{elpicode}
+
+The complexity could have been, on failure, the product of its parts if we had chosen a more
+relaxed definition of function, since the programmer could have called a
+(cut free) implementation of \elpiIn{mem} that gives multiple
+times the same result.\todo{anche in \href{https://repub.eur.nl/pub/1507/eur-few-cs-89-03.pdf}{1989Vink}, dicono simile}
+\todo{una delle robe di mercury può fare lo stesso?}
+
+\paragraph{\textbf{Digression on  the eagherness of $\mathcal{H}$}}
+\label{sec:digression-h}
+
+The function $\mathcal{H}$ in the operational semantics (Figure~\ref{fig:basic-interp})
+eagerly unifies all clauses with the.
+A more natural and possibly more efficient semantics would be to just create the
+alternatives and prepend to the list of goals the same unification
+problems. Our choice simplifies the formal threatment of determinacy 
+in~\cref{sec:thm} and in particular it matches the \mutExclHeads\ condition.
+
+From a practical stanpoint an efficient implementation of that semantics
+can make $\mathcal{H}$ lazy without compromising the \mutExclHeads\ condition
+if either it indexes clauses deep enough
+or performs a program transformation consisting inserting
+\elpiIn{once} around each call to a deterministic predicate (as we manually did
+in silly example above).
+
