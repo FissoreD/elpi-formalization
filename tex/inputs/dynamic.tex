@@ -1,24 +1,19 @@
 \section{Preliminaries}
 \label{sec:basic}
 
-We assume a set $P$ of predicate names, %\todo{pradicate with piimpl as arg?}
-a set $K$ of functors (term constructors),
-% a set of type variables \V
-and a set of term variables \X.
-By convention we use capitals for
-unification variables and small letters for bound variables.
-\CALL is the union of $P$ and \X.
+We assume a set \PRED of predicate names, %\todo{pradicate with piimpl as arg?}
+a set \DATA of functors (term constructors), and a set \VAR of term variables
+($X,Y,\ldots$ for unification variables and $x,y,\ldots$ for bound variables).
+The non terminal \CALL groups symbols that can be called: either predicate names or variables.
 
 The programmer provides a context \ctx{} that assigns a
-signature $\func$ to each predicate. By convention predicates take
+signature $\SIGN$ to each predicate name. By convention predicates take
 all input arguments first and then the output ones:
 We separate them with $\funsep$ and we omit the symbols when there are no arguments
-(i.e. $\func$ degenerates to \F).
-The determinacy marker \detI{} stands for deterministic (the
-precise meaning is given in~\cref{sec:thm}) while
-\relI{} for non-deterministic. Be convention
-we use \func, \func['], $\func[_1] \ldots$ to denote signatures
-or determinacy markers.
+(i.e. $\SIGN$ degenerates to \F).
+The marker \detI{} stands for deterministic (or functional) while
+\relI{} for non-deterministic. By convention
+\func, \func['], $\func[_1] \ldots$ range over signatures \SIGN{} or determinacy markers \F.
 Looking back at section~\ref{sec:examples}
 we have that
 $\ctx~\texttt{likes} = \dtype{\relI}{\expI}{\expI}$,
@@ -26,55 +21,64 @@ that
 $\ctx~\texttt{likes!} = \dtype{\detI}{\expI}{\expI}$
 and $\ctx\ \texttt{true} = \relI$.
 
-In the syntax of atoms \A we single out the cut operator since it has a
-dedicated treatment in the operational semantics. We note $\Ainst \in \A$.
-The usual =/2 operator is
-encoded as a regular predicate \texttt{eq} with a single clause
-\elpiIn{(eq X X :- .)} and signature\todo{dire che poly è solo su exp}
-$\ctx\ \texttt{eq} = \dtype{\detI}{}{\expI\ \expI}$: a deterministic predicate\todo{should add var to static check}
-with two outputs of the same type.
+In the syntax of atoms \ATOM we single out the \cut operator since it has a
+dedicated treatment in the operational semantics, and we glue together the
+\elpiIn{pi} and \elpiIn{=>} in the same grammar production for simplicity.
+Terms include predicate calls, functor applications and the binder $\lambda$.
+For simplicity we impose the body of $\lambda$-abstractions to be explicitly typed
+with a base type (if the body is a predicate, then it must be fully applied).
+Moreover, as this paper does not
+really focus on type checking
+(the interested reader can refer to~\cite{1992nadathur}) we collapse all
+non-predicate types to a single node \texttt{exp}. 
+We also rule out predicates inside data
+% such as list of predicates, 
+for space constraints.
 
-We write \(\vecL{t}\) to denote \(t_1, \ldots, t_n\), representing a (possibly
-empty) list of \(t\)s. Similarly, we write \(\vecL{tu}\) to denote the
+%for regular data or \V{} for 
+% and polymorphic data.
+% We note $\Ainst \in \A$.
+% The usual =/2 operator is
+% encoded as a regular predicate \texttt{eq} with a single clause
+% \elpiIn{(eq X X :- .)} and signature\todo{dire che poly è solo su exp}
+% $\ctx\ \texttt{eq} = \dtype{\detI}{}{\expI\ \expI}$: a deterministic predicate\todo{should add var to static check}
+% with two outputs of the same type.
+We write \(\vecL{t}\) to denote \(t_1 \ldots t_n\) i.e. a (possibly
+empty) list of \(t\)s.
+Similarly, we write \(\vecL{tu}\) to denote the
 element-wise pairing (zipping) of \(\vecL{t}\) and \(\vecL{u}\) into a list of
 pairs. The zipping process continues up to the length of the shorter list.
 
-\todo{check for dead cod here if we hide the proofs}
-Given a call $\pred \vecL{t}$ to a n-ary predicate where
-$\ctx\ \pred = \dtype{\func}{{ty}_1 \ldots {ty}_k~}{~{ty}_{k+1} \ldots {ty}_n}$ we
+% \todo{check for dead cod here if we hide the proofs}
+Given a call $\pred \vecL{t}$ %to a n-ary predicate 
+where
+$\ctx\ \pred = \dtype{\func}{{ty}_1 \ldots {ty}_k}{{ty}_{k+1} \ldots {ty}_n}$ we
 write $\vecL{t_i}$ for the input arguments ${t}_1 \ldots {t}_k$
-and $\vecL{t_o}$ for the output arguments ${t}_{k+1} \ldots {t}_n$.
-
-$\lambda$ and \texttt{pi} are binders in the $\lambda$-calculus sense. In our syntax
-we impose the user to explicitly type binders and the body of $\lambda$-abstractions,
-the body is never a paritial application, i.e. $lambda$-term are always in the $\eta$-long form.
-Note that this piece of information can be inferred by the type-checker,
-but we prefer to keep our presentation simple. We write
+and $\vecL{t_o}$ for the output ones ${t}_{k+1} \ldots {t}_n$.
+We write
 $t[x/y]$ for the usual, capture avoiding, operation of replacing the variable $y$
 with $x$ inside $t$.
-We say that $\vars\ t \subseteq \mathcal{P}(\X)$\todo{\prog is program?} is the set
+We say that $\vars\ t$ is the set
 of free variables occurring in $t$. When $\vars\ t = \emptyset$ we say that
 $t$ is \ground.
-
-\newcommand{\base}{\ensuremath{\mathcal{B}}}
 
 \newcommand{\syntaxFig}{
   \begin{subfigure}[b]{1\textwidth}
     \centering
   $$
   \begin{array}{rlr}
-    P & ::= p, q, \ldots & \mathrm{predicate}\\
-    K & ::= c, f, \ldots & \mathrm{data\ constructor}\\
-    \X & ::= \mathrm{X}, \mathrm{Y} \ldots x, y, \ldots & \mathrm{variable}\\
-    \CALL & ::= P \mid  \X & \mathrm{call\ head}\\
+    \PRED & ::= p, q, \ldots & \mathrm{predicate}\\
+    \DATA & ::= c, f, \ldots & \mathrm{data\ constructor}\\
+    \VAR & ::= \mathrm{X}, \mathrm{Y} \ldots x, y, \ldots & \mathrm{variable}\\
+    \CALLHD & ::= \PRED \mid  \VAR & \mathrm{callable}\\
+    \ATOM& ::= \cut \mid \CALLHD\ \vecL{\TERM} \mid \piImplCmd[\TYPE]{\VAR}{\CLAUSE}{\ATOM} & \mathrm{atom} \\
+    \TERM & ::= \DATA\ \vecL{\TERM} \mid \CALLHD\ \vecL{\TERM} \mid \lambda \VAR\!\!: \TYPE \bs\ \TERM\!\!: \BASE & \mathrm{term}\\
+    \CLAUSE & ::= \clauseCmd{\PRED}{\vecL{\TERM}}{\vecL{\ATOM}} & \mathrm{clause} \\
     \F & ::= \detI \mid \relI & \mathrm{determinacy} \\
-    \A & ::= \cut \mid \CALL\ \vecL{\T} \mid \piImplCmd[ty]{\X}{\CL}{\A} & \mathrm{atom} \\
-    \T & ::= K\ \vecL{\T} \mid \CALL\ \vecL{\T} \mid \lambda \X\!\!: ty \bs\ \T\!\!: \base & \mathrm{term}\\
-    \CL & ::= \clauseCmd{P}{\vecL{\T}}{\vecL{\A}} & \mathrm{clause} \\
     % \V & ::= \mathrm{A}, \mathrm{B}, \ldots & \mathrm{type\ variable} \\
-    \func & ::= \F\ \vecL{ty} \funsep \vecL{ty} & \mathrm{predicate\ signature} \\
-    \base & ::= \expI \mid \F & \mathrm{base\ determinacy} \\
-    ty   & ::= \base \mid \func & \mathrm{type} 
+    \SIGN & ::= \F\ \vecL{\TYPE} \funsep \vecL{\TYPE} & \mathrm{predicate\ signature} \\
+    \BASE & ::= \expI \mid \F & \mathrm{base\ determinacy} \\
+    \TYPE   & ::= \BASE \mid \SIGN & \mathrm{type} 
   \end{array}
   $$
 \end{subfigure}
@@ -93,7 +97,7 @@ $t$ is \ground.
 
 
 A substitution $\subst \in \Sigma $ is a mapping from unification variables
-\X to terms $tm$. 
+\VAR to terms \TERM. 
 We write $\subst t$ the application of a substitution \subst to a term $t$,
 and we remark that $t$ is \ground{} iff $\forall \subst, \subst t = t$.
 We write $\dom\ \subst$ for the set of variables occurring
@@ -104,26 +108,17 @@ substition s.t. $\dom\ \EmptySubst = \emptyset$.
 % When two substitutions have disjoint domains we write $\sigma_1 \cup \sigma_2$
 % as the (disjoint) union of two substitutions.
 
-We denote with $\_\times\_$, $\_+\_$, $\vecL{\phantom{i}\_~}$ and $\_\to\_$ the product, disjoint union, list and
-function space of types, respectively, and with $\B = \{ \top, \bot\}$ the booleans.
-We assume a function $\unify$ of type $tm \times tm \times \Sigma \to \Sigma + \B$
-such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
-and $\subst[']$ is the most general extension of $\subst$\todo{extension=unifier?}
-as in~\cite{1991miller-pf}.
-We assume a function $\match$ of type $tm \times tm \times \Sigma \to \Sigma + \B$
-such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \subst['] p$
-and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\subst$,
-i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as a pattern.\todo{consumer?}
+%\todo{consumer?}
 
-As this paper does not really focus on type checking (the interested reader can
-refer to~\cite{1992nadathur}) we collapse all non-predicate types to
-a single node \texttt{exp} %for regular data or \V{} for 
-and polymorphic data.
-%\todo{what about \V?}
-%  At the same time we enrich the $o$ type
-% of propositions with a marker in \D and  
-We also rule out predicates inside data,
-such as list of predicates, for space constraints.
+% As this paper does not really focus on type checking (the interested reader can
+% refer to~\cite{1992nadathur}) we collapse all non-predicate types to
+% a single node \texttt{exp} %for regular data or \V{} for 
+% and polymorphic data.
+% %\todo{what about \V?}
+% %  At the same time we enrich the $o$ type
+% % of propositions with a marker in \D and  
+% We also rule out predicates inside data,
+% such as list of predicates, for space constraints.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -132,6 +127,21 @@ such as list of predicates, for space constraints.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Operational semantics}
+
+We denote with $\_\times\_$, $\_+\_$, $\vecL{\phantom{i}\_~}$ and $\_\to\_$ the product, disjoint union, list and
+function space of types, respectively, and with $\B = \{ \top, \bot\}$ the booleans.
+We omit the conversion bewteen the (isomorphic) types $A \times B \to C$
+and $A \to B \to C$, e.g. we may write $\map\ f\ \vecL{tu}$ instead of $\map\ (\lambda x.f\ (\text{fst}\ x)\ (\text{snd}\ x))\ \vecL{tu}$.
+
+
+We assume a function $\unify$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \B$
+such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
+and $\subst[']$ is the most general extension of $\subst$ %\todo{extension=unifier?}
+as in~\cite{1991miller-pf}.
+We assume a function $\match$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \B$
+such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \subst['] p$
+and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\subst$,
+i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as the pattern.
 
 We use $\EmptyList$ for the empty list and $x :: xs$ for prepending an element $x$
 to a list $xs$; $@$ for list concatenation;
@@ -145,16 +155,11 @@ $$
 $$
 
 \noindent
-By a slight abuse of notation, we assume that the currification operation for
-the function \( f \) is applied whenever necessary. For example, $\map\ f\
-\vecL{tu} = \map\ (\lambda x.f\ (\text{fst}\ x)\ (\text{snd}\ x))\ \vecL{tu}$ if
-$f : A \to B \to C$ and $\vecL{tu} : list (A*B)$.
-
 A program $\prog = (\aleph, \mathcal{I})$ holds a set of names $\aleph$ and a
 mapping $\mathcal{I}$ from predicate names to an \emph{ordered list} of clauses.
 We write $x \# \prog$ to find a name fresh in $\aleph$.
 We write $\prog~\pred$ for the clauses of predicate \pred in $\mathcal{I}$
-and $(x,h) + \prog$ to add
+and we write $(x,h) + \prog$ to add
 the name $x$ to $\aleph$ and the extra clause $h$ on top of $\mathcal{I}$,
 i.e. $h$ has the histest priority in the program.
 
@@ -200,7 +205,13 @@ i.e. $h$ has the histest priority in the program.
 % \end{subfigure}
 }
 
-\begin{figure}[b]
+A goal $\g \subseteq \prog \times \ATOM\times \vecL{\alt}$
+is a triple made of a program, an atom $g$ and a list of
+so called \emph{cut-to} alternatives.
+An alternative $a \in \alt \subseteq \Sigma \times \vecL{\g}$ is a
+pair made of a substitution and a list of goals.
+
+\begin{figure}[t!]
   \begin{framed}
     \runFig
     \vspace{-1em}
@@ -209,11 +220,6 @@ i.e. $h$ has the histest priority in the program.
   \end{framed}
 \end{figure}
 
-A goal $\g \subseteq \prog \times \A \times \vecL{\alt}$
-is a triple made of a program, an atom $g$ and a list of
-so called \emph{cut-to} alternatives.
-An alternative $a \in \alt \subseteq \Sigma \times \vecL{\g}$ is a
-pair made of a substitution and a list of goals.
 
 The operational semantics of Elpi is given by a relation
 $\run{} \subseteq \alt \times \vecL{\alt} \times (\vecL{\alt} \times \Sigma ~+~ \bot)$.
@@ -261,7 +267,8 @@ is a cut then the global alternatives are shortened to the cut-to ones.
 
 The cut rule goes hand in hand with~\ref{rule:call} that stores
 the current alternatives \alts in all the subgoals via
-the function $\mathcal{F}$. This function is in charge of creating the\todo{dire che F le restituisce in ordine}
+the function $\mathcal{F}$. This function is in charge of creating the
+%\todo{dire che F le restituisce in ordine}
 new alternatives $\alts['] :: al$;
 the former is directly evaluated while
 the rest prepended to the existing list of alternatives.
@@ -277,8 +284,8 @@ solved and returns the current susbtitution and the yet to be explored
 alternatives.
 
 Rule~\ref{rule:piimpl} postulates a fresh symbol $y$ and replaces the bound $x$
-for $y$ everywhere, then it loads the new clause $h$ into the program,
-so that it has the highest priority.
+for $y$ everywhere, then it loads the new clause $h$ into the program.
+%so that it has the highest priority.
 
 The last rule~\ref{rule:beta} deals with the fact that an atom can be
 a variable. If that variable is assgined in $\subst$ to a term
@@ -300,6 +307,6 @@ predicate but also eliminates alternative clauses for subgoals that appear
 earlier in the clause premises. 
 We opted for an operational semantics rather than a denotational one (as
 in~\cite{2011king}) to maintain a concrete representation of the current choice
-points. This choice is also essential for the precise notion of function we
-define in Section~\ref{sec:thm}.
+points, that is essential for the notion of function we
+use in Section~\ref{sec:thm}.
 

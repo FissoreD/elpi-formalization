@@ -22,9 +22,9 @@
 \newcommand{\ruleInferPiImpl}{\ruleInfer{rule:infer-piimpl}{\piimpl}}
 \newcommand{\inferPiImpl}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\checkClause{\ctx}{\CL} \quad \inferCmdArr{(\ctx + \{x \mapsto \func\})}{\T}{\res}}
+    \AxiomC{\checkClause{\ctx}{\CLAUSE} \quad \inferCmdArr{(\ctx + \{x \mapsto \func\})}{\T}{\res}}
     \RightLabelM{\ruleInferPiImpl}
-    \UnaryInfC{\inferCmdArr{\ctx}{(\piImplCmd[\func]{x}{\CL}{\T})}{\res}}
+    \UnaryInfC{\inferCmdArr{\ctx}{(\piImplCmd[\func]{x}{\CLAUSE}{\T})}{\res}}
   \end{myRule}
 }
 

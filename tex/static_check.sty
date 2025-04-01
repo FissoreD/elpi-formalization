@@ -76,10 +76,10 @@
 \newcommand{\ruleCheckPiImplM}[1]{
   \begin{myRule}{#1}
     % PiImpl
-    \AxiomC{\checkClause{\ctx}{\CL}}
+    \AxiomC{\checkClause{\ctx}{\CLAUSE}}
     \AxiomC{\checkCmd{\ctx + \{x \mapsto ty\}}{\func}{t}{\ctx[']}{\func[']}}
     \RightLabelM{\ruleCheckPiImpl}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{\CL}{t})}{\ctx[']\bs \{x\}}{\func[']}}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{\CLAUSE}{t})}{\ctx[']\bs \{x\}}{\func[']}}
   \end{myRule}
 }
 

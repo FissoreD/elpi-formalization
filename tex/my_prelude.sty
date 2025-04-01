@@ -2,12 +2,12 @@
   \usepackage[newfloat]{minted}
   \newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}{elpi.py:ElpiLexer}}{\end{myminted}}
   \newenvironment{elpicodeln}{\VerbatimEnvironment\begin{mymintedln}{elpi.py:ElpiLexer}}{\end{mymintedln}}
-  \newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{elpi.py:ElpiLexer}{#1}}
+  \newcommand{\elpiIn}[1]{\mintinline[escapeinside=~~]{elpi.py:ElpiLexer}{#1}}
 \else
   \usepackage[newfloat,outputdir=.aux]{minted}
   \newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}{'elpi.py:ElpiLexer -x'}}{\end{myminted}}
   \newenvironment{elpicodeln}{\VerbatimEnvironment\begin{mymintedln}{'elpi.py:ElpiLexer -x'}}{\end{mymintedln}}
-  \newcommand{\elpiIn}[1]{\mintinline[fontsize=\small,escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
+  \newcommand{\elpiIn}[1]{\mintinline[escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
 \fi
 
 
@@ -57,15 +57,21 @@
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
 
+\newcommand{\BASE}{\ensuremath{\mathbb{B}}}
+\newcommand{\PRED}[1][]{\ensuremath{\mathbb{P}#1}\xspace}
+\newcommand{\DATA}[1][]{\ensuremath{\mathbb{K}#1}\xspace}
+\newcommand{\VAR}[1][]{\ensuremath{\mathbb{X}#1}\xspace}
+\newcommand{\CALLHD}[1][]{\ensuremath{\mathbb{C}#1}\xspace}
+\def\CALL{\CALLHD}
 \newcommand{\X}[1][]{\ensuremath{\mathcal{X}#1}\xspace}
 \newcommand{\T}[1][]{\ensuremath{tm#1}\xspace}
 \newcommand{\V}[1][]{\ensuremath{\mathcal{V}#1}\xspace}
-\newcommand{\CL}[1][]{\ensuremath{\text{\Keyword{CL}}#1}\xspace}
-\def\CALL{\ensuremath{\mathcal{C}}\xspace}
-\newcommand{\A}[1][]{\ensuremath{\Lambda#1}\xspace}
+\newcommand{\CLAUSE}[1][]{\ensuremath{\mathbb{R}}#1\xspace}
+\newcommand{\ATOM}[1][]{\ensuremath{\mathbb{A}#1}\xspace}
+\newcommand{\A}[1][]{\ensuremath{\mathbb{A}#1}\xspace}
 \newcommand{\Ainst}[1][]{\ensuremath{\alpha#1}\xspace}
 \newcommand{\bool}[1][]{b}
-\newcommand{\B}[1][]{\ensuremath{\mathbb{B}}\xspace}
+\newcommand{\B}[1][]{\ensuremath{\mathrm{B}}\xspace}
 \newcommand{\F}[1][]{\ensuremath{\mathbb{D}}\xspace}
 \newcommand{\subst}[1][]{\ensuremath{\sigma#1}\xspace}
 \newcommand{\alt}[1][]{\ensuremath{\mathcal{A}#1}\xspace}
@@ -245,7 +251,7 @@
 \newcommand{\relI}{\detT{pred}\xspace}
 \newcommand{\expI}{\detT{exp}\xspace}
 \newcommand{\funsep}{\ensuremath{\triangleright}}
-\newcommand{\dtype}[3]{\ensuremath{#1\ #2 \funsep #3}}
+\newcommand{\dtype}[3]{\ensuremath{#1\ #2\ \!\funsep\ \!#3}}
 \newcommand{\myTo}{\ensuremath{\mathbin{\detT{->}}}}
 \newcommand{\mySub}{\ensuremath{\subseteq}\xspace}
 \newcommand{\detlab}{\texttt{detlab}}
@@ -256,6 +262,9 @@
 % \newcommand{\bool}{\ensuremath{\mathcal{B}}}
 \newcommand{\res}{\ensuremath{\mathcal{R}}}
 
+\newcommand{\TYPE}[1][]{\ensuremath{\mathbb{T\!y}#1}}
+\newcommand{\TERM}[1][]{\ensuremath{\mathbb{T\!m}#1}}
+\newcommand{\SIGN}[1][]{\ensuremath{\mathbb{S}#1}}
 \newcommand{\func}[1][]{\ensuremath{\mathcal{D}#1}}
 \newcommand{\get}[1]{\ensuremath{\texttt{get}_\texttt{#1}}}
 \newcommand{\getI}[1]{\ensuremath{\get{i}\ #1}}
