@@ -19,6 +19,9 @@ clean-docker:
 AUX_FOLDER = .aux
 FNAME = main
 
+echo-sha-elpi:
+	echo "{\"custom_lexers\": { \"tex/elpi.py\": \"$$(sha256sum tex/elpi.py | cut -d ' ' -f1)\"}}"
+
 ci:
 	docker create --name latex dfissore/latex2023:latest && \
 	docker cp tex/. latex:/data/ && docker ps -a && \
