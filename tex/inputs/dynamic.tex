@@ -4,7 +4,8 @@
 We assume a set \PRED of predicate names, %\todo{pradicate with piimpl as arg?}
 a set \DATA of functors (term constructors), and a set \VAR of term variables
 ($X,Y,\ldots$ for unification variables and $x,y,\ldots$ for bound variables).
-The non terminal \CALL groups symbols that can be called: either predicate names or variables.
+The non terminal \CALL groups symbols ($c,d,\ldots$) that can be called: either predicate names
+or variables.
 
 The programmer provides a context \ctx{} that assigns a
 signature $\SIGN$ to each predicate name. By convention predicates take
@@ -22,7 +23,7 @@ $\ctx~\texttt{likes!} = \dtype{\detI}{\expI}{\expI}$
 and $\ctx\ \texttt{true} = \relI$.
 
 In the syntax of atoms \ATOM we single out the \cut operator since it has a
-dedicated treatment in the operational semantics, and we glue together the
+dedicated treatment in the operational semantics. We also glue together the
 \elpiIn{pi} and \elpiIn{=>} in the same grammar production for simplicity.
 Terms include predicate calls, functor applications and the binder $\lambda$.
 For simplicity we impose the body of $\lambda$-abstractions to be explicitly typed
@@ -68,10 +69,10 @@ $t$ is \ground.
   $$
   \begin{array}{rlr}
     \PRED & ::= p, q, \ldots & \mathrm{predicate}\\
-    \DATA & ::= c, f, \ldots & \mathrm{data\ constructor}\\
+    \DATA & ::= f, g \ldots & \mathrm{data\ constructor}\\
     \VAR & ::= \mathrm{X}, \mathrm{Y} \ldots x, y, \ldots & \mathrm{variable}\\
     \CALLHD & ::= \PRED \mid  \VAR & \mathrm{callable}\\
-    \ATOM& ::= \cut \mid \CALLHD\ \vecL{\TERM} \mid \piImplCmd[\TYPE]{\VAR}{\CLAUSE}{\ATOM} & \mathrm{atom} \\
+    \ATOM& ::= \cut \mid \CALLHD\ \vecL{\TERM} \mid \piImplCmd[\expI]{\VAR}{\CLAUSE}{\ATOM} & \mathrm{atom} \\
     \TERM & ::= \DATA\ \vecL{\TERM} \mid \CALLHD\ \vecL{\TERM} \mid \lambda \VAR\!\!: \TYPE \bs\ \TERM\!\!: \BASE & \mathrm{term}\\
     \CLAUSE & ::= \clauseCmd{\PRED}{\vecL{\TERM}}{\vecL{\ATOM}} & \mathrm{clause} \\
     \F & ::= \detI \mid \relI & \mathrm{determinacy} \\

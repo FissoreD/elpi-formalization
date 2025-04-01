@@ -1,9 +1,9 @@
 
 % [checkCmd ctx1 func1 tm ctx2 func2]
 \newcommand{\checkL}{\texttt{check}\ensuremath{_L}}
-\newcommand{\checkCmd}[5]{\ensuremath{\checkk\ #3\ (#1,\ #2)\ \arr (#4, #5)}}
+\newcommand{\checkCmd}[6][\prog]{\ensuremath{\checkk\ #1\ #4\ (#2,\ #3)\ \arr (#5, #6)}}
 \newcommand{\checkLCmd}[5]{\ensuremath{\checkL\ #3\ #1\ #2\ \arr (#4, #5)}}
-\newcommand{\checkClause}[2]{\ensuremath{\checkc\ #1\ #2}}
+\newcommand{\checkClause}[3][\prog]{\ensuremath{\checkc\ #1\ #2\ #3}}
 
 % \newcommand{\ruleCheckName}[1]{\ensuremath{C_{#1}}\xspace}
 \newcommand{\ruleCheckName}[2]{\customlabel{#1}{\ensuremath{C_{#2}}}}
@@ -16,8 +16,8 @@
       \stackanchor
       {
         \ensuremath{
-          \ctx\ P = \dtype{\func}{\func[_i]}{\func[_o]} 
-          \qquad\qquad\qquad \fold\ \checkCmd{\ctx[']}{\detI}{\vecL{bs}}{\ctx['']}{\func[']}
+          \ctx\ p = \dtype{\func}{\func[_i]}{\func[_o]} 
+           \ \ \quad\qquad\qquad \fold\ \checkCmd{\ctx[']}{\detI}{\vecL{bs}}{\ctx['']}{\func[']}
           \quad\ \subCmd{\func'}{\func}
         }
       }
@@ -25,11 +25,11 @@
         \ensuremath{
           \fold\ \assumeCmd{\ctx}{\vecL{(\func[_i],t_i)}}{\!\!}{\ctx[']}
           \quad \map\ \inferCmdArr[1]{\ctx['']}{\vecL{t_o}}{\vecL{(\func[_o'],\top)}}
-          \qquad\qquad\ \vecL{\func[_o'] \mySub \func[_o]}}
+          \qquad\qquad\quad\ \vecL{\func[_o'] \mySub \func[_o]}}
         }
     }
     \RightLabelM{\ruleCheckClause}
-    \UnaryInfC{\checkClause{\ctx}{(\clauseCmd{P}{\vec{t}}{\vecL{bs}})}}
+    \UnaryInfC{\checkClause{\ctx}{(\clauseCmd{p}{\vecL{t}}{\vecL{bs}})}}
   \end{myRule}
 }
 
@@ -76,10 +76,11 @@
 \newcommand{\ruleCheckPiImplM}[1]{
   \begin{myRule}{#1}
     % PiImpl
-    \AxiomC{\checkClause{\ctx}{\CLAUSE}}
-    \AxiomC{\checkCmd{\ctx + \{x \mapsto ty\}}{\func}{t}{\ctx[']}{\func[']}}
+    \AxiomC{\stackanchor
+      { $\qquad\qquad\qquad\qquad\qquad\checkClause{(\ctx + \{x \mapsto \expI\})}{r}$}
+      { $\mutExclAll\ \prog\ x\ r\qquad$ \checkCmd[(\prog + r)]{\ctx + \{x \mapsto \expI\}}{\func}{t}{\ctx[']}{\func[']} } }
     \RightLabelM{\ruleCheckPiImpl}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[ty]{x}{\CLAUSE}{t})}{\ctx[']\bs \{x\}}{\func[']}}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[\expI]{x}{r}{t})}{\ctx[']\bs \{x\}}{\func[']}}
   \end{myRule}
 }
 
@@ -107,10 +108,10 @@
     %   {\inferCmdArr{\ctx}{i}{\func[_i']}{\mathcal{R}}}}
     \AxiomC{
       \stackanchor{\ensuremath{%
-          \ctx\ \CALL = \dtype{\func[']}{\func[_i]}{\func[_o]} \qquad
+          \ctx\ c = \dtype{\func[']}{\func[_i]}{\func[_o]} \qquad
           \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func[_i'],\top)}}}
       }{\ensuremath{%
-          \vecL{\func[_i'] \mySub \func[_i]} \qquad\qquad\quad\ \ \ \!
+          \vecL{\func[_i'] \mySub \func[_i]} \qquad\qquad\qquad\ \!
           \fold\ \assumeCmd{\ctx}{\vecL{(\func[_o],t_o)}}{\!\!\!}{\ctx[']}}}}
 
     % \AxiomC{
@@ -120,7 +121,7 @@
     %     {then $\func[''] = \maxT\ \func\ \func[']$}
     %     {else $\func[''] = \relI$}}}
     \RightLabelM{\ruleCheckCall}
-    \UnaryInfC{\checkCmd{\ctx}{\func}{(\CALL\ \vecL{t})}{\ctx[']}{\maxT\ \func\ \func[']}}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{(c\ \vecL{t})}{\ctx[']}{\maxT\ \func\ \func[']}}
   \end{myRule}
 }
 
@@ -128,11 +129,11 @@
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
-    \AxiomC{\ensuremath{ \ctx\ \CALL = \dtype{\_}{\func[_i]}{\_} }}
+    \AxiomC{\ensuremath{ \ctx\ c = \dtype{\_}{\func[_i]}{\_} }}
     \AxiomC{ \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func['],\bool)}}}
     \AxiomC{$ \exists i, \func[_i'] \not\mySub \func[_i]\ \lor\ \bool_i = \bot$}
     \RightLabelM{\ruleCheckCallFail}
-    \TrinaryInfC{\checkCmd{\ctx}{\_}{(\CALL\ \vec{t})}{\ctx}{\relI}}
+    \TrinaryInfC{\checkCmd{\ctx}{\_}{(c\ \vecL{t})}{\ctx}{\relI}}
   \end{myRule}
 }
 
@@ -198,7 +199,7 @@
       % \ruleCheckListCons{1}
 
       \vspace{-1em}
-      \caption{$\checkk : \A \to (\ctx \times \F) \to (\ctx \times \F)$}
+      \caption{$\checkk : \prog \to \A \to (\ctx \times \F) \to (\ctx \times \F)$}
       \label{fig:static-check}
     \end{framed}
   \end{figure}

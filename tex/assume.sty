@@ -36,9 +36,9 @@
 \newcommand{\ruleAssumePiImpl}{\ruleAssume{rule:assume-piimpl}{\piimpl}}
 \newcommand{\assumePiImpl}[1]{
   \begin{myRule}{#1}
-    \AxiomC{\checkClause{\ctx}{\CLAUSE} \quad \assumeCmd{(\ctx + \{x \mapsto \func\})}{\func[']}{\T}{\ctx[']}}
+    \AxiomC{\checkClause{\ctx}{\CLAUSE} \quad \assumeCmd{(\ctx + \{x \mapsto \func\})}{\func[']}{t}{\ctx[']}}
     \RightLabelM{\ruleAssumePiImpl}
-    \UnaryInfC{\assumeCmd{\ctx}{\func[']}{(\piImplCmd[\func]{x}{\CLAUSE}{\T})}{\ctx[']\bs \{x\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func[']}{(\piImplCmd[\func]{x}{\CLAUSE}{t})}{\ctx[']\bs \{x\}}}
   \end{myRule}
 }
 
@@ -60,21 +60,29 @@
 %   \end{myRule}
 % }
 
-\newcommand{\ruleAssumeHd}{\ruleAssume{rule:assume-hd}{\X}}
+\newcommand{\ruleAssumeHd}{\ruleAssume{rule:assume-hd}{\VAR}}
 \newcommand{\assumeHd}[1]{
   \begin{myRule}{#1}
-    \AxiomC{$\texttt{\func['] = \minT\ \func\ (\ctx\ \predVar) }$}
+    \AxiomC{$\func['] = \minT\ \func\ (\ctx\ X) $}
     \RightLabelM{\ruleAssumeHd}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{\X}{\ctx + \{\predVar \mapsto \func[']\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{X}{\ctx + \{X \mapsto \func[']\}}}
   \end{myRule}
 }
 
-\newcommand{\ruleAssumeExpr}{\ruleAssume{rule:assume-expr}{K}}
+\newcommand{\ruleAssumeExpr}{\ruleAssume{rule:assume-expr}{\DATA}}
 \newcommand{\assumeExpr}[1]{
   \begin{myRule}{#1}
-    \AxiomC{}% \quad \ctx\ \predVar \mySub \func$ }
+    \AxiomC{$\ctx\ f = \expI$}
     \RightLabelM{\ruleAssumeExpr}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{(K\ \vecL{\T})}{\ctx}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(f\ \vecL{t})}{\ctx}}
+  \end{myRule}
+}
+\newcommand{\ruleAssumeExprL}{\ruleAssume{rule:assume-exprl}{\DATA[']}}
+\newcommand{\assumeExprL}[1]{
+  \begin{myRule}{#1}
+    \AxiomC{}% \quad \ctx\ \predVar \mySub \func$ }
+    \RightLabelM{\ruleAssumeExprL}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\lambda\ \vecL{x : \_}. t : \expI)}{\ctx}}
   \end{myRule}
 }
 
@@ -84,13 +92,13 @@
   \begin{myRule}{#1}
     % APP
     \AxiomC{\ensuremath{
-        \ctx\ \CALL = \dtype{\func[']}{\func[_i]}{\_}\qquad
+        \ctx\ c = \dtype{\func[']}{\func[_i]}{\_}\qquad
         \text{\kIF{} } \func['] \mySub \func
         \text{ \kTHEN{} } \fold\ \assumeCmd{\ctx}{\vecL{(\func[_i],t_i)}}{\!\!}{\ctx[']}
         \text{ \kELSE{} }\ctx['] = \ctx
       }}
     \RightLabelM{\ruleAssumeApp}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{(\CALL\ \vec{t})}{\ctx[']}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(c\ \vec{t})}{\ctx[']}}
   \end{myRule}
 }
 
@@ -99,10 +107,10 @@
   \begin{myRule}{#1}
     \AxiomC{\ensuremath{
         \text{\kIF{} } \func[_x'] \mySub \func[_x]
-        \text{ \kTHEN{} } \assumeCmd{(\ctx + \{x:\func[_x']\})}{(\dtype{\func}{\func[_i]}{\func[_o]})}{\T}{\ctx[']}
+        \text{ \kTHEN{} } \assumeCmd{(\ctx + \{x \mapsto \func[_x']\})}{(\dtype{\func}{\func[_i]}{\func[_o]})}{t}{\ctx[']}
         \text{ \kELSE{} } \ctx['] = \ctx}}
     \RightLabelM{\ruleAssumeLam}
-    \UnaryInfC{\assumeCmd{\ctx}{(\dtype{\func}{(\func[_x]::\func[_i])}{\func[_o]})}{(\lambda x:\func[_x'].\T)}{\ctx['] \bs \{x\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{(\dtype{\func}{(\func[_x]::\func[_i])}{\func[_o]})}{(\lambda x:\func[_x'].t)}{\ctx['] \bs \{x\}}}
   \end{myRule}
 }
 
@@ -114,10 +122,11 @@
 
       \centering
 
-      \assumeHd{0.45}
       \assumeExpr{0.45}
+      \assumeExprL{0.45}
       \assumeCut{0.3}
-      \assumePiImpl{0.65}
+      \assumeHd{0.45}
+      % \assumePiImpl{0.65}
 
       % \assumeUnif{0.3}
 
@@ -125,7 +134,7 @@
       \assumeApp{1}
 
       \vspace{-1em}
-      \caption{$\assume\ : \func \to (\A + \T) \to \ctx \to \ctx$}
+      \caption{$\assume\ : \SIGN \to \TERM \to \ctx \to \ctx$}
       \label{fig:det-assume}
     \end{framed}
   \end{figure}

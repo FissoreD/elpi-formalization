@@ -60,7 +60,7 @@
 \newcommand{\BASE}{\ensuremath{\mathbb{B}}}
 \newcommand{\PRED}[1][]{\ensuremath{\mathbb{P}#1}\xspace}
 \newcommand{\DATA}[1][]{\ensuremath{\mathbb{K}#1}\xspace}
-\newcommand{\VAR}[1][]{\ensuremath{\mathbb{X}#1}\xspace}
+\newcommand{\VAR}[1][]{\ensuremath{\mathbb{V}#1}\xspace}
 \newcommand{\CALLHD}[1][]{\ensuremath{\mathbb{C}#1}\xspace}
 \def\CALL{\CALLHD}
 \newcommand{\X}[1][]{\ensuremath{\mathcal{X}#1}\xspace}
@@ -79,7 +79,7 @@
 \newcommand{\g}[1][]{\ensuremath{\mathcal{G}#1}\xspace}
 \newcommand{\gl}[1][]{\ensuremath{gl#1}\xspace}
 \newcommand{\clause}[1][]{\ensuremath{\mathcal{@}#1}\xspace}
-\newcommand{\pred}[1][]{\texttt{p#1}\xspace}
+\newcommand{\pred}[1][]{\ensuremath{p#1}\xspace}
 \newcommand{\expr}[1][]{\texttt{e#1}\xspace}
 \newcommand{\isFuncCmd}[1]{\ensuremath{\runCmd{[\goalCmd{\prog}{#1}{\EmptyList}]}{\EmptyList}{\EmptySubst}{a}{\subst} \Rightarrow 
   \forall a_i \in a, \runCmdFQ{a_i}{\EmptyList}
@@ -113,9 +113,9 @@
 
 
 \newcommand{\sem}[1]{\ensuremath{[\![#1]\!]}}
-\newcommand{\semi}[1]{\ensuremath{[\![#1]\!]_{i}}}
+\newcommand{\semi}[1]{\ensuremath{\{\!\!\{#1\}\!\!\}}}
 \newcommand{\semt}[1]{\ensuremath{[\![#1]\!]_t}}
-\newcommand{\predt}{\ensuremath{\pred{}\ \vec{t}}}
+\newcommand{\predt}{\ensuremath{\pred{}\ \vecL{t}}}
 
 % Languages: end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

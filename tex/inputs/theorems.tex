@@ -19,62 +19,82 @@ proofs of the following theorems in the appendix.
 \end{definition}
 
 \noindent Said in other words, a predicate call \isdet if its execution does not
-create choice points. Without loss of generality, we can rephrase the lemma in
-the following way:
+create choice points. 
+% Without loss of generality, we can rephrase the lemma in
+% the following way:
 
-\begin{definition}[Operational determinacy empty prog (\isdetE)]\label{def:is-det-empty}
-  The execution of an atom $t$ is deterministic iff
-  $$\forall a\ \subst, \isDetCmd[\EmptyList]{t}$$
-\end{definition}
+% \begin{definition}[Operational determinacy empty prog (\isdetE)]\label{def:is-det-empty}
+%   The execution of an atom $t$ is deterministic iff
+%   $$\forall a\ \subst, \isDetCmd[\EmptyList]{t}$$
+% \end{definition}
 
-\noindent The main difference from the first definition is that we begin with an
-empty program and handle a generic term \( t \). Notably, due to the implication
-operator, this second definition remains equivalent to the first, as local
-clauses can be dynamically loaded during the evaluation of \( t \), thereby
-reconstructing the same program referenced in \cref{def:is-det}.  
+% \noindent The main difference from the first definition is that we begin with an
+% empty program and handle a generic term \( t \). Notably, due to the implication
+% operator, this second definition remains equivalent to the first, as local
+% clauses can be dynamically loaded during the evaluation of \( t \), thereby
+% reconstructing the same program referenced in \cref{def:is-det}.  
 
 \def\atomtoprog{\ensuremath{\mathcal{T}}}
 
-\begin{definition}[Split atom (\atomtoprog)]
-  Given $\Ainst = \piImplCmd[ty_1]{x_1}{c_1}{\dots \impl\
-  \piImplCmd[ty_n]{x_n}{c_n}{s}}$, then $\atomtoprog(\prog) = \langle \{c_n,\cdots,c_1\}, s \rangle$ 
-\end{definition}
+% \begin{definition}[Split atom (\atomtoprog)]
+%   Given $\Ainst = \piImplCmd[ty_1]{x_1}{c_1}{\dots \impl\
+%   \piImplCmd[ty_n]{x_n}{c_n}{s}}$, then $\atomtoprog(\prog) = \langle \{c_n,\cdots,c_1\}, s \rangle$ 
+% \end{definition}
 
-\begin{lemma}
-  Given an atom $\Ainst$ and let $(\prog, \Ainst') = \atomtoprog(\Ainst)$, then
-  $$\isdetE\ \Ainst \Rightarrow \isdet\ \prog\ \Ainst'$$
-  \label{th:run-empty}
-\end{lemma}
+% \begin{lemma}
+%   Given an atom $\Ainst$ and let $(\prog, \Ainst') = \atomtoprog(\Ainst)$, then
+%   $$\isdetE\ \Ainst \Rightarrow \isdet\ \prog\ \Ainst'$$
+%   \label{th:run-empty}
+% \end{lemma}
+The semantics of a signatures is given by recursion over the signature as follows.
 
-Thanks to the definition of \isdet, we can provide the semantics of determinacy
-signatures.
-The intuition is given by the following formula.
+% Thanks to the definition of \isdet, we can provide the semantics of determinacy
+% signatures.
+% The intuition is given by the following formula.
 
-\begin{definition}[Meaning of a signature $(\sem{\func}\ (\predt))$ given a context \ctx and a program \prog]\label{def:sem}
+\begin{definition}[Meaning of a signature $\sem{\func}\ (\predt)$ given a context \ctx and a program \prog]\label{def:sem}
 \vspace{-1em}
 \newcommand{\funcF}[1][]{\ensuremath{\mathcal{F}#1}}
-\begingroup\makeatletter\def\f@size{8}\check@mathfonts
+% \begingroup\makeatletter\def\f@size{8}\check@mathfonts
 $$
 \arraycolsep=1.4pt
 \begin{array}{rll}
-  \sem{\detI}\ (\predt) & = %
-      \bigwedge \vecL{\semi{\func_i}\ t_i} \Rightarrow \isdet\ \prog\ {(\predt)} \land \bigwedge \vecL{\semi{\func_o}\ t_o} %
-      & \mathrm{s.t.\ } \ctx\ \pred{} = \dtype{\detI}{\func_i}{\func_o} \\
-  \semi{\dtype{\detI}{\func_i}{\func_o}}\ (\predt) & = %
-    \forall \vec{u}\ \vec{v}, |\func[_i]| = |\vec{u}| \land |\func[_o]| = |\vec{v}| %
-      \land \bigwedge \vecL{\semi{\func_i}\ u} \Rightarrow \\ %
-      & \qquad \isdet\ \prog\ {(\pred\ (\vec{t}@\vec{u}@\vec{v}))} \land \bigwedge \vecL{\semi{\funcF}\ t_i}  
-      & \mathrm{s.t.\ } \ctx\ \pred{} = \dtype{\detI}{(\funcF @ \func_i)}{\func_o} \\
-  \semi{\dtype{\detI}{\EmptyList}{\func_o}}\ (\predt) & = %
-    \forall \vec{v}, |\func[_o]| = |\vec{v}| %
-        \Rightarrow  %
-        \isdet\ \prog\ {(\pred\ (\vec{t}@\vec{v}))} \land \bigwedge \vecL{\semi{\funcF}\ t_i} %
-      & \mathrm{s.t.\ } \ctx\ \pred{} = \dtype{\detI}{\funcF}{(\funcF_o @ \func_o)} \\
-  \semi{\dtype{\relI}{\_}{\_}}\ (\predt) & = \top \\
-  \semi{\dtype{\expI}{\_}{\_}}\ (\predt) & = \top 
+  \sem{\detI}\ (\predt) = & %
+      \bigwedge \vecL{\semi{\func_i}\ t_i} \Rightarrow \isdet\ \prog\ {(\predt)} \bigwedge \vecL{\semi{\func_o}\ t_o} %
+      & \quad\mathrm{s.t.\ } \ctx\ \pred{} = \dtype{\detI}{\func_i}{\func_o} \\
 \end{array}
 $$
-\endgroup
+$$
+\arraycolsep=1.4pt
+\begin{array}{rl}
+  \semi{\detI}\ (\predt) = & \isdet\ \prog\ (\predt) \\
+  \semi{\relI}\ (\predt) = & \top \\
+  \semi{\expI}\ (\predt) = & \top \vspace{0.5em}
+\end{array}
+$$
+In order to handle partial application like \elpiIn{once likes} in the introduction
+we consider the following extra rules:
+$$
+\arraycolsep=1.4pt
+\begin{array}{rl}
+
+  \semi{\dtype{\detI}{\func_i}{\func_o}}\ (\predt) = & %
+    \forall \vec{u}\ \vec{v}, 
+      %|\func[_i]| = |\vec{u}| \land |\func[_o]| = |\vec{v}| %
+      %\land 
+      \bigwedge \vecL{\semi{\func_i}\ u} \Rightarrow \isdet\ \prog\ {(\pred\ (\vec{t}\ \vec{u}\ \vec{v}))} \bigwedge \vecL{\semi{\funcF}\ t_i}  \\
+      & \mathrm{where\ } |\func[_i]| = |\vec{u}| \mathrm{\ and\ } |\func[_o]| = |\vec{v}| %
+        \mathrm{\ and\ } \ctx\ \pred{} = \dtype{\detI}{(\funcF \  \func_i)}{\func_o} \vspace{0.5em}\\
+  \semi{\dtype{\detI}{\EmptyList}{\func_o}}\ (\predt) = & %
+    \forall \vec{v}, 
+     %|\func[_o]| = |\vec{v}| %
+      %  \Rightarrow  %
+        \isdet\ \prog\ {(\pred\ (\vec{t}\ \vec{v}))} \bigwedge \vecL{\semi{\funcF}\ t_i} \\
+      & \mathrm{where\ } |\func[_o]| = |\vec{v}| \mathrm{\ and\ } \ctx\ \pred{} = \dtype{\detI}{\funcF}{(\funcF_o \  \func_o)} \vspace{0.5em}\\
+  \semi{\dtype{\relI}{\_}{\_}}\ (\predt) = & \top \\
+\end{array}
+$$
+% \endgroup
 \end{definition}
 The first equation states that if the preconditions of a signature are satisfied
 then the call to a predicate of that signature is
@@ -87,12 +107,22 @@ the pre-conditions of $f_1$ must be weaker than the ones of $f_2$.
 
 The theorem we want to prove is the following.
 
-\begin{theorem}
+\newcommand{\iprog}[1][\prog]{\ensuremath{\texttt{checked}(#1)}\xspace}
+\begin{definition}[Program invariant \iprog]\label{def:i}
+  We say that \iprog{} holds iff for all predicates $\pred \in \prog$ s.t. $\ctx\ \pred = \dtype{\detI}{\_}{\_}$
+  then  $\forall \vecL{t}, \sem{\detI}\ (\predt)$.
+\end{definition}
+
+Note that $\iprog[\EmptyList]$ holds.
+
+\begin{lemma}[key]
   Given a context \ctx and an atom $t$, such that all local clauses for
   deterministic predicates have a \cut, then
-  $$\checkCmd{\ctx}{\detI}{t}{\_}{\detI} \Rightarrow \isdetE\ t$$
+  $$\forall \prog, \iprog \Rightarrow \checkCmd{\ctx}{\detI}{t}{\_}{\detI} \Rightarrow \isdet\ \prog\ t$$
   \label{th:1}
-\end{theorem}
+\end{lemma}
+
+
 
 \noindent
 This theorem is crucial for establishing the connection between our determinacy
