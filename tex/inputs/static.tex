@@ -12,7 +12,7 @@ converse inclusion.
 In the spirit of subtyping the input arguments of predicate signature
 are compared in a contravariant way. 
 %
-\begin{equation}
+\begin{equation*}
   f_1 \mySub f_2 =\ 
   \begin{cases}
    \ \bot                                                          & \text{if } f_1 = \dtype{\relI}{\_}{\_}\ \land\ f_2 = \dtype{\detI}{\_}{\_} \\
@@ -28,8 +28,8 @@ are compared in a contravariant way.
     % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
    \ \top                                                          & \text{if } f_1 = \expI\ \land\ f_2 = \expI
   \end{cases}
-  \label{eq:sub-def}
-\end{equation}
+  % \label{eq:sub-def}
+\end{equation*}
 
 The checking process performs a form of dataflow analysis:
 It stores the predicate
