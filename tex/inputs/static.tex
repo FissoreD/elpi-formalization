@@ -395,34 +395,62 @@ necessary.
 \paragraph{Examples}
   %Inference and Assumptions only on terms in input position}
 
+  
 We aim to clarify why the \infer and \assume routines only process input
-arguments. Inference is applied to atoms in negative positions -- i.e., atoms
-that are interpreted. To align with our definition of determinacy, we must
-verify that the inferred determinacy of their \textit{inputs} is at most \mySub,
-wrt their expected signature.  
+arguments. Inference is applied to atoms in negative positions—i.e., atoms that
+are interpreted. To align with our definition of determinacy, we must verify
+that the inferred determinacy of their \textit{inputs} is at most \mySub, with
+respect to their expected signature.  
 
-Regarding the \textit{outputs} of clauses, and since these \textit{outputs} can
-be interpreted as new atoms in the code, we need to ensure that their inferred
+Regarding the \textit{outputs} of clauses, since these \textit{outputs} can be
+interpreted as new atoms in the code, we need to ensure that their inferred
 signatures have \textit{inputs} that validate their expected signature. Consider
-the following example:  
+the following rule:  
 
 \begin{elpicode}
-  func p -> (func).
-  p (id likes! Y).
+  compose (map A) (map B) (map C) :- compose A B C.
 \end{elpicode}
 
-The \textit{output} of \elpiIn{p} is a function. Therefore, we must verify that
-the inferred signature of \elpiIn{id likes! _} is also a function. This holds
-because \elpiIn{id} qualifies as a function when its first argument is a binary
-function, and indeed, \elpiIn{likes!} is a binary function.  
+\checkc assumes that the clause is called with the correct arguments. Therefore,
+we can \assume that its \textit{inputs} have the expected signature, which is
+\dtype{\detI}{\expI}{\expI}. Consequently, \elpiIn{map A} (resp. \elpiIn{map B})
+will recursively assign \elpiIn{A} (resp. \elpiIn{B}) the signature
+\dtype{\detI}{\expI}{\expI}. These assumptions affect the body of the rule since
+the premise \elpiIn{compose A B C} uses \elpiIn{A} and \elpiIn{B} as
+\textit{inputs}. These \textit{inputs} match the expected signature of
+\elpiIn{compose}, allowing us to assume that the \textit{output} \elpiIn{C}
+indeed has the signature \dtype{\detI}{\expI}{\expI}.  
 
-This validation of \textit{outputs} in clauses allows us to make assumptions
-about the \textit{outputs} of terms appearing in \elpiIn{input} positions.
-Consider the query: \elpiIn{p (commit X Y)}.
+The final stage of clause checking aims to verify that the body of the clause is
+functional, which is confirmed in this case. Secondly, it infers the signature
+of the \textit{output}, which in our example is \elpiIn{map C}. This inference
+returns the signature \dtype{\detI}{\expI}{\expI}, which matches the expected
+output signature of \elpiIn{compose}.  
 
-Since the clauses for \elpiIn{p} have been validated, \elpiIn{commit X Y} must
-be a function. For this to hold, \elpiIn{X} can be assumed to be a binary
-function. However, no assumptions can be made about \elpiIn{Y}.
+This validation of clauses allows us to make assumptions about the
+\textit{outputs} of atoms if their \textit{inputs} respect the predicate’s
+signature. For example, in a query like \elpiIn{compose (map copy) (map copy)
+(map L)}, the variable \elpiIn{L} can be safely considered a binary function.
+Note that the assumption is made on the \textit{input} of the \textit{output}
+argument.  
+
+% \begin{elpicode}
+% func p -> (func).
+% p (id likes! Y).
+% \end{elpicode}
+
+% The \textit{output} of \elpiIn{p} is a function. Therefore, we must verify that
+% the inferred signature of \elpiIn{id likes! _} is also a function. This holds
+% because \elpiIn{id} qualifies as a function when its first argument is a binary
+% function, and indeed, \elpiIn{likes!} is a binary function.  
+
+% This validation of \textit{outputs} in clauses allows us to make assumptions
+% about the \textit{outputs} of terms appearing in \elpiIn{input} positions.
+% Consider the query: \elpiIn{p (commit X Y)}.
+
+% Since the clauses for \elpiIn{p} have been validated, \elpiIn{commit X Y} must
+% be a function. For this to hold, \elpiIn{X} can be assumed to be a binary
+% function. However, no assumptions can be made about \elpiIn{Y}.
 
 % combines both \infer\ and \assume
 % to determine if an atom is fu
