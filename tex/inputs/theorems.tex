@@ -107,7 +107,7 @@ the post-conditions of $f_1$ can be stronger than the ones of $f_2$ while
 the pre-conditions of $f_1$ must be weaker than the ones of $f_2$.
 
 We use the meaning of signatures to describe the key invariant of program:
-\newcommand{\iprog}[1][\prog]{\ensuremath{\texttt{checked}\ #1}\xspace}
+\newcommand{\iprog}[1][\prog]{\ensuremath{\texttt{checked}\ \Gamma\ #1}\xspace}
 \begin{definition}[Program invariant \iprog]\label{def:i}
   We say that \iprog{} holds iff for all predicates $\pred \in \prog$ s.t. $\ctx\ \pred = \dtype{\detI}{\_}{\_}$
   then  $\forall \vecL{t}, \sem{\detI}\ (\predt)$.
@@ -117,7 +117,7 @@ Since the program can be dynamically augmented by asserting clauses we need
 \checkk\ to preserve the invariant.
 
 \begin{lemma}[Invariant preservation]\marginpar{where is Gamma?}
-  $$\forall \Gamma\ \prog\ r, \iprog \land \checkClause{\ctx}{r} \Rightarrow \iprog[(\prog + r)]$$
+  $$\forall\, \Gamma\ \prog\ r, \iprog \land \checkClause{\ctx}{r} \Rightarrow \iprog[(\prog + r)]$$
   \label{th:0}
 \end{lemma}
 
@@ -125,7 +125,7 @@ Since we execute atoms we need need this
 
 \begin{theorem}[Deterministic execution]
   Given a context \ctx and an atom $t$, then
-  $$\forall \prog\ t, \iprog \land \checkCmd{\ctx}{\detI}{t}{\_}{\detI}
+  $$\forall\, \Gamma\ \prog\ t, \iprog \land \checkCmd{\ctx}{\detI}{t}{\_}{\detI}
   \Rightarrow \isdet\ \prog\ t$$
   \label{th:1}
 \end{theorem}
