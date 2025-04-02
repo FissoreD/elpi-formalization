@@ -286,7 +286,7 @@ its current signature in \ctx\ and \func.
 The use of \minT\ is justified by the fact that \assume\ represents runtime
 unification. For unification to succeed, the variable's signature must be the
 strongest between the one in the context and the expected one. For example,
-if \elpiIn{X = Y, X = commit likes F} with $\ctx\ Y = \relI$. 
+if \elpiIn{X = Y, X = commit likes F} with $\ctx\ \text{\elpiIn{Y}} = \relI$. 
 
 The rules \ref{rule:assume-cut}, \ref{rule:assume-expr} and \ref{rule:assume-exprl} are intuitive, as
 they do not require any modifications to the context, for the two last cases
