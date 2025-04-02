@@ -36,6 +36,7 @@
 \usepackage{framed}
 \usepackage{nicefrac}
 \newcommand{\vecL}[1]{\overrightarrow{#1}}
+\usepackage{stmaryrd}
 
 % \expandafter\def\expandafter\normalsize\expandafter{%
 % \normalsize%
@@ -258,7 +259,8 @@
 \newcommand{\isfunc}{\detT{is\_tfunc}}
 \newcommand{\relI}{\detT{pred}\xspace}
 \newcommand{\expI}{\detT{exp}\xspace}
-\newcommand{\funsep}{\ensuremath{\!-\!\!\triangleright}}
+\newcommand{\funsep}{\ensuremath{\rightarrowtriangle}}
+% \newcommand{\funsep}{\ensuremath{\;\scalebox{0.55}[1.0]{\(-\)}\hspace{-2.55pt}\triangleright}}
 \newcommand{\dtype}[3]{\ensuremath{#1\ #2\ \!\funsep\ \!#3}}
 \newcommand{\myTo}{\ensuremath{\mathbin{\detT{->}}}}
 \newcommand{\mySub}{\ensuremath{\subseteq}\xspace}
