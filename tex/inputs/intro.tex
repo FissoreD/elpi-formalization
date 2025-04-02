@@ -1,36 +1,56 @@
 \section{Introduction}
 
-We are interested in the static analsysis of Elpi programs, in particular
-in checking their determinacy. Elpi is a higher-order logic programming
-language, a dialect of $\lambda$Prolog well suited to manipulate
-incomplete syntax trees with binders (see
-\cite{1991miller-pf,Miller_Nadathur_2012} and \cite{dunchev15lpar,TASSI_2019}).
-Elpi finds applications as an extension
-language for the Rocq Prover (formerly known as the Coq proof assistant)
-where it has been used for program and proof synthesis by~\cite{tassi2018,tassi2019,tassi2023,cohen_et_al:LIPIcs.FSCD.2020.34} and more recently
-as the target language for type-class resolution by~\cite{fissore2023,fissore2024}.
+% We are interested in the static analsysis of Elpi programs, in particular
+% in checking their determinacy. Elpi is a higher-order logic programming
+% language, a dialect of $\lambda$Prolog well suited to manipulate
+% incomplete syntax trees with binders (see
+% \cite{1991miller-pf,Miller_Nadathur_2012} and \cite{dunchev15lpar,TASSI_2019}).
+% Elpi finds applications as an extension
+% language for the Rocq Prover (formerly known as the Coq proof assistant)
+% where it has been used for program and proof synthesis by~\cite{tassi2018,tassi2019,tassi2023,cohen_et_al:LIPIcs.FSCD.2020.34} and more recently
+% as the target language for type-class resolution by~\cite{fissore2023,fissore2024}.
 
-In Rocq type-class resolution is used for multiple purposes: From automatic
-proof search as in~\cite{sozeau2008-tc} to Haskell-style symbol overloading as in~\cite{wadler1996-hs}.
-For this last application
-% Type-class resolution
-% is typically used to implement overloading~\cite{wadler1996-hs,sozeau2008-tc}
-% where 
-the solution to a query provides the formal meaning of the overloaded symbol
-and it is of paramount importance that this solution is unique.
-% ruling out ambiguities.
-A static check for this property is of particular
-interest in the context of the platform of Rocq libraries where code developed
-by different teams is combined together.
-%  in order to lower the cost of mechanization.
+% In Rocq type-class resolution is used for multiple purposes: From automatic
+% proof search as in~\cite{sozeau2008-tc} to Haskell-style symbol overloading as in~\cite{wadler1996-hs}.
+% For this last application
+% the solution to a query provides the formal meaning of the overloaded symbol
+% and it is of paramount importance that this solution is unique.
+% A static check for this property is of particular
+% interest in the context of the platform of Rocq libraries where code developed
+% by different teams is combined together.
 
-As of today, Elpi comes equipped with a standard type checker~\cite{1992nadathur} but
-features no determinacy analisys. The literature provides
-many works on the subject~(among them \cite{1989Warren,1996Somogy,2011king}), but none
-% of these works
-can be applied to Elpi due to its higher-order nature.
-%, inherited from $\lambda$Prolog. %, 
-% and its non-standard notion of input.
+% As of today, Elpi comes equipped with a standard type checker~\cite{1992nadathur} but
+% features no determinacy analisys. The literature provides
+% many works on the subject~(among them \cite{1989Warren,1996Somogy,2011king}), but none
+% can be applied to Elpi due to its higher-order nature.
+
+
+
+We are interested in the static analysis of Elpi programs, particularly in
+verifying their determinacy. Elpi is a higher-order logic programming language,
+a dialect of \(\lambda\)Prolog, well suited for manipulating incomplete syntax
+trees with binders (see \cite{1991miller-pf, Miller_Nadathur_2012} and
+\cite{dunchev15lpar, TASSI_2019}).
+
+Elpi has been used as a meta language for the Rocq Prover (formerly known
+as the Coq proof assistant) for program and proof synthesis
+by \cite{tassi2018, tassi2019, tassi2023, cohen_et_al:LIPIcs.FSCD.2020.34}. More
+recently, it has also been employed as the target language for type-class
+resolution by \cite{fissore2023, fissore2024}.
+
+In Rocq, type-class resolution serves multiple purposes, ranging from automatic
+proof search (\cite{sozeau2008-tc}) to Haskell-style symbol overloading
+(\cite{wadler1996-hs}). In the latter case, the solution to a query determines
+the formal meaning of an overloaded symbol, making it crucial that this
+solution is unique. Ensuring this uniqueness through a static check is
+particularly relevant in the context of the Rocq library platform, where code
+developed by different teams is integrated.
+
+Currently, Elpi includes a standard type checker (see \cite{1992nadathur}) but lacks
+a determinacy analysis. While the literature offers numerous studies on this
+topic (e.g., \cite{1989Warren, 1996Somogy, 2011king}), none are directly
+applicable to Elpi due to its higher-order nature.
+
 
 \subsection{Examples of higher-order predicates and their signatures}\label{sec:examples}
 

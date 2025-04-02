@@ -116,7 +116,7 @@ We use the meaning of signatures to describe the key invariant of program:
 Since the program can be dynamically augmented by asserting clauses we need
 \checkk\ to preserve the invariant.
 
-\begin{lemma}[Invariant preservation]\marginpar{where is Gamma?}
+\begin{lemma}[Invariant preservation]
   $$\forall\, \Gamma\ \prog\ r, \iprog \land \checkClause{\ctx}{r} \Rightarrow \iprog[(\prog + r)]$$
   \label{th:0}
 \end{lemma}
