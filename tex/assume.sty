@@ -102,22 +102,39 @@
   \end{myRule}
 }
 
+% \newcommand{\ruleAssumeLam}{\ruleAssume{rule:assume-lam}{\lambda}}
+% \newcommand{\assumeLam}[1]{
+%   \begin{myRule}{#1}
+%     \AxiomC{\ensuremath{
+%         \text{\kIF{} } \func[_x'] \mySub \func[_x]
+%         \text{ \kTHEN{} } \assumeCmd{(\ctx + \{x \mapsto \func[_x']\})}{(\dtype{\func}{\func[_i]}{\func[_o]})}{t}{\ctx[']}
+%         \text{ \kELSE{} } \ctx['] = \ctx}}
+%     \RightLabelM{\ruleAssumeLam}
+%     \UnaryInfC{\assumeCmd{\ctx}{(\dtype{\func}{(\func[_x]::\func[_i])}{\func[_o]})}{(\lambda x:\func[_x'].t : \_)}{\ctx['] \bs \{x\}}}
+%   \end{myRule}
+% }
+
 \newcommand{\ruleAssumeLam}{\ruleAssume{rule:assume-lam}{\lambda}}
 \newcommand{\assumeLam}[1]{
   \begin{myRule}{#1}
     \AxiomC{\ensuremath{
-        \text{\kIF{} } \func[_x'] \mySub \func[_x]
-        \text{ \kTHEN{} } \assumeCmd{(\ctx + \{x \mapsto \func[_x']\})}{(\dtype{\func}{\func[_i]}{\func[_o]})}{t}{\ctx[']}
-        \text{ \kELSE{} } \ctx['] = \ctx}}
+        \text{\kIF{} } \vecL{\func[_i'] \mySub \func[_i]} \land \func['] \mySub \func
+        \text{ \kTHEN{} } 
+        \assumeCmd{(\ctx + \{\vecL{x \mapsto \func[_i]}\} % + \{\vecL{y \mapsto \maximize\ \func[_o]}\}
+            )}{\func}{t}{\ctx[']}
+        \text{ \kELSE{} } \ctx['] = \ctx
+        }}
     \RightLabelM{\ruleAssumeLam}
-    \UnaryInfC{\assumeCmd{\ctx}{(\dtype{\func}{(\func[_x]::\func[_i])}{\func[_o]})}{(\lambda x:\func[_x'].t)}{\ctx['] \bs \{x\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{(\dtype{\func}{\func[_i]}{\func[_o]})}{(\lambda \vecL{x:\func[_i']}.\lambda \vecL{y:\func[_o]}.t : \func['])}{\ctx['] \bs \{\vec{x} \vec{y}\}}}
   \end{myRule}
 }
+
+
 
 \newcommand{\assumeFig}{
   % \begin{subfigure}[b]{1\textwidth}
   \begin{figure}
-    \vspace{-2.1em}
+    % \vspace{-2.1em}
     \begin{framed}
 
       \centering
@@ -130,8 +147,9 @@
 
       % \assumeUnif{0.3}
 
-      \assumeLam{1}
       \assumeApp{1}
+
+      \assumeLam{1}
 
       \vspace{-1em}
       \caption{$\assume\ : \SIGN \to \TERM \to \ctx \to \ctx$}

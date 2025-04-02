@@ -7,54 +7,71 @@ make the predicate signatures of an existing code base more precise.
 
 The \mySub\ relation subsumes signature equality and
 extends the intuitive inclusion of mathematical functions
-into relations to the recursive nature of predicate signatures, and rejects the
-converse inclusion. 
-In the spirit of subtyping the input arguments of predicate signature
-are compared in a contravariant way. 
+into relations to the recursive nature of predicate signatures.
+% , and rejects the
+% converse inclusion. 
+%In the spirit of subtyping the input arguments of predicate signature
+%are compared in a contravariant way. 
 %
 \begin{equation}
-  f_1 \mySub f_2 =\ 
+  s_1 \mySub s_2 =\ 
   \begin{cases}
-   \ \bot                                                          & \text{if } f_1 = \dtype{\relI}{\_}{\_}\ \land\ f_2 = \dtype{\detI}{\_}{\_} \\
-    % (\forall i, a'_i \mySub a_i) \land (\forall j, b_j \mySub b'_j)      & \text{else if } f_1 = \detI\ a\ b \land f_2 = \detI\ a'\ b' \\
-    % (\forall i, a'_i \mySub c_i) \land (\forall j, b_j \mySub c_{|a|+j}) & \text{else if } f_1 = \detI\ a\ b \land f_2 = \relI\ c      \\
-    % \forall i, a_i \mySub b_i                                            & \text{else if } f_1 = \relI\ a\ \land f_2 = \relI\ b        \\
-    % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{else if } f_1 = [\detI\mid \relI]\ a\ b \land f_2 = [\detI\mid \relI]\ c\ d \\
+   \ \bot                                                          & \text{if } s_1 = \dtype{\relI}{\_}{\_}\ \land\ s_2 = \dtype{\detI}{\_}{\_} \\
+    % (\forall i, a'_i \mySub a_i) \land (\forall j, b_j \mySub b'_j)      & \text{else if } s_1 = \detI\ a\ b \land s_2 = \detI\ a'\ b' \\
+    % (\forall i, a'_i \mySub c_i) \land (\forall j, b_j \mySub c_{|a|+j}) & \text{else if } s_1 = \detI\ a\ b \land s_2 = \relI\ c      \\
+    % \forall i, a_i \mySub b_i                                            & \text{else if } s_1 = \relI\ a\ \land s_2 = \relI\ b        \\
+    % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{else if } s_1 = [\detI\mid \relI]\ a\ b \land s_2 = [\detI\mid \relI]\ c\ d \\
    \ (\forall i, c_i \mySub a_i)\ \land\ (\forall j, b_j \mySub d_j) &
     \!\!\!
-    \begin{array}{l} \text{if } f_1 = \dtype{\func}{a}{b}\ \land\ f_2 = \dtype{\func}{c}{d} \ \lor    \\
-     \ \ \  f_1 = \dtype{\detI}{a}{b}\ \land\ f_2 = \dtype{\relI}{c}{d} 
+    \begin{array}{l} \text{if } s_1 = \dtype{\func}{a}{b}\ \land\ s_2 = \dtype{\func}{c}{d} \ \lor    \\
+     \ \ \  s_1 = \dtype{\detI}{a}{b}\ \land\ s_2 = \dtype{\relI}{c}{d} 
     \end{array}    \\
-    % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } f_1 = \relI\ a\ b \land f_2 = \relI\ c\ d \\
-   \ \top                                                          & \text{if } f_1 = \expI\ \land\ f_2 = \expI
+    % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } s_1 = \relI\ a\ b \land s_2 = \relI\ c\ d \\
+   \ \top                                                          & \text{if } s_1 = \expI\ \land\ s_2 = \expI
   \end{cases}
-  \label{eq:sub-def}
+  \label{eq:sub-def}\nonumber
 \end{equation}
 
-The checking process performs a form of dataflow analysis:
-It stores the predicate
-signature of each variable in \ctx\ and uses it to verify whether the variable
-satisfies the precondition of a predicate call or not.
-Additionally, it may update the
-variable's signature to match the postcondition of
-the predicate call.
+The static checker performs a form of dataflow analysis by
+storing in the context \ctx the signature of each variable
+and updating it as it traverses the body of a clause.
+We suppose the context \ctx is pre-loaded with weak signatures
+for each variable: It is up to the determinacy analsysis to \emph{assume}
+or \emph{infer} stronger signatures.\\
+In our implementation the context is pre-loaded by the
+type-checker that traverses all terms, including higher-order variables in \VAR, and
+assigns to them the result of running the \maximize\ function
+on their declared signature.
+We define \minimize and \maximize mutually using a function $w$ parametrized by
+a determinacy marker $d$ (either \(\detI\) or \(\relI\)): 
+$w_\detI$ stands for \minimize while $w_\relI$ for \maximize.
+We use \( \overline{d} \) to denote the dual marker.
+%
+\begin{equation}
+  w_d\ s =\ 
+  \begin{cases}
+    \ \dtype{d}{(\map\ w_{\overline{d}}\ a)}{(\map\ w_d\ b)} & \text{if } s = \dtype{\_}{a}{b} \\
+    \ \expI                                                       & \text{if } s = \expI
+  \end{cases}
+  \label{eq:maximize}
+  \nonumber
+\end{equation}
 
-Updates use the dual operators \(\minT\) and \(\maxT\).  
-In their mutual definition below, we encode them thourgh the function \( f \),
-parameterized by the determinacy \( d \) (either \(\detI\) or \(\relI\)).
-Specifically, \( f_\detI \) represents \(\minT\), while \( f_\relI \)
-corresponds to \(\maxT\). We use \( \overline{d} \) to denote the negation of \(
-d \), which inverts its determinacy value. The definitions of these functions
-are as follows:  
+\noindent
+Context updates are based on the \(\minT\) and \(\maxT\) operators
+that we define mutually using a function $u$ parametrized by
+a determinacy marker $d$:
+\( u_\detI \) represents \(\minT\), while \( u_\relI \)
+corresponds to \(\maxT\).
 %
 %
 \begin{equation}
-  f_d\ s_1\ s_2 =\ 
+  u_d\ s_1\ s_2 =\ 
   \begin{cases}
     %\ \dtype{\detI}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})} & \text{if } s_k = \dtype{\relI}{a}{b}\ \land\ s_{3-k} = \dtype{\detI}{c}{d} \\
-    \ \dtype{d}{(\map\ f_{\overline{d}}\ \vecL{ac})}{(\map\ f_d\ \vecL{bd})} & \text{if } s_k = \dtype{\relI}{\vec a}{\vec b}\ \land\ s_{3-k} = \dtype{\detI}{\vec c}{\vec d} \\
+    \ \dtype{d}{(\map\ u_{\overline{d}}\ \vecL{ac})}{(\map\ u_d\ \vecL{bd})} & \text{if } s_k = \dtype{\relI}{\vec a}{\vec b}\ \land\ s_{3-k} = \dtype{\detI}{\vec c}{\vec d} \\
     %\ \dtype{D}{(\vecL{g\ a\ c})}{(\vecL{f\ b\ d})}     & \text{if } s_1 = \dtype{D}{a}{b}\ \land\ s_2 = \dtype{D}{c}{d}             \\
-    \ \dtype{\func}{(\map\ f_{\overline{d}}\ \vecL{ac})}{(\map\ f_d\ \vecL{bd})}     & \text{if } s_1 = \dtype{\func}{\vec a}{\vec b}\ \land\ s_2 = \dtype{\func}{\vec c}{\vec d}             \\
+    \ \dtype{\func}{(\map\ u_{\overline{d}}\ \vecL{ac})}{(\map\ u_d\ \vecL{bd})}     & \text{if } s_1 = \dtype{\func}{\vec a}{\vec b}\ \land\ s_2 = \dtype{\func}{\vec c}{\vec d}             \\
     % \relI\ (\vecL{g}\ a\ c)\ (\vecL{f}\ b\ d) & \text{if } s_1 = \relI\ a\ b \land s_2 = \relI\ c\ d \\
     \ \expI                                                     & \text{if } s_1 = \expI\ \land\ s_2 = \expI
   \end{cases}
@@ -63,58 +80,7 @@ are as follows:
 \end{equation}
 \vspace{0.1em}
 
-We assume each clause has been type-checked by an algorithm that
-traverses terms including variables in \X\ that
-represent predicates, e.g. the higher-order parameter of \elpiIn{map}.
-Since we want to keep type checking separated from determinacy checking,\todo{not sure}
-the former identifies \relI\ with \detI\ and in particular assigns
-to these variables the signature obtained by weakening their
-declared signature:
-It is up to the determinacy analsysis to assume or prove stronger signatures.
-The \maximize\ function is defined mutually with its
-dual \minimize. Similarly to the \minT and \maxT, we encode them with the
-function $f$ parametrized by a determinacy $d$:
-%
-% $$
-%   \minT\ f_1\ f_2 = \begin{cases}
-%     \maxT\ a'\ a \myTo \minT\ b\ b' & \text{if } f_1 = a \myTo b \land f_2 = a' \myTo b' \\
-%     f_1                             & \text{else if } f_1 \mySub f_2                     \\
-%     f_2                             & \text{otherwise}
-%   \end{cases}
-%   \label{eq:maximize}
-% \end{equation}
-% \begin{equation}
-%   \minimize\ f =
-%   \begin{cases}
-%     \dtype{\detI}{(\vecL{\maximize}\ a)}{(\vecL{\minimize}\ b)} & \text{if } f = \dtype{\_}{a}{b} \\
-%     \expI                                                       & \text{if } f = \expI
-%   \end{cases}
-% $$
-%
-% The main usage of the \minT\ and \maxT\ comes with the fact that unification is
-% possibile between variable with different determinacy annotation. For example,
-% let \elpiIn{get-det} and \elpiIn{get-rel} be two relations returning
-% respectively a function and a relation (both with zero arguments). In a query like \elpiIn{get-det X,
-%   det-rel Y, X = Y} we have three goals to solve, the first allows to label
-% \elpiIn{X} with the tag \detI, the second allows to label \elpiIn{Y} with
-% the tag \relI. The third goal is interesting since we are unifying two\todo{not true if output are flex}
-% predicates with different determinacy labels. Now, the only way that this unificaton
-% succeeds at runtime is that \elpiIn{Y} is a function.
-% Said in another way, a unification may change the labels of the two terms being
-% unified. In the previous example, \detlab\ \elpiIn{X} $=$ \detlab\ \elpiIn{Y} $=$
-% \minT\ $($\detlab\ \elpiIn{X}$)$ $($\detlab\ \elpiIn{Y}$)$.
-%
-% finally when a predcate is miscalled we need a way to deal with its post conditions
-%
-%
-\begin{equation}
-  f_d\ s =\ 
-  \begin{cases}
-    \ \dtype{d}{(\map\ f_{\overline{d}}\ a)}{(\map\ f_d\ b)} & \text{if } s = \dtype{\_}{a}{b} \\
-    \ \expI                                                       & \text{if } s = \expI
-  \end{cases}
-  \label{eq:maximize}
-\end{equation}
+
 % \begin{equation}
 %   \minimize\ f_1 =
 %   \begin{cases}
@@ -200,33 +166,72 @@ function $f$ parametrized by a determinacy $d$:
 % has the expected determinacy, which is crucial since outputs can be used as new
 % queries in the program.
 %
-\inferFig
 %
+%
+
+\noindent
+The static checker is made of three procedures: \assume\ (\cref{fig:det-assume}),
+\infer\ (\cref{fig:det-inference}) and \checkk\ (\cref{fig:static-check}).
+
 \assumeFig
-%
-\paragraph{The static checker} We can now exibit the static checker.
-The first rules we present allow to \infer\ (\cref{fig:det-inference}) or
-\assume\ (\cref{fig:det-assume}) the signature of a term and finally to
-\checkk\ (\cref{fig:static-check}) if it matches (via \mySub) the expected signature.
-%
-% $$\infer : \ctx \to (\A + \T) \to \func \times \B$$
-% $$\dapp : \ctx \to \vecL{\func} \to \vecL{\func} \to \vecL{tm} \to \B \to \func \times \func \times \B$$
 
-% TODO: rule for lambda assumes lambdas are ordered according to
-% the convetion of input first and that their mode is somehow given.
-% We have an heuristic in the type checker for that\todo{Davide?}.
+\paragraph{The \assume\ procedure} strenghtens the signature
+of variables to a given signature by updating the context via the $\min$ operator.
+Since the syntax allows for arbitrary terms in predicate postion,
+\assume traverses terms recursively until it finds the variables \ref{rule:assume-hd}.
+When the term represents data (e.g. it is of type \expI) the context is left
+untouched (see rules \ref{rule:assume-cut}, \ref{rule:assume-expr} and \ref{rule:assume-exprl}).
+Rule \ref{rule:assume-app} moves under a predicate call if the signature of
+the predicate is included in the given one.
+Rule \ref{rule:assume-lam} handles predicate calls where arguments are
+re-arranged.
 
-% TODO: rule for app handles partial application like
-% the \elpiIn{commit likes V} in the intro and check if
-% sigs are respected.
+Here an example of a case where assume does not update the context
+\begin{elpicode}
+% TODO Davide esempio di una assume su predicato che non matcha la D data
+% mi pare che sulla testa della clausola non abbia senso, potrebbe essere un errore
+pred silly i:(func). silly P :- P; P.
+id F (silly G). %  G is not functional
+\end{elpicode}
 
-The \infer\ procedure 
+
+% performs a fold over the input arguments of the
+% predicate being called, under the assumption that the determinacy of the
+% predicate is smaller than the received one.  
+
+% . This strengthening is made
+% by exploring a term $t$ together with an assumed determinacy $\func$.
+% If a variable is ever encountered in $t$ and the assumed determinacy
+% is $\func$, then its mapping in \ctx is set to the minimum between
+% its current signature in \ctx\ and \func.
+
+% % The intuition is given by definition~ref{def:sem}: when the
+% % preconditions are satisfied we know the post conditions hold. 
+% The use of \minT\ is justified by the fact that \assume\ represents runtime
+% unification. For unification to succeed, the variable's signature must be the
+% strongest between the one in the context and the expected one. For example,
+% if \elpiIn{X = Y, X = commit likes F} with $\ctx\ Y = \relI$. 
+
+% The rules \ref{rule:assume-cut}, \ref{rule:assume-expr} and \ref{rule:assume-exprl} are intuitive, as
+% they do not require any modifications to the context, for the two last cases
+% there is no need to make assumption on expressions, since expressions
+% play no role in the checker (only propositional terms do). In rules
+% \ref{rule:assume-lam}, we extend the context by
+% mapping the binder to its signature and making a recursive call to \assume
+% Finally, \ref{rule:assume-app} performs a fold over the input arguments of the
+% predicate being called, under the assumption that the determinacy of the
+% predicate is smaller than the received one.  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
+
+\inferFig
+
+\paragraph{The \infer\ procedure}
 %is responsible for inferring the signature of a term. It
 returns a pair containing the signature of the given
 a term and a boolean value indicating whether
 it contains miscalled predicates.
-%  Since predicate
-% calls are part of the term syntax, they can also be miscalled.  
+
 
 The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK} and \ref{rule:inferKL}) are
 straightforward. %Rule \ref{rule:infer-piimpl} introduces a new mapping in the
@@ -274,29 +279,6 @@ has the inferred signature
 % 
 % $$\assume : \func \to (\A + \T) \to \ctx \to \ctx$$  
 
-The \assume\ procedure is meant to strenghten the signature
-of variables occurring in a given term. This strengthening is made
-by exploring a term $t$ together with an assumed determinacy $\func$.
-If a variable is ever encountered in $t$ and the assumed determinacy
-is $\func$, then its mapping in \ctx is set to the minimum between
-its current signature in \ctx\ and \func.
-
-% The intuition is given by definition~ref{def:sem}: when the
-% preconditions are satisfied we know the post conditions hold. 
-The use of \minT\ is justified by the fact that \assume\ represents runtime
-unification. For unification to succeed, the variable's signature must be the
-strongest between the one in the context and the expected one. For example,
-if \elpiIn{X = Y, X = commit likes F} with $\ctx\ Y = \relI$. 
-
-The rules \ref{rule:assume-cut}, \ref{rule:assume-expr} and \ref{rule:assume-exprl} are intuitive, as
-they do not require any modifications to the context, for the two last cases
-there is no need to make assumption on expressions, since expressions
-play no role in the checker (only propositional terms do). In rules
-\ref{rule:assume-lam}, we extend the context by
-mapping the binder to its signature and making a recursive call to \assume
-Finally, \ref{rule:assume-app} performs a fold over the input arguments of the
-predicate being called, under the assumption that the determinacy of the
-predicate is smaller than the received one.  
 % 
 % $$\checkk : \A \to (\ctx \times \F) \to (\ctx \times \F)$$  
 

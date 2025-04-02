@@ -40,12 +40,12 @@ follows the $\lambda$Prolog convention of
 writing application with no parentheses: \elpiIn{map F L R}
 should be understood as the atom \elpiIn{map(F, L, R)}.
 
-\begin{elpicode}
+\begin{elpicodeln}[1]
 pred map i:(pred i:A, o:B), i:list A, o:list B. % basic signature
 func map   (func   A -> B),   list A -> list B. % better signature (this paper)
 map _ [] [].                                    % code  
 map F [X|XS] [Y|YS] :- F X Y, map F XS YS.      % code
-\end{elpicode}
+\end{elpicodeln}
 
 The basic predicate signature says that \elpiIn{map} has two input arguments
 and one output. The first argument is a predicate with an inupt
@@ -67,7 +67,7 @@ In the examples below we give three (alternative) one-line
 implementations of a \elpiIn{meal} predicate building a list of dishes
 to satisfy the guests.
 
-\begin{elpicodeln}
+\begin{elpicodeln}[5]
 pred likes i:guest, o:dish.
 ... % the same guest may like more than one dish ...
 func likes! guest -> dish.
@@ -78,12 +78,12 @@ meal Gs M :- map likes Gs M, !.   % accepted: alternatives are cut
 meal Gs M :- map likes Gs M.      % rejected: meal is not a function
 \end{elpicodeln}
 
-\noindent The first implementation given at line 6 is accepted since \elpiIn{likes!} is a
+\noindent The first implementation given at line 10 is accepted since \elpiIn{likes!} is a
 function, hence also \elpiIn{map likes! Gs M} is.
 The second implementation miscalls \elpiIn{map} by passing the relation
 \elpiIn{likes}, but then commits to the first solution,
 hence it behaves like as function.
-The third one, at line 8, is rejected since it miscalls \elpiIn{map} without
+The third one, at line 12, is rejected since it miscalls \elpiIn{map} without
 compensating for it.
 
 The hard-cut operator of Elpi lets one turn a relation into a function
@@ -105,7 +105,7 @@ meal Gs M :- map (once likes) Gs M. % accepted: map is well called
 can be predicates. The determinacy analysis we present tracks their
 functional status.
     
-\begin{elpicodeln}
+\begin{elpicodeln}[13]
 func commit (pred i:A, o:B) -> (func A -> B).          
 commit P (once P).                       % wraps a predicate P into once
 func id (func A -> B) -> (func A -> B).
@@ -115,10 +115,10 @@ meal Gs M :- id likes! F, map F Gs M.    % accepted: F is a function
 meal Gs M :- id likes F, map F Gs M.     % rejected: id miscalled => F relation
 \end{elpicodeln}
 
-\noindent In line 5 the output of \elpiIn{commit} is a function \elpiIn{F} that
+\noindent In line 17 the output of \elpiIn{commit} is a function \elpiIn{F} that
 in turn makes \elpiIn{map F Gs M} produce a single value for \elpiIn{M}.
 Moreover \elpiIn{commit} is a function, so the whole body of \elpiIn{meal} also
-is. The example at line 7 is rejected since \elpiIn{id} is miscalled: the outputs
+is. The example at line 19 is rejected since \elpiIn{id} is miscalled: the outputs
 are considered functions only if the signature of the inputs is respected.
 
 The domain where Elpi really shines is the manipulation of higher-order data
@@ -128,7 +128,7 @@ Such data is pervasive in interactive provers based on type theory
 such as Rocq. In the paradigmatic example below \elpiIn{tm} is
 the data type for $\lambda$-terms.
 
-\begin{elpicodeln}
+\begin{elpicodeln}[20]
 kind tm type.                              % type of $\lambda$-terms in HOAS form
 type app tm -> tm -> tm.                   %  - binary application
 type lam (tm -> tm) -> tm.                 %  - $\lambda$-abstraction
@@ -141,7 +141,7 @@ whd X X.
 \end{elpicodeln}
 
 The \elpiIn{copy} predicate performs a \emph{deep} copy of a term. The interesting
-code is at line 6 where we cross the binder in \elpiIn{F} by performing two
+code is at line 25 where we cross the binder in \elpiIn{F} by performing two
 operations:
 1) create a fresh symbol \elpiIn{x} via the \elpiIn{pi} operator, and
 2) assert a new clause to copy \elpiIn{x} to itself via the \elpiIn{=>} operator.

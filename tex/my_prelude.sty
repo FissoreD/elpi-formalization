@@ -1,12 +1,12 @@
 \ifdefined\istwentytwentyfive
   \usepackage[newfloat]{minted}
   \newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}{elpi.py:ElpiLexer}}{\end{myminted}}
-  \newenvironment{elpicodeln}{\VerbatimEnvironment\begin{mymintedln}{elpi.py:ElpiLexer}}{\end{mymintedln}}
+  \newenvironment{elpicodeln}[1][1]{\VerbatimEnvironment\begin{mymintedln}{#1}{elpi.py:ElpiLexer}}{\end{mymintedln}}
   \newcommand{\elpiIn}[1]{\mintinline[escapeinside=~~]{elpi.py:ElpiLexer}{#1}}
 \else
   \usepackage[newfloat,outputdir=.aux]{minted}
   \newenvironment{elpicode}{\VerbatimEnvironment\begin{myminted}{'elpi.py:ElpiLexer -x'}}{\end{myminted}}
-  \newenvironment{elpicodeln}{\VerbatimEnvironment\begin{mymintedln}{'elpi.py:ElpiLexer -x'}}{\end{mymintedln}}
+  \newenvironment{elpicodeln}[1][1]{\VerbatimEnvironment\begin{mymintedln}{#1}{'elpi.py:ElpiLexer -x'}}{\end{mymintedln}}
   \newcommand{\elpiIn}[1]{\mintinline[escapeinside=~~]{'elpi.py:ElpiLexer -x'}{#1}}
 \fi
 
@@ -128,10 +128,10 @@
   \end{minted}%
   \vspace{0.2em}%
 }
-\newenvironment{mymintedln}[2][~~]{
+\newenvironment{mymintedln}[2]{
   \vspace{0.2em}%
   \VerbatimEnvironment
-  \begin{minted}[linenos,fontsize=\small,autogobble,escapeinside=#1,mathescape=true,frame=leftline,framerule=0pt,framesep=1em]{#2}%
+  \begin{minted}[linenos,firstnumber=#1,fontsize=\small,autogobble,escapeinside=~~,mathescape=true,frame=leftline,framerule=0pt,framesep=1em]{#2}%
 }{
   \end{minted}%
   \vspace{0.2em}%
