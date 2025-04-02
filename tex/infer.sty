@@ -87,7 +87,7 @@
 % \newcommand{\ruleInferAppRef}[2]{\customlabel{#1}{\ensuremath{I_{#2}}}}
 \newcommand{\ruleInferAppRef}[2]{\ruleInfer{#1}{#2}}
 % dappCmd[ctx][detInput][detOutput][args][goodCall][res]
-\newcommand{\dappCmd}[6]{\ensuremath{\dapp\ #1\ #2\ #3\ #4\ #5 \arr #6}}
+\newcommand{\dappCmd}[6]{\ensuremath{\dapp\ #1\ #2\ #3\ #4\ #5 = #6}}
 \newcommand{\inferAppEmptyRef}{\ruleInferAppRef{rule:inferAppEmpty}{\EmptyList}}
 \newcommand{\inferAppEmpty}[1]{
   \begin{myRule}{#1}
