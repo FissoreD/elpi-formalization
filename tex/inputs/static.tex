@@ -31,13 +31,11 @@ are compared in a contravariant way.
   % \label{eq:sub-def}
 \end{equation*}
 
-The checking process performs a form of dataflow analysis:
-It stores the predicate
-signature of each variable in \ctx\ and uses it to verify whether the variable
-satisfies the precondition of a predicate call or not.
-Additionally, it may update the
-variable's signature to match the postcondition of
-the predicate call.
+The checking process operates as a form of dataflow analysis: it maintains the
+predicate signature of each variable in \ctx\ and uses it to determine whether
+the variable meets the precondition of a predicate call. Additionally, it can
+update the variable's signature to align with the postcondition of the predicate
+call.
 
 Updates use the dual operators \(\minT\) and \(\maxT\).  
 In their mutual definition below, we encode them thourgh the function \( f \),
