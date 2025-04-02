@@ -237,37 +237,41 @@ it contains miscalled predicates.
 
 
 The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK} and \ref{rule:inferKL}) are
-straightforward. %Rule \ref{rule:infer-piimpl} introduces a new mapping in the
-% context, associating the binder with its signature and performing a recursive
-% call to \infer. 
-$\lambda$-abstractions are handled by \ref{rule:infer-lam}. This rules
-transforms the $lambda$-term in a clause for a fresh clause which is checked
-thanks to \checkc (\ref{rule:check-clause}). This checking phase is needed to
-ensure that the term under the spine of lambda is functional if it should be and
-that the outputs becomes terms with the expected signature. 
-% As an example,
-% consider the query \elpiIn{X = (x\y\ commit likes y), map X Y Z}. Since
-% \elpiIn{X} is passed in the input of \elpiIn{map}, we need to be sure that its
-% signature reflects expected determinacy, that is 
-% \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{A}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{B}~}. 
-% To have
-% this guarantee, we check a rule with fresh predicate name \elpiIn{fresh_name x y
-% :- commit likes y} with \elpiIn{func fresh_name A -> B}.
-
-This strict verification is necessary because anonymous functions can appear as
-the head of atoms and its behavior should match the determinacy specified in the
-signature. For example: \elpiIn{X = (x:func\y:func\ (commit x y):func), X like F, F paul Z}.
+straightforward. 
 
 The rule \ref{rule:infer-app}, combined with the \dapp\ procedure,
 handles calls when the head is a variable or a predicate
 and accounts both for full and partial applications. \dapp\ aims essentially
 to verify that the inferred signature of the inputs of a term respect the
 expected signature. If it is not the case, it returns $\bot$.
-
 For example given \elpiIn{func once (pred i:A, o:B), A -> B} as in
 the introduction, the partial application \elpiIn{(once likes)}
 has the inferred signature
 \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{guest}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{dish}~}.
+
+
+%Rule \ref{rule:infer-piimpl} introduces a new mapping in the
+% context, associating the binder with its signature and performing a recursive
+% call to \infer. 
+Anonymous clauses are handled by rule \ref{rule:infer-lam} that crafts
+a fresh predicate name $p$ so to reuse the code \checkc\ to check regular clauses (see \cref{fig:static-check}).
+% . This checking phase is needed to
+% ensure that the term under the spine of lambda is functional if it should be and
+% that the outputs becomes terms with the expected signature. 
+% % As an example,
+% % consider the query \elpiIn{X = (x\y\ commit likes y), map X Y Z}. Since
+% % \elpiIn{X} is passed in the input of \elpiIn{map}, we need to be sure that its
+% % signature reflects expected determinacy, that is 
+% % \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{A}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{B}~}. 
+% % To have
+% % this guarantee, we check a rule with fresh predicate name \elpiIn{fresh_name x y
+% % :- commit likes y} with \elpiIn{func fresh_name A -> B}.
+
+% This strict verification is necessary because anonymous functions can appear as
+% the head of atoms and its behavior should match the determinacy specified in the
+% signature. For example: \elpiIn{X = (x:func\y:func\ (commit x y):func), X like F, F paul Z}.
+
+
 %
 % $t =\ $\elpiIn{map likes!}. Its inferred
 % signature is obtained by calling \ref{rule:infer-app}. The signature of
@@ -287,43 +291,98 @@ has the inferred signature
 
 \checkTermFig  
 
-\paragraph{The \checkk\ procedure} (in \cref{fig:static-check}) attempts to prove, in the
-sense of~\cref{def:sem}, the determinacy of an atom by verifying the
-preconditions -- i.e., whether the input argument can be inferred to have a
-determinacy \mySub consistent with the expected signature. If the preconditions
-are satisfied, the procedure assumes new knowledge for the postconditions,
-meaning they are expected to maintain the prescribed determinacy. \checkk also
-is charged to update the determinacy of the atom wrt a given determinacy
-$\func$. In a way, it tries to track what is the behavior (relational or
-deterministic) after the exectution of the program. Note that in the case of
-\ref{rule:check-cut}, we set the determinacy to \detI. In the case the \piimpl
-operator, we add the new clause in the program and check that it is in
-mutual-exclusion (\mutExclAll, see \cref{def:mut-excl} below) wrt the other
-clause in the current program. 
+\paragraph{The \checkk\ procedure} is in charge of veryfying the determinacy of
+an atom.
+A cut is clearly determinate (rule \ref{rule:check-cut}).
+A predicate call is determinate if the the premises of its signature
+are met, i.e. if \infer\ returns $\top$ on all input arguments and
+infers signatures that are stronger than the required ones (rule \ref{rule:check-callOK}).
+If it is the case the context is also updated by \assume, the signature of
+output arguments is strenghtened. When a predicate is miscalled
+(rule \ref{rule:check-callKO}) it is considered to be relational and the context
+is not updated.
+
+Rule \ref{rule:check-piimpl} applies when the atom is the assertion of a new
+clause (for a predicate $p$).
+
+The procedure \checkc\ processes the head and body of the clause as follows.
+It \assume{}s all the inputs arguments in the head validate the declared signature;
+then it \checkk{}s all atoms in the body; and finally \infer{}s all the
+output arguments in the head. It concludes by veryfying that the inferred
+signature for the body and the outputs match the declared one.
+It also checks that the clause does not overlap with an existing one.
+
+% validates a clause by ensuring that its input respects
+% the signature of the implemented predicate. It then verifies the list of
+% premises, ensuring that the context is updated correctly according to the flow
+% of variables in input and output positions while maintaining the functionality
+% of the body. The clause is validated if it its output are inferred to have a 
+% determinacy \mySub then the one in the signature. The same test is done
+% with the determinacy of the body with the expected.
+
+
+% The case the \piimpl
+% operator, we add the new clause in the program and check that it is in
+% mutual-exclusion (\mutExclAll, see \cref{def:mut-excl} below) wrt the other
+% clause in the current program. 
+
+
+% attempts to prove, in the
+% sense of~\cref{def:sem}, the determinacy of an atom by verifying the
+% preconditions -- i.e., whether the input argument can be inferred to have a
+% determinacy \mySub consistent with the expected signature. If the preconditions
+% are satisfied, the procedure assumes new knowledge for the postconditions,
+% meaning they are expected to maintain the prescribed determinacy. \checkk also
+% is charged to update the determinacy of the atom wrt a given determinacy
+% $\func$. In a way, it tries to track what is the behavior (relational or
+% deterministic) after the exectution of the program. Note that in the case of
+% \ref{rule:check-cut}, we set the determinacy to \detI. In the case the \piimpl
+% operator, we add the new clause in the program and check that it is in
+% mutual-exclusion (\mutExclAll, see \cref{def:mut-excl} below) wrt the other
+% clause in the current program. 
 
 \begin{definition}[Mutual exclusion \mutExclAll]
-  Given a program \prog and a clause $r = \clauseCmd{p}{\vecL{t}}{\vecL{bs}}$,
-  $\mutExclAll\ \prog\ r$ holds iff there is a \cut in the body of $r$ or forall
-  clauses $r' = \clauseCmd{p}{\vecL{t'}}{\vecL{bs'}}$ declared after $r$ in
-  \prog, there exists an input position $d$ discriminating them, i.e. 
-  $\forall \subst, \unifyCmd{t_d}{t_d'}{\subst}{\bot}$
+  Given a program \prog and a clause $r = \clauseCmd{p}{\vecL{t}}{\vecL{bs}}$
+  where $\ctx\ \pred = \dtype{\detI}{i_1 \ldots i_k}{\_}$, we say that
+  $\mutExclAll\ \prog\ r$ holds iff one of the following conditions
+  holds:\\
+  a) $\cut \in \vecL{bs}$\\
+  b) $\forall r' = (\clauseCmd{p}{\vecL{t'}}{\_}) \in \prog$
+     there exists a $d \leq k$ such that $\lnot \exists\ \subst\ s.t.\ \unifyCmd{t_d}{t'_d}{\EmptySubst}{\subst}$ % \land \subst \neq \bot$
+  % c) $\forall r' = (\clauseCmd{p}{\vecL{t'}}{\_}) \in \prog$ $\bigwedge \vecL{t_i = x} \bigwedge \vecL{t'_i \not = X}$.
   \label{def:mut-excl}
 \end{definition}
 
-\ref{rule:check-callOK} and \ref{rule:check-callKO} deals
-with term applications, and if the terms has valid inputs, then the output are
-assumed to have the expected signature, otherwise, nothing can be deduced on the
-output and the execution of the atom becomes relational.
+Case a) is justified by the fact that \ref{rule:piimpl} gives precedence to the
+newly asserted clause, hence the hard cut in its body discards all other clayses.
+Case b) accounts for mutually exclusive heads.
+We recall that \ref{rule:piimpl} generates a fresh symbol for the
+\elpiIn{pi} quantifid variable.
+Usually (see for example~\cite{1989Warren,1996Somogy}) static mode checking
+plays a crucial role in most determinacy analsys algorithms: two mutually
+exclusive heads may still unify with with the same query if it is flexible.
+By tracking the flow of ground terms from the query to every predicate call
+a mode checker can rule out this problematic situation.
+However, since Elpi performs matching
+rather than full unification on input arguments, the groundness condition is not
+necessary.
 
-The \checkc\ procedure validates a clause by ensuring that its input respects
-the signature of the implemented predicate. It then verifies the list of
-premises, ensuring that the context is updated correctly according to the flow
-of variables in input and output positions while maintaining the functionality
-of the body. The clause is validated if it its output are inferred to have a 
-determinacy \mySub then the one in the signature. The same test is done
-with the determinacy of the body with the expected.
 
-\subsection{Inference and Assumptions only on terms in input position}
+% \ref{rule:check-callOK} and \ref{rule:check-callKO} deals
+% with term applications, and if the terms has valid inputs, then the output are
+% assumed to have the expected signature, otherwise, nothing can be deduced on the
+% output and the execution of the atom becomes relational.
+
+% The \checkc\ procedure validates a clause by ensuring that its input respects
+% the signature of the implemented predicate. It then verifies the list of
+% premises, ensuring that the context is updated correctly according to the flow
+% of variables in input and output positions while maintaining the functionality
+% of the body. The clause is validated if it its output are inferred to have a 
+% determinacy \mySub then the one in the signature. The same test is done
+% with the determinacy of the body with the expected.
+
+\paragraph{Examples}
+  %Inference and Assumptions only on terms in input position}
 
 We aim to clarify why the \infer and \assume routines only process input
 arguments. Inference is applied to atoms in negative positions -- i.e., atoms

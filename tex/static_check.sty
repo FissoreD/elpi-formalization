@@ -13,7 +13,8 @@
   \begin{myRule}{#1}
     % Clause
     \AxiomC{
-      \stackanchor
+      \Shortstack{
+      { \ensuremath{\mutExclAll\ \prog\ (\clauseCmd{p}{\vecL{t}}{\vecL{bs}})} }
       {
         \ensuremath{
           \ctx\ p = \dtype{\func}{\func[_i]}{\func[_o]} 
@@ -27,6 +28,7 @@
           \quad \map\ \inferCmdArr[1]{\ctx['']}{\vecL{t_o}}{\vecL{(\func[_o'],\top)}}
           \qquad\qquad\quad\ \vecL{\func[_o'] \mySub \func[_o]}}
         }
+      }
     }
     \RightLabelM{\ruleCheckClause}
     \UnaryInfC{\checkClause{\ctx}{(\clauseCmd{p}{\vecL{t}}{\vecL{bs}})}}
@@ -76,11 +78,10 @@
 \newcommand{\ruleCheckPiImplM}[1]{
   \begin{myRule}{#1}
     % PiImpl
-    \AxiomC{\stackanchor
-      { $\qquad\qquad\qquad\qquad\qquad\checkClause{(\ctx + \{x \mapsto \expI\})}{r}$}
-      { $\mutExclAll\ \prog\ x\ r\qquad$ \checkCmd[(\prog + r)]{\ctx + \{x \mapsto \expI\}}{\func}{t}{\ctx[']}{\func[']} } }
+    \AxiomC{ $\checkClause{(\ctx + \{x \mapsto \expI\})}{r}$ }
+    \AxiomC{ \!\!\!\checkCmd[(\prog + r)]{\ctx + \{x \mapsto \expI\}}{\func}{t}{\ctx[']}{\func[']} } 
     \RightLabelM{\ruleCheckPiImpl}
-    \UnaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[\expI]{x}{r}{t})}{\ctx[']\bs \{x\}}{\func[']}}
+    \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[\expI]{x}{r}{t})}{\ctx[']\bs \{x\}}{\func[']}}
   \end{myRule}
 }
 
@@ -169,21 +170,21 @@
 }
 
 \newcommand{\checkTermFig}{
-  \begin{figure}
+  \begin{figure}[b]
     \begin{framed}
       \centering
 
       \ruleCheckCutM{.45}
 
       % \ruleCheckPiM{.5}
-      \ruleCheckPiImplM{1}
-
+      
       % \ruleCheckUnifM{1}
       % \ruleCheckUnifFailM{0.52}
-
+      
       % \ruleCheckMatchM{.7}
       \ruleCheckCallM{1}
       \ruleCheckCallFailM{1}
+      \ruleCheckPiImplM{1}
 
       %     \caption{\checkk\ relation}
       %     \label{fig:static-check-term}
