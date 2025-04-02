@@ -323,9 +323,9 @@ mutual-exclusion (\mutExclAll, see \cref{def:mut-excl} below) wrt the other
 clause in the current program. 
 
 \begin{definition}[Mutual exclusion \mutExclAll]
-  Given a program \prog and a clause $r = \clauseCmd{p}{\vecL{t}}{\vec{bs}}$,
+  Given a program \prog and a clause $r = \clauseCmd{p}{\vecL{t}}{\vecL{bs}}$,
   $\mutExclAll\ \prog\ r$ holds iff there is a \cut in the body of $r$ or forall
-  clauses $r' = \clauseCmd{p}{\vecL{t'}}{\vec{bs'}}$ declared after $r$ in
+  clauses $r' = \clauseCmd{p}{\vecL{t'}}{\vecL{bs'}}$ declared after $r$ in
   \prog, there exists an input position $d$ discriminating them, i.e. 
   $\forall \subst, \unifyCmd{t_d}{t_d'}{\subst}{\bot}$
   \label{def:mut-excl}
