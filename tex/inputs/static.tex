@@ -189,13 +189,24 @@ the predicate is included in the given one.
 Rule \ref{rule:assume-lam} handles predicate calls where arguments are
 re-arranged.
 
-Here an example of a case where assume does not update the context
+% Here an example of a case where assume does not update the context
+
+% \begin{elpicode}
+% % TODO Davide esempio di una assume su predicato che non matcha la D data
+% % mi pare che sulla testa della clausola non abbia senso, potrebbe essere un errore
+% pred silly i:(func). silly P :- P; P.
+% id F (silly G). %  G is not functional
+% \end{elpicode}
+As an example, consider a predicate compose with the following signature
 \begin{elpicode}
-% TODO Davide esempio di una assume su predicato che non matcha la D data
-% mi pare che sulla testa della clausola non abbia senso, potrebbe essere un errore
-pred silly i:(func). silly P :- P; P.
-id F (silly G). %  G is not functional
+  func compose (func A -> B), (func B -> C) -> (func A -> C)
 \end{elpicode}
+
+\noindent which takes two binary functions and returns a new function which is
+their composition. We may wish to assume that \elpiIn{compose likes X Y} is a
+function. Since the first argument of compose has signature
+$\dtype{\relI}{\expI}{\expI}\not\mySub \dtype{\detI}{\expI}{\expI}$, then not
+assumption is done on the variable \elpiIn{X}.
 
 
 % performs a fold over the input arguments of the
