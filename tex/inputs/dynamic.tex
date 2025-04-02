@@ -77,8 +77,8 @@ $t$ is \ground.
     \CLAUSE & ::= \clauseCmd{\PRED}{\vecL{\TERM}}{\vecL{\ATOM}} & \mathrm{clause} \\
     \F & ::= \detI \mid \relI & \mathrm{determinacy} \\
     % \V & ::= \mathrm{A}, \mathrm{B}, \ldots & \mathrm{type\ variable} \\
-    \SIGN & ::= \F\ \vecL{\TYPE} \funsep \vecL{\TYPE} & \mathrm{predicate\ signature} \\
-    \BASE & ::= \expI \mid \F & \mathrm{base\ determinacy} \\
+    \SIGN & ::= \F\ \vecL{\TYPE} \funsep \vecL{\TYPE} & \mathrm{determinacy\ signature} \\
+    \BASE & ::= \expI \mid \F & \mathrm{base\ type} \\
     \TYPE   & ::= \BASE \mid \SIGN & \mathrm{type} 
   \end{array}
   $$
@@ -189,7 +189,7 @@ i.e. $h$ has the histest priority in the program.
     %\underbrace{
       \big[(\prog, g, a) \mid g \in \vecL{g}\big]
     %}_{\mathrm{premises}} @ ~ gl
-    \ \kIF\ \mathcal{H}(\vecL{tu}, \subst) = \subst['] \not= \bot,
+    \ \kIF\ \mathcal{H}(\vecL{tu}, \subst) = \subst['] \not= \bot
     %\Big)
     %\bigg)
     ~\bigg\rvert~

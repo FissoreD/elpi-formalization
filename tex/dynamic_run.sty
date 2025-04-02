@@ -102,10 +102,10 @@
 
 \newcommand{\ruleCallBeta}[1]{
   \begin{myRule}{#1}
-    \AxiomC{$\subst (\X\ \vecL{t}) =_{\beta\eta} \pred\ \vecL{u}$}
+    \AxiomC{$\subst (X\ \vecL{t}) =_{\beta\eta} \pred\ \vecL{u}$}
     \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\pred\ \vecL{u}}{a}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
     \RightLabelM{\ruleBeta}
-    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(\X\ \vecL{t})}{a}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
+    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(X\ \vecL{t})}{a}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
   \end{myRule}
 }
 
