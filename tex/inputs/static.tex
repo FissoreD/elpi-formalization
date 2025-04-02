@@ -274,7 +274,7 @@ has the inferred signature
 % 
 % $$\assume : \func \to (\A + \T) \to \ctx \to \ctx$$  
 
-The \assume\ procedure is meant to strenghten the signature\todo{role of input}
+The \assume\ procedure is meant to strenghten the signature
 of variables occurring in a given term. This strengthening is made
 by exploring a term $t$ together with an assumed determinacy $\func$.
 If a variable is ever encountered in $t$ and the assumed determinacy
@@ -357,8 +357,8 @@ the following example:
   p (id likes! Y).
 \end{elpicode}
 
-The output of \elpiIn{p} is a function. Therefore, we must verify that the
-inferred signatuor of \elpiIn{id likes! _} is also a function. This holds
+The \textit{output} of \elpiIn{p} is a function. Therefore, we must verify that
+the inferred signature of \elpiIn{id likes! _} is also a function. This holds
 because \elpiIn{id} qualifies as a function when its first argument is a binary
 function, and indeed, \elpiIn{likes!} is a binary function.  
 
