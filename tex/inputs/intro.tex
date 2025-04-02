@@ -115,17 +115,17 @@ behavior into the \elpiIn{once} predicate. Its signature
 states that the higher-order argument \elpiIn{P} can be any predicate, not
 necessarily a function, but still \elpiIn{once P} acts as a function.
 
-\begin{elpicode}
+\begin{elpicodeln}[13]
 func once (pred i:A, o:B), A -> B.
 once P X R :- P X R, !.
 meal Gs M :- map (once likes) Gs M. % accepted: map is well called
-\end{elpicode}
+\end{elpicodeln}
 
 \noindent Not only the inputs, but also the outputs of predicates
 can be predicates. The determinacy analysis we present tracks their
 functional status.
     
-\begin{elpicodeln}[13]
+\begin{elpicodeln}[16]
 func commit (pred i:A, o:B) -> (func A -> B).          
 commit P (once P).                       % wraps a predicate P into once
 func id (func A -> B) -> (func A -> B).
@@ -135,10 +135,10 @@ meal Gs M :- id likes! F, map F Gs M.    % accepted: F is a function
 meal Gs M :- id likes F, map F Gs M.     % rejected: id miscalled => F relation
 \end{elpicodeln}
 
-\noindent In line 17 the output of \elpiIn{commit} is a function \elpiIn{F} that
+\noindent In line 20 the output of \elpiIn{commit} is a function \elpiIn{F} that
 in turn makes \elpiIn{map F Gs M} produce a single value for \elpiIn{M}.
 Moreover \elpiIn{commit} is a function, so the whole body of \elpiIn{meal} also
-is. The example at line 19 is rejected since \elpiIn{id} is miscalled: the outputs
+is. The example at line 22 is rejected since \elpiIn{id} is miscalled: the outputs
 are considered functions only if the signature of the inputs is respected.
 
 The domain where Elpi really shines is the manipulation of higher-order data

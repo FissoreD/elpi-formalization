@@ -182,25 +182,25 @@ atop the empty program, that validates the invariant trivially.
 %   $$
 % \end{theorem}
 
-\begin{proof}
-  We can prove this final lemma thank to \cref{th:run-empty}, combining the
+% \begin{proof}
+%   We can prove this final lemma thank to \cref{th:run-empty}, combining the
 
-\end{proof}
+% \end{proof}
 
 \paragraph{\textbf{Digression on \isdet}.}
 
-In the logic programming literature the notion of ``function'' is
-not necessarily the one we picked in \isdet. In particular a
-program that produces infinetly many times the same result
-is undeniably representing a mathematical function, but with
-a programmer hat one is nothing like a program that terminates
-by returning its (only) result. Our notion captures the latter
-on purpose because it makes the computational complexity of
-programs more apparent, especially in case of failure.
+In the logic programming literature, the notion of a ``function'' does not
+necessarily align with the definition we adopt in \isdet. In particular, a
+program that repeatedly produces the same result infinitely many times
+undeniably represents a mathematical function. However, from a programmer's
+perspective, such behavior is fundamentally different from that of a program
+that terminates after returning a single result. Our definition intentionally
+captures the latter, as it better reflects the computational complexity of
+programs, particularly in cases of failure (as also observed by \cite{1989Vink}).
 
 \begin{elpicode}
 func silly list int -> int.
-silly L V :- mem 1 L, len L N, N = V.
+silly L V :- mem 1 L, len L V.
 \end{elpicode}
 
 Given the signature of \elpiIn{silly} the program is accepted only
@@ -210,30 +210,31 @@ equivalent to the following one whose complexity is clealy
 the sum of its parts.
 
 \begin{elpicode}
-once P :- P, !. % encoding of if-then cut using Elpi's hard cut
-silly L V :- once (mem 1 L), once (len L N), once (N = V).
+func do! (pred).
+do! P :- P, !.                 % encoding of if-then cut using Elpi's hard cut
+silly L V :- do! (mem 1 L), do! (len L V).
 \end{elpicode}
 
 The complexity could have been, on failure, the product of its parts if we had chosen a more
 relaxed definition of function, since the programmer could have called a
-(cut free) implementation of \elpiIn{mem} that gives multiple
-times the same result.\todo{anche in \href{https://repub.eur.nl/pub/1507/eur-few-cs-89-03.pdf}{1989Vink}, dicono simile}
-\todo{una delle robe di mercury può fare lo stesso?}
+(cut free) implementation of \elpiIn{mem} that is allowed to give multiple
+times the same result.
+% \todo{anche in \href{https://repub.eur.nl/pub/1507/eur-few-cs-89-03.pdf}{1989Vink}, dicono simile}
+% \todo{una delle robe di mercury può fare lo stesso?}
 
 \paragraph{\textbf{Digression on  the eagherness of $\mathcal{H}$}}
 \label{sec:digression-h}
 
 The function $\mathcal{H}$ in the operational semantics (Figure~\ref{fig:basic-interp})
-eagerly unifies all clauses with the.
+eagerly unifies all clauses with the goal.
 A more natural and possibly more efficient semantics would be to just create the
-alternatives and prepend to the list of goals the same unification
-problems. Our choice simplifies the formal threatment of determinacy 
-in~\cref{sec:thm} and in particular it matches the \mutExclHeads\ condition.
+alternatives and prepend to the list of goals the same matching/unification
+problems, but that would not satisfy \isdet.
 
 From a practical stanpoint an efficient implementation of that semantics
-can make $\mathcal{H}$ lazy without compromising the \mutExclHeads\ condition
+can make $\mathcal{H}$ lazy without compromising the \isdet property
 if either it indexes clauses deep enough
-or performs a program transformation consisting inserting
-\elpiIn{once} around each call to a deterministic predicate (as we manually did
-in silly example above).
+or performs a program transformation consisting in inserting the
+\elpiIn{do!} defined above around each call to a deterministic predicate
+(as we manually did in the example above).
 
