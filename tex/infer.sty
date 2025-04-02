@@ -1,6 +1,6 @@
 
 %              inp           inp  out   out
-% \inferCmdArr{optional-vec}{trm}{det}{good-call}
+% \inferCmdArr{optional-vecL}{trm}{det}{good-call}
 \newcommand{\inferCmdArr}[4][]{\ensuremath{
     \ifstrequal{#1}{1}
     {(\infer\ #2)\ #3}
@@ -74,7 +74,7 @@
     \AxiomC{
     \ensuremath{\pred\ \#\ \ctx \quad\kIF\ \checkc
     {\ (\ctx + \{\pred\mapsto \dtype{\func}{\func[_i]}{\func[_o]}\})}
-    {\ (\clauseCmd{\pred}{\vec{x}\ \vec{y}}{t})}
+    {\ (\clauseCmd{\pred}{\vecL{x}\ \vecL{y}}{t})}
     \ \kTHEN\ b = \top\ \kELSE\ b = \bot
     % \ensuremath{\inferCmdArr{(\ctx + \{\vecL{x:\func[_i]}\})}{t}{(\func, \bool)} \qquad \checkInferLamCmd{\ctx}{\func}{t}}
     }}
@@ -108,9 +108,9 @@
 % \newcommand{\inferAppEmptyDIRef}{\ruleInferAppRef{rule:inferAppInputKO}{\bot}}
 % \newcommand{\inferAppInputKO}[1]{
 %   \begin{myRule}{#1}
-%     \AxiomC{\ensuremath{\bool = \bot \quad \dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vec{t}}{\bot}{\res}}}
+%     \AxiomC{\ensuremath{\bool = \bot \quad \dappCmd{\ctx}{\func[_i]}{\func[_o]}{\vecL{t}}{\bot}{\res}}}
 %     \RightLabelM{\inferAppEmptyDIRef}
-%     \UnaryInfC{\dappCmd{\ctx}{(\_ :: \func[_i])}{\func[_o]}{(t :: \vec{t})}{\bool}{\res}}
+%     \UnaryInfC{\dappCmd{\ctx}{(\_ :: \func[_i])}{\func[_o]}{(t :: \vecL{t})}{\bool}{\res}}
 %   \end{myRule}
 % }
 

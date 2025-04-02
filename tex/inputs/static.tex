@@ -13,7 +13,7 @@ into relations to the recursive nature of predicate signatures.
 %In the spirit of subtyping the input arguments of predicate signature
 %are compared in a contravariant way. 
 %
-\begin{equation}
+\begin{equation*}
   s_1 \mySub s_2 =\ 
   \begin{cases}
    \ \bot                                                          & \text{if } s_1 = \dtype{\relI}{\_}{\_}\ \land\ s_2 = \dtype{\detI}{\_}{\_} \\
@@ -29,8 +29,8 @@ into relations to the recursive nature of predicate signatures.
     % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } s_1 = \relI\ a\ b \land s_2 = \relI\ c\ d \\
    \ \top                                                          & \text{if } s_1 = \expI\ \land\ s_2 = \expI
   \end{cases}
-  \label{eq:sub-def}\nonumber
-\end{equation}
+  % \label{eq:sub-def}
+\end{equation*}
 
 The checking process operates as a form of dataflow analysis: it maintains the
 predicate signature of each variable in \ctx\ and uses it to determine whether
@@ -302,9 +302,9 @@ mutual-exclusion (\mutExclAll, see \cref{def:mut-excl} below) wrt the other
 clause in the current program. 
 
 \begin{definition}[Mutual exclusion \mutExclAll]
-  Given a program \prog and a clause $r = \clauseCmd{p}{\vecL{t}}{\vec{bs}}$,
+  Given a program \prog and a clause $r = \clauseCmd{p}{\vecL{t}}{\vecL{bs}}$,
   $\mutExclAll\ \prog\ r$ holds iff there is a \cut in the body of $r$ or forall
-  clauses $r' = \clauseCmd{p}{\vecL{t'}}{\vec{bs'}}$ declared after $r$ in
+  clauses $r' = \clauseCmd{p}{\vecL{t'}}{\vecL{bs'}}$ declared after $r$ in
   \prog, there exists an input position $d$ discriminating them, i.e. 
   $\forall \subst, \unifyCmd{t_d}{t_d'}{\subst}{\bot}$
   \label{def:mut-excl}
