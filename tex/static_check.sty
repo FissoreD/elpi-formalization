@@ -129,7 +129,7 @@
 \newcommand{\ruleCheckCallFailM}[1]{
   \begin{myRule}{#1}
     % CALL FAIL
-    \AxiomC{\ensuremath{ \ctx\ c = \dtype{\_}{\func[_i]}{\_} }}
+    \AxiomC{\ensuremath{ \ctx\ c = \dtype{\_}{\func}{\_} }}
     \AxiomC{ \map\ \inferCmdArr[1]{\ctx}{\vecL{t_i}}{\vecL{(\func['],\bool)}}}
     \AxiomC{$ \exists i, \func[_i'] \not\mySub \func[_i]\ \lor\ \bool_i = \bot$}
     \RightLabelM{\ruleCheckCallFail}

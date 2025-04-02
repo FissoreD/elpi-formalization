@@ -274,7 +274,7 @@ has the inferred signature
 % 
 % $$\assume : \func \to (\A + \T) \to \ctx \to \ctx$$  
 
-The \assume\ procedure is meant to strenghten the signature\todo{role of input}
+The \assume\ procedure is meant to strenghten the signature
 of variables occurring in a given term. This strengthening is made
 by exploring a term $t$ together with an assumed determinacy $\func$.
 If a variable is ever encountered in $t$ and the assumed determinacy
@@ -305,7 +305,7 @@ predicate is smaller than the received one.
 
 The \checkk\ procedure (in \cref{fig:static-check}) attempts to prove, in the
 sense of~\cref{def:sem}, the determinacy of an atom by verifying the
-preconditions—i.e., whether the input argument can be inferred to have a
+preconditions -- i.e., whether the input argument can be inferred to have a
 determinacy \mySub consistent with the expected signature. If the preconditions
 are satisfied, the procedure assumes new knowledge for the postconditions,
 meaning they are expected to maintain the prescribed determinacy. \checkk also
@@ -341,23 +341,34 @@ with the determinacy of the body with the expected.
 
 \subsection{Inference and Assumptions only on terms in input position}
 
-We want to point out why in the \infer and \assume routine, we only deal with
-input arguments. In both cases, applications reason with the input terms.
-The inference is launched on atoms in negative position, i.e. atoms that
-are called in the program. In order to respect the semantics of pre-conditions,
-we need to be sure the ...
+We aim to clarify why the \infer and \assume routines only process input
+arguments. Inference is applied to atoms in negative positions -- i.e., atoms
+that are interpreted. To align with our definition of determinacy, we must
+verify that the inferred determinacy of their \textit{inputs} is at most \mySub,
+wrt their expected signature.  
 
-Potrebbe avere senso:
+Regarding the \textit{outputs} of clauses, and since these \textit{outputs} can
+be interpreted as new atoms in the code, we need to ensure that their inferred
+signatures have \textit{inputs} that validate their expected signature. Consider
+the following example:  
 
 \begin{elpicode}
   func p -> (func).
-  p (commit id Y).
+  p (id likes! Y).
 \end{elpicode}
 
+The \textit{output} of \elpiIn{p} is a function. Therefore, we must verify that
+the inferred signature of \elpiIn{id likes! _} is also a function. This holds
+because \elpiIn{id} qualifies as a function when its first argument is a binary
+function, and indeed, \elpiIn{likes!} is a binary function.  
+
+This validation of \textit{outputs} in clauses allows us to make assumptions
+about the \textit{outputs} of terms appearing in \elpiIn{input} positions.
 Consider the query: \elpiIn{p (commit X Y)}.
-We make no assumption on Y, since it is an output of commit, but `X' is 
-considered function. Note that otherwise the checker would have rejected the
-clause.
+
+Since the clauses for \elpiIn{p} have been validated, \elpiIn{commit X Y} must
+be a function. For this to hold, \elpiIn{X} can be assumed to be a binary
+function. However, no assumptions can be made about \elpiIn{Y}.
 
 % combines both \infer\ and \assume
 % to determine if an atom is fu
