@@ -1,4 +1,4 @@
-\section{Preliminaries}
+\section{Syhntax}
 \label{sec:basic}
 
 We assume a set \PRED of predicate names, %\todo{pradicate with piimpl as arg?}
@@ -15,17 +15,17 @@ We separate them with $\funsep$ and we omit the symbols when there are no argume
 The marker \detI{} stands for deterministic (or functional) while
 \relI{} for non-deterministic. By convention
 \func, \func['], $\func[_1] \ldots$ range over signatures \SIGN{} or determinacy markers \F.
-Looking back at section~\ref{sec:examples}
+Looking back at the examples in Section~\ref{sec:examples}
 we have that
 $\ctx~\texttt{likes} = \dtype{\relI}{\expI}{\expI}$,
 that
-$\ctx~\texttt{likes!} = \dtype{\detI}{\expI}{\expI}$
-and $\ctx\ \texttt{true} = \relI$.
+$\ctx~\texttt{likes!} = \dtype{\detI}{\expI}{\expI}$,
+and also $\ctx\ \texttt{true} = \relI$.
 
 In the syntax of atoms \ATOM we single out the \cut operator since it has a
 dedicated treatment in the operational semantics. We also glue together the
 \elpiIn{pi} and \elpiIn{=>} in the same grammar production for simplicity.
-Terms include predicate calls, functor applications and the binder $\lambda$.
+Terms include predicate calls, functor applications and $\lambda$-abstraction.
 For simplicity we impose the body of $\lambda$-abstractions to be explicitly typed
 with a base type (if the body is a predicate, then it must be fully applied).
 Moreover, as this paper does not
@@ -97,15 +97,6 @@ $t$ is \ground.
 % \todo{serve \V per eq, ma poi exp?}
 
 
-A substitution $\subst \in \Sigma $ is a mapping from unification variables
-\VAR to terms \TERM. 
-We write $\subst t$ the application of a substitution \subst to a term $t$,
-and we remark that $t$ is \ground{} iff $\forall \subst, \subst t = t$.
-We write $\dom\ \subst$ for the set of variables occurring
-in the domain or in the codomain of \subst, i.e.
-$\dom\ \subst = \{ X\ |\ \subst X \mathrm{\ is\ defined\ } \lor X \in \vars\ (\subst Y) \mathrm{\ for\ some\ Y} \}$.
-We write $\EmptySubst$ for the only
-substition s.t. $\dom\ \EmptySubst = \emptyset$.
 % When two substitutions have disjoint domains we write $\sigma_1 \cup \sigma_2$
 % as the (disjoint) union of two substitutions.
 
@@ -129,21 +120,6 @@ substition s.t. $\dom\ \EmptySubst = \emptyset$.
 
 \section{Operational semantics}
 
-We denote with $\_\times\_$, $\_+\_$, $\vecL{\phantom{i}\_~}$ and $\_\to\_$ the product, disjoint union, list and
-function space of types, respectively, and with $\B = \{ \top, \bot\}$ the booleans.
-We omit the conversion bewteen the (isomorphic) types $A \times B \to C$
-and $A \to B \to C$, e.g. we may write $\map\ f\ \vecL{tu}$ instead of $\map\ (\lambda x.f\ (\text{fst}\ x)\ (\text{snd}\ x))\ \vecL{tu}$.
-
-
-We assume a function $\unify$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \B$
-such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
-and $\subst[']$ is the most general extension of $\subst$ %\todo{extension=unifier?}
-as in~\cite{1991miller-pf}.
-We assume a function $\match$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \B$
-such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \subst['] p$
-and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\subst$,
-i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as the pattern.
-
 We use $\EmptyList$ for the empty list and $x :: xs$ for prepending an element $x$
 to a list $xs$; $@$ for list concatenation;
 $[e|x \in \vec{x}]$ for list comprehension and $[e\ \kIF\ p|x \in \vec{x}]$ 
@@ -156,6 +132,31 @@ $$
 $$
 
 \noindent
+
+We denote with $\_\times\_$, $\_+\_$, $\vecL{\phantom{i}\_~}$ and $\_\to\_$ the product, disjoint union, list and
+function space of types, respectively, and with $\B = \{ \top, \bot\}$ the booleans.
+We omit the conversion bewteen the (isomorphic) types $A \times B \to C$
+and $A \to B \to C$, e.g. we may write $\map\ f\ \vecL{tu}$ instead of $\map\ (\lambda x.f\ (\text{fst}\ x)\ (\text{snd}\ x))\ \vecL{tu}$.
+
+A substitution $\subst \in \Sigma $ is a mapping from unification variables
+\VAR to terms \TERM. 
+We write $\subst t$ the application of a substitution \subst to a term $t$,
+and we remark that $t$ is \ground{} iff $\forall \subst, \subst t = t$.
+We write $\dom\ \subst$ for the set of variables occurring
+in the domain or in the codomain of \subst, i.e.
+$\dom\ \subst = \{ X\ |\ \subst X \mathrm{\ is\ defined\ } \lor X \in \vars\ (\subst Y) \mathrm{\ for\ some\ Y} \}$.
+We write $\EmptySubst$ for the only
+substition s.t. $\dom\ \EmptySubst = \emptyset$.
+
+We assume a function $\unify$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \B$
+such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
+and $\subst[']$ is the most general extension of $\subst$ %\todo{extension=unifier?}
+as in~\cite{1991miller-pf}.
+We assume a function $\match$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \B$
+such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \subst['] p$
+and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\subst$,
+i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as the pattern.
+
 A program $\prog = (\aleph, \mathcal{I})$ holds a set of names $\aleph$ and a
 mapping $\mathcal{I}$ from predicate names to an \emph{ordered list} of clauses.
 We write $x \# \prog$ to find a name fresh in $\aleph$.
@@ -296,10 +297,10 @@ that but plays no role in this paper (the reference
 for the equational theory of $\lambda$Prolog is~\cite{1991miller-pf}).
 
 The operational semantics we present is essentially a big-step version of the
-one given in~\cite{1990Vink}, extended to accommodate the Higher-Order
+one given in~\cite{1990Vink}, extended to accommodate the higher-order
 constructs of $\lambda$Prolog and the input-matching behavior specific to Elpi.
 It is also worth mentioning \cite{qi2009}, where the author proposes a semantics
-for an implementation of a Higher-Order \textit{pure} $\lambda$Prolog, which,
+for an implementation of a higher-order \textit{pure} $\lambda$Prolog, which,
 therefore, has no equivalent for the cut operator and lacks the notion of clause
 priorities. 
 Our semantics describes an SLD search strategy with a \textit{hard-cut} operator

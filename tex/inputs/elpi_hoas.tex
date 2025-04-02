@@ -1,11 +1,11 @@
-\section{Determinacy analysis for Hereditary Harrop formulas} % Prolog with Higher-Order variables in datatype}
+\section{Determinacy analysis for Hereditary Harrop formulas} % Prolog with higher-order variables in datatype}
 \label{sec:hoas}
 
 An improvement of the current version of the interpreter comes with the fact
-that the \elpi accepts hareditary-harrop formulas and Higher-Order pattern
+that the \elpi accepts hareditary-harrop formulas and higher-order pattern
 unification (\cite{1991miller-pf}), noted \pf. This extension allows to
 dynamically modify the program by inserting fresh variables and clauses.
-Moreover, in order to express using the Higher-Order abstract syntax (HOAS,
+Moreover, in order to express using the higher-order abstract syntax (HOAS,
 \cite{1988pfenning}) we also add $\lambda$-abstractions to the language.
 % 
 % In order to pass to the full \elpi language, we need to change the way terms and clauses are 
@@ -66,7 +66,7 @@ The updated rule is shown in \cref{fig:interp-piimpl}.
   % \rulePiM{.85}
 
   % \ruleLamM{.85}
-  \caption{Dynamic semantics: rule for Higher-Order prolog}
+  \caption{Dynamic semantics: rule for higher-order prolog}
   \label{fig:interp-piimpl}
 \end{figure}
 
@@ -106,7 +106,7 @@ unification. \env is required to know if a term is in the pattern fragment.
 
 % Finally the \ruleLam makes a $\beta$-reduction step and keep solving the goal.
 
-\subsection{Determinacy checker for prolog with Higher-Order variables in datatype}
+\subsection{Determinacy checker for prolog with higher-order variables in datatype}
 
 The insertion of the new rule makes the determinacy checker to change
 accordingly. In particular, the rule $H$ charged by \impl\ in
@@ -138,7 +138,7 @@ should be granted.
 % goal: pi x\ f x 1 :- body_with_no_bang => f x R
 % Per backtracking potrei istanziare R a 1 o 3
 
-Thanks to this we can define the mutual-exlusion definition in the Higher-Order
+Thanks to this we can define the mutual-exlusion definition in the higher-order
 setting.
 
 \begin{definition}[Mutual-exclusion in HOAS (\mutExclHO)]

@@ -1,7 +1,7 @@
 \section{Introduction}
 
 We are interested in the static analsysis of Elpi programs, in particular
-in checking their determinacy. Elpi is a Higher-Order logic programming
+in checking their determinacy. Elpi is a higher-order logic programming
 language, a dialect of $\lambda$Prolog well suited to manipulate
 incomplete syntax trees with binders (see
 \cite{1991miller-pf,Miller_Nadathur_2012} and \cite{dunchev15lpar,TASSI_2019}).
@@ -28,11 +28,11 @@ As of today, Elpi comes equipped with a standard type checker~\cite{1992nadathur
 features no determinacy analisys. The literature provides
 many works on the subject~(among them \cite{1989Warren,1996Somogy,2011king}), but none
 % of these works
-can be applied to Elpi due to its Higher-Order nature.
+can be applied to Elpi due to its higher-order nature.
 %, inherited from $\lambda$Prolog. %, 
 % and its non-standard notion of input.
 
-\subsection{Motivating examples}\label{sec:examples}
+\subsection{Examples of higher-order predicates and their signatures}\label{sec:examples}
 
 A first motivating example is the \elpiIn{map} predicate, widely used in
 all Elpi applications. Elpi
@@ -54,9 +54,9 @@ arguments are respectively of type \elpiIn{list A} and \elpiIn{list B}.
 The better signature we describe in this paper subsumes the  basic one by
 %additionally 
 asserting that
-if the Higher-Order argument \elpiIn{F} is a function, then also \elpiIn{map F} is.
+if the higher-order argument \elpiIn{F} is a function, then also \elpiIn{map F} is.
 In this section ``function'' intuitively means single-valued relation; 
-we will give a more precise definition in section~\ref{sec:thm}.
+we will give a more precise definition in Section~\ref{sec:thm}.
 
 We need this new signature to be added to an existing code base where
 \elpiIn{map} is potentially called by passing a relation as the first
@@ -67,23 +67,23 @@ In the examples below we give three (alternative) one-line
 implementations of a \elpiIn{meal} predicate building a list of dishes
 to satisfy the guests.
 
-\begin{elpicode}
+\begin{elpicodeln}
 pred likes i:guest, o:dish.
-... % same guest may like more than one dish ...
+... % the same guest may like more than one dish ...
 func likes! guest -> dish.
 likes! G D :- likes D G, !.
 func meal list guest -> list dish.
 meal Gs M :- map likes! Gs M.     % accepted: map is well called
 meal Gs M :- map likes Gs M, !.   % accepted: alternatives are cut
 meal Gs M :- map likes Gs M.      % rejected: meal is not a function
-\end{elpicode}
+\end{elpicodeln}
 
-\noindent The first implementation is accepted since \elpiIn{likes!} is a
+\noindent The first implementation given at line 6 is accepted since \elpiIn{likes!} is a
 function, hence also \elpiIn{map likes! Gs M} is.
 The second implementation miscalls \elpiIn{map} by passing the relation
 \elpiIn{likes}, but then commits to the first solution,
 hence it behaves like as function.
-The third one is rejected since it miscalls \elpiIn{map} without
+The third one, at line 8, is rejected since it miscalls \elpiIn{map} without
 compensating for it.
 
 The hard-cut operator of Elpi lets one turn a relation into a function
@@ -92,7 +92,7 @@ discards the clauses following the current one.
 The language of signatures we
 introduce is expressive enough to encapsulate the desired ``if-then''
 behavior into the \elpiIn{once} predicate. Its signature
-states that the Higher-Order argument \elpiIn{P} can be any predicate, not
+states that the higher-order argument \elpiIn{P} can be any predicate, not
 necessarily a function, but still \elpiIn{once P} acts as a function.
 
 \begin{elpicode}
@@ -105,7 +105,7 @@ meal Gs M :- map (once likes) Gs M. % accepted: map is well called
 can be predicates. The determinacy analysis we present tracks their
 functional status.
     
-\begin{elpicode}
+\begin{elpicodeln}
 func commit (pred i:A, o:B) -> (func A -> B).          
 commit P (once P).                       % wraps a predicate P into once
 func id (func A -> B) -> (func A -> B).
@@ -113,38 +113,38 @@ id F F.
 meal Gs M :- commit likes F, map F Gs M. % accepted: F is a function
 meal Gs M :- id likes! F, map F Gs M.    % accepted: F is a function
 meal Gs M :- id likes F, map F Gs M.     % rejected: id miscalled => F relation
-\end{elpicode}
+\end{elpicodeln}
 
-\noindent Here the output of \elpiIn{commit} is a function \elpiIn{F} that
+\noindent In line 5 the output of \elpiIn{commit} is a function \elpiIn{F} that
 in turn makes \elpiIn{map F Gs M} produce a single value for \elpiIn{M}.
 Moreover \elpiIn{commit} is a function, so the whole body of \elpiIn{meal} also
-is. The last example is rejected since \elpiIn{id} is miscalled: the outputs
+is. The example at line 7 is rejected since \elpiIn{id} is miscalled: the outputs
 are considered functions only if the signature of the inputs is respected.
 
-The domain where Elpi really shines is the manipulation of Higher-Order data
+The domain where Elpi really shines is the manipulation of higher-order data
 via the so-called $\lambda$-tree syntax by~\cite{Miller2018MechanizedMR}
 also called HOAS by~\cite{1988pfenning}.
 Such data is pervasive in interactive provers based on type theory
 such as Rocq. In the paradigmatic example below \elpiIn{tm} is
 the data type for $\lambda$-terms.
 
-\begin{elpicode}
-kind tm type.                % type of $\lambda$-terms
-type app tm -> tm -> tm.     %  binary application
-type lam (tm -> tm) -> tm.   %  $\lambda$-abstraction
-func copy tm -> tm.          % deep copy of a term
+\begin{elpicodeln}
+kind tm type.                              % type of $\lambda$-terms in HOAS form
+type app tm -> tm -> tm.                   %  - binary application
+type lam (tm -> tm) -> tm.                 %  - $\lambda$-abstraction
+func copy tm -> tm.                        % deep copy of a term
 copy (app A B) (app C D) :- copy A C, copy B D.
-copy (lam F) (lam G) :- pi x\ copy x x => copy (F x) (G x).
-func whd tm -> tm.           % weak head reduction
+copy (lam F) (lam G)     :- pi x\ copy x x => copy (F x) (G x).
+func whd tm -> tm.                         % weak head reduction
 whd (app H A) R :- whd H (lam F), !, (pi x\ copy x A => copy (F x) S), whd S R.
 whd X X.
-\end{elpicode}
+\end{elpicodeln}
 
 The \elpiIn{copy} predicate performs a \emph{deep} copy of a term. The interesting
-clause is the second one that crosses the binder in \elpiIn{F} by performing two
+code is at line 6 where we cross the binder in \elpiIn{F} by performing two
 operations:
-1) it creates a fresh symbol \elpiIn{x} via the \elpiIn{pi} operator, and
-2) it asserts a dynamic clause to copy \elpiIn{x} to itself via the \elpiIn{=>} operator.
+1) create a fresh symbol \elpiIn{x} via the \elpiIn{pi} operator, and
+2) assert a new clause to copy \elpiIn{x} to itself via the \elpiIn{=>} operator.
 This fresh \elpiIn{x} stands for the bound variable in the function body
 \elpiIn{F x} and its dedicated clause is only active in that scope (intuitively it
 is a local \texttt{assert/1}).
@@ -165,11 +165,11 @@ Our static analysis understands this programming pattern.
 
 Our main contribution is a determinacy checker that:
 \begin{itemize}
-\item covers Higher-Order logic programming constructs such as first-class
+\item covers higher-order logic programming constructs such as first-class
       predicates and dynamic clauses,
 \item can be applied incrementally to a pre-existing code bases since it tracks
-      miscalled Higher-Order functions rather than aborting.
+      miscalled higher-order functions rather than aborting.
 \end{itemize}
 Last, but not least, we provide an operational semantics for
-the Elpi dialect of $\lambda$Prolog: a Higher-Order logic programming language
+the Elpi dialect of $\lambda$Prolog: a higher-order logic programming language
 with cut.
