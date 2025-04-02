@@ -54,20 +54,22 @@ investment plan managed by the Agence Nationale de la Recherche, as part of the
 % As a result we can add signatures without breaking existing code, progressively increasing
 %  staic guarantees.
 
-We study the determinacy checker for Elpi, a higher-order logic programming
-language in which predicates can receive other predicates as arguments and
-can locally assert new clauses.
+We study a determinacy checker for Elpi, a higher-order logic programming
+language descendant of $\lambda$Prolog. Elpi clauses can receive predicates as arguments,
+can locally assert new clauses and can use the cut operator.
 
-We present an operational semantics for Elpi that accounts for these higher-order
-features and the cut operator. This semantics explicitly represents choice points,
+We present an operational semantics for Elpi that
+% accounts for these higher-order features and the cut operator. This semantics 
+explicitly represents choice points,
 enabling us to identify operationally deterministic (or functional)
 predicates -- those that do not leave any choice points.
-
-Furthermore, we design a language of signatures with preconditions, allowing
-deterministic predicates to be miscalled. The static checker tracks miscalled
-functions and treats them as relations (non-deterministic predicates) when
+Then we design a language of determinacy signatures with preconditions.
+Fially we present a determinacy checker
+that tracks miscalled
+functions, i.e. when preconditions are not met, and instrad of aborting
+treats those calls as relations (non-deterministic predicates) when
 analyzing
-the surrounding code. As a result, signatures can be introduced without
+the surrounding code. As a result, determinacy signatures can be introduced without
 breaking existing code, progressively enhancing static guarantees.
 \end{abstract}
 
