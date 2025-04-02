@@ -1,8 +1,10 @@
 
 % [checkCmd ctx1 func1 tm ctx2 func2]
 \newcommand{\checkL}{\texttt{check}\ensuremath{_L}}
-\newcommand{\checkCmd}[6][\prog]{\ensuremath{\checkk\ #1\ #4\ (#2,\ #3)\ \!\arr (#5, #6)}}
-\newcommand{\checkLCmd}[5]{\ensuremath{\checkL\ #3\ #1\ #2\ \arr (#4, #5)}}
+\newcommand{\checkCmd}[6][\prog]{\ensuremath{\checkk\ #1\ #4\ (#2,\ #3)\ \!= (#5, #6)}}
+% \newcommand{\checkCmd}[6][\prog]{\ensuremath{\checkk\ #1\ #4\ (#2,\ #3)\ \!\arr (#5, #6)}}
+\newcommand{\checkLCmd}[5]{\ensuremath{\checkL\ #3\ #1\ #2\ = (#4, #5)}}
+% \newcommand{\checkLCmd}[5]{\ensuremath{\checkL\ #3\ #1\ #2\ \arr (#4, #5)}}
 \newcommand{\checkClause}[3][\prog]{\ensuremath{\checkc\ #1\ #2\ #3}}
 
 % \newcommand{\ruleCheckName}[1]{\ensuremath{C_{#1}}\xspace}
@@ -18,7 +20,7 @@
       {
         \ensuremath{
           \ctx\ p = \dtype{\func}{\func[_i]}{\func[_o]} 
-           \ \ \quad\qquad\qquad \fold\ \checkCmd{\ctx[']}{\detI}{\vecL{bs}}{\ctx['']}{\func[']}
+           \ \ \;\quad\quad\qquad \fold\ \checkCmd{\ctx[']}{\detI}{\vecL{bs}}{\ctx['']}{\func[']}
           \quad\ \subCmd{\func'}{\func}
         }
       }

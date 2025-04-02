@@ -4,7 +4,8 @@
 \newcommand{\inferCmdArr}[4][]{\ensuremath{
     \ifstrequal{#1}{1}
     {(\infer\ #2)\ #3}
-    {\infer\ #2\ #3} \arr #4
+    {\infer\ #2\ #3} = #4
+    % {\infer\ #2\ #3} \arr #4
   }}
 \newcommand{\dapp}{\ensuremath{\texttt{\infer}_@}\xspace}
 

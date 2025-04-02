@@ -11,7 +11,8 @@
 \newcommand{\assumeCmd}[5][]{\ensuremath{
     \ifstrequal{#1}{1}
     {\vecL{\assume\ #3\ #4\ #2}}
-    {\assume\ #3\ #4\ #2} \arr #5}}
+    {\assume\ #3\ #4\ #2} = #5}}
+    % {\assume\ #3\ #4\ #2} \arr #5}}
 
 \newcommand{\ruleAssume}[2]{\customlabel{#1}{\ensuremath{A_{#2}}}}
 
