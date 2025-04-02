@@ -1,32 +1,33 @@
 \section{Related work and conclusions}
 
-\begin{table}
-  \centering
+\begin{table}[b]
+  \begin{center}
   \begin{tabular}{c|c|c|c|c|c}
-    Paper         & Mode check & Hard Cut & HO prog         & SubT.           & HHF    \\
+    Paper         & Mode check & Hard Cut & HO programs        & Wrong calls           & Open program    \\
     \hline
-    Warren et al. & Assumed    & \cmark   & \xmark          & \xmark          & \xmark \\
-    Mercury       & \cmark     & \xmark   & \nicefrac{1}{2} & \nicefrac{1}{2} & \xmark \\
+    Warren et al. & required    & \cmark   & \xmark          & \xmark          & \xmark \\
+    Mercury       & required     & \xmark   & \nicefrac{1}{2}$\ddagger$ & \xmark$\dagger$ & \xmark \\
     % Mixtus        & \cmark     & \cmark   & \xmark          & \nicefrac{1}{2} & \xmark  & \xmark \\
-    RedAlert      & \cmark     & \cmark   & \xmark          & \xmark          & \xmark \\
-    Elpi          & \xmark     & \cmark   & \cmark          & \cmark          & \cmark \\
+    RedAlert      & required     & \cmark   & \xmark          & \xmark          & \xmark \\
+    Elpi          & no need     & \cmark   & \cmark          & \cmark          & \cmark
   \end{tabular}
-
-  \caption{Comparison}
+  \end{center}
+  $\dagger$ multiple signatures for the sema predicate, one must perfectly match\\
+  $\ddagger$ TODO explain what is missing: partial application\\
+  \caption{Comparison with related work}
   \label{tab:comparison}
 \end{table}
 
 
 Several studies have explored determinacy analysis in logic programs.
 \Cref{tab:comparison} summarizes the main differences between our approach to
-determinacy checking and existing work from the literature.
+determinacy checking and related work.
 
 The papers referenced in the first column of the table correspond to
 \cite{1989Warren,1996Somogy,2011king}. One key difference between our work and
-these studies is that prior research primarily focuses on \textit{closed}
-programs, i.e., programs that do not evolve during query execution. In contrast,
-our approach, leveraging the \impl\ operator, allows clauses to be dynamically
-loaded in subqueries, making the program mutable.
+these studies is that they focus on \textit{closed}
+programs, that do not evolve during query execution, while 
+the \impl\ operator of Elpi  allows clauses to be dynamically asserted.
 
 For closed programs, a transformation into \textit{super-homogeneous} form is
 possible, where all clauses of a predicate are collapsed into a single clause
@@ -35,27 +36,28 @@ facilitates determinacy inference and can sometimes yield more efficient
 programs. However, in our open-world setting, such a transformation is not
 feasible.
 
-The mutability of programs also impacts our operational semantics: rule
-\ref{rule:piimpl} must add local clauses to the program dynamically. Our
+Our
 operational semantics shares similarities with \cite{1990Vink}, where a list of
 alternatives is maintained -- these alternatives are consumed on failure and
 discarded upon encountering a \cut\ operator. The primary distinction between
-our semantics and that of \cite{1990Vink} (beyond the acceptance of hereditary
-Harrop formulas in our system) is that we do not require special built-in
-predicates for \textit{fail} and \textit{or}. Instead, we encode them directly
-in our language: for example \textit{fail} is represented as a predicate with no
-implementation. % \textit{or} is a predicate with two propositional arguments
+our semantics and that of \cite{1990Vink} (beyond rule
+\ref{rule:piimpl} to add local clauses to the program dynamically) 
+is that we do not require special built-in predicates for \textit{fail} and \textit{or}.
+Instead, we encode them directly in our language: for example \textit{fail} is
+represented as a predicate with no implementation. % \textit{or} is a predicate with two propositional arguments
 % $p_1$ and $p_2$, and two clauses: the first executes $p_1$, while the second
 % retains the execution of $p_2$ as a choice point.
-We would also point out that our semantics is the concrete semantics of the Elpi
+We also point out that our semantics is the concrete semantics of the Elpi
 language from \cite{dunchev15lpar}, except for the $\mathcal{H}$ function. In
 Elpi we can perform some fast indexing clause retrieval, but complete
 unification is kept lazy in the stack of alternatives, as explained in
 \cref{sec:digression-h}.
 
-Our operational semantics enables reasoning with concrete objects, making it
-easier to define what it means for a predicate to be deterministic. This
-approach differs from \cite{2011king}, which employs a denotational semantics.
+Our operational semantics 
+explicitly represents choice points, enabling us to identify
+operationally deterministic predicates as those that do not leave any choice points.
+This approach differs from \cite{2011king}, which employs a denotational semantics
+where choice points are encoded as continuations.
 
 Regarding modes, Elpi’s matching procedure over input arguments allows us to
 dispense with explicit mode checking—an essential component in the other works.
