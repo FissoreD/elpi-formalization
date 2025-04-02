@@ -32,9 +32,12 @@ into relations to the recursive nature of predicate signatures.
   \label{eq:sub-def}\nonumber
 \end{equation}
 
-The static checker performs a form of dataflow analysis by
-storing in the context \ctx the signature of each variable
-and updating it as it traverses the body of a clause.
+The checking process operates as a form of dataflow analysis: it maintains the
+predicate signature of each variable in \ctx\ and uses it to determine whether
+the variable meets the precondition of a predicate call. Additionally, it can
+update the variable's signature to align with the postcondition of the predicate
+call.
+
 We suppose the context \ctx is pre-loaded with weak signatures
 for each variable: It is up to the determinacy analsysis to \emph{assume}
 or \emph{infer} stronger signatures.\\
