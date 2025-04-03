@@ -1,6 +1,6 @@
 \section{Introduction}
 
-% We are interested in the static analsysis of Elpi programs, in particular
+% We are interested in the static analysis of Elpi programs, in particular
 % in checking their determinacy. Elpi is a higher-order logic programming
 % language, a dialect of $\lambda$Prolog well suited to manipulate
 % incomplete syntax trees with binders (see
@@ -20,7 +20,7 @@
 % by different teams is combined together.
 
 % As of today, Elpi comes equipped with a standard type checker~\cite{1992nadathur} but
-% features no determinacy analisys. The literature provides
+% features no determinacy analysis. The literature provides
 % many works on the subject~(among them \cite{1989Warren,1996Somogy,2011king}), but none
 % can be applied to Elpi due to its higher-order nature.
 
@@ -68,7 +68,7 @@ map F [X|XS] [Y|YS] :- F X Y, map F XS YS.      % code
 \end{elpicodeln}
 
 The basic predicate signature says that \elpiIn{map} has two input arguments
-and one output. The first argument is a predicate with an inupt
+and one output. The first argument is a predicate with an input
 of type \elpiIn{A} and an output of type \elpiIn{B}, while the other two
 arguments are respectively of type \elpiIn{list A} and \elpiIn{list B}.
 The better signature we describe in this paper subsumes the  basic one by
@@ -76,13 +76,13 @@ The better signature we describe in this paper subsumes the  basic one by
 asserting that
 if the higher-order argument \elpiIn{F} is a function, then also \elpiIn{map F} is.
 In this section ``function'' intuitively means single-valued relation; 
-we will give a more precise definition in Section~\ref{sec:thm}.
+we will give a more precise definition in \cref{sec:thm}.
 
 We need this new signature to be added to an existing code base where
 \elpiIn{map} is potentially called by passing a relation as the first
 argument, say \elpiIn{P}.
 In this case the call to \elpiIn{map P L R} has to be accepted but not
-considered to be a function for the analisys of the surrounding code.
+considered to be a function for the analysis of the surrounding code.
 In the examples below we give three (alternative) one-line
 implementations of a \elpiIn{meal} predicate building a list of dishes
 to satisfy the guests.
@@ -176,7 +176,7 @@ The argument is put in place of the abstracted variable by running
 being replaced.
 
 Both \elpiIn{copy} and \elpiIn{whd} are functions even if they
-dynamically assert caluses:
+dynamically assert clauses:
 Since \elpiIn{x} is fresh it does not unify
 with \elpiIn{app}, \elpiIn{lam} or any previously generated fresh \elpiIn{x}.
 Our static analysis understands this programming pattern.

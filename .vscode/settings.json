@@ -28,4 +28,9 @@
         "**/*.vo": true,
         "**/*.generated": true,
     },
+    "cSpell.words": [
+        "functors",
+        "HOAS",
+        "Rocq"
+    ],
 }

@@ -1,6 +1,6 @@
 \section{Related work and conclusions}
 
-\begin{table}[b]
+\begin{table}[t]
   \begin{center}
   \begin{tabular}{c|c|c|c|c}
     Paper         & Mode check & HO programs        & Wrong calls           & Open program    \\
@@ -61,6 +61,13 @@ where choice points are encoded as continuations.
 
 Regarding modes, Elpi’s matching procedure over input arguments allows us to
 dispense with explicit mode checking -- an essential component in the other works.
+
+Our mode analysis encompasses numerous higher-order features, some of which
+are absent in other higher-order logic programming languages.
+In particular, it handles partially applied predicates, non-ground
+atoms as arguments (e.g., \elpiIn{do!}), and the inspection of
+atoms (as demonstrated in \cref{sec:examplesx}).
+
 % Additionally, Elpi’s strong integration with an interactive theorem prover like
 % Rocq prevents us from relying on ground input terms.
 
@@ -77,7 +84,7 @@ compilation failure. % For instance, \textit{list.filter\_map\_corresponding} fa
 % if the higher-order function is deterministic rather than semi-deterministic.
 
 Elpi targets less technically inclined users, more familiar with functional programming languages
-than logic ones, hence we strieve for simplicty,
+than logic ones, hence we strive for simplicity,
 defining only one determinacy class and immediately classifying wrong calls as
 non-deterministic.
 As a result \elpiIn{foldr} is decorated with just the following, familiar to our audience,
@@ -87,6 +94,7 @@ with our goal of providing static guarantees on programs rather than
 helping the compiler to produce
 efficient, specialized, machine code.
 
+TODO: bench on HB
 
 
 

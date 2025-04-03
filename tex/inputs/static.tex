@@ -35,11 +35,11 @@ into relations to the recursive nature of predicate signatures.
 The checking process operates as a form of dataflow analysis: it maintains the
 predicate signature of each variable in \ctx\ and uses it to determine whether
 the variable meets the precondition of a predicate call. Additionally, it can
-update the variable's signature to align with the postcondition of the predicate
+update the variable's signature to align with the post condition of the predicate
 call.
 
 We suppose the context \ctx is pre-loaded with weak signatures
-for each variable: It is up to the determinacy analsysis to \emph{assume}
+for each variable: It is up to the determinacy analysis to \emph{assume}
 or \emph{infer} stronger signatures.\\
 In our implementation the context is pre-loaded by the
 type-checker that traverses all terms, including higher-order variables in \VAR, and
@@ -178,7 +178,7 @@ The static checker is made of three procedures: \assume\ (\cref{fig:det-assume})
 
 \assumeFig
 
-\paragraph{The \assume\ procedure} strenghtens the signature
+\paragraph{The \assume\ procedure} strengthens the signature
 of variables to a given signature by updating the context via the $\min$ operator.
 Since the syntax allows for arbitrary terms in predicate postion,
 \assume traverses terms recursively until it finds the variables \ref{rule:assume-hd}.
@@ -291,14 +291,14 @@ a fresh predicate name $p$ so to reuse the code \checkc\ to check regular clause
 
 \checkTermFig  
 
-\paragraph{The \checkk\ procedure} is in charge of veryfying the determinacy of
+\paragraph{The \checkk\ procedure} is in charge of verifying the determinacy of
 an atom.
 A cut is clearly determinate (rule \ref{rule:check-cut}).
 A predicate call is determinate if the the premises of its signature
 are met, i.e. if \infer\ returns $\top$ on all input arguments and
 infers signatures that are stronger than the required ones (rule \ref{rule:check-callOK}).
 If it is the case the context is also updated by \assume, the signature of
-output arguments is strenghtened. When a predicate is miscalled
+output arguments is strengthened. When a predicate is miscalled
 (rule \ref{rule:check-callKO}) it is considered to be relational and the context
 is not updated.
 
@@ -308,7 +308,7 @@ clause (for a predicate $p$).
 The procedure \checkc\ processes the head and body of the clause as follows.
 It \assume{}s all the inputs arguments in the head validate the declared signature;
 then it \checkk{}s all atoms in the body; and finally \infer{}s all the
-output arguments in the head. It concludes by veryfying that the inferred
+output arguments in the head. It concludes by verifying that the inferred
 signature for the body and the outputs match the declared one.
 It also checks that the clause does not overlap with an existing one.
 
@@ -353,22 +353,20 @@ It also checks that the clause does not overlap with an existing one.
   \label{def:mut-excl}
 \end{definition}
 
-Case a) is justified by the hard-cut semantics combined with the the highest
+Case a) is justified by the hard-cut semantics combined with the highest
 priority of $h$ in \prog (see rule \ref{rule:cut}).
-Case b) accounts for mutually exclusive heads.
-We recall that \ref{rule:piimpl} generates a fresh symbol for the
-\elpiIn{pi} quantified variable, hence different from any symbol that can
-occur in the goal or in the other clauses.
-Moreover we
-point out that \ref{rule:call} \emph{matches} the input arguments
+Case b) addresses mutually exclusive heads.
+We recall that rule \ref{rule:piimpl} generates a fresh symbol for the
+\elpiIn{pi}-quantified variable, ensuring it is distinct from any symbol that can
+appear in the goal or in other clauses.
+Additionally, we emphasize that rule \ref{rule:call} \emph{matches} the input arguments
 of the goal against the head of the clauses.
-In turn this dispenses with the need for groudness of input
-arguments, a prerequisite of most determinacy analysis algorithms
-(see for example~\cite{1989Warren,1996Somogy}). For example imagine all
-input arguments in the goal are variables: condition b) grants that there
-is at most one clause with variables in all input positions, and that
-would be the only one that can match (unify with the goal without instantiating it).
-
+This eliminates the need for groundness of input
+arguments, a common prerequisite in most determinacy analysis algorithms
+(see, for example,~\cite{1989Warren,1996Somogy}). For instance, consider a scenario where all
+input arguments in the goal are variables: condition b) guarantees that there
+is at most one clause with variables in all input positions, which would be
+the only one capable of matching (unifying with the goal without instantiating it).
 
 % \ref{rule:check-callOK} and \ref{rule:check-callKO} deals
 % with term applications, and if the terms has valid inputs, then the output are
@@ -383,7 +381,7 @@ would be the only one that can match (unify with the goal without instantiating 
 % determinacy \mySub then the one in the signature. The same test is done
 % with the determinacy of the body with the expected.
 
-\paragraph{Examples}
+\paragraph{Examples}\label{sec:examplesx}
   %Inference and Assumptions only on terms in input position}
 
   
@@ -396,13 +394,13 @@ would be the only one that can match (unify with the goal without instantiating 
 % Regarding the \textit{outputs} of clauses, since these \textit{outputs} can be
 % interpreted as new atoms in the code, we need to ensure that their inferred
 % signatures have \textit{inputs} that validate their expected signature. 
-Consider
-the following program optimizing function composition (as in \cite{wadler1989}).
+Consider the following code performing the fusion of two calls to \elpiIn{map} (as in \cite{wadler1989}).
 
 \begin{elpicodeln}[29]
   func compose (func A -> B), (func B -> C), A -> C.
-  compose F G X Y :- F X R, G R Y.
-  typeabbrev (flist A B) (func list A -> list B).     % type abbreviation
+  compose F G X Z :- F X Y, G Y Z.
+
+  ~\PYG{k+kd}{typeabbrev}\PYG{+w}{ }\PYG{n+nf}{(flist A B)}\PYG{+w}{ }\PYG{k+kd}{(}\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{A}\PYG{+w}{ }\PYG{k+kd}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{B}\PYG{k+kd}{)}.\PYG{+w}{             }\PYG{c}{\PYGZpc{} type abbreviation}~
   func fuse (flist A B), (flist B C) -> (flist A C).
   fuse (map A) (map B) (map C) :- id (compose A B) C. 
 \end{elpicodeln}
@@ -410,26 +408,29 @@ the following program optimizing function composition (as in \cite{wadler1989}).
 \noindent 
 \def\infunc{\ensuremath{\in \func}\xspace} 
 
-For brevity, we shorten the signature \elpiIn{func list X -> list Y} to $\func$
+For brevity, we shorten the signature
+\elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{Y}~}
+to $\func$
 and we say $t \infunc$ when a term $t$ has signature stronger or equal to
 $\func$.
 % $\dtype{\detI}{\expI}{\expI}$.
 
-Considering the work that \checkc performs line 32:
+Considering the work that \checkc performs line 34:
 it \assume{}s (resp. \infer{}s) that
 \textit{inputs} (resp. \textit{outputs}) have the expected signature and that
 the body is functional.
-More precisely, it \assume{}s that \elpiIn{map A}\infunc and \elpiIn{map B}\infunc. 
+More precisely, it \assume{}s that \elpiIn{map A}~\infunc and \elpiIn{map B}~\infunc. 
 In order to be able to \infer that
-\elpiIn{map C} \infunc, we need 
-\elpiIn{C} \infunc.
-The checking phase on the premise allows to \infer that \elpiIn{C} \infunc 
+\elpiIn{map C}~\infunc, we need 
+\elpiIn{C}~\infunc.
+The checking phase on the premise allows to \infer that \elpiIn{C}~\infunc 
 if \elpiIn{id} is well-called.
-In turn, this requires \elpiIn{compose A B} $\in$ \elpiIn{func A -> B}.
+In turn, this requires \elpiIn{compose A B} $\in$
+\elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{Y}~}.
    \elpiIn{A} and \elpiIn{B} have the determinacy
 \func. This is the reason why \assume recurses on the 
 \textit{inputs} of \elpiIn{map A} and \elpiIn{map B} in order to
-\infer that \elpiIn{A}\infunc and \elpiIn{B}\infunc.
+\infer that \elpiIn{A}~\infunc and \elpiIn{B}~\infunc.
 
 % Consequently, \elpiIn{map A} (resp. \elpiIn{map B})
 % will recursively assign \elpiIn{A} (resp. \elpiIn{B}) the signature
@@ -445,17 +446,24 @@ In turn, this requires \elpiIn{compose A B} $\in$ \elpiIn{func A -> B}.
 % returns the signature \dtype{\detI}{\expI}{\expI}, which matches the expected
 % output signature of \elpiIn{compose}.  
 
-As a result of the deep analysis performed by \assume on the outputs of
-well-called predicates. The following clause
+As a result of the analysis performed by \assume on the outputs of
+well-called predicates the following clauses are deemed functional.
 
 \begin{elpicode}
-  whd_copy_list TL RL :- fuse (map whd) (map copy) F, F TL RL. 
-  whd_copy T R :- fuse (map whd) (map copy) (map F), F T R. 
+  easy T R :- fuse (map whd) (map copy) F,       F T R. 
+  hard T R :- fuse (map whd) (map copy) (map F), F T R. 
 \end{elpicode}
 
-\noindent can be considered functional since the variable \elpiIn{F} 
-occurs in \textit{input} position of the output of \elpiIn{fuse} and therefore
-is assumed to be a binary function for the final call \elpiIn{F A B}.
+\noindent
+While the first clause simply uses the output of \elpiIn{fuse}, the
+second clause extracts the sub-term \elpiIn{F} from it. The
+in-depth analysis performed by \assume ensures the correctness of the
+signature for arguments in \textit{input} positions of the outputs,
+such as \elpiIn{F}.
+
+The analysis performed by \assume matches the one done by \infer: they both
+recurse deeply on inputs and their role is exchanged when we move from the
+head to the body of clauses.
 
 % As a second example, consider the query \elpiIn{compose likes X Y}. The \checkk
 % procedure, when applied to this term, infers that the call to \elpiIn{compose}

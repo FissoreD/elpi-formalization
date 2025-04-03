@@ -114,24 +114,38 @@ We use the meaning of signatures to describe the key invariant of program:
 \end{definition}
 
 Since the program can be dynamically augmented by asserting clauses we need
-\checkk\ to preserve the invariant.
+\checkc\ to preserve the invariant.
 
 \begin{lemma}[Invariant preservation]
+  \vspace{-1em}
   $$\forall\, \Gamma\ \prog\ r, \iprog \land \checkClause{\ctx}{r} \Rightarrow \iprog[(\prog + r)]$$
   \label{th:0}
+  \vspace{-1em}
 \end{lemma}
 
-Since we execute atoms we need need this
+The main theorem states that a checked initial query behaves deterministically
+under a checked program.
 
 \begin{theorem}[Deterministic execution]
   Given a context \ctx and an atom $t$, then
   $$\forall\, \Gamma\ \prog\ t, \iprog \land \checkCmd{\ctx}{\detI}{t}{\_}{\detI}
   \Rightarrow \isdet\ \prog\ t$$
   \label{th:1}
+  \vspace{-1em}
 \end{theorem}
 
-Note that programs can be encoded into atoms by asserting all clauses dynamically
-atop the empty program, that validates the invariant trivially.
+Since programs can be encoded into atoms by asserting all clauses dynamically
+atop the empty program (that validates the invariant vacuously), we can directly
+relate the static check with the deterministic execution of atoms.
+
+\begin{corollary}[Static check entails Deterministic run]
+  % Given a context \ctx and an atom $t$, then
+  \vspace{-1em}
+  $$\forall\, \Gamma\ t, \checkCmd[\EmptyList]{\ctx}{\detI}{t}{\_}{\detI}
+  \Rightarrow \isdet\ \EmptyList\ t$$
+  % \label{th:1}
+\end{corollary}
+
 
 % \noindent
 % This theorem is crucial for establishing the connection between our determinacy
@@ -206,12 +220,12 @@ silly L V :- mem 1 L, len L V.
 Given the signature of \elpiIn{silly} the program is accepted only
 if both both \elpiIn{mem} and \elpiIn{len} are observationally
 deterministic hence the code is operationally
-equivalent to the following one whose complexity is clealy
+equivalent to the following one whose complexity is clearly
 the sum of its parts.
 
 \begin{elpicode}
 func do! (pred) ->.
-do! P :- P, !.                 % encoding of if-then cut using Elpi's hard cut
+do! P :- P, !.                   % encoding of if-then using Elpi's hard cut
 silly L V :- do! (mem 1 L), do! (len L V).
 \end{elpicode}
 
@@ -231,7 +245,7 @@ A more natural and possibly more efficient semantics would be to just create the
 alternatives and prepend to the list of goals the same matching/unification
 problems, but that would not satisfy \isdet.
 
-From a practical stanpoint an efficient implementation of that semantics
+From a practical standpoint an efficient implementation of that semantics
 can make $\mathcal{H}$ lazy without compromising the \isdet property
 if either it indexes clauses deep enough
 or performs a program transformation consisting in inserting the
