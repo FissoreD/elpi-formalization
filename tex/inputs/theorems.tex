@@ -208,15 +208,15 @@ necessarily align with the definition we adopt in \isdet. In particular, a
 program that repeatedly produces the same result infinitely many times
 undeniably represents a mathematical function. However, from a programmer's
 perspective, such behavior is fundamentally different from that of a program
-that terminates after returning a single result. Our definition intentionally
+that terminates after returning a single result. Our definition %intentionally
 captures the latter, as it better reflects the computational complexity of
-programs, particularly in cases of failure (as also observed by \cite{1989Vink}).
+programs%, particularly in cases of failure 
+(as also observed by \cite{1989Vink}).
 
-Take the following predicate and consider the two (alternative)
-contexts.
+Consider the following \elpiIn{silly} predicate and two (alternative)
+implementations of \elpiIn{mem}.
 
 \begin{elpicode}
-% bad context                      % good context
 pred mem i:A, i:list A.            func mem A, list A ->.
 mem X [X|_].                       mem X [X|_] :- !
 mem X [_|XS] :- mem X XS.          mem X [_|XS] :- mem X XS.
@@ -226,17 +226,15 @@ mem X [_|XS] :- mem X XS.          mem X [_|XS] :- mem X XS.
 \end{elpicode}
 
 The signature of \elpiIn{silly} is accepted only
-if \elpiIn{mem} is a function (the code on the right).
+if \elpiIn{mem} is a function in our sense.
 In this case the code of \elpiIn{silly} is operationally
-equivalent to the following one where the worst-case complexity is clearly
-the sum of its parts, rather than the product as it can be is \elpiIn{mem}
-is allowed to give multiple times the same result (code on the left).
+equivalent to the following, cluttered, one where the worst-case complexity is clearly
+the sum of its parts (and not its product).
 
 \begin{elpicode}
-func do! (pred) ->.
-do! P :- P, !.                   % encoding of if-then using Elpi's hard cut
-silly L V :- do! (mem 1 L), do! (len L V).
+~                 ~silly L V :- mem 1 L, !, len L V, !.
 \end{elpicode}
+\vspace{-1em}
 
 \paragraph{\textbf{Digression on  the eagherness of $\mathcal{H}$}}
 \label{sec:digression-h}

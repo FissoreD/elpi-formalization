@@ -12,8 +12,6 @@
     Elpi          & no need    & \cmark          & \cmark          & \cmark
   \end{tabular}
   \end{center}
-  $\dagger$ multiple signatures for the same predicate, one must perfectly match\\
-  $\ddagger$ HO arguments must be ground, e.g. \elpiIn{do! (len [] N)} is forbidden
   \caption{Comparison with related work}
   \label{tab:comparison}
 \end{table}
@@ -65,8 +63,8 @@ dispense with explicit mode checking -- an essential component in the other work
 Our mode analysis encompasses numerous higher-order features, some of which
 are absent in other higher-order logic programming languages.
 In particular, it handles partially applied predicates, non-ground
-atoms as arguments (e.g., \elpiIn{do!}), and the inspection of
-atoms (as demonstrated in \cref{sec:examplesx}).
+atoms as arguments and the inspection of
+atoms (as demonstrated in \cref{sec:examplesx}) ($\ddagger$).
 
 % Additionally, Elpi’s strong integration with an interactive theorem prover like
 % Rocq prevents us from relying on ground input terms.
@@ -80,7 +78,7 @@ ascribes
 \href{https://github.com/Mercury-Language/mercury/blob/5900de3e8c1bc1dcc75799b350b381ff9b9774f2/library/list.m#L1587C1-L1597C75}{$11$ signatures}
 to the \texttt{foldr} predicate
 and any call that does not match exactly one of these signatures results in a
-compilation failure. % For instance, \textit{list.filter\_map\_corresponding} fails
+compilation failure ($\dagger$). % For instance, \textit{list.filter\_map\_corresponding} fails
 % if the higher-order function is deterministic rather than semi-deterministic.
 
 Elpi targets less technically inclined users, more familiar with functional programming languages
