@@ -347,25 +347,26 @@ It also checks that the clause does not overlap with an existing one.
   $\mutExclAll\ \prog\ r$ holds iff one of the following conditions
   holds:\\
   a) $\cut \in \vecL{bs}$\\
-  b) $\forall r' = (\clauseCmd{p}{\vecL{t'}}{\_}) \in \prog$
-     there exists a $d \leq k$ such that $\lnot \exists\ \subst\ s.t.\ \unifyCmd{t_d}{t'_d}{\EmptySubst}{\subst}$ % \land \subst \neq \bot$
+  b) $\forall r' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$
+     there exists a $d \leq k$ such that $\forall \subst, \unifyCmd{t_d}{u_d}{\subst}{\bot}$ % \land \subst \neq \bot$
   % c) $\forall r' = (\clauseCmd{p}{\vecL{t'}}{\_}) \in \prog$ $\bigwedge \vecL{t_i = x} \bigwedge \vecL{t'_i \not = X}$.
   \label{def:mut-excl}
 \end{definition}
 
-Case a) is justified by the fact that \ref{rule:piimpl} gives precedence to the
-newly asserted clause, hence the hard cut in its body discards all other clayses.
+Case a) is justified by the hard-cut semantics (see rule \ref{rule:cut}).
 Case b) accounts for mutually exclusive heads.
 We recall that \ref{rule:piimpl} generates a fresh symbol for the
-\elpiIn{pi} quantifid variable.
-Usually (see for example~\cite{1989Warren,1996Somogy}) static mode checking
-plays a crucial role in most determinacy analsys algorithms: two mutually
-exclusive heads may still unify with with the same query if it is flexible.
-By tracking the flow of ground terms from the query to every predicate call
-a mode checker can rule out this problematic situation.
-However, since Elpi performs matching
-rather than full unification on input arguments, the groundness condition is not
-necessary.
+\elpiIn{pi} quantifid variable, hence different from any symbol that can
+occur in the goal or in the other clauses.
+Moreover we
+poit out that \ref{rule:call} \emph{matches} the input arguments
+of the goal against the head of the clauses.
+In turn this dispenses the need for groudness of input
+arguments, a prerequisite of most determinacy analsys algorithms
+(see for example~\cite{1989Warren,1996Somogy}). For example imagine all
+input arguments in the goal are variables: condition b) grants that there
+is at most one clause with variables in all input positions, and that
+would be the only one that can match (unify with the goal without instantiating it).
 
 
 % \ref{rule:check-callOK} and \ref{rule:check-callKO} deals
