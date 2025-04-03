@@ -2,18 +2,18 @@
 
 \begin{table}[b]
   \begin{center}
-  \begin{tabular}{c|c|c|c|c|c}
-    Paper         & Mode check & Hard Cut & HO programs        & Wrong calls           & Open program    \\
+  \begin{tabular}{c|c|c|c|c}
+    Paper         & Mode check & HO programs        & Wrong calls           & Open program    \\
     \hline
-    Warren et al. & required    & \cmark   & \xmark          & \xmark          & \xmark \\
-    Mercury       & required     & \xmark   & \nicefrac{1}{2}$\ddagger$ & \xmark$\dagger$ & \xmark \\
-    % Mixtus        & \cmark     & \cmark   & \xmark          & \nicefrac{1}{2} & \xmark  & \xmark \\
-    RedAlert      & required     & \cmark   & \xmark          & \xmark          & \xmark \\
-    Elpi          & no need     & \cmark   & \cmark          & \cmark          & \cmark
+    Warren et al. & required   & \xmark          & \xmark          & \xmark \\
+    Mercury       & required      & \cmark$\ddagger$ & \xmark$\dagger$ & \xmark \\
+    % Mixtus        & \cmark      & \xmark          & \nicefrac{1}{2} & \xmark  & \xmark \\
+    RedAlert      & required      & \xmark          & \xmark          & \xmark \\
+    Elpi          & no need    & \cmark          & \cmark          & \cmark
   \end{tabular}
   \end{center}
-  $\dagger$ multiple signatures for the sema predicate, one must perfectly match\\
-  $\ddagger$ TODO explain what is missing: partial application\\
+  $\dagger$ multiple signatures for the same predicate, one must perfectly match\\
+  $\ddagger$ HO arguments must be ground, e.g. \elpiIn{do! (len [] N)} is forbidden
   \caption{Comparison with related work}
   \label{tab:comparison}
 \end{table}

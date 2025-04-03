@@ -210,7 +210,7 @@ equivalent to the following one whose complexity is clealy
 the sum of its parts.
 
 \begin{elpicode}
-func do! (pred).
+func do! (pred) ->.
 do! P :- P, !.                 % encoding of if-then cut using Elpi's hard cut
 silly L V :- do! (mem 1 L), do! (len L V).
 \end{elpicode}
