@@ -4,14 +4,14 @@
 We assume a set \PRED of predicate names, %\todo{pradicate with piimpl as arg?}
 a set \DATA of functors (term constructors), and a set \VAR of term variables
 ($X,Y,\ldots$ for unification variables and $x,y,\ldots$ for bound variables).
-The non terminal \CALL groups symbols ($c,d,\ldots$) that can be called: either predicate names
+The non-terminal \CALL groups symbols ($c,d,\ldots$) that can be called: either predicate names
 or variables.
 
 The programmer provides a context \ctx{} that assigns a
 signature $\SIGN$ to each predicate name. By convention predicates take
 all input arguments first and then the output ones:
 We separate them with $\funsep$ and we omit the symbols when there are no arguments
-(i.e. $\SIGN$ degenerates to \F).
+(i.e. $\SIGN$ degenerates to a determinacy marker \F).
 The marker \detI{} stands for deterministic (or functional) while
 \relI{} for non-deterministic. By convention
 \func, \func['], $\func[_1] \ldots$ range over signatures \SIGN{} or determinacy markers \F.
@@ -23,18 +23,16 @@ $\ctx~\texttt{likes!} = \dtype{\detI}{\expI}{\expI}$,
 and also $\ctx\ \texttt{true} = \relI$.
 
 In the syntax of atoms \ATOM we single out the \cut operator since it has a
-dedicated treatment in the operational semantics. We also glue together the
-\elpiIn{pi} and \elpiIn{=>} in the same grammar production for simplicity.
+dedicated treatment in the operational semantics.
 Terms include predicate calls, functor applications and $\lambda$-abstraction.
-For simplicity we impose the body of $\lambda$-abstractions to be explicitly typed
-with a base type (if the body is a predicate, then it must be fully applied).
-Moreover, as this paper does not
-really focus on type checking
-(the interested reader can refer to~\cite{1992nadathur}) we collapse all
-non-predicate types to a single node \texttt{exp}. 
-We also rule out predicates inside data
-% such as list of predicates, 
-for space constraints.
+For simplicity we glue together the
+\elpiIn{pi} and \elpiIn{=>} in the same grammar production and we
+rule out predicates inside data (like lists or predicates).
+Moreover, as this paper does not really focus on type checking
+(the interested reader can refer to~\cite{1992nadathur}) 
+we impose the body of $\lambda$-abstractions to be explicitly typed
+with a base type (if the body is a predicate, then it must be fully applied)
+and we collapse all non-predicate types to a single node \texttt{exp}. 
 
 %for regular data or \V{} for 
 % and polymorphic data.
@@ -75,7 +73,7 @@ $t$ is \ground.
     \ATOM& ::= \cut \mid \CALLHD\ \vecL{\TERM} \mid \piImplCmd[\expI]{\VAR}{\CLAUSE}{\ATOM} & \mathrm{atom} \\
     \TERM & ::= \DATA\ \vecL{\TERM} \mid \CALLHD\ \vecL{\TERM} \mid \lambda \VAR\!\!: \TYPE \bs\ \TERM\!\!: \BASE & \mathrm{term}\\
     \CLAUSE & ::= \clauseCmd{\PRED}{\vecL{\TERM}}{\vecL{\ATOM}} & \mathrm{clause} \\
-    \F & ::= \detI \mid \relI & \mathrm{determinacy} \\
+    \F & ::= \detI \mid \relI & \mathrm{determinacy marker} \\
     % \V & ::= \mathrm{A}, \mathrm{B}, \ldots & \mathrm{type\ variable} \\
     \SIGN & ::= \F\ \vecL{\TYPE} \funsep \vecL{\TYPE} & \mathrm{determinacy\ signature} \\
     \BASE & ::= \expI \mid \F & \mathrm{base\ type} \\
@@ -95,7 +93,7 @@ $t$ is \ground.
   \end{framed}
 \end{figure}
 % \todo{serve \V per eq, ma poi exp?}
-
+\marginpar{pred-> is allowed}
 
 % When two substitutions have disjoint domains we write $\sigma_1 \cup \sigma_2$
 % as the (disjoint) union of two substitutions.
@@ -135,20 +133,20 @@ $$
 
 We denote with $\_\times\_$, $\_+\_$, $\vecL{\phantom{i}\_~}$ and $\_\to\_$ the product, disjoint union, list and
 function space of types, respectively, and with $\B = \{ \top, \bot\}$ the booleans.
-We omit the conversion bewteen the (isomorphic) types $A \times B \to C$
+We omit the conversion between the (isomorphic) types $A \times B \to C$
 and $A \to B \to C$, e.g. we may write $\map\ f\ \vecL{tu}$ instead of $\map\ (\lambda x.f\ (\text{fst}\ x)\ (\text{snd}\ x))\ \vecL{tu}$.
 
-A substitution $\subst \in \Sigma $ is a mapping from unification variables
-\VAR to terms \TERM. 
+A substitution $\subst$ is a mapping from unification variables
+\VAR to terms \TERM (we call this function space $\Sigma$). 
 We write $\subst t$ the application of a substitution \subst to a term $t$,
 and we remark that $t$ is \ground{} iff $\forall \subst, \subst t = t$.
 We write $\dom\ \subst$ for the set of variables occurring
 in the domain or in the codomain of \subst, i.e.
 $\dom\ \subst = \{ X\ |\ \subst X \mathrm{\ is\ defined\ } \lor X \in \vars\ (\subst Y) \mathrm{\ for\ some\ Y} \}$.
 We write $\EmptySubst$ for the only
-substition s.t. $\dom\ \EmptySubst = \emptyset$.
+substitution s.t. $\dom\ \EmptySubst = \emptyset$.
 
-We assume a function $\unify$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \B$
+We assume a function $\unify$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \bot$
 such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
 and $\subst[']$ is the most general extension of $\subst$ %\todo{extension=unifier?}
 as in~\cite{1991miller-pf}.
@@ -158,12 +156,13 @@ and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\
 i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as the pattern.
 
 A program $\prog = (\aleph, \mathcal{I})$ holds a set of names $\aleph$ and a
-mapping $\mathcal{I}$ from predicate names to an \emph{ordered list} of clauses.
+mapping $\mathcal{I}$ from predicate names to an \emph{ordered list} of clauses
+(where the head has higher priority).
 We write $x \# \prog$ to find a name fresh in $\aleph$.
 We write $\prog~\pred$ for the clauses of predicate \pred in $\mathcal{I}$
 and we write $(x,h) + \prog$ to add
-the name $x$ to $\aleph$ and the extra clause $h$ on top of $\mathcal{I}$,
-i.e. $h$ has the highest priority in the program.
+the name $x$ to $\aleph$ and prepend the extra clause $h$  to $\mathcal{I}$
+($h$ has the highest priority in the program).
 
 
 
@@ -217,14 +216,14 @@ pair made of a substitution and a list of goals.
   \begin{framed}
     \runFig
     \vspace{-1em}
-    \caption{Operational natural semantics}
+    \caption{$\run{} : \alt \times \vecL{\alt} \to (\vecL{\alt} \times \Sigma) ~+~ \bot$}
     \label{fig:basic-interp}
   \end{framed}
 \end{figure}
 
 
-The operational semantics of Elpi is given by a relation
-$\run{} \subseteq \alt \times \vecL{\alt} \times (\vecL{\alt} \times \Sigma ~+~ \bot)$.
+The operational, big step, semantics of Elpi is given by a function
+$\run{}$  in \cref{fig:basic-interp}.
 We write \runCmd{gl}{a}{\subst}{a'}{\subst'}
 when a goal list $gl$ under a substitution \subst and alternatives $a$
 terminates with a substitution $\subst'$ and a remaining list of
@@ -261,10 +260,11 @@ An initial query looks like \runQuery{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyLi
   
   %\vspace{0.3em}%
 
-The rules for \run{} are given in~\cref{fig:basic-interp}.
-The first rule to look at is the one for cut (\ref{rule:cut}).
-Remark that the cut-to alternatives stored in each goal are a suffix
-of the (global) alternatives to that goal: If the atom in the goal
+% The rules for \run{} are given in~\cref{fig:basic-interp}.
+The first rule to look at is the one for cut (\ref{rule:cut}):
+% Remark that the cut-to alternatives stored in each goal are a suffix
+% of the (global) alternatives to that goal: 
+If the atom in the goal
 is a cut then the global alternatives are shortened to the cut-to ones.
 
 The cut rule goes hand in hand with~\ref{rule:call} that stores

@@ -212,29 +212,31 @@ that terminates after returning a single result. Our definition intentionally
 captures the latter, as it better reflects the computational complexity of
 programs, particularly in cases of failure (as also observed by \cite{1989Vink}).
 
+Take the following predicate and consider the two (alternative)
+contexts.
+
 \begin{elpicode}
-func silly list int -> int.
-silly L V :- mem 1 L, len L V.
+% bad context                      % good context
+pred mem i:A, i:list A.            func mem A, list A ->.
+mem X [X|_].                       mem X [X|_] :- !
+mem X [_|XS] :- mem X XS.          mem X [_|XS] :- mem X XS.
+
+                 func silly list int -> int.
+                 silly L V :- mem 1 L, len L V. 
 \end{elpicode}
 
-Given the signature of \elpiIn{silly} the program is accepted only
-if both both \elpiIn{mem} and \elpiIn{len} are observationally
-deterministic hence the code is operationally
-equivalent to the following one whose complexity is clearly
-the sum of its parts.
+The signature of \elpiIn{silly} is accepted only
+if \elpiIn{mem} is a function (the code on the right).
+In this case the code of \elpiIn{silly} is operationally
+equivalent to the following one where the worst-case complexity is clearly
+the sum of its parts, rather than the product as it can be is \elpiIn{mem}
+is allowed to give multiple times the same result (code on the left).
 
 \begin{elpicode}
 func do! (pred) ->.
 do! P :- P, !.                   % encoding of if-then using Elpi's hard cut
 silly L V :- do! (mem 1 L), do! (len L V).
 \end{elpicode}
-
-The complexity could have been, on failure, the product of its parts if we had chosen a more
-relaxed definition of function, since the programmer could have called a
-(cut free) implementation of \elpiIn{mem} that is allowed to give multiple
-times the same result.
-% \todo{anche in \href{https://repub.eur.nl/pub/1507/eur-few-cs-89-03.pdf}{1989Vink}, dicono simile}
-% \todo{una delle robe di mercury può fare lo stesso?}
 
 \paragraph{\textbf{Digression on  the eagherness of $\mathcal{H}$}}
 \label{sec:digression-h}

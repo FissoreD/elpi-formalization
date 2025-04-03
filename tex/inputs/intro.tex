@@ -91,7 +91,7 @@ to satisfy the guests.
 pred likes i:guest, o:dish.
 ... % the same guest may like more than one dish ...
 func likes! guest -> dish.
-likes! G D :- likes D G, !.
+likes! G D :- likes G D, !.
 func meal list guest -> list dish.
 meal Gs M :- map likes! Gs M.     % accepted: map is well called
 meal Gs M :- map likes Gs M, !.   % accepted: alternatives are cut
@@ -106,7 +106,7 @@ hence it behaves like as function.
 The third one, at line 12, is rejected since it miscalls \elpiIn{map} without
 compensating for it.
 
-The hard-cut operator of Elpi lets one turn a relation into a function
+The cut operator of Elpi lets one turn a relation into a function
 by committing to its first result, as in the body of \elpiIn{likes!}, but it also
 discards the clauses following the current one.
 The language of signatures we
@@ -187,7 +187,7 @@ Our main contribution is a determinacy checker that:
 \begin{itemize}
 \item covers higher-order logic programming constructs such as first-class
       predicates and dynamic clauses,
-\item can be applied incrementally to a pre-existing code bases since it tracks
+\item can be applied to a pre-existing code bases since it tracks
       miscalled higher-order functions rather than aborting.
 \end{itemize}
 Last, but not least, we provide an operational semantics for

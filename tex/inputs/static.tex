@@ -408,12 +408,10 @@ Consider the following code performing the fusion of two calls to \elpiIn{map} (
 \noindent 
 \def\infunc{\ensuremath{\in \func}\xspace} 
 
-For brevity, we shorten the signature
-\elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{Y}~}
-to $\func$
-and we say $t \infunc$ when a term $t$ has signature stronger or equal to
+For brevity, let $\func$ be the signature
+\elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{Y}~},
+and let $t \infunc$ mean that a term $t$ has a signature stronger or equal to
 $\func$.
-% $\dtype{\detI}{\expI}{\expI}$.
 
 Considering the work that \checkc performs line 34:
 it \assume{}s (resp. \infer{}s) that
