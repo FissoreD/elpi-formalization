@@ -137,7 +137,7 @@ We omit the conversion between the (isomorphic) types $A \times B \to C$
 and $A \to B \to C$, e.g. we may write $\map\ f\ \vecL{tu}$ instead of $\map\ (\lambda x.f\ (\text{fst}\ x)\ (\text{snd}\ x))\ \vecL{tu}$.
 
 A substitution $\subst$ is a mapping from unification variables
-\VAR to terms \TERM (we call this function space $\Sigma$). 
+\VAR to terms \TERM{} (we call this function space $\Sigma$). 
 We write $\subst t$ the application of a substitution \subst to a term $t$,
 and we remark that $t$ is \ground{} iff $\forall \subst, \subst t = t$.
 We write $\dom\ \subst$ for the set of variables occurring
@@ -150,7 +150,7 @@ We assume a function $\unify$ of type $\TERM \times \TERM \times \Sigma \to \Sig
 such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
 and $\subst[']$ is the most general extension of $\subst$ %\todo{extension=unifier?}
 as in~\cite{1991miller-pf}.
-We assume a function $\match$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \B$
+We assume a function $\match$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \bot$
 such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \subst['] p$
 and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\subst$,
 i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as the pattern.
@@ -162,7 +162,7 @@ We write $x \# \prog$ to find a name fresh in $\aleph$.
 We write $\prog~\pred$ for the clauses of predicate \pred in $\mathcal{I}$
 and we write $(x,h) + \prog$ to add
 the name $x$ to $\aleph$ and prepend the extra clause $h$  to $\mathcal{I}$
-($h$ has the highest priority in the program).
+(hence $h$ has the highest priority in the new program).
 
 
 
@@ -207,7 +207,7 @@ the name $x$ to $\aleph$ and prepend the extra clause $h$  to $\mathcal{I}$
 }
 
 A goal $\g \subseteq \prog \times \ATOM\times \vecL{\alt}$
-is a triple made of a program, an atom $g$ and a list of
+is a triple made of a program, an atom and a list of
 so called \emph{cut-to} alternatives.
 An alternative $a \in \alt \subseteq \Sigma \times \vecL{\g}$ is a
 pair made of a substitution and a list of goals.
@@ -216,13 +216,13 @@ pair made of a substitution and a list of goals.
   \begin{framed}
     \runFig
     \vspace{-1em}
-    \caption{$\run{} : \alt \times \vecL{\alt} \to (\vecL{\alt} \times \Sigma) ~+~ \bot$}
+    \caption{$\run{} : \alt \times \vecL{\alt} \to (\vecL{\alt} \times \Sigma) + \bot$}
     \label{fig:basic-interp}
   \end{framed}
 \end{figure}
 
 
-The operational, big step, semantics of Elpi is given by a function
+The operational, big step, semantics of Elpi is given by the function
 $\run{}$  in \cref{fig:basic-interp}.
 We write \runCmd{gl}{a}{\subst}{a'}{\subst'}
 when a goal list $gl$ under a substitution \subst and alternatives $a$
