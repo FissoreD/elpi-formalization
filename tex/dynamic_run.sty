@@ -145,9 +145,9 @@
   \begin{myRule}{#1}
     % IMPL
     \AxiomC{$y \# \prog$}
-    \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{(y, \CLAUSE{}[y/x]) + \prog}{g[y/x]}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
+    \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{(y,h[y/x]) + \prog}{g[y/x]}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
     \RightLabelM{\rulePiImpl}
-    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(\piCmd{x}{\implCmd{\CLAUSE }{g}})}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
+    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(\piCmd{x}{\implCmd{h }{g}})}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
   \end{myRule}
 }
 
