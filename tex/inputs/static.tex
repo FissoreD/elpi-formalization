@@ -38,9 +38,10 @@ into relations to the recursive nature of predicate signatures.
 
 The checking process operates as a form of dataflow analysis: it maintains the
 predicate signature of each variable in \ctx\ and uses it to determine whether
-the variable meets the precondition of a predicate call. Additionally, it can
-update the variable's signature to align with the postcondition of the predicate
-call.
+the variable meets the precondition of a predicate call. Additionally,
+if preconditions are met, it
+updates the signature of the variable to match the signature expected by the
+predicate call.
 
 % We assume that each variable in a term is mapped in \ctx with the
 % weakest signature (i.e., the signature with the fewest constraints).
@@ -187,11 +188,11 @@ first describe the three procedures and then give an example of their execution.
 \assumeFig
 
 \paragraph{The \assume\ procedure} strengthens the signature
-of variables to a given signature by updating the context via the $\min$ operator.
+of variables (see rule \ref{rule:assume-hd}) to a given signature by updating the context via the $\min$ operator.
 Since the syntax allows for arbitrary terms in predicate postion,
-\assume traverses terms recursively until it finds the variables \ref{rule:assume-hd}.
+\assume traverses terms recursively until it finds the variables.
 When the term represents data (e.g. it is of type \expI) the context is left
-untouched (see rules \ref{rule:assume-cut}, \ref{rule:assume-expr} and \ref{rule:assume-exprl}).
+untouched (see rules \ref{rule:assume-expr} and \ref{rule:assume-exprl}).
 Rule \ref{rule:assume-app} moves under a predicate call if the signature of
 the predicate is included in the given one.
 Rule \ref{rule:assume-lam} handles predicate calls where arguments are
@@ -244,7 +245,7 @@ a term and a boolean value indicating whether
 it contains miscalled predicates.
 
 
-The rules for \cut\ (\ref{rule:infer-cut}) and functors (\ref{rule:inferK} and \ref{rule:inferKL}) are
+The rules for functors (\ref{rule:inferK} and \ref{rule:inferKL}) are
 straightforward. 
 
 The rule \ref{rule:infer-app}, combined with the \dapp\ procedure,
