@@ -27,11 +27,11 @@ into relations to the recursive nature of predicate signatures.
     %     s_1 = \dtype{\func_1}{a}{b}\ \land\ s_2 = \dtype{\func_2}{c}{d} \ \land    \\
     %  \ \ \  \func_1 \neq \relI \land \func_2 \neq \detI
     % \end{array}    \\
-    \begin{array}{l} \text{else if } 
+    \begin{array}{l} \text{if } 
         s_1 = \dtype{\_}{a}{b}\ \land\ s_2 = \dtype{\_}{c}{d}
     \end{array}    \\
     % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } s_1 = \relI\ a\ b \land s_2 = \relI\ c\ d \\
-   \ \top                                                          & \text{else if } s_1 = \expI\ \land\ s_2 = \expI
+   \ \top                                                          & \text{if } s_1 = \expI\ \land\ s_2 = \expI
   \end{cases}
   % \label{eq:sub-def}
 \end{equation*}
@@ -73,7 +73,7 @@ We use \( \overline{d} \) to denote the dual marker.
   w_d\ s =\ 
   \begin{cases}
     \ \dtype{d}{(\map\ w_{\overline{d}}\ a)}{(\map\ w_d\ b)} & \text{if } s = \dtype{\_}{a}{b} \\
-    \ \expI                                                       & \text{else if } s = \expI
+    \ \expI                                                       & \text{if } s = \expI
   \end{cases}
   \label{eq:maximize}
   \nonumber
@@ -96,8 +96,8 @@ corresponds to \(\maxT\).
     %   \text{if } s_1 = \dtype{\func_1}{a}{b}\ \land\ s_2 = \dtype{\func_2}{c}{d}\ \land \\
     %       \ \ \ \func_1 \neq \func_2
     % \end{array} \\
-    \text{else if }s_1 = \dtype{\_}{a}{b}\ \land\ s_2 = \dtype{\_}{c}{d}\\
-    \ \expI                                                     & \text{else if } s_1 = \expI\ \land\ s_2 = \expI
+    \text{if }s_1 = \dtype{\_}{a}{b}\ \land\ s_2 = \dtype{\_}{c}{d}\\
+    \ \expI                                                     & \text{if } s_1 = \expI\ \land\ s_2 = \expI
   \end{cases}
   \nonumber
   \label{eq:min}
