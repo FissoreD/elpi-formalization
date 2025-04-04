@@ -59,7 +59,7 @@ We use \( \overline{d} \) to denote the dual marker.
   w_d\ s =\ 
   \begin{cases}
     \ \dtype{d}{(\map\ w_{\overline{d}}\ a)}{(\map\ w_d\ b)} & \text{if } s = \dtype{\_}{a}{b} \\
-    \ \expI                                                       & \text{if } s = \expI
+    \ \expI                                                       & \text{else if } s = \expI
   \end{cases}
   \label{eq:maximize}
   \nonumber
@@ -76,13 +76,14 @@ corresponds to \(\maxT\).
 \begin{equation}
   u_d\ s_1\ s_2 =\ 
   \begin{cases}
+    \ \dtype{\func}{(\map\ u_{\overline{d}}\ \vecL{ac})}{(\map\ u_d\ \vecL{bd})}     & \text{if } s_1 = \dtype{\func}{a}{b}\ \land\ s_2 = \dtype{\func}{c}{d}             \\
     \ \dtype{d}{(\map\ u_{\overline{d}}\ \vecL{ac})}{(\map\ u_d\ \vecL{bd})} & 
-    \!\!\!\begin{array}{l}%
-      \text{if } s_1 = \dtype{\func_1}{\vec a}{\vec b}\ \land\ s_2 = \dtype{\func_2}{\vec c}{\vec d}\ \land \\
-          \ \ \ \func_1 \neq \func_2
-    \end{array} \\
-    \ \dtype{\func}{(\map\ u_{\overline{d}}\ \vecL{ac})}{(\map\ u_d\ \vecL{bd})}     & \text{if } s_1 = \dtype{\func}{\vec a}{\vec b}\ \land\ s_2 = \dtype{\func}{\vec c}{\vec d}             \\
-    \ \expI                                                     & \text{if } s_1 = \expI\ \land\ s_2 = \expI
+    % \!\!\!\begin{array}{l}%
+    %   \text{if } s_1 = \dtype{\func_1}{a}{b}\ \land\ s_2 = \dtype{\func_2}{c}{d}\ \land \\
+    %       \ \ \ \func_1 \neq \func_2
+    % \end{array} \\
+    \text{else if }s_1 = \dtype{\_}{a}{b}\ \land\ s_2 = \dtype{\_}{c}{d}\\
+    \ \expI                                                     & \text{else if } s_1 = \expI\ \land\ s_2 = \expI
   \end{cases}
   \nonumber
   \label{eq:min}
