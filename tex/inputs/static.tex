@@ -36,12 +36,25 @@ into relations to the recursive nature of predicate signatures.
   % \label{eq:sub-def}
 \end{equation*}
 
+Given two signatures \func[_1] and \func[_2], if $\func[_1] \mySub \func[_2]$,
+then \func[_1] is stronger than or equal to \func[_2], and \func[_2] is weaker
+than \func[_1]. Consider a predicate \pred with signature
+\dtype{\func}{\func_i}{\func_o}. We define \func[_i] as the list of
+preconditions on the inputs of \pred, whereas \func{} and \func[_o] represent the
+postconditions on the call to \pred and its outputs, respectively. In a call to
+$p$, let $\func[_i']$ (resp. \func[_o]) represent the signatures of its input
+(resp. output) arguments. If the preconditions are satisfied (i.e.,
+$\vecL{\func[_i'] \mySub \func[_i]} = \top$), then the postconditions can be
+assumed. That is, we assume that the output arguments are pointwise stronger
+or equal to the signature \func[_o], and the entire application has determinacy
+\func.
+
 The checking process operates as a form of dataflow analysis: it maintains the
 predicate signature of each variable in \ctx\ and uses it to determine whether
 the variable meets the precondition of a predicate call. Additionally,
 if preconditions are met, it
-updates the signature of the variable to match the signature expected by the
-predicate call.
+updates the signature of the variable to match the postconditions 
+of the predicate call.
 
 % We assume that each variable in a term is mapped in \ctx with the
 % weakest signature (i.e., the signature with the fewest constraints).
