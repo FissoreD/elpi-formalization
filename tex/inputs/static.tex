@@ -365,21 +365,21 @@ It also checks that the clause does not overlap with an existing one.
 \begin{definition}[Mutual exclusion \mutExclAll]
   Given a program \prog and a clause $h = \clauseCmd{p}{\vecL{t}}{\vecL{bs}}$
   where $\ctx\ \pred = \dtype{\detI}{i_1 \ldots i_k}{\_}$, we say that
-  $\mutExclAll\ \prog\ r$ holds iff one of the following conditions
+  $\mutExclAll\ \prog\ r\ v$ holds iff one of the following conditions
   holds:\\
   a) $h$ has highest priority in \prog and $\cut \in \vecL{bs}$, or\\
-  b) $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$
-     there exists a $d \leq k$ such that $\forall \subst, \unifyCmd{t_d}{u_d}{\subst}{\bot}$ % \land \subst \neq \bot$
-  % c) $\forall h' = (\clauseCmd{p}{\vecL{t'}}{\_}) \in \prog$ $\bigwedge \vecL{t_i = x} \bigwedge \vecL{t'_i \not = X}$.
+  b) exists a $d \leq k$ such that $t_d = v$ and
+       $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$
+       $u_d = f \vec{w} \lor u_d = q \vec{w}$ ($u_d$ not a variable), or\\
+  c) $h$ is toplevel and $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$
+    there exists a $d \leq k$ such that $\forall \subst, \unifyCmd{t_d}{u_d}{\subst}{\bot}$ % \land \subst \neq \bot$
   \label{def:mut-excl}
 \end{definition}
 
 Case a) is justified by the hard-cut semantics combined with the highest
 priority of $h$ in \prog (see rule \ref{rule:cut}).
-Case b) addresses mutually exclusive heads.
-We recall that rule \ref{rule:piimpl} generates a fresh symbol for the
-\elpiIn{pi}-quantified variable, ensuring it is distinct from any symbol that can
-appear in the goal or in other clauses.
+Case c) addresses mutually exclusive heads for teplevle clauses, i.e. clauses
+part of the initial program (or, equivalently, assumed in the query).
 Additionally, we emphasize that rule \ref{rule:call} \emph{matches} the input arguments
 of the goal against the head of the clauses.
 This eliminates the need for groundness of input
@@ -388,6 +388,11 @@ arguments, a common prerequisite in most determinacy analysis algorithms
 input arguments in the goal are variables: condition b) guarantees that there
 is at most one clause with variables in all input positions, which would be
 the only one capable of matching (unifying with the goal without instantiating it).
+Note that c) is unsound if applied to hypothetical clauses
+since they can be asserted multiple times: in case b) that the hypothetical
+clause is required to mention the variable $v$ that is guaranteed to be fresh
+each time by rule \ref{rule:piimpl}.
+
 
 % \ref{rule:check-callOK} and \ref{rule:check-callKO} deals
 % with term applications, and if the terms has valid inputs, then the output are
@@ -415,7 +420,7 @@ the only one capable of matching (unifying with the goal without instantiating i
 % Regarding the \textit{outputs} of clauses, since these \textit{outputs} can be
 % interpreted as new atoms in the code, we need to ensure that their inferred
 % signatures have \textit{inputs} that validate their expected signature. 
-Consider the following code performing the fusion of two calls to \elpiIn{map} (as in \cite{wadler1989}).
+Consider the code performing fusion of two calls to \elpiIn{map} (as in \cite{wadler1989}).
 
 \begin{elpicodeln}[29]
   func compose (func A -> B), (func B -> C), A -> C.

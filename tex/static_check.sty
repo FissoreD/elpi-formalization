@@ -5,7 +5,7 @@
 % \newcommand{\checkCmd}[6][\prog]{\ensuremath{\checkk\ #1\ #4\ (#2,\ #3)\ \!\arr (#5, #6)}}
 \newcommand{\checkLCmd}[5]{\ensuremath{\checkL\ #3\ #1\ #2\ = (#4, #5)}}
 % \newcommand{\checkLCmd}[5]{\ensuremath{\checkL\ #3\ #1\ #2\ \arr (#4, #5)}}
-\newcommand{\checkClause}[3][\prog]{\ensuremath{\checkc\ #1\ #2\ #3}}
+\newcommand{\checkClause}[4][\prog]{\ensuremath{\checkc\ #1\ #2\ #3\ #4}}
 
 % \newcommand{\ruleCheckName}[1]{\ensuremath{C_{#1}}\xspace}
 \newcommand{\ruleCheckName}[2]{\customlabel{#1}{\ensuremath{C_{#2}}}}
@@ -16,7 +16,7 @@
     % Clause
     \AxiomC{
       \Shortstack{
-      { \ensuremath{\mutExclAll\ \prog\ (\clauseCmd{p}{\vecL{t}}{\vecL{bs}})} }
+      { \ensuremath{\mutExclAll\ \prog\ (\clauseCmd{p}{\vecL{t}}{\vecL{bs}})\ v} }
       {
         \ensuremath{
           \ctx\ p = \dtype{\func}{\func[_i]}{\func[_o]} 
@@ -33,7 +33,7 @@
       }
     }
     \RightLabelM{\ruleCheckClause}
-    \UnaryInfC{\checkClause{\ctx}{(\clauseCmd{p}{\vecL{t}}{\vecL{bs}})}}
+    \UnaryInfC{\checkClause{\ctx}{(\clauseCmd{p}{\vecL{t}}{\vecL{bs}})}{v}}
   \end{myRule}
 }
 
@@ -80,7 +80,7 @@
 \newcommand{\ruleCheckPiImplM}[1]{
   \begin{myRule}{#1}
     % PiImpl
-    \AxiomC{ $\checkClause{(\ctx + \{x \mapsto \expI\})}{h}$ }
+    \AxiomC{ $\checkClause{(\ctx + \{x \mapsto \expI\})}{h}{x}$ }
     \AxiomC{ \!\!\!\checkCmd[(\prog + h)]{\ctx + \{x \mapsto \expI\}}{\func}{t}{\ctx[']}{\func[']} } 
     \RightLabelM{\ruleCheckPiImpl}
     \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[\expI]{x}{h}{t})}{\ctx[']\bs \{x\}}{\func[']}}
@@ -202,7 +202,7 @@
       % \ruleCheckListCons{1}
 
       \vspace{-1em}
-      \caption{$\checkk : \prog \to \A \to (\ctx \times \F) \to (\ctx \times \F)$}
+      \caption{$\checkk : \prog \to \A \to (\ctx \times \F) \to (\ctx \times \F) \quad \checkc : \prog \to \ctx \to \CLAUSE \to \VAR \to \mathrm{B}$}
       \label{fig:static-check}
     \end{framed}
   \end{figure}

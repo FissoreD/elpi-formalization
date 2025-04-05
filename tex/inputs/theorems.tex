@@ -120,7 +120,7 @@ Since the program can be dynamically augmented by asserting clauses we need
   \vspace{-1em}
   $$\forall\, \Gamma\ \prog\ r, \iprog \land \checkClause{\ctx}{r} \Rightarrow \iprog[(\prog + r)]$$
   \label{th:0}
-  \vspace{-1em}
+  \vspace{-1.5em}
 \end{lemma}
 
 The main theorem states that a checked initial query behaves deterministically
@@ -131,9 +131,9 @@ under a checked program.
   $$\forall\, \Gamma\ \prog\ t, \iprog \land \checkCmd{\ctx}{\detI}{t}{\_}{\detI}
   \Rightarrow \isdet\ \prog\ t$$
   \label{th:1}
-  \vspace{-1em}
 \end{theorem}
 
+\vspace{-1.5em}
 Since programs can be encoded into atoms by asserting all clauses dynamically
 atop the empty program (that validates the invariant vacuously), we can directly
 relate the static check with the deterministic execution of atoms.
@@ -200,7 +200,7 @@ relate the static check with the deterministic execution of atoms.
 %   We can prove this final lemma thank to \cref{th:run-empty}, combining the
 
 % \end{proof}
-
+\vspace{-1em}
 \paragraph{\textbf{Digression on \isdet}.}
 
 In the logic programming literature, the notion of a ``function'' does not
@@ -228,13 +228,8 @@ mem X [_|XS] :- mem X XS.          mem X [_|XS] :- mem X XS.
 The signature of \elpiIn{silly} is accepted only
 if \elpiIn{mem} is a function in our sense.
 In this case the code of \elpiIn{silly} is operationally
-equivalent to the following, cluttered, one where the worst-case complexity is clearly
-the sum of its parts (and not its product).
-
-\begin{elpicode}
-~                 ~silly L V :- mem 1 L, !, len L V, !.
-\end{elpicode}
-\vspace{-1em}
+equivalent to ``\elpiIn{mem 1 L, !, len L V, !}'' where the worst-case
+complexity is clearly the sum of its parts (and not its product).
 
 \paragraph{\textbf{Digression on  the eagherness of $\mathcal{H}$}}
 \label{sec:digression-h}
