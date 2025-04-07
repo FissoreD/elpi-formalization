@@ -217,13 +217,13 @@ Consider the following \elpiIn{silly} predicate and two (alternative)
 implementations of \elpiIn{mem}.
 
 \begin{elpicode}
-pred mem i:A, i:list A.            func mem A, list A ->.
-mem X [X|_].                       mem X [X|_] :- !.
-mem X [_|XS] :- mem X XS.          mem X [_|XS] :- mem X XS.
-
-                 func silly list int -> int.
-                 silly L V :- mem 1 L, len L V. 
-\end{elpicode}
+~   ~   pred mem i:A, i:list A.                    func mem A, list A ->.
+~   ~   mem X [X|_].                               mem X [X|_] :- !.
+~   ~   mem X [_|XS] :- mem X XS.                  mem X [_|XS] :- mem X XS.
+~   ~
+~   ~                      func silly list int -> int.
+~   ~                      silly L V :- mem 1 L, len L V. 
+\end{elpicode} 
 
 The signature of \elpiIn{silly} is accepted only
 if \elpiIn{mem} is a function in our sense.
