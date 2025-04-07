@@ -76,7 +76,7 @@
 \newcommand{\ruleCallM}[1]{
   \begin{myRule}{#1}
     % CALL
-    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, \subst, al) = \ConsHdNP{\alts[']}\ConsTlNP{al'}$}
+    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, gl, \subst, al) = \ConsHdNP{\alts[']}\ConsTlNP{al'}$}
     \AxiomC{\runCmdQR{\alts[']}{(al'\ @\ al)}}
     \RightLabelM{\ruleCall}
     \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vecL{t}}}{\_}}\ConsTlNP{\gl}}{al}{\subst}}
@@ -85,7 +85,7 @@
 \newcommand{\ruleCallMF}[1]{
   \begin{myRule}{#1}
     % CALL
-    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, \subst, (a::al)) = \EmptyList$}
+    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, gl, \subst, (a::al)) = \EmptyList$}
     \AxiomC{\runCmdQR{a}{al}}
     \RightLabelM{\ruleCallF}
     \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vecL{t}}}{\_}}\ConsTlNP{\gl}}{(a :: al)}{\subst}}
@@ -94,7 +94,7 @@
 \newcommand{\ruleCallMFH}[1]{
   \begin{myRule}{#1}
     % CALL
-    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, \subst, \EmptyList) = \EmptyList$}
+    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, gl, \subst, \EmptyList) = \EmptyList$}
     \RightLabelM{\ruleCallFH}
     \UnaryInfC{\runCmdF{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vecL{t}}}{\_}}\ConsTlNP{\gl}}{\EmptyList}{\subst}}
   \end{myRule}
