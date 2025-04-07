@@ -188,7 +188,7 @@ the name $x$ to $\aleph$ and prepend the extra clause $h$  to $\mathcal{I}$
   \ruleCallMF{0.58}
 
   $$
-  \mathcal{F}(\prog, \pred\ \vecL{t}, gl, \subst, a) :=
+  \!\! \mathcal{F}(\prog, \pred\ \vecL{t}, gl, \subst, a) :=
   \bigg[
     %\bigg(
     \subst['],
@@ -200,7 +200,7 @@ the name $x$ to $\aleph$ and prepend the extra clause $h$  to $\mathcal{I}$
     %\Big)
     %\bigg)
     ~\bigg\rvert~
-    (\clauseCmd{\pred}{\vec{u}}{\vecL{g}}) \in \prog\ \pred
+    (\clauseCmd{\pred}{\vecL{u}}{\vecL{g}}) \in \prog\ \pred
     \bigg]
   $$
   $$
