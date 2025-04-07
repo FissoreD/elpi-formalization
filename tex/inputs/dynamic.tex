@@ -178,23 +178,23 @@ the name $x$ to $\aleph$ and prepend the extra clause $h$  to $\mathcal{I}$
   % \begin{subfigure}[b]{1\textwidth}
     \centering
 
-  \ruleBangM{.50}
-  \ruleStopM{.45}
+  \ruleBangM{.4}
+  \ruleCallMFH{0.44}
   \vspace{0.3em}%
 
   \ruleCallM{1}
 
-  \ruleCallMF{0.5}
-  \ruleCallMFH{0.44}
+  \ruleStopM{.37}
+  \ruleCallMF{0.58}
 
   $$
-  \mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
+  \mathcal{F}(\prog, \pred\ \vecL{t}, gl, \subst, a) :=
   \bigg[
     %\bigg(
     \subst['],
     %\Big(
     %\underbrace{
-      \big[(\prog, g, a) \mid g \in \vecL{g}\big]
+      \big(\big[(\prog, g, a) \mid g \in \vecL{g}\big] @\ gl\big)
     %}_{\mathrm{premises}} @ ~ gl
     \ \kIF\ \mathcal{H}(\vecL{tu}, \subst) = \subst['] \not= \bot
     %\Big)
@@ -204,7 +204,7 @@ the name $x$ to $\aleph$ and prepend the extra clause $h$  to $\mathcal{I}$
     \bigg]
   $$
   $$
-  \mathcal{H}(\vecL{tu},\ ol,\ \subst) = \fold\ \unify\ \vecL{tu_o}\ (\fold\ \match\ \vecL{tu_i}\ \subst)
+  \mathcal{H}(\vecL{tu}, \subst) = \fold\ \unify\ \vecL{tu_o}\ (\fold\ \match\ \vecL{tu_i}\ \subst)
   $$
   ~\\
 
