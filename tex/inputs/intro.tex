@@ -91,7 +91,7 @@ to satisfy the guests.
 pred likes i:guest, o:dish.
 ... % the same guest may like more than one dish ...
 func likes! guest -> dish.
-likes! G D :- likes G D, !.
+likes! G D :- likes G D, !.       % enforces likes! is a function
 func meal list guest -> list dish.
 meal Gs M :- map likes! Gs M.     % accepted: map is well called
 meal Gs M :- map likes Gs M, !.   % accepted: alternatives are cut

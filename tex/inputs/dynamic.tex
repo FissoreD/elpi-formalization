@@ -150,16 +150,17 @@ and we remark that $t$ is \ground{} iff $\forall \subst, \subst t = t$.
 We write $\dom\ \subst$ for the set of variables occurring
 in the domain or in the codomain of \subst, i.e.
 $\dom\ \subst = \{ X\ |\ \subst X \mathrm{\ is\ defined\ } \lor X \in \vars\ (\subst Y) \mathrm{\ for\ some\ Y} \}$.
-We write $\EmptySubst$ for the only
-substitution s.t. $\dom\ \EmptySubst = \emptyset$.
+The empty substitution $\EmptySubst$ is so that $\dom\ \EmptySubst = \EmptyList$.
 
 We assume a function $\unify$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \bot$
-such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ then $\subst['] t_1 = \subst['] t_2$
-and $\subst[']$ is the most general extension of $\subst$ %\todo{extension=unifier?}
+such that if $\unifyCmd{t_1}{t_2}{\subst}{\subst[']} \not= \bot$ 
+then \subst['] is the most general extension of \subst 
+such that $\subst['] t_1 = \subst['] t_2$ %\todo{extension=unifier?}
 as in~\cite{1991miller-pf}.
 We assume a function $\match$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \bot$
-such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$ then $\subst t = \subst['] p$
-and $\subst[']t = \subst t$ and $\subst[']$ is the most general extension of  $\subst$,
+such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$
+then \subst[']  is the most general extension of  $\subst$
+such that $\subst t = \subst['] p$ and $\subst[']t = \subst t$ and $\subst[']$ ,
 i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as the pattern.
 
 A program $\prog = (\aleph, \mathcal{I})$ holds a set of names $\aleph$ and a
