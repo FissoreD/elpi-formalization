@@ -269,11 +269,6 @@ For example given \elpiIn{func once (pred i:A, o:B), A -> B} as in
 the introduction, the partial application \elpiIn{(once likes)}
 has the inferred signature
 \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{guest}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{dish}~}.
-
-
-%Rule \ref{rule:infer-piimpl} introduces a new mapping in the
-% context, associating the binder with its signature and performing a recursive
-% call to \infer. 
 Anonymous clauses are handled by rule \ref{rule:infer-lam} that crafts
 a fresh predicate name $p$ so to reuse the code \checkc\ to check regular clauses (see \cref{fig:static-check}).
 % . This checking phase is needed to
@@ -368,17 +363,16 @@ It also checks that the clause does not overlap with an existing one.
   $\mutExclAll\ \prog\ h\ v$ holds iff one of the following conditions
   holds:\\
   a) $h$ has highest priority in \prog and $\cut \in \vecL{bs}$, or\\
-  b) exists a $d \leq k$ such that $t_d = v$ and
-       $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$
-       $u_d = f \vec{w} \lor u_d = q \vec{w}$ ($u_d$ not a variable), or\\
+  b) there exists a $d \leq k$ s.t. $t_d = v$ and
+       $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$ and $u_d$ is not a variable
+       (i.e. $u_d = f \vec{w} \lor u_d = q \vec{w}$ for some $w$), or\\
   c) $h$ is toplevel and $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$
-    there exists a $d \leq k$ such that $\forall \subst, \unifyCmd{t_d}{u_d}{\subst}{\bot}$ % \land \subst \neq \bot$
-  \label{def:mut-excl}
+    there exists a $d \leq k$ s.t. $\forall \subst, \unifyCmd{t_d}{u_d}{\subst}{\bot}.$\label{def:mut-excl}
 \end{definition}
-
+%
 Case a) is justified by the hard-cut semantics combined with the highest
 priority of $h$ in \prog (see rule \ref{rule:cut}).
-Case c) addresses mutually exclusive heads for teplevle clauses, i.e. clauses
+Case c) addresses mutually exclusive heads for teplevel clauses, i.e. clauses
 part of the initial program (or, equivalently, assumed in the query).
 Additionally, we emphasize that rule \ref{rule:call} \emph{matches} the input arguments
 of the goal against the head of the clauses.
@@ -389,7 +383,7 @@ input arguments in the goal are variables: condition b) guarantees that there
 is at most one clause with variables in all input positions, which would be
 the only one capable of matching (unifying with the goal without instantiating it).
 Note that c) is unsound if applied to hypothetical clauses
-since they can be asserted multiple times: in case b) that the hypothetical
+since they can be asserted multiple times: in case b) the hypothetical
 clause is required to mention the variable $v$ that is guaranteed to be fresh
 each time by rule \ref{rule:piimpl}.
 

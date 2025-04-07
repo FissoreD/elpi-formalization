@@ -64,9 +64,13 @@
 \newcommand{\ruleAssumeHd}{\ruleAssume{rule:assume-hd}{\VAR}}
 \newcommand{\assumeHd}[1]{
   \begin{myRule}{#1}
-    \AxiomC{$\func['] = \minT\ \func\ (\ctx\ X) $}
+    \AxiomC{$
+    \ctx\ X = \dtype{\func[']}{\func[_i]}{\func[_o]}\qquad
+    \func[''] = \minT\ \func\ \func[']\qquad \mathrm{arity}\ X = |\vecL{t}|
+    %\fold\ \assumeCmd{\ctx}{\vecL{(\func[_i],t_i)}}{\!\!}{\ctx[']}
+    $}
     \RightLabelM{\ruleAssumeHd}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{X}{\ctx + \{X \mapsto \func[']\}}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(X\ \vecL{t})}{\ctx + \{X \mapsto \dtype{\func['']}{\func[_i]}{\func[_o]}\}}}
   \end{myRule}
 }
 
@@ -81,7 +85,7 @@
 \newcommand{\ruleAssumeExprL}{\ruleAssume{rule:assume-exprl}{\DATA[']}}
 \newcommand{\assumeExprL}[1]{
   \begin{myRule}{#1}
-    \AxiomC{}% \quad \ctx\ \predVar \mySub \func$ }
+    \AxiomC{\phantom{A}}% \quad \ctx\ \predVar \mySub \func$ }
     \RightLabelM{\ruleAssumeExprL}
     \UnaryInfC{\assumeCmd{\ctx}{\func}{(\lambda\ \vecL{x : \_}. t : \expI)}{\ctx}}
   \end{myRule}
@@ -93,13 +97,13 @@
   \begin{myRule}{#1}
     % APP
     \AxiomC{\ensuremath{
-        \ctx\ c = \dtype{\func[']}{\func[_i]}{\_}\qquad
+        \ctx\ p = \dtype{\func[']}{\func[_i]}{\_}\qquad
         \text{\kIF{} } \func['] \mySub \func
         \text{ \kTHEN{} } \fold\ \assumeCmd{\ctx}{\vecL{(\func[_i],t_i)}}{\!\!}{\ctx[']}
         \text{ \kELSE{} }\ctx['] = \ctx
       }}
     \RightLabelM{\ruleAssumeApp}
-    \UnaryInfC{\assumeCmd{\ctx}{\func}{(c\ \vecL{t})}{\ctx[']}}
+    \UnaryInfC{\assumeCmd{\ctx}{\func}{(p\ \vecL{t})}{\ctx[']}}
   \end{myRule}
 }
 
@@ -140,10 +144,10 @@
 
       \centering
 
-      \assumeExpr{0.45}
-      \assumeExprL{0.45}
+      \assumeExpr{0.48}
+      \assumeExprL{0.48}
       % \assumeCut{0.3}
-      \assumeHd{0.45}
+      \assumeHd{1}
       % \assumePiImpl{0.65}
 
       % \assumeUnif{0.3}

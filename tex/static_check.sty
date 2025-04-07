@@ -80,10 +80,10 @@
 \newcommand{\ruleCheckPiImplM}[1]{
   \begin{myRule}{#1}
     % PiImpl
-    \AxiomC{ $\checkClause{(\ctx + \{x \mapsto \expI\})}{h}{x}$ }
-    \AxiomC{ \!\!\!\checkCmd[(\prog + h)]{\ctx + \{x \mapsto \expI\}}{\func}{t}{\ctx[']}{\func[']} } 
+    \AxiomC{ $\checkClause{(\ctx + \{x \mapsto \expI\})}{h}{x} \quad$ 
+      \checkCmd[(\prog + h)]{\ctx + \{x \mapsto \expI\}}{\func}{t}{\ctx[']}{\func[']} } 
     \RightLabelM{\ruleCheckPiImpl}
-    \BinaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[\expI]{x}{h}{t})}{\ctx[']\bs \{x\}}{\func[']}}
+    \UnaryInfC{\checkCmd{\ctx}{\func}{(\piImplCmd[\expI]{x}{h}{t})}{\ctx[']\bs \{x\}}{\func[']}}
   \end{myRule}
 }
 
