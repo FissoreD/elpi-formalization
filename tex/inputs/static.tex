@@ -365,7 +365,7 @@ It also checks that the clause does not overlap with an existing one.
 \begin{definition}[Mutual exclusion \mutExclAll]
   Given a program \prog and a clause $h = \clauseCmd{p}{\vecL{t}}{\vecL{bs}}$
   where $\ctx\ \pred = \dtype{\detI}{i_1 \ldots i_k}{\_}$, we say that
-  $\mutExclAll\ \prog\ r\ v$ holds iff one of the following conditions
+  $\mutExclAll\ \prog\ h\ v$ holds iff one of the following conditions
   holds:\\
   a) $h$ has highest priority in \prog and $\cut \in \vecL{bs}$, or\\
   b) exists a $d \leq k$ such that $t_d = v$ and
