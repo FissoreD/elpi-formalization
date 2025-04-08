@@ -94,10 +94,10 @@ of a clause.
   \begin{framed}
   \vspace{-.5em}
   \syntaxFig
+\end{framed}
   \vspace{-1em}
   \caption{Syntax}
   \label{fig:syntax}
-  \end{framed}
 \end{figure}
 % \todo{serve \V per eq, ma poi exp?}
 % \marginpar{pred-> is allowed}
@@ -126,7 +126,7 @@ of a clause.
 \section{Operational semantics}
 
 We use $\EmptyList$ for the empty list and $x :: xs$ for prepending an element $x$
-to a list $xs$; $@$ for list concatenation;
+to a list $xs$; $\atsign$ for list concatenation;
 $[e|x \in \vec{x}]$ for list comprehension and $[e\ \kIF\ p|x \in \vec{x}]$ 
 for list filtering. We use the list processing combinators \fold and \map defined by the following equations:
 $$
@@ -172,8 +172,6 @@ and we write $(x,h) + \prog$ to add
 the name $x$ to $\mathbb{N}$ and prepend the extra clause $h$  to $\mathcal{I}$
 (hence $h$ has the highest priority in the new program).
 
-
-
 \newcommand{\runFig}{
   % \begin{subfigure}[b]{1\textwidth}
     \centering
@@ -188,19 +186,19 @@ the name $x$ to $\mathbb{N}$ and prepend the extra clause $h$  to $\mathcal{I}$
   \ruleCallMF{0.58}
 
   $$
-  \!\! \mathcal{F}(\prog, \pred\ \vecL{t}, \vecL{g}, \subst, a) :=
+  \!\! \mathcal{F}(\prog, \pred\, \vecL{t}, \vecL{g}, \subst, a) =
   \bigg[
     %\bigg(
     \subst['],
     %\Big(
     %\underbrace{
-      \big(\big[(\prog, g, a) \mid g \in \vecL{g}\big] @\ \vecL{g}\big)
-    %}_{\mathrm{premises}} @ ~ \vecL{g}
+      \big(\big[(\prog, g, a) \mid g \in\! \vecL{b}\big] \atsign\ \vecL{g}\big)
+    %}_{\mathrm{premises}} \atsign ~ \vecL{g}
     \ \kIF\ \mathcal{H}(\vecL{tu}, \subst) = \subst['] \not= \bot
     %\Big)
     %\bigg)
     ~\bigg\rvert~
-    (\clauseCmd{\pred}{\vecL{u}}{\vecL{g}}) \in \prog\ \pred
+    (\clauseCmd{\pred}{\vecL{u}}{\vecL{b}}) \in \prog\ \pred
     \bigg]
   $$
   $$
@@ -223,10 +221,10 @@ pair made of a substitution and a list of goals.
 \begin{figure}[t!]
   \begin{framed}
     \runFig
+  \end{framed}
     \vspace{-1em}
     \caption{$\run{} : \alt \times \vecL{\alt} \to (\vecL{\alt} \times \Sigma) + \bot$}
     \label{fig:basic-interp}
-  \end{framed}
 \end{figure}
 
 
@@ -252,8 +250,8 @@ An initial query looks like \runQuery{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyLi
   %   %\bigg(
   %   \subst,
   %   %\Big(
-  %   \underbrace{\big[(\prog, t = u, ~a) \mid (t,u) \in \vecL{t,u}\big]}_{\mathrm{head\ unification}} @
-  %   \underbrace{\big[(\prog, g, a) \mid g \in \vecL{g}\big]}_{\mathrm{premises}} @ ~ \vecL{g}
+  %   \underbrace{\big[(\prog, t = u, ~a) \mid (t,u) \in \vecL{t,u}\big]}_{\mathrm{head\ unification}} \atsign
+  %   \underbrace{\big[(\prog, g, a) \mid g \in \vecL{g}\big]}_{\mathrm{premises}} \atsign ~ \vecL{g}
   %   %\Big)
   %   %\bigg)
   %   ~\bigg\rvert~

@@ -36,7 +36,7 @@
 \newtheorem{remark}{Remark}
 \usepackage{framed}
 \usepackage{nicefrac}
-\newcommand{\vecL}[1]{\overrightarrow{#1}}
+\newcommand{\vecL}[1]{\overrightarrow{\vphantom{t}#1}}
 \usepackage{stmaryrd}
 
 % \expandafter\def\expandafter\normalsize\expandafter{%
@@ -58,6 +58,8 @@
 \usepackage{pifont}% http://ctan.org/pkg/pifont
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
+
+\newcommand{\atsign}{\ensuremath{\mbox{\footnotesize\raisebox{-1pt}{\ensuremath{@}}}}}
 
 \newcommand{\BASE}{\ensuremath{\mathbb{B}}}
 \newcommand{\PRED}[1][]{\ensuremath{\mathbb{P}#1}\xspace}

@@ -176,8 +176,8 @@ achieve this, we need to slightly adjust the $\mathcal{F}$ function used by the
   \mathcal{F}(\prog, \pred, \vec{t}, \subst, \alt) :=
   \Bigg[\bigg(\subst,
     \Big(
-    &\big[(\prog, (\vec{t}_i)_x =_m (\vec{u}_i)_x, \alt) \mid 0 \leq x < \text{len }\vec{t}_i\big] @ \\
-    &\quad\big[(\prog, (\vec{t}_o)_x = (\vec{u}_o)_x, \alt) \mid 0 \leq x < \text{len }\vec{t}_o\big] @\\
+    &\big[(\prog, (\vec{t}_i)_x =_m (\vec{u}_i)_x, \alt) \mid 0 \leq x < \text{len }\vec{t}_i\big] \atsign \\
+    &\quad\big[(\prog, (\vec{t}_o)_x = (\vec{u}_o)_x, \alt) \mid 0 \leq x < \text{len }\vec{t}_o\big] \atsign\\
     &\qquad\big[(\prog, g, \alt) \mid g \in bs\big]
     \Big)\bigg) \mid \clauseCmd{\pred}{\vec{u}}{bs} \in \prog\ \pred\Bigg]
 \end{align*}
@@ -453,7 +453,7 @@ $$
   \ref{rule:cut} is executed on $\runCmdQ{(\subst',\cut, post)}{a}{\subst}{a'}$,
   hence $\runCmdQ{(\subst',post)}{\EmptyList}{\subst}{a'}$.
   The same condifuration is reached by starting with $\runCmdQ{a_1}{a_2}{\subst}{a'}$
-  but \ref{rule:cut} is executed on $\runCmdQ{(\subst',\cut, post)}{a @ a_2}{\subst}{a'}$.
+  but \ref{rule:cut} is executed on $\runCmdQ{(\subst',\cut, post)}{a \atsign a_2}{\subst}{a'}$.
   % just with a different set of alternative
   % By induction on the derivation rules (\cref{fig:basic-interp}). The interesting case is the rule
   % \ref{rule:call} when the heads $c_1$ and $c_2$ unify both with the current goal. If
@@ -618,7 +618,7 @@ predicates.
   % $\alt[']$ with no solution. The final list of alternatives returned by the
   % call to \run is the concatenation of $\alt[']$ and $a_{s+1},\dots,a_n$. We
   % need to prove that:
-  % $$\forall a_i \in \alt['] @ (a_{s+1},\dots,a_n), \lnot (\exists \alt\
+  % $$\forall a_i \in \alt['] \atsign (a_{s+1},\dots,a_n), \lnot (\exists \alt\
   % \subst['], \runCmd{a_i}{\EmptyList}{\EmptySubst}{\alt}{\subst[']})$$
   
   

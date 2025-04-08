@@ -77,7 +77,7 @@
   \begin{myRule}{#1}
     % CALL
     \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, \vecL{g}, \subst, al) = \ConsHdNP{\alts[']}\ConsTlNP{al'}$}
-    \AxiomC{\runCmdQR{\alts[']}{(al'\ @\ al)}}
+    \AxiomC{\runCmdQR{\alts[']}{(al'\ \atsign\ al)}}
     \RightLabelM{\ruleCall}
     \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vecL{t}}}{\_}}\ConsTlNP{\vecL{g}}}{al}{\subst}}
   \end{myRule}
@@ -115,7 +115,7 @@
     % CALLB
     \AxiomC{$(\subst h)\ \vecL{t} =_\beta \pred\ \vecL{u}$}
     \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{u}, \subst, \alts) = \ConsHdNP{g}\ConsTlNP{new\_alt}$}
-    \AxiomC{\runCmdR{(g\ @\ \vecL{g})}{(new\_alt\ @\ \alts)}{\subst}}
+    \AxiomC{\runCmdR{(g\ \atsign\ \vecL{g})}{(new\_alt\ \atsign\ \alts)}{\subst}}
     \RightLabelM{\ruleCallB}
     \TrinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(h\ \vecL{t})}{\_}}\ConsTlNP{\vecL{g}}}{\alts}{\subst}}
   \end{myRule}
