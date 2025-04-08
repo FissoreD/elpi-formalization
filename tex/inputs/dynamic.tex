@@ -8,7 +8,7 @@ The non-terminal \CALL groups callable symbols ($c,d,\ldots$): either predicate 
 or variables.
 
 The programmer provides a context \ctx{} that assigns a
-signature $\SIGN$ to each predicate name. By convention predicates take
+signature $\SIGN$ to each predicate name or variable. By convention predicates take
 all input arguments first and then the output ones:
 We separate them with $\funsep$ and we omit the symbols when there are no arguments
 (i.e. $\SIGN$ degenerates to a determinacy marker \F).
@@ -51,7 +51,7 @@ pairs. The zipping process continues up to the length of the shorter list.
 
 Given a call $\pred \vecL{t}$ %to a n-ary predicate 
 where
-$\ctx\ \pred = \dtype{\func}{{ty}_1 \ldots {ty}_k}{{ty}_{k+1} \ldots {ty}_n}$ we
+$\ctx\ \pred = \dtype{\func}{{i}_1 \ldots {i}_k}{{o}_{k+1} \ldots {o}_n}$ we
 write $\vecL{t_i}$ for the input arguments ${t}_1 \ldots {t}_k$;
 $\vecL{t_o}$ for the output ones ${t}_{k+1} \ldots {t}_n$ and
 we define $\mathrm{arity}\ p = n$.
@@ -60,7 +60,7 @@ We write
 $t[x/y]$ for the usual, capture avoiding, operation of replacing the variable $y$
 with $x$ inside $t$.
 We say that $\vars\ t$ is the set
-of free variables occurring in $t$. When $\vars\ t = \emptyset$ we say that
+of free variables occurring in $t$. When $\vars\ t = \EmptyList$ we say that
 $t$ is \ground.
 
 We call \emph{toplevel clauses} the ones that are in the initial program,
@@ -163,13 +163,13 @@ then \subst[']  is the most general extension of  $\subst$
 such that $\subst t = \subst['] p$ and $\subst[']t = \subst t$ and $\subst[']$ ,
 i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as the pattern.
 
-A program $\prog = (\aleph, \mathcal{I})$ holds a set of names $\aleph$ and a
+A program $\prog = (\mathbb{N}, \mathcal{I})$ holds a set of names $\mathbb{N}$ and a
 mapping $\mathcal{I}$ from predicate names to an \emph{ordered list} of clauses
 (where the head has higher priority).
-We write $x \# \prog$ to find a name fresh in $\aleph$.
+We write $x \# \prog$ to find a name fresh in $\mathbb{N}$.
 We write $\prog~\pred$ for the clauses of predicate \pred in $\mathcal{I}$
 and we write $(x,h) + \prog$ to add
-the name $x$ to $\aleph$ and prepend the extra clause $h$  to $\mathcal{I}$
+the name $x$ to $\mathbb{N}$ and prepend the extra clause $h$  to $\mathcal{I}$
 (hence $h$ has the highest priority in the new program).
 
 
@@ -188,14 +188,14 @@ the name $x$ to $\aleph$ and prepend the extra clause $h$  to $\mathcal{I}$
   \ruleCallMF{0.58}
 
   $$
-  \!\! \mathcal{F}(\prog, \pred\ \vecL{t}, gl, \subst, a) :=
+  \!\! \mathcal{F}(\prog, \pred\ \vecL{t}, \vecL{g}, \subst, a) :=
   \bigg[
     %\bigg(
     \subst['],
     %\Big(
     %\underbrace{
-      \big(\big[(\prog, g, a) \mid g \in \vecL{g}\big] @\ gl\big)
-    %}_{\mathrm{premises}} @ ~ gl
+      \big(\big[(\prog, g, a) \mid g \in \vecL{g}\big] @\ \vecL{g}\big)
+    %}_{\mathrm{premises}} @ ~ \vecL{g}
     \ \kIF\ \mathcal{H}(\vecL{tu}, \subst) = \subst['] \not= \bot
     %\Big)
     %\bigg)
@@ -232,10 +232,10 @@ pair made of a substitution and a list of goals.
 
 The operational, big step, semantics of Elpi is given by the function
 $\run{}$  in \cref{fig:basic-interp}.
-We write \runCmd{gl}{a}{\subst}{a'}{\subst'}
-when a goal list $gl$ under a substitution \subst and alternatives $a$
+We write \runCmd{\vecL{g}}{a}{\subst}{a'}{\subst'}
+when a goal list $\vecL{g}$ under a substitution \subst and alternatives $a$
 terminates with a substitution $\subst'$ and a remaining list of
-(still unexplored) alternatives $a'$. We write  \runCmdF{gl}{a}{\subst}
+(still unexplored) alternatives $a'$. We write  \runCmdF{\vecL{g}}{a}{\subst}
 when the execution halts: fails to solve one of the given goals and runs out of
 alternatives. 
 An initial query looks like \runQuery{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyList}]}{\EmptyList}
@@ -247,13 +247,13 @@ An initial query looks like \runQuery{[\goalCmd{\prog}{\pred\ \vecL{t}}{\EmptyLi
 
 
   % $$
-  % \mathcal{F}(\prog, \pred\ \vec{t}, gl, \subst, a) :=
+  % \mathcal{F}(\prog, \pred\ \vec{t}, \vecL{g}, \subst, a) :=
   % \bigg[
   %   %\bigg(
   %   \subst,
   %   %\Big(
   %   \underbrace{\big[(\prog, t = u, ~a) \mid (t,u) \in \vecL{t,u}\big]}_{\mathrm{head\ unification}} @
-  %   \underbrace{\big[(\prog, g, a) \mid g \in \vecL{g}\big]}_{\mathrm{premises}} @ ~ gl
+  %   \underbrace{\big[(\prog, g, a) \mid g \in \vecL{g}\big]}_{\mathrm{premises}} @ ~ \vecL{g}
   %   %\Big)
   %   %\bigg)
   %   ~\bigg\rvert~

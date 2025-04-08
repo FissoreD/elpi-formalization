@@ -571,9 +571,9 @@ predicates.
 \end{definition}
 
 \begin{definition}[Index-cut erasure $|\cdot|$]
-  Given an alternative $a = (\subst, \vecL{gl})$ we write
+  Given an alternative $a = (\subst, \vecL{\vecL{g}})$ we write
   $|a|$ the procedure of filtering out index-cuts, i.e.
-  $|a| = (\subst,\ [ (\prog^!,\ g,\ \vecL{|al|})\ \mathbf{if}\ g \not\in I^! \ \mid\ (\prog^!,\ g,\ al) \in \vecL{gl}])$
+  $|a| = (\subst,\ [ (\prog^!,\ g,\ \vecL{|al|})\ \mathbf{if}\ g \not\in I^! \ \mid\ (\prog^!,\ g,\ al) \in \vecL{\vecL{g}}])$
 \end{definition}
 
 \begin{lemma}[Same exec $\prog$ and $\prog^!$]

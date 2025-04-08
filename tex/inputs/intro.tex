@@ -58,7 +58,7 @@ A first motivating example is the \elpiIn{map} predicate, widely used in
 all Elpi applications. Elpi
 follows the $\lambda$Prolog convention of
 writing application with no parentheses: \elpiIn{map F L R}
-should be understood as the atom \elpiIn{map(F, L, R)}.
+should be understood as the standard Prolog atom \elpiIn{map(F, L, R)}.
 
 \begin{elpicodeln}[1]
 pred map i:(pred i:A, o:B), i:list A, o:list B. % basic signature
@@ -91,7 +91,7 @@ to satisfy the guests.
 pred likes i:guest, o:dish.
 ... % the same guest may like more than one dish ...
 func likes! guest -> dish.
-likes! G D :- likes G D, !.       % enforces likes! is a function
+likes! G D :- likes G D, !.       % commit to the first solution
 func meal list guest -> list dish.
 meal Gs M :- map likes! Gs M.     % accepted: map is well called
 meal Gs M :- map likes Gs M, !.   % accepted: alternatives are cut
@@ -167,7 +167,7 @@ operations:
 2) assert a new clause to copy \elpiIn{x} to itself via the \elpiIn{=>} operator.
 This fresh \elpiIn{x} stands for the bound variable in the function body
 \elpiIn{F x} and its dedicated clause is only active in that scope (intuitively it
-is a local \texttt{assert/1}).
+is the local version of Prolog's \texttt{assert/1}).
 
 The \elpiIn{whd} predicate computes the weak head normal form by
 contracting the application of a $\lambda$-abstraction to an argument.

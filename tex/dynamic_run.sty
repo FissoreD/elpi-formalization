@@ -29,9 +29,9 @@
   \begin{myRule}{#1}
     % UNIF
     \AxiomC{\unifyCmd{x}{y}{\subst}{\subst[']}}
-    \AxiomC{\runCmdR{\gl}{\alts}{\subst[']}}
+    \AxiomC{\runCmdR{\vecL{g}}{\alts}{\subst[']}}
     \RightLabelM{\ruleUnif}
-    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\_}{x = y}{\_}}\ConsTlNP{\gl}}{\alts}{\subst}}
+    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\_}{x = y}{\_}}\ConsTlNP{\vecL{g}}}{\alts}{\subst}}
   \end{myRule}
 }
 
@@ -39,9 +39,9 @@
   \begin{myRule}{#1}
     % MATCH
     \AxiomC{\matchCmd{x}{y}{\subst}{\subst[']}}
-    \AxiomC{\runCmd{\gl}{\alts}{\subst[']}{\alts[']}{\subst['']}}
+    \AxiomC{\runCmd{\vecL{g}}{\alts}{\subst[']}{\alts[']}{\subst['']}}
     \RightLabelM{\ruleMatch}
-    \BinaryInfC{\runCmd{\ConsHdNP{\goalCmd{\_}{(x =_m y)}{\_}}\ConsTlNP{\gl}}{\alts}{\subst}{\alts[']}{\subst['']}}
+    \BinaryInfC{\runCmd{\ConsHdNP{\goalCmd{\_}{(x =_m y)}{\_}}\ConsTlNP{\vecL{g}}}{\alts}{\subst}{\alts[']}{\subst['']}}
   \end{myRule}
 }
 
@@ -67,45 +67,45 @@
 \newcommand{\ruleBangM}[1]{
   \begin{myRule}{#1}
     % CUT
-    \AxiomC{\runCmdR{\gl}{\alts}{\subst}}
+    \AxiomC{\runCmdR{\vecL{g}}{\alts}{\subst}}
     \RightLabelM{\ruleBang}
-    \UnaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\_}{\cut}{\alts}}\ConsTlNP{\gl}}{\_}{\subst}}
+    \UnaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\_}{\cut}{\alts}}\ConsTlNP{\vecL{g}}}{\_}{\subst}}
   \end{myRule}
 }
 
 \newcommand{\ruleCallM}[1]{
   \begin{myRule}{#1}
     % CALL
-    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, gl, \subst, al) = \ConsHdNP{\alts[']}\ConsTlNP{al'}$}
+    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, \vecL{g}, \subst, al) = \ConsHdNP{\alts[']}\ConsTlNP{al'}$}
     \AxiomC{\runCmdQR{\alts[']}{(al'\ @\ al)}}
     \RightLabelM{\ruleCall}
-    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vecL{t}}}{\_}}\ConsTlNP{\gl}}{al}{\subst}}
+    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vecL{t}}}{\_}}\ConsTlNP{\vecL{g}}}{al}{\subst}}
   \end{myRule}
 }
 \newcommand{\ruleCallMF}[1]{
   \begin{myRule}{#1}
     % CALL
-    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, gl, \subst, (a::al)) = \EmptyList$}
+    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, \vecL{g}, \subst, (a::al)) = \EmptyList$}
     \AxiomC{\runCmdQR{a}{al}}
     \RightLabelM{\ruleCallF}
-    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vecL{t}}}{\_}}\ConsTlNP{\gl}}{(a :: al)}{\subst}}
+    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vecL{t}}}{\_}}\ConsTlNP{\vecL{g}}}{(a :: al)}{\subst}}
   \end{myRule}
 }
 \newcommand{\ruleCallMFH}[1]{
   \begin{myRule}{#1}
     % CALL
-    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, gl, \subst, \EmptyList) = \EmptyList$}
+    \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{t}, \vecL{g}, \subst, \EmptyList) = \EmptyList$}
     \RightLabelM{\ruleCallFH}
-    \UnaryInfC{\runCmdF{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vecL{t}}}{\_}}\ConsTlNP{\gl}}{\EmptyList}{\subst}}
+    \UnaryInfC{\runCmdF{\ConsHdNP{\goalCmd{\prog}{\callCmd{\pred}{\vecL{t}}}{\_}}\ConsTlNP{\vecL{g}}}{\EmptyList}{\subst}}
   \end{myRule}
 }
 
 \newcommand{\ruleCallBeta}[1]{
   \begin{myRule}{#1}
     \AxiomC{$\subst (X\ \vecL{t}) =_{\beta\eta} \pred\ \vecL{u}$}
-    \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\pred\ \vecL{u}}{a}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
+    \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{\pred\ \vecL{u}}{a}}\ConsTlNP{\vecL{g}}}{\alts[']}{\subst}}
     \RightLabelM{\ruleBeta}
-    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(X\ \vecL{t})}{a}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
+    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(X\ \vecL{t})}{a}}\ConsTlNP{\vecL{g}}}{\alts[']}{\subst}}
   \end{myRule}
 }
 
@@ -115,9 +115,9 @@
     % CALLB
     \AxiomC{$(\subst h)\ \vecL{t} =_\beta \pred\ \vecL{u}$}
     \AxiomC{$\mathcal{F}(\prog, \pred\ \vecL{u}, \subst, \alts) = \ConsHdNP{g}\ConsTlNP{new\_alt}$}
-    \AxiomC{\runCmdR{(g\ @\ \gl)}{(new\_alt\ @\ \alts)}{\subst}}
+    \AxiomC{\runCmdR{(g\ @\ \vecL{g})}{(new\_alt\ @\ \alts)}{\subst}}
     \RightLabelM{\ruleCallB}
-    \TrinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(h\ \vecL{t})}{\_}}\ConsTlNP{\gl}}{\alts}{\subst}}
+    \TrinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(h\ \vecL{t})}{\_}}\ConsTlNP{\vecL{g}}}{\alts}{\subst}}
   \end{myRule}
 }
 
@@ -126,18 +126,18 @@
 % \newcommand{\ruleImplM}[1]{
 %   \begin{myRule}{#1}
 %     % IMPL
-%     \AxiomC{\runCmd{\ConsHdNP{(\goalCmd{(H + \ctx)}{B}{\alts})}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
+%     \AxiomC{\runCmd{\ConsHdNP{(\goalCmd{(H + \ctx)}{B}{\alts})}\ConsTlNP{\vecL{g}}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %     \RightLabelM{\ruleImpl}
-%     \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{(\implCmd{H}{B})}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
+%     \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{(\implCmd{H}{B})}{\alts}}\ConsTlNP{\vecL{g}}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %   \end{myRule}
 % }
 
 % \newcommand{\rulePiM}[1]{
 %   \begin{myRule}{#1}
 %     % PI
-%     \AxiomC{\runCmd{\ConsHdNP{\goalCmd{(x \uplus \ctx)}{B}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
+%     \AxiomC{\runCmd{\ConsHdNP{\goalCmd{(x \uplus \ctx)}{B}{\alts}}\ConsTlNP{\vecL{g}}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %     \RightLabelM{\rulePi}
-%     \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{(\piCmd{x}{B})}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
+%     \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{(\piCmd{x}{B})}{\alts}}\ConsTlNP{\vecL{g}}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %   \end{myRule}
 % }
 
@@ -145,9 +145,9 @@
   \begin{myRule}{#1}
     % IMPL
     \AxiomC{$y \# \prog$}
-    \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{(y,h[y/x]) + \prog}{g[y/x]}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
+    \AxiomC{\runCmdR{\ConsHdNP{\goalCmd{(y,h[y/x]) + \prog}{g[y/x]}{\alts}}\ConsTlNP{\vecL{g}}}{\alts[']}{\subst}}
     \RightLabelM{\rulePiImpl}
-    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(\piCmd{x}{\implCmd{h }{g}})}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}}
+    \BinaryInfC{\runCmdR{\ConsHdNP{\goalCmd{\prog}{(\piCmd{x}{\implCmd{h }{g}})}{\alts}}\ConsTlNP{\vecL{g}}}{\alts[']}{\subst}}
   \end{myRule}
 }
 
@@ -155,8 +155,8 @@
 % \newcommand{\ruleLamM}[1]{
 %   \begin{myRule}{#1}
 %     % PI
-%     \AxiomC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{(B[x\backslash T])}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
+%     \AxiomC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{(B[x\backslash T])}{\alts}}\ConsTlNP{\vecL{g}}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %     \RightLabelM{\ruleLam}
-%     \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{((\lambda x. B) T)}{\alts}}\ConsTlNP{\gl}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
+%     \UnaryInfC{\runCmd{\ConsHdNP{\goalCmd{\ctx}{((\lambda x. B) T)}{\alts}}\ConsTlNP{\vecL{g}}}{\alts[']}{\subst}{\alts['']}{\subst[']}}
 %   \end{myRule}
 % }
