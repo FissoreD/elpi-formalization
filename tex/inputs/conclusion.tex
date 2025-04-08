@@ -73,7 +73,8 @@ atoms (as demonstrated in \cref{sec:examplesx}) ($\ddagger$).
 % Rocq prevents us from relying on ground input terms.
 
 Finally, in higher-order programming, the \mySub\ relation allows predicates to
-be wrongly applied, as illustrated by the \elpiIn{map} procedure. In Mercury,
+be wrongly applied, as illustrated by the \elpiIn{map} procedure. In the Mercury
+language (\cite{1996Somogy}),
 this notion of a ``wrong call'' does not exist. Instead, the language enforces
 correctness by requiring higher-order functions to be annotated with explicit
 mode and determinacy signatures for each possible behavior. As a result, Mercury
@@ -88,8 +89,8 @@ Elpi targets less technically inclined users, more familiar with functional prog
 than logic ones, hence we strive for simplicity,
 defining only one determinacy class and immediately classifying wrong calls as
 non-deterministic.
-As a result \elpiIn{foldr} is decorated with just the following, familiar to our audience,
-signature: \elpiIn{func foldr (func L, A -> A), list L, A -> A}.
+As a result \elpiIn{foldr} is decorated with just the following signature: 
+\elpiIn{func foldr (func L, A -> A), list L, A -> A}, which is familiar to our audience.
 Finally this design choice aligns
 with our goal of providing static guarantees on programs rather than
 helping the compiler to produce

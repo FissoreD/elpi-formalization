@@ -102,7 +102,7 @@ meal Gs M :- map likes Gs M.      % rejected: meal is not a function
 function, hence also \elpiIn{map likes! Gs M} is.
 The second implementation miscalls \elpiIn{map} by passing the relation
 \elpiIn{likes}, but then commits to the first solution,
-hence it behaves like as function.
+hence it behaves like a function.
 The third one, at line 12, is rejected since it miscalls \elpiIn{map} without
 compensating for it.
 
