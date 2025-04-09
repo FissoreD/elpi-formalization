@@ -468,7 +468,9 @@ As a result of the analysis performed by \assume\ on the outputs of
 well-called predicates, the following clauses are deemed functional.
 
 \begin{elpicode}
+  func easy list term -> list term.
   easy T R :- fuse (map whd) (map copy) F,       F T R. 
+  func hard term -> term.
   hard T R :- fuse (map whd) (map copy) (map F), F T R. 
 \end{elpicode}
 
@@ -476,7 +478,7 @@ well-called predicates, the following clauses are deemed functional.
 While the first clause simply uses the output of \elpiIn{fuse}, the
 second clause extracts the sub-term \elpiIn{F} from it. The
 in-depth analysis performed by \assume ensures the correctness of the
-signature for arguments in \textit{input} positions of the outputs,
+signature for arguments in \textit{input} positions of the outputs ones,
 such as \elpiIn{F}.
 
 The analysis performed by \assume matches the one done by \infer: they both

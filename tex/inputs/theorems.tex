@@ -8,8 +8,9 @@
 % \end{definition}
 
 We are interested in identifying predicates that leave no choice points
-called \emph{semidet} in \cite{1996henderson}, or in the wording of \cite{nakamura1986}
-predicates that are \emph{operationally deterministic}. 
+called \emph{semidet} in \cite{1996henderson}, or
+\emph{operationally deterministic} in
+\cite{nakamura1986}.
 % Due to the lack of space, we leave the
 % proofs of the following theorems in the appendix.
 
@@ -73,8 +74,8 @@ $$
   \qquad \semi{\expI}\ (\predt) = \top \vspace{0.5em}
 \end{array}
 $$
-In order to handle partial application like \elpiIn{once likes} in the introduction
-we consider the following extra rules:
+Partial applications like \elpiIn{once likes} in the introduction
+require following extra rules:
 $$
 \arraycolsep=1.4pt
 \begin{array}{rl}
@@ -106,14 +107,14 @@ $\sem{f_1} t \Rightarrow \sem{f_2} t$:
 the post-conditions of $f_1$ can be stronger than the ones of $f_2$ while
 the pre-conditions of $f_1$ must be weaker than the ones of $f_2$.
 
-We use the meaning of signatures to describe the key invariant of program:
+% We use the meaning of signatures to describe the key invariant of program:
 \newcommand{\iprog}[1][\prog]{\ensuremath{\texttt{checked}\ \Gamma\ #1}\xspace}
 \begin{definition}[Program invariant \iprog]\label{def:i}
   We say that \iprog{} holds iff for all predicates $\pred \in \prog$ s.t. $\ctx\ \pred = \dtype{\detI}{\_}{\_}$
   then  $\forall \vecL{t}, \sem{\detI}\ (\predt)$.
 \end{definition}
 
-Since the program can be dynamically augmented by asserting clauses we need
+Since the program can locally assert clauses we need
 \checkc\ to preserve the invariant.
 
 \begin{lemma}[Invariant preservation]
@@ -123,8 +124,10 @@ Since the program can be dynamically augmented by asserting clauses we need
   \vspace{-1.5em}
 \end{lemma}
 
-The main theorem states that a checked initial query behaves deterministically
-under a checked program.
+As one expects a checked query evaluates deterministically under
+a checked program.
+% The main theorem states that a checked initial query behaves deterministically
+% under a checked program.
 
 \begin{theorem}[Deterministic execution]
   Given a context \ctx and an atom $t$, then
@@ -134,9 +137,8 @@ under a checked program.
 \end{theorem}
 
 \vspace{-1.5em}
-Since programs can be encoded into atoms by asserting all clauses dynamically
-atop the empty program (that validates the invariant vacuously), we can directly
-relate the static check with the deterministic execution of atoms.
+Since programs can be encoded into atoms (via the \elpiIn{=>} operator)
+we can directly relate the static check with the deterministic execution of atoms.
 
 \begin{corollary}[Static check entails Deterministic run]
   % Given a context \ctx and an atom $t$, then
@@ -221,15 +223,18 @@ implementations of \elpiIn{mem}.
 ~   ~   mem X [X|_].                               mem X [X|_] :- !.
 ~   ~   mem X [_|XS] :- mem X XS.                  mem X [_|XS] :- mem X XS.
 ~   ~
-~   ~                      func silly list int -> int.
-~   ~                      silly L V :- mem 1 L, len L V. 
+~   ~   func silly list int -> int.                func once (pred) -> .
+~   ~   silly L V :- mem 1 L, len L V.             once P :- P, !.
 \end{elpicode} 
 
-The signature of \elpiIn{silly} is accepted only
-if \elpiIn{mem} is a function in our sense.
+The signature of \elpiIn{silly} is accepted by our check only
+if \elpiIn{mem} is functional in our sense (code on the right).
 In this case the code of \elpiIn{silly} is operationally
-equivalent to ``\elpiIn{mem 1 L, !, len L V, !}'' where the worst-case
+equivalent to ``\elpiIn{once (mem 1 L), once (len L V)}'' where the worst-case
 complexity is clearly the sum of its parts (and not its product).
+Moreover we found that beginners are often confused by backtracking,
+especially when they instrument their code for debugging: a
+we believe our static check of observational determinacy can mitigate that. 
 
 \paragraph{\textbf{Digression on  the eagherness of $\mathcal{H}$}}
 \label{sec:digression-h}
@@ -240,10 +245,8 @@ A more natural and possibly more efficient semantics would be to just create the
 alternatives and prepend to the list of goals the same matching/unification
 problems, but that would not satisfy \isdet.
 
-From a practical standpoint an efficient implementation of that semantics
+From a practical standpoint an efficient implementation %of that semantics
 can make $\mathcal{H}$ lazy without compromising the \isdet property
 if either it indexes clauses deep enough
-or performs a program transformation consisting in inserting the
-\elpiIn{do!} defined above around each call to a deterministic predicate
-(as we manually did in the example above).
-
+or it transforms the program by inserting
+\elpiIn{once} around each call to a deterministic predicate.
