@@ -1,10 +1,5 @@
 \section{Determinacy checking}
 
-It is one of our objectives that the determinacy checker accepts
-predicates that are \textit{wrongly} called so that we can, incrementally and bottom up,
-make the predicate signatures of an existing code base more precise.
-
-
 The \mySub\ relation subsumes signature equality and
 extends the intuitive inclusion of mathematical functions
 into relations to the recursive nature of predicate signatures.
@@ -49,6 +44,9 @@ assumed. That is, the output arguments are pointwise stronger
 or equal to the signature \func[_o], and the entire application has determinacy
 \func.
 
+It is one of our objectives that the determinacy checker accepts
+predicates that are \textit{wrongly} called so that we can, incrementally and bottom up,
+make the predicate signatures of an existing code base more precise.
 The checking process operates as a form of dataflow analysis: it maintains the
 predicate signature of each variable in \ctx\ and uses it to determine whether
 the variable meets the precondition of a predicate call. Additionally,
