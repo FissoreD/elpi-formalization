@@ -219,7 +219,7 @@ Consider the following \elpiIn{silly} predicate and two (alternative)
 implementations of \elpiIn{mem}.
 
 \begin{elpicode}
-~   ~   pred mem i:A, i:list A.                    func mem A, list A ->.
+~   ~   pred mem i:A, i:list A.                    func mem A, list A -> .
 ~   ~   mem X [X|_].                               mem X [X|_] :- !.
 ~   ~   mem X [_|XS] :- mem X XS.                  mem X [_|XS] :- mem X XS.
 ~   ~
@@ -234,7 +234,7 @@ equivalent to ``\elpiIn{once (mem 1 L), once (len L V)}'' where the worst-case
 complexity is clearly the sum of its parts (and not its product).
 Moreover we found that beginners are often confused by backtracking,
 especially when they instrument their code for debugging:
-we believe our static check of observational determinacy can mitigate that. 
+we believe our static check for \emph{observational} determinacy can mitigate that. 
 
 \paragraph{\textbf{Digression on  the eagherness of $\mathcal{H}$}}
 \label{sec:digression-h}
