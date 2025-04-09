@@ -361,9 +361,9 @@ It also checks that the clause does not overlap with an existing one.
   $\mutExclAll\ \prog\ h\ v$ holds iff one of the following conditions
   holds:\\
   a) $h$ has highest priority in \prog and $\cut \in \vecL{bs}$, or\\
-  b) there exists a $d \leq k$ s.t. $t_d = v$ and
+  b) \parbox[t][][t]{.95\textwidth}{there exists a $d \leq k$ s.t. $t_d = v$ and
        $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$ and $u_d$ is not a variable
-       (i.e. $u_d = f \vec{w} \lor u_d = q \vec{w}$ for some $w$), or\\
+       (i.e. $u_d = f \vec{w} \lor u_d = q \vec{w}$ for some $w$), or}\\
   c) $h$ is toplevel and $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$
     there exists a $d \leq k$ s.t. $\forall \subst, \unifyCmd{t_d}{u_d}{\subst}{\bot}.$\label{def:mut-excl}
 \end{definition}
