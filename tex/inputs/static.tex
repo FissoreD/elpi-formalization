@@ -37,12 +37,12 @@ than \func[_1]. Consider a predicate \pred with signature
 \dtype{\func}{\func_i}{\func_o}. We define \func[_i] as the list of
 preconditions on the inputs of \pred, whereas \func{} and \func[_o] represent the
 postconditions on the call to \pred and its outputs, respectively. In a call to
-$p$, let $\func[_i']$ (resp. \func[_o]) represent the signatures of its input
-(resp. output) arguments. If the preconditions are satisfied (i.e.,
+$p\ \vecL{t}$ let $\func[_i']$ be the signatures of its input
+arguments $\vecL{t_i}$. If the preconditions are satisfied (i.e.,
 $\vecL{\func[_i'] \mySub \func[_i]} = \top$), then the postconditions can be
-assumed. That is, the output arguments are pointwise stronger
-or equal to the signature \func[_o], and the entire application has determinacy
-\func.
+assumed. That is, the signature of the output arguments $vecL{t_o}$ are
+considered to be stronger or equal to the signature \func[_o],
+and the entire application has determinacy \func.
 
 It is one of our objectives that the determinacy checker accepts
 predicates that are \textit{wrongly} called so that we can, incrementally and bottom up,
@@ -199,7 +199,8 @@ first describe the three procedures and then give an example of their execution.
 \assumeFig
 
 \paragraph{The \assume\ procedure} strengthens the signature
-of variables (see rule \ref{rule:assume-hd}) to a given signature by updating the context via the $\min$ operator.
+of variables (see rule \ref{rule:assume-hd}) to a given signature by
+updating the context via the \minT operator.
 Since the syntax allows for arbitrary terms in predicate postion,
 \assume traverses terms recursively until it finds the variables.
 When the term represents data (e.g. it is of type \expI) the context is left
@@ -252,7 +253,7 @@ re-arranged.
 \paragraph{The \infer\ procedure}
 %is responsible for inferring the signature of a term. It
 returns a pair containing the signature of the given
-a term and a boolean value indicating whether
+term and a boolean value indicating whether
 it contains miscalled predicates.
 
 
@@ -260,15 +261,15 @@ The rules for functors (\ref{rule:inferK} and \ref{rule:inferKL}) are
 straightforward. 
 The rule \ref{rule:infer-app}, combined with the \dapp\ procedure,
 handles calls when the head is a variable or a predicate
-and accounts both for full and partial applications. \dapp\ aims essentially
-to verify that the inferred signature of the inputs of a term respect the
+and accounts for both full and partial applications. \dapp\ 
+verifies that the inferred signature of the inputs of a term respect the
 expected signature. If it is not the case, it returns $\bot$.
 For example given \elpiIn{func once (pred i:A, o:B), A -> B} as in
 the introduction, the partial application \elpiIn{(once likes)}
 has the inferred signature
 \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{guest}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{dish}~}.
 Anonymous clauses are handled by rule \ref{rule:infer-lam} that crafts
-a fresh predicate name $p$ so to reuse the code \checkc\ to check regular clauses (see \cref{fig:static-check}).
+a fresh predicate name $p$ so to reuse \checkc\ to check regular clauses (see \cref{fig:static-check}).
 % . This checking phase is needed to
 % ensure that the term under the spine of lambda is functional if it should be and
 % that the outputs becomes terms with the expected signature. 
@@ -307,7 +308,7 @@ a fresh predicate name $p$ so to reuse the code \checkc\ to check regular clause
 
 \paragraph{The \checkk\ procedure} is in charge of verifying the determinacy of
 an atom.
-A cut is clearly determinate (rule \ref{rule:check-cut}).
+A \cut is clearly determinate (rule \ref{rule:check-cut}).
 A predicate call is determinate if the premises of its signature
 are met, i.e. if \infer\ returns $\top$ on all input arguments and
 infers signatures that are stronger than the required ones (rule \ref{rule:check-callOK}).
@@ -362,7 +363,7 @@ It also checks that the clause does not overlap with an existing one.
   holds:\\
   a) $h$ has highest priority in \prog and $\cut \in \vecL{bs}$, or\\
   b) \parbox[t][][t]{.95\textwidth}{there exists a $d \leq k$ s.t. $t_d = v$ and
-       $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$ and $u_d$ is not a variable
+       $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$ we have that $u_d$ is not a variable
        (i.e. $u_d = f \vec{w} \lor u_d = q \vec{w}$ for some $w$), or}\\
   c) $h$ is toplevel and $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$
     there exists a $d \leq k$ s.t. $\forall \subst, \unifyCmd{t_d}{u_d}{\subst}{\bot}.$\label{def:mut-excl}
@@ -427,11 +428,11 @@ Consider the code performing fusion of two calls to \elpiIn{map} (as in \cite{wa
 \def\infunc{\ensuremath{\in \func}\xspace} 
 
 For brevity, let $\func$ be the signature
-\elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{Y}~},
+\elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{Y}~} (for the right \elpiIn{X} and \elpiIn{Y}),
 and let $t \infunc$ mean that a term $t$ has a signature stronger or equal to
 $\func$.
 
-Considering the work that \checkc performs line 34:
+Considering the work that \checkc performs at line 34:
 it \assume{}s (resp. \infer{}s) that
 \textit{inputs} (resp. \textit{outputs}) have the expected signature and that
 the body is functional.

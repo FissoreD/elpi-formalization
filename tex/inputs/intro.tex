@@ -43,12 +43,11 @@ proof search (\cite{sozeau2008-tc}) to Haskell-style symbol overloading
 (\cite{wadler1996-hs}). In the latter case, the solution to a query determines
 the formal meaning of an overloaded symbol, making it crucial that this
 solution is unique. Ensuring this uniqueness through a static check is
-particularly relevant in the context of the Rocq library platform, where code
+particularly relevant in the context of the \emph{Rocq platform}, where code
 developed by different teams is integrated.
 % Currently, Elpi includes a standard type checker (see \cite{1992nadathur}) but lacks
 % a determinacy analysis. 
-While the literature offers numerous studies on this
-topic (e.g., \cite{1989Warren, 1996Somogy, 2011king}), none are directly
+While the literature offers numerous studies on determinacy analysis (e.g., \cite{1989Warren, 1996Somogy, 2011king}), none are directly
 applicable to Elpi due to its higher-order nature.
 
 

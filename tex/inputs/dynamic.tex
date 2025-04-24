@@ -7,6 +7,19 @@ a set \DATA of functors (term constructors), and a set \VAR of term variables
 The non-terminal \CALL groups callable symbols ($c,d,\ldots$): either predicate names
 or variables.
 
+In the syntax of atoms \ATOM we single out the \cut operator since it has a
+dedicated treatment in the operational semantics.
+The non-terminal $\TERM$, for terms, include predicate calls, functor applications and $\lambda$-abstraction.
+For simplicity we glue together the
+\elpiIn{pi} and \elpiIn{=>} in the same grammar production and we
+rule out predicates inside data (like lists of predicates).
+Moreover, as this paper does not really focus on type checking
+(the interested reader can refer to~\cite{1992nadathur}) 
+we collapse all non-predicate types to a single node \texttt{exp} in
+the non-terminal $\TYPE$. Finally
+we impose the body of $\lambda$-abstractions to be explicitly typed
+with a base type (if the body is a predicate, then it must be fully applied).
+
 The programmer provides a context \ctx{} that assigns a
 signature $\SIGN$ to each predicate name or variable. By convention predicates take
 all input arguments first and then the output ones:
@@ -20,19 +33,8 @@ we have that
 $\ctx~\texttt{likes} = \dtype{\relI}{\expI}{\expI}$,
 that
 $\ctx~\texttt{likes!} = \dtype{\detI}{\expI}{\expI}$,
-and also $\ctx\ \texttt{true} = \relI$.
+and also $\ctx\ \texttt{true} = \relI$ (no arguments, no $\funsep$ symbol).
 
-In the syntax of atoms \ATOM we single out the \cut operator since it has a
-dedicated treatment in the operational semantics.
-Terms include predicate calls, functor applications and $\lambda$-abstraction.
-For simplicity we glue together the
-\elpiIn{pi} and \elpiIn{=>} in the same grammar production and we
-rule out predicates inside data (like lists of predicates).
-Moreover, as this paper does not really focus on type checking
-(the interested reader can refer to~\cite{1992nadathur}) 
-we impose the body of $\lambda$-abstractions to be explicitly typed
-with a base type (if the body is a predicate, then it must be fully applied)
-and we collapse all non-predicate types to a single node \texttt{exp}. 
 
 %for regular data or \V{} for 
 % and polymorphic data.
@@ -57,14 +59,16 @@ $\vecL{t_o}$ for the output ones ${t}_{k+1} \ldots {t}_n$ and
 we define $\mathrm{arity}\ p = n$.
 We say that $|t_1 \ldots t_n| = n$.
 We write
-$t[x/y]$ for the usual, capture avoiding, operation of replacing the variable $y$
-with $x$ inside $t$.
+$t[y/x]$ for the usual, capture avoiding, operation of replacing the variable $x$
+with $y$ inside $t$.
 We say that $\vars\ t$ is the set
-of free variables occurring in $t$. When $\vars\ t = \EmptyList$ we say that
+of free variables occurring in $t$ (the binders are \elpiIn{pi} and $\lambda$).
+When $\vars\ t = \EmptyList$ we say that
 $t$ is \ground.
 
-We call \emph{toplevel clauses} the ones that are in the initial program,
-or equivalently that are asserted by the atoms in the query. We call
+We call \emph{toplevel clauses} the ones that are in the initial program.
+%or equivalently that are asserted by the atoms in the query. 
+We call
 \emph{hypothetical clauses} the ones that are asserted by atoms in the premises
 of a clause.
 
@@ -127,8 +131,8 @@ of a clause.
 
 We use $\EmptyList$ for the empty list and $x :: xs$ for prepending an element $x$
 to a list $xs$; $\atsign$ for list concatenation;
-$[e|x \in \vec{x}]$ for list comprehension and $[e\ \kIF\ p|x \in \vec{x}]$ 
-for list filtering. We use the list processing combinators \fold and \map defined by the following equations:
+$[e\ \kIF\ p|x \in \vec{x}]$ for list comprehension (we omit the filter when $p$ is true).
+We use the list processing combinators \fold and \map defined by the following equations:
 $$
 \begin{array}{lll}
 \fold\ \_\ \_\ \bot = \bot & \fold\ f\ (x :: xs)\ a = \fold\ f\ xs\ (f\ x\ a) & \fold\ \_\ \EmptyList\ a = a \\
@@ -160,7 +164,7 @@ as in~\cite{1991miller-pf}.
 We assume a function $\match$ of type $\TERM \times \TERM \times \Sigma \to \Sigma + \bot$
 such that if $\matchCmd{t}{p}{\subst}{\subst[']} \not= \bot$
 then \subst[']  is the most general extension of  $\subst$
-such that $\subst t = \subst['] p$ and $\subst[']t = \subst t$ and $\subst[']$ ,
+such that $\subst t = \subst['] p$ and $\subst[']t = \subst t$,
 i.e. \match{} does not assign variables in $t$ but only in $p$ that acts as the pattern.
 
 A program $\prog = (\mathbb{N}, \mathcal{I})$ holds a set of names $\mathbb{N}$ and a
@@ -181,10 +185,7 @@ the name $x$ to $\mathbb{N}$ and prepend the extra clause $h$  to $\mathcal{I}$
   \vspace{0.3em}%
 
   \ruleCallM{1}
-
-  \ruleStopM{.37}
-  \ruleCallMF{0.58}
-
+%
   $$
   \!\! \mathcal{F}(\prog, \pred\, \vecL{t}, \vecL{g}, \subst, a) =
   \bigg[
@@ -204,7 +205,10 @@ the name $x$ to $\mathbb{N}$ and prepend the extra clause $h$  to $\mathcal{I}$
   $$
   \mathcal{H}(\vecL{tu}, \subst) = \fold\ \unify\ \vecL{tu_o}\ (\fold\ \match\ \vecL{tu_i}\ \subst)
   $$
-  ~\\
+  
+  \ruleStopM{.37}
+  \ruleCallMF{0.58}
+
 
   \rulePiImplM{1}
   \ruleCallBeta{1}
@@ -274,10 +278,10 @@ If the atom in the goal
 is a cut then the global alternatives are shortened to the cut-to ones.
 
 The cut rule goes hand in hand with~\ref{rule:call} that stores
-the current alternatives \alts in all the subgoals via
+the current alternatives $al$ in all the subgoals via
 the function $\mathcal{F}$. This function is in charge of creating the
 %\todo{dire che F le restituisce in ordine}
-new alternatives $\alts['] :: al$;
+new alternatives $\alts['] :: al'$;
 the former is directly evaluated while
 the rest prepended to the existing list of alternatives.
 $\mathcal{H}$ filters applicable clauses by unifying their heads with
@@ -297,10 +301,11 @@ for $y$ everywhere, then it loads the new clause $h$ into the program.
 
 The last rule~\ref{rule:beta} deals with the fact that an atom can be
 a variable. If that variable is assgined in $\subst$ to a term
-that happens to be a predicate, then it proceeds. We write $=_{\beta\eta}$
-since the equational theory of $\lambda$Prolog (hence Elpi) requires
-that but plays no role in this paper (the reference
-for the equational theory of $\lambda$Prolog is~\cite{1991miller-pf}).
+that happens to be a predicate, then it proceeds.
+% We write $=_{\beta\eta}$
+% since the equational theory of $\lambda$Prolog (hence Elpi) requires
+% that but plays no role in this paper (the reference
+% for the equational theory of $\lambda$Prolog is~\cite{1991miller-pf}).
 
 The operational semantics we present is essentially a big-step version of the
 one given in~\cite{1990Vink}, extended to accommodate the higher-order
@@ -308,11 +313,11 @@ constructs of $\lambda$Prolog and the input-matching behavior specific to Elpi.
 It is also worth mentioning \cite{qi2009}, where the author proposes a semantics
 for an implementation of a higher-order \textit{pure} $\lambda$Prolog, which,
 therefore, has no equivalent for the cut operator and lacks the notion of clause
-priorities. 
+prioritiy. 
 Our semantics describes an SLD search strategy with a \textit{hard-cut} operator
 in the sense of~\cite{2003Andrews}: it not only prunes later clauses of the same
-predicate but also eliminates alternative clauses for subgoals that appear
-earlier in the clause premises. 
+predicate but also eliminates alternatives for subgoals that appear
+earlier in the clause premise. 
 We opted for an operational semantics rather than a denotational one (as
 in~\cite{2011king}) to maintain a concrete representation of the current choice
 points, that is essential for the notion of function we

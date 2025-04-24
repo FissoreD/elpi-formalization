@@ -16,7 +16,7 @@ called \emph{semidet} in \cite{1996henderson}, or
 
 \begin{definition}[Operational determinacy (\isdet)]\label{def:is-det}
   Given a program \prog and a term $\predt$,
-  \isdet\ is defined as follows:
+  we say that \isdet\ \prog\ {(\predt)} holds iff
   $$\forall a\ \subst, \isDetCmd{\predt}$$
 \end{definition}
 
@@ -75,7 +75,7 @@ $$
 \end{array}
 $$
 Partial applications like \elpiIn{once likes} in the introduction
-require following extra rules:
+require the following extra rules:
 $$
 \arraycolsep=1.4pt
 \begin{array}{rl}
@@ -140,7 +140,7 @@ a checked program.
 Since programs can be encoded into atoms (via the \elpiIn{=>} operator)
 we can directly relate the static check with the deterministic execution of atoms.
 
-\begin{corollary}[Static check entails Deterministic run]
+\begin{corollary}[Static check entails Deterministic execution]
   % Given a context \ctx and an atom $t$, then
   \vspace{-1em}
   $$\forall\, \Gamma\ t, \checkCmd[\EmptyList]{\ctx}{\detI}{t}{\_}{\detI}
@@ -212,7 +212,7 @@ undeniably represents a mathematical function. However, from a programmer's
 perspective, such behavior is fundamentally different from that of a program
 that terminates after producing a single result. Our definition %intentionally
 captures the latter, as it better reflects the computational complexity of
-programs%, particularly in cases of failure 
+programs %, particularly in cases of failure 
 (as also observed by \cite{1989Vink}).
 
 Consider the following \elpiIn{silly} predicate and two (alternative)
