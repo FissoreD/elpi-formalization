@@ -419,16 +419,19 @@ Consider the code performing fusion of two calls to \elpiIn{map} (as in \cite{wa
   func compose (func A -> B), (func B -> C), A -> C.
   compose F G X Z :- F X Y, G Y Z.
 
-  ~\PYG{k+kd}{typeabbrev}\PYG{+w}{ }\PYG{n+nf}{(flist A B)}\PYG{+w}{ }\PYG{k+kd}{(}\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{A}\PYG{+w}{ }\PYG{k+kd}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{B}\PYG{k+kd}{)}.\PYG{+w}{             }\PYG{c}{\PYGZpc{} type abbreviation}~
-  func fuse (flist A B), (flist B C) -> (flist A C).
-  fuse (map A) (map B) (map C) :- id (compose A B) C. 
+  ~\PYG{k+kd}{typeabbrev}\PYG{+w}{ }\PYG{n+nf}{(fl A B)}\PYG{+w}{ }\PYG{k+kd}{(}\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{A}\PYG{+w}{ }\PYG{k+kd}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{B}\PYG{k+kd}{)}.\PYG{+w}{               }\PYG{c}{\PYGZpc{} type abbreviation}~
+  func fuse (fl A B), (fl B C) -> (fl A C).
+  fuse (map F) (map G) (map H) :- id (compose F G) H. 
 \end{elpicodeln}
 
 \noindent 
 \def\infunc{\ensuremath{\in \func}\xspace} 
 
-For brevity, let $\func$ be the signature
-\elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{Y}~} (for the right \elpiIn{X} and \elpiIn{Y}),
+\newcommand{\fl}[2]{\ensuremath{fl_{#1#2}}}
+\newcommand{\f}[2]{\ensuremath{f_{#1#2}}}
+
+For brevity, let $\fl{X}{Y}$ be the signature \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{Y}~},
+let $\f{X}{Y}$ be the signature \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{Y}~},
 and let $t \infunc$ mean that a term $t$ has a signature stronger or equal to
 $\func$.
 
@@ -436,18 +439,19 @@ Considering the work that \checkc performs at line 34:
 it \assume{}s (resp. \infer{}s) that
 \textit{inputs} (resp. \textit{outputs}) have the expected signature and that
 the body is functional.
-More precisely, it \assume{}s that \elpiIn{map A}~\infunc and \elpiIn{map B}~\infunc. 
+More precisely, it \assume{}s that \elpiIn{map F}~$\in \fl{A}{B}$ and
+\elpiIn{map G}~$\in \fl{B}{C}$. 
 In order to be able to \infer that
-\elpiIn{map C}~\infunc, we need 
-\elpiIn{C}~\infunc.
-The checking phase on the premise allows to \infer that \elpiIn{C}~\infunc 
+\elpiIn{map H}~$\in \fl{A}{C}$, we need 
+\elpiIn{H}~$\in \f{A}{C}$.
+The checking phase on the premise allows to \infer that
+\elpiIn{H}~$\in \f{A}{C}$ 
 if \elpiIn{id} is well-called.
-In turn, this requires \elpiIn{compose A B} $\in$
-\elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{Y}~}.
-   \elpiIn{A} and \elpiIn{B} have the determinacy
-\func. This is the reason why \assume recurses on the 
-\textit{inputs} of \elpiIn{map A} and \elpiIn{map B} in order to
-\infer that \elpiIn{A}~\infunc and \elpiIn{B}~\infunc.
+In turn, this requires \elpiIn{compose F G} $\in \f{A}{C}$,
+and hence it requires \elpiIn{F}~$\in \f{A}{B}$ and \elpiIn{G}~$\in \f{B}{C}$.
+This is the reason why \assume recurses on the 
+\textit{inputs} of \elpiIn{map F} and \elpiIn{map G} in order to
+\infer strong signatured for \elpiIn{F} and \elpiIn{G}.
 
 % Consequently, \elpiIn{map A} (resp. \elpiIn{map B})
 % will recursively assign \elpiIn{A} (resp. \elpiIn{B}) the signature
@@ -466,16 +470,16 @@ In turn, this requires \elpiIn{compose A B} $\in$
 As a result of the analysis performed by \assume\ on the outputs of
 well-called predicates, the following clauses are deemed functional.
 
-\begin{elpicode}
+\begin{elpicodeln}[35]
   func easy list term -> list term.
   easy T R :- fuse (map whd) (map copy) F,       F T R. 
   func hard term -> term.
   hard T R :- fuse (map whd) (map copy) (map F), F T R. 
-\end{elpicode}
+\end{elpicodeln}
 
 \noindent
 While the first clause simply uses the output of \elpiIn{fuse}, the
-second clause extracts the sub-term \elpiIn{F} from it. The
+clause at line 38 extracts the sub-term \elpiIn{F} from it. The
 in-depth analysis performed by \assume ensures the correctness of the
 signature for arguments in \textit{input} positions of the outputs ones,
 such as \elpiIn{F}.
