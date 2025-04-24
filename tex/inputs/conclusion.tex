@@ -29,13 +29,13 @@ The papers referenced in the first column of the table correspond to
 these studies is that they focus on \textit{closed}
 programs, that do not evolve during query execution, while 
 the \impl\ operator of Elpi  allows clauses to be dynamically asserted.
+%
+For closed programs, predicates can be transformed into
+\textit{super-homogeneous} form by merging all clauses into one with
+disjunctions. This aids determinacy inference and may improve efficiency.
+However, this transformation is not feasible in our open-world setting.
 
-For closed programs, a transformation into \textit{super-homogeneous} form is
-possible, where all clauses of a predicate are collapsed into a single clause
-containing a disjunction for each original clause. This transformation
-facilitates determinacy inference and can sometimes yield more efficient
-programs. However, in our open-world setting, such a transformation is not
-feasible.
+
 
 Our
 operational semantics shares similarities with \cite{1990Vink}, where a list of
@@ -59,7 +59,7 @@ explicitly represents choice points, enabling us to identify
 operationally deterministic predicates as those that do not leave any choice points.
 This approach differs from \cite{2011king}, which employs a denotational semantics
 where choice points are encoded as continuations.
-
+%
 Regarding modes, Elpi’s matching procedure over input arguments allows us to
 dispense with explicit mode checking -- an essential component in the other works.
 
@@ -73,7 +73,8 @@ atoms (as demonstrated in \cref{sec:examplesx}) ($\ddagger$).
 % Rocq prevents us from relying on ground input terms.
 
 Finally the \mySub\ relation allows higher-order predicates to
-be wrongly applied, as illustrated by the \elpiIn{map} procedure. In the Mercury
+be wrongly applied. %, as illustrated by the \elpiIn{map} procedure. 
+In the Mercury
 language (\cite{1996Somogy}),
 this notion of a ``wrong call'' does not exist. Instead, the language enforces
 correctness by requiring higher-order functions to be annotated with explicit
@@ -95,6 +96,13 @@ Finally this design choice aligns
 with our goal of providing static guarantees on programs rather than
 helping the compiler to produce
 efficient, specialized, machine code.
+
+We have ported the Hierarchy-Builder tool~\cite{cohen_et_al:LIPIcs.FSCD.2020.34}
+to work with our static determinacy checker. The tool consists of $5,031$ lines of
+code organized into $495$ predicates, of which $482$ had declared signatures. As a
+result of the porting, $460$ predicates are functions at the cost of adding $13$
+signatures and $37$ cuts — $26$ of which arguably should have been present from
+the beginning.
 
 % TODO: bench on HB
 
