@@ -97,11 +97,12 @@ with our goal of providing static guarantees on programs rather than
 helping the compiler to produce
 efficient, specialized, machine code.
 
-We have ported the Hierarchy-Builder tool~\cite{cohen_et_al:LIPIcs.FSCD.2020.34}
-to work with our static determinacy checker. The tool consists of $5,031$ lines of
-code organized into $495$ predicates, of which $482$ had declared signatures. As a
-result of the porting, $460$ predicates are functions at the cost of adding $13$
-signatures and $37$ cuts — $26$ of which arguably should have been present from
+We applied our determinacy checker to the Hierarchy-Builder tool by
+\cite{cohen_et_al:LIPIcs.FSCD.2020.34}. It consists of $5,031$ lines of
+code organized into $495$ predicates. %, of which $482$ had declared signatures. 
+As a result $460$ predicates are functions at the cost of adding
+% $13$ signatures and
+$37$ cuts — $26$ of which arguably should have been present from
 the beginning.
 
 % TODO: bench on HB
