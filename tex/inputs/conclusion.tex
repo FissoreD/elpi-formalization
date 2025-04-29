@@ -97,13 +97,26 @@ with our goal of providing static guarantees on programs rather than
 helping the compiler to produce
 efficient, specialized, machine code.
 
-We applied our determinacy checker to the Hierarchy-Builder tool by
-\cite{cohen_et_al:LIPIcs.FSCD.2020.34}. It consists of $5,031$ lines of
-code organized into $495$ predicates. %, of which $482$ had declared signatures. 
-As a result $460$ predicates are functions at the cost of adding
+% We applied our determinacy checker to the Hierarchy-Builder tool by
+% \cite{cohen_et_al:LIPIcs.FSCD.2020.34}. It consists of $5,031$ lines of
+% code organized into $495$ predicates. %, of which $482$ had declared signatures. 
+% As a result $460$ predicates are functions at the cost of adding
+% % $13$ signatures and
+% $37$ cuts — $26$ of which arguably should have been present from
+% the beginning.
+
+We applied our determinacy checker to Rocq-Elpi by
+\cite{tassi2018}
+and Hierarchy-Builder by
+\cite{cohen_et_al:LIPIcs.FSCD.2020.34}. Together, they consist of 14,062 lines of
+code organized into 1,126 predicates. %, of which $482$ had declared signatures. 
+As a result 1,073 predicates are functions at the cost of adding
 % $13$ signatures and
-$37$ cuts — $26$ of which arguably should have been present from
-the beginning.
+137 cuts — 105 of which arguably should have been present from
+the beginning (they were lurking bugs).
+Thee determinacy checker runs, on average, faster than the type checker.
+
+Elpi is free software available at \url{https://github.com/LPCIC/elpi}.
 
 % TODO: bench on HB
 
