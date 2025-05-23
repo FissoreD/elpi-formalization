@@ -1,0 +1,108 @@
+% tlpguide.tex
+% v1.0, released 24 Mar 2021
+% Copyright 2021 Cambridge University Press
+
+\documentclass[runningheads]{llncs}
+% \usepackage{bbold}
+\usepackage{my_prelude}
+\usepackage{infer}
+\usepackage{assume}
+\usepackage{dynamic_run}
+\usepackage{static_check}
+% \usepackage[backend=biber]{biblatex}
+
+\DeclareUnicodeCharacter{03BB}{$\lambda$}
+
+\begin{document}
+
+% \lefttitle{Davide Fissore and Enrico Tassi}
+
+% \jnlPage{1}{8}
+% \jnlDoiYr{2021}
+% \doival{10.1017/xxxxx}
+
+\title{Determinacy Checking for Elpi: an Higher-Order Logic Programming language with Cut}
+\titlerunning{Determinacy Checking for Elpi}
+
+% \begin{authgrp}
+% \author{\gn{Davide Fissore}}
+% \affiliation{Université Côte d'Azur, Inria\thanks{This work has been supported by the French government, through the France 2030
+% investment plan managed by the Agence Nationale de la Recherche, as part of the
+% ``UCA DS4H'' project, reference ANR-17-EURE-0004.}}
+% \author{\gn{Enrico Tassi}}
+% \affiliation{Université Côte d'Azur, Inria}
+% \end{authgrp}
+
+%\history{\sub{xx xx xxxx;} \rev{xx xx xxxx;} \acc{xx xx xxxx}}
+
+\author{Davide Fissore\inst{1}\orcidID{0000-1111-2222-3333} \and
+Enrico Tassi\inst{1}\orcidID{1111-2222-3333-4444}}
+%
+\authorrunning{Fissore \& Tassi}
+\institute{Université Côte d’Azur, Inria}
+
+\maketitle
+
+\begin{abstract}
+% We study the determinacy checker for Elpi, a higher-order logic programming
+% language: Predicates can receive predicates as arguments
+% and can locally assert clauses.
+
+% We give an operational semantics for Elpi that accounts for
+% the cut operator and local asserts. The semantics makes
+% choice points explicit, allowing us to
+% call operationally deterministic (or functional) predicates that do not leave any
+% choice points. 
+
+% We design a language of signatures with preconditions
+% that allows deterministic predicates to be miscalled. The static
+% checker tracks miscalled functions and considers them
+% relations (non-deterministic predicates) for the analisys of the surrounding code.
+% As a result we can add signatures without breaking existing code, progressively increasing
+%  staic guarantees.
+
+We study a determinacy checker for Elpi, a higher-order logic programming
+language descendant of $\lambda$Prolog. Elpi clauses can receive predicates as arguments,
+can locally assert new clauses and can use the cut operator.
+
+We present an operational semantics for Elpi that
+% accounts for these higher-order features and the cut operator. This semantics 
+explicitly represents choice points,
+enabling us to identify operationally deterministic (or functional)
+predicates -- those that do not leave any choice points.
+Then we design a language of determinacy signatures with preconditions.
+Finally we present a determinacy checker
+that tracks miscalled
+functions, i.e. when preconditions are not met, and instead of aborting
+treats those calls as relations (non-deterministic predicates) when
+analyzing
+the surrounding code. As a result, determinacy signatures can be introduced without
+breaking existing code, progressively enhancing static guarantees.
+\end{abstract}
+
+\begin{keywords}
+Functionality, Determinacy Analysis, Higher Order, Logic Programming, Cut
+\end{keywords}
+
+
+
+\input{inputs/intro.tex}
+\input{inputs/dynamic.tex}
+\input{inputs/static.tex}
+\input{inputs/theorems.tex}
+
+% \input{inputs/elpi_hoas.tex}
+%\input{inputs/elpi_basic.tex}
+\input{inputs/conclusion.tex}
+
+%\input{inputs/intro.tex}
+% \input{inputs/enrico.tex}
+\bibliographystyle{splncs04}
+\bibliography{bib}
+
+
+% \appendix
+% \section{Theorem proofs}
+% \input{inputs/appendix.tex}
+
+\end{document}

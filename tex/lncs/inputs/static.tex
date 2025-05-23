@@ -1,0 +1,785 @@
+\section{Determinacy checking}
+
+The \mySub\ relation subsumes signature equality and
+extends the intuitive inclusion of mathematical functions
+into relations to the recursive nature of predicate signatures.
+% , and rejects the
+% converse inclusion. 
+%In the spirit of subtyping the input arguments of predicate signature
+%are compared in a contravariant way. 
+%
+\begin{equation*}
+  s_1 \mySub s_2 =\ 
+  \begin{cases}
+   \ \bot                                                          & \text{if } s_1 = \dtype{\relI}{\_}{\_}\ \land\ s_2 = \dtype{\detI}{\_}{\_} \\
+    % (\forall i, a'_i \mySub a_i) \land (\forall j, b_j \mySub b'_j)      & \text{else if } s_1 = \detI\ a\ b \land s_2 = \detI\ a'\ b' \\
+    % (\forall i, a'_i \mySub c_i) \land (\forall j, b_j \mySub c_{|a|+j}) & \text{else if } s_1 = \detI\ a\ b \land s_2 = \relI\ c      \\
+    % \forall i, a_i \mySub b_i                                            & \text{else if } s_1 = \relI\ a\ \land s_2 = \relI\ b        \\
+    % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{else if } s_1 = [\detI\mid \relI]\ a\ b \land s_2 = [\detI\mid \relI]\ c\ d \\
+   \ (\forall i, c_i \mySub a_i)\ \land\ (\forall j, b_j \mySub d_j) &
+    \!\!\!
+    % \begin{array}{l} \text{if } 
+    %     s_1 = \dtype{\func_1}{a}{b}\ \land\ s_2 = \dtype{\func_2}{c}{d} \ \land    \\
+    %  \ \ \  \func_1 \neq \relI \land \func_2 \neq \detI
+    % \end{array}    \\
+    \begin{array}{l} \text{if } 
+        s_1 = \dtype{\_}{a}{b}\ \land\ s_2 = \dtype{\_}{c}{d}
+    \end{array}    \\
+    % (\forall i, c_i \mySub a_i) \land (\forall j, b_j \mySub d_j) & \text{if } s_1 = \relI\ a\ b \land s_2 = \relI\ c\ d \\
+   \ \top                                                          & \text{if } s_1 = \expI\ \land\ s_2 = \expI
+  \end{cases}
+  % \label{eq:sub-def}
+\end{equation*}
+
+Given two signatures \func[_1] and \func[_2], if $\func[_1] \mySub \func[_2]$,
+then we say that \func[_1] is stronger than or equal to \func[_2], and \func[_2] is weaker
+than \func[_1]. Consider a predicate \pred with signature
+\dtype{\func}{\func_i}{\func_o}. We define \func[_i] as the list of
+preconditions on the inputs of \pred, whereas \func{} and \func[_o] represent the
+postconditions on the call to \pred and its outputs, respectively. In a call to
+$p\ \vecL{t}$ let $\func[_i']$ be the signatures of its input
+arguments $\vecL{t_i}$. If the preconditions are satisfied (i.e.,
+$\vecL{\func[_i'] \mySub \func[_i]} = \top$), then the postconditions can be
+assumed. That is, the signature of the output arguments $vecL{t_o}$ are
+considered to be stronger or equal to the signature \func[_o],
+and the entire application has determinacy \func.
+
+It is one of our objectives that the determinacy checker accepts
+predicates that are \textit{wrongly} called so that we can, incrementally and bottom up,
+make the predicate signatures of an existing code base more precise.
+The checking process operates as a form of dataflow analysis: it maintains the
+predicate signature of each variable in \ctx\ and uses it to determine whether
+the variable meets the precondition of a predicate call. Additionally,
+when preconditions are met, it
+updates the signatures to match the postconditions 
+of the predicate call.
+
+% We assume that each variable in a term is mapped in \ctx with the
+% weakest signature (i.e., the signature with the fewest constraints).
+% It is the responsibility of the determinacy analysis to \emph{assume}
+% or \emph{infer} stronger signatures.\\
+In our implementation the context is pre-loaded by the
+type-checker that traverses all terms, including higher-order variables in \VAR, and
+assigns to them the result of running the \maximize\ function
+on their declared signature.
+We define \minimize and \maximize mutually using a function $w$ parametrized by
+a determinacy marker $d$ (either \(\detI\) or \(\relI\)): 
+$w_\detI$ stands for \minimize while $w_\relI$ for \maximize.
+We use \( \overline{d} \) to denote the dual marker.
+%
+\begin{equation}
+  w_d\ s =\ 
+  \begin{cases}
+    \ \dtype{d}{(\map\ w_{\overline{d}}\ a)}{(\map\ w_d\ b)} & \text{if } s = \dtype{\_}{a}{b} \\
+    \ \expI                                                       & \text{if } s = \expI
+  \end{cases}
+  \label{eq:maximize}
+  \nonumber
+\end{equation}
+
+\noindent
+Context updates are based on the \(\minT\) and \(\maxT\) operators
+that we define mutually using a function $u$ parametrized by
+a determinacy marker $d$:
+\( u_\detI \) represents \(\minT\), while \( u_\relI \)
+corresponds to \(\maxT\).
+%
+%
+\begin{equation}
+  u_d\ s_1\ s_2 =\ 
+  \begin{cases}
+    \ \dtype{\func}{(\map\ u_{\overline{d}}\ \vecL{ac})}{(\map\ u_d\ \vecL{bd})}     & \text{if } s_1 = \dtype{\func}{a}{b}\ \land\ s_2 = \dtype{\func}{c}{d}             \\
+    \ \dtype{d}{(\map\ u_{\overline{d}}\ \vecL{ac})}{(\map\ u_d\ \vecL{bd})} & 
+    % \!\!\!\begin{array}{l}%
+    %   \text{if } s_1 = \dtype{\func_1}{a}{b}\ \land\ s_2 = \dtype{\func_2}{c}{d}\ \land \\
+    %       \ \ \ \func_1 \neq \func_2
+    % \end{array} \\
+    \text{if }s_1 = \dtype{\_}{a}{b}\ \land\ s_2 = \dtype{\_}{c}{d}\\
+    \ \expI                                                     & \text{if } s_1 = \expI\ \land\ s_2 = \expI
+  \end{cases}
+  \nonumber
+  \label{eq:min}
+\end{equation}
+\vspace{0.1em}
+
+
+% \begin{equation}
+%   \minimize\ f_1 =
+%   \begin{cases}
+%     \dtype{\detI}{(\vecL{\maximize}\ a)}{(\vecL{\minimize}\ b)} & \text{if } f = \dtype{\func}{a}{b} \\
+%     \expI                                                       & \text{if } f = \expI
+%   \end{cases}
+%   \label{eq:minimize}
+% \end{equation}
+%
+% The two fonctions respectively return the maximal and minimal dtype of a given
+% dtype. This is used \dots
+%
+% $$---$$
+%
+% and therefore
+% The base cases of \mySub\ are quite intuitive: a relation is not a function. The
+% interesting case is the \coqIn{arr} constructor. Here, we are comparing two
+% propositions and therefore some attention should be paid for its inputs and
+% outputs: the inputs of the left memeber should be at least as restrictive as the
+% right one and the outputs of the left memeber are at most as restrictive as the
+% right one.
+%
+% As an example consider two terms $t_1 \coloneq \texttt{idF}$ and $t_2 \coloneq
+%   \texttt{once}$. 
+%
+% What may seem weird at first sight is that in the example above, we call
+% \texttt{idF} with a relation in input position. This creates a mismatch
+% between the dtype of the signature and the dtype of the argument.\todo{dtype := determinacy type}
+% However, we want our system to be as expressive as possible. This means that
+% we allows the user the wrongly call a predicate. In that particular case the dtype of the
+% outputs will not be guaranteed to have the expected determinacy: they will be labeled
+% with the less restrictive determinacy for its type. To continue our example,
+% the query \elpiIn{idF (divisor 3 X) Y} will label \elpiIn{Y} with the \relI\
+% tag, since the determinacy of \elpiIn{divisor 3 X} is \relI\ and $\relI \not\mySub \detI$.
+%
+% Thanks to the \mySub\ relation we can define a min (resp. max) relation between
+% two determinacy relations.
+%
+%
+% \begin{coqcode}
+%   Fixpoint min a b = match a, b with
+%     | a ~\myTo~ b, a' ~\myTo~ b' => max a' a && min b b'
+%     | a, b -> if a ~\mySub~ b then a else b
+%   end with max a b = match a, b with
+%     | a ~\myTo~ b, a' ~\myTo~ b' => min a' a && max b b'
+%     | a, b -> if a ~\mySub~ b then b else a
+%   end.
+% \end{coqcode}
+%
+% These two functions become particularly useful
+% when trying to determine the determinacy of unification variables. Let's
+% take the following example.
+%
+% \begin{elpicode}
+%   pred give_rel i:int, o:pred.
+%   func give_fun i:int, o:func.
+%   give_rel _ (divisors 5 X).
+%   give_rel _ (succ 1 X).
+%   give_fun _ (succ 1 X).
+% \end{elpicode}
+%
+% In the snippet above, both \txt{give\_rel} and \txt{give\_fun} are functions
+% that take a dummy integer as input (we conventionally work with binary
+% predicates) and return, respectively, a relation and a function.
+%
+% Now, consider the following query: \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}.
+% The first goal tells us that \elpiIn{Z} is \relI, while the second tells us that
+% \elpiIn{Y} is \detI. After unifying the two variables, what determinacy label
+% should they have? Unification succeeds if the two terms are unifiable, meaning
+% that, in the end, \elpiIn{Z} and \elpiIn{Y} will be the same term and will
+% therefore share the same \detlab. Their label will be updated and set to the
+% minimum determinacy between them, which is \coqIn{min Rel Fun} $=$ \detI.
+%
+% If we take back the query \elpiIn{give_fun 1 Y, give_rel 1 Z, Z = Y}, we may
+% want to statically determine if it create choice points. The determinacy of each
+% goal is \detI, \relI, \detI, the determinay of the query is the maximum of them,
+% that is \relI.
+%
+% With this, we now have all the ingredients needed to propose the full static
+% determinacy checker for the higher-order setting. This checker is implemented in
+% \detCheck, which ensures that a deterministic predicate has at most one solution
+% per call. Furthermore, it is extended to certify that each output of a clause
+% has the expected determinacy, which is crucial since outputs can be used as new
+% queries in the program.
+%
+%
+%
+
+\noindent
+The static checker is made of three procedures: \assume\ (\cref{fig:det-assume}),
+\infer\ (\cref{fig:det-inference}) and \checkk\ (\cref{fig:static-check}). We
+first describe the three procedures and then give an example of their execution.
+
+\assumeFig
+
+\paragraph{The \assume\ procedure} strengthens the signature
+of variables (see rule \ref{rule:assume-hd}) to a given signature by
+updating the context via the \minT operator.
+Since the syntax allows for arbitrary terms in predicate postion,
+\assume traverses terms recursively until it finds the variables.
+When the term represents data (e.g. it is of type \expI) the context is left
+untouched (see rules \ref{rule:assume-expr} and \ref{rule:assume-exprl}).
+Rule \ref{rule:assume-app} moves under a predicate call if the signature of
+the predicate is included in the given one.
+Rule \ref{rule:assume-lam} handles predicate calls where arguments are
+re-arranged.
+
+% Here an example of a case where assume does not update the context
+
+% \begin{elpicode}
+% % TODO Davide esempio di una assume su predicato che non matcha la D data
+% % mi pare che sulla testa della clausola non abbia senso, potrebbe essere un errore
+% pred silly i:(func). silly P :- P; P.
+% id F (silly G). %  G is not functional
+% \end{elpicode}
+
+% performs a fold over the input arguments of the
+% predicate being called, under the assumption that the determinacy of the
+% predicate is smaller than the received one.  
+
+% . This strengthening is made
+% by exploring a term $t$ together with an assumed determinacy $\func$.
+% If a variable is ever encountered in $t$ and the assumed determinacy
+% is $\func$, then its mapping in \ctx is set to the minimum between
+% its current signature in \ctx\ and \func.
+
+% % The intuition is given by definition~ref{def:sem}: when the
+% % preconditions are satisfied we know the post conditions hold. 
+% The use of \minT\ is justified by the fact that \assume\ represents runtime
+% unification. For unification to succeed, the variable's signature must be the
+% strongest between the one in the context and the expected one. For example,
+% if \elpiIn{X = Y, X = commit likes F} with $\ctx\ Y = \relI$. 
+
+% The rules \ref{rule:assume-cut}, \ref{rule:assume-expr} and \ref{rule:assume-exprl} are intuitive, as
+% they do not require any modifications to the context, for the two last cases
+% there is no need to make assumption on expressions, since expressions
+% play no role in the checker (only propositional terms do). In rules
+% \ref{rule:assume-lam}, we extend the context by
+% mapping the binder to its signature and making a recursive call to \assume
+% Finally, \ref{rule:assume-app} performs a fold over the input arguments of the
+% predicate being called, under the assumption that the determinacy of the
+% predicate is smaller than the received one.  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
+
+\inferFig
+
+\paragraph{The \infer\ procedure}
+%is responsible for inferring the signature of a term. It
+returns a pair containing the signature of the given
+term and a boolean value indicating whether
+it contains miscalled predicates.
+
+
+The rules for functors (\ref{rule:inferK} and \ref{rule:inferKL}) are
+straightforward. 
+The rule \ref{rule:infer-app}, combined with the \dapp\ procedure,
+handles calls when the head is a variable or a predicate
+and accounts for both full and partial applications. \dapp\ 
+verifies that the inferred signature of the inputs of a term respect the
+expected signature. If it is not the case, it returns $\bot$.
+For example given \elpiIn{func once (pred i:A, o:B), A -> B} as in
+the introduction, the partial application \elpiIn{(once likes)}
+has the inferred signature
+\elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{guest}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{dish}~}.
+Anonymous clauses are handled by rule \ref{rule:infer-lam} that crafts
+a fresh predicate name $p$ so to reuse \checkc\ to check regular clauses (see \cref{fig:static-check}).
+% . This checking phase is needed to
+% ensure that the term under the spine of lambda is functional if it should be and
+% that the outputs becomes terms with the expected signature. 
+% % As an example,
+% % consider the query \elpiIn{X = (x\y\ commit likes y), map X Y Z}. Since
+% % \elpiIn{X} is passed in the input of \elpiIn{map}, we need to be sure that its
+% % signature reflects expected determinacy, that is 
+% % \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{A}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{B}~}. 
+% % To have
+% % this guarantee, we check a rule with fresh predicate name \elpiIn{fresh_name x y
+% % :- commit likes y} with \elpiIn{func fresh_name A -> B}.
+
+% This strict verification is necessary because anonymous functions can appear as
+% the head of atoms and its behavior should match the determinacy specified in the
+% signature. For example: \elpiIn{X = (x:func\y:func\ (commit x y):func), X like F, F paul Z}.
+
+
+%
+% $t =\ $\elpiIn{map likes!}. Its inferred
+% signature is obtained by calling \ref{rule:infer-app}. The signature of
+% \elpiIn{map} expects a binary function as the first input argument. Thanks to
+% \ref{rule:inferAppInputOK}, we can infer the signature of \elpiIn{likes!}, which
+% falls into the category of partial application (in fact, this term is not
+% applied at all). Ultimately, the signature of \elpiIn{likes!} is a subtype of
+% the expected signature for the first argument of \elpiIn{map}. The result of the
+% call to \infer\ on $t$ is the pair $(\dtype{\detI}{\expI}{\expI},\top)$: the
+% Boolean value indicates that the predicate call is correct, and the first
+% position of the pair expresses the signature of the partially applied term.  
+% 
+% $$\assume : \func \to (\A + \T) \to \ctx \to \ctx$$  
+
+% 
+% $$\checkk : \A \to (\ctx \times \F) \to (\ctx \times \F)$$  
+
+\checkTermFig  
+
+\paragraph{The \checkk\ procedure} is in charge of verifying the determinacy of
+an atom.
+A \cut is clearly determinate (rule \ref{rule:check-cut}).
+A predicate call is determinate if the premises of its signature
+are met, i.e. if \infer\ returns $\top$ on all input arguments and
+infers signatures that are stronger than the required ones (rule \ref{rule:check-callOK}).
+If it is the case the context is also updated by \assume, the signature of
+output arguments is strengthened. When a predicate is miscalled
+(rule \ref{rule:check-callKO}) it is considered to be relational and the context
+is not updated.
+
+Rule \ref{rule:check-piimpl} applies when the atom is the assertion of a new
+clause (for a predicate $p$).
+
+The procedure \checkc\ processes the head and body of the clause as follows.
+It \assume{}s all the inputs arguments in the head validate the declared signature;
+then it \checkk{}s all atoms in the body; and finally \infer{}s all the
+output arguments in the head. It concludes by verifying that the inferred
+signature for the body and the outputs match the declared one.
+It also checks that the clause does not overlap with an existing one.
+
+% validates a clause by ensuring that its input respects
+% the signature of the implemented predicate. It then verifies the list of
+% premises, ensuring that the context is updated correctly according to the flow
+% of variables in input and output positions while maintaining the functionality
+% of the body. The clause is validated if it its output are inferred to have a 
+% determinacy \mySub then the one in the signature. The same test is done
+% with the determinacy of the body with the expected.
+
+
+% The case the \piimpl
+% operator, we add the new clause in the program and check that it is in
+% mutual-exclusion (\mutExclAll, see \cref{def:mut-excl} below) wrt the other
+% clause in the current program. 
+
+
+% attempts to prove, in the
+% sense of~\cref{def:sem}, the determinacy of an atom by verifying the
+% preconditions -- i.e., whether the input argument can be inferred to have a
+% determinacy \mySub consistent with the expected signature. If the preconditions
+% are satisfied, the procedure assumes new knowledge for the postconditions,
+% meaning they are expected to maintain the prescribed determinacy. \checkk also
+% is charged to update the determinacy of the atom wrt a given determinacy
+% $\func$. In a way, it tries to track what is the behavior (relational or
+% deterministic) after the exectution of the program. Note that in the case of
+% \ref{rule:check-cut}, we set the determinacy to \detI. In the case the \piimpl
+% operator, we add the new clause in the program and check that it is in
+% mutual-exclusion (\mutExclAll, see \cref{def:mut-excl} below) wrt the other
+% clause in the current program. 
+
+\begin{definition}[Mutual exclusion \mutExclAll]
+  Given a program \prog and a clause $h = \clauseCmd{p}{\vecL{t}}{\vecL{bs}}$
+  where $\ctx\ \pred = \dtype{\detI}{i_1 \ldots i_k}{\_}$, we say that
+  $\mutExclAll\ \prog\ h\ v$ holds iff one of the following conditions
+  holds:\\
+  a) $h$ has highest priority in \prog and $\cut \in \vecL{bs}$, or\\
+  b) \parbox[t][][t]{.95\textwidth}{there exists a $d \leq k$ s.t. $t_d = v$ and
+       $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$ we have that $u_d$ is not a variable
+       (i.e. $u_d = f \vec{w} \lor u_d = q \vec{w}$ for some $w$), or}\\
+  c) $h$ is toplevel and $\forall h' = (\clauseCmd{p}{\vecL{u}}{\_}) \in \prog$
+    there exists a $d \leq k$ s.t. $\forall \subst, \unifyCmd{t_d}{u_d}{\subst}{\bot}.$\label{def:mut-excl}
+\end{definition}
+%
+Case a) is justified by the hard-cut semantics combined with the highest
+priority of $h$ in \prog (see rule \ref{rule:cut}).
+Case c) addresses mutually exclusive heads for teplevel clauses, i.e. clauses
+part of the initial program (or, equivalently, assumed in the query).
+Additionally, we emphasize that rule \ref{rule:call} \emph{matches} the input arguments
+of the goal against the head of the clauses.
+This eliminates the need for groundness of input
+arguments, a common prerequisite in most determinacy analysis algorithms
+(see, for example,~\cite{1989Warren,1996Somogy}). For instance, consider a scenario where all
+input arguments in the goal are variables: condition b) guarantees that there
+is at most one clause with variables in all input positions, which would be
+the only one capable of matching (unifying with the goal without instantiating it).
+Note that c) is unsound if applied to hypothetical clauses
+since they can be asserted multiple times: in case b) the hypothetical
+clause is required to mention the variable $v$ that is guaranteed to be fresh
+each time by rule \ref{rule:piimpl}.
+
+
+% \ref{rule:check-callOK} and \ref{rule:check-callKO} deals
+% with term applications, and if the terms has valid inputs, then the output are
+% assumed to have the expected signature, otherwise, nothing can be deduced on the
+% output and the execution of the atom becomes relational.
+
+% The \checkc\ procedure validates a clause by ensuring that its input respects
+% the signature of the implemented predicate. It then verifies the list of
+% premises, ensuring that the context is updated correctly according to the flow
+% of variables in input and output positions while maintaining the functionality
+% of the body. The clause is validated if it its output are inferred to have a 
+% determinacy \mySub then the one in the signature. The same test is done
+% with the determinacy of the body with the expected.
+
+\paragraph{Examples}\label{sec:examplesx}
+  %Inference and Assumptions only on terms in input position}
+
+  
+% We aim to clarify why the \infer and \assume routines only process input
+% arguments. Inference is applied to atoms in negative positions—i.e., atoms that
+% are interpreted. To align with our definition of determinacy, we must verify
+% that the inferred determinacy of their \textit{inputs} is stronger or equal to
+% to the required one.  
+
+% Regarding the \textit{outputs} of clauses, since these \textit{outputs} can be
+% interpreted as new atoms in the code, we need to ensure that their inferred
+% signatures have \textit{inputs} that validate their expected signature. 
+Consider the code performing fusion of two calls to \elpiIn{map} (as in \cite{wadler1989}).
+
+\begin{elpicodeln}[29]
+  func compose (func A -> B), (func B -> C), A -> C.
+  compose F G X Z :- F X Y, G Y Z.
+
+  ~\PYG{k+kd}{typeabbrev}\PYG{+w}{ }\PYG{n+nf}{(fl A B)}\PYG{+w}{ }\PYG{k+kd}{(}\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{A}\PYG{+w}{ }\PYG{k+kd}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{B}\PYG{k+kd}{)}.\PYG{+w}{               }\PYG{c}{\PYGZpc{} type abbreviation}~
+  func fuse (fl A B), (fl B C) -> (fl A C).
+  fuse (map F) (map G) (map H) :- id (compose F G) H. 
+\end{elpicodeln}
+
+\noindent 
+\def\infunc{\ensuremath{\in \func}\xspace} 
+
+\newcommand{\fl}[2]{\ensuremath{fl_{#1#2}}}
+\newcommand{\f}[2]{\ensuremath{f_{#1#2}}}
+
+For brevity, let $\fl{X}{Y}$ be the signature \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{list}\PYG{+w}{ }\PYG{k+kt}{Y}~},
+let $\f{X}{Y}$ be the signature \elpiIn{~\PYG{k+kd}{func}\PYG{+w}{ }\PYG{k+kt}{X}\PYG{+w}{ }\PYG{k+kMode}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{Y}~},
+and let $t \infunc$ mean that a term $t$ has a signature stronger or equal to
+$\func$.
+
+Considering the work that \checkc performs at line 34:
+it \assume{}s (resp. \infer{}s) that
+\textit{inputs} (resp. \textit{outputs}) have the expected signature and that
+the body is functional.
+More precisely, it \assume{}s that \elpiIn{map F}~$\in \fl{A}{B}$ and
+\elpiIn{map G}~$\in \fl{B}{C}$. 
+In order to be able to \infer that
+\elpiIn{map H}~$\in \fl{A}{C}$, we need 
+\elpiIn{H}~$\in \f{A}{C}$.
+The checking phase on the premise allows to \infer that
+\elpiIn{H}~$\in \f{A}{C}$ 
+if \elpiIn{id} is well-called.
+In turn, this requires \elpiIn{compose F G} $\in \f{A}{C}$,
+and hence it requires \elpiIn{F}~$\in \f{A}{B}$ and \elpiIn{G}~$\in \f{B}{C}$.
+This is the reason why \assume recurses on the 
+\textit{inputs} of \elpiIn{map F} and \elpiIn{map G} in order to
+\infer strong signatured for \elpiIn{F} and \elpiIn{G}.
+
+% Consequently, \elpiIn{map A} (resp. \elpiIn{map B})
+% will recursively assign \elpiIn{A} (resp. \elpiIn{B}) the signature
+% \dtype{\detI}{\expI}{\expI}. These assumptions affect the body of the rule since
+% the premise \elpiIn{compose A B C} uses \elpiIn{A} and \elpiIn{B} as
+% \textit{inputs}. These \textit{inputs} match the expected signature of
+% \elpiIn{compose}, allowing us to assume that the \textit{output} \elpiIn{C}
+% indeed has the signature \dtype{\detI}{\expI}{\expI}.  
+
+% The final stage of clause checking aims to verify that the body of the clause is
+% functional, which is confirmed in this case. Secondly, it infers the signature
+% of the \textit{output}, which in our example is \elpiIn{map C}. This inference
+% returns the signature \dtype{\detI}{\expI}{\expI}, which matches the expected
+% output signature of \elpiIn{compose}.  
+
+As a result of the analysis performed by \assume\ on the outputs of
+well-called predicates, the following clauses are deemed functional.
+
+\begin{elpicodeln}[35]
+  func easy list term -> list term.
+  easy T R :- fuse (map whd) (map copy) F,       F T R. 
+  func hard term -> term.
+  hard T R :- fuse (map whd) (map copy) (map F), F T R. 
+\end{elpicodeln}
+
+\noindent
+While the first clause simply uses the output of \elpiIn{fuse}, the
+clause at line 38 extracts the sub-term \elpiIn{F} from it. The
+in-depth analysis performed by \assume ensures the correctness of the
+signature for arguments in \textit{input} positions of the outputs ones,
+such as \elpiIn{F}.
+
+The analysis performed by \assume matches the one done by \infer: they both
+recurse deeply on inputs and their role is exchanged when we move from the
+head to the body of clauses.
+
+% As a second example, consider the query \elpiIn{compose likes X Y}. The \checkk
+% procedure, when applied to this term, infers that the call to \elpiIn{compose}
+% has an input (i.e., \elpiIn{likes}) with an invalid determinacy. Consequently,
+% \infer returns $\bot$, preventing the \assume procedure from being applied to
+% the variable \elpiIn{Y}.
+
+
+% \begin{elpicode}
+% func p -> (func).
+% p (id likes! Y).
+% \end{elpicode}
+
+% The \textit{output} of \elpiIn{p} is a function. Therefore, we must verify that
+% the inferred signature of \elpiIn{id likes! _} is also a function. This holds
+% because \elpiIn{id} qualifies as a function when its first argument is a binary
+% function, and indeed, \elpiIn{likes!} is a binary function.  
+
+% This validation of \textit{outputs} in clauses allows us to make assumptions
+% about the \textit{outputs} of terms appearing in \elpiIn{input} positions.
+% Consider the query: \elpiIn{p (commit X Y)}.
+
+% Since the clauses for \elpiIn{p} have been validated, \elpiIn{commit X Y} must
+% be a function. For this to hold, \elpiIn{X} can be assumed to be a binary
+% function. However, no assumptions can be made about \elpiIn{Y}.
+
+% combines both \infer\ and \assume
+% to determine if an atom is fu
+
+% . Its purpose is to
+% check the execution of a query under a given context and determinacy. The result
+% is a new context and an updated determinacy.  
+
+% For example, as shown in \ref{rule:check-cut}, if the term to be executed is a
+% \cut, then the context remains unchanged, and the determinacy becomes \detI. If
+% a predicate $p$ is called (\ref{rule:check-callOK} and \ref{rule:check-callKO}),
+% we first verify whether the call is correct -- i.e., whether the inferred
+% signature of the inputs is at least as strong as the expected one. If the call
+% is correct, the terms in the output position are assigned the signature of $p$'s
+% outputs. If $p$ is miscalled, then the behavior of the call is
+% non-deterministic, and we output \relI.  
+
+% If the call is correct, the behavior of the call is determined by the maximum of
+% the predicate's determinacy and the input determinacy. For example, if we are in
+% a deterministic context and correctly call a relation, then the resulting
+% behavior of the query is the maximum of the two, i.e., relational.  
+
+% The ~ref{rule:check-clause} rule concerns the validation of
+% an entire clause: It begins by assuming that the input terms
+% have the determinacy specified in the signature and
+% it analyzes all premises in order, accumulating in \ctx
+% all post conditions \checkk\ was able to prove.
+% Finally it checks that the determinacy of the body
+% matches the declared one, as well as that all output
+% signatures are consequences of the body.
+% \todo{sucks}
+
+%  Then, we analyze the premises
+% of the clause, assuming its behavior is deterministic. Finally, we infer the
+% type of the output terms, ensuring that all have their boolean value set to
+% $\top$ and that their signature is \mySub compared to the expected determinacy.
+% Additionally, we verify that the determinacy of the body (\func['] in the rule)
+% is \mySub relative to the expected determinacy (\func\ in the rule).
+
+% xxx
+
+% Rule \ref{rule:check-piimpl} behaves similarly to \ref{rule:assume-piimpl}. It
+% also makes some check on the hypothesis $H$. But we delay it to the next
+% section.
+
+
+% If the term is a unification the determinacy \func\ is transmitted from the
+% input to the output. What may change is the context, since, during unification
+% some variables may be assigned. In \ref{rule:check-unif} we are in the case
+% where it is possible to successfully deduce the dtype of the left and the right
+% terms of the equality operator. At runitime, unification succeeds if the two
+% terms are unifiable. This means that in the end the two terms will share the
+% same determinacy. The determinacy the will have is the minimum between the
+% determinacy of the two terms. Imagine that we are unifying a function with a
+% relation, then the more restrictive condition for both terms should be taken
+% into account. Therefore, the \assume\ procedure is called on both terms so that
+% their determinacy is set to the minimum. If on the contrary, it is not possible
+% to \infer\ a valid dtype for at least one of the two terms (rule
+% \ref{rule:check-unifFail}), we cannot deduce much more on the variables in the
+% two terms, therefore, we do nothing on the context \ctx, which is returned as it
+% was in input.
+
+% The \checkk\ rule for application (see \ref{rule:check-callOK}) starts by
+% deducing the type of the input term. If its dtype \func[_i'] can be derived
+% (i.e. the booleans is $\top$) and if \func[_i'] is less or equal than the
+% expected one in the signature, then the output can be assumed to be the one
+% inscribed the signature. If these two conditions are not validated, then the
+% rule context is not modified. Concerning determinacy, if the call is valid, then
+% the determinacy is the \maxT\ between the one received in entry and the
+% determinacy of the head of the application. If, otherwise, the call is wrong,
+% then the output determinacy is set to relational.
+
+% $$\checkk : \A \times (\ctx \times \F) \to (\ctx \times \F)$$
+
+% \textbf{TODO: make an example}
+
+% \subsection{Determinacy checking for clauses}
+
+% \staticCheckFig
+% \todo{fai con fold}
+
+% We provide an example of this checker in the following database.
+
+% \begin{elpicode}
+%   give-fun X (succ X Y).
+%   give-fun X (~\texttt{pred}~ X Y).
+%   good :- give-fun 3 Res, !, Res.
+% \end{elpicode}
+
+% The signatures of the predicates in the snippet above are the following:
+% %
+% \begin{align*}
+%   \texttt{succ}     & : \dtype{\detI}{[\expI]}{[\expI]} & \texttt{pred} & : \dtype{\detI}{[\expI]}{[\expI]} \\
+%   \texttt{give-fun} & : \dtype{\relI}{[\expI]}{[\detI]} & \texttt{good} & : \detI
+% \end{align*}
+
+% The static checker for determinacy starts by analysing the first rule for
+% \texttt{give-fun}. The input is an expression, the body is empty, so in the end
+% we only have to check that the output has the output and the body have the right
+% determinacy. Now, the determinacy of the body is $\detI \mySub \relI$, the
+% determinacy (deduced) for the ouput term is $\detI \mySub \detI$. Therefore the
+% rule respect the contract of the signature: the rule is valid. A very similar
+% reasonment can be do on the second rule for \texttt{give-fun}. It is now more
+% interesting to analyze the clause for \texttt{good}. We have no input, thereofre
+% we keep analyze the body. The context on which \checkL\ is launched is $\ctx =
+%   \{\text{\elpiIn{Res}}\mapsto \relI\}$ since in the wrost case the determinacy of
+% a term with type \texttt{prop} is \relI. The iteration on the terms in the body
+% starts by analysing ``\elpiIn{give-fun 3 Res}'' which makes the determinacy of
+% the term relational and sets updates the context to
+% $\{\text{\elpiIn{Res}}\mapsto \detI\}$, since it is a correct call and its
+% output is \assume d to have the functionality of the output in the dype of
+% \elpiIn{give-fun}. The \cut\ operator, makes \func\ to become \detI: intuitively
+% the \cut discards all choice points, that's way \ref{rule:check-cut} puts the
+% determinacy to \detI. Finally we execute a term which, by
+% \ref{rule:check-callOK} is deterministic. We conclude the execution of \checkL\
+% with $\func = \detI$ and $\ctx = \{\text{\elpiIn{Res}}\mapsto \detI\}$. This is
+% exactly what the signature of \texttt{good} expects and therefore the rule
+% passes the check.
+
+% $$-----$$
+
+% For instance, we would like that the call \elpiIn{idF divisors X} is valid for
+% determinacy, but, since the input has not the expected determinacy, then the
+% output will not be a deterministic predicate. Indeed, we propose the following
+% ordering relation between deterministic and relational predicates.
+
+% TODO: presentare l'algoritmo di static check of determinacy with varaible flow.
+
+% Dare un esempio in cui l'input ground non è garantito e in cui il checkin viene
+% invalidato
+
+\newcommand{\pgc}{\texttt{pgCheck}}
+\newcommand{\pgcC}{\texttt{pgCheckC}}
+\newcommand{\pgcP}{\texttt{pgCheckP}}
+
+% \subsection{Mode checking: propositional-ground mode}
+% \label{sec:mc}
+
+% \begin{leftbar}{red}
+
+% The last but not least important point to treat is the mode checker. Similarly
+% to the determinacy checker in the literature, the determinacy checker extended
+% with higher-order propositional variable need a guarantee on the terms that are
+% manipulated during the resolution of a goal. If we take back the predicate
+% \elpiIn{idF}, defined at the beginning of \cref{sec:vars} and the predicate
+% \elpiIn{give-fun}, defined and the end of the previous paragraph, we can create
+% a list of premises contradicting the hypothesis the static checker performs on
+% terms.
+
+% The list of goal we may be interested in is \elpiIn{idF X X, X = give-fun 3 Y}.
+% This goal naturally succeeds at runtime, but what breaks the checker is the
+% hypothesis made on the variable \elpiIn{X}. If we perform a \checkk\ on the
+% first atom we realize that 
+
+% As we have sketched in \cref{sec:basic-elpi}, we don't want to perform 
+
+% \begin{definition}[Proposiotions ground check (\pgc)] 
+%   ground check: \pgc.
+% \end{definition}
+
+% \begin{definition}[Clause prop ground check (\pgcC)]
+%   Given a clause, we use the same algorithm as the mode ground checker from
+%   the literature, but, instead of using the ground condition on terms, we
+%   use the definition of input ground check (\pgc)
+% \end{definition}
+
+% \begin{definition}[Program ground check (\pgcP)] 
+%   Given a program \prog,
+%   $$\forall p\ c, c \in \prog p \to \pgcC\ c$$
+% \end{definition}
+% \end{leftbar}
+
+
+% \subsection{The final theorem}
+
+% The final theorem we want to prove is the following.
+
+% \begin{theorem}[Determinacy checking property]
+%   Given a context \ctx, a program \prog and a deterministic predicate \pred
+%   % \begin{align*}
+%   %   &\pgcP\ \prog \to \detCheck\ \prog\ \to \\ 
+%   %     &\quad \forall i\ o, \pgc\ i\ \to \isdet\ \prog\ \pred\ i\ o \\
+%   %       &\qquad\land \pgc\ o \land \infer\ o = \get{o}p
+%   % \end{align*}
+%   \begin{align*}
+%     \hyperref[def:det-check-ho]{\detCheckHO}\ \prog\ \to
+%     (\forall p\ c, c \in \prog\ p \to \hyperref[fig:static-check]{\checkc}\ \ctx\ c) \to \forall \vec{t}, \hyperref[def:is-det]{\isdet}\ \prog\ (\pred\ \vec{t}) %\land \infer\ \vec{t}_o = \get{o}p
+%   \end{align*}
+%   \vspace{-20pt}
+%   \label{th:det3}
+% \end{theorem}
+
+% % $$\isdet := \isDetCmd{i}$$
+
+% \begin{proof}
+%   We reason on the derivations in \cref{fig:basic-interp} extended with
+%   \cref{fig:interp-match,fig:interp-piimpl}. The interesting case is the rule
+%   \ref{rule:call} since we have an application in our call the \run.
+%   By
+% \end{proof}
+
+% \subsection{Mix data with ty}
+
+% \begin{align}
+%   data & ::= \texttt{c}\ ty^\ast \mid data \to data \mid \predVar \label{eq:data11}
+% \end{align}
+
+% \subsection{Determinacy polymorphism}
+
+% Il problema è ad esmepio la funzione identità
+
+% \begin{elpicode}
+%   pred id i:A, o:A.
+% \end{elpicode}
+
+% Se id viene chiamato con una deterministic-predicate, allora l'output sarà
+% anch'esso deterministic. Il problema è che non è sempre vero che la determinacy
+% è passata tra due oggetti che hanno lo stesso tipo.
+
+% Per esempio:
+
+% \begin{elpicode}
+%   pred wrong_id i:A, o:A.
+%   wrong_id fun rel.
+% \end{elpicode}
+
+% Per l'identià si potrebbe definire versioni specializzate:
+
+% \begin{elpicode}
+%   pred id1 i:(func A -> A) (func A -> A).
+%   id1 X X.
+% \end{elpicode}
+
+% Ma ovviamente questo è tedioso, ci vorrebbe la possibilità di avere un
+% polimorphismo di determinacy.
+% Qualcosa tipo:
+
+% \begin{elpicode}
+%   pred id2 i:X~$^\texttt{Y}$~, o:X~$^\texttt{Y}$~.
+% \end{elpicode}
+
+% Dove $^\texttt{Y}$ trasmette l'informazione che i due argomenti di id2 hanno
+% la stessa funzionalità.
+
+% \paragraph{\textbf{Digression: inference v.s. checking}}
+
+% Several works \cite{king2005, king2006, 2011king}
+% study the inference of determinacy in \prolog system with \cut.
+% They explain that determinacy inference subsume determinacy checking.
+% We think that an inference algorithm does not fit
+% well with our language.
+
+% % The first motivation is that since an \elpi
+% % %is an interpreted dialect of \lamprolog,
+% % program can change dynamically due to the \impl operator.
+% % This means that rules can be added \textit{à la volée} making impossible to infer
+% % determinacy as the user expects.
+% % It's
+% % up to the user to choose what should be the behavior of a predicate wrt
+% % determinacy. The checker is meant to assist the user by rejecting, a predicate,
+% % that does not respect the declared determinacy.
+
+% As explained in some of the previously cited papers, determinacy (and so
+% functionality) checking is an undecidable problem. The checking property is
+% sound: if a predicate passes the analysis then it is for sure deterministic.
+% However, it is not complete: there could exists false negatives. We are
+% convinced, that completeness, is not a big deal, since, as also claimed in ...
+% every deterministic predicate not passing the determinacy check,
+% can be rewritten in a equivalent way
+% so that it is no more classified as non-deterministic.
+
