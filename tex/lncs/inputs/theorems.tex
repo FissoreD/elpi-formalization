@@ -7,8 +7,8 @@
 %   $$\forall a\ \subst, \isFuncCmd{t}$$
 % \end{definition}
 
-We are interested in identifying predicates that leave no choice points
-called \emph{semidet} in \cite{1996henderson}, or
+In this section, we are interested in identifying predicates that leave no choice points.
+They are called \emph{semidet} in \cite{1996henderson}, or
 \emph{operationally deterministic} in
 \cite{nakamura1986}.
 % Due to the lack of space, we leave the
@@ -48,7 +48,14 @@ called \emph{semidet} in \cite{1996henderson}, or
 %   $$\isdetE\ \Ainst \Rightarrow \isdet\ \prog\ \Ainst'$$
 %   \label{th:run-empty}
 % \end{lemma}
-We assign to signatures a logic formula, a formal meaning, by recursion.
+
+
+\textcolor{red}{
+We assign to signatures a logic formula, a formal meaning, by recursion. We use
+the notation $\sem{\func}\ t$ to translate a signature (\detI\ or \relI) of a
+full applied term $t$ and $\semi{\func_i}\ t'$ for the translation of a generic
+term $t'$. After the definition of the two notation, we briefly explain them.
+}
 
 % Thanks to the definition of \isdet, we can provide the semantics of determinacy
 % signatures.
@@ -116,7 +123,7 @@ the pre-conditions of $f_1$ must be weaker than the ones of $f_2$.
 \end{definition}
 
 Since the program can locally assert clauses we need
-\checkc\ to preserve the invariant.
+\checkc\ to preserve the invariant.\marginpar{right}
 
 \begin{lemma}[Invariant preservation]
   % \vspace{-1em}
@@ -124,6 +131,14 @@ Since the program can locally assert clauses we need
   \label{th:0}
   \vspace{-1.5em}
 \end{lemma}
+
+\begin{proof}
+  \textcolor{red}{
+    Without loss of generality, we let $r = \clauseCmd{p}{\vecL{t}}{bs}$ for
+    a given predicate $p$, a list of terms $t$ and a list of premises $bs$.
+    By definition of \checkc, we have the hypothesis $p \vecL{t}$ is 
+  }
+\end{proof}
 
 As one expects a checked query evaluates deterministically under
 a checked program.
