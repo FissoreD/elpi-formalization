@@ -48,8 +48,6 @@ I think this should be explained in the paper.
 
 page 8: infer@ verifies that the inferred signature of the inputs of a term respectS
 
-page 10 line 2: teplevel
-
 Page 11: Def 3 defines the symbols "double square bracket" and "double curly bracket". While the title of the definition says "Meaning of a signature (double square bracket)" and the text below explains very shortly the first rule, there is no explanation of what the double curly bracket means, and what is the difference with the double square bracket.
 
 "contravariance" is not defined.
@@ -119,7 +117,6 @@ There are several typographic errors throughout the paper that need to be fixed.
 - p 8, fig 4, rule I_o: what is the purpose of this rule? it seems that the
   output signatures and terms are ignored. Why infer@ needs this parameters?
 - p 9, fig 5,
-- p 10, teplevel -> toplevel
 - p 10, signatured -> signatures
 - p 11, definition 3, D_i and D_o can be any Ty and not only { func, pred }.
   Therefore, {{ D_i }} and {{ D_o }} seems ill-defined. Take, for example, the
