@@ -139,7 +139,7 @@ Since the program can locally assert clauses we need
 
 \begin{proof}
   \color{red}%
-  Without loss of generality, let $r = \clauseCmd{q}{\vecL{u}}{bs}$ be a clause
+  Let $r = \clauseCmd{q}{\vecL{u}}{bs}$ be a clause
   for a predicate $q$, with a list of terms $\vecL{u}$ and a list of premises
   $bs$. Let $u_i$ (resp. $u_o$) denote the input (resp. output) terms in
   $\vecL{u}$ with respect to the mode annotations for $q$. We assume $\ctx\ q =
@@ -183,8 +183,8 @@ Since the program can locally assert clauses we need
   \begin{itemize}
     \item If $x \neq r$, then we apply the induction hypothesis to
           conclude.
-    \item If $x = r$, then $xs = r :: b_1, \dots, b_n :: xs'$, where the $b_i$
-          are the rules used to solve the premises of $r$.
+    \item If $x = r$, then $xs = \vecL{b_1, \dots, b_2, \dots, b_n, \dots,
+          xs'}$, where $\vecL{b_1, b_2, \dots, b_n} = bs$.
   \end{itemize}
 
   Due to H1, $r$ is the only applicable rule for the original goal -- no other
