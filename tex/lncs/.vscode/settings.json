@@ -1,0 +1,36 @@
+{
+    // "latex-workshop.latex.external.build.command": "make",
+    "latex-workshop.latex.outDir": ".aux",
+    "latex-workshop.latex.autoBuild.run": "never",
+    "latex-workshop.latex.tools": [
+        { 
+            "name": "make",
+            "command": "make",
+        }
+    ],
+    "latex-workshop.latex.recipes": [
+        {
+            "name": "make tex",
+            "tools": [
+                "make"
+            ]
+        },
+    ],
+    "latex-workshop.latex.recipe.default": "lastUsed",
+
+    "files.exclude": {
+        "**/*.aux": true,
+        "**/*.vos": true,
+        "**/*.vok": true,
+        "**/*.glob": true,
+        "**/.lia.cache": true,
+        "**/*.generated.*": true,
+        "**/*.vo": true,
+        "**/*.generated": true,
+    },
+    "cSpell.words": [
+        "functors",
+        "HOAS",
+        "Rocq"
+    ],
+}
