@@ -98,6 +98,7 @@ $$
 $$
 % \endgroup
 \end{definition}
+
 The first equation states that if the preconditions of a signature are satisfied
 then the call to a predicate of that signature is
 functional and the post conditions on the outputs hold.
@@ -118,7 +119,7 @@ Since the program can locally assert clauses we need
 \checkc\ to preserve the invariant.
 
 \begin{lemma}[Invariant preservation]
-  \vspace{-1em}
+  % \vspace{-1em}
   $$\forall\, \Gamma\ \prog\ r, \iprog \land \checkClause{\ctx}{r} \Rightarrow \iprog[(\prog + r)]$$
   \label{th:0}
   \vspace{-1.5em}
@@ -142,7 +143,7 @@ we can directly relate the static check with the deterministic execution of atom
 
 \begin{corollary}[Static check entails Deterministic execution]
   % Given a context \ctx and an atom $t$, then
-  \vspace{-1em}
+  % \vspace{-1em}
   $$\forall\, \Gamma\ t, \checkCmd[\EmptyList]{\ctx}{\detI}{t}{\_}{\detI}
   \Rightarrow \isdet\ \EmptyList\ t$$
   % \label{th:1}
