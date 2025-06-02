@@ -42,8 +42,6 @@ page 6: assgined
 Page 7: I think the most interesting thing to notice in the first equation is that func _ \subset pred _ (provided that the argument also respect the condition).
 I suggest to add this explanation, because it might be easily overlooked.
 
-page 7, 7 lines below the first equation: vecLt_0 : I guess there is a '\' missing in the LaTeX.
-
 page 7: it is not clear why the weaken/strengthen functions are defined in that way. Specifically, I can understand that
 w_funct accepts that the input parameters of some function can be pred and the output must be func. But I do not see the reason for the vice-versa: why a pred should have as parameters func? and must return a pred?
 I think this should be explained in the paper.
