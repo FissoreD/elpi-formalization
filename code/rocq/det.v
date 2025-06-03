@@ -57,8 +57,7 @@ Definition F pr pname args (gl:list goal) s (alts:list alt) :=
   let rules := pr.(rules) in
   let modes := pr.(modes) pname in
   let rules := select args modes rules s in
-  let f := fun x => match x with (s,r)=> build_alt pr gl alts s r end in
-  [seq f r | r <- rules].
+  [seq match r with (s,r) => build_alt pr gl alts s r end | r <- rules].
 
 (* Axiom F : program -> P -> list Tm -> list goal -> Sigma -> list alt -> list alt. *)
 
@@ -210,6 +209,103 @@ Proof.
   by right; eexists; split; eassumption.
   auto.
 Qed.
+
+Lemma run_inconsistent:
+  forall {stk g a s1 s2}, run stk g a s1 -> run stk g a s2 -> s1 = s2.
+Proof.
+  move=> stk g a s1 + H.
+  elim: H.
+    move=> ??????? IH ? H1; inversion H1; subst. by specialize (IH _ H7).
+    by move=> ??? H; inversion H.
+    move=> ?????????? HF H IH ? H1. 
+      inversion H1; subst; rewrite HF in H9; try by [].
+        injection H9; move=> ??; subst; auto.
+    by move=> ????????? HF ? IH ? H1; inversion H1; subst; auto; rewrite HF in H9.
+    move=> ?????? HF ? H; inversion H; subst; auto.
+      by rewrite H8 in HF.
+    move=> ????????? H H1 ?? H2.
+      inversion H2; subst.
+      rewrite H10 in H; inversion H; subst; auto.
+    move=> ????????? H ?? H1; inversion H1; auto.
+Qed.
+
+Lemma FProp {P pn args gl1 gl2 s al1 al2 r}: 
+  F P pn args gl1 s al1 = [::] ->
+    F P pn args gl2 s al2 = r ->
+      r = [::].
+Proof.
+  unfold F.
+  destruct select => //=.
+Qed.
+
+Lemma FSuff {P pn args g1 g2 s al1 x xs y ys}: 
+  let f := fun x => match x with Alt s g => Alt s (g ++ g2) end in
+  F P pn args g1 s al1 = x :: xs ->
+    F P pn args (g1 ++ g2) s al1 = y :: ys ->
+      y :: ys = [seq f a | a <- x :: xs].
+Proof.
+  unfold F; destruct select => //=.
+  destruct p0.
+  move=> [] ?? [] ??; subst.
+  unfold build_alt.
+  f_equal.
+  by rewrite catA.
+  induction l; auto; simpl.
+  f_equal; auto.
+  destruct a.
+  by rewrite catA.
+Qed.
+
+
+
+Corollary FSuff_singleton {P pn args gl s al1 x xs y ys}: 
+  let f := fun x => match x with Alt s g => Alt s (g ++ gl) end in
+  F P pn args [::] s al1 = x :: xs ->
+    F P pn args gl s al1 = y :: ys ->
+      y :: ys = [seq f a | a <- x :: xs].
+Proof. intros; apply (FSuff H0 H1). Qed.
+
+Definition alt_prefix g2 al' :=
+  [seq match a with | Alt s g => Alt s (g ++ g2) end | a <- al'].
+
+Lemma run_pref_none s g1 g2  a stk r:
+  run stk (Alt s g1) a None ->
+  run stk (Alt s (g1 ++ g2)) a r ->
+  r = None.
+Proof.
+  move: g2 r => + [] + H //.
+  remember (Alt _ _) as A eqn:RA.
+  remember None as o eqn:Ro.
+  move: s g1 RA Ro.
+  elim: H.
+    move=> ?????? H IH ?? [] ????? H1; subst.
+      eapply IH; try reflexivity.
+      inversion H1; subst; eassumption.
+    by [].
+    move=> ?????? a'' ??? HF H IH ?? [] ??? ?? H1; subst.
+      inversion H1; clear H1; subst.
+        pose proof (FSuff HF H9) as HS.
+        move: HS => [] ??; subst.
+        destruct a''.
+        eapply IH; try reflexivity.
+        admit.
+      by pose proof (FProp H9 HF).
+    move=> ????????? H H1 IH ?? [] ????? H2; subst.
+      inversion H2; subst; clear H2.
+        by pose proof (FProp H H10).
+      by pose proof (run_inconsistent H12 H1).
+    move=> ?????? HF ?? [] ???? ? H; subst; inversion H; subst.
+      by pose proof (FProp HF H8).
+    move=> ????????? H H1 IH ?? [] ???? ? H2; subst.
+      inversion H2; subst.
+      rewrite H in H10.
+      move: H10 => [] ?; subst.
+      eapply IH; try reflexivity.
+      eassumption.
+    move=> ????????? H IH ?? [] ????? H1; subst; inversion H1; subst.
+    eapply IH; try reflexivity.
+    eassumption.
+Admitted.
 
 
 
