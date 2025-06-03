@@ -56,10 +56,10 @@ Inductive run : stack -> alt -> list alt -> option (list alt * Sigma) -> Prop :=
       (*------------------------------------*)
       run [::] (Alt s [::]) a (Some (a, s))
 
-  | run_call s P pname args gl a al a' al' r _a :
+  | run_call s P pname args gl al a' al' r _a :
 
       F P pname args gl s al = a' :: al' ->
-      run [::] a' (al' ++ a) r
+      run [::] a' al' r
       (*------------------------------------*) ->
       run args (Alt s (Goal P (Call (p pname)) _a :: gl)) al r
 
@@ -88,6 +88,8 @@ Inductive run : stack -> alt -> list alt -> option (list alt * Sigma) -> Prop :=
       (**********************************) ->
       run stack (Alt s (Goal P (App atom arg) a :: gl)) al r
 .
+
+
 
 Axiom suffix : seq alt -> seq alt -> Prop.
 Axiom suffix0 : forall a, suffix a [::].
@@ -145,6 +147,52 @@ inversion H; subst => {H}.
 
 
  *)
+Admitted.
+
+Lemma run_cut_gl P cta s g gl a' a'' s' {stk}:
+  run stk (Alt s (g :: gl)) a'' (Some(a',s')) ->
+  g = Goal P Cut cta ->
+  exists s'', run stk (Alt s'' gl) cta (Some(a',s')).
+Proof. move=> H1 ?; subst; inversion H1; eexists; eassumption. Qed.
+
+Lemma run_call_pn_empty P cta pn s g gl a' a'' s' stk :
+  run stk (Alt s (g :: gl)) a'' (Some(a',s')) ->
+  g = Goal P (Call (p pn)) cta ->
+  F P pn stk gl s a'' = [::] ->
+  exists x xs, x :: xs = a'' /\ run [::] x xs (Some(a',s')).
+Proof.
+  move=> H; inversion H; subst => {}H FP.
+    by [].
+    by injection H => ???; subst; rewrite H6 in FP.
+    injection H => ???; subst; exists a, al; auto.
+    by [].
+    by [].
+Qed.
+
+Lemma run_call_pn_some P cta pn s g gl a a' s' stk x xs:
+  run stk (Alt s (g :: gl)) a (Some(a',s')) ->
+  g = Goal P (Call (p pn)) cta ->
+  F P pn stk gl s a = x :: xs ->
+  run [::] x xs (Some(a',s')).
+Proof.
+  move=> H; inversion H; subst => {}H FP; try by []; injection H => ???; subst.
+    2: by rewrite H6 in FP.
+    by rewrite H6 in FP; inversion FP; subst.
+Qed.
+
+Lemma run_var_gl P cta vname s g gl a' a'' s' stk :
+  run stk (Alt s (g :: gl)) a'' (Some(a',s')) ->
+  g = Goal P (Call (v vname)) cta ->
+  exists x xs, 
+    (x :: xs = a'' \/ (exists pn, s vname = Some (Code (p pn)) /\ F P pn stk gl s a'' = x :: xs)) 
+      /\ run [::] x xs (Some(a',s')).
+Proof. 
+  move=> H1 ?; subst; inversion H1; subst.
+  inversion H10; subst; do 2 eexists; split; auto.
+  by right; eexists; split; eassumption.
+  auto.
+Qed.
+
 (* Lemma run_x_y s g gl a' a'' s' :
   valid ((Alt s (g :: gl)) :: a'') ->
   run [::] (Alt s (g :: gl)) a'' (Some(a',s')) ->
