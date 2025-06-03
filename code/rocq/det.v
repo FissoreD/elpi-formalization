@@ -16,13 +16,13 @@ Inductive Tm :=
   | Data : K -> Tm
   | Comb : Tm -> Tm -> Tm.
   (* | Lam  : V -> S -> Tm -> S -> Tm. *)
-Record R_ A := { pred : P; args : list Tm; premises : list A }.
+Record R_ {A} := { pred : P; args : list Tm; premises : list A }.
 Inductive A :=
   | Cut
   | Call : C -> A
   | App : A -> Tm -> A.
   (* | PiImpl : V -> R_ A -> A -> A. *)
-Notation R := (R_ A).
+Notation R := (@R_ A).
 
 Definition Sigma := V -> option Tm.
 Definition empty : Sigma := fun _ => None.
@@ -31,7 +31,8 @@ Axiom unify : Tm -> Tm -> Sigma -> option Sigma.
 Axiom matching : Tm -> Tm -> Sigma -> option Sigma.
 
 Definition index := list R.
-Record program := { (*depth : nat;*) rules : index }.
+Definition mode_ctx := P -> list mode.
+Record program := { (*depth : nat;*) rules : index; modes : mode_ctx }.
 
 Inductive goal_ alt := Goal of program & A & list alt.
 Arguments Goal {_} _ _ _.
@@ -39,8 +40,27 @@ Inductive alt := Alt of Sigma & list (goal_ alt).
 Notation goal := (goal_ alt).
 
 Axiom H : list mode -> list Tm -> list Tm -> Sigma -> option Sigma.
+Fixpoint select argsI (modes:list mode) (rules: list R) sigma :=
+  match rules with
+  | [::] => [::]
+  | rule :: rules =>
+    match H modes argsI (rule.(args)) sigma with
+    | None => select argsI modes rules sigma
+    | Some sigma' => (sigma', rule) :: select argsI modes rules sigma
+    end
+  end.
 
-Axiom F : program -> P -> list Tm -> list goal -> Sigma -> list alt -> list alt.
+Definition build_alt (pr: program) (gl:list goal) (alts:list alt) (s:Sigma) (r : R) : alt := 
+  Alt s ([seq Goal pr x alts | x <- r.(premises)] ++ gl).  
+
+Definition F pr pname args (gl:list goal) s (alts:list alt) :=
+  let rules := pr.(rules) in
+  let modes := pr.(modes) pname in
+  let rules := select args modes rules s in
+  let f := fun x => match x with (s,r)=> build_alt pr gl alts s r end in
+  [seq f r | r <- rules].
+
+(* Axiom F : program -> P -> list Tm -> list goal -> Sigma -> list alt -> list alt. *)
 
 Definition stack := list Tm.
 
@@ -88,8 +108,6 @@ Inductive run : stack -> alt -> list alt -> option (list alt * Sigma) -> Prop :=
       (**********************************) ->
       run stack (Alt s (Goal P (App atom arg) a :: gl)) al r
 .
-
-
 
 Axiom suffix : seq alt -> seq alt -> Prop.
 Axiom suffix0 : forall a, suffix a [::].
@@ -192,6 +210,8 @@ Proof.
   by right; eexists; split; eassumption.
   auto.
 Qed.
+
+
 
 (* Lemma run_x_y s g gl a' a'' s' :
   valid ((Alt s (g :: gl)) :: a'') ->
