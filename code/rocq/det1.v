@@ -111,3 +111,32 @@ Inductive run : state -> Res -> Prop :=
       run (Goal pr s (App (p pn) args)) res ->
       (* =======Call with var========> *)
       run (Goal pr s (App (v vn) args)) res.
+
+Lemma run_consistent:
+  forall {s r1 r2}, run s r1 -> run s r2 -> r1 = r2.
+Proof.
+  move=> s r1 + H.
+  elim: H.
+  by inversion 1.
+  by inversion 1.
+  move=> ???? H IH ? H1.
+    inversion H1; subst; auto.
+      apply IH in H4.
+      inversion H4; subst; repeat f_equal.
+    by apply IH in H3.
+  move=> ??? H IH H1 H2 ? H3.
+    inversion H3; subst; auto.
+      by apply IH in H6.
+  move=> ????? H IH H1 H2 H3 H4.
+    inversion H4; subst.
+    apply IH in H6; inversion H6; subst.
+    by apply H2 in H8.
+  move=> ????? H IH > H1.
+    by inversion H1; auto.
+  move=> ?????? H H1 IH ? H2.
+    inversion H2; subst.
+      rewrite H in H7; inversion H7; subst.
+      by apply IH in H8.
+Qed.
+
+
