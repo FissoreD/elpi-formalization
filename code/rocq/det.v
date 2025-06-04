@@ -78,7 +78,7 @@ Inductive run : stack -> alt -> list alt -> option (list alt * Sigma) -> Prop :=
   | run_call s P pname args gl al a' al' r _a :
 
       F P pname args gl s al = a' :: al' ->
-      run [::] a' al' r
+      run [::] a' (al'++al) r
       (*------------------------------------*) ->
       run args (Alt s (Goal P (Call (p pname)) _a :: gl)) al r
 
