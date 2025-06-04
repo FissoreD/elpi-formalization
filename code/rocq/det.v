@@ -64,11 +64,11 @@ Definition F pr pname args (gl:list goal) s (alts:list alt) :=
 Definition stack := list Tm.
 
 Inductive run : stack -> alt -> list alt -> option (list alt * Sigma) -> Prop :=
-  | run_cut P s gl cta r _a :
+  (* | run_cut P s gl cta r _a :
 
       run [::] (Alt s gl) cta r
       (*--------------------------------------*) ->
-      run [::] (Alt s (Goal P Cut cta :: gl)) _a r
+      run [::] (Alt s (Goal P Cut cta :: gl)) _a r *)
 
   | run_top s a :
 
@@ -115,7 +115,7 @@ Axiom append_alt : seq alt -> seq alt -> seq alt.
 Axiom append_alt_ok : forall a a1, valid a -> valid a1 -> valid (append_alt a a1).
 Axiom valid_run : forall a al a' s, valid (a :: al) -> run [::] a al (Some(a',s)) -> valid a'.
 
-Inductive run1_outcome (s : Sigma) gl : goal -> list alt -> list alt -> Sigma -> Prop :=
+(* Inductive run1_outcome (s : Sigma) gl : goal -> list alt -> list alt -> Sigma -> Prop :=
 | IsCut s'' cta P a' s' a'' :
     run [::] (Alt s'' gl) cta (Some(a',s')) ->
     run1_outcome s gl (Goal P Cut cta) a'' a'  s'
@@ -134,7 +134,7 @@ Lemma run1P s g gl a' a'' s' :
   valid ((Alt s (g :: gl)) :: a'') ->
   run [::] (Alt s (g :: gl)) a'' (Some(a',s')) ->
   run1_outcome s gl g a'' a' s'.
-Proof.
+Proof. *)
 (* case: g => p atom cta.
 elim: atom.
   move=> H H1; apply: IsCut. inversion H1; subst. by eassumption.
@@ -164,7 +164,7 @@ inversion H; subst => {H}.
 
 
  *)
-Admitted.
+(* Admitted. *)
 
 Lemma run_cut_gl P cta s g gl a' a'' s' {stk}:
   run stk (Alt s (g :: gl)) a'' (Some(a',s')) ->
@@ -179,7 +179,7 @@ Lemma run_call_pn_empty P cta pn s g gl a' a'' s' stk :
   exists x xs, x :: xs = a'' /\ run [::] x xs (Some(a',s')).
 Proof.
   move=> H; inversion H; subst => {}H FP.
-    by [].
+    (* by []. *)
     by injection H => ???; subst; rewrite H6 in FP.
     injection H => ???; subst; exists a, al; auto.
     by [].
@@ -189,11 +189,10 @@ Qed.
 Lemma run_call_pn_some P cta pn s g gl a a' s' stk x xs:
   run stk (Alt s (g :: gl)) a (Some(a',s')) ->
   g = Goal P (Call (p pn)) cta ->
-  F P pn stk gl s a = x :: xs ->
+  F P pn stk gl s a ++ a = x :: xs ->
   run [::] x xs (Some(a',s')).
 Proof.
-  move=> H; inversion H; subst => {}H FP; try by []; injection H => ???; subst.
-    2: by rewrite H6 in FP.
+  move=> H; inversion H; subst => {}H FP; try by []; injection H => ???; subst;
     by rewrite H6 in FP; inversion FP; subst.
 Qed.
 
@@ -201,13 +200,14 @@ Lemma run_var_gl P cta vname s g gl a' a'' s' stk :
   run stk (Alt s (g :: gl)) a'' (Some(a',s')) ->
   g = Goal P (Call (v vname)) cta ->
   exists x xs, 
-    (x :: xs = a'' \/ (exists pn, s vname = Some (Code (p pn)) /\ F P pn stk gl s a'' = x :: xs)) 
+    (x :: xs = a'' \/ (exists pn, s vname = Some (Code (p pn)) /\ F P pn stk gl s a'' ++ a'' = x :: xs)) 
       /\ run [::] x xs (Some(a',s')).
 Proof. 
   move=> H1 ?; subst; inversion H1; subst.
   inversion H10; subst; do 2 eexists; split; auto.
-  by right; eexists; split; eassumption.
-  auto.
+  right; eexists; split; try eassumption.
+    rewrite H11; reflexivity.
+    auto.
 Qed.
 
 Lemma run_inconsistent:
@@ -215,7 +215,7 @@ Lemma run_inconsistent:
 Proof.
   move=> stk g a s1 + H.
   elim: H.
-    move=> ??????? IH ? H1; inversion H1; subst. by specialize (IH _ H7).
+    (* move=> ??????? IH ? H1; inversion H1; subst. by specialize (IH _ H7). *)
     by move=> ??? H; inversion H.
     move=> ?????????? HF H IH ? H1. 
       inversion H1; subst; rewrite HF in H9; try by [].
@@ -268,41 +268,42 @@ Proof. intros; apply (FSuff H0 H1). Qed.
 Definition alt_prefix g2 al' :=
   [seq match a with | Alt s g => Alt s (g ++ g2) end | a <- al'].
 
-Lemma run_pref_none s g1 g2  a stk r:
+Lemma run_pref_none s g1 g2 a stk r:
   run stk (Alt s g1) a None ->
   run stk (Alt s (g1 ++ g2)) a r ->
   r = None.
 Proof.
-  move: g2 r => + [] + H //.
-  remember (Alt _ _) as A eqn:RA.
   remember None as o eqn:Ro.
-  move: s g1 RA Ro.
+  remember (Alt _ _) as A eqn:RA.
+  move=> H.
+  move: s g1 g2 r RA Ro.
   elim: H.
-    move=> ?????? H IH ?? [] ????? H1; subst.
+    (* move=> ?????? H IH ?? [] ????? H1; subst.
       eapply IH; try reflexivity.
-      inversion H1; subst; eassumption.
+      inversion H1; subst; eassumption. *)
     by [].
-    move=> ?????? a'' ??? HF H IH ?? [] ??? ?? H1; subst.
-      inversion H1; clear H1; subst.
-        pose proof (FSuff HF H9) as HS.
-        move: HS => [] ??; subst.
-        destruct a''.
-        eapply IH; try reflexivity.
+    (* caso run_call *)
+    move=> ?????? a'' ? OO ? HF H IH ???? H0 ? H1; subst.
+      inversion H0; subst; clear H0.
+      { inversion H1; clear H1; subst.
+        (* epose proof (FSuff HF H9). *)
         admit.
-      by pose proof (FProp H9 HF).
-    move=> ????????? H H1 IH ?? [] ????? H2; subst.
+        2:auto.
+        by epose proof (FProp H9 HF) as HS.
+      }
+    move=> ????????? H H1 IH ? ??? [] ??? H2; subst.
       inversion H2; subst; clear H2.
         by pose proof (FProp H H10).
       by pose proof (run_inconsistent H12 H1).
-    move=> ?????? HF ?? [] ???? ? H; subst; inversion H; subst.
+    move=> ?????? HF ???? [] ??? H; subst. inversion H; subst => //.
       by pose proof (FProp HF H8).
-    move=> ????????? H H1 IH ?? [] ???? ? H2; subst.
+    move=> ????????? H H1 IH ???? [] ??? H2; subst.
       inversion H2; subst.
       rewrite H in H10.
       move: H10 => [] ?; subst.
       eapply IH; try reflexivity.
       eassumption.
-    move=> ????????? H IH ?? [] ????? H1; subst; inversion H1; subst.
+    move=> ????????? H IH ???? [] ??? H1; subst; inversion H1; subst.
     eapply IH; try reflexivity.
     eassumption.
 Admitted.
