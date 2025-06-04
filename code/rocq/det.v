@@ -268,22 +268,25 @@ Proof. intros; apply (FSuff H0 H1). Qed.
 Definition alt_prefix g2 al' :=
   [seq match a with | Alt s g => Alt s (g ++ g2) end | a <- al'].
 
-Lemma run_pref_none s g1 g2 a stk r:
-  run stk (Alt s g1) a None ->
+
+
+Lemma run_pref_none s g1 g2 a a2 stk r:
+  run stk (Alt s g1) (a ++ a2) None ->
   run stk (Alt s (g1 ++ g2)) a r ->
   r = None.
 Proof.
   remember None as o eqn:Ro.
   remember (Alt _ _) as A eqn:RA.
+  remember (cat _ _) as C eqn:HC.
   move=> H.
-  move: s g1 g2 r RA Ro.
+  move: s g1 g2 r a2 HC RA Ro.
   elim: H.
     (* move=> ?????? H IH ?? [] ????? H1; subst.
       eapply IH; try reflexivity.
       inversion H1; subst; eassumption. *)
     by [].
     (* caso run_call *)
-    move=> ?????? a'' ? OO ? HF H IH ???? H0 ? H1; subst.
+    move=> ?????? a'' ? OO ? HF H IH ?????? H0 ? H1; subst.
       inversion H0; subst; clear H0.
       { inversion H1; clear H1; subst.
         (* epose proof (FSuff HF H9). *)
@@ -291,19 +294,23 @@ Proof.
         2:auto.
         by epose proof (FProp H9 HF) as HS.
       }
-    move=> ????????? H H1 IH ? ??? [] ??? H2; subst.
-      inversion H2; subst; clear H2.
+    move=> ????????? H H1 IH ? ???? HC [] ??? H2; subst.
+      { inversion H2 => //; subst; clear H2.
         by pose proof (FProp H H10).
-      by pose proof (run_inconsistent H12 H1).
-    move=> ?????? HF ???? [] ??? H; subst. inversion H; subst => //.
+        inversion HC; subst.
+
+        (* IH is useless... *)
+        admit.
+      }
+    move=> ?????? HF ?????? [] ??? H; subst. inversion H; subst => //.
       by pose proof (FProp HF H8).
-    move=> ????????? H H1 IH ???? [] ??? H2; subst.
+    move=> ????????? H H1 IH ?????? [] ??? H2; subst.
       inversion H2; subst.
       rewrite H in H10.
       move: H10 => [] ?; subst.
       eapply IH; try reflexivity.
       eassumption.
-    move=> ????????? H IH ???? [] ??? H1; subst; inversion H1; subst.
+    move=> ????????? H IH ?????? [] ??? H1; subst; inversion H1; subst.
     eapply IH; try reflexivity.
     eassumption.
 Admitted.
