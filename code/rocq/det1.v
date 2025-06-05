@@ -139,4 +139,152 @@ Proof.
       by apply IH in H8.
 Qed.
 
+Lemma or_fail {g1 g2}:
+  run (Or g1 g2) ResN -> run g2 ResN.
+Proof.
+  remember (Or _ _).
+  remember ResN.
+  move=> H.
+  move: g1 g2 Heqs Heqr.
+  elim H; try by [].
+  by move=> ??? H1 IH H2 IH1 ?? [] ???; subst.
+Qed.
+
+Lemma or_fail_left {g1 g2 r}:
+  run g1 ResN -> run (Or g1 g2) r -> run g2 r.
+Proof.
+  remember (Or _ _).
+  move=> + H.
+  move: g1 g2 Heqs.
+  elim: H; try by [].
+  + move=> ???? H IH ?? [] ?? H1; subst.
+    by pose proof (run_consistent H1 H).
+  + by move=> ??? H IH H1 IH1 ?? [] ?? H2; subst.
+Qed.
+
+Lemma or_assoc g1 g2 g3 r1 r2: 
+  run (Or g1 (Or g2 g3)) r1 -> run (Or (Or g1 g2) g3) r2 -> r1 = r2.
+Proof.
+  remember (Or _ _) as OR eqn:HOR.
+  move=> H.
+  move: r2 g1 g2 g3 HOR.
+  elim: H; try by [].
+  move=> ?? s ? H IH ? g1 g2 g3 [] ?? H1; subst.
+  {
+    inversion H1; subst;clear H1.
+    inversion H4; subst; clear H4.
+      pose proof (run_consistent H1 H).
+    inversion H0; subst; clear H0.
+    assert (exists st, run (Or (Or g1 g2) g3) (ResY s st)).
+      eexists.
+      constructor.
+      constructor.
+      apply H1.
+      
+      admit. (*Mh, *)
+    by pose proof (run_consistent H2 H).
+    inversion H3; subst.
+    by pose proof (run_consistent H H2).
+  }
+  move=> ??? H IH H1 IH2 ???? [] ?? H2; subst.
+  inversion H2; subst; clear H2.
+    {
+      inversion H5; subst; clear H5.
+        by pose proof (run_consistent H H2).
+      inversion H1; subst; clear H1.
+        pose proof (run_consistent H5 H6).
+        by injection H0; intros; subst; auto.
+      by pose proof (run_consistent H4 H6).
+    }
+    eapply or_fail in H4.
+    apply (or_fail_left H4) in H1.
+    apply (run_consistent H1 H6).
+Admitted.
+
+
+
+Lemma or_fails g1 g2 r:
+  run (Or g1 g2) ResN ->
+    run g1 r -> r = ResN.
+Proof.
+  move=> + H.
+  move: g2.
+  elim: H.
+  by inversion 1; subst; inversion H3.
+  by [].
+  move=> ???? H IH ? H1.
+    inversion H1; subst; clear H1.
+    by apply IH in H3.
+  move=> ??? H IH H1 H2 ? H3.
+    eapply H2.
+    inversion H3; subst.
+    auto.
+
+
+
+
+Lemma run_pref_none g g1 a1 a2 r:
+  run (Or g (Or a1 a2)) ResN ->
+  run (Or (And g g1) a1) r ->
+  r = ResN.
+Proof.
+  (* move=> H.
+  inversion H; subst; clear H.
+  inversion H4; subst; clear H4.
+  move=> H; inversion H; clear H; subst.
+    inversion H5; clear H5; subst. *)
+
+  move=> H.
+  remember ResN as resN eqn:HresN.
+  remember (Or _ _) as or eqn:Hor.
+  move: a1 a2 g HresN g1 r Hor.
+  elim: H => //.
+  move=> ??? H /(_ _ _ _ erefl) IH H1 + ????; subst.
+  move=> /(_ _ _ _ erefl) IH1 ?? [] ??; subst.
+  move=> H2.
+  inversion H1; subst; clear H1.
+  inversion H; clear H.
+  {
+    (* KO *)
+    subst.
+    inversion H2; subst; clear H2.
+    by inversion H5; subst; inversion H2.
+    inversion H3; subst; inversion H2.
+  }
+  {
+    (* OR KO *)
+    subst.
+    inversion H2; subst; clear H2.
+    inversion H8; subst; clear H8.
+    {
+      exfalso.
+      inversion H0; subst; clear H0.
+      {
+        inversion H5; subst; clear H5.
+        inversion H2.
+        admit.
+     }
+
+      inversion 
+
+    }
+    inversion H5; subst; clear H5.
+    admit.
+    admit.
+    admit.
+  }
+  {
+    subst.
+    inversion H2; clear H2; subst.
+      inversion H8; subst; clear H8.
+      inversion H5; subst; clear H5.
+      
+    exfalso.
+    inversion H5; subst; clear H5.
+    by inversion H2.
+    inversion H1; subst.
+
+  }
+    
+
 
