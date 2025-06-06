@@ -10,7 +10,10 @@ Notation "x '--o-->' y" := (arr o x y) (at level 3).
 Definition P := nat.
 Definition K := nat.
 Definition V := nat.
-Inductive C := p of P | v of V.
+Inductive C := 
+  | p of P 
+  (* | v of V *)
+  .
 Inductive Tm := 
   | Code : C -> Tm
   | Data : K -> Tm
@@ -114,7 +117,7 @@ Fixpoint expand (st :state) s : expand_res :=
   | OK => Solved s
   | CutOut => Failure
   | Goal _ Cut  => CutBrothers OK
-  | Goal pr (App (v _) _) => Failure
+  (* | Goal pr (App (v _) _) => Failure *)
   | Goal pr (App (p pn) args) =>
       let l := F pr pn args s in
       if l is [:: (s1,_) & _] then Expanded (big_or pr l) s1
@@ -163,7 +166,181 @@ Inductive run : Sigma -> state -> run_res -> state -> Prop :=
   | run_step s s' st st1 st2 r :
       expand st s = Expanded st1 s' ->
       run s' st1 r st2 ->
-      run s st r st2.
+      run s st r st2
+.
+
+Lemma run_Solved_id:
+  forall (s : Sigma) (st : state) (s' : Sigma),
+    expand st s = Solved s' -> forall r2 : state, run s st (Done s') r2 -> st = r2.
+Proof.
+  move=> s st s' + r2 H.
+  case: H => //=; clear.
+  move=> s st st1 st2 r H ? H2; by rewrite H in H2.
+  move=> s s'' st st1 st2 r H H1 H2; subst; by rewrite H in H2.
+Qed.
+
+Lemma run_consistent: forall {a b c r1 r2},
+  run a b c r1 -> run a b c r2 -> r1 = r2.
+Proof.
+  move=> a b c r1 + H.
+  elim:H; clear.
+  + by apply run_Solved_id.
+  + by move=> ?? H r2 H1; inversion H1; subst => //=; by rewrite H in H0.
+  + move=> s st st1 st2 r H H1 IH r2 H2.
+    inversion H2; subst => //=; rewrite H in H0 => //.
+    by move: H0 => [] ?; subst; auto.
+  + move=> s s' st st1 st2 r H H1 IH r2 H2.
+    inversion H2; subst; clear H2; rewrite H in H0 => //=.
+    move: H0 => [] ??; subst; auto.
+Qed.
+
+Lemma run_cut_simpl pr s3 s4 s2:
+  run s3 (Goal pr Cut) (Done s2) s4 -> expand OK s3 = Solved s2 /\ s4 = OK.
+  (* expand (Goal pr Cut) s3 = CutBrothers st1 /\  run s3 st1 (Done s2) s4. *)
+Proof.
+  inversion 1; subst => //=.
+  move: H1 => //= [] ?; subst.
+  inversion H2; subst => //.
+Qed.
+
+Lemma run_CutBrothers_id {s2 s3 st1 st2 ir1 ir2}:
+  expand st1 s3 = CutBrothers st2 -> 
+  run s3 st2 (Done s2) ir1 -> 
+  run s3 st1 (Done s2) ir2 ->
+  ir1 = ir2.
+Proof.
+  move: s2 s3 st2 ir1 ir2.
+  case: st1 => //=.
+  + move=> pr [] //=.
+    - move=> ????? [] <- H H1.
+      apply run_cut_simpl in H1 as []; subst; by inversion H.
+    - move=> [] pn args s2 s3 st2 ir1 ir2; by case: F => [|[]] //=.
+  + move=> st0  [] s st1 s2 s3 st2 ir1 ir2; by case: expand; case: expand => //.
+  + move=> st0 st1 s2 s3 st2 ir1 ir2.
+    case E: expand => //.
+    + move=> [] <- H1 H2.
+      { 
+        inversion H2; subst; clear H2 => //=.
+          + move: H5 => //=.
+            case F: expand => //.
+            by rewrite E in F.
+          + move: H0 => //=.
+            case F: expand => //=.
+            - rewrite E in F.
+              move: F => [] <- [] ?; subst.
+              by apply (run_consistent H1 H3).
+            - case G: expand => //= -[] ?; subst.
+              by rewrite E in F.
+          + move: H0 => /=; case F: expand => //. 
+            - move => [] ??; subst.
+              by rewrite E in F.
+            - by rewrite E in F.
+      }
+    + case F: expand => //= -[] ?; subst => H H1.
+      inversion H1; subst; clear H1; subst.
+        + move: H4 => //=.
+          case G: expand => //.
+          rewrite E in G.
+          move: G => [] <-.
+          case G: expand => //=.
+          by rewrite F in G.
+        + move: H0 => //=.
+          case G: expand => //.
+            by rewrite E in G.
+          case G1: expand => //= -[] ?; subst.
+          rewrite E in G; move: G => [] ?; subst.
+          rewrite F in G1; move: G1 => [] ?; subst.
+          by apply (run_consistent H H2).
+        + move: H0 => //=.
+          case G: expand => //=.
+          - by rewrite E in G.
+          - case D: expand => //= -[] ??; subst.
+            rewrite E in G.
+            move: G => [] ?; subst.
+            by rewrite F in D.
+Qed.
+
+
+Lemma run_CutBrothers_id1 {s2 s3 st1 st2 ir1}:
+  expand st1 s3 = CutBrothers st2 -> 
+  run s3 st2 (Done s2) ir1 -> 
+  run s3 st1 (Done s2) ir1.
+Proof.
+  move: s2 s3 st2 ir1.
+  case: st1 => //=.
+  + move=> pr [] //=.
+    - move=> ???? [] <- H.
+      inversion H; subst => //=.
+      inversion H3; subst; clear H3.
+      eapply run_cut => //.
+    - move=> [] pn args s2 s3 st2 ir1; by case: F => [|[]] //=.
+  + move=> st0  [] s st1 s2 s3 st2 ir1; by case: expand; case: expand.
+  + move=> st0 st1 s2 s3 st2 ir1.
+    case E: expand => //.
+    + move=> [] <- H1.
+      { 
+        inversion H1; subst; clear H1 => //=.
+          + move: H4 => //=.
+            case F: expand => //.
+            case G: expand => //= -[] <-.
+            eapply run_cut => //=.
+            rewrite E=> //.
+            apply run_done.
+            move=> //=.
+            rewrite F.
+            by rewrite G.
+          + move: H0 => //=.
+            case F: expand => //=.
+            - move=> [] ?; subst.
+              apply: run_cut => //=.
+                by rewrite E.
+              apply: run_cut => //=.
+                by rewrite F.
+              auto.
+            - case G: expand => //= -[] ?; subst.
+              apply: run_cut => //=.
+                by rewrite E.
+              {
+                inversion H2; subst; clear H2 => //=.
+                  + move: H4 => /=.
+                    rewrite F.
+                    case H: expand => //= -[] ?.
+                    subst.
+                    admit.
+                    admit.
+                    admit.
+              }
+              admit.
+      }
+    + case F: expand => //= -[] ?; subst => H.
+      inversion H; subst; clear H; subst.
+        + move: H3 => //=.
+          case G: expand => //.
+          rewrite E in G.
+          move: G => [] <-.
+          case G: expand => //= -[] <-.
+          admit.
+        + move: H0 => //=.
+          case G: expand => //.
+            by rewrite E in G.
+          case G1: expand => //= -[] ?; subst.
+          rewrite E in G; move: G => [] ?; subst.
+          admit.
+        + move: H0 => //=.
+          case G: expand => //=.
+          - by rewrite E in G.
+          - case D: expand => //= -[] ??; subst.
+            rewrite E in G.
+            move: G => [] ?; subst.
+            admit.
+Abort.
+
+Lemma run_solved_same_subst {st_l s s' s''' il}:
+   expand st_l s = Solved s' ->
+    run s st_l (Done s''') il ->
+      s' = s'''.
+Proof.
+Admitted.
 
 Lemma test s g1 g2 s' st :
   run s (And g1 g2) (Done s') st ->
@@ -180,36 +357,34 @@ elim: H => {st s s1 g0} /= [s st s'|s st|s st st1 st2 r|].
   by exists st_l, st_r, x; split => //; split; constructor.
 - by [].
 - move=> + Hr IH st_l st_r ? s'' ?; subst.
-  rewrite expand_And. case L: expand => [|st0||s'] // => [[?]|]; subst.
-  move: (IH _ _ erefl _ erefl) => [il [ir [s']]] [-> [ IHl IHr]] {IH}.
-  - exists il, ir, s'; split=> //; split.
-      by apply: run_cut L IHl.
-      by apply: IHr.
+  rewrite expand_And. 
+  {
+    case L: expand => [|st0||s'] // => [[?]|]; subst.
+  - move: (IH _ _ erefl _ erefl) => [il [ir [s']]] [-> [ IHl IHr]] {IH}.
+    exists il, ir, s'; split=> //; split.
+    by apply: run_cut L IHl.
+    by apply: IHr.
   - case R: expand => //= -[?]; subst.
     move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
     exists il, ir, s'''; split=> //; split.
       by apply: IHl.
-    move: R.
-    elim: st_r => //=.
-    - move=> ? [[?]|[|]//]; subst.
-      - by apply: run_cut => //=.
-      - by move=> ??; case: F => [|[]].
-    - move=> s0 ? [s0' p0]; case: expand => //; by case:expand. 
-    - move=> s0 + s1 IH1; case: expand => //=.
-      - move=> s2 IH [?]; subst.
-  admit. admit.
-move=> s s' st st1 st2 r + Hr IH g1 g2 ? s'' ?; subst.
-rewrite expand_And.
-case E:expand => [|||] //.
-- move=> [??]; subst.
-  move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
-  exists il, ir, s'''; split => //; split=>//.
-  apply: run_step E IHl.
-- case Er:expand => [|||] //= [??]; subst.
-  move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
-
-  exists g1, g2, s.
-
-
+    {
+      pose proof (run_solved_same_subst L IHl).
+      subst.
+      apply: run_cut.
+      apply R.
+      auto.
+    }
+  }
+- move=> s s' st st1 st2 r + Hr IH g1 g2 ? s'' ?; subst.
+  rewrite expand_And.
+  case E:expand => [|||] //.
+  - move=> [??]; subst.
+    move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
     exists il, ir, s'''; split => //; split=>//.
-    - apply: run_done.
+    apply: run_step E IHl.
+  - case Er:expand => [|||] //= [??]; subst.
+    move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
+    exists il, ir.
+    admit.
+Admitted.
