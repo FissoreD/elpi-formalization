@@ -340,7 +340,36 @@ Lemma run_solved_same_subst {st_l s s' s''' il}:
     run s st_l (Done s''') il ->
       s' = s'''.
 Proof.
-Admitted.
+  move: s s' s''' il.
+  elim: st_l => //=.
+  by move=> s s' s''' il [] <-; inversion 1; subst => //=; move: H4 => /= [].
+  by move=> pr [] // [p args] s s' s''' il; case: F => // -[] //.
+  move=> s IH [] s1 st s2 s3 s4 il //.
+    case E: expand => //.
+      case F: expand => //= -[] <- H.
+      { 
+        inversion H; subst; clear H => //=.
+        + by move: H3 => /=; rewrite E F => -[].
+        + by move: H0 => /=; rewrite E F.
+        + by move: H0 => /=; rewrite E F.
+      }
+    move=> [] <- H.
+      {
+       inversion H; subst; clear H.
+       + by move: H3 => /=; rewrite E => -[].
+       + by move: H0 => /=; rewrite E.
+       + by move: H0 => /=; rewrite E.
+      }
+  move=> s IH1 s0 IH2 s1 s' s''' il.
+    case E: expand => //.
+    case F: expand => //= - [] <- H.
+    {
+      inversion H; subst; clear H.
+      + by move: H3 => /=; rewrite E F => -[].
+      + by move: H0 => /=; rewrite E F.
+      + by move: H0 => /=; rewrite E F.
+    }
+Qed.
 
 Lemma test s g1 g2 s' st :
   run s (And g1 g2) (Done s') st ->
@@ -386,5 +415,12 @@ elim: H => {st s s1 g0} /= [s st s'|s st|s st st1 st2 r|].
   - case Er:expand => [|||] //= [??]; subst.
     move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
     exists il, ir.
+    move: E Hr IHl.
+    case: g1 => //=.
+    * move=> [] ->.
+      move=> Hr IHl.
+      inversion IHl => //=; subst.
+      exists s'''; repeat split => //=.
+      constructor => //=.
     admit.
 Admitted.
