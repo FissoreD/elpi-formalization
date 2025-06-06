@@ -153,46 +153,57 @@ Qed.
 Inductive run_res := Done of Sigma | Failed.
 
 Inductive run : Sigma -> state -> run_res -> state -> Prop :=
-  | run_done s st s' :
+  | run_done {s st s'} :
       expand st s = Solved s' ->
       run s st (Done s') st
-  | run_fail s st :
+  | run_fail {s st} :
       expand st s = Failure ->
       run s st Failed st
-  | run_cut s st st1 st2 r :
+  | run_cut {s st st1 st2 r} :
       expand st s = CutBrothers st1 ->
       run s st1 r st2 ->
       run s st r st2 
-  | run_step s s' st st1 st2 r :
+  | run_step {s s' st st1 st2 r} :
       expand st s = Expanded st1 s' ->
       run s' st1 r st2 ->
       run s st r st2
 .
 
 Lemma run_Solved_id:
-  forall (s : Sigma) (st : state) (s' : Sigma),
-    expand st s = Solved s' -> forall r2 : state, run s st (Done s') r2 -> st = r2.
+  forall {s st s' r2},
+    expand st s = Solved s' -> run s st (Done s') r2 -> st = r2.
 Proof.
-  move=> s st s' + r2 H.
+  move=> s st s' r2 + H.
   case: H => //=; clear.
   move=> s st st1 st2 r H ? H2; by rewrite H in H2.
   move=> s s'' st st1 st2 r H H1 H2; subst; by rewrite H in H2.
 Qed.
 
-Lemma run_consistent: forall {a b c r1 r2},
-  run a b c r1 -> run a b c r2 -> r1 = r2.
+Lemma run_consistent: forall {a b c1 c2 r1 r2},
+  run a b c1 r1 -> run a b c2 r2 -> c1 = c2 /\ r1 = r2.
 Proof.
-  move=> a b c r1 + H.
+  move=> a b c1 + r1  + H.
   elim:H; clear.
-  + by apply run_Solved_id.
-  + by move=> ?? H r2 H1; inversion H1; subst => //=; by rewrite H in H0.
-  + move=> s st st1 st2 r H H1 IH r2 H2.
-    inversion H2; subst => //=; rewrite H in H0 => //.
-    by move: H0 => [] ?; subst; auto.
-  + move=> s s' st st1 st2 r H H1 IH r2 H2.
-    inversion H2; subst; clear H2; rewrite H in H0 => //=.
-    move: H0 => [] ??; subst; auto.
+  + move=> s st s' H r1 r2 H1. {
+    inversion H1; subst; clear H1 => //=; rewrite H in H0.
+      by move: H0 => -[] <-.
+      all: by []. }
+  + by move=> s st H r1 r2 H0; inversion H0; subst; clear H0 => //; rewrite H in H1.
+  + move=> s st st1 st2 r H H1 IH r1 r2 H2.
+    inversion H2; subst => //; rewrite H in H0; try by [].
+    by move: H0 => -[] ?; subst; auto.
+  + move=> s s' st st1 st2 r H H1 IH r1 r2 H2.
+    inversion H2; subst; clear H2; rewrite H in H0; try by [].
+    by move: H0 => [] ??; subst; auto.
 Qed.
+
+Lemma run_consistent_res {a b c1 c2 r1 r2}:
+    run a b c1 r1 -> run a b c2 r2 -> c1 = c2.
+Proof. by move=> H H1; apply (proj1 (run_consistent H H1)). Qed.
+
+Lemma run_consistent_state {a b c1 c2 r1 r2}:
+    run a b c1 r1 -> run a b c2 r2 -> r1 = r2.
+Proof. by move=> H H1; apply (proj2 (run_consistent H H1)). Qed.
 
 Lemma run_cut_simpl pr s3 s4 s2:
   run s3 (Goal pr Cut) (Done s2) s4 -> expand OK s3 = Solved s2 /\ s4 = OK.
@@ -407,20 +418,33 @@ elim: H => {st s s1 g0} /= [s st s'|s st|s st st1 st2 r|].
   }
 - move=> s s' st st1 st2 r + Hr IH g1 g2 ? s'' ?; subst.
   rewrite expand_And.
-  case E:expand => [|||] //.
+  case El:expand => [|||] //.
   - move=> [??]; subst.
     move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
     exists il, ir, s'''; split => //; split=>//.
-    apply: run_step E IHl.
+    apply: run_step El IHl.
   - case Er:expand => [|||] //= [??]; subst.
     move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
     exists il, ir.
-    move: E Hr IHl.
-    case: g1 => //=.
-    * move=> [] ->.
-      move=> Hr IHl.
-      inversion IHl => //=; subst.
-      exists s'''; repeat split => //=.
-      constructor => //=.
+    inversion Hr;subst => //; clear Hr.
+    - move: H3 => //=; case E: expand => //=.
+      case F: expand => //= -[] <-.
+      {
+        inversion IHl; subst; clear IHl; try (by (rewrite E in H0)).
+        {
+          rewrite E in H3; move: H3 => [] ?; subst.
+          eexists.
+          split; auto; split.
+          apply run_done.
+          apply H.
+          apply: run_step.
+            apply Er.
+          pose proof (run_done F).
+          pose proof (run_consistent H0 IHr) as [].
+          move: H1 => [] ?; subst; apply run_done.
+          
+          admit.
+        }
+      }
     admit.
 Admitted.
