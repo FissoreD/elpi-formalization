@@ -170,13 +170,16 @@ Inductive run : Sigma -> state -> run_res -> state -> Prop :=
 .
 
 Lemma run_Solved_id:
-  forall {s st s' r2},
-    expand st s = Solved s' -> run s st (Done s') r2 -> st = r2.
+  forall {s s1 s2 st1 st2},
+    expand st1 s = Solved s1 -> run s st1 (Done s2) st2 -> s2 = s1 /\ st1 = st2.
 Proof.
-  move=> s st s' r2 + H.
+  move=> s s1 s2 st1 st2 + H.
+  remember (Done s2).
+  move: Heqr.
   case: H => //=; clear.
-  move=> s st st1 st2 r H ? H2; by rewrite H in H2.
-  move=> s s'' st st1 st2 r H H1 H2; subst; by rewrite H in H2.
+  by move=> s st1 s3 H1 [] ?; rewrite H1=> -[] ?; subst.
+  by move=> s st st1 st2 r H H1 ?; rewrite H.
+  by move=> s s' st st1 st2 r H; rewrite H.
 Qed.
 
 Lemma run_consistent: forall {a b c1 c2 r1 r2},
