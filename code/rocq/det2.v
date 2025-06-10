@@ -430,7 +430,7 @@ Proof.
   by move=> s g g' H H1 IH g2 g3 + H3; rewrite H => -[] ?; subst.
 Qed.
 
-Lemma run_or_fail s1 s2 g1 g2 st:
+Lemma run_or_fail {s1 s2 g1 g2 st}:
   run s1 (Or g1 (s2,g2)) Failed st ->
     run s1 g1 Failed st /\ (not_cut_brothers s1 g1 -> run s2 g2 Failed st).
 Proof.
@@ -467,6 +467,7 @@ Proof.
         by apply: run_cut F (HR HH).
 Qed. 
 
-
-
-
+Corollary run_or_fail1 s1 g1 g2 st:
+  run s1 (Or g1 (s1,g2)) Failed st ->
+    run s1 g1 Failed st /\ (not_cut_brothers s1 g1 -> run s1 g2 Failed st).
+Proof. move=> H. apply: run_or_fail H. Qed.
