@@ -111,7 +111,7 @@ Fixpoint big_or pr (s : seq (Sigma * R)) : state :=
   | (_,r) :: ((s,_) :: _ as xs) => Or (big_and pr r.(premises)) (s,big_or pr xs)
   end.
 
-Fixpoint expand (st :state) s : expand_res :=
+Fixpoint expand s (st :state) : expand_res :=
   match st with
   | KO => Failure
   | OK => Solved s
@@ -123,15 +123,15 @@ Fixpoint expand (st :state) s : expand_res :=
       if l is [:: (s1,_) & _] then Expanded (big_or pr l) s1
       else Expanded KO s
   | Or st1 (sr,st2) =>
-      match expand st1 s with
+      match expand s st1 with
       | Solved s => Solved s
       | Expanded st1 s => Expanded (Or st1 (sr,st2)) s
       | CutBrothers st1 => Expanded (Or st1 (sr,cut st2)) s
-      | Failure => mkOr st1 sr (expand st2 sr)
+      | Failure => mkOr st1 sr (expand sr st2)
       end
   | And st1 st2 =>
-      match expand st1 s with
-      | Solved s1 => mkAnd st1 s1 (expand st2 s1)
+      match expand s st1 with
+      | Solved s1 => mkAnd st1 s1 (expand s1 st2)
       | Expanded st1 s => Expanded (And st1 st2) s
       | CutBrothers st1 => CutBrothers (And st1 st2)
       | Failure => Failure
@@ -139,9 +139,9 @@ Fixpoint expand (st :state) s : expand_res :=
   end
 .
 
-Lemma expand_And st1 st2 s : expand (And st1 st2) s =
-      match expand st1 s with
-      | Solved s1 => mkAnd st1 s1 (expand st2 s1)
+Lemma expand_And st1 st2 s : expand s (And st1 st2) =
+      match expand s st1 with
+      | Solved s1 => mkAnd st1 s1 (expand s1 st2)
       | Expanded st1 s => Expanded (And st1 st2) s
       | CutBrothers st1 => CutBrothers (And st1 st2)
       | Failure => Failure
@@ -154,24 +154,24 @@ Inductive run_res := Done of Sigma | Failed.
 
 Inductive run : Sigma -> state -> run_res -> state -> Prop :=
   | run_done {s st s'} :
-      expand st s = Solved s' ->
+      expand s st = Solved s' ->
       run s st (Done s') st
   | run_fail {s st} :
-      expand st s = Failure ->
+      expand s st = Failure ->
       run s st Failed st
   | run_cut {s st st1 st2 r} :
-      expand st s = CutBrothers st1 ->
+      expand s st = CutBrothers st1 ->
       run s st1 r st2 ->
       run s st r st2 
   | run_step {s s' st st1 st2 r} :
-      expand st s = Expanded st1 s' ->
+      expand s st = Expanded st1 s' ->
       run s' st1 r st2 ->
       run s st r st2
 .
 
 Lemma run_Solved_id:
   forall {s s1 s2 st1 st2},
-    expand st1 s = Solved s1 -> run s st1 (Done s2) st2 -> s2 = s1 /\ st1 = st2.
+    expand s st1 = Solved s1 -> run s st1 (Done s2) st2 -> s2 = s1 /\ st1 = st2.
 Proof.
   move=> s s1 s2 st1 st2 + H.
   remember (Done s2).
@@ -209,7 +209,7 @@ Lemma run_consistent_state {a b c1 c2 r1 r2}:
 Proof. by move=> H H1; apply (proj2 (run_consistent H H1)). Qed.
 
 Lemma run_cut_simpl pr s3 s4 s2:
-  run s3 (Goal pr Cut) (Done s2) s4 -> expand OK s3 = Solved s2 /\ s4 = OK.
+  run s3 (Goal pr Cut) (Done s2) s4 -> expand s3 OK = Solved s2 /\ s4 = OK.
   (* expand (Goal pr Cut) s3 = CutBrothers st1 /\  run s3 st1 (Done s2) s4. *)
 Proof.
   inversion 1; subst => //=.
@@ -218,7 +218,7 @@ Proof.
 Qed.
 
 Lemma run_CutBrothers_id {s2 s3 st1 st2 ir1 ir2}:
-  expand st1 s3 = CutBrothers st2 -> 
+  expand s3 st1 = CutBrothers st2 -> 
   run s3 st2 (Done s2) ir1 -> 
   run s3 st1 (Done s2) ir2 ->
   ir1 = ir2.
@@ -275,7 +275,7 @@ Proof.
 Qed.
 
 Lemma run_solved_same_subst {st_l s s' s''' il}:
-   expand st_l s = Solved s' ->
+   expand s st_l = Solved s' ->
     run s st_l (Done s''') il ->
       s' = s'''.
 Proof.
@@ -346,7 +346,7 @@ elim: H => {st s s1 g0} /= [s st s'|s st|s st st1 st2 r|].
   }
 {
   move=> s s'' ? A' C ? HH1 H1 IH A B ? s' ?; subst.
-  have : expand (And A B) s = Expanded A' s''.
+  have : expand s (And A B) = Expanded A' s''.
     by [].
   move => //=.
   case E1: expand => [|||s1] //=.
@@ -355,7 +355,7 @@ elim: H => {st s s1 g0} /= [s st s'|s st|s st st1 st2 r|].
       exists il, ir, s'''; split => //; split=>//.
       apply: run_step E1 IHl.
     - move=> HH2.
-      have: mkAnd A s1 (expand B s1) = Expanded A' s''.
+      have: mkAnd A s1 (expand s1 B) = Expanded A' s''.
         by [].
       case E2: expand => [st s2|||] //=.
         move=> [] ??. subst.
