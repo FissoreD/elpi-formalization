@@ -121,7 +121,7 @@ Fixpoint expand s (st :state) : expand_res :=
   | Goal pr (App (p pn) args) =>
       let l := F pr pn args s in
       if l is [:: (s1,_) & _] then Expanded (big_or pr l)
-      else Failure
+      else Expanded KO
   | Or st1 (sr,st2) =>
       match expand s st1 with
       | Solved s => Solved s
