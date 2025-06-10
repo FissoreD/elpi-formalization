@@ -182,6 +182,10 @@ Proof.
   by move=> s st st1 st2 ? H ; rewrite H.
 Qed.
 
+Lemma run_Solved_and_failed {s A sol A'}:
+  expand s A = Failure -> run s A (Done sol) A' -> False.
+Proof. by inversion 2; subst; congruence. Qed.
+
 Lemma run_consistent: forall {a b c1 c2 r1 r2},
   run a b c1 r1 -> run a b c2 r2 -> c1 = c2 /\ (c1 <> Failed -> r1 = r2).
 Proof.
@@ -430,6 +434,47 @@ Proof.
   by move=> s g g' H H1 IH g2 g3 + H3; rewrite H => -[] ?; subst.
 Qed.
 
+Lemma not_cut_brothers_and {s A B sol st}:
+  not_cut_brothers s (And A B) ->
+    not_cut_brothers s A /\ (run s A (Done sol) st -> not_cut_brothers sol B).
+Proof.
+  remember (And _ _) as NA eqn:HNA.
+  move=> H.
+  move: A B sol st HNA.
+  elim: H; clear.
+  + move=> sol s ? H A B sol1 A' ?; subst.
+    move: H => //=.
+    case E: expand => //=.
+    case F: expand => //= -[] ?; subst.
+    split.
+      - by apply: not_cut_brothers_solved E.
+      - by move=> H1; destruct (run_Solved_id E H1); subst; apply: not_cut_brothers_solved F.
+  + move=> s g + A B sol A' ?; subst => //=.
+    case E: expand => //=.
+    - move=> _; split.
+      by apply: not_cut_brothers_failure.
+      by move=> H; destruct (run_Solved_and_failed E H).
+    - case F: expand => //=.
+      move=> _; split.
+      by apply: not_cut_brothers_solved E.
+      move=> H; destruct (run_Solved_id E H); subst.
+      by apply: not_cut_brothers_failure.
+  + move=> s g g' + H1 IH A B sol A' ?; subst => //=.
+    case E: expand => [|||sol'] //=.
+    - move=> [] ?; subst.
+      move: IH => /(_ _ _ sol A' erefl) [] H2 H3; split.
+      - by apply: not_cut_brothers_expanded E H2.
+      - by move=> H; apply H3; inversion H; subst; clear H; congruence.
+    - case F: expand => [A''|||] //= -[] ?; subst.
+      split.
+      - by apply: not_cut_brothers_solved E.
+      - move=> H.
+        destruct (run_Solved_id E H); subst.
+        move: IH => /(_ _ _ sol' A' erefl) => -[] H2 H3. 
+        by apply: not_cut_brothers_expanded F (H3 H).
+Qed.
+
+
 Lemma run_or_fail {s1 s2 g1 g2 st}:
   run s1 (Or g1 (s2,g2)) Failed st ->
     run s1 g1 Failed st /\ (not_cut_brothers s1 g1 -> run s2 g2 Failed st).
@@ -470,4 +515,12 @@ Qed.
 Corollary run_or_fail1 s1 g1 g2 st:
   run s1 (Or g1 (s1,g2)) Failed st ->
     run s1 g1 Failed st /\ (not_cut_brothers s1 g1 -> run s1 g2 Failed st).
-Proof. move=> H. apply: run_or_fail H. Qed.
+Proof. move=> H. apply: run_or_fail H. Qed. 
+
+Lemma or_is_distributive:
+  forall A B C s sol E,
+    run s (Or (And A B) (s, (And A C))) (Done sol) E ->
+      not_cut_brothers s (And A B) ->
+        exists s' IGN, run s A (Done s') IGN /\
+        run s (And A (Or B (s', C))) (Done sol) E.
+Proof.
