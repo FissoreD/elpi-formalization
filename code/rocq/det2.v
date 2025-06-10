@@ -560,11 +560,26 @@ Proof.
     by apply expand_cut_expanded in H; subst; apply: IH erefl erefl.
 Qed.
 
+Inductive chooseB : Sigma -> state -> state -> state -> Prop :=
+  | chooseB_CB s A cb B : expand s A = CutBrothers cb -> chooseB s A B (cut B)
+  | chooseB_Fail s A B : expand s A = Failure -> chooseB s A B B
+  | chooseB_Done s s' A B : expand s A = Solved s' -> chooseB s A B B
+  | chooseB_Exp s A A' B B' : expand s A = Expanded A' -> chooseB s A' B B' -> chooseB s A B B'
+  .
+
+Lemma chooseBP {s A B C} :
+  chooseB s A (cut B) C -> cut B = C.
+Proof.
+  remember (cut _) as CC eqn:HCC.
+  move=> H; move: B HCC.
+  elim: H; clear => //=.
+  by intros; subst; rewrite cut_cut_same.
+Qed.
+
 Lemma run_or_success {s1 s2 A B SOL E}:
   run s1 (Or A (s2, B)) (Done SOL) E ->
-      (* E = Or A (s2, B) /\ *)
-      exists X,
-        (run s1 A (Done SOL) X \/ run s2 B (Done SOL) X).
+    (exists A' B', chooseB s1 A B B' /\ E = Or A' (s2, B') /\ run s1 A (Done SOL) A') \/ 
+      exists A' B', run s1 A Failed A' /\ E = (Or A' (s2, B')) /\ run s2 B (Done SOL) B'.
 Proof.
   move=> H.
   remember (Or _ _) as O eqn:HO.
@@ -574,33 +589,46 @@ Proof.
   + move=> s st s' + s2 A B SOL ? [] ?; subst => //=.
     case E: expand => //=.
       case F: expand => //= -[] ?; subst.
-      exists B.
-      by right; apply: run_done.
-    by move=> [] ?; subst; exists A; left; apply run_done.
+      by right; exists A, B; repeat split; auto; [apply: run_fail E| apply: run_done].
+    move=> [] ?; subst; left.
+    exists A; eexists.
+    split.
+    apply: chooseB_Done E.
+    by split; auto; apply run_done.
   + move=> s ? st1 st2 ? + H1 IH s2 A B SOL ? ?; subst => /=.
     case E: expand => //=.
     by case F: expand => //=.
   + move=> s ? st1 st2 ? + H1 IH s2 A B SOL ?? ; subst => //=.
     case E: expand => [s4|||s4] //=.
     + move=> [] ?; subst.
-      move: (IH _ _ _ _ erefl erefl) => [X [H|H]] {IH}; subst.
-      - by exists X; left; apply: run_step E H.
-      - by exists X; right.
+      move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
+      - move: H => [A' [B' [H [H0 H2]]]]; subst.
+        left; do 2 eexists.
+        split.
+        apply: chooseB_Exp E H.
+        split; [reflexivity | apply: run_step E H2 ].
+      - by right; exists A', B'; repeat split; auto; apply: run_step E H.
     + move=> [] ?; subst.
       {
-      move: (IH _ _ _ _ erefl erefl) => [X [H|H]] {IH}; subst.
-      - by exists X; left; apply: run_cut E H.
-      - by apply run_cut_fail in H.
+      move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
+      - move: H => [A' [B' [H [H0 H2]]]]; subst.
+        left; do 2 eexists.
+        apply chooseBP in H; split; subst.
+        apply: chooseB_CB E.
+        split; [reflexivity|apply: run_cut E H2].
+      - by right; exists A', B'; split; auto; apply run_cut_fail in H0.
       }
-    + case F: expand => //=.
+    + case F: expand => [ss|ss||] //=.
       - move=> [] ?; subst.
-        move: (IH _ _ _ _ erefl erefl) => [X [H|H]] {IH}; subst.
-        by exists X; left.
-        by exists X; right; apply: run_step F H.
+        move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
+        move: H => [A' [B' [H [H0 H2]]]]; subst.
+        by destruct (run_Solved_and_failed E H2).
+        right; exists A', B'; repeat split; auto; apply: run_step F H0.
       - move=> [] ?; subst.
-        move: (IH _ _ _ _ erefl erefl) => [X [H|H]] {IH}; subst.
-        by exists X; left.
-        by exists X; right; apply: run_cut F H.
+        move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
+        move: H => [A' [B' [H [H0 H2]]]]; subst.
+        by destruct (run_Solved_and_failed E H2).
+        by right; exists A', B'; repeat split; auto; apply: run_cut F H0.
 Qed. 
 
 Lemma run_or_fail {s1 s2 g1 g2 st}:
@@ -645,10 +673,35 @@ Corollary run_or_fail1 s1 g1 g2 st:
     run s1 g1 Failed st /\ (not_cut_brothers s1 g1 -> run s1 g2 Failed st).
 Proof. move=> H. apply: run_or_fail H. Qed. 
 
-Lemma or_is_distributive:
-  forall A B C s sol E,
+Lemma or_is_distributive {A B C s sol E}:
     run s (Or (And A B) (s, (And A C))) (Done sol) E ->
       not_cut_brothers s (And A B) ->
         exists s' IGN, run s A (Done s') IGN /\
         run s (And A (Or B (s', C))) (Done sol) E.
 Proof.
+  move=> H.
+  apply run_or_success in H as [D [H|H]].
+  + move=> H1.
+    apply test_and_succeed in H as [il [ir [s'' [H2 [H3 H4]]]]]; subst.
+    exists s'', il; split; auto.
+    { 
+      inversion H3; subst; clear H3.
+      apply: run_step => //=.
+      rewrite H6.
+
+    (* eapply (not_cut_brothers_and) in H1 as [].
+    apply: run_step => //=.
+    admit. *)
+    admit.
+  + move=> H1.
+    apply test_and_succeed in H as [il [ir [s'' [H2 [H3 H4]]]]]; subst.
+    do 2 eexists; split.
+    eassumption.
+    apply: run_step => //=.
+    inversion H3; subst; clear H3.
+    rewrite H6.
+
+
+
+
+
