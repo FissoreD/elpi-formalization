@@ -72,10 +72,10 @@ Inductive expand_res :=
   | Failure
   | Solved of Sigma.
 
-Definition mkAnd left r :=
+Definition mkAnd left s0 r :=
   match r with
   | Failure => Failure
-  | Expanded st s => Expanded (And left st) s
+  | Expanded st s => Expanded (And left st) s0
   | CutBrothers st => CutBrothers (And left st)
   | Solved s => Solved s
   end.
@@ -131,7 +131,7 @@ Fixpoint expand (st :state) s : expand_res :=
       end
   | And st1 st2 =>
       match expand st1 s with
-      | Solved s => mkAnd st1 (expand st2 s)
+      | Solved s1 => mkAnd st1 s1 (expand st2 s1)
       | Expanded st1 s => Expanded (And st1 st2) s
       | CutBrothers st1 => CutBrothers (And st1 st2)
       | Failure => Failure
@@ -141,7 +141,7 @@ Fixpoint expand (st :state) s : expand_res :=
 
 Lemma expand_And st1 st2 s : expand (And st1 st2) s =
       match expand st1 s with
-      | Solved s => mkAnd st1 (expand st2 s)
+      | Solved s1 => mkAnd st1 s1 (expand st2 s1)
       | Expanded st1 s => Expanded (And st1 st2) s
       | CutBrothers st1 => CutBrothers (And st1 st2)
       | Failure => Failure
@@ -312,7 +312,7 @@ Qed.
 
 Lemma test s g1 g2 s' st :
   run s (And g1 g2) (Done s') st ->
-    exists st1 st2 s'', st = And st1 st2 /\ run s g1 (Done s'') st1 /\ run s'' g2 (Done s') st2.
+    exists il ir s'',  st = And il ir /\ run s g1 (Done s'') il /\ run s'' g2 (Done s') ir.
 Proof.
 remember (And _ _) as g0 eqn:Hg0.
 remember (Done _) as s1 eqn:Hs1.
@@ -344,35 +344,86 @@ elim: H => {st s s1 g0} /= [s st s'|s st|s st st1 st2 r|].
       auto.
     }
   }
-- move=> s s' st st1 st2 r + Hr IH g1 g2 ? s'' ?; subst.
+{
+  move=> s s'' ? A' C ? HH1 H1 IH A B ? s' ?; subst.
+  have : expand (And A B) s = Expanded A' s''.
+    by [].
+  move => //=.
+  case E1: expand => [|||s1] //=.
+    - move=> [??]; subst.
+      move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
+      exists il, ir, s'''; split => //; split=>//.
+      apply: run_step E1 IHl.
+    - move=> HH2.
+      have: mkAnd A s1 (expand B s1) = Expanded A' s''.
+        by [].
+      case E2: expand => [st s2|||] //=.
+        move=> [] ??. subst.
+      move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [? [ IHl IHr]] {IH}; subst.
+      exists il, ir.
+      suffices: (exists s''0 : Sigma, run s A (Done s''0) il /\ run s''0 B (Done s') ir).
+        by move=> [] ? [??]; eexists; repeat split; try eassumption.
+      inversion H1; subst.
+      + move: H5 => //=.
+        case E: expand => //=.
+        case F: expand => //= -[] ?; subst.
+        eexists.
+        split.
+        apply run_done; eassumption.
+        eapply run_step.
+        eassumption.
+        eapply run_done.
+        shelve.
+        apply IHr.
+
+
+
+      
+      
+
+}
+(* run_step *)
+- move=> s s1 st st1 st2 r + Hr IH g1 g2 ? s' ?; subst.
   rewrite expand_And.
-  case El:expand => [|||] //.
+  case El: expand => [st3 s2|||s2] //.
   - move=> [??]; subst.
     move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
     exists il, ir, s'''; split => //; split=>//.
     apply: run_step El IHl.
-  - case Er:expand => [|||] //= [??]; subst.
-    move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
+  - case Er:expand => [st3|||] //= [??]; subst.
+    (* run s' (And g1 st3) (Done s'') st2 
+       expand g1 s = Solved s1
+       expand g2 s1 = Expanded st3 s'
+    *)
+    move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [? [IHl IHr]] {IH}; subst.
     exists il, ir.
-    inversion Hr;subst => //; clear Hr.
-    - move: H3 => //=; case E: expand => //=.
-      case F: expand => //= -[] <-.
-      {
-        inversion IHl; subst; clear IHl; try (by (rewrite E in H0)).
-        {
-          rewrite E in H3; move: H3 => [] ?; subst.
+    suffices: (exists s'' : Sigma, run s g1 (Done s'') il /\ run s'' g2 (Done s') ir).
+      by move=> [] ? [??]; eexists; repeat split; eassumption.
+
+    inversion Hr; subst; clear Hr.
+    + {
+      move: H4 => /=.
+      case E: expand => [|||s44] //=.
+      case F: expand => //= -[] ?; subst.
+      eexists.
+      split.
+      apply: run_done El.
+      apply: run_step Er _.
+      apply: run_done.
+      assert (s1 = s44) by admit.
+      subst.
+      auto.
+    }
+    + {
+      move: H0 => //=.
+      case E: expand => [|st4||s3] //=.
+        + move=> [] ?; subst.
+          assert (s  = s1) by admit; subst.
           eexists.
-          split; auto; split.
-          apply run_done.
-          apply H.
-          apply: run_step.
-            apply Er.
-          pose proof (run_done F).
-          pose proof (run_consistent H0 IHr) as [].
-          move: H1 => [] ?; subst; apply run_done.
-          
-          admit.
-        }
-      }
-    admit.
+          split.
+          eapply run_cut.
+          eassumption.
+
+
+    }
 Admitted.
