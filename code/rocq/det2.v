@@ -156,9 +156,9 @@ Inductive run : Sigma -> state -> run_res -> state -> Prop :=
   | run_done {s st s'} :
       expand s st = Solved s' ->
       run s st (Done s') st
-  | run_fail {s st} :
+  | run_fail {s st st1} :
       expand s st = Failure ->
-      run s st Failed st
+      run s st Failed st1
   | run_cut {s st st1 st2 r} :
       expand s st = CutBrothers st1 ->
       run s st1 r st2 ->
@@ -183,7 +183,7 @@ Proof.
 Qed.
 
 Lemma run_consistent: forall {a b c1 c2 r1 r2},
-  run a b c1 r1 -> run a b c2 r2 -> c1 = c2 /\ r1 = r2.
+  run a b c1 r1 -> run a b c2 r2 -> c1 = c2 /\ (c1 <> Failed -> r1 = r2).
 Proof.
   move=> a b c1 + r1  + H.
   elim:H; clear.
@@ -191,7 +191,8 @@ Proof.
     inversion H1; subst; clear H1 => //=; rewrite H in H0.
       by move: H0 => -[] <-.
       all: by []. }
-  + by move=> s st H r1 r2 H0; inversion H0; subst; clear H0 => //; rewrite H in H1.
+  + move=> s st st1 H r1 r2 H0.
+    inversion H0; subst; clear H0 => //=; by rewrite H in H1.
   + move=> s st st1 st2 r H H1 IH r1 r2 H2.
     inversion H2; subst => //; rewrite H in H0; try by [].
     by move: H0 => -[] ?; subst; auto.
@@ -205,7 +206,7 @@ Lemma run_consistent_res {a b c1 c2 r1 r2}:
 Proof. by move=> H H1; apply (proj1 (run_consistent H H1)). Qed.
 
 Lemma run_consistent_state {a b c1 c2 r1 r2}:
-    run a b c1 r1 -> run a b c2 r2 -> r1 = r2.
+    run a b c1 r1 -> run a b c2 r2 -> (c1 <> Failed ->  r1 = r2).
 Proof. by move=> H H1; apply (proj2 (run_consistent H H1)). Qed.
 
 Lemma run_cut_simpl pr s3 s4 s2:
@@ -310,7 +311,7 @@ Proof.
     }
 Qed.
 
-Lemma test s g1 g2 s' st :
+Lemma test_and_succeed s g1 g2 s' st :
   run s (And g1 g2) (Done s') st ->
     exists il ir s'',  st = And il ir /\ run s g1 (Done s'') il /\ run s'' g2 (Done s') ir.
 Proof.
@@ -357,3 +358,48 @@ Proof.
         exists s1; repeat split; auto.
         apply: run_step E2 IHr.
 Qed.
+
+Lemma test_and_fail s g1 g2 st:
+  run s (And g1 g2) Failed st ->
+    run s g1 Failed st \/ (exists s' st', run s g1 (Done s') st' /\ run s' g2 Failed st).
+Proof.
+  move=> H.
+  remember (And _ _) as A eqn:HA.
+  remember Failed as F eqn:HF.
+  move: g1 g2 HA HF.
+  elim: H => //=; clear.
+  + move=> s st st1 + g1 g2 ? ?; subst => //=.
+    case E: expand => [|||s2] //=.
+    + by move=> _; left; apply: run_fail.
+    + case F: expand => //=.
+      move=> _; right.
+      exists s2, g1; split.
+        - by apply run_done.
+        - by apply run_fail.
+  + move=> s ? st1 st2 ? + H IH g1 g2 ? ?; subst => //=.
+    case E: expand => //=.
+    - move=> [] ?; subst.
+      move: (IH _ _ erefl erefl) => [].
+      + by left; apply: run_cut E _.
+      + move=> [? [? []]] H1 H2.
+        by right; do 2 eexists; split; [|eassumption]; apply: run_cut E H1.
+    - case F: expand => //= -[] ?; subst.
+      move: (IH _ _ erefl erefl) => []; [by auto|].
+      move=> [? [? []]] H1 H2.
+      epose proof (run_Solved_id E H1) as []; subst.
+      by right; do 2 eexists; split; [eassumption|apply: run_cut F H2].
+  + move=> s ? st1 st2 ? + H1 IH g1 g2 ??; subst => //=.
+    case E: expand => //=.
+    + move=> [] ?; subst.
+      move: (IH _ _ erefl erefl) => [] {IH}.
+      + by left; apply: run_step E _.
+      + move=> [? [? []]] H2 H3.
+        by right; do 2 eexists; split; [apply: run_step E H2|].
+    + case F: expand => //= -[] ?; subst.
+      move: (IH _ _ erefl erefl) => [] {IH}; [by auto|].
+      move=> [? [? []]] H2 H3.
+      epose proof (run_Solved_id E H2) as []; subst.
+      right; do 2 eexists; split; [by eassumption|].
+      by apply: run_step F H3.
+Qed.
+
