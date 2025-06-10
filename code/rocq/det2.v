@@ -121,7 +121,7 @@ Fixpoint expand s (st :state) : expand_res :=
   | Goal pr (App (p pn) args) =>
       let l := F pr pn args s in
       if l is [:: (s1,_) & _] then Expanded (big_or pr l)
-      else Expanded KO
+      else Failure
   | Or st1 (sr,st2) =>
       match expand s st1 with
       | Solved s => Solved s
@@ -402,4 +402,71 @@ Proof.
       right; do 2 eexists; split; [by eassumption|].
       by apply: run_step F H3.
 Qed.
+
+Inductive not_cut_brothers : Sigma -> state -> Prop :=
+  | not_cut_brothers_solved {s' s g} : expand s g = Solved s' -> not_cut_brothers s g
+  | not_cut_brothers_failure {s g}    : expand s g = Failure   -> not_cut_brothers s g
+  | not_cut_brothers_expanded {s g g'} : 
+    expand s g = Expanded g' -> not_cut_brothers s g' -> not_cut_brothers s g.
+
+Lemma not_cut_brothersP {s1 g1 g2 g3}:
+  expand s1 g1 = Expanded g2 -> 
+    not_cut_brothers s1 g1 ->
+      run s1 g2 Failed g3 ->
+        not_cut_brothers s1 g2.
+Proof.
+  move=> + H.
+  move: g2 g3.
+  elim: H => //=.
+  move=> s' s g H g2 g3 H1 H2.
+    inversion H2; subst; clear H2 => //=; rewrite H1 in H; try by [].
+  move=> s g H g2 g3 H1 H2.
+    remember Failed.
+    move: s1 g1 g H H1 Heqr => _ _.
+    elim: H2 => //=; clear.
+    by move=> s st _ H g H1 H2 _; apply: not_cut_brothers_failure H.
+    by move=> s st st1 st2 r H H1 IH g H2 H3 H4; subst; rewrite H2 in H3.
+    by move=> s st st1 st2 r H H1 IH g H2 H3 H4; subst; rewrite H2 in H3.
+  by move=> s g g' H H1 IH g2 g3 + H3; rewrite H => -[] ?; subst.
+Qed.
+
+Lemma run_or_fail s1 s2 g1 g2 st:
+  run s1 (Or g1 (s2,g2)) Failed st ->
+    run s1 g1 Failed st /\ (not_cut_brothers s1 g1 -> run s2 g2 Failed st).
+Proof.
+  move=> H.
+  remember (Or _ _) as O eqn:HO.
+  remember Failed as F eqn:HF.
+  move: s2 g1 g2 HO HF.
+  elim: H; clear => //=.
+  + move=> s st s' + s2 g1 g2 HO _; subst => /=.
+    case E: expand => //=.
+    case F: expand => //=.
+    by move=> _; split; intros; apply run_fail.
+  + move=> s ? st1 st2 ? + H1 IH s2 g1 g2 ? ?; subst => /=.
+    case E: expand => //=.
+    by case F: expand => //=.
+  + move=> s ? st1 st2 ? + H1 IH s2 g1 g2 ?? ; subst => //=.
+    case E: expand => [s4|||s4] //=.
+    + move=> [] ?; subst.
+      move: (IH _ _ _ erefl erefl) => [] HL HR {IH}.
+      split; [by apply: run_step E _|] => H.
+      inversion H1; subst; clear H1; move: H0 => //=.
+      + case F: expand => //=; case: expand => //= _.
+        apply: HR (not_cut_brothers_failure F).
+      + by case F: expand => //=; case G: expand => //=.
+      + by epose proof (not_cut_brothersP E H HL); auto.
+    + move=> [] ?; subst.
+      move: (IH _ _ _ erefl erefl) => [] HL HR.
+      split; [by apply: run_cut E HL|] => H.
+      inversion H; clear H; subst; rewrite E in H0 => //=.
+    + case F: expand => //= -[] ?; subst.
+      - move: (IH _ _ _ erefl erefl) => [] HL HR; split; [by []|] => HH.
+        by apply: run_step F (HR HH).
+      - move: (IH _ _ _ erefl erefl) => [] HL HR; split; [by []|] => HH.
+        by apply: run_cut F (HR HH).
+Qed. 
+
+
+
 
