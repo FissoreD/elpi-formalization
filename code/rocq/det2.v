@@ -12,7 +12,7 @@ Definition K := nat.
 Definition V := nat.
 Inductive C := 
   | p of P 
-  (* | v of V *)
+  | v of V
   .
 Inductive Tm := 
   | Code : C -> Tm
@@ -65,6 +65,8 @@ Inductive state :=
   | CutOut : state
   .
 
+(* Notation "A ∧ B" := (And A B) (at level 13000).
+Notation "A ∨ B" := (Or A B) (at level 13000). *)
 
 Inductive expand_res :=
   | Expanded of state
@@ -128,7 +130,7 @@ Fixpoint expand s (st :state) : expand_res :=
   | OK => Solved s
   | CutOut => Failure
   | Goal _ Cut  => CutBrothers OK
-  (* | Goal pr (App (v _) _) => Failure *)
+  | Goal pr (App (v _) _) => Failure
   | Goal pr (App (p pn) args) =>
       let l := F pr pn args s in
       if l is [:: (s1,_) & _] then Expanded (big_or pr l)
@@ -251,7 +253,7 @@ Proof.
   + move=> pr [] //=.
     - move=> ????? [] <- H H1.
       apply run_cut_simpl in H1 as []; subst; by inversion H.
-    - move=> [] pn args s2 s3 st2 ir1 ir2; by case: F => [|[]] //=.
+    - move=> [] pn args s2 s3 st2 ir1 ir2 => //=; by case F: F => [|[]] //=.
   + move=> st0  [] s st1 s2 s3 st2 ir1 ir2; by case: expand; case: expand => //.
   + move=> st0 st1 s2 s3 st2 ir1 ir2.
     case E: expand => //.
@@ -305,7 +307,7 @@ Proof.
   move: s s' s''' il.
   elim: st_l => //=.
   by move=> s s' s''' il [] <-; inversion 1; subst => //=; move: H4 => /= [].
-  by move=> pr [] // [p args] s s' s''' il; case: F => // -[] //.
+  by move=> pr [] // [v args | p args] s s' s''' il => //=; case: F => // -[] //.
   move=> s IH [] s1 st s2 s3 s4 il //.
     case E: expand => //.
       case F: expand => //= -[] <- H.
@@ -367,7 +369,7 @@ Proof.
         auto.
       }
     }
-    move=> s ? A' C ? + H1 IH A B ? s' ?; subst => //=.
+  - move=> s ? A' C ? + H1 IH A B ? s' ?; subst => //=.
     case E1: expand => [|||s1] //=.
       - move=> [?]; subst.
         move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
@@ -452,7 +454,11 @@ Proof.
   by move=> s g g' H H1 IH g2 g3 + H3; rewrite H => -[] ?; subst.
 Qed.
 
-Lemma not_cut_brothers_and {s A B sol st}:
+Lemma not_cut_brothers_cut {s A B}:
+  not_cut_brothers s A -> expand s A = CutBrothers B -> False.
+Proof. by move=> H; elim: H B; congruence. Qed.
+
+Lemma not_cut_brothers_split {s A B sol st}:
   not_cut_brothers s (And A B) ->
     not_cut_brothers s A /\ (run s A (Done sol) st -> not_cut_brothers sol B).
 Proof.
@@ -579,6 +585,18 @@ Proof.
   by intros; subst; rewrite cut_cut_same.
 Qed.
 
+Lemma chooseBP1 {s A X}:
+  not_cut_brothers s A ->
+    chooseB s A X X.
+Proof.
+  move=> H.
+  elim: H X; clear.
+  by move=> ??? H ?; apply: chooseB_Done H.
+  by move=> ?? H ?; apply: chooseB_Fail H.
+  by move=> ??? H H1 IH ?; apply: chooseB_Exp H (IH _).
+Qed.
+
+
 Lemma run_or_success {s1 s2 A B SOL E}:
   run s1 (Or A (s2, B)) (Done SOL) E ->
     (exists A' B', chooseB s1 A B B' /\ E = Or A' (s2, B') /\ run s1 A (Done SOL) A') \/ 
@@ -690,44 +708,175 @@ Proof.
   auto.
 Qed.
 
-(* Lemma xx {A B s s'}:
-  expand s A = Solved s' -> run s B (Done s') B -> run s A (Done s') B.
+Lemma chooseB_expanded_and_left {s A B X Y ss}:
+  chooseB s (And A B) X Y ->
+    expand s A = Expanded ss ->
+      chooseB s (And ss B) X Y.
 Proof.
-  remember (Done _) as D eqn:HD.
-  remember B as BR eqn:HBR.
-  move=> + H.
-  have {}H: (run s BR D B).
-    by subst.
-  move: A s' HD HBR.
-  elim: H.
-  + move=> ??? H ?? [] ?? H1; subst. 
-    apply run_done. *)
+  remember (And _ _) as And eqn:HAnd.
+  move=> H.
+  move: A B HAnd ss.
+  elim: H; clear => //=.
+  by move=> s A B C + A1 B1 ?? H; subst => //=; rewrite H.
+  by move=> ??? + ???? H; subst => //=; rewrite H.
+  by move=> ???? + ???? H; subst => //=; rewrite H.
+  by move=> s A A' B B' + HC IH A0 B0 ? ? H; subst => //=; rewrite H => -[] ?; subst.
+Qed.
 
+Lemma chooseB_expanded_and_right {s A B B2 X Y ss}:
+  chooseB s (And A B) X Y ->
+    expand s A = Solved ss ->
+      expand ss B = Expanded B2 ->
+        chooseB s (And A B2) X Y.
+Proof.
+  remember (And _ _) as And eqn:HAnd.
+  move=> H.
+  move: A B B2 HAnd ss.
+  case: H; clear => //=.
+  by move=> s A B C + ????? H H1; subst => //=; rewrite H H1.
+  by move=> ??? + ????? H H1; subst => //=; rewrite H H1.
+  by move=> ???? + ????? H H1; subst => //=; rewrite H H1.
+  by move=> s A A' B B' + HC ????? H H1; subst => //=; rewrite H H1 => -[] ?; subst.
+Qed.
+
+Lemma not_cut_borothers_expanded_and_left {s A B ss}:
+  not_cut_brothers s (And A B) ->
+    expand s A = Expanded ss ->
+      not_cut_brothers s (And ss B).
+Proof.
+  remember (And _ _) as And eqn:HAnd.
+  move=> H.
+  move: A B HAnd ss.
+  case: H; clear => //=.
+  by move=> ??? + ???? H; subst => //=; rewrite H.
+  by move=> ?? + ???? H; subst => //=; rewrite H.
+  by move=> ??? + H1 ???? H2; subst => //=; rewrite H2 => -[] ?; subst; auto.
+Qed.
+
+Lemma not_cut_borothers_expanded_and_right {s A B B'' ss}:
+  not_cut_brothers s (And A B) ->
+    expand s A = Solved ss ->
+    expand ss B = Expanded B'' ->
+      not_cut_brothers s (And A B'').
+Proof.
+  remember (And _ _) as And eqn:HAnd.
+  move=> H.
+  move: A B HAnd ss B''.
+  case: H; clear => //=.
+  by move=> ??? + ????? H H1; subst => //=; rewrite H H1.
+  by move=> ?? + ????? H H1; subst => //=; rewrite H H1.
+  by move=> ??? + H1 H2 ???? H3 H4; subst => //=; rewrite H3 H4 => -[] ?; subst; auto.
+Qed.
+
+Inductive will_fail : Sigma -> state -> Prop :=
+  | will_fail1 {s st} : expand s st = Failure -> will_fail s st
+  | will_fail2 {s st st'} : expand s st = Expanded st' -> will_fail s st' -> will_fail s st.
+
+(* ((A ∧ B) ∨ (A ∧ C)) -> (A ∧ (B ∨ C)) *)
 Lemma or_is_distributive {A B C s sol E}:
     run s (Or (And A B) (s, (And A C))) (Done sol) E ->
       not_cut_brothers s (And A B) ->
-        exists s' IGN, run s A (Done s') IGN /\
-        run s (And A (Or B (s', C))) (Done sol) E.
+        exists E' s' IGN, run s A (Done s') IGN /\
+          run s (And A (Or B (s', C))) (Done sol) E' 
+          (* /\ (forall x s r, run x E s r <-> run x E' s r) *)
+            .
 Proof.
-  move=> H.
-  apply run_or_success in H as [[A' [B' [H [? H0]]]]|[A' [C' [H [? H0]]]]] => H2; subst.
+  move=> H H1.
+  apply run_or_success in H as [[A' [B' [H [? H0]]]]|[A' [C' [H [? H0]]]]]; subst.
   (* left succeeds *)
-  + epose proof (not_cut_brothers_choosB H H2); subst.
-    pose proof  (test_and_succeed H0) as [il [ir [s'' [? [H3 H4]]]]]; subst.
-    do 2 eexists; split; [eassumption|].
-
-
-
-    
-      admit.
+  + remember (And A B) as AB eqn:HAB.
+    remember (And A C) as AC eqn:HAC.
+    remember (Done sol) as SOL eqn:HSOL.
+    move: A B C sol B' AC HSOL HAC HAB H H1.
+    {
+      elim: H0 => //=; clear.
+      + move=> s0 st s' + A B C sol B' ? [] ??? H1 H2; subst => //=.
+        case E: expand => //=.
+        case F: expand => //= -[] ?; subst.
+        do 3 eexists; repeat split; [by apply: run_done E|]; by apply: run_done => //=; rewrite E F.
+      + move=> s st st1 st2 r H H1 IH A B C sol B' ? ??? H2 H3; subst.
+        by destruct (not_cut_brothers_cut H3 H).
+      + move=> s st st1 st2 r + H1 IH A B C sol B' ???? H2 H3; subst => //=.
+        case E: expand => [ss|||ss] //=.
+        + move=> []?; subst.
+          move: IH => /(_ _ _ _ _ _ _ erefl erefl erefl).
+          assert (chooseB s (And ss B) (And ss C) (And ss C)) by
+            apply: chooseB_expanded_and_left (chooseBP1 H3) E.
+          assert (not_cut_brothers s (And ss B)) by
+            apply: not_cut_borothers_expanded_and_left H3 E.
+          move=> /(_ _ _ H0 H4) [A1 [A2 [A3 [A4 A5]]]].
+          do 3 eexists; split.
+          apply: run_step E A4.
+          apply: run_step => //=; [by rewrite E|]; apply A5.
+        + case F: expand => [B''|||] //= -[] ?; subst.
+          assert (chooseB s (And A B'') (And A C) (And A C)) as H0 by
+            apply: chooseB_expanded_and_right (chooseBP1 H3) E F.
+          assert (not_cut_brothers s (And A B'')) as H00 by
+            apply: not_cut_borothers_expanded_and_right H3 E F.
+          move: IH => /(_ _ _ _ _ _ _ erefl erefl erefl H0 H00) [A1 [A2 [A3 [A4 A5]]]].
+          do 3 eexists; split.
+          eassumption.
+          by apply: run_step A5 => //=; rewrite E F.
+    }
   (* left fails *)
-  + eapply test_and_succeed in H0 as [il [ir [s'' [? [H3 H4]]]]]; subst.
-    exists s'', il; split; auto.
-    apply test_and_fail in H as [|[s' [st' [H5 H6]]]].
-    by pose proof (run_consistent H0 H3) as [].
-    pose proof (run_consistent H5 H3) as [AA BB]; move: AA.
-    assert (st' = il).
-      by apply BB => ?.
-    move=> [] ?; subst; clear BB H3.
+  + remember (And A B) as AB eqn:HAB.
+    remember Failed as fail eqn:Hfail.
+    move: C' sol A B C Hfail HAB H0 H1.
+    elim: H; clear => //=.
+    + move=> s st _ + C' sol A B C _ ? H1 H2; subst => //=.
+      { case E: expand => //=.
+        { inversion H1; subst => //=.
+          by move: H5 => //=; rewrite E.
+          by move: H0 => //=; rewrite E.
+          by move: H0 => //=; rewrite E. }
+        case F: expand => //=.
+        do 3 eexists; split; [apply: run_done E|].
+        + inversion H1; subst; clear H1 => //=.
+          move: H6 => //=; rewrite E.
+          case G: expand => //=.
+          move=> []?; subst.
+          { apply: run_done => //=.
+            rewrite E.
+            rewrite F.
+            rewrite G => //=.
+          }
+        + move: H3 => //=; rewrite E.
+        admit.
+        admit.
+        }
+    + move=> s st st1 st2 r H H1 IH C sol A B C' ?? H2 H3; subst.
+      by destruct (not_cut_brothers_cut H3 H).
+    + move=> s st st1 st2 r + H1 IH C' sol A B C ?? H2 H3; subst => //=.
+      inversion H2; subst; clear H2.
+      {
+        move: H6 => //=; case E: expand => //= [s'].
+        case F: expand => //= -[]? ; subst.
+        case G: expand => //= [WRONG] -[]?; subst.
+        epose proof (not_cut_borothers_expanded_and_right H3 E G).
+        assert (exists x, run s (And A (Or B (s', C))) (Done sol) x).
+        { eexists.
+          apply: run_step => //=.
+          rewrite E G => //=.
+          assert (expand s' WRONG = Failure).
+          {
+            inversion H1; subst; move : H2 => //=; rewrite E; case GG: expand => //=.
+            - eapply not_cut_brothers_split in H0 as [].
+              pose proof (run_done E).
+              apply H2 in H5.
+              by epose proof (not_cut_brothers_cut H5 GG).
+            - move=> -[] ?; subst; inversion H4; subst; clear H4; move: H2 => //=; rewrite E; case EE: expand => //=.
+            all: admit.
 
+          }
 Abort.
+
+Print Tm.
+
+Module check.
+  Definition Gamma := V -> option Tm.
+  Definition empty : Gamma := fun _ => None.
+
+  (* Inductive assume : S -> Tm -> Gamma -> Gamma -> Prop :=
+  | assume_app : 
+  
+    assume D (Code _) . *)
