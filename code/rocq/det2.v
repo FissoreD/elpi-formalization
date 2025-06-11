@@ -167,6 +167,8 @@ Inductive run : Sigma -> state -> run_res -> state -> Prop :=
   | run_done {s st s'} :
       expand s st = Solved s' ->
       run s st (Done s') st
+  (* | run_done1 {s s' A B} :
+    expand s A = Solved s' -> run s B (Done s') B -> run s A (Done s') B *)
   | run_fail {s st st1} :
       expand s st = Failure ->
       run s st Failed st1
@@ -193,6 +195,7 @@ Proof.
   move: Heqr.
   case: H => //=; clear.
   by move=> s st1 s3 H1 [] ?; rewrite H1=> -[] ?; subst.
+  (* move=> s s' A B H1 H2 [] ?; rewrite H1 => -[] ?; subst. *)
   by move=> s st st1 st2 r H H1 ?; rewrite H.
   by move=> s st st1 st2 ? H ; rewrite H.
 Qed.
@@ -330,7 +333,7 @@ Proof.
     }
 Qed.
 
-Lemma test_and_succeed s g1 g2 s' st :
+Lemma test_and_succeed {s g1 g2 s' st} :
   run s (And g1 g2) (Done s') st ->
     exists il ir s'',  st = And il ir /\ run s g1 (Done s'') il /\ run s'' g2 (Done s') ir.
 Proof.
@@ -673,6 +676,33 @@ Corollary run_or_fail1 s1 g1 g2 st:
     run s1 g1 Failed st /\ (not_cut_brothers s1 g1 -> run s1 g2 Failed st).
 Proof. move=> H. apply: run_or_fail H. Qed. 
 
+Lemma not_cut_brothers_choosB {s A B C}:
+  chooseB s A B C ->
+    not_cut_brothers s A ->
+      C = B.
+Proof.
+  move=> H.
+  elim: H => //=; clear.
+  by move=> s A C B + H; inversion H; subst => //=; congruence.
+  move=> s A A' B B' + H IH H1.
+  inversion H1; subst; clear H1; try congruence.
+  rewrite H0 => -[] ?; subst.
+  auto.
+Qed.
+
+(* Lemma xx {A B s s'}:
+  expand s A = Solved s' -> run s B (Done s') B -> run s A (Done s') B.
+Proof.
+  remember (Done _) as D eqn:HD.
+  remember B as BR eqn:HBR.
+  move=> + H.
+  have {}H: (run s BR D B).
+    by subst.
+  move: A s' HD HBR.
+  elim: H.
+  + move=> ??? H ?? [] ?? H1; subst. 
+    apply run_done. *)
+
 Lemma or_is_distributive {A B C s sol E}:
     run s (Or (And A B) (s, (And A C))) (Done sol) E ->
       not_cut_brothers s (And A B) ->
@@ -680,28 +710,24 @@ Lemma or_is_distributive {A B C s sol E}:
         run s (And A (Or B (s', C))) (Done sol) E.
 Proof.
   move=> H.
-  apply run_or_success in H as [D [H|H]].
-  + move=> H1.
-    apply test_and_succeed in H as [il [ir [s'' [H2 [H3 H4]]]]]; subst.
+  apply run_or_success in H as [[A' [B' [H [? H0]]]]|[A' [C' [H [? H0]]]]] => H2; subst.
+  (* left succeeds *)
+  + epose proof (not_cut_brothers_choosB H H2); subst.
+    pose proof  (test_and_succeed H0) as [il [ir [s'' [? [H3 H4]]]]]; subst.
+    do 2 eexists; split; [eassumption|].
+
+
+
+    
+      admit.
+  (* left fails *)
+  + eapply test_and_succeed in H0 as [il [ir [s'' [? [H3 H4]]]]]; subst.
     exists s'', il; split; auto.
-    { 
-      inversion H3; subst; clear H3.
-      apply: run_step => //=.
-      rewrite H6.
+    apply test_and_fail in H as [|[s' [st' [H5 H6]]]].
+    by pose proof (run_consistent H0 H3) as [].
+    pose proof (run_consistent H5 H3) as [AA BB]; move: AA.
+    assert (st' = il).
+      by apply BB => ?.
+    move=> [] ?; subst; clear BB H3.
 
-    (* eapply (not_cut_brothers_and) in H1 as [].
-    apply: run_step => //=.
-    admit. *)
-    admit.
-  + move=> H1.
-    apply test_and_succeed in H as [il [ir [s'' [H2 [H3 H4]]]]]; subst.
-    do 2 eexists; split.
-    eassumption.
-    apply: run_step => //=.
-    inversion H3; subst; clear H3.
-    rewrite H6.
-
-
-
-
-
+Abort.
