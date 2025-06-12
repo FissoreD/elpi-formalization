@@ -1,0 +1,7 @@
+-Q . det
+
+-arg -w -arg -notation-overridden
+
+det2.v
+
+aux.v
