@@ -153,25 +153,12 @@ Fixpoint expand s (st :state) : expand_res :=
   end
 .
 
-Lemma expand_And st1 st2 s : expand s (And st1 st2) =
-      match expand s st1 with
-      | Solved s1 => mkAnd st1 (expand s1 st2)
-      | Expanded st1 => Expanded (And st1 st2)
-      | CutBrothers st1 => CutBrothers (And st1 st2)
-      | Failure => Failure
-      end.
-by [].
-Qed.
-
-
 Inductive run_res := Done of Sigma | Failed.
 
 Inductive run : Sigma -> state -> run_res -> state -> Prop :=
   | run_done {s st s'} :
       expand s st = Solved s' ->
       run s st (Done s') st
-  (* | run_done1 {s s' A B} :
-    expand s A = Solved s' -> run s B (Done s') B -> run s A (Done s') B *)
   | run_fail {s st st1} :
       expand s st = Failure ->
       run s st Failed st1
@@ -183,10 +170,6 @@ Inductive run : Sigma -> state -> run_res -> state -> Prop :=
       expand s st = Expanded st1  ->
       run s st1 r st2 ->
       run s st r st2
-  (* | run_or_fail {s1 s2 st1 st2 st3 r} :
-    expand s1 st1 = Failure ->
-    run s2 st2 r st3 ->
-    run s1 (Or st1 (s2, st2)) r st3 *)
 .
 
 Lemma run_Solved_id:
@@ -194,11 +177,9 @@ Lemma run_Solved_id:
     expand s st1 = Solved s1 -> run s st1 (Done s2) st2 -> s2 = s1 /\ st1 = st2.
 Proof.
   move=> s s1 s2 st1 st2 + H.
-  remember (Done s2).
-  move: Heqr.
-  case: H => //=; clear.
+  remember (Done s2) as D eqn:HD.
+  case: H HD => //=; clear.
   by move=> s st1 s3 H1 [] ?; rewrite H1=> -[] ?; subst.
-  (* move=> s s' A B H1 H2 [] ?; rewrite H1 => -[] ?; subst. *)
   by move=> s st st1 st2 r H H1 ?; rewrite H.
   by move=> s st st1 st2 ? H ; rewrite H.
 Qed.
@@ -229,14 +210,6 @@ Proof.
     inversion H2; subst; clear H2; rewrite H in H0; try by [].
     by move: H0 => [] ?; subst; auto.
 Qed.
-
-Lemma run_consistent_res {a b c1 c2 r1 r2}:
-    run a b c1 r1 -> run a b c2 r2 -> c1 = c2.
-Proof. by move=> H H1; apply (proj1 (run_consistent H H1)). Qed.
-
-Lemma run_consistent_state {a b c1 c2 r1 r2}:
-    run a b c1 r1 -> run a b c2 r2 -> (c1 <> Failed ->  r1 = r2).
-Proof. by move=> H H1; apply (proj2 (run_consistent H H1)). Qed.
 
 Lemma run_cut_simpl pr s3 s4 s2:
   run s3 (Goal pr Cut) (Done s2) s4 -> expand s3 OK = Solved s2 /\ s4 = OK.
@@ -282,7 +255,7 @@ Proof.
     }
 Qed.
 
-Lemma run_and_succeed {s g1 g2 s' st} :
+Lemma run_and_complete {s g1 g2 s' st} :
   run s (And g1 g2) (Done s') st ->
     (exists il ir s'', st = And il ir /\ run s g1 (Done s'') il /\ run s'' g2 (Done s') ir).
 Proof.
@@ -291,8 +264,8 @@ Proof.
   move => H.
   move: g1 g2 Hg0 s' Hs1.
   elim: H => {st s s1 g0} /= [s st s'|s st|s st st1 st2 r|] => //=.
-  - move=> + st_l st_r ? r [?]; subst.
-    rewrite expand_And; case L: expand => [|||x] //; case R: expand => //= -[?]; subst.
+  - move=> + st_l st_r ? r [?]; subst => //=.
+    case L: expand => [|||x] //; case R: expand => //= -[?]; subst.
     by exists st_l, st_r, x; repeat split; constructor.
   - move=> + Hr + st_l st_r ? s'' ?; subst => //=.
     case L: expand => [|st0||s'] // => [[?]|]; subst.
@@ -319,7 +292,7 @@ Proof.
       apply: run_step E2 IHr.
 Qed.
 
-Lemma run_and_succeed1 {s0 s1 s2 g1 g2 il ir} :
+Lemma run_and_correct {s0 s1 s2 g1 g2 il ir} :
     run s0 g1 (Done s1) il -> run s1 g2 (Done s2) ir ->
       run s0 (And g1 g2) (Done s2) (And il ir).
 Proof.
@@ -567,7 +540,7 @@ Proof.
         by apply: run_no_cut_failure_step Y H3.
 Qed.
 
-Lemma run_or_success1 {s1 s2 A B SOL A' B'}:
+Lemma run_or_correct {s1 s2 A B SOL A' B'}:
   (chooseB s1 A B B' /\ run s1 A (Done SOL) A') \/ 
   (run_no_cut_failure s1 A A' /\ run s2 B (Done SOL) B') ->
   run s1 (Or A (s2, B)) (Done SOL) (Or A' (s2, B')).
@@ -611,7 +584,7 @@ Proof.
       by rewrite H.
 Qed. 
 
-Lemma run_or_success {s1 s2 A B SOL E}:
+Lemma run_or_complete {s1 s2 A B SOL E}:
   run s1 (Or A (s2, B)) (Done SOL) E ->
     (exists A' B', chooseB s1 A B B' /\ E = Or A' (s2, B') /\ run s1 A (Done SOL) A') \/ 
       exists A' B', run_no_cut_failure s1 A A' /\ E = (Or A' (s2, B')) /\ run s2 B (Done SOL) B'.

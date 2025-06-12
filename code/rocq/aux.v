@@ -1,6 +1,14 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import det2.
 
+Lemma run_consistent_res {a b c1 c2 r1 r2}:
+  run a b c1 r1 -> run a b c2 r2 -> c1 = c2.
+Proof. by move=> H H1; apply (proj1 (run_consistent H H1)). Qed.
+
+Lemma run_consistent_state {a b c1 c2 r1 r2}:
+    run a b c1 r1 -> run a b c2 r2 -> (c1 <> Failed ->  r1 = r2).
+Proof. by move=> H H1; apply (proj2 (run_consistent H H1)). Qed.
+
 Lemma not_cut_brothers_cut {s A B}:
   not_cut_brothers s A -> expand s A = CutBrothers B -> False.
 Proof. by move=> H; elim: H B; congruence. Qed.
@@ -19,15 +27,15 @@ Proof.
     - move=> [] pn args s2 s3 st2 ir1 ir2 => //=; by case F: F => [|[]] //=.
   + move=> st0  [] s st1 s2 s3 st2 ir1 ir2; by case: expand; case: expand => //.
   + move=> st0 st1 s2 s3 st2 ir1 ir2 + + H.
-    move: (run_and_succeed H) => [il [ir [s'' [?[HL HR]]]]]; subst.
+    move: (run_and_complete H) => [il [ir [s'' [?[HL HR]]]]]; subst.
     case E: expand => //; inversion HL; try congruence; subst.
     + move: E; rewrite H0 => -[] ? [] ? H2; subst.
-      move: (run_and_succeed H2) => [il2 [ir2 [s'''[?[HL' HR']]]]]; subst.
+      move: (run_and_complete H2) => [il2 [ir2 [s'''[?[HL' HR']]]]]; subst.
       move: (run_consistent H1 HL') => [][] ? /(_ done_fail) ?; subst.
       by move: (run_consistent HR HR') => [] _ /(_ done_fail) ?; subst.
     + move: E; rewrite H3 => -[]?; subst.
       case F: expand => //= -[] ? H1; subst.
-      move: (run_and_succeed H1) => [il1 [ir2 [s''1 [?[HL1 HR1]]]]] {H1}; subst.
+      move: (run_and_complete H1) => [il1 [ir2 [s''1 [?[HL1 HR1]]]]] {H1}; subst.
       move: (run_consistent HL1 HL) => [][] ? /(_ done_fail) ?; subst.
       inversion HR; try congruence; subst.
       move: H0; rewrite F => -[] ?; subst.
@@ -195,8 +203,8 @@ Lemma p_aorb_andc {sA sB sD A B C D E}:
       exists D', run sB (And B C) (Done sD) D'.
 Proof.
   move=> H H1.
-  move: (run_and_succeed H) => [il[ir[s'' [?[HAORB HC]]]]] {H}; subst.
-  move: (run_or_success HAORB) => [] {HAORB}.
+  move: (run_and_complete H) => [il[ir[s'' [?[HAORB HC]]]]] {H}; subst.
+  move: (run_or_complete HAORB) => [] {HAORB}.
     + move=> [A' [B' [HChA [? HA]]]]; subst.
       move: (run_and_fail H1) => {H1} [HA'|].
       + by move: (run_consistent HA HA') => [].
@@ -205,7 +213,7 @@ Proof.
         by move: (run_consistent HC HC') => [].
     + move=> [A' [B' [HA [? HB]]]]; subst.
       exists (And B' ir).
-      apply: run_and_succeed1 HB HC.
+      apply: run_and_correct HB HC.
 Qed.
 
 (* ((A ∧ B) ∨ (A ∧ C)) -> (A ∧ (B ∨ C)) *)
@@ -216,16 +224,16 @@ Lemma or_is_distributive {A B C s sol E}:
           run s (And A (Or B (s', C))) (Done sol) E' .
 Proof.
   move=> H H1.
-  apply run_or_success in H as [[A' [B' [H [? H0]]]]|[A' [C' [H [? H0]]]]]; subst.
+  apply run_or_complete in H as [[A' [B' [H [? H0]]]]|[A' [C' [H [? H0]]]]]; subst.
   (* left succeeds *)
-  + move: (run_and_succeed H0) => [il[ir[s'' [?[HA HB]]]]] {H}; subst.
+  + move: (run_and_complete H0) => [il[ir[s'' [?[HA HB]]]]] {H}; subst.
     move: (chooseB_complete s'' B C) => [] ? HC.
     do 3 eexists; repeat split.
     + apply HA.
-    + apply: run_and_succeed1 HA _.
-    + apply: run_or_success1; left; split; [apply HC|eassumption].
+    + apply: run_and_correct HA _.
+    + apply: run_or_correct; left; split; [apply HC|eassumption].
   (* right succeeds *)
-  + move: (run_and_succeed H0) => [il[ir[s'' [?[HA HC]]]]] {H0}; subst.
+  + move: (run_and_complete H0) => [il[ir[s'' [?[HA HC]]]]] {H0}; subst.
     move: (run_and_fail (run_run_no_cut_failure H)) => [H0|].
     + by move: (run_consistent H0 HA) => [].
     + move=> [s1 [s2 [HA' HB]]].
@@ -235,6 +243,6 @@ Proof.
         move=> [s' [X [H2 H3]]]; move: (run_expand_all_solved H2 HA') => ?; subst.
         do 3 eexists; split.
         + apply HA.
-        + apply: run_and_succeed1 HA _.
-        + apply: run_or_success1; right; split; [apply H3|eassumption].
+        + apply: run_and_correct HA _.
+        + apply: run_or_correct; right; split; [apply H3|eassumption].
 Qed.
