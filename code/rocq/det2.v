@@ -377,9 +377,8 @@ Proof.
       by apply: run_step E1 IHl.
     - case E2: expand => //= [st] [] ?; subst.
       move=> /(_ _ _ erefl _ erefl) [il [ir [s''']]] [? [ IHl IHr]]; subst.
-      exists il, ir.
       move: (run_Solved_id E1 IHl) => [] ??; subst.
-      exists s1; repeat split => //=.
+      exists il, ir, s1; repeat split => //=.
       apply: run_step E2 IHr.
 Qed.
 
@@ -921,72 +920,9 @@ Proof.
         move: (run_consistent HA HA') => [[?]] /(_ done_fail) ?; subst.
         by move: (run_consistent HC HC') => [].
     + move=> [A' [B' [HA [? HB]]]]; subst.
-      exists ir.
-      apply run_and_succeed1
-      apply run_done.
-        move: (run_and_fail H1) => {H1} [HA'|].
-
-
-      + move=> [A' [B' [HA [? HB]]]]; subst.
-        move: H0 => //=.
-        case: expand => //=. *)
-  (* move=> H1 H2.
-  inversion H1; subst.
-  + move: H5 => //=.
-    case X: expand => //=.
-    + case Y: expand => //=.
-      case W: expand => //= -[] ?; subst.
-      eexists.
-      apply: run_done => //=.
-      by rewrite Y W.
-    + case Y: expand => //= -[]?; subst.
-      apply run_and_fail in H2 as [].
-      - by epose proof (run_Solved_and_Failed X H0).
-      - eexists.
-        move: H0 => [s' [st' [H2 H3]]].
-        pose proof (run_Solved_id X H2) as []; subst.
-        by pose proof (run_Solved_and_Failed Y H3).
-  + move: H0 => //=.
-    case X: expand => //= [|ss].
-    + case Y: expand => //= [s].
-      case W: expand => //= [C'] -[]?; subst.
-      apply run_and_succeed in H1 as [il[ir[s'' [?[HL HR]]]]]; subst.
-      apply run_and_succeed in H3 as [il1[ir1[s'1 [?[HL1 HR1]]]]]; subst.
-      move: H0 => -[]??; subst.
-      case: (run_consistent HL1 HL) => -[]?.
-      assert (Done s'1 <> Failed) by easy.
-      move=> /(_ H0) ?; subst; clear H0.
-      clear HL1.
-      eexists.
-      apply: run_cut => //=.
-      + rewrite Y W => //=.
-      + admit.
-
-    + apply run_and_fail in H2 as [|[s'[st'[HL HR]]]].
-      + by destruct (run_Solved_and_Failed X H0).
-      + pose proof (run_solved_same_subst X HL); subst.
-        move: (run_and_succeed H1) => [il [ir [s'' [? [H4 H5]]]]]; subst.
-        inversion H4; subst; clear H4 => //=.
-        + move: H7 => //=; rewrite X => -[]?; subst.
-          by move:(run_consistent HR H5) => [].
-        + by move: H0 => //=; rewrite X.
-        + by move: H0 => //=; rewrite X.
-  + move: (run_and_succeed H1) => [il[ir[s'' [?[HL HR]]]]]; subst.
-    apply (run_and_fail) in H2 as [].
-    - move: (run_or_success HL) => [].
-      + move=> [A' [B' [HC [? HA]]]]; subst.
-        by move: (run_consistent H2 HA) => [].
-      + move=> [A' [B' [HA [? HB]]]]; subst.
-        move: H0 => //=.
-        case: expand => //=. *)
-      
-
-
-
-    
-
-  admit. (*should have a *)
-    
+      exists (And B' ir).
+      apply: run_and_succeed1 HB HC.
+Qed.
 
 Module check.
   Definition Gamma := V -> S.
