@@ -9,8 +9,8 @@ Lemma run_consistent_state {a b c1 c2 r1 r2}:
     run a b c1 r1 -> run a b c2 r2 -> (c1 <> Failed ->  r1 = r2).
 Proof. by move=> H H1; apply (proj2 (run_consistent H H1)). Qed.
 
-Lemma not_cut_brothers_cut {s A B}:
-  not_cut_brothers s A -> expand s A = CutBrothers B -> False.
+Lemma expand_no_cut_cut {s A B}:
+  expand_no_cut s A -> expand s A = CutBrothers B -> False.
 Proof. by move=> H; elim: H B; congruence. Qed.
 
 Lemma run_CutBrothers_id {s2 s3 st1 st2 ir1 ir2}:
@@ -43,9 +43,9 @@ Proof.
 Qed.
 
 
-Lemma not_cut_brothers_split {s A B sol st}:
-  not_cut_brothers s (And A B) ->
-    not_cut_brothers s A /\ (run s A (Done sol) st -> not_cut_brothers sol B).
+Lemma expand_no_cut_split {s A B sol st}:
+  expand_no_cut s (And A B) ->
+    expand_no_cut s A /\ (run s A (Done sol) st -> expand_no_cut sol B).
 Proof.
   remember (And _ _) as NA eqn:HNA.
   move=> H.
@@ -56,31 +56,31 @@ Proof.
     case E: expand => //=.
     case F: expand => //= -[] ?; subst.
     split.
-      - by apply: not_cut_brothers_solved E.
-      - by move=> H1; destruct (run_Solved_id E H1); subst; apply: not_cut_brothers_solved F.
+      - by apply: expand_no_cut_solved E.
+      - by move=> H1; destruct (run_Solved_id E H1); subst; apply: expand_no_cut_solved F.
   + move=> s g + A B sol A' ?; subst => //=.
     case E: expand => //=.
     - move=> _; split.
-      by apply: not_cut_brothers_failure.
+      by apply: expand_no_cut_failure.
       by move=> H; destruct (run_Failure_and_Done E H).
     - case F: expand => //=.
       move=> _; split.
-      by apply: not_cut_brothers_solved E.
+      by apply: expand_no_cut_solved E.
       move=> H; destruct (run_Solved_id E H); subst.
-      by apply: not_cut_brothers_failure.
+      by apply: expand_no_cut_failure.
   + move=> s g g' + H1 IH A B sol A' ?; subst => //=.
     case E: expand => [|||sol'] //=.
     - move=> [] ?; subst.
       move: IH => /(_ _ _ sol A' erefl) [] H2 H3; split.
-      - by apply: not_cut_brothers_expanded E H2.
+      - by apply: expand_no_cut_expanded E H2.
       - by move=> H; apply H3; inversion H; subst; clear H; congruence.
     - case F: expand => [A''|||] //= -[] ?; subst.
       split.
-      - by apply: not_cut_brothers_solved E.
+      - by apply: expand_no_cut_solved E.
       - move=> H.
         destruct (run_Solved_id E H); subst.
         move: IH => /(_ _ _ sol' A' erefl) => -[] H2 H3. 
-        by apply: not_cut_brothers_expanded F (H3 H).
+        by apply: expand_no_cut_expanded F (H3 H).
 Qed.
 
 Lemma run_cut_cut s B SOL X:
@@ -100,7 +100,7 @@ Lemma chooseB_split s A B C: chooseB s A B C -> C = B \/ C = cut B.
 Proof. by move=> H; elim: H; auto. Qed.
 
 Lemma chooseBP1 {s A X}:
-  not_cut_brothers s A ->
+  expand_no_cut s A ->
     chooseB s A X X.
 Proof.
   move=> H.
@@ -120,12 +120,12 @@ Qed.
 
 Corollary run_or_fail1 s1 g1 g2 st:
   run s1 (Or g1 (s1,g2)) Failed st ->
-    run s1 g1 Failed st /\ (not_cut_brothers s1 g1 -> run s1 g2 Failed st).
+    run s1 g1 Failed st /\ (expand_no_cut s1 g1 -> run s1 g2 Failed st).
 Proof. move=> H. apply: run_or_fail H. Qed. 
 
-Lemma not_cut_brothers_choosB {s A B C}:
+Lemma expand_no_cut_choosB {s A B C}:
   chooseB s A B C ->
-    not_cut_brothers s A ->
+    expand_no_cut s A ->
       C = B.
 Proof.
   move=> H.
@@ -169,9 +169,9 @@ Proof.
 Qed.
 
 Lemma not_cut_borothers_expanded_and_left {s A B ss}:
-  not_cut_brothers s (And A B) ->
+  expand_no_cut s (And A B) ->
     expand s A = Expanded ss ->
-      not_cut_brothers s (And ss B).
+      expand_no_cut s (And ss B).
 Proof.
   remember (And _ _) as And eqn:HAnd.
   move=> H.
@@ -183,10 +183,10 @@ Proof.
 Qed.
 
 Lemma not_cut_borothers_expanded_and_right {s A B B'' ss}:
-  not_cut_brothers s (And A B) ->
+  expand_no_cut s (And A B) ->
     expand s A = Solved ss ->
     expand ss B = Expanded B'' ->
-      not_cut_brothers s (And A B'').
+      expand_no_cut s (And A B'').
 Proof.
   remember (And _ _) as And eqn:HAnd.
   move=> H.
@@ -219,7 +219,7 @@ Qed.
 (* ((A ∧ B) ∨ (A ∧ C)) -> (A ∧ (B ∨ C)) *)
 Lemma or_is_distributive {A B C s sol E}:
     run s (Or (And A B) (s, (And A C))) (Done sol) E ->
-      not_cut_brothers s (And A B) ->
+      expand_no_cut s (And A B) ->
         exists E' s' IGN, run s A (Done s') IGN /\
           run s (And A (Or B (s', C))) (Done sol) E' .
 Proof.
