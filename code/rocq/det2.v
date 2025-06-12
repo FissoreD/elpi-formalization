@@ -1,3 +1,4 @@
+(* Require Import Coq.Program.Wf. *)
 From mathcomp Require Import all_ssreflect.
 
 Inductive D := Func | Pred.
@@ -202,9 +203,18 @@ Proof.
   by move=> s st st1 st2 ? H ; rewrite H.
 Qed.
 
-Lemma run_Solved_and_failed {s A sol A'}:
+Lemma run_Failure_and_Done {s A sol A'}:
   expand s A = Failure -> run s A (Done sol) A' -> False.
 Proof. by inversion 2; subst; congruence. Qed.
+
+Lemma run_Solved_and_Failed {s A sol A'}:
+  expand s A = Solved sol -> run s A Failed A' -> False.
+Proof. inversion 2; subst; congruence. Qed.
+
+(* Lemma run_CutBrothers_same_subst:
+  run s' C (Done sD) ir ->
+    run s' _s1_ (Done sD) ir1 ->
+      expand _s_ C = CutBrothers _s1_ *)
 
 Lemma run_consistent: forall {a b c1 c2 r1 r2},
   run a b c1 r1 -> run a b c2 r2 -> c1 = c2 /\ (c1 <> Failed -> r1 = r2).
@@ -335,55 +345,78 @@ Proof.
     }
 Qed.
 
-Lemma test_and_succeed {s g1 g2 s' st} :
+Lemma run_and_succeed {s g1 g2 s' st} :
   run s (And g1 g2) (Done s') st ->
-    exists il ir s'',  st = And il ir /\ run s g1 (Done s'') il /\ run s'' g2 (Done s') ir.
+    (exists il ir s'', st = And il ir /\ run s g1 (Done s'') il /\ run s'' g2 (Done s') ir).
 Proof.
   remember (And _ _) as g0 eqn:Hg0.
   remember (Done _) as s1 eqn:Hs1.
   move => H.
   move: g1 g2 Hg0 s' Hs1.
-  elim: H => {st s s1 g0} /= [s st s'|s st|s st st1 st2 r|].
+  elim: H => {st s s1 g0} /= [s st s'|s st|s st st1 st2 r|] => //=.
   - move=> + st_l st_r ? r [?]; subst.
-    rewrite expand_And. case L: expand => [|||x] //. case R: expand => //.
-    move=> /= [?]; subst.
-    by exists st_l, st_r, x; split => //; split; constructor.
-  - by [].
-  - move=> + Hr IH st_l st_r ? s'' ?; subst.
-    rewrite expand_And. 
-    {
-      case L: expand => [|st0||s'] // => [[?]|]; subst.
-    - move: (IH _ _ erefl _ erefl) => [il [ir [s']]] [-> [ IHl IHr]] {IH}.
+    rewrite expand_And; case L: expand => [|||x] //; case R: expand => //= -[?]; subst.
+    by exists st_l, st_r, x; repeat split; constructor.
+  - move=> + Hr + st_l st_r ? s'' ?; subst => //=.
+    case L: expand => [|st0||s'] // => [[?]|]; subst.
+    - move=> /(_ _ _ erefl _ erefl) [il [ir [s']]] [-> [ IHl IHr]].
       exists il, ir, s'; split=> //; split.
       by apply: run_cut L IHl.
       by apply: IHr.
     - case R: expand => //= -[?]; subst.
-      move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
+      move=> /(_ _ _ erefl _ erefl) [il [ir [s''']]] [-> [ IHl IHr]].
       exists il, ir, s'''; split=> //; split.
-        by apply: IHl.
-      {
-        pose proof (run_solved_same_subst L IHl).
-        subst.
-        apply: run_cut.
-        apply R.
-        auto.
-      }
-    }
-  - move=> s ? A' C ? + H1 IH A B ? s' ?; subst => //=.
-    case E1: expand => [|||s1] //=.
-      - move=> [?]; subst.
-        move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [-> [ IHl IHr]] {IH}.
-        exists il, ir, s'''; split => //; split=>//.
-        by apply: run_step E1 IHl.
-      - case E2: expand => [st|||] //= [] ?; subst.
-        move: (IH _ _ erefl _ erefl) => [il [ir [s''']]] [? [ IHl IHr]] {IH}; subst.
-        exists il, ir.
-        pose proof (run_Solved_id E1 IHl) as []; subst.
-        exists s1; repeat split; auto.
-        apply: run_step E2 IHr.
+      - by apply: IHl.
+      - move: (run_solved_same_subst L IHl) => ?; subst.
+        apply: run_cut R IHr.
+  - move=> s ? A' C ? + H1 + A B ? s' ?; subst => //=.
+    case E1: expand => //= [|s1].
+    - move=> [?]; subst.
+      move => /(_ _ _ erefl _ erefl) [il [ir [s''']]] [-> [ IHl IHr]].
+      exists il, ir, s'''; repeat split => //=.
+      by apply: run_step E1 IHl.
+    - case E2: expand => //= [st] [] ?; subst.
+      move=> /(_ _ _ erefl _ erefl) [il [ir [s''']]] [? [ IHl IHr]]; subst.
+      exists il, ir.
+      move: (run_Solved_id E1 IHl) => [] ??; subst.
+      exists s1; repeat split => //=.
+      apply: run_step E2 IHr.
 Qed.
 
-Lemma test_and_fail s g1 g2 st:
+Lemma run_and_succeed1 {s0 s1 s2 g1 g2 il ir} :
+    run s0 g1 (Done s1) il -> run s1 g2 (Done s2) ir ->
+      run s0 (And g1 g2) (Done s2) (And il ir).
+Proof.
+  remember (Done _) as ds1 eqn:Hds1.
+  move => H.
+  move: s1 s2 g2 ir Hds1.
+  elim: H => //=; clear.
+  + move=> + + s' + s1 s2 g2 ir [] ? H1; subst.
+    remember (Done s2).
+    move: s2 Heqr.
+    elim: H1 => //=; clear.
+    + move=> s st s' H s2 [] ? s0 g1 H1; subst.
+      apply: run_done => //=; rewrite H1 H => //=.
+    + move=> s g2 st1 st2 r H H1 IH s2 ? s0 g1 H2; subst.
+      apply: run_cut => //=.
+      + rewrite H2 H => //=.
+      + apply: IH => //=.
+    + move=> s g2 st1 st2 r H H1 IH s2 ? s0 g1 H2; subst.
+      apply: run_step => //=.
+      + by rewrite H2 H.
+      + by apply: IH _ H2.
+  + move=> s0 g1 st1 il r H H1 IH s3 s2 g2 ir ? H2; subst.
+    apply: run_cut => //=.
+    + by rewrite H.
+    + by apply: IH _ H2.
+  + move=> s0 g1 st1 il ? H H1 IH s1 s2 g2 ir ? H2; subst.
+    apply: run_step => //=.
+    + by rewrite H.
+    + by apply: IH erefl H2.
+Qed.
+ 
+
+Lemma run_and_fail {s g1 g2 st}:
   run s (And g1 g2) Failed st ->
     run s g1 Failed st \/ (exists s' st', run s g1 (Done s') st' /\ run s' g2 Failed st).
 Proof.
@@ -477,7 +510,7 @@ Proof.
     case E: expand => //=.
     - move=> _; split.
       by apply: not_cut_brothers_failure.
-      by move=> H; destruct (run_Solved_and_failed E H).
+      by move=> H; destruct (run_Failure_and_Done E H).
     - case F: expand => //=.
       move=> _; split.
       by apply: not_cut_brothers_solved E.
@@ -643,12 +676,12 @@ Proof.
       - move=> [] ?; subst.
         move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
         move: H => [A' [B' [H [H0 H2]]]]; subst.
-        by destruct (run_Solved_and_failed E H2).
+        by destruct (run_Failure_and_Done E H2).
         right; exists A', B'; repeat split; auto; apply: run_step F H0.
       - move=> [] ?; subst.
         move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
         move: H => [A' [B' [H [H0 H2]]]]; subst.
-        by destruct (run_Solved_and_failed E H2).
+        by destruct (run_Failure_and_Done E H2).
         by right; exists A', B'; repeat split; auto; apply: run_cut F H0.
 Qed. 
 
@@ -870,13 +903,217 @@ Proof.
           }
 Abort.
 
-Print Tm.
+Print expand.
+Lemma done_fail {s}: Done s <> Failed. by []. Qed.
+
+Lemma p_aorb_andc {sA sB sD A B C D E}:
+  run sA (And (Or A (sB, B)) C) (Done sD) D ->
+    run sA (And A C) Failed E ->
+      exists D', run sB (And B C) (Done sD) D'.
+Proof.
+  move=> H H1.
+  move: (run_and_succeed H) => [il[ir[s'' [?[HAORB HC]]]]] {H}; subst.
+  move: (run_or_success HAORB) => [] {HAORB}.
+    + move=> [A' [B' [HChA [? HA]]]]; subst.
+      move: (run_and_fail H1) => {H1} [HA'|].
+      + by move: (run_consistent HA HA') => [].
+      + move=> [s [st [HA' HC']]].
+        move: (run_consistent HA HA') => [[?]] /(_ done_fail) ?; subst.
+        by move: (run_consistent HC HC') => [].
+    + move=> [A' [B' [HA [? HB]]]]; subst.
+      exists ir.
+      apply run_and_succeed1
+      apply run_done.
+        move: (run_and_fail H1) => {H1} [HA'|].
+
+
+      + move=> [A' [B' [HA [? HB]]]]; subst.
+        move: H0 => //=.
+        case: expand => //=. *)
+  (* move=> H1 H2.
+  inversion H1; subst.
+  + move: H5 => //=.
+    case X: expand => //=.
+    + case Y: expand => //=.
+      case W: expand => //= -[] ?; subst.
+      eexists.
+      apply: run_done => //=.
+      by rewrite Y W.
+    + case Y: expand => //= -[]?; subst.
+      apply run_and_fail in H2 as [].
+      - by epose proof (run_Solved_and_Failed X H0).
+      - eexists.
+        move: H0 => [s' [st' [H2 H3]]].
+        pose proof (run_Solved_id X H2) as []; subst.
+        by pose proof (run_Solved_and_Failed Y H3).
+  + move: H0 => //=.
+    case X: expand => //= [|ss].
+    + case Y: expand => //= [s].
+      case W: expand => //= [C'] -[]?; subst.
+      apply run_and_succeed in H1 as [il[ir[s'' [?[HL HR]]]]]; subst.
+      apply run_and_succeed in H3 as [il1[ir1[s'1 [?[HL1 HR1]]]]]; subst.
+      move: H0 => -[]??; subst.
+      case: (run_consistent HL1 HL) => -[]?.
+      assert (Done s'1 <> Failed) by easy.
+      move=> /(_ H0) ?; subst; clear H0.
+      clear HL1.
+      eexists.
+      apply: run_cut => //=.
+      + rewrite Y W => //=.
+      + admit.
+
+    + apply run_and_fail in H2 as [|[s'[st'[HL HR]]]].
+      + by destruct (run_Solved_and_Failed X H0).
+      + pose proof (run_solved_same_subst X HL); subst.
+        move: (run_and_succeed H1) => [il [ir [s'' [? [H4 H5]]]]]; subst.
+        inversion H4; subst; clear H4 => //=.
+        + move: H7 => //=; rewrite X => -[]?; subst.
+          by move:(run_consistent HR H5) => [].
+        + by move: H0 => //=; rewrite X.
+        + by move: H0 => //=; rewrite X.
+  + move: (run_and_succeed H1) => [il[ir[s'' [?[HL HR]]]]]; subst.
+    apply (run_and_fail) in H2 as [].
+    - move: (run_or_success HL) => [].
+      + move=> [A' [B' [HC [? HA]]]]; subst.
+        by move: (run_consistent H2 HA) => [].
+      + move=> [A' [B' [HA [? HB]]]]; subst.
+        move: H0 => //=.
+        case: expand => //=. *)
+      
+
+
+
+    
+
+  admit. (*should have a *)
+    
 
 Module check.
-  Definition Gamma := V -> option Tm.
-  Definition empty : Gamma := fun _ => None.
+  Definition Gamma := V -> S.
+
+  Fixpoint eat r1 r2 :=
+    match r1, r2 with
+    | arr _ _ r1, arr _ _ r2 => eat r1 r2
+    | arr _ _ r1, _ => r1
+    | _, _ => r1
+    end.
+
+  Fixpoint incl d1 d2 :=
+    match d1, d2 with
+    | b Exp, b Exp => true
+    | b (d Func), b (d Func) => true
+    | b (d Func), b (d Pred) => true
+    | arr i l1 r1, arr i l2 r2 => incl l1 l2 && incl r1 r2
+    | arr i l1 _, x => incl l1 x
+    | arr o l1 r1, arr o l2 r2 => incl r1 r2
+    | _, _ => false
+  end.
+
+  Fixpoint min m1 m2 :=
+    match m1, m2 with
+    | b Exp, b Exp => b Exp
+    | b (d Func), _ => m1
+    | b (d Pred), _ => m2
+    | arr i l1 r1, arr i l2 r2 => arr i (max l1 l2) (min r1 r2)
+    | arr o l1 r1, arr o l2 r2 => arr o (min l1 l2) (min r1 r2)
+    | _, _ => m1
+  end
+  with max m1 m2 := match m1, m2 with
+    | b Exp, b Exp => b Exp
+    | b (d Func), _ => m1
+    | b (d Pred), _ => m2
+    | arr i l1 r1, arr i l2 r2 => arr i (min l1 l2) (max r1 r2)
+    | arr o l1 r1, arr o l2 r2 => arr o (max l1 l2) (max r1 r2)
+    | _, _ => m1
+  end.
+
+  Fixpoint infer (G: Gamma) tm :=
+    match tm with
+    | Code (v V) => (G V, true)
+    | Code (p P) => (G P, true)
+    | Data _ => (b Exp, true)
+    | Comb t1 t2 => 
+      match infer G t1 with
+      | (r, false) => (r, false)
+      | (r, _) => 
+        match infer G t2 with
+        | (r, false) => (r, false)
+        | (d1, true) => (eat r d1, incl r d1)
+        end
+      end
+    end.
+
+  (* Inductive infer : Gamma -> Tm -> S -> bool -> Prop :=
+    | infer_var  {G V}: infer G (Code (v V)) (G V) true
+    | infer_pred {G C}: infer G (Code (p C)) (G C) true
+    | infer_app_hd_false {G t1 t2 r} : 
+      infer G t1 r false ->
+      infer G (Comb t1 t2) r false
+    | infer_app_bo_false {G t1 t2 r} : 
+      infer G t2 r false ->
+      infer G (Comb t1 t2) r false
+    | infer_app {G t1 t2 r1 r2} :
+      infer G t1 r1 true ->
+        infer G t2 r2 true ->
+          infer G (Comb t1 t2) (eat r1 r2) (incl r1 r2). *)
+
+  Definition update_gamma (g:Gamma) (v : V) s : Gamma := 
+    fun x => if eqn x v then s else g v.
+
+  Fixpoint assume D tm (G : Gamma) : (S * Gamma) :=
+  match tm with
+  | Code (v V) => (D, update_gamma G V (min (G V) D))
+  | Code (p P) => (G P, G)
+  | Data _ => (b Exp, G)
+  | Comb l r => 
+    match assume D l G with
+    | (arr i dl dr, G) => 
+      if incl dr D then assume dl r G
+      else (D, G)
+    | _ => (D, G)
+    end
+  end.
+
+  Fixpoint assume_output D tm (G : Gamma) : (S * Gamma) :=
+  match tm with
+  | Code (v V) => (D, update_gamma G V (min (G V) D))
+  | Code (p P) => (G P, G)
+  | Data _ => (b Exp, G)
+  | Comb l r => 
+    match assume_output D l G with
+    | (arr o dl dr, G) => 
+      if incl dr D then assume dl r G
+      else (D, G)
+    | _ => (D, G)
+    end
+  end.
 
   (* Inductive assume : S -> Tm -> Gamma -> Gamma -> Prop :=
-  | assume_app : 
-  
-    assume D (Code _) . *)
+  | assume_var {D G1 V}: assume D (Code (v V)) G1 (update_gamma G1 V (min (G1 V) D))
+  | assume_app {D G1 G2 l r dl dr} :
+    infer G1 l (arr i dl dr) true -> incl dr D ->
+      assume dl r G1 G2 ->
+        assume D (Comb l r) G1 G2
+  | assume_pred {D G P}: assume D (Code (p P)) G G. *)
+
+  (* Inductive assume_output : S -> Tm -> Gamma -> Gamma -> Prop :=
+  | assume_var {D G1 V}: assume D (Code (v V)) G1 (update_gamma G1 V (min (G1 V) D))
+  | assume_app {D G1 G2 l r dl dr} :
+    infer G1 l (arr i dl dr) true -> incl dr D ->
+      assume dl r G1 G2 ->
+        assume D (Comb l r) G1 G2
+  | assume_pred {D G P}: assume D (Code (p P)) G G. *)
+
+Inductive check : program -> A -> Gamma -> S -> Gamma -> S -> Prop :=
+  | check_cut {P G _Ign} : check P Cut G _Ign G (b (d Func))
+  | check_comb : 
+    
+
+
+Inductive D : Set :=   Func : D | Pred : D.
+Inductive S : Set :=   b : B -> S | arr : mode -> S -> S -> S.
+Inductive B : Set :=   Exp : B | d : D -> B.
+  Inductive Tm : Set :=   
+    | Code : C -> Tm 
+    | Data : K -> Tm 
+    | Comb : Tm -> Tm -> Tm.
