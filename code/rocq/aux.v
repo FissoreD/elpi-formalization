@@ -21,7 +21,7 @@ Proof.
     - move=> ????? [] <- H => //= H1.
       apply run_cut_simpl in H1 as []; subst; by inversion H.
     - move=> [] pn args s2 s3 st2 ir1 ir2 => //=; by case F: F => [|[]] //=.
-  + move=> st0  [] s st1 s2 s3 st2 ir1 ir2; by case: expand; case: expand => //.
+  + by move=> st0  s st1 s2 s3 st2 ir1 ir2; by case: expand; case: expand => //.
   + move=> st0 st1 s2 s3 st2 ir1 ir2 + + H.
     move: (run_and_complete H) => [il [ir [s'' [?[HL HR]]]]]; subst.
     case E: expand => //; inversion HL; try congruence; subst.
@@ -115,7 +115,7 @@ Proof.
 Qed.
 
 Corollary run_or_fail1 s1 g1 g2 st:
-  run s1 (Or g1 (s1,g2)) Failed st ->
+  run s1 (Or g1 s1 g2) Failed st ->
     run s1 g1 Failed st /\ (expand_no_cut s1 g1 -> run s1 g2 Failed st).
 Proof. move=> H. apply: run_or_fail H. Qed. 
 
@@ -194,7 +194,7 @@ Proof.
 Qed.
 
 Lemma p_aorb_andc {sA sB sD A B C D E}:
-  run sA (And (Or A (sB, B)) C) (Done sD) D ->
+  run sA (And (Or A sB B) C) (Done sD) D ->
     run sA (And A C) Failed E ->
       exists D', run sB (And B C) (Done sD) D'.
 Proof.
@@ -214,10 +214,10 @@ Qed.
 
 (* ((A ∧ B) ∨ (A ∧ C)) -> (A ∧ (B ∨ C)) *)
 Lemma or_is_distributive {A B C s sol E}:
-    run s (Or (And A B) (s, (And A C))) (Done sol) E ->
+    run s (Or (And A B) s (And A C)) (Done sol) E ->
       expand_no_cut s (And A B) ->
         exists E' s' IGN, run s A (Done s') IGN /\
-          run s (And A (Or B (s', C))) (Done sol) E' .
+          run s (And A (Or B s' C)) (Done sol) E' .
 Proof.
   move=> H H1.
   apply run_or_complete in H as [[A' [B' [H [? H0]]]]|[A' [C' [H [? H0]]]]]; subst.

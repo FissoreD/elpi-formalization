@@ -61,7 +61,7 @@ Inductive state :=
   | KO : state
   | OK : state
   | Goal : program  -> A -> state
-  | Or  : state -> Sigma * state -> state
+  | Or  : state -> Sigma -> state -> state
   | And : state -> state -> state
   | CutOut : state
   .
@@ -86,8 +86,8 @@ Definition mkAnd left r :=
 Definition mkOr left sr r :=
   match r with
   | Failure => Failure
-  | Expanded st => Expanded (Or left (sr,st))
-  | CutBrothers st => Expanded (Or left (sr,st)) (* for now this is the rightmost brother *)
+  | Expanded st => Expanded (Or left sr st)
+  | CutBrothers st => Expanded (Or left sr st) (* for now this is the rightmost brother *)
   | Solved s => Solved s
   end.
 
@@ -95,7 +95,7 @@ Fixpoint cut st :=
   match st with
   | Goal _ _ => CutOut
   | And x y => And (cut x) (cut y)
-  | Or x (s,y) => Or (cut x) (s,cut y)
+  | Or x s y => Or (cut x) s (cut y)
   | OK => CutOut
   | KO => KO
   | CutOut => CutOut
@@ -105,12 +105,9 @@ Fixpoint cut st :=
 Lemma cut_cut_same {a}: cut (cut a) = cut a.
 Proof. 
   elim: a => //=.
-  move=> ? H [] => //=; rewrite H.
-  move => s A; f_equal.
-  admit. (* enrico *)
-  move=> ? H ? H1.
-  by rewrite H H1.
-Admitted.
+  + by move=> ? H => //= s A H1; rewrite H H1.
+  + by move=> ? H ? H1; rewrite H H1.
+Qed.
 
 Fixpoint big_and pr (a : list A) : state :=
   match a with
@@ -122,7 +119,7 @@ Fixpoint big_or pr (s : seq (Sigma * R)) : state :=
   match s with 
   | [::] => KO
   | [:: (_,r)] => big_and pr r.(premises)
-  | (_,r) :: ((s,_) :: _ as xs) => Or (big_and pr r.(premises)) (s,big_or pr xs)
+  | (_,r) :: ((s,_) :: _ as xs) => Or (big_and pr r.(premises)) s (big_or pr xs)
   end.
 
 Fixpoint expand s (st :state) : expand_res :=
@@ -136,11 +133,11 @@ Fixpoint expand s (st :state) : expand_res :=
       let l := F pr pn args s in
       if l is [:: (s1,_) & _] then Expanded (big_or pr l)
       else Expanded KO
-  | Or st1 (sr,st2) =>
+  | Or st1 sr st2 =>
       match expand s st1 with
       | Solved s => Solved s
-      | Expanded st1 => Expanded (Or st1 (sr,st2))
-      | CutBrothers st1 => Expanded (Or st1 (sr,cut st2))
+      | Expanded st1 => Expanded (Or st1 sr st2)
+      | CutBrothers st1 => Expanded (Or st1 sr (cut st2))
       | Failure => mkOr st1 sr (expand sr st2)
       end
   | And st1 st2 =>
@@ -390,51 +387,26 @@ Proof.
   by move=> s g g' H H1 IH g2 g3 + H3; rewrite H => -[] ?; subst.
 Qed.
 
-Lemma expand_cut_cut {s A B}: expand s (cut A) = CutBrothers B -> B = cut A.
-Proof.
-  move: s B.
-  elim: A => //=.
-    by move=> s IH [] s' A s'' B //=; case E: expand => //=; case F: expand.
-  move=> s0 IH0 s1 IH1 s A; case E: expand => //=.
-    by move=> [] ?; subst; move: (IH0 _ _ E) => ?; subst.
-  case F: expand => //= -[] ?; subst.
-  by move: (IH1 _ _ F) => ?; subst.
-Qed.
-
-Lemma expand_cut_expanded {s A B}: expand s (cut A) = Expanded B -> B = cut A.
-Proof.
-  elim: A s B => //=; clear.
-    move=> s IH [] s' A s'' B //=; case E: expand => //=.
-    + by move=> [] ?; subst; f_equal; apply: IH E.
-    + by move=> [] ?; subst; apply expand_cut_cut in E; subst; rewrite cut_cut_same.
-    + case F: expand => //=.
-      - move=> [] ?; subst. admit. (* enrico *)
-      - by move=> [] ?; subst; apply expand_cut_cut in F; subst.
-  move=> s0 IH0 s1 IH1 s A; case E: expand => //=.
-    by move=> [] ?; subst; move: (IH0 _ _ E) => ?; subst.
-  case F: expand => //= -[] ?; subst.
-  by move: (IH1 _ _ F) => ?; subst.
-Admitted.
-
 Lemma expand_cut_fail {s A SOL}:
   expand s (cut A) = Solved SOL -> False.
 Proof.
   elim: A s SOL => //=.
-  + move=> s IH [s' A] s'' SOL //=.
+  + move=> s IH s' A H s'' SOL //=.
     case E: expand => //=.
-    + case F: expand => //= -[] ?; subst. admit. (* enrico *)
+    + case F: expand => //= -[] ?; subst.
+      apply: H F.
     + by move=> [] ?; subst; apply: IH E.
   + move=> s IH1 A IH2 s' SOL.
     case E: expand => //=.
     case F: expand => //= -[] ?; subst.
     apply: IH2 F.
-Admitted.
+Qed.
 
 Lemma expand_cut_CB {s A B}:
   expand s (cut A) = CutBrothers B -> False.
 Proof.
   elim: A s B => //=.
-  + move=> AL IH [] s' AR s B => //=.
+  + move=> AL IH s' AR H s B => //=.
     case X: expand => //=.
     case Y: expand => //=.
   + move=> A IHA B IHB s C.
@@ -444,42 +416,52 @@ Proof.
       apply: expand_cut_fail X.
 Qed.
 
+Lemma expand_cut_expanded {s A B}: expand s (cut A) = Expanded B -> B = cut A.
+Proof.
+  elim: A s B => //=; clear.
+    move=> s IH s' A H s'' B //=; case E: expand => //=.
+    + by move=> [] ?; subst; f_equal; apply: IH E.
+    + by move: (expand_cut_CB E).
+    + case F: expand => //=.
+      - move=> [] ?; subst.
+        by move: (H _ _ F) => ?; subst.
+      - by move: (expand_cut_CB F).
+  move=> s0 IH0 s1 IH1 s A; case E: expand => //=.
+    by move=> [] ?; subst; move: (IH0 _ _ E) => ?; subst.
+  case F: expand => //= -[] ?; subst.
+  by move: (IH1 _ _ F) => ?; subst.
+Qed.
+
 Axiom classic : forall P : Prop, P \/ ~ P.
 
 Lemma expand_cut_result {s A r}:
   expand s (cut A) = r -> (exists B, r = Expanded B) \/ r = Failure.
 Proof.
   elim: A s r => //=; auto.
-  + move=> A IH [] a A' s r //=.
+  + move=> A IH a A' HA' s r //=.
     case H: expand => //=.
     + by move=>?; subst; left; eexists.
     + by move=>?; subst; left; eexists.
     + case X: expand => //=?; subst; auto.
       + by left; eexists.
       + by left; eexists.
-      + (*apply IH in X as [[]|?] => //=.*) (*enrico*) admit.
+      + apply: HA' X.
     + apply IH in H as [[]|?] => //=.
   + move=> s1 IH1 s2 IH2 s3 r.
     case H: expand => ?; subst; auto.
     + by left; eexists.
     + apply IH1 in H as [[]|?] => //=.
     + apply IH1 in H as [[]|?] => //=.
-Admitted.
+Qed.
 
-Lemma expand_cut_result1 {s A}:
+Lemma expand_cut_result1 s A:
   expand s (cut A) = Failure \/ exists x, expand s (cut A) = (Expanded x).
 Proof.
-  elim: A s => //=; auto.
-  + move=> A + [] a A' s //=.
-    move=> /(_ s) => -[] H.
-    + rewrite H; case X: expand => //=; auto.
-      + by right; eexists.
-      + case: (expand_cut_CB X).
-      + case: (expand_cut_fail X).
-    + move: H => [] A'' H; rewrite H; by right; eexists.
-  + move=> A IH1 B IH2 s3.
-    move: (IH1 s3) => [|[C]] H; rewrite H; [by auto|].
-    by right; eexists.
+  case X: (expand s (cut A)).
+  + by right; eexists.
+  + by move: (expand_cut_CB X).
+  + by left.
+  + by move: (expand_cut_fail X).
 Qed.
 
 Lemma run_cut_fail {s A SOL X} :
@@ -492,11 +474,10 @@ Proof.
   elim: H; clear => //=.
   + by move=> ??? H ?? ? [] ?; subst; apply: expand_cut_fail H.
   + move=> s st st1 st2 r H H1 IH A SOL ??; subst.
-    by apply expand_cut_cut in H; subst; apply: IH erefl erefl.
+    by move: (expand_cut_CB H).
   + move=> s st st1 st2 r H H1 IH A SOL ??; subst.
     by apply expand_cut_expanded in H; subst; apply: IH erefl erefl.
 Qed.
-
 Inductive chooseB : Sigma -> state -> state -> state -> Prop :=
   | chooseB_CB {s A cb B} : expand s A = CutBrothers cb -> chooseB s A B (cut B)
   | chooseB_Fail {s A B} : expand s A = Failure -> chooseB s A B B
@@ -513,14 +494,26 @@ Proof.
   by intros; subst; rewrite cut_cut_same.
 Qed.
 
+Lemma chooseB_cut_result s A B:
+  chooseB s A B B \/ chooseB s A B (cut B).
+Proof.
+  elim: A s B.
+  + by left; apply: chooseB_Fail.
+  + by left; apply: chooseB_Done.
+  + move=> p [].
+    + by right; apply: chooseB_CB => //=.
+    + admit.
+  + move=> A + s1 A' IHs2 s2 B.
+    move=> /(_ s2 B) [] H.
+Admitted.
+
+
 Lemma chooseB_cut_cut {s A B}:
   chooseB s A (cut B) (cut B).
 Proof.
-  case E: (expand s A) => [C|||].
-  2: by rewrite <-cut_cut_same at 2; apply: chooseB_CB E.
-  2: by apply: chooseB_Fail E.
-  2: by apply: chooseB_Done E.
-Admitted. (*enrico, nota che cut B = cut cut B *)
+  move: (chooseB_cut_result s A (cut B)) => []; [by auto|].
+  by rewrite cut_cut_same; auto.
+Qed.
 
 Lemma chooseB_expanded {s1 A' A B B'}:
   expand s1 A = Expanded A' -> chooseB s1 A B B' -> chooseB s1 A' B B'.
@@ -577,7 +570,7 @@ Qed.
 Lemma run_or_correct {s1 s2 A B SOL A' B'}:
   (chooseB s1 A B B' /\ run s1 A (Done SOL) A') \/ 
   (expand_no_cut_failure s1 A A' /\ run s2 B (Done SOL) B') ->
-  run s1 (Or A (s2, B)) (Done SOL) (Or A' (s2, B')).
+  run s1 (Or A s2 B) (Done SOL) (Or A' s2 B').
 Proof.
   move=> [] [].
   - remember (Done SOL) as DS eqn:HS.
@@ -619,12 +612,12 @@ Proof.
 Qed. 
 
 Lemma run_or_complete {s1 s2 A B SOL E}:
-  run s1 (Or A (s2, B)) (Done SOL) E ->
-    (exists A' B', chooseB s1 A B B' /\ E = Or A' (s2, B') /\ run s1 A (Done SOL) A') \/ 
-      exists A' B', expand_no_cut_failure s1 A A' /\ E = (Or A' (s2, B')) /\ run s2 B (Done SOL) B'.
+  run s1 (Or A s2 B) (Done SOL) E ->
+    (exists A' B', chooseB s1 A B B' /\ E = Or A' s2 B' /\ run s1 A (Done SOL) A') \/ 
+      exists A' B', expand_no_cut_failure s1 A A' /\ E = (Or A' s2 B') /\ run s2 B (Done SOL) B'.
 Proof.
   move=> H.
-  remember (Or _ _) as O eqn:HO.
+  remember (Or _ _ _) as O eqn:HO.
   remember (Done _) as D eqn:HD.
   move: s2 A B SOL HO HD.
   elim: H; clear => //=.
@@ -657,7 +650,7 @@ Proof.
         apply chooseBP in H; split; subst.
         apply: chooseB_CB E.
         split; [reflexivity|apply: run_cut E H2].
-      - by right; exists A', B'; split; auto; apply run_cut_fail in H0.
+      - by right; exists A', B'; split; auto; move: (run_cut_fail H0).
     + case F: expand => [ss|ss||] //=.
       - move=> [] ?; subst.
         move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
@@ -693,11 +686,11 @@ Proof.
 Qed.
 
 Lemma run_or_fail {s1 s2 g1 g2 st}:
-  run s1 (Or g1 (s2,g2)) Failed st ->
+  run s1 (Or g1 s2 g2) Failed st ->
     run s1 g1 Failed st /\ (expand_no_cut s1 g1 -> run s2 g2 Failed st).
 Proof.
   move=> H.
-  remember (Or _ _) as O eqn:HO.
+  remember (Or _ _ _) as O eqn:HO.
   remember Failed as F eqn:HF.
   move: s2 g1 g2 HO HF.
   elim: H; clear => //=.
@@ -729,30 +722,20 @@ Proof.
         by apply: run_cut F (HR HH).
 Qed.
 
-Lemma mkOr_expand_cut_Failure {A s2 B}:
-  mkOr A s2 (expand s2 (cut B)) = Failure.
-Proof.
-  elim: B s2 A; clear => //=.
-  move=> s IH [] => //=.
-Abort.
-
 Lemma expand_no_cut_cut {s A B}:
   expand_no_cut s A -> expand s A = CutBrothers B -> False.
 Proof. by move=> H; elim: H B; congruence. Qed.
 
-
-
 Lemma run_Failed_cut {s s2 A B X Y}:
    run s A Failed X ->
-    run s (Or A (s2, cut B)) Failed Y.
+    run s (Or A s2 (cut B)) Failed Y.
 Proof.
   remember Failed as F eqn:HF.
   move=> H.
   elim: H s2 B Y HF; clear => //=.
   + move=> s A _ H s2 B Y _.
-    apply: run_step => //=.
-    + rewrite H.
-      case X: expand.
+    move: (expand_cut_result1 s2 B) => [ | [D]] H1.
+    + by apply: run_fail => //=; rewrite H H1.
     + admit.
   + move=> s A st1 st2 r H H1 IH s2 B Y ?; subst.
     apply: run_step => //=.
@@ -766,16 +749,15 @@ Admitted.
 
 Lemma run_or_fail1 {s1 s2 g1 g2 st aa}:
     run s1 g1 Failed aa -> (expand_no_cut s1 g1 -> run s2 g2 Failed st) ->
-      run s1 (Or g1 (s2,g2)) Failed st.
+      run s1 (Or g1 s2 g2) Failed st.
 Proof.
   move: (classic (expand_no_cut s1 g1)) => [].
   + move=> H + /(_ H) => H1; move: H.  
     remember Failed as F eqn:HF.
-    remember (Or st (s2, cut g2)) as O eqn:HO.
-    elim: H1 st s2 g2 HF HO; clear => //=.
-    + move=> s st st1 H st0 s2 g2 _ H1 H2 H3; subst.
+    elim: H1 s2 g2 st HF; clear => //=.
+    + move=> s A _ H s2 B C _ H1 H2; subst.
       remember Failed as F eqn:HF.
-      elim: H3 s st H H2 HF; clear => //=.
+      elim: H2 s A H H1 HF; clear => //=.
       + by intros; apply run_fail => //=; rewrite H0 H1.
       + intros; subst. 
         apply: run_step => //=.
@@ -797,7 +779,6 @@ Proof.
     elim: H H1 s2 g2 st HF O HO; clear => //=.
     + by move=> s st st1 H []; apply expand_no_cut_failure1.
     + move=> s st st1 st2 r H H1 IH H2 s2 g2 st0 ? O HO; subst.
-      (* apply: IH => //=. *)
       apply: run_step => //=.
       + rewrite H => //=.
       + apply: run_Failed_cut H1.
@@ -810,10 +791,7 @@ Proof.
       apply: expand_no_cut_expanded H0 H4.
 Qed.
 
-
 Lemma done_fail {s}: Done s <> Failed. by []. Qed.
-
-(* Axiom classic : forall P : Prop, P \/ ~ P. *)
 
 Lemma chooseB_complete s A B: exists X, chooseB s A B X.
 Proof.
