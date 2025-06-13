@@ -608,57 +608,82 @@ Proof.
       by rewrite H.
 Qed. 
 
-Lemma run_or_complete {s1 s2 A B SOL E}:
-  run s1 (Or A s2 B) (Done SOL) E ->
-    (exists A' B', chooseB s1 A B B' /\ E = Or A' s2 B' /\ run s1 A (Done SOL) A') \/ 
-      exists A' B', expand_no_cut_failure s1 A A' /\ E = (Or A' s2 B') /\ run s2 B (Done SOL) B'.
+Lemma run_or_done {s1 s2 A B SOL r}:
+  run s1 (Or A s2 B) (Done SOL) r -> exists x y, r = Or x s2 y.
 Proof.
-  move=> H.
   remember (Or _ _ _) as O eqn:HO.
   remember (Done _) as D eqn:HD.
-  move: s2 A B SOL HO HD.
-  elim: H; clear => //=.
-  + move=> s st s' + s2 A B SOL ? [] ?; subst => //=.
+  move=> H.
+  elim: H s2 A B SOL HO HD; clear => //=.
+  + by move=> s st s' H s2 A B SOL ? [] ?; subst; do 2 eexists.
+  + move=> s st st1 st2 r + H1 IH s2 A B SOL ??; subst => //=.
+    by case E: expand => //=; case E: expand => //=.
+  + move=> s st st1 st2 r + H1 IH s2 A B SOL ??; subst => //=.
+    case E: expand => //= [A'|A'|].
+    + by move=> [] ?; subst; move: (IH s2 A' B SOL erefl erefl).
+    + by move=> [] ?; subst; move: (IH s2 A' (cut B) SOL erefl erefl).
+    + case F: expand => //= -[]?; subst; by move: (IH _ _ _ SOL erefl erefl).
+Qed.
+
+Lemma run_and_done {s A B SOL r}:
+  run s (And A B) (Done SOL) r -> exists x y, r = And x y.
+Proof.
+  remember (And _ _) as O eqn:HO.
+  remember (Done _) as D eqn:HD.
+  move=> H.
+  elim: H A B SOL HO HD; clear => //=.
+  + by move=> s st s' H A B SOL ? [] ?; subst; do 2 eexists.
+  + move=> s st st1 st2 r + H1 IH A B SOL ??; subst => //=.
+    case E: expand => //=.
+    + by move=> []?; subst; apply: IH erefl erefl.
+    + by case F: expand => //= -[]?; subst; apply: IH erefl erefl.
+  + move=> s st st1 st2 r + H1 IH A B SOL ??; subst => //=.
+    case E: expand => //= [A'|A'].
+    + by move=> [] ?; subst; apply: IH erefl erefl.
+    + by case F: expand => //= -[]?; subst; apply: IH erefl erefl.
+Qed.
+
+
+Lemma run_or_complete {s1 s2 A B SOL A' B'}:
+  run s1 (Or A s2 B) (Done SOL) (Or A' s2 B') ->
+    (chooseB s1 A B B' /\ run s1 A (Done SOL) A') \/ 
+      expand_no_cut_failure s1 A A' /\ run s2 B (Done SOL) B'.
+Proof.
+  remember (Or _ _ _) as O1 eqn:HO1.
+  remember (Or A' _ _) as O2 eqn:HO2.
+  remember (Done _) as D eqn:HD.
+  move=> H.
+  elim: H s2 A A' B B' SOL HO1 HO2 HD; clear => //=.
+  + move=> s st s' + s2 A A' B B' SOL H; rewrite H => + [] ?? [] ?; subst => //=.
     case E: expand => //=.
       case F: expand => //= -[] ?; subst.
-      by right; exists A, B; repeat split; auto; [apply: expand_no_cut_failure_fail E| apply: run_done].
+      by right; repeat split; auto; [apply: expand_no_cut_failure_fail E| apply: run_done].
     move=> [] ?; subst; left.
-    exists A; eexists.
-    split.
-    apply: chooseB_Done E.
-    by split; auto; apply run_done.
-  + move=> s ? st1 st2 ? + H1 IH s2 A B SOL ? ?; subst => /=.
+    split; [by apply: chooseB_Done E|]; apply: run_done E.
+  + move=> s ? st1 st2 ? + H1 IH s2 A A' B B' SOL ???; subst => /=.
     case E: expand => //=.
     by case F: expand => //=.
-  + move=> s ? st1 st2 ? + H1 IH s2 A B SOL ?? ; subst => //=.
+  + move=> s ? st1 st2 ? + H1 IH s2 A A' B B' SOL ??? ; subst => //=.
     case E: expand => [s4|||s4] //=.
     + move=> [] ?; subst.
-      move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
-      - move: H => [A' [B' [H [H0 H2]]]]; subst.
-        left; do 2 eexists.
-        split.
-        apply: chooseB_Exp E H.
-        split; [reflexivity | apply: run_step E H2 ].
-      - by right; exists A', B'; repeat split; auto; apply: expand_no_cut_failure_step E H.
+      move: IH => /(_ _ _ _ _ _ _ erefl erefl erefl) [[HL HR]|[HL HR]].
+      - by left; split; [apply: chooseB_Exp E HL|]; apply: run_step E HR.
+      - by right; split; [apply: expand_no_cut_failure_step E HL|assumption].
     + move=> [] ?; subst.
-      move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
-      - move: H => [A' [B' [H [H0 H2]]]]; subst.
-        left; do 2 eexists.
-        apply chooseBP in H; split; subst.
-        apply: chooseB_CB E.
-        split; [reflexivity|apply: run_cut E H2].
-      - by right; exists A', B'; split; auto; move: (run_cut_fail H0).
+      move: IH => /(_ _ _ _ _ _ _ erefl erefl erefl) [[HL HR]|[HL HR]].
+      - left; split.
+        by apply chooseBP in HL; subst; apply: chooseB_CB E.
+        by apply: run_cut E HR.
+      - by right; split; auto; move: (run_cut_fail HR).
     + case F: expand => [ss|ss||] //=.
       - move=> [] ?; subst.
-        move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
-        move: H => [A' [B' [H [H0 H2]]]]; subst.
-        by destruct (run_Failure_and_Done E H2).
-        right; exists A', B'; repeat split; auto; apply: run_step F H0.
+        move: IH => /(_ _ _ _ _ _ _ erefl erefl erefl) [[HL HR]|[HL HR]].
+        by destruct (run_Failure_and_Done E HR).
+        right; split; auto; apply: run_step F HR.
       - move=> [] ?; subst.
-        move: (IH _ _ _ _ erefl erefl) => [H|[A' [B' [H [? H0]]]]] {IH}; subst.
-        move: H => [A' [B' [H [H0 H2]]]]; subst.
-        by destruct (run_Failure_and_Done E H2).
-        by right; exists A', B'; repeat split; auto; apply: run_cut F H0.
+        move: IH => /(_ _ _ _ _ _ _ erefl erefl erefl) [[HL HR]|[HL HR]].
+        by destruct (run_Failure_and_Done E HR).
+        by right; split; auto; apply: run_cut F HR.
 Qed.
 
 Lemma run_expand_no_cut_failure {s A ign} : 

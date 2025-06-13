@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import det2.
+From det Require Import det.
 
 Lemma run_consistent_res {a b c1 c2 r1 r2}:
   run a b c1 r1 -> run a b c2 r2 -> c1 = c2.
@@ -200,14 +200,14 @@ Lemma p_aorb_andc {sA sB sD A B C D E}:
 Proof.
   move=> H H1.
   move: (run_and_complete H) => [il[ir[s'' [?[HAORB HC]]]]] {H}; subst.
-  move: (run_or_complete HAORB) => [] {HAORB}.
-    + move=> [A' [B' [HChA [? HA]]]]; subst.
-      move: (run_and_fail H1) => {H1} [HA'|].
+  move: (run_or_done HAORB) => [A' [B' ?]]; subst.
+  move: (run_or_complete HAORB) => -[] [].
+    + move=> Hc HA; move: (run_and_fail H1) => {H1} [HA'|].
       + by move: (run_consistent HA HA') => [].
       + move=> [s [st [HA' HC']]].
         move: (run_consistent HA HA') => [[?]] /(_ done_fail) ?; subst.
         by move: (run_consistent HC HC') => [].
-    + move=> [A' [B' [HA [? HB]]]]; subst.
+    + move=> HA HB.
       exists (And B' ir).
       apply: run_and_correct HB HC.
 Qed.
@@ -220,21 +220,23 @@ Lemma or_is_distributive {A B C s sol E}:
           run s (And A (Or B s' C)) (Done sol) E' .
 Proof.
   move=> H H1.
-  apply run_or_complete in H as [[A' [B' [H [? H0]]]]|[A' [C' [H [? H0]]]]]; subst.
+  move: (run_or_done H) => [AB [AC ?]]; subst.
+  move: (run_or_complete H) => -[] [] Hc HRA.
   (* left succeeds *)
-  + move: (run_and_complete H0) => [il[ir[s'' [?[HA HB]]]]] {H}; subst.
+  + move: (run_and_done HRA) => [A' [B' ?]]; subst.
+    move: (run_and_complete HRA) => [il[ir[s'' [?[HA HB]]]]] {H}; subst.
     move: (chooseB_complete s'' B C) => [] ? HC.
     do 3 eexists; repeat split.
     + apply HA.
     + apply: run_and_correct HA _.
     + apply: run_or_correct; left; split; [apply HC|eassumption].
   (* right succeeds *)
-  + move: (run_and_complete H0) => [il[ir[s'' [?[HA HC]]]]] {H0}; subst.
-    move: (run_and_fail (run_expand_no_cut_failure H)) => [H0|].
+  + move: (run_and_complete HRA) => [il[ir[s'' [?[HA HC]]]]] {HRA}; subst.
+    move: (run_and_fail (run_expand_no_cut_failure Hc)) => [H0|].
     + by move: (run_consistent H0 HA) => [].
     + move=> [s1 [s2 [HA' HB]]].
       move: (run_consistent HA HA') => [] [] ? /(_ done_fail) ?; subst.
-      move: (expand_no_cut_failure_split H) => [].
+      move: (expand_no_cut_failure_split Hc) => [].
       + by move=> []? H2; move: (run_consistent (run_expand_no_cut_failure H2) HA') => [].
         move=> [s' [X [H2 H3]]]; move: (run_expand_all_solved H2 HA') => ?; subst.
         do 3 eexists; split.
