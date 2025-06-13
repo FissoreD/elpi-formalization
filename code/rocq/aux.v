@@ -9,10 +9,6 @@ Lemma run_consistent_state {a b c1 c2 r1 r2}:
     run a b c1 r1 -> run a b c2 r2 -> (c1 <> Failed ->  r1 = r2).
 Proof. by move=> H H1; apply (proj2 (run_consistent H H1)). Qed.
 
-Lemma expand_no_cut_cut {s A B}:
-  expand_no_cut s A -> expand s A = CutBrothers B -> False.
-Proof. by move=> H; elim: H B; congruence. Qed.
-
 Lemma run_CutBrothers_id {s2 s3 st1 st2 ir1 ir2}:
   expand s3 st1 = CutBrothers st2 -> 
   run s3 st2 (Done s2) ir1 -> 
@@ -61,13 +57,13 @@ Proof.
   + move=> s g + A B sol A' ?; subst => //=.
     case E: expand => //=.
     - move=> _; split.
-      by apply: expand_no_cut_failure.
+      by apply: expand_no_cut_failure1.
       by move=> H; destruct (run_Failure_and_Done E H).
     - case F: expand => //=.
       move=> _; split.
       by apply: expand_no_cut_solved E.
       move=> H; destruct (run_Solved_id E H); subst.
-      by apply: expand_no_cut_failure.
+      by apply: expand_no_cut_failure1.
   + move=> s g g' + H1 IH A B sol A' ?; subst => //=.
     case E: expand => [|||sol'] //=.
     - move=> [] ?; subst.
@@ -110,8 +106,8 @@ Proof.
   by move=> ??? H H1 IH ?; apply: chooseB_Exp H (IH _).
 Qed.
 
-Lemma run_no_cut_failure_run {s A B}:
-  run_no_cut_failure s A B -> run s A Failed B.
+Lemma expand_no_cut_failure_run {s A B}:
+  expand_no_cut_failure s A B -> run s A Failed B.
 Proof.
   move=> H; elim: H; clear.
   + by constructor.
@@ -234,12 +230,12 @@ Proof.
     + apply: run_or_correct; left; split; [apply HC|eassumption].
   (* right succeeds *)
   + move: (run_and_complete H0) => [il[ir[s'' [?[HA HC]]]]] {H0}; subst.
-    move: (run_and_fail (run_run_no_cut_failure H)) => [H0|].
+    move: (run_and_fail (run_expand_no_cut_failure H)) => [H0|].
     + by move: (run_consistent H0 HA) => [].
     + move=> [s1 [s2 [HA' HB]]].
       move: (run_consistent HA HA') => [] [] ? /(_ done_fail) ?; subst.
-      move: (run_no_cut_failure_split H) => [].
-      + by move=> []? H2; move: (run_consistent (run_run_no_cut_failure H2) HA') => [].
+      move: (expand_no_cut_failure_split H) => [].
+      + by move=> []? H2; move: (run_consistent (run_expand_no_cut_failure H2) HA') => [].
         move=> [s' [X [H2 H3]]]; move: (run_expand_all_solved H2 HA') => ?; subst.
         do 3 eexists; split.
         + apply HA.
