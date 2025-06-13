@@ -733,7 +733,7 @@ Proof.
   + move=> s A _ H s2 B Y _.
     move: (expand_cut_result1 s2 B) => [ | [D]] H1.
     + by apply: run_fail => //=; rewrite H H1.
-    + admit.
+    + by move: (expand_cut_expanded H1).
   + move=> s A st1 st2 r H H1 IH s2 B Y ?; subst.
     apply: run_step => //=.
     + by rewrite H.
@@ -742,7 +742,7 @@ Proof.
     apply: run_step => //=.
     + by rewrite H.
     + apply: IH erefl.
-Admitted.
+Qed.
 
 Lemma run_or_fail1 {s1 s2 g1 g2 st aa}:
     run s1 g1 Failed aa -> (expand_no_cut s1 g1 -> run s2 g2 Failed st) ->
