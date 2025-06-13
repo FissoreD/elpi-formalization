@@ -36,7 +36,8 @@ Axiom matching : Tm -> Tm -> Sigma -> option Sigma.
 
 Definition index := list R.
 Definition mode_ctx := P -> list mode.
-Record program := { (*depth : nat;*) rules : index; modes : mode_ctx }.
+Definition sigT := nat -> S.
+Record program := { (*depth : nat;*) rules : index; modes : mode_ctx; sig : sigT }.
 
 (* Inductive goal := Goal of program & Sigma & A. *)
 
@@ -360,6 +361,10 @@ Inductive expand_no_cut : Sigma -> state -> Prop :=
   | expand_no_cut_expanded {s g g'} : 
     expand s g = Expanded g' -> expand_no_cut s g' -> expand_no_cut s g.
 
+Inductive expand_with_cut : Sigma -> state -> Prop :=
+  | expand_with_cut_cb {s g g'} : expand s g = CutBrothers g' -> expand_with_cut s g
+  | expand_with_cut_exp {s g g'} : expand s g = Expanded g' -> expand_with_cut s g' -> expand_with_cut s g.
+
 Inductive expand_will_fail: Sigma -> state -> Prop :=
   | expand_will_fail_fail {s g}    : expand s g = Failure -> expand_will_fail s g
   | expand_will_fail_cut {s g g'} : expand s g = CutBrothers g' -> expand_will_fail s g' -> expand_will_fail s g
@@ -416,7 +421,7 @@ Proof.
       apply: expand_cut_fail X.
 Qed.
 
-Lemma expand_cut_expanded {s A B}: expand s (cut A) = Expanded B -> B = cut A.
+Lemma expand_cut_expanded {s A B}: expand s (cut A) = Expanded B -> False.
 Proof.
   elim: A s B => //=; clear.
     move=> s IH s' A H s'' B //=; case E: expand => //=.
@@ -476,7 +481,7 @@ Proof.
   + move=> s st st1 st2 r H H1 IH A SOL ??; subst.
     by move: (expand_cut_CB H).
   + move=> s st st1 st2 r H H1 IH A SOL ??; subst.
-    by apply expand_cut_expanded in H; subst; apply: IH erefl erefl.
+    by apply expand_cut_expanded in H.
 Qed.
 Inductive chooseB : Sigma -> state -> state -> state -> Prop :=
   | chooseB_CB {s A cb B} : expand s A = CutBrothers cb -> chooseB s A B (cut B)
@@ -497,16 +502,8 @@ Qed.
 Lemma chooseB_cut_result s A B:
   chooseB s A B B \/ chooseB s A B (cut B).
 Proof.
-  elim: A s B.
-  + by left; apply: chooseB_Fail.
-  + by left; apply: chooseB_Done.
-  + move=> p [].
-    + by right; apply: chooseB_CB => //=.
-    + admit.
-  + move=> A + s1 A' IHs2 s2 B.
-    move=> /(_ s2 B) [] H.
+  
 Admitted.
-
 
 Lemma chooseB_cut_cut {s A B}:
   chooseB s A (cut B) (cut B).
@@ -857,20 +854,6 @@ Module check.
       end
     end.
 
-  (* Inductive infer : Gamma -> Tm -> S -> bool -> Prop :=
-    | infer_var  {G V}: infer G (Code (v V)) (G V) true
-    | infer_pred {G C}: infer G (Code (p C)) (G C) true
-    | infer_app_hd_false {G t1 t2 r} : 
-      infer G t1 r false ->
-      infer G (Comb t1 t2) r false
-    | infer_app_bo_false {G t1 t2 r} : 
-      infer G t2 r false ->
-      infer G (Comb t1 t2) r false
-    | infer_app {G t1 t2 r1 r2} :
-      infer G t1 r1 true ->
-        infer G t2 r2 true ->
-          infer G (Comb t1 t2) (eat r1 r2) (incl r1 r2). *)
-
   Definition update_gamma (g:Gamma) (v : V) s : Gamma := 
     fun x => if eqn x v then s else g v.
 
@@ -902,33 +885,33 @@ Module check.
     end
   end.
 
-  (* Inductive assume : S -> Tm -> Gamma -> Gamma -> Prop :=
-  | assume_var {D G1 V}: assume D (Code (v V)) G1 (update_gamma G1 V (min (G1 V) D))
-  | assume_app {D G1 G2 l r dl dr} :
-    infer G1 l (arr i dl dr) true -> incl dr D ->
-      assume dl r G1 G2 ->
-        assume D (Comb l r) G1 G2
-  | assume_pred {D G P}: assume D (Code (p P)) G G. *)
+  Axiom infer_inputs : (seq Tm) -> S -> bool.
+  Axiom assume_outputs : (seq Tm) -> S -> Gamma * S.  
+  Axiom assume_inputs : (seq Tm) -> S -> Gamma * S.  
 
-  (* Inductive assume_output : S -> Tm -> Gamma -> Gamma -> Prop :=
-  | assume_var {D G1 V}: assume D (Code (v V)) G1 (update_gamma G1 V (min (G1 V) D))
-  | assume_app {D G1 G2 l r dl dr} :
-    infer G1 l (arr i dl dr) true -> incl dr D ->
-      assume dl r G1 G2 ->
-        assume D (Comb l r) G1 G2
-  | assume_pred {D G P}: assume D (Code (p P)) G G. *)
+  Axiom base_sig : program -> nat -> S.
 
-(* Inductive check : program -> A -> Gamma -> S -> Gamma -> S -> Prop :=
-  | check_cut {P G _Ign} : check P Cut G _Ign G (b (d Func))
-  | check_comb : 
-    
+  Definition check (prog:program) atom (g:Gamma) (s:S) :=
+    match atom with
+    | Cut => (g, s)
+    | App (v V) args => 
+      let b := infer_inputs args s in
+      if b then assume_outputs args s
+      else (g, s)
+    | App (p P) args => 
+      let b := infer_inputs args s in
+      if b then assume_outputs args s
+      else (g, s)
+    end.
+
+  Axiom checks : program -> list A -> Gamma -> bool.
+
+  Definition check_entails (prog:program) (G:Gamma) (r:R) : bool :=
+    let pred := r.(pred) in
+    let args := r.(args) in
+    let premises := r.(premises) in
+    let (G', s) := assume_inputs args (prog.(sig) pred) in
+    checks prog premises G'.
 
 
-Inductive D : Set :=   Func : D | Pred : D.
-Inductive S : Set :=   b : B -> S | arr : mode -> S -> S -> S.
-Inductive B : Set :=   Exp : B | d : D -> B.
-  Inductive Tm : Set :=   
-    | Code : C -> Tm 
-    | Data : K -> Tm 
-    | Comb : Tm -> Tm -> Tm. *)
 End check.
