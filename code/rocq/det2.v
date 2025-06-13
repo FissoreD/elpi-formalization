@@ -219,40 +219,18 @@ Proof.
   inversion H2; subst => //.
 Qed.
 
-Lemma run_solved_same_subst {st_l s s' s''' il}:
-   expand s st_l = Solved s' ->
-    run s st_l (Done s''') il ->
-      s' = s'''.
+Lemma run_solved_same_subst {A s1 s2 s3 B}:
+   expand s1 A = Solved s2 ->
+    run s1 A (Done s3) B ->
+      s2 = s3.
 Proof.
-  move: s s' s''' il.
-  elim: st_l => //=.
-  by move=> s s' s''' il [] <-; inversion 1; subst => //=; move: H4 => /= [].
-  by move=> pr [] // [v args | p args] s s' s''' il => //=; case: F => // -[] //.
-  move=> s IH [] s1 st s2 s3 s4 il //.
-    case E: expand => //.
-      case F: expand => //= -[] <- H.
-      { 
-        inversion H; subst; clear H => //=.
-        + by move: H3 => /=; rewrite E F => -[].
-        + by move: H0 => /=; rewrite E F.
-        + by move: H0 => /=; rewrite E F.
-      }
-    move=> [] <- H.
-      {
-       inversion H; subst; clear H.
-       + by move: H3 => /=; rewrite E => -[].
-       + by move: H0 => /=; rewrite E.
-       + by move: H0 => /=; rewrite E.
-      }
-  move=> s IH1 s0 IH2 s1 s' s''' il.
-    case E: expand => //.
-    case F: expand => //= - [] <- H.
-    {
-      inversion H; subst; clear H.
-      + by move: H3 => /=; rewrite E F => -[].
-      + by move: H0 => /=; rewrite E F.
-      + by move: H0 => /=; rewrite E F.
-    }
+  remember (Done _) as D eqn:HD.
+  move=> + H.
+  elim: H s2 s3 HD; clear.
+  + by move=> s1 A s2 H s3 ? [] <-; rewrite H => -[].
+  + by congruence.
+  + by congruence.
+  + by congruence.
 Qed.
 
 Lemma run_and_complete {s g1 g2 s' st} :
