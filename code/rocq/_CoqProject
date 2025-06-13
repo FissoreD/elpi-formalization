@@ -2,6 +2,6 @@
 
 -arg -w -arg -notation-overridden
 
-det2.v
+det.v
 
 aux.v
