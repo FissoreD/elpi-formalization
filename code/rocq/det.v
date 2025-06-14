@@ -361,10 +361,6 @@ Inductive expand_no_cut : Sigma -> state -> Prop :=
   | expand_no_cut_expanded {s g g'} : 
     expand s g = Expanded g' -> expand_no_cut s g' -> expand_no_cut s g.
 
-Inductive expand_with_cut : Sigma -> state -> Prop :=
-  | expand_with_cut_cb {s g g'} : expand s g = CutBrothers g' -> expand_with_cut s g
-  | expand_with_cut_exp {s g g'} : expand s g = Expanded g' -> expand_with_cut s g' -> expand_with_cut s g.
-
 Inductive expand_will_fail: Sigma -> state -> Prop :=
   | expand_will_fail_fail {s g}    : expand s g = Failure -> expand_will_fail s g
   | expand_will_fail_cut {s g g'} : expand s g = CutBrothers g' -> expand_will_fail s g' -> expand_will_fail s g
