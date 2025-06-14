@@ -469,26 +469,6 @@ Proof.
     + by apply: IH.
 Qed.
 
-Lemma run_or_done_cut1 {s1 s2 SOL A A' B B'}:
-  run s1 (Or A s2 (cut B)) (Done SOL) (Or A' s2 B') -> B' = (cut B).
-Proof.
-  remember (Or A _ _) as O1 eqn:HO1.
-  remember (Or A' _ _) as O2 eqn:HO2.
-  remember (Done _) as D eqn:HD.
-  move=> H.
-  elim: H s2 A A' B B' SOL HO1 HO2 HD; clear => //=.
-  + by move=> s st s' H s2 A A' B B' SOL H1; rewrite H1 => -[] ?? [] ?; subst.
-  + move=> s st st1 st2 r + H1 IH s2 A A' B B' SOL ???; subst => //=.
-    by case E: expand => //=; case: expand => //=.
-  + move=> s st s1 st2 r + H1 IH s2 A A' B B' SOL ???; subst => //=.
-    case E: expand => //=.
-    + by move=> []?; subst; apply: IH erefl erefl erefl.
-    + by move=> []?; subst; apply: IH erefl erefl; rewrite cut_cut_same.
-    + case F: expand => //=.
-      + by move: (expand_cut_expanded F).
-      + by move: (expand_cut_CB F).
-Qed.
-
 Lemma run_or_correct_left {s s' A A'}:
   run s A (Done s') A' ->
     forall s2 B, exists B', run s (Or A s2 B) (Done s') (Or A' s2 B').
