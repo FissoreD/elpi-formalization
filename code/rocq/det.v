@@ -361,25 +361,14 @@ Inductive expand_no_cut : Sigma -> state -> Prop :=
   | expand_no_cut_expanded {s g g'} : 
     expand s g = Expanded g' -> expand_no_cut s g' -> expand_no_cut s g.
 
-Lemma expand_no_cutP {s1 g1 g2 g3}:
+Lemma expand_no_cut_expandedR {s1 g1 g2}:
   expand s1 g1 = Expanded g2 -> 
     expand_no_cut s1 g1 ->
-      run s1 g2 Failed g3 ->
         expand_no_cut s1 g2.
 Proof.
   move=> + H.
-  move: g2 g3.
-  elim: H => //=.
-  move=> s' s g H g2 g3 H1 H2.
-    inversion H2; subst; clear H2 => //=; rewrite H1 in H; try by [].
-  move=> s g H g2 g3 H1 H2.
-    remember Failed.
-    move: s1 g1 g H H1 Heqr => _ _.
-    elim: H2 => //=; clear.
-    by move=> s st _ H g H1 H2 _; apply: expand_no_cut_failure1 H.
-    by move=> s st st1 st2 r H H1 IH g H2 H3 H4; subst; rewrite H2 in H3.
-    by move=> s st st1 st2 r H H1 IH g H2 H3 H4; subst; rewrite H2 in H3.
-  by move=> s g g' H H1 IH g2 g3 + H3; rewrite H => -[] ?; subst.
+  elim: H g2 => //=; [congruence | congruence | ].
+  by move=> s g g' H H1 IH g2 +; rewrite H => -[] ?; subst.
 Qed.
 
 Lemma expand_cut_fail {s A SOL}:
@@ -737,7 +726,7 @@ Proof.
       + case F: expand => //=; case: expand => //= _.
         apply: HR (expand_no_cut_failure1 F).
       + by case F: expand => //=; case G: expand => //=.
-      + by epose proof (expand_no_cutP E H HL); auto.
+      + by epose proof (expand_no_cut_expandedR E H); auto.
     + move=> [] ?; subst.
       move: (IH _ _ _ erefl erefl) => [] HL HR.
       split; [by apply: run_cut E HL|] => H.
@@ -799,7 +788,7 @@ Proof.
     + intros; subst.
       apply: run_step=> //=.
       + by rewrite H0 => //=.
-      + by apply: H2 => //=; apply: expand_no_cutP H0 H3 H1.
+      + by apply: H2 => //=; apply: expand_no_cut_expandedR H0 H3.
   + remember Failed as F eqn:HF.
     remember (Or _ _) as O eqn:HO.
     move=> H1 H _.
