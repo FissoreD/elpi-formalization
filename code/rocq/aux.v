@@ -79,33 +79,6 @@ Proof.
         by apply: expand_no_cut_expanded F (H3 H).
 Qed.
 
-Lemma run_cut_cut s B SOL X:
-  run s (cut B) (Done SOL) X ->
-    exists Y, run s B (Done SOL) Y.
-Proof.
-  remember (cut _) as CUT eqn:HCUT.
-  remember (Done _) as D eqn:HD.
-  move=> H.
-  move: B SOL HCUT HD.
-  elim: H; clear => //=.
-  + move=> A ? ? H B SOL ? [] ?; subst.
-    move: A SOL H.
-Abort.
-
-Lemma chooseB_split s A B C: chooseB s A B C -> C = B \/ C = cut B.
-Proof. by move=> H; elim: H; auto. Qed.
-
-Lemma chooseBP1 {s A X}:
-  expand_no_cut s A ->
-    chooseB s A X X.
-Proof.
-  move=> H.
-  elim: H X; clear.
-  by move=> ??? H ?; apply: chooseB_Done H.
-  by move=> ?? H ?; apply: chooseB_Fail H.
-  by move=> ??? H H1 IH ?; apply: chooseB_Exp H (IH _).
-Qed.
-
 Lemma expand_no_cut_failure_run {s A B}:
   expand_no_cut_failure s A B -> run s A Failed B.
 Proof.
@@ -118,51 +91,6 @@ Corollary run_or_fail1 s1 g1 g2 st:
   run s1 (Or g1 s1 g2) Failed st ->
     run s1 g1 Failed st /\ (expand_no_cut s1 g1 -> run s1 g2 Failed st).
 Proof. move=> H. apply: run_or_fail H. Qed. 
-
-Lemma expand_no_cut_choosB {s A B C}:
-  chooseB s A B C ->
-    expand_no_cut s A ->
-      C = B.
-Proof.
-  move=> H.
-  elim: H => //=; clear.
-  by move=> s A C B + H; inversion H; subst => //=; congruence.
-  move=> s A A' B B' + H IH H1.
-  inversion H1; subst; clear H1; try congruence.
-  rewrite H0 => -[] ?; subst.
-  auto.
-Qed.
-
-Lemma chooseB_expanded_and_left {s A B X Y ss}:
-  chooseB s (And A B) X Y ->
-    expand s A = Expanded ss ->
-      chooseB s (And ss B) X Y.
-Proof.
-  remember (And _ _) as And eqn:HAnd.
-  move=> H.
-  move: A B HAnd ss.
-  elim: H; clear => //=.
-  by move=> s A B C + A1 B1 ?? H; subst => //=; rewrite H.
-  by move=> ??? + ???? H; subst => //=; rewrite H.
-  by move=> ???? + ???? H; subst => //=; rewrite H.
-  by move=> s A A' B B' + HC IH A0 B0 ? ? H; subst => //=; rewrite H => -[] ?; subst.
-Qed.
-
-Lemma chooseB_expanded_and_right {s A B B2 X Y ss}:
-  chooseB s (And A B) X Y ->
-    expand s A = Solved ss ->
-      expand ss B = Expanded B2 ->
-        chooseB s (And A B2) X Y.
-Proof.
-  remember (And _ _) as And eqn:HAnd.
-  move=> H.
-  move: A B B2 HAnd ss.
-  case: H; clear => //=.
-  by move=> s A B C + ????? H H1; subst => //=; rewrite H H1.
-  by move=> ??? + ????? H H1; subst => //=; rewrite H H1.
-  by move=> ???? + ????? H H1; subst => //=; rewrite H H1.
-  by move=> s A A' B B' + HC ????? H H1; subst => //=; rewrite H H1 => -[] ?; subst.
-Qed.
 
 Lemma not_cut_borothers_expanded_and_left {s A B ss}:
   expand_no_cut s (And A B) ->
@@ -201,13 +129,13 @@ Proof.
   move=> H H1.
   move: (run_and_complete H) => [il[ir[s'' [?[HAORB HC]]]]] {H}; subst.
   move: (run_or_done HAORB) => [A' [B' ?]]; subst.
-  move: (run_or_complete HAORB) => -[] [].
-    + move=> Hc HA; move: (run_and_fail H1) => {H1} [HA'|].
-      + by move: (run_consistent HA HA') => [].
-      + move=> [s [st [HA' HC']]].
-        move: (run_consistent HA HA') => [[?]] /(_ done_fail) ?; subst.
+  move: (run_or_complete HAORB) => [].
+    + move=> HA; move: (run_and_fail H1) => [HA'|].
+      + move: (run_consistent HA HA') => []; by [].
+      + move=> [X[Y [HA' HC']]].
+        move: (run_consistent HA HA') => [] [] ? /(_ done_fail) ?; subst.
         by move: (run_consistent HC HC') => [].
-    + move=> HA HB.
+    + move=> [] HA HB.
       exists (And B' ir).
       apply: run_and_correct HB HC.
 Qed.
@@ -221,26 +149,24 @@ Lemma or_is_distributive {A B C s sol E}:
 Proof.
   move=> H H1.
   move: (run_or_done H) => [AB [AC ?]]; subst.
-  move: (run_or_complete H) => -[] [] Hc HRA.
+  move: (run_or_complete H) => [].
   (* left succeeds *)
-  + move: (run_and_done HRA) => [A' [B' ?]]; subst.
-    move: (run_and_complete HRA) => [il[ir[s'' [?[HA HB]]]]] {H}; subst.
-    move: (chooseB_complete s'' B C) => [] ? HC.
-    do 3 eexists; repeat split.
-    + apply HA.
-    + apply: run_and_correct HA _.
-    + apply: run_or_correct; left; split; [apply HC|eassumption].
+  + move=> HAB. move: (run_and_done HAB) => [A' [B' ?]]; subst.
+    move: (run_and_complete HAB) => [il[ir[s'' [+ [HA HB]]]]] {H} => -[]??; subst.
+    move: (run_or_correct_left HB s'' C) => [] X H.
+    do 3 eexists; split; [apply: HA|].
+    apply: run_and_correct (HA) H.
   (* right succeeds *)
-  + move: (run_and_complete HRA) => [il[ir[s'' [?[HA HC]]]]] {HRA}; subst.
-    move: (run_and_fail (run_expand_no_cut_failure Hc)) => [H0|].
+  + move=> [] EAB HAC; move: (run_and_complete HAC) => [il[ir[s'' [?[HA HC]]]]] {HAC}; subst.
+    move: (run_and_fail (run_expand_no_cut_failure EAB)) => [H0|].
     + by move: (run_consistent H0 HA) => [].
     + move=> [s1 [s2 [HA' HB]]].
       move: (run_consistent HA HA') => [] [] ? /(_ done_fail) ?; subst.
-      move: (expand_no_cut_failure_split Hc) => [].
+      move: (expand_no_cut_failure_split EAB) => [].
       + by move=> []? H2; move: (run_consistent (run_expand_no_cut_failure H2) HA') => [].
         move=> [s' [X [H2 H3]]]; move: (run_expand_all_solved H2 HA') => ?; subst.
+        move: (run_or_correct_right H3 HC) => [] p {}H.
         do 3 eexists; split.
         + apply HA.
-        + apply: run_and_correct HA _.
-        + apply: run_or_correct; right; split; [apply H3|eassumption].
+        + apply: run_and_correct HA H.
 Qed.
