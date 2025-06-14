@@ -53,7 +53,8 @@ Proof.
     case F: expand => //= -[] ?; subst.
     split.
       - by apply: expand_no_cut_solved E.
-      - by move=> H1; destruct (run_Solved_id E H1); subst; apply: expand_no_cut_solved F.
+      - move=> H1; move: (run_Solved_id E H1) => [][]??; subst.
+        apply: expand_no_cut_solved F.
   + move=> s g + A B sol A' ?; subst => //=.
     case E: expand => //=.
     - move=> _; split.
@@ -62,7 +63,7 @@ Proof.
     - case F: expand => //=.
       move=> _; split.
       by apply: expand_no_cut_solved E.
-      move=> H; destruct (run_Solved_id E H); subst.
+      move=> H; move: (run_Solved_id E H) => [][]??; subst.
       by apply: expand_no_cut_failure1.
   + move=> s g g' + H1 IH A B sol A' ?; subst => //=.
     case E: expand => [|||sol'] //=.
@@ -74,7 +75,7 @@ Proof.
       split.
       - by apply: expand_no_cut_solved E.
       - move=> H.
-        destruct (run_Solved_id E H); subst.
+        move: (run_Solved_id E H)=> [][]??; subst.
         move: IH => /(_ _ _ sol' A' erefl) => -[] H2 H3. 
         by apply: expand_no_cut_expanded F (H3 H).
 Qed.
@@ -169,4 +170,24 @@ Proof.
         do 3 eexists; split.
         + apply HA.
         + apply: run_and_correct HA H.
+Qed.
+
+Lemma expand_cut_result {s A r}:
+  expand s (cut A) = r -> (exists B, r = Expanded B) \/ r = Failure.
+Proof.
+  elim: A s r => //=; auto.
+  + move=> A IH a A' HA' s r //=.
+    case H: expand => //=.
+    + by move=>?; subst; left; eexists.
+    + by move=>?; subst; left; eexists.
+    + case X: expand => //=?; subst; auto.
+      + by left; eexists.
+      + by left; eexists.
+      + apply: HA' X.
+    + apply IH in H as [[]|?] => //=.
+  + move=> s1 IH1 s2 IH2 s3 r.
+    case H: expand => ?; subst; auto.
+    + by left; eexists.
+    + apply IH1 in H as [[]|?] => //=.
+    + apply IH1 in H as [[]|?] => //=.
 Qed.
