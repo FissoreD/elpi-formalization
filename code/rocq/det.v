@@ -180,12 +180,6 @@ Inductive expand_no_cut : Sigma -> state -> Prop :=
   | expand_no_cut_failure1 {s A}  : expand s A = Failure   -> expand_no_cut s A
   | expand_no_cut_expanded {s A B}: expand s A = Expanded B -> expand_no_cut s B -> expand_no_cut s A.
 
-Inductive expand_all: Sigma -> state -> expand_res -> Prop :=
-  | expand_all_done {s s' A } : expand s A = (Solved s') -> expand_all s A (Solved s')
-  | expand_all_fail {s A} : expand s A = Failure -> expand_all s A Failure
-  | expand_all_cut {s s' A B} : expand s A = CutBrothers B -> expand_all s B s' -> expand_all s A s'
-  | expand_all_exp {s s' A B} : expand s A = Expanded B -> expand_all s B s' -> expand_all s A s'.
-
 Lemma run_Solved_id {s s1 A B r}:
     expand s A = Solved s1 -> run s A r B -> r = Done s1 /\ A = B.
 Proof.
@@ -407,44 +401,33 @@ Proof.
     by apply expand_cut_expanded in H.
 Qed.
 
-Lemma run_expand_all_solved {s0 s1 s2 A B}:
-  expand_all s0 A (Solved s2) -> run s0 A (Done s1) B -> s1 = s2.
-Proof.
-  remember (Solved s2) as S eqn:HS => H.
-  elim: H s1 s2 B HS; clear => //=.
-  + move=> s0 A r H s1 s2 B []<- H1.
-    by move: (run_Solved_id H H1) => [][]??;subst.
-  + all:
-    move=> s0 A AC ? H1 H2 IH s1 s2 B ? H3; inversion H3; clear H3; try congruence; subst; 
-    move: H0; rewrite H1 => -[]?; subst; by apply: IH erefl H4.
-Qed.
-
 Lemma expand_no_cut_failure_split {s A B AB}: 
   expand_no_cut_failure s (And A B) AB ->
-    (exists X, expand_no_cut_failure s A X) \/ (exists s' X, expand_all s A (Solved s') /\ expand_no_cut_failure s' B X).
+    (exists A', expand_no_cut_failure s A A') \/ 
+      (exists s' A' B', run s A (Done s') A' /\ expand_no_cut_failure s' B B').
 Proof.
   remember (And A B) as And eqn:HAnd.
   move=> H; elim: H A B HAnd; clear.
   + move=> s ? + A B ?; subst => //=.
     case X: expand => //=.
     + by left; eexists A; apply: expand_no_cut_failure_fail.
-    + case Y: expand => //= _; right; do 2 eexists; split.
-      + apply: expand_all_done X.
+    + case Y: expand => //= _; right; do 3 eexists; split.
+      + apply: run_done X.
       + by apply: expand_no_cut_failure_fail.
   + move=> s st st1 st2 + H1 + A B ?; subst => //=.
     case X: expand => //=.
     + move=> []?;subst.
       move=> /(_ _ _ erefl) [] [].
       + move=> X1 H; left; eexists; apply: expand_no_cut_failure_step X H.
-      + move=> X1 [X2 [H2 H3]]; right.
-        do 2 eexists; split.
-        + apply: expand_all_exp X H2.
-        + apply: H3.
+      + move=> X1 [X2 [H2 [H3 H4]]]; right.
+        do 3 eexists; repeat split.
+        + apply: run_step X H3.
+        + apply: H4.
     + case Y: expand => //= [A'] [] ?; subst.
       move=> /(_ _ _ erefl) [].
       + by left.
-      + move=> [s' [B' [H2 H3]]]; right.
-        do 2 eexists; split; try eassumption.
+      + move=> [s' [A'' [B' [H2 H3]]]]; right.
+        do 3 eexists; repeat split; try eassumption.
         inversion H2; subst; try congruence; clear H2.
         move: H6; rewrite X => -[]?; subst.
         by apply: expand_no_cut_failure_step Y H3.

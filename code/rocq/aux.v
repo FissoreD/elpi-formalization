@@ -165,8 +165,10 @@ Proof.
       move: (run_consistent HA HA') => [] [] ? /(_ done_fail) ?; subst.
       move: (expand_no_cut_failure_split EAB) => [].
       + by move=> []? H2; move: (run_consistent (run_expand_no_cut_failure H2) HA') => [].
-        move=> [s' [X [H2 H3]]]; move: (run_expand_all_solved H2 HA') => ?; subst.
+        move=> [s' [A' [B' [H2 H3]]]].
+        (* move: (run_expand_all_solved H2 HA') => ?; subst. *)
         move: (run_or_correct_right H3 HC) => [] p {}H.
+        move: (run_consistent HA H2) => [][]? /(_ done_fail) ?; subst.
         do 3 eexists; split.
         + apply HA.
         + apply: run_and_correct HA H.
