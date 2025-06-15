@@ -5,64 +5,15 @@ Lemma run_consistent_res {a b c1 c2}:
   run a b c1 -> run a b c2 -> c1 = c2.
 Proof. by move=> H H1; apply ((run_consistent H H1)). Qed.
 
-Lemma expand_no_cut_split {s A B sol alts}:
-  expand_no_cut s (And A B) ->
-    expand_no_cut s A /\ (run s A (Done sol alts) -> expand_no_cut sol B).
-Proof.
-  remember (And _ _) as NA eqn:HNA.
-  move=> H.
-  move: A B sol HNA alts.
-  elim: H; clear.
-  + move=> sol s ? alt H A B sol1 ?; subst.
-    move: H => //=.
-    case E: expand => //=.
-    case F: expand => //= -[] ?; subst.
-    split.
-      - by apply: expand_no_cut_solved E.
-      - move=> H1; move: (run_Solved_id E H1) => []??; subst.
-        apply: expand_no_cut_solved F.
-  + move=> s g + A B sol ?; subst => //=.
-    case E: expand => //=.
-    - move=> _; split.
-      by apply: expand_no_cut_failure1.
-      by move=> H; destruct (run_Failure_and_Done E H).
-    - case F: expand => //=.
-      move=> _; split.
-      by apply: expand_no_cut_solved E.
-      move=> H; move: (run_Solved_id E H) => []??; subst.
-      by apply: expand_no_cut_failure1.
-  + move=> s g g' + H1 IH A B sol ?; subst => //=.
-    case E: expand => [|||sol' alts'] //=.
-    - move=> [] ? alts; subst.
-      move: IH => /(_ _ _ sol erefl alts) [] H2 H3; split.
-      - by apply: expand_no_cut_expanded E H2.
-      - by move=> H; apply H3; inversion H; subst; clear H; congruence.
-    - case F: expand => [A''|||] //= -[] ?; subst.
-      split.
-      - by apply: expand_no_cut_solved E.
-      - move=> H.
-        move: (run_Solved_id E H)=> []??; subst.
-        move: IH => /(_ _ _ sol' erefl alts') => -[] H2 H3. 
-        by apply: expand_no_cut_expanded F (H3 H).
-Qed.
-
-Lemma expand_no_cut_failure_run {s A}:
-  expand_no_cut_failure s A -> run s A Failed.
-Proof.
-  move=> H; elim: H; clear.
-  + by constructor.
-  + by move=> s A st1 H H1 H2; apply: run_step H H2.
-Qed.
-
-Corollary run_or_fail1 s1 g1 g2:
+(* Corollary run_or_fail1 s1 g1 g2 b:
   run s1 (Or g1 s1 g2) Failed ->
-    run s1 g1 Failed /\ (expand_no_cut s1 g1 -> run s1 g2 Failed).
-Proof. move=> H. apply: run_or_fail H. Qed. 
+    run s1 g1 Failed /\ (run_classic s1 g1 b -> run s1 g2 Failed).
+Proof. move=> H. apply: run_or_fail H. Qed.  *)
 
-Lemma not_cut_borothers_expanded_and_left {s A B ss}:
-  expand_no_cut s (And A B) ->
+(* Lemma not_cut_borothers_expanded_and_left {s A B ss}:
+  run_classic s (And A B) ->
     expand s A = Expanded ss ->
-      expand_no_cut s (And ss B).
+      run_classic s (And ss B).
 Proof.
   remember (And _ _) as And eqn:HAnd.
   move=> H.
@@ -74,10 +25,10 @@ Proof.
 Qed.
 
 Lemma not_cut_borothers_expanded_and_right {s A B B'' ss altA}:
-  expand_no_cut s (And A B) ->
+  run_classic s (And A B) ->
     expand s A = Solved ss altA ->
     expand ss B = Expanded B'' ->
-      expand_no_cut s (And A B'').
+      run_classic s (And A B'').
 Proof.
   remember (And _ _) as And eqn:HAnd.
   move=> H.
@@ -86,7 +37,7 @@ Proof.
   by move=> ???? + ????? H H1; subst => //=; rewrite H H1.
   by move=> ?? + ????? H H1; subst => //=; rewrite H H1.
   by move=> ??? + H1 H2 ???? H3 H4; subst => //=; rewrite H3 H4 => -[] ?; subst; auto.
-Qed.
+Qed. *)
 
 Lemma p_aorb_andc {sA sB sD A B C alts}:
   run sA (And (Or A sB B) C) (Done sD alts) ->
@@ -106,9 +57,9 @@ Proof.
 Qed.
 
 (* ((A ∧ B) ∨ (A ∧ C)) -> (A ∧ (B ∨ C)) *)
-Lemma or_is_distributive {A B C s sol alts}:
+Lemma or_is_distributive {A B C s sol alts b}:
     run s (Or (And A B) s (And A C)) (Done sol alts) ->
-      expand_no_cut s (And A B) ->
+      run_classic s (And A B) b ->
         exists s' altA altABC, run s A (Done s' altA) /\
           run s (And A (Or B s' C)) (Done sol altABC) .
 Proof.
@@ -122,12 +73,12 @@ Proof.
     apply: run_and_correct (HA) H.
   (* right succeeds *)
   + move=> [] altB [] EAB HAC; move: (run_and_complete HAC) => [s'' [?[?[?[HA HC]]]]] {HAC}; subst.
-    move: (run_and_fail (run_expand_no_cut_failure EAB)) => [H0|].
+    move: (run_and_fail (run_run_classic_failure EAB)) => [H0|].
     + by move: (run_consistent H0 HA).
     + move=> [s1 [altA [HA' HB]]].
       move: (run_consistent HA HA') => [] ??; subst.
-      move: (expand_no_cut_failure_split EAB) => [].
-      + by move=> H2; move: (run_consistent (run_expand_no_cut_failure H2) HA').
+      move: (run_classic_failure_split EAB) => [].
+      + by move=> H2; move: (run_consistent (run_run_classic_failure H2) HA').
       + move=> [s' [altA0 [H2 H3]]].
         (* move: (run_expand_all_solved H2 HA') => ?; subst. *)
         move: (run_or_correct_right H3 HC) => {}H.
