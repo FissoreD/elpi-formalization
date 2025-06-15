@@ -154,20 +154,10 @@ Fixpoint expand s (st :state) : expand_res :=
 Inductive run_res := Done of Sigma | Failed.
 
 Inductive run : Sigma -> state -> run_res -> state -> Prop :=
-  | run_done {s s' A} :
-      expand s A = Solved s' ->
-      run s A (Done s') A
-  | run_fail {s A B} :
-      expand s A = Failure ->
-      run s A Failed B
-  | run_cut {s s' A B C} :
-      expand s A = CutBrothers B ->
-      run s B s' C ->
-      run s A s' C 
-  | run_step {s s' A B C} :
-      expand s A = Expanded B  ->
-      run s B s' C ->
-      run s A s' C.
+  | run_done {s s' A} : expand s A = Solved s' -> run s A (Done s') A
+  | run_fail {s A B}  : expand s A = Failure   -> run s A Failed B
+  | run_cut {s s' A B C} : expand s A = CutBrothers B -> run s B s' C -> run s A s' C
+  | run_step {s s' A B C} : expand s A = Expanded B  -> run s B s' C -> run s A s' C.
 
 Inductive expand_no_cut_failure : Sigma -> state -> state -> Prop :=
   | expand_no_cut_failure_fail {s A} :
