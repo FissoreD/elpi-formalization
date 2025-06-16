@@ -60,10 +60,10 @@ Definition F pr pname args s :=
 
 Inductive state :=
   | KO : state
-  | OK : state
+  | OK : (*Sigma ->*) state
   | Goal : program  -> A -> state
   | Or  : state -> Sigma -> state -> state
-  | And : state -> state -> state
+  | And : (*Sigma ->*) state -> state -> state
   | CutOut : state
   .
 
@@ -84,6 +84,7 @@ Definition mkAnd alt left r :=
   | Solved s A => Solved s (And alt A)
   end.
 
+(* alternative: mkOr always builds an Or *)
 Definition mkOr left sr r :=
   match r with
   | Failure => Failure
@@ -187,6 +188,11 @@ Proof.
   + move=> ???? H1 _ H3; apply: run_step H1 H3.
 Qed.
 
+Lemma run_classic_cut {s A B b}:
+  run_classic s A b -> expand s A = CutBrothers B -> False.
+Proof. by move=> H; elim: H B; congruence. Qed.
+
+
 Lemma run_Solved_id {s s1 A r alt}:
     expand s A = Solved s1 alt -> run s A r -> r = Done s1 alt.
 Proof.
@@ -213,8 +219,8 @@ Proof.
 Qed.
 
 Lemma run_cut_simpl {pr s2 s3 alt}:
-  run s3 (Goal pr Cut) (Done s2 alt) -> expand s3 OK = Solved s2 alt.
-Proof. by inversion 1; move: H1 => //= [] ?; subst; inversion H2; subst. Qed.
+  run s3 (Goal pr Cut) (Done s2 alt) -> alt = KO.
+Proof. by inversion 1; move: H1 => //= [] ?; subst; inversion H2; subst => //; move: H5 => [? ->]. Qed.
 
 Lemma run_and_complete {s s' altAB A B} :
   run s (And A B) (Done s' altAB) ->
@@ -327,6 +333,57 @@ Proof.
       by apply: run_step F H3.
 Qed.
 
+Lemma run_and_fail_left {s A}:
+  run s A Failed ->
+    forall B, run s (And A B) Failed.
+Proof.
+  move=> H.
+  remember Failed as F eqn:HF.
+  elim: H HF => //=; clear.
+  + move=> s A H _ B2.
+    by apply: run_fail => //=; rewrite H.
+  + move=> s s' A B H H1 IH B1 ?; subst => //=.
+    apply: run_cut => //=.
+    + by rewrite H.
+    + by auto.
+  + move=> s s' A B H H1 IH B1 ?; subst => //=.
+    apply: run_step => //=.
+    + by rewrite H.
+    + by auto.
+Qed.
+
+Lemma run_and_fail_both {s s' A B alt}:
+  run s A (Done s' alt) -> run s' B Failed ->
+    run s (And A B) Failed.
+Proof.
+  move=> H.
+  remember (Done _ _) as D eqn:HD.
+  elim: H B s' alt HD => //=; clear.
+  + move=> + + + + + B s + + H.
+    remember Failed as F eqn:HF.
+    elim: H HF => //=; clear.
+    + move=> s A H _ s1 s2 A1 alt H1 alt1 [] ??;subst.
+      by apply: run_fail => //=; rewrite H1 H.
+    + move=> s s' A B H H1 IH ? s1 s2 a1 alt H3 alt1 []??; subst.
+      apply: run_cut => //=.
+      + rewrite H3 H => //=.
+      + apply: IH => //=.
+        apply: H3.
+    + move=> s s' A B H H1 IH ? s1 s2 a1 alt H3 alt1 []??; subst.
+      apply: run_step => //=.
+      + by rewrite H3 H.
+      + apply: IH => //=.
+        apply: H3.
+  + move=> s s' A B H H1 IH B1 s1 alt ? H2; subst => //=.
+    apply: run_cut => //=.
+    + by rewrite H.
+    + apply: IH => //=.
+  + move=> s s' A B H H1 IH B1 s1 alt ? H2; subst => //=.
+    apply: run_step => //=.
+    + by rewrite H.
+    + apply: IH => //=.
+Qed.
+
 Lemma run_classic_expandedR {s1 A B b}:
   expand s1 A = Expanded B -> 
     run_classic s1 A b ->
@@ -337,7 +394,7 @@ Proof.
   by move=> s A B b H H1 IH B1 +; rewrite H => -[] ?; subst.
 Qed.
 
-Lemma expand_cut_solved {s s' A altA}:
+(* Lemma expand_cut_solved {s s' A altA}:
   expand s (cut A) = Solved s' altA -> False.
 Proof.
   elim: A s s' altA => //=.
@@ -380,11 +437,18 @@ Proof.
     + by move=> [] ?; subst; move: (IH0 _ _ E) => ?; subst.
     + case F: expand => //= -[] ?; subst.
       by move: (IH1 _ _ F) => ?; subst.
+Qed. *)
+
+Lemma expand_cut_failure {s A}: expand s (cut A) = Failure.
+Proof.
+  elim: A s => //=; clear.
+  - by move => A IHl s1 B IHr s2; rewrite IHl IHr.
+  - by move => A IHl B IHr s2; rewrite IHl.
 Qed.
 
 Axiom classic : forall P : Prop, P \/ ~ P.
 
-Lemma expand_cut_result1 s A:
+(* Lemma expand_cut_result1 s A:
   expand s (cut A) = Failure \/ exists x, expand s (cut A) = (Expanded x).
 Proof.
   case X: (expand s (cut A)).
@@ -392,15 +456,15 @@ Proof.
   + by move: (expand_cut_CB X).
   + by left.
   + by move: (expand_cut_solved X).
-Qed.
+Qed. *)
 
 Lemma run_cut_fail {s s' A altA} :
   run s (cut A) (Done s' altA) -> False.
 Proof.
   inversion 1; subst.
-  + by move: (expand_cut_solved H4).
-  + by move: (expand_cut_CB H1).
-  + by move: (expand_cut_expanded H1).
+  + by rewrite expand_cut_failure in H4. 
+  + by rewrite expand_cut_failure in  H1.
+  + by rewrite expand_cut_failure in  H1.
 Qed.
 
 Lemma run_classic_failure_split {s A B}: 
@@ -581,19 +645,6 @@ Proof.
   + by move=> ???? H H1 H2 ?; subst; apply: run_step H (H2 _).
 Qed.
 
-Lemma run_classic_failure_expanded {s1 s2 g1}:
-   expand s1 g1 = Expanded s2 ->
-    run_classic s1 g1 Failed ->
-      run_classic s1 s2 Failed.
-Proof.
-  remember Failed as F eqn:HF.
-  move=> + H; elim: H s2 HF => //=; [congruence|]; clear.
-  move=> s1 st st1 ? H; rewrite H => H1 IH g1 ? []?; subst.
-  inversion H1; clear H1; subst.
-  - by apply: run_classic_fail.
-  - by apply: run_classic_step (H0) _; apply IH.
-Qed.
-
 Lemma run_or_fail {s1 s2 g1 g2 b}:
   run s1 (Or g1 s2 g2) Failed ->
     run s1 g1 Failed /\ (run_classic s1 g1 b -> run s2 g2 Failed).
@@ -632,10 +683,6 @@ Proof.
         by apply: run_cut F (HR HH).
 Qed.
 
-Lemma run_classic_cut {s A B b}:
-  run_classic s A b -> expand s A = CutBrothers B -> False.
-Proof. by move=> H; elim: H B; congruence. Qed.
-
 Lemma run_Failed_cut {s s2 A B}:
    run s A Failed ->
     run s (Or A s2 (cut B)) Failed.
@@ -644,9 +691,7 @@ Proof.
   move=> H.
   elim: H s2 B HF; clear => //=.
   + move=> s A H s2 B _.
-    move: (expand_cut_result1 s2 B) => [ | [D]] H1.
-    + by apply: run_fail => //=; rewrite H H1.
-    + by move: (expand_cut_expanded H1).
+    by apply: run_fail; rewrite /= H /= expand_cut_failure.
   + move=> s s' st1 st2 H H1 IH s2 B ?; subst.
     apply: run_step => //=.
     + by rewrite H.
@@ -698,6 +743,14 @@ Proof.
         move=> H3.
         apply: H2.
         apply: run_classic_step H H3.
+Qed.
+
+Lemma run_or_fail2 {s1 s2 g1 g2 g3}:
+    run s1 g1 Failed -> expand s1 g1 = CutBrothers g3 -> (* g1 coulbe not an immediate cut, but expand... to a cut *)
+      run s1 (Or g1 s2 g2) Failed.
+Proof.
+  move=> H H1; apply: run_or_fail1 H _ => H2.
+  inversion H2; subst; congruence.
 Qed.
 
 Module check.

@@ -88,6 +88,25 @@ Proof.
         + apply: run_and_correct H2 H.
 Qed.
 
+Goal
+  forall pr s s' A alt,
+    run s (And A (Goal pr Cut)) (Done s' alt) ->
+      forall x, run x alt Failed.
+Proof.
+  move=> pr s s' A alt H.
+  move: (run_and_complete H) => [s'' [altA [altB [? [HL HR]]]]] {H}; subst.
+  move: (run_cut_simpl HR) => def_altB; subst.
+  move=> x.
+  move: (classic (run x altA Failed)) => [].
+  + move=> H; apply: (run_and_fail_left H KO).
+  + have: (run s' KO Failed).
+      by apply: run_fail.
+    move=> H H1.
+    apply: run_and_fail_both.
+      admit.
+    by apply: run_fail.
+Admitted.
+
 Lemma expand_cut_result {s A r}:
   expand s (cut A) = r -> (exists B, r = Expanded B) \/ r = Failure.
 Proof.
