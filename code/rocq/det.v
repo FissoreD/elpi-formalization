@@ -1,5 +1,6 @@
 (* Require Import Coq.Program.Wf. *)
 From mathcomp Require Import all_ssreflect.
+From elpi.apps Require Import derive derive.std.
 
 Inductive D := Func | Pred.
 Inductive B := Exp | d of D.
@@ -9,53 +10,67 @@ Notation "x '--i-->' y" := (arr i x y) (at level 3).
 Notation "x '--o-->' y" := (arr o x y) (at level 3).
 
 Definition P := nat.
+
 Definition K := nat.
+
 Definition V := nat.
+
 Inductive C := 
   | p of P 
   | v of V
   .
+
+
 Inductive Tm := 
   | Code : C -> Tm
   | Data : K -> Tm
   | Comb : Tm -> Tm -> Tm.
   (* | Lam  : V -> S -> Tm -> S -> Tm. *)
-Record R_ {A} := { pred : P; args : list Tm; premises : list A }.
+Record R_ {A} := { head : Tm; premises : list A }.
 Inductive A :=
   | Cut
-  (* | Call : C -> A *)
-  | App : C -> list Tm -> A.
+  | Call : Tm -> A.
   (* | PiImpl : V -> R_ A -> A -> A. *)
 Notation R := (@R_ A).
 
 Definition Sigma := V -> option Tm.
 Definition empty : Sigma := fun _ => None.
 
+Axiom eqb_C : Sigma -> C -> C -> bool.
+
 Axiom unify : Tm -> Tm -> Sigma -> option Sigma.
 Axiom matching : Tm -> Tm -> Sigma -> option Sigma.
 
 Definition index := list R.
-Definition mode_ctx := P -> list mode.
-Definition sigT := nat -> S.
+Definition mode_ctx := Tm -> list mode.
+Definition sigT := Tm -> S.
 Record program := { (*depth : nat;*) rules : index; modes : mode_ctx; sig : sigT }.
 
 (* Inductive goal := Goal of program & Sigma & A. *)
 
-Axiom H : list mode -> list Tm -> list Tm -> Sigma -> option Sigma.
-Fixpoint select argsI (modes:list mode) (rules: list R) sigma :=
+(* Axiom H : list mode -> Tm -> Tm -> Sigma -> option Sigma. *)
+Fixpoint H (ml : list mode) (q : Tm) (h: Tm) s : option Sigma :=
+  match ml,q,h with
+  | [::], Code c, Code c1 => if eqb_C s c c1 then Some s else None
+  | [:: i & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (matching a1 a2 s) 
+  | [:: o & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (unify a1 a2 s) 
+  | _, _, _ => None
+  end.
+
+Fixpoint select (query : Tm) (modes:list mode) (rules: list R) sigma :=
   match rules with
   | [::] => [::]
   | rule :: rules =>
-    match H modes argsI (rule.(args)) sigma with
-    | None => select argsI modes rules sigma
-    | Some sigma' => (sigma', rule) :: select argsI modes rules sigma
+    match H modes query rule.(head) sigma with
+    | None => select query modes rules sigma
+    | Some sigma' => (sigma', rule) :: select query modes rules sigma
     end
   end.
 
-Definition F pr pname args s :=
+Definition F pr query s :=
   let rules := pr.(rules) in
-  let modes := pr.(modes) pname in
-  let rules := select args modes rules s in
+  let modes := pr.(modes) query in
+  let rules := select query modes rules s in
   rules.
 
 Inductive state :=
@@ -130,11 +145,10 @@ Fixpoint expand s (st :state) : expand_res :=
   | OK => Solved s KO
   | CutOut => Failure
   | Goal _ Cut  => CutBrothers OK
-  | Goal pr (App (v _) _) => Failure
-  | Goal pr (App (p pn) args) =>
-      let l := F pr pn args s in
-      if l is [:: (s1,_) & _] then Expanded (big_or pr l)
-      else Expanded KO
+  | Goal pr (Call t) =>
+        let l := F pr t s in
+        if l is [:: (s1,_) & _] then Expanded (big_or pr l)
+        else Expanded KO
   | Or st1 sr st2 =>
       match expand s st1 with
       | Solved s A => Solved s (Or A sr st2)
@@ -792,34 +806,54 @@ Module check.
     | _, _ => m1
   end.
 
-  Fixpoint infer (G: Gamma) tm :=
+  Fixpoint infer_input (G: Gamma) tm : S * bool :=
     match tm with
     | Code (v V) => (G V, true)
     | Code (p P) => (G P, true)
     | Data _ => (b Exp, true)
     | Comb t1 t2 => 
-      match infer G t1 with
+      match infer_input G t1 with
       | (r, false) => (r, false)
-      | (r, _) => 
-        match infer G t2 with
-        | (r, false) => (r, false)
-        | (d1, true) => (eat r d1, incl r d1)
+      | (arr o _ x, true) => (x, true)
+      | (arr i l r, true) => 
+        match infer_input G t2 with
+        | (_, false) => (r, false)
+        | (d1, true) => (r, incl d1 l)
         end
+      | (r, _) => (r, false)
+      end
+    end.
+
+  Fixpoint infer_output (G: Gamma) tm : S * bool :=
+    match tm with
+    | Code (v V) => (G V, true)
+    | Code (p P) => (G P, true)
+    | Data _ => (b Exp, true)
+    | Comb t1 t2 => 
+      match infer_output G t1 with
+      | (r, false) => (r, false)
+      | (arr i _ x, true) => (x, true)
+      | (arr o l r, true) => 
+        match infer_input G t2 with
+        | (_, false) => (r, false)
+        | (d1, true) => (r, incl d1 l)
+        end
+      | (r, _) => (r, false)
       end
     end.
 
   Definition update_gamma (g:Gamma) (v : V) s : Gamma := 
     fun x => if eqn x v then s else g v.
 
-  Fixpoint assume D tm (G : Gamma) : (S * Gamma) :=
+  Fixpoint assume_input D tm (G : Gamma) : (S * Gamma) :=
   match tm with
   | Code (v V) => (D, update_gamma G V (min (G V) D))
   | Code (p P) => (G P, G)
   | Data _ => (b Exp, G)
   | Comb l r => 
-    match assume D l G with
+    match assume_input D l G with
     | (arr i dl dr, G) => 
-      if incl dr D then assume dl r G
+      if incl dr D then assume_input dl r G
       else (D, G)
     | _ => (D, G)
     end
@@ -833,39 +867,30 @@ Module check.
   | Comb l r => 
     match assume_output D l G with
     | (arr o dl dr, G) => 
-      if incl dr D then assume dl r G
+      if incl dr D then assume_input dl r G
       else (D, G)
     | _ => (D, G)
     end
   end.
 
-  Axiom infer_inputs : (seq Tm) -> S -> bool.
-  Axiom assume_outputs : (seq Tm) -> S -> Gamma * S.  
-  Axiom assume_inputs : (seq Tm) -> S -> Gamma * S.  
-
-  Axiom base_sig : program -> nat -> S.
-
-  Definition check (prog:program) atom (g:Gamma) (s:S) :=
+  Definition check_atom (prog:program) atom '(g, s) :=
     match atom with
-    | Cut => (g, s)
-    | App (v V) args => 
-      let b := infer_inputs args s in
-      if b then assume_outputs args s
-      else (g, s)
-    | App (p P) args => 
-      let b := infer_inputs args s in
-      if b then assume_outputs args s
-      else (g, s)
+    | Cut => (g, b (d Func))
+    | Call t => 
+      if infer_input g t is (s',true) then 
+        (snd (assume_output s' t g), max s s') (* not sure about the s' passed to assume_output *)
+      else (g, b (d Pred))
     end.
 
-  Axiom checks : program -> list A -> Gamma -> bool.
-
   Definition check_entails (prog:program) (G:Gamma) (r:R) : bool :=
-    let pred := r.(pred) in
-    let args := r.(args) in
     let premises := r.(premises) in
-    let (G', s) := assume_inputs args (prog.(sig) pred) in
-    checks prog premises G'.
+    let: (expected_det, G) := assume_input (prog.(sig) r.(head)) r.(head) G in
+    let: (G, body_det) := foldr (check_atom prog) (G,b (d (Func))) premises in
+    if infer_output G r.(head) is (_, true) then incl body_det expected_det else false .
 
+
+  Definition is_det := forall pr s s' a alt,
+    run s (Goal pr a) (Done s' alt) ->
+      expand s alt = Failure.
 
 End check.
