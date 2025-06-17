@@ -1,6 +1,7 @@
 (* Require Import Coq.Program.Wf. *)
 From mathcomp Require Import all_ssreflect.
 From elpi.apps Require Import derive derive.std.
+From HB Require Import structures.
 
 Inductive D := Func | Pred.
 Inductive B := Exp | d of D.
@@ -32,6 +33,23 @@ Inductive A :=
   | Call : Tm -> A.
   (* | PiImpl : V -> R_ A -> A -> A. *)
 Notation R := (@R_ A).
+
+Axiom Tm_eqb : Tm -> Tm -> bool.
+Axiom Tm_eqb_ok : Equality.axiom Tm_eqb.
+HB.instance Definition _ : hasDecEq Tm := hasDecEq.Build Tm Tm_eqb_ok.
+
+Definition A_eqb (a b : A) :=
+  match a,b with
+  | Cut, Cut => true
+  | Call t1, Call t2 => t1 == t2
+  | _, _ => false
+  end.
+Lemma A_eqb_ok : Equality.axiom A_eqb.
+Proof.
+move=> [|t1] [|t2] => //=; try by constructor.
+by apply: iffP eqP _ _; [ move-> | move=> [] ].
+Qed.
+HB.instance Definition _ : hasDecEq A := hasDecEq.Build A A_eqb_ok.
 
 Definition Sigma := V -> option Tm.
 Definition empty : Sigma := fun _ => None.
@@ -147,8 +165,7 @@ Fixpoint expand s (st :state) : expand_res :=
   | Goal _ Cut  => CutBrothers OK
   | Goal pr (Call t) =>
         let l := F pr t s in
-        if l is [:: (s1,_) & _] then Expanded (big_or pr l)
-        else Expanded KO
+         Expanded (big_or pr l)
   | Or st1 sr st2 =>
       match expand s st1 with
       | Solved s A => Solved s (Or A sr st2)
@@ -889,8 +906,50 @@ Module check.
     if infer_output G r.(head) is (_, true) then incl body_det expected_det else false .
 
 
-  Definition is_det := forall pr s s' a alt,
-    run s (Goal pr a) (Done s' alt) ->
+  Definition is_det g := forall s s' alt,
+    run s g (Done s' alt) ->
       expand s alt = Failure.
+
+  Lemma cut_is_det pr : is_det (Goal pr Cut).
+  Proof. by move=> s s1 A /run_cut_simpl ->. Qed.
+
+  Definition det_rule_cut (r : R) :=
+    last Cut r.(premises) == Cut.
+
+    Notation "[subst]" := ltac:(subst).
+    Notation "[subst1]" := ltac:(move=> ?;subst).
+    Notation "[subst2]" := ltac:(move=> ??;subst).
+
+    Axiom same_subst : forall (s1 s2 : Sigma), s1 = s2.
+
+  (* Lemma tail_cut_is_det a : 
+    (forall pr, all det_rule_cut pr.(rules)) ->
+    is_det a.
+  Proof.
+    move=> AllCut s1 s2 alts.
+
+    move=> H; inversion H; subst.
+    - admit. (* false because the conf is potentially not from SLD *)
+    - admit.
+    - 
+
+
+    remember (Done s2 alts) as r eqn:Hr.
+    move=> H.
+    elim: H s2 alts Hr => //=. clear -AllCut.
+    move=> s s' A B He s'' C [] /[subst2].
+    elim: A s s'' C He => //=.
+    - by move=> ??? [_ <-].
+    - by move=> ?[].
+    - move=> A IHA sr B IHB s s3 C.
+      case X: expand => //= [|altA].
+      + case Y: (expand sr B) => //= -[] /[subst2].
+        rewrite (same_subst s sr).
+        apply: IHB Y.
+      + move=> [] /[subst2].
+        move: (IHA _ _ _ X) => {}IHA //=.
+        rewrite IHA.
+
+Qed. *)
 
 End check.
