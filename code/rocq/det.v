@@ -127,7 +127,8 @@ Axiom same_progr : forall (s1 s2 : program), s1 = s2.
 Inductive state :=
   | KO : state
   | OK : (*Sigma ->*) state
-  | NoAlts : state
+  | Top : state
+  | Bot : state
   | CutOut : state
   | Goal : program  -> A -> state
   | Or  : state -> Sigma -> state -> state
@@ -168,8 +169,9 @@ Fixpoint cut st :=
   match st with
   | OK => CutOut
   | KO => CutOut
+  | Bot => CutOut
   | CutOut => CutOut
-  | Goal _ _ | NoAlts => CutOut
+  | Goal _ _ | Top => CutOut
   | And x y => And (cut x) (cut y)
   | Or x s y => Or (cut x) s (cut y)
   end.
@@ -191,7 +193,7 @@ Fixpoint big_and_aux pr h (a : list A) : state :=
 (* A rule with premises is considered to fail *)
 Definition big_and pr l :=
   match l with
-  | [::] => NoAlts
+  | [::] => Top
   | x::xs => big_and_aux pr x xs
   end. 
 
@@ -205,13 +207,14 @@ Fixpoint expand s (A :state) : expand_res :=
   match A with
   | KO => Failure
   | OK => Solved s KO
-  | NoAlts => Solved s KO
+  | Top => Solved s KO
   | CutOut => Failure
+  | Bot => Failure
   | Goal _ Cut  => CutBrothers OK
   | Goal pr (Call t) =>
-      let l := F pr t s in
-      if l is (s,r) :: _ then Expanded (Or KO s (big_or pr r l))
-      else Expanded KO
+      Expanded (let l := F pr t s in
+      if l is (s,r) :: _ then (Or Bot s (big_or pr r l))
+      else Bot)
   | Or L sr R =>
       match expand s L with
       | Solved s L => Solved s (Or L sr R)
@@ -338,7 +341,6 @@ Proof.
   + move=> p [].
     by eexists.
   + move=> ?? //=.
-    by case:F => //= -[].
   + by move=> A IHA s B IHB s1 /simpl_expand_or_cut.
   + move=> A IHA B IHB s1 /simpl_expand_and_cut [].
     + by move=> [A' [H]] /[subst1].
