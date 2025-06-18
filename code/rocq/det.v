@@ -103,23 +103,44 @@ Inductive state :=
   | KO : state
   | OK : (*Sigma ->*) state
   | NoAlts : state
+  | CutOut : state
   | Goal : program  -> A -> state
   | Or  : state -> Sigma -> state -> state
   | And : (*Sigma ->*) state -> state -> state
-  | CutOut : state
   .
+
+Axiom program_eqb : program -> program -> bool.
+Axiom program_eqb_ok : Equality.axiom program_eqb.
+Axiom Sigma_eqb : Sigma -> Sigma -> bool.
+Axiom Sigma_eqb_ok : Equality.axiom program_eqb.
+Axiom same_subst : forall (s1 s2 : Sigma), s1 = s2.
+Axiom same_progr : forall (s1 s2 : program), s1 = s2.
 
 Fixpoint state_eqb A B :=
   match A, B with
-  | KO, KO | CutOut, CutOut | OK, OK => true
-  | Goal _p1 a1, Goal _p2 a2 => A_eqb a1 a2  (* should also compare _p1 and _p2 *)
-  | Or A1 sr1 B1, Or A2 sr2 B2 => state_eqb A1 A2 && state_eqb B1 B2 (* should also compare sr1 and sr2 *)
+  | KO, KO | CutOut, CutOut | OK, OK
+  | NoAlts, NoAlts => true
+  | Goal p1 a1, Goal p2 a2 => program_eqb p1 p2 && A_eqb a1 a2 
+  | Or A1 sr1 B1, Or A2 sr2 B2 => state_eqb A1 A2 && Sigma_eqb sr1 sr2 && state_eqb B1 B2
   | And A1 B1, And A2 B2 => state_eqb A1 A2 && state_eqb B1 B2
   | _, _ => false
   end.
 Theorem state_eqb_ok : Equality.axiom state_eqb.
 Proof.
-  move=> s1; elim: s1; move=> [] //=; try by constructor.
+  move=> s1; elim: s1.
+  + move=> []; move=> *; (try by apply: iffP (ReflectT _ I) _ _); by (apply: iffP (ReflectF False id) _ _). 
+  + move=> []; move=> *; (try by apply: iffP (ReflectT _ I) _ _); by (apply: iffP (ReflectF False id) _ _). 
+  + move=> []; move=> *; (try by apply: iffP (ReflectT _ I) _ _); by (apply: iffP (ReflectF False id) _ _). 
+  + move=> []; move=> *; (try by apply: iffP (ReflectT _ I) _ _); by (apply: iffP (ReflectF False id) _ _). 
+  + { 
+    move=> p a [] * //=; (try by apply: iffP (ReflectF False id) _ _).
+    admit.
+  }
+  + admit.
+  + move=> A IHA B IHB [] *; (try by apply: iffP (ReflectF False id) _ _) => //=.
+    apply: iffP andP _ _.
+    + by move=> [] /IHA /[subst1] /IHB /[subst1].
+    + admit.
 Admitted.
 
 HB.instance Definition _ : hasDecEq state := hasDecEq.Build state state_eqb_ok.
@@ -152,12 +173,12 @@ Definition mkOr left sr r :=
 
 Fixpoint cut st :=
   match st with
+  | OK => CutOut
+  | KO => CutOut
+  | CutOut => CutOut
   | Goal _ _ | NoAlts => CutOut
   | And x y => And (cut x) (cut y)
   | Or x s y => Or (cut x) s (cut y)
-  | OK => CutOut
-  | KO => KO
-  | CutOut => CutOut
   end.
 
 
@@ -976,8 +997,6 @@ Module check.
 
   Definition det_rule_cut (r : R) :=
     last Cut r.(premises) == Cut.
-
-  Axiom same_subst : forall (s1 s2 : Sigma), s1 = s2.
 
     (* -------------------------------
 
