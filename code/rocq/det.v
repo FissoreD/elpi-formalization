@@ -15,55 +15,52 @@ Notation "x '--i-->' y" := (arr i x y) (at level 3).
 Notation "x '--o-->' y" := (arr o x y) (at level 3).
 
 Definition P := nat.
-Elpi derive.eqb P.
+derive P.
+Elpi derive.eqbOK.register_axiom P is_P is_nat_inhab P_eqb P_eqb_correct P_eqb_refl.
 
 Definition K := nat.
-Elpi derive.eqb K.
+derive K.
+Elpi derive.eqbOK.register_axiom K is_K is_nat_inhab K_eqb K_eqb_correct K_eqb_refl.
 
 Definition V := nat.
-Elpi derive.eqb V.
+derive V.
+Elpi derive.eqbOK.register_axiom V is_V is_nat_inhab V_eqb V_eqb_correct V_eqb_refl.
 
 Inductive C := 
   | p of P 
   | v of V
   .
-Elpi derive.eqb option.
-Elpi derive.eqb list.
+derive C.
 
 Inductive Tm := 
   | Code : C -> Tm
   | Data : K -> Tm
   | Comb : Tm -> Tm -> Tm.
   (* | Lam  : V -> S -> Tm -> S -> Tm. *)
+derive Tm.
+
 Record R_ {A} := { head : Tm; premises : list A }.
+derive R_.
 Inductive A :=
   | Cut
   | Call : Tm -> A.
+derive A.
+
   (* | PiImpl : V -> R_ A -> A -> A. *)
 Notation R := (@R_ A).
 
-Axiom Tm_eqb : Tm -> Tm -> bool.
-Axiom Tm_eqb_ok : Equality.axiom Tm_eqb.
-HB.instance Definition _ : hasDecEq Tm := hasDecEq.Build Tm Tm_eqb_ok.
+HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
+HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
+HB.instance Definition _ := hasDecEq.Build C C_eqb_OK.
+HB.instance Definition _ := hasDecEq.Build P P_eqb_OK.
+HB.instance Definition _ := hasDecEq.Build K K_eqb_OK.
+HB.instance Definition _ := hasDecEq.Build V V_eqb_OK.
+HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK _ _ A_eqb_OK).
 
-Definition A_eqb (a b : A) :=
-  match a,b with
-  | Cut, Cut => true
-  | Call t1, Call t2 => t1 == t2
-  | _, _ => false
-  end.
-Lemma A_eqb_ok : Equality.axiom A_eqb.
-Proof.
-move=> [|t1] [|t2] => //=; try by constructor.
-by apply: iffP eqP _ _; [ move-> | move=> [] ].
-Qed.
-HB.instance Definition _ : hasDecEq A := hasDecEq.Build A A_eqb_ok.
-
-Definition Sigma := V -> option Tm.
-Definition empty : Sigma := fun _ => None.
+Record Sigma := { sigma : V -> option Tm }.
+Definition empty : Sigma := {| sigma := fun _ => None |}.
 
 Axiom eqb_C : Sigma -> C -> C -> bool.
-
 Axiom unify : Tm -> Tm -> Sigma -> option Sigma.
 Axiom matching : Tm -> Tm -> Sigma -> option Sigma.
 
@@ -99,6 +96,34 @@ Definition F pr query s :=
   let rules := select query modes rules s in
   rules.
 
+Axiom program_eqb : program -> program -> bool.
+Axiom is_program : program -> Type.
+Axiom is_program_inhab : forall p : program, is_program p.
+Axiom program_eqb_correct : forall p1 p2, program_eqb p1 p2 -> p1 = p2.
+Axiom program_eqb_refl : forall x, program_eqb x x.
+
+Elpi derive.eqbOK.register_axiom program is_program is_program_inhab program_eqb program_eqb_correct program_eqb_refl.
+Lemma program_eqb_OK : Equality.axiom program_eqb.
+apply: iffP2 program_eqb_correct program_eqb_refl.
+Qed.
+HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eqb_OK.
+
+Axiom Sigma_eqb : Sigma -> Sigma -> bool.
+Axiom is_Sigma : Sigma -> Type.
+Axiom is_Sigma_inhab : forall p : Sigma, is_Sigma p.
+Axiom Sigma_eqb_correct : forall p1 p2, Sigma_eqb p1 p2 -> p1 = p2.
+Axiom Sigma_eqb_refl : forall x, Sigma_eqb x x.
+
+Elpi derive.eqbOK.register_axiom Sigma is_Sigma is_Sigma_inhab Sigma_eqb Sigma_eqb_correct Sigma_eqb_refl.
+Lemma Sigma_eqb_OK : Equality.axiom Sigma_eqb.
+apply: iffP2 Sigma_eqb_correct Sigma_eqb_refl.
+Qed.
+HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
+
+Axiom same_subst : forall (s1 s2 : Sigma), s1 = s2.
+Axiom same_progr : forall (s1 s2 : program), s1 = s2.
+
+
 Inductive state :=
   | KO : state
   | OK : (*Sigma ->*) state
@@ -108,42 +133,8 @@ Inductive state :=
   | Or  : state -> Sigma -> state -> state
   | And : (*Sigma ->*) state -> state -> state
   .
-
-Axiom program_eqb : program -> program -> bool.
-Axiom program_eqb_ok : Equality.axiom program_eqb.
-Axiom Sigma_eqb : Sigma -> Sigma -> bool.
-Axiom Sigma_eqb_ok : Equality.axiom program_eqb.
-Axiom same_subst : forall (s1 s2 : Sigma), s1 = s2.
-Axiom same_progr : forall (s1 s2 : program), s1 = s2.
-
-Fixpoint state_eqb A B :=
-  match A, B with
-  | KO, KO | CutOut, CutOut | OK, OK
-  | NoAlts, NoAlts => true
-  | Goal p1 a1, Goal p2 a2 => program_eqb p1 p2 && A_eqb a1 a2 
-  | Or A1 sr1 B1, Or A2 sr2 B2 => state_eqb A1 A2 && Sigma_eqb sr1 sr2 && state_eqb B1 B2
-  | And A1 B1, And A2 B2 => state_eqb A1 A2 && state_eqb B1 B2
-  | _, _ => false
-  end.
-Theorem state_eqb_ok : Equality.axiom state_eqb.
-Proof.
-  move=> s1; elim: s1.
-  + move=> []; move=> *; (try by apply: iffP (ReflectT _ I) _ _); by (apply: iffP (ReflectF False id) _ _). 
-  + move=> []; move=> *; (try by apply: iffP (ReflectT _ I) _ _); by (apply: iffP (ReflectF False id) _ _). 
-  + move=> []; move=> *; (try by apply: iffP (ReflectT _ I) _ _); by (apply: iffP (ReflectF False id) _ _). 
-  + move=> []; move=> *; (try by apply: iffP (ReflectT _ I) _ _); by (apply: iffP (ReflectF False id) _ _). 
-  + { 
-    move=> p a [] * //=; (try by apply: iffP (ReflectF False id) _ _).
-    admit.
-  }
-  + admit.
-  + move=> A IHA B IHB [] *; (try by apply: iffP (ReflectF False id) _ _) => //=.
-    apply: iffP andP _ _.
-    + by move=> [] /IHA /[subst1] /IHB /[subst1].
-    + admit.
-Admitted.
-
-HB.instance Definition _ : hasDecEq state := hasDecEq.Build state state_eqb_ok.
+derive state.
+HB.instance Definition _ := hasDecEq.Build state state_eqb_OK.
 
 (* Notation "A ∧ B" := (And A B) (at level 13000).
 Notation "A ∨ B" := (Or A B) (at level 13000). *)
@@ -153,6 +144,8 @@ Inductive expand_res :=
   | CutBrothers of state
   | Failure
   | Solved of Sigma & state.
+derive expand_res.
+HB.instance Definition _ := hasDecEq.Build expand_res expand_res_eqb_OK.
 
 Definition mkAnd alt left r :=
   match r with
@@ -237,6 +230,9 @@ Fixpoint expand s (A :state) : expand_res :=
 .
 
 Inductive run_res := Done of Sigma & state | Failed.
+derive run_res.
+HB.instance Definition _ := hasDecEq.Build run_res run_res_eqb_OK.
+
 
 Inductive run : Sigma -> state -> run_res -> Prop :=
   | run_done {s s' A alt} : expand s A = Solved s' alt  -> run s A (Done s' alt)
