@@ -73,45 +73,37 @@ Module RunP (A: Unif).
       by move: H2; rewrite Hz => -[] /[subst2].
   Qed.
 
-  (* Lemma simpl_next_alt_and_none {A B0 B}:
-    next_alt (And A B0 B) = None -> next_alt B = None /\  next_alt A = None.
-  Proof. by move=> /=; case X: next_alt => //=; case Y: next_alt => //=. Qed.
-
-  Lemma simpl_next_alt_and_some {A B0 B C}:
-    next_alt (And A B0 B) = Some C -> 
-    (exists B',  next_alt B = Some B' /\ C = And A B0 B') \/ 
-      (exists A', next_alt B = None /\  next_alt A = Some A' /\ C = And A' B0 B0).
-  Proof.
-    move=> //=; case X: next_alt.
-    + by move=> [] /[subst1]; left; eexists.
-    + by case Y: next_alt => // -[] /[subst1]; right; eexists.
+  Lemma simpl_next_alt_aux_and_none {s A B0 B}:
+    next_alt_aux true s (And A B0 B) = None -> next_alt_aux true s B = None /\  next_alt_aux true s A = None.
+  Proof. 
+    rewrite /next_alt //=. 
+    case X: next_alt_aux => [x|].
+    + by case x.
+    + case Y: next_alt_aux => [x|] //.
+      + by case x.
   Qed.
 
-  Lemma run_cut_simpl {pr s2 s3 alt}:
-    run s3 (Goal pr Cut) (Done s2 alt) -> alt = OK.
+  Lemma simpl_next_alt_and_some {s A B0 B r}:
+    next_alt_aux true s (And A B0 B) = Some r -> 
+    (exists s' B',  next_alt_aux true s B = Some (s', B') /\ r = (s', And A B0 B')) \/ 
+      (exists s' A', next_alt_aux true s B = None /\  next_alt_aux true s A = Some (s', A') /\ r = (s', And A' B0 B0)).
+  Proof.
+    move=> //=; case X: next_alt_aux => [x|].
+    + case: x X => S C H -[] /[subst1].
+      by left; do 2 eexists.
+    + case Y: next_alt_aux => [x|] //; case: x Y.
+      move=> s' C H -[] /[subst1]; right.
+      by do 2 eexists.
+  Qed.
+
+  Lemma expanded_cut_simpl {pr s2 s3 alt}:
+    expanded s3 (Goal pr Cut) (Done s2 alt) -> alt = OK.
   Proof. by inversion 1; move: H1 => //= [] ?; subst; inversion H2; subst => //; move: H5 => [? ->]. Qed.
 
-  (* Lemma simpl_next_alt_some {A B}:
-    next_alt A = Some B -> False.
-    (*
-      (A = Or _s_ _s1_ _s2_ /\ failed _s_ = true /\ failed _s2_ = false) \/ 
-      (exists s1 C D, A = Or C s1 D /\ failed C = false /\ B = Or C s1 D) \/ 
-      (exists s C, false A = false /\ B = Or A s C)
-      \/ (exists C C0, next_alt D = Some a /\ B = And A C0 C)
-    *)
-  Proof.
-    case AA: A => //=.
-    + case F: failed.
-      + case G: failed => //. admit.
-      move=> []. admit.
-    + move=> A C D.
-      case N: next_alt => //=. *)
-
-
-  Lemma run_classic_expandedR {s1 A B b}:
+  Lemma expanded_classic_expandedR {s1 A B b}:
     expand s1 A = Expanded B -> 
-      run_classic s1 A b ->
-          run_classic s1 B b.
+      expanded_classic s1 A b ->
+          expanded_classic s1 B b.
   Proof.
     move=> + H; elim: H B => //=; congruence.
   Qed.
@@ -132,21 +124,55 @@ Module RunP (A: Unif).
     + by move=> A HA B HB C HC; rewrite HA.
   Qed.
 
-  Lemma next_alt_cut {A B}: next_alt (cut A) = Some B -> exists A, B = cut A.
+  Lemma next_alt_cut {b s s' A B}: next_alt_aux b s (cut A) = Some (s', B) -> exists A, B = cut A.
   Proof.
-    elim: A B => //=.
-    + by move=> A IH s B IHB C; rewrite 2! failed_cut.
-    + move=> A IHA B IHB C IHC D.
-      case N1: next_alt => //.
+    elim: A b B s s' => //=; clear.
+    + move=> A IH s2 B IHB bool C s s'; rewrite /next_alt //=.
+      case G: next_alt_aux => [x|].
+      + case: x G => a b G -[] /[subst2].
+        move: (IH _ _ _ _ G) => [] X ->.
+        by exists (Or X s2 B).
+      + by move=> [] /[subst2]; eexists.
+    + move=> A HA B0 HB0 B HB bool C s s'; rewrite /next_alt /=.
+      case G: next_alt_aux => [x|].
+      + case: x G => s2 b HN [] /[subst2].
+        move: (HB _ _ _ _ HN) => [B'] /[subst1].
+        by exists (And A B0 B').
+      + case H: next_alt_aux => [x|] //.
+        + case: x H => s2 A' NA -[] /[subst2].
+          move: (HA _ _ _ _ NA) => [A2] /[subst1] //.
+          (* by exists (And ).
+      case N1: next_alt => // . *)
+  Abort.
 
+  Lemma expand_cut_solved {s s' A B}: expand s (cut A) = Solved s' B -> False.
+  Proof.
+    elim: A s s' B => //; clear.
+    + move=> A HA s B HB s1 s2 C /=.
+      case X: expand => // -[] /[subst2]; by apply: HA X.
+    + move=> A HA B HB C HC s s' D /=; case X: expand => // _.
+      apply: HA X.
+  Qed.
 
+  Lemma expanded_cut_fail {s s' A B}:
+    expanded s (cut A) (Done s' B) -> False.
+  Proof.
+    remember (cut _) as CA eqn:HCA.
+    remember (Done _ _) as D eqn:HD => H.
+    elim: H s' A B HCA HD => //; clear.
+    + move=> s s' A B H s2 C D /[subst1] -[] /[subst2].
+      apply: expand_cut_solved H.
+    + move=> s s' A B HA HB IHA s2 C D /[subst2].
+      apply: IHA erefl.
+  Abort.
+(* 
   Lemma run_cut_fail {s s' A altA} :
     run s (cut A) (Done s' altA) -> False.
   Proof.
     remember (cut _) as CA eqn:HCA.
     remember (Done _ _) as D eqn:HD => H.
     elim: H s' A altA HCA HD => //=; clear.
-    + by move=> s s' A A' + s2 B B'8 ? []??; subst; rewrite expand_cut_failure.
+    + move=> s s' ? B HA s2 AC B' /[subst1] -[] /[subst2].  by move=> s s' A A' + s2 B B'8 ? []??; subst; rewrite expand_cut_failure.
     + move=> s s' A B C + HN HR IHA s2 A' B' /[subst2].
       rewrite expand_cut_failure => -[] /[subst1].
       apply: IHA erefl.

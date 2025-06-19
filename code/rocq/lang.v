@@ -179,7 +179,7 @@ Module Run (U : Unif).
     | KO => KO
     | Bot => KO
     | Goal _ _ | Top => KO
-    | And A B0 B => And (cut A) B0 (cut B)
+    | And A B0 B => And (cut A) (cut B) (cut B)
     | Or A s B => Or (cut A) s (cut B)
     end.
 
