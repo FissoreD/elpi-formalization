@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import det.
 
-Lemma run_consistent_res {a b c1 c2}:
+(* Lemma run_consistent_res {a b c1 c2}:
   run a b c1 -> run a b c2 -> c1 = c2.
 Proof. by move=> H H1; apply ((run_consistent H H1)). Qed.
 
@@ -125,4 +125,4 @@ Proof.
     + by left; eexists.
     + apply IH1 in H as [[]|?] => //=.
     + apply IH1 in H as [[]|?] => //=.
-Qed.
+Qed. *)

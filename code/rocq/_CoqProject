@@ -2,6 +2,9 @@
 
 -arg -w -arg -notation-overridden
 
-det.v
-
+lang.v
+run_test.v
+valid_state.v
+run_prop.v
 aux.v
+check.v
