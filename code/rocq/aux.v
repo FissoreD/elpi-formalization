@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import det.
+From det Require Import lang.
 
 (* Lemma run_consistent_res {a b c1 c2}:
   run a b c1 -> run a b c2 -> c1 = c2.

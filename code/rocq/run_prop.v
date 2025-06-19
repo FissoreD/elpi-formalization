@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import det.
+From det Require Import lang.
 
 Module RunP (A: Unif).
   Module Run := Run(A).
@@ -115,6 +115,41 @@ Module RunP (A: Unif).
     - by move => A IHl B IHr C IHc s; rewrite IHl.
   Qed.
 
+  Lemma expand_cut_solved {s s' A B}: expand s (cut A) = Solved s' B -> False.
+  Proof.
+    elim: A s s' B => //; clear.
+    + move=> A HA s B HB s1 s2 C /=.
+      case X: expand => // -[] /[subst2]; by apply: HA X.
+    + move=> A HA B HB C HC s s' D /=; case X: expand => // _.
+      apply: HA X.
+  Qed.
+
+  Lemma expand_cut_cb {s A B}: expand s (cut A) = CutBrothers B -> exists B', B = cut B'.
+  Proof.
+    elim: A s B => //; clear.
+    + move=> A HA s B HB s' C /=; case G: expand => //.
+    + move=> A HA B HB C HC s D /=; case G: expand => //.
+      + move=> [] /[subst1].
+        move: (HA _ _ G) => [B'] /[subst1].
+        exists (cut (And B' B C)) => /=.
+        by rewrite 2!cut_cut_same.
+      + by move: (expand_cut_solved G).
+  Qed.
+
+  Lemma expand_cut_expanded {s A B}: expand s (cut A) = Expanded B -> exists B', B = cut B'.
+  Proof.
+    elim: A s B => //; clear.
+    + move=> A HA s B HB s' C /=; case G: expand => // -[] /[subst1].
+      + by move: (HA _ _ G) => [X] /[subst1]; exists (Or X s B).
+      + by move: (expand_cut_cb G) => [X] /[subst1]; exists (Or X s B); rewrite cut_cut_same.
+    + move=> A HA B HB C HC s D /=; case G: expand => //.
+      + move=> [] /[subst1].
+        move: (HA _ _ G) => [B'] /[subst1].
+        exists (cut (And B' B C)) => /=.
+        by rewrite 2!cut_cut_same.
+      + by move: (expand_cut_solved G).
+  Qed.
+
   Axiom classic : forall P : Prop, P \/ ~ P.
 
   Lemma failed_cut {A}: failed (cut A).
@@ -145,15 +180,6 @@ Module RunP (A: Unif).
       case N1: next_alt => // . *)
   Abort.
 
-  Lemma expand_cut_solved {s s' A B}: expand s (cut A) = Solved s' B -> False.
-  Proof.
-    elim: A s s' B => //; clear.
-    + move=> A HA s B HB s1 s2 C /=.
-      case X: expand => // -[] /[subst2]; by apply: HA X.
-    + move=> A HA B HB C HC s s' D /=; case X: expand => // _.
-      apply: HA X.
-  Qed.
-
   Lemma expanded_cut_fail {s s' A B}:
     expanded s (cut A) (Done s' B) -> False.
   Proof.
@@ -163,29 +189,23 @@ Module RunP (A: Unif).
     + move=> s s' A B H s2 C D /[subst1] -[] /[subst2].
       apply: expand_cut_solved H.
     + move=> s s' A B HA HB IHA s2 C D /[subst2].
-      apply: IHA erefl.
-  Abort.
-(* 
-  Lemma run_cut_fail {s s' A altA} :
+      move: (expand_cut_cb HA) => [A'] /[subst1].
+      by apply: IHA erefl.
+    + move=> s s' A B HA HB IH s2 C D /[subst2].
+      move: (expand_cut_expanded HA) => [B'] /[subst1].
+      by apply: IH.
+  Qed.
+
+  (* Lemma run_cut_fail {s s' A altA} :
     run s (cut A) (Done s' altA) -> False.
   Proof.
     remember (cut _) as CA eqn:HCA.
     remember (Done _ _) as D eqn:HD => H.
     elim: H s' A altA HCA HD => //=; clear.
-    + move=> s s' ? B HA s2 AC B' /[subst1] -[] /[subst2].  by move=> s s' A A' + s2 B B'8 ? []??; subst; rewrite expand_cut_failure.
-    + move=> s s' A B C + HN HR IHA s2 A' B' /[subst2].
-      rewrite expand_cut_failure => -[] /[subst1].
-      apply: IHA erefl.
-      
-      move: H1; rewrite expand_cut_failure => -[] /[subst1].
-    + by rewrite expand_cut_failure in  H1.
-  Qed.
-
-  Lemma cut_cut_same {a}: cut (cut a) = cut a.
-  Proof. 
-    elim: a => //=.
-    + by move=> ? H => //= s A H1; rewrite H H1.
-    + by move=> ? H ? H1 ? H2; rewrite H H2.
+    + move=> s s' ? B HA s2 AC B' /[subst1] -[] /[subst2].
+      apply: expanded_cut_fail HA.
+    + move=> s s1 r A B C HA NA HR IH s' D E /[subst2].
+      apply: IH.
   Qed.
 
   Lemma run_and_complete {s s' C A B0 B} :

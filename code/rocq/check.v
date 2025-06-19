@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import det.
+From det Require Import lang.
 
 Module check (U:Unif).
   Module Run := Run(AxiomUnif).

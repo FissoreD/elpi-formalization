@@ -1,10 +1,10 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import det.
+From det Require Import lang.
 
 
 Module Test1.
 
-  Module U <: det.Unif.
+  Module U <: Unif.
     Definition unify    (t1 t2 : Tm) (s : Sigma) :=
       match t1, t2 with
       | Code (v X), _ => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t2 else s.(sigma) x) |} | Some t => if t == t2 then Some s else None end

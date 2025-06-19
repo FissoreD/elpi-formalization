@@ -179,7 +179,7 @@ Module Run (U : Unif).
     | KO => KO
     | Bot => KO
     | Goal _ _ | Top => KO
-    | And A B0 B => And (cut A) (cut B) (cut B)
+    | And A B0 B => And (cut A) B0 (cut B)
     | Or A s B => Or (cut A) s (cut B)
     end.
 
@@ -318,7 +318,7 @@ Module Run (U : Unif).
 
   Lemma simpl_expand_or_fail {s s1 A B C} :
     expand s1 (Or A s B) = Failure C -> 
-      exists A' B', expand s1 A = Failure A' /\ C = Or A' s B'.
+      exists A', expand s1 A = Failure A' /\ C = Or A' s B.
   Proof. by move=> /=; case X: expand => //= -[] /[subst1]; do 2 eexists. Qed.
 
   Lemma simpl_expand_or_expanded {s s1 A B C} :
@@ -402,6 +402,13 @@ Module Run (U : Unif).
     + move=> A IHA B IHB C IHC s1 /simpl_expand_and_cut [].
       + by move=> [A' [H]] /[subst1].
       + by move=> [s'[A'[B' [HA[HB]]]]] /[subst1].
+  Qed.
+
+  Lemma cut_cut_same {a}: cut (cut a) = cut a.
+  Proof. 
+    elim: a => //=.
+    + by move=> ? H => //= s A H1; rewrite H H1.
+    + by move=> ? H ? H1 ? H2; rewrite H H2.
   Qed.
 
 End Run.
