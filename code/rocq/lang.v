@@ -260,7 +260,7 @@ Module Run (U : Unif).
     | And A B0 B => 
       match next_alt_aux true s B, next_alt_aux true s A with
       | None, None => None
-      | None, Some (s, A) => Some (s, And A B0 B0) (* B0 è un grande and di ATOMI *)
+      | None, Some (s, A) => Some (s, And A B0 (if B == cut B then B else B0)) (* B0 è un grande and di ATOMI *)
       | Some (s, B), _ => Some (s, And A B0 B)
       end
     | Or A sB B => (* NOTE: B is a BIG_OR of BIG_AND of ATOM | Top, i.e. it is never been explored *)
