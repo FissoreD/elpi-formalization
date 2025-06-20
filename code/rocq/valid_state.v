@@ -10,7 +10,7 @@ Module valid_state (U:Unif).
     | KO | OK => true
     | Top | Goal _ _ | Bot => false
     | And l _ r => full_expanded l && full_expanded r
-    | Or l s r => full_expanded l
+    | Or l s r => full_expanded l && full_expanded r
     end.
 
   Fixpoint some_expanded (s : state) :=
@@ -52,11 +52,24 @@ Module valid_state (U:Unif).
   | expandedP_cut {s s' A B}   : F A -> F B -> expand s A = CutBrothers B -> expandedP s B s' -> expandedP s A s'
   | expandedP_step {s s' A B}  : F A -> F B -> expand s A = Expanded B    -> expandedP s B s' -> expandedP s A s'.
 
+  Inductive runP (F : state -> bool) : Sigma -> state -> run_res -> Prop :=
+    | runP_done {s s' A B}            : F A -> F B -> expandedP F s A (Done s' B) -> runP s A (Done s' B)
+    | runP_fail {s A B}               : F A -> F B -> expandedP F s A (Failed B) -> next_alt s B = None -> runP s A (Failed B)
+    | runP_backtrack {s s' s'' A B C} : F A -> F B -> expandedP F s A (Failed B) -> next_alt s B = Some (s', C) ->  runP s' C s'' -> runP s A s''.
+
   Lemma full_expanded_cut A: full_expanded (cut A).
-  Proof. by elim: A => //; move=> A HA B HB C HC => //=; rewrite HA HC. Qed.
+  Proof. 
+    elim: A => //.
+    + by move=> A HA s B HB //=; rewrite HA HB.
+    + by move=> A HA B HB C HC => //=; rewrite HA HC.
+  Qed.
 
   Lemma full_expanded_some_expanded {A} : full_expanded A -> some_expanded A.
-  Proof. by elim: A => // A HA B HB C HC /= /andP [] HV _; rewrite (HA HV). Qed.
+  Proof.
+    elim: A => //.
+    + by move=> A HA s B HB //= /andP [] /HA.
+    + by move=> A HA B HB C HC /= /andP [] HV _; rewrite (HA HV). 
+  Qed.
 
   Lemma valid_cut_cut {B}: valid_state (cut B).
   Proof. 
@@ -70,7 +83,8 @@ Module valid_state (U:Unif).
   Proof.
     elim: A s s' B => //; clear.
     + by move=> s s' B; rewrite /expand => -[] /[subst2].
-    + move=> A HA s B HB s1 s2 C /simpl_expand_or_solved [A' [HA']] /[subst1] //= FA; apply: HA HA' FA.
+    + move=> A HA s B HB s1 s2 C /simpl_expand_or_solved [A' [HA']] /[subst1] //= /andP [].
+      by move=> /(HA _ _ _ HA') -> ->.
     + move=> A HA A0 _ B HB s s' C /simpl_expand_and_solved [s2 [A' [B' [EA [EB]]]]] /[subst1] /= /andP [FA FB].
       by rewrite (HA _ _ _ EA FA) (HB _ _ _ EB FB).
   Qed.
@@ -79,7 +93,7 @@ Module valid_state (U:Unif).
   Proof.
     elim: A s B => //; clear.
     + by move=> s B; rewrite /expand => -[] /[subst2].
-    + move=> A HA s B HB s1 C /simpl_expand_or_fail [A' [HA']] /[subst1] //= FA; apply: HA HA' FA.
+    + by move=> A HA s B HB s1 C /simpl_expand_or_fail [A' [HA']] /[subst1] //= /andP [] /(HA _ _ HA') -> ->.
     + move=> A HA A0 _ B HB s C /simpl_expand_and_fail [].
       + move=> [A' [EA]] /[subst1] /= /andP [FA FB].
         by rewrite (HA _ _ EA FA) FB.
@@ -310,8 +324,9 @@ Module valid_state (U:Unif).
   Proof.
     elim: A A' s1 => //.
     + move=> A HA s B HB A' ? /simpl_expand_or_expanded [].
-      + by move=> [A2 [H]] /[subst1] //= /(HA _ _ H).
-      + by move=> [A2 [H]] /[subst1] //= /(full_expanded_cb H) ->.
+      + by move=> [A2 [H]] /[subst1] //= /andP [] /(HA _ _ H) -> ->.
+      + move=> [A2 [H]] /[subst1] //= /andP [] /(full_expanded_cb H) ->.
+        by rewrite full_expanded_cut.
     + move=> A HA B0 HB0 C HC D s /simpl_expand_and_expanded [].
       + by move=> [A2[H]] /[subst1] /= /andP [] /(HA _ _ H) -> ->.
       + by move=> [s1[A1[A2[H[H1]]]]] /[subst1] /= /andP [] /(full_expanded_solved H) -> /(HC _ _ H1) ->.
@@ -350,7 +365,7 @@ Module valid_state (U:Unif).
         + by move=> /andP [] _ /base_and_valid /(IHB _ _ HB) H; rewrite H.
   Qed.
 
-  Lemma runP_run {s A r}:
+  Lemma expandedP_expanded {s A r}:
     valid_state A -> expanded s A r -> expandedP valid_state s A r.
   Proof.
     move=> + H; elim H; clear.
@@ -366,6 +381,76 @@ Module valid_state (U:Unif).
     + move=> s s' A B HA HB IH VA.
       have VB:= valid_state_expanded HA VA.
       apply: expandedP_step (VA) VB (HA) (IH VB).
+  Qed.
+
+  Lemma valid_state_expanded_done {s1 s2 A B}:
+    valid_state A ->  expanded s1 A (Done s2 B) -> valid_state B.
+  Proof.
+    remember (Done _ _) as D eqn:HD => + H.
+    elim: H s2 B HD => //; clear.
+    + move=> s1 s2 A B HA s3 C [] /[subst2].
+      apply: valid_state_solved HA.
+    + move=> s1 s2 A B HA HB + s3 C ? /(valid_state_cb HA) VB /[subst].
+      by move=> /(_ _ _ erefl VB).
+    + move=> s1 s2 A B HA HB + s3 C ? /(valid_state_expanded HA) VB /[subst].
+      by move=> /(_ _ _ erefl VB).
+  Qed.
+
+  Lemma valid_state_expanded_failed {s1 A B}:
+    valid_state A ->  expanded s1 A (Failed B) -> valid_state B.
+  Proof.
+    remember (Failed _) as D eqn:HD => + H.
+    elim: H B HD => //; clear.
+    + move=> s1 A B HA s3 [] /[subst1].
+      apply: valid_state_failure HA.
+    + move=> s1 s2 A B HA HB + C ? /(valid_state_cb HA) VB /[subst].
+      by move=> /(_ _ erefl VB).
+    + move=> s1 s2 A B HA HB + C ? /(valid_state_expanded HA) VB /[subst].
+      by move=> /(_ _ erefl VB).
+  Qed.
+  
+  (* Lemma full_expanded_next_alt_aux {b s1 s2 A B}:
+    full_expanded A -> next_alt_aux b s1 A = Some (s2, B) -> full_expanded B.
+  Proof.
+    elim: A b s1 s2 B => //.
+    + move=> A HA s B HB b s1 s2 C /= /andP [] FA FB.
+      by case NA: next_alt_aux => [[ ] | ] [] /[subst2] /=; rewrite ?FB// (HA _ _ _ _ FA NA).
+    + move=> A HA B0 HB0 B HB b s1 s2 C /=/andP [] FA FB.
+      case NB: next_alt_aux => [[  ] | ].
+      + by move=> [] /[subst2] /=; move: (HB _ _ _ _ FB NB) ->; rewrite FA.
+      + case NA: next_alt_aux => // [[]] [] /[subst2] /=.
+        rewrite (HA _ _ _ _ FA NA).
+        case X: eq_op.
+        move: X => /eqP ->; rewrite fulle. *)
+
+  Lemma valid_state_next_alt {s s' b A B} : next_alt_aux b s A = Some (s', B) -> valid_state A -> valid_state B.
+  Proof.
+    elim: A b s s' B => //.
+    + by move=> [] ??? // [] /[subst2].
+    + by move=> [] ??? // [] /[subst2].
+    + by move=> ? [|?] [] // ??? -[] /[subst2].
+    + move=> A HA s B HB b s1 s2 C /=.
+      case F: next_alt_aux => [[ ]| ] [] /[subst2].
+  Admitted.
+
+
+  Lemma runP_run {s A r}:
+    valid_state A -> run s A r -> runP valid_state s A r.
+  Proof.
+    move=> + H; elim H; clear.
+    + move=> s1 s2 A B EA VA.
+      have:= expandedP_expanded VA EA => H.
+      have ?:= valid_state_expanded_done VA EA.
+      apply: runP_done => //.
+    + move=> s A B HA HB VA.
+      have:= expandedP_expanded VA HA => H.
+      have VS := valid_state_expanded_failed VA HA.
+      apply: runP_fail => //.
+    + move=> s s' r A B C HA HB HC IH VA.
+      have EA := expandedP_expanded VA HA.
+      have VB := valid_state_expanded_failed VA HA.
+      have NA := valid_state_next_alt HB VB.
+      apply: runP_backtrack VA VB EA HB (IH NA).
   Qed.
 
 End valid_state.

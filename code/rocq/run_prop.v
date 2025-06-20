@@ -152,13 +152,6 @@ Module RunP (A: Unif).
 
   Axiom classic : forall P : Prop, P \/ ~ P.
 
-  Lemma failed_cut {A}: failed (cut A).
-  Proof.
-    elim: A => //=.
-    + by move=> A HA _ B HB; rewrite HA HB.
-    + by move=> A HA B HB C HC; rewrite HA.
-  Qed.
-
   Lemma next_alt_cut {b s s' A B}: next_alt_aux b s (cut A) = Some (s', B) -> exists A, B = cut A.
   Proof.
     elim: A b B s s' => //=; clear.
@@ -269,8 +262,12 @@ Module RunP (A: Unif).
       apply: HA HD.
   Qed.
 
-  Lemma expanded_cut1 {s A' s3}: expanded s A' (Done s3 (cut A')) -> False.
+  Lemma expanded_cut1 {s1 s2 A}: expanded s1 A (Done s2 (cut A)) -> False.
   Proof.
+    (* elim: A s1 s2 => //=; try by move=> s1 s2; inversion 1. 
+    + move=> p [].
+    + move=> s1 s2; inversion 1 => //.
+    + move=> s1 s2; inversion 1 => //. *)
   Admitted.
 
   Lemma xxx {s1 E}: expand s1 E = Expanded (cut E) -> E = cut E \/ (exists pr s t, E = Goal pr (Call t) /\ F pr t s = [::]).

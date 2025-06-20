@@ -238,6 +238,13 @@ Module Run (U : Unif).
     | Or A _ B => failed A && failed B
     end.
 
+  Lemma failed_cut {A}: failed (cut A).
+  Proof.
+    elim: A => //=.
+    + by move=> A HA _ B HB; rewrite HA HB.
+    + by move=> A HA B HB C HC; rewrite HA.
+  Qed.
+
   Fixpoint success (A : state) : bool :=
     match A with
     | OK => true
