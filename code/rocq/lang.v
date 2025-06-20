@@ -197,8 +197,8 @@ Module Run (U : Unif).
 
   Definition big_or pr s t :=
     let l := F pr t s in
-    if l is (s,r) :: xs then (Or Bot s (big_or_aux pr r xs))
-    else Bot.
+    if l is (s,r) :: xs then (Or KO s (big_or_aux pr r xs))
+    else KO.
 
   Fixpoint expand s (A :state) : expand_res :=
     match A with
