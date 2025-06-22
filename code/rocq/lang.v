@@ -179,7 +179,7 @@ Module Run (U : Unif).
     | KO => KO
     | Bot => KO
     | Goal _ _ | Top => KO
-    | And A B0 B => And (cut A) B0 (cut B)
+    | And A B0 B => And (cut A) (cut B0) (cut B)
     | Or A s B => Or (cut A) s (cut B)
     end.
 
@@ -230,35 +230,29 @@ Module Run (U : Unif).
     end
   .
 
-  Fixpoint failed (A : state) : bool :=
-    match A with
-    | KO => true
-    | Top | Bot | Goal _ _ | OK => false
-    | And A _ B => failed A || failed B
-    | Or A _ B => failed A && failed B
-    end.
-
-  Lemma failed_cut {A}: failed (cut A).
-  Proof.
-    elim: A => //=.
-    + by move=> A HA _ B HB; rewrite HA HB.
-    + by move=> A HA B HB C HC; rewrite HA.
-  Qed.
-
-  Fixpoint success (A : state) : bool :=
-    match A with
-    | OK => true
-    | Top | Bot | Goal _ _ | KO => false
-    | And A _ B => success A && success B
-    | Or A _ B => success A || success B
-    end.
-
   Fixpoint reset (A : state) :=
     match A with
     | KO | OK | Top | Bot | Goal _ _ => A
     | And A B0 B => And (reset A) B0 B0
     | Or A s B => Or (reset A) s (reset B)
     end.
+
+  Fixpoint success (A : state) : bool :=
+    match A with
+    | OK => true
+    | Top | Bot | Goal _ _ | KO => false
+    | And A _ B => success A && success B
+    | Or A _ B => success A (*|| (failed A && success B)*)
+    end.
+
+  Fixpoint failed (A : state) : bool :=
+    match A with
+    | KO => true
+    | Top | Bot | Goal _ _ | OK => false
+    | And A _ B => failed A || (success A && failed B)
+    | Or A _ B => failed A (*&& failed B*)
+    end.
+
 
   Fixpoint next_alt_aux inAnd (s : Sigma) (A : state) : option (Sigma * state) :=
     match A with
@@ -272,7 +266,7 @@ Module Run (U : Unif).
       end
     | Or A sB B => (* NOTE: B is a BIG_OR of BIG_AND of ATOM | Top, i.e. it is never been explored *)
         match next_alt_aux false s A with
-        | None =>  Some (sB, B)
+        | None => if failed B then next_alt_aux false sB B else Some (sB, B)
         | Some (sA, A) => Some (sA, Or A sB B)
         end
     end.
@@ -343,15 +337,15 @@ Module Run (U : Unif).
       + by move=> [] /[subst1]; right; right; right; do 2 eexists. *)
   Qed.
 
-  Lemma simpl_expand_and_solved {s s2 L R0 R K} :
-    expand s (And L R0 R) = Solved s2 K -> 
-      exists s' L' R', 
-        expand s L = Solved s' L' /\
-          expand s' R = Solved s2 R' /\ And L' R0 R' = K.
+  Lemma simpl_expand_and_solved {s s2 A B0 B C} :
+    expand s (And A B0 B) = Solved s2 C -> 
+      exists s' A' B', 
+        expand s A = Solved s' A' /\
+          expand s' B = Solved s2 B' /\ And A' B0 B' = C.
   Proof.
-    move=> //=; case X: expand => //=.
-    case Y: expand => //=.
-    move=> [] /[subst2].
+    move=> //=; case X: expand => //= [s' A'].
+    case Y: expand => //= [s'' B'].
+    move=> [] /[subst1] /[subst1].
     by do 3 eexists; repeat split.
   Qed.
 
@@ -415,7 +409,7 @@ Module Run (U : Unif).
   Proof. 
     elim: a => //=.
     + by move=> ? H => //= s A H1; rewrite H H1.
-    + by move=> ? H ? H1 ? H2; rewrite H H2.
+    + by move=> ? H ? H1 ? H2; rewrite H H1 H2.
   Qed.
 
 End Run.
