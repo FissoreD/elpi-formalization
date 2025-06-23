@@ -273,7 +273,7 @@ Module Run (U : Unif).
   Inductive next_alt : Sigma -> state -> option (Sigma * state) -> Prop :=
     | next_alt0 {s A}: next_alt_aux false s A = None -> next_alt s A None
     | next_alt1 {s s1 A A1}: next_alt_aux false s A = Some (s1, A1) -> ~ failed A1 -> next_alt s A (Some (s1, A1))
-    | next_alt2 {s s1 s2 A A1 A2}: next_alt_aux false s A = Some (s1, A1) -> failed A1 -> next_alt_aux false s1 A1 = Some (s2, A2) -> next_alt s A (Some (s2, A2)).
+    | next_alt2 {s s1 s2 A A1 A2}: next_alt_aux false s A = Some (s1, A1) -> failed A1 -> next_alt s1 A1 (Some (s2, A2)) -> next_alt s A (Some (s2, A2)).
 
   (* Definition next_alt A := next_alt_aux false A. *)
 

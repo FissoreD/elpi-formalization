@@ -649,7 +649,7 @@ Module valid_state (U:Unif).
       by rewrite BB in HB; rewrite (HB _ _ _ isT NB).
   Qed.
 
-  Lemma next_alt_failed {b s1 s2 A B}: 
+  Lemma valid_state_next_alt_aux {b s1 s2 A B}: 
     valid_state A -> next_alt_aux b s1 A = Some (s2, B) 
     -> valid_state B.
   Proof.
@@ -663,9 +663,7 @@ Module valid_state (U:Unif).
     + move=> A HA B0 HB0 B HB b s1 s2 C.
       move=> /= /andP [] /andP [] /[dup] /base_and_base_and_ko_valid VB0 H VA.
       case SA: success.
-      (* case AND A B *)
-      + (* case success or failed A *)
-        move=> VB.
+      + move=> VB.
         case NB: next_alt_aux => [[ ]|].
         + by move=> [] /[subst2] /= ; rewrite VA (HB _ _ _ _ VB NB) SA H.
         + case NA: next_alt_aux => [[ ]|] // [] /[subst2] /=.
@@ -680,20 +678,15 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma valid_state_next_alt {s s' A B} : 
-    failed A ->
-    next_alt s A (Some (s', B)) -> valid_state A ->  valid_state B.
+    failed A -> next_alt s A (Some (s', B)) -> valid_state A ->  valid_state B.
   Proof.
     remember (Some _) as S eqn:HS.
     move=> + H; elim: H s' B HS => //; clear.
     + move=> s s2 A B' + FB s1 B [] /[subst2].
-      by move=> /next_alt_failed H1.
-       (* /H1 {}H1 /H1. *)
-    + move=> s s1 s2 A B C + FB HB s3 D [] /[subst2].
-      move=> /next_alt_failed H1.
-      move=> ?.
-      move=> /H1.
-       (* /H1 {}H1 /H1 /next_alt_failed H. *)
-      by move: HB => /next_alt_failed H /H.
+      by move=> /valid_state_next_alt_aux H1.
+    + move=> s s1 s2 A B C NA FB NB IH s3 D [] /[subst2] FA VA.
+      have VB:= valid_state_next_alt_aux VA NA.
+      apply: IH erefl FB VB.
   Qed.
 
   Lemma runP_run {s A r}:
