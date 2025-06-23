@@ -207,8 +207,8 @@ Module Run (U : Unif).
     | KO => Failure KO
     
     (* lang *)
-    | Top              => Solved s OK
-    | Bot              => Failure KO
+    | Top              => Expanded OK
+    | Bot              => Expanded KO
     | Goal _ Cut       => CutBrothers OK
     | Goal pr (Call t) => Expanded (big_or pr s t)
 
@@ -253,25 +253,29 @@ Module Run (U : Unif).
     | Or A _ B => failed A (*&& failed B*)
     end.
 
-
   Fixpoint next_alt_aux inAnd (s : Sigma) (A : state) : option (Sigma * state) :=
     match A with
     | KO | OK => None
     | Top | Bot | Goal _ _ => if inAnd then None else Some (s, A)
-    | And A B0 B => 
+    | And A B0 B =>
       match next_alt_aux true s B, next_alt_aux true s A with
       | None, None => None
-      | None, Some (s, A) => Some (s, And A B0 (if B == cut B then B else B0)) (* B0 è un grande and di ATOMI *)
+      | None, Some (s, A) => Some (s, And A B0 B0) (* B0 è un grande and di ATOMI *)
       | Some (s, B), _ => Some (s, And A B0 B)
       end
     | Or A sB B => (* NOTE: B is a BIG_OR of BIG_AND of ATOM | Top, i.e. it is never been explored *)
         match next_alt_aux false s A with
-        | None => if failed B then next_alt_aux false sB B else Some (sB, B)
+        | None => Some (sB, B)
         | Some (sA, A) => Some (sA, Or A sB B)
         end
     end.
 
-  Definition next_alt A := next_alt_aux false A.
+  Inductive next_alt : Sigma -> state -> option (Sigma * state) -> Prop :=
+    | next_alt0 {s A}: next_alt_aux false s A = None -> next_alt s A None
+    | next_alt1 {s s1 A A1}: next_alt_aux false s A = Some (s1, A1) -> ~ failed A1 -> next_alt s A (Some (s1, A1))
+    | next_alt2 {s s1 s2 A A1 A2}: next_alt_aux false s A = Some (s1, A1) -> failed A1 -> next_alt_aux false s1 A1 = Some (s2, A2) -> next_alt s A (Some (s2, A2)).
+
+  (* Definition next_alt A := next_alt_aux false A. *)
 
   (* Lemma next_alt_failed_and {b A B0 B}:
     next_alt_aux b (And A B0 B) = None ->
@@ -301,8 +305,8 @@ Module Run (U : Unif).
 
   Inductive run : Sigma -> state -> run_res -> Prop :=
     | run_done {s s' A B}        : expanded s A (Done s' B) -> run s A (Done s' B)
-    | run_fail {s A B}           : expanded s A (Failed B) -> next_alt s B = None -> run s A (Failed B)
-    | run_backtrack {s s' s'' A B C} : expanded s A (Failed B) -> next_alt s B = Some (s', C) ->  run s' C s'' -> run s A s''.
+    | run_fail {s A B}           : expanded s A (Failed B) -> next_alt s B None -> run s A (Failed B)
+    | run_backtrack {s s' s'' A B C} : expanded s A (Failed B) -> next_alt s B (Some (s', C)) ->  run s' C s'' -> run s A s''.
 
 
   Lemma simpl_expand_or_solved {s s1 s2 A B C} :
