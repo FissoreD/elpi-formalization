@@ -1,8 +1,9 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
+From det Require Import run_prop.
 
 Module check (U:Unif).
-  Module Run := Run(AxiomUnif).
+  Module Run := Run(U).
   Import Run.
 
   Definition Gamma := V -> S.

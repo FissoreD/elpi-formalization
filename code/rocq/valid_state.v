@@ -3,7 +3,7 @@ From det Require Import lang.
 
 Module valid_state (U:Unif).
   Module Run := Run(U).
-  Import Run.
+  Include Run.
   
 
   Lemma failed_cut {A}: failed (cut A).
