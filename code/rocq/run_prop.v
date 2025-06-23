@@ -12,8 +12,8 @@ Module RunP (A: Unif).
 
   Inductive run_classic : Sigma -> state -> run_res -> Prop :=
     | run_classic_done {s s' A B}        : expanded_classic s A (Done s' B) -> run_classic s A (Done s' B)
-    | run_classic_fail {s A B}           : expanded_classic s A (Failed B) -> next_alt s B = None -> run_classic s A (Failed B)
-    | run_classic_backtrack {s s' s'' A B C} : expanded_classic s A (Failed B) -> next_alt s B = Some (s', C) ->  run_classic s' C s'' -> run_classic s A s''.
+    | run_classic_fail {s A B}           : expanded_classic s A (Failed B) -> next_alt s B None -> run_classic s A (Failed B)
+    | run_classic_backtrack {s s' s'' A B C} : expanded_classic s A (Failed B) -> next_alt s B (Some (s', C)) ->  run_classic s' C s'' -> run_classic s A s''.
 
   Lemma expanded_classic_expanded {s A r}:
     expanded_classic s A r -> expanded s A r.
@@ -62,15 +62,27 @@ Module RunP (A: Unif).
       inversion H2; subst; clear H2; try congruence; rewrite H0 => -[]?; subst; by auto.
   Qed.
 
+  Lemma next_alt_consistent {s A r1 r2}:
+    next_alt s A r1 -> next_alt s A r2 -> r1 = r2.
+  Proof.
+    move=> H; elim: H r2 => //; clear.
+    + move=> s A HA r H1; inversion H1; congruence.
+    + move=> s1 s2 A B HA F r1; inversion 1; congruence.
+    + move=> ??? ??? H FA NA IH ? H1; inversion H1; try congruence; subst.
+      by move: H0; rewrite H => -[] /[subst2]; auto.
+  Qed.
+
   Lemma run_consistent {s A r1 r2}:
     run s A r1 -> run s A r2 -> r1 = r2.
   Proof.
     move=> H; elim: H r2; clear.
     + move=> s s' A B H r2; inversion 1; subst; have:= expanded_consistent H H1; congruence.
-    + move=> s A B HA HB r; inversion 1; subst; have:= expanded_consistent HA H1; congruence.
-    + move=> ?????? H Hz ? IH ?; inversion 1; subst; have:= expanded_consistent H H1; try congruence.
-      move=> [] /[subst1]; apply: IH.
-      by move: H2; rewrite Hz => -[] /[subst2].
+    + move=> s A B HA HB r; inversion 1; subst; have:= expanded_consistent HA H1; try congruence.
+      move=> [] /[subst1].
+      by have:= next_alt_consistent HB H2.
+    + move=> ?????? H Hz ? IH ?; inversion 1; subst; have:= expanded_consistent H H1; try congruence; move=> [] /[subst1].
+      + by have:= next_alt_consistent Hz H2.
+      + by have:= next_alt_consistent Hz H2 => -[] /[subst2]; auto.
   Qed.
 
   Lemma simpl_next_alt_aux_and_none {s A B0 B}:
@@ -86,7 +98,7 @@ Module RunP (A: Unif).
   Lemma simpl_next_alt_and_some {s A B0 B r}:
     next_alt_aux true s (And A B0 B) = Some r -> 
     (exists s' B',  next_alt_aux true s B = Some (s', B') /\ r = (s', And A B0 B')) \/ 
-      (exists s' A', next_alt_aux true s B = None /\  next_alt_aux true s A = Some (s', A') /\ r = (s', And A' B0 ((if B == cut B then B else B0)))).
+      (exists s' A', next_alt_aux true s B = None /\  next_alt_aux true s A = Some (s', A') /\ r = (s', And A' B0 B0)).
   Proof.
     move=> //=; case X: next_alt_aux => [x|].
     + case: x X => S C H -[] /[subst1].
@@ -132,7 +144,7 @@ Module RunP (A: Unif).
       + move=> [] /[subst1].
         move: (HA _ _ G) => [B'] /[subst1].
         exists (cut (And B' B C)) => /=.
-        by rewrite 2!cut_cut_same.
+        by rewrite 3!cut_cut_same.
       + by move: (expand_cut_solved G).
   Qed.
 
@@ -146,7 +158,7 @@ Module RunP (A: Unif).
       + move=> [] /[subst1].
         move: (HA _ _ G) => [B'] /[subst1].
         exists (cut (And B' B C)) => /=.
-        by rewrite 2!cut_cut_same.
+        by rewrite 3!cut_cut_same.
       + by move: (expand_cut_solved G).
   Qed.
 
@@ -168,9 +180,8 @@ Module RunP (A: Unif).
         by exists (And A B0 B').
       + case H: next_alt_aux => [x|] //.
         case: x H => s2 A' NA -[] /[subst2].
-        rewrite cut_cut_same eq_refl.
         move: (HA _ _ _ _ NA) => [A2] /[subst1] //.
-        by exists (And A2 B0 B).
+        by exists (And A2 B0 B0).
   Qed.
 
   Lemma expanded_cut_done {s s' A B}:
@@ -206,6 +217,17 @@ Module RunP (A: Unif).
       by apply: IH.
   Qed.
 
+  Lemma next_alt_cut_some {s s1 A B}: next_alt s (cut A) (Some (s1, B)) -> False.
+  Proof.
+    remember (cut _) as C eqn:HC.
+    remember (Some _) as S eqn:HS => H.
+    elim: H s1 A B HC HS => //; clear.
+    + move=> s1 s2 A B H FB s3 C D /[subst1] -[] /[subst2].
+      admit.
+    + move=> s s1 s2 A B C HA FA HB s3 D E /[subst1] -[] /[subst2].
+
+  Admitted.
+
   Lemma run_cut_fail {s s' A altA} :
     run s (cut A) (Done s' altA) -> False.
   Proof.
@@ -215,15 +237,12 @@ Module RunP (A: Unif).
     + move=> s s' ? B HA s2 AC B' /[subst1] -[] /[subst2].
       apply: expanded_cut_done HA.
     + move=> s s1 r A B C + + HR IH s' D E /[subst2].
-      move=> /expanded_cut_fail [B'] /[subst1].
-      move=> /next_alt_cut [] ? /[subst1].
-      by apply: IH.
+      by move=> /expanded_cut_fail [B'] /[subst1] /next_alt_cut_some.
   Qed.
 
   Lemma expand_flow {s s1 s2 A B C}: expand s A = Solved s1 B -> expand s B = Solved s2 C -> B = C /\ s1 = s2.
   Proof.
     elim: A s s1 s2 B C; clear => //.
-    + by move=> s s1 s2 B C [] /[subst2] -[] /[subst2].
     + by move=> s s1 s2 B C [] /[subst2] -[] /[subst2].
     + by move=> p [].
     + move=> A HA s B HB s1 s2 s3 C D /simpl_expand_or_solved [E [HE]] /[subst1].
@@ -238,7 +257,6 @@ Module RunP (A: Unif).
   Lemma expand_flow_cut {s s1 A B C}: expand s A = Solved s1 B -> expand s B = CutBrothers C -> B = C.
   Proof.
     elim: A s s1 B C; clear => //.
-    + move=> s s1 B C [] /[subst2] //.
     + move=> s s1 B C [] /[subst2] //.
     + by move=> p [].
     + move=> A HA s B HB s1 s2 C D /simpl_expand_or_solved [E [HE]] /[subst1].
@@ -258,7 +276,7 @@ Module RunP (A: Unif).
     + move=> p [] //.
     + move=> A HA s B HB s1 s2 /simpl_expand_or_solved [C [HC]] [] /[subst2].
       apply: HA HC.
-    + move=> A HA B HB C HC s1 s2 /simpl_expand_and_solved [s3[D[E[HD[HE]]]]] [] /[subst2].
+    + move=> A HA B HB C HC s1 s2 /simpl_expand_and_solved [s3[D[E[HD[HE]]]]] [] /[subst2] /[subst1].
       apply: HA HD.
   Qed.
 
@@ -277,7 +295,6 @@ Module RunP (A: Unif).
   Lemma expand_flow_expanded {s s1 A B C}: expand s A = Solved s1 B -> expand s B = Expanded C -> (B = C).
   Proof.
     elim: A s s1 B C; clear => //.
-    + move=> s s1 B C [] /[subst2] //.
     + move=> s s1 B C [] /[subst2] //.
     + by move=> p [].
     + move=> A HA s B HB s1 s2 C D /simpl_expand_or_solved [E [HE]] /[subst1].
