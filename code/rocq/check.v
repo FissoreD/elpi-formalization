@@ -3,7 +3,7 @@ From det Require Import lang.
 From det Require Import run_prop.
 
 Module check (U:Unif).
-  Module Run := Run(U).
+  Module Run := RunP(U).
   Import Run.
 
   Definition Gamma := V -> S.
@@ -129,34 +129,43 @@ Module check (U:Unif).
 
   Definition is_det g := forall s s' alt,
     run s g (Done s' alt) ->
-      exists B, run s alt (Failed B) /\ next_alt s B = None.
+      next_alt s alt None.
 
   Lemma cut_is_det pr : is_det (Goal pr Cut).
   Proof. 
-    (* by move=> s s1 A /run_cut_simpl ->.  *)
+    move=> s s1 A; inversion 1; subst; simpl in *; try congruence.
+    + by rewrite (expanded_cut_simpl H4); apply: next_alt0.
+    + Search expanded Failed Cut.
   (* Qed. *)
   Admitted.
 
   Definition det_rule_cut (r : R) :=
     last Cut r.(premises) == Cut.
 
-  (* Lemma tail_cut_is_det a : 
+  Lemma tail_cut_is_det A :
     (forall pr, all det_rule_cut pr.(rules)) ->
-    valid_state a ->
-    is_det a.
+    valid_state A ->
+    is_det A.
   Proof.
     move=> AllCut VS s1 s2 alts.
-    move=> H; inversion H; subst; clear H.
-    - by move: (vs_expand H3 VS).
-    -   
-       admit. (* false because the conf is potentially not from SLD *)
-    - admit.
-    - 
-
-
-    remember (Done s2 alts) as r eqn:Hr.
-    move=> H.
-    elim: H s2 alts Hr => //=. clear -AllCut.
+    remember (Done _ _) as r eqn:Hr => H.
+    elim: H VS s2 alts Hr => //=; clear -AllCut.
+    + move=> s1 s2 A B EA VA s3 C [] /[subst2].
+      remember (Done _ _) as RD eqn:HRD.
+      elim: EA s3 C HRD VA; clear -AllCut => //.
+      + move=> s s1 A B HA s2 C [] /[subst2].
+        elim: A s s2 C HA => //; clear -AllCut.
+        + by move=> ??? [] /[subst2] _; apply: next_alt0.
+        + move=> ? [] //.
+        + move=> A HA s B HB s1 s2 C /simpl_expand_or_solved [A'[EA]] /[subst1] /=/andP[]VA.
+          have VA' := valid_state_solved EA VA.
+          have {}HA := HA _ _ _ (EA) (VA).
+          
+          move: (HA _ _ _ EA).
+          apply: next_alt0 => /=.
+        +
+      +
+      +
     move=> s s' A B He s'' C [] /[subst2].
     elim: A s s'' C He => //=.
     - by move=> ??? [_ <-].

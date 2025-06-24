@@ -148,27 +148,27 @@ Module Run (U : Unif).
   Notation "A ∨ B" := (Or A B) (at level 13000). *)
 
   Inductive expand_res :=
-    | Expanded    of state
-    | CutBrothers of state
+    | Expanded    of Sigma & state
+    | CutBrothers of Sigma & state
     | Failure     of state
     | Solved      of Sigma & state.
   derive expand_res.
   HB.instance Definition _ := hasDecEq.Build expand_res expand_res_eqb_OK.
 
 
-  Definition mkAnd A B0 r :=
+  Definition mkAnd (s: Sigma) A B0 r :=
     match r with
     | Failure B     => Failure     (And A B0 B)
-    | Expanded B    => Expanded    (And A B0 B)
-    | CutBrothers B => CutBrothers (And A B0 B)
+    | Expanded s B    => Expanded   s (And A B0 B)
+    | CutBrothers s B => CutBrothers s (And A B0 B)
     | Solved s B    => Solved s    (And A B0 B)
     end.
 
   Definition mkOr A sB er :=
     match er with
     | Failure B     => Failure  (Or A sB B)
-    | Expanded B    => Expanded (Or A sB B)
-    | CutBrothers B => Expanded (Or A sB B) (* for now this is the rightmost brother *)
+    | Expanded s B    => Expanded s (Or A sB B)
+    | CutBrothers s B => Expanded s (Or A sB B) (* for now this is the rightmost brother *)
     | Solved s B    => Solved s (Or A sB B)
     end.
 
@@ -207,24 +207,24 @@ Module Run (U : Unif).
     | KO => Failure KO
     
     (* lang *)
-    | Top              => Expanded OK
-    | Bot              => Expanded KO
-    | Goal _ Cut       => CutBrothers OK
-    | Goal pr (Call t) => Expanded (big_or pr s t)
+    | Top              => Expanded s OK
+    | Bot              => Expanded s KO
+    | Goal _ Cut       => CutBrothers s OK
+    | Goal pr (Call t) => Expanded s (big_or pr s t)
 
     (* recursive cases *)
     | Or A sB B =>
         match expand s A with
-        | Solved s A    => Solved s  (Or A sB B)
-        | Expanded A    => Expanded  (Or A sB B)
-        | CutBrothers A => Expanded  (Or A sB (cut B))
-        | Failure A     => Failure   (Or A sB B)
+        | Solved s A    => Solved s      (Or A sB B)
+        | Expanded s A    => Expanded s  (Or A sB B)
+        | CutBrothers s A => Expanded s  (Or A sB (cut B))
+        | Failure A     => Failure       (Or A sB B)
         end
     | And A B0 B =>
         match expand s A with
-        | Solved s1 A   => mkAnd A B0   (expand s1 B)
-        | Expanded A    => Expanded     (And A B0 B)
-        | CutBrothers A => CutBrothers  (And A B0 B)
+        | Solved s1 A   => mkAnd s1 A B0   (expand s1 B)
+        | Expanded s A    => Expanded s    (And A B0 B)
+        | CutBrothers s A => CutBrothers s  (And A B0 B)
         | Failure A     => Failure      (And A B0 B)
         end
     end
@@ -273,24 +273,7 @@ Module Run (U : Unif).
   Inductive next_alt : Sigma -> state -> option (Sigma * state) -> Prop :=
     | next_alt0 {s A}: next_alt_aux false s A = None -> next_alt s A None
     | next_alt1 {s s1 A A1}: next_alt_aux false s A = Some (s1, A1) -> ~ failed A1 -> next_alt s A (Some (s1, A1))
-    | next_alt2 {s s1 s2 A A1 A2}: next_alt_aux false s A = Some (s1, A1) -> failed A1 -> next_alt s1 A1 (Some (s2, A2)) -> next_alt s A (Some (s2, A2)).
-
-  (* Definition next_alt A := next_alt_aux false A. *)
-
-  (* Lemma next_alt_failed_and {b A B0 B}:
-    next_alt_aux b (And A B0 B) = None ->
-      next_alt_aux true A = None /\ next_alt_aux true B = None.
-  Proof.
-    case: A; try by move=> //=; case: next_alt_aux.
-    + move=> A s C //=.
-      case NA: next_alt_aux => //.
-      case F: next_alt_aux => //.
-      case F1: next_alt_aux => //.
-    + move=> A C D //=.
-      case NE: next_alt_aux => //.
-      case NC: next_alt_aux => //.
-      case NA: next_alt_aux => //.
-  Qed. *)
+    | next_alt2 {s s1 r A A1}: next_alt_aux false s A = Some (s1, A1) -> failed A1 -> next_alt s1 A1 r -> next_alt s A r.
 
   Inductive run_res := Done of Sigma & state | Failed of state.
   derive run_res.
@@ -298,10 +281,10 @@ Module Run (U : Unif).
 
 
   Inductive expanded : Sigma -> state -> run_res -> Prop :=
-    | expanded_done {s s' A alt}   : expand s A = Solved s' alt  -> expanded s A (Done s' alt)
-    | expanded_fail {s A B}        : expand s A = Failure B -> expanded s A (Failed B)
-    | expanded_cut {s s' A B}      : expand s A = CutBrothers B -> expanded s B s' -> expanded s A s'
-    | expanded_step {s s' A B}     : expand s A = Expanded B  -> expanded s B s' -> expanded s A s'.
+    | expanded_done {s s' A alt}     : expand s A = Solved s' alt  -> expanded s A (Done s' alt)
+    | expanded_fail {s A B}          : expand s A = Failure B -> expanded s A (Failed B)
+    | expanded_cut {s s' r A B}      : expand s A = CutBrothers s' B -> expanded s' B r -> expanded s A r
+    | expanded_step {s s' r A B}     : expand s A = Expanded s' B  -> expanded s' B r -> expanded s A r.
 
   Inductive run : Sigma -> state -> run_res -> Prop :=
     | run_done {s s' A B}        : expanded s A (Done s' B) -> run s A (Done s' B)
@@ -317,8 +300,8 @@ Module Run (U : Unif).
     by eexists; split.
   Qed.
 
-  Lemma simpl_expand_or_cut {s s1 A B C} :
-    expand s1 (Or A s B) = CutBrothers C -> False.
+  Lemma simpl_expand_or_cut {s s1 s2 A B C} :
+    expand s1 (Or A s B) = CutBrothers s2 C -> False.
   Proof. move=> /=; case X: expand => //=; case Y: expand => //=. Qed.
 
   Lemma simpl_expand_or_fail {s s1 A B C} :
@@ -326,19 +309,14 @@ Module Run (U : Unif).
       exists A', expand s1 A = Failure A' /\ C = Or A' s B.
   Proof. by move=> /=; case X: expand => //= -[] /[subst1]; do 2 eexists. Qed.
 
-  Lemma simpl_expand_or_expanded {s s1 A B C} :
-    expand s1 (Or A s B) = Expanded C ->
-      (exists A', expand s1 A = Expanded A' /\ C = Or A' s B) \/ 
-      (exists A', expand s1 A = CutBrothers A' /\ C = Or A' s (cut B)).
-      (* (exists A' B', expand s1 A = Failure A' /\ expand s B = Expanded B' /\ Or A' s B' = C) \/
-      (exists A' B', expand s1 A = Failure A' /\ expand s B = CutBrothers B' /\ Or A' s B' = C). *)
+  Lemma simpl_expand_or_expanded {s s1 s2 A B C} :
+    expand s1 (Or A s B) = Expanded s2 C ->
+      (exists A', expand s1 A = Expanded s2 A' /\ Or A' s B = C) \/ 
+      (exists A', expand s1 A = CutBrothers s2 A' /\ C = Or A' s (cut B)).
   Proof.
     move=> /=; case X: expand => //=.
-    + by move=> [] ?; left; eexists.
+    + by move=> [] ?; left; eexists; split; subst.
     + by move=> [] /[subst1]; right; eexists.
-    (* + case Y: expand => //=.
-      + by move=> [] /[subst1]; right; right; left; do 2 eexists.
-      + by move=> [] /[subst1]; right; right; right; do 2 eexists. *)
   Qed.
 
   Lemma simpl_expand_and_solved {s s2 A B0 B C} :
@@ -363,26 +341,27 @@ Module Run (U : Unif).
     - by case Y: expand => //= -[] /[subst1]; right; do 3 eexists => //=; repeat split.
   Qed.
 
-  Lemma simpl_expand_and_cut {s A B B0 C}:
-    expand s (And A B0 B) = CutBrothers C ->
-    (exists A', expand s A = CutBrothers A' /\ C = And A' B0 B ) \/
-      (exists s' A' B', expand s A = Solved s' A' /\ expand s' B = CutBrothers B' /\ C = And A' B0 B').
+  Lemma simpl_expand_and_cut {s s2 A B B0 C}:
+    expand s (And A B0 B) = CutBrothers s2 C ->
+    (exists A', expand s A = CutBrothers s2 A' /\ C = And A' B0 B ) \/
+      (exists s' A' B', expand s A = Solved s' A' /\ expand s' B = CutBrothers s2 B' /\ C = And A' B0 B').
   Proof.
     move=> //=; case X: expand => //=.
     + by move=> [] /[subst1]; left; eexists.
-    + case Y: expand => //= -[] /[subst1]; right.
-      by do 3 eexists; repeat split => //=.
+    + case Y: expand => //= -[] /[subst1]; right; subst.
+       do 3 eexists; repeat split => //=.
+       apply Y.
   Qed.
 
-  Lemma simpl_expand_and_expanded {s A B B0 C}:
-    expand s (And A B0 B) = Expanded C ->
-    (exists A', expand s A = Expanded A' /\ C = And A' B0 B ) \/
-      (exists s' A' B', expand s A = Solved s' A' /\ expand s' B = Expanded B' /\ C = And A' B0 B').
+  Lemma simpl_expand_and_expanded {s s2 A B B0 C}:
+    expand s (And A B0 B) = Expanded s2 C ->
+    (exists A', expand s A = Expanded s2 A' /\ C = And A' B0 B ) \/
+      (exists s' A' B', expand s A = Solved s' A' /\ expand s' B = Expanded s2 B' /\ C = And A' B0 B').
   Proof.
     move=> /=; case X: expand => //=.
     + by move=> [] /[subst1]; left; eexists.
-    + case Y: expand => //= -[] /[subst1]; right.
-      by do 3 eexists; repeat split => //=.
+    + case Y: expand => //= -[] /[subst1]; right; subst.
+      do 3 eexists; repeat split => //=; eassumption.
   Qed.
 
   (* Lemma expand_solved_ok {s1 s2 A}:
@@ -396,8 +375,8 @@ Module Run (U : Unif).
     + by move=> A IHA B IHB s1 s2 /simpl_expand_and_solved [s' [A' [B' [H1 [H2]]]]].
   Qed. *)
 
-  Lemma expand_cb_OK {s1 A}:
-    expand s1 A = CutBrothers OK -> (exists p, A = Goal p Cut).
+  Lemma expand_cb_OK {s1 s2 A}:
+    expand s1 A = CutBrothers s2 OK -> (exists p, A = Goal p Cut).
   Proof.
     elim: A s1 => //.
     + move=> p [].
