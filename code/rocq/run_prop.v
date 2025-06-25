@@ -69,7 +69,7 @@ Module RunP (A: Unif).
     move=> H; elim: H r2 => //; clear.
     + move=> s A HA r H1; inversion H1; congruence.
     + move=> s1 s2 A B HA F r1; inversion 1; congruence.
-    + move=> ??? ??? H FA NA IH ? H1; inversion H1; try congruence; subst.
+    + move=> ??? ?? H FA NA IH ? H1; inversion H1; try congruence; subst.
       by move: H0; rewrite H => -[] /[subst2]; auto.
   Qed.
 
@@ -225,8 +225,8 @@ Module RunP (A: Unif).
     elim: H s1 A B HC HS => //; clear.
     + move=> s1 s2 A B + FB s3 C D ? -[] ??; subst => /next_alt_cut [A' H]; subst.
       by rewrite failed_cut in FB.
-    + move=> s s1 s2 A B C HA FA HB IH s3 D E /[subst1] -[] /[subst2].
-      have:= next_alt_cut HA => -[B'] /[subst1].
+    + move=> s s1 ? A B NA FA NB IH ??? /[subst2].
+      have:= next_alt_cut NA => -[B'] /[subst1].
       apply: IH erefl erefl.
   Qed.
 
