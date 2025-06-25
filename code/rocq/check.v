@@ -134,7 +134,7 @@ Module check (U:Unif).
   Lemma cut_is_det pr : is_det (Goal pr Cut).
   Proof. 
     move=> s s1 A; inversion 1; subst; simpl in *; try congruence.
-    + by rewrite (expanded_cut_simpl H4); apply: next_alt0.
+    + by rewrite (expanded_cut_simpl H4); apply: next_alt_ko.
     + Search expanded Failed Cut.
   (* Qed. *)
   Admitted.
@@ -155,14 +155,14 @@ Module check (U:Unif).
       elim: EA s3 C HRD VA; clear -AllCut => //.
       + move=> s s1 A B HA s2 C [] /[subst2].
         elim: A s s2 C HA => //; clear -AllCut.
-        + by move=> ??? [] /[subst2] _; apply: next_alt0.
+        + by move=> ??? [] /[subst2] _; apply: next_alt_ko.
         + move=> ? [] //.
         + move=> A HA s B HB s1 s2 C /simpl_expand_or_solved [A'[EA]] /[subst1] /=/andP[]VA.
           have VA' := valid_state_solved EA VA.
           have {}HA := HA _ _ _ (EA) (VA).
           
-          move: (HA _ _ _ EA).
-          apply: next_alt0 => /=.
+          (* move: (HA _ _ _ EA).
+          apply: next_alt_ko => /=.
         +
       +
       +
@@ -177,8 +177,7 @@ Module check (U:Unif).
         apply: IHB Y.
       + move=> [] /[subst2].
         move: (IHA _ _ _ X) => {}IHA //=.
-        rewrite IHA.
-
-Qed. *)
+        rewrite IHA. *)
+  Admitted.
 
 End check.

@@ -271,9 +271,9 @@ Module Run (U : Unif).
     end.
 
   Inductive next_alt : Sigma -> state -> option (Sigma * state) -> Prop :=
-    | next_alt0 {s A}: next_alt_aux false s A = None -> next_alt s A None
-    | next_alt1 {s s1 A A1}: next_alt_aux false s A = Some (s1, A1) -> ~ failed A1 -> next_alt s A (Some (s1, A1))
-    | next_alt2 {s s1 r A A1}: next_alt_aux false s A = Some (s1, A1) -> failed A1 -> next_alt s1 A1 r -> next_alt s A r.
+    | next_alt_ko {s A}: next_alt_aux false s A = None -> next_alt s A None
+    | next_alt_ok {s s1 A A1}: next_alt_aux false s A = Some (s1, A1) -> ~ failed A1 -> next_alt s A (Some (s1, A1))
+    | next_alt_step {s s1 r A A1}: next_alt_aux false s A = Some (s1, A1) -> failed A1 -> next_alt s1 A1 r -> next_alt s A r.
 
   Inductive run_res := Done of Sigma & state | Failed of state.
   derive run_res.
