@@ -483,17 +483,17 @@ Module valid_state (U:Unif).
   Lemma expandedP_expanded {s A r}:
     valid_state A -> expanded s A r -> expandedP valid_state s A r.
   Proof.
-    move=> + H; elim H; clear.
+    move=> + [b H]; elim H; clear.
     + move=> s1 s2 A1 A2 EA VA.
       apply: expandedP_done => //.
       apply: valid_state_solved EA VA.
     + move=> s A B HA HB.
       apply: expandedP_fail => //.
       apply: valid_state_failure HA HB.
-    + move=> s s' r A B HA HB IH VA.
+    + move=> s s' r A B b HA HB IH VA.
       have VB:= valid_state_cb HA VA.
       apply: expandedP_cut (VA) VB (HA) (IH VB).
-    + move=> s s' r A B HA HB IH VA.
+    + move=> s s' r A B b HA HB IH VA.
       have VB:= valid_state_expanded HA VA.
       apply: expandedP_step (VA) VB (HA) (IH VB).
   Qed.
@@ -501,33 +501,33 @@ Module valid_state (U:Unif).
   Lemma valid_state_expanded_done {s1 s2 A B}:
     valid_state A ->  expanded s1 A (Done s2 B) -> valid_state B.
   Proof.
-    remember (Done _ _) as D eqn:HD => + H.
+    remember (Done _ _) as D eqn:HD => + [b H].
     elim: H s2 B HD => //; clear.
     + move=> s1 s2 A B HA s3 C [] /[subst2].
       apply: valid_state_solved HA.
-    + move=> s1 s2 r A B HA HB + s3 C ? /(valid_state_cb HA) VB /[subst].
+    + move=> s1 s2 r A B b HA HB + s3 C ? /(valid_state_cb HA) VB /[subst].
       by move=> /(_ _ _ erefl VB).
-    + move=> s1 s2 r A B HA HB + s3 C ? /(valid_state_expanded HA) VB /[subst].
+    + move=> s1 s2 r A B b HA HB + s3 C ? /(valid_state_expanded HA) VB /[subst].
       by move=> /(_ _ _ erefl VB).
   Qed.
 
   Lemma valid_state_expanded_valid_state {s1 A B}:
     valid_state A ->  expanded s1 A (Failed B) -> valid_state B.
   Proof.
-    remember (Failed _) as D eqn:HD => + H.
+    remember (Failed _) as D eqn:HD => + [b H].
     elim: H B HD => //; clear.
     + move=> s1 A B HA s3 [] /[subst1].
       apply: valid_state_failure HA.
-    + move=> s1 s2 r A B HA HB + C ? /(valid_state_cb HA) VB /[subst].
+    + move=> s1 s2 r A B b HA HB + C ? /(valid_state_cb HA) VB /[subst].
       by move=> /(_ _ erefl VB).
-    + move=> s1 s2 r A B HA HB + C ? /(valid_state_expanded HA) VB /[subst].
+    + move=> s1 s2 r A B b HA HB + C ? /(valid_state_expanded HA) VB /[subst].
       by move=> /(_ _ erefl VB).
   Qed.
 
   Lemma valid_state_expanded_failed {s A B}:
     valid_state A -> expanded s A (Failed B) -> failed B.
   Proof.
-    remember (Failed _) as F eqn:HF => + H.
+    remember (Failed _) as F eqn:HF => + [b H].
     elim: H B HF; clear => //.
     + move=> s A B H ? [] <-.
       elim: A s B H; clear => //.
@@ -539,8 +539,8 @@ Module valid_state (U:Unif).
       + move=> A HA B0 _ B HB s C /simpl_expand_and_fail [].
         + by move=> [A'[HA']] /[subst1] /=/andP [] /andP [] /[dup] /base_and_base_and_ko_valid VB0 H; rewrite (expand_failure_success HA') => /(HA _ _ HA') -> /=.
         + by move=> [s'[A'[B'[HA'[HB']]]]] /[subst1] /=; rewrite (expand_failure_failed HB') (expand_solved_success HA') orbT.
-    + move=> ????? H H1 IH ? /[subst1] H2; apply: IH erefl (valid_state_cb H H2).
-    + move=> ????? H H1 IH ? /[subst1] H2; apply: IH erefl (valid_state_expanded H H2).
+    + move=> ?????? H H1 IH ? /[subst1] H2; apply: IH erefl (valid_state_cb H H2).
+    + move=> ?????? H H1 IH ? /[subst1] H2; apply: IH erefl (valid_state_expanded H H2).
   Qed.
 
   Lemma next_alt_aux_base_and {s1 s2 A B}:
@@ -585,35 +585,33 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma valid_state_next_alt {s s' A B} : 
-    failed A -> next_alt s A (Some (s', B)) -> valid_state A ->  valid_state B.
+    next_alt s A (Some (s', B)) -> valid_state A ->  valid_state B.
   Proof.
     remember (Some _) as S eqn:HS.
-    move=> + H; elim: H s' B HS => //; clear.
-    + move=> s s2 A B' + FB s1 B [] /[subst2].
+    move=> H; elim: H s' B HS => //; clear.
+    + move=> s s2 A B' + FA s1 B [] /[subst2].
       by move=> /valid_state_next_alt_aux H1.
-    + move=> s s1 r A B NA FB NB IH s2 D /[subst1] FA VA.
+    + move=> s s1 r A B NA FB NB IH s2 D /[subst1] VA.
       have VB:= valid_state_next_alt_aux VA NA.
-      apply: IH erefl FB VB.
+      apply: IH erefl VB.
   Qed.
 
   Lemma runP_run {s A r}:
     valid_state A -> run s A r -> runP valid_state s A r.
   Proof.
-    move=> + H; elim H; clear.
-    + move=> s1 s2 A B EA VA.
-      have:= expandedP_expanded VA EA => H.
-      have ?:= valid_state_expanded_done VA EA.
+    move=> + [b H]; elim H; clear.
+    + move=> s1 s2 A B b EA VA.
+      have:= expandedP_expanded VA (ex_intro _ _ EA) => H.
+      have ?:= valid_state_expanded_done VA (ex_intro _ _ EA).
       apply: runP_done => //.
-    + move=> s A B HA HB VA.
-      have:= expandedP_expanded VA HA => H.
-      have VS := valid_state_expanded_valid_state VA HA.
+    + move=> s A B b HA HB VA.
+      have:= expandedP_expanded VA (ex_intro _ _ HA) => H.
+      have VS := valid_state_expanded_valid_state VA (ex_intro _ _ HA).
       apply: runP_fail => //.
-    + move=> s s' r A B C HA HB HC IH VA.
-      have EA := expandedP_expanded VA HA.
-      have VB := valid_state_expanded_valid_state VA HA.
-      have FB := valid_state_expanded_failed VA HA.
-      have NA := valid_state_next_alt FB HB VB.
-      (* have NNA := base_or_base_or_ko_valid NA. *)
+    + move=> s s' r A B C b1 b2 b3 HA HB HC IH Hb VA.
+      have EA := expandedP_expanded VA (ex_intro _ _ HA).
+      have VB := valid_state_expanded_valid_state VA (ex_intro _ _ HA).
+      have NA := valid_state_next_alt HB VB.
       apply: runP_backtrack VA VB EA HB (IH NA).
   Qed.
 

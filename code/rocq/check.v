@@ -133,14 +133,61 @@ Module check (U:Unif).
 
   Lemma cut_is_det pr : is_det (Goal pr Cut).
   Proof. 
-    move=> s s1 A; inversion 1; subst; simpl in *; try congruence.
-    + by rewrite (expanded_cut_simpl H4); apply: next_alt_ko.
-    + Search expanded Failed Cut.
-  (* Qed. *)
-  Admitted.
+    move=> s s1 A [? H]; inversion H; clear H; subst; simpl in *; try congruence.
+    + by rewrite (expanded_cut_simpl (ex_intro _ _ H5)); apply: next_alt_ko.
+    + inversion H0; clear H0; subst; simpl in *; try congruence.
+      move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
+  Qed.
 
   Definition det_rule_cut (r : R) :=
     last Cut r.(premises) == Cut.
+
+  Lemma next_alt_aux_none {s1 s2 A b}:
+    next_alt_aux b s1 A = None ->
+      next_alt_aux b s2 A = None.
+  Proof.
+    elim: A b s1 s2 => //; try by move=> []//.
+    + move=> ?? [] //.
+    + move=> A HA s B HB b s1 s2 /=.
+      case NA: next_alt_aux => // [[ ]] //.
+    + move=> A HA B0 _ B HB b s1 s2 /=.
+      case NB: next_alt_aux => [[ ]|] //.
+      case NA: next_alt_aux => [[ ]|] // _.
+      by rewrite (HA _ _ _ NA) (HB _ _ _ NB).
+  Qed.
+
+  Lemma next_alt_aux_some {s1 s2 A B b}:
+    next_alt_aux b s1 A = Some (s2, B) ->
+      forall s3, exists s4, next_alt_aux b s3 A = Some (s4, B).
+  Proof.
+    elim: A b s1 s2 B => //.
+    + by move=> [] => //= ??? [] /[subst2]; eexists.
+    + by move=> [] => //= ??? [] /[subst2]; eexists.
+    + by move=> ??[] // ??? [] /[subst2]; eexists.
+    + move=> A HA s B HB b s1 s2 C /= + s3.
+      case NA: next_alt_aux => [[ ]|] => -[] /[subst2].
+      + by have [? {}HA]:= HA _ _ _ _ NA s3; rewrite HA; eexists.
+      + case NA': next_alt_aux => [[ ]|].
+        + have [? {}HA]:= HA _ _ _ _ NA' s1; congruence.
+        + by eexists.
+    + move=> A HA B0 _ B HB b s1 s2 C /= + s3.
+      case NB: next_alt_aux =>  [[ ]|].
+      + by move=> [] /[subst2]; have [? {}HB]:= HB _ _ _ _ NB s3; rewrite HB; eexists.
+      + case NA': next_alt_aux => [[ ]|] // [] /[subst2].
+        by have [? {}HA]:= HA _ _ _ _ NA' s3; rewrite HA (next_alt_aux_none NB); eexists.
+  Qed.
+
+  Lemma next_alt_none {s1 s2 D}:
+    next_alt s1 D None -> next_alt s2 D None.
+  Proof.
+    remember None as RN eqn:HRN => H.
+    elim: H s2 HRN => //; clear.
+    + move=> s A NA s1 _; apply: next_alt_ko.
+      apply: next_alt_aux_none NA.
+    + move=> s1 s2 r A B NA FB NB + s3 ? /[subst] => /(_ _ erefl) H.
+      have [? {}H1] := next_alt_aux_some NA s3.
+      apply: next_alt_step H1 FB (H _).
+  Qed.
 
   Lemma tail_cut_is_det A :
     (forall pr, all det_rule_cut pr.(rules)) ->
@@ -148,36 +195,36 @@ Module check (U:Unif).
     is_det A.
   Proof.
     move=> AllCut VS s1 s2 alts.
-    remember (Done _ _) as r eqn:Hr => H.
+    remember (Done _ _) as r eqn:Hr => -[b H].
     elim: H VS s2 alts Hr => //=; clear -AllCut.
-    + move=> s1 s2 A B EA VA s3 C [] /[subst2].
+    2:{
+      move=> s1 s2 s3 A B C b1 b2 b3 EA NB HR IH ? VA s4 D ? /[subst].
+      have:= valid_state_expanded_valid_state VA (ex_intro _ _ EA).
+      move=> /(valid_state_next_alt NB).
+      move=> /IH /(_ _ _ erefl) {}IH.
+      apply: next_alt_none IH.
+    }
+    + move=> s1 s2 A B b EA VA s3 C [] /[subst2].
       remember (Done _ _) as RD eqn:HRD.
-      elim: EA s3 C HRD VA; clear -AllCut => //.
-      + move=> s s1 A B HA s2 C [] /[subst2].
-        elim: A s s2 C HA => //; clear -AllCut.
-        + by move=> ??? [] /[subst2] _; apply: next_alt_ko.
-        + move=> ? [] //.
-        + move=> A HA s B HB s1 s2 C /simpl_expand_or_solved [A'[EA]] /[subst1] /=/andP[]VA.
-          have VA' := valid_state_solved EA VA.
-          have {}HA := HA _ _ _ (EA) (VA).
-          
-          (* move: (HA _ _ _ EA).
-          apply: next_alt_ko => /=.
-        +
-      +
-      +
-    move=> s s' A B He s'' C [] /[subst2].
-    elim: A s s'' C He => //=.
-    - by move=> ??? [_ <-].
-    - by move=> ?[].
-    - move=> A IHA sr B IHB s s3 C.
-      case X: expand => //= [|altA].
-      + case Y: (expand sr B) => //= -[] /[subst2].
-        rewrite (same_subst s sr).
-        apply: IHB Y.
-      + move=> [] /[subst2].
-        move: (IHA _ _ _ X) => {}IHA //=.
-        rewrite IHA. *)
-  Admitted.
+      move: s3 C HRD VA.
+      elim: EA ; clear -AllCut => //.
+      2:{
+        move=> s1 s2 r A B b EA EB IH s3 C ? VA /[subst].
+        have VB := valid_state_cb EA VA.
+        have {}IH := IH _ _ erefl VB.
+        apply: next_alt_none IH.
+      }
+      2:{
+        move=> s1 s2 r A B b EA EB IH s3 C ? VA /[subst].
+        have VB := valid_state_expanded EA VA.
+        have {}IH := IH _ _ erefl VB.
+        apply: next_alt_none IH.
+      }
+      move=> s1 s2 A A' + s3 C [] ?? + /[subst].
+      elim: A s1 s3 C => //.
+      + move=> ??? [] /[subst2] _; apply: next_alt_ko => //.
+      + move=> ? [] //.
+      + move=> A HA s B HB s1 s2 C /simpl_expand_or_solved [A' [HA']] /[subst1] /= /andP [] VA BO.
+  Abort.
 
 End check.

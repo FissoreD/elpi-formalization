@@ -280,16 +280,22 @@ Module Run (U : Unif).
   HB.instance Definition _ := hasDecEq.Build run_res run_res_eqb_OK.
 
 
-  Inductive expanded : Sigma -> state -> run_res -> Prop :=
-    | expanded_done {s s' A alt}     : expand s A = Solved s' alt  -> expanded s A (Done s' alt)
-    | expanded_fail {s A B}          : expand s A = Failure B -> expanded s A (Failed B)
-    | expanded_cut {s s' r A B}      : expand s A = CutBrothers s' B -> expanded s' B r -> expanded s A r
-    | expanded_step {s s' r A B}     : expand s A = Expanded s' B  -> expanded s' B r -> expanded s A r.
+  Inductive expandedb : Sigma -> state -> run_res -> bool -> Prop :=
+    | expanded_done {s s' A alt}     : expand s A = Solved s' alt  -> expandedb s A (Done s' alt) false
+    | expanded_fail {s A B}          : expand s A = Failure B -> expandedb s A (Failed B) false
+    | expanded_cut {s s' r A B b}      : expand s A = CutBrothers s' B -> expandedb s' B r b -> expandedb s A r true
+    | expanded_step {s s' r A B b}     : expand s A = Expanded s' B  -> expandedb s' B r b -> expandedb s A r b.
 
-  Inductive run : Sigma -> state -> run_res -> Prop :=
-    | run_done {s s' A B}        : expanded s A (Done s' B) -> run s A (Done s' B)
-    | run_fail {s A B}           : expanded s A (Failed B) -> next_alt s B None -> run s A (Failed B)
-    | run_backtrack {s s' s'' A B C} : expanded s A (Failed B) -> next_alt s B (Some (s', C)) ->  run s' C s'' -> run s A s''.
+  Inductive runb : Sigma -> state -> run_res -> bool -> Prop :=
+    | run_done {s s' A B b}        : expandedb s A (Done s' B) b -> runb s A (Done s' B) b
+    | run_fail {s A B b}           : expandedb s A (Failed B) b -> next_alt s B None -> runb s A (Failed B) b
+    | run_backtrack {s s' s'' A B C b1 b2 b3} : expandedb s A (Failed B) b1 -> next_alt s B (Some (s', C)) ->  runb s' C s'' b2 -> b3 = (b1 || b2) -> runb s A s'' b3.
+
+  Definition expanded s A r := exists b, expandedb s A r b.
+  Definition run s A r := exists b, runb s A r b.
+
+  Definition run_classic s A r := runb s A r false. 
+  Definition expanded_classic s A r := expandedb s A r false. 
 
 
   Lemma simpl_expand_or_solved {s s1 s2 A B C} :

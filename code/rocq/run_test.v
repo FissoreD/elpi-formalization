@@ -45,23 +45,23 @@ Module Test1.
 
   Goal exists r, run empty (Goal p_test (Call (pred_q (Data 1)))) (Done s2 r).
   Proof.
-    eexists.
-    apply: run_backtrack.
+    do 2 eexists.
+    apply: run_backtrack => //.
     - apply: expanded_step => //=.
       rewrite /big_or/F/select/=.
       apply: expanded_fail => //=.
     - apply: next_alt_ok => //=.
-    - apply: run_backtrack.
+    - apply: run_backtrack => //.
       - apply: expanded_step => //=.
         rewrite /big_or/F/select/= -/s1 -/s2.
         apply: expanded_fail => //=.
       - apply: next_alt_ok => //=.
-      - apply: run_backtrack.
+      - apply: run_backtrack => //.
         - apply: expanded_step => //=.
           apply: expanded_step => //=.
           apply: expanded_fail => //=.
         - apply: next_alt_ok => //=.
-        - apply: run_backtrack.
+        - apply: run_backtrack => //.
           - apply: expanded_step => //=.
             apply: expanded_step => //=.
             rewrite /big_or/F//=.
@@ -78,21 +78,22 @@ Module Test2.
   Import ARun.
   Goal expand empty (Or OK empty OK) = Solved empty (Or OK empty OK) . by []. Qed.
   Goal forall p, run empty (Or (Goal p Cut) empty OK) (Done empty (Or OK empty KO)).
-    move=> pr //=. apply: run_done => //=. 
+    move=> pr //=.
+    eexists. apply: run_done => //=. 
     apply: expanded_step => //=.
     by apply: expanded_done. 
   Qed.
 
   Goal forall p, 
     run empty (Or (Goal p Cut) empty (Or OK empty OK)) (Done empty (Or OK empty (cut ((Or OK empty OK))))).
-    move=> p.
+    move=> p; eexists.
     apply: run_done.
     apply: expanded_step => //=.
     apply: expanded_done => //=.
   Qed.
 
   Goal run empty (Or OK empty (Or OK empty OK)) (Done empty (Or OK empty (((Or OK empty OK))))).
-  Proof. apply: run_done => //=. apply: expanded_done => //=. Qed.
+  Proof. eexists; apply: run_done => //=. apply: expanded_done => //=. Qed.
 End Test2.
 
 Module Test3.
