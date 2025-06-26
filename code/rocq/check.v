@@ -126,15 +126,46 @@ Module check (U:Unif).
     let: (G, body_det) := foldr (check_atom prog) (G,b (d (Func))) premises in
     if infer_output G r.(head) is (_, true) then incl body_det expected_det else false .
 
+  Fixpoint has_cut_and A :=
+    match A with
+    | Goal _ Cut => true
+    | And A _ B => has_cut_and A || has_cut_and B
+    | _ => false
+    end.
+
+  Fixpoint has_cut_or A :=
+    match A with
+    | Or A _ B => has_cut_and A && has_cut_or B
+    | _ => false
+    end.
+
+  Definition has_cut A := match A with KO => true | Or KO _ A => has_cut_or A | _ => false end.
+
+  Fixpoint no_new_alt_aux A :=
+    match A with
+    | OK => true
+    | And A _ B => no_new_alt_aux A && no_new_alt_aux B
+    | Or A _ B => no_new_alt_aux A && (B == cut B)
+    | Top | Bot | Goal _ _ | KO => true
+    end.
+
+  Fixpoint no_new_alt sold snew :=   
+    match sold, snew with
+    | OK, OK | KO, KO | Top, Top | Top, OK | Bot, Bot | Bot, KO => true
+    | Or A _ B, Or A' _ B' => (no_new_alt A A') && ((B == B') || (cut B == B'))
+    | And A _ B, And A' _ B' => no_new_alt A A' && no_new_alt B B'
+    | Goal _ _, snew => (*has_cut snew || *) no_new_alt_aux snew
+    | _, _ => false
+    end.
 
   Definition is_det g := forall s s' alt,
     run s g (Done s' alt) ->
-      next_alt s alt None.
+      no_new_alt g alt.
 
   Lemma cut_is_det pr : is_det (Goal pr Cut).
   Proof. 
-    move=> s s1 A [? H]; inversion H; clear H; subst; simpl in *; try congruence.
-    + by rewrite (expanded_cut_simpl (ex_intro _ _ H5)); apply: next_alt_ko.
+    move=> s s1 A [? H]; inversion H; clear H; subst; try congruence.
+    + by rewrite (expanded_cut_simpl (ex_intro _ _ H5)).
     + inversion H0; clear H0; subst; simpl in *; try congruence.
       move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
   Qed.
@@ -142,52 +173,81 @@ Module check (U:Unif).
   Definition det_rule_cut (r : R) :=
     last Cut r.(premises) == Cut.
 
-  Lemma next_alt_aux_none {s1 s2 A b}:
-    next_alt_aux b s1 A = None ->
-      next_alt_aux b s2 A = None.
+  Print state.
+
+  Lemma no_new_alt_trans {A B C}: no_new_alt A B -> no_new_alt B C -> no_new_alt A C.
   Proof.
-    elim: A b s1 s2 => //; try by move=> []//.
-    + move=> ?? [] //.
-    + move=> A HA s B HB b s1 s2 /=.
-      case NA: next_alt_aux => // [[ ]] //.
-    + move=> A HA B0 _ B HB b s1 s2 /=.
-      case NB: next_alt_aux => [[ ]|] //.
-      case NA: next_alt_aux => [[ ]|] // _.
-      by rewrite (HA _ _ _ NA) (HB _ _ _ NB).
+    elim: A B C => //; try by move=> [].
+    + move=> [] [] //=.
+    + move=> [] [] //=.
+    + move=> /= _ _ B C.
+      elim: B C => //; try by move=> [] //.
+      + move=>  A HA s B HB  [] //= C _ D /andP [] AC /eqP HB' /andP [] CD HE.
+        by rewrite <- HB' in HE; move: HE => /orP [] /eqP <-; rewrite HB' cut_cut_same eq_refl (HA _ AC CD).
+      + by move=> A IHA B0 _ B IHB [] // C D E /= /andP [] HA HB /andP [] HA' HB'; rewrite (IHA _ HA HA') (IHB _ HB HB').
+    + move=> A HA s B HB [] => //= C _ D [] // E _ F.
+      move=> /andP [] AC HB' /andP [] CD HE .
+      rewrite (HA _ _ AC CD).
+      by move: HB' HE => /orP [] /eqP ? /orP [] /eqP ?; subst; try rewrite cut_cut_same; rewrite eq_refl//orbT.
+    + move=> A HA B0 _ B HB [] //= ? _ ?[] //= ? _ ? /andP [] AC HB' /andP [] CD HE .
+      by rewrite (HA _ _ AC CD) (HB _ _ HB' HE).
   Qed.
 
-  Lemma next_alt_aux_some {s1 s2 A B b}:
-    next_alt_aux b s1 A = Some (s2, B) ->
-      forall s3, exists s4, next_alt_aux b s3 A = Some (s4, B).
-  Proof.
-    elim: A b s1 s2 B => //.
-    + by move=> [] => //= ??? [] /[subst2]; eexists.
-    + by move=> [] => //= ??? [] /[subst2]; eexists.
-    + by move=> ??[] // ??? [] /[subst2]; eexists.
-    + move=> A HA s B HB b s1 s2 C /= + s3.
-      case NA: next_alt_aux => [[ ]|] => -[] /[subst2].
-      + by have [? {}HA]:= HA _ _ _ _ NA s3; rewrite HA; eexists.
-      + case NA': next_alt_aux => [[ ]|].
-        + have [? {}HA]:= HA _ _ _ _ NA' s1; congruence.
-        + by eexists.
-    + move=> A HA B0 _ B HB b s1 s2 C /= + s3.
-      case NB: next_alt_aux =>  [[ ]|].
-      + by move=> [] /[subst2]; have [? {}HB]:= HB _ _ _ _ NB s3; rewrite HB; eexists.
-      + case NA': next_alt_aux => [[ ]|] // [] /[subst2].
-        by have [? {}HA]:= HA _ _ _ _ NA' s3; rewrite HA (next_alt_aux_none NB); eexists.
-  Qed.
+  Definition get_state r := match r with 
+    | Failure A | Solved _ A | CutBrothers _ A | Expanded _ A => A 
+  end.
 
-  Lemma next_alt_none {s1 s2 D}:
-    next_alt s1 D None -> next_alt s2 D None.
+  Lemma no_new_alt_id {B} : no_new_alt B B.
+  Proof. elim: B => //.
+    + by move=> ? H ?? H1 /=; rewrite H eq_refl.
+    + by move=> ? H ? H1 ? H2 /=; rewrite H H2.
+  Qed. 
+
+  Lemma expandedb_no_new_alt {A s1 r}: 
+    (forall pr : program, all det_rule_cut (rules pr)) ->
+    valid_state A -> expand s1 A = r -> no_new_alt A (get_state r).
   Proof.
-    remember None as RN eqn:HRN => H.
-    elim: H s2 HRN => //; clear.
-    + move=> s A NA s1 _; apply: next_alt_ko.
-      apply: next_alt_aux_none NA.
-    + move=> s1 s2 r A B NA FB NB + s3 ? /[subst] => /(_ _ erefl) H.
-      have [? {}H1] := next_alt_aux_some NA s3.
-      apply: next_alt_step H1 FB (H _).
-  Qed.
+    move=> AllCut.
+    elim: A s1 r.
+    + by move=> ?[]//? _ []? /[subst].
+    + by move=> ?[] // ?? _ []?? /[subst].
+    + by move=> s [] // ??? [] ??/[subst] /=.
+    + by move=> s [] // ??? [] ??/[subst] /=.
+    + move=> p [] //.
+      + by move=> /= * /[subst].
+      + move=> * /[subst]. admit.
+    + move=> A HA s B HB s1 +; simpl valid_state => + /andP [] VA VB => -[].
+      + move=> ?? /simpl_expand_or_expanded [].
+        + by move=> [A'[HA']] ? /[subst] /=; rewrite eq_refl (HA _ _ VA HA').
+        + by move=> [A'[HA']] ? /[subst] /=; rewrite eq_refl (HA _ _ VA HA') orbT.
+      + by move=> ?? /simpl_expand_or_cut.
+      + move=> ? /simpl_expand_or_fail [A'[HA']] ? /[subst] /=.
+        by rewrite eq_refl (HA _ _ VA HA').
+      + move=> ?? /simpl_expand_or_solved [A'[HA']] ?/[subst] /=.
+        by rewrite eq_refl (HA _ _ VA HA').
+    + move=> A HA B0 _ B HB s1 +; simpl valid_state => + /andP [] /andP [] VB VA H => -[].
+      + move=> ?? /simpl_expand_and_expanded [].
+        + by move=> [A'[HA']] ? /[subst] /=; rewrite (HA _ _ VA HA') no_new_alt_id.
+        + move=> [?[?[?[HA'[HB']]]]] ? /[subst] /=.
+          move: H; case success.
+          + by move=> {}VB; rewrite (HA _ _ VA HA') (HB _ _ VB HB').
+          + by move=> /eqP HB0; rewrite HB0 in VB; rewrite (HA _ _ VA HA') (HB _ _ (base_and_base_and_ko_valid VB) HB').
+      + move=> ?? /simpl_expand_and_cut.
+        admit.
+      + move=> ? /simpl_expand_and_fail. admit.
+      + move=> ?? /simpl_expand_and_solved. admit.
+  Abort.
+
+
+  Lemma expandedb_no_new_alt {A B s1 b1}: 
+    (forall pr : program, all det_rule_cut (rules pr)) ->
+    valid_state A -> expandedb s1 A (Failed B) b1 -> no_new_alt A B.
+  Proof.
+    move=> AllCut.
+    remember (Failed _) as RF eqn:HRF.
+    move=> + H; elim: H B HRF => //; clear -AllCut.
+    + move=> s2 A B HA ? [] <-.
+  Abort.
 
   Lemma tail_cut_is_det A :
     (forall pr, all det_rule_cut pr.(rules)) ->
@@ -202,7 +262,8 @@ Module check (U:Unif).
       have:= valid_state_expanded_valid_state VA (ex_intro _ _ EA).
       move=> /(valid_state_next_alt NB).
       move=> /IH /(_ _ _ erefl) {}IH.
-      apply: next_alt_none IH.
+      (* apply: next_alt_none IH.= *)
+      admit.
     }
     + move=> s1 s2 A B b EA VA s3 C [] /[subst2].
       remember (Done _ _) as RD eqn:HRD.
@@ -212,19 +273,27 @@ Module check (U:Unif).
         move=> s1 s2 r A B b EA EB IH s3 C ? VA /[subst].
         have VB := valid_state_cb EA VA.
         have {}IH := IH _ _ erefl VB.
-        apply: next_alt_none IH.
+        (* apply: next_alt_none IH. *)
+        admit.
       }
       2:{
         move=> s1 s2 r A B b EA EB IH s3 C ? VA /[subst].
         have VB := valid_state_expanded EA VA.
         have {}IH := IH _ _ erefl VB.
-        apply: next_alt_none IH.
+        (* apply: next_alt_none IH. *)
+        admit.
       }
       move=> s1 s2 A A' + s3 C [] ?? + /[subst].
       elim: A s1 s3 C => //.
-      + move=> ??? [] /[subst2] _; apply: next_alt_ko => //.
+      + move=> ??? [] /[subst2] _ //.
       + move=> ? [] //.
       + move=> A HA s B HB s1 s2 C /simpl_expand_or_solved [A' [HA']] /[subst1] /= /andP [] VA BO.
+        by rewrite eq_refl/=(HA _ _ _ HA' VA).
+      + move=> A HA B0 _ B HB s1 s2 C /simpl_expand_and_solved [s'[A'[B'[HA'[HB']]]]] /[subst1] /= /andP [] /andP [] HB2 VA.
+        rewrite (HA _ _ _ HA' VA).
+        case: success.
+        + by move=> VB; rewrite (HB _ _ _ HB' VB).
+        + by move=> /eqP?;subst; rewrite (HB _ _ _ HB' (base_and_base_and_ko_valid HB2)).
   Abort.
 
 End check.

@@ -401,6 +401,53 @@ Module Run (U : Unif).
     + by move=> ? H ? H1 ? H2; rewrite H H1 H2.
   Qed.
 
+  Lemma next_alt_aux_none {s1 s2 A b}:
+    next_alt_aux b s1 A = None ->
+      next_alt_aux b s2 A = None.
+  Proof.
+    elim: A b s1 s2 => //; try by move=> []//.
+    + move=> ?? [] //.
+    + move=> A HA s B HB b s1 s2 /=.
+      case NA: next_alt_aux => // [[ ]] //.
+    + move=> A HA B0 _ B HB b s1 s2 /=.
+      case NB: next_alt_aux => [[ ]|] //.
+      case NA: next_alt_aux => [[ ]|] // _.
+      by rewrite (HA _ _ _ NA) (HB _ _ _ NB).
+  Qed.
+
+  Lemma next_alt_aux_some {s1 s2 A B b}:
+    next_alt_aux b s1 A = Some (s2, B) ->
+      forall s3, exists s4, next_alt_aux b s3 A = Some (s4, B).
+  Proof.
+    elim: A b s1 s2 B => //.
+    + by move=> [] => //= ??? [] /[subst2]; eexists.
+    + by move=> [] => //= ??? [] /[subst2]; eexists.
+    + by move=> ??[] // ??? [] /[subst2]; eexists.
+    + move=> A HA s B HB b s1 s2 C /= + s3.
+      case NA: next_alt_aux => [[ ]|] => -[] /[subst2].
+      + by have [? {}HA]:= HA _ _ _ _ NA s3; rewrite HA; eexists.
+      + case NA': next_alt_aux => [[ ]|].
+        + have [? {}HA]:= HA _ _ _ _ NA' s1; congruence.
+        + by eexists.
+    + move=> A HA B0 _ B HB b s1 s2 C /= + s3.
+      case NB: next_alt_aux =>  [[ ]|].
+      + by move=> [] /[subst2]; have [? {}HB]:= HB _ _ _ _ NB s3; rewrite HB; eexists.
+      + case NA': next_alt_aux => [[ ]|] // [] /[subst2].
+        by have [? {}HA]:= HA _ _ _ _ NA' s3; rewrite HA (next_alt_aux_none NB); eexists.
+  Qed.
+
+  Lemma next_alt_none {s1 s2 D}:
+    next_alt s1 D None -> next_alt s2 D None.
+  Proof.
+    remember None as RN eqn:HRN => H.
+    elim: H s2 HRN => //; clear.
+    + move=> s A NA s1 _; apply: next_alt_ko.
+      apply: next_alt_aux_none NA.
+    + move=> s1 s2 r A B NA FB NB + s3 ? /[subst] => /(_ _ erefl) H.
+      have [? {}H1] := next_alt_aux_some NA s3.
+      apply: next_alt_step H1 FB (H _).
+  Qed.
+
 End Run.
 
 
