@@ -136,6 +136,7 @@ Module Run (U : Unif).
     | OK : (*Sigma ->*) state
     | Top : state
     | Bot : state
+    | Dead : state
     (* | CutOut : state *)
     | Goal : program  -> A -> state
     | Or  : state -> Sigma -> state -> state               (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
@@ -164,24 +165,29 @@ Module Run (U : Unif).
     | Solved s B    => Solved s    (And A B0 B)
     end.
 
-  Definition mkOr A sB er :=
+  Definition mkOr sB er :=
     match er with
-    | Failure B     => Failure  (Or A sB B)
-    | Expanded s B    => Expanded s (Or A sB B)
-    | CutBrothers s B => Expanded s (Or A sB B) (* for now this is the rightmost brother *)
-    | Solved s B    => Solved s (Or A sB B)
+    | Failure Dead => Failure Dead
+    | Failure B     => Failure  (Or Dead sB B)
+    | Expanded s B    => Expanded s (Or Dead s B)
+    | CutBrothers s B => Expanded s (Or Dead s B) (* for now this is the rightmost brother *)
+    | Solved s B    => Solved s (Or Dead s B)
+    end.
+
+  Fixpoint const E A :=
+    match A with
+    | OK => E
+    | KO => E
+    | Bot => E
+    | Dead => E
+    | Goal _ _ | Top => E
+    | And A B0 B => And (const E A) (const E B0) (const E B)
+    | Or A s B => Or (const E A) s (const E B)
     end.
 
     (* Maybe replace all cutout with bot, and remove the cutout constructor *)
-  Fixpoint cut A :=
-    match A with
-    | OK => KO
-    | KO => KO
-    | Bot => KO
-    | Goal _ _ | Top => KO
-    | And A B0 B => And (cut A) (cut B0) (cut B)
-    | Or A s B => Or (cut A) s (cut B)
-    end.
+  Definition cut A := const KO A.
+  Definition dead A := const Dead A.
 
   Fixpoint big_and pr (a : list A) : state :=
     match a with
@@ -200,11 +206,19 @@ Module Run (U : Unif).
     if l is (s,r) :: xs then (Or KO s (big_or_aux pr r xs))
     else KO.
 
+  Definition get_state r := match r with 
+    | Failure A | Solved _ A | CutBrothers _ A | Expanded _ A => A 
+  end.
+
+
   Fixpoint expand s (A :state) : expand_res :=
     match A with
     (* meta *)
     | OK => Solved s OK
     | KO => Failure KO
+
+    (* meta *)
+    | Dead => Failure Dead
     
     (* lang *)
     | Top              => Expanded s OK
@@ -218,6 +232,8 @@ Module Run (U : Unif).
         | Solved s A    => Solved s      (Or A sB B)
         | Expanded s A    => Expanded s  (Or A sB B)
         | CutBrothers s A => Expanded s  (Or A sB (cut B))
+        | Failure Dead  => mkOr s        (expand s B)
+
         | Failure A     => Failure       (Or A sB B)
         end
     | And A B0 B =>
@@ -230,32 +246,34 @@ Module Run (U : Unif).
     end
   .
 
-  Fixpoint reset (A : state) :=
+  Fixpoint is_dead A :=
     match A with
-    | KO | OK | Top | Bot | Goal _ _ => A
-    | And A B0 B => And (reset A) B0 B0
-    | Or A s B => Or (reset A) s (reset B)
+    | Dead => true
+    | Or A _ B => is_dead A && is_dead B 
+    | _ => false
     end.
 
   Fixpoint success (A : state) : bool :=
     match A with
     | OK => true
-    | Top | Bot | Goal _ _ | KO => false
+    | Top | Bot | Goal _ _ | KO | Dead => false
     | And A _ B => success A && success B
-    | Or A _ B => success A (*|| (failed A && success B)*)
+    | Or A _ B => if is_dead A then success B else success A
     end.
+
 
   Fixpoint failed (A : state) : bool :=
     match A with
-    | KO => true
+    | KO | Dead => true
     | Top | Bot | Goal _ _ | OK => false
     | And A _ B => failed A || (success A && failed B)
-    | Or A _ B => failed A (*&& failed B*)
+    | Or A _ B => if is_dead A then failed B else failed A (*&& failed B*)
     end.
 
   Fixpoint next_alt_aux inAnd (s : Sigma) (A : state) : option (Sigma * state) :=
     match A with
     | KO | OK => None
+    | Dead => None
     | Top | Bot | Goal _ _ => if inAnd then None else Some (s, A)
     | And A B0 B =>
       match next_alt_aux true s B, next_alt_aux true s A with
@@ -263,9 +281,14 @@ Module Run (U : Unif).
       | None, Some (s, A) => Some (s, And A B0 B0) (* B0 è un grande and di ATOMI *)
       | Some (s, B), _ => Some (s, And A B0 B)
       end
+    | Or Dead sB B => 
+          match next_alt_aux false s B with
+          | None | Some (_, Dead) => None
+          | Some (sB1, B) => Some (sB1, Or Dead sB B)
+          end
     | Or A sB B => (* NOTE: B is a BIG_OR of BIG_AND of ATOM | Top, i.e. it is never been explored *)
         match next_alt_aux false s A with
-        | None => Some (sB, B)
+        | None =>  Some (sB, Or Dead sB B)
         | Some (sA, A) => Some (sA, Or A sB B)
         end
     end.
@@ -297,32 +320,55 @@ Module Run (U : Unif).
   Definition run_classic s A r := runb s A r false. 
   Definition expanded_classic s A r := expandedb s A r false. 
 
-
   Lemma simpl_expand_or_solved {s s1 s2 A B C} :
     expand s1 (Or A s B) = Solved s2 C ->
-      (exists A', expand s1 A = Solved s2 A' /\ C = Or A' s B).
+      (exists A', expand s1 A = Solved s2 A' /\ C = Or A' s B) \/
+      (exists B', expand s1 A = Failure Dead /\ expand s1 B = Solved s2 B' /\ C = Or Dead s2 B').
   Proof.
-    move=> //=; case X: expand => //= -[] /[subst2].
-    by eexists; split.
+    move=> //= ; case X: expand => //= [x |].
+    case: x X => //= => X; case Y: (expand s1 B) => // [[ ]|] //=.
+      by move=> [] /[subst2]; right; eexists.
+    by move=> -[] /[subst2]; left; eexists.
   Qed.
 
   Lemma simpl_expand_or_cut {s s1 s2 A B C} :
-    expand s1 (Or A s B) = CutBrothers s2 C -> False.
-  Proof. move=> /=; case X: expand => //=; case Y: expand => //=. Qed.
+    expand s1 (Or A s B) = CutBrothers s2 C -> 
+      exists s1 B', A = Dead /\ expand s B = CutBrothers s1 B' /\ C = Or Dead s1 B'.
+  Proof. move=> /=; case X: expand => //= [[ ]] //; case Y: expand => //= [[ ]] //. Qed.
 
   Lemma simpl_expand_or_fail {s s1 A B C} :
     expand s1 (Or A s B) = Failure C -> 
-      exists A', expand s1 A = Failure A' /\ C = Or A' s B.
-  Proof. by move=> /=; case X: expand => //= -[] /[subst1]; do 2 eexists. Qed.
+      (exists A', expand s1 A = Failure A' /\ A' <> Dead /\ C = Or A' s B) \/
+      (exists B', B' <> Dead /\ expand s1 A = Failure Dead /\ expand s1 B = Failure B' /\ C = Or Dead s1 B') \/
+      (expand s1 A = Failure Dead /\ expand s1 B = Failure Dead /\ C = Dead).
+  Proof. 
+    move=> /=; case X: expand => //= [D] H.
+    have {}H: D = Dead /\ mkOr s1 (expand s1 B) = Failure C \/ (D <> Dead /\ Failure (Or D s B) = Failure C).
+      case: D H {X}; try by move=> [] /[subst1]; right => // .
+      by move=> ->; left.
+    move: H => []; subst.
+      + move=> [/[subst1]]; case Y: expand => //= [D] H.
+        have {H} [[] | []]: (D = Dead /\ C = Dead) \/ (D <> Dead /\ Or Dead s1 D = C).
+          move: H; case: D {Y}; try by move=> [] /[subst1]; right => //.
+          + move=> [] <-; left => //.
+          + by move=> ?? [] <-; right.
+          + by move=> ??? [] <-; right. 
+          + by move=> ??? [] <-; right.
+        + by move=> /[subst2]; right; right; eexists.
+        + move=> H /[subst1]; right; left; eexists; repeat split; eassumption.
+      + move=> [H [/[subst1]]]; left; eexists; repeat split => //.
+    Qed.
 
   Lemma simpl_expand_or_expanded {s s1 s2 A B C} :
     expand s1 (Or A s B) = Expanded s2 C ->
       (exists A', expand s1 A = Expanded s2 A' /\ Or A' s B = C) \/ 
-      (exists A', expand s1 A = CutBrothers s2 A' /\ C = Or A' s (cut B)).
+      (exists A', expand s1 A = CutBrothers s2 A' /\ C = Or A' s (cut B)) \/
+      (expand s1 A = Failure Dead /\ (exists B', C = Or Dead s2 B' /\ (expand s1 B = Expanded s2 B' \/ expand s1 B = CutBrothers s2 B'))).
   Proof.
-    move=> /=; case X: expand => //=.
-    + by move=> [] ?; left; eexists; split; subst.
-    + by move=> [] /[subst1]; right; eexists.
+    move=> /=; case X: expand => //= [||[ ]] //.
+    + move=> [] ?; left; eexists; split; subst; reflexivity.
+    + by move=> [] /[subst1]; right; left; eexists.
+    + case Y: expand => // [||[ ]] // [] /[subst2] ; right; right ; repeat split => //; eexists; repeat split ; [left|right] => //.
   Qed.
 
   Lemma simpl_expand_and_solved {s s2 A B0 B C} :
@@ -388,18 +434,50 @@ Module Run (U : Unif).
     + move=> p [].
       by eexists.
     + move=> ?? //=.
-    + by move=> A IHA s B IHB s1 /simpl_expand_or_cut.
+    + move=> A IHA s B IHB s1 /simpl_expand_or_cut => -[s3[B'[?[]]]] //.
     + move=> A IHA B IHB C IHC s1 /simpl_expand_and_cut [].
       + by move=> [A' [H]] /[subst1].
       + by move=> [s'[A'[B' [HA[HB]]]]] /[subst1].
   Qed.
 
   Lemma cut_cut_same {a}: cut (cut a) = cut a.
-  Proof. 
+  Proof.
+    rewrite /cut. 
     elim: a => //=.
     + by move=> ? H => //= s A H1; rewrite H H1.
     + by move=> ? H ? H1 ? H2; rewrite H H1 H2.
   Qed.
+
+  Definition is_meta X := match X with OK | KO | Dead => true | _ => false end.
+  Definition is_base X := match X with Top | Bot | Goal _ _ => true | _ => false end.
+
+  (* Lemma simpl_next_alt_aux_false {s1 s2 A B r}: 
+    next_alt_aux false s1 (Or A s2 B) = Some r -> 
+      (is_meta A /\ r = (s2, Or Dead s2 B)) \/ (is_base A /\ r = (s1, Or A s2 B)) \/
+      (A = And X Y0 Y /\).
+  Proof.
+    case X: A ; try by move=> // [] /[subst1]; left.
+    + move=> [] ?/[subst]; right => //. 
+    + move=> [] ?/[subst]; right => //.
+    + move=> [] ?/[subst]; right => //.
+    + move=> /=; case Y: next_alt_aux; admit.
+    + move=> /=; case Y: next_alt_aux => [[ ]|].
+      + move=> [] ?.  *)
+
+  Lemma next_alt_aux_dead {b s1 s3 A}: 
+    next_alt_aux b s1 A = Some (s3, Dead) -> False.
+  Proof.
+    elim: A b s1 s3 => //; try by move=> [] => //.
+    + move=> ?? [] //.
+    + move=> A HA s B HB b s1 s3 + => /=.
+      case NA: next_alt_aux => // [[s2 C]|].
+      + case: A HA NA => //.
+      + case: A HA NA => // HA HA'; case NB: next_alt_aux => [[s2 []]|] //.
+    + move=> A HA B0 _ B HB s1 s3 + => /=.
+      case NB: next_alt_aux => // [[s2 C]|].
+      + move=> [] //.
+      + case NA: next_alt_aux => // [[s2 C]] [] //.
+  Qed. 
 
   Lemma next_alt_aux_none {s1 s2 A b}:
     next_alt_aux b s1 A = None ->
@@ -408,7 +486,12 @@ Module Run (U : Unif).
     elim: A b s1 s2 => //; try by move=> []//.
     + move=> ?? [] //.
     + move=> A HA s B HB b s1 s2 /=.
-      case NA: next_alt_aux => // [[ ]] //.
+      case X: next_alt_aux => [[s3 C]|].
+      + by case: A X HA => //.
+      + rewrite (HA _ _ s2 X); case A => //.
+        case NB: next_alt_aux => [[? []]|] // _.
+        + by have:= next_alt_aux_dead NB.
+        + by rewrite (HB _ _ _ NB).
     + move=> A HA B0 _ B HB b s1 s2 /=.
       case NB: next_alt_aux => [[ ]|] //.
       case NA: next_alt_aux => [[ ]|] // _.
@@ -417,18 +500,41 @@ Module Run (U : Unif).
 
   Lemma next_alt_aux_some {s1 s2 A B b}:
     next_alt_aux b s1 A = Some (s2, B) ->
-      forall s3, exists s4, next_alt_aux b s3 A = Some (s4, B).
+      (forall s3, exists s4, next_alt_aux b s3 A = Some (s4, B)).
   Proof.
     elim: A b s1 s2 B => //.
     + by move=> [] => //= ??? [] /[subst2]; eexists.
     + by move=> [] => //= ??? [] /[subst2]; eexists.
     + by move=> ??[] // ??? [] /[subst2]; eexists.
-    + move=> A HA s B HB b s1 s2 C /= + s3.
-      case NA: next_alt_aux => [[ ]|] => -[] /[subst2].
-      + by have [? {}HA]:= HA _ _ _ _ NA s3; rewrite HA; eexists.
-      + case NA': next_alt_aux => [[ ]|].
-        + have [? {}HA]:= HA _ _ _ _ NA' s1; congruence.
-        + by eexists.
+    + move=> A HA s B HB b s1 s2 C; simpl next_alt_aux at 1 => H.
+      have {H}: (
+        (A = Dead /\
+          match next_alt_aux false s1 B with
+            | Some (sB1, Dead) => None
+            | Some (sB1, KO as B) | Some (sB1, OK as B) | Some (sB1, Top as B) |
+                Some (sB1, Bot as B) | Some (sB1, Goal _ _ as B) |
+                Some (sB1, Or _ _ _ as B) | Some (sB1, And _ _ _ as B) =>
+                Some (sB1, Or Dead s B)
+            | None => None
+            end = Some (s2, C)) \/ 
+      (A <> Dead /\ 
+        match next_alt_aux false s1 A with
+          | Some (sA, A) => Some (sA, Or A s B)
+          | None => Some (s, Or Dead s B) 
+          end = Some (s2, C))).
+      by case: A H {HA} => //=; auto; try by right.
+      move=> [].
+      + move=> [] /[subst1].
+        case NB: next_alt_aux => // [[s3 D]] // H.
+        have {H}: Some (s3, Or Dead s D) = Some (s2, C).
+           by case: D H {NB} => //.
+        move=> []/[subst2] s3 /=.
+        have [s4 {}HB]:= HB _ _ _ _ NB s3.
+        rewrite HB.
+        by eexists; destruct D => //; have:= next_alt_aux_dead NB.
+      + move=> [] HD; case NA: next_alt_aux => // [[s3 D]|] [] /[subst2] s5 /=.
+        + have [s4 {}HB] := HA _ _ _ _ NA s5; rewrite HB; eexists; destruct A => //=.
+        + rewrite (next_alt_aux_none NA); eexists; destruct A => //.
     + move=> A HA B0 _ B HB b s1 s2 C /= + s3.
       case NB: next_alt_aux =>  [[ ]|].
       + by move=> [] /[subst2]; have [? {}HB]:= HB _ _ _ _ NB s3; rewrite HB; eexists.
@@ -456,4 +562,4 @@ Module AxiomUnif <: Unif.
   Parameter matching : Tm -> Tm -> Sigma -> option Sigma.
 End AxiomUnif.
 
-Module ARun := Run(AxiomUnif).
+Module ARun := Run(AxiomUnif).  

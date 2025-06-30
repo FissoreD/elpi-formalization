@@ -50,12 +50,12 @@ Module Test1.
     - apply: expanded_step => //=.
       rewrite /big_or/F/select/=.
       apply: expanded_fail => //=.
-    - apply: next_alt_ok => //=.
+    - apply: next_alt_ok => //.
     - apply: run_backtrack => //.
       - apply: expanded_step => //=.
         rewrite /big_or/F/select/= -/s1 -/s2.
         apply: expanded_fail => //=.
-      - apply: next_alt_ok => //=.
+      - apply: next_alt_ok => //.
       - apply: run_backtrack => //.
         - apply: expanded_step => //=.
           apply: expanded_step => //=.
