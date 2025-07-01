@@ -289,6 +289,22 @@ Module Run (U : Unif).
     + by move=> A HA B0 _ B HB /= /andP[] /[dup] /HA -> ->/HB ->.
   Qed.
 
+  Lemma dead_failed {A} : A = dead A -> failed A.
+  Proof. elim: A => //.
+    + by move=> A HA s B HB /= [] /HA -> /HB -> ; rewrite if_same.
+    + by move=> A HA B0 HB0 B HB /= [] /HA ->.
+  Qed.
+
+  Lemma failed_dead {A} : failed A = false -> A <> dead A.
+  Proof. elim: A => //.
+    + move=> A HA s B HB /=; case: eqP.
+      + move=> <- /HB H [] //.
+      + move=> H _ [] //.
+    + move=> A HA B0 HB0 B HB /= /orP H [] H1; apply H.
+      by left; apply: dead_failed H1.
+  Qed.
+
+
   Fixpoint next_alt_aux inAnd (s : Sigma) (A : state) : option (Sigma * state) :=
     match A with
     | KO | OK => None
