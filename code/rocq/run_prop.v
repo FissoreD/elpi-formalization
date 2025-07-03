@@ -95,25 +95,23 @@ Module RunP (A: Unif).
   Proof.
     move=> + H; elim: H B => //=; congruence.
   Qed. *)
-
-  Lemma expand_cut_failure s A: expand s (cut A) = Failure Dead \/ expand s (cut A) = Failure (cut A).
+  Lemma expand_cut_failure s A: exists X, expand s (cut A) = Failure (cut X).
   Proof.
-    elim: A s => //; clear; auto.
-    - move => A HA s1 B HB s2 /=.
-      case: eqP; [by auto|].
-      case: (HA s2) => /= ->.
-      + case: (HB s2) => ->; [by auto|] => /=.
-        admit.
-      + case: (HB s2) => -> /=.
-        case: cut; auto.
-      simpl.
-      move=> [] /=.
-      case X: eq_op; try by eexists.
-      move=> /(_ s2) [A'] /= -> /(_ s2) [B'] -> /=.
-      destruct A' => //; destruct B'; eexists => //.
+    elim: A s.
+    all: try by by move=> s; eexists KO.
+    by move=> s; eexists Dead.
+    - move => A + s1 B + s2 /=.
+      move=> /(_ s2) [A'] -> /(_ s2) [B'] ->.
+      case X: (cut A' == Dead); move: X => /eqP H.
+      + rewrite H /=; case X: (cut B' == Dead); move: X => /eqP H1.
+        + by rewrite H1; exists Dead.
+        + exists (Or Dead s1 B'); case: B' H1 => //.
+      + exists (Or A' s1 B); case: A' H => //.
     - move => A + B0 _ B + s /=.
-      case X: eq_op; try by eexists.
-      by move=> /(_ s) [A'] /= -> _; destruct A'; eexists => //=.
+      move=> /(_ s) [A'] -> _.
+      case X: (cut A' == Dead); move: X => /eqP H.
+      + exists Dead; case: A' H => //=.
+      + exists (And A' B0 B); case: A' H => //.
   Qed.
 
   (* Lemma expand_cut_solved {s s' A B}: expand s (cut A) = Solved s' B -> False.
