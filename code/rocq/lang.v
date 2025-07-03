@@ -159,7 +159,7 @@ Module Run (U : Unif).
 
   Definition mkAnd (s: Sigma) A B0 r :=
     match r with
-    | Failure B       => Failure       (And A B0 B)
+    | Failure B    => Failure       (if B == Dead then Dead else And A B0 B)
     | Expanded s B    => Expanded    s (And A B0 B)
     | CutBrothers s B => CutBrothers s (And A B0 B)
     | Solved s B      => Solved      s (And A B0 B)
@@ -167,8 +167,7 @@ Module Run (U : Unif).
 
   Definition mkOr sB er :=
     match er with
-    | Failure Dead => Failure Dead
-    | Failure B       => Failure     (Or Dead sB B)
+    | Failure B    => Failure     (if B == Dead then Dead else (Or Dead sB B))
     | Expanded s B    => Expanded s  (Or Dead sB B)
     | CutBrothers s B => Expanded s  (Or Dead sB B)
     | Solved s B      => Solved   s  (Or Dead sB B)
@@ -361,8 +360,8 @@ Module Run (U : Unif).
       (exists B', expand s1 A = Failure Dead /\ expand s1 B = Solved s2 B' /\ C = Or Dead s B').
   Proof.
     move=> //= ; case X: expand => //= [x |].
-    case: x X => //= => X; case Y: (expand s1 B) => // [[ ]|] //=.
-      by move=> [] /[subst2]; right; eexists.
+    case: x X => //= => X ; case Y: (expand s1 B) => // -[].
+      by move=> /[subst2]; right; eexists.
     by move=> -[] /[subst2]; left; eexists.
   Qed.
 
@@ -403,7 +402,7 @@ Module Run (U : Unif).
     move=> /=; case X: expand => //= [||[ ]] //.
     + move=> [] ?; left; eexists; split; subst; reflexivity.
     + by move=> [] /[subst1]; right; left; eexists.
-    + case Y: expand => // [||[ ]] // [] /[subst2] ; right; right ; repeat split;  eexists ; repeat split ; [left|right] => //.
+    + case Y: expand => // -[] /[subst2] ; right; right ; repeat split;  eexists ; repeat split ; [left|right] => //.
   Qed.
 
   Lemma simpl_expand_and_solved {s s2 A B0 B C} :
@@ -413,7 +412,7 @@ Module Run (U : Unif).
           expand s' B = Solved s2 B' /\ And A' B0 B' = C.
   Proof.
     move=> //=; case X: expand => //= [[]|s' A'] //.
-    case Y: expand => //= [s'' B'].
+    case Y: expand => // [s'' B'].
     move=> [] /[subst1] /[subst1].
     by do 3 eexists; repeat split.
   Qed.
@@ -422,7 +421,8 @@ Module Run (U : Unif).
     expand s (And A B0 B) = Failure C ->
       (expand s A = Failure Dead /\ C = Dead) \/ 
       (exists A', A' <> Dead /\ expand s A = Failure A' /\ C = And A' B0 B) \/ 
-        (exists s' A' B', expand s A = Solved s' A' /\  expand s' B = Failure B' /\ C = And A' B0 B').
+        (exists s' A' B', expand s A = Solved s' A' /\  
+          expand s' B = Failure B' /\ C = if B' == Dead then Dead else And A' B0 B').
   Proof.
     move=> //=; case X: expand => //= [D|s' D].
     - move=> H.
@@ -434,7 +434,7 @@ Module Run (U : Unif).
       move=> /orP [/andP|/andP] [] /eqP H /eqP [] ->.
       + by right;left; exists D; auto.
       + by move=> /[subst]; auto.
-    - by case Y: expand => //= -[] /[subst1]; right; right; do 3 eexists => //=; repeat split.
+    - case Y: expand => //= [[ ]]-[]<-; right; right; do 3 eexists; erewrite Y => //.
   Qed.
 
   Lemma simpl_expand_and_cut {s s2 A B B0 C}:

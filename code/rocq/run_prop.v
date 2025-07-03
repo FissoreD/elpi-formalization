@@ -542,13 +542,14 @@ Module RunP (A: Unif).
 
   Lemma expanded_and_fail_left {s A B0 FA}:
     expanded s A (Failed FA) ->
-      forall B, expanded s (And A B0 B) (Failed (And FA B0 B)).
+      forall B, expanded s (And A B0 B) (Failed (if FA == Dead then Dead else (And FA B0 B))).
   Proof.
     move=> [? H].
     remember (Failed _) as F eqn:HF.
     elim: H FA B0 HF => //=; clear.
-    + move=> s A H H1 ?? [] /[subst1] ?.
-      (* by eexists; apply: expanded_fail => //=; rewrite H1.
+    + move=> s A H H1 FA ? [] /[subst1] ?.
+      eexists; apply: expanded_fail => //=; rewrite H1.
+      case: FA {H1} => //.
     + move=> s s' r A B ? H H1 IH ? B0 ? B1; subst => //=.
       have [?{}IH]:= IH _ B0 erefl B1.
       eexists; apply: expanded_cut => //=.
@@ -558,12 +559,12 @@ Module RunP (A: Unif).
       have [?{}IH]:= IH _ B0 erefl B1.
       eexists; apply: expanded_step => //=.
       + by rewrite H.
-      + apply: IH. *)
-  Abort.
+      + apply: IH.
+  Qed.
 
   Lemma run_and_fail_both {s s' A B B0 SA FB}:
     expanded s A (Done s' SA) -> expanded s' B (Failed FB) ->
-      expanded s (And A B0 B) (Failed (And SA B0 FB)).
+      expanded s (And A B0 B) (Failed (if FB == Dead then Dead else And SA B0 FB)).
   Proof.
     move=> [? H].
     remember (Done _ _) as D eqn:HD.
@@ -572,7 +573,10 @@ Module RunP (A: Unif).
       remember (Failed _) as F eqn:HF.
       elim: H B0 FB s1 A D HA HF; clear => //.
       + move=> s A ? H ????? EA [] /[subst1].
-        by eexists; apply: expanded_fail => //= ; rewrite EA H .
+        eexists; apply: expanded_fail => //= ; rewrite EA H /=.
+        have:= expand_solved_dead EA => -[].
+        case: eqP
+        Search expand Solved Dead.
       + move=> s s' r A B ? HA HB IH B0 ???? HA' /[subst1].
         have := expand_solved_is_solved HA' => /(_ s') HA2.
         have [? {}IH]:= (IH B0 _ _ _ _ HA2 erefl).
