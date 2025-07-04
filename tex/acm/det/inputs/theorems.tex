@@ -1,0 +1,252 @@
+
+\section{Determinacy analysis}\label{sec:thm}
+
+% \begin{definition}[Functionality (\isfunc)]\label{def:is-func}
+%   Given a program \prog and a term $t$,
+%   \isdet\ is defined as follows:
+%   $$\forall a\ \subst, \isFuncCmd{t}$$
+% \end{definition}
+
+We are interested in identifying predicates that leave no choice points
+called \emph{semidet} in \cite{1996henderson}, or
+\emph{operationally deterministic} in
+\cite{nakamura1986}.
+% Due to the lack of space, we leave the
+% proofs of the following theorems in the appendix.
+
+\begin{definition}[Operational determinacy (\isdet)]\label{def:is-det}
+  Given a program \prog and a term $\predt$,
+  we say that \isdet\ \prog\ {(\predt)} holds iff
+  $$\forall a\ \subst, \isDetCmd{\predt}$$
+\end{definition}
+
+% \noindent Said in other words, a predicate call \isdet if its execution does not
+% create choice points. 
+% Without loss of generality, we can rephrase the lemma in
+% the following way:
+
+% \begin{definition}[Operational determinacy empty prog (\isdetE)]\label{def:is-det-empty}
+%   The execution of an atom $t$ is deterministic iff
+%   $$\forall a\ \subst, \isDetCmd[\EmptyList]{t}$$
+% \end{definition}
+
+% \noindent The main difference from the first definition is that we begin with an
+% empty program and handle a generic term \( t \). Notably, due to the implication
+% operator, this second definition remains equivalent to the first, as local
+% clauses can be dynamically loaded during the evaluation of \( t \), thereby
+% reconstructing the same program referenced in \cref{def:is-det}.  
+
+\def\atomtoprog{\ensuremath{\mathcal{T}}}
+
+% \begin{definition}[Split atom (\atomtoprog)]
+%   Given $\Ainst = \piImplCmd[ty_1]{x_1}{c_1}{\dots \impl\
+%   \piImplCmd[ty_n]{x_n}{c_n}{s}}$, then $\atomtoprog(\prog) = \langle \{c_n,\cdots,c_1\}, s \rangle$ 
+% \end{definition}
+
+% \begin{lemma}
+%   Given an atom $\Ainst$ and let $(\prog, \Ainst') = \atomtoprog(\Ainst)$, then
+%   $$\isdetE\ \Ainst \Rightarrow \isdet\ \prog\ \Ainst'$$
+%   \label{th:run-empty}
+% \end{lemma}
+We assign to signatures a logic formula, a formal meaning, by recursion.
+
+% Thanks to the definition of \isdet, we can provide the semantics of determinacy
+% signatures.
+% The intuition is given by the following formula.
+
+\begin{definition}[Meaning of a signature $\sem{\func}\ (\predt)$ given a context \ctx and a program \prog]\label{def:sem}
+\vspace{-1em}
+\newcommand{\funcF}[1][]{\ensuremath{\mathcal{F}#1}}
+% \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+$$
+\arraycolsep=1.4pt
+\begin{array}{rll}
+  \sem{\detI}\ (\predt) = & %
+      \bigwedge \vecL{\semi{\func_i}\ t_i} \Rightarrow \isdet\ \prog\ {(\predt)} \bigwedge \vecL{\semi{\func_o}\ t_o} %
+      & \quad\mathrm{s.t.\ } \ctx\ \pred{} = \dtype{\detI}{\func_i}{\func_o} \\
+\end{array}
+$$
+$$
+\arraycolsep=1.4pt
+\begin{array}{ccc}
+  \semi{\detI}\ (\predt) = \isdet\ \prog\ (\predt) &
+  \qquad \semi{\relI}\ (\predt) = \top &
+  \qquad \semi{\expI}\ (\predt) = \top \vspace{0.5em}
+\end{array}
+$$
+Partial applications like \elpiIn{once likes} in the introduction
+require the following extra rules:
+$$
+\arraycolsep=1.4pt
+\begin{array}{rl}
+
+  \semi{\dtype{\detI}{\func_i}{\func_o}}\ (\predt) = & %
+    \forall \vec{u}\ \vec{v}, 
+      %|\func[_i]| = |\vec{u}| \land |\func[_o]| = |\vec{v}| %
+      %\land 
+      \bigwedge \vecL{\semi{\func_i}\ u} \Rightarrow \isdet\ \prog\ {(\pred\ (\vec{t}\ \vec{u}\ \vec{v}))} \bigwedge \vecL{\semi{\funcF}\ t_i}  \\
+      & \mathrm{where\ } |\func[_i]| = |\vec{u}| \mathrm{\ and\ } |\func[_o]| = |\vec{v}| %
+        \mathrm{\ and\ } \ctx\ \pred{} = \dtype{\detI}{(\funcF \  \func_i)}{\func_o} \vspace{0.5em}\\
+  \semi{\dtype{\detI}{\EmptyList}{\func_o}}\ (\predt) = & %
+    \forall \vec{v}, 
+     %|\func[_o]| = |\vec{v}| %
+      %  \Rightarrow  %
+        \isdet\ \prog\ {(\pred\ (\vec{t}\ \vec{v}))} \bigwedge \vecL{\semi{\funcF}\ t_i} \\
+      & \mathrm{where\ } |\func[_o]| = |\vec{v}| \mathrm{\ and\ } \ctx\ \pred{} = \dtype{\detI}{\funcF}{(\funcF_o \  \func_o)} \vspace{0.5em}\\
+  \semi{\dtype{\relI}{\_}{\_}}\ (\predt) = & \top \\
+\end{array}
+$$
+% \endgroup
+\end{definition}
+The first equation states that if the preconditions of a signature are satisfied
+then the call to a predicate of that signature is
+functional and the post conditions on the outputs hold.
+The contravariance of the \mySub test is reflected by the
+fact that for any $t$, if $f_1 \mySub f_2$ then
+$\sem{f_1} t \Rightarrow \sem{f_2} t$:
+the post-conditions of $f_1$ can be stronger than the ones of $f_2$ while
+the pre-conditions of $f_1$ must be weaker than the ones of $f_2$.
+
+% We use the meaning of signatures to describe the key invariant of program:
+\newcommand{\iprog}[1][\prog]{\ensuremath{\texttt{checked}\ \Gamma\ #1}\xspace}
+\begin{definition}[Program invariant \iprog]\label{def:i}
+  We say that \iprog{} holds iff for all predicates $\pred \in \prog$ s.t. $\ctx\ \pred = \dtype{\detI}{\_}{\_}$
+  then  $\forall \vecL{t}, \sem{\detI}\ (\predt)$.
+\end{definition}
+
+Since the program can locally assert clauses we need
+\checkc\ to preserve the invariant.
+
+\begin{lemma}[Invariant preservation]
+  \vspace{-1em}
+  $$\forall\, \Gamma\ \prog\ r, \iprog \land \checkClause{\ctx}{r} \Rightarrow \iprog[(\prog + r)]$$
+  \label{th:0}
+  \vspace{-1.5em}
+\end{lemma}
+
+As one expects a checked query evaluates deterministically under
+a checked program.
+% The main theorem states that a checked initial query behaves deterministically
+% under a checked program.
+
+\begin{theorem}[Deterministic execution]
+  Given a context \ctx and an atom $t$, then
+  $$\forall\, \Gamma\ \prog\ t, \iprog \land \checkCmd{\ctx}{\detI}{t}{\_}{\detI}
+  \Rightarrow \isdet\ \prog\ t$$
+  \label{th:1}
+\end{theorem}
+
+\vspace{-1.5em}
+Since programs can be encoded into atoms (via the \elpiIn{=>} operator)
+we can directly relate the static check with the deterministic execution of atoms.
+
+\begin{corollary}[Static check entails Deterministic execution]
+  % Given a context \ctx and an atom $t$, then
+  \vspace{-1em}
+  $$\forall\, \Gamma\ t, \checkCmd[\EmptyList]{\ctx}{\detI}{t}{\_}{\detI}
+  \Rightarrow \isdet\ \EmptyList\ t$$
+  % \label{th:1}
+\end{corollary}
+
+
+% \noindent
+% This theorem is crucial for establishing the connection between our determinacy
+% checker and the a program execution. Specifically, if our \checkk\ procedure
+% verifies that a given atom is \detI, we can guarantee that its interpretation
+% will produce no choice points.
+
+% The invariant we preserve in the proof is that \checkk\ ensures $\sem{\detI}\ t$
+% while guaranteeing that all the input terms appearing in $t$ respect
+% $\semi{\cdot}$.
+
+% \Cref{th:1} can be generalized to work in a context where a concrete program
+% \prog is provided (instead of having the initial empty program). This program is
+% possible thanks to \cref{th:run-empty}. The program \prog is extracted thanks to
+% the \atomtoprog\ function.
+
+% The hypothesis in \cref{th:1} about the fact that local clauses for
+% deterministic predicate should have a \cut can be relaxed in some situations.
+% The interesting property allowing to remove \cut while respecting the semantics
+% of the program is the so-called mutual-clause exclusion.
+
+% \begin{lemma}[\mutExcl]
+%   Given a program \(\prog\), it exists an equivalent program \(\prog'\) that
+%   contains the minimal number of \cut\ operators. 
+% \end{lemma}
+
+% \def\remCut{\ensuremath{\mathcal{R}}}
+
+% \begin{definition}[Remove redundant \cut (\remCut)]
+%   Given a program \prog, we can build a program $\prog'$, which is a copy of
+%   \prog where for each clause \( c = \clauseCmd{\pred}{\vec{t}}{\vecL{bs}, \cut,
+%   \vecL{ds}} \) in \(\prog\), if all premises in \(\vecL{bs}\) are valid calls to
+%   deterministic predicates and $\mutExclAll\ \prog\ c$, then
+%   the \cut\ can be safely removed.
+% \end{definition}
+
+% Finally, we can generalize \cref{th:1} as follows.
+
+% \begin{theorem}[Deterministic execution] \label{th:2}
+%   Given a predicate context \ctx, a program \prog\ and a predicate \pred, s.t.
+%   $\ctx\ \pred = \dtype{\detI}{\_}{\_}$, then
+%   $$
+%   \mutExclAll\ \ctx\ \prog \land
+%   (\forall c \in \prog, \checkc\ \ctx\ c) \land
+%   \checkk\ \ctx\ (\pred\ \vec{t})
+%   \Rightarrow
+%   \isdet\ \prog\ (\pred\ \vec{t})
+%   $$
+% \end{theorem}
+
+% \begin{proof}
+%   We can prove this final lemma thank to \cref{th:run-empty}, combining the
+
+% \end{proof}
+\vspace{-1em}
+\paragraph{\textbf{Digression on \isdet}.}
+
+In the logic programming literature, the notion of a ``function'' does not
+necessarily align with the definition we adopt in \isdet. In particular, a
+program that repeatedly produces the same result infinitely many times
+undeniably represents a mathematical function. However, from a programmer's
+perspective, such behavior is fundamentally different from that of a program
+that terminates after producing a single result. Our definition %intentionally
+captures the latter, as it better reflects the computational complexity of
+programs %, particularly in cases of failure 
+(as also observed by \cite{1989Vink}).
+
+Consider the following \elpiIn{silly} predicate and two (alternative)
+implementations of \elpiIn{mem}.
+
+\begin{elpicode}
+~   ~   pred mem i:A, i:list A.                    func mem A, list A -> .
+~   ~   mem X [X|_].                               mem X [X|_] :- !.
+~   ~   mem X [_|XS] :- mem X XS.                  mem X [_|XS] :- mem X XS.
+~   ~
+~   ~   func silly list int -> int.                func once (pred) -> .
+~   ~   silly L V :- mem 1 L, len L V.             once P :- P, !.
+\end{elpicode} 
+
+The signature of \elpiIn{silly} is accepted by our check only
+if \elpiIn{mem} is functional in our sense (code on the right).
+In this case the code of \elpiIn{silly} is operationally
+equivalent to ``\elpiIn{once (mem 1 L), once (len L V)}'' where the worst-case
+complexity is clearly the sum of its parts (and not its product).
+Moreover we found that beginners are often confused by backtracking,
+especially when they instrument their code for debugging:
+we believe our static check for \emph{observational} determinacy can mitigate that. 
+
+\paragraph{\textbf{Digression on  the eagherness of $\mathcal{H}$}}
+\label{sec:digression-h}
+
+The function $\mathcal{H}$ in the operational semantics (Figure~\ref{fig:basic-interp})
+eagerly unifies all clauses with the goal.
+A more natural and possibly more efficient semantics would be to just create the
+alternatives and prepend to the list of goals the same matching/unification
+problems, but that would not satisfy \isdet.
+
+From a practical standpoint an efficient implementation %of that semantics
+can make $\mathcal{H}$ lazy without compromising the \isdet property
+if either it indexes clauses deep enough
+or it transforms the program by inserting
+\elpiIn{once} around each call to a deterministic predicate.

@@ -1,0 +1,60 @@
+
+% \section{Classic mode and functional analysis}
+
+% two steps, overlap + func body, with refinement for cut
+
+% mode analysis to deduce groundness and hence sustain overlapping check hypothesis
+
+% \subsection{Peculiarity of Elpi's input mode}
+
+% dynamic effect of input make the ground
+
+% \section{Higher Order programming}
+
+% give the meaning of a type
+
+% \begin{verbatim}
+% ty_ := k ty | m:_ -> _ | prop f
+% ty := all (ty_ -> ty) | mono ty_
+% f  := F | R
+% m  := i | o
+% tm := tm tm | c
+% rule := tm :- tm*
+% \end{verbatim}
+
+% \begin{verbatim}
+
+% \end{verbatim}
+
+% \begin{verbatim}
+% spec (c : tm) (e : logic) ty : logic := match ty with
+%   | prop R => True /\ e
+%   | prop F => functional c
+%   | data => True
+%   | i:l -> r => forall x, spec x True l -> spec (c x) e r
+%   | o:l -> r => forall x, -> spec x (spec x True l /\ e) r
+
+% spec map True ... =
+% forall c0, (forall c1, forall c2, func (c0 c1 c2)) → forall c1, forall c2, func (map c0 c1 c2) 
+% \end{verbatim}
+
+% in other words $func ~ F \to func~ (map~ F)$.
+
+% TODO: how do we do partial application?
+
+% \section{Higher order Abstract syntax}
+
+% \begin{verbatim}
+%   ty_ := k ty | m:_ -> _ | prop f
+%   ty := all (ty_ -> ty) | mono ty_
+%   f  := F | R
+%   m  := i | o
+%   tm := c | tm tm | x\ tm | tm => tm | pi x\ tm
+%   rule := tm :- tm*
+%   \end{verbatim}
+
+% \section{Homoiconicity}
+
+% not sure we need to change the syntax.
+% what was the example where the skema
+% parameters had to carry a mode?
