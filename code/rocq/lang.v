@@ -157,13 +157,6 @@ Module Run (U : Unif).
   HB.instance Definition _ := hasDecEq.Build expand_res expand_res_eqb_OK.
 
 
-  Definition mkAnd (s: Sigma) A B0 r :=
-    match r with
-    | Failure B    => Failure       (if B == Dead then Dead else And A B0 B)
-    | Expanded s B    => Expanded    s (And A B0 B)
-    | CutBrothers s B => CutBrothers s (And A B0 B)
-    | Solved s B      => Solved      s (And A B0 B)
-    end.
 
   Definition mkOr sB er :=
     match er with
@@ -193,10 +186,19 @@ Module Run (U : Unif).
   Fixpoint cut A :=
     (* if A == dead A then Dead else *)
     match A with
-    | Dead => Dead
-    | OK | KO | Bot | Goal _ _ | Top => KO
+    | Bot | Goal _ _ | Top => KO
+    | Dead | KO | OK => A
     | And A B0 B => And (cut A) B0 B
     | Or A s B => Or (cut A) s (cut B)
+    end.
+
+  
+  Definition mkAnd (s: Sigma) A B0 r :=
+    match r with
+    | Failure B    => Failure       (if B == Dead then Dead else And A B0 B)
+    | Expanded s B    => Expanded    s (And A B0 B)
+    | CutBrothers s B => CutBrothers s (And (cut A) B0 B)
+    | Solved s B      => Solved      s (And A B0 B)
     end.
 
   Fixpoint big_and pr (a : list A) : state :=
@@ -440,7 +442,7 @@ Module Run (U : Unif).
   Lemma simpl_expand_and_cut {s s2 A B B0 C}:
     expand s (And A B0 B) = CutBrothers s2 C ->
     (exists A', expand s A = CutBrothers s2 A' /\ C = And A' B0 B ) \/
-      (exists s' A' B', expand s A = Solved s' A' /\ expand s' B = CutBrothers s2 B' /\ C = And A' B0 B').
+      (exists s' A' B', expand s A = Solved s' A' /\ expand s' B = CutBrothers s2 B' /\ C = And (cut A') B0 B').
   Proof.
     move=> //=; case X: expand => //= [|[]|] //.
     + by move=> [] /[subst1]; left; eexists.

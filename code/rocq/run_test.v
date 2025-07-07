@@ -74,14 +74,82 @@ Module Test1.
   Qed.
 End Test1.
 
+Module Test5.
+
+  Module U <: Unif.
+    Definition unify    (t1 t2 : Tm) (s : Sigma) :=
+      match t1, t2 with
+      | Code (v X), _ => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t2 else s.(sigma) x) |} | Some t => if t == t2 then Some s else None end
+      | _, Code (v X) => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t1 else s.(sigma) x) |} | Some t => if t == t1 then Some s else None end
+      | _, _ => if t1 == t2 then Some s else None
+      end.
+
+    Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
+  End U.
+
+  Module Run := Run(U).
+  Import Run.
+
+  Definition v_X := Code (v 0).
+  Definition pred_f x  := Comb (Code (p 1)) x.
+  Definition pred_g x  := Comb (Code (p 0)) x.
+
+  Definition p_test : program := {|
+    modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
+    sig := (fun _ => b (d Pred));
+    rules := [:: 
+      mkR (pred_f (Data 0)) [:: Call (pred_g v_X); Cut] ;
+      mkR (pred_g (Data 1)) [::];
+      mkR (pred_g (Data 2)) [::]
+    ];
+  |}.
+
+  Notation "X &&& Y" := (And X _ Y) (at level 3).
+  Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).
+  Notation "` X" := (Goal _ (Call X)) (at level 3).
+  (* Notation "[ x -> _]" := {| sigma := (fun x : V => _) |} (x binder). *)
+
+  Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
+  Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
+
+  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) (Done s1 r).
+  Proof.
+    do 2 eexists.
+    apply: run_backtrack.
+    apply: expanded_step.
+    + move=> //.
+    + rewrite /big_or/F/select/=.
+      apply: expanded_fail => //.
+      apply: next_alt_ok => //.
+    apply: run_backtrack => //.
+      apply: expanded_step => //=.
+    + rewrite /big_or/F/select/=.
+      apply: expanded_fail => //=.
+      apply: next_alt_ok => //=.
+      apply: run_done.
+      apply: expanded_step => //.
+      rewrite [Cut]lock.
+      apply: expanded_step => //=.
+      rewrite -lock [mkAnd]lock /= -/s1 -/s2.
+      rewrite -lock [mkOr]lock /=.
+      rewrite -lock //=.
+      apply: expanded_step => //=.
+      apply: expanded_done => //=.
+      reflexivity.
+  Qed.
+End Test5.
+
+
+
 Module Test2.
   Import ARun.
   Goal expand empty (Or OK empty OK) = Solved empty (Or OK empty OK) . by []. Qed.
-  Goal forall p, run empty (Or (Goal p Cut) empty OK) (Done empty (Or OK empty KO)).
+
+  Goal forall p, run empty (Or (Goal p Cut) empty Top) (Done empty (Or OK empty KO)).
     move=> pr //=.
     eexists. apply: run_done => //=. 
     apply: expanded_step => //=.
-    by apply: expanded_done. 
+    by apply: expanded_done => /=. 
   Qed.
 
   Goal forall p, 
