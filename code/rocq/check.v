@@ -126,6 +126,8 @@ Module check (U:Unif).
     let: (G, body_det) := foldr (check_atom prog) (G,b (d (Func))) premises in
     if infer_output G r.(head) is (_, true) then incl body_det expected_det else false .
 
+  (* Da qui *)
+
   Fixpoint has_cut_and A :=
     (A == dead A) || (A == cut A) ||
     match A with
@@ -135,16 +137,6 @@ Module check (U:Unif).
     | _ => false
     end.
 
-  Lemma has_cut_and_has_cut_and_cut {B}: has_cut_and (cut B).
-  Proof.
-    elim:B => //.
-    + move=> A HA s B HB /=; case: eqP => ///=.
-      case: eqP => //; case: eqP => //.
-      rewrite !cut_cut_same //.
-    + move=> A HA B0 HB0 B HB /=; case: eqP => ///=.
-      case: eqP => //; case: eqP => //; rewrite !cut_cut_same => //.
-  Qed.
-
   Fixpoint has_cut_or A :=
     (A == dead A) || (A == cut A) ||
     match A with
@@ -153,7 +145,16 @@ Module check (U:Unif).
     | _ => has_cut_and A
     end.
 
-  Definition has_cut A := (A == cut A) || (A == dead A) || has_cut_and A || has_cut_or A.
+  Lemma has_cut_and_has_cut_and_cut {B}: has_cut_and (cut B).
+  Proof.
+    case:B => //.
+    + move=> A s B /=; case: eqP => ///=.
+      by rewrite !cut_cut_same eq_refl.
+    + move=> A B0 B /=; case: eqP => ///=.
+      by rewrite !cut_cut_same.
+  Qed.
+
+  Definition has_cut A := has_cut_and A || has_cut_or A.
 
 
   Lemma has_cut_and_has_cut {A}: has_cut_and A -> has_cut_or A.
@@ -171,29 +172,44 @@ Module check (U:Unif).
   Fixpoint no_new_alt_aux A :=
     match A with
     | OK | Dead => true
-    | And A _ B => (A == dead A)|| (no_new_alt_aux A && no_new_alt_aux B)
+    | And A _ B => 
+      (* (A == dead A) || (A == cut A) ||  *)
+      if has_cut B then no_new_alt_aux B
+      else no_new_alt_aux A && no_new_alt_aux B
     | Or A _ B =>
-      if A == dead A then no_new_alt_aux B
+      (* if has_cut A then no_new_alt_aux B *)
+      (* else if A == cut A then no_new_alt_aux B *)
+      (* else no_new_alt_aux A && ((B == cut B) || (B == dead B)) *)
+      (* else no_new_alt_aux A && no_new_alt_aux B *)
+      if has_cut A then no_new_alt_aux A && no_new_alt_aux B
       else no_new_alt_aux A && ((B == cut B) || (B == dead B))
     | Top | Bot | Goal _ _ | KO => true
     end.
 
-    Definition det_rule_cut (r : R) :=
-    match r.(premises) with [::] => false | x :: xs => last x xs == Cut end.
+  (* Lemma has_cut_cut *)
+
+  Definition det_rule_cut (r : R) :=
+  match r.(premises) with [::] => false | x :: xs => last x xs == Cut end.
 
   Fixpoint no_new_alt sold snew :=
-    (snew == dead snew) || (snew == cut snew) ||
+    (* (snew == dead snew) || (snew == cut snew) || *)
     (* if cut sold == sold then (sold == snew)
     else *)
+    
     match sold, snew with
-    | OK, OK | KO, KO | Top, Top | Top, OK | Bot, Bot | Bot, KO => true
+    | _, Dead => true
     (* | _, KO => true *)
+    | OK, OK | Top, Top | Top, OK | Bot, Bot => true
+    | OK, KO | Top, KO | Bot, KO | KO, KO => true
+    (* | _, KO => true *)
+
     | Or A _ B, Or A' _ B' =>
-      if A' == dead A' then no_new_alt B B'
+      if (A' == dead A') then no_new_alt B B'
       else no_new_alt A A' && ((B == B') || (cut B == B'))
     | And A _ B, And A' _ B'       =>  (A' == dead A') || (no_new_alt A A' && no_new_alt B B')
-    | Goal _program Cut, snew      => (snew == OK) || (snew == sold) || (snew == cut snew)
-    | Goal _program (Call _), snew => has_cut snew || no_new_alt_aux snew
+    
+    | Goal _program Cut, snew      => (snew == OK) || (snew == sold) || (snew == KO) || (snew == Dead)
+    | Goal _program (Call _), snew => no_new_alt_aux snew
     | _, _ => false
     end.
 
@@ -215,7 +231,8 @@ Module check (U:Unif).
     + move=> A HA s B HB; case: eqP => //; unfold has_cut =>/=.
       rewrite !cut_cut_same; case: eqP => //;case: eqP => //.
     + move=> A HA B0 HB0 B HB; case: eqP => //=; unfold has_cut =>/=.
-      rewrite !cut_cut_same; case: eqP => //=; case: eqP => //.
+      by rewrite cut_cut_same.
+      (* rewrite !cut_cut_same; case: eqP => //=; case: eqP => //. *)
   Qed.
 
   Lemma has_cut_or_cut {B}: has_cut_or (cut B).
@@ -224,55 +241,86 @@ Module check (U:Unif).
   Lemma has_cut_cut {B}: has_cut (cut B).
   Proof. apply: has_cut_or_has_cut has_cut_or_cut. Qed.
 
-  Lemma cut_dead1 A: cut (dead A) = Dead.
-  Proof.  case: A => //; by move=> * /=; rewrite !dead_dead_same eq_refl. Qed.
+  (* Lemma cut_dead1 A: cut (dead A) = Dead.
+  Proof.  case: A => //.
+    move=> A s B; simpl dead.
+    by move=> * /=; rewrite !dead_dead_same eq_refl. Qed. *)
 
-  (* Lemma no_new_alt_cut {B C}: no_new_alt (cut B) C ->
+  Lemma no_new_alt_cut {B C}: no_new_alt (cut B) C ->
     [|| C == dead C | C == cut C].
   Proof.
-    case: B C => //.
-    all: try by move=> /= C /orP [/orP[->|->]|]; rewrite ?orbT//; case: C => //.
-    + move=> /= _ _ C /orP[/orP[->|->]|]; rewrite ?orbT//; case: C => //.
-    + move=> A s B C /=.
+    elim: B C => //; try by move=> []//.
+    + move=> p [|?][]//.
+    + move=> A HA s B HB [] // A' s' B'/=.
       case: eqP.
-      + move=> [] /= _ _ /orP [->|]///eqP <-//.
-      + move=> + /= /orP [->|]//.
-        case: eqP.
-        + case: eqP => // ??? /eqP <- /=.
-          case: C => // A' s' B'; case: eqP => /=.
-          + move=> ->; rewrite !dead_dead_same; do 2 case: eqP => //.
-            move=> H1 H2 H3 H4.
-          case: eqP => //. ; rewrite !cut_cut_same eq_refl.
-        + rewrite !cut_cut_same; case: eqP => //.
-          move=> [] /cut_dead <- /cut_dead <- _; rewrite !dead_dead_same//.
-    + move=> A B0 B /=.
+        move=> -> /=/HB/orP[]/eqP->.
+          by rewrite !dead_dead_same eq_refl.
+        by rewrite cut_dead_is_dead cut_cut_same eq_refl orbT.
+      move=> /= H1; case:eqP.
+        move=> <- /andP[] /HA; rewrite dead_cut_is_dead cut_cut_same.
+        by case: eqP => //= _ /eqP ->; rewrite cut_cut_same eq_refl orbT.
+      move=> /= H2 /andP[] /HA.
+      by case: eqP => //= _/eqP<-/eqP<-; rewrite !cut_cut_same eq_refl orbT.
+    + move=> A HA B0 HB0 B HB /= [] // A' B0' B'.
       case: eqP => /=.
-      + move=> [] H C /orP [->|]// /eqP <- //.
-      + move=> + C /orP [->|]//.
-        case: eqP.
-        + rewrite !cut_cut_same; case: eqP => // + + + /eqP /[subst1] /=.
-          by rewrite !cut_cut_same; case: eqP => //; rewrite eq_refl.
-        + rewrite !cut_cut_same; case: eqP => // -[] /cut_dead <- _.
-          by rewrite dead_dead_same.
+        by move=> -> _; rewrite cut_dead_is_dead.
+      move=> DA /andP[]/HA/orP[]/eqP//->.
+      by rewrite cut_cut_same.
+  Qed.
+
+  (*Lemma no_new_alt_aux_cut {A}: no_new_alt_aux (cut A).
+  Proof.
+    elim: A => //.
+      move=> A HA s B HB/=.
+      by rewrite has_cut_cut HA HB.
+    move=> A HA B0 HB0 B HB /=.
+
+    Print failed.
+    
+
+      case: A HA => //= *; try by apply: HB (base_or_base_or_ko_valid _).
+        rewrite has_cut_cut .
+      case: A => //=.
+      by rewrite has_cut_cut=>/andP[]/andP[] _ /HA->/HB->.
+    move=> A HA B0 HB0 B HB/=.
+    by case: has_cut => ///andP[]/HA->//.
+  Qed. *)
+  
+
+
+  (* Lemma no_new_alt_aux_cut_valid {A}: valid_state A -> no_new_alt_aux (cut A).
+  Proof. elim: A => //.
+    + move=> A HA s B HB /simpl_valid_state_or[].
+        move=> [] ->//=.
+      by move=> []DA[]/HA/=-> /base_or_base_or_ko_valid/HB->; rewrite has_cut_cut.
+    + move=> A HA B0 _ B HB /simpl_valid_state_and1[]/HA/=->[].
+      case X: success.
+        move=> _ /HB.
+      rewrite HA.
+      case X: has_cut.
+      by rewrite cut_cut_same eq_refl orbT.
   Qed. *)
 
-  Lemma no_new_alt_aux_cut {A}: no_new_alt_aux (cut A).
-  Proof. elim: A => //.
-    + move=> A HA s B HB /=; case X: eq_op => //=; rewrite HA HB cut_cut_same eq_refl.
-      case: cut => // ???; case: eqP =>//.
-    + by move=> A HA B0 _ B HB /=; case X: eq_op => //=; rewrite HA HB orbT.
-  Qed.
+  Lemma has_cut_and_dead {A}: has_cut_and (dead A).
+  Proof. case: A => //; by move=> * /=; rewrite !dead_dead_same eq_refl. Qed.
+  Lemma has_cut_or_dead {A}: has_cut_or (dead A).
+  Proof. apply: has_cut_and_has_cut has_cut_and_dead. Qed.
 
-  Lemma no_new_alt_aux_dead {A}: no_new_alt_aux (dead A).
+
+  Lemma has_cut_dead {A}: has_cut (dead A).
+  Proof. by rewrite/has_cut has_cut_and_dead. Qed.
+
+
+  (* Lemma no_new_alt_aux_dead {A}: no_new_alt_aux A -> no_new_alt_aux (dead A).
   Proof. elim: A => //.
-    + move=> A HA s B HB /=.
-      rewrite HA HB.
-      case D: dead => //=; rewrite !dead_dead_same ?eq_refl ?orbT //.
-      by case: eqP.
-      by case: eqP.
+    + move=> A HA s B HB /=/andP[]/andP[] _ /HA->/HB->.
+      by rewrite has_cut_dead.
+      (* by rewrite !cut_dead_is_dead eq_refl if_same. *)
     + move=> A HA B0 HB0 B HB /=.
-      by rewrite dead_dead_same eq_refl.
-  Qed.
+      case: has_cut => ///andP[]/HA->//.
+      (* rewrite HA if_same. *)
+      (* by rewrite ad_same eq_refl. *)
+  Qed. *)
 
 
   Lemma no_new_alt_id {B} : no_new_alt B B.
@@ -280,40 +328,38 @@ Module check (U:Unif).
     elim: B => //.
     + by move=> ? [] //=; rewrite eq_refl.
     + move=> A HA s B HB /=.
-      rewrite HA HB.
-      case: eqP => // H1; case: eqP => //.
-      by move=> H2; case: eqP => [DA|] //; rewrite eq_refl.
+      by rewrite HA HB eq_refl if_same.
+      (* case: eqP => // H1; case: eqP => //. *)
+      (* by move=> H2; case: eqP => [DA|] //; rewrite eq_refl. *)
     + move=> A HA B0 _ B HB /=.
       rewrite HA HB; repeat case: eqP => //.
   Qed. 
 
-  (* Lemma no_new_alt_dead {C1 D1}: no_new_alt (dead C1) D1 -> D1 = dead D1.
+  Lemma no_new_alt_dead {C1 D1}: no_new_alt (dead C1) D1 -> D1 = dead D1.
   Proof.
-    elim: C1 D1 => //; try by move=> ? /orP [] /eqP <-.
-    + by move=> p a ? /orP[]/eqP <-.
-    + move=> A HA s B HB D1 /=.
-      case: eqP.
-      + case: eqP => //.
-      + rewrite !dead_dead_same eq_refl => _.
-        destruct D1 => //=; case: eqP.
-        + by move=> -> /HB ->; rewrite !dead_dead_same.
-        + move=> _ /andP [] /HA ->; rewrite cut_dead1 => /orP [] /eqP <-; rewrite !dead_dead_same //.
-    + move=> A HA B0 HB0 B HB D /=.
-      case: eqP.
+    elim: C1 D1 => //; try by move=> [].
+    + by move=> p a []//.
+    + move=> A HA s B HB [] //= A' s' B'.
+      case: eqP => /=.
+        by move=> -> /HB ->; rewrite !dead_dead_same.
+      case: eqP => /=.
+        by move=> <- H1 /andP [] /HA->; rewrite !dead_dead_same.
+      by move=> H1 H2 /andP[]/HA<-/eqP; rewrite cut_dead_is_dead=> <-; rewrite dead_dead_same.
+    + move=> A HA B0 HB0 B HB []// A' s' B'/=/orP[].
+        (* case: eqP => //=.
+        by move=><-.
+      by move=>/andP[]/HA->; rewrite dead_dead_same. *)
+      (* case: eqP.
       + case: eqP => //.
       + rewrite dead_dead_same eq_refl => _.
-        by case: eqP => //; destruct D => // _ /orP [] // /orP[/eqP->|/andP[] /HA ->] /=; rewrite dead_dead_same.
-  Qed. *)
+        by case: eqP => //; destruct D => // _ /orP [] // /orP[/eqP->|/andP[] /HA ->] /=; rewrite dead_dead_same. *)
+  Qed.
 
   (* Lemma xxx {C2}: has_cut (dead C2) -> has_cut_or C2.
   Proof.
     elim: C2 => //=.
   Qed. *)
 
-  Lemma has_cut_and_dead {A}: has_cut_and (dead A).
-  Proof. case: A => //; by move=> * /=; rewrite !dead_dead_same eq_refl. Qed.
-  Lemma has_cut_or_dead {A}: has_cut_or (dead A).
-  Proof. apply: has_cut_and_has_cut has_cut_and_dead. Qed.
 
   Lemma has_cut_and_has_cut_dead A s {B}: has_cut_and B -> has_cut_or (Or (dead A) s B).
   Proof.
@@ -328,21 +374,19 @@ Module check (U:Unif).
 
   Lemma has_cut_or_has_cut_dead A s {B}: has_cut_or B -> has_cut (Or (dead A) s B).
   Proof.
-    rewrite /has_cut.
-    simpl has_cut_and; simpl cut; simpl dead; rewrite dead_dead_same cut_dead1.
-    do 2 case: eqP => //=; rewrite dead_dead_same.
-    rewrite has_cut_and_dead => /=.
-    do 2 case: eqP => //=.
+    rewrite /has_cut/= !cut_dead_is_dead dead_dead_same.
+    repeat case: eqP => //=.
+    move=> _ _ ->.
+    by rewrite has_cut_and_dead.
   Qed.
 
   Lemma has_cut_has_cut_dead A s {B}: has_cut B -> has_cut (Or (dead A) s B).
   Proof.
     rewrite /has_cut.
-    move=> /orP [/orP[/orP[]|]|].
-    + by move=> /eqP -> /=; rewrite has_cut_and_dead has_cut_or_cut !orbT.
-    + by move=> /eqP -> /=; rewrite has_cut_and_dead has_cut_or_dead !orbT.
-    + by move=> /(has_cut_and_has_cut_dead A s) ->; rewrite !orbT.
-    + by simpl has_cut_or => ->; rewrite has_cut_and_dead !orbT.
+    move=> /orP [] /=.
+      move=>/has_cut_and_has_cut->.
+      by rewrite has_cut_and_dead !orbT.
+    by move=> ->; rewrite has_cut_and_dead !orbT.
   Qed.
 
   Lemma xx {B C}: no_new_alt B C -> [|| C == dead C, has_cut C | no_new_alt_aux C].
@@ -440,44 +484,93 @@ Module check (U:Unif).
   (* Lemma yy {B C}: no_new_alt_aux B -> no_new_alt B C -> has_cut C || no_new_alt_aux C.
   Admitted. *)
 
+
+  (* Lemma has_cut_and_no_new_alt_aux {A}: has_cut_and A -> no_new_alt_aux A.
+  Proof.
+    elim: A => //.
+      move=> A HA s B HB /orP[]//=/orP[]/eqP[]->->.
+        by rewrite has_cut_dead no_new_alt_aux_dead.
+      by rewrite has_cut_cut no_new_alt_aux_cut.
+    move=> A HA B0 HB0 B HB /= /orP[].
+      by move=> /orP[]/eqP[]<-; rewrite eq_refl//orbT.
+    move=> /orP[].
+      move=> /HA->/=. *)
+
+
+  (* Lemma has_cut_no_new_alt {A}: has_cut A -> no_new_alt_aux A.
+  Proof.
+    unfold has_cut => /orP []. *)
+
+
+  (* Lemma no_new_alt_aux_trans {A B}: no_new_alt_aux A -> no_new_alt A B -> no_new_alt_aux B.
+  Proof.
+    elim: A B; try by move=> []//.
+    + move=> p []//=[]//.
+    + move=> A HA s B HB C /=.
+      case HC: has_cut => //=/andP[].
+      case: C => //= A' s' B'.
+        case: eqP => //=.
+          move=> ->; rewrite has_cut_dead /= => + /HB{}HB/HB->.
+        move=> DA /andP[].
+        case: eqP => //=.
+          move=> <- /HA{}HA _.
+          case: eqP.
+            move=>->; rewrite has_cut_cut.
+            apply: HB no_new_alt_id.
+          move=> CA.
+          case X: has_cut.
+            apply: HB no_new_alt_id.
+          
+          
+          rewrite 
+
+      move=> /. *)
+
+
   Lemma no_new_alt_trans {A B C}: no_new_alt A B -> no_new_alt B C -> no_new_alt A C.
   Proof.
-    (* elim: A B C => //.
-    all: try by move=> B C /= /orP [|/eqP <- /= ->//] /eqP -> /no_new_alt_dead <-; rewrite eq_refl.
-    + move=> B C /= /orP [/eqP -> /no_new_alt_dead <-|]; rewrite ?eq_refl//; destruct B => //.
-    + move=> B C /= /orP [/eqP -> /no_new_alt_dead <-|]; rewrite ?eq_refl//; destruct B => //= _ /orP [/eqP <-|]; rewrite ?eq_refl//; destruct C => //.
-    + move=> B C /= /orP [/eqP -> /no_new_alt_dead <-|]; rewrite ?eq_refl//; destruct B => //= _ /orP [/eqP <-|]; rewrite ?eq_refl//; destruct C => //.
-    + move=> p [|?] B + /=.
-      + move=> + /orP[|/orP[/orP[]|]]/eqP-> => C.
-        + by move=> /no_new_alt_dead <-; rewrite eq_refl.
-        + move=> /=/orP[->|]//; case: C => //.
-        + move=> /=/orP[->|]//; case: C => //.
-        + by move=> /no_new_alt_cut/orP[]->//; rewrite !orbT.
-      + move=> C /orP[/eqP->/no_new_alt_dead<-|/orP[]].
-        + by rewrite eq_refl.
-        + HERE
-      + move=> /orP [] /eqP -> /= /orP [->|] //; destruct C => //.
-      + move=> /eqP ->. /no_new_alt_cut.
-
-    + move=> p [].
-      + move=> B C /= H.
-        have {H}: (B == KO) || (B == OK) || (B == Goal p Cut) || (B == cut B).
-          by destruct B => //=.
-        move=> /orP [/orP[/orP[]|]|] /eqP; try move=> -> //.
-        + move=> /= /eqP <-//.
-        + move=> /=; destruct C => //.
-        + move=> /no_new_alt_cut <-; rewrite cut_cut_same eq_refl orbT.
-          by destruct cut => //.
-        + move=> /= _ B C H.
-          have {H}: (B == KO) || has_cut B || no_new_alt_aux B.
-            by destruct B => //.
-          move=> /orP [/orP[]|].
-          + move=> /eqP -> /eqP <- //.
-          + apply: xx.
-          + apply: yy.
-    + move=> A HA s B HB C D /=.
+    elim: A B C => //; try by move=> []//[]//.
+    + move=> p[|?]/= B C.
+        case: eqP.
+          move=> ->/=; case: C =>//.
+        case: eqP.
+          move=> ->//.
+        case: eqP => //=.
+          move=> -> _ _ _ /=; case C =>//.
+        (* by move=> _ _ _ /eqP -> /=; case: C =>//. *)
+      (* 1:{
+          move=>/orP[].
+          1:{
+            elim: B {p} C => //; try by move => [] //.
+            + move=> p [] //= C; rewrite /has_cut/= => _.
+              repeat case: eqP => //=; try by move=> ->//.
+                move=> _ _ ->//.
+              move=> _ _ -> //.
+            + move=> A HA s B HB []//A' s' B'/=.
+              unfold has_cut.
+              case: eqP => /=.
+                move=> []->->; rewrite !cut_cut_same/=.
+                case: eqP.
+                  by move=> -> _ /no_new_alt_cut/orP[]/eqP->
+                  ; rewrite !cut_dead_is_dead !dead_dead_same ?cut_cut_same eq_refl.
+                move=> H1 _ /andP[]/no_new_alt_cut/orP[]/eqP->/orP[]/eqP<-
+                  ; rewrite ?cut_dead_is_dead !cut_cut_same ?eq_refl//.
+              case: eqP => /=.
+                by move=> [] ->->; rewrite !cut_dead_is_dead.
+              do 2 case: eqP => //=.
+                move=> -> _ _ _ /andP[] H1 /has_cut_or_has_cut /HB{}HB/HB.
+              admit.
+            admit.
+            + move=> A HA B HB C HC.
+            admit.
+          }
+          admit.
+        }
+    + move=> A HA s B HB [] // A' s' B' /=.
       case: eqP.
-      + case: eqP => //.
+      + move=> -> []// A2 _ B2.
+        case: eqP => //.
+               x 9c
         move=> H [] <- <- /eqP <- /=.
         rewrite !cut_cut_same.
         case: eqP.
@@ -496,7 +589,7 @@ Module check (U:Unif).
           +
         +
     + admit. *)
-  Admitted.
+  Admitted. 
 
   Lemma det_rule_cut_has_cut_and {p r1}:
      det_rule_cut r1 -> has_cut_and (big_and p (premises r1)).
@@ -509,10 +602,10 @@ Module check (U:Unif).
       + by move=> ->; rewrite 2!orbT.
   Qed.
 
-  Lemma no_new_alt_cut {A B}: no_new_alt A (cut B).
+  (* Lemma no_new_alt_cut {A B}: no_new_alt A (cut B).
   Proof.
-    by case: A; move=> * /=; rewrite cut_cut_same eq_refl orbT.
-  Qed.
+    case: A; move=> * //=. ; rewrite cut_cut_same eq_refl orbT.
+  Qed. *)
 
   Lemma det_rule_has_cut_or {r rs p t s}:
     det_rule_cut r -> all det_rule_cut rs -> 
@@ -541,6 +634,37 @@ Module check (U:Unif).
     + move=> /andP[] //.
   Qed.
 
+  Lemma no_new_alt_cut1 {A}: no_new_alt A (cut A).
+  Proof.
+    elim: A => //.
+    + move=> /= _ [] //.
+    + move=> A HA s B HB /=.
+      by rewrite HA HB eq_refl orbT if_same.
+    + by move=> A HA B0 HB0 B HB /=; rewrite HA no_new_alt_id orbT.
+  Qed.
+
+  (* Lemma zz {A}: no_new_alt_aux A -> no_new_alt_aux (cut A).
+  Proof.
+    elim: A => //.
+      move=> A HA s B HB/=.
+      rewrite has_cut_cut.
+      case: has_cut.
+        by move=> /andP[]/HA->/HB->.
+      move=> /andP[]/HA->/orP[]/eqP.
+        move=> H; rewrite H in HB.
+
+  Lemma yy {A B}: no_new_alt A B -> no_new_alt A (cut B).
+  Proof.
+    elim: A B; try by move=> [] //.
+    + move=> p [].
+        by move=> /=[]//.
+      move=> /= _ []//.
+        move=> A s B/=; rewrite has_cut_cut /=.
+        case X: has_cut.
+        move=> /andP[].
+        Search no_new_alt cut. *)
+  
+
   Lemma expand_no_new_alt {A s1 r}: 
     (forall pr : program, all det_rule_cut (rules pr)) ->
     valid_state A -> expand s1 A = r -> no_new_alt A (get_state r).
@@ -561,10 +685,12 @@ Module check (U:Unif).
         case: rules => // [r rs] /= /andP [] /det_rule_has_cut_or H1 /H1 => /(_ p t s1).
         case: H => //.
         + move=> s2 => /=.
-          by unfold has_cut; simpl has_cut_or => ->; rewrite !orbT.
+          admit.
+          (* unfold/ has_cut. simpl has_cut_or => ->; rewrite !orbT. *)
         + case S: select => // [[ ]].
           unfold has_cut.
-          by move=> /has_cut_or1 /= ->; rewrite !orbT.
+          move=> /has_cut_or1 /=.
+          admit.
     + move=> A HA s B HB s1 r /simpl_valid_state_or [].
       + move=> [] -> /[dup] VB /HB {}HB /[dup] EB.
         destruct r.
@@ -573,46 +699,47 @@ Module check (U:Unif).
           + move=> [A' []] //.
           + move=> [] _ [B' [? ]]/[subst] -[] /[dup] ? /HB; simpl get_state => // /=; repeat case: eqP => //.
         + move=>  /simpl_expand_or_cut [s3[B'[_[+]]]]/[subst1].
-          by move=> /HB /= ->; rewrite !orbT.
+          move=> /HB//.
+          (* by move=> /HB /= ->; rewrite !orbT. *)
+          (* admit. *)
         + move=> /simpl_expand_or_fail [|[]].
           + move=> [A'[+[?]]]/[subst1] -[]; congruence.
-          + by move=> [B'[?[_[+]]]] /[subst1] /HB /=->; rewrite !orbT.
+          + by move=> [B'[?[_[+]]]] /[subst1] /HB /=->.
           + move=> [_[+]] /[subst1] //.
         + move=> /simpl_expand_or_solved [].
           + move=> [A'[+]] /[subst1] //.
-          + by move=> [B'[_[+]]] /[subst1] /HB /=->; rewrite !orbT.
+          + move=> [B'[_[+]]] /[subst1] /HB /=->//.
       + move=> [?[]] /[dup]VA/HA{}HA/[dup]BB/base_or_base_or_ko_valid/HB{}HB; destruct r.
         + move=> /simpl_expand_or_expanded [|[]].
           + move=> [A' [+]] /[subst1] /HA /= ->; rewrite no_new_alt_id eq_refl; repeat case: eqP => //.
-          + move=> [A' [+]] /[subst1] /HA /= ->; rewrite eq_refl orbT.
-            by rewrite no_new_alt_cut; repeat case: eqP.
-          + move=> [] _ [B' [? ]]/[subst] -[] /[dup] ? /HB; simpl get_state => // /=; repeat case: eqP => //.
+          + by move=> [A' [+]] /[subst1] /HA /= ->; rewrite eq_refl orbT no_new_alt_cut1 if_same.
+          + by move=> [] _ [B' [? ]]/[subst] -[] /[dup] ? /HB; simpl get_state => // /=; repeat case: eqP => //.
         + move=>  /simpl_expand_or_cut [s3[B'[_[+]]]]/[subst1].
-          by move=> /HB /= ->; rewrite !orbT.
+          move=> /HB /= ->//.
         + move=> /simpl_expand_or_fail [|[]].
           + move=> [A'[+[?]]]/[subst1] /= /HA ->; rewrite eq_refl no_new_alt_id; repeat case: eqP => //.
-          + by move=> [B'[?[_[+]]]] /[subst1] /HB /=->; rewrite !orbT.
+          + by move=> [B'[?[_[+]]]] /[subst1] /HB /=->//.
           + move=> [_[+]] /[subst1] //.
         + move=> /simpl_expand_or_solved [].
           + move=> [A'[+]] /[subst1] /HA /= ->; rewrite eq_refl no_new_alt_id; repeat case: eqP => //.
-          + by move=> [B'[_[+]]] /[subst1] /HB /=->; rewrite !orbT.
-    + move=> A HA B0 HB0 B HB s; simpl valid_state => r /andP [] /andP[] /[dup] BB /base_and_base_and_ko_valid /HB0 {}HB0 /HA{}HA H.
-      have: valid_state B.
-        move: H; case: success => // /eqP <-; apply: base_and_base_and_ko_valid BB.
-      move=> /HB{}HB.
+          + by move=> [B'[_[+]]] /[subst1] /HB //.
+    + move=> A HA B0 HB0 B HB s r /simpl_valid_state_and [] /[dup] VA/HA{}HA[]/[dup]VB/HB{}HB BB.
       destruct r.
       + move=> /simpl_expand_and_expanded [].
         + by move=> [A'[+]] /[subst1] /HA /=->; rewrite no_new_alt_id !orbT.
         + by move=> [s'[A'[B'[/HA {}HA [/HB {}HB]]]]] /[subst1] /=; rewrite HA HB !orbT.
       + move=> /simpl_expand_and_cut [].
         + by move=> [A'[/HA +]] /[subst1] /= ->; rewrite no_new_alt_id !orbT.
-        + by move=> [s'[A'[B'[/HA {}HA [/HB {}HB]]]]] /[subst1] /=; rewrite HA HB !orbT.
+        + move=> [s'[A'[B'[/HA /={}HA [/HB/={}HB]]]]] /[subst1] /=; rewrite HB.
+          admit.
       + move=> /simpl_expand_and_fail [|[]].
         + move=> [] /HA + /[subst1] //.
         + by move=> [A'[? [/HA +]]] /[subst1] /= ->; rewrite no_new_alt_id !orbT.
-        + by move=> [s'[A'[B'[/HA +[/HB+]]]]] /[subst1] /= -> ->; rewrite !orbT.
+        + move=> [s'[A'[B'[/HA +[/HB+]]]]] /[subst1]/=.
+          repeat case: eqP => //.
+          by move=> H1 H2 -> ->; rewrite orbT.
       + by move=> /simpl_expand_and_solved [s'[A'[B'[/HA+[/HB+]]]]] /[subst1] /= ->->; rewrite !orbT.
-  Qed.
+  Admitted.
 
   Lemma expandedb_no_new_alt {A B s1 b1}: 
     (forall pr : program, all det_rule_cut (rules pr)) ->

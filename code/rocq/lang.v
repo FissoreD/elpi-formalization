@@ -178,7 +178,7 @@ Module Run (U : Unif).
     match A with
     | Dead => Dead
     | OK | KO | Bot | Goal _ _ | Top => Dead
-    | And A B0 B => And (dead A) B0 B
+    | And A B0 B => Dead
     | Or A s B => Or (dead A) s (dead B)
     end.
 
@@ -188,6 +188,12 @@ Module Run (U : Unif).
     match A with
     | Bot | Goal _ _ | Top => KO
     | Dead | KO | OK => A
+    (* Non restituisco KO, al posto di And (cut A) B0 B perchè 
+      esempio: (A, (B; C)), !.
+      Quando raggiungo il cut, A per forza è OK
+      se anche B è OK, allora devo solo mettere a KO lo stato C che,
+      in uno stato valido è una chiamata
+    *)
     | And A B0 B => And (cut A) B0 B
     | Or A s B => Or (cut A) s (cut B)
     end.
@@ -293,7 +299,7 @@ Module Run (U : Unif).
   Lemma dead_failed {A} : A = dead A -> failed A.
   Proof. elim: A => //.
     + by move=> A HA s B HB /= [] /HA -> /HB -> ; rewrite if_same.
-    + by move=> A HA B0 HB0 B HB /= [] /HA ->.
+    (* + by move=> A HA B0 HB0 B HB /= [] /HA ->. *)
   Qed.
 
   Lemma failed_dead {A} : failed A = false -> A <> dead A.
@@ -301,8 +307,8 @@ Module Run (U : Unif).
     + move=> A HA s B HB /=; case: eqP.
       + move=> <- /HB H [] //.
       + move=> H _ [] //.
-    + move=> A HA B0 HB0 B HB /= /orP H [] H1; apply H.
-      by left; apply: dead_failed H1.
+    (* + move=> A HA B0 HB0 B HB /= /orP H [] H1; apply H. *)
+      (* by left; apply: dead_failed H1. *)
   Qed.
 
 
@@ -490,7 +496,7 @@ Module Run (U : Unif).
   Proof.
     elim: A => //.
     by move=> A HA s B HB /=; rewrite HA HB.
-    by move=> A HA B0 HB0 B HB /=; rewrite HA.
+    (* by move=> A HA B0 HB0 B HB /=; rewrite HA. *)
   Qed.
 
   (* Lemma cut_dead {A}: cut A = dead (cut A) -> dead A = A.
@@ -526,14 +532,14 @@ Module Run (U : Unif).
   Proof.
     elim: A => //.
     + by move=> A HA s B HB /=; rewrite HA HB.
-    + by move=> A HA B0 HB0 B HB /=; rewrite HA.
+    (* + by move=> A HA B0 HB0 B HB /=; rewrite HA. *)
   Qed.
 
   Lemma dead_cut_is_dead {A}: dead(cut A) = dead A.
   Proof.
     elim: A => //.
     + by move=> A HA s B HB /=; rewrite HA HB.
-    + by move=> A HA B0 HB0 B HB /=; rewrite HA.
+    (* + by move=> A HA B0 HB0 B HB /=; rewrite HA. *)
   Qed.
 
   Definition is_meta X := match X with OK | KO | Dead => true | _ => false end.
