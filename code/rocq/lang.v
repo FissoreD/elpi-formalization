@@ -145,6 +145,10 @@ Module Run (U : Unif).
   derive state.
   HB.instance Definition _ := hasDecEq.Build state state_eqb_OK.
 
+  Definition is_and s := match s with And _ _ _ => true | _ => false end.
+  Definition is_or s  := match s with Or _ _ _ => true | _ => false end.
+  Definition is_cut A := match A with Goal _ Cut => true | _ => false end.
+
   (* Notation "A ∧ B" := (And A B) (at level 13000).
   Notation "A ∨ B" := (Or A B) (at level 13000). *)
 
@@ -155,8 +159,6 @@ Module Run (U : Unif).
     | Solved      of Sigma & state.
   derive expand_res.
   HB.instance Definition _ := hasDecEq.Build expand_res expand_res_eqb_OK.
-
-
 
   Definition mkOr sB er :=
     match er with
@@ -343,7 +345,8 @@ Module Run (U : Unif).
   Inductive run_res := Done of Sigma & state | Failed of state.
   derive run_res.
   HB.instance Definition _ := hasDecEq.Build run_res run_res_eqb_OK.
-
+  Definition is_fail A := match A with Failure _ => true | _ => false end.
+  Definition is_done A := match A with Done _ _ => true | _ => false end.
 
   Inductive expandedb : Sigma -> state -> run_res -> bool -> Prop :=
     | expanded_done {s s' A alt}     : expand s A = Solved s' alt  -> expandedb s A (Done s' alt) false

@@ -91,8 +91,6 @@ Module valid_state (U:Unif).
       move=> p a H /andP [] /eqP -> H1 ; move:(H1) ->; move: H1 => /base_and_valid ->; rewrite eq_refl//.
   Qed.
 
-  Definition is_fail A := match A with Failure _ => true | _ => false end.
-
   Lemma dead_big_or p s t: big_or p s t <> dead (big_or p s t).
   Proof.
     rewrite /big_or; case F: F => // [[s1 r] xs] //.
@@ -146,8 +144,6 @@ Module valid_state (U:Unif).
       move=> [] -> /HB + []//.
     move=>[]+[]/HA++[]//.
   Qed.
-
-  Definition is_and s := match s with And _ _ _ => true | _ => false end.
 
   Lemma expand_failure_dead s1 {A}: valid_state A -> expand s1 A <> Failure Dead.
   Proof.

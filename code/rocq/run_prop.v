@@ -766,7 +766,7 @@ Module RunP (A: Unif).
         have [? {}IH]:= IH _ _ _ _ erefl erefl.
         eexists; apply: expanded_cut HA IH.
   Qed. *)
-Admitted.
+  Admitted.
 
   (* Lemma expanded_or_correct_left_fail {s A A'} b:
     expandedb s A (Failed A') b ->
