@@ -225,7 +225,7 @@ Module check (U:Unif).
     | Or A _ B, Or A' _ B' =>
       if A == dead A then (A' == dead A') && no_new_alt B B'
       else if (A' == dead A') then no_new_alt B B'
-      else no_new_alt A A' && (if has_cut A && ~~(has_cut A') then B' == cut B else (B == B') || (B' == cut B))
+      else no_new_alt A A' && ((B == B') || (B' == cut B))
 
     | And A B0 B, And A' B0' B'       =>
       [&& 
@@ -270,7 +270,7 @@ Module check (U:Unif).
     + move=> A HA s B HB /=.
       rewrite HA HB eq_refl.
       case: eqP=>//.
-      by case: has_cut=>//=; rewrite if_same.
+      (* by case: has_cut=>//=; rewrite if_same. *)
       (* case: eqP => // H1; case: eqP => //. *)
       (* by move=> H2; case: eqP => [DA|] //; rewrite eq_refl. *)
     + move=> A HA B0 HB0 B HB /=.
@@ -332,7 +332,7 @@ Module check (U:Unif).
     elim: A => //.
     + move=> /= _ [] //.
     + move=> A HA s B HB /=.
-      rewrite HB HA has_cut_cut eq_refl orbT if_same if_same.
+      rewrite HB HA eq_refl orbT if_same.
       case: eqP => //.
         by by move=> ->; rewrite cut_dead_is_dead dead_dead_same eq_refl.
     +move=> A HA B0 HB0 B HB /=; rewrite HA HB HB0 ?cut_cut_same ?eq_refl ?if_same//.
@@ -382,7 +382,7 @@ Module check (U:Unif).
         by move=>/cut_dead1 H /andP[]/eqP->/HB->; rewrite cut_dead_is_dead cut_cut_same.
       move=> H; case: eqP.
         by move=>-> /HB-> ; rewrite cut_cut_same cut_dead_is_dead.
-      by move=> ? /andP[]/HA ->; rewrite !has_cut_cut/= !cut_cut_same; rewrite eq_sym orPA => /eqP->; rewrite cut_cut_same.
+      by move=> ? /andP[] /HA ->; rewrite /= !cut_cut_same eq_sym orPA => /eqP->; rewrite cut_cut_same.
     + move=> A HA B0 HB0 B HB[]// A' B0' B'/= /and3P[]+/HB0->/HB->.
       by move=> /HA->; rewrite !cut_cut_same.
   Qed.
@@ -395,7 +395,7 @@ Module check (U:Unif).
       move=> /=/andP[]/orP[]/eqP[]->->_.
         rewrite dead_dead_same eq_refl=>/andP[]/eqP->.
         by move=>/no_new_alt_dead->; rewrite !dead_dead_same eq_refl.
-      rewrite cut_cut_same (@eq_sym _ B') orPA if_same dead_cut_is_dead.
+      rewrite cut_cut_same (@eq_sym _ B') orPA dead_cut_is_dead.
       case: eqP.
         move=> _/andP[]/eqP->/no_new_alt_cut_left->.
         by rewrite cut_cut_same cut_dead_is_dead eq_refl orbT.
@@ -427,8 +427,6 @@ Module check (U:Unif).
       case: eqP=>//=.
         by move=>-> _/HB=>/(_ H2)->; rewrite has_cut_and_dead.
       move=> _ _/andP[] /(xxx H1) /=->.
-      case: andP => _.
-        by move=>/eqP->; rewrite has_cut_cut.
       rewrite eq_sym.
       by move=>/orP[]/eqP->//; rewrite has_cut_cut.
     + move=> A HA B0 HB0 B HB[]//.
@@ -457,9 +455,8 @@ Module check (U:Unif).
         by move=> /eqP-> /no_new_alt_cut_left->; apply: no_alt_cut.
       case X: has_cut => /=.
         case: ifPn => //= /eqP ndA ndC /andP[nA nB] /andP[nnA].
-        rewrite [no_free_alt C]HA //=.
-        case: (ifP (has_cut C)) => /= cC; last by move=> /eqP->; rewrite cut_cut_same eqxx.
-        by rewrite eq_sym; case/orP => /eqP-> //; apply: no_alt_cut.
+        rewrite [no_free_alt C]HA //= eq_sym (cut_remains X nnA).
+        by case/orP => /eqP-> //; rewrite no_alt_cut.
       move=> ndC /andP[nA].
       move/eqP->. rewrite [_ == D]eq_sym cut_cut_same orbb.
       case: ifP => //= ndA /andP[nnAC /eqP->].
@@ -497,6 +494,23 @@ Module check (U:Unif).
     Compute (no_free_alt (Or OK empty OK)).
     Compute (has_cut OK).
 
+  Lemma no_new_alt_cut3 {B F}: no_new_alt (cut B) F -> no_new_alt B F.
+  Proof.
+    elim: B F; try by move=> [].
+    + move=> ? [|?]//=[]//.
+    + move=> A HA s B HB [] // A' s' B'.
+      move=> /=.
+      rewrite !dead_cut_is_dead.
+      case: ifP.
+        by move=>/eqP/cut_dead1->; rewrite dead_dead_same eqxx => /andP[]->/HB->.
+      move=> H; rewrite cut_cut_same [B' == _]eq_sym orbb.
+      case: ifP.
+        by move=> ? /HB ->; rewrite if_same.
+      move=> ?/andP[]/HA->/eqP<-; rewrite eqxx orbT.
+      by case: ifP => // H1; move: H; rewrite (eqP H1); rewrite cut_dead_is_dead dead_dead_same eqxx.
+    + move=> A HA B0 HB0 B HB []// A' B0' B'.
+      by move=>/=/and3P[]/HA->/HB0->/HB->.
+  Qed.
 
   Lemma no_new_alt_trans {A B C}: no_new_alt A B -> no_new_alt B C -> no_new_alt A C.
   Proof.
@@ -511,25 +525,17 @@ Module check (U:Unif).
         case: (C =P _) => //=.
           rewrite if_same => _ _; apply HB.
         case: eqP => // H1 H2 H3/andP[].
-        case: andP.
-          move=> [] H4 H5 /HA{}HA /eqP->.
-          apply: HB no_new_alt_cut1.
-        by move=> H4 /HA{}HA /orP; rewrite eq_sym => -[]/eqP->///HB => /(_ no_new_alt_cut1).
+        rewrite eq_sym.
+        move=> _ /orP[]/eqP->//.
+        apply: no_new_alt_cut3.
       case: (A =P _).
         move=>H1 H2/andP[]/eqP->; rewrite dead_dead_same eq_refl//.
       move=> H1 H2.
       case: eqP => //= H3 /andP[]/HA{}HA.
-      case X: has_cut => //=.
-        case Y: has_cut => //=.
-          rewrite eq_sym => /orP[]/eqP->.
-            by move=>/andP[]/HA->->.
-          move=> /andP[]/HA->; rewrite cut_cut_same.
-          by case: has_cut => ///=; rewrite eq_sym orPA => /eqP->; rewrite eqxx orbT.
-        move=> /eqP->; rewrite cut_cut_same eq_sym orPA => /andP[]/HA->/eqP->.
-        by rewrite eq_refl orbT if_same.
-      rewrite eq_sym=>/orP[]/eqP->/andP[]/HA->/=.
-        by case: andP =>// _ ->; rewrite orbT.
-      by rewrite cut_cut_same eq_sym orPA if_same =>->; rewrite orbT.
+      move=> + /andP[]/HA->.
+      (* rewrite eq_sym *)
+      move=>/orP[]/eqP->//; rewrite cut_cut_same.
+      by rewrite eq_sym orbb=>->; rewrite orbT.
     + move=> A HA B0 HB0 B HB[]//.
         move=> []//.
       move=> C D0 D [] // E F0 F.
@@ -563,22 +569,21 @@ Module check (U:Unif).
     + move=> A HA s B HB [] => // A' s' B' /=.
       case: ifP.
         by move=> _ /andP[/eqP-> ?]; rewrite cut_dead_is_dead dead_dead_same eqxx HB.
-      rewrite has_cut_cut /= andbF.
       case: ifP.
         by move=> /eqP-> _ /HB ->; rewrite cut_dead_is_dead dead_dead_same eqxx.
       move=> ndA' ndA /andP[/HA->/=].
       case: ifP.
-        by move=> ? /eqP ->; rewrite cut_cut_same eqxx orbT no_new_alt_cut1 if_same.
+        rewrite dead_cut_is_dead => /eqP /cut_dead1; move: ndA'=>/eqP//.
       move=> ? /orP[]; last first.
-        by move=> /eqP ->; rewrite cut_cut_same eqxx orbT no_new_alt_cut1 if_same.
-      by move=> /eqP ->; rewrite eqxx orbT no_new_alt_cut1 if_same.
+        by move=>/eqP->; rewrite cut_cut_same eqxx orbT.
+      by move=> /eqP ->; rewrite eqxx orbT.
     + move=> A HA B0 HB0 B HB [] // C D0 D /= /and3P[+ /HB0-> /HB->].
       by rewrite !(andbT, andbF); apply: HA.
     Qed.
 
   Definition is_cb x := match x with CutBrothers _ _ => true | _ => false end.
   
-  Lemma expand_has_cut {s0 s1 A B}: 
+  (* Lemma expand_has_cut {s0 s1 A B}: 
     valid_state A -> has_cut A -> expand s1 A = Expanded s0 B -> 
       has_cut B.
   Proof.
@@ -593,7 +598,7 @@ Module check (U:Unif).
           by move=> /HB/=//.
         simpl in H2.
         move=>/=.
-        admit.
+        admit. *)
       (* + move=> C[]-> /HB{}HB /HB{}HB /simpl_expand_or_fail[].
           move=>[A'[]] /=[] <-[]//.
         move=>[].
@@ -630,7 +635,7 @@ Module check (U:Unif).
           by move=>/has_cut_and_has_cut.
         admit.
       +  *)
-  Abort.
+  (* Abort. *)
 
   (* Lemma yy {A B s A'}: no_new_alt A A' -> no_new_alt (Or A s B) (Or A' s B).
   Proof.
@@ -680,74 +685,127 @@ Module check (U:Unif).
           + move=> [B'[_[+]]] /[subst1] /HB /=->//.
       + move=> [?[]] /[dup]VA/HA{}HA/[dup]BB/base_or_base_or_ko_valid/HB{}HB; destruct r.
         + move=> /[dup] HH /simpl_expand_or_expanded [].
-            move=> [A' [+]] /[subst1] /[dup] /[dup] H /expand_dead.
-            move=>/(_ VA notF) => -[] DA/=.
-            case: eqP => // _ H1.
-            move=> /HA /= /[dup] H2 ->; rewrite no_new_alt_id eq_refl /=.
-            case: eqP => // _.
-            case H3: has_cut => //=.
-            by have:= xx _ H2; rewrite H3 => /(_ isT) ->.
+            move=> [A' [H]] ?; subst => /=.
+            case: ifP => /eqP H1.
+              by move: VA; rewrite H1 valid_state_dead.
+            have:= expand_not_dead VA H => /=.
+            by case: ifP => /eqP// _; rewrite (HA _ _ H) eq_refl.
           move=> [].
-            move=> [A' [+]] /[subst1] /[dup] XX /HA /= ->; rewrite eq_refl orbT no_new_alt_cut1 if_same.
-            have:= expand_dead VA XX notF => /= -[] H1 H2.
-            rewrite if_same; case eqP => //.
+            move=> [A' [+]] /[subst1] /[dup] H /HA /= ->; rewrite eq_refl orbT no_new_alt_cut1 if_same.
+            have:= expand_not_dead VA H => /=.
+            by case: ifP => /eqP// H1; move: VA; rewrite H1 valid_state_dead.
           by move=> [] _ [B' [? ]]/[subst] -[] /[dup] ? /HB; simpl get_state => // /=; repeat case: eqP => //. 
         + move=> /simpl_expand_or_cut [s3[B'[_[+]]]]/[subst1].
           by move=> /HB /= ->//; rewrite if_same.
         + move=> /simpl_expand_or_fail [].
-            move=> [A'[+[?]]]/[subst1].
-            simpl get_state.
-            simpl.
-            /= /[dup] XX /HA ->.
-            rewrite eq_refl no_new_alt_id.
-            case: eqP => //.
-              move=> /(expand_is_dead_flow s1).
-              by rewrite XX => -[]->.
-            move=> DA; case: eqP => //=.
-            move=> DA'.
-            
-            XXXXX
-              (* + by move=> [B'[?[_[+]]]] /[subst1] /HB /=->//.
-              + move=> [_[+]] /[subst1] //.
+            move=> [A'[+[?]]]/[subst1]/= H.
+            rewrite (HA _ _ H) /=.
+            case: ifP=>/eqP H1.
+              by move: VA; rewrite H1 valid_state_dead.
+            have:= expand_not_dead VA H => /=.
+            by case: eqP => /eqP H2 //; rewrite eqxx.
+          move=> [].
+            by move=> [B'[DB[H]]]; have:= expand_not_dead VA H.
+          by move=> [H]; have:= expand_not_dead VA H.
         + move=> /simpl_expand_or_solved [].
-          + move=> [A'[+]] /[subst1] /HA /= ->; rewrite eq_refl no_new_alt_id; repeat case: eqP => //.
-          + by move=> [B'[_[+]]] /[subst1] /HB //.
+            move=> [A'[H]] -> /=.
+            case: ifP => /eqP H1.
+              by move: VA; rewrite H1 valid_state_dead.
+            case: ifP => /eqP H2.
+              by rewrite no_new_alt_id.
+            by rewrite (HA _ _ H) eq_refl.
+          by move=> [B'[H]]; have:= expand_not_dead VA H.
     + move=> A HA B0 HB0 B HB s r /simpl_valid_state_and [] /[dup] VA/HA{}HA[]/[dup]VB/HB{}HB BB.
       destruct r.
       + move=> /simpl_expand_and_expanded [].
-        + by move=> [A'[+]] /[subst1] /HA /=->; rewrite no_new_alt_id !orbT.
-        + by move=> [s'[A'[B'[/HA {}HA [/HB {}HB]]]]] /[subst1] /=; rewrite HA HB !orbT.
+          by move=> [A'[HA']] ->/=; rewrite (HA _ _ HA') !no_new_alt_id.
+        move=> [s'[A'[B'[HA' [HB']]]]]->/=.
+        by rewrite (HA _ _ HA') (HB _ _ HB') no_new_alt_id.
       + move=> /simpl_expand_and_cut [].
-        + by move=> [A'[/HA +]] /[subst1] /= ->; rewrite no_new_alt_id !orbT.
-        + move=> [s'[A'[B'[/HA /={}HA [/HB/={}HB]]]]] /[subst1] /=; rewrite HB.
-          by rewrite no_new_alt_no_new_alt_cut // orbT.
-      + move=> /simpl_expand_and_fail [|[]].
-        + move=> [] /HA + /[subst1] //.
-        + by move=> [A'[? [/HA +]]] /[subst1] /= ->; rewrite no_new_alt_id !orbT.
-        + move=> [s'[A'[B'[/HA +[/HB+]]]]] /[subst1]/=.
-          repeat case: eqP => //.
-          by move=> H1 H2 -> ->; rewrite orbT.
-      + by move=> /simpl_expand_and_solved [s'[A'[B'[/HA+[/HB+]]]]] /[subst1] /= ->->; rewrite !orbT. *)
+          by move=> [A'[/HA +]] /[subst1] /= ->; rewrite !no_new_alt_id.
+        move=> [s'[A'[B'[HA' [HB']]]]] ->/=; rewrite no_new_alt_id (HB _ _ HB') !andbT.
+        have:= HA _ _ HA' => /=.
+        apply: no_new_alt_no_new_alt_cut.
+      + move=> /simpl_expand_and_fail [].
+          by move=> [] /HA + /[subst1] //.
+        move=>[].
+          by move=> [A'[? [/HA +]]] /[subst1] /= ->; rewrite !no_new_alt_id.
+        move=> [s'[A'[B'[HA'[HB']]]]] -> /=.
+        case: ifP => /eqP H.
+          by subst.
+        by rewrite (HA _ _ HA') (HB _ _ HB') no_new_alt_id.
+      + by move=> /simpl_expand_and_solved [s'[A'[B'[/HA+[/HB+]]]]] /[subst1] /= ->->; rewrite no_new_alt_id.
+  Qed.
+
+  Lemma expandedb_no_new_alt {A r s1 b1}: 
+    (forall pr : program, all det_rule_cut (rules pr)) ->
+    valid_state A -> expandedb s1 A r b1 -> no_new_alt A (get_state_run r).
+  Proof.
+    move=> AllCut + H.
+    elim: H => //; clear -AllCut.
+    + move=> s1 s2 A B /= HA VA.
+      by have := expand_no_new_alt AllCut VA HA.
+    + move=> s1 A B H VA/=.
+      by have:= (expand_no_new_alt AllCut) VA H.
+    + move=> s s' r A B b H H1 IH VA.
+      have:= expand_no_new_alt AllCut VA H => /= H2.
+      apply: no_new_alt_trans H2 (IH (valid_state_expand H VA)).
+    + move=> s s' r A B b H H1 IH VA.
+      have:= expand_no_new_alt AllCut VA H => /= H2.
+      apply: no_new_alt_trans H2 (IH (valid_state_expand H VA)).
+  Qed.
+
+  Lemma next_alt_aux_no_new_alt {s1 s3 A C b}: 
+    valid_state A -> next_alt_aux b s1 A = Some (s3, C) ->
+      no_new_alt A C.
+  Proof.
+    elim: A C s3 b; try by move=>[]/=.
+    + by move=> /= + + []// _ [] _ <-.
+    + by move=> /= + + []// _ [] _ <-.
+    + by move=> p [|t] //= + + [] _//[] _ <-// => _ _; rewrite eq_refl orbT. 
+    + move=> A HA s B HB C s2 b /simpl_valid_state_or[].
+        move=>[]-> VB /=.
+        case nB: next_alt_aux => // [[s3 D]] H.
+        have {H}: Some (s3, Or Dead s D) = (Some (s2, C)).
+          case: D H {nB} => //.
+        by move=>[] _ <-; rewrite (HB _ _ _ VB nB).
+      move=> [ndA[VA VB]] /simpl_next_alt_aux_some[].
+        by move=> [B'[-> []]]/= H -> //=; rewrite (HB _ _ _ (base_or_base_or_ko_valid VB) H).
+      move=> [].  
+        move=> [A'[DA[nA]]]->/=.
+        rewrite (HA _ _ _ VA nA)/= eq_refl/=; rewrite no_new_alt_id if_same.
+        by case: ifP => /eqP //H; move: VA; rewrite H valid_state_dead.
+      by move=>[nDA[nAn->]] /=; rewrite no_new_alt_id if_same.
+    + move=> A HA B0 HB0 B HB C s2 b /simpl_valid_state_and[VA[VB _]]/=.
+      case X: next_alt_aux => //[[s3 D]|].
+        by move=>[] _ <-; rewrite !no_new_alt_id (HB _ _ _ VB X).
+      case Y: next_alt_aux => // [[s3 D]][] _<-.
+      rewrite !no_new_alt_id (HA _ _ _ VA Y)/=.
   Admitted.
 
-  Lemma expandedb_no_new_alt {A B s1 b1}: 
-    (forall pr : program, all det_rule_cut (rules pr)) ->
-    valid_state A -> expandedb s1 A (Failed B) b1 -> no_new_alt A B.
+  Lemma no_new_alt_valid_state {A B}: valid_state A -> no_new_alt A B -> valid_state B(** \/ (B = dead B)*).
   Proof.
-    move=> AllCut.
-    remember (Failed _) as RF eqn:HRF.
-    move=> + H; elim: H B HRF => //; clear -AllCut.
-    + move=> s2 A B HA ? [] <- VA.
-      by have := expand_no_new_alt AllCut VA HA.
-    + move=> s1 s2 r A B b /[dup] H.
-      move=> /(expand_no_new_alt AllCut) /= H1 H2 IH C /[subst1]/[dup] /H1{}H1.
-      move=> /(valid_state_expand H) /(IH _ erefl).
-      apply: no_new_alt_trans H1.
-    + move=> s s' r A B b /[dup] H.
-      move=> /(expand_no_new_alt AllCut) /= H1 H2 IH C /[subst1]/[dup] /H1{}H1.
-      move=> /(valid_state_expand H) /(IH _ erefl).
-      apply: no_new_alt_trans H1.
-  Qed.
+    (* elim: A B; try by move=> //= [] //=; auto.
+    + move=> p [|t] [] //=; auto.
+        move=> A s B _.
+        case: ifP => H.
+          move=> /andP[].
+        mo *)
+  Admitted.
+
+  Lemma next_alt_no_new_alt {s1 s2 B C}:
+    valid_state B -> next_alt s1 B (Some (s2, C)) -> no_new_alt B C.
+  Proof.
+    move=> + H.
+    remember (Some _) as S eqn:HS.
+    elim: H s2 C HS; clear => //.
+    + move=> s1 s2 A B /= nA fB s3 C []?? VA; subst.
+      apply: next_alt_aux_no_new_alt VA nA.
+    + move=> s1 s2 []//[s3 A] B C H1 F H2 IH s4 D [] _ <- VB.
+      have H:= next_alt_aux_no_new_alt VB H1.
+      have {}IH := IH _ _ erefl (no_new_alt_valid_state VB H).
+      apply: no_new_alt_trans H IH.
+    Qed.
 
   Lemma tail_cut_is_det A :
     (forall pr, all det_rule_cut pr.(rules)) ->
@@ -756,17 +814,17 @@ Module check (U:Unif).
   Proof.
     move=> AllCut VS s1 s2 alts.
     remember (Done _ _) as r eqn:Hr => -[b H].
-    elim: H VS s2 alts Hr => //=; clear -AllCut.
-    2:{
-      move=> s1 s2 s3 A B C b1 b2 b3 EA NB HR IH ? VA s4 D ? /[subst].
-      have:= valid_state_expanded_valid_state VA (ex_intro _ _ EA).
-      move=> /(valid_state_next_alt NB).
-      move=> /IH /(_ _ _ erefl) {}IH.
-      (* apply: next_alt_none IH.= *)
-      admit.
-    }
-    + move=> s1 s2 A B b EA VA s3 C [] /[subst2].
-      remember (Done _ _) as RD eqn:HRD.
-  Abort.
+    elim: H VS s2 alts Hr => //=; clear -AllCut; last first.
+      move=> s1 s2 s3 A B C b1 b2 b3 EA NB HR IH ? VA s4 D ?; subst.
+      have VB := valid_state_expanded_valid_state VA (ex_intro _ _ EA).
+      have VC:= valid_state_next_alt NB VB.
+      have nnCD := IH VC _ _ erefl.
+      apply: no_new_alt_trans _ nnCD.
+      have nnAB := expandedb_no_new_alt AllCut VA EA.
+      apply: no_new_alt_trans nnAB _.
+      by have:= next_alt_no_new_alt VB NB.
+    move=> s1 s2 A B b EA VA s3 C [] /[subst2].
+    by have:= expandedb_no_new_alt AllCut VA EA.
+  Qed.
 
 End check.

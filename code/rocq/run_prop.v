@@ -339,8 +339,8 @@ Module RunP (A: Unif).
       move=> [XX[]] /[dup]VA /HA{}HA /base_or_base_or_ko_valid/[dup]VB/HB{}HB /simpl_expand_or_solved [].
         move=> [A2] [] /[dup] /valid_state_expand /(_ VA) /= AA /HA {}HA ->/simpl_expand_or_solved[].
           move=> [A3][]/HA{} [] ->->->//.
-        move=> [B'][] /expand_is_dead_flow1 => /(_ AA)/[subst1]//.
-      move=> [B'][] /expand_is_dead_flow1 => /(_ VA)//.
+        move=> [B'][] /(expand_not_dead AA)//.
+      move=> [B'][] /(expand_not_dead VA)//.
     + move=> A HA B0 HB0 B HB s1 s2 s3 s4 C D /simpl_valid_state_and[]/HA{}HA[]/HB{}HB _ /simpl_expand_and_solved [s'[A'[B'[]]]].
       move=> /HA{}HA[]/HB{}HB<- /simpl_expand_and_solved [s7[A2[B2[]]]]/HA[]->->[]/HB[]->-><-//.
   Qed.
@@ -377,7 +377,6 @@ Module RunP (A: Unif).
     + move=> ??? + ??? [] ? /[subst] => /simpl_expand_and_fail [|[]].
       + move=> [] /expand_failure_dead H -> /simpl_valid_state_and []/H//.
       + move=> [A' [X[HA']]] /[subst1] /simpl_valid_state_and [] VA; right; do 2 eexists.
-        
         have:= expand_failure_not_dead_left VA HA' X => //.
       + move=> [s'[A'[B'[HA'[HB']]]]] /[subst1] /simpl_valid_state_and [] VA [] VB _.
         have:= expand_solved_success VA HA' => -[] /success_failed /failed_dead H _; right.
@@ -391,7 +390,7 @@ Module RunP (A: Unif).
         have VA'B: valid_state (And A' B0 B).
           move=> /=; rewrite BB VA'.
           move: H BB; case X: (success A1).
-            have [xx] := succes_is_solved s1 X; congruence.
+            have [xx] := succes_is_solved s1 VA X; congruence.
           by move=> /eqP <- => /base_and_base_and_ko_valid ->; rewrite eq_refl if_same.
         have {IH} []:= IH _ _ erefl erefl VA'B.
           by move=>[] H3; move: VA'B; rewrite H3 => /=; rewrite valid_state_dead.
@@ -510,9 +509,9 @@ Module RunP (A: Unif).
     remember (Failed _) as RF eqn:HRF => + + [? H].
     elim: H s HRF => //; clear.
     + move=> s A B /expand_failure_failed H C [] _ /H [] /failed_success -> //.
-    + by move=> s s' r A B b HA HB IH C /[subst1] VA /(succes_is_solved s) [] ss; rewrite HA.
+    + by move=> s s' r A B b HA HB IH C /[subst1] VA /(succes_is_solved s VA) [] ss; rewrite HA.
     + move=> s s' r A B ? HA HB IH C /[subst1] VA.
-      move=> /(succes_is_solved s) [? ? ]; congruence.
+      move=> /(succes_is_solved s VA) [? ? ]; congruence.
   Qed.
 
   Lemma expandes_and_fail {s A B0 B C}:
