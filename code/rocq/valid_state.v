@@ -45,27 +45,6 @@ Module valid_state (U:Unif).
       valid_state l && (base_and r0 || base_and_ko r0) && if success l then valid_state r else (r0 == r)
     end.
 
-  (* Lemma failed_cut {A}: valid_state (cut A) -> failed (cut A).
-  Proof.
-    elim: A => //.
-    + move=> A HA s B HB.
-      by case X: eq_op => //=; rewrite HA HB if_same.
-    + move=> A HA B HB C HC.
-      by rewrite HA.
-  Qed. *)
-
-
-  (* Inductive expandedP (F : state -> bool) : Sigma -> state -> run_res -> Prop :=
-  | expandedP_done {s s' A B}  : F A -> F B -> expand s A = Solved s' B   -> expandedP s A (Done s' B)
-  | expandedP_fail {s A B}     : F A -> F B -> expand s A = Failure B     -> expandedP s A (Failed B)
-  | expandedP_cut {s s' r A B}   : F A -> F B -> expand s A = CutBrothers s' B -> expandedP s' B r -> expandedP s A r
-  | expandedP_step {s s' r A B}  : F A -> F B -> expand s A = Expanded s' B    -> expandedP s' B r -> expandedP s A r.
-
-  Inductive runP (F : state -> bool) : Sigma -> state -> run_res -> Prop :=
-    | runP_done {s s' A B}            : F A -> F B -> expandedP F s A (Done s' B) -> runP s A (Done s' B)
-    | runP_fail {s A B}               : F A -> F B -> expandedP F s A (Failed B) -> next_alt s B None -> runP s A (Failed B)
-    | runP_backtrack {s s' s'' A B C} : F A -> F B -> expandedP F s A (Failed B) -> next_alt s B (Some (s', C)) ->  runP s' C s'' -> runP s A s''. *)
-
   Lemma base_and_valid {A} : base_and A -> valid_state A.
   Proof.
     elim A => //; clear => A HA B +; rewrite /base_or //=; case: A HA => //.
@@ -107,7 +86,6 @@ Module valid_state (U:Unif).
   Proof.
     elim A => //; clear.
     + move=> A HA s B HB; rewrite /base_or => /orP [] //= /andP [] /base_and_valid -> /base_or_aux_base_or.
-      (* move=> H; move: (H) => /HB ->; rewrite H; case failed => //=. *)
       by move=> /[dup] H => ->; case A => //=; auto.
     + move=> A HA B HB C HC; rewrite /base_or => /orP []//=; case: A HA => //.
       move=> p a H /andP [] /eqP -> H1 ; move:(H1) ->; move: H1 => /base_and_valid ->; rewrite eq_refl//.
@@ -164,10 +142,9 @@ Module valid_state (U:Unif).
   Lemma valid_state_is_not_dead A: valid_state A -> A <> dead A.
   Proof. 
     elim: A => //.
-    + move=> A HA s B HB /simpl_valid_state_or[].
-        move=> [] -> /HB + []//.
-      move=>[]+[]/HA++[]//.
-    (* + move=> A HA B0 _ B HB /simpl_valid_state_and[]/HA+ _ []//. *)
+    move=> A HA s B HB /simpl_valid_state_or[].
+      move=> [] -> /HB + []//.
+    move=>[]+[]/HA++[]//.
   Qed.
 
   Definition is_and s := match s with And _ _ _ => true | _ => false end.
@@ -194,37 +171,8 @@ Module valid_state (U:Unif).
       by have:= HB s'.
     Qed.
 
-  (* Lemma expand_failure_is_dead {s1 A}: valid_state A -> expand s1 A = Failure Dead -> A = dead A.
-  Proof. 
-    elim: A s1 => //.
-    + move=> ? []//.
-    + move=> A HA s B HB ? /simpl_valid_state_or [].
-        move=> []->/=/HB{}HB.
-        case X: expand=> // [[ ]]//=; move:X=>/HB <-//.
-      move=> []H1[]/HA{}HA /base_or_base_or_ko_valid /HB{}HB.
-      move=> /simpl_expand_or_fail [|[]].
-      + by move=> [A'[HA'[? ]]] //.
-      + by move=> [B'[?[HA'[HB']]]] //.
-      + by move=> [] /HA /= -> [] /HB -> _ /=; rewrite !dead_dead_same.
-    + move=> A HA B0 HB0 B HB s2.
-      rewrite (lock expand).
-      move=>/=/andP[]/andP[]/HA{}HA /[dup]H /base_and_base_and_ko_valid/HB0{}HB0 H1.
-      have {H H1}: valid_state B.
-        by move: H1 H; case: success => // /eqP<-/base_and_base_and_ko_valid.
-      rewrite -lock.
-      move=> /[dup] VB /HB{}HB /simpl_expand_and_fail[].
-        move=> [] /HA.
-      move=> [].
-        by move=> [A'[DA[]]] //.
-      move=> [s'[A'[B' [HA'[HB']]]]]; case: B' HB' => //= /HB/valid_state_is_not_dead //.
-  Qed. *)
-
   Lemma success_dead {A}: success (dead A) = false.
-  Proof.
-    elim: A=> //.
-    + by move=> A HA s B HB /=; rewrite HA HB if_same.
-    (* + by move=> A HA B0 _ B HB /=; rewrite HA. *)
-  Qed.
+  Proof. by elim: A=> // A HA s B HB /=; rewrite HA HB if_same. Qed.
 
   Lemma valid_state_big_or {pr s t} : valid_state (big_or pr s t).
   Proof.
@@ -250,7 +198,6 @@ Module valid_state (U:Unif).
       move=> -> /IHB /orP[/eqP->|]//.
     + move=> [] //= _ _ _ B HB C HC /andP [] /eqP /[subst1].
       by rewrite eq_refl => /base_and_base_and_ko_cut. 
-      (* by move=> /base_and_base_and_ko_cut ->; rewrite eq_refl. *)
   Qed.
 
   Lemma base_and_ko_cut {B}: base_and_ko B -> base_and_ko (cut B).
@@ -272,11 +219,8 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma cut_dead1 {A}: cut A = dead A -> A = dead A.
-  Proof.
-    elim: A=> //.
-      by move=> A HA s B HB[]/=/HA<-/HB<-.
-    (* by move=> A HA B0 HB0 B HB/=[]/HA<-. *)
-  Qed.
+  Proof. by elim: A=> // A HA s B HB[]/=/HA<-/HB<-. Qed.
+  
 
   Lemma expand_not_dead {s A r}: 
     valid_state A -> expand s A = r -> get_state r <> dead (get_state r).
@@ -325,11 +269,7 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma valid_state_dead {A}: valid_state (dead A) = false.
-  Proof.
-    elim: A => //.
-    + by move=> A HA s B HB/=; rewrite HA HB; case: dead.
-    (* + by move=> A HA ? _ B HB /=; rewrite HA; rewrite success_dead; case: orP. *)
-  Qed.
+  Proof. by elim: A => // A HA s B HB/=; rewrite HA HB; case: dead. Qed.
 
   Lemma succes_is_solved s {A}: valid_state A -> success A -> exists B, expand s A = Solved s B.
   Proof.
@@ -556,7 +496,6 @@ Module valid_state (U:Unif).
   Lemma expand_failure_not_dead_left {s1 A B}: valid_state A -> expand s1 A = Failure B -> B <> Dead -> A <> dead A.
   Proof.
     elim: A B => //.
-    (* + move=> ?? [] /[subst1] //. *)
     + move=> A HA s B HB C VA /simpl_expand_or_fail [|[]].
       + move=> [A'[HA'[?]]] /[subst1] /= H -[] H1 H2.
         by move: VA; rewrite H1 H2; rewrite (@valid_state_dead (Or A s B)).
@@ -594,30 +533,15 @@ Module valid_state (U:Unif).
       apply: (IH VB).
   Qed.
 
-  Lemma valid_state_expanded_done {s1 s2 A B}:
-    valid_state A ->  expanded s1 A (Done s2 B) -> valid_state B.
+  Lemma valid_state_expanded {s1 A r}:
+    valid_state A ->  expanded s1 A r -> valid_state (get_state_run r).
   Proof.
-    remember (Done _ _) as D eqn:HD => + [b H].
-    elim: H s2 B HD => //; clear.
-    + move=> s1 s2 A B HA s3 C [] /[subst2].
-      apply: valid_state_expand HA.
-    + move=> s1 s2 r A B b HA HB + s3 C ? /(valid_state_expand HA) VB /[subst].
-      by move=> /(_ _ _ erefl VB).
-    + move=> s1 s2 r A B b HA HB + s3 C ? /(valid_state_expand HA) VB /[subst].
-      by move=> /(_ _ _ erefl VB).
-  Qed.
-
-  Lemma valid_state_expanded_valid_state {s1 A B}:
-    valid_state A ->  expanded s1 A (Failed B) -> valid_state B.
-  Proof.
-    remember (Failed _) as D eqn:HD => + [b H].
-    elim: H B HD => //; clear.
-    + move=> s1 A B HA s3 [] /[subst1].
-      apply: valid_state_expand HA.
-    + move=> s1 s2 r A B b HA HB + C ? /(valid_state_expand HA) VB /[subst].
-      by move=> /(_ _ erefl VB).
-    + move=> s1 s2 r A B b HA HB + C ? /(valid_state_expand HA) VB /[subst].
-      by move=> /(_ _ erefl VB).
+    move=> + [b H].
+    elim: H; clear.
+    + move=> s1 s2 A B HA VA /=; apply: valid_state_expand HA VA.
+    + move=> s A B HA VA; apply: valid_state_expand HA VA.
+    + move=> s1 s2 r A B b HA _ IH VA; apply (IH (valid_state_expand HA VA)).
+    + move=> s1 s2 r A B b HA _ IH VA; apply (IH (valid_state_expand HA VA)).
   Qed.
 
   Lemma next_alt_aux_base_and {s1 s2 A B}:
@@ -680,12 +604,12 @@ Module valid_state (U:Unif).
   Proof.
     move=> + [b H]; elim H; clear.
     + move=> s1 s2 A B b EA VA.
-      have H := valid_state_expanded_done VA (ex_intro _ _ EA).
+      have H := valid_state_expanded VA (ex_intro _ _ EA).
       exact H.
     + move=> s A B b HA HB VA.
-      apply: valid_state_expanded_valid_state VA (ex_intro _ _ HA).
+      apply: valid_state_expanded VA (ex_intro _ _ HA).
     + move=> s s' r A B C b1 b2 b3 HA HB HC IH Hb VA.
-      have VB := valid_state_expanded_valid_state VA (ex_intro _ _ HA).
+      have VB := valid_state_expanded VA (ex_intro _ _ HA).
       have NA := valid_state_next_alt HB VB.
       apply: IH NA.
     Qed.
