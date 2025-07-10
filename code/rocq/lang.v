@@ -575,69 +575,60 @@ Module Run (U : Unif).
       case NB: next_alt_aux => // [[s2 C]|].
       + move=> [] //.
       + case NA: next_alt_aux => // [[s2 C]] [] //.
-  Qed. 
+  Qed.
+  
+  Definition same_sol (A B : option (Sigma * state)) := 
+    match A, B with
+    | None, None => true
+    | Some (_, A), Some (_, B) => A == B
+    | _, _ => false
+    end.
 
-  Lemma next_alt_aux_none {s1 s2 A b}:
-    next_alt_aux b s1 A = None ->
-      next_alt_aux b s2 A = None.
+  Lemma next_alt_aux_same_sol s1 s2 A b:
+    same_sol (next_alt_aux b s1 A) (next_alt_aux b s2 A).
   Proof.
-    elim: A b s1 s2 => //; try by move=> []//.
-    + move=> ?? [] //.
+    elim: A b s1 s2 => //; try by move=> [] *; subst.
+    + by move=> ??[]/=.
     + move=> A HA s B HB b s1 s2 /=.
-      case X: next_alt_aux => [[s3 C]|].
-      + by case: A X HA => //.
-      + rewrite (HA _ _ s2 X); case A => //.
-        case NB: next_alt_aux => [[? []]|] // _.
-        + by have:= next_alt_aux_dead NB.
-        + by rewrite (HB _ _ _ NB).
+      case NA: next_alt_aux => [[s3 C]|]; have:= HA false s1 s2; rewrite NA.
+        case: next_alt_aux => // [[s4 D]]/eqP->/=.
+        case NB: next_alt_aux => [[s5 E]|]; have:= HB false s1 s2; rewrite NB.
+          case: next_alt_aux => //[[s6 F]]/eqP->; by destruct A => //=.
+        by case: next_alt_aux => //; destruct A => //=.
+      case: next_alt_aux => //; destruct A => //= _.
+      case NB: next_alt_aux => [[s5 E]|]; have:= HB false s1 s2; rewrite NB.
+        case: next_alt_aux => // [[s6 F]] /eqP->; by destruct F => //=.
+      by case: next_alt_aux => //.
     + move=> A HA B0 _ B HB b s1 s2 /=.
-      case NB: next_alt_aux => [[ ]|] //.
-      case NA: next_alt_aux => [[ ]|] // _.
-      by rewrite (HA _ _ _ NA) (HB _ _ _ NB).
+      case NB: next_alt_aux => [[s3 C]|].
+        have:= HB true s1 s2; rewrite NB.
+        by case: next_alt_aux => [[s4 D]|]///eqP->/=.
+      have:= HB true s1 s2; rewrite NB.
+        case: (next_alt_aux true s2 B) => // _.
+      case NA: next_alt_aux => [[s3 C]|].
+        have:= HA true s1 s2; rewrite NA.
+        by case: next_alt_aux => //[[s4 D]]/eqP-> //=.
+      have:= HA true s1 s2; rewrite NA.
+      by case: next_alt_aux => //=.
+  Qed.
+
+  Lemma next_alt_aux_none {s1 A b}:
+    next_alt_aux b s1 A = None ->
+      forall s2, next_alt_aux b s2 A = None.
+  Proof.
+    move=> H s2.
+    have := next_alt_aux_same_sol s1 s2 A b.
+    rewrite H => /=; case: next_alt_aux => //.
   Qed.
 
   Lemma next_alt_aux_some {s1 s2 A B b}:
     next_alt_aux b s1 A = Some (s2, B) ->
       (forall s3, exists s4, next_alt_aux b s3 A = Some (s4, B)).
   Proof.
-    elim: A b s1 s2 B => //.
-    + by move=> [] => //= ??? [] /[subst2]; eexists.
-    + by move=> [] => //= ??? [] /[subst2]; eexists.
-    + by move=> ??[] // ??? [] /[subst2]; eexists.
-    + move=> A HA s B HB b s1 s2 C; simpl next_alt_aux at 1 => H.
-      have {H}: (
-        (A = Dead /\
-          match next_alt_aux false s1 B with
-            | Some (sB1, Dead) => None
-            | Some (sB1, KO as B) | Some (sB1, OK as B) | Some (sB1, Top as B) |
-                Some (sB1, Bot as B) | Some (sB1, Goal _ _ as B) |
-                Some (sB1, Or _ _ _ as B) | Some (sB1, And _ _ _ as B) =>
-                Some (sB1, Or Dead s B)
-            | None => None
-            end = Some (s2, C)) \/ 
-      (A <> Dead /\ 
-        match next_alt_aux false s1 A with
-          | Some (sA, A) => Some (sA, Or A s B)
-          | None => Some (s, Or Dead s B) 
-          end = Some (s2, C))).
-      by case: A H {HA} => //=; auto; try by right.
-      move=> [].
-      + move=> [] /[subst1].
-        case NB: next_alt_aux => // [[s3 D]] // H.
-        have {H}: Some (s3, Or Dead s D) = Some (s2, C).
-           by case: D H {NB} => //.
-        move=> []/[subst2] s3 /=.
-        have [s4 {}HB]:= HB _ _ _ _ NB s3.
-        rewrite HB.
-        by eexists; destruct D => //; have:= next_alt_aux_dead NB.
-      + move=> [] HD; case NA: next_alt_aux => // [[s3 D]|] [] /[subst2] s5 /=.
-        + have [s4 {}HB] := HA _ _ _ _ NA s5; rewrite HB; eexists; destruct A => //=.
-        + rewrite (next_alt_aux_none NA); eexists; destruct A => //.
-    + move=> A HA B0 _ B HB b s1 s2 C /= + s3.
-      case NB: next_alt_aux =>  [[ ]|].
-      + by move=> [] /[subst2]; have [? {}HB]:= HB _ _ _ _ NB s3; rewrite HB; eexists.
-      + case NA': next_alt_aux => [[ ]|] // [] /[subst2].
-        by have [? {}HA]:= HA _ _ _ _ NA' s3; rewrite HA (next_alt_aux_none NB); eexists.
+    move=> H s3.
+    have := next_alt_aux_same_sol s1 s3 A b.
+    rewrite H/=.
+    by case X: next_alt_aux => // [[s4 C]]/eqP->; eexists.
   Qed.
 
   Lemma next_alt_none {s1 s2 D}:
@@ -646,7 +637,7 @@ Module Run (U : Unif).
     remember None as RN eqn:HRN => H.
     elim: H s2 HRN => //; clear.
     + move=> s A NA s1 _; apply: next_alt_ko.
-      apply: next_alt_aux_none NA.
+      apply: next_alt_aux_none NA _.
     + move=> s1 s2 r A B NA FB NB + s3 ? /[subst] => /(_ _ erefl) H.
       have [? {}H1] := next_alt_aux_some NA s3.
       apply: next_alt_step H1 FB (H _).
