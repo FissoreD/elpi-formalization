@@ -18,7 +18,12 @@ Module valid_state (U:Unif).
     | t => base_and t
     end.
 
-  Definition base_or s := (s == Bot) || (base_or_aux s).
+  Definition base_or s := 
+    match s with 
+    | Bot => true
+    | Or Bot _ t => base_or_aux t
+    | _ => false
+    end.
 
   Fixpoint base_and_ko s :=
     match s with
@@ -27,68 +32,58 @@ Module valid_state (U:Unif).
     | _ => false
     end.
 
-  Fixpoint base_or_ko_aux s :=
+  Fixpoint base_or_aux_ko s :=
     match s with
-    | Or l _ r => base_and_ko l && (base_or_ko_aux r) (* todo: should also say something about the substitution and the program? *)
+    | Or l _ r => base_and_ko l && (base_or_aux_ko r) (* todo: should also say something about the substitution and the program? *)
     | t => base_and_ko t
     end.
 
-  Definition base_or_ko s := (s == KO) || (base_or_ko_aux s).
+  Definition base_or_ko s := 
+    match s with 
+    | KO => true
+    | Or KO _ t => base_or_aux_ko t
+    | _ => false
+    end.
 
   Fixpoint valid_state s :=
     match s with
     | Goal _ _ | OK | KO | Bot | Top => true
     | Dead => false
     | Or Dead _ r => valid_state r
-    | Or l _ r => valid_state l && (base_or r || base_or_ko r)
+    | Or l _ r => valid_state l && (base_or_aux r || base_or_aux_ko r)
     | And l r0 r => 
       valid_state l && (base_and r0 || base_and_ko r0) && if success l then valid_state r else (r0 == r)
     end.
 
   Lemma base_and_valid {A} : base_and A -> valid_state A.
   Proof.
-    elim A => //; clear => A HA B +; rewrite /base_or //=; case: A HA => //.
+    elim A => //; clear => A HA B +; rewrite /base_or_aux //=; case: A HA => //.
     move=> p a _ + A + /andP [] /eqP H ; rewrite H.
     move=> _ HVA HA; rewrite (HVA HA) /=.
     by rewrite HA eq_refl.
   Qed.
 
-  Lemma base_or_aux_base_or {B}: base_or_aux B -> base_or B.
-  Proof. case B => //. Qed.
-
   Lemma base_and_big_and {pr A}: base_and (big_and pr A).
   Proof. by elim: A => // a l /= ->; rewrite eq_refl. Qed.
-
-  Lemma base_or_aux_big_and {pr l} : base_or_aux (big_and pr l).
-  Proof. by elim: l => //= _ ??; rewrite eq_refl base_and_big_and. Qed.
 
   Lemma valid_state_big_and {pr l} : valid_state (big_and pr l).
   Proof. elim: l => // x xs /=; by rewrite base_and_big_and eq_refl. Qed.
 
-  Lemma base_or_big_and {pr l} : base_or (big_and pr l).
-  Proof. case: l; rewrite /base_or // => ??; by rewrite base_or_aux_big_and. Qed.
+  Lemma base_or_big_and {pr l} : base_or_aux (big_and pr l).
+  Proof. case: l; rewrite /base_or_aux //= => ??; by rewrite base_and_big_and eqxx. Qed.
 
-  Lemma base_or_aux_big_or_aux {pr s l}: base_or_aux (big_or_aux pr s l).
-  Proof. 
-    elim: l s.
-    + move=> s; apply base_or_aux_big_and.
-    + by move=> [] s R l H r1 //=; rewrite H base_and_big_and.
-  Qed.
-
-  Lemma base_or_big_or_aux {pr s l}: base_or (big_or_aux pr s l).
+  Lemma base_or_big_or_aux {pr s l}: base_or_aux (big_or_aux pr s l).
   Proof.
-    case: l => //=.
-    + by rewrite base_or_big_and.
-    + by move=> [] s' R l; rewrite /base_or/= base_and_big_and base_or_aux_big_or_aux.
+    elim: l s => //=; clear.
+    + move=> ?; apply: base_or_big_and.
+    + by move=> [[s r] rs] IH r1 /=; rewrite IH base_and_big_and.
   Qed.
 
-  Lemma base_or_valid {A} : base_or A -> valid_state A.
+  Lemma base_or_valid {A} : base_or_aux A -> valid_state A.
   Proof.
     elim A => //; clear.
-    + move=> A HA s B HB; rewrite /base_or => /orP [] //= /andP [] /base_and_valid -> /base_or_aux_base_or.
-      by move=> /[dup] H => ->; case A => //=; auto.
-    + move=> A HA B HB C HC; rewrite /base_or => /orP []//=; case: A HA => //.
-      move=> p a H /andP [] /eqP -> H1 ; move:(H1) ->; move: H1 => /base_and_valid ->; rewrite eq_refl//.
+    + move=> A HA s B HB/=/andP[]/base_and_valid->/[dup]/HB->->; destruct A => //.
+    + by move=> []// p a Ha B0 HB0 B HB /=/andP[/eqP->->]; rewrite eqxx.
   Qed.
 
   Lemma dead_big_or p s t: big_or p s t <> dead (big_or p s t).
@@ -96,7 +91,7 @@ Module valid_state (U:Unif).
     rewrite /big_or; case F: F => // [[s1 r] xs] //.
   Qed.
 
-  Lemma simpl_valid_state_or {s A B}: valid_state (Or A s B) -> (A = Dead /\ valid_state B) \/ (A <> Dead /\ valid_state A /\ (base_or B || base_or_ko B)).
+  Lemma simpl_valid_state_or {s A B}: valid_state (Or A s B) -> (A = Dead /\ valid_state B) \/ (A <> Dead /\ valid_state A /\ (base_or_aux B || base_or_aux_ko B)).
   Proof.
     move=> /=; case: A => //.
     all: try by move=> /= ->; right; repeat split => //; rewrite orbT //.
@@ -121,20 +116,17 @@ Module valid_state (U:Unif).
     valid_state A /\ base_and B0 || base_and_ko B0 /\ (if success A then valid_state B else B0 == B).
   Proof. move=>/=/andP[]/andP[]// => ->/[dup]/base_and_base_and_ko_valid + ->; case:success => // + /eqP <-//. Qed.
 
-  Lemma base_or_ko_valid {B}: base_or_ko B -> valid_state B.
+  Lemma base_or_ko_valid {B}: base_or_aux_ko B -> valid_state B.
   Proof.
-    rewrite /base_or_ko => /orP [].
-    + by move=> /eqP ->.
-    + elim: B => //.
-      + move=> A HA s B HB /= /andP [] /base_and_ko_valid ->.
-        rewrite /base_or_ko /base_or.
-        move=> /[dup] /HB -> ->.
-        by rewrite 2!orbT; destruct A.
-      + by move=> [] // HA B0 HB0 B HB /= /andP [] /[dup] /eqP -> _ ->; rewrite eq_refl orbT.
+    elim: B => //.
+    + move=> A HA s B HB /= /andP [] /base_and_ko_valid ->.
+      move=> /[dup] /HB -> ->.
+      by rewrite !orbT; destruct A.
+    + by move=> [] // HA B0 HB0 B HB /= /andP [] /[dup] /eqP -> _ ->; rewrite eq_refl orbT.
   Qed.
 
   Lemma base_or_base_or_ko_valid {B}:
-    base_or B || base_or_ko B -> valid_state B.
+    base_or_aux B || base_or_aux_ko B -> valid_state B.
   Proof. by move=> /orP []; [move=> /base_or_valid | move=> /base_or_ko_valid] => ->. Qed.
 
   Lemma valid_state_is_not_dead A: valid_state A -> A <> dead A.
@@ -186,12 +178,10 @@ Module valid_state (U:Unif).
   Qed.
 
 
-  Lemma base_or_base_or_ko_cut {B}: base_or B -> base_or_ko (cut B).
+  Lemma base_or_base_or_ko_cut {B}: base_or_aux B -> base_or_aux_ko (cut B).
   Proof.
-    rewrite /base_or /base_or_ko => /orP []; [by case B |].
     elim: B => //.
-    + move=> A IHA s B IHB /= /andP [] /base_and_base_and_ko_cut.
-      move=> -> /IHB /orP[/eqP->|]//.
+    + by move=> A IHA s B IHB /= /andP [] /base_and_base_and_ko_cut -> /IHB ->.
     + move=> [] //= _ _ _ B HB C HC /andP [] /eqP /[subst1].
       by rewrite eq_refl => /base_and_base_and_ko_cut. 
   Qed.
@@ -203,15 +193,13 @@ Module valid_state (U:Unif).
      by rewrite eq_refl.
   Qed.
   
-  Lemma base_or_ko_cut {B}: base_or_ko B -> base_or_ko (cut B).
+  Lemma base_or_ko_cut {B}: base_or_aux_ko B -> base_or_aux_ko (cut B).
   Proof.
-    rewrite /base_or_ko => /orP [].
-    + by case: B => //.
-    + elim: B => //.
-      + move=> A HA s B HB /= /andP[]/base_and_ko_cut->/HB/orP[/eqP->|]//.
-      + move=> [] //= HA B0 HB0 B HB/andP[]/eqP/[subst1].
-        rewrite eq_refl.
-        apply: base_and_ko_cut.
+    elim: B => //.
+      by move=> A HA s B HB /= /andP[]/base_and_ko_cut->/HB->.
+    move=> [] //= HA B0 HB0 B HB/andP[]/eqP/[subst1].
+    rewrite eq_refl.
+    apply: base_and_ko_cut.
   Qed.
 
   Lemma cut_dead1 {A}: cut A = dead A -> A = dead A.
@@ -276,7 +264,7 @@ Module valid_state (U:Unif).
         have [C H]:= HB s H1 H2.
         by eexists; rewrite H => //.
       + move=> DA H.
-        have {H}: (valid_state A && (base_or B || base_or_ko B)).
+        have {H}: (valid_state A && (base_or_aux B || base_or_aux_ko B)).
           destruct A => //.
         move=>/andP[]VA VB SA.
         have [A' H]:= HA s VA SA.
@@ -432,7 +420,7 @@ Module valid_state (U:Unif).
         + move=> [A'[HA']] /[subst1] /simpl_valid_state_or [].
           + move=> [] /[subst1] //.
           + move=> [] _ [] VA /[dup] /base_or_base_or_ko_valid /= VB BB.
-            suffices:  valid_state A' && (base_or (cut B) || base_or_ko (cut B)).
+            suffices:  valid_state A' && (base_or_aux (cut B) || base_or_aux_ko (cut B)).
               destruct A' => //.
             by move: BB; rewrite (IHA _ _ HA' VA) => /orP [/base_or_base_or_ko_cut|/base_or_ko_cut] ->; rewrite orbT.
         + move=> [] HA [B' +] /simpl_valid_state_or [] [] DA => -[] /[subst1] H /=.
