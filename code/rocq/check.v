@@ -251,15 +251,10 @@ Module check (U:Unif).
       move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
   Qed.
   Lemma no_alt_dead {A}: no_free_alt (dead A).
-  Proof. elim: A => //.
-    + move=> A HA s B HB /=.
-      rewrite has_cut_dead.
-      by rewrite HA HB.
-      (* by rewrite !cut_dead_is_dead eq_refl if_same. *)
-    (* + move=> A HA B0 HB0 B HB /=. *)
-      (* case: has_cut => ///andP[]/HA->//. *)
-      (* rewrite HA if_same. *)
-      (* by rewrite ad_same eq_refl. *)
+  Proof. 
+    elim: A => //.
+    move=> A HA s B HB /=.
+    by rewrite has_cut_dead HA HB.
   Qed.
 
 
@@ -270,9 +265,6 @@ Module check (U:Unif).
     + move=> A HA s B HB /=.
       rewrite HA HB eq_refl.
       case: eqP=>//.
-      (* by case: has_cut=>//=; rewrite if_same. *)
-      (* case: eqP => // H1; case: eqP => //. *)
-      (* by move=> H2; case: eqP => [DA|] //; rewrite eq_refl. *)
     + move=> A HA B0 HB0 B HB /=.
       case: has_cut => //=; by rewrite HA HB HB0.
   Qed. 
@@ -335,40 +327,17 @@ Module check (U:Unif).
       rewrite HB HA eq_refl orbT if_same.
       case: eqP => //.
         by by move=> ->; rewrite cut_dead_is_dead dead_dead_same eq_refl.
-    +move=> A HA B0 HB0 B HB /=; rewrite HA HB HB0 ?cut_cut_same ?eq_refl ?if_same//.
-      (* case HC: has_cut => //=. *)
-      (* rewrite has_cut_cut=>//=. *)
+    + move=> A HA B0 HB0 B HB /=. 
+      rewrite HA HB HB0 ?cut_cut_same ?eq_refl ?if_same//.
   Qed.
-
-  (* Lemma no_new_alt_cut2 {A B}: no_new_alt B (cut A).
-  Proof.
-    elim: B A => //.
-    + move=> /= _ [] //.
-    + move=> A HA s B HB /=.
-      rewrite HB HA has_cut_cut eq_refl orbT if_same if_same.
-      case: eqP => //.
-        by by move=> ->; rewrite cut_dead_is_dead dead_dead_same eq_refl.
-    + by move=> A HA B0 HB0 B HB /=; rewrite HA HB HB0 ?cut_cut_same eq_refl ?if_same.
-  Qed. *)
 
   Lemma no_alt_cut {A}: no_free_alt (cut A).
   Proof.
     elim: A => //.
-    + move=> A HA s B HB /=.
-      by rewrite has_cut_cut HA HB.
-        (* by move=> []->/HB/=. *)
-      (* rewrite HA cut_cut_same eq_refl if_same. *)
-    + move=> A HA B0 _ B HB /=.
-      (* move=> [] /HA H[] /HB/=. *)
-      by rewrite has_cut_cut HB.
+    + move=> A HA s B HB /=; by rewrite has_cut_cut HA HB.
+    + move=> A HA B0 _ B HB /=; by rewrite has_cut_cut HB.
   Qed.
 
-  Lemma eq_sym {T} {a b}: (@eq_op T a b) = (b == a).
-  Proof. 
-    case: eqP.
-    + by move=> ->; rewrite eq_refl.
-    + case: eqP =>//; congruence.
-  Qed.
   Lemma orPA {a}: a || a = a.
   Proof. case: a => //. Qed. 
 
@@ -387,7 +356,7 @@ Module check (U:Unif).
       by move=> /HA->; rewrite !cut_cut_same.
   Qed.
 
-    Lemma xxx {A B}: has_cut_and A -> no_new_alt A B -> has_cut_and B.
+  Lemma has_cut_and_trans {A B}: has_cut_and A -> no_new_alt A B -> has_cut_and B.
   Proof.
     elim: A B => //; try by move=> [].
     + move=> ?[]//[]///=?[]//? _ /orP[]///orP[]///eqP[]//.
@@ -405,18 +374,11 @@ Module check (U:Unif).
     + move=> A HA B0 _ B HB[]// A' B0' B'/=/orP[].
         move=>/eqP[]->->->/and3P[].
         by move=>/no_new_alt_cut_left->; rewrite has_cut_and_cut orbT.
-        (* rewrite has_cut_cut/=; case: has_cut=>/=[|/eqP->].
-          do 3 move=> /no_new_alt_cut_left->.
-          by rewrite !cut_cut_same eqxx.
-        do 2 move=> /no_new_alt_cut_left->.
-          by rewrite !cut_cut_same eqxx. *)
-      (* case: (has_cut _ && _) => + /and3P[].
-        by move=> + /eqP->; rewrite has_cut_and_cut orbT. *)
       move=> + /and3P[].
       by move=>/orP[/HA{}HA/HA->|/HB{}HB _ _ /HB->]; rewrite !orbT.
   Qed.
 
-  Lemma cut_remains {A B}: has_cut A -> no_new_alt A B -> has_cut B.
+  Lemma has_cut_trans {A B}: has_cut A -> no_new_alt A B -> has_cut B.
   Proof.
     elim: A B => //; try by move=> [].
     + move=> ?[]//[]///=?[]//? _ /orP[]///orP[]///eqP[]//.
@@ -426,19 +388,16 @@ Module check (U:Unif).
         by move=>_/andP[]/eqP->/HB=>/(_ H2)->; rewrite has_cut_and_dead.
       case: eqP=>//=.
         by move=>-> _/HB=>/(_ H2)->; rewrite has_cut_and_dead.
-      move=> _ _/andP[] /(xxx H1) /=->.
+      move=> _ _/andP[] /(has_cut_and_trans H1) /=->.
       rewrite eq_sym.
       by move=>/orP[]/eqP->//; rewrite has_cut_cut.
     + move=> A HA B0 HB0 B HB[]//.
       move=> A' B0' B'/= + /and3P[]=>/orP[].
         move=>/eqP[]->->->.
-          (* by move=>/eqP-> /no_new_alt_cut_left->/no_new_alt_cut_left->; rewrite !cut_cut_same eqxx. *)
         by do 3 move=> /no_new_alt_cut_left->; rewrite !cut_cut_same eqxx.
       move=>/orP[].
-        (* case: andP => _. *)
-          (* by move=> + /eqP->; rewrite has_cut_and_cut orbT. *)
-        by move=> /xxx H /H->; rewrite orbT.
-      by move=>/xxx H _ _ /H->; rewrite !orbT.
+        by move=> /has_cut_and_trans H /H->; rewrite orbT.
+      by move=>/has_cut_and_trans H _ _ /H->; rewrite !orbT.
   Qed.
 
   Lemma no_alt_trans {A B}: 
@@ -454,7 +413,7 @@ Module check (U:Unif).
         by move=> /eqP-> /no_new_alt_cut_left->; apply: no_alt_cut.
       case X: has_cut => /=.
         case: ifPn => //= /eqP ndA ndC /andP[nA nB] /andP[nnA].
-        rewrite [no_free_alt C]HA //= eq_sym (cut_remains X nnA).
+        rewrite [no_free_alt C]HA //= eq_sym (has_cut_trans X nnA).
         by case/orP => /eqP-> //; rewrite no_alt_cut.
       move=> ndC /andP[nA].
       move/eqP->. rewrite [_ == D]eq_sym cut_cut_same orbb.
@@ -462,7 +421,7 @@ Module check (U:Unif).
       by rewrite no_alt_cut !cut_cut_same eqxx if_same [no_free_alt C]HA.
     + move=> A HA B0 HB0 B HB []// C D0 D/= + /and3P[]+/HB0{}HB0/[dup]HH /HB{}HB.
       case: ifP => [cB + _|? /andP[nA nB] nnAC].
-        by rewrite [has_cut D](cut_remains cB).
+        by rewrite [has_cut D](has_cut_trans cB).
       by rewrite [no_free_alt D]HB // HA // if_same.
   Qed.
 
@@ -490,7 +449,7 @@ Module check (U:Unif).
     by move=> ??????; apply no_alt_trans.
   Qed.
 
-  Lemma no_new_alt_cut3 {B F}: no_new_alt (cut B) F -> no_new_alt B F.
+  Lemma no_new_alt_cut {B F}: no_new_alt (cut B) F -> no_new_alt B F.
   Proof.
     elim: B F; try by move=> [].
     + move=> ? [|?]//=[]//.
@@ -523,7 +482,7 @@ Module check (U:Unif).
         case: eqP => // H1 H2 H3/andP[].
         rewrite eq_sym.
         move=> _ /orP[]/eqP->//.
-        apply: no_new_alt_cut3.
+        apply: no_new_alt_cut.
       case: (A =P _).
         move=>H1 H2/andP[]/eqP->; rewrite dead_dead_same eq_refl//.
       move=> H1 H2.
@@ -632,12 +591,6 @@ Module check (U:Unif).
         admit.
       +  *)
   (* Abort. *)
-
-  (* Lemma yy {A B s A'}: no_new_alt A A' -> no_new_alt (Or A s B) (Or A' s B).
-  Proof.
-    elim: A A' => //; try by move=>[]//=; rewrite ?eq_refl ?no_new_alt_id //.
-    move=> p [|t]//=[]/=; rewrite ?eq_refl ?no_new_alt_id //.
-    move=> /=. *)
 
   Lemma expand_no_new_alt {A s1 r}: 
     (forall pr : program, all det_rule_cut (rules pr)) ->
@@ -801,13 +754,6 @@ Module check (U:Unif).
   (* Lemma no_new_alt_valid_state {A B}: valid_state A -> no_new_alt A B -> valid_state B \/ (B = dead B). *)
   Proof.
     elim: A B; try by move=> //= [] //=; auto.
-    (* + move=> p [|t]//=; auto. *)
-      (* + move=> []//=; auto. *)
-      (* + move=> 
-        move=> A s B _.
-        case: ifP => H.
-          move=> /andP[].
-        mo *)
   Admitted.
 
   Lemma next_alt_no_new_alt {s1 s2 B C}:
