@@ -223,8 +223,8 @@ Module Run (U : Unif).
 
   Definition big_or pr s t :=
     let l := F pr t s in
-    if l is (s,r) :: xs then (Or KO s (big_or_aux pr r xs))
-    else KO.
+    if l is (s,r) :: xs then (Or Bot s (big_or_aux pr r xs))
+    else Bot.
 
   Definition get_state r := match r with 
     | Failure A | Solved _ A | CutBrothers _ A | Expanded _ A => A 

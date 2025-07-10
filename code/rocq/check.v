@@ -132,6 +132,7 @@ Module check (U:Unif).
     (A == dead A) || (A == cut A) ||
     match A with
     | Goal _ Cut => true
+    | Bot => true
     | KO => true
     | And A _ B => has_cut_and A || has_cut_and B
     | _ => false
