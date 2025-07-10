@@ -190,11 +190,13 @@ Module Run (U : Unif).
     match A with
     | Bot | Goal _ _ | Top => KO
     | Dead | KO | OK => A
-    (* Non restituisco KO, al posto di And (cut A) B0 B perchè 
-      esempio: (A, (B; C)), !.
-      Quando raggiungo il cut, A per forza è OK
-      se anche B è OK, allora devo solo mettere a KO lo stato C che,
-      in uno stato valido è una chiamata
+    (* Non restituisco KO, al posto di And (cut A) B0 B 
+      !! Il cut taglio i nipoti a sinistra. Quindi nel caso di
+      "(A, (B; C)), !, D", al raggingimento del cut, devo tagliare i punti di scelta
+      a sinistra. Immaginiamo che A e B hanno avuto successo e che si espanda il cut.
+      Allora, C deve essere tagliato, ma non A e B. Mettere KO, significa che
+      se dovesse lanciare D la seconda volta, mi ritrovo con (KO, D) che 
+      è spiacevole...
     *)
     | And A B0 B => And (cut A) (cut B0) (cut B)
     | Or A s B => Or (cut A) s (cut B)
