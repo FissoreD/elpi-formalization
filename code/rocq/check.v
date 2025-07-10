@@ -556,7 +556,6 @@ Module check (U:Unif).
         move=> H.
         rewrite (HB _ _ _ H) //.
         admit.
-        (* qui funzionerebbe se B0 = D = F0, in questo modo  *)
       by move=>->; rewrite orbT.
     Admitted. 
 
@@ -607,60 +606,6 @@ Module check (U:Unif).
 
   Definition is_cb x := match x with CutBrothers _ _ => true | _ => false end.
   
-  (* Lemma expand_has_cut {s0 s1 A B}: 
-    valid_state A -> has_cut A -> expand s1 A = Expanded s0 B -> 
-      has_cut B.
-  Proof.
-    elim: A s0 s1 B => //.
-    + move=> /= ? []//.
-    + move=> A HA s B HB s1 s2 C /simpl_valid_state_or[].
-      + move=> [] -> /[dup] H1 /HB{}HB /[dup] H2 /HB{}HB /simpl_expand_or_expanded[].
-          by move=> [A'[HA']]//.
-        move=>[].
-          by move=> [A'[HA']]//.
-        move=> [] _ [B' [->]][]/=.
-          by move=> /HB/=//.
-        simpl in H2.
-        move=>/=.
-        admit. *)
-      (* + move=> C[]-> /HB{}HB /HB{}HB /simpl_expand_or_fail[].
-          move=>[A'[]] /=[] <-[]//.
-        move=>[].
-          move=> [B'[DB']] [] _[] /HB/(_ isT)//.
-          by move=> /= + ->/=.
-        by move=> [] _[]/HB/(_ isT) ///= _ ->.
-      + move=> C s2 []->/HB{}HB/HB{}HB/simpl_expand_or_solved[].
-          move=>[A'][]//.
-        move=>[B'[]] _ []/HB /(_ isT) //= _ ->//.
-      move=>[]//.
-      + move=> s2 C [] H[] /HA{}HA/base_or_base_or_ko_valid/HB{}HB.
-        simpl has_cut => /andP[]/has_cut_and_has_cut/HA{}HA/HB{}HB.
-        move=> /simpl_expand_or_expanded[].
-          move=>[A'[]] /HA /(_ isT) /= + <- /=.
-          admit. *)
-        (* move=>[]/HA/(_ isT) H1 [B'[->]].
-        move=>_ _ /=/andP[]/has_cut_and_has_cut//.
-      + move=> C [] H[]/HA{}HA/base_or_base_or_ko_valid/HB{}HB.
-        move=> /simpl_expand_or_fail[].
-          move=>[A'[]]/HA/(_ isT) + _ _ /andP[]/has_cut_and_has_cut//.
-        move=>[].
-          move=>[B'[?]][]/HA/(_ isT)+ _ _ /andP[]/has_cut_and_has_cut//.
-        move=>[] /HA /(_ isT)+ _ _ /andP[]/has_cut_and_has_cut//.
-      + move=> C s2 [] ?[]/HA{}HA _ /simpl_expand_or_solved[].
-          move=>[A'[]]/HA /(_ isT) + _ _ /andP[]/has_cut_and_has_cut//.
-        move=>[B'[]]/HA/(_ isT) + _ _ /andP[]/has_cut_and_has_cut//.
-    + move=> A HA B0 _ B HB s + /simpl_valid_state_and[]/HA{}HA[]/HB{}HB _.
-      move=>[]//.
-      + move=> s1 C /simpl_expand_and_expanded[].
-          move=>[A'][]/HA/(_ isT) H1 -> _/=/orP[].
-          move=>/eqP []H; move: H1; rewrite H.
-          by rewrite has_cut_cut.
-        move=> /orP[].
-          by move=>/has_cut_and_has_cut.
-        admit.
-      +  *)
-  (* Abort. *)
-
   Lemma expand_no_new_alt {A s1 r}: 
     (forall pr : program, all det_rule_cut (rules pr)) ->
     valid_state A -> expand s1 A = r -> no_new_alt A (get_state r).
