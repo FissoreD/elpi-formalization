@@ -341,8 +341,11 @@ Module RunP (A: Unif).
           move=> [A3][]/HA{} [] ->->->//.
         move=> [B'][] /(expand_not_dead AA)//.
       move=> [B'][] /(expand_not_dead VA)//.
-    + move=> A HA B0 HB0 B HB s1 s2 s3 s4 C D /simpl_valid_state_and[]/HA{}HA[]/HB{}HB _ /simpl_expand_and_solved [s'[A'[B'[]]]].
-      move=> /HA{}HA[]/HB{}HB<- /simpl_expand_and_solved [s7[A2[B2[]]]]/HA[]->->[]/HB[]->-><-//.
+    + move=> A HA B0 _ B HB s1 s2 s3 s4 C D /simpl_valid_state_and[] VA VB.
+      move=> /simpl_expand_and_solved [s'[A'[B'[HA' [HB' <-]]]]].
+      move=> /simpl_expand_and_solved [s''[A2[B2[HA2 [HB2 <-]]]]].
+      have:= HA _ _ _ _ _ _ VA HA' HA2 => -[]->->.
+      by have:= HB _ _ _ _ _ _ VB HB' HB2 => -[]->->.
   Qed.
 
   Lemma expand_solved_is_solved {s s1 s2 A B}: expand s A = Solved s1 B -> expand s2 B = Solved s2 B.
