@@ -57,13 +57,20 @@ Module Test1.
         rewrite /big_or/F/select/= -/s1 -/s2.
         apply: expanded_step => //=.
         apply: expanded_fail => //=.
-      - apply: next_alt_ok => //.
+      - apply: next_alt_ok => //=.
+          case: ifP => /eqP.
+            by move=>[].
+          by [].
+        by move=>//.
       - apply: run_backtrack => //.
         - apply: expanded_step => //=.
           apply: expanded_step => //=.
           apply: expanded_step => //=.
           apply: expanded_fail => //=.
         - apply: next_alt_ok => //=.
+          case: ifP => /eqP//.
+          case:ifP => ///eqP[]//.
+          by move=>//.
         - apply: run_backtrack => //.
           - apply: expanded_step => //=.
             apply: expanded_step => //=.
@@ -71,6 +78,8 @@ Module Test1.
             apply: expanded_step => //=.
             apply: expanded_fail => //=.
           - apply: next_alt_ok => //=.
+            case:ifP => ///eqP[]//.
+            move=>//.
           - apply: run_done.
             apply: expanded_step => //=.
             apply: expanded_step => //=.
@@ -131,7 +140,10 @@ Module Test5.
     + rewrite /big_or/F/select/=.
       apply: expanded_step => //=.
       apply: expanded_fail => //=.
-      apply: next_alt_ok => //=.
+      apply: next_alt_ok.
+      rewrite -/s1-/s2.
+      move=>/=; case:ifP =>/eqP//.
+      move=>//.
       apply: run_done.
       apply: expanded_step => //.
       rewrite [Cut]lock.
@@ -202,6 +214,8 @@ Module Test6.
       apply: expanded_fail => //=.
       rewrite -/s2 -/s1.
       apply: next_alt_ok => //=.
+        case:ifP => /eqP//.
+        move=>//.
       apply: run_backtrack.
       apply: expanded_step => //.
       (* rewrite [Cut]lock. *)
@@ -209,7 +223,9 @@ Module Test6.
       apply: expanded_step => //=.
       apply: expanded_fail => //=.
 
-      apply: next_alt_ok => //.
+      apply: next_alt_ok => //=.
+      case:ifP=>/eqP//.
+      move=>//.
 
       apply: run_done.
       apply: expanded_step => //=.
