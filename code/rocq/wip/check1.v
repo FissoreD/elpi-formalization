@@ -766,14 +766,16 @@ Module check (U:Unif).
       case Y: next_alt_aux => // [[s4 A']][]/[subst2].
       move=>/=.
       rewrite (HA _ _ VA Y) eqxx andbT.
-      move: VB.
-      case: ifP => //.
-        move=> sA VB/=.
-        admit.
+      (* move: VB. *)
+      (* case: ifP => //. *)
+        (* move=> sA VB/=. *)
+      admit.
         (* apply: xxx X => //. *)
-      move=> _ /orP[]/eqP?;subst.
+      (* move=> _ /orP[]/eqP?;subst.
         by rewrite no_new_alt_id.
       move=>/=.
+      no_new_alt_cut1. *)
+      
   Admitted.
 
   Lemma next_alt_no_new_alt {s1 s2 B C}:
@@ -800,19 +802,20 @@ Module check (U:Unif).
   Proof.
     move=> AllCut VS s1 s2 alts.
     remember (Done _ _) as r eqn:Hr => -[b H].
-    elim: H VS s2 alts Hr => //=; clear -AllCut; last first.
-      move=> s1 s2 s3 A B C b1 b2 b3 EA NB HR IH ? VA s4 D ?; subst.
-      have VB := valid_state_expanded VA (ex_intro _ _ EA).
-      have VC:= valid_state_next_alt NB VB.
-      have VD:= runP_run VC (ex_intro _ _ HR).
-      have nnCD := IH VC _ _ erefl.
-      apply: no_new_alt_trans nnCD => //.
-      have nnAB := expandedb_no_new_alt AllCut VA EA.
-      apply: no_new_alt_trans nnAB _ => //=.
-      by have:= next_alt_no_new_alt VB NB.
-    move=> s1 s2 A B b EA VA s3 C [] /[subst2].
-    by have:= expandedb_no_new_alt AllCut VA EA.
-  Qed.
+    elim: H VS s2 alts Hr => //=; clear -AllCut.
+      move=> s1 s2 A B b EA VA s3 C [] /[subst2].
+      by have:= expandedb_no_new_alt AllCut VA EA.
+    move=> s1 s2 s3 A B C b1 b2 b3 EA NB HR IH ? VA s4 D ?; subst.
+    have /= VB := valid_state_expanded VA (ex_intro _ _ EA).
+    have /= VC:= valid_state_next_alt NB VB.
+    have /= VD:= runP_run VC (ex_intro _ _ HR).
+    have /= nnCD := IH VC _ _ erefl.
+    apply: no_new_alt_trans nnCD => //.
+    have /= nnAB := expandedb_no_new_alt AllCut VA EA.
+    apply: no_new_alt_trans nnAB _ => //=.
+    Search expandedb.
+    by have:= next_alt_no_new_alt VB NB.
+Qed.
 
   Print Assumptions tail_cut_is_det.
 
