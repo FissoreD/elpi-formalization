@@ -270,13 +270,6 @@ Module valid_state (U:Unif).
     by rewrite cut_cut_same bB eqxx => ->.
   Qed.
 
-  Lemma cut_dead1 {A}: cut A = dead A -> dead A = A.
-  Proof. 
-    elim: A=> //.
-      move=> A HA s B HB/=[]??; rewrite HA//HB//.
-    move=> A HA B0 _ B HB/=[]??; rewrite HA//HB//.
-  Qed.
-
   Lemma success_cut {A} : success (cut A) = success A.
   Proof.
     elim: A => //. 

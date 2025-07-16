@@ -6,7 +6,7 @@ Module check (U:Unif).
   Module Run := RunP(U).
   Import Run.
 
-  (* Definition Gamma := V -> S.
+  Definition Gamma := V -> S.
 
   Fixpoint eat r1 r2 :=
     match r1, r2 with
@@ -124,7 +124,7 @@ Module check (U:Unif).
     let premises := r.(premises) in
     let: (expected_det, G) := assume_input (prog.(sig) r.(head)) r.(head) G in
     let: (G, body_det) := foldr (check_atom prog) (G,b (d (Func))) premises in
-    if infer_output G r.(head) is (_, true) then incl body_det expected_det else false . *)
+    if infer_output G r.(head) is (_, true) then incl body_det expected_det else false .
 
   Fixpoint has_cut_and A :=
     (A == dead A) || (A == cut A) ||
@@ -756,19 +756,15 @@ Module check (U:Unif).
         move=>[A'[nA]]->/=.
         by rewrite no_new_alt_id (HA _ _ _ VA nA).
       by move=> [nA ->]/=; rewrite no_new_alt_id no_new_alt_dead1.
-    + move=> A HA B0 _ B HB C s2 b.
-      move=> /simpl_valid_state_and1[VA [VB [ssB bB0]]].
-      simpl next_alt_aux.
-      (* move=>/=. *)
+    + move=> A HA B0 _ B HB C s2 b /simpl_valid_state_and1[VA [VB [ssB bB0]]]/=.
       case X: next_alt_aux => [[s3 D]|].
-        move=>[]/[subst2]/=.
+        move=>[]/[subst2].
         by rewrite !no_new_alt_id (HB _ _ _ (valid_state_compose_and VB bB0) X) eqxx.
-      case Y: next_alt_aux => // [[s4 A']][]/[subst2].
-      move=>/=.
+      case Y: next_alt_aux => // [[s4 E]][]/[subst2].
       rewrite (HA _ _ _ VA Y) eqxx andbT.
       move: VB.
       case: ifP => //.
-        move=> sA VB/=.
+        move=> _ VB.
         admit.
         (* apply: xxx X => //. *)
       move=> _ /orP[]/eqP?;subst.

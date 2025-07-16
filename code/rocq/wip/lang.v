@@ -331,6 +331,12 @@ Module Run (U : Unif).
         end
     end.
 
+  Lemma cut_dead1 {A}: cut A = dead A -> dead A = A.
+  Proof. 
+    elim: A=> //.
+      move=> A HA s B HB/=[]??; rewrite HA//HB//.
+    move=> A HA B0 _ B HB/=[]??; rewrite HA//HB//.
+  Qed.
   Inductive next_alt : Sigma -> state -> option (Sigma * state) -> Prop :=
     | next_alt_ko {s A}: next_alt_aux false s A = None -> next_alt s A None
     | next_alt_ok {s s1 A A1}: next_alt_aux false s A = Some (s1, A1) -> ~ failed A1 -> next_alt s A (Some (s1, A1))
