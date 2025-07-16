@@ -592,7 +592,7 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma next_alt_aux_base_and {s1 s2 A B}:
-     base_and A || base_and_ko A ->  next_alt_aux true s1 A = Some (s2, B) -> A = B.
+     base_and A || base_and_ko A ->  next_alt_aux s1 A = Some (s2, B) -> A = B.
   Proof.
     elim: A s1 s2 B => //; move=> [] //.
     + move=> _ B0 _ B HB s1 s2 C /= /and3P[] bB0 /eqP cB0 bcB0.
@@ -604,7 +604,7 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma next_alt_aux_base_and1 {s1 s2 A B}:
-     base_and A ->  next_alt_aux true s1 A = Some (s2, B) -> A = B.
+     base_and A ->  next_alt_aux s1 A = Some (s2, B) -> A = B.
   Proof.
     elim: A s1 s2 B => //; move=> [] //.
     + move=> p a _ B0 HB0 B HB s1 s2 C /= /andP []/eqP/[subst1] BB.
@@ -613,7 +613,7 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma next_alt_aux_base_and2 {s1 s2 A B}:
-     base_and A ->  next_alt_aux true s1 (cut A) = Some (s2, B) -> cut A = B.
+     base_and A ->  next_alt_aux s1 (cut A) = Some (s2, B) -> cut A = B.
   Proof.
     elim: A s1 s2 B => //; move=> [] //.
     + move=> p a _ B0 HB0 B HB s1 s2 C /= /andP []/eqP/[subst1] BB.
@@ -629,22 +629,22 @@ Module valid_state (U:Unif).
       move=>/= []//=. *)
 
 
-  Lemma ssa_next_alt_aux {B0 B s1 s2 D b}: 
+  Lemma ssa_next_alt_aux {B0 B s1 s2 D}: 
     base_and B0 -> ssa B0 B -> valid_state B ->
       (* valid_state B -> *)
-        next_alt_aux b s1 B = Some (s2, D) -> ssa B0 D.
+        next_alt_aux s1 B = Some (s2, D) -> ssa B0 D.
   Proof.
-    elim: B0 B s1 s2 D b => //.
+    elim: B0 B s1 s2 D => //.
       by move=> []//= s1 s2 D []// _ _ _ []??;subst.
     move=>[]//p A IGN /= B0 HB0 B HB.
-    move=>[]// A' B0' B' s1 s2 D b.
+    move=>[]// A' B0' B' s1 s2 D.
     move=>/andP[/eqP? bB]; subst => ssaB/=.
     move=>/and3P[VA' VB']/andP[ssB0 bB0].
-    case NB' : (next_alt_aux true s1 B') => [[s3 E]|].
+    case NB' : (next_alt_aux s1 B') => [[s3 E]|].
       move=>[]??;subst.
-      rewrite (HB _ _ _ _ _ bB ssaB (valid_state_compose_and VB' bB0) NB')//.
+      rewrite (HB _ _ _ _ _ ssaB (valid_state_compose_and VB' bB0) NB')//.
       (* by rewrite (HB _ _ _ _ _ bB _ ssaB NB')./ *)
-    case NA' : (next_alt_aux true s1 A') => // [[s3 E]].
+    case NA' : (next_alt_aux s1 A') => // [[s3 E]].
     move=>[]??;subst.
     move: VB'.
     case: ifP.
@@ -656,39 +656,50 @@ Module valid_state (U:Unif).
     apply: ssa_cut2 => //.
   Qed.
 
-  Lemma valid_state_next_alt_aux {b s1 s2 A B}: 
-    valid_state A -> next_alt_aux b s1 A = Some (s2, B) 
+  Lemma valid_state_next_alt_aux {s1 s2 A B}: 
+    valid_state A -> next_alt_aux s1 A = Some (s2, B) 
     -> valid_state B.
   Proof.
-    elim: A b s1 s2 B => //.
+    elim: A s1 s2 B => //.
+    (* + by move=> [] // ??? _ [] /[subst2].
     + by move=> [] // ??? _ [] /[subst2].
-    + by move=> [] // ??? _ [] /[subst2].
-    + by move=> ?? [] // ??? _ [] /[subst2].
-    + move=> A HA s B HB b s1 s2 C /simpl_valid_state_or [].
+    + by move=> ?? [] // ??? _ [] /[subst2]. *)
+    + move=> A HA s B HB s1 s2 C /simpl_valid_state_or [].
         move=> [-> VB]/=; rewrite dead_dead_same eqxx.
+        case:ifP.
+          by move=>/simpl_is_base[->|[->|[?[?->]]]][]*;subst => /=; rewrite dead_dead_same eqxx.
+        move=>H.
         case X: next_alt_aux => // [[s3 D]].
         case: ifP => ///eqP dD []*; subst => /=.
         rewrite dead_dead_same eqxx; apply: HB VB X.
-      move=> [dA [VA bB]].
-      move=> /simpl_next_alt_aux_some [].
-        move=>[B'[?]]//.
-      move=> [_ [dB []]].
-        move=>[A'[NA->]]/=.
-        by rewrite bB (base_or_base_or_ko_valid)// (HA _ _ _ _ VA NA) if_same.
-      by move=>[NA->]/=; rewrite dead_dead_same eqxx (base_or_base_or_ko_valid bB).
-    + move=> A HA B0 HB0 B HB b s1 s2 C /simpl_valid_state_and1 [VA [VB [ssaB0 bB0]]]/=.
+      move=> [dA [VA bB]]/=.
+      case: ifP=>/eqP.
+        move=>->.
+        case:ifP.
+          by move=>/simpl_is_base[->|[->|[?[?->]]]][]*;subst => /=; rewrite dead_dead_same eqxx.
+        move=>H.
+        case X: next_alt_aux => //[[s3 D]].
+        case: ifP => ///eqP dD []*;subst=>/=.
+        rewrite dead_dead_same eqxx.
+        apply: HB (base_or_base_or_ko_valid bB) X.
+      move=> _; case: ifP => /eqP// dB.
+      have VB:= base_or_base_or_ko_valid bB.
+      case X: next_alt_aux => //[[s3 D]|]=>-[]*;subst=>/=.
+        by rewrite bB VB (HA _ _ _ VA X) if_same.
+      by rewrite dead_dead_same eqxx VB.
+    + move=> A HA B0 HB0 B HB s1 s2 C /simpl_valid_state_and1 [VA [VB [ssaB0 bB0]]]/=.
       case NB: next_alt_aux => [[s3 D]|].
         move=> [] /[subst2] /=; rewrite VA bB0.
         move: VB.
         case: ifP => SA//.
-          move=>VB; rewrite (HB _ _ _ _ VB NB) (ssa_next_alt_aux bB0 _ _ NB)//.
+          move=>VB; rewrite (HB _ _ _ VB NB) (ssa_next_alt_aux bB0 _ _ NB)//.
         move=>/orP[]/eqP?;subst.
           have <- := next_alt_aux_base_and1 bB0 NB.
           by rewrite eqxx ssa_id//=.
         have <- := next_alt_aux_base_and2 bB0 NB.
         by rewrite eqxx orbT ssaB0.
       case NA: next_alt_aux => // [[s3 D]] [] /[subst2] /=.
-      by rewrite (HA _ _ _ _ VA NA) eqxx bB0 (base_and_valid bB0) if_same ssa_id.
+      by rewrite (HA _ _ _ VA NA) eqxx bB0 (base_and_valid bB0) if_same ssa_id.
   Qed.
 
   Lemma valid_state_next_alt {s s' A B} : 
