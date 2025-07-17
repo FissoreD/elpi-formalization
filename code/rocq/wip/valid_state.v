@@ -666,18 +666,18 @@ Module valid_state (U:Unif).
     + by move=> ?? [] // ??? _ [] /[subst2]. *)
     + move=> A HA s B HB s1 s2 C /simpl_valid_state_or [].
         move=> [-> VB]/=; rewrite dead_dead_same eqxx.
-        case:ifP.
-          by move=>/simpl_is_base[->|[->|[?[?->]]]][]*;subst => /=; rewrite dead_dead_same eqxx.
-        move=>H.
+        (* case:ifP.
+          by move=>/simpl_is_base[->|[->|[?[?->]]]][]*;subst => /=; rewrite dead_dead_same eqxx. *)
+        (* move=>H. *)
         case X: next_alt_aux => // [[s3 D]].
         case: ifP => ///eqP dD []*; subst => /=.
         rewrite dead_dead_same eqxx; apply: HB VB X.
       move=> [dA [VA bB]]/=.
       case: ifP=>/eqP.
         move=>->.
-        case:ifP.
+        (* case:ifP.
           by move=>/simpl_is_base[->|[->|[?[?->]]]][]*;subst => /=; rewrite dead_dead_same eqxx.
-        move=>H.
+        move=>H. *)
         case X: next_alt_aux => //[[s3 D]].
         case: ifP => ///eqP dD []*;subst=>/=.
         rewrite dead_dead_same eqxx.
@@ -728,5 +728,58 @@ Module valid_state (U:Unif).
       have NA := valid_state_next_alt HB VB.
       apply: IH NA.
     Qed.
+
+  Lemma base_and_ko_succes {B}: base_and_ko B -> success B = false.
+  Proof. elim: B => // -[]//=. Qed.
+
+  Lemma base_and_succes {B}: base_and B -> success B = false.
+  Proof. elim: B => // -[]//=. Qed.
+
+  Lemma base_or_succes {B}: base_or_aux B || base_or_aux_ko B -> success B = false.
+  Proof.
+    move=>/orP[].
+      elim: B => //.
+        move=> A HA s B HB/=/andP[].
+        case: ifP=>/eqP.
+          by move=>->; rewrite base_and_dead.
+        by move=> dA /base_and_succes.
+      move=> []//.
+    elim: B=> //=.
+      move=> A HA _ B HB/andP[].
+      case: ifP=>/eqP//.
+      by move=> _ /base_and_ko_succes.
+    move=> []//.
+  Qed.
+
+  Lemma next_alt_aux_success {A B s1 s2}: valid_state A -> next_alt_aux s1 A = Some (s2, B) -> success B = false.
+  Proof.
+    elim: A B s1 s2 => //.
+      move=> A HA s B HB B0 s1 s2/simpl_valid_state_or[].
+        move=>[-> VB]/=; rewrite dead_dead_same eqxx.
+        have:= HB _ s1 _ VB.
+        case: next_alt_aux => //[[s3 C]] => /(_ _ _ erefl).
+        case: ifP => ///eqP dC + []??;subst => /=.
+        by rewrite dead_dead_same eqxx.
+      move=> [dA [VA VB]]/=; case: ifP => /eqP// _.
+      case: ifP => ///eqP dB.
+      have:= HA _ s1 _ VA.
+      case: next_alt_aux => [[s3 C]|].
+        move=>/(_ _ _ erefl) + []??; subst => /=.
+        case: ifP => ///eqP.
+        by rewrite (base_or_succes VB).
+      move=> _ []??;subst => /=.
+      rewrite dead_dead_same eqxx.
+      by rewrite (base_or_succes VB).
+    move=> A HA B0 _ B HB B1 s1 s2 /simpl_valid_state_and1[VA [VB [? bB0]]].
+    move=>/=.
+    have:= HB _ s1 _ (valid_state_compose_and VB bB0).
+    case: next_alt_aux => [[s3 C]|].
+      by move=>/(_ _ _ erefl) + []??;subst => /= ->; rewrite andbF.
+    move=> _.
+    have:= HA _ s1 _ VA.
+    case: next_alt_aux => [[s3 C]|]// /(_ _ _ erefl) + []??; subst.
+    by move=>/=->.
+  Qed.
+
 
 End valid_state.

@@ -321,8 +321,8 @@ Module Run (U : Unif).
       end
     | Or A sB B => 
       if A == dead A then
-        if is_base B then Some (s, Or A sB B) 
-        else
+        (* if is_base B then Some (s, Or A sB B) 
+        else *)
         match next_alt_aux s B with
         | None => None
         | Some (sB1, B) => if B == dead B then None else Some (sB1, Or A sB B)
@@ -574,13 +574,13 @@ Module Run (U : Unif).
     (* + by move=>??/=[]//[]//. *)
     + move=> A HA s B HB/=C s1 s2.
       case: ifP => [/eqP->|/eqP].
-        case: ifP => //.
-          move=>/simpl_is_base[].
-            move=>->-[]*; subst => //.
-          move=>[].
-            move=>->-[]*; subst => //.
-          move=>[?[?]]->[]*;subst => //.
-        move=> _.
+        (* case: ifP => //. *)
+          (* move=>/simpl_is_base[]. *)
+            (* move=>->-[]*; subst => //. *)
+          (* move=>[]. *)
+            (* move=>->-[]*; subst => //. *)
+          (* move=>[?[?]]->[]*;subst => //. *)
+        (* move=> _. *)
         case NA: next_alt_aux => //[[s3 D]].
         case: ifP => ///eqP DD []?? /=; subst => -[].
         rewrite dead_dead_same; congruence.
@@ -610,9 +610,9 @@ Module Run (U : Unif).
     + move=> A HA s B HB s1 s2 /=.
       case:ifP => /eqP.
         move=>->.
-        case: ifP.  
-          by move=>/simpl_is_base[->|[->|[?[?->]]]]/=.
-        move=> H.
+        (* case: ifP.  
+          by move=>/simpl_is_base[->|[->|[?[?->]]]]/=. *)
+        (* move=> H. *)
         have:= HB s1 s2.
         case: next_alt_aux => //[[s5 E]|]; case: next_alt_aux => //[[s6 F]].
         move=> /=/eqP->; case: ifP => //=.
