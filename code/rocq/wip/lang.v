@@ -164,7 +164,7 @@ Module Run (U : Unif).
   match A with
   | Dead => Dead
   | OK | KO | Bot | Goal _ _ | Top => Dead
-  | And A B0 B => And (dead A) B0 (dead B)
+  | And A B0 B => And (dead A) B0 B
   | Or A s B => Or (dead A) s (dead B)
   end.
 
@@ -172,7 +172,7 @@ Module Run (U : Unif).
   Proof.
     elim: A => //.
     by move=> A HA s B HB /=; rewrite HA HB.
-    by move=> A HA B0 HB0 B HB /=; rewrite HA HB.
+    by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
   Qed.
 
   Definition mkOr A sB r :=
@@ -189,7 +189,7 @@ Module Run (U : Unif).
     match A with
     | Bot | Goal _ _ | Top => KO
     | Dead | KO | OK => A
-    | And A B0 B => And (cut A) B0 (cut B)
+    | And A B0 B => And (cut A) B0 B
     | Or A s B => Or (cut A) s (cut B)
     end.
 
@@ -300,7 +300,7 @@ Module Run (U : Unif).
     + move=> A HA s B HB /=; case: eqP.
       + move=> <- /HB H [] //.
       + move=> H _ [] //.
-    + move=> A HA B0 HB0 B HB /= /orP H [] H1 DB.
+    + move=> A HA B0 HB0 B HB /= /orP H [] H1 (*DB*).
       apply: H.
       by left; apply: dead_failed H1.
   Qed.
@@ -341,7 +341,7 @@ Module Run (U : Unif).
   Proof. 
     elim: A=> //.
       move=> A HA s B HB/=[]??; rewrite HA//HB//.
-    move=> A HA B0 _ B HB/=[]??; rewrite HA//HB//.
+    move=> A HA B0 _ B HB/=[]?; rewrite HA//?HB//.
   Qed.
   Inductive next_alt : Sigma -> state -> option (Sigma * state) -> Prop :=
     | next_alt_ko {s A}: next_alt_aux s A = None -> next_alt s A None
@@ -529,7 +529,7 @@ Module Run (U : Unif).
     + move=> A HA B0 HB0 B HB.
 
       (* case X: eq_op => //=. *)
-      by move=> /=; rewrite HA ?HB0 HB.
+      by move=> /=; rewrite HA ?HB0 ?HB.
       (* case Y: eq_op => //=.
       exfalso.
       by move: Y X => /eqP [] /cut_dead ->; rewrite eq_refl. *)
@@ -539,14 +539,14 @@ Module Run (U : Unif).
   Proof.
     elim: A => //.
     + by move=> A HA s B HB /=; rewrite HA HB.
-    + by move=> A HA B0 HB0 B HB /=; rewrite HA HB.
+    + by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
   Qed.
 
   Lemma dead_cut_is_dead {A}: dead(cut A) = dead A.
   Proof.
     elim: A => //.
     + by move=> A HA s B HB /=; rewrite HA HB.
-    + by move=> A HA B0 HB0 B HB /=; rewrite HA HB.
+    + by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
   Qed.
 
   Definition is_meta X := match X with OK | KO | Dead => true | _ => false end.
@@ -567,34 +567,6 @@ Module Run (U : Unif).
   Lemma simpl_is_base {B}: is_base B -> B = Top \/ B = Bot \/ (exists p t, B = Goal p t).
   Proof. by case B => //=; auto; right; right; do 2 eexists. Qed.
 
-  Lemma next_alt_aux_dead {s1 s3 A B}: 
-    next_alt_aux s1 A = Some (s3, B) -> B <> dead B.
-  Proof.
-    elim: A B s1 s3; try by move=>/=[]//[]//.
-    (* + by move=>??/=[]//[]//. *)
-    + move=> A HA s B HB/=C s1 s2.
-      case: ifP => [/eqP->|/eqP].
-        (* case: ifP => //. *)
-          (* move=>/simpl_is_base[]. *)
-            (* move=>->-[]*; subst => //. *)
-          (* move=>[]. *)
-            (* move=>->-[]*; subst => //. *)
-          (* move=>[?[?]]->[]*;subst => //. *)
-        (* move=> _. *)
-        case NA: next_alt_aux => //[[s3 D]].
-        case: ifP => ///eqP DD []?? /=; subst => -[].
-        rewrite dead_dead_same; congruence.
-      move=> DA.
-      case: ifP => ///eqP H.
-      case NA: next_alt_aux => [[s3 D]|] => -[]*; subst => -[]//.
-    + move=> A HA B0 _ B HB s1 s2 s3/=.
-      case NB: next_alt_aux => // [[s4 D]|].
-        move=>[]*;subst => /= => -[]*; subst.
-        by apply: HB NB _.
-      case NA: next_alt_aux => // [[s4 D]] []*;subst => -[]/=*;subst.
-      by apply: HA NA _.
-  Qed.
-  
   Definition same_sol (A B : option (Sigma * state)) := 
     match A, B with
     | None, None => true
@@ -695,7 +667,7 @@ Module Run (U : Unif).
   Proof. 
     elim: A=> //. 
       by move=> A HA s B HB /=; rewrite HA HB if_same.
-    by move=> A HA B0 ? B HB/=; rewrite HA HB.
+    by move=> A HA B0 ? B HB/=; rewrite HA ?HB.
   Qed.
 
 End Run.

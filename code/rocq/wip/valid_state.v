@@ -30,7 +30,7 @@ Module valid_state (U:Unif).
 
   Fixpoint base_and_ko s :=
     match s with
-    | And KO r r1 => [&&base_and r, (cut r == r1) & base_and_ko r1] (* should also say something about the program *)
+    | And KO r r1 => [&&base_and r, (r == r1) & base_and r1] (* should also say something about the program *)
     | KO => true
     | _ => false
     end.
@@ -69,10 +69,10 @@ Module valid_state (U:Unif).
     Proof. by elim: A =>// -[]// p a _ B0 HB0 B HB/=/andP[] _. Qed.
 
     Lemma ssa_cut {A}: base_and A -> ssa A (cut A).
-    Proof. by elim: A =>// -[]// p a _ B0 HB0 B HB/=/andP[] _. Qed.
+    Proof. elim: A =>// -[]// p a _ B0 HB0 B HB/=/andP[] _; apply ssa_id. Qed.
 
     Lemma ssa_dead {A}: base_and A -> ssa A (dead A).
-    Proof. elim: A =>//= -[]// p a _ B0 HB0 B HB/=/andP[] _//. Qed.
+    Proof. elim: A =>//= -[]// p a _ B0 HB0 B HB/=/andP[] _//; apply ssa_id. Qed.
 
     Lemma ssa_cut1 {A B}: ssa A B -> ssa A (cut B).
     Proof.
@@ -92,8 +92,8 @@ Module valid_state (U:Unif).
       (* - move=> /= _ _ []//.
       - move=> A HA s B HB []//. *)
       - move=> A HA B0 _ B HB[]//[]//.
-        move=> p a s1 s2/=/andP[]/eqP?;subst.
-        apply: HB.
+        (* move=> p a s1 s2/=/andP[]/eqP?;subst.
+        apply: HB. *)
     Qed.
 
     (* Lemma xxx {B C D}: ssa B C -> ssa D C -> ssa B D.
@@ -143,7 +143,7 @@ Module valid_state (U:Unif).
     | And A B0 B => 
       [&& valid_state A,
         if success A then valid_state B 
-        else ((B0 == B) || (cut B0 == B)),
+        else (B0 == B),
         ssa B0 B &
         (base_and B0)]
     end.
@@ -212,7 +212,7 @@ Module valid_state (U:Unif).
   Lemma base_and_ko_valid {B}: base_and_ko B -> valid_state B.
   Proof.
     elim: B => //.
-    by move=> []// HA B0 _ B HB/=/and3P[bB0 /eqP <-]; rewrite bB0 eqxx orbT (ssa_cut bB0).
+    move=> []// HA B0 _ B HB/=/and3P[bB0 /eqP <-] H; rewrite bB0 eqxx (ssa_id bB0)//.
   Qed.
 
   Lemma simpl_valid_state_and1 {A B0 B}: valid_state (And A B0 B) -> 
@@ -220,7 +220,7 @@ Module valid_state (U:Unif).
       ( 
         (* if A == dead A then B == dead B else  *)
         if success A then valid_state B 
-        else ((B0 == B) || (cut B0 == B))) 
+        else ((B0 == B) )) 
       /\ ssa B0 B /\ base_and B0.
   Proof. by move=>/=/and3P[]//->->/andP[]->->. Qed.
 
@@ -231,7 +231,8 @@ Module valid_state (U:Unif).
     + move=> A HA s B HB /= /andP [] /base_and_ko_valid ->.
       move=> /[dup] /HB -> ->.
       by rewrite orbT if_same.
-    + by move=> [] // HA B0 _ B HB /= /and3P[] bB0 /eqP <-; rewrite eq_refl bB0 orbT (ssa_cut bB0).
+    + move=> [] // HA B0 _ B HB /= /and3P[] bB0 /eqP <-.
+      by rewrite eq_refl bB0 (ssa_id bB0).
   Qed.
 
 
@@ -244,7 +245,7 @@ Module valid_state (U:Unif).
   Proof. 
     elim: B => // A + B + C /=.
     case: A => //= _ _ _ HB HC /andP [] /eqP <- hB.
-    by rewrite hB (HB hB) eqxx.
+    by rewrite hB eqxx.
   Qed.
 
   Lemma base_or_base_or_ko_cut {B}: base_or_aux B -> base_or_aux_ko (cut B).
@@ -252,14 +253,14 @@ Module valid_state (U:Unif).
     elim: B => //.
     + by move=> A IHA s B IHB /= /andP [] /base_and_base_and_ko_cut -> /IHB ->.
     + move=> [] //= _ _ _ B HB C HC /andP [] /eqP /[subst1] hC.
-      by rewrite eq_refl hC (base_and_base_and_ko_cut hC). 
+      by rewrite eq_refl hC ?(base_and_base_and_ko_cut hC). 
   Qed.
 
   Lemma base_and_ko_cut {B}: base_and_ko B -> base_and_ko (cut B).
   Proof.
     elim: B => //.
     move=> []// _ B _ C HC /= /and3P[] bB /eqP <-.
-    by rewrite cut_cut_same eqxx bB => ->.
+    (* by rewrite cut_cut_same eqxx bB => ->. *)
   Qed.
   
   Lemma base_or_ko_cut {B}: base_or_aux_ko B -> base_or_aux_ko (cut B).
@@ -267,7 +268,7 @@ Module valid_state (U:Unif).
     elim: B => //.
       by move=> A HA s B HB /= /andP[]/base_and_ko_cut->/HB->.
     move=> [] //= _ B0 _ B HB /and3P[] bB /eqP<-.
-    by rewrite cut_cut_same bB eqxx => ->.
+    (* by rewrite cut_cut_same bB eqxx => ->. *)
   Qed.
 
   Lemma success_cut {A} : success (cut A) = success A.
@@ -279,7 +280,7 @@ Module valid_state (U:Unif).
         by move=> /cut_dead1//->; rewrite eqxx.
       by case: eqP => //->; rewrite dead_dead_same cut_dead_is_dead.
     + move=> A HA B HB C HC /=.
-      by rewrite HA HC.
+      by rewrite HA ?HC.
   Qed.
 
   Lemma valid_state_cut {A}: valid_state A -> valid_state (cut A).
@@ -295,19 +296,19 @@ Module valid_state (U:Unif).
     case: ifP => sA.
       (* move=>->/eqP->; rewrite !cut_dead_is_dead !dead_dead_same !eqxx ssa_dead1//. *)
     (* move=> dA; case: ifP => sA. *)
-      move=>vB; rewrite HB//ssa_cut1//.
-    move=> /orP[|]/eqP<-; rewrite ?cut_cut_same ?cut_dead_is_dead eqxx !orbT ?ssa_cut//.
+      move=>vB; rewrite vB//?ssa_cut1//.
+    move=> /eqP<-; rewrite eqxx ?ssa_id//.
   Qed.
 
   Lemma valid_state_compose_and {A2 B2 B02}: 
-    (if success A2 then valid_state B2 else ((B02 == B2) || (cut B02 == B2))) ->
+    (if success A2 then valid_state B2 else ((B02 == B2))) ->
       base_and B02  ->
         valid_state B2.
   Proof. 
     case: success => //.
-    move=>/orP[].
+    (* move=>/orP[]. *)
       move=>/eqP->; apply: base_and_valid.
-    move=>/eqP<-/base_and_valid;apply: valid_state_cut.
+    (* move=>/eqP<-/base_and_valid;apply: valid_state_cut. *)
   Qed.
 
   Lemma simpl_valid_state_and {A B0 B}: valid_state (And A B0 B) -> 
@@ -591,7 +592,7 @@ Module valid_state (U:Unif).
     + move=> s1 s2 r A B b HA _ IH VA; apply (IH (valid_state_expand VA HA)).
   Qed.
 
-  Lemma next_alt_aux_base_and {s1 s2 A B}:
+  (* Lemma next_alt_aux_base_and {s1 s2 A B}:
      base_and A || base_and_ko A ->  next_alt_aux s1 A = Some (s2, B) -> A = B.
   Proof.
     elim: A s1 s2 B => //; move=> [] //.
@@ -601,33 +602,21 @@ Module valid_state (U:Unif).
     + move=> p a _ B0 HB0 B HB s1 s2 C /= /orP []// /andP []/eqP/[subst1] BB.
       case NB: next_alt_aux => // [[ ]] [] /[subst2].
       by rewrite BB in HB; rewrite (HB _ _ _ isT NB).
+  Qed. *)
+
+  Lemma next_alt_aux_base_and1 {A s}: base_and A -> next_alt_aux s A = None.
+  Proof.
+    elim: A s => //-[]//p a _ B0 _ B HB/= c.
+    move=>/andP[]/eqP? bB;subst.
+    by rewrite HB.
   Qed.
 
-  Lemma next_alt_aux_base_and1 {s1 s2 A B}:
-     base_and A ->  next_alt_aux s1 A = Some (s2, B) -> A = B.
+  Lemma next_alt_aux_base_and2 {A s}: base_and A -> next_alt_aux s (cut A) = None.
   Proof.
-    elim: A s1 s2 B => //; move=> [] //.
-    + move=> p a _ B0 HB0 B HB s1 s2 C /= /andP []/eqP/[subst1] BB.
-      case NB: next_alt_aux => // [[ ]] [] /[subst2].
-      by rewrite BB in HB; rewrite (HB _ _ _ isT NB).
+    elim: A s => //-[]//p a _ B0 _ B HB/= c.
+    move=>/andP[]/eqP? bB;subst.
+    rewrite next_alt_aux_base_and1//.
   Qed.
-
-  Lemma next_alt_aux_base_and2 {s1 s2 A B}:
-     base_and A ->  next_alt_aux s1 (cut A) = Some (s2, B) -> cut A = B.
-  Proof.
-    elim: A s1 s2 B => //; move=> [] //.
-    + move=> p a _ B0 HB0 B HB s1 s2 C /= /andP []/eqP/[subst1] BB.
-      case NB: next_alt_aux => // [[ ]] [] /[subst2].
-      by rewrite BB in HB; rewrite (HB _ _ _ isT NB).
-  Qed.
-
-  (* Lemma xx {A B s}:
-    base_and A ->ssa A B -> 
-      exists s', next_alt_aux false s B = Some (s', A).
-  Proof.
-    elim: A B s => //.
-      move=>/= []//=. *)
-
 
   Lemma ssa_next_alt_aux {B0 B s1 s2 D}: 
     base_and B0 -> ssa B0 B -> valid_state B ->
@@ -652,8 +641,8 @@ Module valid_state (U:Unif).
       apply: xxx ssaB ssB0 => //.
       (* admit. *)
     move=> _.
-    move=>/orP[]/eqP?;subst => //.
-    apply: ssa_cut2 => //.
+    move=>/eqP?;subst => //.
+    (* apply: ssa_cut2 => //. *)
   Qed.
 
   Lemma valid_state_next_alt_aux {s1 s2 A B}: 
@@ -693,11 +682,9 @@ Module valid_state (U:Unif).
         move: VB.
         case: ifP => SA//.
           move=>VB; rewrite (HB _ _ _ VB NB) (ssa_next_alt_aux bB0 _ _ NB)//.
-        move=>/orP[]/eqP?;subst.
-          have <- := next_alt_aux_base_and1 bB0 NB.
-          by rewrite eqxx ssa_id//=.
-        have <- := next_alt_aux_base_and2 bB0 NB.
-        by rewrite eqxx orbT ssaB0.
+        move=>/eqP?;subst.
+        move: NB.
+        by rewrite next_alt_aux_base_and1.
       case NA: next_alt_aux => // [[s3 D]] [] /[subst2] /=.
       by rewrite (HA _ _ _ VA NA) eqxx bB0 (base_and_valid bB0) if_same ssa_id.
   Qed.
