@@ -697,27 +697,33 @@ Module check (U:Unif).
 
   Lemma xxx {B0 B s1}: 
     base_and B0 -> ssa B0 B -> valid_state B -> 
-      next_alt_aux true s1 B = None -> no_new_alt B B0 .
+      next_alt_aux s1 B = None -> no_new_alt B B0 .
   Proof.
     elim: B0 B s1 => //.
       move=> /= []//.
   Admitted.
 
 
-  Lemma next_alt_aux_no_new_alt {s1 s3 A C b}: 
-    valid_state A -> next_alt_aux b s1 A = Some (s3, C) ->
+  Lemma next_alt_aux_no_new_alt {s1 s3 A C}: 
+    valid_state A -> next_alt_aux s1 A = Some (s3, C) ->
       no_new_alt A C.
   Proof.
-    elim: A C s3 b; try by move=>[]/=.
+    elim: A C s3; try by move=>[]/=.
+    (* + by move=> /= + + []// _ [] _ <-.
     + by move=> /= + + []// _ [] _ <-.
-    + by move=> /= + + []// _ [] _ <-.
-    + by move=> p [|t] //= + + [] // _ [] _ <-// => _ _; rewrite eq_refl orbT. 
-    + move=> A HA s B HB C s2 b /simpl_valid_state_or[].
+    + by move=> p [|t] //= + + [] // _ [] _ <-// => _ _; rewrite eq_refl orbT.  *)
+    + move=> A HA s B HB C s2 /simpl_valid_state_or[].
         move=>[]->VB/=; rewrite dead_dead_same eqxx.
+        case: ifP.
+          move=>/simpl_is_base.
+          move=>[->|[->|[p[t->]]]]/=-[]*; subst => /=; rewrite no_new_alt_id//.
+          by case: t => //; rewrite eqxx.
+        move=>Z.
         case X: next_alt_aux => // [[s3 D]].
         case: ifP => /eqP// dD []*;subst.
-        by rewrite no_new_alt_id (HB _ _ _ VB X).
-      move=> [DA[VA VB]]/simpl_next_alt_aux_some[].
+        by rewrite no_new_alt_id (HB _ _ VB X).
+      move=> [DA[VA VB]]/=.
+      move=>
         move=> [B'[DA']]//.
       move=>[_[dB[]]].
         move=>[A'[nA]]->/=.

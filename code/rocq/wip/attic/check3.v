@@ -127,7 +127,7 @@ Module check (U:Unif).
     if infer_output G r.(head) is (_, true) then incl body_det expected_det else false .
 
   Fixpoint has_cut_and A :=
-    (A == dead A)|| (A == cut A)
+    (* (A == dead A) || *)
     (* (A == dead A) || (A == cut A) || *)
     match A with
     | Goal _ Cut => true
@@ -230,23 +230,28 @@ Module check (U:Unif).
     | Top, KO | Bot, KO | KO, KO => true
     | OK, Dead | Top, Dead | Bot, Dead | KO, Dead | Dead, Dead => true
 
-    | Or A _ B, Or A' _ B'            => no_new_alt A A' && no_new_alt B B'
+    | Or A _ B, Or A' _ B' =>
+      no_new_alt A A' && no_new_alt B B'
     | And A B0 B, And A' B0' B'       =>
-      [&& no_new_alt A A',
-        if has_next_alt_aux false A' && (has_next_alt_aux false B' == false)
-         then B0' == B' else no_new_alt B B' & B0 == B0']
+      [&& no_new_alt A A', if has_next_alt_aux false A then B0' == B' else no_new_alt B B' & B0 == B0']
     
     | Goal _program Cut, B      => (B == OK) || (B == A) || (B == KO) || (B == Dead)
     | Goal _program (Call _), B => no_free_alt B
     | _, _ => false
     end || (B == dead B).
+  (* 
+    Immagina:
+    A /\ B -> A /\ KO con un punto di reset B0 che non ha cut
+    allora A /\ B si transforma in un A' /\ B0, dove non è vero 
+    che transitivo `A /\ B` -> `A /\ B0'`
+  
+  *)
 
   Lemma base_and_no_free_alt {A}: base_and A -> no_free_alt A.
   Proof.
     elim: A => []//[]//= _ _ _ A HA B HB/andP[/eqP]/[subst1] bB.
     rewrite (HA bB).
-    by rewrite orbT.
-    (* by case: ifP => //->. *)
+    by case: ifP => //->.
   Qed.
 
   Definition is_det g := forall s s' alt,

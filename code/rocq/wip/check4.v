@@ -719,9 +719,7 @@ Module check (U:Unif).
   | Or A _ B, Or A' _ B' =>
     no_new_alt1 A A' && no_new_alt1 B B'
   | And A B0 B, And A' B0' B'       =>
-    [&& no_new_alt1 A A', 
-      (* (if false && (has_next_alt_aux' A A') && (has_next_alt_aux B == false) *)
-        (* then B' == B0' else no_new_alt1 B B')  *)
+    [&& no_new_alt1 A A',
         (if failed A' && has_next_alt_aux A' then ((B' == B0')) 
         else no_new_alt1 B B')
         & B0 == B0']
@@ -741,20 +739,6 @@ Module check (U:Unif).
     + have := (expanded_cut_simpl (ex_intro _ _ H5)) => -> //.
     + inversion H0; clear H0; subst; simpl in *; try congruence.
       move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
-  Qed.
-
-  Lemma next_alt_aux_base_and2 {A s}: base_and A -> next_alt_aux s A = None.
-  Proof.
-    elim: A s => //-[]//p a _ B0 _ B HB/= c.
-    move=>/andP[]/eqP? bB;subst.
-    by rewrite HB.
-  Qed.
-
-  Lemma next_alt_aux_base_and3 {A s}: base_and A -> next_alt_aux s (cut A) = None.
-  Proof.
-    elim: A s => //-[]//p a _ B0 _ B HB/= c.
-    move=>/andP[]/eqP? bB;subst.
-    by rewrite HB.
   Qed.
 
   (* Search next_alt_aux dead. *)

@@ -241,18 +241,6 @@ Module check (U:Unif).
     by case: ifP => //->.
   Qed.
 
-  Definition is_det g := forall s s' alt,
-    run s g (Done s' alt) ->
-      no_new_alt g alt.
-
-  Lemma cut_is_det pr : is_det (Goal pr Cut).
-  Proof. 
-    move=> s s1 A [? H]; inversion H; clear H; subst; try congruence.
-    + have := (expanded_cut_simpl (ex_intro _ _ H5)) => -> //.
-    + inversion H0; clear H0; subst; simpl in *; try congruence.
-      move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
-  Qed.
-
   Lemma no_alt_dead {A}: no_free_alt (dead A).
   Proof. 
     elim: A => //.
@@ -724,10 +712,6 @@ Module check (U:Unif).
     elim: A C s3; try by move=>[]/=.
     + move=> A HA s B HB C s2 /simpl_valid_state_or[].
         move=>[]->VB/=; rewrite dead_dead_same eqxx.
-        (* case: ifP.
-          move=> /simpl_is_base[->|[->|[p[a->]]]]-[]*;subst =>/=; rewrite dead_dead_same no_new_alt_dead1//.
-          by case: a => //; rewrite eqxx.
-        move=> HZ. *)
         case X: next_alt_aux => // [[s3 D]].
         case: ifP => /eqP// dD []*;subst.
         by rewrite no_new_alt_id (HB _ _ VB X).
@@ -769,6 +753,19 @@ Module check (U:Unif).
       have VA:= valid_state_next_alt H2 VC.
       by have:= no_new_alt_trans VB VC VA H (IH VC).
     Qed.
+
+
+  Definition is_det g := forall s s' alt,
+    run s g (Done s' alt) ->
+      no_new_alt g alt.
+
+  Lemma cut_is_det pr : is_det (Goal pr Cut).
+  Proof. 
+    move=> s s1 A [? H]; inversion H; clear H; subst; try congruence.
+    + have := (expanded_cut_simpl (ex_intro _ _ H5)) => -> //.
+    + inversion H0; clear H0; subst; simpl in *; try congruence.
+      move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
+  Qed.
 
   Lemma tail_cut_is_det A :
     (forall pr, all det_rule_cut pr.(rules)) ->
