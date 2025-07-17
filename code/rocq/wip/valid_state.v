@@ -192,6 +192,30 @@ Module valid_state (U:Unif).
       by rewrite eqxx bB (ssa_id bB).
   Qed.
 
+
+  Lemma base_and_ko_valid {B}: base_and_ko B -> valid_state B.
+  Proof.
+    elim: B => //.
+    move=> []// HA B0 _ B HB/=/and3P[bB0 /eqP <-] H; rewrite bB0 eqxx (ssa_id bB0)//.
+  Qed.
+
+
+  Lemma base_or_ko_valid {B}: base_or_aux_ko B -> valid_state B.
+  Proof.
+    elim: B => //.
+    + move=> A HA s B HB /= /andP [] /base_and_ko_valid ->.
+      move=> /[dup] /HB -> ->.
+      by rewrite orbT if_same.
+    + move=> [] // HA B0 _ B HB /= /and3P[] bB0 /eqP <-.
+      by rewrite eq_refl bB0 (ssa_id bB0).
+  Qed.
+
+
+  Lemma base_or_base_or_ko_valid {B}:
+    base_or_aux B || base_or_aux_ko B -> valid_state B.
+  Proof. by move=> /orP []; [move=> /base_or_valid | move=> /base_or_ko_valid] => ->. Qed.
+
+
   Lemma simpl_valid_state_or {s A B}: 
     valid_state (Or A s B) -> 
       (A = dead A /\ valid_state B) \/ 
@@ -209,11 +233,15 @@ Module valid_state (U:Unif).
       move=>? /andP[]->->; auto.
   Qed.
 
-  Lemma base_and_ko_valid {B}: base_and_ko B -> valid_state B.
+  Lemma simpl_valid_state_or1 {s A B}: 
+    valid_state (Or A s B) -> 
+      (A = dead A /\ valid_state B) \/ 
+      (A <> dead A /\ valid_state A /\ valid_state B).
   Proof.
-    elim: B => //.
-    move=> []// HA B0 _ B HB/=/and3P[bB0 /eqP <-] H; rewrite bB0 eqxx (ssa_id bB0)//.
+    move=> /simpl_valid_state_or[]; auto.
+    move=> [?[?/base_or_base_or_ko_valid]]; auto.
   Qed.
+
 
   Lemma simpl_valid_state_and1 {A B0 B}: valid_state (And A B0 B) -> 
     valid_state A /\ 
@@ -224,21 +252,6 @@ Module valid_state (U:Unif).
       /\ ssa B0 B /\ base_and B0.
   Proof. by move=>/=/and3P[]//->->/andP[]->->. Qed.
 
-
-  Lemma base_or_ko_valid {B}: base_or_aux_ko B -> valid_state B.
-  Proof.
-    elim: B => //.
-    + move=> A HA s B HB /= /andP [] /base_and_ko_valid ->.
-      move=> /[dup] /HB -> ->.
-      by rewrite orbT if_same.
-    + move=> [] // HA B0 _ B HB /= /and3P[] bB0 /eqP <-.
-      by rewrite eq_refl bB0 (ssa_id bB0).
-  Qed.
-
-
-  Lemma base_or_base_or_ko_valid {B}:
-    base_or_aux B || base_or_aux_ko B -> valid_state B.
-  Proof. by move=> /orP []; [move=> /base_or_valid | move=> /base_or_ko_valid] => ->. Qed.
 
 
   Lemma base_and_base_and_ko_cut {B} : base_and B -> base_and_ko (cut B).
