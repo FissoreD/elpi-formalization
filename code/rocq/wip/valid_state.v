@@ -132,7 +132,20 @@ Module valid_state (U:Unif).
     Qed.
   End ssa.
 
-  
+  Lemma base_or_dead {B}: base_or_aux B || base_or_aux_ko B -> B <> dead B.
+  Proof.
+    move=>/orP[].
+      elim: B => //.
+        move=> A HA s B HB /=/andP [bA bB][dA dB].
+        by move: bA; rewrite dA; rewrite base_and_dead.
+      move=> []//.
+    elim: B => //.
+      move=> A HA s B HB /=/andP[bA bB] [dA dB].
+      apply: HB; auto.
+    move=>[]//.
+  Qed.
+
+
   Fixpoint valid_state s :=
     match s with
     | Goal _ _ | OK | KO | Bot | Top => true
