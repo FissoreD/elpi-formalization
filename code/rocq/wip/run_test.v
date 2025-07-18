@@ -51,35 +51,27 @@ Module Test1.
       rewrite /big_or/F/select/=.
       apply: expanded_step => //=.
       apply: expanded_fail => //=.
-    - apply: next_alt_ok => //.
+    - reflexivity.
     - apply: run_backtrack => //.
       - apply: expanded_step => //=.
         rewrite /big_or/F/select/= -/s1 -/s2.
         apply: expanded_step => //=.
         apply: expanded_fail => //=.
-      - apply: next_alt_ok => //=.
-          case: ifP => /eqP.
-            by move=>[].
-          by [].
-        by move=>//.
+      - reflexivity.
       - apply: run_backtrack => //.
         - apply: expanded_step => //=.
           apply: expanded_step => //=.
           apply: expanded_step => //=.
           apply: expanded_fail => //=.
-        - apply: next_alt_ok => //=.
+        - move=> /=.
           case: ifP => /eqP//.
-          case:ifP => ///eqP[]//.
-          by move=>//.
         - apply: run_backtrack => //.
           - apply: expanded_step => //=.
             apply: expanded_step => //=.
             rewrite /big_or/F//=.
             apply: expanded_step => //=.
             apply: expanded_fail => //=.
-          - apply: next_alt_ok => //=.
-            case:ifP => ///eqP[]//.
-            move=>//.
+          - move=>/=; case: ifP => /eqP => //.
           - apply: run_done.
             apply: expanded_step => //=.
             apply: expanded_step => //=.
@@ -134,16 +126,14 @@ Module Test5.
     + rewrite /big_or/F/select/=.
       apply: expanded_step => //=.
       apply: expanded_fail => //.
-      apply: next_alt_ok => //.
+      reflexivity.
     apply: run_backtrack => //.
       apply: expanded_step => //=.
     + rewrite /big_or/F/select/=.
       apply: expanded_step => //=.
       apply: expanded_fail => //=.
-      apply: next_alt_ok.
+      reflexivity.
       rewrite -/s1-/s2.
-      move=>/=; case:ifP =>/eqP//.
-      move=>//.
       apply: run_done.
       apply: expanded_step => //.
       rewrite [Cut]lock.
@@ -206,27 +196,21 @@ Module Test6.
     + rewrite /big_or/F/select/=.
       apply: expanded_step => //=.
       apply: expanded_fail => //.
-      apply: next_alt_ok => //.
+      reflexivity.
     apply: run_backtrack => //.
       apply: expanded_step => //=.
     + rewrite /big_or/F/select/=.
       apply: expanded_step => //=.
       apply: expanded_fail => //=.
       rewrite -/s2 -/s1.
-      apply: next_alt_ok => //=.
-        case:ifP => /eqP//.
-        move=>//.
+      reflexivity.
       apply: run_backtrack.
       apply: expanded_step => //.
       (* rewrite [Cut]lock. *)
       apply: expanded_step => //=.
       apply: expanded_step => //=.
       apply: expanded_fail => //=.
-
-      apply: next_alt_ok => //=.
-      case:ifP=>/eqP//.
-      move=>//.
-
+      move=> /=;case: ifP => /eqP//.
       apply: run_done.
       apply: expanded_step => //=.
       apply: expanded_step => //=.
@@ -270,8 +254,8 @@ Module Test3.
   Lemma xxx {s A A' sA}:
     expand s A = Solved sA A' -> expand sA A' = Failure KO ->
       run s A (Done sA A') ->
-        forall C SC, run s (And A KO C) (Failed SC) -> next_alt s SC None ->
-          forall D SD, run s (And A KO D) (Failed SD) -> next_alt s SD None ->
+        forall C SC, run s (And A KO C) (Failed SC) -> next_alt s SC = None ->
+          forall D SD, run s (And A KO D) (Failed SD) -> next_alt s SD = None ->
             forall B CD0 r s', run s (And (Or A s B) CD0 (Or C sA D)) (Done s' r) ->
               exists r', run s (And B CD0 CD0) (Done s' r').
   Proof.

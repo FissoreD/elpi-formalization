@@ -50,7 +50,7 @@ Module RunP (A: Unif).
       by inversion HA; try congruence; subst; rewrite H0 => -[] /[subst2]; auto.
   Qed.
 
-  Lemma next_alt_consistent {s A r1 r2}:
+  (* Lemma next_alt_consistent {s A r1 r2}:
     next_alt s A r1 -> next_alt s A r2 -> r1 = r2.
   Proof.
     move=> H; elim: H r2 => //; clear.
@@ -58,7 +58,7 @@ Module RunP (A: Unif).
     + move=> s1 s2 A B HA F r1; inversion 1; congruence.
     + move=> ??? ?? H FA NA IH ? H1; inversion H1; try congruence; subst.
       by move: H0; rewrite H => -[] /[subst2]; auto.
-  Qed.
+  Qed. *)
 
   Lemma run_consistent {s A r1 r2 b1 b2}:
     runb s A r1 b1 -> runb s A r2 b2 -> r1 = r2 /\ b1 = b2.
@@ -68,10 +68,10 @@ Module RunP (A: Unif).
       by move => -[].
     + move=> s A B b HA HB r b2; inversion 1; subst; have:= expanded_consistent HA H1; try congruence.
       move=> [] [] /[subst2].
-      by have:= next_alt_consistent HB H2.
+      congruence.
     + move=> ????????? H HN HR IH ???; subst; inversion 1; subst; have:= expanded_consistent H H1; try congruence; move=> [] // [] /[subst2].
-      + by have:= next_alt_consistent HN H2.
-      + have:= next_alt_consistent HN H2 => -[] /[subst2].
+      + congruence.
+      + move: H2; rewrite HN => -[]??;subst.
         by have:= IH _ _ H3 => -[] /[subst2].
   Qed.
 
@@ -1001,4 +1001,17 @@ Module RunP (A: Unif).
     move=> H H1; apply: run_or_fail1 H _ => H2.
     inversion H2; subst; congruence.
   Qed.  *)
+
+  Lemma expandedb_failed {s1 A B b1}: valid_state A -> expandedb s1 A (Failed B) b1 -> failed B.
+  Proof.
+    remember (Failed B) as fB eqn:HfB => + H.
+    elim: H B HfB => //; clear.
+    - move=> s1 A B H C []<- VA.
+      have []:= expand_failure_failed VA H => //.
+    - move=> s1 s2 r A B b H1 H2 IH C ? VA;subst.
+      by have:= (IH _ erefl (valid_state_expand VA H1)).
+    - move=> s1 s2 r A B b H1 H2 IH C ? VA;subst.
+      by have:= (IH _ erefl (valid_state_expand VA H1)).
+  Qed.
+
 End RunP.
