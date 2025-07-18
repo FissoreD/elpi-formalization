@@ -649,19 +649,25 @@ Module check (U:Unif).
       move=>/orP[].
         move=>->//.
       move=>/and3P[nnA1 nnB1 /eqP]?; subst.
-      move: nnB1.
       rewrite eqxx (HA A1 A2)//=andbT.
+      move: nnB1.
       move=>/orP[].
-      (* case: ifP => H. *)
         by move=> ->; rewrite orbT.
       move=> nnB1.
       have H1 := valid_state_compose_and sA1 bB02.
       have H2 := valid_state_compose_and sA2 bB02.
       have H3 := valid_state_compose_and sA bB02.
-      rewrite (HB B1 B2)// ?orbT//.
+
+      (* pb: 
+        A /\ B --> A1 /\ B1   --> A2 /\ B2
+        A /\ B --> A1 /\ B02  --> A2 /\ B2
+      *)
       move: nnB.
-      move=>/orP[].
+      move=>/orP[]//.
         move=>/eqP?;subst.
+        admit.
+      move=> H.
+      rewrite (HB B1 B2)// ?orbT//.
   Admitted. 
 
   Lemma has_cut_and_no_new_alt {p l}: no_free_alt (big_and p l).
@@ -821,14 +827,17 @@ Module check (U:Unif).
       by have:= (expand_no_new_alt AllCut) VA H.
     + move=> s s' r A B b H H1 IH VA.
       have:= expand_no_new_alt AllCut VA H => /= H2.
-      have VB:=  valid_state_expand VA H.
-      have Vr:= valid_state_expanded VB (ex_intro _ _ H1).
-      apply: no_new_alt_trans H2 (IH (valid_state_expand VA H)) => //.
+      have /= VB:=  valid_state_expand VA H.
+      have /= Vr:= valid_state_expanded VB (ex_intro _ _ H1).
+      remember (get_state_run _) as C.
+      have {}IH:= IH VB.
+      apply: no_new_alt_trans H2 IH => //.
     + move=> s s' r A B b H H1 IH VA.
       have:= expand_no_new_alt AllCut VA H => /= H2.
-      have VB:=  valid_state_expand VA H.
+      have /= VB:=  valid_state_expand VA H.
       have Vr:= valid_state_expanded VB (ex_intro _ _ H1).
-      apply: no_new_alt_trans H2 (IH (valid_state_expand VA H)) => //.
+      remember (get_state_run _) as C.
+      apply: no_new_alt_trans H2 (IH VB) => //.
   Qed.
 
   Lemma next_alt_aux_no_new_alt {s1 s3 A C}: 
