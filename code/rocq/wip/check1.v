@@ -161,11 +161,6 @@ Module check (U:Unif).
   Lemma has_cut_and_cut {B}: has_cut_and (cut B).
   Proof.
     by destruct B => //=; rewrite !cut_cut_same eqxx.
-    (* elim:B => //=.
-    + move=> A HA s B HB; case: eqP => //; unfold has_cut =>/=.
-      rewrite !cut_cut_same; case: eqP => //;case: eqP => //.
-    + move=> A HA B0 HB0 B HB; case: eqP => //=; unfold has_cut =>/=.
-      by rewrite !cut_cut_same eqxx. *)
   Qed.
 
   Lemma has_cut_cut {B}: has_cut (cut B).
@@ -926,6 +921,4 @@ Module check (U:Unif).
   Print Assumptions tail_cut_is_det.
 
 End check.
-
-Buongiorno dottore,
 
