@@ -147,7 +147,6 @@ Module check (U:Unif).
 
   Fixpoint has_cut A :=
     match A with
-    (* | Dead => true *)
     | Or A _ B => has_cut_and A && has_cut B
     | _ => has_cut_and A
     end.
@@ -782,44 +781,20 @@ Module check (U:Unif).
       have VB' := valid_state_compose_and VB bB0.
       move=> /=.
       case X : expand => // ?; subst => /=; try rewrite (HA _ _ VA X) eqxx /= andbT.
-      - move: VB.
-        rewrite no_new_alt_id//.
-        (* case: ifP => // sA.
-          have [A'] := succes_is_solved s VA sA; congruence. *)
-        (* by move=>/eqP?;subst; rewrite eqxx if_same orbT. *)
-        rewrite !orbT//.
-      - move: VB.
-        rewrite no_new_alt_id//.
-        rewrite !orbT//.
-        (* case: ifP => // sA. *)
-          (* have [A'] := succes_is_solved s VA sA; congruence. *)
-        (* by move=>/eqP?;subst; rewrite eqxx if_same orbT. *)
-      - move: VB.
-        rewrite no_new_alt_id//.
-        rewrite !orbT//.
-        (* case: ifP => // sA.
-          have [A'] := succes_is_solved s VA sA; congruence.
-        by move=>/eqP?;subst; rewrite eqxx if_same orbT. *)
+      - rewrite no_new_alt_id// !orbT//.
+      - rewrite no_new_alt_id// !orbT//.
+      - rewrite no_new_alt_id// !orbT//.
       - case Y: expand => //=.
-        - 
-          (* move: VB. *)
-          (* have [-> /success_failed -> /=] := expand_solved_success VA X. *)
-          rewrite (HA _ _ VA X) (HB _ _ VB' Y) eqxx !orbT//.
+        - rewrite (HA _ _ VA X) (HB _ _ VB' Y) eqxx !orbT//.
         - have [sA ss1] := expand_solved_success VA X.
           have /=nnA := HA _ _ VA X.
           have:= ss1.
-          (* rewrite -success_cut.
-          move=>/success_failed->/=. *)
           rewrite (HB _ _ VB' Y) eqxx !andbT.
           case: eqP => //=; rewrite dead_cut_is_dead.
           move=> cd.
           by rewrite (no_new_alt_cut_right nnA).
-        - move: VB.
-          (* have [-> /success_failed -> /=] := expand_solved_success VA X. *)
-          by rewrite (HA _ _ VA X) (HB _ _ VB' Y) eqxx !orbT.
-        - move: VB.
-          (* have [-> /success_failed -> /=] := expand_solved_success VA X. *)
-          by rewrite (HA _ _ VA X) (HB _ _ VB' Y) eqxx !orbT.
+        - by rewrite (HA _ _ VA X) (HB _ _ VB' Y) eqxx !orbT.
+        - by rewrite (HA _ _ VA X) (HB _ _ VB' Y) eqxx !orbT.
   Qed.
 
   Lemma expandedb_no_new_alt {A r s1 b1}: 
@@ -881,21 +856,11 @@ Module check (U:Unif).
         move=>[]/[subst2]/=.
         rewrite eqxx //= andbT.
         rewrite (HA _ _ _ VA X)/= !orbT//.
-        (* rewrite (next_alt_failed X)/=.
-        move: VB.
-        rewrite (failed_success _ fA) => /eqP ?;subst.
-        have VB := base_and_valid bB0.
-        by rewrite no_new_alt_id // orbT. *)
-      (* move=>fA.
-      move: VB.
-      rewrite sA => VB. *)
       have VB' := valid_state_compose_and VB bB0.
       case Y: next_alt => // [[s4 A']|] fa.
         move=>[]??;subst.
         rewrite eqxx no_new_alt_id // andbT/=.
         rewrite (HB A' s1 s2)// //!orbT//.
-        (* rewrite (success_failed _ sA) /=. *)
-        (* by rewrite (HB _ _ _ VB fB Y) orbT. *)
       case X: next_alt => //[[s3 D]].
       case: ifP => // fB0[]??;subst.
       rewrite eqxx/= (HA D s1 s2)//?orbT//.

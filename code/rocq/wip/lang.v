@@ -328,8 +328,6 @@ Module Run (U : Unif).
       end
     | Or A sB B => 
       if A == dead A then
-        (* if is_base B then Some (s, Or A sB B) 
-        else *)
         match next_alt s B with
         | None => None
         | Some (sB1, B) => Some (sB1, Or A sB B)
