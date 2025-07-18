@@ -920,12 +920,11 @@ Module check (U:Unif).
     have /= VB := valid_state_expanded VA (ex_intro _ _ EA).
     have /= VC:= valid_state_next_alt VB NB.
     have /= VD:= runP_run VC (ex_intro _ _ HR).
-    have /= nnCD := IH VC _ _ erefl.
+    have {IH} /= nnCD := IH VC _ _ erefl.
     apply: no_new_alt_trans nnCD => //.
     have /= nnAB := expandedb_no_new_alt AllCut VA EA.
+    have /= nnBC := next_alt_aux_no_new_alt VB NB.
     apply: no_new_alt_trans nnAB _ => //=.
-    have fB := expandedb_failed VA EA.
-    by have:= next_alt_aux_no_new_alt VB NB.
   Qed.
 
   Print Assumptions tail_cut_is_det.
