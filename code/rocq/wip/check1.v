@@ -231,7 +231,9 @@ Module check (U:Unif).
       no_new_alt A A' && no_new_alt B B'
     | And A B0 B, And A' B0' B'       =>
       (A' == dead A') || [&& no_new_alt A A',
-        (if failed A' && has_next_alt A' then ((B' == B0')) 
+        (if ((failed A' && has_next_alt A') 
+          (* || (has_next_alt A' && ~(has_next_alt B') *)
+          ) then ((B' == B0')) 
         else no_new_alt B B')
       (* no_new_alt B B'  *)
       & B0 == B0']
