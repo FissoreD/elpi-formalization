@@ -433,6 +433,15 @@ Module Run (U : Unif).
     move=> /(_ _ _ erefl) fD[]??;subst => /=.
     by rewrite fA fD andbF.
   Qed.
+  Lemma next_alt_dead1 {s A}: next_alt s (dead A) = None.
+  Proof.
+    elim: A => //.
+      move=> A HA s1 B HB => /=.
+      rewrite dead_dead_same eqxx.
+      by rewrite HB.
+    move=> A HA B0 _ B HB /=.
+    by rewrite dead_dead_same eqxx.
+  Qed.
 
   Definition has_next_alt s := isSome (next_alt empty s).
 

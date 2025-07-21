@@ -215,6 +215,7 @@ Module check (U:Unif).
       ((if has_cut B0 then has_cut B else no_free_alt A) &&
       no_free_alt B)
     | Or A _ B =>
+      (* Più o meno... *)
       if has_cut A then no_free_alt A && no_free_alt B
       else no_free_alt A && (B == cut B)
     end.
@@ -230,7 +231,7 @@ Module check (U:Unif).
       no_new_alt b A A' && no_new_alt b B B'
     | And A B0 B, And A' B0' B'       =>
       (A' == dead A') || [&& no_new_alt b A A',
-        if b then (B' == B0') || no_new_alt b B B'
+        if b && has_next_alt A' then (B' == B0') || no_new_alt b B B'
         else no_new_alt b B B'
       & B0 == B0']
     
@@ -248,7 +249,7 @@ Module check (U:Unif).
     move=> /=/orP[].
       by move=>->.
     move=>/and3P[nnA H /eqP?];subst.
-    by rewrite eqxx (HA A')//andbT/=(HB B')//!orbT.
+    by rewrite eqxx (HA A')//andbT/=(HB B')//!orbT if_same orbT.
   Qed.
 
   Lemma base_and_no_free_alt {A}: base_and A -> no_free_alt A.
@@ -719,8 +720,8 @@ Module check (U:Unif).
     by move=>/andP[]->->; rewrite orbT.
   Qed.
 
-  Lemma no_new_alt_cut_right {A B b}:
-    no_new_alt b A B -> no_new_alt b A (cut B).
+  Lemma no_new_alt_cut_right {A B}:
+    no_new_alt false A B -> no_new_alt false A (cut B).
   Proof.
     elim: A B; try by move=> []//.
     - move=> ?[|t]//=[]//???//=.
@@ -736,12 +737,12 @@ Module check (U:Unif).
         by move=>/eqP ->; rewrite cut_dead_is_dead dead_dead_same eqxx.
       move=>/and3P[] nnA + /eqP?;subst.
       rewrite (HA _ nnA)/= eqxx andbT.
-      case:ifP => // _.
+      (* case:ifP => // _.
       move=>/orP[].
         move=>/eqP?;subst.
-        rewrite eqxx /= orbT//.
+        rewrite eqxx /= orbT//. *)
       move=> ->; rewrite !orbT//.
-      move=> ->; rewrite !orbT//.
+      (* move=> ->; rewrite !orbT//. *)
     Qed.
 
   Definition is_cb x := match x with CutBrothers _ _ => true | _ => false end.
@@ -848,6 +849,7 @@ Module check (U:Unif).
         by rewrite (no_new_altP no_new_alt_trans_dead0) no_new_alt_id.
     + move=> A HA B0 _ B HB C s1 s2.
       move=> /simpl_valid_state_and1[VA [VB bB0]]/=.
+      have vB := valid_state_compose_and VB bB0. 
       case: ifP => ///eqP dA.
       case: ifP => //=.
         move=> _.
@@ -855,16 +857,31 @@ Module check (U:Unif).
         case: ifP => // fB0.
         move=>[]/[subst2]/=.
         rewrite eqxx //= andbT.
-        rewrite (HA _ _ _ VA X)/= !orbT//.
+        rewrite (HA _ _ _ VA X)/=.
+        clear HA.
+        case: ifP => // nD; rewrite ?orbT//.
+        move: VB; case: ifP => // sA.
+        move=> _.
+          admit.
+        move=> /eqP->; rewrite no_new_alt_id//orbT//.
       have VB' := valid_state_compose_and VB bB0.
       case Y: next_alt => // [[s4 A']|] fa.
         move=>[]??;subst.
         rewrite eqxx no_new_alt_id // andbT/=.
-        rewrite (HB A' s1 s2)// //!orbT//.
+        rewrite (HB A' s1 s2)// //!orbT// if_same orbT//.
       case X: next_alt => //[[s3 D]].
       case: ifP => // fB0[]??;subst.
-      rewrite eqxx/= (HA D s1 s2)//?orbT//.
-  Qed.
+      rewrite eqxx/= (HA D s1 s2)//?orbT//andbT/=.
+      case: ifP => // nD.
+        rewrite orbT//.
+      move: VB.
+      case: ifP => // sA.
+        clear Y.
+        clear VB'.
+        clear fa.
+        admit.
+      move=>/eqP->; rewrite no_new_alt_id//orbT//.
+  Admitted.
 
   Definition is_det g := forall s s' alt,
     run s g (Done s' alt) ->
@@ -899,6 +916,7 @@ Module check (U:Unif).
     apply: no_new_alt_trans nnCD => //.
     apply: no_new_alt_trans nnAB _ => //=.
   Admitted.
+  Search next_alt dead.
 
   Print Assumptions tail_cut_is_det.
 
