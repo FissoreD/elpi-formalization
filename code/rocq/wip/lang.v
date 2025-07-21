@@ -443,6 +443,80 @@ Module Run (U : Unif).
     by rewrite dead_dead_same eqxx.
   Qed.
 
+  (* Lemma next_alt2 {s s1 A B}: next_alt s A = Some (s1, B) -> forall s2, isSome (next_alt s2 B).
+  Proof.
+    elim: A s B s1 => //.
+      move=> A HA s B HB s1 C s2.
+      move=>/=; case: ifP => /eqP.
+        move=>->.
+        have:= (HB s1).
+        case: next_alt => //[[s4 D]] /(_ _ _ erefl) + [??] s3; subst.
+        move=>/=; rewrite dead_dead_same eqxx.
+        move=> /(_ s3).
+        case: next_alt => //[[ ]]//.
+      move=> dA; case:ifP => ///eqP dB.
+      have:= (HA s1).
+      case X: next_alt => //[[s3 D]|].
+        move=>/(_ _ _ erefl) + [??] s4;subst.
+        move=> /=.
+        case: ifP => /eqP.
+          move=>-> /(_ empty).
+          by rewrite next_alt_dead1.
+        move=> dD.
+        case: ifP => /eqP// _.
+        move=> /(_ s4).
+        case: next_alt => //[[]]//.
+      move=> _; case: ifP => //fB.
+        have:= HB s.
+        case: next_alt => //[[s3 D]].
+        move=>/(_ _ _ erefl) + []?? s4;subst.
+        move=>/=; rewrite dead_dead_same eqxx.
+        move=>/(_ s4); case: next_alt => //[[]]//.
+      move=>[]??;subst => /= s3; rewrite dead_dead_same eqxx.
+      have:= HB s3.
+      case Y: next_alt => //[[s4 C]|]//.
+      move=> _.
+      admit.
+    move=> A HA B0 _ B HB.
+    move=>/= s C s1.
+    case: ifP => /eqP//dA.
+    case:ifP => // fA.
+      have:= HA s.
+      case: next_alt => //[[s2 D]] /(_ _ _ erefl).
+      case: ifP => // fB + [??] s3;subst => /=.
+      case: ifP => /eqP.
+        by move=>->/(_ s); rewrite next_alt_dead1.
+      move=> dD.
+      case: ifP => // fD.
+        move=>/(_ s3).
+        case: next_alt => //[[s4 E]].
+        by rewrite fB.
+      rewrite fB.
+      move=> /(_ s3).
+      case: next_alt => //[[s4 E]].
+      case: next_alt => //[[]]//.
+    have:= HB s.
+    case: next_alt => //[[s2 D]|]. 
+      move=> /(_ _ _ erefl)+[??] s3;subst.
+      move=>/=; case: ifP => /eqP// _.
+      rewrite fA.
+      move=> /(_ s3).
+      case: next_alt => //[[ ]]//.
+    move=> _.
+    have:= HA s.
+    case: next_alt => //[[s2 D]]/(_ _ _ erefl).
+    case: ifP => // fB0 + [??] s3; subst.
+    move=> /=.
+    case: ifP=>/eqP.
+      by move=>->/(_ s); rewrite next_alt_dead1.
+    move=> dD /(_ s3).
+    case: next_alt => //[[s4 E]].
+    rewrite fB0.
+    case: ifP => // fD.
+    case: next_alt => //[[]]//.
+  Qed. *)
+  
+
   Definition has_next_alt s := isSome (next_alt empty s).
 
   Lemma cut_dead1 {A}: cut A = dead A -> dead A = A.
