@@ -532,6 +532,7 @@ Module Run (U : Unif).
   derive run_res.
   HB.instance Definition _ := hasDecEq.Build run_res run_res_eqb_OK.
   Definition is_fail A := match A with Failure _ => true | _ => false end.
+  Definition is_failed A := match A with Failed _ => true | _ => false end.
   Definition is_done A := match A with Done _ _ => true | _ => false end.
 
   Inductive expandedb : Sigma -> state -> run_res -> bool -> Prop :=

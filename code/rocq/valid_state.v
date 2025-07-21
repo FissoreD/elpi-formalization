@@ -422,21 +422,20 @@ Module valid_state (U:Unif).
 
   (* Lemma expand_failure_dead *)
 
-  Lemma succes_is_solved s {A}: valid_state A -> success A -> exists B, expand s A = Solved s B.
+  Lemma succes_is_solved s {A}: valid_state A -> success A -> expand s A = Solved s A.
   Proof.
     elim: A s => //; try by do 2 eexists.
     + move=> A HA s1 B HB s /simpl_valid_state_or[].
         move=>[-> vB]/=.
         rewrite dead_dead_same eqxx.
         move=>sB.
-        by have [B' H] := HB s vB sB; rewrite H; eexists.
+        by have H := HB s vB sB; rewrite H.
       move=>[dA[vA bB]]/=.
       case:ifP => /eqP// _ sA.
-      by have [A' H] := HA s vA sA; rewrite H; eexists.
+      have H := HA s vA sA; rewrite H; eexists.
     + move=> A HA B0 HB0 B HB s /simpl_valid_state_and[] VA VB /=/andP[SA SB].
-      have [A' H1]:= HA s VA SA; rewrite H1.
-      have [B' H2]:= HB s VB SB; rewrite H2.
-      by eexists.
+      have H1:= HA s VA SA; rewrite H1.
+      by have H2:= HB s VB SB; rewrite H2.
   Qed.
 
   Lemma expand_solved_success {s1 A s2 B}: 
@@ -540,7 +539,7 @@ Module valid_state (U:Unif).
           rewrite (HA _ _ VA HA') bB0 (valid_state_compose_and VB bB0) ?ssB0.
           move: VB.
           case: ifP => //sA.
-          have:= succes_is_solved s1 VA sA; rewrite HA' => -[?] //.
+          have:= succes_is_solved s1 VA sA; rewrite HA' => //.
           by move=>->; rewrite if_same.
         move=> [s[A'[B'[HA'[HB' ->]]]]]/=.
         have:= expand_solved_success VA HA' => -[] _ ->.
@@ -550,7 +549,7 @@ Module valid_state (U:Unif).
           move=> [A' [HA' ->]]/=.
           rewrite (HA _ _ VA HA') bB0 (valid_state_compose_and VB bB0).
           move: VB; case SA: success.
-            have:= succes_is_solved s1 VA SA; rewrite HA' => -[?] //.
+            have:= succes_is_solved s1 VA SA; rewrite HA' => //.
           by move=>->; rewrite if_same ?ssB0.
         move=> [s'[A'[B'[HA'[HB' ->]]]]]/=.
         move: VB.
