@@ -1,9 +1,0 @@
--Q . det
-
--arg -w -arg -notation-overridden
-
-lang.v
-run_test.v
-valid_state.v
-run_prop.v
-check.v
