@@ -7,83 +7,100 @@ Notation "[subst]" := ltac:(subst).
 Notation "[subst1]" := ltac:(move=> ?;subst).
 Notation "[subst2]" := ltac:(move=> ??;subst).
 
-Inductive D := Func | Pred.
-Inductive B := Exp | d of D.
-Inductive mode := i |o.
-Inductive S :=  b of B | arr of mode & S & S.
-Notation "x '--i-->' y" := (arr i x y) (at level 3).
-Notation "x '--o-->' y" := (arr o x y) (at level 3).
+Module Language.
+  Inductive D := Func | Pred.
+  Inductive B := Exp | d of D.
+  Inductive mode := i |o.
+  Inductive S :=  b of B | arr of mode & S & S.
+  Notation "x '--i-->' y" := (arr i x y) (at level 3).
+  Notation "x '--o-->' y" := (arr o x y) (at level 3).
 
-Definition P := nat.
-derive P.
-Elpi derive.eqbOK.register_axiom P is_P is_nat_inhab P_eqb P_eqb_correct P_eqb_refl.
+  Definition P := nat.
+  derive P.
+  Elpi derive.eqbOK.register_axiom P is_P is_nat_inhab P_eqb P_eqb_correct P_eqb_refl.
 
-Definition K := nat.
-derive K.
-Elpi derive.eqbOK.register_axiom K is_K is_nat_inhab K_eqb K_eqb_correct K_eqb_refl.
+  Definition K := nat.
+  derive K.
+  Elpi derive.eqbOK.register_axiom K is_K is_nat_inhab K_eqb K_eqb_correct K_eqb_refl.
 
-Definition V := nat.
-derive V.
-Elpi derive.eqbOK.register_axiom V is_V is_nat_inhab V_eqb V_eqb_correct V_eqb_refl.
+  Definition V := nat.
+  derive V.
+  Elpi derive.eqbOK.register_axiom V is_V is_nat_inhab V_eqb V_eqb_correct V_eqb_refl.
 
-Inductive C := 
-  | p of P 
-  | v of V
-  .
-derive C.
+  Inductive C := 
+    | p of P 
+    | v of V
+    .
+  derive C.
 
-Inductive Tm := 
-  | Code : C -> Tm
-  | Data : K -> Tm
-  | Comb : Tm -> Tm -> Tm.
-  (* | Lam  : V -> S -> Tm -> S -> Tm. *)
-derive Tm.
+  Inductive Tm := 
+    | Code : C -> Tm
+    | Data : K -> Tm
+    | Comb : Tm -> Tm -> Tm.
+    (* | Lam  : V -> S -> Tm -> S -> Tm. *)
+  derive Tm.
 
-Record R_ {A} := mkR { head : Tm; premises : list A }.
-Arguments mkR {_} _ _.
-derive R_.
-Inductive A :=
-  | Cut
-  | Call : Tm -> A.
-derive A.
+  Record R_ {A} := mkR { head : Tm; premises : list A }.
+  Arguments mkR {_} _ _.
+  derive R_.
+  Inductive A :=
+    | Cut
+    | Call : Tm -> A.
+  derive A.
 
-  (* | PiImpl : V -> R_ A -> A -> A. *)
-Notation R := (@R_ A).
+    (* | PiImpl : V -> R_ A -> A -> A. *)
+  Notation R := (@R_ A).
 
-HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build C C_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build P P_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build K K_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build V V_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK _ _ A_eqb_OK).
+  HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build C C_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build P P_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build K K_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build V V_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK _ _ A_eqb_OK).
 
-Record Sigma := { sigma : V -> option Tm }.
-Definition empty : Sigma := {| sigma := fun _ => None |}.
-
-Module Type Unif.
-  Parameter unify : Tm -> Tm -> Sigma -> option Sigma.
-  Parameter matching : Tm -> Tm -> Sigma -> option Sigma.
-End Unif.
-
-Module Run (U : Unif).
-
-  Definition unify := U.unify.
-  Definition matching := U.matching.
+  Record Sigma := { sigma : V -> option Tm }.
+  Definition empty : Sigma := {| sigma := fun _ => None |}.
 
   Definition index := list R.
   Definition mode_ctx := Tm -> list mode.
   Definition sigT := Tm -> S.
   Record program := { (*depth : nat;*) rules : index; modes : mode_ctx; sig : sigT }.
+End Language.
 
-  (* Inductive goal := Goal of program & Sigma & A. *)
+Module Type Unif.
+  Import Language.
+  Parameter unify : Tm -> Tm -> Sigma -> option Sigma.
+  Parameter matching : Tm -> Tm -> Sigma -> option Sigma.
 
-  (* Axiom H : list mode -> Tm -> Tm -> Sigma -> option Sigma. *)
+  Parameter program_eqb : program -> program -> bool.
+  Parameter is_program : program -> Type.
+  Parameter is_program_inhab : forall p : program, is_program p.
+  Parameter program_eqb_correct : forall p1 p2, program_eqb p1 p2 -> p1 = p2.
+  Parameter program_eqb_refl : forall x, program_eqb x x.
+
+
+  Parameter Sigma_eqb : Sigma -> Sigma -> bool.
+  Parameter is_Sigma : Sigma -> Type.
+  Parameter is_Sigma_inhab : forall p : Sigma, is_Sigma p.
+  Parameter Sigma_eqb_correct : forall p1 p2, Sigma_eqb p1 p2 -> p1 = p2.
+  Parameter Sigma_eqb_refl : forall x, Sigma_eqb x x.
+
+
+  Parameter same_subst : forall (s1 s2 : Sigma), s1 = s2.
+  Parameter same_progr : forall (s1 s2 : program), s1 = s2.
+End Unif.
+
+Module Run (U : Unif).
+
+  Import U.
+  Import Language.
+
   Fixpoint H (ml : list mode) (q : Tm) (h: Tm) s : option Sigma :=
     match ml,q,h with
     | [::], Code c, Code c1 => if c == c1 then Some s else None
-    | [:: i & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (matching a1 a2 s) 
-    | [:: o & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (unify a1 a2 s) 
+    | [:: i & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (U.matching a1 a2 s) 
+    | [:: o & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (U.unify a1 a2 s) 
     | _, _, _ => None
     end.
 
@@ -103,33 +120,18 @@ Module Run (U : Unif).
     let rules := select query modes rules s in
     rules.
 
-  Axiom program_eqb : program -> program -> bool.
-  Axiom is_program : program -> Type.
-  Axiom is_program_inhab : forall p : program, is_program p.
-  Axiom program_eqb_correct : forall p1 p2, program_eqb p1 p2 -> p1 = p2.
-  Axiom program_eqb_refl : forall x, program_eqb x x.
 
-  Elpi derive.eqbOK.register_axiom program is_program is_program_inhab program_eqb program_eqb_correct program_eqb_refl.
-  Lemma program_eqb_OK : Equality.axiom program_eqb.
-  apply: iffP2 program_eqb_correct program_eqb_refl.
+  Elpi derive.eqbOK.register_axiom program U.is_program U.is_program_inhab U.program_eqb U.program_eqb_correct U.program_eqb_refl.
+  Lemma program_eqb_OK : Equality.axiom U.program_eqb.
+  apply: iffP2 U.program_eqb_correct U.program_eqb_refl.
   Qed.
   HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eqb_OK.
-
-  Axiom Sigma_eqb : Sigma -> Sigma -> bool.
-  Axiom is_Sigma : Sigma -> Type.
-  Axiom is_Sigma_inhab : forall p : Sigma, is_Sigma p.
-  Axiom Sigma_eqb_correct : forall p1 p2, Sigma_eqb p1 p2 -> p1 = p2.
-  Axiom Sigma_eqb_refl : forall x, Sigma_eqb x x.
-
-  Elpi derive.eqbOK.register_axiom Sigma is_Sigma is_Sigma_inhab Sigma_eqb Sigma_eqb_correct Sigma_eqb_refl.
-  Lemma Sigma_eqb_OK : Equality.axiom Sigma_eqb.
-  apply: iffP2 Sigma_eqb_correct Sigma_eqb_refl.
+  
+  Elpi derive.eqbOK.register_axiom Sigma U.is_Sigma U.is_Sigma_inhab U.Sigma_eqb U.Sigma_eqb_correct U.Sigma_eqb_refl.
+  Lemma Sigma_eqb_OK : Equality.axiom U.Sigma_eqb.
+  apply: iffP2 U.Sigma_eqb_correct U.Sigma_eqb_refl.
   Qed.
   HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
-
-  Axiom same_subst : forall (s1 s2 : Sigma), s1 = s2.
-  Axiom same_progr : forall (s1 s2 : program), s1 = s2.
-
 
   Inductive state :=
     | KO : state
@@ -160,28 +162,27 @@ Module Run (U : Unif).
   derive expand_res.
   HB.instance Definition _ := hasDecEq.Build expand_res expand_res_eqb_OK.
 
-  Definition mkOr sB er :=
-    match er with
-    | Failure B    => Failure     (if B == Dead then Dead else (Or Dead sB B))
-    | Expanded s B    => Expanded s  (Or Dead sB B)
-    | CutBrothers s B => Expanded s  (Or Dead sB B)
-    | Solved s B      => Solved   s  (Or Dead sB B)
-    end.
-
-  (* Fixpoint const E A :=
-    match A with
-    | Dead => Dead
-    | OK | KO | Bot | Goal _ _ | Top => E
-    | And A B0 B => And (const E A) (const E B0) (const E B)
-    | Or A s B => Or (const E A) s (const E B)
-    end. *)
-
   Fixpoint dead A :=
-    match A with
-    | Dead => Dead
-    | OK | KO | Bot | Goal _ _ | Top => Dead
-    | And A B0 B => Dead
-    | Or A s B => Or (dead A) s (dead B)
+  match A with
+  | Dead => Dead
+  | OK | KO | Bot | Goal _ _ | Top => Dead
+  | And A B0 B => And (dead A) B0 B
+  | Or A s B => Or (dead A) s (dead B)
+  end.
+
+  Lemma dead_dead_same {A}: dead (dead A) = dead A.
+  Proof.
+    elim: A => //.
+    by move=> A HA s B HB /=; rewrite HA HB.
+    by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
+  Qed.
+
+  Definition mkOr A sB r :=
+    match r with
+    | Failure B       => Failure     (Or A sB B)
+    | Expanded s B    => Expanded s  (Or A sB B)
+    | CutBrothers s B => Expanded s  (Or A sB B)
+    | Solved s B      => Solved   s  (Or A sB B)
     end.
 
     (* Maybe replace all cutout with bot, and remove the cutout constructor *)
@@ -190,22 +191,13 @@ Module Run (U : Unif).
     match A with
     | Bot | Goal _ _ | Top => KO
     | Dead | KO | OK => A
-    (* Non restituisco KO, al posto di And (cut A) B0 B 
-      !! Il cut taglio i nipoti a sinistra. Quindi nel caso di
-      "(A, (B; C)), !, D", al raggingimento del cut, devo tagliare i punti di scelta
-      a sinistra. Immaginiamo che A e B hanno avuto successo e che si espanda il cut.
-      Allora, C deve essere tagliato, ma non A e B. Mettere KO, significa che
-      se dovesse lanciare D la seconda volta, mi ritrovo con (KO, D) che 
-      è spiacevole...
-    *)
-    | And A B0 B => And (cut A) (cut B0) (cut B)
+    | And A B0 B => And (cut A) B0 B
     | Or A s B => Or (cut A) s (cut B)
     end.
 
-  
-  Definition mkAnd (s: Sigma) A B0 r :=
+  Definition mkAnd A B0 r :=
     match r with
-    | Failure B    => Failure       (if B == Dead then Dead else And A B0 B)
+    | Failure B       => Failure       (And A B0 B)
     | Expanded s B    => Expanded    s (And A B0 B)
     | CutBrothers s B => CutBrothers s (And (cut A) B0 B)
     | Solved s B      => Solved      s (And A B0 B)
@@ -233,7 +225,7 @@ Module Run (U : Unif).
   end.
 
 
-  Fixpoint expand s (A :state) : expand_res :=
+  Fixpoint expand s A : expand_res :=
     match A with
     (* meta *)
     | OK => Solved s OK
@@ -250,21 +242,20 @@ Module Run (U : Unif).
 
     (* recursive cases *)
     | Or A sB B =>
+        if A == dead A then mkOr A sB (expand s B)
+        else
         match expand s A with
         | Solved s A    => Solved s      (Or A sB B)
         | Expanded s A    => Expanded s  (Or A sB B)
         | CutBrothers s A => Expanded s  (Or A sB (cut B))
-        | Failure Dead  => mkOr sB        (expand s B)
-
         | Failure A     => Failure       (Or A sB B)
         end
     | And A B0 B =>
         match expand s A with
-        | Solved s1 A   => mkAnd s1 A B0    (expand s1 B)
+        | Solved s1 A     => mkAnd    A B0  (expand s1 B)
         | Expanded s A    => Expanded s     (And A B0 B)
         | CutBrothers s A => CutBrothers s  (And A B0 B)
-        | Failure Dead => Failure Dead
-        | Failure A     => Failure          (And A B0 B)
+        | Failure A       => Failure        (And A B0 B)
         end
     end
   .
@@ -303,7 +294,7 @@ Module Run (U : Unif).
   Lemma dead_failed {A} : A = dead A -> failed A.
   Proof. elim: A => //.
     + by move=> A HA s B HB /= [] /HA -> /HB -> ; rewrite if_same.
-    (* + by move=> A HA B0 HB0 B HB /= [] /HA ->. *)
+    + by move=> A HA B0 HB0 B HB /= [] /HA ->.
   Qed.
 
   Lemma failed_dead {A} : failed A = false -> A <> dead A.
@@ -311,38 +302,231 @@ Module Run (U : Unif).
     + move=> A HA s B HB /=; case: eqP.
       + move=> <- /HB H [] //.
       + move=> H _ [] //.
-    (* + move=> A HA B0 HB0 B HB /= /orP H [] H1; apply H. *)
-      (* by left; apply: dead_failed H1. *)
+    + move=> A HA B0 HB0 B HB /= /orP H [] H1 (*DB*).
+      apply: H.
+      by left; apply: dead_failed H1.
   Qed.
 
+  Definition is_base X := match X with Top | Bot | Goal _ _ => true | _ => false end.
 
-  Fixpoint next_alt_aux inAnd (s : Sigma) (A : state) : option (Sigma * state) :=
+
+  Fixpoint next_alt (s : Sigma) (A : state) : option (Sigma * state) :=
     match A with
     | KO | OK => None
     | Dead => None
-    | Top | Bot | Goal _ _ => if inAnd then None else Some (s, A)
+    | Top | Bot | Goal _ _ => None
     | And A B0 B =>
-      match next_alt_aux true s B, next_alt_aux true s A with
+      if (A == dead A) then None else
+      if failed A then 
+        match next_alt s A with
+        | None => None
+        | Some (s, A) => if failed B0 then None else Some (s, And A B0 B0)
+        end
+      else
+      match next_alt s B, next_alt s A with
       | None, None => None
-      | None, Some (s, A) => Some (s, And A B0 B0) (* B0 è un grande and di ATOMI *)
+      | None, Some (s, A) => if failed B0 then None else Some (s, And A B0 B0)
       | Some (s, B), _ => Some (s, And A B0 B)
       end
-    | Or Dead sB B => 
-          match next_alt_aux false s B with
-          | None | Some (_, Dead) => None
-          | Some (sB1, B) => Some (sB1, Or Dead sB B)
-          end
-    | Or A sB B => (* NOTE: B is a BIG_OR of BIG_AND of ATOM | Top, i.e. it is never been explored *)
-        match next_alt_aux false s A with
-        | None =>  Some (sB, Or Dead sB B)
+    | Or A sB B => 
+      if A == dead A then
+        match next_alt s B with
+        | None => None
+        | Some (sB1, B) => Some (sB1, Or A sB B)
+        end
+      else
+        if B == dead B then None else
+        match next_alt s A with
+        | None =>  
+            if failed B then 
+              match next_alt sB B with
+              | None => None
+              | Some (sB1, B) => Some (sB1, Or (dead A) sB B)
+              end
+            else Some (sB, Or (dead A) sB B)
         | Some (sA, A) => Some (sA, Or A sB B)
         end
     end.
 
-  Inductive next_alt : Sigma -> state -> option (Sigma * state) -> Prop :=
-    | next_alt_ko {s A}: next_alt_aux false s A = None -> next_alt s A None
-    | next_alt_ok {s s1 A A1}: next_alt_aux false s A = Some (s1, A1) -> ~ failed A1 -> next_alt s A (Some (s1, A1))
-    | next_alt_step {s s1 r A A1}: next_alt_aux false s A = Some (s1, A1) -> failed A1 -> next_alt s1 A1 r -> next_alt s A r.
+  Lemma next_alt_dead {A D s1 s2}: 
+    next_alt s1 A = Some (s2, D) -> D <> dead D.
+  Proof.
+    elim: A D s1 s2 => //.
+      move=> A HA s B HB C s1 s2/=.
+      case: ifP => /eqP/=.
+        move=>->.
+        case X: next_alt => //[[s3 D]].
+        have:= HB _ _ _ X.
+        move=> dD []??;subst => /=; rewrite dead_dead_same; congruence.
+      move=> dA; case: ifP=> ///eqP dB.
+      have:= (HA _ s1).
+      case: next_alt => //= [[s3 D]|].
+        move=> /(_ _ _ erefl) H []??;subst => /=; congruence.
+      move=> _; case: ifP => /= fB.
+        have:= HB _ s.
+        case: next_alt => //[[s3 D]] /(_ _ _ erefl) dD []??;subst => /=.
+        congruence.
+      move=> []??;subst => /=; congruence.
+    move=> A HA B0 _ B HB C s1 s2 /=.
+    have:= HB _ s1.
+    case: next_alt => //[[s3 D]|].
+      move=> /(_ _ _ erefl) dD; case: ifP => //.
+      case: eqP => // dA _.
+      case: ifP => // fA.
+        have:= HA _ s1.
+        case: next_alt => //[[s4 E]].
+        move=> /(_ _ _ erefl) dE.
+        by case:ifP => // _[]??;subst => -[].
+      by move=> []??;subst => /=-[].
+    move=> _; case: ifP => //.
+    case:eqP => //; move=> dA _.
+    have:= HA _ s1.
+    case: next_alt => //[[s3 D]|].
+      move=> /(_ _ _ erefl) dD.
+      case: ifP => //fA.
+        case: ifP => // ? []??;subst => /=; congruence.
+      case: ifP => // fB0.
+      by move=> []??;subst => -[].
+    case: ifP => //.
+  Qed.
+
+  Lemma next_alt_failed {s A s1 B}:
+    next_alt s A = Some (s1, B) -> failed B = false.
+  Proof.
+    elim: A B s s1 => //.
+      move=> A HA s B HB C s1 s2/=.
+      case: ifP => /eqP.
+        move=>->; case X: next_alt => //[[s3 D]].
+        move=> []??;subst => /=; rewrite dead_dead_same eqxx.
+        apply: HB X.
+      move=> dA; case: ifP => /eqP//dB.
+      have:= HA _ s1.
+      case X: next_alt => //[[s3 D]|].
+        move=>/(_ _ _ erefl) fD.
+        move=>[]??;subst => /=.
+        have:= next_alt_dead X.
+        case: ifP => /eqP //.
+      move=> _.
+      case: ifP => // fB.
+        have:= (HB _ s).
+        case: next_alt => //[[s3 D]].
+        move=> /(_ _ _ erefl) fD []??;subst => /=.
+        by rewrite dead_dead_same eqxx.
+      by move=> []??;subst => /=; rewrite dead_dead_same eqxx.
+    move=> A HA B0 _ B HB C s1 s2.
+    move=> /=.
+    case: ifP => /eqP//dA.
+    have:= HA _ s1.
+    case X: next_alt => //[[s3 D]|].
+      move=> /(_ _ _ erefl) fD.
+      case: ifP => //fA.
+        case: ifP => //fB0.
+        move=> []??; subst => /=; rewrite fD.
+        by rewrite fB0 andbF.
+      have:= HB _ s1.
+      case: next_alt => //[[s4 E]|].
+        move=>/(_ _ _ erefl) fE []??;subst => /=.
+        by rewrite fA fE andbF.
+      case: ifP => // fB0 _ []??;subst => /=.
+      by rewrite fD fB0 andbF.
+    move=> _; case: ifP => //fA.
+    have:= HB _ s1.
+    case: next_alt => //[[s3 D]].
+    move=> /(_ _ _ erefl) fD[]??;subst => /=.
+    by rewrite fA fD andbF.
+  Qed.
+  Lemma next_alt_dead1 {s A}: next_alt s (dead A) = None.
+  Proof.
+    elim: A => //.
+      move=> A HA s1 B HB => /=.
+      rewrite dead_dead_same eqxx.
+      by rewrite HB.
+    move=> A HA B0 _ B HB /=.
+    by rewrite dead_dead_same eqxx.
+  Qed.
+
+  (* Lemma next_alt2 {s s1 A B}: next_alt s A = Some (s1, B) -> forall s2, isSome (next_alt s2 B).
+  Proof.
+    elim: A s B s1 => //.
+      move=> A HA s B HB s1 C s2.
+      move=>/=; case: ifP => /eqP.
+        move=>->.
+        have:= (HB s1).
+        case: next_alt => //[[s4 D]] /(_ _ _ erefl) + [??] s3; subst.
+        move=>/=; rewrite dead_dead_same eqxx.
+        move=> /(_ s3).
+        case: next_alt => //[[ ]]//.
+      move=> dA; case:ifP => ///eqP dB.
+      have:= (HA s1).
+      case X: next_alt => //[[s3 D]|].
+        move=>/(_ _ _ erefl) + [??] s4;subst.
+        move=> /=.
+        case: ifP => /eqP.
+          move=>-> /(_ empty).
+          by rewrite next_alt_dead1.
+        move=> dD.
+        case: ifP => /eqP// _.
+        move=> /(_ s4).
+        case: next_alt => //[[]]//.
+      move=> _; case: ifP => //fB.
+        have:= HB s.
+        case: next_alt => //[[s3 D]].
+        move=>/(_ _ _ erefl) + []?? s4;subst.
+        move=>/=; rewrite dead_dead_same eqxx.
+        move=>/(_ s4); case: next_alt => //[[]]//.
+      move=>[]??;subst => /= s3; rewrite dead_dead_same eqxx.
+      have:= HB s3.
+      case Y: next_alt => //[[s4 C]|]//.
+      move=> _.
+      admit.
+    move=> A HA B0 _ B HB.
+    move=>/= s C s1.
+    case: ifP => /eqP//dA.
+    case:ifP => // fA.
+      have:= HA s.
+      case: next_alt => //[[s2 D]] /(_ _ _ erefl).
+      case: ifP => // fB + [??] s3;subst => /=.
+      case: ifP => /eqP.
+        by move=>->/(_ s); rewrite next_alt_dead1.
+      move=> dD.
+      case: ifP => // fD.
+        move=>/(_ s3).
+        case: next_alt => //[[s4 E]].
+        by rewrite fB.
+      rewrite fB.
+      move=> /(_ s3).
+      case: next_alt => //[[s4 E]].
+      case: next_alt => //[[]]//.
+    have:= HB s.
+    case: next_alt => //[[s2 D]|]. 
+      move=> /(_ _ _ erefl)+[??] s3;subst.
+      move=>/=; case: ifP => /eqP// _.
+      rewrite fA.
+      move=> /(_ s3).
+      case: next_alt => //[[ ]]//.
+    move=> _.
+    have:= HA s.
+    case: next_alt => //[[s2 D]]/(_ _ _ erefl).
+    case: ifP => // fB0 + [??] s3; subst.
+    move=> /=.
+    case: ifP=>/eqP.
+      by move=>->/(_ s); rewrite next_alt_dead1.
+    move=> dD /(_ s3).
+    case: next_alt => //[[s4 E]].
+    rewrite fB0.
+    case: ifP => // fD.
+    case: next_alt => //[[]]//.
+  Qed. *)
+  
+
+  Definition has_next_alt s := isSome (next_alt empty s).
+
+  Lemma cut_dead1 {A}: cut A = dead A -> dead A = A.
+  Proof. 
+    elim: A=> //.
+      move=> A HA s B HB/=[]??; rewrite HA//HB//.
+    move=> A HA B0 _ B HB/=[]?; rewrite HA//?HB//.
+  Qed.
 
   Inductive run_res := Done of Sigma & state | Failed of state.
   derive run_res.
@@ -358,8 +542,8 @@ Module Run (U : Unif).
 
   Inductive runb : Sigma -> state -> run_res -> bool -> Prop :=
     | run_done {s s' A B b}        : expandedb s A (Done s' B) b -> runb s A (Done s' B) b
-    | run_fail {s A B b}           : expandedb s A (Failed B) b -> next_alt s B None -> runb s A (Failed B) b
-    | run_backtrack {s s' s'' A B C b1 b2 b3} : expandedb s A (Failed B) b1 -> next_alt s B (Some (s', C)) ->  runb s' C s'' b2 -> b3 = (b1 || b2) -> runb s A s'' b3.
+    | run_fail {s A B b}           : expandedb s A (Failed B) b -> next_alt s B = None -> runb s A (Failed B) b
+    | run_backtrack {s s' s'' A B C b1 b2 b3} : expandedb s A (Failed B) b1 -> next_alt s B = (Some (s', C)) ->  runb s' C s'' b2 -> b3 = (b1 || b2) -> runb s A s'' b3.
 
   Definition expanded s A r := exists b, expandedb s A r b.
   Definition run s A r := exists b, runb s A r b.
@@ -370,61 +554,73 @@ Module Run (U : Unif).
   Lemma simpl_expand_or_solved {s s1 s2 A B C} :
     expand s1 (Or A s B) = Solved s2 C ->
       (exists A', expand s1 A = Solved s2 A' /\ C = Or A' s B) \/
-      (exists B', expand s1 A = Failure Dead /\ expand s1 B = Solved s2 B' /\ C = Or Dead s B').
+      (exists B', A = dead A /\ expand s1 B = Solved s2 B' /\ C = Or A s B').
   Proof.
-    move=> //= ; case X: expand => //= [x |].
-    case: x X => //= => X ; case Y: (expand s1 B) => // -[].
-      by move=> /[subst2]; right; eexists.
-    by move=> -[] /[subst2]; left; eexists.
+    move=> //=.
+    case: ifP => /eqP.
+      move=>->.
+      unfold mkOr.
+      case X: expand => //-[]*;subst.
+      right; do 2 eexists; repeat split.
+      by rewrite dead_dead_same.
+    move=> _; case Y: expand => //=-[]??;subst.
+    by left; eexists.
   Qed.
 
   Lemma simpl_expand_or_cut {s s1 s2 A B C} :
     expand s1 (Or A s B) = CutBrothers s2 C -> 
-      exists s1 B', A = Dead /\ expand s B = CutBrothers s1 B' /\ C = Or Dead s1 B'.
-  Proof. move=> /=; case X: expand => //= [[ ]] //; case Y: expand => //= [[ ]] //. Qed.
+      exists s2 B', A = dead A /\ expand s1 B = CutBrothers s2 B' /\ C = Or A s B'.
+  Proof.
+    move=>/=; case: ifP => [/eqP->|/eqP DA].
+      case X:expand => //=-[]*;subst; do 2 eexists; repeat split.
+      (* by rewrite dead_dead_same. *)
+    case X:expand => //.
+  Qed.
+
+  Lemma dead_big_or p s t: dead (big_or p s t) <> big_or p s t.
+  Proof.
+    rewrite /big_or; case F: F => // [[s1 r] xs] //.
+  Qed. 
 
   Lemma simpl_expand_or_fail {s s1 A B C} :
     expand s1 (Or A s B) = Failure C -> 
-      (exists A', expand s1 A = Failure A' /\ A' <> Dead /\ C = Or A' s B) \/
-      (exists B', B' <> Dead /\ expand s1 A = Failure Dead /\ expand s1 B = Failure B' /\ C = Or Dead s B') \/
-      (expand s1 A = Failure Dead /\ expand s1 B = Failure Dead /\ C = Dead).
-  Proof. 
-    move=> /=; case X: expand => //= [D] H.
-    have {}H: D = Dead /\ mkOr s (expand s1 B) = Failure C \/ (D <> Dead /\ Failure (Or D s B) = Failure C).
-      case: D H {X}; try by move=> [] /[subst1]; right => // .
-      by move=> ->; left.
-    move: H => []; subst.
-      + move=> [/[subst1]]; case Y: expand => //= [D] H.
-        have {H} [[] | []]: (D = Dead /\ C = Dead) \/ (D <> Dead /\ Or Dead s D = C).
-          move: H; case: D {Y}; try by move=> [] /[subst1]; right => //.
-          + move=> [] <-; left => //.
-          + by move=> ?? [] <-; right.
-          + by move=> ??? [] <-; right. 
-          + by move=> ??? [] <-; right.
-        + by move=> /[subst2]; right; right; eexists.
-        + move=> H /[subst1]; right; left; eexists; repeat split; eassumption.
-      + move=> [H [/[subst1]]]; left; eexists; repeat split => //.
+      (exists A', A <> dead A /\ expand s1 A = Failure A' /\ C = Or A' s B) \/
+      (exists B', A = dead A /\ expand s1 B = Failure B' /\ C = Or A s B').
+  Proof.
+    move=>/=; case: ifP => [/eqP->|/eqP DA];subst.
+      rewrite /mkOr. 
+      case X: expand => //= [D][]?;subst.
+      by right; eexists; repeat split; rewrite dead_dead_same.
+    case X: expand => // => -[]?;subst.
+    by left; eexists; repeat split.
   Qed.
 
   Lemma simpl_expand_or_expanded {s s1 s2 A B C} :
     expand s1 (Or A s B) = Expanded s2 C ->
-      (exists A', expand s1 A = Expanded s2 A' /\ Or A' s B = C) \/ 
-      (exists A', expand s1 A = CutBrothers s2 A' /\ C = Or A' s (cut B)) \/
-      (expand s1 A = Failure Dead /\ (exists B', C = Or Dead s B' /\ (expand s1 B = Expanded s2 B' \/ expand s1 B = CutBrothers s2 B'))).
+      (exists A', A <> dead A /\ expand s1 A = Expanded s2 A' /\ C = Or A' s B ) \/ 
+      (exists A', A <> dead A /\ expand s1 A = CutBrothers s2 A' /\ C = Or A' s (cut B)) \/
+      (A = dead A /\ (exists B', (expand s1 B = Expanded s2 B' \/ expand s1 B = CutBrothers s2 B') /\ C = Or A s B')).
   Proof.
-    move=> /=; case X: expand => //= [||[ ]] //.
-    + move=> [] ?; left; eexists; split; subst; reflexivity.
-    + by move=> [] /[subst1]; right; left; eexists.
-    + case Y: expand => // -[] /[subst2] ; right; right ; repeat split;  eexists ; repeat split ; [left|right] => //.
+    move=>/=; case: ifP => /eqP.
+      move=>->.
+      case X: expand => //=.
+        move=>[]??;subst; right; right; rewrite dead_dead_same; split => //.
+        eexists; repeat split; auto.
+      move=>[]??;subst; right; right; rewrite dead_dead_same; split => //.
+      eexists; repeat split; auto.
+    move=> H.
+    case X: expand => //=-[]??;subst.
+      by left; eexists; repeat split.
+    by right; left; eexists; repeat split.
   Qed.
 
   Lemma simpl_expand_and_solved {s s2 A B0 B C} :
     expand s (And A B0 B) = Solved s2 C -> 
       exists s' A' B', 
         expand s A = Solved s' A' /\
-          expand s' B = Solved s2 B' /\ And A' B0 B' = C.
+          expand s' B = Solved s2 B' /\ C = And A' B0 B'.
   Proof.
-    move=> //=; case X: expand => //= [[]|s' A'] //.
+    move=> //=; case X: expand => //.
     case Y: expand => // [s'' B'].
     move=> [] /[subst1] /[subst1].
     by do 3 eexists; repeat split.
@@ -432,22 +628,14 @@ Module Run (U : Unif).
 
   Lemma simpl_expand_and_fail {s A B B0 C} :
     expand s (And A B0 B) = Failure C ->
-      (expand s A = Failure Dead /\ C = Dead) \/ 
-      (exists A', A' <> Dead /\ expand s A = Failure A' /\ C = And A' B0 B) \/ 
+      (exists A', expand s A = Failure A' /\ C = And A' B0 B) \/ 
         (exists s' A' B', expand s A = Solved s' A' /\  
-          expand s' B = Failure B' /\ C = if B' == Dead then Dead else And A' B0 B').
+          expand s' B = Failure B' /\ C = And A' B0 B').
   Proof.
     move=> //=; case X: expand => //= [D|s' D].
-    - move=> H.
-      have {H} : (((D != Dead) && (Failure C == Failure (And D B0 B)) || (D == Dead) && (Failed C == Failed Dead))).
-        case: D H {X} => //=; try by move=> [] <-; rewrite eq_refl.
-        + by move=> ?? [] <-; rewrite eq_refl.
-        + by move=> ??? [] <-; rewrite eq_refl.
-        + by move=> ??? [] <-; rewrite eq_refl.
-      move=> /orP [/andP|/andP] [] /eqP H /eqP [] ->.
-      + by right;left; exists D; auto.
-      + by move=> /[subst]; auto.
-    - case Y: expand => //= [[ ]]-[]<-; right; right; do 3 eexists; erewrite Y => //.
+    - by move=> []<-; left; eexists.
+    - case Y: expand => //= -[]?;subst; right.
+      by do 3 eexists; repeat split.
   Qed.
 
   Lemma simpl_expand_and_cut {s s2 A B B0 C}:
@@ -455,7 +643,7 @@ Module Run (U : Unif).
     (exists A', expand s A = CutBrothers s2 A' /\ C = And A' B0 B ) \/
       (exists s' A' B', expand s A = Solved s' A' /\ expand s' B = CutBrothers s2 B' /\ C = And (cut A') B0 B').
   Proof.
-    move=> //=; case X: expand => //= [|[]|] //.
+    move=> //=; case X: expand => //=.
     + by move=> [] /[subst1]; left; eexists.
     + case Y: expand => //= -[] /[subst1]; right; subst.
        do 3 eexists; repeat split => //=.
@@ -467,7 +655,7 @@ Module Run (U : Unif).
     (exists A', expand s A = Expanded s2 A' /\ C = And A' B0 B ) \/
       (exists s' A' B', expand s A = Solved s' A' /\ expand s' B = Expanded s2 B' /\ C = And A' B0 B').
   Proof.
-    move=> /=; case X: expand => //= [|[]|] //.
+    move=> /=; case X: expand => //=.
     + by move=> [] /[subst1]; left; eexists.
     + case Y: expand => //= -[] /[subst1]; right; subst.
       do 3 eexists; repeat split => //=; eassumption.
@@ -497,13 +685,6 @@ Module Run (U : Unif).
       + by move=> [s'[A'[B' [HA[HB]]]]] /[subst1].
   Qed.
 
-  Lemma dead_dead_same {A}: dead (dead A) = dead A.
-  Proof.
-    elim: A => //.
-    by move=> A HA s B HB /=; rewrite HA HB.
-    (* by move=> A HA B0 HB0 B HB /=; rewrite HA. *)
-  Qed.
-
   (* Lemma cut_dead {A}: cut A = dead (cut A) -> dead A = A.
   Proof.
     elim: A=> //.
@@ -528,7 +709,7 @@ Module Run (U : Unif).
     + move=> A HA B0 HB0 B HB.
 
       (* case X: eq_op => //=. *)
-      by move=> /=; rewrite HA HB0 HB.
+      by move=> /=; rewrite HA ?HB0 ?HB.
       (* case Y: eq_op => //=.
       exfalso.
       by move: Y X => /eqP [] /cut_dead ->; rewrite eq_refl. *)
@@ -538,21 +719,20 @@ Module Run (U : Unif).
   Proof.
     elim: A => //.
     + by move=> A HA s B HB /=; rewrite HA HB.
-    (* + by move=> A HA B0 HB0 B HB /=; rewrite HA. *)
+    + by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
   Qed.
 
   Lemma dead_cut_is_dead {A}: dead(cut A) = dead A.
   Proof.
     elim: A => //.
     + by move=> A HA s B HB /=; rewrite HA HB.
-    (* + by move=> A HA B0 HB0 B HB /=; rewrite HA. *)
+    + by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
   Qed.
 
   Definition is_meta X := match X with OK | KO | Dead => true | _ => false end.
-  Definition is_base X := match X with Top | Bot | Goal _ _ => true | _ => false end.
 
-  (* Lemma simpl_next_alt_aux_false {s1 s2 A B r}: 
-    next_alt_aux false s1 (Or A s2 B) = Some r -> 
+  (* Lemma simpl_next_alt_false {s1 s2 A B r}: 
+    next_alt false s1 (Or A s2 B) = Some r -> 
       (is_meta A /\ r = (s2, Or Dead s2 B)) \/ (is_base A /\ r = (s1, Or A s2 B)) \/
       (A = And X Y0 Y /\).
   Proof.
@@ -560,25 +740,13 @@ Module Run (U : Unif).
     + move=> [] ?/[subst]; right => //. 
     + move=> [] ?/[subst]; right => //.
     + move=> [] ?/[subst]; right => //.
-    + move=> /=; case Y: next_alt_aux; admit.
-    + move=> /=; case Y: next_alt_aux => [[ ]|].
+    + move=> /=; case Y: next_alt; admit.
+    + move=> /=; case Y: next_alt => [[ ]|].
       + move=> [] ?.  *)
 
-  Lemma next_alt_aux_dead {b s1 s3 A}: 
-    next_alt_aux b s1 A = Some (s3, Dead) -> False.
-  Proof.
-    elim: A b s1 s3 => //; try by move=> [] => //.
-    + move=> ?? [] //.
-    + move=> A HA s B HB b s1 s3 + => /=.
-      case NA: next_alt_aux => // [[s2 C]|].
-      + case: A HA NA => //.
-      + case: A HA NA => // HA HA'; case NB: next_alt_aux => [[s2 []]|] //.
-    + move=> A HA B0 _ B HB s1 s3 + => /=.
-      case NB: next_alt_aux => // [[s2 C]|].
-      + move=> [] //.
-      + case NA: next_alt_aux => // [[s2 C]] [] //.
-  Qed.
-  
+  Lemma simpl_is_base {B}: is_base B -> B = Top \/ B = Bot \/ (exists p t, B = Goal p t).
+  Proof. by case B => //=; auto; right; right; do 2 eexists. Qed.
+
   Definition same_sol (A B : option (Sigma * state)) := 
     match A, B with
     | None, None => true
@@ -586,99 +754,86 @@ Module Run (U : Unif).
     | _, _ => false
     end.
 
-  Lemma next_alt_aux_same_sol s1 s2 A b:
-    same_sol (next_alt_aux b s1 A) (next_alt_aux b s2 A).
+  Lemma next_alt_same_sol s1 s2 A:
+    same_sol (next_alt s1 A) (next_alt s2 A).
   Proof.
-    elim: A b s1 s2 => //; try by move=> [] *; subst.
-    + by move=> ??[]/=.
-    + move=> A HA s B HB b s1 s2 /=.
-      case NA: next_alt_aux => [[s3 C]|]; have:= HA false s1 s2; rewrite NA.
-        case: next_alt_aux => // [[s4 D]]/eqP->/=.
-        case NB: next_alt_aux => [[s5 E]|]; have:= HB false s1 s2; rewrite NB.
-          case: next_alt_aux => //[[s6 F]]/eqP->; by destruct A => //=.
-        by case: next_alt_aux => //; destruct A => //=.
-      case: next_alt_aux => //; destruct A => //= _.
-      case NB: next_alt_aux => [[s5 E]|]; have:= HB false s1 s2; rewrite NB.
-        case: next_alt_aux => // [[s6 F]] /eqP->; by destruct F => //=.
-      by case: next_alt_aux => //.
-    + move=> A HA B0 _ B HB b s1 s2 /=.
-      case NB: next_alt_aux => [[s3 C]|].
-        have:= HB true s1 s2; rewrite NB.
-        by case: next_alt_aux => [[s4 D]|]///eqP->/=.
-      have:= HB true s1 s2; rewrite NB.
-        case: (next_alt_aux true s2 B) => // _.
-      case NA: next_alt_aux => [[s3 C]|].
-        have:= HA true s1 s2; rewrite NA.
-        by case: next_alt_aux => //[[s4 D]]/eqP-> //=.
-      have:= HA true s1 s2; rewrite NA.
-      by case: next_alt_aux => //=.
+    elim: A s1 s2 => //; try by move=> [] *; subst.
+    (* + by move=> ??[]/=. *)
+    + move=> A HA s B HB s1 s2 /=.
+      case:ifP => /eqP.
+        move=>->.
+        have:= HB s1 s2.
+        case: next_alt => //[[s5 E]|]; case: next_alt => //[[s6 F]].
+        by move=> /=/eqP->.
+      case: ifP => /eqP//DB DA.
+      have:= HA s1 s2.
+      case NA: next_alt => [[s3 C]|].
+        by case: next_alt => // [[s4 D]]/eqP->/=; rewrite eqxx.
+      case: ifP => //.
+        do 2 case: next_alt => //; move=> [??]//=.
+      case: next_alt => //=.
+    + move=> A HA B0 _ B HB s1 s2 /=.
+      case: ifP => // _.
+      case: ifP => // _.
+        have:= HA s1 s2.
+        case NA: next_alt => [[s3 C]|].
+          case: next_alt => [[s4 D]|]///eqP->/=.
+          case: ifP => //=.
+        case: next_alt => //.
+      have:= HB s1 s2.
+      case: next_alt => //[[??]|].
+        case: next_alt => //[[??]]/eqP->//=.
+      case: next_alt => //.
+      have:= HA s1 s2.
+      case: next_alt => //=[[s3 C]|]; case: next_alt => //[[s4 D]].
+      move=>/eqP ->/=.
+      case: ifP => //=.
   Qed.
 
-  Lemma next_alt_aux_none {s1 A b}:
-    next_alt_aux b s1 A = None ->
-      forall s2, next_alt_aux b s2 A = None.
+  Lemma next_alt_none {s1 A}:
+    next_alt s1 A = None ->
+      forall s2, next_alt s2 A = None.
   Proof.
     move=> H s2.
-    have := next_alt_aux_same_sol s1 s2 A b.
-    rewrite H => /=; case: next_alt_aux => //.
+    have := next_alt_same_sol s1 s2 A.
+    rewrite H => /=; case: next_alt => //.
   Qed.
 
-  Lemma next_alt_aux_some {s1 s2 A B b}:
-    next_alt_aux b s1 A = Some (s2, B) ->
-      (forall s3, exists s4, next_alt_aux b s3 A = Some (s4, B)).
+  Lemma next_alt_some {s1 s2 A B}:
+    next_alt s1 A = Some (s2, B) ->
+      (forall s3, exists s4, next_alt s3 A = Some (s4, B)).
   Proof.
     move=> H s3.
-    have := next_alt_aux_same_sol s1 s3 A b.
+    have := next_alt_same_sol s1 s3 A.
     rewrite H/=.
-    by case X: next_alt_aux => // [[s4 C]]/eqP->; eexists.
+    by case X: next_alt => // [[s4 C]]/eqP->; eexists.
   Qed.
 
-  Lemma next_alt_none {s1 s2 D}:
-    next_alt s1 D None -> next_alt s2 D None.
-  Proof.
-    remember None as RN eqn:HRN => H.
-    elim: H s2 HRN => //; clear.
-    + move=> s A NA s1 _; apply: next_alt_ko.
-      apply: next_alt_aux_none NA _.
-    + move=> s1 s2 r A B NA FB NB + s3 ? /[subst] => /(_ _ erefl) H.
-      have [? {}H1] := next_alt_aux_some NA s3.
-      apply: next_alt_step H1 FB (H _).
-  Qed.
-
-  Lemma simpl_next_alt_aux_and_none {s A B0 B}:
-    next_alt_aux true s (And A B0 B) = None -> next_alt_aux true s B = None /\  next_alt_aux true s A = None.
-  Proof. 
-    rewrite /next_alt //=. 
-    case X: next_alt_aux => [x|].
-    + by case x.
-    + by case Y: next_alt_aux => [x|] //; case x.
-  Qed.
-
-  Lemma simpl_next_alt_aux_some {b s s1 s2 A B C}: next_alt_aux b s1 (Or A s B) = Some (s2, C) -> 
-    (exists B', A = Dead /\ next_alt_aux false s1 B = Some (s2, B') /\ C = Or Dead s B') \/
-    (exists A', A <> Dead /\ next_alt_aux false s1 A = Some (s2, A') /\ C = Or A' s B) \/
-    (A <> Dead /\  next_alt_aux false s1 A = None /\ C = Or Dead s B).
+  (* Lemma simpl_next_alt_some {b s s1 s2 A B C}: next_alt b s1 (Or A s B) = Some (s2, C) -> 
+    (exists B', A = dead A /\ next_alt false s1 B = Some (s2, B') /\ C = Or A s B') \/
+    (A <> dead A /\ B <> dead B /\ 
+      ((exists A', next_alt false s1 A = Some (s2, A') /\ C = Or A' s B) \/
+      (next_alt false s1 A = None /\ C = Or (dead A) s B))).
   Proof.
     move=> //=.
-    case X: (A == Dead).
-    + move: X; move=> /eqP /[subst1].
-      case X: next_alt_aux => // [[s3 D]].
-      by destruct D => // -[] /[subst2]; left; eexists => //.
-    + case Y: (next_alt_aux false s1 A) => // [[ ] |] H.
-      + right; left; case: A Y X H; try by move=> // -[]/[subst2] _ []/[subst2]; eexists => //.
-        + move=> ?? [] /[subst2] _ []/[subst2]; eexists => //.
-        + move=> ??? _ _ []/[subst2]; eexists => //.
-        + move=> ??? _ _ []/[subst2]; eexists => //.
-      + right; right.
-        destruct A => //; move: H => [] /[subst2] //.
+    case:ifP => /eqP.
+      move=>->.
+      case: next_alt => // [[s3 D]].
+      case:ifP => /eqP// dD []??;subst.
+      by rewrite dead_dead_same; left; eexists.
+    move=> dA; case: ifP => ///eqP dB.
+    case X: next_alt => [[s3 D] |]-[]*;subst.
+      right; repeat split => //.
+      left; eexists => //.
+    right; repeat split => //.
+    by right.
+  Qed. *)
+
+  Lemma success_dead {A}: success (dead A) = false.
+  Proof. 
+    elim: A=> //. 
+      by move=> A HA s B HB /=; rewrite HA HB if_same.
+    by move=> A HA B0 ? B HB/=; rewrite HA ?HB.
   Qed.
 
 End Run.
-
-
-Module AxiomUnif <: Unif.
-  Parameter unify : Tm -> Tm -> Sigma -> option Sigma.
-  Parameter matching : Tm -> Tm -> Sigma -> option Sigma.
-End AxiomUnif.
-
-Module ARun := Run(AxiomUnif).  

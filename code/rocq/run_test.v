@@ -1,6 +1,32 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
+Import Language.
 
+Module Axioms.
+  Parameter program_eqb : program -> program -> bool.
+  Parameter is_program : program -> Type.
+  Parameter is_program_inhab : forall p : program, is_program p.
+  Parameter program_eqb_correct : forall p1 p2, program_eqb p1 p2 -> p1 = p2.
+  Parameter program_eqb_refl : forall x, program_eqb x x.
+
+
+  Parameter Sigma_eqb : Sigma -> Sigma -> bool.
+  Parameter is_Sigma : Sigma -> Type.
+  Parameter is_Sigma_inhab : forall p : Sigma, is_Sigma p.
+  Parameter Sigma_eqb_correct : forall p1 p2, Sigma_eqb p1 p2 -> p1 = p2.
+  Parameter Sigma_eqb_refl : forall x, Sigma_eqb x x.
+
+
+  Parameter same_subst : forall (s1 s2 : Sigma), s1 = s2.
+  Parameter same_progr : forall (s1 s2 : program), s1 = s2.
+End Axioms.
+
+Module UAxioms <: Unif.
+  Axiom unify : Tm -> Tm -> Sigma -> option Sigma.
+  Axiom matching : Tm -> Tm -> Sigma -> option Sigma.
+  Include Axioms.
+End UAxioms.
+Module RunAxiom:= Run(UAxioms).
 
 Module Test1.
 
@@ -13,6 +39,7 @@ Module Test1.
       end.
 
     Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
+    Include Axioms.
   End U.
 
   Module Run := Run(U).
@@ -51,26 +78,27 @@ Module Test1.
       rewrite /big_or/F/select/=.
       apply: expanded_step => //=.
       apply: expanded_fail => //=.
-    - apply: next_alt_ok => //.
+    - reflexivity.
     - apply: run_backtrack => //.
       - apply: expanded_step => //=.
         rewrite /big_or/F/select/= -/s1 -/s2.
         apply: expanded_step => //=.
         apply: expanded_fail => //=.
-      - apply: next_alt_ok => //.
+      - reflexivity.
       - apply: run_backtrack => //.
         - apply: expanded_step => //=.
           apply: expanded_step => //=.
           apply: expanded_step => //=.
           apply: expanded_fail => //=.
-        - apply: next_alt_ok => //=.
+        - move=> /=.
+          case: ifP => /eqP//.
         - apply: run_backtrack => //.
           - apply: expanded_step => //=.
             apply: expanded_step => //=.
             rewrite /big_or/F//=.
             apply: expanded_step => //=.
             apply: expanded_fail => //=.
-          - apply: next_alt_ok => //=.
+          - move=>/=; case: ifP => /eqP => //.
           - apply: run_done.
             apply: expanded_step => //=.
             apply: expanded_step => //=.
@@ -89,6 +117,7 @@ Module Test5.
       end.
 
     Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
+    Include Axioms.
   End U.
 
   Module Run := Run(U).
@@ -125,13 +154,14 @@ Module Test5.
     + rewrite /big_or/F/select/=.
       apply: expanded_step => //=.
       apply: expanded_fail => //.
-      apply: next_alt_ok => //.
+      reflexivity.
     apply: run_backtrack => //.
       apply: expanded_step => //=.
     + rewrite /big_or/F/select/=.
       apply: expanded_step => //=.
       apply: expanded_fail => //=.
-      apply: next_alt_ok => //=.
+      reflexivity.
+      rewrite -/s1-/s2.
       apply: run_done.
       apply: expanded_step => //.
       rewrite [Cut]lock.
@@ -145,10 +175,85 @@ Module Test5.
   Qed.
 End Test5.
 
+Module Test6.
+
+  Module U <: Unif.
+    Definition unify    (t1 t2 : Tm) (s : Sigma) :=
+      match t1, t2 with
+      | Code (v X), _ => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t2 else s.(sigma) x) |} | Some t => if t == t2 then Some s else None end
+      | _, Code (v X) => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t1 else s.(sigma) x) |} | Some t => if t == t1 then Some s else None end
+      | _, _ => if t1 == t2 then Some s else None
+      end.
+
+    Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
+    Include Axioms.
+  End U.
+
+  Module Run := Run(U).
+  Import Run.
+
+  Definition v_X := Code (v 0).
+  Definition pred_f x  := Comb (Code (p 1)) x.
+  Definition pred_g x  := Comb (Code (p 0)) x.
+  Definition pred_true := (Code (p 0)).
+
+  Definition p_test : program := {|
+    modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
+    sig := (fun _ => b (d Pred));
+    rules := [:: 
+      mkR pred_true [::];
+      mkR (pred_f (Data 0)) [:: Call (pred_g v_X); Call pred_true; Cut] ;
+      mkR (pred_g (Data 1)) [::];
+      mkR (pred_g (Data 2)) [::]
+    ];
+  |}.
+
+  Notation "X &&& Y" := (And X _ Y) (at level 3).
+  Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).
+  Notation "` X" := (Goal _ (Call X)) (at level 3).
+  (* Notation "[ x -> _]" := {| sigma := (fun x : V => _) |} (x binder). *)
+
+  Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
+  Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
+
+  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) (Done s1 r).
+  Proof.
+    do 2 eexists.
+    apply: run_backtrack.
+    apply: expanded_step.
+    + move=> //.
+    + rewrite /big_or/F/select/=.
+      apply: expanded_step => //=.
+      apply: expanded_fail => //.
+      reflexivity.
+    apply: run_backtrack => //.
+      apply: expanded_step => //=.
+    + rewrite /big_or/F/select/=.
+      apply: expanded_step => //=.
+      apply: expanded_fail => //=.
+      rewrite -/s2 -/s1.
+      reflexivity.
+      apply: run_backtrack.
+      apply: expanded_step => //.
+      (* rewrite [Cut]lock. *)
+      apply: expanded_step => //=.
+      apply: expanded_step => //=.
+      apply: expanded_fail => //=.
+      move=> /=;case: ifP => /eqP//.
+      apply: run_done.
+      apply: expanded_step => //=.
+      apply: expanded_step => //=.
+      apply: expanded_step => //=.
+      apply: expanded_done => //=.
+      reflexivity.
+      reflexivity.
+  Qed.
+End Test6.
+
 
 
 Module Test2.
-  Import ARun.
+  Import RunAxiom.
   Goal expand empty (Or OK empty OK) = Solved empty (Or OK empty OK) . by []. Qed.
 
   Goal forall p, run empty (Or (Goal p Cut) empty Top) (Done empty (Or OK empty KO)).
@@ -169,19 +274,3 @@ Module Test2.
   Goal run empty (Or OK empty (Or OK empty OK)) (Done empty (Or OK empty (((Or OK empty OK))))).
   Proof. eexists; apply: run_done => //=. apply: expanded_done => //=. Qed.
 End Test2.
-
-Module Test3.
-
-  Module Run := Run(AxiomUnif).
-  Import Run.
-
-  Lemma xxx {s A A' sA}:
-    expand s A = Solved sA A' -> expand sA A' = Failure KO ->
-      run s A (Done sA A') ->
-        forall C SC, run s (And A KO C) (Failed SC) -> next_alt s SC None ->
-          forall D SD, run s (And A KO D) (Failed SD) -> next_alt s SD None ->
-            forall B CD0 r s', run s (And (Or A s B) CD0 (Or C sA D)) (Done s' r) ->
-              exists r', run s (And B CD0 CD0) (Done s' r').
-  Proof.
-  Abort.
-End Test3.
