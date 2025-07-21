@@ -1,10 +1,11 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From det Require Import run_prop.
+From det Require Import valid_state.
 
 Module check (U:Unif).
-  Module Run := RunP(U).
-  Import Run.
+  Module RP := RunP(U).
+  Import Language RP VS Run.
 
   (* Definition Gamma := V -> S.
 
@@ -901,6 +902,6 @@ Module check (U:Unif).
     apply: next_alt_aux_no_new_alt VB NB.
   Qed.
 
-  Print Assumptions tail_cut_is_det.  
+  Print Assumptions tail_cut_is_det.
 
 End check.

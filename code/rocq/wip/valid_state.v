@@ -3,7 +3,7 @@ From det Require Import lang.
 
 Module valid_state (U:Unif).
   Module Run := Run(U).
-  Include Run.
+  Import Run.
   
   Fixpoint base_and s :=
     match s with

@@ -4,10 +4,13 @@ From det Require Import valid_state.
 
 Module RunP (A: Unif).
   Module VS := valid_state(A).
-  Include VS.
+  (* Import Run. *)
+  (* Module R := Run(A). *)
+  Import VS Language.
+  Import Run.
 
   Lemma expanded_classic_expanded {s A r}:
-    expanded_classic s A r -> expanded s A r.
+    Run.expanded_classic s A r -> Run.expanded s A r.
   Proof. by exists false. Qed.
   
   Lemma run_classic_run {s A r}:

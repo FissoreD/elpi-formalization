@@ -1,6 +1,32 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
+Import Language.
 
+Module Axioms.
+  Parameter program_eqb : program -> program -> bool.
+  Parameter is_program : program -> Type.
+  Parameter is_program_inhab : forall p : program, is_program p.
+  Parameter program_eqb_correct : forall p1 p2, program_eqb p1 p2 -> p1 = p2.
+  Parameter program_eqb_refl : forall x, program_eqb x x.
+
+
+  Parameter Sigma_eqb : Sigma -> Sigma -> bool.
+  Parameter is_Sigma : Sigma -> Type.
+  Parameter is_Sigma_inhab : forall p : Sigma, is_Sigma p.
+  Parameter Sigma_eqb_correct : forall p1 p2, Sigma_eqb p1 p2 -> p1 = p2.
+  Parameter Sigma_eqb_refl : forall x, Sigma_eqb x x.
+
+
+  Parameter same_subst : forall (s1 s2 : Sigma), s1 = s2.
+  Parameter same_progr : forall (s1 s2 : program), s1 = s2.
+End Axioms.
+
+Module UAxioms <: Unif.
+  Axiom unify : Tm -> Tm -> Sigma -> option Sigma.
+  Axiom matching : Tm -> Tm -> Sigma -> option Sigma.
+  Include Axioms.
+End UAxioms.
+Module RunAxiom:= Run(UAxioms).
 
 Module Test1.
 
@@ -13,6 +39,7 @@ Module Test1.
       end.
 
     Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
+    Include Axioms.
   End U.
 
   Module Run := Run(U).
@@ -90,6 +117,7 @@ Module Test5.
       end.
 
     Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
+    Include Axioms.
   End U.
 
   Module Run := Run(U).
@@ -158,6 +186,7 @@ Module Test6.
       end.
 
     Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
+    Include Axioms.
   End U.
 
   Module Run := Run(U).
@@ -224,7 +253,7 @@ End Test6.
 
 
 Module Test2.
-  Import ARun.
+  Import RunAxiom.
   Goal expand empty (Or OK empty OK) = Solved empty (Or OK empty OK) . by []. Qed.
 
   Goal forall p, run empty (Or (Goal p Cut) empty Top) (Done empty (Or OK empty KO)).
@@ -245,19 +274,3 @@ Module Test2.
   Goal run empty (Or OK empty (Or OK empty OK)) (Done empty (Or OK empty (((Or OK empty OK))))).
   Proof. eexists; apply: run_done => //=. apply: expanded_done => //=. Qed.
 End Test2.
-
-Module Test3.
-
-  Module Run := Run(AxiomUnif).
-  Import Run.
-
-  Lemma xxx {s A A' sA}:
-    expand s A = Solved sA A' -> expand sA A' = Failure KO ->
-      run s A (Done sA A') ->
-        forall C SC, run s (And A KO C) (Failed SC) -> next_alt s SC = None ->
-          forall D SD, run s (And A KO D) (Failed SD) -> next_alt s SD = None ->
-            forall B CD0 r s', run s (And (Or A s B) CD0 (Or C sA D)) (Done s' r) ->
-              exists r', run s (And B CD0 CD0) (Done s' r').
-  Proof.
-  Abort.
-End Test3.

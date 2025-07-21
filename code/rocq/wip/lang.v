@@ -7,83 +7,100 @@ Notation "[subst]" := ltac:(subst).
 Notation "[subst1]" := ltac:(move=> ?;subst).
 Notation "[subst2]" := ltac:(move=> ??;subst).
 
-Inductive D := Func | Pred.
-Inductive B := Exp | d of D.
-Inductive mode := i |o.
-Inductive S :=  b of B | arr of mode & S & S.
-Notation "x '--i-->' y" := (arr i x y) (at level 3).
-Notation "x '--o-->' y" := (arr o x y) (at level 3).
+Module Language.
+  Inductive D := Func | Pred.
+  Inductive B := Exp | d of D.
+  Inductive mode := i |o.
+  Inductive S :=  b of B | arr of mode & S & S.
+  Notation "x '--i-->' y" := (arr i x y) (at level 3).
+  Notation "x '--o-->' y" := (arr o x y) (at level 3).
 
-Definition P := nat.
-derive P.
-Elpi derive.eqbOK.register_axiom P is_P is_nat_inhab P_eqb P_eqb_correct P_eqb_refl.
+  Definition P := nat.
+  derive P.
+  Elpi derive.eqbOK.register_axiom P is_P is_nat_inhab P_eqb P_eqb_correct P_eqb_refl.
 
-Definition K := nat.
-derive K.
-Elpi derive.eqbOK.register_axiom K is_K is_nat_inhab K_eqb K_eqb_correct K_eqb_refl.
+  Definition K := nat.
+  derive K.
+  Elpi derive.eqbOK.register_axiom K is_K is_nat_inhab K_eqb K_eqb_correct K_eqb_refl.
 
-Definition V := nat.
-derive V.
-Elpi derive.eqbOK.register_axiom V is_V is_nat_inhab V_eqb V_eqb_correct V_eqb_refl.
+  Definition V := nat.
+  derive V.
+  Elpi derive.eqbOK.register_axiom V is_V is_nat_inhab V_eqb V_eqb_correct V_eqb_refl.
 
-Inductive C := 
-  | p of P 
-  | v of V
-  .
-derive C.
+  Inductive C := 
+    | p of P 
+    | v of V
+    .
+  derive C.
 
-Inductive Tm := 
-  | Code : C -> Tm
-  | Data : K -> Tm
-  | Comb : Tm -> Tm -> Tm.
-  (* | Lam  : V -> S -> Tm -> S -> Tm. *)
-derive Tm.
+  Inductive Tm := 
+    | Code : C -> Tm
+    | Data : K -> Tm
+    | Comb : Tm -> Tm -> Tm.
+    (* | Lam  : V -> S -> Tm -> S -> Tm. *)
+  derive Tm.
 
-Record R_ {A} := mkR { head : Tm; premises : list A }.
-Arguments mkR {_} _ _.
-derive R_.
-Inductive A :=
-  | Cut
-  | Call : Tm -> A.
-derive A.
+  Record R_ {A} := mkR { head : Tm; premises : list A }.
+  Arguments mkR {_} _ _.
+  derive R_.
+  Inductive A :=
+    | Cut
+    | Call : Tm -> A.
+  derive A.
 
-  (* | PiImpl : V -> R_ A -> A -> A. *)
-Notation R := (@R_ A).
+    (* | PiImpl : V -> R_ A -> A -> A. *)
+  Notation R := (@R_ A).
 
-HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build C C_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build P P_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build K K_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build V V_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK _ _ A_eqb_OK).
+  HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build C C_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build P P_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build K K_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build V V_eqb_OK.
+  HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK _ _ A_eqb_OK).
 
-Record Sigma := { sigma : V -> option Tm }.
-Definition empty : Sigma := {| sigma := fun _ => None |}.
-
-Module Type Unif.
-  Parameter unify : Tm -> Tm -> Sigma -> option Sigma.
-  Parameter matching : Tm -> Tm -> Sigma -> option Sigma.
-End Unif.
-
-Module Run (U : Unif).
-
-  Definition unify := U.unify.
-  Definition matching := U.matching.
+  Record Sigma := { sigma : V -> option Tm }.
+  Definition empty : Sigma := {| sigma := fun _ => None |}.
 
   Definition index := list R.
   Definition mode_ctx := Tm -> list mode.
   Definition sigT := Tm -> S.
   Record program := { (*depth : nat;*) rules : index; modes : mode_ctx; sig : sigT }.
+End Language.
 
-  (* Inductive goal := Goal of program & Sigma & A. *)
+Module Type Unif.
+  Import Language.
+  Parameter unify : Tm -> Tm -> Sigma -> option Sigma.
+  Parameter matching : Tm -> Tm -> Sigma -> option Sigma.
 
-  (* Axiom H : list mode -> Tm -> Tm -> Sigma -> option Sigma. *)
+  Parameter program_eqb : program -> program -> bool.
+  Parameter is_program : program -> Type.
+  Parameter is_program_inhab : forall p : program, is_program p.
+  Parameter program_eqb_correct : forall p1 p2, program_eqb p1 p2 -> p1 = p2.
+  Parameter program_eqb_refl : forall x, program_eqb x x.
+
+
+  Parameter Sigma_eqb : Sigma -> Sigma -> bool.
+  Parameter is_Sigma : Sigma -> Type.
+  Parameter is_Sigma_inhab : forall p : Sigma, is_Sigma p.
+  Parameter Sigma_eqb_correct : forall p1 p2, Sigma_eqb p1 p2 -> p1 = p2.
+  Parameter Sigma_eqb_refl : forall x, Sigma_eqb x x.
+
+
+  Parameter same_subst : forall (s1 s2 : Sigma), s1 = s2.
+  Parameter same_progr : forall (s1 s2 : program), s1 = s2.
+End Unif.
+
+Module Run (U : Unif).
+
+  Import U.
+  Import Language.
+
   Fixpoint H (ml : list mode) (q : Tm) (h: Tm) s : option Sigma :=
     match ml,q,h with
     | [::], Code c, Code c1 => if c == c1 then Some s else None
-    | [:: i & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (matching a1 a2 s) 
-    | [:: o & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (unify a1 a2 s) 
+    | [:: i & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (U.matching a1 a2 s) 
+    | [:: o & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (U.unify a1 a2 s) 
     | _, _, _ => None
     end.
 
@@ -103,33 +120,18 @@ Module Run (U : Unif).
     let rules := select query modes rules s in
     rules.
 
-  Axiom program_eqb : program -> program -> bool.
-  Axiom is_program : program -> Type.
-  Axiom is_program_inhab : forall p : program, is_program p.
-  Axiom program_eqb_correct : forall p1 p2, program_eqb p1 p2 -> p1 = p2.
-  Axiom program_eqb_refl : forall x, program_eqb x x.
 
-  Elpi derive.eqbOK.register_axiom program is_program is_program_inhab program_eqb program_eqb_correct program_eqb_refl.
-  Lemma program_eqb_OK : Equality.axiom program_eqb.
-  apply: iffP2 program_eqb_correct program_eqb_refl.
+  Elpi derive.eqbOK.register_axiom program U.is_program U.is_program_inhab U.program_eqb U.program_eqb_correct U.program_eqb_refl.
+  Lemma program_eqb_OK : Equality.axiom U.program_eqb.
+  apply: iffP2 U.program_eqb_correct U.program_eqb_refl.
   Qed.
   HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eqb_OK.
-
-  Axiom Sigma_eqb : Sigma -> Sigma -> bool.
-  Axiom is_Sigma : Sigma -> Type.
-  Axiom is_Sigma_inhab : forall p : Sigma, is_Sigma p.
-  Axiom Sigma_eqb_correct : forall p1 p2, Sigma_eqb p1 p2 -> p1 = p2.
-  Axiom Sigma_eqb_refl : forall x, Sigma_eqb x x.
-
-  Elpi derive.eqbOK.register_axiom Sigma is_Sigma is_Sigma_inhab Sigma_eqb Sigma_eqb_correct Sigma_eqb_refl.
-  Lemma Sigma_eqb_OK : Equality.axiom Sigma_eqb.
-  apply: iffP2 Sigma_eqb_correct Sigma_eqb_refl.
+  
+  Elpi derive.eqbOK.register_axiom Sigma U.is_Sigma U.is_Sigma_inhab U.Sigma_eqb U.Sigma_eqb_correct U.Sigma_eqb_refl.
+  Lemma Sigma_eqb_OK : Equality.axiom U.Sigma_eqb.
+  apply: iffP2 U.Sigma_eqb_correct U.Sigma_eqb_refl.
   Qed.
   HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
-
-  Axiom same_subst : forall (s1 s2 : Sigma), s1 = s2.
-  Axiom same_progr : forall (s1 s2 : program), s1 = s2.
-
 
   Inductive state :=
     | KO : state
@@ -223,7 +225,7 @@ Module Run (U : Unif).
   end.
 
 
-  Fixpoint expand s (A :state) : expand_res :=
+  Fixpoint expand s A : expand_res :=
     match A with
     (* meta *)
     | OK => Solved s OK
@@ -835,11 +837,3 @@ Module Run (U : Unif).
   Qed.
 
 End Run.
-
-
-Module AxiomUnif <: Unif.
-  Parameter unify : Tm -> Tm -> Sigma -> option Sigma.
-  Parameter matching : Tm -> Tm -> Sigma -> option Sigma.
-End AxiomUnif.
-
-Module ARun := Run(AxiomUnif).  
