@@ -64,7 +64,7 @@ Module Language.
 
   Definition index := list R.
   Definition mode_ctx := Tm -> list mode.
-  Definition sigT := Tm -> S.
+  Definition sigT := C -> S.
   Record program := { (*depth : nat;*) rules : index; modes : mode_ctx; sig : sigT }.
 End Language.
 
@@ -209,6 +209,7 @@ Module Run (U : Unif).
     | x :: xs => And (Goal pr x)  (big_and pr xs) (big_and pr xs)
     end.
 
+    (* change this definition: instead of (r:R) it takes (r:seq A) *)
   Fixpoint big_or_aux pr (r : R) (l : seq (Sigma * R)) : state :=
     match l with 
     | [::] => big_and pr r.(premises)
@@ -996,4 +997,42 @@ Module Run (U : Unif).
   Lemma success_cut1 {A} : success A -> success (cut A).
   Proof. by rewrite success_cut. Qed.
 
+  Lemma failed_dead1 {A}: failed (dead A).
+  Proof.
+    elim: A => //.
+      by move=>A HA s B HB/=; rewrite dead_dead_same eqxx.
+    move=> A HA B0 _ B HB/=.
+    by rewrite HA.
+  Qed.
+
+  Lemma big_or_failed {p s1 t}: failed (big_or p s1 t) = false.
+  Proof.
+    unfold big_or.
+      case: F => //.
+    move=> [s r] l.
+    by move=>/=.
+  Qed.
+
+  Lemma failed_cut {A}: failed A -> failed (cut A).
+  Proof.
+    elim: A => //.
+      move=> A HA s B HB /=.
+      rewrite dead_cut_is_dead.
+      case: ifP => /eqP.
+        by move=>->; rewrite dead_dead_same cut_dead_is_dead eqxx.
+      move=> dA; case: ifP => ///eqP.
+      move=> /cut_dead1 H; move: dA; rewrite -H.
+      by rewrite dead_dead_same.
+    move=> A HA B0 _ B HB /=.
+    move=>/orP[].
+      by move=>/HA ->.
+    rewrite success_cut.
+    by move=>/andP[]->->; rewrite orbT.
+  Qed.
+
+  Lemma big_and_dead {p l}: big_and p l = dead (big_and p l) -> False.
+  Proof. elim l => //. Qed.
+
+  Lemma big_and_cut {p l}: big_and p l = cut (big_and p l) -> False.
+  Proof. elim l => //. Qed.
 End Run.

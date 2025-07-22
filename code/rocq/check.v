@@ -6,6 +6,13 @@ Module check (U:Unif).
   Module VS := valid_state(U).
   Import Language VS RunP Run.
 
+  Fixpoint get_head (t: Tm) : C :=
+    match t with
+    | Code c => c
+    | Data _ => p 0
+    | Comb hd _ => get_head hd
+    end.
+
   (* Definition Gamma := V -> S.
 
   Fixpoint eat r1 r2 :=
@@ -126,15 +133,6 @@ Module check (U:Unif).
     let: (G, body_det) := foldr (check_atom prog) (G,b (d (Func))) premises in
     if infer_output G r.(head) is (_, true) then incl body_det expected_det else false . *)
 
-
-  Lemma failed_dead1 {A}: failed (dead A).
-  Proof.
-    elim: A => //.
-      by move=>A HA s B HB/=; rewrite dead_dead_same eqxx.
-    move=> A HA B0 _ B HB/=.
-    by rewrite HA.
-  Qed.
-
   Fixpoint has_cut_and A :=
     (A == cut A) ||
     match A with
@@ -234,35 +232,6 @@ Module check (U:Unif).
     | _, _ => false
     end.
 
-  (* Lemma no_new_altP {A B}: no_new_alt false A B -> no_new_alt true A B.
-  Proof.
-    elim: A B => //.
-      move=> A HA s B HB [] // A' s' B'.
-      by move=> /=/andP[]/HA->/HB->.
-    move=> A HA B0 _ B HB []// A' B0' B'.
-    move=> /=/orP[].
-      by move=>->.
-    move=>/and3P[nnA H /eqP?];subst.
-    by rewrite eqxx (HA A')//andbT/=(HB B')//!orbT if_same orbT.
-  Qed. *)
-
-  Lemma base_and_no_free_alt {A}: base_and A -> no_free_alt A.
-  Proof.
-    elim: A => []//[]//= _ _ _ A HA B HB/andP[/eqP]/[subst1] bB.
-    rewrite (HA bB).
-    by case: ifP => //->.
-  Qed.
-
-  Lemma no_alt_dead {A}: no_free_alt (dead A).
-  Proof. 
-    elim: A => //.
-      move=> A HA s B HB /=.
-      by rewrite has_cut_dead HA HB.
-    move=>A HA B0 _ B HB/=.
-    by rewrite cut_dead_is_dead eqxx.
-    (* by rewrite HA dead_dead_same eqxx. *)
-  Qed.
-
   Lemma no_new_alt_id {B} : no_new_alt B B.
   Proof.
     elim: B => //.
@@ -286,8 +255,6 @@ Module check (U:Unif).
       move=>/and3P[]/HA->; rewrite !dead_dead_same//.
   Qed.
 
-
-
   Lemma has_cut_and_has_cut_dead A s {B}: has_cut_and B -> has_cut (Or (dead A) s B).
   Proof.
     simpl.
@@ -297,21 +264,6 @@ Module check (U:Unif).
   Lemma has_cut_or1 {p r a b l} : has_cut(big_or_aux p r ((a, b) :: l)) -> has_cut (big_or_aux p b (l)).
   Proof.
     move=> /=/andP[]//.
-  Qed.
-
-  Lemma xxx {A} : success A -> failed (cut A) = false.
-  Proof.
-    elim: A => //=.
-      move=>A HA s B HB; rewrite dead_cut_is_dead.
-      case:ifP => /eqP.
-        by move=>->; rewrite dead_dead_same cut_dead_is_dead eqxx.
-      move=> dA /HA ->.
-      case:ifP => /eqP//.
-      by move=>/cut_dead1/esym.
-    move=> A HA B0 _ B HB/andP[].
-    move=> H.
-    rewrite success_cut H (HA H)/=.
-    by move=>/success_failed.
   Qed.
 
   Lemma no_new_alt_cut1 {A}: no_new_alt A (cut A).
@@ -429,20 +381,6 @@ Module check (U:Unif).
       }
     move=> t /=.
     apply no_alt_trans.
-  Qed.
-
-  Lemma no_new_alt_trans_dead {A B C}: 
-    no_new_alt (dead A) (dead B) -> 
-      no_new_alt (dead B) (dead C) -> 
-        no_new_alt (dead A) (dead C).
-  Proof.
-    elim: A B C; try by move=>[].
-    + move=>/= _ _ []//.
-    + move=> A HA s B HB[]//A1 s1 B1[]//A2 s2 B2.
-      move=> /=/andP[nnA nnB]/andP[nnA1 nnB2].
-      rewrite (HA A1 A2)//(HB B1 B2)//.
-    + move=> A HA B0 _ B HB[]// A1 B01 B1[]// A2 B02 B2/=.
-      by rewrite !dead_dead_same !eqxx.
   Qed.
 
   Lemma no_new_alt_trans_dead0 {A}: no_new_alt A (dead A).
@@ -590,6 +528,18 @@ Module check (U:Unif).
       by rewrite no_new_alt_id//!orbT.
     Qed.
 
+  Definition is_det g := forall s s' alt,
+    run s g (Done s' alt) ->
+      no_new_alt g alt.
+
+  Lemma cut_is_det pr : is_det (Goal pr Cut).
+  Proof. 
+    move=> s s1 A [? H]; inversion H; clear H; subst; try congruence.
+    + have := (expanded_cut_simpl (ex_intro _ _ H5)) => -> //.
+    + inversion H0; clear H0; subst; simpl in *; try congruence.
+      move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
+  Qed.
+
   Section has_cut.
 
     Definition cut_in_prem (r : R) := Cut \in r.(premises).
@@ -672,18 +622,6 @@ Module check (U:Unif).
         have:= expand_no_new_alt AllCut H => /= H2.
         remember (get_state_run _) as C.
         apply: no_new_alt_trans H2 IH => //.
-    Qed.
-
-    Definition is_det g := forall s s' alt,
-      run s g (Done s' alt) ->
-        no_new_alt g alt.
-
-    Lemma cut_is_det pr : is_det (Goal pr Cut).
-    Proof. 
-      move=> s s1 A [? H]; inversion H; clear H; subst; try congruence.
-      + have := (expanded_cut_simpl (ex_intro _ _ H5)) => -> //.
-      + inversion H0; clear H0; subst; simpl in *; try congruence.
-        move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
     Qed.
 
     Lemma cut_in_prem_is_det A :
