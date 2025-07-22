@@ -697,25 +697,30 @@ Module RunP (A: Unif).
       move=> []//.
   Qed.
 
-  (* Lemma expanded_or_correct_left_fail {s A A'} b:
+  Lemma expanded_or_correct_left_fail {s A A'} b:
+    A <> dead A ->
     expandedb s A (Failed A') b ->
       forall s2 B, expanded s (Or A s2 B) (Failed (Or A' s2 (if b then cut B else B))).
   Proof.
-    remember (Failed _) as D eqn:HD => H.
+    remember (Failed _) as D eqn:HD => + H.
     elim: H A' HD => //=; clear.
     + move=> s A A' HA B [] ? s3 C; subst.
-      by eexists; apply: expanded_fail => //= ; rewrite HA.
-    + move=> s1 s2 r A B b HA HB IH C ? s4 D /[subst].
-      have [? {}IH]:= IH _ erefl s4 (cut D).
+      eexists; apply: expanded_fail => /=.
+      rewrite HA.
+      case: ifP => /eqP => //.
+    + move=> s1 s2 r A B b HA HB IH C ? dA s4 D /[subst].
+      have [? {}IH]:= IH _ erefl (expand_not_dead dA HA) s4 (cut D).
       eexists; apply: expanded_step => //=.
+      case: ifP => /eqP // _.
       + by rewrite HA.
       + move: IH; rewrite cut_cut_same if_same => H; eassumption.
-    + move=> s1 s2 r A B b HA HB IH C ? s4 D /[subst].
-      have [? {}IH] := IH _ erefl s4 D.
+    + move=> s1 s2 r A B b HA HB IH C ? dA s4 D /[subst].
+      have [? {}IH] := IH _ erefl (expand_not_dead dA HA) s4 D.
       eexists; apply: expanded_step => //=.
-      + by rewrite HA.
-      + apply IH. 
-  Qed. *)
+      case: ifP => /eqP // _.
+        by rewrite HA.
+      apply IH. 
+  Qed.
 
   (*Lemma run_or_correct {s1 s2 A B SOL A'}:
     (run s1 A (Done SOL A')) \/ 
