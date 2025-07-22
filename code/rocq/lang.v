@@ -570,7 +570,7 @@ Module Run (U : Unif).
 
   Lemma simpl_expand_or_cut {s s1 s2 A B C} :
     expand s1 (Or A s B) = CutBrothers s2 C -> 
-      exists s2 B', A = dead A /\ expand s1 B = CutBrothers s2 B' /\ C = Or A s B'.
+      exists B', A = dead A /\ expand s1 B = CutBrothers s2 B' /\ C = Or A s B'.
   Proof.
     move=>/=; case: ifP => [/eqP->|/eqP DA].
       case X:expand => //=-[]*;subst; do 2 eexists; repeat split.
@@ -835,6 +835,12 @@ Module Run (U : Unif).
     elim: A=> //. 
       by move=> A HA s B HB /=; rewrite HA HB if_same.
     by move=> A HA B0 ? B HB/=; rewrite HA ?HB.
+  Qed.
+
+  Lemma success_dead1 {A}: success A -> A <> dead A.
+  Proof.
+    move=> + H.
+    by rewrite H success_dead.
   Qed.
 
 End Run.
