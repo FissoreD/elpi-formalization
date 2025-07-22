@@ -209,16 +209,15 @@ Module Run (U : Unif).
     | x :: xs => And (Goal pr x)  (big_and pr xs) (big_and pr xs)
     end.
 
-    (* change this definition: instead of (r:R) it takes (r:seq A) *)
-  Fixpoint big_or_aux pr (r : R) (l : seq (Sigma * R)) : state :=
+  Fixpoint big_or_aux pr (r : list A) (l : seq (Sigma * R)) : state :=
     match l with 
-    | [::] => big_and pr r.(premises)
-    | (s,r1) :: xs => Or (big_and pr r.(premises)) s (big_or_aux pr r1 xs)
+    | [::] => big_and pr r
+    | (s,r1) :: xs => Or (big_and pr r) s (big_or_aux pr r1.(premises) xs)
     end.
 
   Definition big_or pr s t :=
     let l := F pr t s in
-    if l is (s,r) :: xs then (Or Bot s (big_or_aux pr r xs))
+    if l is (s,r) :: xs then (Or Bot s (big_or_aux pr r.(premises) xs))
     else Bot.
 
   Definition get_state r := match r with 

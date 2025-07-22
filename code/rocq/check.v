@@ -261,7 +261,7 @@ Module check (U:Unif).
     by move=> /has_cut_and_has_cut->; rewrite has_cut_and_dead.
   Qed.
 
-  Lemma has_cut_or1 {p r a b l} : has_cut(big_or_aux p r ((a, b) :: l)) -> has_cut (big_or_aux p b (l)).
+  Lemma has_cut_or1 {p r a b l} : has_cut(big_or_aux p r ((a, b) :: l)) -> has_cut (big_or_aux p b.(premises) (l)).
   Proof.
     move=> /=/andP[]//.
   Qed.
@@ -555,7 +555,7 @@ Module check (U:Unif).
 
     Lemma det_rule_has_cut_or {r rs p t s}:
       cut_in_prem r -> all cut_in_prem rs -> 
-        has_cut (big_or_aux p r (select t (modes p t) rs s)).
+        has_cut (big_or_aux p r.(premises) (select t (modes p t) rs s)).
     Proof.
       rewrite /cut_in_prem.
       elim: rs r s t.
