@@ -192,9 +192,6 @@ Module check (U:Unif).
     by rewrite has_cut_and_cut has_cut_cut.
   Qed.
 
-  Definition det_rule_cut (r : R) :=
-  match r.(premises) with [::] => false | x :: xs => last x xs == Cut end.
-
   Lemma or_cut_dead B : (B == cut B) || (B == dead B) = (B == cut B).
   Proof. by rewrite orb_idr //; move/eqP->; rewrite cut_dead_is_dead. Qed.
 
@@ -295,34 +292,6 @@ Module check (U:Unif).
   Proof.
     simpl.
     by move=> /has_cut_and_has_cut->; rewrite has_cut_and_dead.
-  Qed.
-
-  Lemma det_rule_cut_has_cut_and {p r1}:
-     det_rule_cut r1 -> has_cut_and (big_and p (premises r1)).
-  Proof.
-    case: r1 => hd [] /=; rewrite /det_rule_cut//=.
-    move=> + l; elim: l.
-    + move=> [] //.
-    + move=> a l IH /= a1 /IH /orP [].
-      + by case: a => [] //; rewrite orbT.
-      + by move=> ->; rewrite 2!orbT.
-  Qed.
-
-  Lemma det_rule_has_cut_or {r rs p t s}:
-    det_rule_cut r -> all det_rule_cut rs -> 
-      has_cut (big_or_aux p r (select t (modes p t) rs s)).
-  Proof.
-    elim: rs r s t.
-    + move=> [] // hd [] // a l; simpl big_or_aux; unfold det_rule_cut => /= _ _ + _.
-      elim: l a {hd} => [[ ]|] //=.
-      by move=> a l IH a1 /IH /orP [] ->; rewrite 2?orbT.
-    + move=> r rs IH r1 s2 t HR1 /= /andP [] HR HRs.
-      case H: H => [s3|]; [|by apply:IH => //].
-      have H1 : has_cut_and (big_and p (premises r1)).
-        by apply: det_rule_cut_has_cut_and.
-      move=> /=.
-      repeat case: eqP => //.
-      rewrite H1 IH//.
   Qed.
 
   Lemma has_cut_or1 {p r a b l} : has_cut(big_or_aux p r ((a, b) :: l)) -> has_cut (big_or_aux p b (l)).
@@ -575,74 +544,12 @@ Module check (U:Unif).
         by move=>/eqP ->; rewrite cut_dead_is_dead dead_dead_same eqxx.
       move=>/and3P[] nnA + /eqP?;subst.
       rewrite (HA _ nnA)/= eqxx andbT.
-      (* case:ifP => // _.
-      move=>/orP[].
-        move=>/eqP?;subst.
-        rewrite eqxx /= orbT//. *)
       move=> ->; rewrite !orbT//.
-      (* move=> ->; rewrite !orbT//. *)
     Qed.
 
-  Definition is_cb x := match x with CutBrothers _ _ => true | _ => false end.
-  
-  Definition allCut := (forall pr : program, all det_rule_cut (rules pr)).
-  
-  Lemma expand_no_new_alt {A s1 r}: 
-    allCut ->
-      expand s1 A = r -> no_new_alt A (get_state r).
-  Proof.
-    move=> AllCut <-; clear r.
-    elim: A s1; try by move=> [].
-    + move=> p [] //.
-      move=> /=  t s1 /=.
-      have {AllCut}:= AllCut p.
-      unfold big_or, F.
-      case: rules => // /= r rs /= /andP [] /det_rule_has_cut_or H1 /H1 => /(_ p t s1).
-      case: H => //.
-        move=> s2 => /=.
-        apply: has_cut_or_no_new_alt.
-      case S: select => // [[ ]].
-      move=> /has_cut_or1 /=.
-      apply: has_cut_or_no_new_alt.
-    + move=> A HA s B HB s1 /=.
-      case: ifP => /eqP.
-        move=> ->.
-        have := HB s1.
-        by case: expand => //= [_|_||_]?->; rewrite no_new_alt_id.
-      move=>dA /=.
-      have:= HA s1.
-      case: expand => //= [_|_||_]?->; rewrite ?no_new_alt_id//no_new_alt_cut1//.
-    + move=> A HA B0 _ B HB s/=.
-      have:= HA s.
-      case: expand => //=[_|_||s1] C H; try rewrite no_new_alt_id H eqxx !orbT //.
-      have:= HB s1.
-      case: expand => //= [_|_||_] D ->; rewrite eqxx ?H !orbT//.
-      by rewrite (no_new_alt_cut_right H) orbT.
-  Qed.
-
-  Lemma expandedb_no_new_alt {A r s1 b1}: 
-    allCut ->
-    expandedb s1 A r b1 -> no_new_alt A (get_state_run r).
-  Proof.
-    move=> AllCut H.
-    elim: H => //; clear -AllCut.
-    + move=> s1 s2 A B /= HA.
-      by have := expand_no_new_alt AllCut HA.
-    + move=> s1 A B H /=.
-      by have:= expand_no_new_alt AllCut H.
-    + move=> s s' r A B b H H1 IH.
-      have:= expand_no_new_alt AllCut H => /= H2.
-      remember (get_state_run _) as C.
-      apply: no_new_alt_trans H2 IH => //.
-    + move=> s s' r A B b H H1 IH.
-      have:= expand_no_new_alt AllCut H => /= H2.
-      remember (get_state_run _) as C.
-      apply: no_new_alt_trans H2 IH => //.
-  Qed.
 
   Lemma next_alt_aux_no_new_alt {s1 s3 A C}: 
-    next_alt s1 A = Some (s3, C) ->
-      no_new_alt A C.
+    next_alt s1 A = Some (s3, C) -> no_new_alt A C.
   Proof.
     elim: A C s1 s3; try by move=>[]/=.
     + move=> A HA s B HB C s1 s2/=.
@@ -683,35 +590,150 @@ Module check (U:Unif).
       by rewrite no_new_alt_id//!orbT.
     Qed.
 
+  Section has_cut.
 
-  Definition is_det g := forall s s' alt,
-    run s g (Done s' alt) ->
-      no_new_alt g alt.
+    Definition cut_in_prem (r : R) := Cut \in r.(premises).
+    Definition allCut := (forall pr : program, all cut_in_prem (rules pr)).
 
-  Lemma cut_is_det pr : is_det (Goal pr Cut).
-  Proof. 
-    move=> s s1 A [? H]; inversion H; clear H; subst; try congruence.
-    + have := (expanded_cut_simpl (ex_intro _ _ H5)) => -> //.
-    + inversion H0; clear H0; subst; simpl in *; try congruence.
-      move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
-  Qed.
+    Lemma cut_in_prem_has_cut_and p r1:
+      cut_in_prem r1 -> has_cut_and (big_and p (premises r1)).
+    Proof.
+      case: r1 => hd l /=; rewrite /cut_in_prem//=.
+      elim: l => //.
+      by move=> [] l IH //; rewrite in_cons/= andbb.
+    Qed.
 
-  Lemma tail_cut_is_det A :
-    allCut -> is_det A.
-  Proof.
-    move=> AllCut s1 s2 alts.
-    remember (Done _ _) as r eqn:Hr => -[b H].
-    elim: H s2 alts Hr => //=; clear -AllCut.
-      move=> s1 s2 A B b EA s3 C [] /[subst2].
-      have // := expandedb_no_new_alt AllCut EA.
-      (* apply: no_new_altP. *)
-    move=> s1 s2 s3 A B C b1 b2 b3 EA NB HR IH ? s4 D ?; subst.
-    have {IH} /= nnCD := IH _ _ erefl.
-    have /= nnAB := expandedb_no_new_alt AllCut EA.
-    apply: no_new_alt_trans nnCD => //.
-    apply: no_new_alt_trans nnAB _ => //.
-    apply: next_alt_aux_no_new_alt NB.
-  Qed.
+    Lemma det_rule_has_cut_or {r rs p t s}:
+      cut_in_prem r -> all cut_in_prem rs -> 
+        has_cut (big_or_aux p r (select t (modes p t) rs s)).
+    Proof.
+      rewrite /cut_in_prem.
+      elim: rs r s t.
+      + move=> [] // hd [] // []//= t l _ _.
+        rewrite in_cons/=andbb => + _; clear.
+        elim: l => // -[] t xs //=.
+        move=> H; rewrite in_cons => /orP[]//.
+        by move=> /H ->.
+      + move=> r rs IH r1 s2 t HR1 /= /andP [] HR HRs.
+        case H: H => [s3|]; [|by apply:IH => //].
+        have H1 : has_cut_and (big_and p (premises r1)).
+          by apply: cut_in_prem_has_cut_and.
+        move=> /=.
+        repeat case: eqP => //.
+        rewrite H1 IH//.
+    Qed.
+
+    Lemma expand_no_new_alt {A s1 r}: 
+      allCut -> expand s1 A = r -> no_new_alt A (get_state r).
+    Proof.
+      move=> AllCut <-; clear r.
+      elim: A s1; try by move=> [].
+      + move=> p [] //.
+        move=> /=  t s1 /=.
+        have {AllCut}:= AllCut p.
+        unfold big_or, F.
+        case: rules => ///= r rs /= /andP [] /det_rule_has_cut_or H1 /H1 => /(_ p t s1).
+        case: H => //.
+          move=> s2 => /=.
+          apply: has_cut_or_no_new_alt.
+        case S: select => // [[ ]].
+        move=> /has_cut_or1 /=.
+        apply: has_cut_or_no_new_alt.
+      + move=> A HA s B HB s1 /=.
+        case: ifP => /eqP.
+          move=> ->.
+          have := HB s1.
+          by case: expand => //= [_|_||_]?->; rewrite no_new_alt_id.
+        move=>dA /=.
+        have:= HA s1.
+        case: expand => //= [_|_||_]?->; rewrite ?no_new_alt_id//no_new_alt_cut1//.
+      + move=> A HA B0 _ B HB s/=.
+        have:= HA s.
+        case: expand => //=[_|_||s1] C H; try rewrite no_new_alt_id H eqxx !orbT //.
+        have:= HB s1.
+        case: expand => //= [_|_||_] D ->; rewrite eqxx ?H !orbT//.
+        by rewrite (no_new_alt_cut_right H) orbT.
+    Qed.
+
+    Lemma expandedb_no_new_alt {A r s1 b1}: 
+      allCut -> expandedb s1 A r b1 -> no_new_alt A (get_state_run r).
+    Proof.
+      move=> AllCut H.
+      elim: H => //; clear -AllCut.
+      + move=> s1 s2 A B /= HA.
+        by have := expand_no_new_alt AllCut HA.
+      + move=> s1 A B H /=.
+        by have:= expand_no_new_alt AllCut H.
+      + move=> s s' r A B b H H1 IH.
+        have:= expand_no_new_alt AllCut H => /= H2.
+        remember (get_state_run _) as C.
+        apply: no_new_alt_trans H2 IH => //.
+      + move=> s s' r A B b H H1 IH.
+        have:= expand_no_new_alt AllCut H => /= H2.
+        remember (get_state_run _) as C.
+        apply: no_new_alt_trans H2 IH => //.
+    Qed.
+
+    Definition is_det g := forall s s' alt,
+      run s g (Done s' alt) ->
+        no_new_alt g alt.
+
+    Lemma cut_is_det pr : is_det (Goal pr Cut).
+    Proof. 
+      move=> s s1 A [? H]; inversion H; clear H; subst; try congruence.
+      + have := (expanded_cut_simpl (ex_intro _ _ H5)) => -> //.
+      + inversion H0; clear H0; subst; simpl in *; try congruence.
+        move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
+    Qed.
+
+    Lemma cut_in_prem_is_det A :
+      allCut -> is_det A.
+    Proof.
+      move=> AllCut s1 s2 alts.
+      remember (Done _ _) as r eqn:Hr => -[b H].
+      elim: H s2 alts Hr => //=; clear -AllCut.
+        move=> s1 s2 A B b EA s3 C [] /[subst2].
+        have // := expandedb_no_new_alt AllCut EA.
+      move=> s1 s2 s3 A B C b1 b2 b3 EA NB HR IH ? s4 D ?; subst.
+      have {IH} /= nnCD := IH _ _ erefl.
+      have /= nnAB := expandedb_no_new_alt AllCut EA.
+      apply: no_new_alt_trans nnCD => //.
+      apply: no_new_alt_trans nnAB _ => //.
+      apply: next_alt_aux_no_new_alt NB.
+    Qed.
+  End has_cut.
+
+  Section tail_cut.
+
+    Definition tail_cut (r : R) :=
+    match r.(premises) with [::] => false | x :: xs => last x xs == Cut end.
+    
+    Definition AllTailCut := (forall pr : program, all tail_cut (rules pr)).
+
+    Lemma cut_in_prem_tail_cut: AllTailCut -> allCut.
+    Proof.
+      rewrite /AllTailCut /allCut.
+      rewrite /tail_cut /cut_in_prem.
+      move=> + pr => /(_ pr).
+      remember (rules pr) as RS.
+      apply: sub_all => r; clear.
+      case: r => //= _ []//.
+      move=> []// t []//= a l.
+      rewrite in_cons/=; clear.
+      elim: l a => //=.
+        by move=> a; rewrite mem_seq1 eq_sym.
+      move=> a l IH []//= t1.
+      rewrite in_cons/=.
+      apply: IH.
+    Qed.
+
+    Lemma tail_cut_is_det A :
+      AllTailCut -> is_det A.
+    Proof.
+      move=> /cut_in_prem_tail_cut.
+      apply: cut_in_prem_is_det.
+    Qed.
+  End tail_cut.
 
   Print Assumptions tail_cut_is_det.
 
