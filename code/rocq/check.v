@@ -621,7 +621,7 @@ Module check (U:Unif).
   Qed.
 
   Lemma expandedb_no_new_alt {A r s1 b1}: 
-    (forall pr : program, all det_rule_cut (rules pr)) ->
+    allCut ->
     expandedb s1 A r b1 -> no_new_alt A (get_state_run r).
   Proof.
     move=> AllCut H.
@@ -697,8 +697,7 @@ Module check (U:Unif).
   Qed.
 
   Lemma tail_cut_is_det A :
-    (forall pr, all det_rule_cut pr.(rules)) ->
-    is_det A.
+    allCut -> is_det A.
   Proof.
     move=> AllCut s1 s2 alts.
     remember (Done _ _) as r eqn:Hr => -[b H].
