@@ -870,6 +870,17 @@ Module Run (U : Unif).
       move=> _ C []; rewrite dead_cut_is_dead => /cut_dead1; congruence.
   Qed.
 
+  Lemma expanded_not_dead {s A r b}: 
+    A <> dead A -> expandedb s A r b -> get_state_run r <> dead (get_state_run r).
+  Proof.
+    move=> + H.
+    elim: H; clear.
+    + move=> s s' A A' H1 H2 /=; apply: expand_not_dead H2 H1.
+    + move=> s A B H1 H2 /=; apply: expand_not_dead H2 H1.
+    + move=> s s' r A A' b H _ IH dA; apply: IH (expand_not_dead dA H).
+    + move=> s s' r A A' b H _ IH dA; apply: IH (expand_not_dead dA H).
+  Qed.
+
   Lemma expand_dead {s A}: 
     A = dead A -> expand s A = Failure A.
   Proof.
@@ -879,6 +890,16 @@ Module Run (U : Unif).
       by rewrite dead_dead_same eqxx HB /=.
     + move=> A HA B0 _ B HB s1 /=.
       by rewrite HA.
+  Qed.
+
+  Lemma expanded_dead s {A}: 
+    A = dead A -> expandedb s A (Failed A) false.
+  Proof.
+    move=> ->.
+    case: A s; try by move=>?; apply: expanded_fail.
+    + by move=>???; apply: expanded_fail.
+    + all: move=> *; apply: expanded_fail;
+      rewrite /= expand_dead//!dead_dead_same//eqxx//.
   Qed.
 
   Lemma succes_is_solved s {A}: success A -> expand s A = Solved s A.

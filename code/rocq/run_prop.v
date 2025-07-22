@@ -512,36 +512,6 @@ Module RunP (A: Unif).
       by apply H3.
   Qed.
 
-  (* Lemma expand_classic_failure_split {s A B B0 FAB}: 
-    expand_classic s (And A B0 B) (Failed FAB) ->
-      exists FA, expand_classic s A (Failed FA).
-  Proof.
-    (* remember (And A B) as And eqn:HAnd.
-    remember Failed as F eqn:HF.
-    move=> H; elim: H A B HAnd HF; clear => //=.
-    + move=> s A + A1 B /[subst1] /simpl_expand_and_fail [].
-      + by left; apply: run_classic_fail.
-      + move=> [s' [L' [H1 H2]]]; right; repeat eexists.
-        + apply: run_done H1.
-        + by apply: run_classic_fail.
-    + move=> s st st1 b + H1 + A B /[subst2] /simpl_expand_and_expanded [].
-      + move=> [A' [H2]] /[subst1].
-        move=> /(_ _ _ erefl erefl) => -[].
-        + move=> H; left; apply: run_classic_step H2 H.
-        + move=> [X1 [altA [H3 H4]]]; right.
-          repeat eexists.
-          + apply: run_step H2 H3.
-          + apply: H4.
-      + move=> [s' [A' [B' [HA [HB]]]]] /[subst1].
-        move=> /(_ _ _ erefl erefl) [].
-        + by left.
-        + move=> [s'' [altA [H2 H3]]]; right.
-          repeat eexists; try eassumption.
-          inversion H2; subst; try congruence; clear H2.
-          move: H6; rewrite HA => -[]??; subst.
-          by apply: run_classic_step HB H3. *)
-  Admitted. *)
-
   Lemma expanded_or_correct_left {s s' A A'} b:
     expandedb s A (Done s' A') b ->
       forall s2 B, expanded s (Or A s2 B) (Done s' (Or A' s2 (if b then cut B else B))).
@@ -680,11 +650,52 @@ Module RunP (A: Unif).
       apply IH. 
   Qed.
 
-  (*Lemma run_or_correct {s1 s2 A B SOL A'}:
-    (run s1 A (Done SOL A')) \/ 
-      (exists FA, run_classic s1 A (Failed FA)) ->
-        exists AB', run s1 (Or A s2 B) (Done SOL AB').
-  Proof. *)
+  Lemma run_or_correct_left {s1 A s2 A' b sB B}:
+    runb s1 A (Done s2 A') b ->
+      B <> dead B -> run s1 (Or A sB B) (Done s2 (Or A' sB (if b then cut B else B))).
+  Proof.
+    remember (Done _ _) as rD eqn:HrD => H.
+    elim: H s2 A' sB B HrD => //; clear.
+    + move=> s s' A B b H s2 A' sB B' [??]; subst.
+      have [? H1]:= expanded_or_correct_left _ H sB B'.
+      eexists.
+      apply: run_done H1.
+    + move=> s s' r A B C b1 b2 b3 HE HN HR IH ? s2 D sB E ? dE;subst.
+      - case: (A =P dead A); last first => dA.
+        {
+          have /= dB := expanded_not_dead dA HE.
+          have:= expanded_or_correct_left_fail _ dA HE sB E.
+          have cdE : cut E <> dead (cut E).
+            rewrite dead_cut_is_dead.
+            by move=> /cut_dead1/esym.
+          have [b H] := IH _ _ sB (cut E) erefl cdE.
+          rewrite cut_cut_same if_same in H.
+          have [b3 H2] := IH _ _ sB E erefl dE.
+          case: b1 HE => //=.
+          { 
+            move=> HE.
+            move=> [b1 H1]/=.
+            eexists; apply: run_backtrack erefl.
+            apply: H1.
+            simpl.
+            case: ifP => /eqP// _.
+            case: ifP => /eqP// _.
+            by rewrite HN.
+            apply: H.
+          }
+          {
+            move=> H1 [b4 H3].
+            eexists; apply: run_backtrack => //.
+            apply: H3.
+            simpl; rewrite HN; do 2 case: ifP => /eqP// _.
+            apply: H2.
+          }
+        }
+    - have H := expanded_dead s dA.
+      have [[?]?] := expanded_consistent H HE; subst.
+      by rewrite dA next_alt_dead1 in HN.
+  Qed.
+
     (* move=> [].
     + move=> H; move: (run_or_correct_left H s2 B) => [altB1 H1]; eexists; apply H1.
     + move=> [] FA [] H1 H2. ; move: (run_or_correct_right H1 H2); exists B'.
