@@ -531,6 +531,8 @@ Module Run (U : Unif).
   Inductive run_res := Done of Sigma & state | Failed of state.
   derive run_res.
   HB.instance Definition _ := hasDecEq.Build run_res run_res_eqb_OK.
+
+  Definition get_state_run r := match r with Done _ s => s | Failed s => s end.
   Definition is_fail A := match A with Failure _ => true | _ => false end.
   Definition is_failed A := match A with Failed _ => true | _ => false end.
   Definition is_done A := match A with Done _ _ => true | _ => false end.
@@ -842,5 +844,126 @@ Module Run (U : Unif).
     move=> + H.
     by rewrite H success_dead.
   Qed.
+
+
+  Lemma expand_not_dead {s A r}: 
+    A <> dead A -> expand s A = r -> get_state r <> dead (get_state r).
+  Proof.
+    move=> + <-.
+    elim: A s; clear; try by move=> //=.
+    + move=> p [|t]//= s _ /esym; apply dead_big_or.
+    + move=> A HA s B HB s1 => //=.
+      case: ifP => /eqP.
+        move=>->/=.
+        rewrite dead_dead_same.
+        move=> H; have {}H: B <> dead B by congruence.
+        have:= HB s1 H.
+        case X: expand => //=?; rewrite dead_dead_same; congruence.
+      move=> dA _.
+      have:= HA s1 dA.
+      case X: expand => //=?;subst; congruence.
+    + move=> A HA B0 _ B HB s1 //= H.
+      have {}H : A <> dead A by congruence.
+      have:= (HA s1 H).
+      case X: expand => // => //=?; subst; try by congruence.
+      case: expand => //=; try congruence.
+      move=> _ C []; rewrite dead_cut_is_dead => /cut_dead1; congruence.
+  Qed.
+
+  Lemma expand_dead {s A}: 
+    A = dead A -> expand s A = Failure A.
+  Proof.
+    move=> ->.
+    elim: A s => //.
+    + move=> A HA s B HB s1 => //=.
+      by rewrite dead_dead_same eqxx HB /=.
+    + move=> A HA B0 _ B HB s1 /=.
+      by rewrite HA.
+  Qed.
+
+  Lemma succes_is_solved s {A}: success A -> expand s A = Solved s A.
+  Proof.
+    elim: A s => //; try by do 2 eexists.
+    + move=> A HA s1 B HB s /=.
+        (* move=>[-> vB]/=.
+        rewrite dead_dead_same eqxx.
+        move=>sB.
+        by have H := HB s vB sB; rewrite H. *)
+      (* move=>[dA[vA bB]]/=. *)
+      case:ifP => /eqP// H sA.
+        rewrite (HB s)//.
+      rewrite (HA s)//.
+    + move=> A HA B0 HB0 B HB s /=.
+      move=>/andP[sA sB].
+      rewrite (HA s)// (HB s)//.
+  Qed.
+
+  Lemma expand_solved_success {s1 A s2 B}: 
+    expand s1 A = Solved s2 B -> success A /\ success B.
+  Proof.
+    elim: A s1 s2 B => //.
+    + by move=> /= ??? [] /[subst2].
+    + move=> ? [] //.
+    + move=> A HA s B HB s1 s2 C/=.
+      case: ifP => /eqP dA.
+        case X: expand =>//-[??];subst => /=.
+        rewrite dA dead_dead_same eqxx.
+        by have := HB _ _ _ X.
+      have:= HA s1; case: expand => //.
+      move=> D E /(_ _ _ erefl)[->] sE [??]; subst => /=.
+      rewrite sE.
+      move: sE.
+      by case: ifP => /eqP//->; rewrite success_dead.
+    + move=> A HA ? _ B HB s1 s2 C /=.
+      have:= HA s1.
+      case: expand => // s D /(_ _ _ erefl)[]->.
+      have:= HB s.
+      case: expand => // s3 E /(_ _ _ erefl)[]->.
+      by move=> sE sD [??]; subst => /=; rewrite sE sD.
+  Qed.
+
+  Lemma expand_solved_failed {s1 A s2 B}: 
+    expand s1 A = Solved s2 B -> failed A = false /\ failed B = false.
+  Proof.
+    move=>/expand_solved_success [].
+    by do 2 move=> /success_failed->.
+  Qed.
+
+  Lemma expand_failure_failed {s1 A B}:
+    expand s1 A = Failure B -> failed A /\ failed B.
+  Proof.
+    elim: A s1 B; clear => //; try by move=> ? [] //.
+    + move=> A HA s1 B HB s2 C.
+      move=>/simpl_expand_or_fail[].
+        move=>[A'[dA[HA' ->]]] /=.
+        move: (dA) => /eqP/negbTE->.
+        have /=/eqP/negbTE-> := expand_not_dead dA HA'.
+        apply: HA HA'.
+      move=> [B' [dA [HB' ->]]] /=-.
+      by rewrite -dA eqxx; apply: HB HB'.
+    + move=> A HA B0 _ B HB s C.
+      move=> /simpl_expand_and_fail[].
+        move=> [A' [HA'->]]/=.
+        by have:= HA _ _ HA'=>-[]-> //->.
+      move=> [s' [A' [B' [HA' [HB' ->]]]]]/=.
+      have:= HB _ _ HB' => -[]->->.
+      have:= expand_solved_success HA' => -[] ->->.
+      by rewrite !orbT.
+  Qed. 
+
+  Lemma success_cut {A} : success (cut A) = success A.
+  Proof.
+    elim: A => //. 
+    + move=> A HA s B HB /=.
+      rewrite dead_cut_is_dead.
+      case:ifP=>/eqP.
+        by move=> /cut_dead1//->; rewrite eqxx.
+      by case: eqP => //->; rewrite dead_dead_same cut_dead_is_dead.
+    + move=> A HA B HB C HC /=.
+      by rewrite HA ?HC.
+  Qed.
+
+  Lemma success_cut1 {A} : success A -> success (cut A).
+  Proof. by rewrite success_cut. Qed.
 
 End Run.

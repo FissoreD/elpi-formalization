@@ -4,6 +4,6 @@
 
 lang.v
 run_test.v
-valid_state.v
 run_prop.v
+valid_state.v
 check.v
