@@ -349,24 +349,24 @@ Module Run (U : Unif).
     end.
 
   Lemma next_alt_dead {A D s1 s2}: 
-    next_alt s1 A = Some (s2, D) -> D <> dead D.
+    next_alt s1 A = Some (s2, D) -> A <> dead A /\ D <> dead D.
   Proof.
     elim: A D s1 s2 => //.
       move=> A HA s B HB C s1 s2/=.
       case: ifP => /eqP/=.
         move=>->.
         case X: next_alt => //[[s3 D]].
-        have:= HB _ _ _ X.
-        move=> dD []??;subst => /=; rewrite dead_dead_same; congruence.
+        have [??]:= HB _ _ _ X.
+        move=> []??;subst => /=; rewrite dead_dead_same; split; congruence.
       move=> dA; case: ifP=> ///eqP dB.
       have:= (HA _ s1).
       case: next_alt => //= [[s3 D]|].
-        move=> /(_ _ _ erefl) H []??;subst => /=; congruence.
+        move=> /(_ _ _ erefl) []?? []??;subst => /=; split; congruence.
       move=> _; case: ifP => /= fB.
         have:= HB _ s.
-        case: next_alt => //[[s3 D]] /(_ _ _ erefl) dD []??;subst => /=.
-        congruence.
-      move=> []??;subst => /=; congruence.
+        case: next_alt => //[[s3 D]] /(_ _ _ erefl) []?? []??;subst => /=.
+        split; congruence.
+      move=> []??;subst => /=; split; congruence.
     move=> A HA B0 _ B HB C s1 s2 /=.
     have:= HB _ s1.
     case: next_alt => //[[s3 D]|].
@@ -375,18 +375,18 @@ Module Run (U : Unif).
       case: ifP => // fA.
         have:= HA _ s1.
         case: next_alt => //[[s4 E]].
-        move=> /(_ _ _ erefl) dE.
-        by case:ifP => // _[]??;subst => -[].
-      by move=> []??;subst => /=-[].
+        move=> /(_ _ _ erefl) []??.
+        by case:ifP => // _[]??;subst; split => /=; congruence.
+      by move=> []??;subst; split => /=-[].
     move=> _; case: ifP => //.
     case:eqP => //; move=> dA _.
     have:= HA _ s1.
     case: next_alt => //[[s3 D]|].
-      move=> /(_ _ _ erefl) dD.
+      move=> /(_ _ _ erefl) []??.
       case: ifP => //fA.
-        case: ifP => // ? []??;subst => /=; congruence.
+        case: ifP => // ? []??;subst => /=; split; congruence.
       case: ifP => // fB0.
-      by move=> []??;subst => -[].
+      by move=> []??;subst; split => -[].
     case: ifP => //.
   Qed.
 
@@ -404,7 +404,7 @@ Module Run (U : Unif).
       case X: next_alt => //[[s3 D]|].
         move=>/(_ _ _ erefl) fD.
         move=>[]??;subst => /=.
-        have:= next_alt_dead X.
+        have [_ +] := next_alt_dead X.
         case: ifP => /eqP //.
       move=> _.
       case: ifP => // fB.
@@ -443,6 +443,15 @@ Module Run (U : Unif).
       by rewrite HB.
     move=> A HA B0 _ B HB /=.
     by rewrite dead_dead_same eqxx.
+  Qed.
+
+  Lemma next_alt_or_some {s B s' C y}:
+    next_alt s B = Some (s', C) ->  y <> dead y -> forall x, next_alt s (Or B x y) = Some (s', Or C x y).
+  Proof.
+    move=> /= H dy x.
+    have [dB dC] := next_alt_dead H.
+    do 2 case: ifP => /eqP// _.
+    by rewrite H.
   Qed.
 
   (* Lemma next_alt2 {s s1 A B}: next_alt s A = Some (s1, B) -> forall s2, isSome (next_alt s2 B).

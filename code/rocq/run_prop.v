@@ -661,39 +661,22 @@ Module RunP (A: Unif).
       eexists.
       apply: run_done H1.
     + move=> s s' r A B C b1 b2 b3 HE HN HR IH ? s2 D sB E ? dE;subst.
-      - case: (A =P dead A); last first => dA.
-        {
-          have /= dB := expanded_not_dead dA HE.
-          have:= expanded_or_correct_left_fail _ dA HE sB E.
-          have cdE : cut E <> dead (cut E).
-            rewrite dead_cut_is_dead.
-            by move=> /cut_dead1/esym.
-          have [b H] := IH _ _ sB (cut E) erefl cdE.
-          rewrite cut_cut_same if_same in H.
-          have [b3 H2] := IH _ _ sB E erefl dE.
-          case: b1 HE => //=.
-          { 
-            move=> HE.
-            move=> [b1 H1]/=.
-            eexists; apply: run_backtrack erefl.
-            apply: H1.
-            simpl.
-            case: ifP => /eqP// _.
-            case: ifP => /eqP// _.
-            by rewrite HN.
-            apply: H.
-          }
-          {
-            move=> H1 [b4 H3].
-            eexists; apply: run_backtrack => //.
-            apply: H3.
-            simpl; rewrite HN; do 2 case: ifP => /eqP// _.
-            apply: H2.
-          }
-        }
-    - have H := expanded_dead s dA.
-      have [[?]?] := expanded_consistent H HE; subst.
-      by rewrite dA next_alt_dead1 in HN.
+      case: (A =P dead A) => dA.
+        have H := expanded_dead s dA.
+        have [[?]?] := expanded_consistent H HE; subst.
+        by rewrite dA next_alt_dead1 in HN.
+      have /= dB := expanded_not_dead dA HE.
+      have:= expanded_or_correct_left_fail _ dA HE sB E.
+      have cdE : cut E <> dead (cut E).
+        rewrite dead_cut_is_dead.
+        by move=> /cut_dead1/esym.
+      have [b H] := IH _ _ sB (cut E) erefl cdE.
+      rewrite cut_cut_same if_same in H.
+      have [b3 H2] := IH _ _ sB E erefl dE.
+      have H3 := next_alt_or_some HN.
+      case: b1 HE => //=; move=> H1 [b4 H4]/=;
+        eexists; apply: run_backtrack H4 (H3 _ _ _) _ erefl; 
+        eassumption.
   Qed.
 
     (* move=> [].
