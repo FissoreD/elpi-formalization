@@ -455,6 +455,38 @@ Module Run (U : Unif).
     by rewrite dead_dead_same eqxx.
   Qed.
 
+  Lemma cutr_dead1 {A}: cutr A = dead A -> dead A = A.
+  Proof. 
+    elim: A=> //.
+      move=> A HA s B HB/=[]??; rewrite HA//HB//.
+    move=> A HA B0 _ B HB/=[]?; rewrite HA//?HB//.
+  Qed.
+
+  Lemma dead_cutr_is_dead {A}: dead(cutr A) = dead A.
+  Proof.
+    elim: A => //.
+    + by move=> A HA s B HB /=; rewrite HA HB.
+    + by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
+  Qed.  
+  
+  Lemma failed_cutr {A}: failed (cutr A) = true.
+  Proof.
+    elim: A => //.
+      move=> A HA s B HB /=.
+      by rewrite HA HB if_same.
+    move=> A HA B0 _ B HB /=.
+    by rewrite HA.
+  Qed.
+
+  Lemma next_alt_cutr {s A}: next_alt s (cutr A) = None.
+  Proof.
+    elim: A s => //.
+      move=> A HA s1 B HB s2 /=.
+      by rewrite HA failed_cutr !HB if_same.
+    move=> A HA B0 _ B HB /= s1.
+    by rewrite failed_cutr HA if_same.
+  Qed.
+
   Lemma next_alt_or_some {s B s' C y}:
     next_alt s B = Some (s', C) ->  y <> dead y -> forall x, next_alt s (Or B x y) = Some (s', Or C x y).
   Proof.
@@ -540,13 +572,6 @@ Module Run (U : Unif).
   Definition has_next_alt s := isSome (next_alt empty s).
 
   Lemma cut_dead1 {A}: cutl A = dead A -> dead A = A.
-  Proof. 
-    elim: A=> //.
-      move=> A HA s B HB/=[]??; rewrite HA//HB//.
-    move=> A HA B0 _ B HB/=[]?; rewrite HA//?HB//.
-  Qed.
-
-  Lemma cutr_dead1 {A}: cutr A = dead A -> dead A = A.
   Proof. 
     elim: A=> //.
       move=> A HA s B HB/=[]??; rewrite HA//HB//.
@@ -707,7 +732,7 @@ Module Run (U : Unif).
     + move=> p [].
       by eexists.
     + move=> ?? //=.
-    + move=> A IHA s B IHB s1 /simpl_expand_or_cut => -[s3[B'[?[]]]] //.
+    + move=> A IHA s B IHB s1 /simpl_expand_or_cut => -[s3[B'[? ]]] //.
     + move=> A IHA B IHB C IHC s1 /simpl_expand_and_cut [].
       + by move=> [A' [H]] /[subst1].
       + by move=> [s'[A'[B' [HA[HB]]]]] /[subst1].
@@ -762,14 +787,6 @@ Module Run (U : Unif).
     + by move=> A HA s B HB /=; rewrite HA HB.
     + by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
   Qed.
-
-  Lemma dead_cutr_is_dead {A}: dead(cutr A) = dead A.
-  Proof.
-    elim: A => //.
-    + by move=> A HA s B HB /=; rewrite HA HB.
-    + by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
-  Qed.
-
 
   Definition is_meta X := match X with OK | KO | Dead => true | _ => false end.
 
