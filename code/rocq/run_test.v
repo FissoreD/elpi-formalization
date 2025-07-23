@@ -264,7 +264,7 @@ Module Test2.
   Qed.
 
   Goal forall p, 
-    run empty (Or (Goal p Cut) empty (Or OK empty OK)) (Done empty (Or OK empty (cut ((Or OK empty OK))))).
+    run empty (Or (Goal p Cut) empty (Or OK empty OK)) (Done empty (Or OK empty (cutr ((Or OK empty OK))))).
     move=> p; eexists.
     apply: run_done.
     apply: expanded_step => //=.

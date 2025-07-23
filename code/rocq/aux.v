@@ -108,7 +108,7 @@ Proof.
 Admitted.
 
 Lemma expand_cut_result {s A r}:
-  expand s (cut A) = r -> (exists B, r = Expanded B) \/ r = Failure.
+  expand s (cutl A) = r -> (exists B, r = Expanded B) \/ r = Failure.
 Proof.
   elim: A s r => //=; auto.
   + move=> A IH a A' HA' s r //=.

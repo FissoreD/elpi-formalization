@@ -151,7 +151,7 @@ Module check (U:Unif).
     if infer_output G r.(head) is (_, true) then incl body_det expected_det else false . *)
 
   Fixpoint has_cut_and A :=
-    (A == cut A) ||
+    (A == cutl A) ||
     match A with
     | Goal _ Cut => true
     | Bot => true
@@ -166,18 +166,18 @@ Module check (U:Unif).
     | _ => has_cut_and A
     end.
 
-  Lemma has_cut_and_hard_cut {A}: has_cut_and (cut A).
+  Lemma has_cut_and_hard_cut {A}: has_cut_and (cutl A).
   Proof. case: A => //=*; rewrite ?hard_cut_hard_cut_same ?cut_cut_same ?eqxx ?orbT//. Qed.
 
-  Lemma has_cut_hard_cut {A}: has_cut (cut A).
+  Lemma has_cut_hard_cut {A}: has_cut (cutl A).
   Proof. elim: A => //=*; rewrite ?has_cut_and_hard_cut //?orbT//. Qed.
 
-  Lemma has_cut_and_cut {B}: has_cut_and (cut B).
+  Lemma has_cut_and_cut {B}: has_cut_and (cutl B).
   Proof.
     by destruct B => //=; rewrite !cut_cut_same eqxx.
   Qed.
 
-  Lemma has_cut_cut {B}: has_cut (cut B).
+  Lemma has_cut_cut {B}: has_cut (cutl B).
   Proof.
     elim: B => //=.
       move=> ? _ _ B HB. 
@@ -207,15 +207,15 @@ Module check (U:Unif).
     by rewrite has_cut_and_cut has_cut_cut.
   Qed.
 
-  Lemma or_cut_dead B : (B == cut B) || (B == dead B) = (B == cut B).
+  Lemma or_cut_dead B : (B == cutl B) || (B == dead B) = (B == cutl B).
   Proof. by rewrite orb_idr //; move/eqP->; rewrite cut_dead_is_dead. Qed.
 
 
-  (* a free alternative can be reached without encountering a cut following SLD 
+  (* a free alternative can be reached without encountering a cutl following SLD 
   
     "((A, !, A') ; B) , C" is OK since B is not free
     "((A, A') ; B) , !, C" is OK because any alt from first conjunct dies
-    "((A, A') ; B) , C" is OK if B is dead already (cut by predecessor of A for example)
+    "((A, A') ; B) , C" is OK if B is dead already (cutl by predecessor of A for example)
   
   *)
   Fixpoint no_free_alt sig A :=
@@ -224,20 +224,20 @@ Module check (U:Unif).
     | Top | Bot | KO => true
     | OK | Dead => true
     | And A B0 B =>
-      if (A == cut A) then true else
+      if (A == cutl A) then true else
       ((if has_cut B0 then has_cut B else no_free_alt sig A) &&
       no_free_alt sig B && no_free_alt sig B0)
     | Or A _ B =>
       (* Più o meno... *)
       if has_cut A then no_free_alt sig A && no_free_alt sig B
-      else no_free_alt sig A && (B == cut B)
+      else no_free_alt sig A && (B == cutl B)
     end.
 
   Fixpoint no_new_alt (sig: C -> S) A B {struct A} :=
     match A, B with
 
     | OK, OK | Top, Top | Top, OK | Bot, Bot => true
-    | Top, KO | Bot, KO | KO, KO => true
+    | OK, KO | Top, KO | Bot, KO | KO, KO => true
     | OK, Dead | Top, Dead | Bot, Dead | KO, Dead | Dead, Dead => true
 
     | Or A _ B, Or A' _ B' =>
@@ -275,7 +275,7 @@ Module check (U:Unif).
       move=>/and3P[]/HA->; rewrite !dead_dead_same//.
   Qed.
 
-  Lemma no_new_alt_cut_left {sig A B}: no_new_alt sig (cut A) B -> B = cut B.
+  Lemma no_new_alt_cut_left {sig A B}: no_new_alt sig (cutl A) B -> B = cutl B.
   Proof.
     elim: A B; try by move=> [].
     + move=>??[]//.
@@ -298,7 +298,7 @@ Module check (U:Unif).
     move=> /=/andP[]//.
   Qed.
 
-  Lemma no_new_alt_cut1 {sig A}: no_new_alt sig A (cut A).
+  Lemma no_new_alt_cut1 {sig A}: no_new_alt sig A (cutr A).
   Proof.
     elim: A => //.
     + by move=> /= _ [] //= t; rewrite if_same.
@@ -308,7 +308,7 @@ Module check (U:Unif).
       by rewrite HA eqxx no_new_alt_id !orbT.
   Qed.
 
-  Lemma no_alt_cut {sig A}: no_free_alt sig (cut A).
+  Lemma no_alt_cut {sig A}: no_free_alt sig (cutl A).
   Proof.
     elim: A => //.
     + by move=> A HA s B HB /=; rewrite has_cut_cut HA HB.
@@ -449,7 +449,7 @@ Module check (U:Unif).
   Qed. 
 
   Lemma no_new_alt_cut_right {sig A B}:
-    no_new_alt sig A B -> no_new_alt sig A (cut B).
+    no_new_alt sig A B -> no_new_alt sig A (cutl B).
   Proof.
     elim: A B; try by move=> []//.
     - move=> p[|t]//=[]//.
@@ -479,7 +479,6 @@ Module check (U:Unif).
         move=>[]??;subst.
         by rewrite (HB _ _ _ X)no_new_alt_id.
       move=> dA.
-      case: ifP => /eqP//dB.
       case X:  next_alt => //[[s3 D]|].
         move=> -[]??;subst.
         rewrite no_new_alt_id//.
@@ -489,6 +488,7 @@ Module check (U:Unif).
         move=>[]??;subst.
         rewrite (no_new_alt_trans_dead0).
         by apply: HB Y.
+      case: ifP => /eqP//dB.
       move=>[]??;subst.
       by rewrite (no_new_alt_trans_dead0) no_new_alt_id.
     + move=> A HA B0 _ B HB C s1 s2/=.
