@@ -879,6 +879,14 @@ Module Run (U : Unif).
       move=> _ C []; rewrite dead_cut_is_dead => /cut_dead1; congruence.
   Qed.
 
+  Lemma expand_not_deadb {s A r}: 
+    A == dead A = false -> expand s A = r -> get_state r == dead (get_state r) = false.
+  Proof.
+    move=>/eqP H1 H2.
+    case: eqP => //= H3.
+    by have:= expand_not_dead H1 H2 H3.
+  Qed.
+
   Lemma expanded_not_dead {s A r b}: 
     A <> dead A -> expandedb s A r b -> get_state_run r <> dead (get_state_run r).
   Proof.
