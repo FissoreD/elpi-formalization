@@ -1,4 +1,3 @@
-(* Require Import Coq.Program.Wf. *)
 From mathcomp Require Import all_ssreflect.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
@@ -135,7 +134,7 @@ Module Run (U : Unif).
 
   Inductive state :=
     | KO : state
-    | OK : (*Sigma ->*) state
+    | OK : bool ->(*Sigma ->*) state
     | Top : state
     | Bot : state
     | Dead : state
@@ -165,7 +164,7 @@ Module Run (U : Unif).
   Fixpoint dead A :=
   match A with
   | Dead => Dead
-  | OK | KO | Bot | Goal _ _ | Top => Dead
+  | OK _ | KO | Bot | Goal _ _ | Top => Dead
   | And A B0 B => And (dead A) B0 B
   | Or A s B => Or (dead A) s (dead B)
   end.
@@ -190,7 +189,7 @@ Module Run (U : Unif).
     (* if A == dead A then Dead else *)
     match A with
     | Bot | Goal _ _ | Top => KO
-    | Dead | KO | OK => A
+    | Dead | KO | OK _ => A
     | And A B0 B => And (cutl A) B0 B
     | Or A s B => Or (cutl A) s (cutl B)
     end.
@@ -198,11 +197,25 @@ Module Run (U : Unif).
   Fixpoint cutr A :=
     (* if A == dead A then Dead else *)
     match A with
-    | Bot | Goal _ _ | Top | OK => KO
+    | Bot | Goal _ _ | Top | OK _ => KO
     | Dead | KO => A
     | And A B0 B => And (cutr A) B0 B
     | Or A s B => Or (cutr A) s (cutr B)
     end.
+
+  Lemma cutr_cutl_is_cutr A: cutr (cutl A) = cutr A.
+  Proof.
+    elim: A => //.
+      by move=> A HA s B HB /=; rewrite HA HB.
+    by move=> A HA B0 _ B HB /=; rewrite HA.
+  Qed.
+
+  Lemma cutl_cutr_is_cutr A: cutl (cutr A) = cutr A.
+  Proof.
+    elim: A => //.
+      by move=> A HA s B HB /=; rewrite HA HB.
+    by move=> A HA B0 _ B HB /=; rewrite HA.
+  Qed.
 
   Definition mkAnd A B0 r :=
     match r with
@@ -237,16 +250,16 @@ Module Run (U : Unif).
   Fixpoint expand s A : expand_res :=
     match A with
     (* meta *)
-    | OK => Solved s OK
+    | OK b1 => Solved s (OK b1)
     | KO => Failure KO
 
     (* meta *)
     | Dead => Failure Dead
     
     (* lang *)
-    | Top              => Expanded s OK
+    | Top              => Expanded s (OK false)
     | Bot              => Expanded s KO
-    | Goal _ Cut       => CutBrothers s OK
+    | Goal _ Cut       => CutBrothers s (OK true)
     | Goal pr (Call t) => Expanded s (big_or pr s t)
 
     (* recursive cases *)
@@ -271,7 +284,7 @@ Module Run (U : Unif).
 
   Fixpoint success (A : state) : bool :=
     match A with
-    | OK => true
+    | OK _ => true
     | Top | Bot | Goal _ _ | KO | Dead => false
     | And A _ B => success A && success B
     | Or A _ B => if A == dead A  then success B else success A
@@ -281,7 +294,7 @@ Module Run (U : Unif).
   Fixpoint failed (A : state) : bool :=
     match A with
     | KO | Dead => true
-    | Top | Bot | Goal _ _ | OK => false
+    | Top | Bot | Goal _ _ | OK _ => false
     | And A _ B => failed A || (success A && failed B)
     | Or A _ B => if A == dead A then failed B else failed A (*&& failed B*)
     end.
@@ -321,7 +334,7 @@ Module Run (U : Unif).
 
   Fixpoint next_alt (s : Sigma) (A : state) : option (Sigma * state) :=
     match A with
-    | KO | OK => None
+    | KO | OK _ => None
     | Dead => None
     | Top | Bot | Goal _ _ => None
     | And A B0 B =>
@@ -725,19 +738,6 @@ Module Run (U : Unif).
     + by move=> A IHA B IHB s1 s2 /simpl_expand_and_solved [s' [A' [B' [H1 [H2]]]]].
   Qed. *)
 
-  Lemma expand_cb_OK {s1 s2 A}:
-    expand s1 A = CutBrothers s2 OK -> (exists p, A = Goal p Cut).
-  Proof.
-    elim: A s1 => //.
-    + move=> p [].
-      by eexists.
-    + move=> ?? //=.
-    + move=> A IHA s B IHB s1 /simpl_expand_or_cut => -[s3[B'[? ]]] //.
-    + move=> A IHA B IHB C IHC s1 /simpl_expand_and_cut [].
-      + by move=> [A' [H]] /[subst1].
-      + by move=> [s'[A'[B' [HA[HB]]]]] /[subst1].
-  Qed.
-
   (* Lemma cut_dead {A}: cutl A = dead (cutl A) -> dead A = A.
   Proof.
     elim: A=> //.
@@ -788,7 +788,7 @@ Module Run (U : Unif).
     + by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
   Qed.
 
-  Definition is_meta X := match X with OK | KO | Dead => true | _ => false end.
+  Definition is_meta X := match X with OK _ | KO | Dead => true | _ => false end.
 
   (* Lemma simpl_next_alt_false {s1 s2 A B r}: 
     next_alt false s1 (Or A s2 B) = Some r -> 
@@ -961,7 +961,8 @@ Module Run (U : Unif).
   Proof.
     move=> ->.
     case: A s; try by move=>?; apply: expanded_fail.
-    + by move=>???; apply: expanded_fail.
+    + try by move=>??; apply: expanded_fail.
+    + by move=> /= _ _ s; apply expanded_fail.
     + all: move=> *; apply: expanded_fail;
       rewrite /= expand_dead//!dead_dead_same//eqxx//.
   Qed.
@@ -987,7 +988,7 @@ Module Run (U : Unif).
     expand s1 A = Solved s2 B -> success A /\ success B.
   Proof.
     elim: A s1 s2 B => //.
-    + by move=> /= ??? [] /[subst2].
+    + by move=> /= ???? [] /[subst2].
     + move=> ? [] //.
     + move=> A HA s B HB s1 s2 C/=.
       case: ifP => /eqP dA.

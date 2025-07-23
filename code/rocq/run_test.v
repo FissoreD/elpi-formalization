@@ -254,6 +254,7 @@ End Test6.
 
 Module Test2.
   Import RunAxiom.
+  Definition OK := OK true.
   Goal expand empty (Or OK empty OK) = Solved empty (Or OK empty OK) . by []. Qed.
 
   Goal forall p, run empty (Or (Goal p Cut) empty Top) (Done empty (Or OK empty KO)).

@@ -62,7 +62,7 @@ Module valid_state (U:Unif).
 
   Fixpoint valid_state s :=
     match s with
-    | Goal _ _ | OK | KO | Bot | Top => true
+    | Goal _ _ | OK _ | KO | Bot | Top => true
     | Dead => false
     | Or A _ B => 
       if A == dead A then valid_state B
@@ -150,6 +150,7 @@ Module valid_state (U:Unif).
   Proof.
     move=> /=; case: A => //.
     all: try by move=> /= ->; right; repeat split => //; rewrite orbT //.
+    try by move=> ? /= ->; right; repeat split => //; rewrite orbT //.
     + move=> /= ->; left => //.
     + move=> ?? /orP [] ->; right; repeat split => //; rewrite orbT //.
     + move=> ???; case:ifP=>/eqP//.
