@@ -330,6 +330,7 @@ Module Run (U : Unif).
   Qed.
 
   Definition is_base X := match X with Top | Bot | Goal _ _ => true | _ => false end.
+  Definition is_expanded X := match X with Expanded _ _ => true | _ => false end.
 
 
   Fixpoint next_alt (s : Sigma) (A : state) : option (Sigma * state) :=

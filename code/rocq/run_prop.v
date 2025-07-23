@@ -5,6 +5,23 @@ Module RunP (A: Unif).
   Module Run := Run(A).
   Import Run Language.
 
+  Lemma expand_big_or {p s s1 t r}: 
+    expand s (big_or p s1 t) = r -> is_expanded r.
+  Proof.
+    rewrite /big_or/F.
+    move=> <-; clear.
+    case: p => //= rules modes sig1.
+    generalize {| rules := rules; modes := modes; sig := sig1 |} as pr => pr.
+    generalize (modes t) as m => {}modes.
+    elim: rules => //= -[] hd bo rs/=.
+    move=> IH.
+    case: H => //.
+  Qed.
+
+  Lemma expand_big_or1 {p s t}: 
+    is_expanded (expand s (big_or p s t)).
+  Proof. by apply: expand_big_or. Qed.
+
   Lemma expanded_classic_expanded {s A r}:
     Run.expanded_classic s A r -> Run.expanded s A r.
   Proof. by exists false. Qed.
