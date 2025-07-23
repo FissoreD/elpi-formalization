@@ -30,16 +30,16 @@ Module RunP (A: Unif).
     run_classic s A r -> run s A r.
   Proof. by exists false. Qed.
 
-  Lemma expand_cutr {A s1 r}: expand s1 (cutr A) = r -> is_fail r.
+  Lemma expand_cutr {A s1 r}: expand s1 (cutr A) = r -> is_fail r && (get_state r == cutr (get_state r)).
   Proof.
     move=><-; clear.
     elim: A s1 => //.
     - move=> A HA s B HB s1 /=.
       case: ifP=> //.
-        have:= HB s1; by case: expand => //[s3 D] /(_ D s3)//.
-      have:= HA s1; by case: expand => //[s3 D] /(_ D s3)//.
+        by have:= HB s1; case: expand => //[s3]/= /eqP<-; rewrite cutr2_same eqxx.
+      have:= HA s1; case: expand => //[s3] /=/eqP<-; rewrite cutr2_same eqxx//.
     - move=> A HA B0 _ B HB s1 /=.
-      have:= HA s1; by case: expand => //[s3 D] /(_ D s3)//.
+      have:= HA s1; case: expand => //[s3]/=/eqP<-; rewrite eqxx//.
   Qed.
 
   Lemma run_classic_cut {s s2 A B r}:
