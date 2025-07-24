@@ -104,7 +104,7 @@ Module Run (U : Unif).
     | _, _, _ => None
     end.
 
-  Fixpoint select (query : Tm) (modes:list mode) (rules: list R) sigma :=
+  Fixpoint select (query : Tm) (modes:list mode) (rules: list R) sigma : seq (Sigma * R) :=
     match rules with
     | [::] => [::]
     | rule :: rules =>
@@ -114,7 +114,7 @@ Module Run (U : Unif).
       end
     end.
 
-  Definition F pr query s :=
+  Definition F pr query s : seq (Sigma * R) :=
     let rules := pr.(rules) in
     let modes := pr.(modes) query in
     let rules := select query modes rules s in
