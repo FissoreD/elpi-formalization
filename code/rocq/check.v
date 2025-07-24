@@ -22,7 +22,10 @@ Module check (U:Unif).
     end.
 
   Definition det_term sig (t : Tm) :=
-    is_det_sig (sig (get_head t)).
+    match sig (get_head t) with 
+    | None => false
+    | Some s => is_det_sig s
+    end.
 
   Definition det_atom sig (s: A) :=
     match s with
@@ -196,7 +199,7 @@ Module check (U:Unif).
           if has_cut A then no_free_alt sig B else (B == cutr B)
     end.
 
-  Fixpoint no_new_alt (sig: C -> S) A B {struct A} :=
+  Fixpoint no_new_alt (sig: sigT) A B {struct A} :=
     match A, B with
 
     | OK b1, OK b2 => b1 == b2
@@ -489,7 +492,7 @@ Module check (U:Unif).
 
   Section has_cut. 
 
-    Fixpoint cut_followed_by_det (sig : C -> S) (s: seq A) :=
+    Fixpoint cut_followed_by_det (sig :sigT) (s: seq A) :=
       match s with
       | [::] => false
       | Cut :: xs => all (det_atom sig) xs || cut_followed_by_det sig xs
@@ -1009,7 +1012,7 @@ Module check (U:Unif).
     
     Definition AllTailCut := (forall pr : program, all tail_cut (rules pr)).
 
-    Lemma cut_in_prem_tail_cut {sig}: AllTailCut -> all_cut_followed_by_det sig.
+    Lemma cut_in_prem_tail_cut sig: AllTailCut -> all_cut_followed_by_det sig.
     Proof.
       rewrite /AllTailCut /all_cut_followed_by_det.
       rewrite /tail_cut /all_cut_followed_by_det_aux.
@@ -1024,14 +1027,14 @@ Module check (U:Unif).
       by move=> H1 H2; rewrite IH//orbT.
     Qed.
 
-    Lemma tail_cut_is_det A:
-      AllTailCut -> is_det A.
+    Lemma tail_cut_is_det sig p t:
+      AllTailCut -> det_term sig t -> is_det (Goal p (Call t)).
     Proof.
-      move=> /(@cut_in_prem_tail_cut empty_sig).
-      apply: cut_in_prem_is_det.
+      move=> /(cut_in_prem_tail_cut sig).
+      apply main.
     Qed.
   End tail_cut.
 
-  Print Assumptions cut_in_prem_is_det.
+  Print Assumptions tail_cut_is_det.
 
 End check.
