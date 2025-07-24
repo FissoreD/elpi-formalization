@@ -108,25 +108,40 @@ Module RunP (A: Unif).
     inversion H3; subst; simpl in *; congruence.
   Qed.
 
-  (* Lemma next_alt_cut {b s s' A B}: next_alt_aux b s (cutl A) = Some (s', B) -> exists A, B = cutl A.
+  Lemma next_alt_cut {s s' A B}: next_alt s (cutl A) = Some (s', B) -> exists A, B = cutl A.
   Proof.
-    elim: A b B s s' => //; clear.
-    + move=> A IH s2 B IHB bool C s s'; simpl cutl => /simpl_next_alt_aux_some [|[]].
-      + move=> [B'[]]; destruct A => // _ [] /IHB [B2] /[subst2].
-        by exists (Or Dead s2 B2) => //=.
-      + by move=> [A'[_ [+]]] /[subst1] /IH [C] /[subst1]; exists (Or C s2 B) => /=.
-      + move=> [_ [H]] /[subst1] .
-        by exists (Or Dead s2 B) => /=.
-    + move=> A HA B0 HB0 B HB bool C s s'; rewrite /next_alt /=.
-      case G: next_alt_aux => [x|].
-      + case: x G => s2 b HN [] /[subst2].
-        move: (HB _ _ _ _ HN) => [B'] /[subst1].
-        by exists (And A B0 B').
-      + case H: next_alt_aux => [x|] //.
-        case: x H => s2 A' NA -[] /[subst2].
-        move: (HA _ _ _ _ NA) => [A2] /[subst1] //.
-        by exists (And A2 B0 B0).
-  Qed. *)
+    elim: A B s s' => //; clear.
+    + move=> A IH s2 B IHB C s s'/=.
+      case: ifP => //.
+        move=>/eqP->/=; rewrite dead_dead_same eqxx.
+        have:= IHB _ s.
+        case: next_alt => // [[s1 D]] /(_ _ _ erefl)[E ->][_ <-].
+        by exists (Or (dead A) s2 E)=>/=; rewrite cut_dead_is_dead dead_dead_same eqxx.
+      move=> dA/=; rewrite dead_cut_is_dead.
+      case: ifP => ///eqP.
+        move=>/cut_dead1->; rewrite next_alt_cutr//.
+      move=> cA; have:= IH _ s.
+      case: next_alt => // [[s3 E]|].
+        move=>/(_ _ _ erefl)[F]->[_<-]; exists (Or (cutl F) s2 (cutr B)).
+        by move=>/=; rewrite !cutl_cutr_is_cutr cut_cut_same cutr2_same if_same.
+      by move=> _; rewrite failed_cutr next_alt_cutr.
+    + move=> A HA B0 HB0 B HB C s s'/=.
+      rewrite dead_cut_is_dead.
+      case: ifP => // cdA.
+      case: ifP => // fcA.
+        have:= HA _ s.
+        case: next_alt => //[[s1 D]] /(_ _ _ erefl)[E->].
+        case: ifP => // _ [_<-]; exists (And E B0 B0).
+        by move=>/=.
+      have:= HB _ s.
+      case: next_alt => // [[s2 D]|].
+        by move=>/(_ _ _ erefl)[E->][_<-]; exists (And A B0 E).
+      move=>_.
+      have:= HA _ s.
+      case: next_alt => //[[s1 D]] /(_ _ _ erefl)[E->].
+      case: ifP => // _ [_<-]; exists (And E B0 B0).
+      by move=>/=.
+  Qed.
 
   (* Lemma expanded_cut_done {s s' A B}:
     solved A -> expanded s (cutl A) (Done s' B) -> s = s'.
@@ -238,7 +253,7 @@ Module RunP (A: Unif).
     match A with
     | And A1 B0 B1 =>
       match B with 
-      | And A' B0' B' => [&& B0 == B0', same_structure A1 A' & same_structure B1 B']
+      | And A' B0' B' => [&& same_structure B0 B0', same_structure A1 A' & same_structure B1 B']
       | _ => false
       end
     | Or A1 s B1 =>
@@ -253,21 +268,24 @@ Module RunP (A: Unif).
   Proof. 
     elim: A => //=.
       by move=>?->??->; rewrite eqxx.
-    by move=> ?->? _?->; rewrite eqxx.
+    by move=> ?->? ->?->.
   Qed.
 
-  (* Lemma same_structure_cut {A B}: same_structure A B -> same_structure A (cutl B).
-  Proof. 
-    elim: A B => //=.
-      move=> A HA s B HB []// A' s' B' /= /and3P[/eqP<-/HA->/HB->]; rewrite eqxx.
-    by move=> A HA B0 _ B HB []//A' B0' B'/=/and3P[/eqP<-]/HA->->; rewrite eqxx.
-  Qed. *)
-
-  (* Lemma same_structure_cutr {A B}: same_structure A B -> same_structure A (cutr B).
+  Lemma same_structure_cutr {A B}: same_structure A B -> same_structure A (cutr B).
   Proof. 
     elim: A B => //=.
       by move=> A HA s B HB []// A' s' B' /= /and3P[/eqP<-/HA->/HB->]; rewrite eqxx.
-    by move=> A HA B0 _ B HB []//A' B0' B'/=/and3P[/eqP<-]/HA->->; rewrite eqxx.
+    by move=> A HA B0 HB0 B HB []//A' B0' B'/=/and3P[/HB0->]/HA-> /HB->.
+  Qed.
+  
+  Lemma same_structure_cut {A B}: same_structure A B -> same_structure A (cutl B).
+  Proof. 
+    elim: A B => //=.
+      move=> A HA s B HB []// A' s' B' /= /and3P[/eqP<- H2 H3].
+      case: ifP => //.
+        by rewrite H2 HB//eqxx.
+      by rewrite eqxx HA// same_structure_cutr//.
+    by move=> A HA B0 HB0 B HB []//A' B0' B'/=/and3P[/HB0->/HA->/HB->].
   Qed.
 
   Lemma same_structure_trans {A B C}: 
@@ -277,12 +295,12 @@ Module RunP (A: Unif).
       move=> A HA s B HB []// A1 s1 B1 /= []// A2 s2 B2.
       move=>/and3P[/eqP<- ssA ssB]/and3P[/eqP<- ssA1 ssB2].
       by rewrite eqxx (HA A1 A2)//(HB B1 B2)//.
-    move=> A HA B0 _ B HB []// A1 B01 B1[]// A2 B02 B2/=.
-    move=>/and3P[/eqP<- ssA ssB]/and3P[/eqP<- ssA1 ssB2].
-      by rewrite eqxx (HA A1 A2)//(HB B1 B2)//.
-  Qed. *)
+    move=> A HA B0 HB0 B HB []// A1 B01 B1[]// A2 B02 B2/=.
+    move=>/and3P[ssB0 ssA ssB]/and3P[ssB1 ssA1 ssB2].
+      by rewrite (HB0 B01 B02)// (HA A1 A2)//(HB B1 B2)//.
+  Qed.
 
-  (* Lemma expand_same_structure {s A r}: 
+  Lemma expand_same_structure {s A r}: 
     expand s A = r -> same_structure A (get_state r).
   Proof.
     elim: A s r => //.
@@ -300,20 +318,21 @@ Module RunP (A: Unif).
       - move=> /simpl_expand_or_solved[].
           by move=>[A'[HA'->]]/=; rewrite eqxx same_structure_id (HA _ _ HA').
         by move=> [B'[_ [HB'->]]]/=; rewrite eqxx same_structure_id (HB _ _ HB').
-    move=> A HA B0 _ B HB s1 [s2|s2||s2]C.
+    move=> A HA B0 HB0 B HB s1 [s2|s2||s2]C.
     - move=> /simpl_expand_and_expanded[].
-        by move=>[A'[HA'->]]/=; rewrite eqxx same_structure_id (HA _ _ HA').
-      by move=> [s'[A'[B' [HA'[HB' ->]]]]]/=; rewrite eqxx (HA _ _ HA') (HB _ _ HB').
+        by move=>[A'[HA'->]]/=; rewrite !same_structure_id (HA _ _ HA').
+      by move=> [s'[A'[B' [HA'[HB' ->]]]]]/=; rewrite (HA _ _ HA') (HB _ _ HB') same_structure_id.
     - move=> /simpl_expand_and_cut[].
-        by move=>[A'[HA'->]]/=; rewrite eqxx same_structure_id (HA _ _ HA').
-      by move=>[s'[A'[B'[HA'[HB' ->]]]]]/=; rewrite eqxx (HB _ _ HB') same_structure_cut// (HA _ _ HA').
+        by move=>[A'[HA'->]]/=; rewrite !same_structure_id (HA _ _ HA').
+      move=>[s'[A'[B'[HA'[HB' ->]]]]]/=; rewrite (HB _ _ HB') same_structure_id//.
+      by have:= (HA _ _ HA') => /same_structure_cut->.
     - move=> /simpl_expand_and_fail[].
-        by move=> [A'[HA'->]]/=; rewrite eqxx same_structure_id (HA _ _ HA').
-      by move=> [s'[A'[B'[HA'[HB' ->]]]]]/=; rewrite eqxx (HA _ _ HA') (HB _ _ HB').
-    - by move=> /simpl_expand_and_solved [s'[A'[B'[HA'[HB'->]]]]]/=; rewrite eqxx (HA _ _ HA') (HB _ _ HB').
-  Qed. *)
+        by move=> [A'[HA'->]]/=; rewrite !same_structure_id (HA _ _ HA').
+      by move=> [s'[A'[B'[HA'[HB' ->]]]]]/=; rewrite (HA _ _ HA') (HB _ _ HB') same_structure_id.
+    - by move=> /simpl_expand_and_solved [s'[A'[B'[HA'[HB'->]]]]]/=; rewrite (HA _ _ HA') (HB _ _ HB') same_structure_id.
+  Qed.
 
-  (* Lemma expanded_same_structure {s A r}: 
+  Lemma expanded_same_structure {s A r}: 
     expanded s A r -> same_structure A (get_state_run r).
   Proof.
     move=> [b H].
@@ -325,7 +344,7 @@ Module RunP (A: Unif).
       apply: same_structure_trans.
     + move=> ??????/expand_same_structure/= + _.
       apply: same_structure_trans.
-  Qed. *)
+  Qed.
 
   Lemma expanded_success_same_subst {s A s1 A2}: 
     success A -> expanded s A (Done s1 A2) -> s = s1 /\ A = A2.

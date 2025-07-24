@@ -71,7 +71,6 @@ Module valid_state (U:Unif).
       [&& valid_state A,
         if success A then valid_state B 
         else (B0 == B)
-        (* ssa B0 B & *)
         & (base_and B0)]
     end.
 
