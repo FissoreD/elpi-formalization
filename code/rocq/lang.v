@@ -184,16 +184,6 @@ Module Run (U : Unif).
     | Solved s B      => Solved   s  (Or A sB B)
     end.
 
-    (* Maybe replace all cutout with bot, and remove the cutout constructor *)
-  Fixpoint cutl A :=
-    (* if A == dead A then Dead else *)
-    match A with
-    | Bot | Goal _ _ | Top => KO
-    | Dead | KO | OK _ => A
-    | And A B0 B => And (cutl A) B0 B
-    | Or A s B => Or (cutl A) s (cutl B)
-    end.
-
   Fixpoint cutr A :=
     (* if A == dead A then Dead else *)
     match A with
@@ -203,19 +193,28 @@ Module Run (U : Unif).
     | Or A s B => Or (cutr A) s (cutr B)
     end.
 
-  Lemma cutr_cutl_is_cutr A: cutr (cutl A) = cutr A.
-  Proof.
-    elim: A => //.
-      by move=> A HA s B HB /=; rewrite HA HB.
-    by move=> A HA B0 _ B HB /=; rewrite HA.
-  Qed.
+   Fixpoint success (A : state) : bool :=
+    match A with
+    | OK _ => true
+    | Top | Bot | Goal _ _ | KO | Dead => false
+    | And A _ B => success A && success B
+    | Or A _ B => if A == dead A  then success B else success A
+    end.
 
-  Lemma cutl_cutr_is_cutr A: cutl (cutr A) = cutr A.
-  Proof.
-    elim: A => //.
-      by move=> A HA s B HB /=; rewrite HA HB.
-    by move=> A HA B0 _ B HB /=; rewrite HA.
-  Qed.
+
+    (* Maybe replace all cutout with bot, and remove the cutout constructor *)
+  Fixpoint cutl A :=
+    (* if A == dead A then Dead else *)
+    match A with
+    | Bot | Goal _ _ | Top => KO
+    | Dead | KO | OK _ => A
+    | And A B0 B => And (cutl A) B0 B
+    | Or A s B => 
+        if A == dead A then Or A s (cutl B)
+        else  Or (cutl A) s (cutr B)
+         (* Or (cutl A) s (if success A then cutr B else cutl B) *)
+    end.
+
 
   Definition mkAnd A B0 r :=
     match r with
@@ -281,14 +280,6 @@ Module Run (U : Unif).
         end
     end
   .
-
-  Fixpoint success (A : state) : bool :=
-    match A with
-    | OK _ => true
-    | Top | Bot | Goal _ _ | KO | Dead => false
-    | And A _ B => success A && success B
-    | Or A _ B => if A == dead A  then success B else success A
-    end.
 
 
   Fixpoint failed (A : state) : bool :=
@@ -588,7 +579,9 @@ Module Run (U : Unif).
   Lemma cut_dead1 {A}: cutl A = dead A -> dead A = A.
   Proof. 
     elim: A=> //.
-      move=> A HA s B HB/=[]??; rewrite HA//HB//.
+      move=> A HA s B HB/=[]?. case: ifP.
+        move=> sA /cutr_dead1<-; rewrite dead_dead_same HA//.
+      move=> _ /HB->; rewrite HA//.
     move=> A HA B0 _ B HB/=[]?; rewrite HA//?HB//.
   Qed.
 
@@ -750,28 +743,18 @@ Module Run (U : Unif).
       + by move=> [] /HA ->.
   Qed. *)
 
-  Lemma cut_cut_same {a}: cutl (cutl a) = cutl a.
-  Proof.
-    elim: a => //=.
-    + move=> A HA s B HB.
-      by move=> /=; rewrite HA HB.
-    + move=> A HA B0 HB0 B HB.
-      by move=> /=; rewrite HA ?HB0 ?HB.
-  Qed.
 
-  Lemma cutr2_same {a}: cutr (cutr a) = cutr a.
-  Proof.
-    elim: a => //=.
-    + move=> A HA s B HB.
-      by move=> /=; rewrite HA HB.
-    + move=> A HA B0 HB0 B HB.
-      by move=> /=; rewrite HA ?HB0 ?HB.
+  Lemma success_dead {A}: success (dead A) = false.
+  Proof. 
+    elim: A=> //. 
+      by move=> A HA s B HB /=; rewrite HA HB if_same.
+    by move=> A HA B0 ? B HB/=; rewrite HA ?HB.
   Qed.
 
   Lemma cut_dead_is_dead {A}: cutl(dead A) = dead A.
   Proof.
     elim: A => //.
-    + by move=> A HA s B HB /=; rewrite HA HB.
+    + move=> A HA s B HB /=; rewrite HA HB; rewrite success_dead//.
     + by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
   Qed.
 
@@ -785,7 +768,7 @@ Module Run (U : Unif).
   Lemma dead_cut_is_dead {A}: dead(cutl A) = dead A.
   Proof.
     elim: A => //.
-    + by move=> A HA s B HB /=; rewrite HA HB.
+    + move=> A HA s B HB /=; rewrite HA; case: ifP; rewrite ?HB//dead_cutr_is_dead//.
     + by move=> A HA B0 HB0 B HB /=; rewrite HA ?HB.
   Qed.
 
@@ -889,12 +872,6 @@ Module Run (U : Unif).
     by right.
   Qed. *)
 
-  Lemma success_dead {A}: success (dead A) = false.
-  Proof. 
-    elim: A=> //. 
-      by move=> A HA s B HB /=; rewrite HA HB if_same.
-    by move=> A HA B0 ? B HB/=; rewrite HA ?HB.
-  Qed.
 
   Lemma success_dead1 {A}: success A -> A <> dead A.
   Proof.
@@ -1044,7 +1021,8 @@ Module Run (U : Unif).
     + move=> A HA s B HB /=.
       rewrite dead_cut_is_dead.
       case:ifP=>/eqP.
-        by move=> /cut_dead1//->; rewrite eqxx.
+        move=> /cut_dead1//<-.
+        by rewrite dead_dead_same success_dead eqxx.
       by case: eqP => //->; rewrite dead_dead_same cut_dead_is_dead.
     + move=> A HA B HB C HC /=.
       by rewrite HA ?HC.
@@ -1071,6 +1049,42 @@ Module Run (U : Unif).
     by rewrite HA.
   Qed.
 
+  Lemma cutr2_same {a}: cutr (cutr a) = cutr a.
+  Proof.
+    elim: a => //=.
+    + move=> A HA s B HB.
+      by move=> /=; rewrite HA HB.
+    + move=> A HA B0 HB0 B HB.
+      by move=> /=; rewrite HA ?HB0 ?HB.
+  Qed.
+
+
+
+  Lemma cutr_cutl_is_cutr A: cutr (cutl A) = cutr A.
+  Proof.
+    elim: A => //.
+      by move=> A HA s B HB /=; case: ifP; rewrite ?HA ?HB ?cutr2_same.
+    by move=> A HA B0 _ B HB /=; rewrite HA.
+  Qed.
+
+    Lemma cutl_cutr_is_cutr A: cutl (cutr A) = cutr A.
+  Proof.
+    elim: A => //.
+      by move=> A HA s B HB /=; case: ifP; rewrite ?cutr2_same ?HA ?HB.
+    by move=> A HA B0 _ B HB /=; rewrite HA.
+  Qed.
+
+  Lemma cut_cut_same {a}: cutl (cutl a) = cutl a.
+  Proof.
+    elim: a => //=.
+    + move=> A HA s B HB.
+      move=> /=; case: ifP; case: ifP; rewrite ?cutr2_same ?cutr_cutl_is_cutr ?cutl_cutr_is_cutr ?HA ?HB //.
+      by rewrite success_cut =>->.
+    + move=> A HA B0 HB0 B HB.
+      by move=> /=; rewrite HA ?HB0 ?HB.
+  Qed.
+
+
   Lemma big_or_failed {p s1 t}: failed (big_or p s1 t) = false.
   Proof.
     unfold big_or.
@@ -1085,7 +1099,7 @@ Module Run (U : Unif).
       move=> A HA s B HB /=.
       rewrite dead_cut_is_dead.
       case: ifP => /eqP.
-        by move=>->; rewrite dead_dead_same cut_dead_is_dead eqxx.
+        by move=>->; rewrite dead_dead_same cut_dead_is_dead eqxx success_dead.
       move=> dA; case: ifP => ///eqP.
       move=> /cut_dead1 H; move: dA; rewrite -H.
       by rewrite dead_dead_same.

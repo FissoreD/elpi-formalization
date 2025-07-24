@@ -196,7 +196,7 @@ Module valid_state (U:Unif).
     by rewrite hB eqxx.
   Qed.
 
-  Lemma base_or_base_or_ko_cut {B}: base_or_aux B -> base_or_aux_ko (cutl B).
+  (* Lemma base_or_base_or_ko_cut {B}: base_or_aux B -> base_or_aux_ko (cutl B).
   Proof.
     elim: B => //.
     + by move=> A IHA s B IHB /= /andP [] /base_and_base_and_ko_cut -> /IHB ->.
@@ -526,7 +526,7 @@ Module valid_state (U:Unif).
       case: ifP=>/eqP//.
       by move=> _ /base_and_ko_succes.
     move=> []//.
-  Qed.
+  Qed. *)
 (* 
   Lemma next_alt_aux_success {A B s1 s2}: valid_state A -> next_alt s1 A = Some (s2, B) -> success B = false.
   Proof.
