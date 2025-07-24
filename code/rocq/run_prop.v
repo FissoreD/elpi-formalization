@@ -736,33 +736,7 @@ Module RunP (A: Unif).
         eassumption.
   Qed.
 
-    (* move=> [].
-    + move=> H; move: (run_or_correct_left H s2 B) => [altB1 H1]; eexists; apply H1.
-    + move=> [] FA [] H1 H2. ; move: (run_or_correct_right H1 H2); exists B'.
-  Qed. *)
-  (* Admitted. *)
-
-  (* Lemma run_and_done {s A B SOL r}:
-    run s (And A B) (Done SOL r) -> exists x y, r = And x y.
-  Proof.
-    remember (And _ _) as O eqn:HO.
-    remember (Done _ _) as D eqn:HD.
-    move=> H.
-    elim: H A B SOL HO HD; clear => //=.
-    + move=> s s' A altA + A' B H SOL [] ??; subst => //=.
-      move=> /simpl_expand_and_solved [s' [L [R [H1 [H2]]]]] /[subst1].
-      by do 2 eexists.
-    + move=> s st st1 st2 + H1 IH A B SOL ??; subst => //=.
-      move=> /simpl_expand_and_cut [].
-      + by move=> [? [?]] /[subst1]; apply: IH erefl erefl.
-      + by move=> [?[?[?[?[?]]]]] /[subst1]; apply: IH erefl erefl.
-    + move=> s st st1 st2 + H1 IH A B SOL ??; subst => //=.
-      move=> /simpl_expand_and_expanded [].
-      + by move=> [?[?]] /[subst1]; apply: IH erefl erefl.
-      + by move=> [?[?[?[?[?]]]]] /[subst1]; apply: IH erefl erefl.
-  Qed.
-
-  Lemma run_or_complete {s1 s2 A B SOL altAB}:
+  (*Lemma run_or_complete {s1 s2 A B SOL altAB}:
     run s1 (Or A s2 B) (Done SOL altAB) ->
       (exists altA, run s1 A (Done SOL altA)) \/ 
         (exists altB, run_classic s1 A Failed /\ run s2 B (Done SOL altB)).
@@ -798,17 +772,7 @@ Module RunP (A: Unif).
         right; eexists; split; auto; apply: run_cut HB HR.
   Qed. *)
 
-  (* Lemma run_run_classic_failure {s A} : 
-    run_classic s A Failed -> 
-      run s A Failed.
-  Proof.
-    remember Failed as F eqn:HF.
-    move=> H; elim: H HF; clear => //=.
-    + move=> ?? H _; by apply: run_fail H.
-    + by move=> ???? H H1 H2 ?; subst; apply: run_step H (H2 _).
-  Qed.
-
-  Lemma run_or_fail {s1 s2 A B b}:
+  (*   Lemma run_or_fail {s1 s2 A B b}:
     run s1 (Or A s2 B) Failed ->
       run s1 A Failed /\ (run_classic s1 A b -> run s2 B Failed).
   Proof.
