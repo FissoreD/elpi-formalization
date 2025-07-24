@@ -616,8 +616,7 @@ Module check (U:Unif).
 
 
   Lemma expand_has_cut {A s}: 
-    has_cut A ->
-      has_cut (get_state (expand s A)) \/ is_cutbrothers (expand s A).
+    has_cut A -> has_cut (get_state (expand s A)) \/ is_cutbrothers (expand s A).
   Proof.
     elim: A s; try by move=> /=; auto.
     - by move=> p []//=; right.
@@ -636,28 +635,7 @@ Module check (U:Unif).
       case: expand => [s1|s1||s1] C/=; rewrite ?cB ?cB0 ?orbT; auto.
       move: (HB s1 cB).
       by case: expand => [s2|s2||s2] D /=; auto => -[]// ->; rewrite cB0 orbT; left.
-Qed.
-  (* Lemma expand_has_cut {A s r}: 
-    has_cut A -> expand s A = r ->
-      has_cut (get_state r).
-  Proof.
-    move=> + <-; clear r.
-    elim: A s => //.
-    - move=> p []//=.
-    - move=> A HA s1 B HB s /=/eqP[]->->.
-      rewrite dead_cutr_is_dead.
-      case X: expand => //; have:= expand_cutr X => //=/eqP->.
-      case: ifP => /eqP.
-        by move=> /cutr_dead1<-; rewrite cutr_dead_is_dead/= cutr_dead_is_dead !cutr2_same.
-      case Y: expand => //; have:= expand_cutr Y => //=/eqP->.
-      by rewrite !cutr2_same.
-    - move=> A HA B0 _ B HB s /=/orP[].
-        move=> /(HA s); case: expand => [s1|s1||s1] C/= H; rewrite ?H//.
-        case: expand => //[s2|s2||s2] D/=; rewrite ?H// has_cut_cutl//.
-      move=>/andP[] H1; case: expand => [s1|s1||s1] C/= H; rewrite ?H?H1?orbT//.
-      have:= HB s1 H.
-      case: expand => //[s2|s2||s2]D/=->; rewrite ?H H1 orbT//.
-  Qed. *)
+  Qed.
 
   Lemma expand_cutr_Failure x S : expand x (cutr S) = Failure (cutr S).
   Proof. by case X: expand; have:= expand_cutr X => //= /eqP ->. Qed.
@@ -707,69 +685,6 @@ Qed.
       by rewrite cutr_cutl_is_cutr; rewrite fB0 H2 no_free_alt_cutl//orbT if_same.
   Qed.
 
-  Fixpoint has_ok_true A :=
-    match A with
-    | And A _ B => has_ok_true A || has_ok_true B
-    | OK true => true
-    | _ => false
-    end.
-
-  Fixpoint right_most_ok A :=
-    match A with
-    | Or A _ B => ((A == dead A) && right_most_ok B) || (has_ok_true A && (B == cutr B))
-    | _ => has_ok_true A
-    end.
-
-  (* Lemma has_ok_true_right_most_ok: has_ok_true A -> right_most_ok. *)
-
-  (* Lemma has_cut_and_expand {s1 A}: has_cut_and A -> 
-    (exists s2, expand s1 A = Solved s2 (OK true)) \/ (exists s2 B, expand s1 A = CutBrothers s2 B && ).
-  Proof.
-    elim: A s1 B s2 => //; clear.
-    - by move=> []//=??? _[]??;subst.
-    - move=> p[]//.
-    - move=> A HA s B HB s1 C s2 /=.
-      move=>/orP[]///eqP[]->->.
-      case: ifP => //.
-        case X: expand => //; by have:= expand_cutr X.
-      case X: expand => //; by have:= expand_cutr X.
-    - move=> A HA B0 _ B HB s1 C s2 /=.
-      move=>/orP[].
-        move=>/eqP[]->.
-        case X: expand => //; by have:= expand_cutr X.
-      move=> /orP[].
-        move=>cA.
-        have:= HA s1 _ _ cA.
-        case X: expand => ///(_ _ _ erefl) H.
-        case Y: expand => // -[??]; subst => /=.
-        by rewrite H.
-      move=> /andP[_ cB].
-        case X: expand => //[s3 D].
-        have:= HB s3 _ _ cB.
-        case Y: expand => // /(_ _ _ erefl) H[?<-]/=.
-        by rewrite H orbT.
-    Qed.
-
-  Lemma has_cut_expand {s1 A s2 B}: has_cut A -> expand s1 A = Solved s2 B -> right_most_ok B.
-  Proof.
-    elim: A s1 B s2 => //; clear.
-    - by move=> []//=??? _[]??;subst.
-    - move=> p[]//.
-    - move=> A HA s B HB s1 C s2 /=.
-      move=>/andP[cA cB].
-      case: ifP => /eqP.
-        have:= HB s1 _ _ cB.
-        case X: expand => // + -> [??]; subst.
-        by move => /(_ _ _ erefl)/=->; rewrite dead_dead_same eqxx.
-      move=> dA.
-      have:= @has_cut_and_expand s1 A _ _ cA.
-      case X: expand => // /(_ _ _ erefl) + [??]; subst => /=.
-
-
-      move=> /=.
-
-    
-  Qed. *)
   
   Goal forall sig s, no_free_alt sig (Or (OK true) s (OK true)) == false.
   Proof. move=> ?? //=. Qed.
@@ -840,16 +755,7 @@ Qed.
       by rewrite H1 H2; rewrite !if_same.
   Qed.
 
-  Lemma zzzz {sig s1 A s2 B b}:
-    all_cut_followed_by_det sig -> no_free_alt sig A -> expandedb s1 A (Done s2 B) b  -> no_new_alt sig A B.
-  Proof.
-    move=> H + H1.
-    remember (Done _ _) as d eqn:Hd.
-    elim: H1 s2 B Hd => //.
-    - move=> ???? H1 ??[??]H2; subst.
-  Admitted.
-
-  Lemma yyyy {sig s A s1 B b}: 
+  Lemma expandedb_next_alt_done {sig s A s1 B b}: 
     all_cut_followed_by_det sig -> 
       no_free_alt sig A -> expandedb s A (Done s1 B) b ->
         forall s0 : Sigma, next_alt s0 B = None.
@@ -866,111 +772,72 @@ Qed.
       apply: IH erefl (expand_no_free_alt Hz fA HA).
   Qed.
 
-  (* Lemma cccc {A s1 B s2}: has_cut A -> next_alt s1 A = Some (s2, B) -> has_cut B.
+  Lemma expand_next_alt_failed {sig A B C s s'}:
+    all_cut_followed_by_det sig ->
+      no_free_alt sig A -> expand s A = Failure B ->
+        next_alt s B = Some (s', C) -> no_free_alt sig C.
   Proof.
-    elim: A s1 B s2; clear => //.
-    - move=> A HA s B HB s1 C s2 /=.
-      move=> /andP[cA cB].
-      case: ifP => //= dA.
-        have:= HB s1 _ _ cB.
-        case: next_alt => //= [[s3 D]] /(_ _ _ erefl) cD [??]; subst.
-        by move=> /=; rewrite cA cD.
-      case: ifP => //= dB.
-      have:= @cccc1 A s1 _ _ cA.
-      case: next_alt => //= [[s3 D]|].
-        move=> /(_ _ _ erefl) cD [??]; subst => /=.
-        by rewrite cD cB.
-      move=> _.
-      case: ifP => fB //=.
-        have:= HB s _ _ cB.
-        case: next_alt => //= [[s3 D]] /(_ _ _ erefl) cD [??]; subst.
-        by move=> /=; rewrite has_cut_and_dead cD.
-      move=> [??]; subst => /=.
-      by rewrite has_cut_and_dead cB.
-    - move=> A HA B0 _ B HB s1 C s2 /=.
-      move=>/orP[].
-        move=> /eqP[] ->; rewrite dead_cut_is_dead.
-        case: ifP => //= dcA.
-        case: ifP => //= fCA.
-          case X: next_alt => //= [[s4 D]].
-          case: ifP => // fB0 [??]; subst => /=.
+    move=> Hz.
+    elim: A B C s s' => //.
+    - move=> /=????? []<-//.
+    - move=> /=????? []<-//.
+    - move=> ? []//.
+    - move=> A HA s1 B HB C D s s' /=.
+      move=>/andP[fA].
+      case: (ifP (_ == _)).
+        move=>/eqP->; rewrite has_cut_dead => fB.
+        have:= HB _ _ s _ fB.
+        case: expand => // E /(_ _ _ _ erefl) + [?]; subst.
+        move=> /=; rewrite dead_dead_same eqxx.
+        case: next_alt => // [[s2 F]]/(_ _ _ erefl) + [??]; subst.
+        by move=> /= ->; rewrite has_cut_dead no_alt_dead.
+      move=> dA.
+      have:= HA _ _ s _ fA.
+      case X: expand => // [E] /(_ _ _ _ erefl) + H2 [?]; subst.
+      rewrite /= (expand_not_deadb dA X).
+      case Y: next_alt => //[[s2 F]|].
+        move=> /(_ _ _ erefl) + [??]; subst => /=->.
+        move: H2.
+        case: ifP => // H1 H2; rewrite ?H1 ?H2.
+          have:= @expand_has_cut _ s H1; rewrite X/= => -[]//.
           admit.
-        case X: next_alt => //= [[s3 D]|].
-          move=> [??]; subst => /=.
-          by rewrite cut_cut_same eqxx.
-        case Y: next_alt => //= [[s3 D]].
-        case: ifP => //= fB0 [??]; subst => /=.
         admit.
-      move=> /orP[cA|/andP[cB0 cB]].
-      case: ifP => // dA.
-      case: ifP => //= fA.
-        have:= @cccc1 A s1 _ _ cA.
-        case X: next_alt => //[[s3 D]].
-        move=> /(_ _ _ erefl) cD.
-        case: ifP => // fB0 [??]; subst => /=.
-        by rewrite cD orbT.
-      case X: next_alt => //= [[s3 D]|].
-        move=> [??];subst => /=.
-        by rewrite cA orbT.
-      have:= @cccc1 A s1 _ _ cA.
-      case: next_alt => // [[s3 D]] /(_ _ _ erefl) cD.
-      case: ifP => // fB0[??]; subst => /=; rewrite cD orbT//.
-    case: ifP => //= dA.
-    case: ifP => //= fA.
-      case X: next_alt => //[[s3 D]].
-      case: ifP => // fB0 [??]; subst => /=.
-      by rewrite cB0 !orbT.
-    have:= @cccc1 B s1 _ _ cB.
-    case: next_alt => // [[s3 D]|].
-      move=> /(_ _ _ erefl) cD [??]; subst => /=; rewrite cB0 cD !orbT//.
-    move=> _.
-    case X: next_alt => //[[s3 D]].
-    case: ifP => // fB0[??]; subst => /=.
-    rewrite cB0 !orbT//.
-  Admitted. *)
-  
+      move: H2 => + _.
+      case: ifP => //cA.
+        admit.
+      by move=> /eqP->; rewrite failed_cutr next_alt_cutr.
+    -
+          
 
-  Lemma bbbb {sig A s B s'}:
+        
+        
+
+
+        
+
+  Lemma expandedb_next_alt_failed {sig s A B C s' b1}: 
+    all_cut_followed_by_det sig ->
       no_free_alt sig A ->
-        next_alt s A = Some (s', B) ->
-          no_free_alt sig B.
+        expandedb s A (Failed B) b1 -> 
+          next_alt s B = Some (s', C) -> no_free_alt sig C.
   Proof.
-    elim: A s B s' => //.
-    + move=> A HA s B HB s1 C s2 /=.
-      case: ifP => //= cA /andP[nnA].
-        move=> nnB; case: ifP => // dA.
-          have:= HB s1 _ _ nnB.
-          case: next_alt => //[[s3 D]] /(_ _ _ erefl) nnD []??;subst.
-          by move=> /=; rewrite cA nnA nnD.
-        case: ifP => // dB.
-        have:= HA s1 _ _ nnA.
-        case X: next_alt => // [[s3 D]|].
-          move=> /(_ _ _ erefl) nnD[??]; subst => /=.
-          rewrite nnD nnB.
-          admit. (* TODO: qui sarebbe bello avere che next_alt preserva il cut *)
-        move=> _.
-          have:= HB s.
-          case: next_alt => //[[s3 D]] /(_ _ _ nnB erefl) nnD [??]; subst => /=.
-          by rewrite has_cut_dead no_alt_dead nnD.
-        admit.
-      move=>/eqP ->.
-      case: ifP => //.
-  Admitted.
+    remember (Failed _) as f eqn:Hf => Hz + H.
+    elim: H B C s' Hf => //; clear -Hz.
+    - move=> s A B HA ? C s' [<-].
 
-  Lemma xxxx {sig s A s' B b}: 
+
+
+  Lemma runb_next_alt {sig s A s' B b}: 
     all_cut_followed_by_det sig -> no_free_alt sig A -> 
       runb s A (Done s' B) b ->
         forall s1, next_alt s1 B = None.
   Proof.
     move=> H1 H2 H3.
-    (* have:= cut_in_prem_is_det _ A H1. *)
-    (* rewrite /is_det. *)
-    (* move=> /(_ _ _ _ (ex_intro _ _ H3)). *)
     remember (Done _ _) as d eqn:Hd.
     elim: H3 s' B H2 Hd; clear -H1 => //.
     - move=> s s' A B b HA s1 C fA [??] nnA;subst.
-      apply: yyyy H1 fA HA _.
-    - move=> s s' A B C b1 b2 b3 HA HB HC HR IH ? s1 D fB ? nnB;subst.
+      apply: expandedb_next_alt_done H1 fA HA _.
+    - move=> s s' r A B C b1 b2 b3 HA HB HC IH ? s1 D fA ? s2; subst.
       apply: IH _ erefl _.
       have:= zzzz H1 fB.
       admit.
