@@ -263,7 +263,7 @@ Module RunP (A: Unif).
     by move=> A HA B0 _ B HB []//A' B0' B'/=/and3P[/eqP<-]/HA->->; rewrite eqxx.
   Qed. *)
 
-  Lemma same_structure_cutr {A B}: same_structure A B -> same_structure A (cutr B).
+  (* Lemma same_structure_cutr {A B}: same_structure A B -> same_structure A (cutr B).
   Proof. 
     elim: A B => //=.
       by move=> A HA s B HB []// A' s' B' /= /and3P[/eqP<-/HA->/HB->]; rewrite eqxx.
@@ -280,7 +280,7 @@ Module RunP (A: Unif).
     move=> A HA B0 _ B HB []// A1 B01 B1[]// A2 B02 B2/=.
     move=>/and3P[/eqP<- ssA ssB]/and3P[/eqP<- ssA1 ssB2].
       by rewrite eqxx (HA A1 A2)//(HB B1 B2)//.
-  Qed.
+  Qed. *)
 
   (* Lemma expand_same_structure {s A r}: 
     expand s A = r -> same_structure A (get_state r).

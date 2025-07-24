@@ -182,7 +182,7 @@ Module valid_state (U:Unif).
 
 
 
-  Lemma base_and_base_and_ko_cut {B} : base_and B -> base_and_ko (cutl B).
+  (* Lemma base_and_base_and_ko_cut {B} : base_and B -> base_and_ko (cutl B).
   Proof. 
     elim: B => // A + B + C /=.
     case: A => //= _ _ _ HB HC /andP [] /eqP <- hB.
@@ -194,7 +194,7 @@ Module valid_state (U:Unif).
     elim: B => // A + B + C /=.
     case: A => //= _ _ _ HB HC /andP [] /eqP <- hB.
     by rewrite hB eqxx.
-  Qed.
+  Qed. *)
 
   (* Lemma base_or_base_or_ko_cut {B}: base_or_aux B -> base_or_aux_ko (cutl B).
   Proof.
