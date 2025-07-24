@@ -53,7 +53,7 @@ Module Test1.
 
   Definition p_test : program := {|
     modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
-    sig := (fun _ => b (d Pred));
+    sig := empty_sig;
     rules := [:: 
       mkR (pred_p (Data 1)) [::] ;
       mkR (pred_p (Data 2)) [::] ;
@@ -129,7 +129,7 @@ Module Test5.
 
   Definition p_test : program := {|
     modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
-    sig := (fun _ => b (d Pred));
+    sig := empty_sig;
     rules := [:: 
       mkR (pred_f (Data 0)) [:: Call (pred_g v_X); Cut] ;
       mkR (pred_g (Data 1)) [::];
@@ -199,7 +199,7 @@ Module Test6.
 
   Definition p_test : program := {|
     modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
-    sig := (fun _ => b (d Pred));
+    sig := empty_sig;
     rules := [:: 
       mkR pred_true [::];
       mkR (pred_f (Data 0)) [:: Call (pred_g v_X); Call pred_true; Cut] ;

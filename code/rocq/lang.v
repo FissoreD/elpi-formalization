@@ -63,7 +63,8 @@ Module Language.
 
   Definition index := list R.
   Definition mode_ctx := Tm -> list mode.
-  Definition sigT := C -> S.
+  Definition sigT := C -> option S.
+  Definition empty_sig : sigT := fun _ => None.
   Record program := { (*depth : nat;*) rules : index; modes : mode_ctx; sig : sigT }.
 End Language.
 
