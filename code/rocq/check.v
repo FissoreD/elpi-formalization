@@ -158,8 +158,7 @@ Module check (U:Unif).
     | Goal _ Cut => true
     | Goal _ (Call _) => false
     | KO | Bot | Dead => true
-    | OK true => false
-    | OK _ | Top => false
+    | OK | Top => false
     | And A B0 B => has_cut A || (has_cut B0 && has_cut B)
     | Or _ _ _ => A == cutr A
     end.
@@ -189,7 +188,7 @@ Module check (U:Unif).
     match A with
     | Goal _ a => det_atom sig a
     | Top | Bot | KO => true
-    | OK _ | Dead => true
+    | OK | Dead => true
     | And A B0 B =>
       if (A == cutr A) then true else
       ((has_cut B0 && has_cut B) || no_free_alt sig A) &&
@@ -202,17 +201,16 @@ Module check (U:Unif).
   Fixpoint no_new_alt (sig: sigT) A B {struct A} :=
     match A, B with
 
-    | OK b1, OK b2 => b1 == b2
-    | Top, Top | Top, OK _ | Bot, Bot => true
-    | OK _, KO | Top, KO | Bot, KO | KO, KO => true
-    | OK _, Dead | Top, Dead | Bot, Dead | KO, Dead | Dead, Dead => true
+    | OK, OK | Top, Top | Top, OK | Bot, Bot => true
+    | OK, KO | Top, KO | Bot, KO | KO, KO => true
+    | OK, Dead | Top, Dead | Bot, Dead | KO, Dead | Dead, Dead => true
 
     | Or A _ B, Or A' _ B' =>
       no_new_alt sig A A' && no_new_alt sig B B'
     | And A B0 B, And A' B0' B'       =>
       [&& no_new_alt sig A A', ((no_new_alt sig B0 B') || no_new_alt sig B B') & no_new_alt sig B0 B0']
     
-    | Goal _program Cut, B      => (B == OK true) || (B == KO) || (B == Dead) || (B == A)
+    | Goal _program Cut, B      => (B == OK) || (B == KO) || (B == Dead) || (B == A)
     | Goal _program (Call t), B => 
         if det_term sig t then no_free_alt sig B
         else true
@@ -688,15 +686,13 @@ Module check (U:Unif).
       by rewrite cutr_cutl_is_cutr; rewrite fB0 H2 no_free_alt_cutl//orbT if_same.
   Qed.
 
-  
-  Goal forall sig s, no_free_alt sig (Or (OK true) s (OK true)) == false.
+  Goal forall sig s, no_free_alt sig (Or OK s OK) == false.
   Proof. move=> ?? //=. Qed.
 
   Lemma has_cut_success {A}:
     has_cut A -> success A = false.
   Proof.
     elim: A => //.
-    - move=> []//.
     - move=> A HA s B HB /=/eqP[]->->.
       by rewrite !success_cutr if_same.
     - move=> A HA B0 HB0 B HB /=/orP[].
@@ -708,7 +704,6 @@ Module check (U:Unif).
     success A -> has_cut A = false.
   Proof.
     elim: A => //.
-    - move=> []//.
     - move=> A HA s B HB/=; case: ifP => /eqP.
         move=>-> /HB; rewrite cutr_dead_is_dead.
         case:eqP => //.
@@ -724,7 +719,7 @@ Module check (U:Unif).
   Proof.
     move=> H.
     elim: A s1 B s2 => //.
-    - by move=> /= b s1 A s2 _ [_ <-]//.
+    - by move=> /= s1 A s2 _ [_ <-]//.
     - move=> p []//.
     - move=> A HA s B HB s1 C s2.
       move=> /=/andP[fA]. 

@@ -135,14 +135,14 @@ Module Run (U : Unif).
 
   Inductive state :=
     | KO : state
-    | OK : bool ->(*Sigma ->*) state
+    | OK : state
     | Top : state
     | Bot : state
     | Dead : state
     (* | CutOut : state *)
     | Goal : program  -> A -> state
     | Or  : state -> Sigma -> state -> state               (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
-    | And : (*Sigma ->*) state -> state -> state -> state  (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
+    | And : state -> state -> state -> state  (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
     .
   derive state.
   HB.instance Definition _ := hasDecEq.Build state state_eqb_OK.
@@ -165,7 +165,7 @@ Module Run (U : Unif).
   Fixpoint dead A :=
   match A with
   | Dead => Dead
-  | OK _ | KO | Bot | Goal _ _ | Top => Dead
+  | OK | KO | Bot | Goal _ _ | Top => Dead
   | And A B0 B => And (dead A) (dead B0) (dead B)
   | Or A s B => Or (dead A) s (dead B)
   end.
@@ -188,7 +188,7 @@ Module Run (U : Unif).
   Fixpoint cutr A :=
     (* if A == dead A then Dead else *)
     match A with
-    | Bot | Goal _ _ | Top | OK _ => KO
+    | Bot | Goal _ _ | Top | OK => KO
     | Dead | KO => A
     | And A B0 B => And (cutr A) (cutr B0) (cutr B)
     | Or A s B => Or (cutr A) s (cutr B)
@@ -196,7 +196,7 @@ Module Run (U : Unif).
 
    Fixpoint success (A : state) : bool :=
     match A with
-    | OK _ => true
+    | OK => true
     | Top | Bot | Goal _ _ | KO | Dead => false
     | And A _ B => success A && success B
     | Or A _ B => if A == dead A  then success B else success A
@@ -208,7 +208,7 @@ Module Run (U : Unif).
     (* if A == dead A then Dead else *)
     match A with
     | Bot | Goal _ _ | Top => KO
-    | Dead | KO | OK _ => A
+    | Dead | KO | OK => A
     | And A B0 B => And (cutl A) (cutl B0) (cutl B)
     | Or A s B => 
         if A == dead A then Or A s (cutl B)
@@ -250,16 +250,16 @@ Module Run (U : Unif).
   Fixpoint expand s A : expand_res :=
     match A with
     (* meta *)
-    | OK b1 => Solved s (OK b1)
+    | OK => Solved s OK
     | KO => Failure KO
 
     (* meta *)
     | Dead => Failure Dead
     
     (* lang *)
-    | Top              => Expanded s (OK false)
+    | Top              => Expanded s OK
     | Bot              => Expanded s KO
-    | Goal _ Cut       => CutBrothers s (OK true)
+    | Goal _ Cut       => CutBrothers s OK
     | Goal pr (Call t) => Expanded s (big_or pr s t)
 
     (* recursive cases *)
@@ -286,7 +286,7 @@ Module Run (U : Unif).
   Fixpoint failed (A : state) : bool :=
     match A with
     | KO | Dead => true
-    | Top | Bot | Goal _ _ | OK _ => false
+    | Top | Bot | Goal _ _ | OK => false
     | And A _ B => failed A || (success A && failed B)
     | Or A _ B => if A == dead A then failed B else failed A (*&& failed B*)
     end.
@@ -327,7 +327,7 @@ Module Run (U : Unif).
 
   Fixpoint next_alt (s : Sigma) (A : state) : option (Sigma * state) :=
     match A with
-    | KO | OK _ => None
+    | KO | OK => None
     | Dead => None
     | Top | Bot | Goal _ _ => None
     | And A B0 B =>
@@ -706,7 +706,7 @@ Module Run (U : Unif).
     + by move=> A HA B0 HB0 B HB /=; rewrite HA HB HB0.
   Qed.
 
-  Definition is_meta X := match X with OK _ | KO | Dead => true | _ => false end.
+  Definition is_meta X := match X with OK | KO | Dead => true | _ => false end.
 
   (* Lemma simpl_next_alt_false {s1 s2 A B r}: 
     next_alt false s1 (Or A s2 B) = Some r -> 
@@ -910,7 +910,7 @@ Module Run (U : Unif).
     expand s1 A = Solved s2 B -> success A /\ success B.
   Proof.
     elim: A s1 s2 B => //.
-    + by move=> /= ???? [] /[subst2].
+    + by move=> /= ??? [] /[subst2].
     + move=> ? [] //.
     + move=> A HA s B HB s1 s2 C/=.
       case: ifP => /eqP dA.

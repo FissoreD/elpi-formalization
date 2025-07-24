@@ -101,7 +101,7 @@ Module RunP (A: Unif).
 
 
   Lemma expanded_cut_simpl {pr s1 s2 A}:
-    expanded s2 (Goal pr Cut) (Done s1 A) -> A = OK true.
+    expanded s2 (Goal pr Cut) (Done s1 A) -> A = OK.
   Proof.
     inversion 1; inversion H1; subst; simpl in *; try congruence.
     move: H2 => /= [] /[subst2].
@@ -195,7 +195,7 @@ Module RunP (A: Unif).
       expand s2 B = Solved s3 C -> B = C /\ s2 = s3.
   Proof.
     elim: A s s1 s2 s3 B C => //.
-    + by move=> ??????? [] /[subst2] -[] /[subst2].
+    + by move=> ?????? [] /[subst2] -[] /[subst2].
     + by move=> ? [] //.
     + move=> A HA s B HB s1 s2 s3 s4 C D.
       move=>/=.
@@ -217,7 +217,7 @@ Module RunP (A: Unif).
   Lemma expand_solved_is_solved {s s1 s2 A B}: expand s A = Solved s1 B -> expand s2 B = Solved s2 B.
   Proof.
     elim: A s s1 s2 B => //.
-    + by move=> ????? [] /[subst2].
+    + by move=> ???? [] /[subst2].
     + by move=> ? [] //.
     + move=> A HA s B HB s1 s2 s3 C /=.
       case: ifP => [dA|/eqP dAP].
