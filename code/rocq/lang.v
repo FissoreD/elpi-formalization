@@ -63,8 +63,11 @@ Module Language.
 
   Definition index := list R.
   Definition mode_ctx := Tm -> list mode.
-  Definition sigT := C -> option S.
-  Definition empty_sig : sigT := fun _ => None.
+  Definition sigT := P -> S.
+  (* 
+    The predicate knows about the signature of all predicates, therefore,
+    for each predicate we return a S (not an option S)
+  *)
   Record program := { (*depth : nat;*) rules : index; modes : mode_ctx; sig : sigT }.
 End Language.
 

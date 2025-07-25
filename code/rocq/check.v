@@ -6,33 +6,36 @@ Module check (U:Unif).
   Module VS := valid_state(U).
   Import Language VS RunP Run.
 
-  Fixpoint get_head (t: Tm) : C :=
+  Print sigT.
+  Definition sigV := V -> option S.
+
+  Fixpoint get_head (sP: sigT) (sV: sigV) (t: Tm) : option S :=
     match t with
-    | Code c => c
-    | Data _ => p 0
-    | Comb hd _ => get_head hd
+    | Code (p pn) => Some (sP pn)
+    | Code (v vn) => sV vn
+    | Data _ => Some (b Exp)
+    | Comb hd _ => get_head sP sV hd
     end.
 
-  Fixpoint is_det_sig (s:S) : bool :=
-    match s with
+  Fixpoint is_det_sig (sig:S) : bool :=
+    match sig with
     | b (d Func) => true
     | b (d Pred) => false
     | b Exp => false
     | arr _ _ s => is_det_sig s
     end.
 
-  Definition det_term sig (t : Tm) :=
-    match sig (get_head t) with 
+  Definition det_term (sP: sigT) (sV: sigV) (t : Tm) :=
+    match get_head sP sV t with 
     | None => false
-    | Some s => is_det_sig s
+    | Some sig => is_det_sig sig
     end.
 
-  Definition det_atom sig (s: A) :=
-    match s with
+  Definition det_atom sig s (a: A) :=
+    match a with
     | Cut => true
-    | Call t => det_term sig t
+    | Call t => det_term sig s t
     end.
-
 
   Fixpoint has_cut A :=
     match A with
@@ -65,20 +68,20 @@ Module check (U:Unif).
     "((A, A') ; B) , C" is OK if B is dead already (cutr by predecessor of A for example)
   
   *)
-  Fixpoint no_free_alt sig A :=
+  Fixpoint no_free_alt (sP:sigT) (sV:sigV) A :=
     match A with
-    | Goal _ a => det_atom sig a
+    | Goal _ a => det_atom sP sV a
     | Top | Bot | KO => true
     | OK | Dead => true
     | And A B0 B =>
       (A == cutr A) || 
-        [&&((has_cut B0 && has_cut B) || no_free_alt sig A), no_free_alt sig B & no_free_alt sig B0]
+        [&&((has_cut B0 && has_cut B) || no_free_alt sP sV A), no_free_alt sP sV B & no_free_alt sP sV B0]
     | Or A _ B =>
-        no_free_alt sig A && 
-          if has_cut A then no_free_alt sig B else (B == cutr B)
+        no_free_alt sP sV A && 
+          if has_cut A then no_free_alt sP sV B else (B == cutr B)
     end.
 
-  Lemma no_alt_cut {sig A}: no_free_alt sig (cutr A).
+  Lemma no_alt_cut {sP sV A}: no_free_alt sP sV (cutr A).
   Proof.
     elim: A => //.
     + by move=> A HA s B HB /=; rewrite HA HB cutr2_same eqxx if_same.
@@ -86,7 +89,7 @@ Module check (U:Unif).
       by rewrite HA cutr2_same eqxx.
   Qed.
 
-  Lemma no_alt_dead {sig A}: no_free_alt sig (dead A).
+  Lemma no_alt_dead {sP sV A}: no_free_alt sP sV (dead A).
   Proof.
     elim: A => //.
     + by move=> A HA s B HB /=; rewrite has_cut_dead HA HB.
@@ -105,7 +108,7 @@ Module check (U:Unif).
     by move=>/andP[] /HB0->/HB->; rewrite orbT.
   Qed.
 
-  Lemma no_free_alt_cutl {sig A}: no_free_alt sig (cutl A).
+  Lemma no_free_alt_cutl {sP sV A}: no_free_alt sP sV (cutl A).
   Proof.
     elim: A => //.
       move=> A HA s B HB/=.
@@ -117,31 +120,31 @@ Module check (U:Unif).
 
   Section has_cut. 
 
-    Fixpoint cut_followed_by_det (sig :sigT) (s: seq A) :=
+    Fixpoint cut_followed_by_det (sP :sigT) (sV:sigV) (s: seq A) :=
       match s with
       | [::] => false
-      | Cut :: xs => all (det_atom sig) xs || cut_followed_by_det sig xs
-      | Call _ :: xs => cut_followed_by_det sig xs
+      | Cut :: xs => all (det_atom sP sV) xs || cut_followed_by_det sP sV xs
+      | Call _ :: xs => cut_followed_by_det sP sV xs
       end.
 
-    Definition all_cut_followed_by_det_aux sig rules :=
-      all (fun x => (det_term sig x.(head) == false) || cut_followed_by_det sig x.(premises)) rules.
+    Definition all_cut_followed_by_det_aux sP sV rules :=
+      all (fun x => (det_term sP sV x.(head) == false) || cut_followed_by_det sP sV x.(premises)) rules.
 
-    Definition all_cut_followed_by_det sig := 
-      forall pr, all_cut_followed_by_det_aux sig (rules pr).
+    Definition all_cut_followed_by_det sP sV := 
+      forall pr, all_cut_followed_by_det_aux sP sV (rules pr).
 
-    Lemma all_det_nfa_big_and {sig p l}: all (det_atom sig) l -> no_free_alt sig (big_and p l).
+    Lemma all_det_nfa_big_and {p sP sV l}: all (det_atom sP sV) l -> no_free_alt sP sV (big_and p l).
     Proof.
       elim: l => //= a l IH/andP[] H1 H2.
       by rewrite H1 orbT IH//.
     Qed.
 
-    Lemma cut_followed_by_det_has_cut {sig p l}:
-       cut_followed_by_det sig l -> has_cut (big_and p l).
+    Lemma cut_followed_by_det_has_cut {sP sV p l}:
+       cut_followed_by_det sP sV l -> has_cut (big_and p l).
     Proof. by elim: l => //= -[]//= _ l H/H->. Qed.
 
-    Lemma cut_followed_by_det_nfa_and {sig p bo} :
-      cut_followed_by_det sig bo -> no_free_alt sig (big_and p bo).
+    Lemma cut_followed_by_det_nfa_and {sV sP p bo} :
+      cut_followed_by_det sP sV bo -> no_free_alt sP sV (big_and p bo).
     Proof.
       elim: bo => //=.
       move=> [|t] /= l IH.
@@ -149,9 +152,9 @@ Module check (U:Unif).
       by move=> H; rewrite IH//!andbT andbb (cut_followed_by_det_has_cut H).
     Qed.
 
-    Lemma is_det_no_free_alt {sig t s1} {p:program}:
-      all_cut_followed_by_det_aux sig p.(rules) -> det_term sig t -> 
-        no_free_alt sig (big_or p s1 t).
+    Lemma is_det_no_free_alt {sP sV t s1} {p:program}:
+      all_cut_followed_by_det_aux sP sV p.(rules) -> det_term sP sV t -> 
+        no_free_alt sP sV (big_or p s1 t).
     Proof.
       rewrite /big_or/F.
       case: p => rules modes sig1 /=.
@@ -206,10 +209,10 @@ Module check (U:Unif).
   Lemma expand_cutr_Failure x S : expand x (cutr S) = Failure (cutr S).
   Proof. by case X: expand; have:= expand_cutr X => //= /eqP ->. Qed.
 
-  Lemma expand_no_free_alt {sig s1 A r} : 
-    all_cut_followed_by_det sig -> no_free_alt sig A -> 
+  Lemma expand_no_free_alt {sP sV s1 A r} : 
+    all_cut_followed_by_det sP sV -> no_free_alt sP sV A -> 
       expand s1 A = r ->
-        no_free_alt sig (get_state r).
+        no_free_alt sP sV (get_state r).
   Proof.
     move=> H + <-; clear r.
     elim: A s1 => //.
@@ -249,7 +252,7 @@ Module check (U:Unif).
       by rewrite cutr_cutl_is_cutr; rewrite fB0 H2 no_free_alt_cutl//!orbT.
   Qed.
 
-  Goal forall sig s, no_free_alt sig (Or OK s OK) == false.
+  Goal forall sP sV s, no_free_alt sP sV (Or OK s OK) == false.
   Proof. move=> ?? //=. Qed.
 
   Lemma has_cut_success {A}:
@@ -276,8 +279,8 @@ Module check (U:Unif).
     - by move=> A HA B0 HB0 B HB/=/andP[]/HA->/HB->; rewrite andbF.
   Qed.
 
-  Lemma expand_next_alt {sig s1 A s2 B} : 
-    all_cut_followed_by_det sig -> no_free_alt sig A ->
+  Lemma expand_next_alt {sP sV s1 A s2 B} : 
+    all_cut_followed_by_det sP sV -> no_free_alt sP sV A ->
       expand s1 A = Solved s2 B -> forall s3 : Sigma, next_alt s3 B = None.
   Proof.
     move=> H.
@@ -314,9 +317,9 @@ Module check (U:Unif).
       by rewrite H1 H2; rewrite !if_same.
   Qed.
 
-  Lemma expandedb_next_alt_done {sig s A s1 B b}: 
-    all_cut_followed_by_det sig -> 
-      no_free_alt sig A -> expandedb s A (Done s1 B) b ->
+  Lemma expandedb_next_alt_done {sP sV s A s1 B b}: 
+    all_cut_followed_by_det sP sV -> 
+      no_free_alt sP sV A -> expandedb s A (Done s1 B) b ->
         forall s0 : Sigma, next_alt s0 B = None.
   Proof.
     remember (Done _ _) as d eqn:Hd => Hz + H.
@@ -361,8 +364,8 @@ Module check (U:Unif).
       by move=> _; case: next_alt => // [[s1 D]]; case: ifP => // fB0 [_ <-]/=; rewrite cB0 orbT.
   Qed.
 
-  Lemma no_free_alt_next_alt {sig s1 A s2 B}:
-    no_free_alt sig A -> next_alt s1 A = Some (s2, B) -> no_free_alt sig B.
+  Lemma no_free_alt_next_alt {sP sV s1 A s2 B}:
+    no_free_alt sP sV A -> next_alt s1 A = Some (s2, B) -> no_free_alt sP sV B.
   Proof.
     elim: A s1 B s2 => //.
     - move=> A HA s B HB s1 C s2 /=.
@@ -420,10 +423,10 @@ Module check (U:Unif).
   Qed.
 
 
-  Lemma expand_next_alt_failed {sig A B C s s'}:
-    all_cut_followed_by_det sig ->
-      no_free_alt sig A -> expand s A = Failure B ->
-        next_alt s B = Some (s', C) -> no_free_alt sig C.
+  Lemma expand_next_alt_failed {sP sV A B C s s'}:
+    all_cut_followed_by_det sP sV ->
+      no_free_alt sP sV A -> expand s A = Failure B ->
+        next_alt s B = Some (s', C) -> no_free_alt sP sV C.
   Proof.
     move=> Hz.
     elim: A B C s s' => //.
@@ -514,11 +517,11 @@ Module check (U:Unif).
       by rewrite fB0 (no_free_alt_next_alt fE T) orbT orbT.
     Qed.
 
-  Lemma expandedb_next_alt_failed {sig s A B C s' b1}: 
-    all_cut_followed_by_det sig ->
-      no_free_alt sig A ->
+  Lemma expandedb_next_alt_failed {sP sV s A B C s' b1}: 
+    all_cut_followed_by_det sP sV ->
+      no_free_alt sP sV A ->
         expandedb s A (Failed B) b1 -> 
-          next_alt s B = Some (s', C) -> no_free_alt sig C.
+          next_alt s B = Some (s', C) -> no_free_alt sP sV C.
   Proof.
     remember (Failed _) as f eqn:Hf => Hz + H.
     elim: H B C s' Hf => //; clear -Hz.
@@ -535,9 +538,9 @@ Module check (U:Unif).
   Definition is_det A := forall s s' B,
     run s A (Done s' B) -> forall s2, next_alt s2 B = None.
 
-  Lemma runb_next_alt {sig A}: 
-    all_cut_followed_by_det sig -> 
-      no_free_alt sig A -> is_det A.
+  Lemma runb_next_alt {sP sV A}: 
+    all_cut_followed_by_det sP sV -> 
+      no_free_alt sP sV A -> is_det A.
   Proof.
     rewrite/is_det.
     move=> H1 H2 s s' B []b H3.
@@ -550,8 +553,8 @@ Module check (U:Unif).
       apply: expandedb_next_alt_failed H1 fA HA HB.
   Qed.
 
-  Lemma main {sig p t}:
-    all_cut_followed_by_det sig -> det_term sig t -> 
+  Lemma main {sP sV p t}:
+    all_cut_followed_by_det sP sV -> det_term sP sV t -> 
       is_det (Goal p (Call t)).
   Proof.
     move=> H1 fA HA.
@@ -569,7 +572,7 @@ Module check (U:Unif).
     
     Definition AllTailCut := (forall pr : program, all tail_cut (rules pr)).
 
-    Lemma cut_in_prem_tail_cut sig: AllTailCut -> all_cut_followed_by_det sig.
+    Lemma cut_in_prem_tail_cut sP sV: AllTailCut -> all_cut_followed_by_det sP sV.
     Proof.
       rewrite /AllTailCut /all_cut_followed_by_det.
       rewrite /tail_cut /all_cut_followed_by_det_aux.
@@ -584,10 +587,10 @@ Module check (U:Unif).
       by move=> H1 H2; rewrite IH//orbT.
     Qed.
 
-    Lemma tail_cut_is_det sig p t:
-      AllTailCut -> det_term sig t -> is_det (Goal p (Call t)).
+    Lemma tail_cut_is_det sP sV p t:
+      AllTailCut -> det_term sP sV t -> is_det (Goal p (Call t)).
     Proof.
-      move=> /(cut_in_prem_tail_cut sig).
+      move=> /(cut_in_prem_tail_cut sP sV).
       apply main.
     Qed.
   End tail_cut.

@@ -2,6 +2,8 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 Import Language.
 
+Definition empty_sig : sigT := fun _ => b(d Func).
+
 Module Axioms.
   Parameter program_eqb : program -> program -> bool.
   Parameter is_program : program -> Type.
