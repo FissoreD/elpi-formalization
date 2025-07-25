@@ -194,24 +194,8 @@ Module RunP (A: Unif).
     expand s A = Solved s1 B -> 
       expand s2 B = Solved s3 C -> B = C /\ s2 = s3.
   Proof.
-    elim: A s s1 s2 s3 B C => //.
-    + by move=> ?????? [] /[subst2] -[] /[subst2].
-    + by move=> ? [] //.
-    + move=> A HA s B HB s1 s2 s3 s4 C D.
-      move=>/=.
-      case:ifP.
-        case X: expand => //= + -[]?<-/= => ->; subst.
-        case Y: expand => //-[]?<-/=;subst.
-        by have[->->]:= HB _ _ _ _ _ _ X Y.
-      case X: expand => //= /eqP dA -[]?<-/=; subst.
-      have /=/eqP/negbTE-> :=expand_not_dead dA X.
-      case Y: expand => //-[]?<-/=;subst.
-      by have [->->]:= HA _ _ _ _ _ _ X Y.
-    + move=> A HA B0 _ B HB s1 s2 s3 s4 C D.
-      move=> /simpl_expand_and_solved [s'[A'[B'[HA' [HB' ->]]]]].
-      move=> /simpl_expand_and_solved [s''[A2[B2[HA2 [HB2 ->]]]]].
-      have:= HA _ _ _ _ _ _ HA' HA2 => -[]->->.
-      by have:= HB _ _ _ _ _ _ HB' HB2 => -[]->->.
+    move=>/expand_solved_success [_ sB].
+    by rewrite (succes_is_solved s2 sB) => -[->->].
   Qed.
 
   Lemma expand_solved_is_solved {s s1 s2 A B}: expand s A = Solved s1 B -> expand s2 B = Solved s2 B.
