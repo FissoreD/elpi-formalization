@@ -197,66 +197,6 @@ Module check (U:Unif).
           if has_cut A then no_free_alt sig B else (B == cutr B)
     end.
 
-  Fixpoint no_new_alt (sig: sigT) A B {struct A} :=
-    match A, B with
-
-    | OK, OK | Top, Top | Top, OK | Bot, Bot => true
-    | OK, KO | Top, KO | Bot, KO | KO, KO => true
-    | OK, Dead | Top, Dead | Bot, Dead | KO, Dead | Dead, Dead => true
-
-    | Or A _ B, Or A' _ B' =>
-      no_new_alt sig A A' && no_new_alt sig B B'
-    | And A B0 B, And A' B0' B'       =>
-      [&& no_new_alt sig A A', ((no_new_alt sig B0 B') || no_new_alt sig B B') & no_new_alt sig B0 B0']
-    
-    | Goal _program Cut, B      => (B == OK) || (B == KO) || (B == Dead) || (B == A)
-    | Goal _program (Call t), B => 
-        (det_term sig t == false) || (no_free_alt sig B)
-    | _, _ => false
-    end.
-
-  Lemma no_new_alt_id {sig B} : no_new_alt sig B B.
-  Proof.
-    elim: B; try by move=> //[].
-    + move=> ? [] //= tl; case: det_term => //.
-    + move=> A HA s B HB /=.
-      by rewrite HA // HB.
-    + move=> A HA B0 HB0 B HB /=.
-      by rewrite HB // HA // HB0 !orbT.
-  Qed. 
-
-  Lemma no_new_alt_dead {sig C1 D1}: no_new_alt sig (dead C1) D1 -> D1 = dead D1.
-  Proof.
-    elim: C1 D1 => //; try by move=> [].
-    - all: try by move=>[]//=_ _ _ _ []//.
-    - all: try by move=>?[]//=_ _ _ _ []//.
-    + move=> A HA s B HB [] //= A' s' B'.
-      move=>/andP[].
-      by move=>/HA<-/HB<-.
-    + move=> A HA B0 HB0 B HB []// A' s' B'/=.
-      by move=>/and3P[/HA<-]/orP[/HB0|/HB]<-/HB0<-.
-  Qed.
-
-  Lemma no_new_alt_cut_left {sig A B}: no_new_alt sig (cutr A) B -> B = cutr B.
-  Proof.
-    elim: A B; try by move=> []//[].
-    + move=>??[]//.
-    + move=> A HA s B HB[]// => A' s' B' /=.
-      move=>/andP[]/HA->/HB->; by rewrite !cutr2_same.
-    + move=> A HA B0 HB0 B HB[]//; auto=> A' B0' B'/=.
-      by move=>/and3P[]/HA<-/orP[/HB0|/HB]<-/HB0<-.
-  Qed.
-
-  Lemma no_new_alt_cut1 {sig A}: no_new_alt sig A (cutr A).
-  Proof.
-    elim: A => //.
-    + by move=> /= _ [] //= t; case: det_term.
-    + move=> A HA s B HB /=.
-      by rewrite HA HB.
-    + move=> A HA B0 HB0 B HB /=.
-      by rewrite HA HB orbT HB0.
-  Qed.
-
   Lemma no_alt_cut {sig A}: no_free_alt sig (cutr A).
   Proof.
     elim: A => //.
@@ -272,128 +212,6 @@ Module check (U:Unif).
     + move=> A HA B0 HB0 B HB /=.
       by rewrite HA cutr_dead_is_dead eqxx.
   Qed.
-
-  (* Lemma has_cut_trans {sig A B}: has_cut A -> no_new_alt sig A B -> has_cut B.
-  Proof.
-    elim: A B => //; try by move=> []; auto.
-    + move=> []//[]//[]//.
-    + move=> /= p []//.
-      move=> b _ /orP[/orP[/orP[]|]|]/eqP->; auto.
-    + move=> A HA s B HB[]// A' s' B' /=.
-      move=> /=/eqP[]->->/andP[].
-      by do 2 move=> /no_new_alt_cut_left<-; auto.
-    + move=> A HA B0 HB0 B HB[]//A' B0' B'/=.
-      move=> + /orP[].
-        by move=> _ /eqP->; rewrite has_cut_dead; auto.
-      move=> /orP[].
-        move=> cA/and3P[nnA _ _].
-        rewrite (HA A')//.
-      move=>/andP[cB0 cB]/and3P[_ + /eqP?]; subst.
-      by move=>/orP[/HB0|/HB]->//; rewrite cB0 orbT.
-  Qed. *)
-
-  (* Lemma no_alt_trans {sig A B}: 
-    no_free_alt sig A -> no_new_alt sig A B -> no_free_alt sig B.
-  Proof.
-    elim: A B => //; try by move=> []//[].
-    + { move=>p /=[|t]//[]//=.
-        - by move=> p1 a _ /eqP[]??;subst.
-        - move=> _ a ->//.
-        - move=> A _ B ->//.
-        - move=> A B C ->//.
-      }
-    + move=> A HA s B HB[]//A' s1 B' /=/andP[fA] + /andP[nnA nnB].
-      rewrite (HA A')//=.
-      
-
-
-      case: ifP => //cA + /andP[nnA nnB].
-        move=> fB; rewrite HA// (has_cut_trans cA nnA)//(HB D)//.
-      move=>/eqP H; rewrite H in nnB.
-      apply no_new_alt_cut_left in nnB.
-      by rewrite -nnB eqxx nnB no_alt_cut if_same (HA C).
-    + move=> A HA B0 HB0 B HB[]//A' B0' B' /=.
-      move=> +/orP[].
-        by move=> _ /eqP->; rewrite cutr_dead_is_dead eqxx.
-      case: ifP => /eqP.
-        by move=>-> _ /and3P[]/no_new_alt_cut_left<-; rewrite eqxx.
-      move=> cA/andP[/andP[H H2] fB] /and3P[nnA + /eqP?];subst.
-      rewrite fB andbT.
-      case: ifP => // cA'.
-      move: H => /orP[].
-        move=> /andP[cB0 cB].
-        move=>/orP[/[dup]H/HB0|/[dup]H/HB]->; rewrite//cB0(has_cut_trans _ H)//.
-      by move=> fA /orP[/HB0|/HB]->//; rewrite (HA A')//orbT.
-  Qed. *)
-
-  (* Lemma no_new_alt_trans_goal {sig p a B C}:
-    no_new_alt sig (Goal p a) B -> no_new_alt sig B C -> no_new_alt sig (Goal p a) C.
-  Proof.
-    case: a => //.
-      { case: B => //=.
-        - case C => //.
-        - move=> b; rewrite !orbF => /eqP[->]; case: C => // -[]//.
-        - move=> _; case: C => //.
-        - by move=> p1 a /eqP[]??;subst.
-      }
-    move=> t /=.
-    case: ifP => // _.
-    apply no_alt_trans.
-  Qed.
-  *)
-  Lemma no_new_alt_trans_dead0 {sig A}: no_new_alt sig A (dead A).
-  Proof.
-    elim: A => //.
-    - by move=>/= _[]// t; case: det_term.
-    - by move=> A HA s B HB/=; rewrite HA HB.
-    - by move=> A HA B0 HB0 B HB/=; rewrite HA HB0 HB orbT.
-  Qed.
-(*
-  Lemma no_new_alt_trans {sig A B C}: 
-    no_new_alt sig A B -> no_new_alt sig B C -> no_new_alt sig A C.
-  Proof.
-    elim: A B C; try by move=> []//[]//[]//.
-    + move=> p [|t]//=.
-        move=> B C /orP[/orP[/orP[]|]|]/eqP->//; case: C => //-[]//.
-      move=> B C.
-      case: ifP => // _.
-      by apply: no_alt_trans.
-    + move=> A HA s B HB []//A' s' B'[]//A2 s2 B2 /=.
-      move=>/andP[nnA nnB]/andP[nnA' nnB'].
-      rewrite (HA A' A2)//(HB B' B2)//.
-    + move=> A HA B0 HB0 B HB []//A1 B01 B1[]// A2 B02 B2//=.
-      move=>+/orP[].
-        by move=> _ /eqP<-//; rewrite eqxx.
-      move=> /orP[].
-        move=>/eqP->.
-        by move=> /and3P[/no_new_alt_dead<-]; rewrite eqxx.
-      move=>/and3P[nnA nnB /eqP]?; subst.
-      move=>/and3P[nnA1 nnB1 /eqP]?; subst.
-      rewrite eqxx (HA A1 A2)//=andbT.
-      move: nnB1.
-      move=> nnB1.
-      move: nnB1 => /orP[].
-        by move=>->; rewrite orbT.
-      move=> H.
-      move: nnB => /orP[] H4.
-        by rewrite (HB0 B1 B2)//!orbT.
-      by rewrite (HB B1 B2)//!orbT.
-  Qed. 
-*)
-  Lemma no_new_alt_cutr_right {sig A B}:
-    no_new_alt sig A B -> no_new_alt sig A (cutr B).
-  Proof.
-    elim: A B; try by move=> []//[]//.
-    - move=> p[[]//|t]//= B; case: det_term => //=; rewrite no_alt_cut//.
-    - move=> A HA s B HB.
-      move=> []//A' s' B'/=.
-      move=>/andP[] nnA nNB.
-      rewrite (HA A')//=(HB B')//.
-    - move=> A HA B0 HB0 B HB []// A' B0' B'.
-      move=>/=/and3P[nnA /orP[nnBx|nnB] nnB0].
-        rewrite HA//!HB0//.
-      rewrite HA//HB//orbT HB0//.
-    Qed.
 
   Lemma has_cut_cutl {A}: has_cut A -> has_cut (cutl A).
   Proof.
@@ -414,70 +232,6 @@ Module check (U:Unif).
       by case: ifP => ///eqP->; rewrite no_alt_dead has_cut_dead.
     move=> A HA B0 HB0 B HB /=.
     by rewrite HB HB0 HA !orbT.
-  Qed.
-
-  Lemma no_new_alt_cut_right {sig A B}:
-    no_new_alt sig A B -> no_new_alt sig A (cutl B).
-  Proof.
-    elim: A B; try by move=> []//[]//.
-    - by move=> p[[]|t]//=B; case: det_term; rewrite// no_free_alt_cutl.
-    - move=> A HA s B HB.
-      move=> []//A' s' B'/=.
-      move=>/andP[] nnA nNB.
-      case: ifP => /eqP.
-        rewrite nnA HB//.
-      by rewrite HA// no_new_alt_cutr_right.
-    - move=> A HA B0 HB0 B HB []// A' B0' B'.
-      by move=>/=/and3P[/HA-> /orP[/HB0|/HB]->]/HB0->//; rewrite orbT.
-    Qed.
-
-  Lemma next_alt_aux_no_new_alt {s1 s3 A C} sig: 
-    next_alt s1 A = Some (s3, C) -> no_new_alt sig A C.
-  Proof.
-    elim: A C s1 s3; try by move=>[]/=.
-    + move=> A HA s B HB C s1 s2/=.
-      case: ifP => /eqP.
-        case X: next_alt => // [[s3 D]] ->.
-        move=>[]??;subst.
-        by rewrite (HB _ _ _ X)no_new_alt_id.
-      move=> dA.
-      case X:  next_alt => //[[s3 D]|].
-        move=> -[]??;subst.
-        rewrite no_new_alt_id//.
-        by rewrite (HA _ _ _ X).
-      case:ifP=> //fB.
-        case Y: next_alt => //[[s3 D]].
-        move=>[]??;subst.
-        rewrite (no_new_alt_trans_dead0).
-        by apply: HB Y.
-      case: ifP => /eqP//dB.
-      move=>[]??;subst.
-      by rewrite (no_new_alt_trans_dead0) no_new_alt_id.
-    + move=> A HA B0 HB0 B HB C s1 s2/=.
-      case: ifP => ///eqP dA.
-      case: ifP => //= fA.
-        case X: next_alt => [[s3 D]|]//.
-        case: ifP => // fB0.
-        move=>[_ <-].
-        by rewrite no_new_alt_id (HA _ _ _ X).
-      case Y: next_alt => // [[s4 B']|].
-        move=>[]??;subst.
-        by rewrite !no_new_alt_id (HB _ _ _ Y) orbT.
-      case X: next_alt => //[[s3 A']].
-      case: ifP => // fB0[]??;subst.
-      by rewrite !no_new_alt_id (HA _ _ _ X).
-  Qed.
-
-  Definition is_det1 sig A := forall s s' B,
-    run s A (Done s' B) ->
-      no_new_alt sig A B.
-
-  Lemma cut_is_det sig pr : is_det1 sig (Goal pr Cut).
-  Proof. 
-    move=> s s1 A [? H]; inversion H; clear H; subst; try congruence.
-    + have := (expanded_cut_simpl (ex_intro _ _ H5)) => -> //.
-    + inversion H0; clear H0; subst; simpl in *; try congruence.
-      move: H3 => [] /[subst2]; inversion H4; subst; simpl in *; congruence.
   Qed.
 
   Section has_cut. 
@@ -545,67 +299,6 @@ Module check (U:Unif).
       rewrite H2 in H3.
       by rewrite (cut_followed_by_det_nfa_and H1) IH// if_same.
     Admitted.
-
-    Lemma expand_no_new_alt {sig A s1 r}: 
-      all_cut_followed_by_det sig -> expand s1 A = r -> no_new_alt sig A (get_state r).
-    Proof.
-      move=> AllCut <-; clear r.
-      elim: A s1; try by move=> [].
-      + move=> p [] //= t s; case X: det_term => //=.
-        by apply: is_det_no_free_alt.
-      + move=> A HA s B HB s1 /=.
-        case: ifP => /eqP.
-          move=> ->.
-          have := HB s1.
-          by case: expand => //= [_|_||_]?->; rewrite no_new_alt_id.
-        move=>dA /=.
-        have:= HA s1.
-        case: expand => //= [_|_||_]?->; rewrite ?no_new_alt_id//no_new_alt_cut1//.
-      + move=> A HA B0 _ B HB s/=.
-        have:= HA s.
-        case: expand => //=[_|_||s1] C H; try rewrite !no_new_alt_id H !orbT //.
-        have:= HB s1.
-        case: expand => //= [_|_||_] D ->; rewrite !no_new_alt_id ?H !orbT//.
-        by rewrite (no_new_alt_cut_right H).
-    Qed.     
-      
-
-    (* Lemma expandedb_no_new_alt {sig A r s1 b1}: 
-      all_cut_followed_by_det sig -> expandedb s1 A r b1 -> no_new_alt sig A (get_state_run r).
-    Proof.
-      move=> AllCut H.
-      elim: H => //; clear -AllCut.
-      + move=> s1 s2 A B /= HA.
-        by have := expand_no_new_alt AllCut HA.
-      + move=> s1 A B H /=.
-        by have:= expand_no_new_alt AllCut H.
-      + move=> s s' r A B b H H1 IH.
-        have:= expand_no_new_alt AllCut H => /= H2.
-        remember (get_state_run _) as C.
-        apply: no_new_alt_trans H2 IH => //.
-      + move=> s s' r A B b H H1 IH.
-        have:= expand_no_new_alt AllCut H => /= H2.
-        remember (get_state_run _) as C.
-        apply: no_new_alt_trans H2 IH => //.
-    Qed.
-
-    Lemma cut_in_prem_is_det sig A :
-      all_cut_followed_by_det sig -> is_det sig A.
-    Proof.
-      move=> AllCut s1 s2 alts.
-      remember (Done _ _) as r eqn:Hr => -[b H].
-      elim: H s2 alts Hr => //=; clear -AllCut.
-        move=> s1 s2 A B b EA s3 C [] /[subst2].
-        have // := expandedb_no_new_alt AllCut EA.
-      move=> s1 s2 s3 A B C b1 b2 b3 EA NB HR IH ? s4 D ?; subst.
-      have {IH} /= nnCD := IH _ _ erefl.
-      have /= nnAB := expandedb_no_new_alt AllCut EA.
-      apply: no_new_alt_trans nnCD => //.
-      apply: no_new_alt_trans nnAB _ => //.
-      apply: next_alt_aux_no_new_alt NB.
-    Qed. *)
-  End has_cut.
-
 
   Lemma expand_has_cut {A s}: 
     has_cut A -> has_cut (get_state (expand s A)) \/ is_cutbrothers (expand s A).
@@ -984,6 +677,7 @@ Module check (U:Unif).
     apply: runb_next_alt H1 _ HA.
     apply: fA.
   Qed.
+  End has_cut.
 
   Print Assumptions  main.
   
