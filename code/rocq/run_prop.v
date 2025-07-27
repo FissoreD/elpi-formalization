@@ -124,7 +124,7 @@ Module RunP (A: Unif).
       case: next_alt => // [[s3 E]|].
         move=>/(_ _ _ erefl)[F]->[_<-]; exists (Or (cutl F) s2 (cutr B)).
         by move=>/=; rewrite !cutl_cutr_is_cutr cut_cut_same cutr2_same if_same.
-      by move=> _; rewrite failed_cutr next_alt_cutr.
+      by rewrite next_alt_cutr//failed_cutr if_same.
     + move=> A HA B0 HB0 B HB C s s'/=.
       rewrite dead_cut_is_dead.
       case: ifP => // cdA.

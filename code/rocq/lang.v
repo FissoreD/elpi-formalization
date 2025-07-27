@@ -355,13 +355,14 @@ Module Run (U : Unif).
       else
         (* if B == dead B then None else *)
         match next_alt s A with
-        | None =>  
+        | None =>
+            if B == dead B then None else 
             if failed B then 
-              match next_alt sB B with
+              match next_alt s B with
               | None => None
-              | Some (sB1, B) => Some (sB1, Or (dead A) sB B)
+              | Some (s, B) => Some (s, Or (dead A) sB B)
               end
-            else if B == dead B then None else Some (sB, Or (dead A) sB B)
+            else Some (sB, Or (dead A) sB B)
         | Some (sA, A) => Some (sA, Or A sB B)
         end
     end.
@@ -380,11 +381,12 @@ Module Run (U : Unif).
       case: next_alt => //= [[s3 D]|].
         move=> /(_ _ _ erefl) []?? _ []??;subst => /=; split; congruence.
       move=> _ dA.
-      case: ifP => //fB.
-        have:= HB _ s.
-        case: next_alt => //[[s3 D]] /(_ _ _ erefl) []?? []??;subst => /=.
-        split; congruence.
-      case: ifP => ///eqP H [??]; subst => /=; rewrite dead_dead_same; split; congruence.
+      case: ifP => /eqP// dB.
+        case:ifP => fB.
+          case X: next_alt => //[[s3 D]][_ <-]/=.
+          have []:= HB _ _ _ X.
+          rewrite dead_dead_same; split; congruence.
+        move=>[_ <-]/=; rewrite dead_dead_same; split; congruence.
     move=> A HA B0 _ B HB C s1 s2 /=.
     have:= HB _ s1.
     case: next_alt => //[[s3 D]|].
@@ -425,12 +427,12 @@ Module Run (U : Unif).
         have [_ +] := next_alt_dead X.
         by case: ifP => /eqP //.
       move=> _ dA.
-      case: ifP => // fB.
-        have:= (HB _ s).
-        case Y: next_alt => [[s3 D]|]//.
-        move=> /(_ _ _ erefl) fD []?? ;subst => /=.
-        by rewrite dead_dead_same eqxx.
-      by case: ifP => //dB [??]; subst => /=; rewrite dead_dead_same eqxx.
+      case: ifP => // /eqP dB.
+      case: ifP => fB.
+        case Y: next_alt => [[s3 D]|]//[_ <-]/=.
+        rewrite dead_dead_same eqxx.
+        by have:= (HB _ _ _ Y).
+      by move=>[_ <-]/=; rewrite dead_dead_same eqxx.
     move=> A HA B0 _ B HB C s1 s2.
     move=> /=.
     case: ifP => /eqP//dA.
@@ -491,7 +493,7 @@ Module Run (U : Unif).
   Proof.
     elim: A s => //.
       move=> A HA s1 B HB s2 /=.
-      by rewrite HA failed_cutr !HB if_same.
+      by rewrite HA failed_cutr !HB !if_same.
     move=> A HA B0 _ B HB /= s1.
     by rewrite failed_cutr HA if_same.
   Qed.
@@ -540,7 +542,9 @@ Module Run (U : Unif).
   Inductive runb : Sigma -> state -> run_res -> bool -> Prop :=
     | run_done {s s' A B b}        : expandedb s A (Done s' B) b -> runb s A (Done s' B) b
     | run_fail {s A B b}           : expandedb s A (Failed B) b -> next_alt s B = None -> runb s A (Failed B) b
-    | run_backtrack {s s' s'' A B C b1 b2 b3} : expandedb s A (Failed B) b1 -> next_alt s B = (Some (s', C)) ->  runb s' C s'' b2 -> b3 = (b1 || b2) -> runb s A s'' b3.
+    | run_backtrack {s s' s'' A B C b1 b2 b3} : 
+        expandedb s A (Failed B) b1 -> next_alt s B = (Some (s', C)) -> 
+          runb s' C s'' b2 -> b3 = (b1 || b2) -> runb s A s'' b3.
 
   Definition expanded s A r := exists b, expandedb s A r b.
   Definition run s A r := exists b, runb s A r b.
@@ -749,9 +753,12 @@ Module Run (U : Unif).
       case NA: next_alt => [[s3 C]|].
         by case: next_alt => // [[s4 D]]/eqP->/=; rewrite eqxx.
       case: next_alt => // _.
-      case: ifP => //.
-        by case: next_alt => //[[??]]//=.
-      by move=> _ _; case: ifP => //=.
+      case: ifP => /eqP// dB dA.
+      case: ifP => fB//=.
+      have:= HB s1 s2.
+      case: next_alt => [[??]|]//=.
+        by case: next_alt => [[??]|]///eqP<-.
+      case: next_alt => //.
     + move=> A HA B0 _ B HB s1 s2 /=.
       case: ifP => // _.
       case: ifP => // _.

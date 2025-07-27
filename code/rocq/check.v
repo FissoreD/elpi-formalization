@@ -300,7 +300,7 @@ Module check (U:Unif).
       rewrite (expand_not_deadb dA X) H1.
       rewrite (success_has_cut (proj1 (expand_solved_success X))).
       move=>/eqP->.
-      by rewrite failed_cutr next_alt_cutr.
+      by rewrite failed_cutr next_alt_cutr if_same.
     - move=> A HA B0 _ B HB s1 C s2 /=.
       move=>/orP[].
         move=>/eqP->; case X: expand; have:= expand_cutr X => //.
@@ -339,7 +339,8 @@ Module check (U:Unif).
   Proof.
     elim: A s B s' => //.
     - move=> A HA s1 B HB s C s' /=.
-      by move=>/eqP[->->]; rewrite !next_alt_cutr failed_cutr if_same.
+      move=>/eqP[->->]; rewrite !next_alt_cutr failed_cutr if_same.
+      by rewrite if_same.
     - move=> A HA B0 HB0 B HB s C s' /=.
       case: ifP => //= dA /orP[].
         move=> cA.
@@ -384,12 +385,15 @@ Module check (U:Unif).
           have cD:= has_cut_next_alt cA X.
           by move=> /(_ _ _ erefl) fD[_<-]/=; rewrite fD cD fB.
         move=> _.
-        case: ifP => FB.
-        have:= HB s _ _ fB.
-        case Y: next_alt => //[[s3 D]] /(_ _ _ erefl) fD [_ <-]/=.
-          by rewrite no_alt_dead has_cut_dead fD.
-        by case: ifP => //dB [_ <-]/=; rewrite no_alt_dead has_cut_dead fB.
+        case: ifP => /eqP dB//.
+        case: ifP => // Fb.
+          case Y: next_alt => //[[s3 D]].
+          move=>[_ <-]/=.
+          rewrite no_alt_dead has_cut_dead.
+          apply: HB fB Y.
+        by move=>[_<-]/=; rewrite no_alt_dead has_cut_dead fB.
       move=>/eqP->; rewrite failed_cutr next_alt_cutr.
+      rewrite if_same.
       have:= HA s1 _ _ fA.
       case: next_alt => // [[s3 D]]/(_ _ _ erefl) fD [_ <-]/=.
       by rewrite fD cutr2_same eqxx no_alt_cut if_same.
@@ -453,14 +457,17 @@ Module check (U:Unif).
           have cF:= has_cut_next_alt cE Y.
           by rewrite fF cF fB.
         move=>_ fB.
-        case: ifP => // FB.
+        case: ifP => // dB.
+        case:ifP => //FB.
           case nB : next_alt => //= [[s2 F]] [_<-]/=.
           by rewrite no_alt_dead has_cut_dead (no_free_alt_next_alt fB nB).
-        by case: ifP => //dB [_ <-]/=; rewrite no_alt_dead has_cut_dead fB.
+        move=>[_<-]/=.
+        by rewrite no_alt_dead has_cut_dead fB.
       move=> cA /eqP->.
       have:= HA _ _ s _ fA.
       case X: expand => // [E] /(_ _ _ _ erefl) + [<-]/=.
       rewrite /= (expand_not_deadb dA X) next_alt_cutr failed_cutr.
+      rewrite if_same.
       case Y: next_alt => //[[s2 F]].
       move=> /(_ _ _ erefl) fF [_ <-] /=.
       by rewrite fF no_alt_cut cutr2_same eqxx if_same.
@@ -596,5 +603,9 @@ Module check (U:Unif).
   End tail_cut.
 
   Print Assumptions tail_cut_is_det.
+
+  Search expand next_alt.
+
+  Search next_alt success.
 
 End check.
