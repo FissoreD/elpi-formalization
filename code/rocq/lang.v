@@ -539,14 +539,21 @@ Module Run (U : Unif).
     | expanded_cut {s s' r A B b}      : expand s A = CutBrothers s' B -> expandedb s' B r b -> expandedb s A r true
     | expanded_step {s s' r A B b}     : expand s A = Expanded s' B  -> expandedb s' B r b -> expandedb s A r b.
 
-
-  (* TODO: should remove the success from the state *)
-  Definition clean_success (A: state):= A.
+  Fixpoint clean_success (A: state):= 
+    match A with
+    | OK => KO
+    | KO | Dead | Bot | Top | Goal _ _ => A
+    | Or A s B => 
+      if A == dead A then Or A s (clean_success B)
+      else Or (clean_success A) s B
+    | And A B0 B =>
+      And A B0 (clean_success B)
+    end.
 
   Inductive run_res := DoneR of Sigma & state | FailedR.
   Inductive runb : Sigma -> state -> run_res -> bool -> Prop :=
-    | run_done {s s' A B b}        : 
-      expandedb s A (Done s' B) b -> runb s A (DoneR s' (clean_success B)) b
+    | run_done {s s' A B C b}        : 
+      expandedb s A (Done s' B) b -> C = clean_success B -> runb s A (DoneR s' C) b
     | run_fail {s A B b}           : expandedb s A (Failed B) b -> next_alt s B = None -> runb s A FailedR b
     | run_backtrack {s s' s'' A B C b1 b2 b3} : 
         expandedb s A (Failed B) b1 -> next_alt s B = (Some (s', C)) -> 
@@ -945,6 +952,93 @@ Module Run (U : Unif).
       case: expand => // s3 E /(_ _ _ erefl)[]->.
       by move=> sE sD [??]; subst => /=; rewrite sE sD.
   Qed.
+
+  Lemma expandedb_Done_success {s1 A s2 B b}: 
+    expandedb s1 A (Done s2 B) b -> success B.
+  Proof.
+    remember (Done _ _) as d eqn:Hd => H.
+    elim: H s2 B Hd => //; clear.
+    by move=> s s' A B /expand_solved_success[sA sB] ?? [_<-].
+  Qed.
+
+  Lemma success_clean_success {A}:
+    success A -> clean_success A == dead (clean_success A) = false.
+  Proof.
+    elim: A => //.
+    - move=> A HA s B HB/=.
+      case: ifP => /eqP.
+        move=>->/= /HB; rewrite dead_dead_same.
+        move=>/eqP.
+        case: eqP => //; congruence.
+      move=> dA/HA/=/eqP; case: eqP => //; congruence.
+    - move=> A HA B0 _ B HB/=.
+      move=>/andP[_ /HB]/=/eqP.
+      case: eqP; congruence.
+  Qed.
+
+  Lemma clean_success2 {A}:
+    success A -> clean_success (clean_success A) = clean_success A.
+  Proof.
+    elim: A => //.
+    - move=> A HA s B HB /=.
+      case: ifP => /eqP.
+        by move=>->/= sB; rewrite dead_dead_same eqxx HB.
+      move=> /= dA sA; rewrite HA//success_clean_success//.
+    - move=> A HA B0 _ B HB/= /andP[/HA _ /HB->]//.
+  Qed.
+
+  Lemma clean_success_dead {A}: clean_success(dead A) = dead A.
+  Proof.
+    elim: A =>//.
+    - move=> A HA s B HB/=.
+      by rewrite dead_dead_same eqxx HB.
+    - move=> A HA B0 _ B HB/=.
+      by rewrite ?HA HB.
+  Qed.
+
+  Lemma next_alt_clean_success {s s1 B}:
+    success B -> next_alt s B = None ->
+      next_alt s1 (clean_success B) = None.
+  Proof.
+    elim: B s s1 => //.
+    - move=> A HA s B HB s1 s2/=.
+      case: ifP => /eqP.
+        move=>->sB.
+        case X: next_alt => [[s3 C]|]//.
+        move=>/=; rewrite dead_dead_same eqxx (HB s1 s2)//.
+      move=> dA sA.
+      case X: next_alt => [[s3 C]|]//.
+      case: ifP => /eqP.
+        move=>->/=.
+        by rewrite next_alt_dead1 (HA s1 s2)// dead_dead_same eqxx if_same.
+      case: ifP => fB//dB.
+      case Y: next_alt => [[s3 C]|]//=.
+      have:= next_alt_none Y=>->.
+      by rewrite (HA s1 s2)//fB !if_same.
+    - move=> A HA B0 _ B HB/= s1 s2/andP[sA sB].
+      case: ifP => /eqP//.
+        (* by move=>->; rewrite clean_success_dead dead_dead_same eqxx. *)
+      rewrite success_failed//.
+      case Y: next_alt => [[s3 C]|]//.
+      rewrite (HB s1 s2)//.
+      case Z: next_alt => [[s3 D]|]//.
+        case: ifP => //fB0.
+        case: next_alt => [[s4 E]|]//; rewrite !if_same//.
+      by have:= next_alt_none Z s2 => ->.
+  Qed.
+
+  Lemma failed_clean_success {A}: success A -> failed (clean_success A).
+  Proof.
+    elim: A => //.
+    - move=> A HA s B HB/=.
+      case: ifP =>/eqP.
+        by move=>->/=; rewrite dead_dead_same eqxx.
+      move=> _/= sA.
+      by rewrite success_clean_success//HA.
+    - move=> A HA B0 HB0 B HB/=/andP[->/HB->]//; rewrite orbT//.
+  Qed.
+
+    
 
   Lemma expand_solved_failed {s1 A s2 B}: 
     expand s1 A = Solved s2 B -> failed A = false /\ failed B = false.

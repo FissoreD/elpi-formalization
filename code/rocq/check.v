@@ -553,8 +553,10 @@ Module check (U:Unif).
     move=> H1 H2 s s' B []b H3.
     remember (DoneR _ _) as d eqn:Hd.
     elim: H3 s' B H2 Hd; clear -H1 => //.
-    - move=> s s' A B b HA s1 C fA [??] s2;subst.
-      apply: expandedb_next_alt_done H1 fA HA _.
+    - move=> s s' A B C b HA -> s1 D fA [??] s2;subst.
+      have H := expandedb_next_alt_done H1 fA HA _.
+      have sB := expandedb_Done_success HA.
+      by have:= next_alt_clean_success sB (H empty)=>->.
     - move=> s s' r A B C b1 b2 b3 HA HB HC IH ? s1 D fA ? s2; subst.
       apply: IH _ erefl _.
       apply: expandedb_next_alt_failed H1 fA HA HB.

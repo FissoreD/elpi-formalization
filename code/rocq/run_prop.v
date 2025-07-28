@@ -84,7 +84,7 @@ Module RunP (A: Unif).
     runb s A r1 b1 -> runb s A r2 b2 -> r1 = r2 /\ b1 = b2.
   Proof.
     move=> H; elim: H r2 b2; clear.
-    + move=> s s' A B b H r2 b2 H1.
+    + move=> s s' A B C b H -> r2 b2 H1.
       inversion H1; clear H1; subst;
         by have:= expanded_consistent H H0 => -[] // [->->]->.
     + move=> s A B b HA HB r b2 H1.
@@ -699,10 +699,16 @@ Module RunP (A: Unif).
   Proof.
     remember (DoneR _ _) as rD eqn:HrD => H.
     elim: H s2 A' sB B HrD => //; clear.
-    + move=> s s' A B b H s2 A' sB B' [??]; subst.
-      have [? H1]:= expanded_or_correct_left _ H sB B'.
+    + move=> s s' A B C b H -> s2 A' s3 B' [??]; subst.
+      have [? H1]:= expanded_or_correct_left _ H s3 B'.
       eexists.
-      apply: run_done H1.
+      apply: run_done H1 _.
+      have sB := expandedb_Done_success H.
+      have:= success_clean_success sB => /=.
+      case: ifP => /eqP// _ _.
+      have:= success_dead1 sB.
+      case: (ifP (_ == _)) => /eqP// _ _.
+      rewrite clean_success2//.
     + move=> s s' r A B C b1 b2 b3 HE HN HR IH ? s2 D sB E ? dE;subst.
       case: (A =P dead A) => dA.
         have H := expanded_dead s dA.

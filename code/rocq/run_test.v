@@ -105,6 +105,8 @@ Module Test1.
             apply: expanded_step => //=.
             apply: expanded_step => //=.
             apply: expanded_done => //=.
+            move=>/=.
+            reflexivity.
   Qed.
 End Test1.
 
@@ -173,6 +175,7 @@ Module Test5.
       rewrite -lock //=.
       apply: expanded_step => //=.
       apply: expanded_done => //=.
+      reflexivity.
       reflexivity.
   Qed.
 End Test5.
@@ -249,6 +252,7 @@ Module Test6.
       apply: expanded_done => //=.
       reflexivity.
       reflexivity.
+      reflexivity.
   Qed.
 End Test6.
 
@@ -258,21 +262,24 @@ Module Test2.
   Import RunAxiom.
   Goal expand empty (Or OK empty OK) = Solved empty (Or OK empty OK) . by []. Qed.
 
-  Goal forall p, run empty (Or (Goal p Cut) empty Top) (DoneR empty (Or OK empty KO)).
+  Goal forall p, run empty (Or (Goal p Cut) empty Top) (DoneR empty (Or KO empty KO)).
     move=> pr //=.
     eexists. apply: run_done => //=. 
     apply: expanded_step => //=.
-    by apply: expanded_done => /=. 
+    by apply: expanded_done => /=.
+    reflexivity. 
   Qed.
 
-  Goal forall p, 
-    run empty (Or (Goal p Cut) empty (Or OK empty OK)) (DoneR empty (Or OK empty (cutr ((Or OK empty OK))))).
+  Goal forall p r, 
+    run empty (Or (Goal p Cut) empty r) (DoneR empty (Or KO empty (cutr r))).
     move=> p; eexists.
     apply: run_done.
     apply: expanded_step => //=.
     apply: expanded_done => //=.
+    reflexivity.
   Qed.
 
-  Goal run empty (Or OK empty (Or OK empty OK)) (DoneR empty (Or OK empty (((Or OK empty OK))))).
-  Proof. eexists; apply: run_done => //=. apply: expanded_done => //=. Qed.
+  Goal run empty (Or OK empty (Or OK empty OK)) (DoneR empty (Or KO empty (((Or OK empty OK))))).
+  Proof. eexists; apply: run_done => //=. apply: expanded_done => //=.
+    reflexivity. Qed.
 End Test2.
