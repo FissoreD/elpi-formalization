@@ -1,5 +1,7 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang run_prop.
+From elpi.apps Require Import derive derive.std.
+From HB Require Import structures.
 
 Import Language.
 
@@ -11,6 +13,9 @@ Module Nur (U : Unif).
   Inductive G := 
     | call : Tm -> G
     | cut : list (list G) -> G.
+  derive G.
+  HB.instance Definition _ := hasDecEq.Build state state_eqb_OK.
+
   Definition alt := (list G).
 
   Definition save_alt_ca (a : A) alts :=
@@ -18,7 +23,6 @@ Module Nur (U : Unif).
     | Cut => cut alts
     | Call t => call t
     end.
-
   Definition save_alt a (b: Sigma * R) gs := ([seq save_alt_ca x a | x <- (snd b).(premises)] ++ gs).
   Definition more_alt a bs gs := [seq (save_alt a b1 gs) | b1 <- bs] ++ a.
 
@@ -68,7 +72,8 @@ Module Nur (U : Unif).
       let lA := state_to_list A bt in
       let lB := state_to_list B bt in
       let lB0 := state_to_list B0 bt in
-      add_alt lB0 lA lB 
+      if failed A then add_alt lB0 lA lB0 
+      else add_alt lB0 lA lB 
     end.
 
   Goal forall p x y z w s1 s2 a, 
@@ -170,7 +175,7 @@ Module Nur (U : Unif).
     + move=> A HA s B HB /= l.
       by rewrite HB HA cats0/=.
     + move=> A HA B0 _ B HB /= l.
-      by rewrite HA HB /add_alt/=.
+      by rewrite HA HB /add_alt/=failed_dead1.
   Qed.
 
   Lemma cats20 {T:Type} {A B : list (list T)} n: A ++ B = nseq n [::] -> 
@@ -205,6 +210,9 @@ Module Nur (U : Unif).
     elim i => //=+ xs-> => -[]//=x.
     by rewrite catA.
   Qed.
+  From HB Require Import structures.
+
+
 
   Lemma expand_solve_state_to_list_cons1 {s1 A s2 A'}:
      expand s1 A = Solved s2 A' -> forall r, exists l, state_to_list A r = [::] :: l.
@@ -227,65 +235,166 @@ Module Nur (U : Unif).
       have [l->]:= HA _ _ _ HA' r.
       have [l'->]:= HB _ _ _ HB' r.
       move=>/=.
+      have [sA _]:= expand_solved_success HA'.
+      rewrite success_failed//.
       by eexists.
     Qed.
 
-  Lemma success_next_alt_none {s A l}: success A -> next_alt s A = None -> 
-    state_to_list A l = [::].
+  Definition alts:= seq alt.
+
+  Definition seq_alt_eqb: alts -> alts -> bool.
+  Proof.
+    apply: allrel.
+    apply: allrel.
+    apply: G_eqb.
+  Defined.
+
+
+  Lemma seq_alt_OK : Equality.axiom seq_alt_eqb.
+    apply: iffP2.
+    rewrite /eqb_correct /eqb_correct_on/seq_alt_eqb.
+    move=> ??.
+  Admitted.
+  
+  Lemma success_next_alt_none {s A l}: next_alt s A = None -> 
+    if (success A) then state_to_list A l = [::[::]]
+    else if failed A then state_to_list A l = [::]
+    else True.
   Proof.
     elim: A s l => //.
-    - move=>/=.
+    - move=>A HA s B HB s1 l/=.
+      case: ifP => /eqP.
+        move=>->.
+        case X: next_alt => [[ ]|]//Ign1.
+        case: ifP => // sB.
+          rewrite state_to_list_dead/=.
+          by have:= HB _ l X; rewrite sB.
+        case: ifP => //fB.
+        rewrite state_to_list_dead/=.
+        by have:= HB _ l X; rewrite sB fB.
+      move=> dA.
+      case X: next_alt => [[s2 C]|]//.
+      case: ifP => /eqP.
+        move=>->; rewrite state_to_list_dead/= cats0.
+        move=>_.
+        case: ifP => //.
+          move=> sA.
+          have:= HA _ l X.
+          by rewrite sA => ->/=.
+        move=> sA.
+        case: ifP => //fA.
+        by have:= HA _ l X; rewrite sA fA => ->.
+      move=> dB.
+      case: ifP => //fB.
+      case Y: next_alt => //[[]|]//.
+      have:= HB _ _ Y; rewrite fB.
+      rewrite (failed_success)//.
+      move=>->/=.
+      case: ifP => sA.
+        by have:= HA _ _ X; rewrite sA=>->/=.
+      case: ifP => //fA _.
+      by have:= HA _ _ X; rewrite sA fA=>->/=.
+    - move=> A HA B0 HB0 B HB s l/=.
+      case: ifP => /eqP.
+        by move=>->; rewrite success_dead failed_dead1 state_to_list_dead/=.
+      move=> dA.
+      case: ifP=>fA.
+      rewrite failed_success//=.
+        case X: next_alt => [[s1 C]|]//.
+          case: ifP => //fB0.
+          case Y: next_alt => [[s2 D]|]//.
+          have:= HB0 _ l Y.
+          rewrite fB0 failed_success///add_alt.
+          move=>->/=; case: state_to_list => //*.
+          by rewrite flatten_empty.
+        have:= HA _ l X.
+        rewrite fA failed_success///add_alt.
+        by move=>->.
+      case X: next_alt => //[[]|]//.
+      case Y: next_alt => [[s1 C]|].
+        case: ifP => //fB0.
+        case W: next_alt => [[]|]//=.
+        have:= HB0 _ l W.
+        rewrite fB0 failed_success//=/add_alt/=.
+        move=>->/=.
+        case: ifP => //.
+          move=>/andP[sA sB] _.
+          have:= HB _ l X.
+          rewrite sB.
+          move=>->/=.
+          case Z: state_to_list.
+            admit.
+          admit.
+        move=> H.
+        rewrite H.
+
+
+
+
+        
+
     
   Abort.
+
 
   Lemma next_alt_none_state_to_list {s B}:
       failed B -> next_alt s B = None -> 
         forall l, state_to_list B l = [::].
+        (* (OK/\KO) \/ KO *)
   Proof.
-    elim: B => //.
-    - move=> A HA s1 B HB /= + + l.
+    elim: B s => //.
+    - move=> A HA s1 B HB /= s + + l.
       case:ifP=>/eqP.
         move=>->.
         rewrite state_to_list_dead/=.
         move=> fB.
         case X: next_alt => [[]|]//.
-        rewrite HB//.
+        rewrite (HB s)//.
       move=> dA fA.
       case X: next_alt => [[s2 D]|]//.
-      rewrite HA//=.
+      rewrite (HA s)//=.
       case: ifP => /eqP.
         by move=>->; rewrite state_to_list_dead.
       move=> dB.
       case: ifP => fB => //.
       case Y: next_alt => [[]|]// _.
-      by apply: HB.
-    - move=> A HA B0 HB0 B HB/= + + l.
+      by apply: (HB s).
+    - move=> A HA B0 HB0 B HB/= s + + l.
       case: ifP=>/eqP.
         move=>->.
+        rewrite failed_dead1/=.
         by rewrite state_to_list_dead.
       move=> dA/orP[].
         move=>fA.
         rewrite fA.
         case X: next_alt => [[s3 C]|].
-          case: ifP => // fB0 _.
-          rewrite /add_alt.
-          case Y: state_to_list => //[y ys].
-          rewrite HB0//=?flatten_empty?cats0.
-            admit.
-          admit.
-        rewrite HA//.
+          case: ifP => // fB0.
+          case Y: next_alt => //[[s4 D]|]// _.
+          rewrite (HB0 s3)//=/add_alt/=.
+          case Z: state_to_list => //[x xs].
+          by rewrite flatten_empty.
+        rewrite (HA s)//.
       move=> /andP[sA fB].
       rewrite success_failed//.
       case X: next_alt => [[s1 C]|]//.
-      rewrite HB//; clear HB.
-      case Y: next_alt => [[s1 C]|]//.
-        case: ifP => // fB0.
-        rewrite HB0/add_alt//=.
-          case: state_to_list => //_ ?.
-          rewrite flatten_empty//.
-        admit.
+      case Y: next_alt => [[s2 D]|]//.
+        case: ifP => //fB0.
+        case Z: next_alt => //[[]|]//=.
+        move=>_.
+        rewrite (HB0 s2)///add_alt.
+        case W: state_to_list => //[x xs]/=.
+        rewrite flatten_empty cats0 (HB s)//.
       move=> _; rewrite /add_alt//=.
-      case: state_to_list => //[_ lA].
+      (* rewrite (HA s)//. *)
+      case W: state_to_list => //[x xs].
+      rewrite (HB s)//=.
+      (* Compute (next_alt empty (And (Or OK empty Bot) Top KO)).
+      Compute (success (Or OK empty Bot)).
+      Compute (next_alt empty (Or OK empty Bot)).
+      Compute (state_to_list (And (Or OK empty Bot) Top KO) [::]).
+      suffices H: (A = (Or OK empty Bot)). *)
+      (* subst => //. *)
+      (* Search success next_alt. *)
       admit.
   Admitted.
 
@@ -313,14 +422,17 @@ Module Nur (U : Unif).
         rewrite state_to_list_dead/=(HB _ _ _ fB Y)//.
       move=>[_<-]/=.
       rewrite state_to_list_dead//.
-    - move=> A HA B0 _ B HB/=s1 s2 C.
+    - move=> A HA B0 HB0 B HB/=s1 s2 C.
       case: ifP => /eqP//dA.
       move=>/orP[].
         move=> fA + l.
         rewrite fA.
         case X: next_alt => [[s3 D]|]//.
-        case: ifP => //fB0[_<-]/=.
-        have:= HA _ _ _ fA X => ->.
+        case: ifP => //fB0.
+          case Y: next_alt => //[[s4 E]][_<-]/=.
+          rewrite (HB0 _ _ _ fB0 Y) (HA _ _ _ fA X).
+          admit.
+        have:= HA _ _ _ fA X => ->[_<-]/=.
         f_equal.
         admit.
       move=>/andP[sA fB] + l.
@@ -329,7 +441,12 @@ Module Nur (U : Unif).
         move=>[_<-]/=.
         have:= HB _ _ _ fB X => ->//.
       case Y: next_alt => //[[s3 D]].
-      case: ifP => //fB0[_<-]/=.
+      case: ifP => //fB0.
+        case Z: next_alt => //[[s4 E]][_<-]/=.
+        rewrite (HB0 _ _ _ fB0 Z).
+        admit.
+      move=>[_<-]/=.
+      rewrite (next_alt_none_state_to_list fB X).
       admit.
   Admitted.
 
