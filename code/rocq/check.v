@@ -1,10 +1,10 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
-From det Require Import valid_state.
+From det Require Import run_prop.
 
 Module check (U:Unif).
-  Module VS := valid_state(U).
-  Import Language VS RunP Run.
+  Module RunP := RunP(U).
+  Import Language RunP Run.
 
   Print sigT.
   Definition sigV := V -> option S.
@@ -41,7 +41,7 @@ Module check (U:Unif).
     match A with
     | Goal _ Cut => true
     | Goal _ (Call _) => false
-    | KO | Bot | Dead => true
+    | KO | Dead => true
     | OK | Top => false
     | And A B0 B => has_cut A || (has_cut B0 && has_cut B)
     | Or _ _ _ => A == cutr A
@@ -71,7 +71,7 @@ Module check (U:Unif).
   Fixpoint no_free_alt (sP:sigT) (sV:sigV) A :=
     match A with
     | Goal _ a => det_atom sP sV a
-    | Top | Bot | KO => true
+    | Top | KO => true
     | OK | Dead => true
     | And A B0 B =>
       (A == cutr A) || 

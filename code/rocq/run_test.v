@@ -78,19 +78,19 @@ Module Test1.
     apply: run_backtrack => //.
     - apply: expanded_step => //=.
       rewrite /big_or/F/select/=.
-      apply: expanded_step => //=.
+      (* apply: expanded_step => //=. *)
       apply: expanded_fail => //=.
     - reflexivity.
     - apply: run_backtrack => //.
       - apply: expanded_step => //=.
         rewrite /big_or/F/select/= -/s1 -/s2.
-        apply: expanded_step => //=.
+        (* apply: expanded_step => //=. *)
         apply: expanded_fail => //=.
       - reflexivity.
       - apply: run_backtrack => //.
         - apply: expanded_step => //=.
           apply: expanded_step => //=.
-          apply: expanded_step => //=.
+          (* apply: expanded_step => //=. *)
           apply: expanded_fail => //=.
         - move=> /=.
           case: ifP => /eqP//.
@@ -98,7 +98,7 @@ Module Test1.
           - apply: expanded_step => //=.
             apply: expanded_step => //=.
             rewrite /big_or/F//=.
-            apply: expanded_step => //=.
+            (* apply: expanded_step => //=. *)
             apply: expanded_fail => //=.
           - move=>/=; case: ifP => /eqP => //.
           - apply: run_done.
@@ -156,13 +156,13 @@ Module Test5.
     apply: expanded_step.
     + move=> //.
     + rewrite /big_or/F/select/=.
-      apply: expanded_step => //=.
+      (* apply: expanded_step => //=. *)
       apply: expanded_fail => //.
       reflexivity.
     apply: run_backtrack => //.
       apply: expanded_step => //=.
     + rewrite /big_or/F/select/=.
-      apply: expanded_step => //=.
+      (* apply: expanded_step => //=. *)
       apply: expanded_fail => //=.
       reflexivity.
       rewrite -/s1-/s2.
@@ -228,13 +228,13 @@ Module Test6.
     apply: expanded_step.
     + move=> //.
     + rewrite /big_or/F/select/=.
-      apply: expanded_step => //=.
+      (* apply: expanded_step => //=. *)
       apply: expanded_fail => //.
       reflexivity.
     apply: run_backtrack => //.
       apply: expanded_step => //=.
     + rewrite /big_or/F/select/=.
-      apply: expanded_step => //=.
+      (* apply: expanded_step => //=. *)
       apply: expanded_fail => //=.
       rewrite -/s2 -/s1.
       reflexivity.
@@ -242,7 +242,7 @@ Module Test6.
       apply: expanded_step => //.
       (* rewrite [Cut]lock. *)
       apply: expanded_step => //=.
-      apply: expanded_step => //=.
+      (* apply: expanded_step => //=. *)
       apply: expanded_fail => //=.
       move=> /=;case: ifP => /eqP//.
       apply: run_done.

@@ -4,7 +4,7 @@ From det Require Import run_prop.
 
 
 Module valid_state (U:Unif).
-  Module RunP := RunP(U).
+  (* Module RunP := RunP(U).
   Import RunP Run Language.
   
   Fixpoint base_and s :=
@@ -177,7 +177,7 @@ Module valid_state (U:Unif).
         if success A then valid_state B 
         else ((B0 == B) )) 
       /\ (*ssa B0 B /\*) base_and B0.
-  Proof. by move=>/=/and3P[]//->->/andP[]->->. Qed.
+  Proof. by move=>/=/and3P[]//->->/andP[]->->. Qed. *)
 
 
 

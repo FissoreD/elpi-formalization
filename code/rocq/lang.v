@@ -140,7 +140,7 @@ Module Run (U : Unif).
     | KO : state
     | OK : state
     | Top : state
-    | Bot : state
+    (* | Bot : state *)
     | Dead : state
     (* | CutOut : state *)
     | Goal : program  -> A -> state
@@ -168,7 +168,7 @@ Module Run (U : Unif).
   Fixpoint dead A :=
   match A with
   | Dead => Dead
-  | OK | KO | Bot | Goal _ _ | Top => Dead
+  | OK | KO | Goal _ _ | Top => Dead
   | And A B0 B => And (dead A) (dead B0) (dead B)
   | Or A s B => Or (dead A) s (dead B)
   end.
@@ -191,7 +191,7 @@ Module Run (U : Unif).
   Fixpoint cutr A :=
     (* if A == dead A then Dead else *)
     match A with
-    | Bot | Goal _ _ | Top | OK => KO
+    | Goal _ _ | Top | OK => KO
     | Dead | KO => A
     | And A B0 B => And (cutr A) (cutr B0) (cutr B)
     | Or A s B => Or (cutr A) s (cutr B)
@@ -200,7 +200,7 @@ Module Run (U : Unif).
    Fixpoint success (A : state) : bool :=
     match A with
     | OK => true
-    | Top | Bot | Goal _ _ | KO | Dead => false
+    | Top | Goal _ _ | KO | Dead => false
     | And A _ B => success A && success B
     | Or A _ B => if A == dead A  then success B else success A
     end.
@@ -210,7 +210,7 @@ Module Run (U : Unif).
   Fixpoint cutl A :=
     (* if A == dead A then Dead else *)
     match A with
-    | Bot | Goal _ _ | Top => KO
+    | Goal _ _ | Top => KO
     | Dead | KO | OK => A
     | And A B0 B => And (cutl A) (cutl B0) (cutl B)
     | Or A s B => 
@@ -242,8 +242,8 @@ Module Run (U : Unif).
 
   Definition big_or pr s t :=
     let l := F pr t s in
-    if l is (s,r) :: xs then (Or Bot s (big_or_aux pr r.(premises) xs))
-    else Bot.
+    if l is (s,r) :: xs then (Or KO s (big_or_aux pr r.(premises) xs))
+    else KO.
 
   Definition get_state r := match r with 
     | Failure A | Solved _ A | CutBrothers _ A | Expanded _ A => A 
@@ -261,7 +261,6 @@ Module Run (U : Unif).
     
     (* lang *)
     | Top              => Expanded s OK
-    | Bot              => Expanded s KO
     | Goal _ Cut       => CutBrothers s OK
     | Goal pr (Call t) => Expanded s (big_or pr s t)
 
@@ -289,7 +288,7 @@ Module Run (U : Unif).
   Fixpoint failed (A : state) : bool :=
     match A with
     | KO | Dead => true
-    | Top | Bot | Goal _ _ | OK => false
+    | Top | Goal _ _ | OK => false
     | And A _ B => failed A || (success A && failed B)
     | Or A _ B => if A == dead A then failed B else failed A (*&& failed B*)
     end.
@@ -324,7 +323,7 @@ Module Run (U : Unif).
       by left; apply: dead_failed H1.
   Qed.
 
-  Definition is_base X := match X with Top | Bot | Goal _ _ => true | _ => false end.
+  Definition is_base X := match X with Top | Goal _ _ => true | _ => false end.
   Definition is_expanded X := match X with Expanded _ _ => true | _ => false end.
 
 
@@ -332,7 +331,7 @@ Module Run (U : Unif).
     match A with
     | KO | OK => None
     | Dead => None
-    | Top | Bot | Goal _ _ => None
+    | Top | Goal _ _ => None
     | And A B0 B =>
       if (A == dead A) then None else
       if failed A then 
@@ -542,7 +541,7 @@ Module Run (U : Unif).
   Fixpoint clean_success (A: state):= 
     match A with
     | OK => KO
-    | KO | Dead | Bot | Top | Goal _ _ => A
+    | KO | Dead | Top | Goal _ _ => A
     | Or A s B => 
       if A == dead A then Or A s (clean_success B)
       else Or (clean_success A) s B
@@ -554,7 +553,7 @@ Module Run (U : Unif).
   Inductive runb : Sigma -> state -> run_res -> bool -> Prop :=
     | run_done {s s' A B C b}        : 
       expandedb s A (Done s' B) b -> C = clean_success B -> runb s A (DoneR s' C) b
-    | run_fail {s A B b}           : expandedb s A (Failed B) b -> next_alt s B = None -> runb s A FailedR b
+    (* | run_fail {s A B b}           : expandedb s A (Failed B) b -> next_alt s B = None -> runb s A FailedR b *)
     | run_backtrack {s s' s'' A B C b1 b2 b3} : 
         expandedb s A (Failed B) b1 -> next_alt s B = (Some (s', C)) -> 
           runb s' C s'' b2 -> b3 = (b1 || b2) -> runb s A s'' b3.
@@ -741,8 +740,8 @@ Module Run (U : Unif).
     + move=> /=; case Y: next_alt => [[ ]|].
       + move=> [] ?.  *)
 
-  Lemma simpl_is_base {B}: is_base B -> B = Top \/ B = Bot \/ (exists p t, B = Goal p t).
-  Proof. by case B => //=; auto; right; right; do 2 eexists. Qed.
+  (* Lemma simpl_is_base {B}: is_base B -> B = Top \/ (exists p t, B = Goal p t).
+  Proof. by case B => //=; auto; right; right; do 2 eexists. Qed. *)
 
   Definition same_sol (A B : option (Sigma * state)) := 
     match A, B with
@@ -1137,13 +1136,13 @@ Module Run (U : Unif).
   Qed.
 
 
-  Lemma big_or_failed {p s1 t}: failed (big_or p s1 t) = false.
+  (* Lemma big_or_failed {p s1 t}: failed (big_or p s1 t) = false.
   Proof.
     unfold big_or.
       case: F => //.
     move=> [s r] l.
     by move=>/=.
-  Qed.
+  Qed. *)
 
   Lemma failed_cut {A}: failed A -> failed (cutl A).
   Proof.

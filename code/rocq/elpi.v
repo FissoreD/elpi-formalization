@@ -62,18 +62,16 @@ Module Nur (U : Unif).
     [seq add_ca gl lB | gl <- lA].
 
   Definition add_alt (lB0 lA lB:list alt) : list  alt :=
-    (* lb ++  *)
-    match lA with
-    | [::] => [::]
-    | x :: xs =>
+    if lA is x :: xs then
       [seq x ++ y | y <- lB] ++ 
         flatten [seq [seq la ++ lb | lb <- lB0] | la <- xs]
-    end.
+    else [::]
+    .
 
   Fixpoint state_to_list (A: state) (bt : list alt) : list alt :=
     match A with
     | OK | Top => [::[::]]
-    | Bot | KO | Dead => [::]
+    | KO | Dead => [::]
     | Goal _ Cut => [::[::cut [::]]]
     | Goal _ (Call t) => [::[::call t]]
     | Or A _ B => 
@@ -169,9 +167,6 @@ Module Nur (U : Unif).
       move=> p l x xs [<-<-]; do 2 eexists; split.
         apply: StopE.
       by [].
-    - inversion H1; subst => //.
-      case: H3 => ??;subst.
-      inversion H4 => //.
     - inversion H1; subst => //.
       case: H4 => ??;subst.
       inversion H5 => //.
@@ -325,24 +320,21 @@ Module Nur (U : Unif).
     by rewrite (expand_solved_state_to_list_same H).
   Qed.
 
-  (* Lemma zzz {s1 A r}: 
-    expand s1 A = r -> is_fail r == false ->
-      forall l, exists x xs, state_to_list A l = x :: xs.
+  Lemma zzz {s1 s2 A B b} l: 
+    expandedb s1 A (Done s2 B) b ->
+      exists x xs, state_to_list A l = x :: xs.
   Proof.
-    move=> <-.
-    elim: A s1 => //; clear.
-    - by move=> s1 _ l /=; do 2 eexists.
-    - by move=> s1 _ l /=; do 2 eexists.
-    - move=> /=. by move=> s1 _ l /=; do 2 eexists.
-    - move=> /=.
-    elim: H s2 B Hd => //; clear.
-    - move=> s s' A B HA s2 C [_ _] l.
-      do 2 eexists.
-      apply: success_state_to_list (proj1 (expand_solved_success HA)).
-    - move=> s s' r A B b H1 H2 IH s2 C ? l; subst.
-
-    move=> H. *)
-
+    remember (Done _ _) as d eqn:Hd => H.
+    elim: H s2 B Hd l => //; clear.
+    - move=> s s' A B HA ??[??] l; subst.
+      do 2 eexists; apply: success_state_to_list (proj1 (expand_solved_success HA)).
+    - move=> s s' r A B b HA HB + s2 C ? l; subst.
+      move=> /(_ _ _ erefl) IH.
+      admit.
+    - move=> s s' r A B b HA HB + s2 C ? l; subst.
+      move=> /(_ _ _ erefl) IH.
+      admit.
+  Admitted.
 
   Lemma runExpandedbDone {s s' A B b}:
     expandedb s A (Done s' B) b ->
@@ -358,19 +350,22 @@ Module Nur (U : Unif).
     - move=> s s' r A B b H1 H2 IH s1 C ? p l x xs; subst.
       have {}IH := IH _ _ erefl.
       move=> H.
+      have [y [ys H3]]:= zzz l H2.
+      have [r1 [s2 [HN HS]]]:= IH p _ _ _ H3.
       do 2 eexists; split; last first.
-      apply: IH.
-      have sC := expandedb_Done_success H2.
-      have H:= success_state_to_list sC.
-      rewrite /same_state_next_alt.
-      move=> p l x xs H3.
-      have {}IH:= IH _ _ erefl.
+        apply: HS.
       admit.
-    - move=> s s' r A B b H1 H2 IH s1 C ?;subst.
-      move=> p l x xs H3.
-      have {}IH:= IH _ _ erefl.
+    - move=> s s' r A B b H1 H2 IH s1 C ? p l x xs; subst.
+      have {}IH := IH _ _ erefl.
+      move=> H.
+      have [y [ys H3]]:= zzz l H2.
+      have [r1 [s2 [HN HS]]]:= IH p _ _ _ H3.
+      do 2 eexists; split; last first.
+        apply: HS.
       admit.
   Admitted.
+
+  (* Lemma xxx {s B}: next_alt s B = None-> state_to_list A x = [::].  *)
 
   Lemma runElpiP: forall A, runElpi A.
   Proof.
@@ -378,11 +373,9 @@ Module Nur (U : Unif).
     elim: H; clear.
     + move=>  s s' A B C b + ->.
       apply: runExpandedbDone.
-    + move=> s A B b H H1 p x xs r1.
-      admit.
     + move=> s s' r A B C b1 b2 b3 HA HB HC IH ?; subst.
-      move=> p x xs r1.
-      (* Qui backtracking: difficile da vedere facilmente nella nur? *)
+      move=> p x xs r1 H.
+      (* rewrite / *)
       admit.
   Admitted.
 End Nur.

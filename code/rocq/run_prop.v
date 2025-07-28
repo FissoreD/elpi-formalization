@@ -5,7 +5,7 @@ Module RunP (A: Unif).
   Module Run := Run(A).
   Import Run Language.
 
-  Lemma expand_big_or {p s s1 t r}: 
+  (* Lemma expand_big_or {p s s1 t r}: 
     expand s (big_or p s1 t) = r -> is_expanded r.
   Proof.
     rewrite /big_or/F.
@@ -13,14 +13,14 @@ Module RunP (A: Unif).
     case: p => //= rules modes sig1.
     generalize {| rules := rules; modes := modes; sig := sig1 |} as pr => pr.
     generalize (modes t) as m => {}modes.
-    elim: rules => //= -[] hd bo rs/=.
+    elim: rules => //=. -[] hd bo rs/=.
     move=> IH.
     case: H => //.
-  Qed.
+  Qed. *)
 
-  Lemma expand_big_or1 {p s t}: 
+  (* Lemma expand_big_or1 {p s t}: 
     is_expanded (expand s (big_or p s t)).
-  Proof. by apply: expand_big_or. Qed.
+  Proof. by apply: expand_big_or. Qed. *)
 
   Lemma expanded_classic_expanded {s A r}:
     Run.expanded_classic s A r -> Run.expanded s A r.
@@ -49,7 +49,6 @@ Module RunP (A: Unif).
   Proof.
     rewrite /run_classic; remember false as f eqn:Hf => H.
     elim: H s2 B Hf; clear.
-    + inversion 1; congruence.
     + inversion 1; congruence.
     + move=> s1 s2 r A A' B b1 b2 b3 HE HN HR IH + s4 A2 /[subst1] +.
       destruct b1, b2 => // _ HC.
@@ -87,12 +86,12 @@ Module RunP (A: Unif).
     + move=> s s' A B C b H -> r2 b2 H1.
       inversion H1; clear H1; subst;
         by have:= expanded_consistent H H0 => -[] // [->->]->.
-    + move=> s A B b HA HB r b2 H1.
+    (* + move=> s A B b HA HB r b2 H1.
       inversion H1; clear H1; subst => //; have []:= expanded_consistent HA H0; try congruence.
-      by move=> [_ <-].
+      by move=> [_ <-]. *)
     + move=> ????????? H HN HR IH ??? H1.
       inversion H1; clear H1; subst;have []:= expanded_consistent H H0 => //-[??]; subst.
-      + congruence.
+      (* + congruence. *)
       + move: H2; rewrite HN => -[]??;subst.
         by have:= IH _ _ H3 => -[] /[subst2].
   Qed.
