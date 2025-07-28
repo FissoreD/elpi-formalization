@@ -524,24 +524,30 @@ Module Run (U : Unif).
     move=> A HA B0 HB0 B HB/=[] H H2 H3; rewrite -HA//-HB//-HB0//.
   Qed.
 
-  Inductive run_res := Done of Sigma & state | Failed of state.
-  derive run_res.
-  HB.instance Definition _ := hasDecEq.Build run_res run_res_eqb_OK.
+  Inductive exp_res := Done of Sigma & state | Failed of state.
+  derive exp_res.
+  HB.instance Definition _ := hasDecEq.Build exp_res exp_res_eqb_OK.
 
-  Definition get_state_run r := match r with Done _ s => s | Failed s => s end.
+  Definition get_state_exp r := match r with Done _ s => s | Failed s => s end.
   Definition is_fail A := match A with Failure _ => true | _ => false end.
   Definition is_failed A := match A with Failed _ => true | _ => false end.
   Definition is_done A := match A with Done _ _ => true | _ => false end.
 
-  Inductive expandedb : Sigma -> state -> run_res -> bool -> Prop :=
+  Inductive expandedb : Sigma -> state -> exp_res -> bool -> Prop :=
     | expanded_done {s s' A alt}     : expand s A = Solved s' alt  -> expandedb s A (Done s' alt) false
     | expanded_fail {s A B}          : expand s A = Failure B -> expandedb s A (Failed B) false
     | expanded_cut {s s' r A B b}      : expand s A = CutBrothers s' B -> expandedb s' B r b -> expandedb s A r true
     | expanded_step {s s' r A B b}     : expand s A = Expanded s' B  -> expandedb s' B r b -> expandedb s A r b.
 
+
+  (* TODO: should remove the success from the state *)
+  Definition clean_success (A: state):= A.
+
+  Inductive run_res := DoneR of Sigma & state | FailedR.
   Inductive runb : Sigma -> state -> run_res -> bool -> Prop :=
-    | run_done {s s' A B b}        : expandedb s A (Done s' B) b -> runb s A (Done s' B) b
-    | run_fail {s A B b}           : expandedb s A (Failed B) b -> next_alt s B = None -> runb s A (Failed B) b
+    | run_done {s s' A B b}        : 
+      expandedb s A (Done s' B) b -> runb s A (DoneR s' (clean_success B)) b
+    | run_fail {s A B b}           : expandedb s A (Failed B) b -> next_alt s B = None -> runb s A FailedR b
     | run_backtrack {s s' s'' A B C b1 b2 b3} : 
         expandedb s A (Failed B) b1 -> next_alt s B = (Some (s', C)) -> 
           runb s' C s'' b2 -> b3 = (b1 || b2) -> runb s A s'' b3.
@@ -878,7 +884,7 @@ Module Run (U : Unif).
   Qed.
 
   Lemma expanded_not_dead {s A r b}: 
-    A <> dead A -> expandedb s A r b -> get_state_run r <> dead (get_state_run r).
+    A <> dead A -> expandedb s A r b -> get_state_exp r <> dead (get_state_exp r).
   Proof.
     move=> + H.
     elim: H; clear.

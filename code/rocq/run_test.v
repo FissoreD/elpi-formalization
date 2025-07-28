@@ -72,7 +72,7 @@ Module Test1.
   Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
   Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
 
-  Goal exists r, run empty (Goal p_test (Call (pred_q (Data 1)))) (Done s2 r).
+  Goal exists r, run empty (Goal p_test (Call (pred_q (Data 1)))) (DoneR s2 r).
   Proof.
     do 2 eexists.
     apply: run_backtrack => //.
@@ -147,7 +147,7 @@ Module Test5.
   Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
   Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
 
-  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) (Done s1 r).
+  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) (DoneR s1 r).
   Proof.
     do 2 eexists.
     apply: run_backtrack.
@@ -218,7 +218,7 @@ Module Test6.
   Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
   Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
 
-  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) (Done s1 r).
+  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) (DoneR s1 r).
   Proof.
     do 2 eexists.
     apply: run_backtrack.
@@ -258,7 +258,7 @@ Module Test2.
   Import RunAxiom.
   Goal expand empty (Or OK empty OK) = Solved empty (Or OK empty OK) . by []. Qed.
 
-  Goal forall p, run empty (Or (Goal p Cut) empty Top) (Done empty (Or OK empty KO)).
+  Goal forall p, run empty (Or (Goal p Cut) empty Top) (DoneR empty (Or OK empty KO)).
     move=> pr //=.
     eexists. apply: run_done => //=. 
     apply: expanded_step => //=.
@@ -266,13 +266,13 @@ Module Test2.
   Qed.
 
   Goal forall p, 
-    run empty (Or (Goal p Cut) empty (Or OK empty OK)) (Done empty (Or OK empty (cutr ((Or OK empty OK))))).
+    run empty (Or (Goal p Cut) empty (Or OK empty OK)) (DoneR empty (Or OK empty (cutr ((Or OK empty OK))))).
     move=> p; eexists.
     apply: run_done.
     apply: expanded_step => //=.
     apply: expanded_done => //=.
   Qed.
 
-  Goal run empty (Or OK empty (Or OK empty OK)) (Done empty (Or OK empty (((Or OK empty OK))))).
+  Goal run empty (Or OK empty (Or OK empty OK)) (DoneR empty (Or OK empty (((Or OK empty OK))))).
   Proof. eexists; apply: run_done => //=. apply: expanded_done => //=. Qed.
 End Test2.

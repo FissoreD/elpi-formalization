@@ -392,7 +392,7 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma expandedP_expanded {s A r}:
-    valid_state A -> expanded s A r -> valid_state (get_state_run r).
+    valid_state A -> expanded s A r -> valid_state (get_state_exp r).
   Proof.
     move=> + [b H]; elim H; clear.
     + move=> s1 s2 A1 A2 EA VA /=.
@@ -408,7 +408,7 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma valid_state_expanded {s1 A r}:
-    valid_state A ->  expanded s1 A r -> valid_state (get_state_run r).
+    valid_state A ->  expanded s1 A r -> valid_state (get_state_exp r).
   Proof.
     move=> + [b H].
     elim: H; clear.
@@ -491,7 +491,7 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma runP_run {s A r}:
-    valid_state A -> run s A r -> valid_state (get_state_run r).
+    valid_state A -> run s A r -> valid_state (get_state_exp r).
   Proof.
     move=> + [b H]; elim H; clear.
     + move=> s1 s2 A B b EA VA.

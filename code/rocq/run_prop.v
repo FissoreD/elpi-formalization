@@ -84,12 +84,14 @@ Module RunP (A: Unif).
     runb s A r1 b1 -> runb s A r2 b2 -> r1 = r2 /\ b1 = b2.
   Proof.
     move=> H; elim: H r2 b2; clear.
-    + move=> s s' A B b H r2 b2; inversion 1; subst; have:= expanded_consistent H H1; try congruence.
-      by move => -[].
-    + move=> s A B b HA HB r b2; inversion 1; subst; have:= expanded_consistent HA H1; try congruence.
-      move=> [] [] /[subst2].
-      congruence.
-    + move=> ????????? H HN HR IH ???; subst; inversion 1; subst; have:= expanded_consistent H H1; try congruence; move=> [] // [] /[subst2].
+    + move=> s s' A B b H r2 b2 H1.
+      inversion H1; clear H1; subst;
+        by have:= expanded_consistent H H0 => -[] // [->->]->.
+    + move=> s A B b HA HB r b2 H1.
+      inversion H1; clear H1; subst => //; have []:= expanded_consistent HA H0; try congruence.
+      by move=> [_ <-].
+    + move=> ????????? H HN HR IH ??? H1.
+      inversion H1; clear H1; subst;have []:= expanded_consistent H H0 => //-[??]; subst.
       + congruence.
       + move: H2; rewrite HN => -[]??;subst.
         by have:= IH _ _ H3 => -[] /[subst2].
@@ -317,7 +319,7 @@ Module RunP (A: Unif).
   Qed.
 
   Lemma expanded_same_structure {s A r}: 
-    expanded s A r -> same_structure A (get_state_run r).
+    expanded s A r -> same_structure A (get_state_exp r).
   Proof.
     move=> [b H].
     elim: H; clear => /=.
@@ -692,10 +694,10 @@ Module RunP (A: Unif).
   Qed.
 
   Lemma run_or_correct_left {s1 A s2 A' b sB B}:
-    runb s1 A (Done s2 A') b ->
-      B <> dead B -> run s1 (Or A sB B) (Done s2 (Or A' sB (if b then cutr B else B))).
+    runb s1 A (DoneR s2 A') b ->
+      B <> dead B -> run s1 (Or A sB B) (DoneR s2 (clean_success (Or A' sB (if b then cutr B else B)))).
   Proof.
-    remember (Done _ _) as rD eqn:HrD => H.
+    remember (DoneR _ _) as rD eqn:HrD => H.
     elim: H s2 A' sB B HrD => //; clear.
     + move=> s s' A B b H s2 A' sB B' [??]; subst.
       have [? H1]:= expanded_or_correct_left _ H sB B'.
