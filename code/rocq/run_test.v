@@ -4,6 +4,12 @@ Import Language.
 
 Definition empty_sig : sigT := fun _ => b(d Func).
 
+Definition build_progr l := {|
+    modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
+    sig := empty_sig;
+    rules := l;
+|}.
+
 Module Axioms.
   Parameter program_eqb : program -> program -> bool.
   Parameter is_program : program -> Type.
@@ -53,16 +59,12 @@ Module Test1.
   Definition pred_r x  := Comb (Code (p 2)) x.
   Definition pred_fail := Code (p 100).
 
-  Definition p_test : program := {|
-    modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
-    sig := empty_sig;
-    rules := [:: 
+  Definition p_test : program := build_progr [:: 
       mkR (pred_p (Data 1)) [::] ;
       mkR (pred_p (Data 2)) [::] ;
       mkR (pred_r (Data 2)) [::] ;
       mkR (pred_q (Data 1)) [:: Call (pred_p v_X) ; Call (pred_r v_X) ] 
-    ];
-  |}.
+    ].
 
   Notation "X &&& Y" := (And X _ Y) (at level 3).
   Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).
@@ -131,15 +133,11 @@ Module Test5.
   Definition pred_f x  := Comb (Code (p 1)) x.
   Definition pred_g x  := Comb (Code (p 0)) x.
 
-  Definition p_test : program := {|
-    modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
-    sig := empty_sig;
-    rules := [:: 
+  Definition p_test : program := build_progr [:: 
       mkR (pred_f (Data 0)) [:: Call (pred_g v_X); Cut] ;
       mkR (pred_g (Data 1)) [::];
       mkR (pred_g (Data 2)) [::]
-    ];
-  |}.
+    ].
 
   Notation "X &&& Y" := (And X _ Y) (at level 3).
   Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).
@@ -202,16 +200,12 @@ Module Test6.
   Definition pred_g x  := Comb (Code (p 0)) x.
   Definition pred_true := (Code (p 0)).
 
-  Definition p_test : program := {|
-    modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
-    sig := empty_sig;
-    rules := [:: 
+  Definition p_test : program := build_progr [:: 
       mkR pred_true [::];
       mkR (pred_f (Data 0)) [:: Call (pred_g v_X); Call pred_true; Cut] ;
       mkR (pred_g (Data 1)) [::];
       mkR (pred_g (Data 2)) [::]
-    ];
-  |}.
+  ].
 
   Notation "X &&& Y" := (And X _ Y) (at level 3).
   Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).
@@ -282,4 +276,21 @@ Module Test2.
   Goal run empty (Or OK empty (Or OK empty OK)) empty (Or Dead empty (((Or OK empty OK)))).
   Proof. eexists; apply: run_done => //=. apply: expanded_done => //=.
     reflexivity. Qed.
+
+  Goal forall s s1 p R B, 
+    failed p = false -> failed R = false -> 
+      run s (And (Or OK s1 p) R OK) s B -> 
+        next_alt s B = Some (s1, And (Or Dead s1 p) R R).
+  Proof.
+    move=> s s1 p R B fP fR [b H].
+    inversion H; clear H; subst.
+      inversion H0; subst => //.
+      case: H6 => <-.
+      simpl clean_success.
+      simpl.
+      have := failed_dead fP.
+      case: ifP => /eqP// dP _.
+      rewrite fP fR//.
+    inversion H0; subst => //.
+  Qed.
 End Test2.
