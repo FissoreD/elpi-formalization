@@ -12,7 +12,9 @@ Module Nur (U : Unif).
 
   Inductive G := 
     | call : Tm -> G
-    | cut : list (list G) -> G.
+    | cut : list (list G) -> G
+    (* | fail : G *)
+    .
   derive G.
   HB.instance Definition _ := hasDecEq.Build state state_eqb_OK.
 
@@ -34,7 +36,10 @@ Module Nur (U : Unif).
       nur p s (save_alt a b gl) (more_alt a bs gl) s1 r -> 
         nur p s [::call t & gl] a s1 r
   | FailE p s s1 t gl a al r : 
-    F p t s = [::] -> nur p s a al s1 r -> nur p s [::call t & gl] (a :: al) s1 r.
+    F p t s = [::] -> nur p s a al s1 r -> nur p s [::call t & gl] (a :: al) s1 r
+  (* | FailE1 p s s1 gl a al r :  *)
+    (* nur p s a al s1 r -> nur p s [::fail & gl] (a :: al) s1 r. *)
+  .
 
   Lemma nur_consistent {p s G x xs1 xs2 s1 s2} :
     nur p s G x s1 xs1 -> nur p s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
@@ -51,11 +56,15 @@ Module Nur (U : Unif).
       apply: IH.
       inversion H2; subst => //.
       congruence.
+    (* - move=> p1 s1 s2 gl a al r H IH xs2 s3 H2.
+      apply: IH.
+      by inversion H2; subst. *)
   Qed.
 
   Definition add_ca gl (l2 : list alt) : G :=
     match gl with
-    | call t => call t
+    | call _ => gl 
+    (* | fail => gl *)
     | cut l1 => cut (l1 ++ l2) end.
   
   Definition add_cas lA lB : alt :=
@@ -71,7 +80,9 @@ Module Nur (U : Unif).
   Fixpoint state_to_list (A: state) (bt : list alt) : list alt :=
     match A with
     | OK | Top => [::[::]]
-    | KO | Dead => [::]
+    | KO 
+    (* => [::[::fail]] *)
+    | Dead => [::]
     | Goal _ Cut => [::[::cut [::]]]
     | Goal _ (Call t) => [::[::call t]]
     | Or A _ B => 
@@ -127,46 +138,43 @@ Module Nur (U : Unif).
      [:: [:: call c; cut [:: [:: call b]]]; [:: call a]; [:: call b]].
   Proof. by []. Qed.
 
-  Definition same_state_next_alt l r r1 :=
-    match r with
-    | FailedR => r1 = [::]
-    | DoneR _ r => state_to_list r l = r1
-    end.
+  Definition nur' r1 A l s :=
+    forall x xs, state_to_list A l = x :: xs ->
+        forall p, exists s1, nur p s x xs s1 r1.
 
   Definition runElpi A :=
-    forall s r b,
-      runb s A r b -> forall p l x xs,
-        state_to_list A l = x :: xs ->
-          exists r1 s1,  nur p s x xs s1 r1 /\ same_state_next_alt l r r1.
+    forall s B s1 b,
+      runb s A s1 B b -> 
+          forall l, exists r1, nur' r1 A l s /\ state_to_list B l = r1.
   
   Goal @runElpi OK.
   Proof.
-    rewrite/runElpi.
+    rewrite/runElpi/nur'.
     inversion 1; subst => //=; inversion H1 => //p; subst.
-    case: H7 => _ <- l x xs[<-<-].
-    do 2 eexists; split.
-      apply: StopE.
-    move=>/=.
-    by move=>/=.
+    case: H7 => _ <-/=.
+    eexists; split; [|reflexivity].
+    move=> ??[<-<-].
+    eexists. apply: StopE.
   Qed.
   
   Goal @runElpi KO.
   Proof.
-    rewrite /runElpi.
-    move=>//=.
+    rewrite /runElpi/nur'.
+    inversion 1; subst; inversion H1; subst => //.
+    inversion H7 => //; subst.
+    inversion H2.
   Qed.
   
   Goal @runElpi Top.
   Proof.
-    rewrite/runElpi.
+    rewrite/runElpi/nur'.
     inversion 1; subst => //=.
     - inversion H1; subst => //.
       case: H2 => ??; subst.
       inversion H3; subst => //.
       case: H8 => ??; subst => /=.
-      move=> p l x xs [<-<-]; do 2 eexists; split.
-        apply: StopE.
-      by [].
+      eexists; split => //??[<-<-].
+      eexists;apply: StopE.
     - inversion H1; subst => //.
       case: H4 => ??;subst.
       inversion H5 => //.
@@ -174,11 +182,15 @@ Module Nur (U : Unif).
   
   Goal @runElpi (And OK KO KO).
   Proof.
-    rewrite/runElpi.
+    rewrite/runElpi/nur'.
     inversion 1; subst => //=.
+      inversion H1; subst => //.
+    inversion H1 => //; subst.
+    inversion H7 => //; subst.
+    inversion H2.
   Qed.
 
-  Lemma state_to_list_dead {A l}: state_to_list (dead A) l = [::].
+  Lemma state_to_list_cutr {A l} : state_to_list (cutr A) l = [::].
   Proof.
     elim: A l => //.
     + move=> A HA s B HB /= l.
@@ -187,67 +199,15 @@ Module Nur (U : Unif).
       by rewrite HA HB HB0.
   Qed.
 
-  Lemma cats20 {T:Type} {A B : list (list T)} n: A ++ B = nseq n [::] -> 
-    exists n1 n2, n1 + n2 = n /\ A = nseq n1 [::] /\ B = nseq n2 [::].
+  Lemma state_to_list_dead {A l}: state_to_list (dead A) l = [::].
   Proof.
-    elim: n A B => //=.
-    + move=> []//[]// _; exists 0, 0 => //.
-    + move=> n H [|A0 As]//=.
-      + move=> B->.
-        exists 0, n.+1 => //.
-      + move=> B [->].
-        move=> /H[n1 [n2 [<- [->->]]]].
-        exists n1.+1, n2.
-        rewrite addSn//.
+    rewrite -cutr_dead_is_dead.
+    apply: state_to_list_cutr.
   Qed.
 
-  Lemma cats20' {T:Type} {A B : list (list T)}: A ++ B = [::] -> A = [::] /\ B = [::].
-  Proof.
-    move=> /(cats20 0).
-    move=> [n1[n2[+[+ +]]]].
-    by case: n1 => //; case: n2 => //.
-  Qed.
-  
   Lemma flatten_empty {T R : Type} {l: list T}:
     @flatten R [seq [::] | _ <- l] = [::].
   Proof. elim: l => //. Qed.
-
-  Lemma add_cas_compose {l1 l2 i}:
-    (add_cas^~ l1 \o add_cas^~ l2) i = add_cas i (l2 ++ l1).
-  Proof.
-    rewrite /add_cas/= -map_comp.
-    elim i => //=+ xs-> => -[]//=x.
-    by rewrite catA.
-  Qed.
-  From HB Require Import structures.
-
-  Lemma success_state_to_list1 {A}:
-    success A -> forall m, exists l, state_to_list A m = [::] :: l.
-  Proof.
-    elim: A => //.
-    - by move=>/=; exists [::].
-    - move=> A HA s B HB/= + m.
-      case: ifP => /eqP.
-        move=>-> sB; rewrite state_to_list_dead/=.
-        apply (HB sB m).
-      move=> dA sA.
-      have [l H]:= (HA sA (state_to_list B m ++ m)).
-      rewrite H/=; by eexists.
-    - move=> A HA B0 _ B HB/=/andP[sA sB]m.
-      (* rewrite success_failed//. *)
-      have [l H] := HA sA m; rewrite H.
-      have [l1 H1] := HB sB m; rewrite H1/=.
-      by eexists.
-    Qed.
-
-  Lemma expand_solve_state_to_list_cons1 {s1 A s2 A'}:
-     expand s1 A = Solved s2 A' -> forall r, exists l, state_to_list A r = [::] :: l.
-  Proof.
-    move=> H.
-    have [sA sA']:= expand_solved_success H.
-    by apply: success_state_to_list1.
-  Qed.
-
 
   Lemma success_state_to_list {A m}:
     success A ->
@@ -263,7 +223,6 @@ Module Nur (U : Unif).
       have:= HA (state_to_list B m ++ m) sA.
       move=>->//.
     - move=> A HA B0 HB0 B HB m /=/andP[sA sB].
-      (* rewrite success_failed// failed_clean_success//. *)
       rewrite /add_alt/=.
       have:= HA m sA => ->.
       have:= HB m sB => ->//.
@@ -302,80 +261,225 @@ Module Nur (U : Unif).
     by move=>/success_state_to_list->[].
   Qed.
 
-  Lemma expand_done {s A s1 B}:
-    expand s A = Solved s1 B ->
-      forall p l x xs,
-        state_to_list A l = x :: xs ->
-        exists r1 s2,
-          nur p s x xs s2 r1 /\ same_state_next_alt l (DoneR s1 (clean_success B)) r1.
+  Lemma expand_state_to_list {A s r}:
+    expand s A = r -> is_fail r == false ->
+      forall {l}, exists x xs, state_to_list A l = x :: xs.
   Proof.
-    rewrite /same_state_next_alt.
-    move=> H p l x xs.
-    have [sA sB] := expand_solved_success H.
-    rewrite (success_state_to_list sA).
-    move=>[]<- H1.
-    do 2 eexists; repeat constructor.
-    subst.
-    apply: state_to_list_eq_clean => //.
-    by rewrite (expand_solved_state_to_list_same H).
-  Qed.
+    elim: A s r => //; try by move=> s r <- //; do 2 eexists.
+    - by move=> p [|t] s r<-//=; do 2 eexists.
+    - move=> A HA s B HB s1 r.
+      case: r => // s2 C.
+      - move=>/simpl_expand_or_expanded[].
+          move=> [A'[dA[HA'->]]] _ l/=.
+          have:= HA _ _ HA' isT (state_to_list B l ++ l).
+          move=> [y[ys ->]]; by do 2 eexists.
+        move=>[].
+          move=>[A'[dA[HA'->]]] _ l /=.
+          have:= HA _ _ HA' isT (state_to_list B l ++ l).
+          move=> [y[ys ->]]; by do 2 eexists.
+        move=> [-> [B' [+ ->]]] _ l /=.
+        rewrite state_to_list_dead/=.
+        move=> []H; apply: HB H isT _.
+      - move=> /simpl_expand_or_cut[D [-> [H ->]]] _ l/=.
+        rewrite state_to_list_dead/=.
+      - apply: HB H isT _.
+      - move=> /simpl_expand_or_solved[].
+          move=>[A'[HA'->]] _ l/=.
+          have:= success_state_to_list (proj1 (expand_solved_success HA')).
+          move=> ->/=.
+          by do 2 eexists.
+        move=> [B'[->[HB'->]]] _ l/=.
+        rewrite state_to_list_dead/=.
+        apply: HB HB' isT _.
+    - move=> A HA B0 _ B HB s r.
+      case: r => // s2 C.
+      - move=> /simpl_expand_and_expanded[].
+          move=>[A'[HA'->]] _ l/=.
+          have:= HA _ _ HA' isT l.
+          move=>[x [xs]]->/=.
+  Abort.
 
-  Lemma zzz {s1 s2 A B b} l: 
-    expandedb s1 A (Done s2 B) b ->
-      exists x xs, state_to_list A l = x :: xs.
+  Lemma expandedb_state_to_list {A s B s1 b}:
+    expandedb s A (Done s1 B) b ->
+      forall {l}, exists x xs, state_to_list A l = x :: xs.
   Proof.
     remember (Done _ _) as d eqn:Hd => H.
-    elim: H s2 B Hd l => //; clear.
-    - move=> s s' A B HA ??[??] l; subst.
-      do 2 eexists; apply: success_state_to_list (proj1 (expand_solved_success HA)).
-    - move=> s s' r A B b HA HB + s2 C ? l; subst.
-      move=> /(_ _ _ erefl) IH.
-      admit.
-    - move=> s s' r A B b HA HB + s2 C ? l; subst.
-      move=> /(_ _ _ erefl) IH.
-      admit.
+    elim: H B s1 Hd; clear => //.
+    - move=> s s' A B H C s1 [_ _] l.
+      have:= success_state_to_list (proj1 (expand_solved_success H)).
+      by move=>->; do 2 eexists.
+    - move=> s s' r A B b HA HB IH B'  s2 ? l; subst.
+      have {}IH := IH _ _ erefl.
+      move: HA HB IH.
+
+  Abort.
+
+  Lemma expand_done {s A s1 B}:
+    expand s A = Solved s1 B ->
+      forall l,
+        exists r1,
+          (nur' r1 A l s) /\ state_to_list (clean_success B) l = r1.
+  Proof.
+    move=> H l .
+    have [sA sB] := expand_solved_success H.
+    (* move=>[]<- H1. *)
+    eexists; split; last first.
+    apply: state_to_list_eq_clean sB sA _.
+    symmetry.
+    apply: expand_solved_state_to_list_same  H.
+    rewrite /nur' => x xs + p.
+    rewrite (success_state_to_list sA) => -[<-<-].
+    eexists; apply: StopE.
+  Qed.
+
+  Definition get_subst R :=
+    match R with
+    | Solved s _ => s
+    | Expanded s _ => s
+    | CutBrothers s _ => s
+    | Failure _ => empty
+    end.
+  
+  Lemma wwww {s1 A r}: 
+    expand s1 A = r -> is_fail r == false -> 
+      forall {s2 C b}, expandedb (get_subst r) (get_state r) (Done s2 C) b ->
+        forall {l}, exists x xs, state_to_list (get_state r) l = x :: xs.
+  Proof.
+    elim: A s1 r => //; try by move=>s1 r <- /=; do 2 eexists.
+    - move=>/=p [|t]//s1 r <- _/=.
+        by do 2 eexists.
+      rewrite /big_or/F.
+      case X: select => [|[s3 r2] ys]/=.
+        inversion 1; subst => //.
+      inversion 1; subst => //.
+    - move=> A HA s B HB s1 []//s3 D + _.
+      - move=> /simpl_expand_or_expanded[].
+          move=>[A2[dA[HA2->]]]/=.
+          move=> s2 E b H.
+          have:= expanded_same_structure (ex_intro _ _ H).
+          case: E H => // A' s' B'/= + /and3P[/eqP ? _ _]; subst.
+          move=> H.
+          have:= expanded_or_complete_left H.
+          move=>[].
+            move=>[dA2 [b' [H1 ?]]] l; subst.
+            have /= := HA _ _ HA2 isT _ _ _ H1 (state_to_list B l ++ l).
+            move=> [y [ys]] ->/=.
+            by do 2 eexists.
+          move=> [-> [b1 H1]] l.
+          rewrite state_to_list_dead/=.
+          inversion H1; subst.
+          - have /= := HB _ _ H6 isT; admit.
+          - have /= := HB _ _ H0 isT _ _ _ H2.
   Admitted.
 
   Lemma runExpandedbDone {s s' A B b}:
     expandedb s A (Done s' B) b ->
-    forall p l x xs,
-    state_to_list A l = x :: xs ->
-    exists r1 s2,
-      nur p s x xs s2 r1 /\ same_state_next_alt l (DoneR s' (clean_success B)) r1.
+    forall l,
+    exists r1,
+      (nur' r1 A l s) /\ state_to_list (clean_success B) l = r1.
   Proof.
     remember (Done _ _) as d eqn:Hd => H.
     elim: H s' B Hd => //; clear.
     - move=> s s' A A' + s1 B [??]; subst.
       apply: expand_done.
-    - move=> s s' r A B b H1 H2 IH s1 C ? p l x xs; subst.
-      have {}IH := IH _ _ erefl.
-      move=> H.
-      have [y [ys H3]]:= zzz l H2.
-      have [r1 [s2 [HN HS]]]:= IH p _ _ _ H3.
-      do 2 eexists; split; last first.
-        apply: HS.
+    - move=> s s' r A B b H1 H2 IH s1 C ? l; subst.
+      have := IH _ _ erefl l.
+      rewrite /nur'.
+      move=> [r1 [H3 H4]].
+      exists r1; split => // x xs H p.
+      clear IH.
       admit.
-    - move=> s s' r A B b H1 H2 IH s1 C ? p l x xs; subst.
-      have {}IH := IH _ _ erefl.
-      move=> H.
-      have [y [ys H3]]:= zzz l H2.
-      have [r1 [s2 [HN HS]]]:= IH p _ _ _ H3.
-      do 2 eexists; split; last first.
-        apply: HS.
+    - move=> s s' r A B b H1 H2 IH s1 C ? l; subst.
+      have := IH _ _ erefl l.
+      rewrite /nur'.
+      move=> [r1 [H3 H4]].
+      exists r1; split => // x xs H p.
+      clear IH.
       admit.
   Admitted.
 
   (* Lemma xxx {s B}: next_alt s B = None-> state_to_list A x = [::].  *)
 
+  Lemma failed_state_to_list {B}:
+    failed B = false ->
+    forall{l}, exists x xs, state_to_list B l = x :: xs.
+  Proof.
+    elim: B => //; try by move=> /=; do 2 eexists.
+    - by move=> /= _ []; do 2 eexists.
+    - move=> A HA s B HB/=.
+      case: ifP => /eqP.
+        move=>-> H l.
+        rewrite state_to_list_dead.
+        by apply: HB.
+      move=> dA fA l.
+      have:= HA fA ((state_to_list B l ++ l)).
+      by move=>[x[xs]]->; do 2 eexists.
+    - move=> A HA B0 _ B HB /=.
+      case fA: failed => //= + l.
+      have [x [xs]]:= HA fA l.
+      move=>->/=.
+  Abort.
+
+  Lemma fff {s B s' C}: 
+    next_alt s B = Some (s', C) ->
+      forall {l}, exists x xs, state_to_list C l = x :: xs.
+  Proof.
+    elim: B s C s' => //.
+    - move=> A HA s B HB s1 C s'.
+      move=> /=.
+      case: ifP => /eqP.
+        move=>->; case X: next_alt => [[s2 D]|]//.
+        move=>[_<-]/=l; rewrite state_to_list_dead/=.
+        apply: HB X _.
+      move=> dA.
+      case X: next_alt => [[s2 D]|]//.
+        move=>[_ <-]/=l.
+        have:= HA _ _ _ X (state_to_list B l ++ l).
+        move=>[x[xs]]->/=.
+        by do 2 eexists.
+      case: ifP => /eqP// dB.
+      case: ifP => fB.
+        case Y: next_alt => [[s2 D]|]//.
+        move=>[_<-]/=l; rewrite state_to_list_dead/=.
+        by apply: HB Y _.
+      move=>[_<-]l/=.
+      rewrite state_to_list_dead/=.
+    Abort.
+
+
+  Lemma zzzzz {s A B b1}:
+    expandedb s A (Failed B) b1 ->
+      forall {x xs l}, state_to_list A l = x :: xs ->
+        forall {s' C}, next_alt s B = Some (s', C) ->
+          state_to_list C l = x :: xs.
+  Proof.
+    remember (Failed _) as f eqn:Hf => H.
+    elim: H B Hf => //; clear.
+    - move=> s A B H B1 [<-] x xs l H1 s' C H2.
+  Abort.
+
+  (* Lemma titi {s C r b2 l}: runb s C r b2 -> 
+    exists x xs, state_to_list C l = x :: xs.
+  Proof.
+    move=> H.
+    elim: H l; clear.
+    - move=> s s' A B C b H _ l.
+      admit.
+    - move=> s s' r A B C b1 b2 b3 HA HB HC IH ? l; subst.
+  Abort. *)
+
   Lemma runElpiP: forall A, runElpi A.
   Proof.
-    move=> A s r b H.
+    move=> A s B s1 b H.
     elim: H; clear.
-    + move=>  s s' A B C b + ->.
+    + move=>  s s' A B C b + ->/=.
       apply: runExpandedbDone.
-    + move=> s s' r A B C b1 b2 b3 HA HB HC IH ?; subst.
-      move=> p x xs r1 H.
-      (* rewrite / *)
+    + move=> s s' r A B C D b1 b2 b3 HA HB HC IH ? l; subst.
+      have := IH l.
+      rewrite /nur'.
+      move=> [r1 [H1 H2]].
+      exists r1; split => // x xs H p.
+      clear IH.
       admit.
   Admitted.
 End Nur.

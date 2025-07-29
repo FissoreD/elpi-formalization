@@ -26,8 +26,8 @@ Module RunP (A: Unif).
     Run.expanded_classic s A r -> Run.expanded s A r.
   Proof. by exists false. Qed.
   
-  Lemma run_classic_run {s A r}:
-    run_classic s A r -> run s A r.
+  Lemma run_classic_run {s A s1 B}:
+    run_classic s A s1 B -> run s A s1 B.
   Proof. by exists false. Qed.
 
   Lemma expand_cutr {A s1 r}: expand s1 (cutr A) = r -> is_fail r && (get_state r == cutr A).
@@ -44,13 +44,13 @@ Module RunP (A: Unif).
       have:= HA s1; case: expand => //[s3]/=/eqP<-; rewrite eqxx//.
   Qed.
 
-  Lemma run_classic_cut {s s2 A B r}:
-    run_classic s A r -> expand s A = CutBrothers s2 B -> False.
+  Lemma run_classic_cut {s s2 A B s3 C}:
+    run_classic s A s3 C -> expand s A = CutBrothers s2 B -> False.
   Proof.
     rewrite /run_classic; remember false as f eqn:Hf => H.
     elim: H s2 B Hf; clear.
     + inversion 1; congruence.
-    + move=> s1 s2 r A A' B b1 b2 b3 HE HN HR IH + s4 A2 /[subst1] +.
+    + move=> s1 s2 r A A' B C b1 b2 b3 HE HN HR IH + s4 A2 /[subst1] +.
       destruct b1, b2 => // _ HC.
       inversion HE; congruence.
   Qed.
@@ -79,21 +79,21 @@ Module RunP (A: Unif).
       by inversion HA; try congruence; subst; rewrite H0 => -[] /[subst2]; auto.
   Qed.
 
-  Lemma run_consistent {s A r1 r2 b1 b2}:
-    runb s A r1 b1 -> runb s A r2 b2 -> r1 = r2 /\ b1 = b2.
+  Lemma run_consistent {s A s1 B b1}:
+    runb s A s1 B b1 -> forall {s2 C b2}, runb s A s2 C b2 -> s1 = s2 /\ B = C /\ b1 = b2.
   Proof.
-    move=> H; elim: H r2 b2; clear.
-    + move=> s s' A B C b H -> r2 b2 H1.
+    move=> H; elim: H; clear.
+    + move=> s s' A B C b H -> s2 D b2 H1.
       inversion H1; clear H1; subst;
         by have:= expanded_consistent H H0 => -[] // [->->]->.
     (* + move=> s A B b HA HB r b2 H1.
       inversion H1; clear H1; subst => //; have []:= expanded_consistent HA H0; try congruence.
       by move=> [_ <-]. *)
-    + move=> ????????? H HN HR IH ??? H1.
-      inversion H1; clear H1; subst;have []:= expanded_consistent H H0 => //-[??]; subst.
-      (* + congruence. *)
-      + move: H2; rewrite HN => -[]??;subst.
-        by have:= IH _ _ H3 => -[] /[subst2].
+    + move=> s s1 s2 A B C D b1 b2 b3 HA HB HC IH ? s3 E s4 H1; subst.
+      inversion H1; subst; have [] := expanded_consistent HA H0 => //.
+      move=>[??]; subst.
+      move: H2; rewrite HB => -[??]; subst.
+      by have:= IH _ _ _ H3 => -[?[??]]; subst.
   Qed.
 
   Lemma expanded_Failure_and_Done {s s' A A' A''}:
@@ -581,7 +581,7 @@ Module RunP (A: Unif).
       apply IH. 
   Qed.
 
-  Lemma expanded_or_complete_left {s s' s2 A A' B B'} b:
+  Lemma expanded_or_complete_left {s s' s2 A A' B B' b}:
     expandedb s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
       (A <> dead A /\ exists b, expandedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
         (A = dead A /\ expanded s B (Done s' B')).
@@ -693,13 +693,13 @@ Module RunP (A: Unif).
   Qed.
 
   Lemma run_or_correct_left {s1 A s2 A' b sB B}:
-    runb s1 A (DoneR s2 A') b ->
-      B <> dead B -> run s1 (Or A sB B) (DoneR s2 (clean_success (Or A' sB (if b then cutr B else B)))).
+    runb s1 A s2 A' b ->
+      B <> dead B -> run s1 (Or A sB B) s2 (clean_success (Or A' sB (if b then cutr B else B))).
   Proof.
-    remember (DoneR _ _) as rD eqn:HrD => H.
-    elim: H s2 A' sB B HrD => //; clear.
-    + move=> s s' A B C b H -> s2 A' s3 B' [??]; subst.
-      have [? H1]:= expanded_or_correct_left _ H s3 B'.
+    move => H.
+    elim: H sB B => //; clear.
+    + move=> s s' A B C b H -> s2 A'.
+      have [? H1]:= expanded_or_correct_left _ H s2 A'.
       eexists.
       apply: run_done H1 _.
       have sB := expandedb_Done_success H.
@@ -708,19 +708,19 @@ Module RunP (A: Unif).
       have:= success_dead1 sB.
       case: (ifP (_ == _)) => /eqP// _ _.
       rewrite clean_success2//.
-    + move=> s s' r A B C b1 b2 b3 HE HN HR IH ? s2 D sB E ? dE;subst.
+    + move=> s s' r A B C D b1 b2 b3 HE HN HR IH ? s2 E dE;subst.
       case: (A =P dead A) => dA.
         have H := expanded_dead s dA.
         have [[?]?] := expanded_consistent H HE; subst.
         by rewrite dA next_alt_dead1 in HN.
       have /= dB := expanded_not_dead dA HE.
-      have:= expanded_or_correct_left_fail _ dA HE sB E.
+      have:= expanded_or_correct_left_fail _ dA HE s2 E.
       have cdE : cutr E <> dead (cutr E).
         rewrite dead_cutr_is_dead.
         by move=> /cutr_dead1/esym.
-      have [b H] := IH _ _ sB (cutr E) erefl cdE.
+      have [b H] := IH s2 _ cdE.
       rewrite cutr2_same if_same in H.
-      have [b3 H2] := IH _ _ sB E erefl dE.
+      have [b3 H2] := IH s2 _ dE.
       have H3 := next_alt_or_some HN.
       case: b1 HE => //=; move=> H1 [b4 H4]/=;
         eexists; apply: run_backtrack H4 (H3 _ _ _) _ erefl; 

@@ -543,7 +543,7 @@ Module check (U:Unif).
   Qed.
 
   Definition is_det A := forall s s' B,
-    run s A (DoneR s' B) -> forall s2, next_alt s2 B = None.
+    run s A s' B -> forall s2, next_alt s2 B = None.
 
   Lemma runb_next_alt {sP sV A}: 
     all_cut_followed_by_det sP sV -> 
@@ -551,14 +551,13 @@ Module check (U:Unif).
   Proof.
     rewrite/is_det.
     move=> H1 H2 s s' B []b H3.
-    remember (DoneR _ _) as d eqn:Hd.
-    elim: H3 s' B H2 Hd; clear -H1 => //.
-    - move=> s s' A B C b HA -> s1 D fA [??] s2;subst.
+    elim: H3 H2; clear -H1 => //.
+    - move=> s s' A B C b HA -> fA s2.
       have H := expandedb_next_alt_done H1 fA HA _.
       have sB := expandedb_Done_success HA.
       by have:= next_alt_clean_success sB (H empty)=>->.
-    - move=> s s' r A B C b1 b2 b3 HA HB HC IH ? s1 D fA ? s2; subst.
-      apply: IH _ erefl _.
+    - move=> s s' r A B C D b1 b2 b3 HA HB HC IH ? fA s2; subst.
+      apply: IH.
       apply: expandedb_next_alt_failed H1 fA HA HB.
   Qed.
 

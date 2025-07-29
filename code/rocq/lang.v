@@ -549,19 +549,17 @@ Module Run (U : Unif).
       And A B0 (clean_success B)
     end.
 
-  Inductive run_res := DoneR of Sigma & state | FailedR.
-  Inductive runb : Sigma -> state -> run_res -> bool -> Prop :=
+  Inductive runb : Sigma -> state -> Sigma -> state -> bool -> Prop :=
     | run_done {s s' A B C b}        : 
-      expandedb s A (Done s' B) b -> C = clean_success B -> runb s A (DoneR s' C) b
-    (* | run_fail {s A B b}           : expandedb s A (Failed B) b -> next_alt s B = None -> runb s A FailedR b *)
-    | run_backtrack {s s' s'' A B C b1 b2 b3} : 
-        expandedb s A (Failed B) b1 -> next_alt s B = (Some (s', C)) -> 
-          runb s' C s'' b2 -> b3 = (b1 || b2) -> runb s A s'' b3.
+      expandedb s A (Done s' B) b -> C = clean_success B -> runb s A s' C b
+    | run_backtrack {s s1 s2 A B C D b1 b2 b3} : 
+        expandedb s A (Failed B) b1 -> next_alt s B = (Some (s1, C)) -> 
+          runb s1 C s2 D b2 -> b3 = (b1 || b2) -> runb s A s2 D b3.
 
   Definition expanded s A r := exists b, expandedb s A r b.
-  Definition run s A r := exists b, runb s A r b.
+  Definition run s A s1 B := exists b, runb s A s1 B b.
 
-  Definition run_classic s A r := runb s A r false. 
+  Definition run_classic s A s1 B := runb s A s1 B false. 
   Definition expanded_classic s A r := expandedb s A r false. 
 
   Lemma simpl_expand_or_solved {s s1 s2 A B C} :
