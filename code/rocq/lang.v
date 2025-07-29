@@ -333,7 +333,12 @@ Module Run (U : Unif).
   Definition is_base X := match X with Top | Goal _ _ => true | _ => false end.
   Definition is_expanded X := match X with Expanded _ _ => true | _ => false end.
 
-
+  (* OK returns None since,
+     We can have the state "A" = (OK \/ B) /\ C
+     It happens that the current substitution makes C to fail
+     "A" becomes: (OK \/ B) /\ KO.
+     The OK node should be transformed into a Dead so that 
+     "B /\ C" is tried with the subst for B *)
   Fixpoint next_alt (s : Sigma) (A : state) : option (Sigma * state) :=
     match A with
     | KO | OK => None
