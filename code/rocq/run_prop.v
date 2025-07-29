@@ -694,7 +694,7 @@ Module RunP (A: Unif).
 
   Lemma run_or_correct_left {s1 A s2 A' b sB B}:
     runb s1 A s2 A' b ->
-      B <> dead B -> run s1 (Or A sB B) s2 (clean_success (Or A' sB (if b then cutr B else B))).
+      B <> dead B -> run s1 (Or A sB B) s2 (Or A' sB (if b then cutr B else B)).
   Proof.
     move => H.
     elim: H sB B => //; clear.
@@ -703,11 +703,9 @@ Module RunP (A: Unif).
       eexists.
       apply: run_done H1 _.
       have sB := expandedb_Done_success H.
-      have:= success_clean_success sB => /=.
-      case: ifP => /eqP// _ _.
+      move=>/=.
       have:= success_dead1 sB.
-      case: (ifP (_ == _)) => /eqP// _ _.
-      rewrite clean_success2//.
+      case: (ifP (_ == _)) => /eqP// dB _.
     + move=> s s' r A B C D b1 b2 b3 HE HN HR IH ? s2 E dE;subst.
       case: (A =P dead A) => dA.
         have H := expanded_dead s dA.

@@ -540,7 +540,7 @@ Module Run (U : Unif).
 
   Fixpoint clean_success (A: state):= 
     match A with
-    | OK => KO
+    | OK => Dead
     | KO | Dead | Top | Goal _ _ => A
     | Or A s B => 
       if A == dead A then Or A s (clean_success B)
@@ -958,7 +958,7 @@ Module Run (U : Unif).
     by move=> s s' A B /expand_solved_success[sA sB] ?? [_<-].
   Qed.
 
-  Lemma success_clean_success {A}:
+  (* Lemma success_clean_success {A}:
     success A -> clean_success A == dead (clean_success A) = false.
   Proof.
     elim: A => //.
@@ -971,9 +971,9 @@ Module Run (U : Unif).
     - move=> A HA B0 _ B HB/=.
       move=>/andP[_ /HB]/=/eqP.
       case: eqP; congruence.
-  Qed.
+  Qed. *)
 
-  Lemma clean_success2 {A}:
+  (* Lemma clean_success2 {A}:
     success A -> clean_success (clean_success A) = clean_success A.
   Proof.
     elim: A => //.
@@ -982,16 +982,16 @@ Module Run (U : Unif).
         by move=>->/= sB; rewrite dead_dead_same eqxx HB.
       move=> /= dA sA; rewrite HA//success_clean_success//.
     - move=> A HA B0 _ B HB/= /andP[/HA _ /HB->]//.
-  Qed.
+  Qed. *)
 
-  Lemma clean_success_dead {A}: clean_success(dead A) = dead A.
+  (* Lemma clean_success_dead {A}: clean_success(dead A) = dead A.
   Proof.
     elim: A =>//.
     - move=> A HA s B HB/=.
       by rewrite dead_dead_same eqxx HB.
     - move=> A HA B0 _ B HB/=.
       by rewrite ?HA HB.
-  Qed.
+  Qed. *)
 
   Lemma next_alt_clean_success {s s1 B}:
     success B -> next_alt s B = None ->
@@ -1024,7 +1024,7 @@ Module Run (U : Unif).
       by have:= next_alt_none Z s2 => ->.
   Qed.
 
-  Lemma failed_clean_success {A}: success A -> failed (clean_success A).
+  (* Lemma failed_clean_success {A}: success A -> failed (clean_success A).
   Proof.
     elim: A => //.
     - move=> A HA s B HB/=.
@@ -1033,7 +1033,7 @@ Module Run (U : Unif).
       move=> _/= sA.
       by rewrite success_clean_success//HA.
     - move=> A HA B0 HB0 B HB/=/andP[->/HB->]//; rewrite orbT//.
-  Qed.
+  Qed. *)
 
     
 

@@ -262,7 +262,7 @@ Module Test2.
   Import RunAxiom.
   Goal expand empty (Or OK empty OK) = Solved empty (Or OK empty OK) . by []. Qed.
 
-  Goal forall p, run empty (Or (Goal p Cut) empty Top) empty (Or KO empty KO).
+  Goal forall p, run empty (Or (Goal p Cut) empty Top) empty (Or Dead empty KO).
     move=> pr //=.
     eexists. apply: run_done => //=. 
     apply: expanded_step => //=.
@@ -271,7 +271,7 @@ Module Test2.
   Qed.
 
   Goal forall p r, 
-    run empty (Or (Goal p Cut) empty r) empty (Or KO empty (cutr r)).
+    run empty (Or (Goal p Cut) empty r) empty (Or Dead empty (cutr r)).
     move=> p; eexists.
     apply: run_done.
     apply: expanded_step => //=.
@@ -279,7 +279,7 @@ Module Test2.
     reflexivity.
   Qed.
 
-  Goal run empty (Or OK empty (Or OK empty OK)) empty (Or KO empty (((Or OK empty OK)))).
+  Goal run empty (Or OK empty (Or OK empty OK)) empty (Or Dead empty (((Or OK empty OK)))).
   Proof. eexists; apply: run_done => //=. apply: expanded_done => //=.
     reflexivity. Qed.
 End Test2.
