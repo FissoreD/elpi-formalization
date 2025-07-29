@@ -320,48 +320,8 @@ Module Nur (U : Unif).
   Lemma next_alt_state_to_list {s1 A s2 B}:
     next_alt s1 A = Some (s2, B) -> state_to_list_cons B.
   Proof.
-    rewrite /state_to_list_cons.
-    elim: A s1 B s2 => //.
-    - move=> A HA s B HB s1 C s2/=.
-      case: ifP => /eqP.
-        move=>->.
-        case X: next_alt => [[s3 D]|]//.
-        move=>[_ <-]l/=.
-        rewrite state_to_list_dead/=.
-        apply: HB X _.
-      case X: next_alt => [[s3 D]|] dA.
-        move=> [_ <-]l/=.
-        have [x [xs]]:= HA _ _ _ X (state_to_list B l ++ l).
-        move=>->; by do 2 eexists.
-      case: ifP => /eqP// dB.
-      case: ifP => // fB.
-        case Y : next_alt => [[s3 D]|]//.
-        move=> [_<-]l/=.
-        rewrite state_to_list_dead/=.
-        apply: HB Y _.
-      move=>[_<-]l/=.
-      have [x[xs]]:= @failed_state_to_list _ fB l.
-      move=>->/=.
-      rewrite state_to_list_dead/=.
-      by do 2 eexists.
-    - move=> A HA B0 _ B HB s1 C s2/=.
-      case: ifP => /eqP//dA.
-      case: ifP => //fA.
-        case X: next_alt => [[s3 D]|]//.
-        case: ifP => //fB0[_<-]/=l.
-        have [x[xs]]:= HA _ _ _ X l => ->.
-        have [y[ys]]:= @failed_state_to_list _ fB0 l => ->.
-        by do 2 eexists.
-      case X: next_alt =>[[s3 D]|]//.
-        move=>[_<-]l/=.
-        have [x[xs]]:= @failed_state_to_list _ fA l => ->.
-        have [y[ys]]:= HB _ _ _ X l=>->.
-        by do 2 eexists.
-      case Y: next_alt => [[s3 D]|]//.
-      case: ifP => //fB0[_<-]l/=.
-      have [x[xs]]:= @failed_state_to_list _ fB0 l => ->.
-      have [y[ys]]:= HA _ _ _ Y l=>->.
-      by do 2 eexists.
+    move=>/next_alt_failed.
+    apply: failed_state_to_list.
   Qed.
 
   (* Lemma expandedb_fail_state_to_list {s A B b1 s' C}:
