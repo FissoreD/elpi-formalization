@@ -191,31 +191,6 @@ Module RunP (A: Unif).
       by rewrite /big_or; case: F => // -[] //.
   Qed. *)
 
-  Lemma expand_solved_solved {s s1 s2 s3 A B C}: 
-    expand s A = Solved s1 B -> 
-      expand s2 B = Solved s3 C -> B = C /\ s2 = s3.
-  Proof.
-    move=>/expand_solved_success [_ sB].
-    by rewrite (succes_is_solved s2 sB) => -[->->].
-  Qed.
-
-  Lemma expand_solved_is_solved {s s1 s2 A B}: expand s A = Solved s1 B -> expand s2 B = Solved s2 B.
-  Proof.
-    elim: A s s1 s2 B => //.
-    + by move=> ???? [] /[subst2].
-    + by move=> ? [] //.
-    + move=> A HA s B HB s1 s2 s3 C /=.
-      case: ifP => [dA|/eqP dAP].
-        case X: expand => //= -[??];subst.
-        by rewrite /= dA (HB _ _ _ _ X).
-      case X: expand => //= -[??];subst.
-      have /=/eqP /negbTE -> := expand_not_dead dAP X.
-      by rewrite (HA _ _ _ _ X).
-    + move=> A HA B0 HB0 B HB s1 s2 s3 C.
-      move=>/simpl_expand_and_solved[s'[A'[B'[HA'[HB' ->]]]]]/=.
-      by rewrite (HA _ _ _ _ HA') (HB _ _ _ _ HB').
-  Qed.
-
   Lemma expand_solved_expand {s s1 s2 s3 A B C}: 
     expand s A = Solved s2 B -> expanded s1 B (Done s3 C) -> B = C /\ s1 = s3.
   Proof.
