@@ -30,18 +30,15 @@ Module RunP (A: Unif).
     run_classic s A s1 B -> run s A s1 B.
   Proof. by exists false. Qed.
 
-  Lemma expand_cutr {A s1 r}: expand s1 (cutr A) = r -> is_fail r && (get_state r == cutr A).
+  Lemma expand_is_ko {A s1}: is_ko A -> expand s1 A = Failure A.
   Proof.
-    move=><-; clear.
     elim: A s1 => //.
     - move=> A HA s B HB s1 /=.
-      case: ifP=> //.
-        rewrite dead_cutr_is_dead => /eqP/cutr_dead1<-.
-        rewrite !cutr_dead_is_dead.
-        by have:= HB s1; case: expand => //[s3]/= /eqP <-.
-      by have:= HA s1; case: expand => //[s3] /=/eqP<-.
-    - move=> A HA B0 _ B HB s1 /=.
-      have:= HA s1; case: expand => //[s3]/=/eqP<-; rewrite eqxx//.
+      case: ifP=> //dA/andP[kA kB].
+        rewrite HB//.
+      rewrite HA//.
+    - move=> A HA B0 _ B HB s1 /= kA.
+      rewrite HA//.
   Qed.
 
   Lemma run_classic_cut {s s2 A B s3 C}:
@@ -109,7 +106,7 @@ Module RunP (A: Unif).
     inversion H3; subst; simpl in *; congruence.
   Qed.
 
-  Lemma next_alt_cut {s s' A B}: next_alt s (cutl A) = Some (s', B) -> exists A, B = cutl A.
+  (* Lemma next_alt_cut {s s' A B}: next_alt s (cutl A) = Some (s', B) -> exists A, B = cutl A.
   Proof.
     elim: A B s s' => //; clear.
     + move=> A IH s2 B IHB C s s'/=.
@@ -120,12 +117,12 @@ Module RunP (A: Unif).
         by exists (Or (dead A) s2 E)=>/=; rewrite cut_dead_is_dead dead_dead_same eqxx.
       move=> dA/=; rewrite dead_cut_is_dead.
       case: ifP => ///eqP.
-        move=>/cut_dead1->; rewrite next_alt_cutr//.
+        move=>/cut_dead1->; rewrite next_alt_is_ko//.
       move=> cA; have:= IH _ s.
       case: next_alt => // [[s3 E]|].
         move=>/(_ _ _ erefl)[F]->[_<-]; exists (Or (cutl F) s2 (cutr B)).
         by move=>/=; rewrite !cutl_cutr_is_cutr cut_cut_same cutr2_same if_same.
-      by rewrite next_alt_cutr//failed_cutr if_same.
+      by rewrite next_alt_is_ko//failed_cutr if_same.
     + move=> A HA B0 HB0 B HB C s s'/=.
       rewrite dead_cut_is_dead.
       case: ifP => // cdA.
@@ -136,13 +133,13 @@ Module RunP (A: Unif).
         by move=>/=.
       have:= HB _ s.
       case: next_alt => // [[s2 D]|].
-        by move=>/(_ _ _ erefl)[E->][_<-]; exists (And A B0 E).
+        move=>/(_ _ _ erefl)[E?]; subst. [E->]. [_<-]; exists (And A B0 E).
       move=>_.
       have:= HA _ s.
       case: next_alt => //[[s1 D]] /(_ _ _ erefl)[E->].
       case: ifP => // _ [_<-]; exists (And E B0 B0).
       by move=>/=.
-  Qed.
+  Qed. *)
 
   (* Lemma expanded_cut_done {s s' A B}:
     solved A -> expanded s (cutl A) (Done s' B) -> s = s'.
@@ -235,7 +232,7 @@ Module RunP (A: Unif).
   Proof. 
     elim: A B => //=.
       by move=> A HA s B HB []// A' s' B' /= /and3P[/eqP<-/HA->/HB->]; rewrite eqxx.
-    by move=> A HA B0 HB0 B HB []//A' B0' B'/=/and3P[/HB0->]/HA-> /HB->.
+    move=> A HA B0 HB0 B HB []//A' B0' B'/=/and3P[/HB0-> /HA-> /HB->]//.
   Qed.
   
   Lemma same_structure_cut {A B}: same_structure A B -> same_structure A (cutl B).
@@ -245,7 +242,10 @@ Module RunP (A: Unif).
       case: ifP => //.
         by rewrite H2 HB//eqxx.
       by rewrite eqxx HA// same_structure_cutr//.
-    by move=> A HA B0 HB0 B HB []//A' B0' B'/=/and3P[/HB0->/HA->/HB->].
+    move=> A HA B0 HB0 B HB []//A' B0' B'/=. 
+    move=> /and3P[sB0 sA sB].
+    rewrite HA//HB0//HB//.
+    (* rewrite 2!(fun_if (same_structure _)). *)
   Qed.
 
   Lemma same_structure_trans {A B C}: 
@@ -266,11 +266,11 @@ Module RunP (A: Unif).
     elim: A s r => //.
       move=> A HA s B HB s1 [s2|s2||s2] C.
       - move=> /simpl_expand_or_expanded => -[].
-          by move=> [A'[dA[HA'->]]]/=; rewrite same_structure_id eqxx (HA _ _ HA').
+          by move=>[A'[dA[HA' ->]]]/=; rewrite same_structure_id eqxx (HA _ _ HA').
         move=>[].
           move=> [A'[dA[HA'->]]]/=; rewrite eqxx (HA _ _ HA') same_structure_cutr//same_structure_id//.
-        by move=>[->[B'[[]]]]/HB/=+->=>->; rewrite eqxx same_structure_id.
-      - move=> /simpl_expand_or_cut [B'[->[HB'->]]]/=.
+        move=>[dA[B'[[]]]]/HB/=+->=>->; rewrite eqxx same_structure_id//.
+      - move=> /simpl_expand_or_cut [B'[dA[HB'->]]]/=.
         by rewrite eqxx same_structure_id (HB _ _ HB').
       - move=> /simpl_expand_or_fail [].
           by move=>[A'[_[HA'->]]]/=; rewrite eqxx (HA _ _ HA') same_structure_id.
@@ -537,20 +537,20 @@ Module RunP (A: Unif).
     elim: H s' A' HD => //=; clear.
     + move=> s s' A A' HA s2 B [] ?? s3 C; subst.
       eexists; apply: expanded_done => //= ; rewrite HA.
-      case: ifP => ///eqP H.
+      case: ifP => //H.
       by rewrite (expand_dead H) in HA.
     + move=> s1 s2 r A B b HA HB IH s3 C ? s4 D /[subst].
       have /= [? {IH}]:= IH _ _ erefl s4 (cutr D).
       rewrite cutr2_same if_same => IH.
       eexists; apply: expanded_step => //=.
-        case: ifP => ///eqP dA.
+        case: ifP => // dA.
           by rewrite (expand_dead dA) in HA.
         by rewrite HA.
       apply: IH.
     + move=> s1 s2 r A B b HA HB IH s' C ? s4 D /[subst].
       have [? {}IH] := IH _ _ erefl s4 D.
       eexists; apply: expanded_step => //=.
-        case: ifP=>/eqP dA.
+        case: ifP=> dA.
           by rewrite (expand_dead dA) in HA.
         by rewrite HA.
       apply IH. 
@@ -558,8 +558,8 @@ Module RunP (A: Unif).
 
   Lemma expanded_or_complete_left {s s' s2 A A' B B' b}:
     expandedb s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
-      (A <> dead A /\ exists b, expandedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
-        (A = dead A /\ expanded s B (Done s' B')).
+      (is_dead A = false /\ exists b, expandedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
+        (is_dead A /\ expanded s B (Done s' B')).
   Proof.
     rewrite /expanded.
     remember (Done _ _) as RD eqn:HRD.
@@ -568,7 +568,7 @@ Module RunP (A: Unif).
     + move=> s1 s3 C D + A B HRO ???? [] ??; subst.
       move=> /simpl_expand_or_solved [].
         move=> [A2 [HA']] [??];subst.
-        have dA := success_dead1 (proj1 (expand_solved_success HA')).
+        have dA := dead_success (proj1 (expand_solved_success HA')).
         left; repeat split => //.
         exists false; split => //; apply: expanded_done HA'.
       move=> [B' [dA [HB' [??]]]];subst.
@@ -576,30 +576,33 @@ Module RunP (A: Unif).
       apply: expanded_done HB'.
     + move=> s s1 r C D b2 + HB IH s' s2 A' B' A B ??; subst. 
       move=> /simpl_expand_or_cut.
-      move=> [B2[dB1[HB' ?]]]; subst.
-      have:= IH _ _ _ _ _ _ erefl erefl.
-      move=> [[]|]// [_ [b H]].
+      move=> [B2[dA[HB' ?]]]; subst.
+      have := IH _ _ _ _ _ _ erefl erefl.
+      move=> [|][]; rewrite dA//.
+      move=> _ [b H].
       right; repeat split; auto; eexists.
       apply: expanded_cut HB' H.
     + move=> s s1 r C D b2 + HB IH s' s2 A' B' A B ??; subst. 
       move=> /simpl_expand_or_expanded[].
         move=> [A2 [dA [HA ?]]]; subst.
-        have := IH _ _ _ _ _ _ erefl erefl.
+        have {IH} := IH _ _ _ _ _ _ erefl erefl.
         have /= dA2:= expand_not_dead dA HA.
-        move=> [][]// _ [b1[H1 ?]]; subst.
-        left; repeat eexists => //.
-        apply: expanded_step HA H1.
+        rewrite dA dA2.
+        move=> [][]//_ [b [H H1]]; subst; left; repeat eexists.
+        apply: expanded_step HA H.
       move=> [].
         move=>[A1[dA[HA?]]]; subst.
         have := IH _ _ _ _ _ _ erefl erefl.
         have /= dA2:= expand_not_dead dA HA.
-        move=> [][]// _ [b1 [H1 ?]]; subst.
+        rewrite dA2 dA.
+        move=>[][]// _ [b1 [H1 ?]]; subst.
         rewrite cutr2_same if_same.
         left; repeat eexists => //.
           apply: expanded_cut HA H1.
         by [].
       move=> [dA [B1 [HB1]]]?;subst.
       have := IH _ _ _ _ _ _ erefl erefl.
+      rewrite dA.
       move=> [][]// _ [b H]; right.
       move: HB1 => [] HB1.
         repeat eexists => //.
@@ -609,7 +612,7 @@ Module RunP (A: Unif).
   Qed.
   
   Lemma expanded_or_complete {s s1 s2 A A' B B'}:
-    A <> dead A ->
+    is_dead A = false ->
     (* TODO: the two call to expanded should return the same bool... *)
     expanded s (Or A s2 B) (Done s1 (Or A' s2 B')) ->
       exists b, expandedb s A (Done s1 A') b /\ B' = if b then cutr B else B.
@@ -621,9 +624,11 @@ Module RunP (A: Unif).
       move => /simpl_expand_or_solved [].
         move=> [A'[HA' [??]]]; subst.
         repeat eexists; [apply: expanded_done|] => //.
+      rewrite dA1.
       move=> [B1[dA]]//.
     + move=> s s' r A0 B0 b + H IH s1 s2 A A' B B' ?? dA;subst.
       move=> /simpl_expand_or_cut.
+      rewrite dA.
       move=> [B2 []]//.
     + move=> s s' r A0 B0 b + H IH s1 s2 A A' B B' ?? dA; subst.
       move=> /simpl_expand_or_expanded[].
@@ -631,7 +636,7 @@ Module RunP (A: Unif).
         have:= IH _ _ _ _ _ _ erefl erefl (expand_not_dead dA HA1).
         move=> [b1 [H1 ->]]; repeat eexists.
         apply: expanded_step HA1 H1.
-      move=>[].
+      move=>[]; rewrite dA.
         move=>[A1 [? [HA1 ?]]]; subst.
         have:= IH _ _ _ _ _ _ erefl erefl (expand_not_dead dA HA1).
         move=> [b1 [H1 H2]].
@@ -643,7 +648,7 @@ Module RunP (A: Unif).
   Qed.
 
   Lemma expanded_or_correct_left_fail {s A A'} b:
-    A <> dead A ->
+    is_dead A = false ->
     expandedb s A (Failed A') b ->
       forall s2 B, expanded s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))).
   Proof.
@@ -651,25 +656,23 @@ Module RunP (A: Unif).
     elim: H A' HD => //=; clear.
     + move=> s A A' HA B [] ? s3 C; subst.
       eexists; apply: expanded_fail => /=.
-      rewrite HA.
-      case: ifP => /eqP => //.
+      rewrite HA s3//.
     + move=> s1 s2 r A B b HA HB IH C ? dA s4 D /[subst].
       have [? {}IH]:= IH _ erefl (expand_not_dead dA HA) s4 (cutr D).
       eexists; apply: expanded_step => //=.
-      case: ifP => /eqP // _.
-      + by rewrite HA.
-      + move: IH; rewrite cutr2_same if_same => H; eassumption.
+        rewrite dA HA//.
+      move: IH; rewrite cutr2_same if_same => H; eassumption.
     + move=> s1 s2 r A B b HA HB IH C ? dA s4 D /[subst].
       have [? {}IH] := IH _ erefl (expand_not_dead dA HA) s4 D.
       eexists; apply: expanded_step => //=.
-      case: ifP => /eqP // _.
+      rewrite dA.
         by rewrite HA.
       apply IH. 
   Qed.
 
   Lemma run_or_correct_left {s1 A s2 A' b sB B}:
     runb s1 A s2 A' b ->
-      B <> dead B -> run s1 (Or A sB B) s2 (Or A' sB (if b then cutr B else B)).
+      is_dead B = false -> run s1 (Or A sB B) s2 (Or A' sB (if b then cutr B else B)).
   Proof.
     move => H.
     elim: H sB B => //; clear.
@@ -679,23 +682,21 @@ Module RunP (A: Unif).
       apply: run_done H1 _.
       have sB := expandedb_Done_success H.
       move=>/=.
-      have:= success_dead1 sB.
-      case: (ifP (_ == _)) => /eqP// dB _.
+      rewrite dead_success//.
     + move=> s s' r A B C D b1 b2 b3 HE HN HR IH ? s2 E dE;subst.
-      case: (A =P dead A) => dA.
+      case dA: (is_dead A).
         have H := expanded_dead s dA.
         have [[?]?] := expanded_consistent H HE; subst.
-        by rewrite dA next_alt_dead1 in HN.
+        by rewrite (next_alt_dead1 dA) in HN.
       have /= dB := expanded_not_dead dA HE.
       have:= expanded_or_correct_left_fail _ dA HE s2 E.
-      have cdE : cutr E <> dead (cutr E).
-        rewrite dead_cutr_is_dead.
-        by move=> /cutr_dead1/esym.
+      have cdE : is_dead (cutr E) = false.
+        rewrite dead_cutr_is_dead//.
       have [b H] := IH s2 _ cdE.
       rewrite cutr2_same if_same in H.
       have [b3 H2] := IH s2 _ dE.
       have H3 := next_alt_or_some HN.
-      case: b1 HE => //=; move=> H1 [b4 H4]/=;
+      case: b1 HE => //= H1 [b4 H4]/=;
         eexists; apply: run_backtrack H4 (H3 _ _ _) _ erefl; 
         eassumption.
   Qed.
