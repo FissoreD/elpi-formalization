@@ -47,37 +47,11 @@ Module check (U:Unif).
     | Or _ _ _ => is_ko A
     end.
 
-  Lemma is_ko_cutr {B}: is_ko (cutr B).
-  Proof. elim: B => // A HA s B HB/=; rewrite HA HB//. Qed.
-  
-  Lemma is_dead_is_ko {A}: is_dead A -> is_ko A.
-  Proof. elim: A => // A HA s B HB/=/andP[/HA->/HB]//. Qed.
-
-  Lemma is_ko_success {A}: is_ko A -> success A = false.
-  Proof. 
-    elim: A=>//.
-    - move => // A HA s B HB/= /andP[/HA->/HB->]; rewrite if_same//.
-    - move=> A HA B0 _ B HB/=/HA->//.  
-  Qed.
-
-  Lemma success_is_ko {A}: success A -> is_ko A = false.
-  Proof. 
-    elim: A=>//.
-    - move => // A HA s B HB/=; case: ifP => [_/HB|_/HA]->//; rewrite andbF//.
-    - move=> A HA B0 _ B HB/=/andP[/HA->]//.
-  Qed.
-
   Lemma has_cut_cut {B}: has_cut (cutr B).
   Proof. 
     elim: B => //=.
     - move=> ?????; rewrite !is_ko_cutr//.
     - by move=> A ->.
-  Qed.
-
-  Lemma is_ko_cutl {B}: is_ko B -> is_ko (cutl B).
-  Proof. 
-    elim: B => //=.
-    move=> A HA s B HB/andP[kA kB]; rewrite fun_if/=kA HA//HB// is_ko_cutr if_same//.
   Qed.
 
   Lemma has_cut_dead {A}: is_dead A -> has_cut A.
@@ -107,13 +81,13 @@ Module check (U:Unif).
           no_free_alt sP sV B & no_free_alt sP sV B0]
     | Or A _ B =>
         no_free_alt sP sV A && 
-          if has_cut A then no_free_alt sP sV B else (B == cutr B)
+          if has_cut A then no_free_alt sP sV B else (B == cutr B) (* TODO: should be is_ko *)
     end.
 
   Lemma no_alt_cut {sP sV A}: no_free_alt sP sV (cutr A).
   Proof.
     elim: A => //.
-    + by move=> A HA s B HB /=; rewrite HA HB cutr2_same eqxx if_same.
+    + by move=> A HA s B HB /=; rewrite HA HB cutr2 eqxx if_same.
     + move=> A HA B0 HB0 B HB /=; rewrite is_ko_cutr//.
   Qed.
 
@@ -207,8 +181,8 @@ Module check (U:Unif).
     - by move=> p []//=; right.
     - move=> A HA s1 B HB s /=/andP[kA kB].
       case: ifP => dA.
-        rewrite (expand_is_ko kB)/=kA kB; auto.
-      rewrite (expand_is_ko kA)/=kA kB; auto.
+        rewrite (is_ko_expand kB)/=kA kB; auto.
+      rewrite (is_ko_expand kA)/=kA kB; auto.
     - move=> A HA B0 _ B HB s /=/orP[].
         move=> /(HA s); case: expand => [s1|s1||s1] C/= []//; auto => cC.
         - by rewrite cC /=; left.
@@ -225,7 +199,7 @@ Module check (U:Unif).
   Proof.
     elim: A => //.
       move=> A HA s B HB/=.
-      rewrite fun_if/=HA HB cutr2_same eqxx no_alt_cut if_same.
+      rewrite fun_if/=HA HB cutr2 eqxx no_alt_cut if_same.
       case: ifP => //dA.
       rewrite has_cut_dead//no_alt_dead//.
     move=> A HA B0 HB0 B HB /=.
@@ -254,15 +228,15 @@ Module check (U:Unif).
         have:= HA s1 fA.
         have := @expand_has_cut _ s1 cA.
         case X: expand => //= -[]// + ->; rewrite ?nnB ?no_alt_cut //=; try by case: has_cut.
-        by rewrite cutr2_same eqxx if_same.
+        by rewrite cutr2 eqxx if_same.
       move/eqP->.
       case: ifP => [dA|].
-        rewrite get_state_Or/=cA no_alt_dead//=expand_is_ko//=?is_ko_cutr//cutr2_same//.
+        rewrite get_state_Or/=cA no_alt_dead//=is_ko_expand//=?is_ko_cutr//cutr2//.
       have:= HA s1 fA => + dA.
-      case Y: expand => /=->; rewrite !cutr2_same eqxx no_alt_cut if_same//.
+      case Y: expand => /=->; rewrite !cutr2 eqxx no_alt_cut if_same//.
     - move=> A HA B0 _ B HB s /=.
       move=>/orP[].
-        move=>kA; rewrite expand_is_ko///=kA//.
+        move=>kA; rewrite is_ko_expand///=kA//.
       move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
         case X: expand => //= [|||s1 C]; try rewrite cB0 cB/= fB0 fB !orbT//.
         rewrite get_state_And.
@@ -324,10 +298,10 @@ Module check (U:Unif).
       rewrite (expand_not_dead dA X) H1.
       rewrite (success_has_cut (proj1 (expand_solved_success X))).
       move=>/eqP->.
-      rewrite dead_cutr_is_dead failed_cutr next_alt_is_ko?is_ko_cutr//if_same//.
+      rewrite dead_cutr_is_dead failed_cutr is_ko_next_alt?is_ko_cutr//if_same//.
     - move=> A HA B0 _ B HB s1 C s2 /=.
       move=>/orP[].
-        move=> kA; rewrite expand_is_ko//.
+        move=> kA; rewrite is_ko_expand//.
       move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
         case X: expand => // [s3 D].
         have:= HB s3 _ _ fB.
@@ -364,7 +338,7 @@ Module check (U:Unif).
     elim: A s B s' => //.
     - move=> A HA s1 B HB s C s' /=.
       move=>/andP[kA kB].
-      do 2 rewrite next_alt_is_ko//; rewrite is_ko_failed//!if_same//.
+      do 2 rewrite is_ko_next_alt//; rewrite is_ko_failed//!if_same//.
     - move=> A HA B0 HB0 B HB s C s' /=.
       case: ifP => //= dA /orP[].
         move=> cA.
@@ -416,16 +390,16 @@ Module check (U:Unif).
           rewrite no_alt_dead// has_cut_dead//.
           apply: HB fB Y.
         move=>[_<-]/=; rewrite no_alt_dead//has_cut_dead// fB.
-      move=>/eqP->; rewrite (is_ko_failed is_ko_cutr) (next_alt_is_ko is_ko_cutr).
+      move=>/eqP->; rewrite (is_ko_failed is_ko_cutr) (is_ko_next_alt is_ko_cutr).
       rewrite if_same.
       have:= HA s1 _ _ fA.
       case: next_alt => // [[s3 D]]/(_ _ _ erefl) fD [_ <-]/=.
-      by rewrite fD cutr2_same eqxx no_alt_cut if_same.
+      by rewrite fD cutr2 eqxx no_alt_cut if_same.
     - move=> A HA B0 HB0 B HB s1 C s2 /=.
       case: (ifP (is_dead _)) => dA//.
       move=>/orP[].
         move=>kA.
-        by rewrite is_ko_failed// next_alt_is_ko//.
+        by rewrite is_ko_failed// is_ko_next_alt//.
       move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
         case: ifP => // fA.
           case: next_alt => // [[s3 D]]; case: ifP => // _ [_ <-]/=.
@@ -491,15 +465,15 @@ Module check (U:Unif).
       have:= HA _ _ s _ fA.
       case X: expand => // [E] /(_ _ _ _ erefl) + [<-]/=.
       have kcB := @is_ko_cutr B.
-      rewrite /= (expand_not_dead dA X) (next_alt_is_ko kcB) failed_cutr.
+      rewrite /= (expand_not_dead dA X) (is_ko_next_alt kcB) failed_cutr.
       rewrite if_same.
       case Y: next_alt => //[[s2 F]].
       move=> /(_ _ _ erefl) fF [_ <-] /=.
-      by rewrite fF no_alt_cut cutr2_same eqxx if_same.
+      by rewrite fF no_alt_cut cutr2 eqxx if_same.
     - move=> A HA B0 _ B HB C D s s' /=.
       move=> /orP[].
-        move=> kA; rewrite expand_is_ko// => -[<-]/=.
-        rewrite is_ko_failed// next_alt_is_ko// if_same//.
+        move=> kA; rewrite is_ko_expand// => -[<-]/=.
+        rewrite is_ko_failed// is_ko_next_alt// if_same//.
       move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
         case X: expand => //[E|s1 E].
           move=> [<-]/=.
@@ -579,7 +553,7 @@ Module check (U:Unif).
     elim: H3 H2; clear -H1 => //.
     - move=> s s' A B C b HA -> fA s2.
       have H := expandedb_next_alt_done H1 fA HA _.
-      have sB := expandedb_Done_success HA.
+      have sB := expanded_Done_success HA.
       by have:= next_alt_clean_success sB (H empty)=>->.
     - move=> s s' r A B C D b1 b2 b3 HA HB HC IH ? fA s2; subst.
       apply: IH.

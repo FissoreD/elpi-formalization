@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang run_prop.
+From det Require Import lang valid_state.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
@@ -7,15 +7,15 @@ Import Language.
 
 Module Nur (U : Unif).
 
-  Module RunP := RunP(U).
-  Import RunP Run Language.
+  Module VS := valid_state(U).
+  Import VS RunP Run Language.
 
   Inductive G := 
     | call : Tm -> G
     | cut : list (list G) -> G
     | fail : G
     .
-  #[verbose]derive G.
+  derive G.
   HB.instance Definition _ := hasDecEq.Build G G_eqb_OK.
 
   Definition alt := (list G).
@@ -73,7 +73,8 @@ Module Nur (U : Unif).
   Definition add_alt (lB0 lA lB:list alt) : list  alt :=
     if lA is x :: xs then
       [seq x ++ y | y <- lB] ++ 
-        flatten [seq [seq la ++ lb | lb <- lB0] | la <- xs]
+        (* flatten [seq [seq la ++ lb | lb <- lB0] | la <- xs] *)
+        [seq la ++ lb | la <- xs, lb <- lB0]
     else [::]
     .
 
@@ -85,7 +86,7 @@ Module Nur (U : Unif).
   Fixpoint state_to_list (A: state) (bt : list alt) : list alt :=
     match A with
     | OK | Top => [::[::]]
-    | KO => [::[::fail]]
+    | KO => [::]
     | Dead => [::]
     | Goal _ Cut => [::[::cut [::]]]
     | Goal _ (Call t) => [::[::call t]]
@@ -123,7 +124,7 @@ Module Nur (U : Unif).
       And 
         (Or OK s1 KO) (f a) 
         (Or (f z) s2 (f w))) [::] = 
-      [:: [:: call z]; [:: call w]; [:: fail; call a]].
+      [:: [:: call z]; [:: call w]].
   Proof.
     move=>/=.
     rewrite /normalize_aux/=.
@@ -169,12 +170,38 @@ Module Nur (U : Unif).
 
   Definition runElpi A :=
     forall s B s1 b,
-      runb s A s1 B b -> 
-        forall l, exists r1, nur' r1 A l s s1 /\ state_to_list B l = r1.
-  
+      valid_state A ->
+        runb s A s1 B b -> 
+          forall l, exists r1, nur' r1 A l s s1 /\ state_to_list B l = r1.
+
+  Goal forall p z w a, 
+    let f x := (Goal p (Call x)) in
+    runElpi (
+    And 
+      (Or OK empty (Or KO empty KO)) (And (f a) Top Top) 
+      (Or (f z) empty (Or KO empty (And (f w) Top Top)))).
+  Proof.
+    rewrite /runElpi => p z w a s B0 s1 b.
+    rewrite /valid_state.
+    simpl is_dead.
+    rewrite /bbAnd.
+    simpl base_and.
+    simpl orb.
+    rewrite /bbOr.
+    simpl base_or_aux.
+    simpl success.
+    simpl base_or_aux_ko.
+    simpl orb.
+    simpl.
+    simpl base_and_ko.
+    move=>/=.
+    rewrite if_same.
+    move=> p z w a//.
+
+
   Goal @runElpi OK.
   Proof.
-    rewrite/runElpi/nur' => s B s1 b H.
+    rewrite/runElpi/nur' => s B s1 b _ H.
     inversion H; clear H; subst => //=; inversion H0 => //p; subst.
     case: H6 => <- <-/=.
     eexists; split; [|reflexivity].
