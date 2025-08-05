@@ -177,10 +177,22 @@ Module Run (U : Unif).
     (* STATE OP DEFINITIONS                                             *)
     (********************************************************************)
 
+    Fixpoint dead1 A :=
+      match A with
+      | Dead => Dead
+      | OK | Bot | Goal _ _ | Top => Dead
+      | And A B0 B => And (dead1 A) (dead1 B0) (dead1 B)
+      | Or A s B => Or (dead1 A) s (dead1 B)
+      end.
+
     Fixpoint is_dead A :=
       match A with
       | Dead => true
       | OK | Bot | Goal _ _ | Top => false
+      (* Note: "is_dead A || (success A && dead B)" is wrong
+        A counter example is: "(OK \/ p) /\ Dead"
+        In this case, a valid alternative is "p /\ B0"
+      *)
       | And A B0 B => is_dead A
       | Or A s B => is_dead A && is_dead B
       end.
@@ -218,13 +230,6 @@ Module Run (U : Unif).
       | Or A _ B => if is_dead A then failed B else failed A (*&& failed B*)
       end.
 
-    Fixpoint dead1 A :=
-      match A with
-      | Dead => Dead
-      | OK | Bot | Goal _ _ | Top => Dead
-      | And A B0 B => And (dead1 A) (dead1 B0) (dead1 B)
-      | Or A s B => Or (dead1 A) s (dead1 B)
-      end.
 
     Fixpoint cutr A :=
       match A with
@@ -517,12 +522,12 @@ Module Run (U : Unif).
         match next_alt s A with
         | None =>
             if is_dead B then None else 
-            if failed B then 
-              match next_alt s B with
+            (* if failed B then  *)
+              match next_alt sB B with
               | None => None
               | Some (s, B) => Some (s, Or (dead1 A) sB B)
               end
-            else Some (sB, Or (dead1 A) sB B)
+            (* else Some (sB, Or (dead1 A) sB B) *)
         | Some (sA, A) => Some (sA, Or A sB B)
         end
     end.
@@ -935,7 +940,7 @@ Module Run (U : Unif).
   Proof.
     elim: A s => //.
       move=> A HA s1 B HB s2 /=/andP[kA kB].
-      rewrite HA//HB//is_ko_failed//; rewrite !if_same//.
+      rewrite HA//!HB//!if_same//.
     move=> A HA B0 _ B HB /= s1 kA.
     rewrite is_ko_failed//HA//if_same//.
   Qed.
@@ -965,11 +970,11 @@ Module Run (U : Unif).
         by case: next_alt => // [[s4 D]]/eqP->/=; rewrite eqxx.
       case: next_alt => // _.
       case: ifP => dB//.
-      case: ifP => fB//=.
-      have:= HB s1 s2.
+      (* case: ifP => fB//=. *)
+      (* have:= HB s1 s2. *)
       case: next_alt => [[??]|]//=.
-        by case: next_alt => [[??]|]///eqP<-.
-      case: next_alt => //.
+        (* by case: next_alt => [[??]|]///eqP<-. *)
+      (* case: next_alt => //. *)
     + move=> A HA B0 _ B HB s1 s2 /=.
       case: ifP => // _.
       case: ifP => // _.
@@ -1022,10 +1027,10 @@ Module Run (U : Unif).
       case X: next_alt => //= [[s3 D]|].
         move=>[_<-]; split => //=; rewrite (proj2 (HA _ _ _ X))//.
       case: ifP => dB//.
-      case:ifP => fB.
+      (* case:ifP => fB. *)
         case Y: next_alt => //[[s3 D]] [_ <-]/=.
         rewrite is_dead_dead (proj2 (HB _ _ _ Y))//.
-      move=>[_ <-]/=; rewrite is_dead_dead; split => //.
+      (* move=>[_ <-]/=; rewrite is_dead_dead; split => //. *)
     move=> A HA B0 _ B HB C s1 s2 /=.
     case: ifP => dA//.
     case X: next_alt => //[[s3 D]|].
@@ -1052,13 +1057,17 @@ Module Run (U : Unif).
           move=>[_<-]/=.
           by rewrite (HA _ _ _ Y)//(proj2 (next_alt_dead Y)).
         case: ifP => dB//.
-        case: ifP => // fB [_<-]/=; rewrite is_dead_dead//; apply: HB X.
+        have [s' H]:= next_alt_some X s.
+        rewrite H.
+        move=> [_<-]/=; rewrite is_dead_dead//; apply: HB X.
       case: ifP => //dA.
       case Y: next_alt => [[s4 E]|]//.
         move=>[_<-]/=.
         by rewrite (HA _ _ _ Y)// (proj2 (next_alt_dead Y)).
-      do 2 case: ifP => //; move=> fB dB [_<-]/=.
-      rewrite [failed(dead1 _)]is_dead_failed is_dead_dead//.
+      case: ifP => //dB.
+      rewrite (next_alt_none X s)//.
+      (* do 2 case: ifP => //; move=> fB dB [_<-]/=. *)
+      (* rewrite [failed(dead1 _)]is_dead_failed is_dead_dead//. *)
     move=> A HA B0 _ B HB C s1 s2/=.
     case: ifP => dA//.
     case: ifP => fA.
@@ -1093,10 +1102,10 @@ Module Run (U : Unif).
       case X: next_alt => [[s3 C]|]//.
       case: ifP => dB.
         rewrite /= (HA s1 s2)//dB is_dead_next_alt//if_same//.
-      case: ifP => fB//.
+      (* case: ifP => fB//. *)
       case Y: next_alt => [[s3 C]|]//=.
       have:= next_alt_none Y=>->.
-      by rewrite (HA s1 s2)//fB !if_same.
+      rewrite (HA s1 s2)//Y!if_same//.
     - move=> A HA B0 _ B HB/= s1 s2/andP[sA sB].
       rewrite sA/= success_is_dead//success_failed//.
       case Y: next_alt => [[s3 C]|]//.

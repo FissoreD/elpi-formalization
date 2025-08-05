@@ -85,13 +85,17 @@ Module valid_state (U:Unif).
     | Dead => false
     | Or A _ B => 
       if is_dead A then valid_state B
-      else valid_state A && (bbOr B)    
+      else valid_state A && (bbOr B)
     | And A B0 B => 
       [&& valid_state A,
         if success A then valid_state B 
         else (B0 == B)
         & (if success A || failed A then bbAnd B0 else base_and B0)]
     end.
+
+    (* TODO: OK /\ p non deve essere valido: la expand nel caso di And va avanti
+      a destra e mangerebbe p
+    *)
 
   Lemma valid_state_dead {A} : is_dead A -> valid_state A = false.
   Proof.
@@ -409,8 +413,17 @@ Module valid_state (U:Unif).
   Proof. 
     elim: A s => //. 
     - move=> A HA s B HB s1 /= /andP[bA bB].
-      rewrite base_and_ko_is_dead//HB//next_alt_aux_base_and_ko//base_or_aux_failed//if_same//.
+      rewrite !HB//next_alt_aux_base_and_ko//!if_same//.
     - move=>/=[]//p a _ B0 HB0 B HB s/andP[/eqP->bB]/=. 
+  Qed.
+
+  Lemma next_alt_aux_base_or_none {A s}: base_or_aux A -> next_alt s A = None -> A = Bot.
+  Proof. 
+    elim: A s => //. 
+    - move=> A HA s B HB s1 /= /andP[bA bB].
+      rewrite base_and_dead//next_alt_aux_base_and//.
+    - move=>/=[]//p a _ B0 HB0 B HB s/andP[/eqP->bB]/=.
+      rewrite next_alt_aux_base_and//. 
   Qed.
 
 
@@ -428,10 +441,10 @@ Module valid_state (U:Unif).
       case X: next_alt => [[s3 D]|].
         move=>[_<-]/=; rewrite bbOr_valid// bB (HA _ _ _ vA X) if_same//.
       case: ifP => //dB.
-      case: ifP => //fB.
+      (* case: ifP => //fB. *)
         case Y: next_alt => [[s3 D]|]//.
         move=>[_<-]/=; rewrite is_dead_dead (HB _ _ _ _ Y)//bbOr_valid//.
-      move=>[_<-]/=; rewrite is_dead_dead bbOr_valid//.
+      (* move=>[_<-]/=; rewrite is_dead_dead bbOr_valid//. *)
     + move=> A HA B0 HB0 B HB s1 s2 C/=.
       move=>/andP[vA].
       case: ifP => [sA/andP[vB bB0]|sA /andP[/eqP?]]; subst.

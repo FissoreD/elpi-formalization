@@ -298,7 +298,7 @@ Module check (U:Unif).
       rewrite (expand_not_dead dA X) H1.
       rewrite (success_has_cut (proj1 (expand_solved_success X))).
       move=>/eqP->.
-      rewrite failed_cutr is_ko_next_alt?is_ko_cutr//if_same//.
+      rewrite is_ko_next_alt?if_same//is_ko_cutr//.
     - move=> A HA B0 _ B HB s1 C s2 /=.
       move=>/orP[].
         move=> kA; rewrite is_ko_expand//.
@@ -339,7 +339,7 @@ Module check (U:Unif).
     - move=>/=p[]//??? _ [_<-]//.
     - move=> A HA s1 B HB s C s' /=.
       move=>/andP[kA kB].
-      do 2 rewrite is_ko_next_alt//; rewrite is_ko_failed//!if_same//.
+      do 3 rewrite is_ko_next_alt//; rewrite !if_same//.
     - move=> A HA B0 HB0 B HB s C s' /=.
       case: ifP => //= dA /orP[].
         move=> cA.
@@ -385,16 +385,15 @@ Module check (U:Unif).
           have cD:= has_cut_next_alt cA X.
           by move=> /(_ _ _ erefl) fD[_<-]/=; rewrite fD cD fB.
         move=> _.
-        case: ifP => /eqP dB//.
+        case: ifP => dB//.
         have idA := @is_dead_dead A.
-        case: ifP => // Fb.
+        (* case: ifP => // Fb. *)
           case Y: next_alt => //[[s3 D]].
           move=>[_ <-]/=.
           rewrite no_alt_dead// has_cut_dead//.
           apply: HB fB Y.
-        move=>[_<-]/=; rewrite no_alt_dead//has_cut_dead// fB.
-      move=>/eqP->; rewrite (is_ko_failed is_ko_cutr) (is_ko_next_alt is_ko_cutr).
-      rewrite if_same.
+        (* move=>[_<-]/=; rewrite no_alt_dead//has_cut_dead// fB. *)
+      move=>/eqP->; rewrite (is_ko_next_alt is_ko_cutr) if_same.
       have:= HA s1 _ _ fA.
       case: next_alt => // [[s3 D]]/(_ _ _ erefl) fD [_ <-]/=.
       by rewrite fD cutr2 eqxx no_alt_cut if_same.
@@ -459,16 +458,16 @@ Module check (U:Unif).
         move=>_ fB.
         case: ifP => // dB.
         have dDe := @is_dead_dead E.
-        case:ifP => //FB.
+        (* case:ifP => //FB. *)
           case nB : next_alt => //= [[s2 F]] [_<-]/=.
           rewrite no_alt_dead// has_cut_dead// (no_free_alt_next_alt fB nB)//.
-        move=>[_<-]/=.
-        rewrite no_alt_dead// has_cut_dead// fB.
+        (* move=>[_<-]/=. *)
+        (* rewrite no_alt_dead// has_cut_dead// fB. *)
       move=> cA /eqP->.
       have:= HA _ _ s _ fA.
       case X: expand => // [E] /(_ _ _ _ erefl) + [<-]/=.
       have kcB := @is_ko_cutr B.
-      rewrite /= (expand_not_dead dA X) (is_ko_next_alt kcB) failed_cutr.
+      rewrite /= (expand_not_dead dA X) (is_ko_next_alt kcB).
       rewrite if_same.
       case Y: next_alt => //[[s2 F]].
       move=> /(_ _ _ erefl) fF [_ <-] /=.

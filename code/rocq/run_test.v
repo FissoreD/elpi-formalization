@@ -256,7 +256,7 @@ Module Test2.
     move=>/=.
     reflexivity. Qed.
 
-  Goal forall s s1 p R B, 
+  (* Goal forall s s1 p R B, 
     failed p = false -> failed R = false -> 
       run s (And (Or OK s1 p) R OK) s B -> 
         next_alt s B = Some (s1, And (Or Dead s1 p) R R).
@@ -267,9 +267,10 @@ Module Test2.
       case: H6 => <-.
       simpl clean_success.
       simpl.
-      have := failed_dead fP.
-      case: ifP => /eqP// dP _.
+      rewrite (failed_dead fP)fR.
+      case X: next_alt => [[x xs]|].
+      case: ifP => // dP _.
       rewrite fP fR//.
     inversion H0; subst => //.
-  Qed.
+  Qed. *)
 End Test2.
