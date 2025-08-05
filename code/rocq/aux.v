@@ -98,8 +98,8 @@ Proof.
   move: (run_cut_simpl HR) => def_altB; subst.
   move=> x.
   move: (classic (run x altA Failed)) => [].
-  + move=> H; apply: (run_and_fail_left H KO).
-  + have: (run s' KO Failed).
+  + move=> H; apply: (run_and_fail_left H Bot).
+  + have: (run s' Bot Failed).
       by apply: run_fail.
     move=> H H1.
     apply: run_and_fail_both.

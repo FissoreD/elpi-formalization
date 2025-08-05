@@ -136,7 +136,7 @@ Module Run (U : Unif).
   HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
 
   Inductive state :=
-    | KO : state
+    | Bot : state
     | OK : state
     | Top : state
     (* | Bot : state *)
@@ -180,14 +180,14 @@ Module Run (U : Unif).
     Fixpoint is_dead A :=
       match A with
       | Dead => true
-      | OK | KO | Goal _ _ | Top => false
+      | OK | Bot | Goal _ _ | Top => false
       | And A B0 B => is_dead A
       | Or A s B => is_dead A && is_dead B
       end.
 
     Fixpoint is_ko A :=
       match A with
-      | Dead | KO => true
+      | Dead | Bot => true
       | OK | Goal _ _ | Top => false
       | And A B0 B => is_ko A
       | Or A s B => is_ko A && is_ko B
@@ -196,14 +196,14 @@ Module Run (U : Unif).
     Fixpoint success (A : state) : bool :=
       match A with
       | OK => true
-      | Top | Goal _ _ | KO | Dead => false
+      | Top | Goal _ _ | Bot | Dead => false
       | And A _ B => success A && success B
       (* We need to keep the if condition to reflect the behavior of expand:
         For example, an interesting proprety of expand is:
         - success A -> expand A = Solved B
         - if we replace following branch with:
             "success A || success B" (i.e. we remove the if), then
-            KO \/ OK is success but expand (KO \/ OK) is not Solved but
+            Bot \/ OK is success but expand (Bot \/ OK) is not Solved but
             rather Expanded
       *)
       | Or A _ B => if is_dead A  then success B else success A
@@ -211,7 +211,7 @@ Module Run (U : Unif).
 
     Fixpoint failed (A : state) : bool :=
       match A with
-      | KO | Dead => true
+      | Bot | Dead => true
       | Top | Goal _ _ | OK => false
       | And A _ B => failed A || (success A && failed B)
       (* We keep the if condition to have the right behavior in next_alt *)
@@ -221,15 +221,16 @@ Module Run (U : Unif).
     Fixpoint dead1 A :=
       match A with
       | Dead => Dead
-      | OK | KO | Goal _ _ | Top => Dead
+      | OK | Bot | Goal _ _ | Top => Dead
       | And A B0 B => And (dead1 A) (dead1 B0) (dead1 B)
       | Or A s B => Or (dead1 A) s (dead1 B)
       end.
 
     Fixpoint cutr A :=
       match A with
-      | Goal _ _ | Top | OK => KO
-      | Dead | KO => A
+      | Goal _ _ | Top | Bot => Bot
+      | OK => Bot
+      | Dead => Dead
       | And A B0 B => And (cutr A) (cutr B0) (cutr B)
       | Or A s B => Or (cutr A) s (cutr B)
       end.
@@ -237,8 +238,8 @@ Module Run (U : Unif).
     Fixpoint cutl A :=
       (* if A == dead A then Dead else *)
       match A with
-      | Goal _ _ | Top => KO
-      | Dead | KO | OK => A
+      | Goal _ _ | Top | Bot => Bot
+      | Dead | OK => A
       | And A B0 B => And (cutl A) (cutl B0) (cutl B)
       | Or A s B => 
           if is_dead A then Or A s (cutl B)
@@ -298,41 +299,53 @@ Module Run (U : Unif).
     Qed.
 
     (* cutl + cutr + dead1 *)
-    Lemma cut_dead_is_dead {A}: is_dead (cutl A) = is_dead A.
-    Proof.
-      elim: A => //.
-      move=> A HA s B HB /=.
-      rewrite fun_if/=; rewrite -HA-HB.
-      case dA: is_dead => //.
-    Qed.
-
     Lemma dead2 {A}: dead1 (dead1 A) = dead1 A.
     Proof. elim: A => //=[A HA s B HB|A HA B0 HB0 B HB]; rewrite HA HB//HB0//. Qed.
 
     Lemma cutr2 {a}: cutr (cutr a) = cutr a.
     Proof. elim: a => //= [A HA s B HB|A HA B0 HB0 B HB]; rewrite HA HB//HB0//. Qed.
 
+    Lemma cutlr {A}: cutl (cutr A) = cutr A.
+    Proof.
+      elim: A => //.
+      - move=> A HA s B HB/=.
+        rewrite HA HB cutr2 if_same//.
+      - move=> A HA B0 HB0 B HB/=.
+          rewrite HA HB0 HB//.
+    Qed.
+
+    Lemma cutrl {A}: cutr (cutl A) = cutr A.
+    Proof.
+      elim: A => //.
+      - move=> A HA s B HB/=.
+        rewrite fun_if/= HA HB cutr2 if_same//.
+      - move=> A HA B0 HB0 B HB/=.
+        rewrite HA HB0 HB//.
+    Qed.
+
+
     Lemma cutl2 {a}: cutl (cutl a) = cutl a.
     Proof.
       elim: a => //=.
       + move=> A HA s B HB.
-        rewrite (fun_if cutl)/= HA HB cutr2 cut_dead_is_dead.
-        case: ifP => ->//.
+        rewrite (fun_if cutl)/= HA HB cutrl cutlr cutr2 if_same.
+        case: ifP => //->//.
       + move=> A -> B0 -> B ->//.
     Qed.
 
-    Lemma cutr_dead {A}: cutr A = dead1 A -> dead1 A = A.
-    Proof. elim: A=> //=[A HA s B HB|A HA B0 HB0 B HB][]*; rewrite HA// HB//HB0//. Qed.
+    (* Lemma cutr_dead {A}: cutr A = dead1 A -> dead1 A = A.
+    Proof.
+      elim: A=> //=. [A HA s B HB|A HA B0 HB0 B HB]. []*; rewrite HA// HB//HB0//. Qed. *)
 
-    Lemma cutl_dead {A}: cutl A = dead1 A -> A = dead1 A.
+    (* Lemma cutl_dead {A}: cutl A = dead1 A -> A = dead1 A.
     Proof. 
       elim: A=> //.
         move=> A HA s B HB/=.
         case: ifP => dA[].
           move=><-/HB<-//.
-        move=> H H1; rewrite -HA//cutr_dead//.
+        move=> H H1; rewrite -HA//. cutr_dead//.
       move=> A HA B0 HB0 B HB/=[/HA<-]/HB0<-/HB<-//.
-    Qed.
+    Qed. *)
 
     (* IS_DEAD + IS_KO + FAILED + SUCCESS with cutr, cutl, dead1 *)
     Lemma is_dead_dead {A}: is_dead (dead1 A).
@@ -341,8 +354,8 @@ Module Run (U : Unif).
     Lemma is_ko_cutr {B}: is_ko (cutr B).
     Proof. elim: B => // A HA s B HB/=; rewrite HA HB//. Qed.
 
-    Lemma dead_cutr_is_dead {A}: is_dead (cutr A) = is_dead A.
-    Proof. elim: A => //; by move=> A HA s B HB /=; rewrite HA HB. Qed.  
+    (* Lemma dead_cutr_is_dead {A}: is_dead (cutr A) = is_dead A.
+    Proof. elim: A => //. ; by move=> A HA s B HB /=; rewrite HA HB. Qed.   *)
 
     Lemma is_ko_cutl {B}: is_ko B -> is_ko (cutl B).
     Proof. elim: B => //=A HA s B HB/andP[kA kB]; rewrite fun_if/=kA HA//HB// is_ko_cutr if_same//. Qed.
@@ -353,19 +366,17 @@ Module Run (U : Unif).
     Lemma success_cutr {A} : success (cutr A) = false.
     Proof. apply: failed_success failed_cutr. Qed.
 
-    Lemma success_cut {A} : success (cutl A) = success A.
+    Lemma success_cut {A} : success A -> success (cutl A).
     Proof.
       elim: A => //. 
       + move=> A HA s B HB /=.
-        rewrite (fun_if (success))/= HA HB success_cutr.
-        do 2 case: ifP => //.
-        rewrite cut_dead_is_dead => ->//.
-      + move=> A HA B HB C HC /=.
-        rewrite HA HC//.
+        rewrite (fun_if success)/=.
+        case: ifP => /= dA//.
+        move=> sA.
+        rewrite success_is_dead HA//.
+      + move=> A HA B HB C HC /=/andP[sA sC].
+        rewrite HA// HC//.
     Qed.
-
-    Lemma success_cut1 {A} : success A -> success (cutl A).
-    Proof. by rewrite success_cut. Qed.
 
     Lemma failed_cut {A}: failed A -> failed (cutl A).
     Proof.
@@ -377,8 +388,15 @@ Module Run (U : Unif).
       move=>/orP[].
         by move=>/HA ->.
       move=>/andP[sA fB].
-      rewrite success_cut sA HB//orbT//.
+      rewrite success_cut// HB//orbT//.
     Qed.
+
+    Lemma is_dead_cutr {A}: is_dead (cutr A) = is_dead A.
+    Proof. elim: A => //A HA s B HB/=; rewrite HA HB//. Qed.
+
+    Lemma is_dead_cutl {A}: is_dead (cutl A) = is_dead A.
+    Proof. elim: A => //A HA s B HB/=; rewrite fun_if/=HB HA is_dead_cutr if_same//. Qed.
+    
   End state_op.
 
   Definition mkOr A sB r :=
@@ -417,8 +435,8 @@ Module Run (U : Unif).
 
   Definition big_or pr s t :=
     let l := F pr t s in
-    if l is (s,r) :: xs then (Or KO s (big_or_aux pr r.(premises) xs))
-    else KO.
+    if l is (s,r) :: xs then (Or Bot s (big_or_aux pr r.(premises) xs))
+    else Bot.
 
   Lemma big_and_dead {p l}: is_dead (big_and p l) = false.
   Proof. elim l => //. Qed.
@@ -435,7 +453,7 @@ Module Run (U : Unif).
     match A with
     (* meta *)
     | OK => Solved s OK
-    | KO => Failure KO
+    | Bot => Failure Bot
 
     (* meta *)
     | Dead => Failure Dead
@@ -468,14 +486,14 @@ Module Run (U : Unif).
   (* OK returns None since,
      We can have the state "A" = (OK \/ B) /\ C
      It happens that the current substitution makes C to fail
-     "A" becomes: (OK \/ B) /\ KO.
+     "A" becomes: (OK \/ B) /\ Bot.
      The OK node should be transformed into a Dead so that 
      "B /\ C" is tried with the subst for B *)
   Fixpoint next_alt (s : Sigma) (A : state) : option (Sigma * state) :=
     match A with
-    | KO | OK => None
+    | Bot | OK => None
     | Dead => None
-    | Top | Goal _ _ => None
+    | Top | Goal _ _ => Some (s, A)
     | And A B0 B =>
       if is_dead A then None else
       if failed A then 
@@ -517,8 +535,8 @@ Module Run (U : Unif).
 
   Fixpoint clean_success (A: state):= 
     match A with
-    | OK => KO
-    | KO | Dead | Top | Goal _ _ => A
+    | OK => Bot
+    | Bot | Dead | Top | Goal _ _ => A
     | Or A s B => 
       if is_dead A then Or A s (clean_success B)
       else Or (clean_success A) s B
@@ -670,35 +688,6 @@ Module Run (U : Unif).
     is_dead A -> expandedb s A (Failed A) false.
   Proof. move=>/is_dead_is_ko/is_ko_expanded//. Qed.
 
-  Lemma expand_not_dead {s A r}: 
-    is_dead A = false -> expand s A = r -> is_dead (get_state r) = false.
-  Proof.
-    move=> + <-.
-    elim: A s; clear; try by move=> //=.
-    + move=> p [|t]//= s _; apply dead_big_or.
-    + move=> A HA s B HB s1 => //=.
-      case: ifP => dA/=.
-        rewrite get_state_Or/=dA; apply: HB.
-      move=> _.
-      have:= HA s1 dA.
-      case X: expand => //=->//.
-    + move=> A HA B0 _ B HB s1 //= dA.
-      have:= HA s1 dA.
-      case X: expand => [|||s A']//=dA'.
-      by rewrite get_state_And/=fun_if cut_dead_is_dead dA' if_same.
-  Qed.
-
-  Lemma expanded_not_dead {s A r b}: 
-    is_dead A = false -> expandedb s A r b -> is_dead (get_state_exp r) = false.
-  Proof.
-    move=> + H.
-    elim: H; clear.
-    + move=> s s' A A' H1 H2 /=; apply: expand_not_dead H2 H1.
-    + move=> s A B H1 H2 /=; apply: expand_not_dead H2 H1.
-    + move=> s s' r A A' b H _ IH dA; apply: IH (expand_not_dead dA H).
-    + move=> s s' r A A' b H _ IH dA; apply: IH (expand_not_dead dA H).
-  Qed.
-
   Lemma succes_is_solved s {A}: success A -> expand s A = Solved s A.
   Proof.
     elim: A s => //; try by do 2 eexists.
@@ -711,12 +700,32 @@ Module Run (U : Unif).
       rewrite (HA s)// (HB s)//.
   Qed.
 
+  (* Lemma success_is_solvedF s {A r}: success A = false -> expand s A = r -> is_solved r = false.
+  Proof.
+    move=>+<-; clear r.
+    elim: A s => //; try by do 2 eexists.
+    + move=>/=p [] s//.
+    + move=> A HA s1 B HB s /=.
+      case:ifP => //dA.
+        move=> sB.
+        have:= HB s sB.
+        case: expand => //.
+      move=>sA; have:= HA s sA.
+      case: expand => //.
+    + move=> A HA B0 HB0 B HB s /=.
+      case sA: success => /=.
+        rewrite succes_is_solved//.
+        move=>/(HB s); case: expand => //.
+      have:= HA s sA.
+      case: expand => //.
+  Qed. *)
+
   Lemma expand_solved_success {s1 A s2 B}: 
     expand s1 A = Solved s2 B -> success A /\ success B.
   Proof.
     elim: A s1 s2 B => //.
     + by move=> /= ??? [] /[subst2].
-    + move=> ? [] //.
+    + move=> p [] //.
     + move=> A HA s B HB s1 s2 C/=.
       case: ifP => dA.
         case X: expand =>//-[??];subst => /=.
@@ -783,6 +792,46 @@ Module Run (U : Unif).
     case: r=> //[s|s|]B/=; case X: success; try by rewrite // (succes_is_solved s1 X).
   Qed.
 
+  Lemma expand_not_dead {s A r}: 
+    is_dead A = false -> expand s A = r -> is_dead (get_state r) = false.
+  Proof.
+    move=> + <-.
+    elim: A s; clear; try by move=> //=.
+    + move=> p [|t]//= s _; apply dead_big_or.
+    + move=> A HA s B HB s1 => //=.
+      case: ifP => dA/=.
+        rewrite get_state_Or/=dA; apply: HB.
+      move=> _.
+      have:= HA s1 dA.
+      case X: expand => //=->//.
+    + move=> A HA B0 _ B HB s1 //= dA.
+      have:= HA s1 dA.
+      case X: expand => [|||s A']//=dA'.
+      rewrite get_state_And/= fun_if dA'.
+      case Y: expand => //[s2 C]/=.
+      have [sA']:= expand_solved_success X.
+      move=>/success_cut.
+      apply: success_is_dead.
+  Qed.
+
+  Lemma expanded_not_dead {s A r b}: 
+    is_dead A = false -> expandedb s A r b -> is_dead (get_state_exp r) = false.
+  Proof.
+    move=> + H.
+    elim: H; clear.
+    + move=> s s' A A' H1 H2 /=; apply: expand_not_dead H2 H1.
+    + move=> s A B H1 H2 /=; apply: expand_not_dead H2 H1.
+    + move=> s s' r A A' b H _ IH dA; apply: IH (expand_not_dead dA H).
+    + move=> s s' r A A' b H _ IH dA; apply: IH (expand_not_dead dA H).
+  Qed.
+
+  Lemma expand_solved_failed {s1 A s2 B}: 
+    expand s1 A = Solved s2 B -> failed A = false /\ failed B = false.
+  Proof.
+    move=>/expand_solved_success [].
+    by do 2 move=> /success_failed->.
+  Qed.
+
   Lemma expand_failure_failed {s1 A B}:
     expand s1 A = Failure B -> failed A /\ failed B.
   Proof.
@@ -802,6 +851,81 @@ Module Run (U : Unif).
       have:= expand_solved_success HA' => -[] ->->.
       by rewrite !orbT.
   Qed. 
+
+  Lemma expand_not_dead1 {s A r}: 
+    expand s A = r -> ~~ (is_fail r) -> is_dead (get_state r) = false.
+  Proof.
+    move=> <-.
+    elim: A s; clear; try by move=> //=.
+    + move=> p []// t s /=; rewrite /big_or.
+      case: F => //= [[]]//=*.
+    + move=> A HA s B HB s1 => //=.
+      case: ifP => dA/=.
+        rewrite get_state_Or/= dA/=.
+        have:= HB s1.
+        case X: expand => //.
+      have:= HA s1.
+      case X: expand => //=->//.
+    + move=> A HA B0 _ B HB s1 //=.
+      have:= HA s1.
+      case X: expand => [|||s A']//=; try move=> /(_ isT)//.
+      move=> dA.
+      have:= HB s.
+      case Y: expand => //=/(_ isT) _ _.
+      have [_]:= expand_solved_success X.
+      move=>/success_cut.
+      apply: success_is_dead.
+  Qed.
+
+  Lemma failed_expand {s1 A}:
+    failed A -> expand s1 A = Failure A.
+  Proof.
+    elim: A s1; clear => //; try by move=> ? [] //.
+    + move=> A HA s1 B HB s2/=.
+      case: ifP => [dA fB|dA fA].
+        rewrite HB//.
+      rewrite HA//.
+    + move=> A HA B0 _ B HB s/=.
+      case X: failed => /=.
+        move=>_; rewrite HA => //.
+      move=>/andP[sA fB].
+      rewrite succes_is_solved//.
+      rewrite HB//.
+  Qed. 
+
+  Lemma expand_not_failed {s1 A r}:
+    expand s1 A = r -> failed (get_state r) = false -> ~ (is_fail r) -> failed A = false.
+  Proof.
+    move=><-; clear r.
+    elim: A s1; try by move=> s1 <-//.
+    - move=> p [|t]//.
+    - move=> A HA s B HB s1/=.
+      case: ifP => dA.
+        have:= HB s1; case X: expand => //=; rewrite dA => H//.
+      have:= HA s1.
+      case X: expand => /= H; case: ifP => // H1 ; have:= expand_not_dead1 X isT => /=; congruence.
+    - move=> A HA B0 _ B HB s1/=.
+      have:= HA s1.
+      case X: expand => //= [||s2 C]; try by (move=> H; case f: failed => //; rewrite H//=; case Y: (success A) => //; rewrite (succes_is_solved) in X).
+      have [sA sC]:= expand_solved_success X.
+      rewrite (success_failed _ sC) => /(_ erefl notF) ->/=.
+      have:= HB s2.
+      case Y: expand => //= H1; rewrite success_failed//=?success_cut//?sC/==>H2; rewrite H1//andbF//.
+  Qed.
+
+
+  Lemma expandedb_Done_not_failed {s1 A s2 B b}: 
+    expandedb s1 A (Done s2 B) b -> failed A = false.
+  Proof.
+    remember (Done _ _) as d eqn:Hd => H.
+    elim: H s2 B Hd => //; clear.
+    - move=> s s' A A'/expand_solved_failed [->]//.
+    - move=> s s' r A B b HA HB IH s1 C ?; subst.
+      apply: expand_not_failed HA (IH _ _ erefl) _ => //.
+    - move=> s s' r A B b HA HB IH s1 C ?; subst.
+      apply: expand_not_failed HA (IH _ _ erefl) _ => //.
+  Qed.
+
 
   (********************************************************************)
   (* NEXT_ALT OP PROPERTIES                                           *)
@@ -830,7 +954,7 @@ Module Run (U : Unif).
     same_sol (next_alt s1 A) (next_alt s2 A).
   Proof.
     elim: A s1 s2 => //; try by move=> [] *; subst.
-    (* + by move=> ??[]/=. *)
+    + by move=> ??[]/=.
     + move=> A HA s B HB s1 s2 /=.
       case:ifP => dA.
         have:= HB s1 s2.
@@ -887,6 +1011,8 @@ Module Run (U : Unif).
     next_alt s1 A = Some (s2, D) -> is_dead A = false /\ is_dead D = false.
   Proof.
     elim: A D s1 s2 => //.
+    - move=>/=???[_<-]//.
+    - move=>/=?????[_<-]//.
       move=> A HA s B HB C s1 s2/=.
       case: ifP => dA.
         case X: next_alt => //[[s3 D]].
@@ -916,6 +1042,8 @@ Module Run (U : Unif).
     next_alt s A = Some (s1, B) -> failed B = false.
   Proof.
     elim: A B s s1 => //.
+    - move=>/=???[_<-]//.
+    - move=>?????[_<-]//.
       move=> A HA s B HB C s1 s2/=.
       case X: next_alt => [[s3 D]|].
         case: ifP => dA.

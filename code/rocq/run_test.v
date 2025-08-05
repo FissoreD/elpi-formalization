@@ -82,7 +82,7 @@ Module Test1.
       rewrite /big_or/F/select/=.
       (* apply: expanded_step => //=. *)
       apply: expanded_fail => //=.
-    - reflexivity.
+    - move=>/=. reflexivity.
     - apply: run_backtrack => //.
       - apply: expanded_step => //=.
         rewrite /big_or/F/select/= -/s1 -/s2.
@@ -113,19 +113,7 @@ End Test1.
 
 Module Test5.
 
-  Module U <: Unif.
-    Definition unify    (t1 t2 : Tm) (s : Sigma) :=
-      match t1, t2 with
-      | Code (v X), _ => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t2 else s.(sigma) x) |} | Some t => if t == t2 then Some s else None end
-      | _, Code (v X) => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t1 else s.(sigma) x) |} | Some t => if t == t1 then Some s else None end
-      | _, _ => if t1 == t2 then Some s else None
-      end.
-
-    Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
-    Include Axioms.
-  End U.
-
-  Module Run := Run(U).
+  Module Run := Run(Test1.U).
   Import Run.
 
   Definition v_X := Code (v 0).
@@ -146,9 +134,9 @@ Module Test5.
   Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
   Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
 
-  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) s1 r.
+  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) s1 r /\ next_alt empty r = None.
   Proof.
-    do 2 eexists.
+    repeat eexists.
     apply: run_backtrack.
     apply: expanded_step.
     + move=> //.
@@ -174,24 +162,13 @@ Module Test5.
       apply: expanded_done => //=.
       reflexivity.
       reflexivity.
+    reflexivity.
   Qed.
 End Test5.
 
 Module Test6.
 
-  Module U <: Unif.
-    Definition unify    (t1 t2 : Tm) (s : Sigma) :=
-      match t1, t2 with
-      | Code (v X), _ => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t2 else s.(sigma) x) |} | Some t => if t == t2 then Some s else None end
-      | _, Code (v X) => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t1 else s.(sigma) x) |} | Some t => if t == t1 then Some s else None end
-      | _, _ => if t1 == t2 then Some s else None
-      end.
-
-    Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
-    Include Axioms.
-  End U.
-
-  Module Run := Run(U).
+  Module Run := Run(Test1.U).
   Import Run.
 
   Definition v_X := Code (v 0).
@@ -214,9 +191,9 @@ Module Test6.
   Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
   Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
 
-  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) s1 r.
+  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) s1 r /\ next_alt empty r = None.
   Proof.
-    do 2 eexists.
+    repeat eexists.
     apply: run_backtrack.
     apply: expanded_step.
     + move=> //.
@@ -246,34 +223,37 @@ Module Test6.
       reflexivity.
       reflexivity.
       reflexivity.
+      reflexivity.
   Qed.
 End Test6.
-
 
 
 Module Test2.
   Import RunAxiom.
   Goal expand empty (Or OK empty OK) = Solved empty (Or OK empty OK) . by []. Qed.
 
-  Goal forall p, run empty (Or (Goal p Cut) empty Top) empty (Or KO empty KO).
+  Goal forall p, run empty (Or (Goal p Cut) empty OK) empty (Or Bot empty Bot).
     move=> pr //=.
     eexists. apply: run_done => //=. 
     apply: expanded_step => //=.
     by apply: expanded_done => /=.
+    move=>/=.
     reflexivity. 
   Qed.
 
   Goal forall p r, 
-    run empty (Or (Goal p Cut) empty r) empty (Or KO empty (cutr r)).
+    run empty (Or (Goal p Cut) empty r) empty (Or Bot empty (cutr r)).
     move=> p; eexists.
     apply: run_done.
     apply: expanded_step => //=.
     apply: expanded_done => //=.
+    move=>/=.
     reflexivity.
   Qed.
 
-  Goal run empty (Or OK empty (Or OK empty OK)) empty (Or KO empty (((Or OK empty OK)))).
+  Goal run empty (Or OK empty (Or OK empty OK)) empty (Or Bot empty (((Or OK empty OK)))).
   Proof. eexists; apply: run_done => //=. apply: expanded_done => //=.
+    move=>/=.
     reflexivity. Qed.
 
   Goal forall s s1 p R B, 

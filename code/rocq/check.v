@@ -1,10 +1,10 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
-From det Require Import valid_state.
+From det Require Import run_prop.
 
 Module check (U:Unif).
-  Module VS := valid_state(U).
-  Import Language VS RunP Run.
+  Module VS := RunP(U).
+  Import Language VS Run.
 
   Print sigT.
   Definition sigV := V -> option S.
@@ -41,7 +41,7 @@ Module check (U:Unif).
     match A with
     | Goal _ Cut => true
     | Goal _ (Call _) => false
-    | KO | Dead => true
+    | Bot | Dead => true
     | OK | Top => false
     | And A B0 B => has_cut A || (has_cut B0 && has_cut B)
     | Or _ _ _ => is_ko A
@@ -71,7 +71,7 @@ Module check (U:Unif).
   Fixpoint no_free_alt (sP:sigT) (sV:sigV) A :=
     match A with
     | Goal _ a => det_atom sP sV a
-    | Top | KO | OK => true
+    | Top | Bot | OK => true
     | Dead => true
     (* | And (Or A1 _ A2) B0 B ->
       ((is_ko A1 || is_ko B) && (is_ko A2 || is_ko B0)) *)
@@ -298,7 +298,7 @@ Module check (U:Unif).
       rewrite (expand_not_dead dA X) H1.
       rewrite (success_has_cut (proj1 (expand_solved_success X))).
       move=>/eqP->.
-      rewrite dead_cutr_is_dead failed_cutr is_ko_next_alt?is_ko_cutr//if_same//.
+      rewrite failed_cutr is_ko_next_alt?is_ko_cutr//if_same//.
     - move=> A HA B0 _ B HB s1 C s2 /=.
       move=>/orP[].
         move=> kA; rewrite is_ko_expand//.
@@ -336,6 +336,7 @@ Module check (U:Unif).
     has_cut A -> next_alt s A = Some (s', B) -> has_cut B.
   Proof.
     elim: A s B s' => //.
+    - move=>/=p[]//??? _ [_<-]//.
     - move=> A HA s1 B HB s C s' /=.
       move=>/andP[kA kB].
       do 2 rewrite is_ko_next_alt//; rewrite is_ko_failed//!if_same//.
@@ -367,6 +368,8 @@ Module check (U:Unif).
     no_free_alt sP sV A -> next_alt s1 A = Some (s2, B) -> no_free_alt sP sV B.
   Proof.
     elim: A s1 B s2 => //.
+    - move=> ??? _ [_<-]//.
+    - move=>/=????? H [_<-]//.
     - move=> A HA s B HB s1 C s2 /=.
       move=>/andP[fA].
       case: (ifP (is_dead _)) => dA.
