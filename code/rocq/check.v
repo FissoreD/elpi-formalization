@@ -245,12 +245,10 @@ Module check (U:Unif).
         move=> [].
           by move=>->; rewrite orbT.
         move=> H1; rewrite H1.
-        have sC := proj2 (expand_solved_success X).
         rewrite no_free_alt_cutl// !orbT//.
       have:= HA s fA.
       case X: expand => //= [|||s1 C] H1; try rewrite H1 orbT fB fB0 orbT//.
       have:= HB s1 fB; case Y: expand => //= H2; try rewrite fB0 H2 H1 orbT !orbT//.
-      have sC := proj2 (expand_solved_success X).
       rewrite no_free_alt_cutl// orbT fB0 H2 orbT//.
   Qed.
 
@@ -296,7 +294,7 @@ Module check (U:Unif).
       have:= HA s1 _ _ fA.
       case X: expand => // [s4 A'] /(_ _ _ erefl) H1 + [_<-] s3/=.
       rewrite (expand_not_dead dA X) H1.
-      rewrite (success_has_cut (proj1 (expand_solved_success X))).
+      rewrite success_has_cut ?(expand_solved_success X)//.
       move=>/eqP->.
       rewrite is_ko_next_alt?if_same//is_ko_cutr//.
     - move=> A HA B0 _ B HB s1 C s2 /=.

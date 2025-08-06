@@ -223,6 +223,10 @@ Module Run (U : Unif).
 
     Fixpoint failed (A : state) : bool :=
       match A with
+      (* Bot is considered as a failure, so that the next_alt can put it
+         into Dead. This is because, we want expand to transform a Bot
+         state into a "Failure Bot" (it does not introduce a Dead state).
+      *)
       | Bot | Dead => true
       | Top | Goal _ _ | OK => false
       | And A _ B => failed A || (success A && failed B)
@@ -726,7 +730,7 @@ Module Run (U : Unif).
   Qed. *)
 
   Lemma expand_solved_success {s1 A s2 B}: 
-    expand s1 A = Solved s2 B -> success A /\ success B.
+    expand s1 A = Solved s2 B -> (success A * success B)%type.
   Proof.
     elim: A s1 s2 B => //.
     + by move=> /= ??? [] /[subst2].
@@ -838,7 +842,7 @@ Module Run (U : Unif).
   Qed.
 
   Lemma expand_failure_failed {s1 A B}:
-    expand s1 A = Failure B -> failed A /\ failed B.
+    expand s1 A = Failure B -> (failed A * failed B)%type.
   Proof.
     elim: A s1 B; clear => //; try by move=> ? [] //.
     + move=> A HA s1 B HB s2 C.
@@ -899,21 +903,19 @@ Module Run (U : Unif).
   Qed. 
 
   Lemma expand_not_failed {s1 A r}:
-    expand s1 A = r -> failed (get_state r) = false -> ~ (is_fail r) -> failed A = false.
+    expand s1 A = r -> ~ (is_fail r) -> failed A = false.
   Proof.
     move=><-; clear r.
-    elim: A s1; try by move=> s1 <-//.
-    - move=> p [|t]//.
+    elim: A s1; try by move=> // s1 <-//=.
     - move=> A HA s B HB s1/=.
       case: ifP => dA.
         have:= HB s1; case X: expand => //=; rewrite dA => H//.
       have:= HA s1.
-      case X: expand => /= H; case: ifP => // H1 ; have:= expand_not_dead1 X isT => /=; congruence.
+      case X: expand => //= /(_ notF).
     - move=> A HA B0 _ B HB s1/=.
       have:= HA s1.
-      case X: expand => //= [||s2 C]; try by (move=> H; case f: failed => //; rewrite H//=; case Y: (success A) => //; rewrite (succes_is_solved) in X).
-      have [sA sC]:= expand_solved_success X.
-      rewrite (success_failed _ sC) => /(_ erefl notF) ->/=.
+      case X: expand => //= [||s2 C]/(_ notF) ->; try rewrite (expand_not_solved_not_success X erefl)//.
+      have [-> sC]:= expand_solved_success X.
       have:= HB s2.
       case Y: expand => //= H1; rewrite success_failed//=?success_cut//?sC/==>H2; rewrite H1//andbF//.
   Qed.
@@ -926,9 +928,9 @@ Module Run (U : Unif).
     elim: H s2 B Hd => //; clear.
     - move=> s s' A A'/expand_solved_failed [->]//.
     - move=> s s' r A B b HA HB IH s1 C ?; subst.
-      apply: expand_not_failed HA (IH _ _ erefl) _ => //.
+      apply: expand_not_failed HA _ => //.
     - move=> s s' r A B b HA HB IH s1 C ?; subst.
-      apply: expand_not_failed HA (IH _ _ erefl) _ => //.
+      apply: expand_not_failed HA _ => //.
   Qed.
 
 
@@ -1115,5 +1117,27 @@ Module Run (U : Unif).
         case: next_alt => [[s4 E]|]//; rewrite !if_same//.
       by have:= next_alt_none Z s2 => ->.
   Qed.
+
+  (* Lemma next_alt_none_expand {s1 B B'} :
+    next_alt s1 B = None -> expand s1 B = Failure B' -> next_alt s1 B' = None.
+  Proof.
+    elim: B s1 B' => //.
+    - move=> /= s1 _ _ [<-]//.
+    - move=> /= s1 _ _ [<-]//.
+    - move=> A HA s B HB s1 C/=.
+      case: ifP => /=dA.
+        case nB: next_alt => [[s2 D]|]// _.
+        case X: expand => //[B'][<-]/=.
+        rewrite dA (HB s1 B')//.
+      case nA: next_alt => [[s2 D]|]//.
+      case: ifP => dB.
+        move=> _; case X: expand => //[A'][<-]/=.
+        rewrite (expand_not_dead dA X) (HA _ _ nA X) dB//.
+      case X: next_alt => //[[s2 D]|]//.
+      move=> _; case Y: expand => //[A'][<-]/=.
+      rewrite (expand_not_dead dA Y) (HA _ _ nA Y) dB//. *)
+      
+
+
 
 End Run.

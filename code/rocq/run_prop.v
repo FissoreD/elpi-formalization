@@ -414,7 +414,7 @@ Module RunP (A: Unif).
       move=> [s2 [A2 [B' [H2 [H3]]]]] /[subst1].
       have [] := IH _ _ _ _ erefl erefl.
         move=> [? H].
-        by have:= expanded_success (proj2 (expand_solved_success H2)) H.
+        by have:= expanded_success (expand_solved_success H2).2 H.
       move=> [] ? [] altA [] ? [] H4 [? H5]; right.
       have:= expand_solved_expand H2 H4 => -[] /[subst2].
       do 3 eexists; split.
@@ -457,14 +457,14 @@ Module RunP (A: Unif).
       + move=> s A ? H ????? EA [] /[subst1].
         eexists; apply: expanded_fail => //= ; rewrite EA H //=.
       + move=> s s' r A B b HA HB IH B0 F s1 C D HC ?;subst.
-        have H := succes_is_solved s' (success_cut (proj2 (expand_solved_success HC))).
+        have H := succes_is_solved s' (success_cut (expand_solved_success HC).2).
         have [b' H1 ]:= IH B0 F s' (cutl D) (cutl D) H erefl.
         rewrite cutl2 if_same in H1.
         eexists; apply: expanded_cut => /=.
           by rewrite HC HA.
         apply: H1.
       + move=> s s' r A B b HA HB IH B0 F s1 C D HC ?;subst.
-        have [b1 H1] := IH B0 F s' D D (succes_is_solved s' ((proj2 (expand_solved_success HC)))) erefl.
+        have [b1 H1] := IH B0 F s' D D (succes_is_solved s' (expand_solved_success HC).2) erefl.
         eexists; apply: expanded_step => /=.
           by rewrite HC HA.
         apply: H1.
@@ -519,7 +519,7 @@ Module RunP (A: Unif).
     + move=> s1 s3 C D + A B HRO ???? [] ??; subst.
       move=> /simpl_expand_or_solved [].
         move=> [A2 [HA']] [??];subst.
-        have dA := success_is_dead (proj1 (expand_solved_success HA')).
+        have dA := success_is_dead (expand_solved_success HA').1.
         left; repeat split => //.
         exists false; split => //; apply: expanded_done HA'.
       move=> [B' [dA [HB' [??]]]];subst.
