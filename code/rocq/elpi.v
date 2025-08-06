@@ -230,9 +230,6 @@ Module Nur (U : Unif).
 
   End tests.
 
-  Definition state_to_list_cons A :=
-    forall l, exists x xs, state_to_list A l = x :: xs.
-
   Definition runElpi A :=
     forall s B s1 b,
       valid_state A ->
@@ -284,9 +281,6 @@ Module Nur (U : Unif).
       - move=> A HA B0 HB0 B HB l /=dA.
         rewrite HA//=.
     Qed.
-  End state_to_list_prop.
-
-  Section list_cons.
 
     Lemma success_state_to_list {A m}:
       success A ->
@@ -340,13 +334,6 @@ Module Nur (U : Unif).
       by move=>/success_state_to_list->[].
     Qed.
 
-    Lemma base_and_state_to_list {A}: base_and A -> state_to_list_cons A.
-    Proof.
-      elim: A => //=.
-      - by do 2 eexists.
-      - move=> []//p [|t]//= _ B0 _ B HB/andP[/eqP->/HB] H l; have[x[xs]]:= H l => /=->; by do 2 eexists.
-    Qed.
-
     Lemma base_and_ko_state_to_list {A l}: base_and_ko A -> state_to_list A l = [::].
     Proof. elim: A => //=-[]//. Qed.
 
@@ -355,40 +342,6 @@ Module Nur (U : Unif).
       elim: A l => //.
       - move=> /= A HA s B HB l /andP[bA bB]; rewrite HB//=base_and_ko_state_to_list//.
       - move=>[]//.
-    Qed.
-
-    Lemma failed_state_to_list {A}:
-      valid_state A -> failed A = false -> state_to_list_cons A.
-    Proof.
-      elim: A => //.
-      - move=> /=. by move=> /=; do 2 eexists.
-      - by move=> /=; do 2 eexists.
-      - by move=> p []//=; do 2 eexists.
-      - move=> A HA s B HB/=++l.
-        case: ifP => [dA vB fB|dA /andP[vA bB] fA]/=.
-          rewrite (state_to_list_dead dA).
-          apply: HB => //.
-        have [x[xs ->]] := HA vA fA (state_to_list B l ++ l).
-        by do 2 eexists.
-      - move=> A HA B0 _ B HB/= /and3P[]++++l/=.
-        case: ifP => [sA vA vB bB0|sA vA/eqP->]/=.
-          rewrite success_failed//==>fB.
-          rewrite (success_state_to_list sA)/=.
-          have [x[xs]]:= HB vB fB l.
-          move=>->/=; by do 2 eexists.
-        rewrite orbF => + fA; rewrite fA => bB.
-        have [x[xs ->]]:= HA vA fA l.
-        have [y[ys ->]]:= base_and_state_to_list bB l.
-        by do 2 eexists.
-    Qed.
-
-    Lemma next_alt_state_to_list_old {s1 A s2 B}:
-      valid_state A -> next_alt s1 A = Some (s2, B) -> state_to_list_cons B.
-    Proof.
-      move=>vA H.
-      have:= next_alt_failed H.
-      have:= valid_state_next_alt vA H.
-      apply: failed_state_to_list.
     Qed.
 
     Lemma success_next_alt_state_to_list {s1 A}:
@@ -510,17 +463,8 @@ Module Nur (U : Unif).
         have -> //:= HA _ vA fA X l.
     Qed.
 
-    Lemma expand_state_to_list_cons {s A r}:
-      valid_state A -> expand s A = r -> ~ (is_fail r) -> state_to_list_cons A.
-    Proof. case: r => //[s1 B|s1 B|s1 B]vA H _; apply: failed_state_to_list vA (expand_not_failed H notF). Qed.
-
-    Lemma expandb_done_state_to_list_cons {s A s1 B b}:
-      valid_state A -> expandedb s A (Done s1 B) b -> state_to_list_cons A.
-    Proof.
-      move=> vA /expandedb_Done_not_failed; apply: failed_state_to_list vA.
-    Qed.
-
-    Lemma state_to_list_same_size {r1 r2 A l1 l2}: state_to_list A l1 = r1 -> state_to_list A l2 = r2 -> size r1 = size r2.
+    Lemma state_to_list_same_size {r1 r2 A l1 l2}: 
+      state_to_list A l1 = r1 -> state_to_list A l2 = r2 -> size r1 = size r2.
     Proof.
       move=><-<-; clear.
       elim: A l1 l2 => //.
@@ -546,12 +490,95 @@ Module Nur (U : Unif).
     Lemma state_to_list_empty_bt {A l1 l2}: state_to_list A l1 = [::] -> state_to_list A l2 = [::].
     Proof. move=>/state_to_list_same_size => /(_ _ l2 erefl); case: state_to_list => //. Qed.
 
+
+  End state_to_list_prop.
+
+  Definition state_to_list_cons A :=
+    forall l, exists x xs, state_to_list A l = x :: xs.
+
+  Section list_cons.
+
+    Lemma state_to_list_cons_or_fail_right {A s B l}:
+      state_to_list_cons (Or A s B) -> state_to_list B l = [::] -> state_to_list_cons A.
+    Proof.
+      move=> HA HB l1.
+      have [y[ys/=]]:= HA l1.
+      rewrite (state_to_list_empty_bt HB)/=cats0.
+      case: state_to_list => //; by do 2 eexists.
+    Qed.
+
+    Lemma state_to_list_cons_and {A B}:
+      state_to_list_cons (And A B B) -> state_to_list_cons A.
+    Proof.
+      move=> HA l1.
+      have [y[ys]]:= HA l1 => /=.
+      case: (state_to_list A) => //; by do 2 eexists.
+    Qed.
+
+    Lemma state_to_list_state_to_list_cons {A l x xs}:
+      state_to_list A l = x :: xs -> state_to_list_cons A.
+    Proof.
+      move=> HA l1.
+      have:= state_to_list_same_size HA erefl => /(_ l1).
+      case: state_to_list => //; by do 2 eexists.
+    Qed.
+
+    Lemma failed_state_to_list {A}:
+      valid_state A -> failed A = false -> state_to_list_cons A.
+    Proof.
+      elim: A => //.
+      - move=> /=. by move=> /=; do 2 eexists.
+      - by move=> /=; do 2 eexists.
+      - by move=> p []//=; do 2 eexists.
+      - move=> A HA s B HB/=++l.
+        case: ifP => [dA vB fB|dA /andP[vA bB] fA]/=.
+          rewrite (state_to_list_dead dA).
+          apply: HB => //.
+        have [x[xs ->]] := HA vA fA (state_to_list B l ++ l).
+        by do 2 eexists.
+      - move=> A HA B0 _ B HB/= /and3P[]++++l/=.
+        case: ifP => [sA vA vB bB0|sA vA/eqP->]/=.
+          rewrite success_failed//==>fB.
+          rewrite (success_state_to_list sA)/=.
+          have [x[xs]]:= HB vB fB l.
+          move=>->/=; by do 2 eexists.
+        rewrite orbF => + fA; rewrite fA => bB.
+        have [x[xs ->]]:= HA vA fA l.
+        have fB:= base_and_failed bB.
+        have [y[ys->]]:= HB (base_and_valid bB) fB l.
+        by do 2 eexists.
+    Qed.
+
+    Lemma base_and_state_to_list {A}: base_and A -> state_to_list_cons A.
+    Proof.
+      move=> /[dup] /base_and_valid + /base_and_failed.
+      apply: failed_state_to_list.
+    Qed.
+
+    Lemma next_alt_state_to_list_old {s1 A s2 B}:
+      valid_state A -> next_alt s1 A = Some (s2, B) -> state_to_list_cons B.
+    Proof.
+      move=>vA H.
+      have:= next_alt_failed H.
+      have:= valid_state_next_alt vA H.
+      apply: failed_state_to_list.
+    Qed.
+
+    Lemma expand_state_to_list_cons {s A r}:
+      valid_state A -> expand s A = r -> ~ (is_fail r) -> state_to_list_cons A.
+    Proof. case: r => //[s1 B|s1 B|s1 B]vA H _; apply: failed_state_to_list vA (expand_not_failed H notF). Qed.
+
+    Lemma expandb_done_state_to_list_cons {s A s1 B b}:
+      valid_state A -> expandedb s A (Done s1 B) b -> state_to_list_cons A.
+    Proof. move=> vA /expandedb_Done_not_failed; apply: failed_state_to_list vA. Qed.
+
     Lemma state_to_list_fail {A s A'}:
       valid_state A ->
       expand s A = Failure A' -> state_to_list_cons A' ->
         state_to_list_cons A.
     Proof.
-      elim: A s A' => //; try by move=> /= _ _ _ [<-]//.
+      elim: A s A' => //.
+      - move=> /= _ _ _ [<-]//.
       - move=>/= p []//.
       - move=> A HA s B HB s' C/=.
         case: ifP => //[dA vB|dA /andP[vA bB]] + + l/=.
@@ -563,10 +590,7 @@ Module Nur (U : Unif).
           by do 2 eexists.
         case X: expand => //[A'][<-] H1.
         case Z: (state_to_list B) => /=.
-          have H : state_to_list_cons A'.
-            move=> l1; have [y[ys/=]]:= H1 l1.
-            rewrite (state_to_list_empty_bt Z)/=cats0.
-            case: state_to_list => //; by do 2 eexists.
+          have H := state_to_list_cons_or_fail_right H1 Z.
           have [x[xs->]]:= HA _ _ vA X H l.
           by do 2 eexists.
         by case: state_to_list; do 2 eexists.
@@ -579,9 +603,7 @@ Module Nur (U : Unif).
             case Z: state_to_list => //=; rewrite ?flatten_empty => -[?[]]//.
           rewrite orbF => bB H.
           have [x[xs->]]:= base_and_state_to_list bB l.
-          have H1 : state_to_list_cons A'.
-            move=> l1; have [y[ys]]:= H l1 => /=.
-            case: (state_to_list A') => //; by do 2 eexists.
+          have H1 := state_to_list_cons_and H.
           have [y[ys->]] := HA _ _ vA X H1 l; by do 2 eexists.
         rewrite (expand_solved_success X)//==> vB bB0.
         case Y: expand => //[B'][<-] H l/=.
@@ -591,17 +613,14 @@ Module Nur (U : Unif).
         rewrite -(expand_solved_state_to_list_same X) H2/=.
         case W: state_to_list => [|w ws].
           move=> /=->; case: state_to_list; by do 2 eexists.
-        have H3: state_to_list_cons B'.
-          move=> l1.
-          have:= state_to_list_same_size W erefl => /(_ l1).
-          case: state_to_list => //; by do 2 eexists.
+        have H3 := state_to_list_state_to_list_cons W.
         have [b[bs->]]:= HB _ _ vB Y H3 l.
         by do 2 eexists.
-      Qed.
+    Qed.
 
     Lemma success_success_singleton_next_alt {A l x s}: 
       success A -> valid_state A ->
-        state_to_list A l = [:: x] -> next_alt s A  = None.
+        state_to_list A l = [:: x] -> next_alt s A = None.
     Proof.
       elim: A l x s=> //.
       - move=> A HA s B HB l x s1/=.
@@ -694,10 +713,7 @@ Module Nur (U : Unif).
           case Z: (state_to_list B l); last first.
             case: state_to_list => /=; by do 2 eexists.
           rewrite cats0/= => H.
-          have {}H: (state_to_list_cons F).
-            move=> l1; have /=[x[xs]]:= H l1.
-            rewrite (state_to_list_empty_bt Z) cats0/=.
-            case: state_to_list => //y ys; by do 2 eexists.
+          have {}H := state_to_list_cons_or_fail_right H Z.
           have [y[ys ->]] := HA _ _ _ _ X Y vA H l.
           by do 2 eexists.
         case: ifP => dB //.
@@ -720,10 +736,7 @@ Module Nur (U : Unif).
             rewrite base_and_ko_failed// in fB.
           rewrite orbF => bB.
           have [x[xs->]]:= base_and_state_to_list bB l => H.
-          have {}H : (state_to_list_cons E).
-            move=> l1; have /=[y[ys]]:= H l1.
-            have [z[zs->]]:= base_and_state_to_list bB l1.
-            case: state_to_list => //; by do 2 eexists.
+          have {}H := state_to_list_cons_and H.
           have [y[ys->]]:= HA _ _ _ _ X Y vA H l.
           by do 2 eexists.
         case Y: expand => //[B'][<-]/=.
@@ -741,11 +754,7 @@ Module Nur (U : Unif).
             move=>->; case: state_to_list ; by do 2 eexists.
           move=>[?]; subst.
           have [{}s3 {}nB'] := next_alt_some nB' s1.
-          have SE : state_to_list_cons E.
-            move=> l1.
-            have:= state_to_list_same_size sE erefl => /(_ l1).
-            case: state_to_list => //.
-            by do 2 eexists.
+          have SE := state_to_list_state_to_list_cons sE.
           have [z[zs ->]]:= HB _ _ _ _ Y nB' vB SE l.
           by do 2 eexists.
         case nA': next_alt => [[s3 E]|]//.
@@ -762,7 +771,7 @@ Module Nur (U : Unif).
         case SB: state_to_list => //=; try by do 2 eexists.
         destruct xs => //=; try by do 2 eexists.
         by rewrite (success_success_singleton_next_alt sA' (valid_state_expand vA X) H) in nA'.
-      Qed.
+    Qed.
 
 
     Lemma runElpi1 A :
