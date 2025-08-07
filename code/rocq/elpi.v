@@ -740,8 +740,7 @@ Module Nur (U : Unif).
           have [y[ys->]]:= HA _ _ _ _ X Y vA H l.
           by do 2 eexists.
         case Y: expand => //[B'][<-]/=.
-        have sA := (expand_solved_success X).1.
-        have sA' := (expand_solved_success X).2.
+        have [sA sA'] := (expand_solved_success X).
         rewrite success_is_dead//success_failed//sA/==>+vB bB0.
         rewrite (expand_solved_state_to_list_same X).
         have /= [x[xs H]] := failed_state_to_list (valid_state_expand vA X) (success_failed _ sA') l.
@@ -773,7 +772,25 @@ Module Nur (U : Unif).
         by rewrite (success_success_singleton_next_alt sA' (valid_state_expand vA X) H) in nA'.
     Qed.
 
-
+    Lemma expandedb_failure_next_alt_state_to_list_cons {s1 s2 A B C b1}:
+      valid_state A -> expandedb s1 A (Failed B) b1 -> 
+        next_alt s1 B = Some (s2, C) -> state_to_list_cons C -> 
+          state_to_list_cons A.
+    Proof.
+      remember (Failed _) as f eqn:Hf => + HA.
+      elim: HA s2 B C Hf; clear => //.
+      - move=> s A B HA s1 _ C [<-] vA HB sC.
+        apply: expand_failure_next_alt_state_to_list_cons HA HB vA sC.
+      - move=> s s' r A B b HA HB IH s2 C D? vA HC sD; subst.
+        have [{}s2 {}HC]:= next_alt_some HC s'.
+        have{}IH := IH _ _ _ erefl (valid_state_expand vA HA) HC sD.
+        apply: expand_state_to_list_cons vA HA notF.
+      - move=> s s' r A B b HA HB IH s2 C D? vA HC sD; subst.
+        have [{}s2 {}HC]:= next_alt_some HC s'.
+        have{}IH := IH _ _ _ erefl (valid_state_expand vA HA) HC sD.
+        apply: expand_state_to_list_cons vA HA notF.
+    Qed.
+        
     Lemma runElpi1 A :
       forall s B s1 b,
         valid_state A ->
@@ -786,21 +803,106 @@ Module Nur (U : Unif).
         apply: expandb_done_state_to_list_cons vA HA _.
       - move=> s1 s2 _ A B C _ b1 _ _ HA HB _ IH _ vA.
         have {}IH := IH (valid_state_next_alt (valid_state_expanded vA (ex_intro _ _ HA)) HB).
-        remember (Failed _) as f eqn:Hf.
-        elim: HA s2 B C Hf HB vA IH; clear => //.
-        - move=> s A B HA s1 _ C [<-] HB vA sC.
-          apply: expand_failure_next_alt_state_to_list_cons HA HB vA sC.
-        - move=> s s' r A B b HA HB IH s2 C D? HC vA sD; subst.
-          have [{}s2 {}HC]:= next_alt_some HC s'.
-          have{}IH := IH _ _ _ erefl HC (valid_state_expand vA HA) sD.
-          apply: expand_state_to_list_cons vA HA notF.
-        - move=> s s' r A B b HA HB IH s2 C D? HC vA sD; subst.
-          have [{}s2 {}HC]:= next_alt_some HC s'.
-          have{}IH := IH _ _ _ erefl HC (valid_state_expand vA HA) sD.
-          apply: expand_state_to_list_cons vA HA notF.
+        apply: expandedb_failure_next_alt_state_to_list_cons vA HA HB IH.
     Qed.
-
   End list_cons.
+
+
+  Lemma expand_done {s A s1 B}:
+    expand s A = Solved s1 B ->
+    forall l p, exists x xs,
+      state_to_list A l = x :: xs /\
+      nur p s x xs s1 (state_to_list (clean_success B) l).
+  Proof.
+    move=> H l p.
+    have [sA sB] := expand_solved_success H.
+    do 2 eexists; split.
+      apply: success_state_to_list sA.
+    rewrite (expand_solved_same_subst H).
+    rewrite (state_to_list_eq_clean sA sB).
+    apply: StopE.
+    apply: expand_solved_state_to_list_same H.
+  Qed.
+
+  Lemma runExpandedbDone {s s' A B b}:
+    expandedb s A (Done s' B) b ->
+    valid_state A ->
+    forall (l : seq alt) (p0 : program),
+    exists (x : alt) (xs : seq alt),
+      state_to_list A l = x :: xs /\
+      nur p0 s x xs s' (state_to_list (clean_success B) l).
+  Proof.
+    remember (Done _ _) as d eqn:Hd => H.
+    elim: H s' B Hd => //; clear.
+    - move=> s s' A A' + s1 B [??] _; subst.
+      apply: expand_done.
+    - move=> s s' r A B b HA HB IH s1 C ? vA l p; subst.
+      have {IH} := IH _ _ erefl (valid_state_expand vA HA) l p.
+      move=> [x[xs[sB H]]].
+      have [y[ys sA]]:= expand_state_to_list_cons vA HA notF l.
+      rewrite sA; exists y, ys; split => //.
+      admit.
+    - move=> s s' r A B b HA HB IH s1 C ? vA l p; subst.
+      have {IH} := IH _ _ erefl (valid_state_expand vA HA) l p.
+      move=> [x[xs[sB H]]].
+      have [y[ys sA]]:= expand_state_to_list_cons vA HA notF l.
+      rewrite sA; exists y, ys; split => //.
+      admit.
+  Admitted.
+
+  (*Lemma xxxx {p s A B b1 l x y ys s' s2 r1}:
+    expandedb s A (Failed B) b1 ->
+      state_to_list A l = x :: (y::ys) ->
+          nur p s' y ys s2 r1 -> nur p s x (y::ys) s2 r1.
+  Admitted.
+
+  Lemma rrrr {s A B s' C l x xs}:
+    expand s A = Failure B -> valid_state A ->
+      next_alt s B = Some (s', C) -> state_to_list A l = x :: xs -> state_to_list C l = xs.
+  Proof.
+    elim: A s B s' C l x xs => //.
+    (* - move=> s B s' C l x xs[<-]//. *)
+    - move=> p [|t]//.
+    - move=> A HA s B HB s1 C s2 D l x xs/=.
+      case: ifP => dA.
+        rewrite state_to_list_dead//=.
+        case X: expand => //[B'][?]; subst.
+
+
+  Lemma zzzz {s A B b1 l x xs s' C}:
+    valid_state A ->
+    expandedb s A (Failed B) b1 ->
+      next_alt s B = Some (s', C) ->
+        state_to_list A l = x :: xs ->
+          state_to_list C l = xs.
+  Proof.
+    remember (Failed _) as f eqn:Hf => +H.
+    elim: H B l x xs s' C Hf; clear => //.
+    - move=> s A B + ? l x xs s' C[<-].
+      clear.
+
+  Admitted.
+ *)
+
+  Lemma runElpiP: forall A, runElpi A.
+  Proof.
+    move=> A s B s1 b + H.
+    elim: H; clear.
+    + move=>  s s' A B C b + ->/=.
+      apply: runExpandedbDone.
+    + move=> s s' s2 A B C D b1 b2 b3 HA HB HC IH ? vA l p; subst.
+      have /=vB := valid_state_expanded vA (ex_intro _ _ HA).
+      have /=vC := valid_state_next_alt vB HB.
+      have {IH} := IH vC l p.
+      move=> [y[ys[sC H]]].
+      have [x[xs sA]]:= expandedb_failure_next_alt_state_to_list_cons vA HA HB (state_to_list_state_to_list_cons sC) l.
+      rewrite sA.
+      exists x, xs; split => //.
+      (* have := zzzz HA HB H.
+      rewrite H3 => ?; subst.
+      apply: xxxx HA H H1. *)
+  Qed.
+  Print Assumptions runElpiP.
   
   (* Goal @runElpi (And OK Bot Bot).
   Proof.
@@ -1034,113 +1136,5 @@ Module Nur (U : Unif).
     - move=> s A B HA ? [] <-.
   Admitted. *)
 
-  Lemma expand_done {s A s1 B}:
-    expand s A = Solved s1 B ->
-      forall l,
-        exists r1,
-          (nur' A l s s1 r1) /\ state_to_list (clean_success B) l = r1.
-  Proof.
-    move=> H l .
-    have [sA sB] := expand_solved_success H.
-    (* move=>[]<- H1. *)
-    eexists; split; last first.
-      apply: state_to_list_eq_clean sB sA _.
-      symmetry.
-      apply: expand_solved_state_to_list_same  H.
-    rewrite /nur' => x xs + p.
-    rewrite (success_state_to_list sA) => -[<-<-].
-    rewrite (expand_solved_same_subst H).
-    apply: StopE.
-  Qed.
-
-  Lemma runExpandedbDone {s s' A B b}:
-    expandedb s A (Done s' B) b ->
-    valid_state A ->
-    forall l,
-      exists r1,
-        (nur' A l s s' r1) /\ state_to_list (clean_success B) l = r1.
-  Proof.
-    remember (Done _ _) as d eqn:Hd => H.
-    elim: H s' B Hd => //; clear.
-    - move=> s s' A A' + s1 B [??] _; subst.
-      apply: expand_done.
-    - move=> s s' r A B b H1 H2 IH s1 C ? vA l; subst.
-      have {IH} := IH _ _ erefl (valid_state_expand vA H1) l.
-      rewrite /nur'.
-      move=> [r1 [H3 H4]].
-      have [x [xs]] := expandedb_done_state_to_list (valid_state_expand vA H1) H2 l.
-      move=>{}/H3 H3.
-      exists r1; split => // w ws H p.
-      have {}H3 := H3 p.
-      admit.
-    - move=> s s' r A B b H1 H2 IH s1 C ? vA l; subst.
-      have {IH} := IH _ _ erefl (valid_state_expand vA H1) l.
-      rewrite /nur'.
-      move=> [r1 [H3 H4]].
-      have [x [xs]] := expandedb_done_state_to_list (valid_state_expand vA H1) H2 l.
-      move=>{}/H3 H3.
-      exists r1; split => // w ws H p.
-      have {}H3 := H3 p.
-      admit.
-  Admitted.
-
-  Lemma xxxx {p s A B b1 l x y ys s' s2 r1}:
-    expandedb s A (Failed B) b1 ->
-      state_to_list A l = x :: (y::ys) ->
-          nur p s' y ys s2 r1 -> nur p s x (y::ys) s2 r1.
-  Admitted.
-
-  Lemma rrrr {s A B s' C l x xs}:
-    expand s A = Failure B -> valid_state A ->
-      next_alt s B = Some (s', C) -> state_to_list A l = x :: xs -> state_to_list C l = xs.
-  Proof.
-    elim: A s B s' C l x xs => //.
-    (* - move=> s B s' C l x xs[<-]//. *)
-    - move=> p [|t]//.
-    - move=> A HA s B HB s1 C s2 D l x xs/=.
-      case: ifP => dA.
-        rewrite state_to_list_dead//=.
-        case X: expand => //[B'][?]; subst.
-
-
-  Lemma zzzz {s A B b1 l x xs s' C}:
-    valid_state A ->
-    expandedb s A (Failed B) b1 ->
-      next_alt s B = Some (s', C) ->
-        state_to_list A l = x :: xs ->
-          state_to_list C l = xs.
-  Proof.
-    remember (Failed _) as f eqn:Hf => +H.
-    elim: H B l x xs s' C Hf; clear => //.
-    - move=> s A B + ? l x xs s' C[<-].
-      clear.
-
-
-
-  Admitted.
-
-
-  Lemma runElpiP: forall A, runElpi A.
-  Proof.
-    move=> A s B s1 b + H.
-    elim: H; clear.
-    + move=>  s s' A B C b + ->/=.
-      apply: runExpandedbDone.
-    + move=> s s' s2 A B C D b1 b2 b3 HA HB HC IH ? vA l; subst.
-      have vB := valid_state_expanded vA (ex_intro _ _ HA).
-      have vC := valid_state_next_alt vB HB.
-      have {IH} := IH vC l.
-      rewrite /nur'.
-      move=> [r1 [H1 H2]].
-      exists r1; split => // x xs H p.
-      have:= next_alt_state_to_list_old vB HB.
-      move=> /(_ l) [y [ys H3]].
-      have {}H1:= H1 _ _ H3 p.
-      rewrite /state_to_list_cons.
-      have := zzzz HA HB H.
-      rewrite H3 => ?; subst.
-      apply: xxxx HA H H1.
-  Qed.
-  Print Assumptions runElpiP.
 End Nur.
 
