@@ -68,38 +68,22 @@ Module Nur (U : Unif).
       apply: IH.
       inversion H2; subst => //.
       congruence.
-    (* - move=> p1 s1 s2 gl a al r H IH xs2 s3 H2.
-      apply: IH.
-      by inversion H2; subst. *)
   Qed.
 
   Definition add_ca gl (l2 : list alt) : G :=
     match gl with
-    | call _ => gl 
-    (* | fail => gl *)
-    | cut l1 => cut (l1 ++ l2) end.
+    | call _ => gl
+    | cut l1 => cut (l1 ++ l2) 
+    end.
   
   Definition add_cas lA lB : alt :=
     [seq add_ca gl lB | gl <- lA].
 
-  Definition app_nil {T : eqType} (A B: (list T)) :=
-      if B == [::] then [::] else A ++ B.
-
-  Definition add_altsbagliata (lA lB:list alt) : list  alt :=
-    flatten [seq [seq la ++ lb | lb <- lB] | la <- lA].
-
   Definition add_alt (lB0 lA lB:list alt) : list  alt :=
     if lA is x :: xs then
       [seq x ++ y | y <- lB] ++ 
-        (* flatten [seq [seq la ++ lb | lb <- lB0] | la <- xs] *)
         [seq la ++ lb | la <- xs, lb <- lB0]
     else [::].
-
-  Lemma add_altsbagliate_emptyl {l}: add_altsbagliata [::] l = [::].
-  Proof. rewrite /add_altsbagliata//. Qed.
-
-  Lemma add_altsbagliate_emptyr {l}: add_altsbagliata l [::] = [::].
-  Proof. rewrite /add_altsbagliata/=flatten_empty//. Qed.
 
   (* bt is the backtracking list for the cut-alternatives
      this list is important since in this tree:
@@ -943,10 +927,10 @@ Module Nur (U : Unif).
   Lemma expand_cb_state_to_list1 {s1 A s2 B x} l:
     valid_state A -> expand s1 A = CutBrothers s2 B -> 
       state_to_list B l = [::x] ->
-      state_to_list A l = (cut [::] :: x ) :: [::].
+      exists tl, state_to_list A l = [:: [::cut [::] & x] & tl].
   Proof.
     elim: A s1 s2 B x => //.
-    - move=> p []//= ???? _/= [_<-]//[<-]//.
+    - move=> p []//= ???? _/= [_<-]//[<-]//; by eexists.
     - move=> A HA s B HB s1 s2 C x/=.
       case: ifP => [dA vB|dA/andP[vA bB]]; case: expand => //.
     - move=> A HA B0 _ B HB s1 s2 C x/=/and3P[vA].
@@ -955,25 +939,20 @@ Module Nur (U : Unif).
         move=>/eqP->bB [_<-]/=.
         have [y->] /=:= base_and_state_to_list l bB.
         have [w H]/= := expand_cb_right_sing l vA eA.
-        have -> := HA _ _ _ _ vA eA H.
-        rewrite H/=; move=> [->]//.
+        have [tl ->] := HA _ _ _ _ vA eA H.
+        rewrite H/=; move=> [->]//; by eexists.
       have [sA sA'] := expand_solved_success eA.
       rewrite sA/==> vB bB0.
       case eB: expand => //[s4 B'] [_<-]/=.
       rewrite (expand_solved_state_to_list_same eA).
       rewrite (success_state_to_list sA')/=map_id(success_state_to_list (success_cut sA'))/=.
       have [w H]/= := expand_cb_right_sing l vB eB.
-      have -> := HB _ _ _ _ vB eB H.
+      have [tl->] := HB _ _ _ _ vB eB H.
       rewrite H/= => -[?]; subst.
       have /= vA':= valid_state_expand vA eA.
       rewrite state_to_list_clean_cutl_empty//==>_.
-      move: bB0; rewrite /bbAnd.
-      move=> /orP[].
-        (* TODO: correct the valids_state *)
-        (* We should notice that in (OK \/ KO) /\ OK the reset point is forced to be cut *)
-        admit.
-      move=>/base_and_ko_state_to_list->/=; rewrite !flatten_empty//.
-  Admitted.
+      by eexists.
+  Qed.
 
   Lemma runExpandedbDone {s s' A B b} l p:
     valid_state A ->
@@ -993,7 +972,7 @@ Module Nur (U : Unif).
       rewrite sA; exists x, xs; split => //.
       have [w]:= expand_cb_right_sing l vA HA.
       rewrite sB => -[]??; subst.
-      have := expand_cb_state_to_list1 l vA HA sB.
+      have [tl] := expand_cb_state_to_list1 l vA HA sB.
       rewrite sA => -[]??;subst.
       apply: CutE.
       admit. (*problem with the substitution... *)
@@ -1002,6 +981,26 @@ Module Nur (U : Unif).
       have [x[xs sA]]:= expand_state_to_list_cons vA HA notF l.
       move=> [y[ys[sB H]]].
       rewrite sA; exists x, xs; split => //.
+      destruct A; simpl in * => //.
+      - case: HA; case: sA => *; subst; case: sB => *; subst => //.
+      (* - destruct a => //; case: HA => *; subst; case: sA => *; subst.
+        move: sB; rewrite /big_or; case f: F => //[b1 bs] H1.
+        apply: CallE (b1) (bs) _ _ _ _ _.
+          admit.
+          destruct b1 => /=.
+          rewrite /save_alt cats0 /save_alt_ca/=.
+          destruct (premises r) => //=.
+          admit.
+          admit.
+        
+          simpl in H1.
+          move=>/=.
+          move: sB.
+          admit.
+          move=> /=.
+          apply: H.
+          Print save_alt. *)
+
       admit.
   Admitted.
 
