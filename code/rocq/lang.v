@@ -534,7 +534,7 @@ Module Run (U : Unif).
             (* else Some (sB, Or (dead1 A) sB B) *)
         | Some (sA, A) => Some (sA, Or A sB B)
         end
-    end.
+  end.
 
   Inductive expandedb : Sigma -> state -> exp_res -> bool -> Prop :=
     | expanded_done {s s' A alt}     : expand s A = Solved s' alt  -> expandedb s A (Done s' alt) false

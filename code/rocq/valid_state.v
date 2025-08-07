@@ -90,6 +90,7 @@ Module valid_state (U:Unif).
       [&& valid_state A,
         if success A then valid_state B 
         else (B0 == B)
+        (* We should notice that in (OK \/ KO) /\ OK the reset point is forced to be cut *)
         & (if success A || failed A then bbAnd B0 else base_and B0)]
     end.
 
