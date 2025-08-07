@@ -21,40 +21,34 @@ Module Nur (U : Unif).
   Definition is_or A := match A with Or _ _ _ => true | _ => false end.
   
   Inductive G := 
-    | call : Tm -> G
+    | call : program -> Tm -> G
     | cut : list (list G) -> G
     .
-    (* | fail : G
-    . *)
   derive G.
   HB.instance Definition _ := hasDecEq.Build G G_eqb_OK.
 
   Definition alt := (list G).
 
-  Definition save_alt_ca (a : A) alts :=
+  Definition save_alt_ca p (a : A) alts :=
     match a with
     | Cut => cut alts
-    | Call t => call t
+    | Call t => call p t
     end.
-  Definition save_alt a (b: Sigma * R) gs := ([seq save_alt_ca x a | x <- (snd b).(premises)] ++ gs).
-  Definition more_alt a bs gs := [seq (save_alt a b1 gs) | b1 <- bs] ++ a.
+  Definition save_alt p a (b: Sigma * R) gs := ([seq save_alt_ca p x a | x <- (snd b).(premises)] ++ gs).
+  Definition more_alt p a bs gs := [seq (save_alt p a b1 gs) | b1 <- bs] ++ a.
 
-  Inductive nur : program -> Sigma -> list G ->  list alt -> Sigma -> list alt -> Prop :=
-  | StopE p s a : nur p s [::] a s a
-  | CutE p s s1 a ca r gl : nur s p gl ca s1 r -> nur s p [:: cut ca & gl] a s1 r
+  Inductive nur : Sigma -> list G ->  list alt -> Sigma -> list alt -> Prop :=
+  | StopE s a : nur s [::] a s a
+  | CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s [:: cut ca & gl] a s1 r
   | CallE p s s1 a b bs gl r t : 
     F p t s = [:: b & bs ] -> 
-      nur p s (save_alt a b gl) (more_alt a bs gl) s1 r -> 
-        nur p s [::call t & gl] a s1 r
+      nur s (save_alt p a b gl) (more_alt p a bs gl) s1 r -> 
+        nur s [::call p t & gl] a s1 r
   | FailE p s s1 t gl a al r : 
-    F p t s = [::] -> nur p s a al s1 r -> nur p s [::call t & gl] (a :: al) s1 r
-    .
-  (* | FailE1 p s s1 gl a al r : 
-    nur p s a al s1 r -> nur p s [::fail & gl] (a :: al) s1 r
-  . *)
+    F p t s = [::] -> nur s a al s1 r -> nur s [::call p t & gl] (a :: al) s1 r.
 
-  Lemma nur_consistent {p s G x xs1 xs2 s1 s2} :
-    nur p s G x s1 xs1 -> nur p s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
+  Lemma nur_consistent {s G x xs1 xs2 s1 s2} :
+    nur s G x s1 xs1 -> nur s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
   Proof.
     move=> H; elim: H xs2 s2 => //; clear.
     - inversion 1 => //.
@@ -62,7 +56,7 @@ Module Nur (U : Unif).
       by inversion 1; subst; auto.
     - move=> p s s1 a b bs gl r t H H1 IH xs2 s2 H2.
       apply: IH.
-      inversion H2; subst; rewrite H in H6; move: H6 => //[??]; subst.
+      inversion H2; subst; move: H9; rewrite H => //-[??]; subst.
       apply: H10.
     - move=> p1 s s1 t gl a al r H H1 IH xs2 s2 H2.
       apply: IH.
@@ -72,7 +66,7 @@ Module Nur (U : Unif).
 
   Definition add_ca gl (l2 : list alt) : G :=
     match gl with
-    | call _ => gl
+    | call _ _ => gl
     | cut l1 => cut (l1 ++ l2) 
     end.
   
@@ -106,7 +100,7 @@ Module Nur (U : Unif).
     | Bot => [::]
     | Dead => [::]
     | Goal _ Cut => [::[::cut [::]]]
-    | Goal _ (Call t) => [::[::call t]]
+    | Goal pr (Call t) => [::[::call pr t]]
     | Or A _ B => 
       let lB := state_to_list B bt in
       let lA := state_to_list A (lB ++ bt) in
@@ -126,9 +120,9 @@ Module Nur (U : Unif).
         And 
           (Or (f x) s1 (f y)) (f a) 
           (Or (f z) s2 (f w))) [::] = 
-        [:: [:: call x; call z];
-        [:: call x; call w];
-        [:: call y; call a]].
+        [:: [:: call p x; call p z];
+        [:: call p x; call p w];
+        [:: call p y; call p a]].
     Proof.
       move=>/=.
       by [].
@@ -140,7 +134,7 @@ Module Nur (U : Unif).
         And 
           (Or Top s1 Bot) (f a) 
           (Or (f z) s2 (f w))) [::] = 
-        [:: [:: call z]; [:: call w]].
+        [:: [:: call p z]; [:: call p w]].
     Proof.
       move=>/=.
       by [].
@@ -154,7 +148,7 @@ Module Nur (U : Unif).
           (Or Bot s1 (f a)) (f b) 
           (Or (f c) s2 (f d))) [::] = 
         (* [:: [:: call a; call b] ]. *)
-        [:: [:: call a; call c]; [::call a; call d] ].
+        [:: [:: call p a; call p c]; [::call p a; call p d] ].
     Proof.
       move=> p s1 s2 a b c d /=.
       by [].
@@ -165,7 +159,7 @@ Module Nur (U : Unif).
         Or 
           (Or (Goal p Cut) s1 (Goal p (Call a))) s2
           (Goal p (Call b))) [::] = 
-      [:: [:: cut [:: [:: call b]]]; [:: call a]; [:: call b]].
+      [:: [:: cut [:: [:: call p b]]]; [:: call p a]; [:: call p b]].
     Proof. by []. Qed.
 
     Goal forall A1 A2 s  C0 B p,
@@ -180,7 +174,7 @@ Module Nur (U : Unif).
     Goal forall A1 A2 s B0 C0 B p,
       let f x := (Goal p (Call x)) in
       state_to_list (And (Or (f A1) s (f A2)) (f B0) (And Bot (f C0) (f B))) [::] =
-      [:: [:: call A2 ; call B0 ]].
+      [:: [:: call p A2 ; call p B0 ]].
     Proof.
       move=> * /=.
       by [].
@@ -191,7 +185,7 @@ Module Nur (U : Unif).
         Or 
           (Or (And (Goal p (Call c)) b0 (Goal p Cut)) s1 (Goal p (Call a))) s2
           (Goal p (Call b))) [::] = 
-      [:: [:: call c; cut [:: [:: call b]]]; [:: call a]; [:: call b]].
+      [:: [:: call p c; cut [:: [:: call p b]]]; [:: call p a]; [:: call p b]].
     Proof. by []. Qed.
 
   End tests.
@@ -200,7 +194,7 @@ Module Nur (U : Unif).
     forall s B s1 b,
       valid_state A ->
         runb s A s1 B b -> 
-          forall l p, exists x xs, state_to_list A l = x :: xs /\ nur p s x xs s1 (state_to_list B l).
+          forall l, exists x xs, state_to_list A l = x :: xs /\ nur s x xs s1 (state_to_list B l).
     
 
   Section tests.
@@ -852,11 +846,11 @@ Module Nur (U : Unif).
   End list_cons.
 
 
-  Lemma expand_done {s A s1 B} l p:
+  Lemma expand_done {s A s1 B} l:
     expand s A = Solved s1 B ->
     exists x xs,
       state_to_list A l = x :: xs /\
-      nur p s x xs s1 (state_to_list (clean_success B) l).
+      nur s x xs s1 (state_to_list (clean_success B) l).
   Proof.
     move=> H.
     have [sA sB] := expand_solved_success H.
@@ -954,19 +948,29 @@ Module Nur (U : Unif).
       by eexists.
   Qed.
 
-  Lemma runExpandedbDone {s s' A B b} l p:
+  (* Lemma xx {p1 s s1 t l y ys r}:
+    (* F p1 t s = (x, s2) :: xs -> *)
+    state_to_list (big_or p1 s t) l = (y :: ys) ->
+      nur s y ys s1 r ->
+        nur s [:: call p1 t] [::] s1 r.
+  Proof.
+    rewrite /big_or.
+    case X: F => //[[x s2] xs]/= H1 H2.
+    apply: CallE X _. *)
+
+  Lemma runExpandedbDone {s s' A B b} l:
     valid_state A ->
     expandedb s A (Done s' B) b ->
     exists x xs,
       state_to_list A l = x :: xs /\
-      nur p s x xs s' (state_to_list (clean_success B) l).
+      nur s x xs s' (state_to_list (clean_success B) l).
   Proof.
     remember (Done _ _) as d eqn:Hd => + H.
-    elim: H s' B Hd l p => //; clear.
-    - move=> s s' A A' + s1 B [??] l p _; subst.
+    elim: H s' B Hd l => //; clear.
+    - move=> s s' A A' + s1 B [??] l _; subst.
       apply: expand_done.
-    - move=> s s' r A B b HA HB IH s1 C ? l p vA; subst.
-      have {IH} := IH _ _ erefl l p (valid_state_expand vA HA).
+    - move=> s s' r A B b HA HB IH s1 C ? l vA; subst.
+      have {IH} := IH _ _ erefl l (valid_state_expand vA HA).
       have [x[xs sA]]:= expand_state_to_list_cons vA HA notF l.
       move=> [y[ys[sB H]]].
       rewrite sA; exists x, xs; split => //.
@@ -976,13 +980,21 @@ Module Nur (U : Unif).
       rewrite sA => -[]??;subst.
       apply: CutE.
       admit. (*problem with the substitution... *)
-    - move=> s s' r A B b HA HB IH s1 C ? l p vA; subst.
-      have {IH} := IH _ _ erefl l p (valid_state_expand vA HA).
+    - move=> s s' r A B b HA HB IH s1 C ? l vA; subst.
+      have {IH} := IH _ _ erefl l (valid_state_expand vA HA).
       have [x[xs sA]]:= expand_state_to_list_cons vA HA notF l.
       move=> [y[ys[sB H]]].
       rewrite sA; exists x, xs; split => //.
-      destruct A; simpl in * => //.
+      case: A vA sA HA sB H => //; clear.
+      - (*case: Top*)
+        move=>/= _ [<-<-][-><-][<-<-]//.
+      - (*case Goal*)
+        move=> p1 [|t]//.
+        move=>/= _ [<-<-][<-<-].
+        rewrite /big_or.
+      (* destruct A; simpl in * => //.
       - case: HA; case: sA => *; subst; case: sB => *; subst => //.
+      -  *)
       (* - destruct a => //; case: HA => *; subst; case: sA => *; subst.
         move: sB; rewrite /big_or; case f: F => //[b1 bs] H1.
         apply: CallE (b1) (bs) _ _ _ _ _.
@@ -1042,12 +1054,12 @@ Module Nur (U : Unif).
   Proof.
     move=> A s B s1 b + H.
     elim: H; clear.
-    + move=>  s s' A B C b eA ->/= vA l p.
+    + move=>  s s' A B C b eA ->/= vA l.
       apply: runExpandedbDone vA eA.
-    + move=> s s' s2 A B C D b1 b2 b3 HA HB HC IH ? vA l p; subst.
+    + move=> s s' s2 A B C D b1 b2 b3 HA HB HC IH ? vA l; subst.
       have /=vB := valid_state_expanded vA (ex_intro _ _ HA).
       have /=vC := valid_state_next_alt vB HB.
-      have {IH} := IH vC l p.
+      have {IH} := IH vC l.
       move=> [y[ys[sC H]]].
       have [x[xs sA]]:= expandedb_failure_next_alt_state_to_list_cons vA HA HB (state_to_list_state_to_list_cons sC) l.
       rewrite sA.

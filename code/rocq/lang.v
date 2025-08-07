@@ -69,12 +69,6 @@ Module Language.
     for each predicate we return a S (not an option S)
   *)
   Record program := { (*depth : nat;*) rules : index; modes : mode_ctx; sig : sigT }.
-End Language.
-
-Module Type Unif.
-  Import Language.
-  Parameter unify : Tm -> Tm -> Sigma -> option Sigma.
-  Parameter matching : Tm -> Tm -> Sigma -> option Sigma.
 
   Parameter program_eqb : program -> program -> bool.
   Parameter is_program : program -> Type.
@@ -82,16 +76,18 @@ Module Type Unif.
   Parameter program_eqb_correct : forall p1 p2, program_eqb p1 p2 -> p1 = p2.
   Parameter program_eqb_refl : forall x, program_eqb x x.
 
-
   Parameter Sigma_eqb : Sigma -> Sigma -> bool.
   Parameter is_Sigma : Sigma -> Type.
   Parameter is_Sigma_inhab : forall p : Sigma, is_Sigma p.
   Parameter Sigma_eqb_correct : forall p1 p2, Sigma_eqb p1 p2 -> p1 = p2.
   Parameter Sigma_eqb_refl : forall x, Sigma_eqb x x.
 
+End Language.
 
-  Parameter same_subst : forall (s1 s2 : Sigma), s1 = s2.
-  Parameter same_progr : forall (s1 s2 : program), s1 = s2.
+Module Type Unif.
+  Import Language.
+  Parameter unify : Tm -> Tm -> Sigma -> option Sigma.
+  Parameter matching : Tm -> Tm -> Sigma -> option Sigma.
 End Unif.
 
 Module Run (U : Unif).
@@ -123,15 +119,15 @@ Module Run (U : Unif).
     let rules := select query modes rules s in
     rules.
 
-  Elpi derive.eqbOK.register_axiom program U.is_program U.is_program_inhab U.program_eqb U.program_eqb_correct U.program_eqb_refl.
-  Lemma program_eqb_OK : Equality.axiom U.program_eqb.
-  apply: iffP2 U.program_eqb_correct U.program_eqb_refl.
+  Elpi derive.eqbOK.register_axiom program is_program is_program_inhab program_eqb program_eqb_correct program_eqb_refl.
+  Lemma program_eqb_OK : Equality.axiom program_eqb.
+  apply: iffP2 program_eqb_correct program_eqb_refl.
   Qed.
   HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eqb_OK.
   
-  Elpi derive.eqbOK.register_axiom Sigma U.is_Sigma U.is_Sigma_inhab U.Sigma_eqb U.Sigma_eqb_correct U.Sigma_eqb_refl.
-  Lemma Sigma_eqb_OK : Equality.axiom U.Sigma_eqb.
-  apply: iffP2 U.Sigma_eqb_correct U.Sigma_eqb_refl.
+  Elpi derive.eqbOK.register_axiom Sigma is_Sigma is_Sigma_inhab Sigma_eqb Sigma_eqb_correct Sigma_eqb_refl.
+  Lemma Sigma_eqb_OK : Equality.axiom Sigma_eqb.
+  apply: iffP2 Sigma_eqb_correct Sigma_eqb_refl.
   Qed.
   HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
 
