@@ -279,53 +279,55 @@ Module RunP (A: Unif).
   End same_structure.
   
 
-  Lemma expanded_and_complete {s s' C A B0 B} :
-    expanded s (And A B0 B) (Done s' C) ->
-      (exists s'' A' B', expanded s A (Done s'' A') /\ expanded s'' B (Done s' B')).
+  Lemma expanded_and_complete {s s' C A B0 B b} :
+    expandedb s (And A B0 B) (Done s' C) b ->
+      exists s'' A' B' b1 b2, expandedb s A (Done s'' A') b1 /\ expandedb s'' B (Done s' B') b2 /\ b = b1 || b2.
   Proof.
     remember (And _ _ _) as g0 eqn:Hg0.
-    remember (Done _ _) as s1 eqn:Hs1 => -[b H].
+    remember (Done _ _) as s1 eqn:Hs1 => H.
     elim: H A B0 B C Hg0 s' Hs1; clear => //.
     - move=> s s' AB alt + A B0 B alt' ? s'' [] ??; subst.
       move=> /simpl_expand_and_solved. 
       move => [s' [A' [B']]] => -[H1 [H2 H3]]; subst.
-      do 3 eexists; repeat split; eexists; apply: expanded_done; eassumption.
-    - move=> s s' r A B ? + HB IH A1 B01 B1 C ? s2 ?; subst.
+      do 3 eexists; exists false, false; repeat split; apply: expanded_done; eassumption.
+    - move=> s s' r A B b + HB IH A1 B01 B1 C ? s2 ?; subst.
       move=> /simpl_expand_and_cut [].
         move=> [A'[HA']]?;subst.
-        have:= IH _ _ _ _ erefl _ erefl.
-        move=> [s3 [A2 [B2 [[? HA1] HB2]]]].
-        do 3 eexists; repeat split.
-          eexists; apply: expanded_cut HA' HA1.
-        apply HB2.
+        have := IH _ _ _ _ erefl _ erefl.
+        move=> [s''[A2[B2[b1[b2 [HA1 HB2]]]]]].
+        (* move=> [s3 [A2 [B2 [[? HA1] HB2]]]]. *)
+        do 5 eexists; repeat split.
+        - apply: expanded_cut HA' HA1.
+        - apply HB2.
+        - reflexivity.
       move=> [s'' [A' [B' [HA'[HB' ?]]]]]; subst.
       have {IH} := IH _ _ _ _ erefl _ erefl.
-      move=> /= [s3 [A2 [B2 [EA2 [b1 EB2]]]]].
+      move=> /= [s3 [A2 [B2 [b1[b2[EA2 [EB2 ?]]]]]]]; subst.
       have [_ +]:= expand_solved_success HA'.
       move=>/success_cut.
       move=> scA1.
-      have [??] := expanded_success scA1 EA2; subst.
-      do 3 eexists; split.
-        eexists; apply: expanded_done HA'.
-      eexists; apply: expanded_cut HB' EB2.
+      have[[??]?] := expanded_success scA1 EA2; subst.
+      do 5 eexists; repeat split.
+      - apply: expanded_done HA'.
+      - apply: expanded_cut HB' EB2.
+      - reflexivity.
     - move=> s1 s2 r ? D b + H IH A B0 B C ? s3 ?; subst.
       move=> /simpl_expand_and_expanded [].
         move=> [A' [EA ?]];subst.
         have:= IH _ _ _ _ erefl _ erefl.
-        move=> [s' [A2 [B2 [[b1 HA'] HB']]]].
-        do 3 eexists; repeat split => //=.
-          eexists.
-          apply: expanded_step EA HA'.
-        apply: HB'.
+        move=> /= [s4 [A2 [B2 [b1[b2[EA2 [EB2 ?]]]]]]]; subst.
+        do 5 eexists; repeat split => //=.
+          apply: expanded_step EA EA2.
+        apply: EB2.
       move=> [s4 [A' [B' [EA' [EB' ?]]]]]; subst.
       have:= IH _ _ _ _ erefl _ erefl.
-      move=> [s''[A1[B1[HA2 [b1 HB2]]]]].
+      move=> /= [s5 [A2 [B2 [b1[b2[EA2 [EB2 ?]]]]]]]; subst.
       have [_ sA']:= expand_solved_success EA'.
-      have /= [??] := expanded_success sA' HA2.
+      have /= [[??]?] := expanded_success sA' EA2; subst.
       subst.
-      do 3 eexists; repeat split; eexists.
+      do 5 eexists; repeat split.
         apply: expanded_done EA'.
-      apply: expanded_step EB' HB2.
+      apply: expanded_step EB' EB2.
   Qed.
 
   Lemma expanded_and_correct {s0 s1 s2 A C B0 B D x} :
@@ -394,7 +396,7 @@ Module RunP (A: Unif).
         move=> [? [b1 H3]].
         have [_ +]:= expand_solved_success H.
         move=>/success_cut scA2.
-        by have /= := expanded_success scA2 (ex_intro _ _ H3).
+        by have [] /= := expanded_success scA2 H3.
       move=> [] s'' [] altA [] ? [] H4 [? H5].
       right.
       have [_ +]:= expand_solved_success H.
@@ -413,8 +415,8 @@ Module RunP (A: Unif).
         right; repeat eexists; [apply: expanded_step HA'' H2|apply H3].
       move=> [s2 [A2 [B' [H2 [H3]]]]] /[subst1].
       have [] := IH _ _ _ _ erefl erefl.
-        move=> [? H].
-        by have:= expanded_success (expand_solved_success H2).2 H.
+        move=> [? [? H]].
+        by have [] := expanded_success (expand_solved_success H2).2 H.
       move=> [] ? [] altA [] ? [] H4 [? H5]; right.
       have:= expand_solved_expand H2 H4 => -[] /[subst2].
       do 3 eexists; split.

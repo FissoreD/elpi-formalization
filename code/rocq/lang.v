@@ -775,14 +775,14 @@ Module Run (U : Unif).
       by rewrite (HA _ _ _ X) (HB _ _ _ Y).
   Qed.
 
-  Lemma expanded_success {s A r}: 
-    success A -> expanded s A r -> r = Done s A.
+  Lemma expanded_success {s A r b}: 
+    success A -> expandedb s A r b -> r = Done s A /\ b = false.
   Proof.
-    move=> sA [b H].
+    move=> sA H.
     inversion H; subst.
     - have:= succes_is_solved s sA.
       rewrite H0 => -[<-<-]//.
-    - have:= succes_is_solved s sA; congruence.
+    - have:= succes_is_solved s sA; congruence. 
     - have := succes_is_solved s sA; congruence.
     - have := succes_is_solved s sA; congruence.
   Qed.
