@@ -510,7 +510,7 @@ Module RunP (A: Unif).
   Lemma expanded_or_complete_left {s s' s2 A A' B B' b}:
     expandedb s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
       (is_dead A = false /\ exists b, expandedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
-        (is_dead A /\ expanded s B (Done s' B')).
+        (is_dead A /\ A = A' /\ expanded s B (Done s' B')).
   Proof.
     rewrite /expanded.
     remember (Done _ _) as RD eqn:HRD.
@@ -530,7 +530,7 @@ Module RunP (A: Unif).
       move=> [B2[dA[HB' ?]]]; subst.
       have := IH _ _ _ _ _ _ erefl erefl.
       move=> [|][]; rewrite dA//.
-      move=> _ [b H].
+      move=> _ [X [b H]].
       right; repeat split; auto; eexists.
       apply: expanded_cut HB' H.
     + move=> s s1 r C D b2 + HB IH s' s2 A' B' A B ??; subst. 
@@ -554,7 +554,7 @@ Module RunP (A: Unif).
       move=> [dA [B1 [HB1]]]?;subst.
       have := IH _ _ _ _ _ _ erefl erefl.
       rewrite dA.
-      move=> [][]// _ [b H]; right.
+      move=> [][]// _ [X[b H]]; right.
       move: HB1 => [] HB1.
         repeat eexists => //.
         apply: expanded_step HB1 H.
