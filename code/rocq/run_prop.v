@@ -509,7 +509,7 @@ Module RunP (A: Unif).
       apply IH. 
   Qed.
 
-  Lemma expanded_or_complete_left {s s' s2 A A' B B' b}:
+  Lemma expanded_or_complete {s s' s2 A A' B B' b}:
     expandedb s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
       (is_dead A = false /\ exists b, expandedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
         (is_dead A /\ A = A' /\ expanded s B (Done s' B')).
@@ -564,16 +564,6 @@ Module RunP (A: Unif).
       apply: expanded_cut HB1 H.
   Qed.
   
-  Lemma expanded_or_complete {s s1 s2 A A' B B'}:
-    is_dead A = false ->
-    expanded s (Or A s2 B) (Done s1 (Or A' s2 B')) ->
-      exists b, expandedb s A (Done s1 A') b /\ B' = if b then cutr B else B.
-  Proof.
-    move=> dA [b H].
-    have:= expanded_or_complete_left H.
-    rewrite dA => -[][]//.
-  Qed.
-
   Lemma expanded_or_correct_left_fail {s A A'} b:
     is_dead A = false ->
     expandedb s A (Failed A') b ->

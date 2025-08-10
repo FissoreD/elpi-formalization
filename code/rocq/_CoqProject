@@ -7,3 +7,4 @@ run_test.v
 run_prop.v
 check.v
 valid_state.v
+elpi.v
