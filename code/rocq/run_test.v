@@ -154,7 +154,7 @@ Module Test5.
       apply: run_done.
       apply: expanded_step => //.
       rewrite [Cut]lock.
-      apply: expanded_step => //=.
+      apply: expanded_cut => //=.
       rewrite -lock [mkAnd]lock /= -/s1 -/s2.
       rewrite -lock [mkOr]lock /=.
       rewrite -lock //=.
@@ -217,7 +217,7 @@ Module Test6.
       move=>//.
       apply: run_done.
       apply: expanded_step => //=.
-      apply: expanded_step => //=.
+      apply: expanded_cut => //=.
       apply: expanded_step => //=.
       apply: expanded_done => //=.
       reflexivity.

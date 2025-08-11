@@ -229,13 +229,13 @@ Module RunP (A: Unif).
     Proof.
       elim: A s r => //.
         move=> A HA s B HB s1 [s2|s2||s2] C.
-        - move=> /simpl_expand_or_expanded => -[].
-            by move=>[A'[dA[HA' ->]]]/=; rewrite same_structure_id eqxx (HA _ _ HA').
-          move=>[].
-            move=> [A'[dA[HA'->]]]/=; rewrite eqxx (HA _ _ HA') same_structure_cutr//same_structure_id//.
-          move=>[dA[B'[[]]]]/HB/=+->=>->; rewrite eqxx same_structure_id//.
-        - move=> /simpl_expand_or_cut [B'[dA[HB'->]]]/=.
-          by rewrite eqxx same_structure_id (HB _ _ HB').
+        - move=> /=.
+          case: ifP => dA.
+            case eB: expand => //[s1' B'][_<-]; rewrite eqxx same_structure_id (HB _ _ eB)//.
+          case eA: expand => //[s1' A'|s1' A'][_<-]; rewrite eqxx (HA _ _ eA)?same_structure_id// same_structure_cutr//same_structure_id//.
+        - move=> /=; case: ifP => dA.
+            case eB: expand => //[s1' B'][_<-]; rewrite eqxx same_structure_id (HB _ _ eB)//.
+          case eA: expand => //.
         - move=> /simpl_expand_or_fail [].
             by move=>[A'[_[HA'->]]]/=; rewrite eqxx (HA _ _ HA') same_structure_id.
           by move=> [B'[_ [HB'->]]]/=; rewrite eqxx same_structure_id (HB _ _ HB').
@@ -511,7 +511,8 @@ Module RunP (A: Unif).
 
   Lemma expanded_or_complete {s s' s2 A A' B B' b}:
     expandedb s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
-      (is_dead A = false /\ exists b, expandedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
+      (is_dead A = false /\ 
+        exists b, expandedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
         (is_dead A /\ A = A' /\ expanded s B (Done s' B')).
   Proof.
     rewrite /expanded.
@@ -527,41 +528,26 @@ Module RunP (A: Unif).
       move=> [B' [dA [HB' [??]]]];subst.
       right; repeat split; auto; eexists.
       apply: expanded_done HB'.
-    + move=> s s1 r C D b2 + HB IH s' s2 A' B' A B ??; subst. 
-      move=> /simpl_expand_or_cut.
-      move=> [B2[dA[HB' ?]]]; subst.
-      have := IH _ _ _ _ _ _ erefl erefl.
-      move=> [|][]; rewrite dA//.
-      move=> _ [X [b H]].
-      right; repeat split; auto; eexists.
-      apply: expanded_cut HB' H.
-    + move=> s s1 r C D b2 + HB IH s' s2 A' B' A B ??; subst. 
-      move=> /simpl_expand_or_expanded[].
-        move=> [A2 [dA [HA ?]]]; subst.
-        have {IH} := IH _ _ _ _ _ _ erefl erefl.
-        have /= dA2:= expand_not_dead dA HA.
-        rewrite dA dA2.
-        move=> [][]//_ [b [H H1]]; subst; left; repeat eexists.
-        apply: expanded_step HA H.
-      move=> [].
-        move=>[A1[dA[HA?]]]; subst.
-        have := IH _ _ _ _ _ _ erefl erefl.
-        have /= dA2:= expand_not_dead dA HA.
-        rewrite dA2 dA.
-        move=>[][]// _ [b1 [H1 ?]]; subst.
-        rewrite cutr2 if_same.
-        left; repeat eexists => //.
-          apply: expanded_cut HA H1.
-        by [].
-      move=> [dA [B1 [HB1]]]?;subst.
-      have := IH _ _ _ _ _ _ erefl erefl.
-      rewrite dA.
-      move=> [][]// _ [X[b H]]; right.
-      move: HB1 => [] HB1.
-        repeat eexists => //.
-        apply: expanded_step HB1 H.
-      repeat eexists => //.
-      apply: expanded_cut HB1 H.
+    + move=> s s1 r C D b2 + HB IH s' s2 A' B' A B ??; subst.
+      move=> /=; case: ifP => //dA.
+        case eB: expand => //[s1' B1'][??]; subst.
+        have:= IH _ _ _ _ _ _ erefl erefl.
+        rewrite dA => -[][]// _[->] [b H]; right; auto.
+        repeat eexists; apply: expanded_cut eB H.
+      case eA: expand => //.
+    + move=> s s1 r C D b2 + HB IH s' s2 A' B' A B ??; subst.
+      move=> /=.
+      case: ifP => dA.
+        case eB: expand => //[s1' B1'][??]; subst.
+        have:= IH _ _ _ _ _ _ erefl erefl; rewrite dA => -[][]// _[->][b H].
+        right; repeat eexists; apply: expanded_step eB H.
+      case eA: expand => //[s1' A1'|s1' A1'][??]; subst; left; repeat split;
+        have:= IH _ _ _ _ _ _ erefl erefl => -[][]; 
+        rewrite (expand_not_dead dA eA)// => _ [b [H1 H2]]; subst.
+        eexists; split => //; apply: expanded_step eA H1.
+      eexists; split.
+        apply: expanded_cut eA H1.
+      move=>/=; rewrite cutr2 if_same//.
   Qed.
   
   Lemma expanded_or_correct_left_fail {s A A'} b:

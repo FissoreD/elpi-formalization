@@ -408,7 +408,7 @@ Module Run (U : Unif).
     match r with
     | Failure B       => Failure     (Or A sB B)
     | Expanded s B    => Expanded s  (Or A sB B)
-    | CutBrothers s B => Expanded s  (Or A sB B)
+    | CutBrothers s B => CutBrothers s  (Or A sB B)
     | Solved s B      => Solved   s  (Or A sB B)
     end.
 
@@ -582,12 +582,12 @@ Module Run (U : Unif).
     by left; eexists.
   Qed.
 
-  Lemma simpl_expand_or_cut {s s1 s2 A B C} :
+  (* Lemma simpl_expand_or_cut {s s1 s2 A B C} :
     expand s1 (Or A s B) = CutBrothers s2 C -> 
       exists B', is_dead A /\ expand s1 B = CutBrothers s2 B' /\ C = Or A s B'.
   Proof.
     move=>/=; case: ifP => dA; case X:expand => //=.
-  Qed.
+  Qed. *)
 
   Lemma simpl_expand_or_fail {s s1 A B C} :
     expand s1 (Or A s B) = Failure C -> 
@@ -602,7 +602,7 @@ Module Run (U : Unif).
     by left; eexists; repeat split.
   Qed.
 
-  Lemma simpl_expand_or_expanded {s s1 s2 A B C} :
+  (* Lemma simpl_expand_or_expanded {s s1 s2 A B C} :
     expand s1 (Or A s B) = Expanded s2 C ->
       (exists A', is_dead A = false /\ expand s1 A = Expanded s2 A' /\ C = Or A' s B ) \/ 
       (exists A', is_dead A = false /\ expand s1 A = CutBrothers s2 A' /\ C = Or A' s (cutr B)) \/
@@ -617,7 +617,7 @@ Module Run (U : Unif).
     case X: expand => //=-[]??;subst.
       by left; eexists; repeat split.
     by right; left; eexists; repeat split.
-  Qed.
+  Qed. *)
 
   Lemma simpl_expand_and_solved {s s2 A B0 B C} :
     expand s (And A B0 B) = Solved s2 C -> 
@@ -725,6 +725,24 @@ Module Run (U : Unif).
       case: expand => //.
   Qed. *)
 
+  Lemma expand_solved_same {s1 A s2 B}: 
+    expand s1 A = Solved s2 B -> ((s1 = s2) * (A = B))%type.
+  Proof.
+    elim: A s1 s2 B => //.
+    + by move=> /= ??? [] /[subst2].
+    + move=> ? [] //.
+    + move=> A HA s B HB s1 s2 C/=.
+      case: ifP => dA.
+        case X: expand =>//-[??];subst => /=.
+        rewrite 2!(HB _ _ _ X)//.
+      case X: expand => //-[??]; subst.
+      rewrite 2!(HA _ _ _ X)//.
+    + move=> A HA ? _ B HB s1 s2 C /=.
+      case X: expand => //.
+      case Y: expand => //=-[??]; subst.
+      rewrite 2!(HA _ _ _ X)//2!(HB _ _ _ Y)//.
+  Qed.
+
   Lemma expand_solved_success {s1 A s2 B}: 
     expand s1 A = Solved s2 B -> (success A * success B)%type.
   Proof.
@@ -755,24 +773,6 @@ Module Run (U : Unif).
     remember (Done _ _) as d eqn:Hd => H.
     elim: H s2 B Hd => //; clear.
     by move=> s s' A B /expand_solved_success[sA sB] ?? [_<-].
-  Qed.
-
-  Lemma expand_solved_same_subst {s1 A s2 B}: 
-    expand s1 A = Solved s2 B -> s1 = s2.
-  Proof.
-    elim: A s1 s2 B => //.
-    + by move=> /= ??? [] /[subst2].
-    + move=> ? [] //.
-    + move=> A HA s B HB s1 s2 C/=.
-      case: ifP => /eqP dA.
-        case X: expand =>//-[??];subst => /=.
-        apply: HB X.
-      case X: expand => //-[??]; subst.
-      apply: HA X.
-    + move=> A HA ? _ B HB s1 s2 C /=.
-      case X: expand => //.
-      case Y: expand => //=-[??]; subst.
-      by rewrite (HA _ _ _ X) (HB _ _ _ Y).
   Qed.
 
   Lemma expanded_success {s A r b}: 
@@ -828,6 +828,21 @@ Module Run (U : Unif).
     + move=> s A B H1 H2 /=; apply: expand_not_dead H2 H1.
     + move=> s s' r A A' b H _ IH dA; apply: IH (expand_not_dead dA H).
     + move=> s s' r A A' b H _ IH dA; apply: IH (expand_not_dead dA H).
+  Qed.
+
+  Lemma expand_solved_cutl {s1 A s2 B}: expand s1 A = Solved s2 B -> cutl A = cutl B.
+  Proof.
+    elim: A s1 s2 B => //.
+    - move=> ???[_<-]//.
+    - move=> p []//.
+    - move=> A HA s B HB s1 s2 C/=.
+      case: ifP => dA; case H: expand => //[s3 D][_<-]/=.
+        rewrite dA (HB _ _ _ H)//.
+      rewrite (expand_not_dead dA H) (HA _ _ _ H)//.
+    - move=> A HA B0 _ B HB s1 s2 C/=.
+      case eA: expand => //[s1' A'].
+      case eB: expand => //[s2' B'][_<-]/=.
+      rewrite (HA _ _ _ eA)(HB _ _ _ eB)//.
   Qed.
 
   Lemma expand_solved_failed {s1 A s2 B}: 
