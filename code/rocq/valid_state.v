@@ -532,4 +532,33 @@ Module valid_state (U:Unif).
       by move=> _ /base_and_ko_succes.
     move=> []//.
   Qed.
+
+  Fixpoint base_and_expanded_done_state A :=
+    match A with
+    | And (Goal _ Cut) _ A => base_and_expanded_done_state A
+    | Top => true
+    | _ => false
+    end.
+
+  Lemma base_and_expanded_done {s1 A s2 B b}:
+    base_and A -> expandedb s1 A (Done s2 B) b -> base_and_expanded_done_state A /\ s1 = s2.
+  Proof.
+    elim: A s1 B s2 b => //.
+    - move=> s1 B s2 b _; inversion 1; subst => //.
+      inversion H1; subst; inversion H2; subst => //; inversion H8; subst => //.
+    - move=> []//p a _ B0 _ B HB s1 C s2 b/=/andP[/eqP->] H1 H2.
+      have /=:= expandedb_same_structure H2.
+      case: C H2 => // A' B0' B' H _.
+      have [s3 [A1[B1[b1[b2[H3[H4 ?]]]]]]] := expanded_and_complete H; subst.
+      inversion H3; clear H3; subst => //.
+      - inversion H8 => //; destruct a => //.
+      - inversion H0; clear H0 => //; destruct a => //=.
+        move: H5 => [??]; subst.
+        inversion H2; clear H2 => //; subst.
+        case: H8 => [??]; subst.
+        have:= HB _ _ _ _ H1 H4 => -[??]; subst.
+        repeat split => //.
+      - inversion H0 => // ; destruct a => //; move: H5 => [_ ?]; subst.
+        by have:= expandedb_big_or_not_done H2.
+  Qed.
 End valid_state.

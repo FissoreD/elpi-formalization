@@ -929,6 +929,14 @@ Module Run (U : Unif).
       apply: expand_not_failed HA _ => //.
   Qed.
 
+  Lemma expandedb_big_or_not_done {s p s1 t res b}:
+    expandedb s (big_or p s1 t) res b -> is_done res = false.
+  Proof.
+    rewrite /big_or; case f: F => [|[s2 r] rs].
+      inversion 1; subst => //.
+    inversion 1; subst => //.
+  Qed.
+
 
   (********************************************************************)
   (* NEXT_ALT OP PROPERTIES                                           *)
