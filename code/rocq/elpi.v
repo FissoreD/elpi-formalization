@@ -346,7 +346,7 @@ Module Nur (U : Unif).
         move=> bB0'.
         rewrite (base_or_aux_ko_state_to_list bB0')/=.
         by eexists.
-      - move=> A HA B0 _ B HB s1 /=/and3P[vA].
+      - move=> A HA B0 _ B HB s1 /=/and4P[oA vA].
         case: ifP => //sA vB/=bB0 sB + l.
         rewrite success_is_dead// success_failed//.
         case X: next_alt => [[]|]//.
@@ -406,7 +406,7 @@ Module Nur (U : Unif).
         case Y: next_alt => [[]|]// _ l.
         rewrite (HA s1)//=.
         rewrite (bbOr_next_alt_none bB Y)//.
-      - move=> A HA B0 HB0 B HB s1/=/and3P[vA].
+      - move=> A HA B0 HB0 B HB s1/=/and4P[oA vA].
         case: ifP => /=[sA vB bB0|sA/eqP->].
           rewrite success_failed//=success_is_dead// => fB.
           case X: next_alt => [[]|]//.
@@ -537,8 +537,8 @@ Module Nur (U : Unif).
           apply: HB => //.
         have [x[xs ->]] := HA vA fA (state_to_list B l ++ l).
         by do 2 eexists.
-      - move=> A HA B0 _ B HB/= /and3P[]++++l/=.
-        case: ifP => [sA vA vB bB0|sA vA/eqP->]/=.
+      - move=> A HA B0 _ B HB/= /and4P[]+++++l/=.
+        case: ifP => [sA oA vA vB bB0|sA oA vA/eqP->]/=.
           rewrite success_failed//==>fB.
           rewrite (success_state_to_list sA)/=.
           have [x[xs]]:= HB vB fB l.
@@ -598,7 +598,7 @@ Module Nur (U : Unif).
           have [x[xs->]]:= HA _ _ vA X H l.
           by do 2 eexists.
         by case: state_to_list; do 2 eexists.
-      - move=> A HA B0 _ B HB s C /=/and3P[vA].
+      - move=> A HA B0 _ B HB s C /=/and4P[oA vA].
         case X: expand => //[A'|s' A'].
           rewrite (expand_not_solved_not_success X erefl)/=(expand_failure_failed X).
           move=> /eqP -> + [<-] + l/=.
@@ -640,7 +640,7 @@ Module Nur (U : Unif).
           rewrite next_alt_aux_base_or_ko//if_same//.
         have [x[xs]]:= failed_state_to_list vB (base_or_failed bB) l.
         rewrite SB//.
-      - move=> A HA B0 _ B HB l x s/=/andP[sA sB]/and3P[vA].
+      - move=> A HA B0 _ B HB l x s/=/andP[sA sB]/and4P[oA vA].
         rewrite sA/==> vB bB0.
         have [y[ys H1]]:= failed_state_to_list vA (success_failed _ sA) l.
         have [w[ws H2]]:= failed_state_to_list vB (success_failed _ sB) l.
@@ -666,7 +666,7 @@ Module Nur (U : Unif).
         case: ifP => //[dA vB|dA /andP[vA bB]] _.
           rewrite (HB _ _ vB sB)//.
         rewrite (HA _ _ vA sA) (HB _ _ (bbOr_valid bB) sB)//if_same//.
-      - move=> A HA B0 _ B HB l s2/=/and3P[vA].
+      - move=> A HA B0 _ B HB l s2/=/and4P[oA vA].
         case: (ifP (is_dead _)) => //dA.
         case: ifP => /=[sA vB bB0 | sA /eqP->].
           have [x[xs H]]:= failed_state_to_list vA (success_failed _ sA) l.
@@ -719,7 +719,7 @@ Module Nur (U : Unif).
         move: bB; rewrite /bbOr => /orP[] H; last first.
           apply: base_or_aux_ko_state_to_list H.
         rewrite (next_alt_aux_base_or_none H nB')//.
-      - move=> A HA B0 _ B HB s2 s3 C l/=/and3P[vA].
+      - move=> A HA B0 _ B HB s2 s3 C l/=/and4P[oA vA].
         case eA: expand => //[A'|s' A'].
           have [fA fA']:= expand_failure_failed eA.
           rewrite (failed_success _ fA) fA/==>/eqP->bB[<-]/=.
@@ -769,7 +769,7 @@ Module Nur (U : Unif).
         move: bB; rewrite /bbOr => /orP[] bB.
           have ->// := base_or_aux_next_alt_some bB nB.
         by rewrite (next_alt_aux_base_or_ko bB) in nB.
-      - move=> A HA B0 _ B HB s2 s3 C l/=/and3P[vA] + + /andP[sA sB].
+      - move=> A HA B0 _ B HB s2 s3 C l/=/and4P[oA vA] + + /andP[sA sB].
         rewrite sA/==>vB bB0.
         rewrite success_is_dead//success_failed//.
         case nB: next_alt => [[s7 E]|].
@@ -817,7 +817,7 @@ Module Nur (U : Unif).
       - move=> A HA B0 _ B HB s C/= s2 s3 D l.
         case eA: expand => //[A'|s1 A'].
           rewrite (expand_not_solved_not_success eA erefl) (expand_failure_failed eA)/=.
-          move=> /and3P[vA /eqP-> bB][<-]/=.
+          move=> /and4P[oA vA /eqP-> bB][<-]/=.
           case: ifP => //dA.
           rewrite (expand_failure_failed eA).
           case nA': next_alt => //[[s4 E]].
@@ -829,7 +829,7 @@ Module Nur (U : Unif).
           have [x ->]:= base_and_state_to_list bB.
           rewrite (HA _ _ _ _ _ _ vA eA nA')//.
         have [sA sA'] := (expand_solved_success eA).
-        rewrite sA/= => /and3P[vA vB bB0].
+        rewrite sA/= => /and4P[oA vA vB bB0].
         case eB: expand => //[B'][<-]/=.
         rewrite success_is_dead// success_failed//.
         rewrite (expand_solved_state_to_list_same eA).
@@ -939,7 +939,7 @@ Module Nur (U : Unif).
     - move=> A HA s B HB l /=; case: ifP => //[dA vB|dA /andP[vA bB]].
         rewrite HB//state_to_list_dead//is_dead_cutr//.
       rewrite HA//HB//bbOr_valid//.
-    - move=> A HA B0 _ B HB l /=/andP[vA]; rewrite HA//.
+    - move=> A HA B0 _ B HB l /=/and3P[oA vA]; rewrite HA//.
   Qed.
 
   Lemma state_to_list_clean_cutl_empty {A l}:
@@ -949,7 +949,7 @@ Module Nur (U : Unif).
     - move=> A HA s B HB l /=; case: ifP => [dA vB sB | dA /andP[vA bB] sA]/=.
         rewrite dA/= HB//state_to_list_dead//.
       rewrite is_dead_cutl//dA/= HA//state_to_list_cutr_empty//bbOr_valid//.
-    - move=> A HA B0 _ B HB l/=/and3P[vA] + +/andP[sA sB].
+    - move=> A HA B0 _ B HB l/=/and4P[oA vA] + +/andP[sA sB].
       rewrite sA success_cut//= => vB bB0.
       rewrite HB// (success_state_to_list (success_cut sA))/=.
       rewrite HA//.
@@ -967,7 +967,7 @@ Module Nur (U : Unif).
       have [x[tl H]] := HB _ _ _ l1 vB eB.
       do 2 eexists; move=> l.
       rewrite 2!(state_to_list_dead dA)/=2!H//.
-    - move=> A HA B0 _ B HB s1 s2 C l1/=/and3P[vA].
+    - move=> A HA B0 _ B HB s1 s2 C l1/=/and4P[oA vA].
       case eA: expand => //[s3 A'|s3 A'].
         rewrite (expand_not_solved_not_success eA erefl)/=(expand_not_failed eA notF).
         move=>/eqP->bB [_<-]/=.
@@ -1004,41 +1004,44 @@ Module Nur (U : Unif).
 
   (*  
     given two states A and B such that (exp_done_shape A),
-    returns (b * has_cut) where b tells if B is a valid evolution of A
-     after a call to expand and has_cut tells if there is a superficial cut in A
+    returns (b * deep_cut * has_cut) where
+    - b tells if B is a valid evolution of A after a call to expand
+    - deep_cut tells a deep cut has been executed
+    - has_cut tells if there is a superficial cut in A
   *)
-  Fixpoint exp_done_rel A B : (bool * bool) :=
+  Fixpoint exp_done_rel A B : (bool * bool * bool) :=
     match A, B with
-    | Top, OK => (true, false)
-    | Goal _ Cut, OK => (true, true)
+    | Top, OK => (true, false, false)
+    | Goal _ Cut, OK => (true, true, true)
     | And A1 B01 B1, And A2 B02 B2 =>
       if success A1 then 
-        let (b1, has_cut) := exp_done_rel B1 B2 in
-        ((B01 == B02) && (if has_cut then cutl A1 == A2 else A1 == A2) && b1, has_cut)
+        let: (b1, m, has_cut) := exp_done_rel B1 B2 in
+        ((B01 == B02) && (if has_cut then cutl A1 == A2 else A1 == A2) && b1,  m, has_cut)
       else 
-        let (b1, has_cut) := exp_done_rel A1 A2 in
-        (b1 && (B01 == B02) && (B1 == B2), has_cut)
+        let: (b1, m, has_cut) := exp_done_rel A1 A2 in
+        (b1 && (B01 == B02) && (B1 == B2),  m, has_cut)
     | Or A1 _ B1, Or A2 _ B2 =>
       if is_dead A1 then 
-        let (b, has_cut) := exp_done_rel B1 B2 in 
-        ((A1 == A2) && b, has_cut)
+        let: (b1, m, has_cut) := exp_done_rel B1 B2 in
+        ((A1 == A2) && b1, m, has_cut)
       else 
-        let (b, has_cut) := exp_done_rel A1 A2 in 
-          (b && if has_cut then cutr B1 == B2 else B1 == B2, false)
-    | _, _ => (false, false)
+        let: (b1, m, has_cut) := exp_done_rel A1 A2 in 
+          (b1 && if has_cut then cutr B1 == B2 else B1 == B2, m, false)
+    | _, _ => (false, false, false)
     end.
 
-  Lemma exp_done_rel_success {A B has_cut}:
-    success A -> exp_done_rel A B = (true, has_cut) -> success B.
+  Lemma exp_done_rel_success {A B m has_cut}:
+    success A -> exp_done_rel A B = (true, m, has_cut) -> success B.
   Proof.
-    elim: A B has_cut => //.
-    - move=> A HA s B HB []//A' s' B' has_cut/=.
-      case: ifP => [dA sB|dA sA]; case H: exp_done_rel => [[] has_cut']//[].
-      - move=> /andP[/eqP<-];rewrite dA => _ _; apply: HB sB H.
+    elim: A B m has_cut => //.
+    - move=> A HA s B HB []//A' s' B' m has_cut/=.
+      case: ifP => [dA sB|dA sA]; case H: exp_done_rel => [[[] m1] has_cut']//[]//.
+      - move=> /andP[/eqP<-];rewrite dA => _ _ _; apply: HB sB H.
       - move=> /andP[]//.
-      - have sA' := (HA _ _ sA H); rewrite success_is_dead//.
-    - move=> A HA B0 _ B HB [] A' B0' B'//=has_cut/andP[sA sB].
-      rewrite sA; case eB: exp_done_rel => [[] []][]/andP[]///andP[] _/eqP<-; rewrite ?success_cut//?sA/==>_ _; apply: HB sB eB.
+      - have sA' := (HA _ _ _ sA H); rewrite success_is_dead//.
+    - move=> A HA B0 _ B HB [] A' B0' B' // m1 has_cut/= /andP[sA sB].
+      rewrite sA; case eB: exp_done_rel => [[[] m2] []][]/andP[]///andP[] _/eqP<-;
+        rewrite ?success_cut//?sA/==>_ _ _; apply: HB sB eB.
   Qed.
       
   Lemma exp_done_shape_failed {A}: exp_done_shape A -> failed A = false.
@@ -1048,45 +1051,44 @@ Module Nur (U : Unif).
     - move=> A HA B0 _ B HB/=/andP[] /HA->/HB->; rewrite andbF//.
   Qed.
 
-  Lemma exp_done_rel_dead {A B has_cut}: exp_done_rel A B = (true, has_cut) -> is_dead A = is_dead B.
+  Lemma exp_done_rel_dead {A B m has_cut}: exp_done_rel A B = (true, m, has_cut) -> is_dead A = is_dead B.
   Proof.
-    elim: A B has_cut => //.
+    elim: A B m has_cut => //.
     - move=> []//.
     - move=> p[]//=[]//.
-    - move=> A HA s B HB []//A' s' B' has_cut/=.
+    - move=> A HA s B HB []//A' s' B' m has_cut/=.
       case: ifP => dA.
-        case X: exp_done_rel => [[] has_cut'] => -[]/andP[]/eqP//<- _?; subst.
+        case X: exp_done_rel => [[[] m1] has_cut'] => -[]/andP[]/eqP//<- _??; subst.
         rewrite dA/=; apply: HB X.
-      case eA: exp_done_rel => //[[] []]/=[]///eqP<- ?; subst; rewrite -(HA _ _ eA) dA//.
-    - move=> A HA B0 _ B HB[]//A' B0' B' has_cut/=.
-      case: ifP => //sA; case H: exp_done_rel => [[] has_cut'][]///andP[]//.
+      case eA: exp_done_rel => //[[[] m1] []]/=[]///eqP<- ?; subst; rewrite -(HA _ _ _ eA) dA//.
+    - move=> A HA B0 _ B HB[]//A' B0' B' m1 has_cut/=.
+      case: ifP => //sA; case H: exp_done_rel => [[[] m2] has_cut'][]///andP[]//.
         move=> /andP[] _; case: has_cut' {H} => /eqP<-//; rewrite is_dead_cutl//.
-      move=> _ _ _; apply: HA H.
+      move=> _ _ _ _; apply: HA H.
   Qed.
 
-  Lemma exp_done_rel_failed {A B b}: exp_done_rel A B = (true, b) -> ((failed A = false))%type.
+  Lemma exp_done_rel_failed {A B m1 b}: exp_done_rel A B = (true, m1, b) -> ((failed A = false))%type.
   Proof.
-    elim: A B b => //.
-    - move=> A HA s B HB []//A' s' B' has_cut/=; case: ifP => dA.
-        case eB: exp_done_rel => [[] has_cut'][]/andP[]///eqP? _?; subst.
-        rewrite !(HB _ _ eB)//.
-      case eA: exp_done_rel => [[] has_cut'][]//??; subst.
-      rewrite (HA _ _ eA)//.
-    - move=> A HA B0 _ B HB/= []//A' B0' B' has_cut.
+    elim: A B m1 b => //.
+    - move=> A HA s B HB []//A' s' B' m1 has_cut/=; case: ifP => dA.
+        case eB: exp_done_rel => [[[]m2] has_cut'][]/andP[]///eqP? _?; subst.
+        rewrite !(HB _ _ _ eB)//.
+      case eA: exp_done_rel => [[[] m2] has_cut'][]//??; subst.
+      rewrite (HA _ _ _ eA)//.
+    - move=> A HA B0 _ B HB/= []//A' B0' B' m1 has_cut.
       case: ifP => sA.
-        case eB: exp_done_rel => [[] []][]/andP[]///andP[/eqP]? /eqP? _ ?/=; subst.
-          rewrite !(HB _ _ eB) success_failed//=.
-        rewrite !(HB _ _ eB)//success_failed//.
-      case eA: exp_done_rel => [[] has_cut'][]///andP[/eqP?/eqP?]?/=; subst.
-      rewrite !(HA _ _ eA)//=.
+        case eB: exp_done_rel => [[[] m2] []][] /andP[]///andP[/eqP]? /eqP????/=; subst.
+          rewrite !(HB _ _ _ eB) success_failed//=.
+        rewrite !(HB _ _ _ eB)//success_failed//.
+      case eA: exp_done_rel => [[[] m2] has_cut'][]///andP[/eqP?/eqP?]??/=; subst.
+      rewrite !(HA _ _ _ eA)//=.
   Qed.
-
 
   Lemma exp_done_shape_big_or {p s t}: exp_done_shape (big_or p s t) = false.
   Proof. rewrite/big_or; case: F => [|[]]//. Qed.
 
   Lemma expand_exp_done_shape_cb {s1 A s2 B}: 
-    expand s1 A = CutBrothers s2 B -> exp_done_shape B -> (exp_done_rel A B) = (true, true).
+    expand s1 A = CutBrothers s2 B -> exp_done_shape B -> (exp_done_rel A B) = (true, true, true).
   Proof.
     elim: A s1 s2 B => //; auto.
     - move=> p[|t]//=s1 s2 B [_<-]//.
@@ -1104,26 +1106,31 @@ Module Nur (U : Unif).
   Qed.
 
   Lemma expand_exp_done_shape_exp {s1 A s2 B}: 
-    expand s1 A = Expanded s2 B -> exp_done_shape B -> (exp_done_rel A B) = (true, false).
+    expand s1 A = Expanded s2 B -> exp_done_shape B -> 
+      exists m, exp_done_rel A B = (true, m, false).
   Proof.
     elim: A s1 s2 B => //; auto.
-    - move=> ??? [_<-]//.
+    - move=> ??? [_<-]//=; by eexists.
     - move=> p[|t]//=s1 s2 B [_<-]//.
       rewrite exp_done_shape_big_or//.
     - move=> A HA s B HB s1 s2 C/=.
       case: ifP => //dA.
         case eB: expand => // [s1' B'] [_<-]/=; rewrite dA => H1.
-        rewrite (HB _ _ _ eB H1) eqxx//.
+        have [m ->] := HB _ _ _ eB H1.
+        rewrite eqxx; eexists => //.
       case eA: expand => //[s1' A'|s1' A'] [_<-]/=; rewrite (expand_not_dead dA eA) => H1.
-        rewrite (HA _ _ _ eA H1) eqxx//.
-      rewrite (expand_exp_done_shape_cb eA H1) eqxx//.
+        have [m ->] := HA _ _ _ eA H1.
+        rewrite eqxx//; by eexists.
+      rewrite (expand_exp_done_shape_cb eA H1) eqxx//; by eexists.
     - move=> A HA B0 _ B HB s1 s2 C/=.
       case eA: expand => //[s3 D|s3 D].
       - move=> [_<-]/=/andP[eD eB]; rewrite (expand_not_solved_not_success eA)//.
-        have:= HA _ _ _ eA eD.
-        case X: exp_done_rel => [b has_cut'][->->]; rewrite !eqxx//.
+        have [m]:= HA _ _ _ eA eD.
+        case X: exp_done_rel => [b has_cut'][->->]; rewrite !eqxx//; by eexists.
       - case eB: expand => //[s4 E]/=[_<-]/=/andP[eD eE].
-        rewrite (expand_solved_success eA)// (HB _ _ _ eB eE) eqxx (expand_solved_same eA) eqxx//.
+        have [m->] := HB _ _ _ eB eE.
+        rewrite (expand_solved_success eA)//  eqxx (expand_solved_same eA) eqxx//.
+        by eexists.
   Qed.
 
   Lemma exp_done_shapeP {s1 A s2 B b}: 
@@ -1145,46 +1152,67 @@ Module Nur (U : Unif).
       by rewrite (HA _ _ _ _ H1) (HB _ _ _ _ H2).
   Qed.
 
-  Lemma bibi {A B has_cut} bt:
-    valid_state A -> exp_done_shape B -> exp_done_rel A B = (true, has_cut) ->
+  Lemma exp_done_rel_bool {A B b1 b2}: exp_done_rel A B = (b1, b2, true) -> b2 = true.
+  Proof.
+    elim: A B b1 b2 => //.
+    - move=> []//.
+    - move=> p[]//[]// b1[]//.
+    - move=> A HA s B HB []//A' s' B' b1 []//=.
+      case: ifP => //dA.
+        case eB: exp_done_rel => [[b1' b2'] b3'][] H1 H2 H3; subst.
+        apply: HB eB.
+      case eA: exp_done_rel => [[b1' b2'] b3'][] H1 H2 H3; subst => //.
+    - move=> A HA B0 _ B HB[]//A' B0' B' b1 []//=.
+      case: ifP => // sA.
+        case eB: exp_done_rel => [[b1' b2'] b3'][] H1 H2 H3; subst.
+        apply: HB eB.
+      case eA: exp_done_rel => [[b1' b2'] b3'][] H1 H2 H3; subst => //.
+      apply: HA eA.
+  Qed.
+
+  Lemma bibi {A B m has_cut} bt:
+    valid_state A -> exp_done_shape B -> exp_done_rel A B = (true, m, has_cut) ->
     if has_cut then 
       (exists x tl, forall l, 
-        ((state_to_list B l = [::x]) * (state_to_list A bt = [:: [::cut [::] & x] & tl]))%type)
-    else exists tl, ((state_to_list A bt = [::[::] & tl]) * (state_to_list B bt = [::[::] & tl]))%type.
+        ((state_to_list B l = [::x]) * (state_to_list A bt = [:: [::cut [::] & x] & tl]))%type) else
+    if m == false then exists tl, ((state_to_list A bt = [::[::] & tl]) * (state_to_list B bt = [::[::] & tl]))%type
+    else True.
   Proof.
-    elim: A B has_cut bt => //.
-    - move=> []//=bt _ _ _[<-]; eexists; auto.
-    - move=> /= p [|t]// []//= bt _ _ _ [<-].
+    elim: A B m has_cut bt => //.
+    - move=> []//= m has_cut _ _ _ [??]; subst; eexists; auto.
+    - move=> /= p [|t]// []//= m hc _ _ _ [??]; subst.
       do 2 eexists; auto.
-    - move=> A HA s B HB []//A' s' B' has_cut bt /=.
+    - move=> A HA s B HB []//A' s' B' m has_cut bt /=.
       case: ifP => [dA vB|dA /andP[vA bB]] HH.
-        case eB: exp_done_rel => [[] []][]/andP[]///eqP???; subst; rewrite dA in HH.
-          have:= HB _ _ _ vB HH eB => /(_ bt).
+        case eB: exp_done_rel => [[[] m1] []][]/andP[]///eqP????; subst; rewrite dA in HH.
+          have:= HB _ _ _ _ vB HH eB => /(_ bt).
           move=> [x[tl]] H; do 2 eexists; move=> l; rewrite 2!(state_to_list_dead dA)//=.
-        have:= HB _ _ _ vB HH eB => /(_ bt).
+        have:= HB _ _ _ _ vB HH eB => /(_ bt).
+        case: ifP => // _.
         move=> [tl[H1 H2]]; rewrite H1 H2/= (state_to_list_dead dA)/=; eexists => //.
       have vB := bbOr_valid bB.
-      case eA: exp_done_rel => [[] []][]// /eqP??; subst; rewrite (exp_done_rel_dead eA) in dA; rewrite dA in HH.
-        have:= HA _ _ _ vA HH eA => // -/(_ (state_to_list B bt ++ bt)); subst.
-        move=> [x[tl]] H; eexists.
-        rewrite (state_to_list_cutr_empty)//=cats0 !H//=.
-        admit.
-      have:= HA _ _ _ vA HH eA => // -/(_ (state_to_list B' bt ++ bt)); subst.
+      case eA: exp_done_rel => [[[] m1] []][] /eqP???//; subst; rewrite (exp_done_rel_dead eA) in dA; rewrite dA in HH.
+        have H := exp_done_rel_bool eA.
+        subst => //.
+      have:= HA _ _ _ _ vA HH eA => // -/(_ (state_to_list B' bt ++ bt)); subst.
+      case: ifP => // _.
       move=> [tl[->->]]; eexists => //.
-    - move=> A HA B0 _ B HB []//A' B0' B' has_cut bt/=/and3P[vA] + + /andP[HA' HB'].
+    - move=> A HA B0 _ B HB []//A' B0' B' m has_cut bt/=/and4P[oA vA] + + /andP[HA' HB'].
       case: ifP => /=[sA vB bB0|sA /eqP->].
-        case eB: exp_done_rel => [[] []][]/andP[]///andP[/eqP?]/eqP ? _?; subst; have:= HB _ _ _ vB HB' eB => /(_ bt).
+        case eB: exp_done_rel => [[[] m1] []][]/andP[]///andP[/eqP?]/eqP ????; subst; have:= HB _ _ _ _ vB HB' eB => /(_ bt).
           move=> [x[tl H]]; do 2 eexists; move=> l.
           rewrite 2!H// (success_state_to_list sA)/=.
           rewrite /=(success_state_to_list (success_cut sA)) (state_to_list_clean_cutl_empty vA sA)//=.
+        case: ifP => // _.
         move=> [tl H].
         rewrite 2!H// (success_state_to_list sA)/=; eexists => //.
-      case eA: exp_done_rel => [[] has_cut'] H// [/andP[/eqP?/eqP??]]; subst.
+      case eA: exp_done_rel => [[[]m1] has_cut'] H// [/andP[/eqP?/eqP???]]; subst.
       rewrite (exp_done_rel_failed eA) in H.
       have [hd H1]:= (base_and_state_to_list H).
-      case: has_cut eA => eA; have:= HA _ _ _ vA HA' eA => /(_ bt).
+      case: has_cut eA => eA; have:= HA _ _ _ _ vA HA' eA => /(_ bt).
         move=> [x[tl H2]]; do 2 eexists; move => l; rewrite 2!H2//=cats0.
         rewrite !H1//.
+      case: ifP => ///eqP?; subst.
       move=> [tl H2]; eexists; rewrite !H2// !H1//=.
       admit.
   Admitted.
@@ -1219,10 +1247,13 @@ Module Nur (U : Unif).
       move=> [y[ys[sB H]]].
       rewrite sA; exists x, xs; split => //.
       have eB:= exp_done_shapeP HB.
-      have eA:= expand_exp_done_shape_exp HA eB.
-      have [tl[]] := bibi bt vA eB eA.
-      rewrite sA sB =>-[??][??]; subst.
-      admit. (*problem with subst...*)
+      have [m eA]:= expand_exp_done_shape_exp HA eB.
+      have := bibi bt vA eB eA.
+      case: ifP => ///eqP?; subst.
+        move=> [tl].
+        rewrite sA sB =>-[] [??][??] ; subst.
+        admit. (*problem with subst*)
+      admit.
   Admitted.
 
   Lemma runElpiP: forall A, runElpi A.
