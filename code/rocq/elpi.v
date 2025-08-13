@@ -1016,7 +1016,8 @@ Module Nur (U : Unif).
     | And A1 B01 B1, And A2 B02 B2 =>
       if success A1 then 
         let: (b1, m, has_cut) := exp_done_rel B1 B2 in
-        ((if has_cut then (cutl A1 == A2) && (cutl B01 == B02) else (A1 == A2) && (B01 == B02)) && b1,  m, has_cut)
+        ((if has_cut then (cutl A1 == A2) && (cutl B01 == B02)
+      else (A1 == A2) && (B01 == B02)) && b1,  m, has_cut)
       else 
         let: (b1, m, has_cut) := exp_done_rel A1 A2 in
         (b1 && (B01 == B02) && (B1 == B2),  m, has_cut)
@@ -1052,7 +1053,8 @@ Module Nur (U : Unif).
     - move=> A HA B0 _ B HB/=/andP[] /HA->/HB->; rewrite andbF//.
   Qed.
 
-  Lemma exp_done_rel_dead {A B m has_cut}: exp_done_rel A B = (true, m, has_cut) -> is_dead A = is_dead B.
+  Lemma exp_done_rel_dead {A B m has_cut}: 
+    exp_done_rel A B = (true, m, has_cut) -> is_dead A = is_dead B.
   Proof.
     elim: A B m has_cut => //.
     - move=> []//.
@@ -1069,7 +1071,8 @@ Module Nur (U : Unif).
       case: b H => //H[] _ _ _; apply: HA H.
   Qed.
 
-  Lemma exp_done_rel_failed {A B m1 b}: exp_done_rel A B = (true, m1, b) -> (failed A = false)%type.
+  Lemma exp_done_rel_failed {A B m1 b}: 
+    exp_done_rel A B = (true, m1, b) -> (failed A = false)%type.
   Proof.
     elim: A B m1 b => //.
     - move=> A HA s B HB []//A' s' B' m1 has_cut/=; case: ifP => dA.
@@ -1090,7 +1093,8 @@ Module Nur (U : Unif).
   Proof. rewrite/big_or; case: F => [|[]]//. Qed.
 
   Lemma expand_exp_done_shape_cb {s1 A s2 B}: 
-    expand s1 A = CutBrothers s2 B -> exp_done_shape B -> (exp_done_rel A B) = (true, true, true).
+    expand s1 A = CutBrothers s2 B -> exp_done_shape B -> 
+      (exp_done_rel A B) = (true, true, true).
   Proof.
     elim: A s1 s2 B => //; auto.
     - move=> p[|t]//=s1 s2 B [_<-]//.
@@ -1180,7 +1184,9 @@ Module Nur (U : Unif).
         ((state_to_list A bt = [:: [::cut [::] & x] & tl]) * (state_to_list B l = [::x]))%type
     else 
     (* this is a deep cut, therefore the ca are non empty *)
-    if m then exists x tl ca ca', ((state_to_list A bt = [:: [::cut ca & x] & tl]) * (state_to_list B bt = [::x & ca']))%type
+    if m then exists x tl ca ca', 
+      ((state_to_list A bt = [:: [::cut ca & x] & tl]) * 
+        (state_to_list B bt = [::x & ca']))%type
     else forall l, state_to_list A l = state_to_list B l.
   Proof.
     elim: A B m has_cut bt => //.
@@ -1205,7 +1211,6 @@ Module Nur (U : Unif).
         have [x[tl H]] := HA _ _ _ (state_to_list B bt ++ bt) vA HH eA.
         rewrite 2!(H bt)/=.
         do 4 eexists; split => //.
-        (* admit. *)
       have:= HA _ _ _ (state_to_list B' bt ++ bt) vA HH eA.
       case: m eA => eA.
         (* A \/ B and A has a deep-level cut, B is not rejected *)
@@ -1227,7 +1232,6 @@ Module Nur (U : Unif).
         move=> H/andP[/eqP?/eqP?]???; subst => l.
         rewrite (success_state_to_list sA) H//.
       move=> H1; subst.
-      (* case: ifP => //. *)
       case eA: exp_done_rel => [[[] m1] has_cut'][]///andP[/eqP?/eqP???]; subst.
       rewrite (exp_done_rel_failed eA) in H1.
       have [hd H2]:= (base_and_state_to_list H1).
@@ -1276,7 +1280,7 @@ Module Nur (U : Unif).
       case: m eA => // eA.
         rewrite sA sB.
         move=> [x0[tl[ca[ca' [[??] [??]]]]]]; subst.
-        apply: CutE.    
+        apply: CutE.
         admit. (*hard problem?*)
       move=> /(_ bt); rewrite sA sB => -[??]; subst.
       admit. (*problem with subst*)
