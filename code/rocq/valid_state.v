@@ -326,6 +326,9 @@ Module valid_state (U:Unif).
     - move=> A HA s B HB s1/= _; case: ifP => dA; case: expand => //.
   Qed.
 
+  Lemma base_and_bbAnd {A}: base_and A -> bbAnd A.
+  Proof. rewrite/bbAnd=>->//. Qed.
+
   Lemma valid_state_expand {s A r}:
     valid_state A -> expand s A = r -> valid_state (get_state r).
   Proof.
@@ -341,14 +344,16 @@ Module valid_state (U:Unif).
       case: ifP => [sA vB /= bB0 | sA /eqP->]/=.
         rewrite succes_is_solved//=.
         have:= HB s1 vB.
-        case X: expand => //[s2 C|s2 C|C|s2 C]/=vC; rewrite ?valid_state_cut// ?success_cut// ?sA ?vA vC//?oA//is_or_cutl//.
+        case X: expand => //[s2 C|s2 C|C|s2 C]/=vC; rewrite ?valid_state_cut// ?success_cut// ?sA ?vA vC//?oA//is_or_cutl// bbAnd_cutl//.
       case: ifP => [fA bB|fA bB].
         rewrite failed_expand//=vA sA eqxx /= bB oA fA//.
       have:= HA s1 vA.
       case X: expand => //=[|||s2 C] H; last first; [|rewrite H eqxx /bbAnd bB if_same base_and_valid//if_same (is_or_expand oA X)// ..].
       have:= HB s2 (base_and_valid bB).
       have /=oC := is_or_expand oA X.
-      case Y: expand => //= H1; rewrite /bbAnd bB if_same H1 ?is_or_cutl//?valid_state_cut//?success_cut//(expand_solved_success X)// H oC//.
+      have [_ sC]:= expand_solved_success X.
+      case Y: expand => //= H1; rewrite ?oC?H?H1?bB?sC?(base_and_bbAnd bB)//.
+      rewrite is_or_cutl//valid_state_cut//success_cut//=bbAnd_cutl//base_and_bbAnd//.
   Qed.
 
   Lemma valid_state_big_or_aux {pr s l} : valid_state (big_or_aux pr s l).

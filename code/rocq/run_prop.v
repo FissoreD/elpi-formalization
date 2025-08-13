@@ -248,7 +248,7 @@ Module RunP (A: Unif).
         by move=> [s'[A'[B' [HA'[HB' ->]]]]]/=; rewrite (HA _ _ HA') (HB _ _ HB') same_structure_id.
       - move=> /simpl_expand_and_cut[].
           by move=>[A'[HA'->]]/=; rewrite !same_structure_id (HA _ _ HA').
-        move=>[s'[A'[B'[HA'[HB' ->]]]]]/=; rewrite (HB _ _ HB') same_structure_id//.
+        move=>[s'[A'[B'[HA'[HB' ->]]]]]/=; rewrite (HB _ _ HB')//(same_structure_cut same_structure_id).
         by have:= (HA _ _ HA') => /same_structure_cut->.
       - move=> /simpl_expand_and_fail[].
           by move=> [A'[HA'->]]/=; rewrite !same_structure_id (HA _ _ HA').
@@ -330,33 +330,67 @@ Module RunP (A: Unif).
       apply: expanded_step EB' EB2.
   Qed.
 
+  Lemma expand_success_done {A B0 s1 B s2 B' b}: 
+    success A -> expandedb s1 B (Done s2 B') b ->
+      expanded s1 (And A B0 B) 
+        (Done s2 (And (if b then cutl A else A) (if b then cutl B0 else B0) B')).
+  Proof.
+    remember (Done _ _) as RD eqn:HRD => + H.
+    elim: H A B0 s2 B' HRD => //; clear.
+    - move=> s s' A A' H A0 B0 _ _ [<-<-] sA0.
+      exists false.
+      apply: expanded_done.
+      rewrite /= (succes_is_solved _ sA0) H//.
+    - move=> s s' r A B b HA HB IH A0 B0 s2 C? sA0; subst.
+      exists true.
+      have [b1 {}IH]:= IH _ (cutl B0) _ _ erefl (success_cut sA0).
+      rewrite !cutl2 !if_same in IH.
+      apply: expanded_cut.
+      move=>/=; rewrite (succes_is_solved _ sA0) HA//.
+      apply: IH.
+    - move=> s s' r A B b HA HB IH A0 B0 s2 C ? sA0; subst.
+      have [b1 H]:= IH A0 B0 _ _ erefl sA0.
+      eexists.
+      apply: expanded_step.
+        rewrite /= (succes_is_solved _ sA0) HA//.
+      apply H.
+  Qed.
+
+  (* This can be factored with the previous proof... *)
+  Lemma expand_success_fail {A B0 s1 B B' b}: 
+    success A -> expandedb s1 B (Failed B') b ->
+      expandedb s1 (And A B0 B) 
+        (Failed (And (if b then cutl A else A) (if b then cutl B0 else B0) B')) b.
+  Proof.
+    remember (Failed _) as RD eqn:HRD => + H.
+    elim: H A B0 B' HRD => //; clear.
+    - move=> s A A' HA X B0 _ [<-] sX.
+      apply: expanded_fail.
+      rewrite /= (succes_is_solved _ sX) HA//.
+    - move=> s s' r A B b HA HB IH A0 B0 C? sA0; subst.
+      have {}IH := IH _ (cutl B0) _ erefl (success_cut sA0).
+      rewrite !cutl2 !if_same in IH.
+      apply: expanded_cut.
+      move=>/=; rewrite (succes_is_solved _ sA0) HA//.
+      apply: IH.
+    - move=> s s' r A B b HA HB IH A0 B0 C ? sA0; subst.
+      have {}IH := IH A0 B0 _ erefl sA0.
+      apply: expanded_step.
+        rewrite /= (succes_is_solved _ sA0) HA//.
+      apply IH.
+  Qed.
+
   Lemma expanded_and_correct {s0 s1 s2 A C B0 B D x} :
       expanded s0 A (Done s1 B) -> expandedb s1 C (Done s2 D) x ->
-        expanded s0 (And A B0 C) (Done s2 (And (if x then cutl B else B) B0 D)).
+        expanded s0 (And A B0 C) 
+          (Done s2 (And (if x then cutl B else B) (if x then cutl B0 else B0) D)).
   Proof.
     remember (Done _ _) as RD eqn:HRD => -[b H].
     elim: H s1 s2 C B0 B D HRD x => //=; clear.
-    + move=> s1 s2 A B + s3 s4 C D E F [??] b H;subst.
-      remember (Done s4 F) as RD eqn:HRD.
-      elim: H s1 A s4 D E F HRD => //=; clear.
-      + move=> s1 s2 A A' HA s4 B s3 D B' ? [<-<-] HB.
-        eexists; apply: expanded_done => /=; by rewrite HB HA.
-      + move=> s s' r A B b HA HB IH s2 C s3 D E F? HC;subst.
-        have [_ +] := expand_solved_success HC.
-        move=>/success_cut => H.
-        have /= H1 := succes_is_solved _ H.
-        have /= [b1 {}IH] := IH _ _ _ D _ _ erefl (H1 _).
-        rewrite cutl2 in IH.
-        eexists; apply: expanded_cut => //=.
-          rewrite HC HA => //=.
-        destruct b; apply: IH.
-      + move=> s1 s2 r A B b HA HB IH s3 C s4 F0 D F ? HC; subst.
-        have HC':= expand_solved_is_solved HC.
-        have [b1 {}IH] := IH s2 D _ F0 D _ erefl (HC' _).
-        eexists.
-        apply: expanded_step => /=.
-          by rewrite HC HA.
-        by apply: IH.
+    + move=> s1 s2 A B eA s3 s4 C D E F [??] b;subst.
+      have [??]:= expand_solved_same eA; subst.
+      have:= (expand_solved_success eA).1.
+      apply: expand_success_done.
     + move=> s s' r A CA ? H H1 IH ?? ? B0 ?? /[subst1] b H2.
       have [b1 {}IH]:= IH _ _ _ B0 _ _ erefl _ H2.
       eexists; apply: expanded_cut => //=.
@@ -448,28 +482,15 @@ Module RunP (A: Unif).
 
   Lemma run_and_fail_both {s s' A B B0 SA FB b}:
     expanded s A (Done s' SA) -> expandedb s' B (Failed FB) b ->
-      expanded s (And A B0 B) (Failed (And (if b then cutl SA else SA) B0 FB)).
+      expanded s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)).
   Proof.
     move=> [b1 H].
     remember (Done _ _) as D eqn:HD.
     elim: H B s' SA HD b => //=; clear.
     + move=> s1 s2 A B HA C s3 D [??] b H; subst.
-      remember (Failed _) as F eqn:HF.
-      elim: H B0 FB s1 A D HA HF; clear => //.
-      + move=> s A ? H ????? EA [] /[subst1].
-        eexists; apply: expanded_fail => //= ; rewrite EA H //=.
-      + move=> s s' r A B b HA HB IH B0 F s1 C D HC ?;subst.
-        have H := succes_is_solved s' (success_cut (expand_solved_success HC).2).
-        have [b' H1 ]:= IH B0 F s' (cutl D) (cutl D) H erefl.
-        rewrite cutl2 if_same in H1.
-        eexists; apply: expanded_cut => /=.
-          by rewrite HC HA.
-        apply: H1.
-      + move=> s s' r A B b HA HB IH B0 F s1 C D HC ?;subst.
-        have [b1 H1] := IH B0 F s' D D (succes_is_solved s' (expand_solved_success HC).2) erefl.
-        eexists; apply: expanded_step => /=.
-          by rewrite HC HA.
-        apply: H1.
+      eexists.
+      have H1:= expand_solved_same HA; rewrite 2!H1.
+      apply: expand_success_fail (expand_solved_success HA).2 H.
     + move=> s s' r A B ? H H1 IH B1 s1 alt ? b H2; subst => //=.
       have [b1 H3] := IH _ _ _ erefl b H2.
       eexists;apply: expanded_cut => /=.

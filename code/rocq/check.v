@@ -234,22 +234,21 @@ Module check (U:Unif).
         rewrite get_state_Or/=cA no_alt_dead//=is_ko_expand//=?is_ko_cutr//cutr2//.
       have:= HA s1 fA => + dA.
       case Y: expand => /=->; rewrite !cutr2 eqxx no_alt_cut if_same//.
-    - move=> A HA B0 _ B HB s /=.
+    - move=> A HA B0 HB0 B HB s /=.
       move=>/orP[].
         move=>kA; rewrite is_ko_expand///=kA//.
       move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
         case X: expand => //= [|||s1 C]; try rewrite cB0 cB/= fB0 fB !orbT//.
         rewrite get_state_And.
-        rewrite /= (HB s1) // fB0 cB0 !andbT /=.
+        rewrite /= (HB s1) //.
         have := @expand_has_cut _ s1 cB.
-        move=> [].
-          by move=>->; rewrite orbT.
-        move=> H1; rewrite H1.
-        rewrite no_free_alt_cutl// !orbT//.
+        case H1: (is_cutbrothers (expand s1 B)).
+          move=>_/=; rewrite has_cut_cutl// no_free_alt_cutl no_free_alt_cutl !orbT//.
+        move=> []//H2; rewrite H2 fB0 cB0 orbT//.
       have:= HA s fA.
       case X: expand => //= [|||s1 C] H1; try rewrite H1 orbT fB fB0 orbT//.
       have:= HB s1 fB; case Y: expand => //= H2; try rewrite fB0 H2 H1 orbT !orbT//.
-      rewrite no_free_alt_cutl// orbT fB0 H2 orbT//.
+      rewrite !no_free_alt_cutl H2 !orbT//.
   Qed.
 
   Goal forall sP sV s, no_free_alt sP sV (Or OK s OK) == false.

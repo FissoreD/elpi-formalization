@@ -416,11 +416,11 @@ Module Run (U : Unif).
     match r with
     | Failure B       => Failure       (And A B0 B)
     | Expanded s B    => Expanded    s (And A B0 B)
-    | CutBrothers s B => CutBrothers s (And (cutl A) B0 B)
+    | CutBrothers s B => CutBrothers s (And (cutl A) (cutl B0) B)
     | Solved s B      => Solved      s (And A B0 B)
     end.
 
-  Lemma get_state_And A B0 B : get_state (mkAnd A B0 B) = And (if is_cutbrothers B then cutl A else A) B0 (get_state B).
+  Lemma get_state_And A B0 B : get_state (mkAnd A B0 B) = And (if is_cutbrothers B then cutl A else A) ((if is_cutbrothers B then cutl B0 else B0)) (get_state B).
   Proof. by case: B. Qed.
 
   Lemma get_state_Or A s B : get_state (mkOr A s B) = Or A s (get_state B).
@@ -646,7 +646,7 @@ Module Run (U : Unif).
   Lemma simpl_expand_and_cut {s s2 A B B0 C}:
     expand s (And A B0 B) = CutBrothers s2 C ->
     (exists A', expand s A = CutBrothers s2 A' /\ C = And A' B0 B ) \/
-      (exists s' A' B', expand s A = Solved s' A' /\ expand s' B = CutBrothers s2 B' /\ C = And (cutl A') B0 B').
+      (exists s' A' B', expand s A = Solved s' A' /\ expand s' B = CutBrothers s2 B' /\ C = And (cutl A') (cutl B0) B').
   Proof.
     move=> //=; case X: expand => //=.
     + by move=> [] /[subst1]; left; eexists.
