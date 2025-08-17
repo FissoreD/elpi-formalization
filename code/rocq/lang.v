@@ -408,7 +408,7 @@ Module Run (U : Unif).
     match r with
     | Failure B       => Failure     (Or A sB B)
     | Expanded s B    => Expanded s  (Or A sB B)
-    | CutBrothers s B => CutBrothers s  (Or A sB B)
+    | CutBrothers s B => Expanded s  (Or A sB B)
     | Solved s B      => Solved   s  (Or A sB B)
     end.
 
@@ -680,6 +680,16 @@ Module Run (U : Unif).
     - move=> A HA B0 _ B HB s1 /= kA.
       rewrite HA//.
   Qed.
+
+  Lemma is_dead_big_and {p r}: is_dead (big_and p r) = false.
+  Proof. elim: r p => //=. Qed.
+
+  Lemma is_dead_big_or {p r rs}: is_dead (big_or_aux p r rs) = false.
+  Proof. 
+    elim: rs r p => //=.
+    - move=> *; apply: is_dead_big_and.
+    - move=> [s r] l/= H rs p; rewrite H andbF//.
+  Qed. 
 
   Lemma is_dead_expand {s A}: 
     is_dead A -> expand s A = Failure A.
@@ -1065,7 +1075,7 @@ Module Run (U : Unif).
   Qed.
 
   Lemma next_alt_failed {s A s1 B}:
-    next_alt s A = Some (s1, B) -> failed B = false.
+    next_alt s A = Some (s1, B) -> ((failed B = false) * (success B = false))%type.
   Proof.
     elim: A B s s1 => //.
     - move=>/=???[_<-]//.
@@ -1076,15 +1086,15 @@ Module Run (U : Unif).
           move=>[_<-]/=; rewrite dA; apply: HB X.
         case Y: next_alt => [[s4 E]|]//.
           move=>[_<-]/=.
-          by rewrite (HA _ _ _ Y)//(proj2 (next_alt_dead Y)).
+          rewrite (HA _ _ _ Y)//(proj2 (next_alt_dead Y))(HA _ _ _ Y)//.
         case: ifP => dB//.
         have [s' H]:= next_alt_some X s.
         rewrite H.
-        move=> [_<-]/=; rewrite is_dead_dead//; apply: HB X.
+        by move=> [_<-]/=; rewrite is_dead_dead//; apply: HB X.
       case: ifP => //dA.
       case Y: next_alt => [[s4 E]|]//.
         move=>[_<-]/=.
-        by rewrite (HA _ _ _ Y)// (proj2 (next_alt_dead Y)).
+        rewrite (HA _ _ _ Y)// (proj2 (next_alt_dead Y))(HA _ _ _ Y)//.
       case: ifP => //dB.
       rewrite (next_alt_none X s)//.
       (* do 2 case: ifP => //; move=> fB dB [_<-]/=. *)
@@ -1093,12 +1103,12 @@ Module Run (U : Unif).
     case: ifP => dA//.
     case: ifP => fA.
       case X: next_alt => //[[s3 D]].
-      case: ifP => // fB0 [_<-]/=; rewrite fB0 andbF (HA _ _ _ X)//.
+      case: ifP => // fB0 [_<-]/=; rewrite fB0 andbF !(HA _ _ _ X)//.
     case X: next_alt => [[s4 E]|].
-      move=>[_<-]/=; rewrite fA (HB _ _ _ X) andbF//.
+      move=>[_<-]/=; rewrite fA !(HB _ _ _ X) andbF//.
     case Y: next_alt => //[[s3 D]].
     case: ifP => // fB0 [_<-]/=.
-    rewrite fB0 andbF (HA _ _ _ Y)//.
+    rewrite fB0 andbF !(HA _ _ _ Y)//.
   Qed.
 
   Lemma next_alt_or_some {s B s' C y}:

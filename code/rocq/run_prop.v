@@ -231,11 +231,9 @@ Module RunP (A: Unif).
         move=> A HA s B HB s1 [s2|s2||s2] C.
         - move=> /=.
           case: ifP => dA.
-            case eB: expand => //[s1' B'][_<-]; rewrite eqxx same_structure_id (HB _ _ eB)//.
+            case eB: expand => //[s1' B'|s1' B'][_<-]; rewrite eqxx same_structure_id (HB _ _ eB)//.
           case eA: expand => //[s1' A'|s1' A'][_<-]; rewrite eqxx (HA _ _ eA)?same_structure_id// same_structure_cutr//same_structure_id//.
-        - move=> /=; case: ifP => dA.
-            case eB: expand => //[s1' B'][_<-]; rewrite eqxx same_structure_id (HB _ _ eB)//.
-          case eA: expand => //.
+        - move=> /=; case: ifP => dA; case: expand => //.
         - move=> /simpl_expand_or_fail [].
             by move=>[A'[_[HA'->]]]/=; rewrite eqxx (HA _ _ HA') same_structure_id.
           by move=> [B'[_ [HB'->]]]/=; rewrite eqxx same_structure_id (HB _ _ HB').
@@ -552,16 +550,15 @@ Module RunP (A: Unif).
     + move=> s s1 r C D b2 + HB IH s' s2 A' B' A B ??; subst.
       move=> /=; case: ifP => //dA.
         case eB: expand => //[s1' B1'][??]; subst.
-        have:= IH _ _ _ _ _ _ erefl erefl.
-        rewrite dA => -[][]// _[->] [b H]; right; auto.
-        repeat eexists; apply: expanded_cut eB H.
       case eA: expand => //.
     + move=> s s1 r C D b2 + HB IH s' s2 A' B' A B ??; subst.
       move=> /=.
       case: ifP => dA.
-        case eB: expand => //[s1' B1'][??]; subst.
+        case eB: expand => //[s1' B1'|s1' B1'][??]; subst.
+          have:= IH _ _ _ _ _ _ erefl erefl; rewrite dA => -[][]// _[->][b H].
+          right; repeat eexists; apply: expanded_step eB H.
         have:= IH _ _ _ _ _ _ erefl erefl; rewrite dA => -[][]// _[->][b H].
-        right; repeat eexists; apply: expanded_step eB H.
+        right; repeat split; eexists; apply: expanded_cut eB H.
       case eA: expand => //[s1' A1'|s1' A1'][??]; subst; left; repeat split;
         have:= IH _ _ _ _ _ _ erefl erefl => -[][]; 
         rewrite (expand_not_dead dA eA)// => _ [b [H1 H2]]; subst.
