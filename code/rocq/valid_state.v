@@ -81,7 +81,9 @@ Module valid_state (U:Unif).
 
   Fixpoint is_and A := 
     match A with
+    | And Top _ _ => false
     | And _ _ A => is_and A
+    (* | And A _ B => if success A then is_and B else bbAnd A *)
     | Bot | Top | OK => true
     | _ => false
     end.
@@ -133,7 +135,7 @@ Module valid_state (U:Unif).
   Proof. rewrite/bbAnd => /orP[/base_and_is_and|/base_and_ko_is_and]//. Qed.
 
   Lemma is_and_cutl {A}: is_and A -> is_and (cutl A).
-  Proof. elim: A => //. Qed.
+  Proof. elim: A => // -[]// A s B _ C0 _ C HB/= aC; case: ifP => dA; auto. Qed.
 
   Lemma is_or_cutl {A}: is_or A -> is_or (cutl A).
   Proof. elim: A => //A HA s B HB/=; rewrite fun_if/=if_same//. Qed.
@@ -266,6 +268,10 @@ Module valid_state (U:Unif).
     rewrite eqxx//.
   Qed.
 
+  Lemma base_ko_and_cutl {B0}:
+    base_and_ko B0-> base_and_ko (cutl B0).
+  Proof. elim: B0; move=> //[]// _ B0 _ B HB/=/and3P[_ /eqP->]/HB->; rewrite eqxx//. Qed.
+
   Lemma bbAnd_cutl{B0}:
     bbAnd B0 -> bbAnd (cutl B0).
   Proof.
@@ -334,14 +340,28 @@ Module valid_state (U:Unif).
     - move=> A HA s B HB s1/= _; case: ifP => dA; case: expand => //.
   Qed.
 
+  Lemma expand_top_right {s1 A r}: expand s1 A = r -> get_state r <> Top.
+  Proof. 
+    move=><-; clear r; elim: A s1 => //.
+    - move=> p []// t s1; rewrite /=/big_or; case: F=>//[[]]//.
+    - move=> A HA s B HB s1/=.
+      case: ifP => //.
+        rewrite get_state_Or//.
+      case: expand => //.
+    - move=> A HA B0 _ B HB s1/=.
+      case: expand => //??; rewrite get_state_And//.
+  Qed.
+
   Lemma is_and_expand {s A r}: is_and A -> expand s A = r -> is_and (get_state r).
   Proof.
     move=> + <-; clear r. 
     elim: A s => //.
     move=> A HA B0 _ B HB s1/= aB.
-    case eA: expand => //=.
-    rewrite get_state_And//=.
-    apply: HB aB.
+    case eA: expand => //=[? A'|? A'|A'|? A']; have /=H := (expand_top_right eA); try by destruct A, A'.
+    rewrite get_state_And/=.
+    have {}aB : is_and B by destruct A.
+    rewrite (HB _ aB).
+    case: ifP; case hA': A' {eA} H => //=; case: ifP => //.
   Qed.
 
   Lemma base_and_bbAnd {A}: base_and A -> bbAnd A.
@@ -483,6 +503,23 @@ Module valid_state (U:Unif).
       rewrite next_alt_aux_base_and//. 
   Qed.
 
+  Lemma next_alt_top {s1 s2 A B}:
+    next_alt s1 A = Some (s2, B) -> ((A = Top) * (B = Top)) \/ ((A <> Top) /\ (B <> Top)).
+  Proof.
+    case: A => //.
+    - move=> [??]; subst; auto.
+    - move=> p a [_<-]; right => //.
+    - move=> ???/=.
+      case: ifP; case: next_alt => //; try by case: ifP => //; case: next_alt => //[[]]????[_<-]; right.
+      all: try by (move=> [] ??? -[_<-]; right).
+    - move=> ???/=; case: ifP => //.  
+      case: ifP => //.
+        by case: next_alt => //[[]]??; case: ifP => ??? // [_<-]; right.
+      case: next_alt => //[[]????[_<-]|??].
+        by right.
+      by case: next_alt => //[[??]]; case: ifP => //?[?<-];right.
+  Qed.
+
   Lemma is_and_or_next_alt {s1 A s2 B}: 
     valid_state A ->
       next_alt s1 A = Some (s2, B) -> ((is_or A = is_or B) * (is_and A = is_and B)).
@@ -500,14 +537,23 @@ Module valid_state (U:Unif).
         rewrite (valid_state_dead1 vA) success_failed//.
         case nB: next_alt => //[[]|].
           move=>[_<-]//=; rewrite (HB _ _ _ vB nB)//.
-        case nA: next_alt => //[[]]; case: ifP => // _ [_<-]//=.
+        case nA: next_alt => //[[s3 D]]; case: ifP => // _ [_<-]//=.
         rewrite (bbAnd_is_and bB0) aB//.
+        have [H|[H1 H2]]:= next_alt_top nA.
+          rewrite !H//.
+        destruct A, D => //.
       rewrite (valid_state_dead1 vA).
       case: ifP => [fA bB|fA bB].
-        case nA: next_alt => //[[]]; case: ifP => // _ [_<-]//=.
-      case nB: next_alt => //[[]|].
+        case nA: next_alt => //[[s3 D]]; case: ifP => // _ [_<-]//=.
+        have [H|[H1 H2]]:= next_alt_top nA.
+          rewrite !H//.
+        destruct A, D => //.
+      case nB: next_alt => //[[s3 D]|].
         move=>[_<-]//=; rewrite (HB _ _ _ (base_and_valid bB) nB)//.
-      case nA: next_alt => //[[]]; case: ifP => // _ [_<-]//.
+      case nA: next_alt => //[[s3 D]]; case: ifP => // _ [_<-]//=.
+      have [H|[H1 H2]]:= next_alt_top nA.
+        rewrite !H//.
+      destruct A, D => //.
   Qed.
 
   Lemma valid_state_next_alt {s1 s2 A B}: 

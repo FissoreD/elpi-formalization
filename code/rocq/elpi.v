@@ -1708,12 +1708,29 @@ Module Nur (U : Unif).
       case eA: exp_done_rel => [[[] b2'] []][]///andP[/eqP?/eqP?]??; subst; rewrite (HA _ _ _ eA).
          *)
 
+  Lemma exp_done_rel_tff_has_sup_cut {B B' b1 b2}:
+    valid_state B -> has_sup_cut B -> exp_done_rel B B' = (true, b1, b2) ->
+      has_sup_cut B'.
+  Proof.
+    elim: B B' b1 b2 => //.
+    - move=> []//.
+    - move=> p[]//[]//.
+    - move=> A HA B0 _ B HB/=[]//A' B0' B' b1 b2 /and5P[oA vA aB].
+      case: ifP => /=[sA vB bB0 cB|sA /eqP->].
+        case eB: exp_done_rel => [[[] b2'] []][]/andP[]///andP[/eqP?/eqP?] _ ??; subst.
+          rewrite (HB _ _ _ vB cB eB) success_cut //.
+        rewrite sA (HB _ _ _ vB cB eB)//.
+      case eA: exp_done_rel => [[[] b2'] hc]//; rewrite (exp_done_rel_failed eA).
+      move=> bB cA [] /andP[/eqP?/eqP?]??; subst.
+      rewrite base_and_has_sup_cut// (HA _ _ _ vA cA eA) if_same//.
+    Qed.
+
   Lemma bibi {A B m has_cut}:
     valid_state A -> exp_done_shape B -> exp_done_rel A B = (true, m, has_cut) ->
     if has_cut then 
-      forall l, exists x tl,
+      forall m l, exists x tl,
         (* this is a top-level cut, therefore the ca are empty *)
-        ((state_to_list A [::] = [:: [::cut [::] & x] & tl]) * (state_to_list B l = [::x]))%type
+        ((state_to_list A m = [:: [::cut [::] & x] & tl]) * (state_to_list B l = [::x]))%type
     else 
     (* this is a deep cut, therefore the ca are non empty *)
     if m then exists x ca tl, 
@@ -1722,7 +1739,6 @@ Module Nur (U : Unif).
     else forall l, state_to_list A l = state_to_list B l.
   Proof.
     elim: A B m has_cut => //.        (* A \/ B and A has a deep-level cut, B is not rejected *)
-
     - move=> []//= m has_cut _ _ [??]; subst; eexists; auto.
     - move=> /= p [|t]// []//= m hc _ _ [??]; subst.
       do 2 eexists; auto.
@@ -1732,7 +1748,7 @@ Module Nur (U : Unif).
           have Hb := (exp_done_rel_bool eB); subst.
           rewrite Hb.
           rewrite !(state_to_list_dead dA) map_add_cas_empty/=.
-          have:= HB _ _ _ vB HH eB => /(_ [::]).
+          have:= HB _ _ _ vB HH eB => /(_ [::] [::]).
           move=> [x[tl]] H; do 3 eexists.
           rewrite !H//=.
         have:= HB _ _ _ vB HH eB.
@@ -1742,7 +1758,7 @@ Module Nur (U : Unif).
       have vB := bbOr_valid bB.
       case eA: exp_done_rel => [[[] m1] []][] /eqP???//; subst; rewrite (exp_done_rel_dead eA) in dA; rewrite dA in HH.
         rewrite !state_to_list_cutr_empty//=cats0/=.
-        have [x[tl H]] := HA _ _ _  vA HH eA [::].
+        have [x[tl H]] := HA _ _ _  vA HH eA [::] [::].
         rewrite !H/=add_cas_empty map_add_cas_empty.
         have H1 := exp_done_rel_bool eA.
         rewrite !H1.
@@ -1753,8 +1769,8 @@ Module Nur (U : Unif).
       have {HA HB} := HA _ _ _ vA HH eA.
       case: m eA => eA; last first.
         move=> H l; rewrite H//.
-      move=> [x[tl[ca]]]H/=.
       rewrite cats0 !map_add_cas_empty.
+      move=> [x[tl[ca]]]H/=.
       {
         (* A \/ B and A has a deep-level cut, B is not rejected *)
         generalize (state_to_list B' [::]) => l.
@@ -1765,13 +1781,14 @@ Module Nur (U : Unif).
         rewrite !(success_state_to_list sA) !add_alt_empty1.
         case eB: exp_done_rel => [[b1 b] hc].
         case: hc eB => +[]/andP[]; case: b1 => // eB.
-          move=>/andP[/eqP?/eqP????]; subst => l.
+          move=>/andP[/eqP?/eqP????]; subst => l1 l2.
           have [? cB] := exp_done_rel_bool eB; subst.
           rewrite (success_state_to_list (success_cut sA))/=.
           rewrite (state_to_list_clean_cutl_empty vA sA) !add_alt_empty2/=map_id cB/=.
-          have:= HB _ _ _ vB HB' eB l.
+          have:= HB _ _ _ vB HB' eB l1 l2.
           move=> [x[tl H]].
-          rewrite !H; do 2 eexists => //.
+          rewrite !H; do 2 eexists => //; split => //.
+          rewrite success_state_to_list //.
         move=>/andP[/eqP?/eqP????]; subst.
         rewrite !(success_state_to_list sA) !add_alt_empty1.
         case: m eB => eB.
@@ -1779,7 +1796,15 @@ Module Nur (U : Unif).
           rewrite 2!H.
           remember (make_lB0 (state_to_list (clean_success A') [::]) (state_to_list B0' [::])).
           rewrite /make_lB/=.
+          case: ifP => cB.
+            rewrite (exp_done_rel_tff_has_sup_cut vB cB eB).
+            do 3 eexists; split => //.
+            admit.
           admit.
+        move=> l.
+        rewrite success_state_to_list// !add_alt_empty1.
+        rewrite (HB _ _ _ vB HB' eB).
+        do 2 f_equal.
         admit.
       move=> H1; subst.
       case eA: exp_done_rel => [[[] m1] has_cut'][]///andP[/eqP?/eqP???]; subst.
