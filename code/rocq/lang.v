@@ -158,6 +158,8 @@ Module Run (U : Unif).
   Definition is_fail A := match A with Failure _ => true | _ => false end.
   Definition is_cutbrothers X := match X with CutBrothers _ _ => true | _ => false end.
   Definition is_solved X := match X with Solved _ _ => true | _ => false end.
+  Definition is_cut X := match X with Goal _ Cut => true | _ => false end.
+
 
   Inductive exp_res := Done of Sigma & state | Failed of state.
   derive exp_res.
