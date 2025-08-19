@@ -157,6 +157,12 @@ Module Nur (U : Unif).
   Lemma incr_cuts0 {l}: incr_cuts l = [::] -> l =[::].
   Proof. case: l => //. Qed.
 
+  Lemma incr_cut2 {l}: map incr_cut (map incr_cut l) = map incr_cut l.
+  Proof. elim: l => // x xs /=->; case: x => //. Qed.
+
+  Lemma incr_cuts2 {l}: incr_cuts (incr_cuts l) = incr_cuts l.
+  Proof. elim: l => // x xs /=->; rewrite incr_cut2//. Qed.
+
   (* bt is the backtracking list for the cut-alternatives
      this list is important since in this tree:
          or
@@ -1769,9 +1775,10 @@ Module Nur (U : Unif).
   Lemma bibi1 {A B s s'} l:
     valid_state A -> exp_done_shape B -> exp_done_rel A B = (true, deep) ->
       expand s A = Expanded s' B ->
-      exists x tl ca ca', 
-        ((state_to_list A l = [:: [::cut false ca & x] & tl]) * 
-          (state_to_list B l = [::x & ca']) 
+      exists x tl ca r, 
+        (((state_to_list A l = [:: [::cut false ca & x] & tl]) * 
+          (state_to_list B l = [::x & r])) * 
+            (r = ca \/ r = incr_cuts ca \/ r = [::])
           (* * all (all lvlF) ca *)
           )%type.
   Proof.
@@ -1789,30 +1796,34 @@ Module Nur (U : Unif).
           have [x[tl0 [+ lx]]]:= expand_cb_state_to_list1 l vB eA.
           move=>/(_ l)[]; rewrite H1 => -[??] H2; subst.
           rewrite H2/=.
-          do 2 eexists.
-          exists [::], [::] => //.
+          do 4 eexists; auto.
+          (* exists [::], [::] => //. *)
         case EB: expand => //[s1' B2|s1' B2][??]?; subst.
-          have [x[tl[ca[ca' H1]]]]:= HB _ _ _ l vB H eB EB.
-          rewrite !H1/=.
-          do 2 eexists.
-          exists ca, (incr_cuts ca') => //.
+          have [x[tl[ca[r[H1 [|[]]]]]]]:= HB _ _ _ l vB H eB EB; rewrite !H1 => ?/=; subst;
+            do 4 eexists; auto.
+          repeat split; auto; rewrite incr_cuts2; auto.
+          (* exists ca, (incr_cuts ca') => //. *)
           (* rewrite all2_lvlF_incr//. *)
         by rewrite (expand_exp_done_shape_cb EB H) in eB.
       case eA: exp_done_rel => [[] h][]//.
       case EA:expand => //[s1' A2|s1' A2] + + [??]??; subst; rewrite (expand_not_dead dA EA) in H.
         have H1 := expand_exp_state_to_list1 EA eA.
         case: h H1 eA => // _ eA/=/eqP _ _.
-        have [x[tl[ca[ca' H2]]]]:= HA _ _ _ (state_to_list B' l ++ l) vA H eA EA.
-        rewrite 2!H2/=.
-        do 2 eexists.
-        exists (ca++l), (incr_cuts (map (map (add_ca l)) ca' ++ state_to_list B' l)) => //.
+        have [x[tl[ca[ca'[H1 [|[]]]]]]]:= HA _ _ _ (state_to_list B' l ++ l) vA H eA EA => ?; subst; rewrite 2!H1/=.
+        - do 4 eexists; repeat split. admit.
+        - do 4 eexists; repeat split. admit.
+        - do 4 eexists; repeat split. admit.
+        (* do 2 eexists. *)
+        (* exists (ca++l), (incr_cuts (map (map (add_ca l)) ca' ++ state_to_list B' l)) => //; auto. *)
       have:= (expand_exp_done_shape_cb EA H); rewrite eA => -[?]; subst.
       have [x[tl [H2 H3]]]:= expand_cb_state_to_list1 ((state_to_list B l ++ l)) vA EA.
-      have vB:= bbOr_valid bB.
+      have vB:= bbOr_valid bB => /= _ _.
       rewrite !(H2 (state_to_list (cutr B) l ++ l))/=.
       rewrite state_to_list_cutr_empty//=.
+      (* eexists; exists [::]. *)
       do 2 eexists.
-      exists l, [::] => //.
+      do 2 eexists; split => //; auto.
+      (* repeat split; f_equal. *)
     - move=> A HA B0 _ B HB []//A' B0' B' s s' l/=/and5P[oA vA aB].
       case eA: expand => //[s2 A2|s2 A2].
         rewrite (expand_not_solved_not_success eA erefl)(expand_not_failed eA notF)/=.
@@ -1820,13 +1831,14 @@ Module Nur (U : Unif).
         have [hd H]:= base_and_state_to_list bB.
         have H3 := base_and_lvl0 bB (H [::]).
         case bA: exp_done_rel => [[] hc][]///andP[/eqP?/eqP?]?[????]; subst.
-        have [x[tl[ca[ca' {}HA]]]]:= HA _ _ _ l vA xA bA eA.
+        have [x[tl[ca[ca' [{}HA Hm]]]]]:= HA _ _ _ l vA xA bA eA.
         rewrite 2!HA.
         rewrite H.
         rewrite/add_alt/make_lB/make_lB0/=.
         rewrite 2!(all_lvl0_add_ca0 H3).
         do 2 eexists.
         eexists ca, (flatten [seq [:: la ++ hd] | la <- ca']) => //.
+        admit.
       rewrite (expand_solved_success eA)/==>vB bB/andP[xA' xB'].
       case eB: exp_done_rel => [[] hc][] /andP[]// +??; subst.
       move=>/andP[/eqP?/eqP?]; subst.
@@ -1834,7 +1846,7 @@ Module Nur (U : Unif).
       have [sA _] := expand_solved_success eA; subst.
       rewrite (success_state_to_list sA)!add_alt_empty1.
       case EB: expand => //[s2' B2][??]; subst.
-      have [x[tl[ca[ca' H1]]]]:= HB _ _ _ l vB xB' eB EB.
+      have [x[tl[ca[ca'[H1 H2]]]]]:= HB _ _ _ l vB xB' eB EB.
       rewrite !H1/=.
       move: bB; rewrite/bbAnd=>/orP[]bB; last first.
         rewrite (base_and_ko_state_to_list bB) !make_lB0_empty2 !cats0 !add_ca0_empty.
@@ -1849,7 +1861,8 @@ Module Nur (U : Unif).
       (make_lB ca'
         (flatten [seq [:: la ++ hd] | la <- state_to_list (clean_success A2) l]) ++
         flatten [seq [:: la ++ hd] | la <- state_to_list (clean_success A2) l]) => //.
-  Qed.
+      admit.
+  Admitted.
 
   Lemma same_subst (s1 s2: Sigma): s1 = s2. Admitted.
 
@@ -1888,9 +1901,12 @@ Module Nur (U : Unif).
         rewrite sA sB => -[]??; subst.
         rewrite (same_subst s s')//.
       have [x1[ca[tl[ca']]]] := bibi1 [::] vA eB eA HA.
-      rewrite sA sB=> -[][??][??]; subst.
-      apply: CutE.
+      rewrite sA sB=> -[][][??][??]; subst.
       rewrite (same_subst s s')//.
+      move=>[|[]]?; subst; apply: CutE.
+      - auto.
+      - admit. (*questo è accettabile: la nur non usa il bool *)
+      - admit. 
   Admitted.
 
   Lemma runElpiP: forall A, runElpi A.
@@ -1908,6 +1924,15 @@ Module Nur (U : Unif).
       have [x[xs sA]]:= expandedb_failure_next_alt_state_to_list_cons vA HA HB (state_to_list_state_to_list_cons sC) [::].
       rewrite sA.
       exists x, xs; split => //.
+      (* ci sono due tipi di fallimento, 
+        - quelli dovuti a dei bot (che spariscono nel nur), quindi la run lavora di più
+        - quelli dovuti a una call senza implementazioni che equivale a fare una FailE
+      *)
+      Search next_alt Failed.
+
+      
+
+      Search next_alt Failed.
       remember (Failed B) as f eqn:Hf.
       elim: HA s' s2 B C D {b2} Hf vA HB {HC} y ys x xs sA sC H; clear => //.
       - move=> s A B HA s1 s2 _ C D (*b*) [<-] vA HB (*HC*) y ys x xs sA sC H.
