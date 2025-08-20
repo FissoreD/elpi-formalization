@@ -529,7 +529,7 @@ Module Nur (U : Unif).
       lvlS y -> add_ca false l y = y.
     Proof. case: y => //-[]//l1/=. Qed.
 
-    Lemma all_lvlt_add_caF {y l}:
+    Lemma all_lvlS_add_ca_false {y l}:
       all lvlS y -> [seq add_ca false l e | e <- y] = y.
     Proof.
       elim: y l => //=x xs IH l/andP[lx lxs].
@@ -864,7 +864,7 @@ Module Nur (U : Unif).
         rewrite (success_state_to_list sA)/=add_alt_empty1.
         case X: (state_to_list (clean_success A)) => [|b bs]//.
         rewrite /add_alt/make_lB/make_lB0/= !Hb/=.
-        rewrite (all_lvlt_add_caF lvlS)//.
+        rewrite (all_lvlS_add_ca_false lvlS)//.
     Qed.
 
 
@@ -904,7 +904,7 @@ Module Nur (U : Unif).
           case sCA: (state_to_list (clean_success _))=>//[z zs].
           rewrite /add_alt/make_lB/make_lB0/=.
           have lhd := base_and_lvlt bB (H [::]).
-          rewrite all_lvlt_add_caF//.
+          rewrite all_lvlS_add_ca_false//.
         case: ifP => //fA bB _.
         case X: next_alt => [[s3 D]|]//.
         case:ifP => fB => //-[_<-]/=.
@@ -1011,7 +1011,6 @@ Module Nur (U : Unif).
 
     Lemma state_to_list_empty {A l1 l2}: state_to_list A l1 = [::] -> state_to_list A l2 = [::].
     Proof. move=>/state_to_list_same_shape => /(_ _ l2 erefl); case: state_to_list => //. Qed.
-
   End state_to_list_prop.
 
   Definition state_to_list_cons A :=
@@ -1200,47 +1199,6 @@ Module Nur (U : Unif).
         rewrite (base_and_ko_failed H)//; case: next_alt => [[]|]//.
     Qed.
 
-    Lemma state_to_list_empty_next_alt {B l s2}:
-      valid_state B -> state_to_list B l = [::] ->  next_alt s2 B = None.
-    Proof.
-      elim: B l s2 => //.
-      - move=> p[]//.
-      - move=> A HA s B HB l s2/= + /incr_cuts0/cats20[+ sB].
-        rewrite sB/=.
-        case sA: state_to_list => //.
-        case: ifP => //[dA vB|dA /andP[vA bB]] _.
-          rewrite (HB _ _ vB sB)//.
-        rewrite (HA _ _ vA sA) (HB _ _ (bbOr_valid bB) sB)//if_same//.
-      - move=> A HA B0 _ B HB l s2/=/and5P[oA vA eB].
-        case: (ifP (is_dead _)) => //dA.
-        case: ifP => /=[sA vB bB0 | sA /eqP->].
-          have [x[xs H]]:= failed_state_to_list vA (success_failed _ sA) l.
-          rewrite H/==> /cats20[].
-          rewrite /add_alt/make_lB0/make_lB.
-          move: bB0; rewrite /bbAnd => /orP[] bB0.
-            have [hd H1]:= base_and_state_to_list bB0.
-            rewrite H1/=; case: xs H => //=; rewrite map_add0_cas_empty.
-            move=> H; case sB: state_to_list => [|y ys]//= _ _.
-            rewrite (HB _ _ vB sB) if_same base_and_failed//(success_success_singleton_next_alt sA vA H)//.
-          rewrite (base_and_ko_state_to_list bB0)/=flatten_empty map_add0_cas_empty.
-          case sB: state_to_list => [|y ys]//= _ _.
-          rewrite (success_failed _ sA) (HB _ _ vB sB) base_and_ko_failed//; case: next_alt => [[]|]//.
-        rewrite /add_alt/make_lB0/make_lB.
-        case: ifP => [fA bB|fA bB].
-          case SA: (state_to_list A) => /=[|x xs].
-            rewrite (HA _ _ vA SA)//.
-          move=> /cats20[].
-          move: bB; rewrite /bbAnd => /orP[]bB.
-            have [hd ->]// := base_and_state_to_list bB.
-          rewrite (base_and_ko_state_to_list bB)/= => _ _.
-          rewrite base_and_ko_failed//; case: next_alt => [[]|]//.
-        have [x[xs->]]/= := failed_state_to_list vA fA l.
-        have [hd H] := base_and_state_to_list bB.
-        rewrite next_alt_aux_base_and//H.
-        move=>/cats20[].
-        case: xs => //=; rewrite add_ca0_empty if_same/=.
-    Qed.
-
     Lemma expand_failure_next_alt_none_empty {A s1 s2 E l}:
       valid_state A ->
         expand s1 A = Failure E ->
@@ -1407,7 +1365,7 @@ Module Nur (U : Unif).
         rewrite /add_alt/make_lB/make_lB0/=H1 H2.
         case SA: state_to_list => //=.
         have lvlS:= base_and_lvlt bB0 (H1 [::]).
-        rewrite (all_lvlt_add_caF lvlS)//.
+        rewrite (all_lvlS_add_ca_false lvlS)//.
     Qed.
 
     Lemma expandedb_failure_next_alt_state_to_list_cons {s1 s2 A B C b1}:
@@ -1445,8 +1403,130 @@ Module Nur (U : Unif).
         have {}IH := IH (valid_state_next_alt (valid_state_expanded vA (ex_intro _ _ HA)) HB).
         apply: expandedb_failure_next_alt_state_to_list_cons vA HA HB IH.
     Qed.
-  End list_cons.
 
+
+    Lemma state_to_list_empty_next_alt {B l s2}:
+      valid_state B -> state_to_list B l = [::] ->  next_alt s2 B = None.
+    Proof.
+      elim: B l s2 => //.
+      - move=> p[]//.
+      - move=> A HA s B HB l s2/= + /incr_cuts0/cats20[+ sB].
+        rewrite sB/=.
+        case sA: state_to_list => //.
+        case: ifP => //[dA vB|dA /andP[vA bB]] _.
+          rewrite (HB _ _ vB sB)//.
+        rewrite (HA _ _ vA sA) (HB _ _ (bbOr_valid bB) sB)//if_same//.
+      - move=> A HA B0 _ B HB l s2/=/and5P[oA vA eB].
+        case: (ifP (is_dead _)) => //dA.
+        case: ifP => /=[sA vB bB0 | sA /eqP->].
+          have [x[xs H]]:= failed_state_to_list vA (success_failed _ sA) l.
+          rewrite H/==> /cats20[].
+          rewrite /add_alt/make_lB0/make_lB.
+          move: bB0; rewrite /bbAnd => /orP[] bB0.
+            have [hd H1]:= base_and_state_to_list bB0.
+            rewrite H1/=; case: xs H => //=; rewrite map_add0_cas_empty.
+            move=> H; case sB: state_to_list => [|y ys]//= _ _.
+            rewrite (HB _ _ vB sB) if_same base_and_failed//(success_success_singleton_next_alt sA vA H)//.
+          rewrite (base_and_ko_state_to_list bB0)/=flatten_empty map_add0_cas_empty.
+          case sB: state_to_list => [|y ys]//= _ _.
+          rewrite (success_failed _ sA) (HB _ _ vB sB) base_and_ko_failed//; case: next_alt => [[]|]//.
+        rewrite /add_alt/make_lB0/make_lB.
+        case: ifP => [fA bB|fA bB].
+          case SA: (state_to_list A) => /=[|x xs].
+            rewrite (HA _ _ vA SA)//.
+          move=> /cats20[].
+          move: bB; rewrite /bbAnd => /orP[]bB.
+            have [hd ->]// := base_and_state_to_list bB.
+          rewrite (base_and_ko_state_to_list bB)/= => _ _.
+          rewrite base_and_ko_failed//; case: next_alt => [[]|]//.
+        have [x[xs->]]/= := failed_state_to_list vA fA l.
+        have [hd H] := base_and_state_to_list bB.
+        rewrite next_alt_aux_base_and//H.
+        move=>/cats20[].
+        case: xs => //=; rewrite add_ca0_empty if_same/=.
+    Qed.
+
+    (* if the s2l of C has a non empty head, then the state is made
+        by some Bot that are going to be canceled by next_alt *)
+    Lemma next_alt_s2l_cons {s1 C s3 D x xs tl l1}:
+      valid_state C ->
+      next_alt s1 C = Some (s3, D) ->
+        state_to_list C l1 = (x :: xs) :: tl -> 
+          state_to_list C l1 = state_to_list D l1.
+    Proof.
+      elim: C s1 s3 D x xs tl l1 => //.
+      - move=> p [|t]//=???????? [_<-][???]; subst => //.
+      - move=> A HA s B HB s1 s2 C x xs tl l1/=.
+        case: ifP => [dA vB|dA /andP[vA bB]].
+          case nB: next_alt => [[s3 D]|]//[??]; subst => /=.
+          rewrite state_to_list_dead//=.
+          rewrite (state_to_list_dead dA)//=.
+          case sB: state_to_list => [|[|z zs] ws]//.
+          have:= HB _ _ _ _ _ _ _ vB nB sB.
+          rewrite sB => <-//.
+        case nA: next_alt => [[s3 D]|].
+          move=>[_<-]/=; case sA: state_to_list => //=[|y ys].
+            by rewrite (state_to_list_empty_next_alt vA sA) in nA.
+          case: y sA => //[z zs] sA/=.
+          have:= HA _ _ _ _ _ _ _ vA nA sA.
+          rewrite sA.
+          case sD: state_to_list => [|[|t ts] rs]//[???]; subst => /=.
+          move=>//.
+        have vB:= bbOr_valid bB.
+        rewrite (valid_state_dead1 vB).
+        move: bB;rewrite /bbOr=> /orP[]; last first.
+          move=>/next_alt_aux_base_or_ko->//.
+        case nB: next_alt => [[w ws]|]//bB.
+        have H := base_or_aux_next_alt_some bB nB.
+        move=>[_<-]/=; rewrite (state_to_list_dead is_dead_dead)/=.
+        rewrite H.
+        have [r [H1 H2]]:= next_alt_none_s2l ((state_to_list ws l1 ++ l1)) vA nA.
+        rewrite H1 incr_cuts_cat.
+        case: r H1 H2 => [|[|m ms] rs]//.
+      - move=> A HA B0 _ B HB s1 s2 C x xs tl l1/= /and5P[oA vA aB].
+        case:(ifP (is_dead _)) => //dA.
+        case:ifP => /=[sA vB bB0|sA /eqP->].
+          rewrite success_failed//=.
+          rewrite success_state_to_list// add_alt_empty1.
+          case nB: next_alt => [[w ws]|]//.
+            move=>[??]; subst =>/=.
+            rewrite (success_state_to_list sA)// !add_alt_empty1.
+            case sB: state_to_list => [|c cs].
+              rewrite (state_to_list_empty_next_alt _ sB)// in nB.
+            case: c sB => //d ds sB.
+            have:= HB _ _ _ _ _ _ _ vB nB sB.
+            move=><-; rewrite sB//.
+          case nA: next_alt => //[[s3 D]].
+          case: ifP => //fB0[??]; subst => /=.
+          move: bB0; rewrite/bbAnd => /orP[]; last first.
+            move=>/base_and_ko_failed; rewrite fB0//.
+          move=>/[dup]/base_and_state_to_list[hd H] bB0.
+          have [r [H1 H2]]:= next_alt_none_s2l l1 vB nB.
+          rewrite H H1; subst.
+          have H1:= clean_successP vA sA nA.
+          rewrite H1.
+          case scA : (state_to_list (clean_success _)) => [|c cs].
+            rewrite make_lB0_empty1 make_lB_empty2 cats0 => H3.
+            rewrite H3 in H2.
+            destruct x => //.
+          case sB: state_to_list => //[|d ds]; last first.
+            rewrite sB in H2.
+            destruct d => //.
+          rewrite make_lB_empty1/=.
+          rewrite/make_lB0/==>-[+?]; subst.
+          rewrite /add_alt/make_lB/make_lB0/=.
+          move=> H3; f_equal.
+          f_equal.
+          have H4 := base_and_lvlt bB0 (H [::]).
+          rewrite all_lvlS_add_ca_false//.
+        case: ifP => [fA bB|fA bB].
+          case nA: next_alt => //[[s3 D]].
+          case: ifP => //fB0[??]; subst => /=.
+          have H := failed_next_alt_some_state_to_list vA fA nA.
+          rewrite H//.
+        rewrite next_alt_aux_base_and// => -[_<-]//.
+    Qed.
+  End list_cons.
 
   Lemma expand_solved {s A s1 B} l:
     expand s A = Solved s1 B ->
@@ -1518,7 +1598,7 @@ Module Nur (U : Unif).
           rewrite/add_alt/make_lB/make_lB0/=.
           repeat f_equal.
           have:= base_and_lvlt bB (H1 [::]).
-          move=>/all_lvlt_add_caF ->//.
+          move=>/all_lvlS_add_ca_false ->//.
         rewrite all_cat H4// (base_and_lvlt bB (H1 [::]))//.
       have [sA sA'] := expand_solved_success eA.
       rewrite sA/==> vB bB0.
@@ -1530,8 +1610,8 @@ Module Nur (U : Unif).
       do 2 eexists; split.
         move=> l; rewrite 2!(H l).
         rewrite state_to_list_cutl//add_alt_empty2//=; repeat split => //.
-          rewrite all_lvlt_add_caF//H//.
-        rewrite all_lvlt_add_caF//H//.
+          rewrite all_lvlS_add_ca_false//H//.
+        rewrite all_lvlS_add_ca_false//H//.
   Qed.
 
   Section exp_done_rel.
@@ -1543,6 +1623,162 @@ Module Nur (U : Unif).
       | Or A _ B => if is_dead A then exp_done_shape B else exp_done_shape A
       | _ => false
       end.
+
+    Lemma base_and_s2l0 {B l}:
+      base_and B -> state_to_list B l = [:: [::]] -> B = Top.
+    Proof. 
+      elim: B l => // -[]//p a _ _ _ B HB l /=/andP[/eqP->] bB.
+      case: a => [|t]; case: state_to_list => //.
+    Qed.
+    
+    Lemma state_to_list_hd0 {A B s1 s2 l1 ws}: valid_state A ->
+      state_to_list A l1 = [::] :: ws -> expand s1 A = Expanded s2 B -> exp_done_shape B ->
+        state_to_list B l1 = [::] :: ws.
+    Proof.
+      elim: A B s1 s2 l1 ws => //; auto.
+      - move=> []//.
+      - move=> p[]//.
+      - move=> A HA s B HB C s1 s2 l1 ws/=.
+        case:ifP => [dA vB|dA/andP[vA bB]].
+          rewrite state_to_list_dead//=.
+          case sB: state_to_list => //[[] xs]//=[?]; subst.
+          case e: expand => //[s' B'|s' B'][??]; subst; rewrite/= dA=> eB.
+            rewrite (HB _ _ _ _ _ vB sB e eB)/=state_to_list_dead//.
+          have [x[tl[H1 H2]]]:= expand_cb_state_to_list1 l1 vB e.
+          by rewrite H1 in sB.
+        case eA: expand => //[s' A'|s' A'].
+          have [x[xs H]]:= failed_state_to_list vA (expand_not_failed eA notF) (state_to_list B l1 ++ l1).
+          rewrite H; case: x H => H//=[?][??]/=; subst.
+          move=>/=.
+          move=>/=; rewrite (expand_not_dead dA eA)=> H1.
+          rewrite (HA _ _ _ _ _ vA H eA H1)//.
+        have [x[tl[H1 H2]]]:= expand_cb_state_to_list1 ((state_to_list B l1 ++ l1)) vA eA.
+        rewrite H1//=.
+      - move=> A HA B0 _ B HB C s1 s2 l1 ws/=/and5P[oA vA aB].
+        case eA: expand => //[s1' A'|s1' A'].
+          rewrite (expand_not_solved_not_success eA erefl)(expand_not_failed eA notF)/=.
+          move=> /eqP->bB.
+          have [hd H]:= base_and_state_to_list bB; rewrite H.
+          have H1 := base_and_lvlt bB (H [::]).
+          case sA: state_to_list => [|y ys]//.
+          rewrite/add_alt/= all_lvlS_add_ca_false//.
+          case: y sA => //; case: hd H H1 => // H H1 sA/=[]?; subst.
+          move=>[_<-]/=/andP[eA' eB].
+          rewrite (HA _ _ _ _ _ vA sA eA eA') add_alt_empty1.
+          rewrite (base_and_s2l0 bB (H [::]))//.
+        have [??] := expand_solved_same eA; subst.
+        have [_ sA] := expand_solved_success eA.
+        case eB: expand => //[s1'' B']; rewrite sA/=.
+        move=> vB bB0; rewrite success_state_to_list//add_alt_empty1.
+        have [x[xs H]]:= failed_state_to_list vB (expand_not_failed eB notF) l1.
+        rewrite H/==>-[]; case: x H => //= H _ ?; subst.
+        move=>[_<-]/=/andP[eA' eB'].
+        rewrite (success_state_to_list)//add_alt_empty1.
+        rewrite (HB _ _ _ _ _ vB H eB eB')//.
+    Qed.
+
+    Lemma exp_done_shape_failed {A}: exp_done_shape A -> failed A = false.
+    Proof.
+      elim: A => //.
+      - move=> A HA s B HB/=; case: ifP => //.
+      - move=> A HA B0 _ B HB/=/andP[] /HA->/HB->; rewrite andbF//.
+    Qed.
+
+    Lemma exp_done_shape_big_or {p s t}: exp_done_shape (big_or p s t) = false.
+    Proof. rewrite/big_or; case: F => [|[]]//. Qed.
+
+    Lemma exp_done_shapeP {s1 A s2 B b}: 
+      expandedb s1 A (Done s2 B) b -> exp_done_shape A.
+    Proof.
+      elim: A s1 s2 B b => //; try by inversion 1.
+      - move=>p [|t]// s1 s2 B b; inversion 1 => //; subst.
+        case: H1 => _ ?; subst; apply expandedb_big_or_not_done in H2 => //.
+      - move=> A HA s B HB s1 s2 C b H.
+        have /= := expandedb_same_structure H.
+        case: C H => //A' s' B' H /and3P[/eqP? _ _]; subst.
+        have:= expanded_or_complete H => -[][]->.
+          move=> [b1[H1 ?]]; subst; apply: HA H1.
+        move=> [? [b1 H1]]; subst; apply: HB H1.
+      - move=> A HA B0 _ B HB s1 s2 C b H.
+        have /= := expandedb_same_structure H.
+        case: C H => //A' s' B' H _; subst.
+        have [s''[A1[B1[b1[b2[H1[H2 H3]]]]]]]:= expanded_and_complete H; subst.
+        by rewrite (HA _ _ _ _ H1) (HB _ _ _ _ H2).
+    Qed.
+
+    Lemma bibi2 {A B s0 s1 b ca x tl l1}:
+      valid_state A -> expand s0 A = Expanded s1 B -> exp_done_shape B ->
+        (state_to_list A l1 = [:: [::cut b ca & x] & tl]) ->
+        exists r, 
+          ((state_to_list B l1 = [::x & r]) * 
+              (r = ca \/ r = incr_cuts ca \/ (r = [::]))
+            (* * all (all lvlD) ca *)
+            )%type.
+    Proof.
+      elim: A B s0 s1 b ca x tl l1 => //.
+      - move=> p []//.
+      - move=> A HA s B HB C s0 s1 b ca x tl l1/=.
+        case: ifP => //[dA vB|dA /andP[vA bB]].
+          case EB: expand => //[s1' B2|s1' B2][??]; subst => /=; rewrite dA !(state_to_list_dead dA)/=.
+            case sB: state_to_list => [|[|[|lvl alts] ws]ys]//=eB2[????]; subst.
+            have [r [H1 H2]]:= HB _ _ _ _ _ _ _ _ vB EB eB2 sB.
+            rewrite H1/=; eexists;split => //.
+            case: H2.
+              move=>->; auto.
+            move=>[]->; auto; rewrite incr_cuts2; auto.
+          have [x0[tl0[H1 H2]]] := expand_cb_state_to_list1 l1 vB EB.
+          rewrite !H1//==> eB[????]; subst.
+          eexists; split; auto.
+        case EA: expand => //[s1' A2|s1' A2][??]; subst; rewrite /=(expand_not_dead dA EA) => eA2.
+        have [x0[tl0 H]]:= failed_state_to_list vA (expand_not_failed EA notF) (state_to_list B l1 ++ l1).
+        rewrite H/=.
+        case: x0 H => //-[]// b0 l l0 H [????]; subst.
+          have [r [H1 H2]]:= HA _ _ _ _ _ _ _ _ vA EA eA2 H.
+          rewrite !H1/=; eexists; split; auto.
+          admit.
+        have [x0[tl0[H1 H2]]] := expand_cb_state_to_list1 (state_to_list B l1 ++ l1) vA EA.
+        rewrite !H1//==>-[????]; subst; eexists; split; auto.
+        rewrite state_to_list_cutr_empty; auto; apply: bbOr_valid bB.
+      - move=> A HA B0 _ B HB C s0 s1 b ca x tl l1/=.
+        move=>/and5P[oA vA aB].
+        case eA: expand => //[s0' A'|s0' A'].
+          rewrite (expand_not_solved_not_success eA erefl)(expand_not_failed eA notF)/=.
+          move=>/eqP->bB[_<-]/=/andP[eA' eB].
+          have [hd H]:= base_and_state_to_list bB; rewrite H.
+          have H1 := base_and_lvlt bB (H [::]).
+          case sA: state_to_list => [|w ws]//; rewrite /add_alt/make_lB0/=.
+          rewrite (all_lvlS_add_ca_false H1).
+          case: w sA => //[|z zs] sA.
+            have H2 := state_to_list_hd0 vA sA eA eA'.
+            rewrite H2/==>-[??]; subst=>/=.
+            move: H1 => /=; destruct b => //=H1.
+            rewrite all_lvlS_add_ca_false//.
+            admit.
+          move=>[???]; subst.
+          have [r [H3 H4]]:= HA _ _ _ _ _ _ _ _ vA eA eA' sA.
+          rewrite H3.
+          rewrite all_lvlS_add_ca_false//.
+          do 2 eexists => //.
+          admit.
+        have [??] := expand_solved_same eA; subst.
+        have [_ sA]:= expand_solved_success eA; rewrite sA/=success_state_to_list//add_alt_empty1/=.
+        move=> vB bB0.
+        case eB: expand => //[s0'' B'][_<-]/=/andP[eA' eB'].
+        rewrite (success_state_to_list sA)//add_alt_empty1.
+        have [x0[tl0 H]]:= failed_state_to_list vB (expand_not_failed eB notF) l1.
+        rewrite H/=; case: x0 H => [|x0 x0s]//=; case: x0 => //b1 l H[]+??; subst.
+        have [r [H3 H4]]:= HB _ _ _ _ _ _ _ _ vB eB eB' H.
+        rewrite H3.
+        move: bB0; rewrite/bbAnd =>/orP[]bB; last first.
+          rewrite (base_and_ko_state_to_list bB)/=make_lB0_empty2 !cats0 make_lB_empty2.
+          rewrite add_ca_empty.
+          destruct b1 => -[??]; subst; eexists; split => //.
+        have [hd H1]:= base_and_state_to_list bB.
+        rewrite H1/=.
+        destruct b1 => -[??]; subst; eexists; split => //.
+          admit.
+        admit.
+    Admitted.
 
     Inductive has_cut := sup | no | deep.
     derive has_cut.
@@ -1593,13 +1829,6 @@ Module Nur (U : Unif).
         - rewrite sA (HB _ _ sB eB)//.
     Qed.
 
-    Lemma exp_done_shape_failed {A}: exp_done_shape A -> failed A = false.
-    Proof.
-      elim: A => //.
-      - move=> A HA s B HB/=; case: ifP => //.
-      - move=> A HA B0 _ B HB/=/andP[] /HA->/HB->; rewrite andbF//.
-    Qed.
-
     Lemma exp_done_rel_dead {A B hc}: 
       exp_done_rel A B = (true, hc) -> is_dead A = is_dead B.
     Proof.
@@ -1635,9 +1864,6 @@ Module Nur (U : Unif).
         case eA: exp_done_rel => [[] hc'][]//=.
         rewrite (HA _ _ eA)//.
     Qed.
-
-    Lemma exp_done_shape_big_or {p s t}: exp_done_shape (big_or p s t) = false.
-    Proof. rewrite/big_or; case: F => [|[]]//. Qed.
 
     Lemma expand_exp_done_shape_cb {s1 A s2 B}: 
       expand s1 A = CutBrothers s2 B -> exp_done_shape B -> 
@@ -1681,25 +1907,6 @@ Module Nur (U : Unif).
         - case eB: expand => //[s4 E]/=[_<-]/=/andP[eD eE].
           have [m [H2 [H3|H3]]] := HB _ _ _ eB eE; rewrite H2 H3/= !eqxx;
           rewrite (expand_solved_success eA) (expand_solved_same eA) !eqxx//; eexists; auto.
-    Qed.
-
-    Lemma exp_done_shapeP {s1 A s2 B b}: 
-      expandedb s1 A (Done s2 B) b -> exp_done_shape A.
-    Proof.
-      elim: A s1 s2 B b => //; try by inversion 1.
-      - move=>p [|t]// s1 s2 B b; inversion 1 => //; subst.
-        case: H1 => _ ?; subst; apply expandedb_big_or_not_done in H2 => //.
-      - move=> A HA s B HB s1 s2 C b H.
-        have /= := expandedb_same_structure H.
-        case: C H => //A' s' B' H /and3P[/eqP? _ _]; subst.
-        have:= expanded_or_complete H => -[][]->.
-          move=> [b1[H1 ?]]; subst; apply: HA H1.
-        move=> [? [b1 H1]]; subst; apply: HB H1.
-      - move=> A HA B0 _ B HB s1 s2 C b H.
-        have /= := expandedb_same_structure H.
-        case: C H => //A' s' B' H _; subst.
-        have [s''[A1[B1[b1[b2[H1[H2 H3]]]]]]]:= expanded_and_complete H; subst.
-        by rewrite (HA _ _ _ _ H1) (HB _ _ _ _ H2).
     Qed.
 
     Lemma exp_done_rel_txt_state_to_list {B B'} l1:
@@ -1779,95 +1986,40 @@ Module Nur (U : Unif).
         apply: HB eB H1.
     Qed.
 
-    Lemma bibi1 {A B s s'} l:
-      valid_state A -> exp_done_shape B -> exp_done_rel A B = (true, deep) ->
-        expand s A = Expanded s' B ->
-        exists x tl ca r, 
-          (((state_to_list A l = [:: [::cut true ca & x] & tl]) * 
-            (state_to_list B l = [::x & r])) * 
-              (r = ca \/ r = incr_cuts ca \/ (r = [::]))
-            (* * all (all lvlD) ca *)
-            )%type.
-    Proof.
-      elim: A B s s' l => //.
-      - move=> []//.
-      - move=> p []//[]//.
-      - move=> A HA s B HB[]//A' s' B' s1 s2 l/=.
-        case: ifP => [dA vB|dA /andP[vA bB]] H.
-          (* dead A \/ B *)
-          rewrite !(state_to_list_dead dA)/=.
-          case eB: exp_done_rel => [[] []][]///andP[]///eqP? _; subst; rewrite dA in H; rewrite (state_to_list_dead dA)/=.
-            have [xs[tl H1]]:= exp_done_rel_txt_state_to_list l vB eB; rewrite H1/=.
-            case eA:expand => //[s1' B2|s1' B2][??]?; subst.
-              by have := (expand_exp_state_to_list1 eA eB).
-            have [x[tl0 [+ lx]]]:= expand_cb_state_to_list1 l vB eA.
-            move=>/(_ l)[]; rewrite H1 => -[??] H2; subst.
-            rewrite H2/=.
-            do 4 eexists; auto.
-            (* exists [::], [::] => //. *)
-          case EB: expand => //[s1' B2|s1' B2][??]?; subst.
-            have [x[tl[ca[r[H1 [|[|]]]]]]]:= HB _ _ _ l vB H eB EB; rewrite !H1 => Hz/=; subst;
-              do 4 eexists; auto.
-              repeat split; rewrite incr_cuts2; auto.
-              do 4 eexists; auto.
-            (* exists ca, (incr_cuts ca') => //. *)
-            (* rewrite all2_lvlD_incr//. *)
-          by rewrite (expand_exp_done_shape_cb EB H) in eB.
-        case eA: exp_done_rel => [[] h][]//.
-        case EA:expand => //[s1' A2|s1' A2] + + [??]??; subst; rewrite (expand_not_dead dA EA) in H.
-          have H1 := expand_exp_state_to_list1 EA eA.
-          case: h H1 eA => // _ eA/=/eqP _ _.
-          have [x[tl[ca[ca'[H1 []]]]]]:= HA _ _ _ (state_to_list B' l ++ l) vA H eA EA => ?; subst; rewrite 2!H1/=.
-          - admit.
-          - admit.
-          (* exists (ca++l), (incr_cuts (map (map (add_ca l)) ca' ++ state_to_list B' l)) => //; auto. *)
-        have:= (expand_exp_done_shape_cb EA H); rewrite eA => -[?]; subst.
-        have [x[tl [H2 H3]]]:= expand_cb_state_to_list1 ((state_to_list B l ++ l)) vA EA.
-        have vB:= bbOr_valid bB => /= _ _.
-        rewrite state_to_list_cutr_empty//=cats0 incr_cuts_cat.
-        rewrite !(H2 (state_to_list (cutr B) l ++ l))/=.
-        do 2 eexists.
-        do 2 eexists; repeat split; auto.
-        rewrite H2/=; auto.
-      - move=> A HA B0 _ B HB []//A' B0' B' s s' l/=/and5P[oA vA aB].
-        case eA: expand => //[s2 A2|s2 A2].
-          rewrite (expand_not_solved_not_success eA erefl)(expand_not_failed eA notF)/=.
-          move=>/eqP->bB/andP[xA xB].
-          have [hd H]:= base_and_state_to_list bB.
-          have H3 := base_and_lvlt bB (H [::]).
-          case bA: exp_done_rel => [[] hc][]///andP[/eqP?/eqP?]?[????]; subst.
-          have [x[tl[ca[ca' [{}HA Hm]]]]]:= HA _ _ _ l vA xA bA eA.
-          rewrite 2!HA.
-          rewrite H.
-          rewrite/add_alt/make_lB/make_lB0/=.
-          rewrite 2!(all_lvlt_add_caF H3).
-          do 2 eexists.
-          eexists ca, (flatten [seq [:: la ++ hd] | la <- ca']) => //.
-          admit.
-        rewrite (expand_solved_success eA)/==>vB bB/andP[xA' xB'].
-        case eB: exp_done_rel => [[] hc][] /andP[]// +??; subst.
-        move=>/andP[/eqP?/eqP?]; subst.
-        have [??] := expand_solved_same eA; subst.
-        have [sA _] := expand_solved_success eA; subst.
-        rewrite (success_state_to_list sA)!add_alt_empty1.
-        case EB: expand => //[s2' B2][??]; subst.
-        have [x[tl[ca[ca'[H1 H2]]]]]:= HB _ _ _ l vB xB' eB EB.
-        rewrite !H1/=.
-        move: bB; rewrite/bbAnd=>/orP[]bB; last first.
-          rewrite (base_and_ko_state_to_list bB) !make_lB0_empty2 !cats0 !add_ca_empty.
-          rewrite make_lB_empty2 make_lB_empty2.
-          do 2 eexists.
-          exists ca, ca' => //.
-        have [hd H3] := base_and_state_to_list bB.
-        rewrite H3/make_lB0/=.
-        do 2 eexists => //.
-        exists 
-          (ca ++ flatten [seq [:: la ++ hd] | la <- state_to_list (clean_success A2) l]),
-        (make_lB ca'
-          (flatten [seq [:: la ++ hd] | la <- state_to_list (clean_success A2) l]) ++
-          flatten [seq [:: la ++ hd] | la <- state_to_list (clean_success A2) l]) => //.
-        admit.
-    Admitted.
+    Definition state_will_cut l :=
+      match l with [::[:: cut _ _ & _] & _] => true | _ => false end.
+
+    Lemma state_will_cut_deep_incr_cuts {l} :
+      state_will_cut (incr_cuts l) = state_will_cut l.
+    Proof. case: l => //-[]//[]//. Qed.
+
+    Lemma state_will_cut_cat {A B} :
+      state_will_cut A -> state_will_cut (A ++ B).
+    Proof. case: A => //. Qed.
+
+    Lemma state_will_cut_add_ca {A b l} :
+      state_will_cut A -> state_will_cut (map (map (add_ca b l)) A).
+    Proof. case: A => // -[]//=[]//= ?? _ _ _; case:ifP => //. Qed.
+
+  Lemma xxx {A B b} l: valid_state A ->
+    exp_done_rel A B = (true, b) -> (b != no) ->
+      state_will_cut (state_to_list A l).
+  Proof.
+    elim: A B b l => //.
+    - move=> []//=[]//.
+    - move=> p[]//.
+    - move=> A HA s B HB[]//A' s' B' hc l/=.
+      case:ifP => [dA vB|dA/andP[vA bB]].
+        rewrite (state_to_list_dead dA)/=.
+        rewrite state_will_cut_deep_incr_cuts.
+        case eB: exp_done_rel => [[] []][]///andP[]// _ _ <-//; apply: HB vB eB.
+      case eA: exp_done_rel => [[] []][]///eqP _ <-// _; rewrite state_will_cut_deep_incr_cuts; apply: state_will_cut_cat; apply: state_will_cut_add_ca; apply: HA vA eA isT.
+    - move=> A HA B0 _ B HB[]//A' B0' B' b l/=/and5P[oA vA aB].
+      case:ifP => /=[sA vB bB0|sA /eqP->].
+        case eB: exp_done_rel => [[] []][]///andP[]// _ _ <-// _; rewrite success_state_to_list//add_alt_empty1; apply: state_will_cut_cat; apply: state_will_cut_add_ca; apply: HB _ _ l vB eB isT.
+      case eA: exp_done_rel => //[[][]] + []///andP//[/eqP?/eqP?]<-//; rewrite (exp_done_rel_failed eA) => bB _; have:= HA _ _ l vA eA isT; case: state_to_list => //=-[]//[]//???? _; have [hd H]:= base_and_state_to_list bB; rewrite H//.
+  Qed.
+
   End exp_done_rel.
 
   (* In this lemma, we do not backtrack: the solution is found
@@ -1904,8 +2056,11 @@ Module Nur (U : Unif).
         have:= exp_done_rel_tfx [::] vA eB eA.
         rewrite sA sB => -[]??; subst.
         rewrite (same_subst s s')//.
-      have [x1[ca[tl[ca']]]] := bibi1 [::] vA eB eA HA.
-      rewrite sA sB=> -[][][??][??]; subst.
+      have:= xxx [::] vA eA isT.
+      case sA': state_to_list => [|[|[]]]//; move: sA'; rewrite sA.
+      move=>[??] _; subst.      
+      have [r] := bibi2 vA HA eB sA.
+      rewrite sB => -[][??]; subst.
       rewrite (same_subst s s')//.
       move=>[|[]]?; subst;apply: CutE.
       - auto.
@@ -1937,87 +2092,6 @@ Module Nur (U : Unif).
       move=>//.
     - admit.
   Admitted.
-
-  (* if the s2l of C has a non empty head, then the state is made
-      by some Bot that are going to be canceled by next_alt *)
-  Lemma next_alt_s2l_cons {s1 C s3 D x xs tl l1}:
-    valid_state C ->
-    next_alt s1 C = Some (s3, D) ->
-      state_to_list C l1 = (x :: xs) :: tl -> 
-        state_to_list C l1 = state_to_list D l1.
-  Proof.
-    elim: C s1 s3 D x xs tl l1 => //.
-    - move=> p [|t]//=???????? [_<-][???]; subst => //.
-    - move=> A HA s B HB s1 s2 C x xs tl l1/=.
-      case: ifP => [dA vB|dA /andP[vA bB]].
-        case nB: next_alt => [[s3 D]|]//[??]; subst => /=.
-        rewrite state_to_list_dead//=.
-        rewrite (state_to_list_dead dA)//=.
-        case sB: state_to_list => [|[|z zs] ws]//.
-        have:= HB _ _ _ _ _ _ _ vB nB sB.
-        rewrite sB => <-//.
-      case nA: next_alt => [[s3 D]|].
-        move=>[_<-]/=; case sA: state_to_list => //=[|y ys].
-          by rewrite (state_to_list_empty_next_alt vA sA) in nA.
-        case: y sA => //[z zs] sA/=.
-        have:= HA _ _ _ _ _ _ _ vA nA sA.
-        rewrite sA.
-        case sD: state_to_list => [|[|t ts] rs]//[???]; subst => /=.
-        move=>//.
-      have vB:= bbOr_valid bB.
-      rewrite (valid_state_dead1 vB).
-      move: bB;rewrite /bbOr=> /orP[]; last first.
-        move=>/next_alt_aux_base_or_ko->//.
-      case nB: next_alt => [[w ws]|]//bB.
-      have H := base_or_aux_next_alt_some bB nB.
-      move=>[_<-]/=; rewrite (state_to_list_dead is_dead_dead)/=.
-      rewrite H.
-      have [r [H1 H2]]:= next_alt_none_s2l ((state_to_list ws l1 ++ l1)) vA nA.
-      rewrite H1 incr_cuts_cat.
-      case: r H1 H2 => [|[|m ms] rs]//.
-    - move=> A HA B0 _ B HB s1 s2 C x xs tl l1/= /and5P[oA vA aB].
-      case:(ifP (is_dead _)) => //dA.
-      case:ifP => /=[sA vB bB0|sA /eqP->].
-        rewrite success_failed//=.
-        rewrite success_state_to_list// add_alt_empty1.
-        case nB: next_alt => [[w ws]|]//.
-          move=>[??]; subst =>/=.
-          rewrite (success_state_to_list sA)// !add_alt_empty1.
-          case sB: state_to_list => [|c cs].
-            rewrite (state_to_list_empty_next_alt _ sB)// in nB.
-          case: c sB => //d ds sB.
-          have:= HB _ _ _ _ _ _ _ vB nB sB.
-          move=><-; rewrite sB//.
-        case nA: next_alt => //[[s3 D]].
-        case: ifP => //fB0[??]; subst => /=.
-        move: bB0; rewrite/bbAnd => /orP[]; last first.
-          move=>/base_and_ko_failed; rewrite fB0//.
-        move=>/[dup]/base_and_state_to_list[hd H] bB0.
-        have [r [H1 H2]]:= next_alt_none_s2l l1 vB nB.
-        rewrite H H1; subst.
-        have H1:= clean_successP vA sA nA.
-        rewrite H1.
-        case scA : (state_to_list (clean_success _)) => [|c cs].
-          rewrite make_lB0_empty1 make_lB_empty2 cats0 => H3.
-          rewrite H3 in H2.
-          destruct x => //.
-        case sB: state_to_list => //[|d ds]; last first.
-          rewrite sB in H2.
-          destruct d => //.
-        rewrite make_lB_empty1/=.
-        rewrite/make_lB0/==>-[+?]; subst.
-        rewrite /add_alt/make_lB/make_lB0/=.
-        move=> H3; f_equal.
-        f_equal.
-        have H4 := base_and_lvlt bB0 (H [::]).
-        rewrite all_lvlt_add_caF//.
-      case: ifP => [fA bB|fA bB].
-        case nA: next_alt => //[[s3 D]].
-        case: ifP => //fB0[??]; subst => /=.
-        have H := failed_next_alt_some_state_to_list vA fA nA.
-        rewrite H//.
-      rewrite next_alt_aux_base_and// => -[_<-]//.
-  Qed.
 
   Lemma gtititigi {s s1 s2 A B C D b1 b2} l1:
     valid_state A ->
