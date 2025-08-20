@@ -541,48 +541,48 @@ Module Nur (U : Unif).
   Section lvlD.
     Definition lvlD A := match A with cut b1 _ => b1 | _ => true end.
 
-    Lemma lvlF_incr {x}: lvlD x -> incr_cut x = x.
+    Lemma lvlD_incr {x}: lvlD x -> incr_cut x = x.
     Proof. case: x => //-[]//. Qed.
 
-    Lemma all_lvlF_incr {ca}:
+    Lemma all_lvlD_incr {ca}:
       all lvlD ca -> map incr_cut ca = ca.
-    Proof. elim: ca => //x xs IH/=/andP[H1 H2]; rewrite IH//lvlF_incr//. Qed.
+    Proof. elim: ca => //x xs IH/=/andP[H1 H2]; rewrite IH//lvlD_incr//. Qed.
 
-    Lemma all2_lvlF_incr {ca}:
+    Lemma all2_lvlD_incr {ca}:
       all (all lvlD) ca -> incr_cuts ca = ca.
-    Proof. elim: ca => //x xs IH/=/andP[] H1 H2. rewrite IH//all_lvlF_incr//. Qed.
+    Proof. elim: ca => //x xs IH/=/andP[] H1 H2. rewrite IH//all_lvlD_incr//. Qed.
 
-    Lemma lvlF_incrT {x}: lvlD (incr_cut x).
+    Lemma lvlD_incrT {x}: lvlD (incr_cut x).
     Proof. case: x => //-[]//. Qed.
 
-    Lemma all_lvlF_incrT {ca}:
+    Lemma all_lvlD_incrT {ca}:
       all lvlD (map incr_cut ca).
-    Proof. elim: ca => // x xs/=->; rewrite lvlF_incrT//. Qed.
+    Proof. elim: ca => // x xs/=->; rewrite lvlD_incrT//. Qed.
 
-    Lemma all2_lvlF_incrT {ca}:
+    Lemma all2_lvlD_incrT {ca}:
       all (all lvlD) (incr_cuts ca).
-    Proof. elim: ca => // x xs/=->; rewrite all_lvlF_incrT//. Qed.
+    Proof. elim: ca => // x xs/=->; rewrite all_lvlD_incrT//. Qed.
 
-    Lemma lvlF_base_and_ko_s2l {B l}:
+    Lemma lvlD_base_and_ko_s2l {B l}:
       base_and_ko B -> all (all lvlD) l -> all (all lvlD) (state_to_list B l).
     Proof. elim: B l => //=-[]//. Qed.
 
-    Lemma lvlF_base_or_ko_s2l {B l}:
+    Lemma lvlD_base_or_ko_s2l {B l}:
       base_or_aux_ko B -> all (all lvlD) l -> all (all lvlD) (state_to_list B l).
     Proof. 
       elim: B l => //[|[]]//.
       move=> A HA s B HB l/=/andP[bA bB] H.
-      rewrite all2_lvlF_incrT//.
+      rewrite all2_lvlD_incrT//.
     Qed.
 
-    Lemma lvlF_add_ca {b ca x}: lvlD ca -> lvlD (add_ca b x ca).
+    Lemma lvlD_add_ca {b ca x}: lvlD ca -> lvlD (add_ca b x ca).
     Proof. case: ca => //= -[]// l _; rewrite orbT//. Qed.
 
-    Lemma all_lvlF_add_ca {ca b x}: (all lvlD) ca -> (all lvlD) ((map (add_ca b x)) ca).
-    Proof. elim: ca b x => //x xs IH b y/= /andP[H1 H2]; rewrite IH//lvlF_add_ca//. Qed.
+    Lemma all_lvlD_add_ca {ca b x}: (all lvlD) ca -> (all lvlD) ((map (add_ca b x)) ca).
+    Proof. elim: ca b x => //x xs IH b y/= /andP[H1 H2]; rewrite IH//lvlD_add_ca//. Qed.
 
-    Lemma all2_lvlF_add_ca {ca b x}: all (all lvlD) ca -> all (all lvlD) (map (map (add_ca b x)) ca).
-    Proof. elim: ca x => //x xs IH y/=/andP[H1 H2]; rewrite IH//all_lvlF_add_ca//. Qed.
+    Lemma all2_lvlD_add_ca {ca b x}: all (all lvlD) ca -> all (all lvlD) (map (map (add_ca b x)) ca).
+    Proof. elim: ca x => //x xs IH y/=/andP[H1 H2]; rewrite IH//all_lvlD_add_ca//. Qed.
 
   End lvlD.
 
@@ -1785,7 +1785,7 @@ Module Nur (U : Unif).
         exists x tl ca r, 
           (((state_to_list A l = [:: [::cut true ca & x] & tl]) * 
             (state_to_list B l = [::x & r])) * 
-              (r = ca \/ r = incr_cuts ca)
+              (r = ca \/ r = incr_cuts ca \/ (r = [::]))
             (* * all (all lvlD) ca *)
             )%type.
     Proof.
@@ -1806,11 +1806,12 @@ Module Nur (U : Unif).
             do 4 eexists; auto.
             (* exists [::], [::] => //. *)
           case EB: expand => //[s1' B2|s1' B2][??]?; subst.
-            have [x[tl[ca[r[H1 []]]]]]:= HB _ _ _ l vB H eB EB; rewrite !H1 => ?/=; subst;
+            have [x[tl[ca[r[H1 [|[|]]]]]]]:= HB _ _ _ l vB H eB EB; rewrite !H1 => Hz/=; subst;
               do 4 eexists; auto.
-            repeat split; auto; rewrite incr_cuts2; auto.
+              repeat split; rewrite incr_cuts2; auto.
+              do 4 eexists; auto.
             (* exists ca, (incr_cuts ca') => //. *)
-            (* rewrite all2_lvlF_incr//. *)
+            (* rewrite all2_lvlD_incr//. *)
           by rewrite (expand_exp_done_shape_cb EB H) in eB.
         case eA: exp_done_rel => [[] h][]//.
         case EA:expand => //[s1' A2|s1' A2] + + [??]??; subst; rewrite (expand_not_dead dA EA) in H.
@@ -1819,18 +1820,15 @@ Module Nur (U : Unif).
           have [x[tl[ca[ca'[H1 []]]]]]:= HA _ _ _ (state_to_list B' l ++ l) vA H eA EA => ?; subst; rewrite 2!H1/=.
           - admit.
           - admit.
-          (* do 2 eexists. *)
           (* exists (ca++l), (incr_cuts (map (map (add_ca l)) ca' ++ state_to_list B' l)) => //; auto. *)
         have:= (expand_exp_done_shape_cb EA H); rewrite eA => -[?]; subst.
         have [x[tl [H2 H3]]]:= expand_cb_state_to_list1 ((state_to_list B l ++ l)) vA EA.
         have vB:= bbOr_valid bB => /= _ _.
+        rewrite state_to_list_cutr_empty//=cats0 incr_cuts_cat.
         rewrite !(H2 (state_to_list (cutr B) l ++ l))/=.
-        rewrite state_to_list_cutr_empty//=.
-        (* eexists; exists [::]. *)
         do 2 eexists.
-        do 2 eexists; split => //; auto.
-        admit.
-        (* repeat split; f_equal. *)
+        do 2 eexists; repeat split; auto.
+        rewrite H2/=; auto.
       - move=> A HA B0 _ B HB []//A' B0' B' s s' l/=/and5P[oA vA aB].
         case eA: expand => //[s2 A2|s2 A2].
           rewrite (expand_not_solved_not_success eA erefl)(expand_not_failed eA notF)/=.
@@ -1909,9 +1907,11 @@ Module Nur (U : Unif).
       have [x1[ca[tl[ca']]]] := bibi1 [::] vA eB eA HA.
       rewrite sA sB=> -[][][??][??]; subst.
       rewrite (same_subst s s')//.
-      move=>[]?; subst; apply: CutE.
+      move=>[|[]]?; subst;apply: CutE.
       - auto.
       - admit. (*questo è accettabile: la nur non usa il bool *)
+      - (*(! \/ A) \/ B -> (OK \/ KO) \/ B *)
+        (* (!B; A; B) *)
   Admitted.
 
   Lemma expandedb_failure_next_alt_state_to_list_cons1 {s1 A B b1} l:
