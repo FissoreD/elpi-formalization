@@ -32,6 +32,7 @@ Module Nur (U : Unif).
     | cut : bool -> list (list G) -> G
     .
 
+
   derive G.
   HB.instance Definition _ := hasDecEq.Build G G_eqb_OK.
   Compute (cut true [::] == cut true [::]).
@@ -1097,7 +1098,9 @@ Module Nur (U : Unif).
     Lemma expand_cb_state_to_list1 {s1 A s2 B} l1:
       valid_state A -> expand s1 A = CutBrothers s2 B -> 
         exists x tl, 
-          ((forall l, (state_to_list A l1 = [:: [::cut false [::] & x] & tl]) * (state_to_list B l = [::x])) * (all lvlS x))%type.
+          ((forall l, 
+            (state_to_list A l1 = [:: [::cut false [::] & x] & tl]) * 
+            (state_to_list B l = [::x])) * (all lvlS x))%type.
     Proof.
       elim: A s1 s2 B l1 => //.
       - move=> p []//= ?????[_<-]/=; by do 2 eexists.
@@ -1952,6 +1955,12 @@ Module Nur (U : Unif).
         apply: HA vA H1.
     Admitted. *)
 
+    (* (! Ok TOP) \/ Any *)
+    (* (success) /\ (! OK Top) *)
+    (* (! OK Top) /\ (! OK TOP) *)
+    (* (! /\ !) -> (Ok /\ !) 
+      (!, !)  -> (!)
+    *)
     Lemma bibi3 {A B s0 s1 b ca x1 x2 tl l1 r}:
         valid_state A -> expand s0 A = Expanded s1 B -> exp_done_shape B ->
           state_to_list A l1 = [:: [::cut b ca & x1] & tl] ->
@@ -1989,6 +1998,9 @@ Module Nur (U : Unif).
         have [x[tl0 [H1 H2]]]:= expand_cb_state_to_list1 (state_to_list B l1 ++ l1) vA EA.
         rewrite !H1//==>-[????][??]; subst.
         have H3:= bbOr_valid bB.
+        (* (! /\ A) \/ B           -> (Ok /\ A) \/ KO
+           ((![],A); B)          -> (A)
+        *)
         rewrite state_to_list_cutr_empty//=; auto.
       - move=> A HA B0 _ B HB C s0 s1 b ca x1 x2 tl l1 r/=/and5P[oA vA aB].
         case EA: expand => //[s1' A2|s1' A2].
@@ -2443,7 +2455,7 @@ Module Nur (U : Unif).
       apply: CutE.
       have:= bibi3 vA HA eB sA sB same_id.
       move=>[?|[?|?]]; subst; auto.
-      - admit. (*questo non è accettabile: la nur non usa il bool *)
+      - admit. (*questo è accettabile: la nur non usa il bool *)
       - have [x[l1]]:= exp_done_shape_s2l [::] eB.
         rewrite sB=>-[][??]H1; subst.
         destruct x => //.
@@ -2451,7 +2463,7 @@ Module Nur (U : Unif).
           destruct ca => //=.
             move=> *; apply: StopE.
           (* ((! \/ A) \/ B \/ C) -> (!bc ; A; B; C)*)
-          (* ((OK \/ Bot) \/ B \/ C) -> (bc) *)
+          (* ((OK \/ Bot) \/ B \/ C) -> (B \/ C) *)
           admit.
         destruct g => //.
         inversion H; subst.
