@@ -63,6 +63,18 @@ Module Nur (U : Unif).
     | cut : list (list G) -> G
     .
 
+  Definition if_cut F g :=
+    match g with
+    | cut a => F a
+    | _ => true
+    end.
+
+  Definition apply_cut F g :=
+    match g with
+    | cut a => cut (F a) 
+    | _ => g
+    end.
+
   derive G.
   HB.instance Definition _ := hasDecEq.Build G G_eqb_OK.
   Compute (cut [::] == cut [::]).
@@ -142,6 +154,12 @@ Module Nur (U : Unif).
     HB.instance Definition _ := hasDecEq.Build G' G'_eqb_OK.
 
 
+  Definition apply_cut1 F g :=
+    match g with
+    | cut' b1 a => cut' b1 (F a) 
+    | _ => g
+    end.
+
     Definition alt':= (seq G').
 
     Section add_ca'.
@@ -175,47 +193,6 @@ Module Nur (U : Unif).
         f_equal; apply add_ca1_empty.
       Qed. *)
     End add_ca'.
-
-
-    Section makers.
-
-      (* here we don't add the alts only to deep cut *)
-      Definition make_lB lB tl := map (map (add_ca' false tl)) lB.
-
-      Lemma make_lB_empty1 {tl} : make_lB [::] tl = [::].
-      Proof. move=>//. Qed.
-
-      Lemma make_lB_empty2 {lB} : make_lB lB [::] = lB.
-      Proof. rewrite/make_lB map_add1_cas_empty//. Qed.
-
-      Definition make_lB0 xs (lB0: list alt') := [seq la ++ lb | la <- xs, lb <- lB0].
-
-      Lemma make_lB0_empty1 {lb0} : make_lB0 [::] lb0 = [::].
-      Proof. rewrite /make_lB0//. Qed.
-
-      Lemma make_lB0_empty2 {xs} : make_lB0 xs [::] = [::].
-      Proof. rewrite /make_lB0/=flatten_empty//. Qed.
-
-      Definition add_alt x xs (lB0 lB:list alt') : list  alt' :=
-        let: lB := make_lB lB (make_lB0 xs lB0) in
-        [seq x ++ y | y <- lB] ++ (make_lB0 xs lB0).
-
-      Lemma add_alt_empty1 {xs lB0 lB}:
-        add_alt [::] xs lB0 lB = (make_lB lB (make_lB0 xs lB0)) ++ (make_lB0 xs lB0).
-      Proof. rewrite /add_alt/=map_id//. Qed.
-
-      Lemma add_alt_empty2 {x lB0 lB}:
-        add_alt x [::] lB0 lB = [seq x ++ y | y <- lB].
-      Proof. rewrite/add_alt/=/make_lB cats0 map_add1_cas_empty//. Qed.
-
-      Lemma add_alt_empty3 {x xs lB}:
-        add_alt x xs [::] lB = [seq x ++ y | y <- lB].
-      Proof. rewrite/add_alt !make_lB0_empty2 make_lB_empty2 cats0//. Qed.
-
-      Lemma add_alt_empty4 {x xs lB0}:
-        add_alt x xs lB0 [::] = make_lB0 xs lB0.
-      Proof. rewrite/add_alt/=/make_lB//. Qed.
-    End makers.
 
     Section incr_cut.
       Definition incr_cut A :=
@@ -260,61 +237,215 @@ Module Nur (U : Unif).
       Proof. rewrite/cuts' all_cat//. Qed.
     End incr_cut.
 
-    (* Fixpoint split_or_list T := 
-      match T with
-      | Or A s1 B => 
-        match split_or_list A with
-        | None => Some (A, B) (* TODO: should use s1 *)
-        | Some (L, R) => Some (L, (Or R s1 B))
-        end
-      | And A B0 B => 
-        match split_or_list A with
-        | Some (s1, s3) => Some ((And s1 B0 B), (And s3 B0 B))
-        | None => 
-          match split_or_list B with
-          | None => None
-          | Some (s1, s3) => Some ((And A B0 s1), (And A B0 s3))
-          end
-        end
-      | _ => None
-      end. *)
+    Section makers.
+    
+      Fixpoint add_deep n (l: alt') (A: seq alt') :=
+        match n with
+        | 0 => A
+        | n.+1 =>
+          map (map (apply_cut1 (fun x => map (fun x => x ++ l) ((add_deep n l) x)))) A
+        end.
+
+      Definition ad l A := (add_deep (size A) l) A.
+
+      Lemma simpl_ad_cons {n x xs}:
+        (add_deep n x [:: [::] & xs]) = [::] :: add_deep n x xs.
+      Proof. destruct n => //. Qed.
+
+      Lemma add_deep_empty n l:
+        add_deep n l [:: [::]] = [:: [::]].
+      Proof. destruct n => //. Qed.
+
+      Lemma simpl_ad_cons1 {n m l x xs}:
+        size xs <= n -> n < m ->
+        (add_deep m l [:: x & xs]) = add_deep m l [::x] ++ add_deep n l xs.
+      Proof. 
+        (* elim:  *)
+      Admitted.
+      
+      Lemma xx {l xs}:
+        (ad l [:: [::] & xs]) = [::] :: ad l xs.
+      Proof. 
+        rewrite/ad.
+        have H := @simpl_ad_cons1  (size xs)  (size ([::] :: xs)) l [::] xs.
+        rewrite H //add_deep_empty//.
+      Qed. 
+      
+
+      
+        
+
+      (* here we add the alts only to deep cut *)
+      Definition make_lB lB tl := map (map (add_ca' false tl)) lB.
+
+      Definition make_lB0 (xs:seq alt') (lB0: alt') := map (fun x => x ++ lB0) xs.
+
+      Definition trully x xs hd lB :=
+        match ad hd (x::xs) with
+        | x :: xs =>
+        let: tl := make_lB0 xs hd in
+        let: lB := make_lB lB tl in
+        [seq x ++ y | y <- lB] ++ tl
+        | [::] => [::]
+        end.
+
+      (* We are build an And node, x and xs are the alternatives from the
+         lhs of the And, lB the alternatives of the rhs and lB0 the reset point.
+         All the cut_to alternatives in x and xs must have lB0 as tail: 
+         this is done thanks to "add (hd x xs)"
+         Moreover, we add to the non superficial cuts in lB the alternatives coming
+         from xs, i.e. in a state (A \/ B) /\_r (! \/ C), the cut should
+         recall (B /\ r) has cut-to alts, in this example, x = A, xs = B, lB0 = r, lB = !; C
+      *)
+      Definition add_alt (x: alt') (xs lB0 lB:list alt') : list  alt' :=
+        match lB0 with
+        (* in a valid state lb0 is either cut away, i.e. has length 0, or
+           is a base_and, i.e. of length 1
+        *)
+        | [::hd] => 
+            (* trully x xs hd lB *)
+            match ad hd (x::xs) with
+            | x::xs =>
+              (* trully x xs hd lB *)
+                let: tl := make_lB0 xs hd in
+                let: lB := make_lB lB tl in
+                [seq x ++ y | y <- lB] ++ tl
+            | [::] => [::]
+            end
+        | [::] =>
+            (* since the reset point is nil, xs are killed (we append the bot to all alt)  *)
+            [seq x ++ y | y <- lB]
+        | _ => [::] (*unreachable*)
+        end.
+
+      Lemma size_lB {lB tl}: size (make_lB lB tl) = size lB.
+      Proof. rewrite size_map//. Qed.
+
+      Lemma size_lB0 {xs hd}: size (make_lB0 xs hd) = size xs.
+      Proof. rewrite size_map//. Qed.
+
+      Lemma size_add_deep n h xs: size xs <= n -> size (add_deep n h xs) = size xs.
+      Proof.
+        elim: n xs => //n IH xs/=.
+        rewrite size_map//.
+      Qed.
+
+      Lemma size_ad h xs: size (ad h xs) = size xs.
+      Proof. apply: size_add_deep => //. Qed.
+
+      Lemma size_add_alt (x: alt') (xs lB0 lB:list alt') :
+        size (add_alt x xs lB0 lB) <= size (xs ++ lB).
+      Proof.
+        case: lB0 => //=[|y ys].
+          rewrite size_map size_cat addnC.
+          rewrite leq_addr//.
+        case: ys => //.
+        rewrite !size_cat !size_map.
+        rewrite addnC//.
+      Qed.
+
+      Lemma make_lB_empty1 {tl} : make_lB [::] tl = [::].
+      Proof. move=>//. Qed.
+
+      Lemma make_lB_empty2 {lB} : make_lB lB [::] = lB.
+      Proof. rewrite/make_lB map_add1_cas_empty//. Qed.
+
+      Lemma make_lB0_empty1 {lb0} : make_lB0 [::] lb0 = [::].
+      Proof. rewrite /make_lB0//. Qed.
+
+      (* Lemma make_lB0_empty2 {xs} : make_lB0 xs [::] = [::].
+      Proof. rewrite /make_lB0/=flatten_empty//. Qed. *)
+
+      (* Lemma add_alt_empty1 {xs lB0 lB}:
+        add_alt [::] xs lB0 lB = (make_lB lB (make_lB0 xs lB0)) ++ (make_lB0 xs lB0).
+      Proof. rewrite /add_alt/=map_id//. Qed. *)
+
+      (* Lemma add_alt_empty2 {x lB0 lB}:
+        add_alt x [::] lB0 lB = [seq x ++ y | y <- lB].
+      Proof. rewrite/add_alt/=/make_lB cats0 map_add1_cas_empty//. Qed. *)
+
+      Lemma add_alt_empty3 {x xs lB}:
+        add_alt x xs [::] lB = [seq x ++ y | y <- lB].
+      Proof. rewrite/add_alt//. Qed.
+
+      Lemma add_alt_empty4 {x xs hd}:
+        add_alt x xs [::hd] [::] = behead (make_lB0 (ad hd (x::xs)) hd).
+      Proof.
+        move=>//.
+      Qed.
+    End makers.
 
     (* bt is the backtracking list for the cut-alternatives
       this list is important since in this tree:
-          or
-          /  \
-        or   K
-        /  \
-      !    J
+           or   
+          /  \  
+         or   K 
+        /  \    
+       !    J   
       K is in bt but not J, i.e. we have to consider two different levels:
       the "siblings" on the right of a cut are NOT alternatives
       the "great^n uncles" on the right of a cut ARE alternatives
     *)
-    Fixpoint state_to_list_aux (A: state) (bt : list alt') (bt2: list alt') (next : list alt') (next0 : list alt') : list alt' :=
+    Fixpoint state_to_list_aux (A: state) (bt : list alt') : list alt' :=
       match A with
         (* Attenzione: bisogna tradurre: "Dead /\ p" che è diverso da "OK /\ p", quindi è strano
           Mettere la lista vuota per "OK".
         *)
-      | OK | Top => if next == [::] then [::[::]] else next
-      | Bot | Dead => behead next
-      (* sbagliato: next = [::] non devo restituire il singoletto nel caso di [::[::]] *)
-      | Goal _ Cut => (*if next == [::] then [::[::cut' false bt2]] else*) (map (cons (cut' false bt2))) next
-      | Goal pr (Call t) => (*if next == [::] then [::[::call' pr t]] else *) map (cons (call' pr t)) next
+      | OK => [::[::]]
+      | Top => [::[::]]
+      | Bot => [::]
+      | Dead => [::]
+      | Goal _ Cut => [::[::cut' false [::]]]
+      | Goal pr (Call t) => [::[::call' pr t]]
       | Or A _ B => 
-        if state_to_list_aux A [::] [::] [::[::]] [::[::]] == [::] then (*if the totally disappears *)
-          state_to_list_aux B bt2 bt2 next next0
-        else
-        let lB := state_to_list_aux B bt2 bt2 next0 next0 in
-        let lA := state_to_list_aux A (lB++bt) bt next next0 in
-        lA ++ lB
+        let lB := state_to_list_aux B [::] in
+        let lA := state_to_list_aux A lB in
+        (* here we are adding bt to lA. In the example above J in not in bt  *)
+        (* since bt are at least grand-parents alts, then we force the insertion 
+           in the cuts of lA *)
+        incr_cuts (map (map (add_ca' true bt)) (lA ++ lB))
       | And A B0 B =>
-        (* TODO: next should consider (behead lA) as cut alternatives...*)
-        (*(A \/ B) /\ (! \/ C)*)
-        let lB   := state_to_list_aux B bt bt2 next next0 in 
-        let lB0 := state_to_list_aux B0 bt bt2 next next0 in
-        let lA := state_to_list_aux A bt bt2 lB lB0 in
-        lA
+        let lA   := state_to_list_aux A bt in
+        let lB   := state_to_list_aux B bt in
+        let lB0 := state_to_list_aux B0 bt in
+        if lA is x :: xs then add_alt x xs lB0 lB
+        else [::]
       end.
+
+    Fixpoint alternatives A :=
+      match A with
+      | Or A _ B => (alternatives A) + alternatives B
+      | And A B0 B => alternatives A + alternatives B
+      | _ => 1
+      end.
+
+    Lemma size_s2l_leq_alternative A l:
+        size (state_to_list_aux A l) <= alternatives A.
+    Proof.
+      elim: A l => //.
+      - move=> p []//.
+      - move=> A HA s B HB l/=.
+        rewrite !size_map size_cat.
+        have:= HB [::].
+        remember (state_to_list_aux B _) as X eqn:HX.
+        have:= HA X.
+        remember (state_to_list_aux A _) as Y eqn:HY.
+        apply leq_add.
+      - move=> A HA B0 _ B HB l/=.
+        move: (HA l).
+        case X: (state_to_list_aux A l) => [|x xs]//=.
+        have:= (size_add_alt x xs (state_to_list_aux B0 l) (state_to_list_aux B l)).
+        remember (add_alt _ _ _ _) as Z eqn:HZ.
+        move=>/=.
+        rewrite size_cat.
+        have:= HB l.
+        remember (state_to_list_aux B _) as LB.
+        move=> HLB {}HZ Hxs.
+        apply: leq_trans HZ _.
+        apply: leq_add.
+        - by apply: ltnW.
+        - exact: HLB.
+    Qed.
 
     Fixpoint G2G A := 
       match A with 
@@ -326,7 +457,7 @@ Module Nur (U : Unif).
     Lemma G2Gs_cat l1 l2 : G2Gs (l1 ++ l2) = G2Gs l1 ++ G2Gs l2.
     Proof. rewrite/G2Gs map_cat//. Qed.
 
-    Definition state_to_list A := G2Gs (state_to_list_aux A [::] [::] [::[::]] [::[::]]).
+    Definition state_to_list A l := G2Gs (state_to_list_aux A l).
 
     Lemma G2G_incr_cut {B}: map G2G (map incr_cut B) = map G2G B.
     Proof. elim: B => //x xs IH/=; rewrite IH; case: x => //. Qed.
@@ -344,108 +475,56 @@ Module Nur (U : Unif).
   End t2l.
 
   Section tests.
-    Goal forall p x y s1, 
-    (* ((x \/ y)) *)
+
+    Goal forall s1 s2 A B C0 C p,
       let f x := (Goal p (Call x)) in
-      state_to_list ((Or (f x) s1 (f y))) = 
-        [:: [:: call p x]; [:: call p y]].
+      (* il cut punta su B *)
+      (* (((! \/ A) \/ B)) /\ (! \/ C)*)
+      state_to_list 
+        (And (Or ((Or (Goal p Cut) s1 (f A))) s1 (f B)) (f C0) (Or (Goal p Cut) s2 (f C))) [::] = 
+        [:: 
+          [::cut [:: [:: call p B; call p C0]]; cut [::[:: call p A; call p C0]; [:: call p B; call p C0]]];
+          [::cut [:: [:: call p B; call p C0]]; call p C];
+          [:: call p A; call p C0]; 
+          [:: call p B; call p C0]].
     Proof.
-      move=> p x y s1.
-      rewrite/state_to_list.
-      move=>//=.
+      move=> s1 s2 A B C0 C p/=.
+      rewrite/state_to_list/=.
+      repeat f_equal.
     Qed.
 
-    Goal forall p y s1, 
-    (* ((Bot \/ y)) *)
+    Goal forall A B0 p s1,
+        (* (OK \/ A) /\_B0 OK *)
       let f x := (Goal p (Call x)) in
-      state_to_list ((Or Bot s1 (f y))) = 
-        [:: [:: call p y]].
+      state_to_list (And (Or OK s1 (f A)) (f B0) OK) [::] =
+      [::[::]; [::call p A; call p B0]].
     Proof.
-      move=> p y s1.
-      rewrite/state_to_list.
-      move=>//=.
+      move=> A B0 p s1.
+      rewrite/state_to_list//=.
     Qed.
 
-    Goal forall p y, 
-    (* ((Bot /\ p y)) *)
+    Goal forall A B0 p s1,
+      (* (Bot \/ B) /\_b0 B0  *)
       let f x := (Goal p (Call x)) in
-      state_to_list (And Bot (f y) (f y)) = 
-        [::].
+      state_to_list (And (Or Bot s1 (f A)) (f B0) (f B0)) [::] =
+      [::[::call p A; call p B0]].
     Proof.
-      move=> p y s1.
-      rewrite/state_to_list.
-      move=>//=.
-    Qed.
-
-    Goal forall p x y a, 
-    (* ((x /\_a y) *)
-      let f x := (Goal p (Call x)) in
-      state_to_list ((And (f x) (f a) (f y))) = 
-        [:: [:: call p x; call p y]].
-    Proof.
-      move=> p x y a.
-      rewrite/state_to_list.
-      move=>//=.
-    Qed.
-
-    Goal forall p x y s1 a a0, 
-    (* ((x \/ y) /\_a0 a *)
-      let f x := (Goal p (Call x)) in
-      state_to_list (And (Or (f x) s1 (f y)) (f a0) (f a)) = 
-        [:: [:: call p x; call p a]; [:: call p y; call p a0]].
-    Proof.
-      move=> p x y s1 a a0.
-      rewrite/state_to_list.
-      move=>//=.
-    Qed.
-
-    Goal forall p y s1 a a0, 
-    (* ((Bot \/ y) /\_a0 a *)
-      let f x := (Goal p (Call x)) in
-      state_to_list (And (Or Bot s1 (f y)) (f a0) (f a)) = 
-        [:: [:: call p y; call p a]].
-    Proof.
-      move=> p y s1 a a0.
-      rewrite/state_to_list.
-      move=>//=.
-    Qed.
-
-    Goal forall p x y s1 a x0, 
-    (* ((x /\_x0 y) \/ a *)
-      let f x := (Goal p (Call x)) in
-      state_to_list (Or (And (f x) (f x0) (f y)) s1 (f a)) = 
-        [:: [:: call p x; call p y]; [:: call p a]].
-    Proof.
-      move=> p x y s1 a x0.
-      rewrite/state_to_list.
-      move=>//=.
-    Qed.
-
-    Goal forall p x y s1 a s2, 
-    (* ((x \/ y) \/ a *)
-      let f x := (Goal p (Call x)) in
-      state_to_list (Or (Or (f x) s1 (f y)) s2 (f a)) = 
-        [:: [:: call p x]; [::call p y]; [:: call p a]].
-    Proof.
-      move=> p x y s1 a s2.
-      rewrite/state_to_list.
-      move=>//=.
+      move=> A B0 p s1.
+      rewrite/state_to_list//=.
     Qed.
 
     Goal forall p x y z w s1 s2 a, 
-    (* ((x \/ y) /\_a (z \/ w)) *)
       let f x := (Goal p (Call x)) in
       state_to_list (
         And 
           (Or (f x) s1 (f y)) (f a) 
-          (Or (f z) s2 (f w))) = 
+          (Or (f z) s2 (f w))) [::] = 
         [:: [:: call p x; call p z];
         [:: call p x; call p w];
         [:: call p y; call p a]].
     Proof.
-      move=> p x y z w s1 s2 a.
-      rewrite /state_to_list.
-      move=>//=.
+      move=>/=.
+      by [].
     Qed.
 
     Goal forall p z w s1 s2 a, 
@@ -453,10 +532,10 @@ Module Nur (U : Unif).
       state_to_list (
         And 
           (Or Top s1 Bot) (f a) 
-          (Or (f z) s2 (f w))) = 
+          (Or (f z) s2 (f w))) [::] = 
         [:: [:: call p z]; [:: call p w]].
     Proof.
-      move=>  p z w s1 s2 a.
+      move=>p z w s1 s2 a.
       rewrite/state_to_list/=.
       by [].
     Qed.
@@ -464,15 +543,14 @@ Module Nur (U : Unif).
     (* THIS IS IMPORTANT *)
     Goal forall p s1 s2 a b c d, 
       let f x := (Goal p (Call x)) in
-      (* ((KO \/ a)  /\b (c \/ d)) *)
       state_to_list (
         And 
           (Or Bot s1 (f a)) (f b) 
-          (Or (f c) s2 (f d))) = 
+          (Or (f c) s2 (f d))) [::] = 
+        (* [:: [:: call a; call b] ]. *)
         [:: [:: call p a; call p c]; [::call p a; call p d] ].
     Proof.
       move=> p s1 s2 a b c d /=.
-      rewrite/state_to_list/=.
       by [].
     Qed.
 
@@ -481,26 +559,35 @@ Module Nur (U : Unif).
       state_to_list (
         Or 
           (Or (Goal p Cut) s1 (Goal p (Call a))) s2
-          (Goal p (Call b))) = 
+          (Goal p (Call b))) [::] = 
       [:: [:: cut [:: [:: call p b]]]; [:: call p a]; [:: call p b]].
     Proof.
       move=>p a b s1 s2; rewrite/state_to_list/=.
       by []. Qed.
 
-    Goal forall a b s c0 c p,
+    Goal forall A1 A2 s  C0 B p,
       let f x := (Goal p (Call x)) in
-      (* ((a \/ b) /\Bot (Bot /\ b) ) *)
-      state_to_list (And (Or (f a) s (f b)) (Bot) (And Bot (f c0) (f c))) =
+      state_to_list (And (Or (f A1) s (f A2)) (Bot) (And Bot (f C0) (f B))) [::] =
       [:: ].
     Proof.
-      move=>a b s c0 c p.
+      move=> A1 A2 s  C0 B p.
+      rewrite/state_to_list.
+      by [].
+    Qed.
+
+    Goal forall s A B C p,
+      let f x := (Goal p (Call x)) in
+      state_to_list (And (Or (f A) s (f B)) (Bot) (f C)) [::] =
+      [:: [:: call p A; call p C]].
+    Proof.
+      move=> s A B C p.
       rewrite/state_to_list/=.
       by [].
     Qed.
 
     Goal forall A1 A2 s B0 C0 B p,
       let f x := (Goal p (Call x)) in
-      state_to_list (And (Or (f A1) s (f A2)) (f B0) (And Bot (f C0) (f B))) =
+      state_to_list (And (Or (f A1) s (f A2)) (f B0) (And Bot (f C0) (f B))) [::] =
       [:: [:: call p A2 ; call p B0 ]].
     Proof.
       move=> * /=.
@@ -508,29 +595,32 @@ Module Nur (U : Unif).
     Qed.
 
     Goal forall b0 p a b c s1 s2, 
-    (* ( ((c /\ !) \/ a)  \/ b) *)
       state_to_list (
         Or 
-          (Or (And (Goal p (Call c)) b0 (Goal p Cut)) s1 (Goal p (Call a))) s2
-          (Goal p (Call b))) = 
+          (Or (And (Goal p (Call c)) (Goal p (Call b0)) (Goal p Cut)) s1 (Goal p (Call a))) s2
+          (Goal p (Call b))) [::] = 
       [:: [:: call p c; cut [:: [:: call p b]]]; [:: call p a]; [:: call p b]].
-    Proof. by []. Qed.
+    Proof.
+      move=> b0 p a b c s1 s2.
+      rewrite/state_to_list/=.
+      f_equal.
+    Qed.
 
     Goal forall s1 s2 B C Res p,
       let f x := (Goal p (Call x)) in
       (* (OK \/ B) /\ (! \/ C) -> [cut_[B,Reset]; C; (B, Reset)] *)
-      state_to_list (And (Or OK s1 (f B)) (f Res) (Or (Goal p Cut) s2 (f C)))
+      state_to_list (And (Or OK s1 (f B)) (f Res) (Or (Goal p Cut) s2 (f C))) [::]
         = [::[::cut [::[:: call p B; call p Res]]]; [::call p C]; [:: call p B; call p Res]].
     Proof.
-      move=> s1 s2 B C Res p/=.
-      rewrite/state_to_list/=.
+      move=> s1 s2 B C Res p.
+      rewrite /state_to_list/=.
       move=>//.
-    Abort.
+    Qed.
 
     Goal forall s1 B C Res Res2 p,
       let f x := (Goal p (Call x)) in
       (* (OK \/ B) /\ (! /\ C) -> [cut_[]; C; (B, Reset)] *)
-      state_to_list (And (Or OK s1 (f B)) (f Res) (And (Goal p Cut) (f Res2) (f C)))
+      state_to_list (And (Or OK s1 (f B)) (f Res) (And (Goal p Cut) (f Res2) (f C))) [::]
         = [::[::cut [::]; call p C]; [:: call p B; call p Res]].
     Proof.
       move=> s1 B C Res Res2 p//=.
@@ -539,20 +629,22 @@ Module Nur (U : Unif).
     Goal forall s1 s2 A B C C0 p,
       let f x := (Goal p (Call x)) in
       (* (A /\ ((! \/ B) \/ C) *)
-      state_to_list (And (f A) (f C0) (Or (Or (Goal p Cut) s1 (f B)) s2 (f C)))
+      state_to_list (And (f A) (f C0) (Or (Or (Goal p Cut) s1 (f B)) s2 (f C))) [::]
       = [:: 
         [:: call p A; cut [:: [:: call p C]]]; 
         [:: call p A; call p B]; 
         [:: call p A; call p C]].
     Proof.
-      move=> s1 s2 A B C C0 p//=.
+      move=> s1 s2 A B C C0 p.
+      rewrite /state_to_list/=.
+      repeat f_equal.
     Qed.
 
     Goal forall s1 s2 s3 A B C D E p,
       let f x := (Goal p (Call x)) in
       (* (A \/_{s1} B) /\_C ((! \/_{s2} D) \/_{s3} E) *)
       state_to_list 
-        (And (Or (f A) s1 (f B)) (f C) (Or (Or (Goal p Cut) s2 (f D)) s3 (f E))) = 
+        (And (Or (f A) s1 (f B)) (f C) (Or (Or (Goal p Cut) s2 (f D)) s3 (f E))) [::] = 
         [:: 
         [:: call p A; cut [:: [:: call p E]; [:: call p B; call p C]]];
         [:: call p A; call p D]; [:: call p A; call p E];
@@ -561,13 +653,13 @@ Module Nur (U : Unif).
     Proof.
       move=> s1 s2 s3 A B C D E p/=.
       rewrite /=/add_alt/make_lB/make_lB0//=.
-    Abort.
+    Qed.
 
     Goal forall s1 s2 A B C D E F p,
       let f x := (Goal p (Call x)) in
       (* (A \/_{s1} B) /\_C ((! \/_{s2} D) /\_{E} F) *)
       state_to_list 
-        (And (Or (f A) s1 (f B)) (f C) (And (Or (Goal p Cut) s2 (f D)) (f E) (f F))) = 
+        (And (Or (f A) s1 (f B)) (f C) (And (Or (Goal p Cut) s2 (f D)) (f E) (f F))) [::] = 
         [:: 
           [:: call p A; cut [:: [:: call p B; call p C]]; call p F];
           [:: call p A; call p D; call p E]; 
@@ -575,7 +667,7 @@ Module Nur (U : Unif).
     Proof.
       move=> s1 s2 A B C D E F p//=.
       (* rewrite/add_alt/=/make_lB0/=. *)
-    Abort.
+    Qed.
 
     (* IMPORTANTE!
       The right and side of the first and becomes:
@@ -588,21 +680,21 @@ Module Nur (U : Unif).
       let f x := (Goal p (Call x)) in
       (* (A \/_{s1} B) /\_C ((! \/_{s2} D) /\_{E} !) *)
       state_to_list 
-        (And (Or (f A) s1 (f B)) (f C) (And (Or (Goal p Cut) s2 (f D)) (f E) (Goal p Cut))) = 
+        (And (Or (f A) s1 (f B)) (f C) (And (Or (Goal p Cut) s2 (f D)) (f E) (Goal p Cut))) [::] = 
         [:: 
           [:: call p A; cut [:: [:: call p B; call p C]]; cut [::]];
           [:: call p A; call p D; call p E]; 
           [:: call p B; call p C]].
     Proof.
       move=> s1 s2 A B C D E p//=.
-    Abort.
+    Qed.
 
     Goal forall s1 s2 A B C p,
       let f x := (Goal p (Call x)) in
       (* entrambi i cat puntano su A B (il primo butta via ! \/ A, il secondo butta via A)*)
       (* ((! \/ ! \/ A) \/ B) \/ C *)
       state_to_list 
-        (Or (Or (Or (Goal p Cut) s1 ((Or (Goal p Cut) s1 (f A)))) s1 (f B)) s2 (f C)) = 
+        (Or (Or (Or (Goal p Cut) s1 ((Or (Goal p Cut) s1 (f A)))) s1 (f B)) s2 (f C)) [::] = 
         [:: 
           [::cut [:: [:: call p B]; [::call p C]]];
           [::cut [:: [:: call p B]; [::call p C]]];
@@ -613,25 +705,59 @@ Module Nur (U : Unif).
       move=> s1 s2 A B C p/=.
       rewrite/state_to_list/=.
       move=>//=.
-    Abort.
+    Qed.
 
-    Goal forall s1 s2 A B C D p,
+    Goal forall s1 s2 A B C p,
       let f x := (Goal p (Call x)) in
       (* entrambi i cat puntano su A B (il primo butta via ! \/ A, il secondo butta via A)*)
-      (* (((! \/ ! \/ A) \/ B) \/ C) /\ D*)
+      (* ((! \/ ! \/ A) \/ B) \/ C *)
       state_to_list 
-        (And (Or (Or (Or (Goal p Cut) s1 ((Or (Goal p Cut) s1 (f A)))) s1 (f B)) s2 (f C)) (f D) (f D)) = 
+        (Or (Or (Or (And (Goal p Cut) Top Top) s1 ((Or (Goal p Cut) s1 (f A)))) s1 (f B)) s2 (f C)) [::] = 
         [:: 
-          [::cut [:: [:: call p B; call p D]; [::call p C; call p D]]; call p D];
-          [::cut [:: [:: call p B; call p D]; [::call p C; call p D]]; call p D];
-          [:: call p A; call p D]; 
-          [:: call p B; call p D];
-          [:: call p C; call p D] ].
+          [::cut [:: [:: call p B]; [::call p C]]];
+          [::cut [:: [:: call p B]; [::call p C]]];
+          [:: call p A]; 
+          [:: call p B];
+          [:: call p C] ].
     Proof.
-      move=> s1 s2 A B C D p/=.
+      move=> s1 s2 A B C p/=.
       rewrite/state_to_list/=.
       move=>//=.
-    Abort. (*another problem...*)
+    Qed.
+
+    Goal forall s1 A B D0 D p,
+      let f x := (Goal p (Call x)) in
+      (* il cut punta su B *)
+      (* (((! \/ A) \/ B)) /\ D*)
+      state_to_list 
+        (And (Or ((Or (Goal p Cut) s1 (f A))) s1 (f B)) (f D0) (f D)) [::] = 
+        [:: 
+          [::cut [:: [:: call p B; call p D0]]; call p D];
+          [:: call p A; call p D0]; 
+          [:: call p B; call p D0]].
+    Proof.
+      move=> s1 A B D0 D p/=.
+      rewrite/state_to_list/=.
+      repeat f_equal.
+    Qed.
+
+    Goal forall s1 s2 A B C D0 D p,
+      let f x := (Goal p (Call x)) in
+      (* entrambi i cut puntano su A B (il primo butta via ! \/ A, il secondo butta via A)*)
+      (* (((! \/ ! \/ A) \/ B) \/ C) /\ D*)
+      state_to_list 
+        (And (Or (Or (Or (Goal p Cut) s1 ((Or (Goal p Cut) s1 (f A)))) s1 (f B)) s2 (f C)) (f D0) (f D)) [::] = 
+        [:: 
+          [::cut [:: [:: call p B; call p D0]; [::call p C; call p D0]]; call p D];
+          [::cut [:: [:: call p B; call p D0]; [::call p C; call p D0]]; call p D0];
+          [:: call p A; call p D0]; 
+          [:: call p B; call p D0];
+          [:: call p C; call p D0] ].
+    Proof.
+      move=> s1 s2 A B C D0 D p/=.
+      rewrite/state_to_list/=.
+      f_equal.
+    Qed.
 
   End tests.
 
@@ -813,10 +939,10 @@ Module Nur (U : Unif).
       move=> + <-; clear B.
       elim: A l => //.
       move=> []// p a _ B0 _ B HB l/=/andP[/eqP->bB].
-      have:= HB l.
-      have [hd H]:= base_and_state_to_list bB; rewrite H.
-      move=>/(_ bB)/=/andP[].
-      case: a => [|t]; rewrite add_alt_empty2/==>->//.
+      have /= := HB l bB.
+      have [hd H]:= base_and_state_to_list bB; rewrite H/=.
+      move=>/andP[H1 _].
+      case: a => [|t]/=; rewrite add_ca1_empty andbT//.
     Qed.
 
     Lemma all_empty_ca_cons g l:
@@ -834,11 +960,22 @@ Module Nur (U : Unif).
         rewrite (base_and_empty_ca bA erefl)//.
       - move=> []//p a _ _ _ B HB /andP[/eqP->bB]/=.
         have {}HB := HB (base_and_base_or_aux bB).
-        destruct a => //; rewrite add_alt_empty2/=; apply: all_empty_ca_cons => //.
+        have [hd H]:= base_and_state_to_list bB.
+        have /= /andP[H2 _] := base_and_empty_ca bB (H [::]).
+        destruct a => //=; rewrite H/= add_ca1_empty H2//.
     Qed.
 
     Lemma base_and_ko_state_to_list {A l}: base_and_ko A -> state_to_list_aux A l = [::].
     Proof. elim: A => //=-[]//. Qed.
+
+    Lemma bbAnd_state_to_list {A}:
+      bbAnd A -> 
+        ((forall l, state_to_list_aux A l = [::]) \/ exists hd, forall l, state_to_list_aux A l = [::hd]).
+    Proof.
+      rewrite/bbAnd=>/orP[].
+        move=>/base_and_state_to_list; auto.
+      move=>/base_and_ko_state_to_list; auto.
+    Qed.
 
     Lemma base_or_aux_ko_state_to_list_aux {A l}: base_or_aux_ko A -> state_to_list_aux A l = [::].
     Proof.
@@ -863,7 +1000,7 @@ Module Nur (U : Unif).
       - move=> l hd _ [<-]//.
       - move=> []// p a _ B0 _ B HB l hd/=/andP[/eqP->bB].
         have [hd1 H]:= base_and_state_to_list bB; rewrite H.
-        case: a => //[|t]; rewrite add_alt_empty2/==>-[?]; subst => /=; apply: HB bB (H [::]).
+        case: a => [|t]//=; rewrite /trully/= add_ca1_empty => -[<-]/=; apply: HB bB (H [::]).
     Qed.
 
     Lemma lvlt_add_caF {y l}:
@@ -946,13 +1083,6 @@ Module Nur (U : Unif).
       all is_nil (map (map (add_ca' b ca)) r) = all is_nil r.
     Proof. elim: r=>//x xs /=->; rewrite is_nil_add_ca//. Qed.
 
-    Lemma all_is_nil_make_lb0 {rs l}:
-      all is_nil rs -> all is_nil (make_lB0 rs l).
-    Proof.
-      rewrite/make_lB0.
-      elim: rs l => //-[]//= xs IH l H.
-      rewrite all_cat IH// map_id.
-    Abort.
   End is_nil.
 
   Section size.
@@ -1021,34 +1151,43 @@ Module Nur (U : Unif).
     Proof. rewrite/state_to_list => /base_or_aux_ko_state_to_list_aux->//. Qed.
 
     Lemma success_state_to_list_aux {A m}:
+      valid_state A ->
       success A ->
         state_to_list_aux A m = [::] :: (state_to_list_aux (clean_success A) m).
     Proof.
       elim: A m => //.
       - move=> A HA s B HB/= m.
-        case: ifP => [dA sB|dA sA].
+        case: ifP => [dA vB sB|dA /andP[vA bB] sA].
           rewrite (state_to_list_dead dA)/=.
-          have:= HB _ sB=>->.
+          have:= HB _ vB sB=>->.
           rewrite (state_to_list_dead dA)//=.
-        have -> //:= HA (state_to_list_aux B [::]) sA.
-      - move=> A HA B0 HB0 B HB m /=/andP[sA sB]; rewrite sA/=.
-        have H1 := HA m sA.
-        have H2 := HB m sB.
-        rewrite /add_alt.
-        rewrite H1/=H2/=map_id//.
+        have -> //:= HA (state_to_list_aux B [::]) vA sA.
+      - move=> A HA B0 HB0 B HB m /= /and5P[oA vA aB] + + /andP[sA sB].
+        rewrite sA/==> vB bB.
+        have H1 := HA m vA sA.
+        have H2 := HB m vB sB.
+        rewrite HA//HB//.
+        have:= bB; rewrite/bbAnd=>/orP[]{}bB; last first.
+          rewrite (base_and_ko_state_to_list bB)//=.
+        have [hd H3] := base_and_state_to_list bB.
+        rewrite H3//.
     Qed.
 
     Lemma success_state_to_list {A m}:
+      valid_state A ->
       success A ->
         state_to_list A m = [::] :: (state_to_list (clean_success A) m).
-    Proof. move=> H; rewrite/state_to_list success_state_to_list_aux//. Qed.
+    Proof. move=> vA H; rewrite/state_to_list success_state_to_list_aux//. Qed.
 
     Lemma state_to_list_empty_clean {B l x}:
+      valid_state B ->
       success B -> state_to_list_aux B l = [::x] ->
         state_to_list_aux (clean_success B) l = [::].
     Proof.
-      move=>/success_state_to_list_aux->.
-      by move=>[].
+      move=> H1 H2 H3.
+      have:= @success_state_to_list_aux _ l H1 H2.
+      rewrite H3.
+      case: state_to_list_aux => //.
     Qed.
 
     Lemma bbOr_next_alt_none {s B l}:
@@ -1103,16 +1242,18 @@ Module Nur (U : Unif).
         case: ifP => //sA vB/=bB0 sB.
         rewrite success_is_dead// success_failed//.
         case X: next_alt => [[]|]//.
-        have H1 := HB _ _ vB sB X; rewrite H1.
+        have {}HB := HB _ _ vB sB X; rewrite HB.
         case Y: next_alt => [[s2 C]|]//.
           move: bB0; rewrite /bbAnd.
           case Z: base_and => //=.
             rewrite base_and_failed//.
           move=> bB0; rewrite (base_and_ko_failed bB0) // (base_and_ko_state_to_list bB0)//=.
           rewrite success_state_to_list_aux//add_alt_empty1 make_lB0_empty2 cats0.
-          rewrite make_lB_empty2; by eexists.
         have H2 := HA _ l vA sA Y.
-        rewrite H2 add_alt_empty2//.
+        rewrite H2//.
+        move: bB0; rewrite /bbAnd=>/orP[].
+          move=>/base_and_state_to_list [hd] ->//.
+        move=>/base_and_ko_state_to_list->//.
     Qed.
 
     Lemma failed_next_alt_none_state_to_list {s1 A}:
@@ -1146,10 +1287,9 @@ Module Nur (U : Unif).
             have H1:= bbAnd_valid bB0.
             rewrite (HB0 empty)//=.
             case: state_to_list_aux => //*.
-            rewrite add_alt_empty4 make_lB0_empty2//.
           move=> _ l.
-          rewrite (success_next_alt_state_to_list vA sA Y) add_alt_empty2/=.
-          rewrite map_id (HB s1)//.
+          rewrite (success_next_alt_state_to_list vA sA Y) (HB s1)//=.
+          have [->|[hd]->]//:= bbAnd_state_to_list bB0.
         case: ifP => //fA bB _ + l.
         case: ifP => //dA.
           rewrite (state_to_list_dead dA)//.
@@ -1162,7 +1302,6 @@ Module Nur (U : Unif).
           have H := @next_alt_aux_base_and_ko _ empty bB0'.
           have H1:= bbAnd_valid bB.
           rewrite (HB empty)//=; case: state_to_list_aux => //*.
-          rewrite add_alt_empty4 make_lB0_empty2//.
         have -> //:= HA _ vA fA X l.
     Qed.
 
@@ -1181,7 +1320,8 @@ Module Nur (U : Unif).
 
     Lemma clean_successP {s1 s2 A B l}:
       valid_state A -> success A ->
-        next_alt s1 A = Some (s2, B) -> state_to_list_aux B l = state_to_list_aux (clean_success A) l.
+        next_alt s1 A = Some (s2, B) -> 
+          state_to_list_aux (clean_success A) l = state_to_list_aux B l.
     Proof.
       elim: A s1 s2 B l => //.
       - move=> A HA s B HB s2 s3 C l/=.
@@ -1196,7 +1336,7 @@ Module Nur (U : Unif).
         case nB: next_alt => //[[s6 E]][_<-]/=.
         rewrite (state_to_list_dead is_dead_dead)/=.
         have H := success_next_alt_state_to_list vA sA nA.
-        have ->/= := state_to_list_empty_clean sA (H _).
+        have ->/= := state_to_list_empty_clean vA sA (H _).
         move: bB; rewrite /bbOr => /orP[] bB.
           have ->// := base_or_aux_next_alt_some bB nB.
         by rewrite (next_alt_aux_base_or_ko bB) in nB.
@@ -1205,22 +1345,36 @@ Module Nur (U : Unif).
         rewrite success_is_dead//success_failed//.
         case nB: next_alt => [[s7 E]|].
           move=>[_<-]/=.
-          rewrite !(success_state_to_list_aux sA)!add_alt_empty1.
+          rewrite !(success_state_to_list_aux vA sA).
           have {}HB := (HB _ _ _ _ vB sB nB).
           rewrite HB//.
-        case nA': next_alt => [[s7 F]|]//.
-        case: ifP => // fB0[_<-]/=.
+        case nA': next_alt => [[s7 A']|]//.
+        case: ifP => // fB0.
+        move=> [??]; subst.
         move: bB0; rewrite /bbAnd => /orP[bB|]; last first.
           move=>/base_and_ko_failed; rewrite fB0//.
         have [x Hb]:= base_and_state_to_list bB.
         have lvlS := base_and_lvlS bB (Hb [::]).
-        have ->/= := HA _ _ _ _ vA sA nA'.
+        have {}HA := HA _ _ _ _ vA sA nA'. 
         have H := success_next_alt_state_to_list vB sB nB.
-        rewrite (state_to_list_empty_clean sB (H _)).
-        rewrite (success_state_to_list_aux sA)/=add_alt_empty1.
-        case X: (state_to_list_aux (clean_success A)) => [|b bs]//.
-        rewrite /add_alt/make_lB/make_lB0/= !Hb/=.
-        rewrite (all_lvlS_add_ca_false lvlS)//.
+        move=>/=.
+        rewrite (state_to_list_empty_clean vB sB (H _)).
+        rewrite (success_state_to_list_aux vA sA).
+        rewrite HA.
+        rewrite Hb.
+        case X: (state_to_list_aux) => [|b bs]//=.
+        rewrite !(all_lvlS_add_ca_false lvlS)//.
+        f_equal.
+        remember ((size bs)).
+        rewrite {1}Heqn.
+        destruct n => //.
+          admit.
+        move=>/=.
+        repeat f_equal.
+        have: n = size bs by admit.
+        move=>?; subst.
+        move=>//.
+        move=> H.
     Qed.
 
 
@@ -2283,14 +2437,6 @@ Module Nur (U : Unif).
       move=> x xs IH [|y ys] zs/= H.
     Admitted.
 
-    Lemma same_cons_false x xs l: sameL l ((x::xs)++l) -> False.
-    Proof.
-      move=>/same_size/=; rewrite size_cat.
-      rewrite -addSn addnC.
-      move=>/addSn_false//.
-    Qed.
-
-
     Lemma same_size {l1 l2}: sameL l1 l2 -> size l1 = size l2.
     Proof.
       elim: l1 l2 => //[|x xs IH] []//=.
@@ -2309,7 +2455,7 @@ Module Nur (U : Unif).
       case: l3 => //-[]//b1 l3 l4/=/andP[/eqP/esym/eqP->]/H//.
     Qed.
 
-    Lemma same_cat {l1 l2 l3}: sameL (l1 ++ l2) (l3 ++ l2) -> sameL l1 l3.
+    (* Lemma same_cat {l1 l2 l3}: sameL (l1 ++ l2) (l3 ++ l2) -> sameL l1 l3.
     Proof. 
       elim: l1 l3 l2.
         move=>[]//=??? /same_cons_false//.
@@ -2325,7 +2471,7 @@ Module Nur (U : Unif).
         rewrite size_cat/=addnS-addSn addnC.
         move=>/esym/addSn_false//.
       move=> []//p1 t1 l1/andP[->]/IH->//.
-    Qed.
+    Qed. *)
 
     Lemma exp_done_shape_s2l {A} l:
       exp_done_shape A -> 
@@ -2397,9 +2543,9 @@ Module Nur (U : Unif).
         apply: HA vA H1.
     Admitted. *)
 
-    Lemma xxx {l1 x x'}:
-      [seq G2G j | j <- [seq add_ca' true l1 j | j <- x]] =
-      [seq G2G j | j <- [seq add_ca' true l1 j | j <- x']] -> 
+    Lemma xxx {b l1 x x'}:
+      [seq G2G j | j <- [seq add_ca' b l1 j | j <- x]] =
+      [seq G2G j | j <- [seq add_ca' b l1 j | j <- x']] -> 
           [seq G2G j | j <- x] = [seq G2G j | j <- x'].
     Proof.
       elim: x x' => //.
@@ -2432,12 +2578,10 @@ Module Nur (U : Unif).
           case EB: expand => //[s1' B2|s1' B2][??]; subst; rewrite/= dA !(state_to_list_dead dA)/==>eB2.
             case sB: state_to_list_aux => [|[|[|lvl alts] x']xs']//=[???]; subst.
             case sB2: state_to_list_aux => //[x xs]/=[+?]; subst.
-            rewrite G2Gs_incr_cuts 2!G2G_incr_cut/G2Gs => H.
-            have:= HB _ _ _ _ _ _ [::] _ vB EB eB2; rewrite sB sB2.
-            apply xxx in H.
-            move=> /=/(_ _ _ _ _ erefl).
-            rewrite H.
-            move=> /(_ _ erefl).
+            rewrite G2Gs_incr_cuts 2!G2G_incr_cut/G2Gs => /xxx H.
+            have:= HB _ _ _ _ _ _ [::] _ vB EB eB2; rewrite sB sB2/=H.
+            move=> /=/(_ _ _ _ _ erefl erefl).
+            rewrite cats0.
             have:= empty_l1 l1.
             move=> ?; subst; rewrite map_add1_cas_empty cats0 => //.
             rewrite cats0//.
@@ -2523,24 +2667,22 @@ Module Nur (U : Unif).
           move=> /(_ _ _ _ _ erefl erefl)//.
         have [hd H] := base_and_state_to_list bB.
         have H1 := base_and_lvlS bB (H [::]).
-        rewrite !add_alt_empty1 H/make_lB.
         have [x[xs H2]]:= failed_state_to_list vB (expand_not_failed eB notF) l1.
-        rewrite H2/= => -[]+?; subst.
-        case: x H2 => //-[]//=b0 l l0 H2.
+        have [x2[l2 [H3 H4]]]:= exp_done_shape_s2l l1 sB'.
+        rewrite H2 H3 H.
+        move=>/[dup]H11+/[dup]H22.
+        rewrite !add_alt_empty1.
+        move=> -[]+?; subst.
+        case: x H11 H2 => //-[]//b0 l l0 H11 H2.
         move=>[]??; subst.
+        move=>[]/xxx H5 H6; subst.
+        have:= HB _ _ _ _ _ _ l1 _ vB eB sB'.
+        rewrite H2 H3/=H5.
+        move=> /(_ _ _ _ _ erefl erefl) {}HB.
         have: b0 = false by admit.
         move=>?; subst.
-        rewrite/make_lB0/=.
-        have [x[l2 [H3 H4]]]:= exp_done_shape_s2l l1 sB'.
-        rewrite H3/==>-[+ ?]; subst.
-        move=> H5.
-        have: l0 = x by admit.
-        move=>?; subst.
-        have: l = [::] by admit.
-        move=>?; subst => /=.
-        have: l1  = [::] by admit.
-        move=>?; subst => /=.
-        admit.
+        rewrite HB.
+        (* move=>->. *)
     Admitted.
 
 
