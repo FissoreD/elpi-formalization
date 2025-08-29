@@ -267,7 +267,7 @@ Module Nur (U : Unif).
     Section makers.
 
       Definition add_deep_help add_deep (n:nat) l :=
-        (apply_cut1 (fun x => map (fun x => x ++ l) ((add_deep n l) x))).
+        apply_cut1 (fun x => map (fun x => x ++ l) (add_deep n l x)).
     
       Fixpoint add_deep n (l: alt') (A: seq alt') :=
         match n with
@@ -277,6 +277,8 @@ Module Nur (U : Unif).
         end. 
 
       Definition ad l As := (add_deep (size As) l) (As) .
+    
+      Definition kill (A: alt') := map (apply_cut1 (fun x => [::])) A. 
 
             (* here we add the alts only to deep cut *)
       Definition make_lB lB tl := map (map (add_ca' false tl)) lB.
@@ -306,7 +308,7 @@ Module Nur (U : Unif).
             end
         | [::] =>
             (* since the reset point is nil, xs are killed (we append the bot to all alt)  *)
-            [seq x ++ y | y <- lB]
+            [seq (kill x) ++ y | y <- lB]
         | _ => [::] (*unreachable*)
         end.
     End makers.
@@ -428,7 +430,7 @@ Module Nur (U : Unif).
             end
         | [::] =>
             (* since the reset point is nil, xs are killed (we append the bot to all alt)  *)
-            [seq x ++ y | y <- lB]
+            [seq (kill x) ++ y | y <- lB]
         | _ => [::] (*unreachable*)
         end.
       Proof.
@@ -436,7 +438,7 @@ Module Nur (U : Unif).
       Qed.
 
       Lemma add_alt_empty3 {x xs lB}:
-        add_alt x xs [::] lB = [seq x ++ y | y <- lB].
+        add_alt x xs [::] lB = [seq kill x ++ y | y <- lB].
       Proof. rewrite/add_alt//. Qed.
 
       Lemma add_alt_empty4 {x xs hd}:
@@ -1318,8 +1320,8 @@ apply_cut1
           move=>/=.
           have:= HB l1 l2.
           case S: (state_to_list_aux B) => [|z zs]; case T: (state_to_list_aux B) => [|w ws]//=.
-          move=>[H3 H4] _; rewrite !size_cat H3 H1; f_equal.
-          rewrite -2!map_comp 2!size_o_cat_map H1.
+          move=>[H3 H4] _; rewrite //.
+          rewrite !size_cat !size_map -2!map_comp !size_o_cat_map !size_map H1 H3;f_equal.
           apply: size_prep H4.
         move=>[H3 H4].
         case: zs Z H4 => //=; case: ws W => //=W Z _.

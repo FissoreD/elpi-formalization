@@ -38,6 +38,21 @@ Proof.
   repeat f_equal.
 Qed.
 
+Goal forall s1 s2 A B C p,
+  let f x := (Goal p (Call x)) in
+  (* il cut punta su B *)
+  (* (((! \/ A) \/ B)) /\ (! \/ C)*)
+  state_to_list 
+    (And (Or ((Or (Goal p Cut) s1 (f A))) s1 (f B)) Bot (Or (Goal p Cut) s2 (f C))) [::] = 
+    [:: 
+      [::cut [::]; cut [::]];
+      [::cut [::]; call p C]].
+Proof.
+  move=> s1 s2 A B C p/=.
+  rewrite/state_to_list/=.
+  f_equal.
+Qed.
+
 Goal forall A B0 p s1,
     (* (OK \/ A) /\_B0 OK *)
   let f x := (Goal p (Call x)) in
@@ -322,6 +337,23 @@ Goal forall X s1 s2 A B C D0 D p,
       [:: call p C; call p D0] ].
 Proof.
   move=> X s1 s2 A B C D0 D p/=.
+  rewrite/state_to_list/=.
+  f_equal.
+Qed.
+
+
+Goal forall s1 s2 B0 A B C D p,
+  let f x := (Goal p (Call x)) in
+  (* entrambi i cut puntano su A B (il primo butta via ! \/ A, il secondo butta via A)*)
+  (* (((A /\ (! \/ B)) \/ C \/ D)) *)
+  state_to_list 
+    (Or (Or (f C) s2 (And (f A) (f B0) (Or (Goal p Cut) s1 (f B)))) s1 (f D)) [::] = 
+    [:: 
+      [:: call p C]; 
+      [:: call p A; cut [:: [:: call p D]]]; 
+      [:: call p A; call p B]; [:: call p D]].
+Proof.
+  move=> s1 s2 B0 A B C D p/=.
   rewrite/state_to_list/=.
   f_equal.
 Qed.
