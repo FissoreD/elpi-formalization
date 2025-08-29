@@ -277,6 +277,12 @@ Module Nur (U : Unif).
         end. 
 
       Definition ad l As := (add_deep (size As) l) (As) .
+
+      Definition add_deep_ n (l: alt') (A: alt') :=
+        match n with
+        | 0 => A
+        | n.+1 => (map (add_deep_help add_deep n l)) A
+        end.
     
       Definition kill (A: alt') := map (apply_cut1 (fun x => [::])) A. 
 
@@ -299,13 +305,13 @@ Module Nur (U : Unif).
            is a base_and, i.e. of length 1
         *)
         | [::hd] => 
-            match ad hd (x::xs) with
-            | x::xs =>
+            (* match ad hd (x::xs) with
+            | x::xs => *)
+                let x := add_deep_ (size xs).+1 hd x in
+                let xs := add_deep (size xs) hd xs in 
                 let: tl := make_lB0 xs hd in
                 let: lB := make_lB lB tl in
                 [seq x ++ y | y <- lB] ++ tl
-            | [::] => [::]
-            end
         | [::] =>
             (* since the reset point is nil, xs are killed (we append the bot to all alt)  *)
             [seq (kill x) ++ y | y <- lB]
@@ -387,7 +393,9 @@ Module Nur (U : Unif).
       Lemma size_add_alt (x: alt') (xs lB0 lB:list alt') :
         size (add_alt x xs lB0 lB) <= size (lB ++ xs).
       Proof.
-        rewrite size_cat; case:lB0 => [|y []]//=;rewrite ?size_cat !size_map//leq_addr//.
+        rewrite size_cat; case:lB0 => [|y []]//=.
+          rewrite ?size_cat !size_map//leq_addr//.
+        rewrite size_cat !size_map size_add_deep//.
       Qed.
 
 
@@ -407,13 +415,10 @@ Module Nur (U : Unif).
         add_alt [::] xs lB0 lB =
         match lB0 with
         | [::hd] => 
-            match ad hd ([::]::xs) with
-            | x::xs =>
-                let: tl := make_lB0 xs hd in
+                let: tl := make_lB0 (ad hd (xs)) hd in
                 let: lB := make_lB lB tl in
                 lB ++ tl
-            | [::] => [::]
-            end
+
         | [::] => lB
         | _ => [::] (*unreachable*)
         end.
@@ -442,8 +447,8 @@ Module Nur (U : Unif).
       Proof. rewrite/add_alt//. Qed.
 
       Lemma add_alt_empty4 {x xs hd}:
-        add_alt x xs [::hd] [::] = behead (make_lB0 (ad hd (x::xs)) hd).
-      Proof. rewrite//. Qed.
+        add_alt x xs [::hd] [::] = make_lB0 (add_deep (size xs) hd xs) hd .
+      Proof. rewrite//=. Qed.
     End props.
 
     (* bt is the backtracking list for the cut-alternatives
@@ -1193,9 +1198,9 @@ apply_cut1
           rewrite (base_and_ko_state_to_list bB)//=map_id.
           apply: HB vB.
         have [hd H]:= base_and_state_to_list bB.
-        rewrite add_alt_empty1 H/= !size_cat size_lB size_lB0 !size_map => H1.
+        rewrite add_alt_empty1 H/= !size_cat size_lB size_lB0 size_ad => H1.
         rewrite valid_ca_split//; last first.
-          rewrite size_cat size_lB size_lB0 !size_map//.
+          rewrite size_cat size_lB size_lB0 size_ad//.
         rewrite size_lB.
         have Hb:= (base_and_empty_ca bB (H [::])).
         rewrite drop_size_cat; last first.
@@ -1211,7 +1216,7 @@ apply_cut1
       move=>/orP[]bB; last first.
         rewrite (base_and_ko_state_to_list bB) add_alt_empty3/=valid_cas1_empty1//.
       have [hd H]:= base_and_state_to_list bB.
-      rewrite H/=size_lB0 size_map => H1.
+      rewrite H/=size_lB0 size_add_deep => H1.
       rewrite (all_lvlS_add_ca_false (base_and_lvlS bB (H [::]))).
       rewrite valid_ca_split_cons.
       have := HA _ l vA (leqnn _).
@@ -1301,6 +1306,16 @@ apply_cut1
       rewrite -2!map_comp 2!size_o_cat_map map_comp H1 H3 3!(map_comp _ _ L2)//.
     Qed.
 
+    Lemma size_add_deep_map {z w ys xs}:
+      size z = size w ->
+      [seq size j | j <- xs] = [seq size j | j <- ys] ->
+      [seq size j | j <- add_deep (size xs) z xs] =
+      [seq size j | j <- add_deep (size ys) w ys].
+    Proof.
+      elim: xs ys w z => [|x xs IH][]//=y ys w z H1[H2 H3].
+      rewrite !size_map H2-!map_comp !size_o_map_map H3//.
+    Qed.
+
     Lemma state_to_list_same_shape_aux {r1 r2 A l1 l2}: 
       state_to_list_aux A l1 = r1 -> state_to_list_aux A l2 = r2 -> shape r1 = shape r2.
     Proof.
@@ -1331,7 +1346,7 @@ apply_cut1
           move=>_.
           rewrite -!(map_comp size).
           apply: size_o_cat_fix_map => //.
-          rewrite -!map_comp !size_o_map_map//.
+          apply: size_add_deep_map => //.
         move=>[H5 H6].
         f_equal.
           rewrite !size_cat !size_map; congruence.
@@ -1341,7 +1356,7 @@ apply_cut1
           rewrite -!map_comp !size_o_map_map//.
         rewrite -2!(map_comp size).
         apply: size_o_cat_fix_map => //.
-        rewrite -!map_comp !size_o_map_map//.
+          apply: size_add_deep_map => //.
     Qed.
 
     Lemma state_to_list_empty {A l1 l2}: state_to_list_aux A l1 = [::] -> state_to_list_aux A l2 = [::].
@@ -1801,12 +1816,12 @@ apply_cut1
         simpl state_to_list_aux.
         rewrite HA Hb.
         case X: (state_to_list_aux) => [|b bs]//.
+        rewrite/add_alt.
         move=>/=.
-        rewrite /=all_lvlS_add_ca_false//.
-        f_equal.
-          admit.
-        f_equal.
-          admit.
+        rewrite /=all_lvlS_add_ca_false//; f_equal.
+        remember (size bs).
+        rewrite {1}Heqn.
+        admit.
     Admitted.
   
     Lemma expand_failure_next_alt_state_to_list_cons {s A B s1 s2 C l}:
@@ -1879,7 +1894,6 @@ apply_cut1
         have lvlS:= base_and_lvlS bB0 (H1 [::]).
         rewrite (all_lvlS_add_ca_false lvlS)//.
         f_equal; f_equal.
-          admit.
         admit.
     Admitted.
 
@@ -2053,8 +2067,6 @@ apply_cut1
           rewrite all_lvlS_add_ca_false//.
           f_equal.
             admit.
-          f_equal.
-          admit.
         case: ifP => //fA bB _.
         case X: next_alt => [[s3 D]|]//.
         case:ifP => fB => //-[_<-]/=.
@@ -2129,10 +2141,8 @@ apply_cut1
         rewrite is_nil_add_ca H/=.
         destruct r => //.
         rewrite make_lB0_empty2.
-        generalize (size r1s).
-        elim: r1s n => //=[b bs] IH/andP[H1 H2] n.
-        rewrite IH//.
-        destruct b => //.
+        rewrite/ad.
+        rewrite add_deep_empty1//.
     Qed.
 
     (* if the s2l of C has a non empty head, then the state is made
@@ -2213,8 +2223,6 @@ apply_cut1
             rewrite all_lvlS_add_ca_false//.
             f_equal.
             admit.
-          f_equal.
-          admit.
         case: ifP => [fA bB|fA bB].
           case nA: next_alt => //[[s3 D]].
           case: ifP => //fB0[??]; subst => /=.
