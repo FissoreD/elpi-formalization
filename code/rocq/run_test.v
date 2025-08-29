@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang.
+From det Require Import lang run.
 Import Language.
 
 Definition empty_sig : sigT := fun _ => b(d Func).
@@ -10,29 +10,9 @@ Definition build_progr l := {|
     rules := l;
 |}.
 
-Module Axioms.
-  Parameter program_eqb : program -> program -> bool.
-  Parameter is_program : program -> Type.
-  Parameter is_program_inhab : forall p : program, is_program p.
-  Parameter program_eqb_correct : forall p1 p2, program_eqb p1 p2 -> p1 = p2.
-  Parameter program_eqb_refl : forall x, program_eqb x x.
-
-
-  Parameter Sigma_eqb : Sigma -> Sigma -> bool.
-  Parameter is_Sigma : Sigma -> Type.
-  Parameter is_Sigma_inhab : forall p : Sigma, is_Sigma p.
-  Parameter Sigma_eqb_correct : forall p1 p2, Sigma_eqb p1 p2 -> p1 = p2.
-  Parameter Sigma_eqb_refl : forall x, Sigma_eqb x x.
-
-
-  Parameter same_subst : forall (s1 s2 : Sigma), s1 = s2.
-  Parameter same_progr : forall (s1 s2 : program), s1 = s2.
-End Axioms.
-
 Module UAxioms <: Unif.
   Axiom unify : Tm -> Tm -> Sigma -> option Sigma.
   Axiom matching : Tm -> Tm -> Sigma -> option Sigma.
-  Include Axioms.
 End UAxioms.
 Module RunAxiom:= Run(UAxioms).
 
@@ -47,7 +27,6 @@ Module Test1.
       end.
 
     Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
-    Include Axioms.
   End U.
 
   Module Run := Run(U).
@@ -230,7 +209,7 @@ End Test6.
 
 Module Test2.
   Import RunAxiom.
-  Goal expand empty (Or OK empty OK) = Solved empty (Or OK empty OK) . by []. Qed.
+  Goal expand empty (Or OK empty OK) = Success empty (Or OK empty OK) . by []. Qed.
 
   Goal forall p, run empty (Or (Goal p Cut) empty OK) empty (Or Bot empty Bot).
     move=> pr //=.

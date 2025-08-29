@@ -277,7 +277,7 @@ Module check (U:Unif).
 
   Lemma expand_next_alt {sP sV s1 A s2 B} : 
     all_cut_followed_by_det sP sV -> no_free_alt sP sV A ->
-      expand s1 A = Solved s2 B -> forall s3 : Sigma, next_alt s3 B = None.
+      expand s1 A = Success s2 B -> forall s3 : Sigma, next_alt s3 B = None.
   Proof.
     move=> H.
     elim: A s1 B s2 => //.

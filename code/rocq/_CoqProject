@@ -3,8 +3,11 @@
 -arg -w -arg -notation-overridden
 
 lang.v
+run.v
 run_test.v
 run_prop.v
 check.v
 valid_state.v
 elpi.v
+elpi_test.v
+elpi_equiv.v

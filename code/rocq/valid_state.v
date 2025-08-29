@@ -46,38 +46,8 @@ Module valid_state (U:Unif).
     | t => base_and_ko t
     end.
 
-
-  (* Lemma base_or_dead {B}: base_or_aux B || base_or_aux_ko B -> is_dead B = false.
-  Proof.
-    move=>/orP[].
-      elim: B => //.
-        move=> A HA s B HB /=/andP[bA bB].
-        rewrite HB//andbF//.
-      move=> []//.
-    elim: B => //.
-      move=> A HA s B HB /=/andP[bA bB].
-      rewrite HB//andbF//.
-    move=>[]//.
-  Qed. *)
-
   Definition bbOr B := base_or_aux B || base_or_aux_ko B. 
   Definition bbAnd B := base_and B||base_and_ko B. 
-
-  (* Fixpoint valid_state s :=
-    match s with
-    | Goal _ _ | Bot | Top => true
-    | Dead => false
-    | OK => false
-    | Or Dead _ (Or _ _ _ as B) => valid_state B
-    | Or A _ B => valid_state A && bbOr B
-    | And OK B0 (And _ _ _ as B) => 
-       valid_state B && bbAnd B0
-    | And A B0 B => 
-      [&& valid_state A,
-        if success A then valid_state B
-        else (B0 == B)
-        & (bbAnd B0)]
-    end. *)
 
   Fixpoint is_and A := 
     match A with
@@ -111,10 +81,6 @@ Module valid_state (U:Unif).
         (* We should notice that in (OK \/ KO) /\ OK the reset point is forced to be cut *)
         & (if success A || failed A then bbAnd B0 else base_and B0)]
     end.
-
-    (* TODO: OK /\ p non deve essere valido: la expand nel caso di And va avanti
-      a destra e mangerebbe p
-    *)
 
   Lemma valid_state_dead {A} : is_dead A -> valid_state A = false.
   Proof.
@@ -401,22 +367,6 @@ Module valid_state (U:Unif).
     + move=> s; rewrite valid_state_big_and // full_expanded_big_and.
     + move=> _ r l IH s.
       rewrite valid_state_big_and bbOr_big_or_aux IH if_same//.
-  Qed.
-
-  Lemma expandedP_expanded {s A r}:
-    valid_state A -> expanded s A r -> valid_state (get_state_exp r).
-  Proof.
-    move=> + [b H]; elim H; clear.
-    + move=> s1 s2 A1 A2 EA VA /=.
-      apply: valid_state_expand VA EA.
-    + move=> s A B HA HB /=.
-      apply: valid_state_expand HB HA.
-    + move=> s s' r A B b HA HB IH VA.
-      have VB:= valid_state_expand VA HA.
-      apply: IH VB.
-    + move=> s s' r A B b HA HB IH VA.
-      have VB:= valid_state_expand VA HA.
-      apply: (IH VB).
   Qed.
 
   Lemma valid_state_expanded {s1 A r}:

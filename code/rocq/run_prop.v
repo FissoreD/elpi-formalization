@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang.
+From det Require Import run.
 
 Module RunP (A: Unif).
   Module Run := Run(A).
@@ -25,7 +25,7 @@ Module RunP (A: Unif).
   Qed.
 
   Lemma run_Solved_id {s s1 A r alt}:
-      expand s A = Solved s1 alt -> expanded s A r -> r = Done s1 alt.
+      expand s A = Success s1 alt -> expanded s A r -> r = Done s1 alt.
   Proof.
     move=> + [b H]; by case: H => //=; clear; congruence.
   Qed.
@@ -65,102 +65,11 @@ Module RunP (A: Unif).
       by have:= IH _ _ _ H3 => -[?[??]]; subst.
   Qed.
 
-  (* Lemma next_alt_cut {s s' A B}: next_alt s (cutl A) = Some (s', B) -> exists A, B = cutl A.
-  Proof.
-    elim: A B s s' => //; clear.
-    + move=> A IH s2 B IHB C s s'/=.
-      case: ifP => //.
-        move=>/eqP->/=; rewrite dead2 eqxx.
-        have:= IHB _ s.
-        case: next_alt => // [[s1 D]] /(_ _ _ erefl)[E ->][_ <-].
-        by exists (Or (dead A) s2 E)=>/=; rewrite cut_dead_is_dead dead2 eqxx.
-      move=> dA/=; rewrite cut_dead_is_dead.
-      case: ifP => ///eqP.
-        move=>/cutl_dead->; rewrite is_ko_next_alt//.
-      move=> cA; have:= IH _ s.
-      case: next_alt => // [[s3 E]|].
-        move=>/(_ _ _ erefl)[F]->[_<-]; exists (Or (cutl F) s2 (cutr B)).
-        by move=>/=; rewrite !cutl_cutr_is_cutr cutl2 cutr2 if_same.
-      by rewrite is_ko_next_alt//failed_cutr if_same.
-    + move=> A HA B0 HB0 B HB C s s'/=.
-      rewrite cut_dead_is_dead.
-      case: ifP => // cdA.
-      case: ifP => // fcA.
-        have:= HA _ s.
-        case: next_alt => //[[s1 D]] /(_ _ _ erefl)[E->].
-        case: ifP => // _ [_<-]; exists (And E B0 B0).
-        by move=>/=.
-      have:= HB _ s.
-      case: next_alt => // [[s2 D]|].
-        move=>/(_ _ _ erefl)[E?]; subst. [E->]. [_<-]; exists (And A B0 E).
-      move=>_.
-      have:= HA _ s.
-      case: next_alt => //[[s1 D]] /(_ _ _ erefl)[E->].
-      case: ifP => // _ [_<-]; exists (And E B0 B0).
-      by move=>/=.
-  Qed. *)
-
-  (* Lemma expanded_cut_done {s s' A B}:
-    solved A -> expanded s (cutl A) (Done s' B) -> s = s'.
-  Proof.
-    remember (cutl _) as CA eqn:HCA.
-    remember (Done _ _) as D eqn:HD => -[b H].
-    elim: H s' A B HCA HD => //; clear.
-    + move=> s s' A B + s2 C D ? -[] ?? /[subst].
-      have [? H]:= expand_cut_failure s C.
-      by rewrite H.
-    + move=> s s' r A B b + HB IHA s2 C D ?? /[subst].
-      have [? H]:= expand_cut_failure s C.
-      by rewrite H.
-    + move=> s s' r A B b + HB IH s2 C D ?? /[subst].
-      have [? H]:= expand_cut_failure s C.
-      by rewrite H.
-  Qed. *)
-
-  (* Lemma expand_flow_cut {s s1 sE A B C}: expand s A = Solved s1 B -> expand s B = CutBrothers sE C -> B = C.
-  Proof.
-    elim: A s s1 sE B C; clear => //.
-    + move=> s s1 ? B C [] /[subst2] //.
-    + by move=> p [].
-    + move=> A HA s B HB s1 ? s2 C D /simpl_expand_or_solved [E [HE]] /[subst1].
-      by move=> /simpl_expand_or_cut.
-    + move=> A HA B0 HB0 B HB s1 ? s2 C D /simpl_expand_and_solved [s4 [E [F [HE [HF]]]]] /[subst1].
-      move=> /simpl_expand_and_cut [].
-      + move=> [G [HG]] /[subst1].
-        by have:= (HA _ _ _ _ _ HE HG) => /[subst1].
-      + move=> [s5 [G [H [HG [HH]]]]] /[subst1].
-        have := expand_flow HE HG => -[] /[subst2].
-        by have:= (HB _ _ _ _ _ HF HH) => /[subst1].
-  Qed. *)
-
-  (* Lemma expanded_big_or_KO {s1 s2 s3 p t}:
-    expanded s1 (big_or p s2 t) (Done s3 Bot) -> False.
-  Proof.
-    remember (big_or _ _ _) as B eqn:HB.
-    remember (Done _ _) as D eqn:HD => -[b H].
-    elim: H s2 s3 p t HB HD => //; clear.
-    + move=> ???? + ??? t ? [] ??; subst.
-      by rewrite /big_or; case: F => // -[] //.
-    + move=> s s' r A B ? + HB IH s1 s2 p t ??; subst.
-      by rewrite /big_or; case: F => // -[] //.
-    + move=> s s' r A B ? + HB IH s1 s2 p t ??; subst.
-      by rewrite /big_or; case: F => // -[] //.
-  Qed. *)
-
   Lemma expand_solved_expand {s s1 s2 s3 A B C}: 
-    expand s A = Solved s2 B -> expanded s1 B (Done s3 C) -> B = C /\ s1 = s3.
+    expand s A = Success s2 B -> expanded s1 B (Done s3 C) -> B = C /\ s1 = s3.
   Proof.
-    remember (Done _ _) as D eqn:HD => + [b H].
-    elim: H s s2 s3 A C HD => //; clear.
-    + move=> s s' A B + s1 s2 s3 C D [<-<-]H3.
-      have:= expand_solved_is_solved H3.
-      move=>-> [->->]//.
-    + move=> s s1 r A B ? + HB IH s2 s3 s4 C D? HC;subst.
-      have:= expand_solved_is_solved HC => /(_ s) HA'.
-      by rewrite HA'.
-    + move=> s s1 r A B ? + HB IH s2 s3 s4 C D? HC;subst.
-      have:= expand_solved_is_solved HC => /(_ s) HA'.
-      by rewrite HA'.
+    move=>/expand_solved_success[_ sB][v].
+    move=>/expanded_success => /(_ sB)[][]//.
   Qed.
 
   Section same_structure.
