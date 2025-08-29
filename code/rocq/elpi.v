@@ -1177,7 +1177,7 @@ apply_cut1
     | _ => [::]
     end.
 
-  Lemma ttt A r n l:
+  Lemma valid_state_valid_ca_help A r n l:
     valid_state A -> state_to_list_aux A l = r -> 
       size r <= n ->
         valid_ca_aux n r r.
@@ -1245,11 +1245,11 @@ apply_cut1
       admit.
   Admitted.
 
-  Lemma ttt_real A r:
+  Lemma valid_state_valid_ca A r:
     valid_state A -> state_to_list_aux A [::] = r -> valid_ca r.
   Proof.
     move=>vA<-.
-    by have:= ttt _ _ _ [::] vA erefl (leqnn _).
+    by have:= valid_state_valid_ca_help _ _ _ [::] vA erefl (leqnn _).
   Qed.
 
   Definition state_to_list_cons A :=
