@@ -1,5 +1,20 @@
 # Status quo = Elpi Run and Nur
 
+- [The language: lang.v](#the-language-langv)
+- [The interpreter: run.v](#the-interpreter-runv)
+  - [Useful lemmas](#useful-lemmas)
+- [Tests: run\_test.v](#tests-run_testv)
+- [Properties of run: run\_prop.v](#properties-of-run-run_propv)
+- [Determinacy checking: check.v](#determinacy-checking-checkv)
+- [Valid state: valid\_state.v](#valid-state-valid_statev)
+- [Elpi interpreter: elpi.v](#elpi-interpreter-elpiv)
+  - [Tree\_to\_list](#tree_to_list)
+    - [Important lemmas](#important-lemmas)
+  - [Valid list](#valid-list)
+- [Tree to list tests: elpi\_test.v](#tree-to-list-tests-elpi_testv)
+- [Semantics equivalence](#semantics-equivalence)
+
+
 ## The language: lang.v
 
 This file describes the Elpi language in tree-like operational semantics.
@@ -466,10 +481,11 @@ When translating a goal or a cut, we naturally translate it to the `G'` type,
 fixing the cut level to `false` (superficial) with empty cut alternatives.
 
 The translation of the state `Or A _ B` involves translating `B` with an empty
-`bt` list to obtain `lB`, and `A` with `lB` as the `bt` list to obtain `lA`.
-`B` serves as a potential choice point for all deep cuts inside `A`, while `A`
-does not create choice points for `B`. Finally, `bt` is added to all cuts
-inside `lA ++ lB`.
+`bt` list to obtain `lB`, and `A` with `lB` as the `bt` list to obtain `lA`. `B`
+serves as a potential choice point for all deep cuts inside `A`, while `A` does
+not create choice points for `B`. Finally, `bt` is added to all cuts inside `lA
+++ lB`. After this step, all the boolean in the cut are change to tree, since 
+the cut inside a or become deep.
 
 > TODO: Consider substitutions in the translation of `Or` states.
 
@@ -523,3 +539,81 @@ translating `A`, `B0`, and `B` into `lA`, `lB`, and `lB0`, respectively. Then:
   conjunction, so the empty list is returned.
 
 
+The function G2Gs translates objects of type G' into G. This way the
+boolean in the cut' is removed. 
+
+
+#### Important lemmas
+We have two foundamental lemmas that should be used a lot when working with the
+`add_alt` procedure. They are:
+
+- `base_and_ko_state_to_list: base_and_ko A -> state_to_list_aux A l = [::]`
+- `base_and_state_to_list {A}: base_and A -> exists hd, forall l, state_to_list_aux A l = [::hd].`
+
+They are used to make add_alt caluclate and show that the reset point is
+either an empty list or a list of length 1.
+
+Another important lemma is:
+` base_and_empty_ca: base_and A -> state_to_list_aux A l = B -> (all empty_ca1) (seq.head [::] B).`  
+saying that in conjunction of goals, all cut-to alternatives are empty
+
+
+### Valid list
+
+We define the notion of a valid list in the Elpi interpreter using the
+`valid_ca` function. This function ensures that the "cut-to" alternatives
+always point to a suffix in the list of alternatives. It performs a deep
+traversal through all cuts in the alternatives and requires a fuel parameter.
+
+The complete definition of a valid list is as follows:
+
+```coq
+Fixpoint all_tail {T:Type} F (l1 l2:list T) :=
+  match l1 with
+  | [::] => true
+  | x::xs => F x (behead l2) && all_tail F xs (behead l2)
+  end.
+
+Fixpoint valid_ca_aux n L1 L2 :=
+  match n with
+  | 0 => true
+  | n.+1 =>
+    all_tail (fun xs ys => all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (G2Gs alts) (G2Gs ys))) xs) L1 L2
+  end.
+
+Definition valid_ca L := valid_ca_aux (size L) L L.
+```
+
+`all_tail` is an auxiliary higher-order function that applies its higher-order argument to
+the head and tail of two lists, repeating until the first list is exhausted.
+The lemmas involving `all_tail` and `valid_ca_aux` assume that `size l1 <= size
+l2`.
+
+Note that `valid_ca` operates on the `G'` type, which includes a boolean flag.
+When verifying suffixes, the boolean is removed from the lists using the
+`G2Gs` function.
+
+In the rest of the file, we prove several properties relating a state `A` and
+a state `B` that are connected through calls to `next_alt`, `expand`,
+`expandedb`, and similar functions.
+
+## Tree to list tests: elpi_test.v
+
+This file contains tests verifying the correct behavior of the `state_to_list`
+function.
+
+## Semantics equivalence
+
+The primary lemma we aim to prove is as follows:
+
+```coq
+Lemma runElpi A :
+  forall s B s1 b,
+    valid_state A ->
+    runb s A s1 B b ->
+      exists x xs, state_to_list A [::] = x :: xs /\
+        nur s x xs s1 (state_to_list B [::]).
+```
+
+The proof proceeds by induction on `runb`, addressing the cases of success and
+backtracking separately. These cases are handled using auxiliary lemmas.

@@ -109,7 +109,7 @@ Module NurEqiv (U : Unif).
         by rewrite (HA _ _ _ _ H1) (HB _ _ _ _ H2).
     Qed.
 
-    Lemma bibi2 {A B s0 s1 b ca x tl l1}:
+    Lemma state_to_list_expand {A B s0 s1 b ca x tl l1}:
       valid_state A -> expand s0 A = Expanded s1 B -> exp_done_shape B ->
         state_to_list_aux A l1 = [:: [::cut' b ca & x] & tl] ->
         state_to_list_aux B l1 = state_to_list_aux A l1 \/ 
@@ -284,7 +284,7 @@ Module NurEqiv (U : Unif).
 
     (* TODO: this assumption should be removed *)
     Lemma empty_l1 {T: Type} (l1: list T) : l1 = [::]. Admitted.
-    Lemma bibi3 {A B s0 s1 ca x1 tl l1 r}:
+    Lemma state_to_list_expand2 {A B s0 s1 ca x1 tl l1 r}:
         valid_state A -> expand s0 A = Expanded s1 B -> exp_done_shape B ->
           state_to_list A l1 = [:: [::cut ca & x1] & tl] ->
             state_to_list B l1 = [::x1 & r] ->
@@ -405,15 +405,6 @@ Module NurEqiv (U : Unif).
         rewrite map_id.
         move=>[H7 H8]; clear H8.
         rewrite/G2Gs.
-        (* move=>[]/xxx H5 H6; subst.
-        have:= HB _ _ _ _ _ _ l1 _ vB eB sB'.
-        rewrite H2 H3/=H5.
-        move=> /(_ _ _ _ _ erefl erefl) {}HB.
-        have: b0 = false by admit.
-        move=>?; subst.
-        rewrite HB.
-        rewrite /make_lB. *)
-        (* move=>->. *)
         admit.
     Admitted.
 
@@ -723,7 +714,7 @@ Module NurEqiv (U : Unif).
       have:= xxxz [::] vA eA isT.
       case sA': state_to_list_aux => [|[|[|b1 ca gl tl]]]//; move: sA'; rewrite sA.
       move=>[??] _; subst.
-      have := bibi2 vA HA eB sA.
+      have := state_to_list_expand vA HA eB sA.
       rewrite (same_subst s s')//.
       move:sB; rewrite/state_to_list; case SB: (state_to_list_aux B) => //-[??]; subst.
       rewrite sA.
@@ -731,7 +722,7 @@ Module NurEqiv (U : Unif).
         move=>[??]; subst=> //.
       move=>[r[??]]; subst=>/=.
       apply: CutE.
-      have:= @bibi3 _ _ _ _ _ _ _ [::] _ vA HA eB.
+      have:= @state_to_list_expand2 _ _ _ _ _ _ _ [::] _ vA HA eB.
       rewrite/state_to_list sA SB/=.
       move=> /(_ _ _ _ _ erefl erefl).
       rewrite cats0.
