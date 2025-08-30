@@ -1567,6 +1567,83 @@ all
     apply: leq_addr.
   Qed.
 
+  Lemma valid_ca_aux_make_lB xs ys tl n: 
+    size xs <= size ys -> size ys <= n ->
+    valid_ca_aux n xs ys ->
+    valid_ca_aux n (make_lB xs tl) (make_lB ys tl ++ tl).
+  Proof.
+    elim: n xs ys => //=++xs.
+    have H1 := list_induction _ _
+      (fun xs => forall n : nat,
+        (forall xs0 ys : seq (seq G'),
+        size xs0 <= size ys ->
+        size ys <= n ->
+        valid_ca_aux n xs0 ys ->
+        valid_ca_aux n (make_lB xs0 tl) (make_lB ys tl ++ tl)) ->
+        forall ys : seq (seq G'),
+        size xs <= size ys ->
+        size ys <= n.+1 ->
+        all_tail
+          (fun (xs0 : seq G') (ys0 : seq (seq G')) =>
+          all
+            (if_cut1
+                (fun alts : seq (seq G') =>
+                valid_ca_aux n alts alts &&
+                suffix (G2Gs alts) (G2Gs ys0)))
+            xs0)
+          xs ys ->
+        all_tail
+          (fun (xs0 : seq G') (ys0 : seq (seq G')) =>
+          all
+            (if_cut1
+                (fun alts : seq (seq G') =>
+                valid_ca_aux n alts alts &&
+                suffix (G2Gs alts) (G2Gs ys0)))
+            xs0)
+          (make_lB xs tl) (make_lB ys tl ++ tl)).
+    apply: H1 => //; try by apply: is_list_inhab id _.
+    move=> g _ gs Hgs n IH []//=y ys H1 H2/andP[H3 H4].
+    rewrite Hgs//; last first.
+      apply: ltnW H2.
+    rewrite andbT.
+    clear gs Hgs H1 H4.
+    move: {xs y} n ys tl H2 H3 IH.
+    have H := list_induction _ _
+      (fun g => forall (n : nat) (ys tl : seq (seq G')),
+        size ys < n.+1 ->
+        all
+          (if_cut1
+            (fun alts : seq (seq G') =>
+              valid_ca_aux n alts alts &&
+              suffix (G2Gs alts) (G2Gs ys)))
+          g ->
+        (forall xs0 ys0 : seq (seq G'),
+        size xs0 <= size ys0 ->
+        size ys0 <= n ->
+        valid_ca_aux n xs0 ys0 ->
+        valid_ca_aux n (make_lB xs0 tl)
+          (make_lB ys0 tl ++ tl)) ->
+        all
+          (if_cut1
+            (fun alts : seq (seq G') =>
+              valid_ca_aux n alts alts &&
+              suffix (G2Gs alts) (G2Gs (make_lB ys tl ++ tl))))
+          [seq add_ca' false tl j | j <- g]).
+    apply: H => //=; try apply: is_list_inhab id _.
+    move=> {}g _ gs Hg n ys tl H1 /andP[H2 H3] IH.
+    rewrite Hg//andbT.
+    clear gs Hg H3.
+    (* TODO: maybe adds some hyps in the lemma, I think that if b is false, then its cut-to alts are emtpy *)
+    case: g H2 => //= b l/andP[H3 H4].
+    case: b => /=; apply/andP.
+      split.
+        admit.
+      admit.
+    split => //.
+    (*here if l is empty, as I think, we win *)
+    admit.
+  Admitted.
+
   Lemma valid_ca_valid_add_deep n p xs ys hd:
     all empty_ca1 hd ->
     size xs <= size ys -> size ys <= n -> size ys <= p ->
@@ -1736,7 +1813,13 @@ all
         rewrite drop_size_cat; last first.
           rewrite size_lB//.
         apply/andP; split.
-          admit.
+          have : size lB <= n by rewrite -(leq_add2r (size lA)); apply: leq_trans H1 (leq_addr _ _).
+          move=>H2.
+          have := HB n l vB.
+          rewrite -HlB => /(_ H2).
+          remember (make_lB0 _ _) as tl eqn:Htl; clear Htl.
+          move: H2.
+          apply: valid_ca_aux_make_lB => //.
         apply: valid_ca_make_lB0_empty_ca2 Hb _.
         move: (HA n.+1 (leq_trans (leq_addl _ _) H1)) => {}HA.
         have {HA}: valid_ca_aux n.+1 (lA) (lA) by [].
