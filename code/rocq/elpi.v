@@ -1629,6 +1629,36 @@ all
     apply: leq_addr.
   Qed.
 
+  Lemma mah hd x xs n m:
+  all empty_ca1 hd ->
+    size xs <= m -> size xs <= n -> m <= n ->
+    (* size xs <= size ys -> size ys <= n -> size ys <= p -> *)
+    all (if_cut1 (fun alts => valid_ca_aux m alts alts && suffix (G2Gs alts) (G2Gs xs))) x ->
+  all
+  (if_cut1 (fun alts => valid_ca_aux n alts alts &&
+      suffix (G2Gs alts) (G2Gs (make_lB0 (add_deep m hd xs) hd))))
+  [seq add_deep_help add_deep m hd t | t <- x].
+  Proof.
+    move=> H.
+    elim: x xs n m => //=x xs IH ys n m H1 H2 HH /andP[H3 H4].
+    rewrite IH//?(ltnW H2)//andbT.
+    clear xs IH H2 H4.
+    case: x H3 => //= b l /andP[H2 H3].
+    have:= size_suffix H3; rewrite !size_map => H4.
+    have H5 : size l <= m by apply: leq_trans H4 H1.
+    have H6 : size l <= n by apply: leq_trans H5 HH.
+    apply/andP; split.
+      apply: valid_ca_make_lB0_empty_ca2 => //.
+      apply: valid_ca_valid_add_deep => //=.
+      have [t ?]:= size_exists _ _ (leq_trans H5 HH); subst.
+      have [u ?]:= size_exists _ _ H5; subst.
+      move: H2; rewrite !(addnC _ (size l)).
+      rewrite !valid_ca_mn//.
+    rewrite -(add_deep_more_less ys ys _ 1)//=?addn1/=.
+    admit.
+  Admitted.
+
+
   Lemma valid_state_valid_ca_help A r n l:
     valid_state A -> state_to_list_aux A l = r -> 
       size r <= n ->
@@ -1673,15 +1703,6 @@ all
         rewrite drop_size_cat; last first.
           rewrite size_lB//.
         apply/andP; split.
-          case sB: lB => [|y ys].
-            rewrite valid_cas1_empty1//.
-          case: y {sB} => //=.
-            rewrite valid_ca_split_cons/=.
-            apply/andP; split.
-              admit.
-            rewrite/make_lB.
-            move=>/=.
-            admit.
           admit.
         apply: valid_ca_make_lB0_empty_ca2 Hb _.
         move: (HA n.+1 (leq_trans (leq_addl _ _) H1)) => {}HA.
@@ -1703,24 +1724,21 @@ all
       rewrite H/=size_lB0 size_add_deep => H1.
       rewrite (all_lvlS_add_ca_false (base_and_lvlS bB (H [::]))).
       rewrite valid_ca_split_cons.
-      have := HA _ l vA (leqnn _).
-      rewrite lA/==>/andP[H2 H3].
-      apply/andP; split.
-        rewrite valid_ca_split_cons.
-        apply/andP; split; last first.
-          apply: valid_cas1_empty1.
-        rewrite valid_ca_split_gs.
-        apply/andP; split; last first.
-          apply: empty_ca_valid.
-          by apply: base_and_empty_ca bB (H [::]).
-        admit.
+      have/= H4 := base_and_empty_ca bB (H [::]).
+      have {HA} := HA _ l vA (leqnn _).
+      rewrite lA.
+      rewrite (valid_ca_split_cons x xs) => /andP[H2 H3].
+      apply/andP; split. 
+        rewrite valid_ca_split_gs; apply/andP; split; last first.
+          by apply: empty_ca_valid.
+        case: n H1 => //=n H1; rewrite andbT.
+        move: H2 => /=; rewrite andbT.
+        apply: mah => //.
       have /=Hb:= (base_and_empty_ca bB (H [::])).
       apply: valid_ca_make_lB0_empty_ca2 (Hb) _.
-      (* move: H3.
-      have [t H3]:= size_exists _ _ H1; subst. *)
       apply: valid_ca_valid_add_deep => //.
         apply: ltnW H1.
-      have [t H4]:= size_exists _ _ (ltnW H1).
+      have [t H5]:= size_exists _ _ (ltnW H1).
       subst.
       rewrite addnC valid_ca_mn//.
       rewrite -(@valid_ca_mn _ _ _ 1)//addn1//.
