@@ -84,6 +84,25 @@ Section aux.
     have {}IH := IH _ _ _ H1 H3.
     rewrite !IH//.
   Qed.
+    Lemma size_exists {T:Type} (xs : seq T) n :
+    size xs <= n -> exists t, t + size xs = n.
+  Proof.
+    move=> H.
+    exists (n - size xs).
+    rewrite addnC.
+    apply: subnKC H.
+  Qed.
+
+  Lemma size_exists2 {T : Type} (lA lB : seq T) n :
+    size lB + size lA <= n -> exists t, size lA + t = n.
+  Proof.
+    move=> H.
+    have Hle: size lA <= n.
+      by apply: leq_trans H; rewrite leq_addl.
+    exists (n - size lA).
+    apply: subnKC Hle.
+  Qed.
+
 
 End aux.
 
@@ -883,7 +902,7 @@ Module Nur (U : Unif).
       - apply: is_list_inhab id _.
     Qed.
 
-    Lemma valid_ca_mn {n x l} m1:
+    Lemma valid_ca_mn1 {n x l} m1:
       size x <= size l -> size l <= n ->
       valid_ca_aux (n+m1) x l = valid_ca_aux n x l.
     Proof.
@@ -900,6 +919,15 @@ Module Nur (U : Unif).
         apply: valid_ca_mn_help2 Hn H2.
       case: l H1 H2 => //=x xs.
       apply: valid_ca_mn_help1 Hn.
+    Qed.
+
+    Lemma valid_ca_mn x l m:
+      size x <= size l -> size l <= m ->
+      valid_ca_aux m x l = valid_ca_aux (size l) x l.
+    Proof.
+      move=> H1 H2.
+      have [t <-]:= size_exists _ _ H2.
+      rewrite addnC valid_ca_mn1//.
     Qed.
 
     (* Lemma valid_ca_mn1 {n x l} m1:
@@ -1468,26 +1496,14 @@ all
     move=> H1.
     apply: leq_trans H1 H3.
   Qed.
-    
 
-
-  Lemma size_exists {T:Type} (xs : seq T) n :
-    size xs <= n -> exists t, t + size xs = n.
+  Lemma add_deep_more_less1 l1 l2 m hd:
+    size l1 <= size l2 -> size l2 <= m -> valid_ca_aux (size l2) l1 l2 ->
+      add_deep m hd l1 = add_deep (size l2) hd l1.
   Proof.
-    move=> H.
-    exists (n - size xs).
-    rewrite addnC.
-    apply: subnKC H.
-  Qed.
-
-  Lemma size_exists2 {T : Type} (lA lB : seq T) n :
-    size lB + size lA <= n -> exists t, size lA + t = n.
-  Proof.
-    move=> H.
-    have Hle: size lA <= n.
-      by apply: leq_trans H; rewrite leq_addl.
-    exists (n - size lA).
-    apply: subnKC Hle.
+    move=> H1 H2 H3.
+    have [t <-]:= size_exists _ _ H2; rewrite addnC.
+    rewrite (add_deep_more_less _ l2)//.
   Qed.
 
   Lemma G2Gs_cat_rotate hd l:
@@ -1513,6 +1529,42 @@ all
     rewrite !G2Gs_cat_rotate.
     f_equal.
     apply: H => //.
+  Qed.
+
+  Lemma suffix_add_deep m hd ys l:
+    size ys <= m ->
+    suffix (G2Gs l) (G2Gs ys) -> valid_ca_aux (size l) l l ->
+    suffix (G2Gs (add_deep m hd l)) 
+      (G2Gs (add_deep m hd ys)).
+  Proof.
+    move=> H3 H1 H4.
+    have:= size_suffix H1; rewrite !size_map => H5.
+    have H9: size l <= m by apply: leq_trans H5 H3.
+    rewrite -(add_deep_more_less l l _ 1)//; last first.
+      rewrite valid_ca_mn => //.
+    move /suffixP: H1 => /=[z] H2; apply/suffixP => /=.
+    suffices: exists z' l', ys = z' ++ l' /\ size z' = size z.
+      move=> [z'[l'[Hr Hz]]]; subst.
+      move: H2.
+      rewrite G2Gs_cat.
+      move=>/cat_cat_size; rewrite !size_map.
+      move=>/(_ Hz)H.
+      rewrite add_deep_cat G2Gs_cat; eexists; f_equal.
+      rewrite (add_deep_more_less _ l)//.
+      apply: g2gs_same_add_deep H.2.
+      rewrite valid_ca_mn => //.
+    move: H2; clear.
+    elim: ys z l => //.
+      move=>[]//[]//; by exists [::],[::].
+    move=> x xs IH [|z zs]//=.
+      move=> []//=y ys[H1 H2]; exists [::]; repeat eexists.
+    move=> l[H1 H2]; subst.
+    eexists (x :: take (size zs) (xs)), (drop (size zs) xs); repeat split => /=; f_equal.
+      rewrite cat_take_drop//.
+    rewrite size_takel//.
+    have: size (G2Gs xs) = size xs by rewrite size_map.
+    rewrite H2 size_cat=><-.
+    apply: leq_addr.
   Qed.
 
   Lemma valid_ca_valid_add_deep n p xs ys hd:
@@ -1598,41 +1650,22 @@ all
       apply: IH => //; by apply: leq_trans H5 _ => //.
     rewrite suffix_make_lB0 => //.
     change [seq [seq add_deep_help add_deep p hd j0 | j0 <- j] | j <- ys] with (add_deep p.+1 hd ys).
-    rewrite -addn1.
     have:= size_suffix H2; rewrite !size_map => H5.
     have H6 : size l <= p by apply: leq_trans H5 H3.
     rewrite -(add_deep_more_less l l _ 1)//; last first.
-      have [t ?]:= size_exists _ _ H6; subst.
-      have H7 : size l <= n by apply: leq_trans H5 _.
-      have [w ?]:= size_exists _ _ H7; subst.
-      rewrite addnC valid_ca_mn//.
-      rewrite addnC valid_ca_mn// in H1.
-    move /suffixP: H2 => /=[z] H2; apply/suffixP => /=.
-    suffices: exists z' l', ys = z' ++ l' /\ size z' = size z.
-      move=> [z'[l'[H8 H9]]]; subst.
-      rewrite add_deep_cat G2Gs_cat; eexists; f_equal.
-      apply: g2gs_same_add_deep.
-      move: H2.
-      rewrite G2Gs_cat//.
-      move=>/cat_cat_size; rewrite size_map => /(_ H9) ->//.
-    move: H2; clear.
-    elim: ys z l => //.
-      move=>[]//[]//; by exists [::],[::].
-    move=> x xs IH [|z zs]//=.
-      move=> []//=y ys[H1 H2]; exists [::]; repeat eexists.
-    move=> l[H1 H2]; subst.
-    eexists (x :: take (size zs) (xs)), (drop (size zs) xs); repeat split => /=; f_equal.
-      rewrite cat_take_drop//.
-    rewrite size_takel//.
-    have: size (G2Gs xs) = size xs by rewrite size_map.
-    rewrite H2 size_cat=><-.
-    apply: leq_addr.
+      rewrite valid_ca_mn => //.
+      rewrite valid_ca_mn in H1 => //.
+      apply: leq_trans H5 H4.
+    rewrite addn1.
+    apply: suffix_add_deep => //.
+      apply: ltnW => //.
+    rewrite valid_ca_mn in H1 => //.
+    apply: leq_trans H5 H4.
   Qed.
 
-  Lemma mah hd x xs n m:
+  Lemma if_cut1_add_deep_help hd x xs n m:
   all empty_ca1 hd ->
     size xs <= m -> size xs <= n -> m <= n ->
-    (* size xs <= size ys -> size ys <= n -> size ys <= p -> *)
     all (if_cut1 (fun alts => valid_ca_aux m alts alts && suffix (G2Gs alts) (G2Gs xs))) x ->
   all
   (if_cut1 (fun alts => valid_ca_aux n alts alts &&
@@ -1653,11 +1686,11 @@ all
       have [t ?]:= size_exists _ _ (leq_trans H5 HH); subst.
       have [u ?]:= size_exists _ _ H5; subst.
       move: H2; rewrite !(addnC _ (size l)).
-      rewrite !valid_ca_mn//.
-    rewrite -(add_deep_more_less ys ys _ 1)//=?addn1/=.
-    admit.
-  Admitted.
-
+      rewrite !valid_ca_mn//; apply leq_addr.
+    rewrite suffix_make_lB0//.
+    apply: suffix_add_deep => //.
+    rewrite valid_ca_mn// in H2.
+  Qed.
 
   Lemma valid_state_valid_ca_help A r n l:
     valid_state A -> state_to_list_aux A l = r -> 
@@ -1707,13 +1740,17 @@ all
         apply: valid_ca_make_lB0_empty_ca2 Hb _.
         move: (HA n.+1 (leq_trans (leq_addl _ _) H1)) => {}HA.
         have {HA}: valid_ca_aux n.+1 (lA) (lA) by [].
-        rewrite -addn1 valid_ca_mn//; last first.
-          apply: leq_trans (leq_addl _ _) H1.
+        rewrite valid_ca_mn => //; last first.
+          apply: leq_trans (leq_addl _ _) _.
+          apply: leq_trans H1 _.
+          rewrite -addn1; apply leq_addr.
         rewrite /ad.
         have /=Hb:= (base_and_empty_ca bB (H [::])).
         have [t H2]:= size_exists2 _ _ _ H1.
-        apply: valid_ca_valid_add_deep => //.
-        rewrite -H2.
+        move=> H9.
+        apply: valid_ca_valid_add_deep; rewrite //-H2.
+          apply: leq_addr.
+        rewrite valid_ca_mn => //.
         apply: leq_addr.
       case lA: state_to_list_aux => //[|x xs].
         rewrite valid_cas1_empty1//.
@@ -1733,7 +1770,7 @@ all
           by apply: empty_ca_valid.
         case: n H1 => //=n H1; rewrite andbT.
         move: H2 => /=; rewrite andbT.
-        apply: mah => //.
+        apply: if_cut1_add_deep_help => //.
       have /=Hb:= (base_and_empty_ca bB (H [::])).
       apply: valid_ca_make_lB0_empty_ca2 (Hb) _.
       apply: valid_ca_valid_add_deep => //.
@@ -1741,7 +1778,9 @@ all
       have [t H5]:= size_exists _ _ (ltnW H1).
       subst.
       rewrite addnC valid_ca_mn//.
-      rewrite -(@valid_ca_mn _ _ _ 1)//addn1//.
+      move: H3.
+      simpl size; rewrite valid_ca_mn//.
+      apply: leq_addr.
   Admitted.
 
   Lemma valid_state_valid_ca A r:
