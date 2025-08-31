@@ -345,6 +345,7 @@ Module Nur (U : Unif).
                 let: tl := make_lB0 xs hd in
                 let: lB := make_lB lB tl in
                 [seq x ++ y | y <- lB] ++ tl
+                (* (OK \/ B) /\ (! \/ C) *)
         | [::] =>
             (* since the reset point is nil, xs are killed (we append the bot to all alt)  *)
             [seq (kill x) ++ y | y <- lB]
@@ -1466,7 +1467,7 @@ apply_cut1
   Qed.
 
   Lemma valid_ca_aux_make_lB xs ys tl n: 
-    size xs <= size ys -> size ys <= n ->
+    size xs <= size ys -> size ys + size tl <= n ->
     valid_ca_aux n xs ys ->
     valid_ca_aux n (make_lB xs tl) (make_lB ys tl ++ tl).
   Proof.
@@ -1475,12 +1476,12 @@ apply_cut1
       (fun xs => forall n : nat,
         (forall xs0 ys : seq (seq G'),
         size xs0 <= size ys ->
-        size ys <= n ->
+        size ys + size tl <= n ->
         valid_ca_aux n xs0 ys ->
         valid_ca_aux n (make_lB xs0 tl) (make_lB ys tl ++ tl)) ->
         forall ys : seq (seq G'),
         size xs <= size ys ->
-        size ys <= n.+1 ->
+        size ys + size tl <= n.+1 ->
         all_tail
           (fun (xs0 : seq G') (ys0 : seq (seq G')) =>
           all
@@ -1500,7 +1501,7 @@ apply_cut1
             xs0)
           (make_lB xs tl) (make_lB ys tl ++ tl)).
     apply: H1 => //; try by apply: is_list_inhab id _.
-    move=> g _ gs Hgs n IH []//=y ys H1 H2/andP[H3 H4].
+    move=> g _ gs Hgs n IH []//=y ys H1 H2 /andP[H3 H4].
     rewrite Hgs//; last first.
       apply: ltnW H2.
     rewrite andbT.
@@ -1508,7 +1509,7 @@ apply_cut1
     move: {xs y} n ys tl H2 H3 IH.
     have H := list_induction _ _
       (fun g => forall (n : nat) (ys tl : seq (seq G')),
-        size ys < n.+1 ->
+        (size ys).+1 + size tl <= n.+1 ->
         all
           (if_cut1
             (fun alts : seq (seq G') =>
@@ -1517,7 +1518,7 @@ apply_cut1
           g ->
         (forall xs0 ys0 : seq (seq G'),
         size xs0 <= size ys0 ->
-        size ys0 <= n ->
+        size ys0 + size tl <= n ->
         valid_ca_aux n xs0 ys0 ->
         valid_ca_aux n (make_lB xs0 tl)
           (make_lB ys0 tl ++ tl)) ->
@@ -1535,7 +1536,20 @@ apply_cut1
     case: g H2 => //= b l/andP[H3 H4].
     case: b => /=; apply/andP.
       split.
+        rewrite valid_ca_split//; last first.
+          rewrite addSn in H1.
+          have:= size_suffix H4.
+          rewrite !size_map => H.
+          rewrite size_cat.
+          apply: leq_trans; [|apply H1].
+          rewrite leq_add2r//.
+        rewrite drop_size_cat//.
+        apply/andP; split.
+          admit.
         admit.
+      rewrite !G2Gs_cat.
+      rewrite suffix_catl//eqxx/=.
+      rewrite /make_lB.
       admit.
     split => //.
     (*here if l is empty, as I think, we win *)
@@ -1715,9 +1729,9 @@ apply_cut1
           move=>H2.
           have := HB n l vB.
           rewrite -HlB => /(_ H2).
-          remember (make_lB0 _ _) as tl eqn:Htl; clear Htl.
-          move: H2.
+          remember (make_lB0 _ _) as tl eqn:Htl.
           apply: valid_ca_aux_make_lB => //.
+          rewrite Htl size_lB0 size_ad//.
         apply: valid_ca_make_lB0_empty_ca2 Hb _.
         move: (HA n.+1 (leq_trans (leq_addl _ _) H1)) => {}HA.
         have {HA}: valid_ca_aux n.+1 (lA) (lA) by [].
