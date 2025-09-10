@@ -227,20 +227,12 @@ Module Nur (U : Unif).
 
     Definition alt':= (seq G).
 
-    Section incr_cut.
-      (* Definition incr_cut A :=
-        match A with
-        | cut ca => cut ca
-        | _ => A
-        end. *)
-
-      Definition is_cutb' A := match A with cut _ => true | _ => false end.
-      Definition cuts' A := all is_cutb' A.
+    Definition is_cutb' A := match A with cut _ => true | _ => false end.
+    Definition cuts' A := all is_cutb' A.
 
 
-      Lemma cuts_cat {x y} : cuts' (x ++ y) = cuts' x && cuts' y.
-      Proof. rewrite/cuts' all_cat//. Qed.
-    End incr_cut.
+    Lemma cuts_cat {x y} : cuts' (x ++ y) = cuts' x && cuts' y.
+    Proof. rewrite/cuts' all_cat//. Qed.
 
     Section makers.
       Section add_ca'.
