@@ -1,12 +1,12 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang elpi.
+From det Require Import lang elpi_prop.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
 Module NurEqiv (U : Unif).
 
-  Module Nur := Nur(U).
-  Import Nur VS RunP Run Language.
+  Module NurP := NurProp(U).
+  Import NurP Nur VS RunP Run Language.
 
   Section exp_done_rel.
     (* this is the shape a state A should have if expandedb s1 A (Done s2 B) b *)

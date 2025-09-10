@@ -10,4 +10,5 @@ check.v
 valid_state.v
 elpi.v
 elpi_test.v
+elpi_prop.v
 elpi_equiv.v

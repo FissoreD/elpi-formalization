@@ -13,12 +13,68 @@ End UAxioms.
 Module Nur:= Nur(UAxioms).
 Import Nur VS.RunP.Run.
 
-Goal forall B B0 p,
+
+    Goal forall B B0 p,
 let f x := (Goal p (Call x)) in
   state_to_list (And (Or OK empty (f B)) (f B0) Bot) [::] = 
     [::[::call p B;call p B0]].
 Proof.
   by move=> //.
+Qed.
+
+Goal forall s1 A B D0 D p,
+  let f x := (Goal p (Call x)) in
+  (* il cut punta su B *)
+  (* (((! \/ A) \/ B)) /\ D*)
+  state_to_list 
+    (And (Or ((Or (Goal p Cut) s1 (f A))) s1 (f B)) (f D0) (f D)) [::] = 
+    [:: 
+      [::cut [:: [:: call p B; call p D0]]; call p D];
+      [:: call p A; call p D0]; 
+      [:: call p B; call p D0]].
+Proof.
+  move=> s1 A B D0 D p/=.
+  rewrite/state_to_list/=.
+  repeat f_equal.
+Qed.
+
+
+Goal forall s1 s2 B C D E F p,
+  let f x := (Goal p (Call x)) in
+  (* (A \/_{s1} B) /\_C ((! \/_{s2} D) /\_{E} F) *)
+  state_to_list 
+    (And (Or OK s1 (f B)) (f C) (And (Or (Goal p Cut) s2 (f D)) (f E) (f F))) [::] = 
+    [:: 
+      [:: cut [:: [:: call p B; call p C]]; call p F];
+      [:: call p D; call p E]; 
+      [:: call p B; call p C]].
+Proof.
+  move=> s1 s2 B C D E F p/=.
+  rewrite eqxx//.
+  (* rewrite/state_to_list.
+  rewrite {2}[And]lock/=.
+  rewrite map_id.
+  rewrite G2Gs_cat/=.
+  rewrite [Or]lock/=.
+  rewrite-{1}lock/=.
+  rewrite-lock/=.
+  f_equal; rewrite eqxx//. *)
+Qed.
+
+
+Goal forall s1 s2 A B C p,
+  let f x := (Goal p (Call x)) in
+  (* il cut punta su B *)
+  (* (((! \/ A) \/ B)) /\ (! \/ C)*)
+  state_to_list 
+    (And (Or ((Or (Goal p Cut) s1 (f A))) s1 (f B)) Bot (Or (Goal p Cut) s2 (f C))) [::] = 
+    [:: 
+      [::cut [::]; cut [::]];
+      [::cut [::]; call p C]].
+Proof.
+  move=> s1 s2 A B C p/=.
+  rewrite/state_to_list/=.
+  f_equal.
 Qed.
 
 Goal forall s1 s2 A B C0 C p,
@@ -38,20 +94,7 @@ Proof.
   repeat f_equal.
 Qed.
 
-Goal forall s1 s2 A B C p,
-  let f x := (Goal p (Call x)) in
-  (* il cut punta su B *)
-  (* (((! \/ A) \/ B)) /\ (! \/ C)*)
-  state_to_list 
-    (And (Or ((Or (Goal p Cut) s1 (f A))) s1 (f B)) Bot (Or (Goal p Cut) s2 (f C))) [::] = 
-    [:: 
-      [::cut [::]; cut [::]];
-      [::cut [::]; call p C]].
-Proof.
-  move=> s1 s2 A B C p/=.
-  rewrite/state_to_list/=.
-  f_equal.
-Qed.
+
 
 Goal forall A B0 p s1,
     (* (OK \/ A) /\_B0 OK *)
@@ -163,7 +206,7 @@ Goal forall b0 p a b c s1 s2,
 Proof.
   move=> b0 p a b c s1 s2.
   rewrite/state_to_list/=.
-  f_equal.
+  rewrite//=.
 Qed.
 
 Goal forall s1 s2 B C Res p,
@@ -183,7 +226,9 @@ Goal forall s1 B C Res Res2 p,
   state_to_list (And (Or OK s1 (f B)) (f Res) (And (Goal p Cut) (f Res2) (f C))) [::]
     = [::[::cut [::]; call p C]; [:: call p B; call p Res]].
 Proof.
-  move=> s1 B C Res Res2 p//=.
+  move=> s1 B C Res Res2 p/=.
+  rewrite/state_to_list/=.
+  f_equal.
 Qed.
 
 Goal forall s1 s2 A B C C0 p,
@@ -212,22 +257,13 @@ Goal forall s1 s2 s3 A B C D E p,
   .
 Proof.
   move=> s1 s2 s3 A B C D E p/=.
-  rewrite /=/add_alt/make_lB/make_lB0//=.
+  rewrite/state_to_list/=.
+  move=>//.
 Qed.
 
-Goal forall s1 s2 A B C D E F p,
-  let f x := (Goal p (Call x)) in
-  (* (A \/_{s1} B) /\_C ((! \/_{s2} D) /\_{E} F) *)
-  state_to_list 
-    (And (Or (f A) s1 (f B)) (f C) (And (Or (Goal p Cut) s2 (f D)) (f E) (f F))) [::] = 
-    [:: 
-      [:: call p A; cut [:: [:: call p B; call p C]]; call p F];
-      [:: call p A; call p D; call p E]; 
-      [:: call p B; call p C]].
-Proof.
-  move=> s1 s2 A B C D E F p//=.
-  (* rewrite/add_alt/=/make_lB0/=. *)
-Qed.
+(* Goal 
+  state_to_list (And (Or (Goal p Cut) s2 (f D)) (f E) (f F))  *)
+
 
 (* IMPORTANTE!
   The right and side of the first and becomes:
@@ -236,17 +272,20 @@ Qed.
   The first rejects (D,E) as choice points
   The second rejects (B,C) which is an alternatives at higher level
 *)
-Goal forall s1 s2 A B C D E p,
+Goal forall s1 s2 B C D E p,
   let f x := (Goal p (Call x)) in
-  (* (A \/_{s1} B) /\_C ((! \/_{s2} D) /\_{E} !) *)
+  (* (OK \/_{s1} B) /\_C ((! \/_{s2} D) /\_{E} !) *)
   state_to_list 
-    (And (Or (f A) s1 (f B)) (f C) (And (Or (Goal p Cut) s2 (f D)) (f E) (Goal p Cut))) [::] = 
+    (And (Or OK s1 (f B)) (f C) (And (Or (Goal p Cut) s2 (f D)) (f E) (Goal p Cut))) [::] = 
     [:: 
-      [:: call p A; cut [:: [:: call p B; call p C]]; cut [::]];
-      [:: call p A; call p D; call p E]; 
+      [:: cut [:: [:: call p B; call p C]]; cut [::]];
+      [:: call p D; call p E]; 
       [:: call p B; call p C]].
 Proof.
-  move=> s1 s2 A B C D E p//=.
+  move=> s1 s2 B C D E p/=.
+  rewrite/state_to_list/=.
+  rewrite eqxx/=.
+  move=>//.
 Qed.
 
 Goal forall s1 s2 A B C p,
@@ -285,21 +324,6 @@ Proof.
   move=>//=.
 Qed.
 
-Goal forall s1 A B D0 D p,
-  let f x := (Goal p (Call x)) in
-  (* il cut punta su B *)
-  (* (((! \/ A) \/ B)) /\ D*)
-  state_to_list 
-    (And (Or ((Or (Goal p Cut) s1 (f A))) s1 (f B)) (f D0) (f D)) [::] = 
-    [:: 
-      [::cut [:: [:: call p B; call p D0]]; call p D];
-      [:: call p A; call p D0]; 
-      [:: call p B; call p D0]].
-Proof.
-  move=> s1 A B D0 D p/=.
-  rewrite/state_to_list/=.
-  repeat f_equal.
-Qed.
 
 Goal forall s1 s2 A B C D0 D p,
   let f x := (Goal p (Call x)) in
@@ -355,5 +379,23 @@ Goal forall s1 s2 B0 A B C D p,
 Proof.
   move=> s1 s2 B0 A B C D p/=.
   rewrite/state_to_list/=.
-  f_equal.
+  rewrite//.
+Qed.
+
+Goal forall s1 s2 s3 s4 p A B C,
+  let f x := (Goal p (Call x)) in
+  (* (((! \/ A) \/ !) \/ B) \/ C *)
+  state_to_list 
+    (Or (Or (Or (Or (Goal p Cut) s1 (f A)) s2 (Goal p Cut)) s3 (f B)) s4 (f C)) [::] = 
+    [:: 
+      [::cut [::[::cut [::[::call p B]; [::call p C]]]; [::call p B]; [::call p C]]];
+      [::call p A];
+      [::cut [::[::call p B]; [::call p C]]];
+      [::call p B];
+      [::call p C]
+    ].
+Proof.
+  move=> s1 s2 s3 s4 p A B C/=.
+  rewrite/state_to_list/=.
+  rewrite//.
 Qed.

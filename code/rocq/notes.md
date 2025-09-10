@@ -13,6 +13,8 @@
   - [Valid list](#valid-list)
 - [Tree to list tests: elpi\_test.v](#tree-to-list-tests-elpi_testv)
 - [Semantics equivalence](#semantics-equivalence)
+- [Add\_ca\_deep:](#add_ca_deep)
+- [Add\_deep](#add_deep)
 
 
 ## The language: lang.v
@@ -617,3 +619,23 @@ Lemma runElpi A :
 
 The proof proceeds by induction on `runb`, addressing the cases of success and
 backtracking separately. These cases are handled using auxiliary lemmas.
+
+# WIP:
+
+## Add_ca_deep:
+This function recursively appends the `bt` alternatives to all cut-to lists. 
+It is applied in the `Or` case. For instance, given `A \/ B` with `bt` as 
+cut-to alternatives, we aim to ensure that every cut-to list includes `bt` 
+as its tail.
+As an example, consider `(A \/ B) \/ C`. In this case, `C` should be added 
+to all cut-to lists of `A` and `B`.
+
+## Add_deep
+This function addresses the `And` case. It recursively appends the reset point
+to all cut-to alternatives within the alternatives created by the current
+sub-tree. For example, consider the state `(A /\_{B0} B) \/ C`. When compiling
+`A` and `B`, `C` is used as the backtracking state. If `A` is the
+list `x::xs`, then `x` should treat `B` as its natural execution tail, while
+`xs` should use `B0` as its execution tail. This implies that `B0` is appended
+as a tail-conjunct to all cut-to alternatives in `x` and `xs` that do not
+come from `C`.
