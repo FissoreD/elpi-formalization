@@ -50,7 +50,7 @@ Goal forall s1 s2 B C D E F p,
       [:: call p B; call p C]].
 Proof.
   move=> s1 s2 B C D E F p/=.
-  rewrite eqxx//.
+  rewrite //.
   (* rewrite/state_to_list.
   rewrite {2}[And]lock/=.
   rewrite map_id.
@@ -284,7 +284,6 @@ Goal forall s1 s2 B C D E p,
 Proof.
   move=> s1 s2 B C D E p/=.
   rewrite/state_to_list/=.
-  rewrite eqxx/=.
   move=>//.
 Qed.
 

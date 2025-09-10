@@ -298,12 +298,16 @@ Module Nur (U : Unif).
 
 
 
-      Fixpoint add_suff (bt: seq (seq G)) (hd:seq (G)) (l: seq (seq G)) :=
-        if l == bt then l
+      (* Fixpoint add_suff (bt: seq (seq G)) (hd:seq (G)) (l: seq (seq G)) :=
+        if size l <= size bt then l
         else match l with
         | [::] => [::]
         | x :: xs => (x ++ hd) :: add_suff bt hd xs
-        end.
+        end. *)
+
+      Definition add_suff (bt: seq alt) hd (l:seq alt) :=
+        let s := size l - size bt in
+        map (fun x => x ++ hd) (take s l) ++ drop s l.
 
       Definition add_deep_help add_deep bt (n:nat) hd :=
         apply_cut1 (fun x => add_suff bt hd (add_deep bt n hd x)).
