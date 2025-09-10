@@ -298,15 +298,15 @@ Module Nur (U : Unif).
 
 
 
-      Fixpoint add_suff (bt: seq (seq G)) (tl:seq (G)) (l: seq (seq G)) :=
+      Fixpoint add_suff (bt: seq (seq G)) (hd:seq (G)) (l: seq (seq G)) :=
         if l == bt then l
         else match l with
         | [::] => [::]
-        | x :: xs => (x ++ tl) :: add_suff bt tl xs
+        | x :: xs => (x ++ hd) :: add_suff bt hd xs
         end.
 
-      Definition add_deep_help add_deep bt (n:nat) tl :=
-        apply_cut1 (fun x => add_suff bt tl (add_deep bt n tl x)).
+      Definition add_deep_help add_deep bt (n:nat) hd :=
+        apply_cut1 (fun x => add_suff bt hd (add_deep bt n hd x)).
     
       Fixpoint add_deep bt n (l: alt') (A: seq alt') :=
         match n with
@@ -363,7 +363,7 @@ Module Nur (U : Unif).
             [seq (kill x) ++ y | y <- lB]
           | [::hd] =>
           (* 
-            invariant every cut-to has bt has tail or is empty          
+            invariant every cut-to has bt has tail or is empty
           *)
             (* the reset point exists, it has to be added to all cut-to alternatives *)
             let x := add_deep_ bt (size xs).+1 hd x in
@@ -374,7 +374,7 @@ Module Nur (U : Unif).
             let lB   := state_to_list B (xs ++ bt) in
             (* lB are alternatives, each of them have x has head *)
             [seq x ++ y | y <- lB] ++ xs
-          | _ => [::]
+          | _ => [::] (*unreachable in a valid_state*)
           end
         else [::]
       end.
