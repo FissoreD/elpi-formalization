@@ -219,19 +219,6 @@ Module Nur (U : Unif).
     derive G'.
     HB.instance Definition _ := hasDecEq.Build G' G'_eqb_OK. *)
 
-
-    Definition apply_cut1 F g :=
-      match g with
-      | cut a => cut (F a) 
-      | _ => g
-      end.
-
-    Definition if_cut1 F g :=
-      match g with
-      | cut a => (F a) 
-      | _ => true
-      end.
-
     Definition get_ca g :=
       match g with
       | cut a => a 
@@ -266,7 +253,7 @@ Module Nur (U : Unif).
       Fixpoint add_ca_deep n tl (alts: seq (seq G)) := (*always:= adds always alts to cut *)
         match n with
         | 0 => alts
-        | n.+1 => map (map (fun x => (add_ca' tl (apply_cut1 (add_ca_deep n tl) x)))) alts
+        | n.+1 => map (map (fun x => (add_ca' tl (apply_cut (add_ca_deep n tl) x)))) alts
         end.
 
       (* Definition add_ca1 tl a := add_ca_deep (size a) tl a. *)
@@ -310,7 +297,7 @@ Module Nur (U : Unif).
         map (fun x => x ++ hd) (take s l) ++ drop s l.
 
       Definition add_deep_help add_deep bt (n:nat) hd :=
-        apply_cut1 (fun x => add_suff bt hd (add_deep bt n hd x)).
+        apply_cut (fun x => add_suff bt hd (add_deep bt n hd x)).
     
       Fixpoint add_deep bt n (l: alt') (A: seq alt') :=
         match n with
@@ -325,7 +312,7 @@ Module Nur (U : Unif).
         | n.+1 => (map (add_deep_help add_deep bt n l)) A
         end.
     
-      Definition kill (A: alt') := map (apply_cut1 (fun x => [::])) A.
+      Definition kill (A: alt') := map (apply_cut (fun x => [::])) A.
 
       Definition make_lB0 (xs:seq alt') (lB0: alt') := map (fun x => x ++ lB0) xs.
     End makers.

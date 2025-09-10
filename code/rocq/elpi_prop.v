@@ -8,144 +8,119 @@ Module NurProp (U : Unif).
   Module Nur := Nur(U).
   Import Nur VS RunP Run Language.
 
-    Lemma add_suff_empty2 bt l: add_suff bt [::] l = l.
-    Proof. rewrite /add_suff map_cats0 cat_take_drop//. Qed.
-    
-    Lemma add_suff_empty3 bt l: add_suff bt l [::] = [::].
-    Proof. move=>//. Qed.
+  Lemma add_suff_empty2 bt l: add_suff bt [::] l = l.
+  Proof. rewrite /add_suff map_cats0 cat_take_drop//. Qed.
+  
+  Lemma add_suff_empty3 bt l: add_suff bt l [::] = [::].
+  Proof. move=>//. Qed.
 
-    Section props.
-      Lemma simpl_ad_cons n bt l x xs:
-        (add_deep bt n l [:: x & xs]) = add_deep bt n l [::x] ++ add_deep bt n l xs.
-      Proof. destruct n => //. Qed.
+  Lemma simpl_ad_cons n bt l x xs:
+    (add_deep bt n l [:: x & xs]) = add_deep bt n l [::x] ++ add_deep bt n l xs.
+  Proof. destruct n => //. Qed.
 
-      Lemma add_deep_empty bt n l:
-        add_deep bt n l [:: [::]] = [:: [::]].
-      Proof. destruct n => //. Qed.
+  Lemma add_deep_empty bt n l:
+    add_deep bt n l [:: [::]] = [:: [::]].
+  Proof. destruct n => //. Qed.
 
-      Lemma add_deep_empty2 bt n l:
-        add_deep bt n l [::] = [::].
-      Proof. destruct n => //. Qed.
+  Lemma add_deep_empty2 bt n l:
+    add_deep bt n l [::] = [::].
+  Proof. destruct n => //. Qed.
 
-      Lemma add_deep_empty1_help2 bt n g:
-        (forall l : seq alt', add_deep bt n [::] l = l) ->
-          [seq add_deep_help add_deep bt n [::] j | j <- g] = g.
-      Proof.
-        move: n.
-        have H := list_induction _ _ 
-          (fun g => forall n : nat,
-            (forall l : seq alt', add_deep bt n [::] l = l) ->
-            [seq add_deep_help add_deep bt n [::] j | j <- g] = g).
-        apply: H; [auto| |apply:is_list_inhab id _].
-        move=> /={}g _ gs Hgs n H.
-        rewrite Hgs//; f_equal.
-        case: g => //=l; rewrite H add_suff_empty2//.
-      Qed.
+  Lemma add_deep_empty1_help2 bt n g:
+    (forall l : seq alt', add_deep bt n [::] l = l) ->
+      [seq add_deep_help add_deep bt n [::] j | j <- g] = g.
+  Proof.
+    move: n.
+    elim: g => //=.
+    move=> /=g gs Hgs n H.
+    rewrite Hgs//; f_equal.
+    case: g => //=l; rewrite H add_suff_empty2//.
+  Qed.
 
-      Lemma add_deep_empty1_help1 bt n gs:
-        (forall l : seq alt', add_deep bt n [::] l = l) ->
-          [seq [seq add_deep_help add_deep bt n [::] j | j <- j] | j <- gs] = gs.
-      Proof.
-        move: n.
-        have H := list_induction _ _ 
-          (fun gs => forall n, (forall l : seq alt', add_deep bt n [::] l = l) ->
-          [seq [seq add_deep_help add_deep bt n [::] j | j <- j] | j <- gs] = gs).
-        apply: H; [auto| |apply:is_list_inhab id _].
-        move=> /=g _ {}gs Hgs n H.
-        rewrite Hgs//add_deep_empty1_help2//.
-      Qed.
-      
-      Lemma add_deep_empty1 bt n l: add_deep bt n [::] l = l.
-      Proof.
-        elim: n l => //=++l.
-        have H := list_induction _ _ 
-          (fun l => forall n,
-            (forall l, add_deep bt n [::] l = l) ->
-              add_deep bt n.+1 [::] l = l).
-        apply: H; [move=>//| |apply: is_list_inhab id _].
-        move=> g _ gs Hgs n IH/=.
-        rewrite add_deep_empty1_help1 //add_deep_empty1_help2//.
-      Qed.
+  Lemma add_deep_empty1_help1 bt n gs:
+    (forall l : seq alt', add_deep bt n [::] l = l) ->
+      [seq [seq add_deep_help add_deep bt n [::] j | j <- j] | j <- gs] = gs.
+  Proof.
+    move: n.
+    elim: gs => //=.
+    move=> /=g gs Hgs n H.
+    rewrite Hgs//add_deep_empty1_help2//.
+  Qed.
+  
+  Lemma add_deep_empty1 bt n l: add_deep bt n [::] l = l.
+  Proof.
+    elim: n l => //=++l.
+    have H := list_induction _ _ 
+      (fun l => forall n,
+        (forall l, add_deep bt n [::] l = l) ->
+          add_deep bt n.+1 [::] l = l).
+    apply: H; [move=>//| |apply: is_list_inhab id _].
+    move=> g _ gs Hgs n IH/=.
+    rewrite add_deep_empty1_help1 //add_deep_empty1_help2//.
+  Qed.
 
-      Lemma add_deep_cat bt m hd l1 l2: add_deep bt m hd (l1 ++ l2) = add_deep bt m hd l1 ++ add_deep bt m hd l2.
-      Proof. elim: m hd l1 l2 => //=n IH hd l1 l2; rewrite map_cat//. Qed.
-      
-      Lemma add_deep_cons m bt hd l1 l2: add_deep bt m hd (l1 :: l2) = add_deep bt m hd [::l1] ++ add_deep bt m hd l2.
-      Proof. apply: add_deep_cat _ _ [::l1] _. Qed.
+  Lemma add_deep_cat bt m hd l1 l2: add_deep bt m hd (l1 ++ l2) = add_deep bt m hd l1 ++ add_deep bt m hd l2.
+  Proof. elim: m hd l1 l2 => //=n IH hd l1 l2; rewrite map_cat//. Qed.
+  
+  Lemma add_deep_cons m bt hd l1 l2: add_deep bt m hd (l1 :: l2) = add_deep bt m hd [::l1] ++ add_deep bt m hd l2.
+  Proof. apply: add_deep_cat _ _ [::l1] _. Qed.
 
-      (* Lemma size_lB lB tl: size (add_ca1 tl lB) = size lB.
-      Proof. case: lB => //= _ lB; rewrite size_map//. Qed. *)
+  Lemma size_lB0 {xs hd}: size (make_lB0 xs hd) = size xs.
+  Proof. rewrite size_map//. Qed.
 
-      Lemma size_lB0 {xs hd}: size (make_lB0 xs hd) = size xs.
-      Proof. rewrite size_map//. Qed.
+  Lemma size_add_deep bt n h xs: size (add_deep bt n h xs) = size xs.
+  Proof. elim: n xs => //n IH xs; rewrite size_map//. Qed.
 
-      Lemma size_add_deep bt n h xs: size (add_deep bt n h xs) = size xs.
-      Proof. elim: n xs => //n IH xs; rewrite size_map//. Qed.
+  Lemma size_add_suff bt hd l: size (add_suff bt hd l) = size l.
+  Proof. rewrite/add_suff size_cat size_map -size_cat cat_take_drop//. Qed.
 
-      Lemma size_add_suff bt hd l: size (add_suff bt hd l) = size l.
-      Proof. rewrite/add_suff size_cat size_map -size_cat cat_take_drop//. Qed.
+  Lemma add_ca_deep_empty2 {n tl} : add_ca_deep n tl [::]  = [::].
+  Proof. case: n => //. Qed.
 
-      Lemma add_ca_deep_empty2 {n tl} : add_ca_deep n tl [::]  = [::].
-      Proof. case: n => //. Qed.
+  Lemma add_ca_deep_empty1 {n lB} : add_ca_deep n [::] lB = lB.
+  Proof.
+    elim: n lB => //= ++ lB.
+    elim: lB => //=.
+    move=> g gs IH n H; rewrite IH//; f_equal.
+    move: n H; clear.
+    elim: g => //=.
+    move=> g gs IH n H; rewrite IH//=; f_equal.
+    case: g => //= l1; f_equal.
+    rewrite cats0//.
+  Qed.
 
-      Section make_lB_empty2.
+  Lemma size_add_ca_deep m tl l:
+    size (add_ca_deep m tl l) = size l.
+  Proof.
+    elim: m l => //=.
+    move=> n IH l.
+    rewrite size_map//.
+  Qed.
 
-        Lemma add_ca_deep_empty1 {n lB} : add_ca_deep n [::] lB = lB.
-        Proof.
-          elim: n lB => //= ++ lB.
-          have H := list_induction _ _ (fun lB => forall n : nat,
-          (forall (lB0 : seq (seq G)), add_ca_deep n [::] lB0 = lB0) ->
-          [seq [seq add_ca'  [::] (apply_cut1 (add_ca_deep n [::]) x) | x <- j] | j <- lB] = lB).
-          apply: H => //=; try by apply: is_list_inhab id _.
-          move=> g _ gs IH n H; rewrite IH//; f_equal.
-          move: n H; clear.
-          have H := list_induction _ _ (fun g => forall (n : nat),
-            (forall (lB0 : seq (seq G)), add_ca_deep n [::] lB0 = lB0) ->
-            [seq add_ca' [::] (apply_cut1 (add_ca_deep n [::]) x) | x <- g] = g).
-          apply: H => //=; try by apply: is_list_inhab id _.
-          move=> {}g _ gs IH n H; rewrite IH//=; f_equal.
-          case: g => //= l1; f_equal.
-          rewrite cats0//.
-        Qed.
+  Lemma make_lB0_empty2 {tl} : make_lB0 tl [::] = tl.
+  Proof. rewrite/make_lB0 map_cats0//. Qed.
 
-      End make_lB_empty2.
+  Lemma make_lB0_empty1 {lb0} : make_lB0 [::] lb0 = [::].
+  Proof. rewrite /make_lB0//. Qed.
 
+  Lemma size_s2l l m B:
+    size (state_to_list B l) = size (state_to_list B m).
+  Proof.
+    elim: B l m => //=.
+    - move=> A HA s B HB l m; rewrite !size_add_ca_deep//.
+    - move=> A HA B0 HB0 B HB l m.
+      move: (HA l m).
+      do 2 case: (state_to_list A _) => //=.
+      move=> x xs y ys/=[] H.
+      move: (HB0 l m).
+      do 2 case: (state_to_list B0 _) => //=.
+        rewrite !size_map//.
+      move=> z zs w ws; case: ws; case: zs => //=_.
+      rewrite !size_cat !size_map !size_add_deep H; f_equal.
+      apply: HB.  
+  Qed.
 
-      Lemma size_add_ca_deep m tl l:
-        size (add_ca_deep m tl l) = size l.
-      Proof.
-        elim: m l => //=.
-        move=> n IH l.
-        rewrite size_map//.
-      Qed.
-
-      Lemma make_lB0_empty2 {tl} : make_lB0 tl [::] = tl.
-      Proof. rewrite/make_lB0 map_cats0//. Qed.
-
-      Lemma make_lB0_empty1 {lb0} : make_lB0 [::] lb0 = [::].
-      Proof. rewrite /make_lB0//. Qed.
-
-      Lemma size_s2l l m B:
-        size (state_to_list B l) = size (state_to_list B m).
-      Proof.
-        elim: B l m => //=.
-        - move=> A HA s B HB l m; rewrite !size_add_ca_deep//.
-        - move=> A HA B0 HB0 B HB l m.
-          move: (HA l m).
-          do 2 case: (state_to_list A _) => //=.
-          move=> x xs y ys/=[] H.
-          move: (HB0 l m).
-          do 2 case: (state_to_list B0 _) => //=.
-            rewrite !size_map//.
-          move=> z zs w ws; case: ws; case: zs => //=_.
-          rewrite !size_cat !size_map !size_add_deep H; f_equal.
-          apply: HB.  
-      Qed.
-
-    End props.
-
-
-  Section size.
+  Section alternatives.
     Fixpoint alternatives A :=
       match A with
       | Or A _ B => (alternatives A) + alternatives B
@@ -182,7 +157,7 @@ Module NurProp (U : Unif).
         rewrite addnC.
         apply: leq_add (ltnW H1) H.
     Qed.
-  End size.
+  End alternatives.
 
   Section t2l_base.
     Lemma state_to_list_dead {A l}: is_dead A -> state_to_list A l = [::].
@@ -221,15 +196,14 @@ Module NurProp (U : Unif).
     Qed.
   End t2l_base.
 
-  Lemma apply_cut1_id l: apply_cut1 id l = l.
+  Lemma apply_cut1_id l: apply_cut id l = l.
   Proof. case: l => //=. Qed.
 
-  Lemma apply_cut1_id_map {T: Type} F (l: list T): map (fun x => apply_cut1 id (F x)) l = map F l.
+  Lemma apply_cut1_id_map {T: Type} F (l: list T): map (fun x => apply_cut id (F x)) l = map F l.
   Proof. elim: l => //= x xs->; rewrite apply_cut1_id//. Qed.
 
   Definition points_to l1 A := match A with cut l2 => l1 == l2 | _ => true end.
   Definition empty_ca := points_to [::].
-
 
   Lemma base_and_empty_ca {A B l}:
     base_and A -> state_to_list A l = B -> (all empty_ca) (seq.head [::] B).
@@ -253,7 +227,7 @@ Module NurProp (U : Unif).
     match n with
     | 0 => true
     | n.+1 =>
-      all_tail (fun xs ys => all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix alts ys)) xs) L1 L2
+      all_tail (fun xs ys => all (if_cut (fun alts => valid_ca_aux n alts alts && suffix alts ys)) xs) L1 L2
     end.
 
   Definition valid_ca L := valid_ca_aux (size L) L L.
@@ -263,7 +237,7 @@ Module NurProp (U : Unif).
 
   Lemma empty_ca_if_cut n r hd:
     all empty_ca hd -> 
-    all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) r)) hd.
+    all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) r)) hd.
   Proof.
     elim: hd r n => //=x xs IH r n /andP[H1 H2].
     rewrite IH//andbT.
@@ -314,14 +288,14 @@ Module NurProp (U : Unif).
   Section valid_empty_2_empty_ca.
     Lemma valid_cas_empty2_help1 {n gs}:
       (forall l, size l <= n -> valid_ca_aux n l [::] -> all (all empty_ca) l) ->
-      (all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) [::])) gs) -> 
+      (all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) [::])) gs) -> 
       all empty_ca gs.
     Proof.
       move: n.
       have H := list_induction _ _
         (fun gs => forall n,
           (forall l, size l <= n -> valid_ca_aux n l [::] -> all (all empty_ca) l) ->
-          all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) [::])) gs ->
+          all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) [::])) gs ->
           all empty_ca gs).
       apply: H => //.
       - move=> /= g Hg {}gs Hgs n H/andP[H1 H2].
@@ -337,7 +311,7 @@ Module NurProp (U : Unif).
       (forall l : seq (seq G), size l <= n -> valid_ca_aux n l [::] -> all (all empty_ca) l) ->
       size gs < n.+1 ->
       all_tail (fun gs ys =>
-    all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) (ys))) gs) gs [::] -> 
+    all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) (ys))) gs) gs [::] -> 
     all (all empty_ca) gs.
     Proof.
       move: n.
@@ -346,7 +320,7 @@ Module NurProp (U : Unif).
           (forall l, size l <= n -> valid_ca_aux n l [::] -> all (all empty_ca) l) ->
         size gs < n.+1 ->
         all_tail
-          (fun xs0 ys => all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) ( ys))) xs0)
+          (fun xs0 ys => all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) ( ys))) xs0)
           gs [::] -> all (all empty_ca) gs).
       apply: H => //.
       - move=>/= g Hg {}gs Hgs n H1 H2 /andP[H3 H4].
@@ -377,8 +351,8 @@ Module NurProp (U : Unif).
       (forall m3 (x l : seq (seq G)), size x <= size l ->
         size l <= n ->
         valid_ca_aux (n + m3) x l = valid_ca_aux n x l) ->  size l <= n ->
-      if_cut1 (fun alts => valid_ca_aux (n + m1) alts alts && suffix (alts) (l)) g =
-      if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) (l)) g.
+      if_cut (fun alts => valid_ca_aux (n + m1) alts alts && suffix (alts) (l)) g =
+      if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) (l)) g.
     Proof.
       destruct g => //=.
       move=> H1 H2.
@@ -394,16 +368,16 @@ Module NurProp (U : Unif).
         size l <= n ->
         valid_ca_aux (n + m1) x l = valid_ca_aux n x l) ->
         size xs <= n ->
-          all (if_cut1 (fun alts => valid_ca_aux (n + m1) alts alts && suffix (alts) (xs))) gs =
-          all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) (xs))) gs.
+          all (if_cut (fun alts => valid_ca_aux (n + m1) alts alts && suffix (alts) (xs))) gs =
+          all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) (xs))) gs.
     Proof.
       move: n m1 xs.
       have H := list_induction _ _ (fun gs => forall (n m1 : nat) xs,
         (forall m3 x l, size x <= size l -> size l <= n -> 
           valid_ca_aux (n + m3) x l = valid_ca_aux n x l) ->
       size xs <= n ->
-      all (if_cut1 (fun alts => valid_ca_aux (n + m1) alts alts && suffix (alts) (xs))) gs =
-      all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) (xs))) gs).
+      all (if_cut (fun alts => valid_ca_aux (n + m1) alts alts && suffix (alts) (xs))) gs =
+      all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) (xs))) gs).
       apply: H => //.
       - move=> g Hg {}gs IH n m1 l H1 H2 /=.
         f_equal; last first.
@@ -420,9 +394,9 @@ Module NurProp (U : Unif).
         size gs < (size l).+1 ->
       size l < n.+1 ->
       all_tail (fun xs0 ys => 
-        all (if_cut1 (fun alts => valid_ca_aux (n + m1) alts alts && suffix (alts) (ys))) xs0) gs l =
+        all (if_cut (fun alts => valid_ca_aux (n + m1) alts alts && suffix (alts) (ys))) xs0) gs l =
       all_tail (fun xs0 ys => 
-        all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) (ys))) xs0) gs l.
+        all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) (ys))) xs0) gs l.
     Proof.
       move: n m1 l.
       have H := list_induction _ _ 
@@ -433,8 +407,8 @@ Module NurProp (U : Unif).
             valid_ca_aux (n + m3) x0 l0 = valid_ca_aux n x0 l0) ->
           size gs < (size l).+1 ->
           size l < n.+1 ->
-          all_tail (fun xs0 ys => all (if_cut1 (fun alts => valid_ca_aux (n + m1) alts alts && suffix (alts) (ys))) xs0) gs l =
-          all_tail (fun xs0 ys => all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) (ys))) xs0) gs l).
+          all_tail (fun xs0 ys => all (if_cut (fun alts => valid_ca_aux (n + m1) alts alts && suffix (alts) (ys))) xs0) gs l =
+          all_tail (fun xs0 ys => all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) (ys))) xs0) gs l).
       apply: H => //.
       - move=> /=g Hg {}gs Hgs n m1 l H1 H2 H3.
         f_equal; last first.
@@ -519,7 +493,7 @@ Module NurProp (U : Unif).
     Qed.
 
     Lemma valid_ca_split_empty xs y n:
-    let f := all_tail (fun xs ys => all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix alts ys)) xs) in
+    let f := all_tail (fun xs ys => all (if_cut (fun alts => valid_ca_aux n alts alts && suffix alts ys)) xs) in
       f (xs ++ y) [::] = f xs [::] && f y [::].
     Proof. elim: xs y n => //=x xs IH y n; rewrite-andbA; f_equal; auto. Qed.
 
@@ -542,16 +516,16 @@ Module NurProp (U : Unif).
     Qed.
 
     Lemma valid_ca_split_gs_help_1 n x y l:
-      all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) (x ++ y) =
-      all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) x &&
-      all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) y.
+      all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) (x ++ y) =
+      all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) x &&
+      all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) y.
     Proof.
       move: n y l.
       have H := list_induction _ _
       (fun x => forall n y l,
-      all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) (x ++ y) =
-      all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) x &&
-      all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) y        )
+      all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) (x ++ y) =
+      all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) x &&
+      all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (alts) l)) y        )
       .
       apply: H; [move=> //| |apply: is_list_inhab id _].
       move=> /=g _ gs Hgs n y l.
@@ -577,7 +551,7 @@ Module NurProp (U : Unif).
         size cB <= n0 ->
         n0 <= n.+1 ->
         valid_ca cB ->
-        [seq [seq add_ca' l (apply_cut1 (add_ca_deep n l) x) | x <- j] | j <- cB] = add_ca_deep n0 l cB.
+        [seq [seq add_ca' l (apply_cut (add_ca_deep n l) x) | x <- j] | j <- cB] = add_ca_deep n0 l cB.
   Proof.
     have H := list_induction _ _ (fun cB => forall n : nat,
       (forall (n0 : nat) (cB0 l : seq (seq G)),
@@ -586,7 +560,7 @@ Module NurProp (U : Unif).
       size cB <= n0 ->
       n0 <= n.+1 ->
       valid_ca cB ->
-      [seq [seq add_ca' l (apply_cut1 (add_ca_deep n l) x) | x <- j] | j <- cB] = add_ca_deep n0 l cB).
+      [seq [seq add_ca' l (apply_cut (add_ca_deep n l) x) | x <- j] | j <- cB] = add_ca_deep n0 l cB).
     apply: H => //=; try by apply: is_list_inhab id _.
       move=> *; rewrite add_ca_deep_empty2//.
     move=> g _ gs Hgs n IH []//m l H1 H2.
@@ -610,11 +584,11 @@ Module NurProp (U : Unif).
       size gs < m.+1 ->
       m < n.+1 ->
       all
-        (if_cut1
+        (if_cut
           (fun alts : seq (seq G) => valid_ca_aux (size gs) alts alts && suffix (alts) (gs)))
         g ->
-      [seq add_ca' l (apply_cut1 (add_ca_deep n l) x) | x <- g] =
-      [seq add_ca' l (apply_cut1 (add_ca_deep m l) x) | x <- g]).
+      [seq add_ca' l (apply_cut (add_ca_deep n l) x) | x <- g] =
+      [seq add_ca' l (apply_cut (add_ca_deep m l) x) | x <- g]).
     apply: H => //=; try by apply: is_list_inhab id _.
     move=> {}g _ gs Hgs gs1 n m l IH H1 H2 /andP[H3 H4].
     rewrite (Hgs gs1 _ m)//; f_equal.
@@ -718,7 +692,7 @@ Module NurProp (U : Unif).
       all_tail
         (fun (xs : seq G) (ys : seq (seq G)) =>
         all
-          (if_cut1
+          (if_cut
               (fun alts : seq (seq G) =>
               valid_ca_aux n alts alts && suffix alts ys))
           xs)
@@ -735,7 +709,7 @@ Module NurProp (U : Unif).
           have H := list_induction _ _ 
           (fun g => forall (n : nat) (l2 : seq (seq G)),
       all
-        (if_cut1
+        (if_cut
           (fun alts : seq (seq G) =>
             valid_ca_aux n alts alts && suffix (alts) ((behead l2))))
         g ->
@@ -1281,9 +1255,9 @@ Module NurProp (U : Unif).
       valid_ca_aux n xs0 (ys0 ++ bt) -> valid_ca_aux n (add_deep bt m0 hd xs0) (make_lB0 (add_deep bt o hd ys0) hd ++ bt)) ->
       size ys < m.+1 ->
       m < o0.+1 ->
-      all (if_cut1 (fun alts : seq (seq G) => valid_ca_aux n alts alts && suffix alts (ys ++ bt))) g ->
+      all (if_cut (fun alts : seq (seq G) => valid_ca_aux n alts alts && suffix alts (ys ++ bt))) g ->
       all
-        (if_cut1
+        (if_cut
           (fun alts : seq (seq G) =>
             valid_ca_aux n alts alts &&
             suffix alts (make_lB0 (add_deep bt o0 hd ys) hd ++ bt)))
@@ -1312,7 +1286,7 @@ Module NurProp (U : Unif).
     match n with
     | 0 => true
     | n.+1 =>
-      all_tail (fun xs ys => all (if_cut1 (fun alts => valid_ca_aux n alts alts bt && suffix alts (ys++bt))) xs) L1 L2
+      all_tail (fun xs ys => all (if_cut (fun alts => valid_ca_aux n alts alts bt && suffix alts (ys++bt))) xs) L1 L2
     end.
 
  *)

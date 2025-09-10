@@ -493,7 +493,7 @@ the cut inside a or become deep.
 
 ```coq
 Definition add_deep_help add_deep (n:nat) l :=
-  (apply_cut1 (fun x => map (fun x => x ++ l) ((add_deep n l) x))).
+  (apply_cut (fun x => map (fun x => x ++ l) ((add_deep n l) x))).
 
 Fixpoint add_deep n (l: alt') (A: seq alt') :=
   match n with
@@ -580,7 +580,7 @@ Fixpoint valid_ca_aux n L1 L2 :=
   match n with
   | 0 => true
   | n.+1 =>
-    all_tail (fun xs ys => all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix (G2Gs alts) (G2Gs ys))) xs) L1 L2
+    all_tail (fun xs ys => all (if_cut (fun alts => valid_ca_aux n alts alts && suffix (G2Gs alts) (G2Gs ys))) xs) L1 L2
   end.
 
 Definition valid_ca L := valid_ca_aux (size L) L L.
