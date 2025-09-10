@@ -231,8 +231,8 @@ Module NurEqiv (U : Unif).
     Qed.
 
     Lemma xxx {b l1 x x'}:
-      [seq G2G j | j <- [seq add_ca' b l1 j | j <- x]] =
-      [seq G2G j | j <- [seq add_ca' b l1 j | j <- x']] -> 
+      [seq G2G j | j <- [seq add_ca b l1 j | j <- x]] =
+      [seq G2G j | j <- [seq add_ca b l1 j | j <- x']] -> 
         [seq G2G j | j <- x] = [seq G2G j | j <- x'].
     Proof.
     Admitted.
@@ -569,7 +569,7 @@ Module NurEqiv (U : Unif).
     Lemma _ign {B B' l1 l2}:
       exp_done_shape B' ->
       exp_done_rel B B' = (true, no) ->
-      map (map (add_ca' false l1)) (state_to_list_aux B' l2) = state_to_list_aux B' l2.
+      map (map (add_ca false l1)) (state_to_list_aux B' l2) = state_to_list_aux B' l2.
     Proof.
     Abort.
 
@@ -632,7 +632,7 @@ Module NurEqiv (U : Unif).
     Proof. case: A => //. Qed.
 
     Lemma state_will_cut_add_ca {A b l} :
-      state_will_cut A -> state_will_cut (map (map (add_ca' b l)) A).
+      state_will_cut A -> state_will_cut (map (map (add_ca b l)) A).
     Proof. case: A => // -[]//=[]//= ?? _ _ _; case:ifP => //. Qed.
 
     Lemma xxxz {A B b} l: valid_state A ->

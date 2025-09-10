@@ -439,7 +439,7 @@ Fixpoint state_to_list_aux A bt :=
     (* here we are adding bt to lA. In the example above J in not in bt  *)
     (* since bt are at least grand-parents alts, then we force the insertion 
         in the cuts of lA *)
-    incr_cuts (map (map (add_ca' true bt)) (lA ++ lB))
+    incr_cuts (map (map (add_ca true bt)) (lA ++ lB))
   | And A B0 B =>
     let lA   := state_to_list_aux A bt in
     let lB   := state_to_list_aux B bt in
@@ -505,7 +505,7 @@ Fixpoint add_deep n (l: alt') (A: seq alt') :=
 Definition ad l As := (add_deep (size As) l) (As).
 
 (* Add alternatives only to deep cuts. *)
-Definition make_lB lB tl := map (map (add_ca' false tl)) lB.
+Definition make_lB lB tl := map (map (add_ca false tl)) lB.
 
 Definition make_lB0 (xs:seq alt') (lB0: alt') := map (fun x => x ++ lB0) xs.
 

@@ -204,110 +204,65 @@ Module Nur (U : Unif).
       congruence.
   Qed.
 
-  Section t2l.
+  Definition get_ca g :=
+    match g with
+    | cut a => a 
+    | _ => [::]
+    end.
 
-    (* The bool in the cut is to know if the cut is deep.
-      For expamle, in the state:
-        ((! \/ A) /\ !) \/ C
-      The first cut is deep, therefore its cut-to alternatives point to C
-      The second cut is superficial, therfore its cut to alternatives are empty
-    *)
-    (* Inductive G' := 
-      | call' : program -> Tm -> G'
-      | cut' : bool -> list (list G') -> G'
-      .
-    derive G'.
-    HB.instance Definition _ := hasDecEq.Build G' G'_eqb_OK. *)
+  Definition is_cutb' A := match A with cut _ => true | _ => false end.
+  Definition cuts' A := all is_cutb' A.
 
-    Definition get_ca g :=
-      match g with
-      | cut a => a 
-      | _ => [::]
-      end.
+  Lemma cuts_cat {x y} : cuts' (x ++ y) = cuts' x && cuts' y.
+  Proof. rewrite/cuts' all_cat//. Qed.
 
-    Definition alt':= (seq G).
+  Fixpoint add_ca_deep n tl (alts: seq (seq G)) := (*always:= adds always alts to cut *)
+    match n with
+    | 0 => alts
+    | n.+1 => map (map (fun x => (add_ca tl (apply_cut (add_ca_deep n tl) x)))) alts
+    end.
 
-    Definition is_cutb' A := match A with cut _ => true | _ => false end.
-    Definition cuts' A := all is_cutb' A.
+  (* Definition add_ca1 tl a := add_ca_deep (size a) tl a. *)
 
+  Lemma add_ca_empty1 l: add_ca [::] l = l.
+  Proof. case: l => //= l1; rewrite cats0//. Qed.
 
-    Lemma cuts_cat {x y} : cuts' (x ++ y) = cuts' x && cuts' y.
-    Proof. rewrite/cuts' all_cat//. Qed.
+  Lemma map_add1_cas_empty {T: Type} (lA: list (list T)) F:
+    map (map (fun x => add_ca [::] (F x))) lA  = map (map F) lA.
+  Proof.
+    rewrite /add_ca; elim: lA => //= x xs ->.
+    f_equal; elim: x => //=x {}xs->; case: (F x)=>//=l; rewrite cats0//.
+  Qed.
 
-    Section makers.
-      Section add_ca'.
-      Definition add_ca' tl (a : G) := (*always:= adds always tl to cut *)
-        match a with
-        | cut a1 => cut (a1 ++ tl)
-        | call pr t => call pr t
-        end.
+  Lemma cut_add_ca {l x}: is_cutb' (add_ca l x) = is_cutb' x.
+  Proof. case: x => //=*. Qed.
 
-      Fixpoint add_ca_deep n tl (alts: seq (seq G)) := (*always:= adds always alts to cut *)
-        match n with
-        | 0 => alts
-        | n.+1 => map (map (fun x => (add_ca' tl (apply_cut (add_ca_deep n tl) x)))) alts
-        end.
+  Lemma cuts_add_ca {x l} : cuts' [seq add_ca l j | j <- x] = cuts' x.
+  Proof. elim: x l => // x xs H/= l; rewrite H cut_add_ca//. Qed.
 
-      (* Definition add_ca1 tl a := add_ca_deep (size a) tl a. *)
+  Definition add_suff (bt: seq alt) hd (l:seq alt) :=
+    let s := size l - size bt in
+    map (fun x => x ++ hd) (take s l) ++ drop s l.
 
-      Lemma add_ca'_empty1 l: add_ca' [::] l = l.
-      Proof. case: l => //= l1; rewrite cats0//. Qed.
+  Definition add_deep_help add_deep bt (n:nat) hd :=
+    apply_cut (fun x => add_suff bt hd (add_deep bt n hd x)).
 
-      Lemma add_ca'_empty {T: Type} (lA : list T) F:
-        map (fun x => add_ca' [::] (F x)) lA = map F lA.
-      Proof.
-        rewrite /add_ca; elim: lA => //= x xs IH.
-        rewrite IH/=; f_equal.
-        rewrite add_ca'_empty1//.
-      Qed.
+  Fixpoint add_deep bt n (l: alt) (A: seq alt) :=
+    match n with
+    | 0 => A
+    | n.+1 =>
+      map (map (add_deep_help add_deep bt n l)) A
+    end. 
 
-      Lemma map_add1_cas_empty {T: Type} (lA: list (list T)) F:
-        map (map (fun x => add_ca' [::] (F x))) lA  = map (map F) lA.
-      Proof.
-        rewrite /add_ca; elim: lA => //= x xs ->.
-        f_equal; apply add_ca'_empty.
-      Qed.
-    End add_ca'.
+  Definition add_deep_ bt n (l: alt) (A: alt) :=
+    match n with
+    | 0 => A
+    | n.+1 => (map (add_deep_help add_deep bt n l)) A
+    end.
 
-      Lemma cut_add_ca {l x}: is_cutb' (add_ca' l x) = is_cutb' x.
-      Proof. case: x => //=*. Qed.
+  Definition kill (A: alt) := map (apply_cut (fun x => [::])) A.
 
-      Lemma cuts_add_ca {x l} : cuts' [seq add_ca' l j | j <- x] = cuts' x.
-      Proof. elim: x l => // x xs H/= l; rewrite H cut_add_ca//. Qed.
-
-
-
-      (* Fixpoint add_suff (bt: seq (seq G)) (hd:seq (G)) (l: seq (seq G)) :=
-        if size l <= size bt then l
-        else match l with
-        | [::] => [::]
-        | x :: xs => (x ++ hd) :: add_suff bt hd xs
-        end. *)
-
-      Definition add_suff (bt: seq alt) hd (l:seq alt) :=
-        let s := size l - size bt in
-        map (fun x => x ++ hd) (take s l) ++ drop s l.
-
-      Definition add_deep_help add_deep bt (n:nat) hd :=
-        apply_cut (fun x => add_suff bt hd (add_deep bt n hd x)).
-    
-      Fixpoint add_deep bt n (l: alt') (A: seq alt') :=
-        match n with
-        | 0 => A
-        | n.+1 =>
-          map (map (add_deep_help add_deep bt n l)) A
-        end. 
-
-      Definition add_deep_ bt n (l: alt') (A: alt') :=
-        match n with
-        | 0 => A
-        | n.+1 => (map (add_deep_help add_deep bt n l)) A
-        end.
-    
-      Definition kill (A: alt') := map (apply_cut (fun x => [::])) A.
-
-      Definition make_lB0 (xs:seq alt') (lB0: alt') := map (fun x => x ++ lB0) xs.
-    End makers.
+  Definition make_lB0 (xs:seq alt) (lB0: alt) := map (fun x => x ++ lB0) xs.
 
     (* bt is the backtracking list for the cut-alternatives
       this list is important since in this tree:
@@ -321,47 +276,44 @@ Module Nur (U : Unif).
       the "great^n uncles" on the right of a cut ARE alternatives
     *)
 
-    Fixpoint state_to_list (A: state) (bt : list alt') : list alt' :=
-      match A with
-      | OK => [::[::]]
-      | Top => [::[::]]
-      | Bot => [::]
-      | Dead => [::]
-      | Goal _ Cut => [::[::cut [::]]]
-      | Goal pr (Call t) => [::[::call pr t]]
-      | Or A _ B => 
-        let lB := state_to_list B [::] in
-        let lA := state_to_list A lB in
-        add_ca_deep (size (lA ++ lB)) bt (lA ++ lB)
-      | And A B0 B =>
-        let lB0 := state_to_list B0 bt in
-        let lA   := state_to_list A bt in
-        if lA is x :: xs then 
-          (* lA is split into the current goal x and the future alternatives xs *)
-          (* in a valid state lB0 has length 0 or 1 (it is a (potentially killed) base and) *)
-          match lB0 with
-          | [::] => 
-            (* the reset point is empty: it kill all the alternatives in the cut-to *)
-            let lB   := state_to_list B bt in
-            [seq (kill x) ++ y | y <- lB]
-          | [::hd] =>
-          (* 
-            invariant every cut-to has bt has tail or is empty
-          *)
-            (* the reset point exists, it has to be added to all cut-to alternatives *)
-            let x := add_deep_ bt (size xs).+1 hd x in
-            let xs := add_deep bt (size xs) hd xs in 
-            (* each alt in xs must have hd has rightmost conjunct  *)
-            let xs := make_lB0 xs hd in
-            (* xs are alternatives that should be added in the deep cuts in B *)
-            let lB   := state_to_list B (xs ++ bt) in
-            (* lB are alternatives, each of them have x has head *)
-            [seq x ++ y | y <- lB] ++ xs
-          | _ => [::] (*unreachable in a valid_state*)
-          end
-        else [::]
-      end.
-
-    (* Definition state_to_list A l := (state_to_list A l). *)
-  End t2l.
+  Fixpoint state_to_list (A: state) (bt : list alt) : list alt :=
+    match A with
+    | OK => [::[::]]
+    | Top => [::[::]]
+    | Bot => [::]
+    | Dead => [::]
+    | Goal _ Cut => [::[::cut [::]]]
+    | Goal pr (Call t) => [::[::call pr t]]
+    | Or A _ B => 
+      let lB := state_to_list B [::] in
+      let lA := state_to_list A lB in
+      add_ca_deep (size (lA ++ lB)) bt (lA ++ lB)
+    | And A B0 B =>
+      let lB0 := state_to_list B0 bt in
+      let lA   := state_to_list A bt in
+      if lA is x :: xs then 
+        (* lA is split into the current goal x and the future alternatives xs *)
+        (* in a valid state lB0 has length 0 or 1 (it is a (potentially killed) base and) *)
+        match lB0 with
+        | [::] => 
+          (* the reset point is empty: it kill all the alternatives in the cut-to *)
+          let lB   := state_to_list B bt in
+          [seq (kill x) ++ y | y <- lB]
+        | [::hd] =>
+        (* 
+          invariant every cut-to has bt has tail or is empty
+        *)
+          (* the reset point exists, it has to be added to all cut-to alternatives *)
+          let x := add_deep_ bt (size xs).+1 hd x in
+          let xs := add_deep bt (size xs) hd xs in 
+          (* each alt in xs must have hd has rightmost conjunct  *)
+          let xs := make_lB0 xs hd in
+          (* xs are alternatives that should be added in the deep cuts in B *)
+          let lB   := state_to_list B (xs ++ bt) in
+          (* lB are alternatives, each of them have x has head *)
+          [seq x ++ y | y <- lB] ++ xs
+        | _ => [::] (*unreachable in a valid_state*)
+        end
+      else [::]
+    end.
 End Nur.
