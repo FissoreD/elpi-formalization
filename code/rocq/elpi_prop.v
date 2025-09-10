@@ -508,7 +508,7 @@ Module NurProp (U : Unif).
         valid_ca_aux n.+1 ys (drop (size xs) tl)).
       apply: H => //=.
       - move=> *; rewrite drop0//.
-      - move=> x Hx {}xs Hxs n ys tl H.
+      - move=> x _ {}xs Hxs n ys tl H.
         rewrite addSn => H1 H2.
         rewrite -andbA; f_equal.
         destruct tl => //=.
@@ -518,25 +518,27 @@ Module NurProp (U : Unif).
       - apply: is_list_inhab id _.
     Qed.
 
+    Lemma valid_ca_split_empty xs y n:
+    let f := all_tail (fun xs ys => all (if_cut1 (fun alts => valid_ca_aux n alts alts && suffix alts ys)) xs) in
+      f (xs ++ y) [::] = f xs [::] && f y [::].
+    Proof. elim: xs y n => //=x xs IH y n; rewrite-andbA; f_equal; auto. Qed.
+
     Lemma valid_ca_split {x y n l}:
-      size (x++y) <= size l -> size l <= n ->
-      valid_ca_aux n (x ++ y) l =
-        valid_ca_aux n x l && valid_ca_aux n y (drop (size x) l).
+      valid_ca_aux n (x ++ y) l = valid_ca_aux n x l && valid_ca_aux n y (drop (size x) l).
     Proof.
       move=>/=.
       elim: n y x l => //n IH y x l.
-      case: x => //[|x xs]; rewrite ?drop0//.
-      rewrite cat_cons; simpl size; rewrite size_cat => H1 H2.
-      rewrite valid_ca_split_cons//; last first.
-      rewrite (valid_ca_split_cons x xs)//; last first.
-      rewrite -andbA; f_equal.
-      clear x.
-      destruct l; simpl behead; simpl drop.
-        destruct xs => //.
-      simpl in H1, H2; clear l.
-      rewrite valid_cas1_deep_split_cat_help //.
-      move=> *.
-      apply: IH => //.
+      case: x => //[|x xs]; rewrite ?drop0//=-andbA; f_equal.
+      case: l => //=.
+        apply: valid_ca_split_empty.
+      move=> _ l.
+      elim: xs {x} l => //=.
+        move=> l; rewrite drop0//.
+      move=> x xs H []//=.
+        rewrite-andbA; f_equal.
+        apply:valid_ca_split_empty.
+      move=> _ l.
+      rewrite H andbA//.
     Qed.
 
     Lemma valid_ca_split_gs_help_1 n x y l:
@@ -782,11 +784,12 @@ Module NurProp (U : Unif).
   Qed.
 
   Lemma valid_ca_aux_make_lB xs ys tl n m o: 
+     valid_ca tl ->
     size xs <= size ys -> size ys + size tl <= n -> size ys <= m -> m <= o ->
-    valid_ca_aux n xs ys -> valid_ca tl ->
+    valid_ca_aux n xs ys ->
     valid_ca_aux n (add_ca_deep m tl xs) (add_ca_deep o tl ys ++ tl).
   Proof.
-    move=> + + + + + vtl.
+    move=> vtl.
     elim: n m o xs ys => //=++++xs.
     elim: xs.
       move=> n _ []//.
@@ -805,16 +808,12 @@ Module NurProp (U : Unif).
       rewrite Hgs//.
     clear Hgs H4.
     case: g H3 => //= l /andP[H3 H4].
-    rewrite addSn in H1.
+    (* rewrite addSn in H1. *)
     have H5 := size_suffix H4.
     have H6 : size l <= m by apply: leq_trans H5 H2.
     apply/andP.
     split.
       rewrite valid_ca_split//; last first.
-        rewrite size_cat.
-        rewrite size_add_ca_deep.
-        apply: leq_trans _ _; [|apply: H1].
-        rewrite leq_add2r//.
       rewrite drop_size_cat//.
       apply/andP; split.
         apply IH => //.
@@ -863,10 +862,6 @@ Module NurProp (U : Unif).
     case: g H4 => //= l1 /andP[H4 H5].
     rewrite addSn in H2.
     rewrite valid_ca_split => //; last first.
-      rewrite size_cat size_add_ca_deep.
-      apply: leq_trans; [|apply: H2].
-      rewrite leq_add2r.
-      apply: size_suffix H5.
     rewrite drop_size_cat//.
     rewrite (valid_ca_mn l l)//; last first.
       apply:leq_trans;[|apply: H2].
@@ -1265,7 +1260,6 @@ Module NurProp (U : Unif).
   Proof.
     move=> Hhd H1 H2 H3.
     rewrite/add_suff valid_ca_split//; last first.
-      rewrite size_cat size_map -size_cat cat_take_drop//.
     apply/andP; split.
       apply: valid_ca_make_lB0_empty_ca2 => //.
       apply: valid_ca_prefix (prefix_take _ _) H1 H3.
@@ -1406,7 +1400,6 @@ Module NurProp (U : Unif).
         have /= Hhd:= base_and_empty_ca bB (H [::]).
         rewrite H size_cat !size_map/=map_id size_add_deep => H1.
         rewrite valid_ca_split; last first; rewrite ?size_cat?size_lB0?size_add_deep//.
-          apply: leq_addr.
         rewrite -catA drop_size_cat//.
         rewrite valid_ca_aux_make_lB0_empty_ca//?size_cat?size_lB0?size_add_deep?andbT; last first.
           apply: leq_trans _ H1; rewrite -addnA leq_addl//.
