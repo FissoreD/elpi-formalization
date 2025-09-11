@@ -529,14 +529,14 @@ Module NurProp (U : Unif).
 
   Lemma valid_ca_make_lB0_empty_ca2 hd n X tl:
       all empty_ca hd ->
-      valid_ca_aux n X tl ->
-      valid_ca_aux n (make_lB0 X hd) tl.
+      valid_ca_aux n (make_lB0 X hd) tl = valid_ca_aux n X tl .
   Proof.
     rewrite/make_lB0.
     move=> H; elim: n X tl => //=+ + X.
     elim: X => //.
-    move=> g gs Hgs n IH tl/= /andP[H1 H2].
-    rewrite Hgs// all_cat H1 (empty_ca_if_cut _ _ _ H) //.
+    move=> g gs Hgs n IH tl/=.
+    rewrite Hgs//; f_equal.
+    rewrite all_cat (empty_ca_if_cut _ _ _ H) andbT//.
   Qed.
 
   Lemma suffix_make_lB0 {T:eqType} (A:list (list T)) B lB0:
@@ -957,30 +957,51 @@ Module NurProp (U : Unif).
       apply: ttt => //.
     - move=> A HA B0 HB0 B HB bt + vt.
       move=>/and5P[_ vA _]; case:ifP => /=[sA vB bB|sA /eqP->bB].
-        have [hd SA] := success_state_to_list_hd bt sA vA.
+        have [x SA] := success_state_to_list_hd bt sA vA.
         have:= HA bt vA vt; rewrite SA/==>{}HA.
         move: bB => /orP[]bB; last first.
           rewrite base_and_ko_state_to_list// map_id.
           apply: HB vB vt.
-        have [hd1 H] := base_and_state_to_list bB.
+        have [hd H] := base_and_state_to_list bB.
         have/= Hz:= base_and_empty_ca bB (H [::]).
         rewrite H size_cat size_map size_lB0 size_add_deep/=map_id.
-        set m := (make_lB0 _ _). 
-        set s := (state_to_list _ _).
-        (* rewrite min_suffix_cat.
-        apply/andP;split;last first.
-          rewrite/make_lB0.
-          apply: min_suffix_map_catR.
-            apply: min_suffix_empty_ca (base_and_empty_ca bB (H [::])).
-            (* rewrite (min_suffix_add_deep _ _ _ _ _ (size hd))//. *)
-            admit.
-            (* admit. *)
-            (* admit. *)
+        rewrite min_suffix_cat.
+        rewrite -catA valid_ca_split.
+        rewrite drop_size_cat//.
+        rewrite valid_ca_mn => //; last first.
+          rewrite !size_cat addnA size_lB0 size_add_deep//.
+          rewrite !size_cat leq_addr//.
+        rewrite valid_ca_mn => //; last first.
+          rewrite size_cat size_lB0 size_add_deep -addnA leq_addl//.
+          rewrite size_cat leq_addr//.
+        set m := make_lB0 _ _.
+        set s := state_to_list _ _.
+        move=>/andP[H1 H2].
+        apply/andP;split; last first.
+        (* valid_ca_make_lB0_empty_ca2
+          rewrite/s/m min_suffix_map_catR//.
+            apply: min_suffix_empty_ca => //.
+          
+          
+
+          move=> /andP[].
+          rewrite/make_lB0 min_suffix_map_catR//.
+          (* rewrite (size_s2l _ [::]). *)
+          
+          
+          
+            
+
+          rewrite -catA in HH.
+          rewrite valid_ca_split in HH.
+          have:= min_suffix_map_catR
+          apply: min_suffix_add_deep. *)
+          admit.
         admit.
       case SA:state_to_list => [|x xs].
         rewrite min_suffix_empty//.
       have:= HA bt vA.
-      rewrite SA/==>/andP[H1 H2].
+      (* rewrite SA/==>/andP[H1 H2].
       have {bB}: bbAnd B by move: bB; case:ifP => //; rewrite /bbAnd => _ -> //.
       move=>/orP[]bB; last first.
         rewrite base_and_ko_state_to_list//=; case: n => //.
@@ -995,9 +1016,9 @@ Module NurProp (U : Unif).
           (* admit. *)
           admit.
         (* admit. *)
-      apply: min_suffix_map_cat.
+      apply: min_suffix_map_cat. *)
         admit.
-      admit. *)
+      (* admit. *)
   Abort.
 
   Lemma xxx_add_suff hd bt n l1 l2 :
@@ -1008,8 +1029,8 @@ Module NurProp (U : Unif).
   Proof.
     move=> Hhd H1 H2 H3.
     rewrite/add_suff valid_ca_split//; last first.
+    rewrite valid_ca_make_lB0_empty_ca2 //.
     apply/andP; split.
-      apply: valid_ca_make_lB0_empty_ca2 => //.
       apply: valid_ca_prefix (prefix_take _ _) H1 H3.
     rewrite size_map size_take; case:ifP.
       rewrite valid_ca_drop //.
@@ -1050,6 +1071,7 @@ Module NurProp (U : Unif).
         rewrite size_add_deep size_add_suff size_add_deep//.
         rewrite size_add_suff size_add_deep//.
         admit.
+      Search add_suff add_deep.
       admit.
     apply/suffixP; move/suffixP:H4 =>/=[l2]H6; subst.
     admit.
@@ -1153,7 +1175,7 @@ Module NurProp (U : Unif).
         rewrite //?size_cat?size_lB0?size_add_deep.
         apply/andP;split; last first.
           rewrite valid_ca_mn// leq_addl//.
-        apply: valid_ca_make_lB0_empty_ca2 => //.
+        rewrite valid_ca_make_lB0_empty_ca2//.
         apply: valid_ca_aux_make_lB0 => //.
         rewrite valid_ca_mn-?(valid_ca_mn _ _ (size xs + size l).+1)// ?size_cat//?leq_addr//.
       case lA: state_to_list => //[|x xs].
@@ -1165,10 +1187,11 @@ Module NurProp (U : Unif).
       rewrite !H/= !size_map size_add_deep => H1.
       have /=H2 := base_and_empty_ca bB (H [::]).
       rewrite valid_ca_split_cons valid_ca_split_gs (@empty_ca_valid _ hd)//andbT.
-      move:HA; rewrite lA => /andP[{}HA HA1].
+      move:HA; rewrite lA =>/= /andP[{}HA HA1].
       rewrite valid_ca_make_lB0_empty_ca2//?andbT/=.
+      apply/andP; split.
         case: n H1 => //=n H1; rewrite andbT.
-        apply: valid_ca_aux_make_lB0_help => //.
+        rewrite valid_ca_aux_make_lB0_help //.
           move=> m o zs ws X Y Z W.
           rewrite addSn in H1.
           apply: valid_ca_aux_make_lB0 => //.
