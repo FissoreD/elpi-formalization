@@ -7,3 +7,5 @@
 **/*.vo
 **/*.generate
 .lia.cache
+
+**/_build
