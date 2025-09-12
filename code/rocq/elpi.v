@@ -240,12 +240,12 @@ Module Nur (U : Unif).
   Lemma cuts_add_ca {x l} : cuts' [seq add_ca l j | j <- x] = cuts' x.
   Proof. elim: x l => // x xs H/= l; rewrite H cut_add_ca//. Qed.
 
-  Definition add_suff (bt: seq alt) hd (l:seq alt) :=
-    let s := size l - size bt in
-    map (fun x => x ++ hd) (take s l) ++ drop s l.
+  Definition make_lB0 (xs:seq alt) (lB0: alt) := map (fun x => x ++ lB0) xs.
 
-  Definition add_deep_help add_deep bt (n:nat) hd :=
-    apply_cut (fun x => add_suff bt hd (add_deep bt n hd x)).
+  Definition add_deep_help add_deep (bt:seq alt) (n:nat) hd :=
+    apply_cut (fun x =>
+      let s := size x - size bt in
+      make_lB0 (add_deep bt n hd (take s x)) hd ++ drop s x).
 
   Fixpoint add_deep bt n (l: alt) (A: seq alt) :=
     match n with
@@ -262,7 +262,6 @@ Module Nur (U : Unif).
 
   Definition kill (A: alt) := map (apply_cut (fun x => [::])) A.
 
-  Definition make_lB0 (xs:seq alt) (lB0: alt) := map (fun x => x ++ lB0) xs.
 
     (* bt is the backtracking list for the cut-alternatives
       this list is important since in this tree:
