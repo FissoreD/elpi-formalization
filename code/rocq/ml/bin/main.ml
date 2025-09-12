@@ -12,6 +12,7 @@ let xB = Data (fromn 1)
 let xC = Data (fromn 2)
 let xD = Data (fromn 3)
 let xE = Data (fromn 4)
+let reset = Data (fromn 1000)
 
 let s = fun _ -> None
 
@@ -19,19 +20,32 @@ let s = fun _ -> None
 let p : program = { rules = []; modes = (fun _ -> []) ; coq_sig = fun _ -> Coq_b Exp }
 let f x = (Goal (p, (Call x)))
 
+let build_or l r = Or (l, s, r)
+let (^|) = build_or
 
-let _ =
-  let s = state_to_list 
-    (And ((Or (OK, s, (f xB))), (f xC), (And ((Or ((Goal (p, Cut)), s, (f xD))), (f xE), (Goal (p, Cut))))))  [] in
+let build_and1 l res r = And (l, res, r)
+let build_and l r = build_and1 l (f reset) r
+let (^&) = build_and
+
+
+let cut = Goal (p, Cut)
+
+let tester ag = state_to_list ag []
+
+let tester_pr ag =
+  let s = tester ag in
   Format.eprintf "%a@." pp_alts s
 
+let _ =
+  tester_pr (
+    let left = OK ^| f xB in
+    let right = build_and1 (cut ^| f xD) (f xE) cut in
+    build_and1 left (f xC) right)
 
-(* 
-  (* (OK \/_{s1} B) /\_C ((! \/_{s2} D) /\_{E} !) *)
-  state_to_list 
-    (And (Or OK s1 (f B)) (f C) (And (Or (Goal p Cut) s2 (f D)) (f E) (Goal p Cut))) [::] = 
-    [:: 
-      [:: cut [:: [:: call p B; call p C]]; cut [::]];
-      [:: call p D; call p E]; 
-      [:: call p B; call p C]].
- *)
+let _ =
+  tester_pr (
+    let left = Bot ^| f xA in
+    let right = f xC ^| f xD in
+    build_and1 left (f xC) right)
+
+

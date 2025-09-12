@@ -2,7 +2,6 @@
 type nat =
 | O
 | S of nat
-(* [@@deriving show] *)
 
 let rec to_int = function
   | O -> 0
@@ -102,6 +101,11 @@ module Language =
   | Comb of coq_Tm * coq_Tm
   [@@deriving show]
 
+  let pp_coq_Tm fmt t =
+    match t with
+    | Data d -> Format.fprintf fmt "d %a" pp_coq_K d
+    | _ -> pp_coq_Tm fmt t
+
   type 'a coq_R_ = { head : coq_Tm; premises : 'a list }
   [@@deriving show]
 
@@ -142,7 +146,14 @@ module Unif =
   type coq_G =
   | Coq_call of Language.program * Language.coq_Tm
   | Coq_cut of coq_G list list
-  [@@deriving show]
+
+  let rec pp_coq_G fmt g =
+    let pp_sep = (fun fmt _ -> Format.fprintf fmt ", ") in
+    let p = Format.pp_print_list  in
+    match g with
+    | Coq_call (_p, t) -> Language.pp_coq_Tm fmt t
+    | Coq_cut l -> Format.fprintf fmt "!_{%a}" (p ~pp_sep (fun fmt e -> p ~pp_sep (fun fmt e -> pp_coq_G fmt e) fmt e)) l
+  (* [@@deriving show] *)
 
   (** val apply_cut : (coq_G list list -> coq_G list list) -> coq_G -> coq_G **)
 
