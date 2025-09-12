@@ -762,9 +762,19 @@ Module NurProp (U : Unif).
     rewrite cat_take_drop//.
   Qed.
 
+  Lemma simpl_eq_cat {T: eqType} (A: list T) B C:
+    ((A ++ B) == (A ++ C)) = (B == C).
+  Proof.
+    case:eqP => //=.
+      move=>/cat_cat_size->//; rewrite eqxx//.
+    case: eqP => //.
+    move=>->//.
+  Qed.
+
   Lemma valid_ca_aux_make_lB0 hd xs n l o: 
     all empty_ca hd ->
-    valid_ca l -> size l <= size xs ->
+    (* valid_ca l ->  *)
+    (* size l <= size xs -> *)
     size xs <= n ->
     valid_ca_aux (size xs) xs xs l -> size xs <= o ->
     valid_ca_aux n (add_deep l o hd xs) (make_lB0 (add_deep l o hd xs) hd) l.
@@ -776,13 +786,12 @@ Module NurProp (U : Unif).
     elim: xs => //=.
       move=> n _ []//.
     move=> x xs IH n H []//= o.
-    move=> l H1 H2 H3 /andP[H4 H5] H6.
+    move=> l H1 /andP[H4 H5] H6.
     rewrite (IH _ _ o.+1)//; last first; try by apply: ltnW.
       rewrite -(valid_ca_mn1 1)//addn1//=.
-      admit. (*problem with bounds*)
     rewrite andbT.
-    elim: x H2 H4 => //=g gs H2 Hz /andP[Hx Hy].
-    rewrite H2//andbT.
+    elim: x H4 => //=g gs H2 /andP[Hx Hy].
+    rewrite H2//andbT; clear gs H2 Hy IH.
     case: g Hx => //=l1.
     case: ifP => //=; last first.
       move=> _/eqP?; subst.
@@ -794,46 +803,28 @@ Module NurProp (U : Unif).
     rewrite !size_cat size_map !size_add_deep size_cat addnK.
     rewrite add_deep_cat take_size_cat?size_add_deep// drop_size_cat?size_add_deep//.
     rewrite addnK.
-    rewrite (add_deep_bt_id _ _ l l)//; last first.
-      apply: leq_trans Hz _.  (*seems doable*)
-      admit.
-    rewrite suffix_add_suff//; last first.
-      apply: leq_trans Hz _.  (*seems doable*)
-      admit.
-    rewrite take_size_cat//; rewrite valid_ca_mn//?leq_addl//.
-    move=> H7.
-    apply/andP; split; last first.
-      rewrite /add_suff size_cat size_add_deep addnK drop_size_cat?size_add_deep//.
-      do 2 rewrite take_size_cat?size_map?size_add_deep//.
-      rewrite valid_ca_make_lB0_empty_ca2//.
-      rewrite -(valid_ca_mn1 1)//?size_map?size_add_deep//; last first.
-        apply: leq_trans;[|apply H3].
-        rewrite size_cat leq_addl//.
-      rewrite addn1/=.
-      have:= IH _ H o l H1 _ (ltnW H3).
-      have Ht : valid_ca_aux (size (z ++ w)) (z ++ w) (z ++ w) l.
-        by rewrite -(valid_ca_mn1 1)//addn1//.
-      move=>/(_ _ Ht H6).
-      rewrite add_deep_cat /make_lB0 map_cat.
-      move=> Hl.
-      have:= valid_ca_drop n.+1 (size z) _ _ _ _ (Hl _).
-      rewrite !size_cat !size_map !size_add_deep .
-      move=>/(_ (leqnn _))/=.
-      rewrite !drop_size_cat//?size_map?size_add_deep//.
-      move=>->//.
-      admit. (*problem with bounds*)
+    rewrite/add_suff !size_cat !size_add_deep !addnK.
+    rewrite take_size_cat?size_add_deep//drop_size_cat?size_add_deep//.
+    rewrite take_size_cat//.
+    rewrite valid_ca_mn//?leq_addl// =>H3.
+    rewrite -{1}(cat0s l).
+    rewrite suffix_catl?size_add_deep//suffix0s andbT.
+    rewrite-{1}(cat0s (_ ++ add_deep _ _ _ _)).
     rewrite /make_lB0 !map_cat -catA.
-    rewrite /add_suff !size_cat size_add_deep addnK drop_size_cat?size_add_deep//.
-    rewrite take_size_cat?size_add_deep//.
-    rewrite -(add_deep_more_less _ _ _ 1)//=.
-    rewrite addn1/=.
-    set x := _ ++ l.
-    rewrite suffix_catr//suffix_refl//.
-      apply: leq_trans; [|apply: H6].
-      rewrite size_cat leq_addl//.
-    (* move: H5; rewrite all_tail_cat drop_size_cat//. *)
-    rewrite /valid_ca.
-    admit. (*this is hard*)
+    rewrite suffix_catl?size_cat?size_map?size_add_deep//.
+    rewrite suffix0s andbT.
+    rewrite take_size_cat?size_map ?size_add_deep//.
+    rewrite valid_ca_make_lB0_empty_ca2//.
+    have Ho: size w <= o by apply: leq_trans; [|apply H6]; rewrite size_cat leq_addl//.
+    rewrite H//; last first.
+      apply: leq_trans; [|apply H1]; rewrite size_cat leq_addl//.
+    rewrite andbT.
+    rewrite -(add_deep_more_less _ w _ 1)//?addn1//=; last first.
+      (* hard *)
+      admit.
+    case:ifP => /eqP Heq.
+      rewrite simpl_eq_cat -Heq//.
+    admit. (*hard*)
   Admitted.
 
   Lemma tita n m l stl:
@@ -885,7 +876,7 @@ Module NurProp (U : Unif).
       rewrite addn1//=.
     rewrite size_cat leq_addr//.
   Qed.
-  
+
   Lemma valid_state_valid_ca_help A r n l:
     valid_state A -> state_to_list A l = r ->
       size r <= n -> valid_ca_aux n r r l.
@@ -931,8 +922,6 @@ Module NurProp (U : Unif).
         apply/andP; split; last first.
         rewrite valid_ca_mn// ?size_lB0 ?size_add_deep//?(leq_trans (leq_addl _ _) H1)//.
         apply: valid_ca_aux_make_lB0 => //.
-          admit. (*seems doable*)
-          admit.  (*seems doable*)
         rewrite -(valid_ca_mn1 1)//addn1//.
       (* equivalence of new valid_ca_aux and old one *)
         admit.
@@ -964,24 +953,24 @@ Module NurProp (U : Unif).
         rewrite valid_ca_mn//; last first.
           rewrite size_cat leq_addl//.
         move=> H4.
-        rewrite (add_deep_bt_id _ _ l l)//.
-        rewrite suffix_add_suff.
-        rewrite/add_suff !size_cat !size_add_deep addnK take_size_cat?size_add_deep// drop_size_cat ?size_add_deep//.
-        rewrite suffix_catl//eqxx/=/make_lB0 add_deep_cat map_cat suffix_catr?suffix_refl//=.
-        rewrite addnK size_map size_add_deep take_size_cat?size_map?size_add_deep//.
+        rewrite/add_suff !size_cat !size_add_deep !addnK.
+        rewrite drop_size_cat?size_add_deep//.
+        rewrite take_size_cat?size_add_deep//.
+        rewrite addnK take_size_cat?size_map?size_add_deep//.
         rewrite valid_ca_make_lB0_empty_ca2//.
-        rewrite valid_ca_aux_make_lB0//.
-        admit.  (*seems doable*)
-        admit. (*seems doable*)
-        admit. (*seems doable*)
-        admit. (*seems doable*)
-        admit. (*seems doable*)
-        admit. (*seems doable*)
-        admit. (*seems doable*)
+        rewrite -{1}(cat0s l).
+        rewrite suffix_catl?size_add_deep//suffix0s andbT.
+        rewrite/make_lB0 add_deep_cat map_cat -{1}(cat0s (_ ++ add_deep l _ _ _)) -!catA.
+        rewrite suffix_catl?size_cat?size_map?size_add_deep//suffix0s andbT.
+        rewrite simpl_eq_cat.
+        have ?: size w <= n by apply: leq_trans; [|apply H1]; rewrite size_cat leq_addl//.
+        rewrite valid_ca_aux_make_lB0//?leq_addl//; last first.
+        rewrite andbT.
+        case:ifP => /eqP.
+          move=><-//.
+        admit. (*hard*)
       rewrite valid_ca_aux_make_lB0//.
-      admit. (*seems doable*)
-      admit. (*seems doable*)
-      admit. (*seems doable*)
+        apply: ltnW => //.
       rewrite -(valid_ca_mn1 1)//addn1//.
   Admitted.
 
