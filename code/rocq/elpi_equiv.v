@@ -748,11 +748,10 @@ Module NurEqiv (U : Unif).
       move=> [y[ys[sC H]]].
       clear vB vC.
       move: sC.
-      rewrite/state_to_list.
-      case sC': state_to_list => [|x xs]// H1.
-      (* have [x1[xs1 sA]]:= expandedb_failure_next_alt_state_to_list_cons vA HA HB (state_to_list_state_to_list_cons sC') [::].
+      case sC': state_to_list => [|x xs]// [??]; subst.
+      have [x[xs sA]]:= expandedb_failure_next_alt_state_to_list_cons vA HA HB (state_to_list_state_to_list_cons sC') [::].
       rewrite sA.
-      exists y, ys; split => //. *)
+      exists x, xs; split => //.
       (* have:= expandedb_failure_next_alt_state_to_list_cons1 [::] vA HA.
       (* ci sono due tipi di fallimento, 
         - quelli dovuti a dei bot (che spariscono nel nur), quindi la run lavora di più

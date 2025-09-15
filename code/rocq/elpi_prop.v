@@ -1354,7 +1354,6 @@ Module NurProp (U : Unif).
         have H:= VS.bbOr_valid bB.
         case: ifP => dB.
           rewrite valid_state_dead// in H.
-        (* case: ifP => // fB. *)
         case Y: next_alt => [[]|]// _.
         have H1 := HA _  (state_to_list B [::]) vA sA X.
         rewrite H1 (bbOr_next_alt_none bB Y)//.
@@ -1457,7 +1456,6 @@ Module NurProp (U : Unif).
 
   
     Lemma expand_failure_state_to_list_same {s A B l}:
-      (* valid_state A ->  *)
         expand s A = Failure B ->
             state_to_list A l = state_to_list B l.
     Proof.
@@ -1635,7 +1633,7 @@ Module NurProp (U : Unif).
         rewrite -(valid_ca_mn1 1)//addn1//.
     Qed.
 
-    (* Lemma expandedb_failure_next_alt_state_to_list_cons {s1 s2 A B C b1}:
+    Lemma expandedb_failure_next_alt_state_to_list_cons {s1 s2 A B C b1}:
       valid_state A -> expandedb s1 A (Failed B) b1 -> 
         next_alt s1 B = Some (s2, C) -> state_to_list_cons C -> 
           state_to_list_cons A.
@@ -1644,7 +1642,7 @@ Module NurProp (U : Unif).
       elim: HA s2 B C Hf; clear => //.
       - move=> s A B HA s1 _ C [<-] vA HB sC l.
         have [x[xs {}sC]]:= sC l.
-        rewrite (expand_failure_next_alt_state_to_list_cons _ vA HA HB). sC.
+        rewrite (expand_failure_next_alt_state_to_list_cons _ HA HB)// sC.
         by do 2 eexists.
       - move=> s s' r A B b HA HB IH s2 C D? vA HC sD; subst.
         have [{}s2 {}HC]:= next_alt_some HC s'.
@@ -1669,7 +1667,7 @@ Module NurProp (U : Unif).
       - move=> s1 s2 _ A B C _ b1 _ _ HA HB _ IH _ vA.
         have {}IH := IH (valid_state_next_alt (valid_state_expanded vA (ex_intro _ _ HA)) HB).
         apply: expandedb_failure_next_alt_state_to_list_cons vA HA HB IH.
-    Qed. *)
+    Qed.
 
 
     Lemma state_to_list_empty_next_alt {B l s2}:
