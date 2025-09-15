@@ -398,3 +398,13 @@ Proof.
   rewrite/state_to_list/=.
   rewrite//.
 Qed.
+
+Goal forall p l,
+  let s := ((Or (Or Dead empty (Goal p Cut)) empty Top)) in
+  let bt := ([::] :: l) in
+  state_to_list s l = [:: [:: cut bt]; [::]] /\ 
+    state_to_list (clean_success (get_state (expand empty s))) l ++ l = bt.
+Proof.
+  simpl get_state.
+  move=>//=.
+Qed.

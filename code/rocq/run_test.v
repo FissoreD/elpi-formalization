@@ -235,6 +235,12 @@ Module Test2.
     move=>/=.
     reflexivity. Qed.
 
+  (* (Dead \/ !) \/ C *)
+  Goal expand empty (Or (Or Dead empty (Goal (build_progr [::]) Cut)) empty Top) = Expanded empty (Or (Or Dead empty OK) empty Top) .
+  Proof.
+    move=>//=.
+  Qed.
+
   (* Goal forall s s1 p R B, 
     failed p = false -> failed R = false -> 
       run s (And (Or OK s1 p) R OK) s B -> 
