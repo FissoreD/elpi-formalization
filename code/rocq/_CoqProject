@@ -2,6 +2,8 @@
 
 -arg -w -arg -notation-overridden
 
+zify_ssreflect.v
+
 lang.v
 run.v
 run_test.v

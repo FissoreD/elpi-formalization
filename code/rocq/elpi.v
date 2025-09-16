@@ -111,6 +111,13 @@ Section aux.
     apply: subnKC Hle.
   Qed.
 
+  Lemma leq_exists a b:
+    a <= b -> exists x, a + x = b.
+  Proof.
+    move=> H; exists (b - a).
+    rewrite addnC subnK//.
+  Qed.
+
 
 End aux.
 
@@ -227,11 +234,19 @@ Module Nur (U : Unif).
   Lemma add_ca_empty1 l: add_ca [::] l = l.
   Proof. case: l => //= l1; rewrite cats0//. Qed.
 
-  Lemma map_add1_cas_empty {T: Type} (lA: list (list T)) F:
+  Lemma map_add1_cas_empty {T: Type} (lA: (list T)) F:
+    (map (fun x => add_ca [::] (F x))) lA  = (map F) lA.
+  Proof.
+    rewrite /add_ca; elim: lA => //= x xs ->.
+    case: (F x)=>//=l; rewrite cats0//.
+  Qed.
+
+
+  Lemma map_map_add1_cas_empty {T: Type} (lA: list (list T)) F:
     map (map (fun x => add_ca [::] (F x))) lA  = map (map F) lA.
   Proof.
     rewrite /add_ca; elim: lA => //= x xs ->.
-    f_equal; elim: x => //=x {}xs->; case: (F x)=>//=l; rewrite cats0//.
+    f_equal; apply: map_add1_cas_empty.
   Qed.
 
   Lemma cut_add_ca {l x}: is_cutb' (add_ca l x) = is_cutb' x.
