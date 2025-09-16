@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang elpi_prop.
+From det Require Import lang elpi_prop elpi.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From Coq Require Import Lia.
@@ -115,7 +115,7 @@ Module NurEqiv (U : Unif).
       valid_state A -> expand s0 A = Expanded s1 B -> exp_done_shape B ->
         state_to_list A l1 = [:: [::cut ca & x] & tl] ->
         state_to_list B l1 = [:: [::cut ca & x] & tl] \/
-          add_ca_deep (size (state_to_list B [::]++l1)) l1 (state_to_list B [::]) ++ l1 = [::x & ca].
+          state_to_list B l1 ++ l1 = [::x & ca].
     Proof.
       elim: A s0 B s1 ca x tl l1 => //.
       - move=> p []//.
@@ -127,68 +127,75 @@ Module NurEqiv (U : Unif).
             have [H|{}HB] := HB _ _ _ _ _ _ _ vB eB eB' sB; auto.
               rewrite H; auto.
             move: HB; rewrite !cats0.
-            case sB': state_to_list => [|w ws]//H; right.
-            rewrite size_cat size_add_ca_deep H.
-            move: H sB => -/=[??]; subst.
-            rewrite add_ca_deep_empty1_help1; last first.
-              apply: @add_ca_deep_empty1.
-            rewrite add_ca_deep_empty1_help2; last first.
-              apply: @add_ca_deep_empty1.
-            move=> sB.
-            have /suffixP/=[z?] := valid_ca_suffix _ _ _ (valid_state_valid_ca_help _ _ _ _ sB vB (leqnn _)).
-            subst.
+            case sB': state_to_list => [|w ws]//[??]; subst; right.
+            rewrite-cat_cons; f_equal.
             have:= valid_state_valid_ca _ _ vB sB.
-            rewrite/valid_ca /= suffix0s cats0 subn0 take_size valid_ca_mn//size_cat?leq_addl//.
-            rewrite {1}addnC -!andbA.
-            rewrite valid_ca_mn1_all_ca//; last first.
+            rewrite/valid_ca /= suffix0s cats0 subn0 take_size -!andbA.
+            move=>/and4P[/suffixP/=[w?]]; subst.
+            rewrite size_cat valid_ca_mn//?leq_addl//.
+            rewrite addnC valid_ca_mn1_all_ca//; last first.
               move=>????; apply: valid_ca_mn1.
-            move=> /and4P[_ vws vw].
-            rewrite all_tail_cat drop_size_cat//.
-            rewrite {2}addnC.
-            rewrite (valid_ca_mn1_all_tail _ _ ws ws)//; last first.
-              move=> ????; apply: valid_ca_mn1.
-            move=>/andP[H1 H2].
-            rewrite add_ca_deep_more_less_add_ca_map_map//; last first.
-              move=>??; apply: add_ca_deep_more_less.
-            rewrite (add_ca_deep_more_less_add_ca_map _ _ _ ws)//; last first.
-              move=>??; apply: add_ca_deep_more_less.
-            rewrite {2}addnC.
+            move=> H1 H2 H3.
             rewrite add_ca_deep_more_less//.
-            f_equal; last first.
-              rewrite -(add_ca_deep_more_less _ 1)//addn1//.
-            rewrite addnC.
-            rewrite (add_ca_deep_more_less_add_ca_map _ _ _ ws)//.
-            move=>??; apply: add_ca_deep_more_less.
+            rewrite -(add_ca_deep_more_less _ 1)//addn1; f_equal.
+            rewrite (add_ca_deep_more_less_add_ca_map _ _ _ ca)//; last first.
+            by move=>??; apply: add_ca_deep_more_less.
           have [y[ys [H1 H2]]]:= expand_cb_state_to_list1 [::] vB eB.
           rewrite !H1/= => -[???]; subst; right.
-          rewrite add_ca_deep_empty2 map_add1_cas_empty/=; f_equal.
-          rewrite apply_cut1_id_map map_id.
-          elim: y {H1} H2 => //=x xs H1 /andP[H2 H3].
-          rewrite H1//; f_equal.
-          case: x H2 => //= l/eqP<-; rewrite !add_ca_deep_empty2//.
-          have VB := (NurP.bbOr_valid _ _ _ _ _ bB erefl).
-          have VA: valid_ca (state_to_list A (state_to_list B [::]) ++ state_to_list B [::]).
-            rewrite /valid_ca; rewrite valid_ca_split drop_size_cat//.
-            rewrite valid_ca_mn//?size_cat ?leq_addl//.
-            rewrite push_bt_out//?VB//.
-            rewrite cats0.
-            apply: valid_state_valid_ca_help => //.
-          case eA: expand => //[s0' A'|s0' A']/=[??]; subst; rewrite /= (valid_state_dead1 (valid_state_expand vA eA)) => eA';
-          rewrite add_ca_deep_split?size_cat//; set SB:= state_to_list _ [::].
-            have FA := expand_not_failed eA notF.
-            have [y[ys YY]]:= failed_state_to_list vA FA SB.
-            rewrite YY/=; case: y YY => //-[]//ca tl1 YY [???]; subst.
-            have [H|{}HA] := HA _ _ _ _ _ _ _ vA eA eA' YY.
-              by rewrite H/= map_cat//; auto.
-            admit.
-          have [z[zs [H1 H2]]] := expand_cb_state_to_list1 SB vA eA.
-          rewrite !H1.
-          rewrite state_to_list_cutr_empty ?bbOr_valid// cats0.
-          rewrite add_ca_deep_empty1/=.
-          move=>[???]; subst; right.
-          rewrite add_ca_deep_empty2; f_equal.
-          elim: z H2 {H1} => //=x xs H /andP[HH HH1]; rewrite H//.
-          f_equal; case: x HH => //=l/eqP<-; rewrite !add_ca_deep_empty2//.
+          rewrite add_ca_deep_empty2.
+          f_equal.
+          elim: y H2 {H1} => //= x xs H /andP[HH HH1]; rewrite H//.
+          by f_equal; case: x HH => //=l/eqP<-; rewrite !add_ca_deep_empty2//.
+        have VB := (NurP.bbOr_valid _ _ _ _ _ bB erefl).
+        have VA: valid_ca (state_to_list A (state_to_list B [::]) ++ state_to_list B [::]).
+          rewrite /valid_ca; rewrite valid_ca_split drop_size_cat//.
+          rewrite valid_ca_mn//?size_cat ?leq_addl//.
+          rewrite push_bt_out//?VB// cats0.
+          by apply: valid_state_valid_ca_help => //.
+        case eA: expand => //[s0' A'|s0' A']/=[??]; subst; rewrite /= (valid_state_dead1 (valid_state_expand vA eA)) => eA';
+        rewrite add_ca_deep_split?size_cat//; set SB:= state_to_list _ [::].
+          have FA := expand_not_failed eA notF.
+          have [y[ys YY]]:= failed_state_to_list vA FA SB.
+          rewrite YY/=; case: y YY => //-[]//ca tl1 YY [???]; subst.
+          have [H|{}HA] := HA _ _ _ _ _ _ _ vA eA eA' YY.
+            by rewrite H/= map_cat//; auto.
+          rewrite-size_cat HA; right => /=.
+          have:= valid_state_valid_ca_help _ _ _ _ YY vA (leqnn _).
+          move=>/=; case: suffixP; rewrite /=-!andbA; last first.
+            move=> _/and3P[]/eqP?; subst => /=.
+            rewrite add_ca_deep_empty2/= => H1 H2.
+            f_equal.
+            elim: tl1 H1 {HA YY} => //= x xs H /andP[HH HH1]; rewrite H//.
+            by f_equal; case: x HH => //=l/eqP<-; rewrite !add_ca_deep_empty2//.
+          move=>[w?]; subst => /and4P[]; rewrite suffix_catl//size_cat addnK.
+          rewrite -cat_cons in HA.
+          apply cat_same_tl in HA.
+          rewrite take_size_cat// => /andP[_ /suffixP[z?]]; subst.
+          rewrite size_cat addnC valid_ca_mn//?leq_addr//.
+          rewrite valid_ca_mn1_all_ca//; last first.
+            move=>????; apply: valid_ca_mn1.
+          rewrite addnC => H1 H2 H3.
+          rewrite -addnA (addnC (size z)).
+          have vw: valid_ca (w ++ SB).
+            rewrite/valid_ca valid_ca_split drop_size_cat// VB andbT.
+            rewrite push_bt_out//?size_cat//cats0//.
+          rewrite add_ca_deep_more_less?size_cat//.
+          rewrite -(add_ca_deep_more_less _ 1)//?size_cat//addn1/=.
+          f_equal.
+          set SIZE := size w + _.
+          rewrite (add_ca_deep_more_less_add_ca_map _ _ _ w)//.
+            by move=>??; apply: add_ca_deep_more_less.
+          rewrite/SIZE; apply: leq_addr.
+          admit.
+        have [z[zs [H1 H2]]] := expand_cb_state_to_list1 SB vA eA.
+        rewrite !H1.
+        rewrite state_to_list_cutr_empty ?bbOr_valid// cats0.
+        move=>[???]; subst; right.
+        rewrite add_ca_deep_empty2; f_equal => /=.
+        f_equal.
+        elim: z H2 {H1} => //=x xs H /andP[HH HH1].
+        rewrite H//; f_equal.
+        case: x HH => //=l /eqP<-; rewrite !add_ca_deep_empty2//.
       - move=> /= A HA B0 _ B HB s1 C s2 ca x tl l1 /and5P[_ vA _].
         case eA: expand => //[s0' A'|s0' A']/=.
           rewrite (expand_not_solved_not_success eA erefl)/=(expand_not_failed eA notF).
@@ -196,13 +203,15 @@ Module NurEqiv (U : Unif).
           case SA : state_to_list => //[w ws].
           have [hd SB] := base_and_state_to_list bB.
           rewrite !SB/= => -[].
-          Search state_to_list expand.
-          move=> ++[??].
-        rewrite /= (valid_state_dead1 (valid_state_expand vA eA)) => eA';
-        case: ex
-
-          
-          
+          admit.
+        have [??]:= expand_solved_same eA; subst.
+        rewrite (expand_solved_success eA)/= => vB bB.
+        case eB: expand => //[s1' B']/=[?<-]/=/andP[H1 H2].
+        rewrite (success_state_to_list vA (expand_solved_success eA).1)/=.
+        have [H|[hd [H H3]]] := bbAnd_state_to_list bB; rewrite H !map_id.
+          by apply: HB eB _ => //.
+        set SA:= add_deep _ _ _ _.
+        admit.
     Admitted.
 
     (* Lemma state_to_list_expand {A B s0 ca x tl}:
@@ -794,8 +803,7 @@ Module NurEqiv (U : Unif).
       move=>[??] _; subst.
       rewrite (same_subst s s')//.
       have := state_to_list_expand vA HA eB sA.
-      rewrite sB sA.
-      move=> [][??]; subst => //.
+      rewrite sB cats0 => -[][]??; subst => //.
       apply: CutE => //.
   Qed.
   Print Assumptions runExpandedbDone.
