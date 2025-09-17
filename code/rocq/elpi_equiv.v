@@ -213,13 +213,11 @@ Module NurEqiv (U : Unif).
             rewrite/valid_ca /= suffix0s cats0 subn0 take_size -!andbA.
             move=>/and4P[/suffixP/=[w?]]; subst.
             rewrite size_cat valid_ca_mn//?leq_addl//.
-            rewrite addnC valid_ca_mn1_all_ca//; last first.
-              move=>????; apply: valid_ca_mn1.
+            rewrite addnC valid_ca_mn1_all_ca//.
             move=> H1 H2 H3.
             rewrite add_ca_deep_more_less//.
             rewrite -(add_ca_deep_more_less _ 1)//addn1; f_equal.
-            rewrite (add_ca_deep_more_less_add_ca_map _ _ _ ca)//; last first.
-            by move=>??; apply: add_ca_deep_more_less.
+            by rewrite (add_ca_deep_more_less_add_ca_map _ _ _ ca)//.
           have [y[ys [H1 H2]]]:= expand_cb_state_to_list1 [::] vB eB.
           rewrite !H1/= => -[???]; subst; right.
           rewrite add_ca_deep_empty2.
@@ -252,9 +250,7 @@ Module NurEqiv (U : Unif).
           apply cat_same_tl in HA.
           rewrite take_size_cat// => /andP[_ /suffixP[z?]]; subst.
           rewrite size_cat valid_ca_mn//?size_cat?leq_addl//.
-          rewrite addnC.
-          rewrite valid_ca_mn1_all_ca//; last first.
-            move=>????; apply: valid_ca_mn1.
+          rewrite addnC valid_ca_mn1_all_ca//.
           rewrite addnC => H1 H2 H3.
           rewrite -addnA (addnC (size z)).
           have vw: valid_ca (w ++ SB).
@@ -265,8 +261,7 @@ Module NurEqiv (U : Unif).
           f_equal.
           set SIZE := size w + _.
           symmetry.
-          apply: add_ca_deep_more_less11_add_ca_map (VB _ _ _) H2 => //.
-          move=>???; apply: add_ca_deep_more_less11.
+          by apply: add_ca_deep_more_less11_add_ca_map (VB _ _ _) H2.
         have [z[zs [H1 H2]]] := expand_cb_state_to_list1 SB vA eA.
         rewrite !H1/=.
         rewrite state_to_list_cutr_empty ?bbOr_valid// cats0.
@@ -306,12 +301,10 @@ Module NurEqiv (U : Unif).
           rewrite size_cat addnK take_size_cat//.
           move=>/and5P[] _ /suffixP/=[w?]; subst.
           rewrite valid_ca_mn//?size_cat?leq_addl//.
-          rewrite addnC valid_ca_mn1_all_ca//; last first.
-            move=>????; apply: valid_ca_mn1.
+          rewrite addnC valid_ca_mn1_all_ca//.
           move=> Hx Hy Hz.
           rewrite add_deep_more_less//.
-          rewrite (add_deep_help_more_less _ _ _ _ _ ts)//.
-          move=>?; apply: add_deep_more_less.
+          by rewrite (add_deep_help_more_less _ _ _ _ _ ts)//.
         have [??]:= expand_solved_same eA; subst.
         rewrite (expand_solved_success eA)/= => vB bB.
         case eB: expand => //[s1' B']/=[?<-]/=.
@@ -679,6 +672,30 @@ Module NurEqiv (U : Unif).
         runb s A s1 B b -> 
           exists x xs, state_to_list A [::] = x :: xs /\ nur s x xs s1 (state_to_list B [::]).
 
+  Lemma expanded_failed {A B C x xs y ys s s' b1} :
+    valid_state A ->
+    state_to_list A [::] = x :: xs -> expandedb s A (Failed B) b1 ->
+      next_alt s B = Some (s', C) -> state_to_list C [::] = y :: ys ->
+        x :: xs = y :: ys \/ xs = y :: ys.
+  Proof.
+    remember (Failed B).
+    move=> ++ H.
+    elim: H B C x xs y ys s' Heqe => //=; clear.
+    - move=> s A B HA _ C x xs y ys s' [<-] vA H1 H2.
+      rewrite -(expand_failure_next_alt_state_to_list_cons vA HA H2) H1; auto.
+    - move=> s s' r A B b HA HB IH C D x xs y ys s2 ? vA sA HC sD; subst.
+      have [hd[tl[[+ H2] H3]]]:= expand_cb_state_to_list1 [::] vA HA.
+      rewrite sA => -[??]; subst.
+      have [s3 H4]:= next_alt_some HC s'.
+      have [] := IH _ _ _ _ _ _ _ erefl (valid_state_expand vA HA) (H2 _) H4 sD => //.
+      move=>[]??; subst.
+      admit.
+    - move=> s s' r A B b HA HB IH C D x xs y ys s2 ? vA sA HC sD; subst.
+      have [s3 {}HC]:= next_alt_some HC s'.
+      have:= IH _ _ _ _  _ _ _ erefl (valid_state_expand vA HA) _ HC sD.
+      admit.
+    Admitted.
+
   Lemma runElpiP: forall A, runElpi A.
   Proof.
     move=> A s B s1 b + H.
@@ -696,6 +713,9 @@ Module NurEqiv (U : Unif).
       have [x[xs sA]]:= expandedb_failure_next_alt_state_to_list_cons vA HA HB (state_to_list_state_to_list_cons sC') [::].
       rewrite sA.
       exists x, xs; split => //.
+      have [] := expanded_failed vA sA HA HB sC'.
+        move=>[??]; subst; rewrite (same_subst s s')//.
+      move=>->.
       (* have:= expandedb_failure_next_alt_state_to_list_cons1 [::] vA HA.
       (* ci sono due tipi di fallimento, 
         - quelli dovuti a dei bot (che spariscono nel nur), quindi la run lavora di più
