@@ -773,6 +773,13 @@ Module Run (U : Unif).
       case Y: expand => //= H1; rewrite success_failed//=?success_cut//?sC/==>H2; rewrite H1//andbF//.
   Qed.
 
+  Lemma expand_not_failed_Expanded {s1 A s2 B}:
+    (* This is wrong: if A is a call and there is no impl, then B = Bot which is failed *)
+    expand s1 A = Expanded s2 B -> failed B = false.
+  Proof.
+  Abort.
+
+
 
   Lemma expandedb_Done_not_failed {s1 A s2 B b}: 
     expandedb s1 A (Done s2 B) b -> failed A = false.
