@@ -445,7 +445,6 @@ Module NurProp (U : Unif).
   End valid_ca_split_cat.
 
   Lemma all_ca_drop bt w ca l1:
-    (* valid_ca ca -> *)
     all_ca (valid_ca_aux (size ca)) bt l1 ca ->
     all_ca (valid_ca_aux (size (w ++ ca))) bt l1 (w ++ ca).
   Proof.
