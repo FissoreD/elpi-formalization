@@ -744,7 +744,7 @@ Module NurProp (U : Unif).
   Qed.
 
 
-  Lemma add_deep_more_less bt l1 n m hd:
+  Lemma add_deep_more_less {bt l1 n hd} m:
     size l1 <= n -> valid_ca_aux (size l1) l1 l1 bt ->
       add_deep bt (n+m) hd l1 = add_deep bt n hd l1.
   Proof.
@@ -946,12 +946,12 @@ Module NurProp (U : Unif).
         have [x]:= leq_exists _ _ H3.
         rewrite addSn => -[?]; subst.
         rewrite add_deep_more_less//.
-        rewrite -(add_deep_more_less _ _ _ 1)//addn1/=.
+        rewrite -(add_deep_more_less 1)//addn1/=.
         rewrite map_cat -catA.
         rewrite suffix_catr//suffix_refl//.
       rewrite valid_ca_make_lB0_empty_ca2//.
       apply: H => //.
-    rewrite -(add_deep_more_less _ _ _ 1)//addn1.
+    rewrite -(add_deep_more_less 1)//addn1.
     apply: H5 => //.
   Qed.
 
@@ -998,7 +998,7 @@ Module NurProp (U : Unif).
   Qed.
 
 
-  Lemma valid_state_valid_ca_help A r n l:
+  Lemma valid_state_valid_ca_help {A r n l}:
     state_to_list A l = r ->
     valid_state A ->
       size r <= n -> valid_ca_aux n r r l.
@@ -1074,7 +1074,7 @@ Module NurProp (U : Unif).
       case: n H1 => //=n H1; rewrite andbT.
       have:= valid_ca_aux_make_lB0 hd [::x] n.+1 l (size xs).+1 (size xs).+1 ([::]::xs) H2 H1 (leq0n 1) (leqnn _) (leqnn _).
       rewrite /=!andbT => HH.
-      rewrite -(add_deep_more_less _ _ _ 1)//.
+      rewrite -(add_deep_more_less 1)//.
         rewrite addn1/= HH//.
       rewrite -(valid_ca_mn1 1)//addn1//.
   Qed.
@@ -1083,7 +1083,7 @@ Module NurProp (U : Unif).
     valid_state A -> state_to_list A [::] = r -> valid_ca r.
   Proof.
     rewrite/valid_ca => H1 H2.
-    have:= valid_state_valid_ca_help A r (size r) [::] H2 H1 (leqnn _).
+    have:= valid_state_valid_ca_help H2 H1 (leqnn _).
     move=>//.
   Qed.
 
@@ -1106,7 +1106,7 @@ Module NurProp (U : Unif).
       rewrite -(add_ca_deep_more_less _ 1)?addn1//.
       have /=vB :=  (bbOr_valid _ _ _ _ _ bB erefl).
       rewrite valid_ca_split1 /valid_ca vB andbT.
-      have /= := valid_state_valid_ca_help _ _ _ _ (HA _ vA sA) vA (leqnn _).
+      have /= := valid_state_valid_ca_help (HA _ vA sA) vA (leqnn _).
       set x:= state_to_list _ _.
       set y:= state_to_list _ _.
       move=> H.
@@ -1674,8 +1674,8 @@ Module NurProp (U : Unif).
         rewrite Hb/=/m.
         case Y: state_to_list => [|t ts]//.
         rewrite Hb/=; f_equal.
-        rewrite -(add_deep_more_less _ _ _ 1)//?addn1//.
-        have /=/andP[] := valid_state_valid_ca_help A' _ _ l Y (valid_state_next_alt vA nA') (leqnn _).
+        rewrite -(add_deep_more_less 1)//?addn1//.
+        have /=/andP[] := valid_state_valid_ca_help Y (valid_state_next_alt vA nA') (leqnn _).
         rewrite -(valid_ca_mn1 1)//addn1//=.
     Qed.
   
@@ -1750,8 +1750,8 @@ Module NurProp (U : Unif).
         case SA: state_to_list => [|x xs]//.
         rewrite H1/=.
         f_equal.
-        rewrite -(add_deep_more_less _ _  _ 1)//?addn1//.
-        have:= valid_state_valid_ca_help _ _ _ _ SA (valid_state_next_alt vA nA') (leqnn _).
+        rewrite -(add_deep_more_less 1)//?addn1//.
+        have:= valid_state_valid_ca_help SA (valid_state_next_alt vA nA') (leqnn _).
         move=>/=.
         move=>/=/andP[].
         rewrite -(valid_ca_mn1 1)//addn1//.
@@ -1919,8 +1919,8 @@ Module NurProp (U : Unif).
           rewrite (clean_successP vA sA Y).
           case Z: state_to_list => [|z zs]//=.
           rewrite !H/=; f_equal.
-          rewrite -(add_deep_more_less _ _ _ 1)//?addn1//.
-          have:= valid_state_valid_ca_help _ _ _ _ Z (valid_state_next_alt vA Y) (leqnn _).
+          rewrite -(add_deep_more_less 1)//?addn1//.
+          have:= valid_state_valid_ca_help Z (valid_state_next_alt vA Y) (leqnn _).
           move=>/valid_ca_drop => /(_ 1 (leqnn _) (leqnn _))/=.
           rewrite drop0 subn1//.
         case: ifP => //fA bB _.

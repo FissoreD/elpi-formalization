@@ -666,6 +666,21 @@ Module Run (U : Unif).
     - have := succes_is_solved s sA; congruence.
   Qed.
 
+  Lemma expand_cb_same_subst {A B s1 s2}:
+    expand s1 A = CutBrothers s2 B -> s1 = s2.
+  Proof.
+    elim: A B s1 s2 => //=.
+    - move=> p []//B s1 s2 []//.
+    - move=> A HA s B HB C s1 s2; case: ifP => dA; case: expand => //.
+    - move=> A HA B0 _ B HB C s1 s2.
+      case e: expand => //[s' A'|s' A'].
+        move=>[<-] _.
+        apply: HA e.
+      have [??] := expand_solved_same e; subst.
+      case e1: expand => //=[s3 B'][<-] _.
+      apply: HB e1.
+  Qed.
+
   Lemma expand_solved_is_solved {s s1 s2 A B}:
     expand s A = Success s1 B -> expand s2 B = Success s2 B.
   Proof. move=> /expand_solved_success[sA]. apply: succes_is_solved. Qed.
