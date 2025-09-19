@@ -14,7 +14,7 @@ Module NurProp (U : Unif).
   Import Nur VS RunP Run Language.
 
   Lemma make_lB0_empty2 {tl} : make_lB0 tl [::] = tl.
-  Proof. rewrite/make_lB0 map_cats0//. Qed.
+  Proof. rewrite/make_lB0 map_cats0//map_id//. Qed.
 
   Lemma make_lB0_empty1 {lb0} : make_lB0 [::] lb0 = [::].
   Proof. rewrite /make_lB0//. Qed.
@@ -418,7 +418,8 @@ Module NurProp (U : Unif).
     let f := all_tail
         (all_ca (valid_ca_aux n) bt) in
       f (xs ++ y) ll = f xs ll && f y (drop (size xs) ll).
-    Proof. elim: xs y n ll => //=.
+    Proof. 
+    elim: xs y n ll => //=.
       move=> y n ll; rewrite drop0//.
     move=> x xs IH y n ll; rewrite-andbA; f_equal; auto.
       rewrite IH; f_equal.
@@ -524,7 +525,7 @@ Module NurProp (U : Unif).
     rewrite -(valid_ca_mn1 1)//addn1//.
   Qed.
 
-  Lemma add_ca_deep_more_less11_add_ca_map_aux n m x xs bt l:
+  Lemma add_ca_deep_more_less11_add_ca_map_aux n m {x xs bt l}:
     (forall (cB : seq alt) (l : seq (seq G)) (bt : seq alt), 
       size cB + size bt <= n -> valid_ca_aux (size bt) bt bt [::] -> 
         valid_ca_aux (size cB) cB cB bt -> add_ca_deep (n + m) l cB = add_ca_deep n l cB) ->
@@ -558,6 +559,27 @@ Module NurProp (U : Unif).
     rewrite valid_ca_mn//leq_addl//.
   Qed.
 
+  Lemma add_ca_deep_more_less11_add_ca_map_map_aux n m {l}:
+    (forall (cB : seq alt) (l : seq (seq G)) (bt : seq alt), 
+      size cB + size bt <= n -> valid_ca_aux (size bt) bt bt [::] -> 
+        valid_ca_aux (size cB) cB cB bt -> add_ca_deep (n + m) l cB = add_ca_deep n l cB) ->
+    forall (l0 : seq (seq G)) (bt : seq alt),
+    size l + size bt <= n.+1 ->
+    valid_ca_aux (size bt) bt bt [::] ->
+    valid_ca_aux (size l) l l bt ->
+    [seq [seq add_ca l0 (apply_cut (add_ca_deep (n + m) l0) x) | x <- j] | j <- l] =
+    [seq [seq add_ca l0 (apply_cut (add_ca_deep n l0) x) | x <- j] | j <- l].
+  Proof.
+    move=> H.
+    elim: l => //= x xs IH l bt H1 Hz /andP[H2 H3].
+    rewrite (IH _ bt)//; last first.
+      rewrite -(valid_ca_mn1 1)//addn1//.
+      apply:ltnW H1.
+    f_equal.
+    clear IH H3.
+    apply: add_ca_deep_more_less11_add_ca_map_aux H H1 Hz H2.
+  Qed.
+
   Lemma add_ca_deep_more_less11 n m cB l bt:
     size cB + size bt <= n ->
     valid_ca bt ->
@@ -568,13 +590,7 @@ Module NurProp (U : Unif).
     elim: n cB l bt => //[[]l|]//=.
       rewrite add_ca_deep_empty2//.
     move=> n H l.
-    elim: l => //= x xs IH l bt H1 Hz /andP[H2 H3].
-    rewrite (IH _ bt)//; last first.
-      rewrite -(valid_ca_mn1 1)//addn1//.
-      apply:ltnW H1.
-    f_equal.
-    clear IH H3.
-    apply: add_ca_deep_more_less11_add_ca_map_aux H H1 Hz H2.
+    apply: add_ca_deep_more_less11_add_ca_map_map_aux H.
   Qed.
 
   Lemma add_ca_deep_more_less11_add_ca_map n m x xs bt l:
@@ -583,6 +599,17 @@ Module NurProp (U : Unif).
     [seq add_ca l (apply_cut (add_ca_deep (n + m) l) x0) | x0 <- x] = [seq add_ca l (apply_cut (add_ca_deep n l) x0) | x0 <- x].
   Proof.
     apply: add_ca_deep_more_less11_add_ca_map_aux => ???.
+    apply: add_ca_deep_more_less11.
+  Qed.
+
+  Lemma add_ca_deep_more_less11_add_ca_map_map n m {l l0 bt}:
+    size l + size bt <= n.+1 ->
+    valid_ca_aux (size bt) bt bt [::] ->
+    valid_ca_aux (size l) l l bt ->
+    [seq [seq add_ca l0 (apply_cut (add_ca_deep (n + m) l0) x) | x <- j] | j <- l] =
+    [seq [seq add_ca l0 (apply_cut (add_ca_deep n l0) x) | x <- j] | j <- l].
+  Proof.
+    apply: add_ca_deep_more_less11_add_ca_map_map_aux => ???.
     apply: add_ca_deep_more_less11.
   Qed.
 

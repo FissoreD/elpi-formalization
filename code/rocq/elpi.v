@@ -41,8 +41,11 @@ Section aux.
     apply: IH.
   Qed.
 
-  Lemma map_cats0 {T : Type} (g:list (list T)): map (fun x => x ++ [::]) g = g.
+  Lemma map_cats0 {T R : Type} (F : list T -> list R) (g:list (list T)): map (fun x => F x ++ [::]) g = map F g.
   Proof. elim: g => //=x xs->; rewrite cats0//. Qed.
+
+  Lemma map_map_cats0 {T R : Type} (F: list T -> list R) g: map (map (fun x => F x ++ [::])) g = map (map F) g.
+  Proof. elim: g => //= x xs->; rewrite map_cats0//. Qed.
 
   Lemma map_cats_same {T : Type} (X Y:list (list T)) hd: 
     X = Y -> [seq x ++ hd | x <- X] = [seq x ++ hd | x <- Y].
@@ -181,15 +184,15 @@ Module Nur (U : Unif).
   End add_ca.
 
 
-  Definition save_alt a gs b := map (add_ca a) b ++ gs.
-  Definition more_alt a bs gs := map (save_alt a gs) bs ++ a.
+  Definition save_alt a b gs := map (add_ca a) b ++ gs.
+  Definition more_alt a bs gs := map (save_alt a gs) bs.
 
   Inductive nur : Sigma -> list G ->  list alt -> Sigma -> list alt -> Prop :=
   | StopE s a : nur s [::] a s a
   | CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s [:: cut ca & gl] a s1 r
   | CallE p s s1 a b bs gl r t : 
     F p t s = [:: b & bs ] -> 
-      nur s (save_alt a (a2gs p b) gl) (more_alt a (map (a2gs p) bs) gl) s1 r -> 
+      nur s (save_alt a (a2gs p b) gl) (more_alt a (map (a2gs p) bs) gl ++ a) s1 r -> 
         nur s [::call p t & gl] a s1 r
   | FailE p s s1 t gl a al r : 
     F p t s = [::] -> nur s a al s1 r -> nur s [::call p t & gl] (a :: al) s1 r.
