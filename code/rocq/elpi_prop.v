@@ -367,8 +367,8 @@ Module NurProp (U : Unif).
     Qed.
   End valid_ca_mn.
 
-  Lemma empty_ca_valid_all_ca_aux n bt hd tl:
-    (forall (hd : seq G) (l : seq alt), all empty_ca hd -> valid_ca_aux n [:: hd] l bt) ->
+  Lemma empty_ca_valid_all_ca_help n bt hd tl:
+    (forall (hd : seq (seq G)) (l : seq alt), all (all empty_ca) hd -> valid_ca_aux n hd l bt) ->
     all empty_ca hd ->
     all_ca (valid_ca_aux n) bt hd tl.
   Proof.
@@ -378,18 +378,37 @@ Module NurProp (U : Unif).
     case: ifP => ///eqP?; subst; rewrite/= cats0 suffix0s valid_cas_empty1 IH//.
   Qed.
 
+  Lemma empty_ca_valid_all_tail_help {n hd l bt}:
+    (forall (hd : seq (seq G)) (l : seq alt), all (all empty_ca) hd -> valid_ca_aux n hd l bt) ->
+    all (all empty_ca) hd ->
+    all_tail (all_ca (valid_ca_aux n) bt) hd l.
+  Proof.
+    move=> H.
+    elim: hd l => //=x xs IH l /andP[H1 H2].
+    rewrite empty_ca_valid_all_ca_help//=IH//.
+  Qed.
+
   Lemma empty_ca_valid {n hd l} bt:
-    all empty_ca hd -> valid_ca_aux n [::hd] l bt.
+    all (all empty_ca) hd -> valid_ca_aux n hd l bt.
   Proof.
     elim: n hd l => //n IH hd l H/=.
-    rewrite empty_ca_valid_all_ca_aux//.
+    apply: empty_ca_valid_all_tail_help IH H.
   Qed.
 
   Lemma empty_ca_valid_all_ca n bt hd tl:
-    all empty_ca hd -> all_ca (valid_ca_aux n) bt hd tl.
+    all empty_ca hd ->
+    all_ca (valid_ca_aux n) bt hd tl.
   Proof.
-    apply: empty_ca_valid_all_ca_aux => ??.
-    apply: empty_ca_valid.
+    apply: empty_ca_valid_all_ca_help => ??.
+    apply: @empty_ca_valid.
+  Qed.
+
+  Lemma empty_ca_valid_all_tail {n hd l bt}:
+    all (all empty_ca) hd ->
+    all_tail (all_ca (valid_ca_aux n) bt) hd l.
+  Proof.
+    apply: empty_ca_valid_all_tail_help => ??.
+    apply: @empty_ca_valid.
   Qed.
 
   Lemma base_and_valid A r n l rs bt:
@@ -399,7 +418,7 @@ Module NurProp (U : Unif).
     move=>H H1; subst.
     have [hd H2]:= base_and_state_to_list H.
     have /=H1:= base_and_empty_ca H (H2 [::]).
-    rewrite H2 empty_ca_valid//.
+    rewrite H2 empty_ca_valid//=?H1//.
   Qed.
 
   Lemma base_and_ko_valid A r n l rs bt:
@@ -671,12 +690,12 @@ Module NurProp (U : Unif).
         rewrite H /= valid_ca_split_cons//=.
         rewrite (HB)//.
         rewrite empty_ca_valid//.
-        have:=base_and_empty_ca bA (H [::]) => ->//.
+        have:=base_and_empty_ca bA (H [::]) => /=->//.
       - move=> []//p a _ _ _ B HB n rs/=/andP[/eqP->] bB.
         have [h H]:= base_and_state_to_list bB.
         rewrite H.
         have H1:=base_and_empty_ca bB (H [::]).
-        by case: a => [|t] //=; rewrite cats0 H//=; apply: empty_ca_valid.
+        case: a => [|t] //=; rewrite cats0 H//=; apply: empty_ca_valid; rewrite/=andbT//.
     Qed.
 
     Lemma bbOr_valid A r rs n bt:

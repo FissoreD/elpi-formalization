@@ -168,15 +168,15 @@ Module Nur (U : Unif).
       | call pr t => call pr t
       end.
 
-    Lemma add_ca_empty {lA}:
-      map (add_ca [::]) lA = lA.
+    Lemma add_ca_empty {T: Type} (F: T -> G) {lA}:
+      map (fun i => add_ca [::] (F i)) lA = map F lA.
     Proof.
-      rewrite /add_ca; elim: lA => //= x xs IH.
-      rewrite IH; case: x => // l; rewrite cats0//if_same//.
+      rewrite /add_ca; elim: lA => //= x xs ->; f_equal.
+      case: F => //l; rewrite cats0//.
     Qed.
 
-    Lemma map_add0_cas_empty {lA}:
-      map (map (add_ca [::])) lA  = lA.
+    Lemma map_add0_cas_empty {T:Type} (F: T -> G) {lA}:
+      map (map (fun i => add_ca [::] (F i))) lA  = map (map F) lA.
     Proof.
       rewrite /add_ca; elim: lA => //= x xs ->.
       f_equal; apply add_ca_empty.
@@ -184,15 +184,15 @@ Module Nur (U : Unif).
   End add_ca.
 
 
-  Definition save_alt a b gs := map (add_ca a) b ++ gs.
-  Definition more_alt a bs gs := map (save_alt a gs) bs.
+  Definition save_alt a gs b := map (add_ca a) b ++ gs.
+  Definition more_alt a gs bs := map (save_alt a gs) bs.
 
   Inductive nur : Sigma -> list G ->  list alt -> Sigma -> list alt -> Prop :=
   | StopE s a : nur s [::] a s a
   | CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s [:: cut ca & gl] a s1 r
   | CallE p s s1 a b bs gl r t : 
     F p t s = [:: b & bs ] -> 
-      nur s (save_alt a (a2gs p b) gl) (more_alt a (map (a2gs p) bs) gl ++ a) s1 r -> 
+      nur s (save_alt a gl (a2gs p b)) (more_alt a gl (map (a2gs p) bs) ++ a) s1 r -> 
         nur s [::call p t & gl] a s1 r
   | FailE p s s1 t gl a al r : 
     F p t s = [::] -> nur s a al s1 r -> nur s [::call p t & gl] (a :: al) s1 r.
