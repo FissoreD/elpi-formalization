@@ -243,15 +243,15 @@ Module NurProp (U : Unif).
     let l:= (take n alts) in
     suffix alts (ys++bt) && valid_ca_aux l l bt.
 
-  Fixpoint all_ca f (bt: seq alt) l tl  :=
-    match l with
+  Fixpoint all_ca f (bt: seq alt) gs alts  :=
+    match gs with
     | [::] => true
-    | call _ _ :: xs => all_ca f bt xs tl
+    | call _ _ :: xs => all_ca f bt xs alts
     | cut ca :: xs => 
       if suffix bt ca then 
         let n := size ca - size bt in
         let ca' := take n ca in
-        suffix ca (tl++bt) && f ca' ca' bt && all_ca f bt xs ca'
+        suffix ca (alts++bt) && f ca' ca' bt && all_ca f bt xs ca'
       else (ca == [::]) && all empty_ca xs
     end.
 
@@ -287,8 +287,233 @@ Module NurProp (U : Unif).
     f_equal; rewrite andbT//.
   Qed.
 
+  Lemma empty_ca_valid_all_ca_help n bt hd tl:
+    (forall (hd : seq (seq G)) (l : seq alt), all (all empty_ca) hd -> valid_ca_aux n hd l bt) ->
+    all empty_ca hd ->
+    all_ca (valid_ca_aux n) bt hd tl.
+  Proof.
+    move=> H.
+    elim: hd tl => //=-[]//= ca l IH tl /andP[]/eqP? el; subst.
+    rewrite suffixs0 eqxx el.
+    case: ifP => ///eqP?; subst; rewrite/= cats0 suffix0s valid_cas_empty1 IH//.
+  Qed.
+
+  Lemma empty_ca_valid_all_tail_help {n hd l bt}:
+    (forall (hd : seq (seq G)) (l : seq alt), all (all empty_ca) hd -> valid_ca_aux n hd l bt) ->
+    all (all empty_ca) hd ->
+    all_tail (all_ca (valid_ca_aux n) bt) hd l.
+  Proof.
+    move=> H.
+    elim: hd l => //=x xs IH l /andP[H1 H2].
+    rewrite empty_ca_valid_all_ca_help//=IH//.
+  Qed.
+
+  Lemma empty_ca_valid {n hd l} bt:
+    all (all empty_ca) hd -> valid_ca_aux n hd l bt.
+  Proof.
+    elim: n hd l => //n IH hd l H/=.
+    apply: empty_ca_valid_all_tail_help IH H.
+  Qed.
+
+  Lemma empty_ca_valid_all_ca n bt hd tl:
+    all empty_ca hd ->
+    all_ca (valid_ca_aux n) bt hd tl.
+  Proof.
+    apply: empty_ca_valid_all_ca_help => ??.
+    apply: @empty_ca_valid.
+  Qed.
+
+  Lemma empty_ca_valid_all_tail {n hd l bt}:
+    all (all empty_ca) hd ->
+    all_tail (all_ca (valid_ca_aux n) bt) hd l.
+  Proof.
+    apply: empty_ca_valid_all_tail_help => ??.
+    apply: @empty_ca_valid.
+  Qed.
 
   Section valid_ca_mn.
+   Fixpoint size_alt l := 
+      match l with
+      | [::] => O
+      | cut ca :: l => maxn (size ca) (size_alt l)
+      | call _ _ :: l => size_alt l
+      end.
+
+    Definition size_alts_aux n l :=
+      foldl maxn n (map size_alt l).
+
+    Definition size_alts l :=
+      size_alts_aux 0 l.
+
+    Lemma fold_maxn_leq n l: n <= foldl maxn n l.
+    Proof.
+      elim: l n => //= x xs IH n.
+      rewrite {2}/maxn; case: ifP => H.
+        apply: leq_trans (IH _).
+        apply:ltnW H.
+      apply: IH.
+    Qed.
+  
+    Lemma fold_maxn_eq n l r: foldl maxn n l <= r -> n <= r.
+    Proof.
+      move=> H.
+      have:= fold_maxn_leq n l.
+      lia.
+    Qed.
+
+    Lemma empty_ca_alt x:
+      (size_alt x == 0) = all empty_ca x.
+    Proof.
+      elim: x => //=-[]//=-[]//=; last first.
+        move=> _ ca xs _.
+        case: eqP => //.
+        rewrite /maxn; case: ifP => //.
+        case: size_alt => //.
+      move=> l <-.
+      rewrite/maxn; case: ifP => //.
+      case: size_alt => //.
+    Qed.
+
+    Lemma empty_ca_size_alts l:
+      (size_alts l == 0) = (all (all empty_ca) l).
+    Proof.
+      rewrite/size_alts/size_alts_aux.
+      elim: l => //=x xs<-. 
+      rewrite -empty_ca_alt.
+      symmetry.
+      case: eqP.
+        move=>->//.
+      case: size_alt => // m1.
+      case X: (foldl _ m1.+1) => //=.
+      move: X => /eqP.
+      rewrite -leqn0 => /fold_maxn_eq; lia.
+    Qed.
+
+    Lemma fold_maxn_leq_same {x y} z:
+      x <= y ->
+      foldl maxn x z <= foldl maxn y z.
+    Proof.
+      elim: z x y => //= x xs IH n m H.
+      apply: IH; lia.
+    Qed.
+
+    Lemma fold_maxn_leqL {x y} z:
+      x <= y ->
+      x <= foldl maxn y z.
+    Proof.
+      elim: z x y => //= x xs IH m n H.
+      apply: IH; lia.
+    Qed.
+
+    Lemma fold_maxn_leqR {x y z}:
+      foldl maxn y z <= x -> foldl maxn x z = x.
+    Proof.
+      elim: z x y => //= x xs IH m n H.
+      rewrite{2}/maxn.
+      case: ifP; last first => H1.
+        apply: IH H.
+      have:= fold_maxn_eq _ _ _ H.
+      lia.
+    Qed.
+
+    Lemma fold_maxnP1 x xs:
+        (foldl maxn x xs \in x :: xs).
+    Proof.
+      elim: xs x => [|x xs IH] e; rewrite in_cons/=?eqxx//.
+      rewrite{2 4}/maxn; case: ifP => H.
+        rewrite IH orbT//.
+      have:= IH e; rewrite !in_cons => /orP[]H1; rewrite H1// !orbT//.
+    Qed.
+
+    Lemma fold_maxnP n l r:
+      reflect (r \in (n :: l) /\ forall j, j \in (n::l) -> j <= r) (foldl maxn n l == r).
+    Proof.
+      case: eqP => H; constructor.
+        elim: l n r H => //=.
+          move=> n r <-; rewrite in_cons eqxx/=; split; auto.
+          by move=> j; rewrite in_cons in_nil => /orP[]///eqP->//.
+        move=> x xs IH n r H; subst.
+        rewrite in_cons.
+        have /=  := IH n _ erefl; rewrite in_cons.
+        move=>[]=>/orP[].
+          move=>/eqP H1 H2; split.
+            rewrite {2 4}/maxn.
+            case: ifP => H; last first.
+              by rewrite H1 eqxx// (fold_maxnP1 _ _ _ _ H1)//orbT//.
+            rewrite fold_maxnP1//orbT//.
+          move=> j; rewrite in_cons => /orP[].
+            move=>/eqP?; subst.
+            rewrite {2}/maxn; case: ifP => H; try lia.
+            rewrite -H1; apply fold_maxn_leq_same; lia.
+          move=> H3.
+          admit.
+        admit.
+      admit.
+    Admitted.
+
+
+
+    (* Lemma valid_ca_mn1 {n xs ys} m bt x y:
+      x <= y ->
+      size_alts_aux x xs <= size_alts_aux y ys ->
+      size_alts_aux y ys <= n ->
+      valid_ca_aux (n+m) xs ys bt = valid_ca_aux n xs ys bt.
+    Proof.
+      rewrite/size_alts_aux.
+      elim: n m x y xs ys bt => //=.
+        move=> m x y xs ys bt H1.
+        case X: (foldl _ _ (map _ ys)) => //=.
+        case Y: (foldl _ _ (map _ xs)) => //=/esym.
+        have:= empty_ca_size_alts xs.
+        have:= fold_maxn_eq y [seq size_alt j | j <- ys] _ erefl; rewrite X.
+        have:= fold_maxn_eq x [seq size_alt j | j <- xs] _ erefl; rewrite Y.
+        case: x Y H1 => //=.
+        case: y X => //X Y _ _ _.
+        rewrite /size_alts/size_alts_aux Y => /esym.
+        case: eqP => // _ /empty_ca_valid->//.
+      move=> n H +++ alts.
+      elim: alts => //=w ws IH m x y/=[]/=.
+        move=> bt H1 H2 H3.
+        have Hz:= fold_maxn_leq (maxn x (size_alt w))  [seq size_alt j | j <- ws].
+        erewrite IH => /=; last first.
+          apply: H3.
+          apply: H2.
+          apply: leq_trans Hz H2.
+        f_equal.
+        elim: w H2 Hz => //=-[]//= ca xs IH1 H4 H5.
+        case: suffixP => //=-[ys]?; subst.
+        case: suffixP => //=-[zs].
+        rewrite catA.
+        move=> /cat_nil; case: zs => //; case: ys H5 H4 => //=.
+        move=> H5 H4 _; rewrite subnn take0 !valid_cas_empty1/=.
+        apply: IH1.
+          apply: leq_trans _ (H4).
+          apply: fold_maxn_leq_same.
+          lia.
+        apply: fold_maxn_leq.
+      move=> z zs bt H1 H2 H3.
+      f_equal; last first.
+        apply: IH (H1) _ _; last first.
+          apply: leq_trans (H3).
+          apply: fold_maxn_leq_same.
+          lia.
+        move: H1 H2.
+        elim: ws x y z w zs {H3 H} => //=; clear.
+          move=> m n z w zs H1 H2.
+
+          apply: leq_trans; last first.
+            apply: fold_maxn_leq_same.
+        admit.
+        appl
+        admit.
+      elim: z H2 H3 => //=.
+        move=> H2 H3.
+        admit.
+      move=> []//= ca l IH1 H3.
+      admit.
+    Qed. *)
+
+
     Section Aux.
       Variable n : nat.
       Variable X : 
@@ -367,49 +592,6 @@ Module NurProp (U : Unif).
     Qed.
   End valid_ca_mn.
 
-  Lemma empty_ca_valid_all_ca_help n bt hd tl:
-    (forall (hd : seq (seq G)) (l : seq alt), all (all empty_ca) hd -> valid_ca_aux n hd l bt) ->
-    all empty_ca hd ->
-    all_ca (valid_ca_aux n) bt hd tl.
-  Proof.
-    move=> H.
-    elim: hd tl => //=-[]//= ca l IH tl /andP[]/eqP? el; subst.
-    rewrite suffixs0 eqxx el.
-    case: ifP => ///eqP?; subst; rewrite/= cats0 suffix0s valid_cas_empty1 IH//.
-  Qed.
-
-  Lemma empty_ca_valid_all_tail_help {n hd l bt}:
-    (forall (hd : seq (seq G)) (l : seq alt), all (all empty_ca) hd -> valid_ca_aux n hd l bt) ->
-    all (all empty_ca) hd ->
-    all_tail (all_ca (valid_ca_aux n) bt) hd l.
-  Proof.
-    move=> H.
-    elim: hd l => //=x xs IH l /andP[H1 H2].
-    rewrite empty_ca_valid_all_ca_help//=IH//.
-  Qed.
-
-  Lemma empty_ca_valid {n hd l} bt:
-    all (all empty_ca) hd -> valid_ca_aux n hd l bt.
-  Proof.
-    elim: n hd l => //n IH hd l H/=.
-    apply: empty_ca_valid_all_tail_help IH H.
-  Qed.
-
-  Lemma empty_ca_valid_all_ca n bt hd tl:
-    all empty_ca hd ->
-    all_ca (valid_ca_aux n) bt hd tl.
-  Proof.
-    apply: empty_ca_valid_all_ca_help => ??.
-    apply: @empty_ca_valid.
-  Qed.
-
-  Lemma empty_ca_valid_all_tail {n hd l bt}:
-    all (all empty_ca) hd ->
-    all_tail (all_ca (valid_ca_aux n) bt) hd l.
-  Proof.
-    apply: empty_ca_valid_all_tail_help => ??.
-    apply: @empty_ca_valid.
-  Qed.
 
   Lemma base_and_valid A r n l rs bt:
     base_and A ->
@@ -533,15 +715,11 @@ Module NurProp (U : Unif).
   Qed.
 
   Lemma add_ca_deep_split n l SA SB:
-    size SA + size SB <= n -> valid_ca (SA ++ SB) ->
-      add_ca_deep n l (SA ++ SB) = add_ca_deep n l SA ++ add_ca_deep n l SB.
+    add_ca_deep n l (SA ++ SB) = add_ca_deep n l SA ++ add_ca_deep n l SB.
   Proof.
-    rewrite/valid_ca.
     elim: n SA SB => //=++SA.
-    elim: SA => //=x xs IH n H SB H1/andP[Hl Hr].
+    elim: SA => //=x xs IH H SB H1.
     rewrite IH//.
-      rewrite addSn in H1; apply: ltnW => //.
-    rewrite -(valid_ca_mn1 1)//addn1//.
   Qed.
 
   Lemma add_ca_deep_more_less11_add_ca_map_aux n m {x xs bt l}:
@@ -923,6 +1101,13 @@ Module NurProp (U : Unif).
     case: eqP => //.
     move=>->//.
   Qed.
+
+  (* Lemma empty_ca_add_deep_help1 l n hd tl:
+    (* all empty_ca hd ->  *)
+    add_deep_help add_deep l n tl hd = hd. *)
+  
+  
+    
 
   Lemma empty_ca_add_deep_help x bt n hd:
     all empty_ca x ->

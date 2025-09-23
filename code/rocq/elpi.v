@@ -53,6 +53,15 @@ Section aux.
     move=>->//.
   Qed.
 
+  Lemma map_cats_same1 {T R : Type} (P F: list T -> list R) X Y hd: 
+    map P X = map F Y -> [seq P x ++ hd | x <- X] = [seq F x ++ hd | x <- Y].
+  Proof.
+    elim: X Y => //=.
+      move=>[]//.
+    move=> x xs IH []//=y ys [H1 H2].
+    rewrite (IH ys)// H1//.
+  Qed.
+
   Lemma cons_false {T: Type} {x:T} {xs}: x :: xs = xs -> False.
   Proof. elim: xs x => //x xs IH y[_/IH]//. Qed.
 
