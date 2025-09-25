@@ -164,27 +164,36 @@ Module NurProp (U : Unif).
     Qed.
   End t2l_base.
 
-  (* to be valid: size L1 <= size L2, in a sense L1 should be a suffix of L2 *)
-  Fixpoint valid_caA L1 L2 (bt:alts) {struct L1} :=
-    match L1 with
-    | no_alt => [::]
-    | more_alt hd tl => valid_caG hd (behead L2) bt :: valid_caA tl (behead L2) bt
-    end
-  with valid_caG (gs:goals) (a:alts) (bt:alts) {struct gs} :=
+  Fixpoint valid_caG (gs:goals) (a:alts) (bt:alts) {struct gs} :=
     match gs with
     | no_goals => true
     | more_goals (call _ _) xs => valid_caG xs a bt
     | more_goals (cut ca) xs =>
       if suffix bt ca then
+        suffix ca (a ++ bt) &&
         let n := size ca - size bt in
         let ca' := take n ca in
-        let xx := valid_caA ca ca' bt in
-        let rr := seq.all id (seq.take n xx) in 
-        suffix ca (a ++ bt) && rr && valid_caG xs ca' bt
+         valid_caG xs ca' bt
+        && valid_caA_aux ca ca bt
       else (eqB ca nilC) && empty_caG xs
-      end.
+      end
+    with valid_caA_aux ca ca1 bt : bool :=
+      if eqB ca bt then true
+      else
+      match ca with
+      | no_alt => false
+      | more_alt hd tl => valid_caG hd (behead ca1) bt && valid_caA_aux tl (behead ca1) bt
+    end
+    .
 
-  Definition valid_caX L1 L2 bt := seq.all id (valid_caA L1 L2 bt).
+  (* to be valid: size L1 <= size L2, in a sense L1 should be a suffix of L2 *)
+  Fixpoint valid_caA L1 L2 (bt:alts) {struct L1} :=
+    match L1 with
+    | no_alt => true
+    | more_alt hd tl => valid_caG hd (behead L2) bt && valid_caA tl (behead L2) bt
+    end.
+
+  Definition valid_caX L1 L2 bt := (valid_caA L1 L2 bt).
 
   Definition valid_ca L := valid_caX L L nilC.
 
@@ -195,11 +204,6 @@ Module NurProp (U : Unif).
     rewrite !subn0 take_size !cats0.
     move => /and4P[]//.
   Qed.
-
-  Lemma size_valid_caA (l1 l2 bt: alts):
-    seq.size (valid_caA l1 l2 bt) = size l1.
-  Proof. elim: l1 l2 bt => //=g gs H [|x xs] bt; rewrite H//. Qed.
-
 
   Lemma valid_cas_empty1 {l} bt: valid_caX nilC l bt.
   Proof. move=>//. Qed.
@@ -227,7 +231,7 @@ Module NurProp (U : Unif).
     rewrite suffixs0.
     case: ifP => //=.
     move=>/eqBP H1; subst.
-    rewrite cats0 suffix0s/= size_nil/= take0.
+    rewrite cats0 suffix0s/= size_nil/= take0 andbT.
     apply: empty_caG_valid H.
   Qed.
 
@@ -254,118 +258,66 @@ Module NurProp (U : Unif).
 
   Section valid_ca_split_cat.
 
-    (* Lemma all_tail_cat xs y n bt ll:
-    let f := all_tail
-        (all_ca (valid_caA n) bt) in
-      f (xs ++ y) ll = f xs ll && f y (drop (size xs) ll).
-    Proof. 
-    elim: xs y n ll => //=.
-      move=> y n ll; rewrite drop0//.
-    move=> x xs IH y n ll; rewrite-andbA; f_equal; auto.
-      rewrite IH; f_equal.
-      case: ll => //.
-    Qed. *)
-
     Lemma valid_ca_split {x y l} bt:
-      (valid_caA (x ++ y) l bt) = cat (valid_caA x l bt) (valid_caA y (drop (size x) l) bt).
+      (valid_caA (x ++ y) l bt) = (valid_caA x l bt) && (valid_caA y (drop (size x) l) bt).
     Proof.
       elim: x y l bt => //=.
       move=> g gs IH y l bt.
-      rewrite IH; f_equal.
-      case: l; rewrite// drop_nil//.
+      rewrite IH -andbA; do 2 f_equal.
+      rewrite size_cons.
+      case: l; rewrite// !drop_nil//.
     Qed.
 
 
     Lemma valid_ca_splitX {x y l} bt:
       valid_caX (x ++ y) l bt = valid_caX x l bt && valid_caX y (drop (size x) l) bt.
-    Proof. rewrite/valid_caX valid_ca_split seq.all_cat//. Qed.
-
-    Lemma valid_ca_take x y n l bt:
-      size x = n ->
-      seq.take n (valid_caA (x ++ y) l bt) = valid_caA (x) l bt.
-    Proof.
-      move=><-.
-      elim: x y l bt => //=.
-        move=> y l bt; rewrite size_nil seq.take0//.
-      move=> g gs IH y l bt.
-      rewrite IH//.
-    Qed.
-
-    (*Lemma valid_ca_split1 {x y}:
-      valid_ca (x ++ y) = valid_caA (size x + size y) x (x ++ y) [::] && valid_ca y.
-    Proof.
-      rewrite/valid_ca valid_ca_split drop_size_cat//.
-      rewrite !valid_ca_mn//?size_cat//?leq_addl//?leq_addr//.
-    Qed. *)
+    Proof. rewrite/valid_caX valid_ca_split//. Qed.
 
   End valid_ca_split_cat.
 
-  (* Lemma all_ca_drop bt w ca l1:
-    all_ca (valid_caA (size ca)) bt l1 ca ->
-    all_ca (valid_caA (size (w ++ ca))) bt l1 (w ++ ca).
+  Lemma valid_caA_aux_id l x:
+    valid_caA_aux l x l.
+  Proof. case: l => //=y ys; rewrite eqb_refl//. Qed.
+
+  Lemma valid_caA_aux_suff l x bt:
+    valid_caA_aux l x bt -> suffix bt l.
   Proof.
-    rewrite/valid_ca.
-    elim: l1 => //=-[]//ca' xs _.
-    case: suffixP; last first.
-      move=> _ /andP[]/eqP->//.
-    move=> [z?]; subst.
-    rewrite !size_cat addnK take_size_cat//.
-    rewrite suffix_catl// => /andP[/andP[]]/andP[_]/suffixP/=[r?]; subst.
-    rewrite valid_ca_mn//?size_cat?leq_addl//.
-    rewrite -!catA.
-    rewrite suffix_catr; last first.
-      rewrite suffix_catr//suffix_refl//.
-    rewrite addnC.
-    rewrite valid_ca_mn1_all_ca//.
-    move=> H2 H3.
-    rewrite valid_ca_mn//; last first.
-      rewrite addnCA leq_addr//.
-    rewrite addnCA.
-    rewrite valid_ca_mn1_all_ca//.
-    rewrite H2//.
-  Qed. *)
+    elim: l x bt => //=[|g gs IH] x bt.
+      case: eqBP => //<-//.
+    case: eqBP => //=.
+      move=><-; rewrite suffix_refl//.
+    move=> H /andP[H1 H2].
+    rewrite/suffix/=.
+    case: ifP => //= H3.
+    apply: IH H2.
+  Qed.
 
   Lemma push_bt_out bt r s l:
     valid_caX bt bt l -> size r <= size s -> valid_caX r s (bt++l) -> valid_caX r (s ++ bt) l
+  (* with push_bt_outA_aux bt r s l:
+    suffix l r ->
+    size r <= size s -> valid_caA_aux (r) s (bt++l) -> valid_caA_aux (r) (s ++ bt) l
   with push_bt_outG g xs bt l:
-    valid_caX bt bt l ->valid_caG g xs (bt++l) -> valid_caG g (xs ++ bt) l
+    valid_caG g xs (bt++l) -> valid_caG g (xs ++ bt) l *)
   .
   Proof.
-    all: rewrite/valid_caX in push_bt_out push_bt_outG *; move=> Hbt.
-    {
-      case: r => //= g gs.
-      case: s => //=.
-      move=> x xs.
-      rewrite cat_cons 2!behead_cons.
-      rewrite !size_cons => H.
-      move=> /andP[H1 H2].
-      rewrite push_bt_out// push_bt_outG//.
-    }
-    case: g => //=-[_ _|ca] gs.
-      apply: push_bt_outG Hbt.
+    rewrite/valid_caX.
+    elim: r bt s l => //=r rs IH bt s l Hbt.
+    case: s => //=x xs.
+    rewrite !size_cons cat_cons !behead_cons.
+    move=> H /andP[H1 H2].
+    rewrite IH//andbT.
+    clear x rs H IH H2.
+    elim: r bt l xs Hbt H1 => //= -[]//=x xs IH bt l rs Hbt.
+    case: ifP => //=; last first.
+      move=> _/andP[/eqBP->] H; rewrite H suffixs0 eqb_refl.
+      case: eqBP => //->; rewrite suffix0s take0.
+      rewrite empty_caG_valid//.
     case: ifP => //; last first.
-      move=> _/andP[/eqBP? H]; subst.
-      rewrite suffixs0.
-      case: ifP.
-        move=>/eqBP?; subst; rewrite cats0 size_nil take0 suffix0s/=.
-        apply: empty_caG_valid H.
-      by rewrite eqb_refl H//.
-    rewrite size_cat.
-    case: suffixP => //-[x?]; subst => _.
-    rewrite suffix_catl//-!andbA.
-    move=>/and4P[_ /suffixP [x' ?]]; subst.
-    rewrite !size_cat addnK take_size_cat//.
-    rewrite !addnA addnK catA take_size_cat?size_cat//.
-    rewrite -catA valid_ca_take// => H1 H2.
-    rewrite !catA suffix_catr?suffix_refl//.
-    rewrite -!catA suffix_catr?suffix_refl//=.
-    rewrite push_bt_outG//!andbT.
-    rewrite catA -size_cat valid_ca_take//.
-
-    rewrite valid_ca_split seq.all_cat drop_size_cat//Hbt andbT.
-    Guarded.
-    apply:push_bt_out => //.
-    (* Guarded. *)
+      move=> H.
+      move=>/suffixP[zs->].
+      rewrite suffix_catl//eqb_refl -andbA=> /and4P[_/suffixP[a?]]; subst.
+      rewrite !size_cat addnK take_size_cat// => H1 H2.
   Admitted.
 
   Lemma add_ca_deep_split l SA SB:
@@ -486,7 +438,8 @@ Module NurProp (U : Unif).
     move=> al.
     case: suffixP.
       move=> [x ->]; rewrite size_cat addnK take_size_cat//.
-      f_equal; apply: valid_caG_aux_make_lB0_empty_ca H.
+      f_equal; f_equal.
+      apply: valid_caG_aux_make_lB0_empty_ca H.
     move=> _; f_equal.
     rewrite /empty_caG in H*.
     rewrite all_cat H andbT//.
@@ -585,8 +538,8 @@ Module NurProp (U : Unif).
 
   Lemma valid_ca_aux_make_lB0 hd xs l ys: 
     empty_caG hd ->
-    seq.all id (valid_caA xs ys l) ->
-    seq.all id (valid_caA (add_deep l hd xs) (make_lB0 (add_deep l hd ys) hd) l)
+    (valid_caA xs ys l) ->
+    (valid_caA (add_deep l hd xs) (make_lB0 (add_deep l hd ys) hd) l)
     with valid_caG_aux_make_lB0 hd l x ys:
     empty_caG hd ->
     valid_caG x ys l ->
@@ -608,6 +561,21 @@ Module NurProp (U : Unif).
     case: x => //=[_ _|].
       apply: valid_caG_aux_make_lB0 Hhd.
     move=> ca.
+    case: ca => /=.
+    case: l => //= [|l0 ls]; last first.
+      admit.
+      rewrite cats0 suffix0s take0 drop0 !cats0 /= make_lB0_empty1 suffix0s /=.
+      admit.
+      move=> ca0 cas.
+         have := valid_ca_aux_make_lB0 hd cas l cas.
+      Guarded.
+   rewrite empty_caG_add_deepG. 
+      
+      (* add_deep_empty1.
+      have := valid_ca_aux_make_lB0 hd l' l l'.
+      Guarded.
+
+      rewrite suffixs0.
     case: suffixP => //=.
       move=> [l'?]; subst.
       rewrite !size_cat addnK take_size_cat//.
@@ -620,23 +588,26 @@ Module NurProp (U : Unif).
       rewrite valid_caG_aux_make_lB0//.
       rewrite suffix_catl// eqb_refl/=andbT.
       move/suffixP: H1 => [x ->]; rewrite add_deep_cat.
-      rewrite valid_ca_take// valid_ca_aux_make_lB0_empty_ca//.
       rewrite {1 2}/make_lB0 map_cat suffix_catr?suffix_refl//=.
 
-      case: l' H2 H3 => //=g gs/andP[H1 H2]H3.
+      rewrite valid_ca_take// valid_ca_aux_make_lB0_empty_ca//.
+      have := valid_ca_aux_make_lB0 hd l' l l'.
+      Guarded.
+      (* rewrite valid_ca_aux_make_lB0//. *)
+
+      (* case: l' H2 H3 => //=g gs/andP[H1 H2]H3.
       rewrite{1}/make_lB0/map/= behead_cons.
       change (mapA _ _) with (make_lB0 (add_deep l hd gs) hd).
-      rewrite valid_caG_aux_make_lB0//.
+      rewrite valid_caG_aux_make_lB0//=. *)
 
-      (* apply: valid_ca_aux_make_lB0 => //. *)
-      (* Guarded. *)
+      Guarded.
       admit.
 
     move=> _ /andP[]/eqBP? H; subst.
     rewrite size_nil/=sub0n take0 drop0 cats0 make_lB0_empty1 suffix0s/=.
     rewrite suffixs0 empty_caG_add_deepG// H.
     case: eqBP=>//->.
-    apply: empty_caG_valid H.
+    apply: empty_caG_valid H. *)
   Admitted.
 
   Lemma tita l stl:
@@ -657,18 +628,18 @@ Module NurProp (U : Unif).
       apply: titi.
     rewrite suffix0s.
     rewrite size_nil subn0 take_size cats0.
-    move=>/andP[H1 H2].
+    move=>/andP[H1 /andP[H2 H3]].
     rewrite suffix_catr?suffix_refl//size_cat addnK take_size_cat//.
-    rewrite titi//andbT.
     rewrite suffix_catl//eqb_refl/=.
     move: H1; case: suffixP => //.
     move=> [pref ?]; subst.
     rewrite add_ca_deep_split suffix_catr// ?suffix_refl//=.
-    rewrite valid_ca_take//.
-    rewrite -(size_valid_caA _ ca nilC).
-    rewrite seq.take_size.
-    apply: tita.
-  Qed.
+    rewrite titi//=.
+    (* rewrite valid_ca_take//. *)
+    (* rewrite -(size_valid_caA _ ca nilC). *)
+    (* rewrite seq.take_size. *)
+    (* apply: tita. *)
+  Admitted.
 
   Lemma valid_state_valid_ca_help {A r l}:
     state_to_list A l = r ->
@@ -679,7 +650,8 @@ Module NurProp (U : Unif).
     move=> <-; clear r.
     elim: A l => //=.
     - move=> p[|t]//=l _.
-      rewrite suffix0s suffixs0/= andbT if_same//.
+      rewrite suffix0s suffixs0/=.
+      case: eqBP => //->//.
     - move=> A HA s B HB l/=.
       case:ifP => [dA vB|dA /andP[vA bB]].
         rewrite state_to_list_dead//=cat0s.
@@ -694,6 +666,7 @@ Module NurProp (U : Unif).
       rewrite HB//?VS.bbOr_valid//andbT.
       have:= HA (state_to_list B nilC) vA.
       set sB := state_to_list B _ => HH.
+      (* Search bbOr empty_ca. *)
       apply: push_bt_out => //.
       apply: bbOr_valid bB _ => //.
       rewrite cats0//.
@@ -715,7 +688,6 @@ Module NurProp (U : Unif).
         rewrite valid_ca_split.
         rewrite drop_size_cat//{4 5}/M.
         rewrite valid_ca_aux_make_lB0_empty_ca?Hhd//.
-        rewrite seq.all_cat.
         apply/andP; split; last first.
           apply: valid_ca_aux_make_lB0 (Hhd _ _) H1.
         rewrite/M.
@@ -745,6 +717,7 @@ Module NurProp (U : Unif).
     have:= valid_state_valid_ca_help H2 H1.
     move=>//.
   Qed.
+  Print Assumptions valid_state_valid_ca.
 
   Lemma success_state_to_list {A m}:
     valid_state A -> (*we need valid state since in s2l we assume B0 to have length <= 1*)
