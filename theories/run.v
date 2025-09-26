@@ -794,8 +794,6 @@ Module Run (U : Unif).
   Proof.
   Abort.
 
-
-
   Lemma expandedb_Done_not_failed {s1 A s2 B b}: 
     expandedb s1 A (Done s2 B) b -> failed A = false.
   Proof.
@@ -816,6 +814,8 @@ Module Run (U : Unif).
     inversion 1; subst => //.
   Qed.
 
+  Lemma failed_big_or p s t: failed (big_or p s t).
+  Proof. rewrite/big_or; case: F => //-[]//. Qed.
 
   (********************************************************************)
   (* NEXT_ALT OP PROPERTIES                                           *)
