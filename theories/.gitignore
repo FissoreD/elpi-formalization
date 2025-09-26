@@ -3,9 +3,8 @@
 **/*.vok
 **/*.glob
 **/.lia.cache
+**/.nia.cache
 **/*.generated*
 **/*.vo
 **/*.generate
-.lia.cache
-
 **/_build
