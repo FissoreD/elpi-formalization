@@ -172,6 +172,8 @@ Module Nur (U : Unif).
       suffix_catr xs ys zs : suffix xs ys -> suffix xs (appendC zs ys);
       take_size_cat n s1 s2: size s1 = n -> take n (appendC s1 s2) = s1;
       drop_size_cat n s1 s2: size s1 = n -> drop n (appendC s1 s2) = s2;
+      take_cons n x xs: take n.+1 (consC x xs) = consC x (take n xs);
+      drop_cons n x xs: drop n.+1 (consC x xs) = (drop n xs);
       behead_cons x xs: behead (consC x xs) = xs;
       suffixP s1 s2: reflect (exists s2', s2 = appendC s2' s1) (suffix s1 s2);
       size_suffix s1 s2: suffix s1 s2 -> size s1 <= size s2;
@@ -184,22 +186,24 @@ Module Nur (U : Unif).
       map_cons F l1 l2 : map F (consC l1 l2) = consC (F l1) (map F l2);
       size_map F l1 : size (map F l1) = size l1;
       map_id l1 : map id l1 = l1;
+      (* cat_same_tl l1 l2 l3: appendC l1 l3 = appendC l2 l3 -> l1 = l2; *)
       (* eq_in_map f g s: (forall x, mem x s -> f x = g x) <-> map f s = map g s *)
     }.
   Declare Scope SE.
   Global Infix "++" := appendC : SE.
   Open Scope SE.
-  Arguments appendC: simpl never.
   Arguments nilC : simpl never.
   Arguments consC : simpl never.
-  Arguments suffix : simpl never.
+  Arguments appendC: simpl never.
+  Arguments eqB : simpl never.
+  Arguments size : simpl never.
   Arguments take : simpl never.
   Arguments drop : simpl never.
-  Arguments size : simpl never.
-  Arguments eqB : simpl never.
   Arguments behead : simpl never.
+  Arguments suffix : simpl never.
   Arguments all : simpl never.
   Arguments map : simpl never.
+  Arguments mem : simpl never.
 
   Module VS := valid_state(U).
   Import VS RunP Run Language.
@@ -577,6 +581,30 @@ Module Nur (U : Unif).
       move=> l; elim: l => //=x xs->//.
     Defined.
   End goals.
+
+  Ltac fConsA x xs := change (more_alt _ _) with (consC x xs).
+  Ltac fConsG x xs := change (more_goals _ _) with (consC x xs).
+  Ltac fNilA := change no_alt with (@nilC _ _ IsList_alts).
+  Ltac fNilG := change no_goals with nilC.
+
+  Lemma cat_right_same {l1 l2} (l3:alts): 
+    l1 ++ l3 = l2 ++ l3 -> l1 = l2.
+  Proof.
+    elim: l1 l2 l3 => //.
+      move=>[]//x xs l3/=.
+      fConsA x xs; fNilA.
+      rewrite cat0s => H.
+      have:= f_equal size H.
+      move=> /(_ _ IsList_alts).
+      rewrite size_cons size_cat; lia.
+    move=> x xs IH [|y ys]//l3; fNilA.
+      fConsA x xs => H.
+      have:= f_equal size H.
+      move=> /(_ _ IsList_alts).
+      rewrite cat_cons size_cons !size_cat size_nil; lia.
+    move=>[<-]/IH->//.
+  Qed.
+
 
   Definition if_cut F g :=
     match g with
