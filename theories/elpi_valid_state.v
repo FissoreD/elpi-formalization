@@ -9,7 +9,6 @@ Module NurValidState (U : Unif).
   Module NurP := NurProp(U).
   Import NurP Nur VS RunP Run Language.
 
-
   Fixpoint valid_caG (gs:goals) (a:alts) (bt:alts) {struct gs} :=
       match gs with
       | no_goals => true
@@ -209,60 +208,33 @@ Module NurValidState (U : Unif).
     Guarded.
   Qed.
 
-  Lemma valid_ca_make_lB0_empty_ca2 hd X tl bt:
+  Lemma valid_ca_make_lB0_empty_ca hd X tl bt:
     empty_caG hd ->
       valid_caA (make_lB0 X hd) tl bt = valid_caA X tl bt
-  with valid_caG_make_lB0_empty_ca2 hd x tl b:
+  with valid_caG_cat_empty_ca hd x tl b:
       empty_caG hd -> valid_caG (x ++ hd) tl b = valid_caG x tl b.
   Proof.
-    all: rewrite/make_lB0/valid_caA/empty_caG in valid_ca_make_lB0_empty_ca2 valid_caG_make_lB0_empty_ca2* => H.
+    all: rewrite/make_lB0/valid_caA/empty_caG in valid_ca_make_lB0_empty_ca valid_caG_cat_empty_ca* => H.
     {
       case: X => //=g gs.
-      rewrite valid_ca_make_lB0_empty_ca2//.
-      rewrite valid_caG_make_lB0_empty_ca2//.
+      rewrite valid_ca_make_lB0_empty_ca//.
+      rewrite valid_caG_cat_empty_ca//.
     }
     case: x => //=.
       rewrite cat0s empty_caG_valid//.
     move=>[]/=.
-      move=> _ _ x; apply:valid_caG_make_lB0_empty_ca2 H.
+      move=> _ _ x; apply:valid_caG_cat_empty_ca H.
     move=> x xs.
-    rewrite valid_caG_make_lB0_empty_ca2//.
+    rewrite valid_caG_cat_empty_ca//.
     rewrite /empty_caG all_cat H andbT//.
   Qed.
 
-  Lemma valid_ca_aux_make_lB0_empty_ca l1 l2 hd bt:
-    empty_caG hd ->
-      valid_caA (make_lB0 l1 hd) l2 bt = valid_caA (l1) l2 bt
-    with valid_caG_aux_make_lB0_empty_ca hd g l2 bt:
-      empty_caG hd -> valid_caG (g ++ hd) l2 bt = valid_caG g l2 bt.
-  Proof.
-    {
-      move=> Hhd.
-      case: l1 => //= g gs.
-      rewrite valid_ca_aux_make_lB0_empty_ca//valid_caG_aux_make_lB0_empty_ca//.
-    }
-    case: g => [|g gs] H/=.
-      rewrite cat0s.
-      apply: empty_caG_valid H.
-    case: g => //[_ _|].
-      apply: valid_caG_aux_make_lB0_empty_ca H.
-    move=> al.
-    case: suffixP.
-      move=> [x ->]; rewrite size_cat addnK take_size_cat//.
-      f_equal; f_equal.
-      apply: valid_caG_aux_make_lB0_empty_ca H.
-    move=> _; f_equal.
-    rewrite /empty_caG in H*.
-    rewrite all_cat H andbT//.
-  Qed.
-
-
-  Lemma xxx ca l hd:
+  Lemma valid_ca_aux_add_deep_make_lB0 ca l hd:
     let pref := take (size ca - size l) (add_deep l hd ca) in
     empty_caG hd -> suffix l ca -> valid_caA_aux ca (take (size ca - size l) ca) l ->
       valid_caA_aux (pref ++ l) 
         (make_lB0 (pref) hd) l 
-    with zzz x xs G hd:
+    with valid_caG_aux_add_deep_make_lB0 x xs G hd:
       let n := size xs - size G in
       empty_caG hd ->
       suffix G xs ->
@@ -294,10 +266,10 @@ Module NurValidState (U : Unif).
       rewrite -(size_add_deep -nilCA hd xs) take_size.
       rewrite -/(make_lB0 (add_deep -nilCA hd xs) hd).
       move=> _ _ /andP[H1 H2].
-      have:= xxx xs -nilCA hd Hhd (suffix0s _).
+      have:= valid_ca_aux_add_deep_make_lB0 xs -nilCA hd Hhd (suffix0s _).
       rewrite subn0 take_size cats0 -(size_add_deep -nilCA hd xs) take_size.
       move=>/(_ H2)->.
-      have:= zzz x xs -nilCA _ Hhd (suffix0s _).
+      have:= valid_caG_aux_add_deep_make_lB0 x xs -nilCA _ Hhd (suffix0s _).
       rewrite subn0 take_size -(size_add_deep -nilCA hd xs) take_size.
       move=>->//.
     move=> g gs.
@@ -316,16 +288,16 @@ Module NurValidState (U : Unif).
     move=>/=.
     case: eqBP => // _.
     move=> H3 /andP[H4 H5].
-    rewrite xxx//andbT /make_lB0 map_cons behead_cons.
+    rewrite valid_ca_aux_add_deep_make_lB0//andbT /make_lB0 map_cons behead_cons.
     rewrite -/(make_lB0 (take n (add_deep G hd xs)) hd).
-    rewrite zzz//.
+    rewrite valid_caG_aux_add_deep_make_lB0//.
     }
     move=>/=.
     case: x => // g gs Hhd suff.
     change (more_goals g gs) with (g:::gs).
     case: g => //=[_ _|ca].
       move=> H1 H2.
-      apply: zzz => //.
+      apply: valid_caG_aux_add_deep_make_lB0 => //.
     case: ifP => //=; last first.
       move=> _ /andP[/eqbPA->] EGS H1.
       rewrite take0 drop0 cats0 /make_lB0/=/map/=.
@@ -358,23 +330,23 @@ Module NurValidState (U : Unif).
     set X:= make_lB0 _ _.
     rewrite size_cat addnK take_size_cat//.
     apply/andP; split.
-      apply: zzz => //.
-    simpl in xxx.
+      apply: valid_caG_aux_add_deep_make_lB0 => //.
+    simpl in valid_ca_aux_add_deep_make_lB0.
     rewrite -valid_ca_valid_ca_aux//.
-    rewrite/X valid_ca_make_lB0_empty_ca2//.
+    rewrite/X valid_ca_make_lB0_empty_ca//.
     rewrite valid_ca_valid_ca_aux?size_map//.
-    apply: xxx => //.
+    apply: valid_ca_aux_add_deep_make_lB0 => //.
     Guarded.
   Qed.
 
-  Lemma valid_ca_aux_make_lB0 hd xs l: 
+  Lemma valid_ca_add_deep_make_lB0 hd xs l: 
     empty_caG hd ->
     (valid_caA xs xs l) ->
     (valid_caA (add_deep l hd xs) (make_lB0 (add_deep l hd xs) hd) l).
   Proof.
     rewrite valid_ca_valid_ca_aux//.
     move=> H1 H2.
-    have /= := xxx (xs++l) l hd H1.
+    have /= := valid_ca_aux_add_deep_make_lB0 (xs++l) l hd H1.
     move=>/(_ _ IsList_alts).
     rewrite size_cat addnK.
     rewrite add_deep_cat !take_size_cat//?size_add_deep//.
@@ -383,22 +355,37 @@ Module NurValidState (U : Unif).
     apply: H => //.
   Qed.
 
-  Lemma tita l stl:
+  Lemma valid_caG_add_deep_make_lB0 {hd x xs l}:
+    empty_caG hd ->
+    valid_caG x xs l ->
+    valid_caA xs xs l ->
+    valid_caG (add_deepG l hd x) (make_lB0 (add_deep l hd xs) hd) l.
+  Proof.
+    move=> H1 H2 H3.
+    have /= := valid_caG_aux_add_deep_make_lB0 x (xs++l) l hd.
+    move=> /(_ _ IsList_alts).
+    rewrite suffix_catr?suffix_refl//.
+    rewrite size_cat addnK take_size_cat//.
+    rewrite add_deep_cat take_size_cat ?size_add_deep//.
+    move=>->//; rewrite?H2//-valid_ca_valid_ca_aux//.
+  Qed.
+
+  Lemma valid_ca_add_ca_deep l stl:
     valid_ca stl ->
     valid_caA (add_ca_deep l stl) (add_ca_deep l stl) l
-    with titi l x xs: 
+    with valid_caG_add_ca_deepG l x xs: 
       valid_caG x xs nilC ->
       valid_caG (add_ca_deep_goals l x) (add_ca_deep l xs) l
     .
   Proof.
-    rewrite /valid_caA in tita titi *.
+    rewrite /valid_caA in valid_ca_add_ca_deep valid_caG_add_ca_deepG *.
     {
       case: stl l => //= x xs l.
       rewrite/behead/=.
-      move=>/andP[H1 H2]; rewrite tita//andbT titi//.
+      move=>/andP[H1 H2]; rewrite valid_ca_add_ca_deep//andbT valid_caG_add_ca_deepG//.
     }
     case: x => //=-[p t| ca]/= gs.
-      apply: titi.
+      apply: valid_caG_add_ca_deepG.
     rewrite suffix0s.
     rewrite size_nil subn0 take_size cats0.
     move=>/andP[H1 /andP[H2 H3]].
@@ -407,14 +394,14 @@ Module NurValidState (U : Unif).
     move: H1; case: suffixP => //.
     move=> [pref ?]; subst.
     rewrite add_ca_deep_cat suffix_catr// ?suffix_refl//=.
-    rewrite titi//= => _.
+    rewrite valid_caG_add_ca_deepG//= => _.
     clear pref gs H2.
     elim: ca l H3 => //=.
       move=> l/=; rewrite cat0s valid_caA_aux_refl//.
     move=> g gs IH l.
     case: eqBP => //H.
     rewrite !behead_cons => /andP[H1 H2].
-    rewrite titi//IH//.
+    rewrite valid_caG_add_ca_deepG//IH//.
   Qed.
 
   (********************************************************************)
@@ -492,9 +479,9 @@ Module NurValidState (U : Unif).
         set stl := state_to_list B no_alt.
         have:= HB _ vB.
         fold stl => H.
-        apply: tita.
+        apply: valid_ca_add_ca_deep.
         apply: H.
-      apply: tita; rewrite ?size_cat//.
+      apply: valid_ca_add_ca_deep; rewrite ?size_cat//.
       rewrite /valid_ca valid_ca_split.
       rewrite drop_size_cat//.
       rewrite HB//?VS.bbOr_valid//andbT.
@@ -520,13 +507,13 @@ Module NurValidState (U : Unif).
         set M := make_lB0 _ _.
         rewrite valid_ca_split.
         rewrite drop_size_cat//{4 5}/M.
-        rewrite valid_ca_aux_make_lB0_empty_ca?Hhd//.
+        rewrite valid_ca_make_lB0_empty_ca?Hhd//.
         apply/andP; split; last first.
-          apply: valid_ca_aux_make_lB0 Hhd H1.
+          apply: valid_ca_add_deep_make_lB0 Hhd H1.
         rewrite/M.
         apply: push_bt_out => //.
-          rewrite valid_ca_make_lB0_empty_ca2?Hhd//.
-          apply: valid_ca_aux_make_lB0; rewrite//Hhd//.
+          rewrite valid_ca_make_lB0_empty_ca?Hhd//.
+          apply: valid_ca_add_deep_make_lB0; rewrite//Hhd//.
         apply: HB vB.
       case lA: state_to_list => [|x xs]//=.
       move=> bB; have {bB}: bbAnd B by move: bB; case:ifP => //; rewrite /bbAnd => _ -> //.
@@ -536,16 +523,11 @@ Module NurValidState (U : Unif).
       have /=H2 := base_and_empty_ca bB H.
       rewrite H/=H/= behead_cons.
       rewrite -/(valid_caA (make_lB0 (add_deep l hd xs) hd) (make_lB0 (add_deep l hd xs) hd) l).
-      rewrite valid_ca_make_lB0_empty_ca2?H2//.
+      rewrite valid_ca_make_lB0_empty_ca?H2//.
       move:HA; rewrite lA/= behead_cons =>/= /andP[{}HA HA1].
-      rewrite valid_ca_aux_make_lB0?H2//andbT.
-      rewrite valid_caG_make_lB0_empty_ca2?H2//.
-      have /= := zzz x (xs++l) l hd.
-      move=> /(_ _ IsList_alts).
-      rewrite suffix_catr?suffix_refl//.
-      rewrite size_cat addnK take_size_cat//.
-      rewrite add_deep_cat take_size_cat ?size_add_deep//.
-      move=>->//; rewrite?H2//-valid_ca_valid_ca_aux//.
+      rewrite valid_ca_add_deep_make_lB0?H2//andbT.
+      rewrite valid_caG_cat_empty_ca?H2//.
+      apply: valid_caG_add_deep_make_lB0 => //.
   Qed.
 
   Lemma valid_state_valid_ca A r:
