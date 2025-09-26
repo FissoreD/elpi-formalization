@@ -715,8 +715,7 @@ Module NurEqiv (U : Unif).
         rewrite/make_lB0 add_deep_cat map_cat.
         rewrite-/(make_lB0 (add_deep l hd (save_alts (ys ++ l) tl (aa2gs p rs))) hd).
         rewrite-/(make_lB0 (add_deep l hd ys) hd).
-        have Hb := (base_and_empty_ca1 bB (H nilC)).
-        have {}Hb := Hb _ IsList_alts.
+        have Hb := (base_and_empty_ca bB H).
         f_equal; [|f_equal].
           apply: add_deep_goalsP Hb (empty_ca_atoms _ _).
         apply: add_deep_altsP Hb (empty_ca_atoms1 _ _).
