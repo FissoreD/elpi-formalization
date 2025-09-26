@@ -4,10 +4,6 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
 
-(* Goal forall x, x<3->x<4.
-lia.
-Qed. *)
-
 Module NurProp (U : Unif).
 
   Module Nur := Nur(U).
@@ -36,27 +32,6 @@ Module NurProp (U : Unif).
   Lemma add_deep_empty2 bt l:
     add_deep bt l nilC = nilC.
   Proof. move=>//. Qed.
-
-  (* Lemma add_deep_empty1_help2 bt g:
-    (forall l, add_deep bt [::] l = l) ->
-      [seq add_deep_help add_deep bt [::] j | j <- g] = g.
-  Proof.
-    move: n.
-    elim: g => //=.
-    move=> /=g gs Hgs n H.
-    rewrite Hgs//; f_equal.
-    case: g => //=l; rewrite H// make_lB0_empty2 cat_take_drop//.
-  Qed.
-
-  Lemma add_deep_empty1_help1 bt n gs:
-    (forall l : seq alt, add_deep bt n [::] l = l) ->
-      [seq [seq add_deep_help add_deep bt n [::] j | j <- j] | j <- gs] = gs.
-  Proof.
-    move: n.
-    elim: gs => //=.
-    move=> /=g gs Hgs n H.
-    rewrite Hgs//add_deep_empty1_help2//.
-  Qed. *)
   
   Lemma add_deep_empty1 bt l: add_deep bt nilC l = l 
     with add_deepG_empty bt x: add_deepG bt nilC x = x.
@@ -115,11 +90,6 @@ Module NurProp (U : Unif).
       elim: A l => //.
       - move=> /= A HA s B HB l /andP[bA bB]/=; rewrite HB//= base_and_ko_state_to_list//.
       - move=>[]//.
-    Qed.
-
-    Lemma drop0 : forall (l:alts), drop 0 l = l.
-    Proof.
-      move=> l; elim: l => //.
     Qed.
 
     Lemma base_and_state_to_list {A}: base_and A -> exists hd, forall l, state_to_list A l = hd ::: nilC.
@@ -192,8 +162,6 @@ Module NurProp (U : Unif).
     | no_alt => true
     | more_alt hd tl => valid_caG hd (behead L2) bt && valid_caA tl (behead L2) bt
     end.
-
-  (* Definition valid_caA L1 L2 bt := (valid_caA L1 L2 bt). *)
 
   Definition valid_ca L := valid_caA L L nilC.
 
@@ -420,7 +388,7 @@ Module NurProp (U : Unif).
     Guarded.
  Qed.
 
-  Lemma add_ca_deep_split l SA SB:
+  Lemma add_ca_deep_cat l SA SB:
     add_ca_deep l (SA ++ SB) = add_ca_deep l SA ++ add_ca_deep l SB.
   Proof. elim: SA => //= x xs IH; rewrite IH//. Qed.
 
@@ -435,7 +403,6 @@ Module NurProp (U : Unif).
       rewrite/valid_caA.
       move=>+<-; clear r.
       elim: A rs => //=.
-      (* - move=> rs; rewrite valid_cas_empty1 if_same//. *)
       - move=> A HA s B HB rs/=/andP[bA bB].
         rewrite add_ca_deep_empty1.
         have [hd H]:= base_and_state_to_list bA.
@@ -551,7 +518,7 @@ Module NurProp (U : Unif).
     - move=> []//=p a _ _ _ B HB/andP[/eqP->]bB.
       have [hd H]:= base_and_state_to_list bB.
       rewrite H; case: a => [|t]/=; rewrite cats0 H/= /all/=/empty_caG/all/=; 
-      have:= (base_and_empty_ca bB (H nilC)); rewrite/empty_ca /all/= andbT => H1; rewrite H1//.
+      have:= (base_and_empty_ca1 bB (H nilC)); rewrite /empty_caG/all/= => H1; rewrite H1//.
   Qed.
 
   Lemma empty_caG_add_deepG l hd xs:
@@ -569,19 +536,6 @@ Module NurProp (U : Unif).
   Proof.
     move=>/suffixP[x->]; rewrite size_cat addnK drop_size_cat//.
   Qed.
-
-  (* Lemma xxx:
-    empty_caG hd -> suffix l ca -> *)
-
-  Notation "-nilCG" :=
-    (@nilC _ _ IsList_goals)
-    (at level 2, no associativity, only parsing)
-    : SE.
-  Notation "-nilCA" :=
-    (@nilC _ _ IsList_alts)
-    (at level 2, no associativity, only parsing)
-    : SE.
-  
 
   Lemma xxx ca l hd:
     let pref := take (size ca - size l) (add_deep l hd ca) in
@@ -732,7 +686,7 @@ Module NurProp (U : Unif).
     rewrite suffix_catl//eqb_refl/=.
     move: H1; case: suffixP => //.
     move=> [pref ?]; subst.
-    rewrite add_ca_deep_split suffix_catr// ?suffix_refl//=.
+    rewrite add_ca_deep_cat suffix_catr// ?suffix_refl//=.
     rewrite titi//= => _.
     clear pref gs H2.
     elim: ca l H3 => //=.
@@ -767,7 +721,6 @@ Module NurProp (U : Unif).
       rewrite HB//?VS.bbOr_valid//andbT.
       have:= HA (state_to_list B nilC) vA.
       set sB := state_to_list B _ => HH.
-      (* Search bbOr empty_ca. *)
       apply: push_bt_out => //.
       apply: bbOr_valid bB _ => //.
       rewrite cats0//.
@@ -862,65 +815,6 @@ Module NurProp (U : Unif).
     forall l, exists x xs, state_to_list A l = x ::: xs.
 
   Section shape.
-    (* Lemma size_o_map {T R: Type} (F:T->R) L: (size \o map F) L = size L.
-    Proof. elim: L => //= _ l->//. Qed.
-
-    Lemma size_o_cat {T: Type} L (x y: list T): 
-      size x = size y -> (size \o [eta cat x]) L = (size \o [eta cat y]) L.
-    Proof. case: L x y => [|w ws] x y /=; rewrite ?cats0//!size_cat => ->//. Qed.  
-    
-    Lemma size_o_map_map {T R: Type} {F:T->R} L: map (size \o map F) L = map size L.
-    Proof. elim: L => //= x xs->/=; f_equal; rewrite -(size_o_map F x)//. Qed.
-
-    Lemma size_o_cat_fix {T: Type} L (x y: list T): 
-      size x = size y -> (size \o cat^~ x) L = (size \o cat^~ y) L.
-    Proof. case: L x y => //= _ l x y H; rewrite !size_cat H//. Qed.
-
-    Lemma size_o_cat_fix_map {T: Type} L1 L2 (x y: list T): 
-      map size L1 = map size L2 ->
-      size x = size y -> map (size \o cat^~ x) L1 = map (size \o cat^~ y) L2.
-    Proof.
-      elim: L1 L2 x y => //=[|x xs IH][]//= y ys w z[H1 H2] H3.
-      rewrite !size_cat H1 H3; f_equal.
-      apply: IH => //.
-    Qed.
-
-    Lemma size_o_cat_map {T: Type} L (x: list T): 
-      map (size \o [eta cat x]) L = map (fun y => size x + size y) L. 
-    Proof. elim: L => //y ys/=->; rewrite size_cat //. Qed.
-
-    Lemma size_o_map_add_ca l2 L: 
-      map (size \o (map (add_ca l2))) L = map (fun y => size y) L. 
-    Proof. elim: L => //y ys/=->; rewrite size_map //. Qed.
-
-    Lemma size_prep {T: Type} {y: list T} {L1 L2:list (list T)}:
-      [seq size y0 | y0 <- L1] = [seq size y0 | y0 <- L2] ->
-        [seq size y + size y0 | y0 <- L1] = [seq size y + size y0 | y0 <- L2].
-    Proof. move=> H. rewrite map_comp H !(map_comp _ _ L2)//. Qed.
-
-    Lemma size_flatten {T:Type} {L1 L2 xs ys: list (list T)}:
-      [seq size ii | ii <- xs] = [seq size ii | ii <- ys] ->
-      [seq size ii | ii <- L1] = [seq size ii | ii <- L2] ->
-        [seq size ii | ii <- [seq la ++ lb | la <- xs, lb <- L1]] =
-          [seq size ii | ii <- [seq la ++ lb | la <- ys, lb <- L2]].
-    Proof.
-      elim: xs ys L1 L2=> [|x xs IH] [|y ys]//=L1 L2.
-      move=>[] H1 H2 H3.
-      have:= IH _ _ _ H2 H3.
-      rewrite 2!map_cat=>->; f_equal.
-      rewrite -2!map_comp 2!size_o_cat_map map_comp H1 H3 3!(map_comp _ _ L2)//.
-    Qed.
-
-    Lemma size_add_deep_map {z w ys xs} bt:
-      size z = size w ->
-      [seq size j | j <- xs] = [seq size j | j <- ys] ->
-      [seq size j | j <- add_deep bt (size xs) z xs] =
-      [seq size j | j <- add_deep bt (size ys) w ys].
-    Proof.
-      elim: xs ys w z => [|x xs IH][]//=y ys w z H1[H2 H3].
-      rewrite !size_map H2-!map_comp !size_o_map_map H3//.
-    Qed. *)
-
     Lemma state_to_list_same_size_aux {r1 r2 A l1 l2}: 
       state_to_list A l1 = r1 -> state_to_list A l2 = r2 -> size r1 = size r2.
     Proof.
@@ -1411,7 +1305,7 @@ Module NurProp (U : Unif).
         case X: state_to_list => //= _.
         rewrite Hb/=/m.
         case Y: state_to_list => [|t ts]//=.
-        rewrite make_lB01_empty1 cat0s.
+        rewrite cat0s.
         rewrite Hb//.
     Qed.
   
@@ -1471,7 +1365,7 @@ Module NurProp (U : Unif).
           move:bB0 => /orP[]bB; last first.
             rewrite base_and_ko_state_to_list//HB//.
           have [hd H]:= base_and_state_to_list bB.
-          have H1 := base_and_empty_ca bB (H nilC).
+          have H1 := base_and_empty_ca1 bB (H nilC).
           rewrite H/= HB//.
         have H := expand_failure_next_alt_none_empty vB eB nB'.
         case nA': next_alt => [[s4 E]|]//.

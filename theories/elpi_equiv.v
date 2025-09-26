@@ -177,12 +177,12 @@ Module NurEqiv (U : Unif).
         rewrite !H1/= => -[???]; subst; right.
         by rewrite cat_cons//.
       case eA: expand => //[s0' A'|s0' A']/=[??]; subst;
-      rewrite add_ca_deep_split?size_cat//; set SB:= state_to_list _ nilC.
+      rewrite add_ca_deep_cat?size_cat//; set SB:= state_to_list _ nilC.
         have FA := expand_not_failed eA notF.
         have [y[ys YY]]:= failed_state_to_list vA FA SB.
         rewrite YY/=; case: y YY => //-[]//ca tl1 YY [???]; subst.
         have [H|{}HA] := HA _ _ _ _ _ _ _ vA eA YY.
-          by rewrite H -/SB/= add_ca_deep_split//; auto.
+          by rewrite H -/SB/= add_ca_deep_cat//; auto.
         by rewrite HA; right => //.
       have [z[zs [H1 H2]]] := expand_cb_state_to_list1 SB vA eA.
       rewrite !H1/=.
@@ -522,7 +522,7 @@ Module NurEqiv (U : Unif).
     elim: rs bo p1 => /=.
       move=> bo p1; rewrite s2l_big_and/empty_ca/=all_cons /=empty_ca_atoms//.
     move=>[s [hd bo]]/= l H b1 p1.
-    rewrite add_ca_deep_split//.
+    rewrite add_ca_deep_cat//.
     rewrite all_cat !add_ca_deep_empty1 H s2l_big_and/=all_cons.
     rewrite empty_ca_atoms//.
   Qed.
@@ -557,7 +557,7 @@ Module NurEqiv (U : Unif).
       generalize X => {}X.
       apply: add_ca_deep_goals_map.
     move=> [s1 [hd bo]]/=rs IH b ca gs/=.
-    rewrite add_ca_deep_empty1 add_ca_deep_split map_cat s2l_big_and/=map_cons.
+    rewrite add_ca_deep_empty1 add_ca_deep_cat map_cat s2l_big_and/=map_cons.
     rewrite cat_cons cat0s; f_equal.
       rewrite -add_ca_deep_goals_map//.
       rewrite empty_ca_atoms//.
@@ -662,7 +662,7 @@ Module NurEqiv (U : Unif).
         f_equal; subst.
           rewrite add_ca_deep_goalsP//.
           apply: empty_ca_atoms.
-        rewrite add_ca_deep_split; f_equal.
+        rewrite add_ca_deep_cat; f_equal.
         rewrite add_ca_deep_altsP//.
         apply: empty_ca_atoms1.
       set SB := state_to_list B nilC.
@@ -677,16 +677,16 @@ Module NurEqiv (U : Unif).
         by move=>[? H]; rewrite !H; subst; auto.
       case FF: F => [|r rs].
         move=>H; subst; rewrite !H-/SB.
-        by rewrite add_ca_deep_split; auto.
+        by rewrite add_ca_deep_cat; auto.
       move=>[fA' H1]; rewrite fA'; left; split => //.
-      rewrite !H1 !add_ca_deep_split.
+      rewrite !H1 !add_ca_deep_cat.
       rewrite -!catA/=.
       rewrite cat_cons.
       f_equal.
-        rewrite add_ca_deep_goalsP?empty_ca_atoms//add_ca_deep_split catA//.
-      rewrite catA add_ca_deep_split.
+        rewrite add_ca_deep_goalsP?empty_ca_atoms//add_ca_deep_cat catA//.
+      rewrite catA add_ca_deep_cat.
       do 2 f_equal.
-      rewrite catA -add_ca_deep_split.
+      rewrite catA -add_ca_deep_cat.
       rewrite add_ca_deep_altsP//.
       apply: empty_ca_atoms1.
     - move=> A HA B0 _ B HB C s1 s2 l p t gs xs /and5P[_ vA _].

@@ -36,8 +36,6 @@ Qed.
 
 Goal forall s1 A B D0 D p,
   let f x := (Goal p (Call x)) in
-  (* il cut punta su B *)
-  (* (((! \/ A) \/ B)) /\ D*)
   state_to_list 
     (And (Or ((Or (Goal p Cut) s1 (f A))) s1 (f B)) (f D0) (f D)) no_alt = 
     of_alt [:: 
@@ -62,20 +60,11 @@ Goal forall s1 s2 B C D E F p,
 Proof.
   move=> s1 s2 B C D E F p/=.
   rewrite //.
-  (* rewrite/state_to_list.
-  rewrite {2}[And]lock/=.
-  rewrite map_id.
-  rewrite G2Gs_cat/=.
-  rewrite [Or]lock/=.
-  rewrite-{1}lock/=.
-  rewrite-lock/=.
-  f_equal; rewrite eqxx//. *)
 Qed.
 
 
 Goal forall s1 s2 A B C p,
   let f x := (Goal p (Call x)) in
-  (* il cut punta su B *)
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   state_to_list 
     (And (Or ((Or (Goal p Cut) s1 (f A))) s1 (f B)) Bot (Or (Goal p Cut) s2 (f C))) no_alt = 
@@ -89,7 +78,6 @@ Qed.
 
 Goal forall s1 s2 A B C0 C p,
   let f x := (Goal p (Call x)) in
-  (* il cut punta su B *)
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   state_to_list 
     (And (Or ((Or (Goal p Cut) s1 (f A))) s1 (f B)) (f C0) (Or (Goal p Cut) s2 (f C))) no_alt = 
@@ -271,10 +259,6 @@ Proof.
   move=>//.
 Qed.
 
-(* Goal 
-  state_to_list (And (Or (Goal p Cut) s2 (f D)) (f E) (f F))  *)
-
-
 (* IMPORTANTE!
   The right and side of the first and becomes:
     (!,!); (D, E)
@@ -299,7 +283,6 @@ Qed.
 
 Goal forall s1 s2 A B C p,
   let f x := (Goal p (Call x)) in
-  (* entrambi i cat puntano su A B (il primo butta via ! \/ A, il secondo butta via A)*)
   (* ((! \/ ! \/ A) \/ B) \/ C *)
   state_to_list 
     (Or (Or (Or (Goal p Cut) s1 ((Or (Goal p Cut) s1 (f A)))) s1 (f B)) s2 (f C)) no_alt = 
@@ -317,7 +300,6 @@ Qed.
 
 Goal forall s1 s2 A B C p,
   let f x := (Goal p (Call x)) in
-  (* entrambi i cat puntano su A B (il primo butta via ! \/ A, il secondo butta via A)*)
   (* ((! \/ ! \/ A) \/ B) \/ C *)
   state_to_list 
     (Or (Or (Or (And (Goal p Cut) Top Top) s1 ((Or (Goal p Cut) s1 (f A)))) s1 (f B)) s2 (f C)) no_alt = 
@@ -336,7 +318,6 @@ Qed.
 
 Goal forall s1 s2 A B C D0 D p,
   let f x := (Goal p (Call x)) in
-  (* entrambi i cut puntano su A B (il primo butta via ! \/ A, il secondo butta via A)*)
   (* (((! \/ ! \/ A) \/ B) \/ C) /\ D*)
   state_to_list 
     (And (Or (Or (Or (Goal p Cut) s1 ((Or (Goal p Cut) s1 (f A)))) s1 (f B)) s2 (f C)) (f D0) (f D)) no_alt = 
@@ -352,12 +333,8 @@ Proof.
   f_equal => //.
 Qed.
 
-(* cosa voglio? devo aggiungere il reset nei tl?
-  (A \/ ((! \/ B \/ X C /\ D))) /\_c0 C
-*)
 Goal forall X s1 s2 A B C D0 D p,
   let f x := (Goal p (Call x)) in
-  (* entrambi i cut puntano su A B (il primo butta via ! \/ A, il secondo butta via A)*)
   (* ((X \/ ((! \/ ! \/ A) \/ B) \/ C)) /\ D*)
   state_to_list 
     (And (Or (f X) s1 (Or (Or (Or (Goal p Cut) s1 ((Or (Goal p Cut) s1 (f A)))) s1 (f B)) s2 (f C))) (f D0) (f D)) no_alt = 
@@ -377,7 +354,6 @@ Qed.
 
 Goal forall s1 s2 B0 A B C D p,
   let f x := (Goal p (Call x)) in
-  (* entrambi i cut puntano su A B (il primo butta via ! \/ A, il secondo butta via A)*)
   (* (((A /\ (! \/ B)) \/ C \/ D)) *)
   state_to_list 
     (Or (Or (f C) s2 (And (f A) (f B0) (Or (Goal p Cut) s1 (f B)))) s1 (f D)) no_alt = 

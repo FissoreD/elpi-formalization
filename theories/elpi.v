@@ -186,8 +186,6 @@ Module Nur (U : Unif).
       map_cons F l1 l2 : map F (consC l1 l2) = consC (F l1) (map F l2);
       size_map F l1 : size (map F l1) = size l1;
       map_id l1 : map id l1 = l1;
-      (* cat_same_tl l1 l2 l3: appendC l1 l3 = appendC l2 l3 -> l1 = l2; *)
-      (* eq_in_map f g s: (forall x, mem x s -> f x = g x) <-> map f s = map g s *)
     }.
   Declare Scope SE.
   Global Infix "++" := appendC : SE.
@@ -298,22 +296,6 @@ Module Nur (U : Unif).
         have:= eqbPA ca ca'; rewrite H; inversion 1; subst => //.
       have:= eqbPA ca ca'; rewrite H; inversion 1; subst; congruence.
   Qed.
-     
-
-  Notation "x ::: xs" :=
-    (consC x xs)
-    (at level 3, no associativity)
-    : SE.
-
-  Notation "-[]" :=
-    (nilC)
-    (at level 3, no associativity,only printing)
-    : SE.
-
-  Notation "(( x ))" := (consC x nilC)
-    (at level 3, no associativity,only printing)
-    : SE.
-
 
   Section alts.
     Fixpoint append_alts l1 l2 := 
@@ -446,7 +428,6 @@ Module Nur (U : Unif).
       move=> F l1; elim: l1 => //=x xs IH l1; rewrite IH//.
       move=> F l1; elim: l1 => //=_ xs->//.
       move=>l; elim: l => //=g gs->//.
-      (* move=> f g s. *)
     Defined.
   End alts.
 
@@ -582,6 +563,31 @@ Module Nur (U : Unif).
     Defined.
   End goals.
 
+  Notation "x ::: xs" :=
+    (consC x xs)
+    (at level 3, no associativity)
+    : SE.
+
+  Notation "-[]" :=
+    (nilC)
+    (at level 3, no associativity,only printing)
+    : SE.
+
+  Notation "(( x ))" := (consC x nilC)
+    (at level 3, no associativity,only printing)
+    : SE.
+
+
+  Notation "-nilCG" :=
+    (@nilC _ _ IsList_goals)
+    (at level 2, no associativity, only parsing)
+    : SE.
+  Notation "-nilCA" :=
+    (@nilC _ _ IsList_alts)
+    (at level 2, no associativity, only parsing)
+    : SE.
+
+
   Ltac fConsA x xs := change (more_alt _ _) with (consC x xs).
   Ltac fConsG x xs := change (more_goals _ _) with (consC x xs).
   Ltac fNilA := change no_alt with (@nilC _ _ IsList_alts).
@@ -635,7 +641,7 @@ Module Nur (U : Unif).
       | no_goals => nilC 
       | more_goals hd tl => (add_ca_deep_g bt hd) ::: (add_ca_deep_goals bt tl)
       end
-    with add_ca_deep_g bt g := (*if ca == [::] then behaves like add_ca *)
+    with add_ca_deep_g bt g :=
       match g with
       | call pr t => call pr t 
       | cut ca => cut ((add_ca_deep bt ca) ++ bt)
@@ -644,10 +650,6 @@ Module Nur (U : Unif).
   Definition save_goals (a: alts) (gs b:goals) := map (add_ca a) b ++ gs.
 
   Definition save_alts (a : alts) (gs: goals) (bs : alts) := map (save_goals a gs) bs.
-
-
-  (* Definition points_to l1 A := match A with cut l2 => l1 == l2 | _ => true end. *)
-  (* Definition empty_ca := points_to [::]. *)
 
   Definition empty_ca_G g :=
     match g with call _ _ | cut no_alt => true | _ => false end.
@@ -767,9 +769,8 @@ Module Nur (U : Unif).
     | Goal _ Cut => ((cut nilC) ::: nilC) ::: nilC
     | Goal pr (Call t) => ((call pr t) ::: nilC) ::: nilC
     | Or A _ B => 
-      let lB := state_to_list B nilC in (*lB = (call p t :: gs) :: a*)
+      let lB := state_to_list B nilC in
       let lA := state_to_list A lB in
-      (* add_ca_deep (size (lB)) bt (lB) *)
       add_ca_deep bt (lA ++ lB)
     | And A B0 B =>
       let lB0 := state_to_list B0 bt in
@@ -782,12 +783,7 @@ Module Nur (U : Unif).
           (* the reset point is empty: it kill all the alternatives in the cut-to *)
           let lB   := state_to_list B bt in
           make_lB01 lB (kill x)
-
-          (* [seq (kill x) ++ y | y <- lB] *)
         | more_alt hd no_alt =>
-        (* 
-          invariant every cut-to has bt has tail or is empty
-        *)
           (* the reset point exists, it has to be added to all cut-to alternatives *)
           let x := add_deepG bt hd x in
           let xs := add_deep bt hd xs in 
