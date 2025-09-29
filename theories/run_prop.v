@@ -521,7 +521,7 @@ Module RunP (A: Unif).
       have /= dB := expanded_not_dead dA HE.
       have [b3 H] := expanded_or_correct_left_fail _ dA HE s2 E.
       have {}HN: next_alt s (Or B s2 (if b1 then cutr E else E)) = Some (s', Or C s2 (if b1 then cutr E else E)).
-        move=>/=; rewrite (proj1 (next_alt_dead HN)) HN//.
+        move=>/=; rewrite ((next_alt_dead HN)) HN//.
       have [b4 {}IH1]:= IH s2 E.
       have [b5]:= IH s2 (cutr E).
       rewrite cutr2 if_same => IH2.

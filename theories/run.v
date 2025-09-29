@@ -898,7 +898,7 @@ Module Run (U : Unif).
   Qed.
 
   Lemma next_alt_dead {A D s1 s2}: 
-    next_alt s1 A = Some (s2, D) -> is_dead A = false /\ is_dead D = false.
+    next_alt s1 A = Some (s2, D) -> ((is_dead A = false) * (is_dead D = false))%type.
   Proof.
     elim: A D s1 s2 => //.
     - move=>/=???[_<-]//.
@@ -910,20 +910,20 @@ Module Run (U : Unif).
         move=> []??;subst => /=; split => //.
         rewrite dA//.
       case X: next_alt => //= [[s3 D]|].
-        move=>[_<-]; split => //=; rewrite (proj2 (HA _ _ _ X))//.
+        move=>[_<-]; split => //=; rewrite ((HA _ _ _ X))//.
       case: ifP => dB//.
       (* case:ifP => fB. *)
         case Y: next_alt => //[[s3 D]] [_ <-]/=.
-        rewrite is_dead_dead (proj2 (HB _ _ _ Y))//.
+        rewrite is_dead_dead ((HB _ _ _ Y))//.
       (* move=>[_ <-]/=; rewrite is_dead_dead; split => //. *)
     move=> A HA B0 _ B HB C s1 s2 /=.
     case: ifP => dA//.
     case X: next_alt => //[[s3 D]|].
       case: ifP => fA.
-        case: ifP => //fB0[_<-]/=; rewrite (proj2 (HA _ _ _ X))//.
+        case: ifP => //fB0[_<-]/=; rewrite ((HA _ _ _ X))//.
       case Y: next_alt => [[s4 E]|].
         move=> [_<-]/=; rewrite dA//.
-      case: ifP => fB0//[_<-]/=; rewrite (proj2 (HA _ _ _ X))//.
+      case: ifP => fB0//[_<-]/=; rewrite ((HA _ _ _ X))//.
     case: ifP => fA//.
     case Y: next_alt => [[s3 D]|]//[_<-]//.
   Qed.
@@ -940,7 +940,7 @@ Module Run (U : Unif).
           move=>[_<-]/=; rewrite dA; apply: HB X.
         case Y: next_alt => [[s4 E]|]//.
           move=>[_<-]/=.
-          rewrite (HA _ _ _ Y)//(proj2 (next_alt_dead Y))(HA _ _ _ Y)//.
+          rewrite (HA _ _ _ Y)//((next_alt_dead Y))(HA _ _ _ Y)//.
         case: ifP => dB//.
         have [s' H]:= next_alt_some X s.
         rewrite H.
@@ -948,7 +948,7 @@ Module Run (U : Unif).
       case: ifP => //dA.
       case Y: next_alt => [[s4 E]|]//.
         move=>[_<-]/=.
-        rewrite (HA _ _ _ Y)// (proj2 (next_alt_dead Y))(HA _ _ _ Y)//.
+        rewrite (HA _ _ _ Y)// ((next_alt_dead Y))(HA _ _ _ Y)//.
       case: ifP => //dB.
       rewrite (next_alt_none X s)//.
       (* do 2 case: ifP => //; move=> fB dB [_<-]/=. *)

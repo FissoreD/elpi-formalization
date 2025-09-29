@@ -205,63 +205,63 @@ Module Nur (U : Unif).
 
   Module VS := valid_state(U).
   Import VS RunP Run Language.
-  
+
   Inductive G := 
     | call : program -> Tm -> G
     | cut : alts -> G
   with alts :=
     | no_alt
-    | more_alt : goals -> alts -> alts
+    | more_alt : (Sigma * goals) -> alts -> alts
   with goals :=
     | no_goals
     | more_goals : G -> goals -> goals .
 
-  Fixpoint eqb_alts t1 t2 :=
+  Fixpoint eqbA t1 t2 :=
     match t1, t2 with
     | no_alt, no_alt => true
-    | more_alt h1 t1, more_alt h2 t2 => eqb_goals h1 h2 && eqb_alts t1 t2
+    | more_alt (s1,h1) t1, more_alt (s2, h2) t2 => (s1 == s2) && eqbGs h1 h2 && eqbA t1 t2
     | _, _ => false
     end
-  with eqb_goals t1 t2 :=
+  with eqbGs t1 t2 :=
     match t1, t2 with
     | no_goals, no_goals => true
-    | more_goals h1 t1, more_goals h2 t2 => eqb_G h1 h2 && eqb_goals t1 t2
+    | more_goals h1 t1, more_goals h2 t2 => eqbG h1 h2 && eqbGs t1 t2
     | _, _ => false
     end
-  with eqb_G t1 t2 :=
+  with eqbG t1 t2 :=
     match t1, t2 with
     | call p1 t1, call p2 t2 => (p1 == p2) && (t1 == t2)
-    | cut ca1, cut ca2 => eqb_alts ca1 ca2
+    | cut ca1, cut ca2 => eqbA ca1 ca2
     | _, _ => false
     end.
 
-  Lemma eqb_reflA l : eqb_alts l l
-    with eqb_reflG l : eqb_goals l l
-    with eqb_G_refl l : eqb_G l l.
+  Lemma eqb_reflA l : eqbA l l
+    with eqb_reflG l : eqbGs l l
+    with eqb_G_refl l : eqbG l l.
   Proof.
     {
-      case: l => /=.
-        move=>//.
-      move=> g gs; rewrite eqb_reflA eqb_reflG//.
+      case: l => /=//.
+      move=> [s1 g] gs; rewrite eqxx eqb_reflA eqb_reflG//.
     }
-    case: l => /=.
-      move=>//.
+    case: l => /=//.
     move=> [p t|ca]/=gs; rewrite ?eqxx eqb_reflG//eqb_reflA//.
     case: l => //=p t; rewrite !eqxx//.
   Qed.
 
-  Lemma eqbPA l1 l2 : reflect (l1 = l2) (eqb_alts l1 l2)
-    with eqbPG l1 l2 : reflect (l1 = l2) (eqb_goals l1 l2)
-    with eqbP_G l1 l2 : reflect (l1 = l2) (eqb_G l1 l2).
+  Lemma eqbPA l1 l2 : reflect (l1 = l2) (eqbA l1 l2)
+    with eqbPG l1 l2 : reflect (l1 = l2) (eqbGs l1 l2)
+    with eqbP_G l1 l2 : reflect (l1 = l2) (eqbG l1 l2).
   Proof.
     {
       case: l1; case: l2 => /=.
       - constructor => //.
       - move=> g gx; constructor => //.
-      - move=> g gs; constructor => //.
-      - move=> x xs y ys.
-        case X: eqb_goals => /=.
-          case Y: eqb_alts => /=; constructor.
+      - move=> [s g] gs; constructor => //.
+      - move=> [s1 x] xs [s2 y] ys.
+        case: eqP => //=?; last first; subst.
+          constructor; congruence.
+        case X: eqbGs => /=.
+          case Y: eqbA => /=; constructor.
             have:= eqbPA ys xs; rewrite Y.
             inversion 1; subst.
             have:= eqbPG y x; rewrite X.
@@ -277,8 +277,8 @@ Module Nur (U : Unif).
       - move=> g gx; constructor => //.
       - move=> g gs; constructor => //.
       - move=> x xs y ys.
-        case X: eqb_G => /=.
-          case Y: eqb_goals => /=; constructor.
+        case X: eqbG => /=.
+          case Y: eqbGs => /=; constructor.
             have:= eqbPG ys xs; rewrite Y.
             inversion 1; subst.
             have:= eqbP_G y x; rewrite X.
@@ -289,13 +289,25 @@ Module Nur (U : Unif).
         move=>[??]; subst; auto.
     }
     case: l1 => [p t|ca].
-    - case X: eqb_G; constructor; case: l2 X => //=??.
+    - case X: eqbG; constructor; case: l2 X => //=??.
         move=>/andP[/eqP->/eqP->//].
       move=> +[??]; subst; rewrite !eqxx//.
-    - case X: eqb_G; constructor; case: l2 X => //=ca' H.
+    - case X: eqbG; constructor; case: l2 X => //=ca' H.
         have:= eqbPA ca ca'; rewrite H; inversion 1; subst => //.
       have:= eqbPA ca ca'; rewrite H; inversion 1; subst; congruence.
   Qed.
+
+  Lemma G_eqb_OK : Equality.axiom eqbG.
+  Proof. apply: iffP2 eqbP_G eqb_G_refl. Qed.
+  HB.instance Definition _ : hasDecEq G := hasDecEq.Build G G_eqb_OK.
+
+  Lemma goals_eqb_OK : Equality.axiom eqbGs.
+  Proof. apply: iffP2 eqbPG eqb_reflG. Qed.
+  HB.instance Definition _ : hasDecEq goals := hasDecEq.Build goals goals_eqb_OK.
+
+  Lemma alts_eqb_OK : Equality.axiom eqbA.
+  Proof. apply: iffP2 eqbPA eqb_reflA. Qed.
+  HB.instance Definition _ : hasDecEq alts := hasDecEq.Build alts alts_eqb_OK.
 
   Section alts.
     Fixpoint append_alts l1 l2 := 
@@ -335,37 +347,37 @@ Module Nur (U : Unif).
       end.
 
     Fixpoint suffix_alts l1 l2 :=
-      if eqb_alts l1 l2 then true
+      if l1 == l2 then true
       else 
       match l2 with
       | no_alt => false
-      | more_alt x xs => suffix_alts l1 xs
+      | more_alt _ xs => suffix_alts l1 xs
       end.
 
     Lemma suffixPA s1 s2: reflect (exists s2', s2 = append_alts s2' s1) (suffix_alts s1 s2).
     Proof.
       elim: s2 s1 => //=.
-        move=>[|g gs]; constructor.
+        move=>[|[S g] gs]; constructor.
           by exists no_alt.
         by move=>[]-[]//.
-      move=> g gs IH s1.
+      move=> [s g] gs IH s1.
       case: ifP.
         move=>/eqbPA->; constructor; exists no_alt => //.
       move=> H.
       have [H1|H1] := IH s1; constructor.
-        case: H1 => x->; exists (more_alt g x) => //.
+        case: H1 => x->; exists (more_alt (s, g) x) => //.
       move=> [x H2]; apply: H1.
-      case: x H2 => [|x xs]/=.
+      case: x H2 => [|[s2 x] xs]/=.
         move=>?; subst.
-        rewrite eqb_reflA// in H.
-      move=>[_->]; exists xs => //.
+        rewrite eqxx// in H.
+      move=>[_ _ ->]; exists xs => //.
     Qed.
 
     Lemma catAA x y z: append_alts x (append_alts y z) = append_alts (append_alts x y) z.
-    Proof. elim: x y z => //= x xs IH y z; rewrite IH//. Qed.
+    Proof. elim: x y z => //= -[s x] xs IH y z; rewrite IH//. Qed.
 
     Lemma cats0A l: append_alts l no_alt = l.
-    Proof. elim: l => //= x xs ->//. Qed.  
+    Proof. elim: l => //= -[s x] xs ->//. Qed.  
 
     Lemma size_cat_alts xs ys:
       size_alts (append_alts xs ys) = (size_alts xs) + (size_alts ys).
@@ -373,15 +385,15 @@ Module Nur (U : Unif).
 
     Lemma suffix_catlA s1 s2 s3 s3':
       size_alts s3 = size_alts s3' ->
-      suffix_alts (append_alts s1 s3) (append_alts s2 s3') = eqb_alts s3 s3' && suffix_alts s1 s2.
+      suffix_alts (append_alts s1 s3) (append_alts s2 s3') = (s3 == s3') && suffix_alts s1 s2.
     Proof.
       elim: s3 s3' s1 s2 => //=.
         move=>[]//= s1 s2; rewrite !cats0A//.
-      move=> g gs IH []//=y ys s1 s2 [H1].
+      move=> [sb1 g] gs IH []//=[sb2 y] ys s1 s2 [H1].
       have:= IH _ _ _ H1.
-      case: eqbPA => /=.
+      case: eqP => /=.
         move=>?; subst.
-      Admitted.
+    Admitted.
 
     Fixpoint mapA F l :=
       match l with
@@ -392,14 +404,14 @@ Module Nur (U : Unif).
     Fixpoint memA e l := 
       match l with
       | no_alt => false
-      | more_alt x xs => eqb_goals e x || memA e xs
+      | more_alt x xs => (e == x) || memA e xs
       end.
 
-    #[refine] Global Instance IsList_alts : @IsList goals alts :=
+    #[refine] Global Instance IsList_alts : @IsList (Sigma * goals) alts :=
       {| 
-      nilC := no_alt; consC := more_alt;  
+      nilC := no_alt; consC := more_alt;
       appendC := append_alts; size := size_alts; take := take_alts; drop := drop_alts;
-      behead := behead_alts; eqB := eqb_alts; suffix:= suffix_alts; all:= all_alts;
+      behead := behead_alts; eqB x y := x == y; suffix:= suffix_alts; all:= all_alts;
       map := mapA; mem := memA
       |}.
     Proof.
@@ -409,15 +421,14 @@ Module Nur (U : Unif).
       move=> l1; elim: l1 => //=x xs IH l2 l3; rewrite IH//.
       move=> l1; elim: l1 => //=x xs IH l2 l3; rewrite IH//.
       move=> l; elim: l => //.
-      move=> l; elim: l => //=x xs->//.
-      move=> l; elim: l => //=x xs->//.
+      move=> l; elim: l => //-[s x]//=.
+      move=> l; elim: l => //=-[s x] xs->//.
       move=> n; elim: n => //=.
       move=> n; elim: n => //=.
       move=> n; elim: n => //=.
-      apply: eqb_reflA.
       apply: eqbPA.
       apply: size_cat_alts.
-      move=> xs; elim: xs => //=x xs H; rewrite eqb_reflG eqb_reflA//.
+      move=> xs; elim: xs => //=x xs H; rewrite eqxx//.
       move=> ++zs; elim: zs => //=x xs IH ys zs; case: ifP => // _; apply: IH.
       move=> n; elim: n => [|n IH] []//=g xs ys []/IH->//.
       move=> n; elim: n => [|n IH][]//= _ xs ys []/IH->//.
@@ -469,7 +480,7 @@ Module Nur (U : Unif).
       end.
 
     Fixpoint suffix_goals l1 l2 :=
-      if eqb_goals l1 l2 then true
+      if l1 == l2 then true
       else 
       match l2 with
       | no_goals => false
@@ -491,13 +502,12 @@ Module Nur (U : Unif).
       move=> g gs IH s1.
       case: ifP.
         move=>/eqbPG->; constructor; exists no_goals => //.
-      move=> H.
+      move=>/eqP H.
       have [H1|H1] := IH s1; constructor.
         case: H1 => x->; exists (more_goals g x) => //.
       move=> [x H2]; apply: H1.
       case: x H2 => [|x xs]/=.
-        move=>?; subst.
-        rewrite eqb_reflG// in H.
+        by move=>?; subst.
       move=>[_->]; exists xs => //.
     Qed.
 
@@ -513,26 +523,26 @@ Module Nur (U : Unif).
 
     Lemma suffix_catlG s1 s2 s3 s3':
       size_goals s3 = size_goals s3' ->
-      suffix_goals (append_goals s1 s3) (append_goals s2 s3') = eqb_goals s3 s3' && suffix_goals s1 s2.
+      suffix_goals (append_goals s1 s3) (append_goals s2 s3') = (s3 == s3') && suffix_goals s1 s2.
     Proof.
       elim: s3 s3' s1 s2 => //=.
         move=>[]//= s1 s2; rewrite !cats0G//.
       move=> g gs IH []//=y ys s1 s2 [H1].
       have:= IH _ _ _ H1.
-      case: eqbPG => /=.
+      case: eqP => /=.
         move=>?; subst.
-      Admitted.
+    Admitted.
 
     Fixpoint memG e l := 
       match l with
       | no_goals => false
-      | more_goals x xs => eqb_G e x || memG e xs
+      | more_goals x xs => (e == x) || memG e xs
       end.    
 
     #[refine] Global Instance IsList_goals : @IsList G goals :=
       {| nilC := no_goals; consC := more_goals; map:= mapG;
          appendC := append_goals; size := size_goals; take:= take_goals; drop := drop_goals;
-         behead := behead_goals; suffix := suffix_goals; eqB := eqb_goals; all:= all_goals;
+         behead := behead_goals; suffix := suffix_goals; eqB x y := x == y; all:= all_goals;
          mem := memG |}.
     Proof.
       all: try by move=>//.
@@ -546,10 +556,9 @@ Module Nur (U : Unif).
       move=> n; elim: n => //.
       move=> n; elim: n => //.
       move=> n; elim: n => //.
-      apply: eqb_reflG.
       apply: eqbPG.
       move=> l1; elim: l1 => //= _ x IH l2; rewrite IH; lia.
-      move=> xs; elim: xs => //=x xs H; rewrite eqb_reflG eqb_G_refl//.
+      move=> xs; elim: xs => //=x xs H; rewrite eqxx//.
       move=> ++zs; elim: zs => //=x xs IH ys zs; case: ifP => // _; apply: IH.
       move=> n; elim: n => [|n IH] []//=g xs ys []/IH->//.
       move=> n; elim: n => [|n IH][]//= _ xs ys []/IH->//.
@@ -588,10 +597,23 @@ Module Nur (U : Unif).
     : SE.
 
 
-  Ltac fConsA x xs := change (more_alt _ _) with (consC x xs).
-  Ltac fConsG x xs := change (more_goals _ _) with (consC x xs).
+  Ltac fConsA x xs := change (more_alt x xs) with (consC x xs).
+  Ltac fConsG x xs := change (more_goals x xs) with (consC x xs).
   Ltac fNilA := change no_alt with (@nilC _ _ IsList_alts).
   Ltac fNilG := change no_goals with nilC.
+
+  (* Elpi Tactic fold_goal.
+  Elpi Accumulate lp:{{
+    solve (goal _ _ Gty _ _ as R) Y :- 
+      % refine Gty R Y,
+      (pi x y\ sizecopy {{more_alt lp:x lp:y}} {{@consC lp:X lp:Y lp:Z lp:x lp:y}}) ==>
+      copy Gty Z,
+      coq.say {coq.term->string Gty},
+      coq.say {coq.term->string Z},
+      % std.spy!(refine Z R Y),
+      true
+      .
+  }}. *)
 
   Lemma cat_right_same {l1 l2} (l3:alts): 
     l1 ++ l3 = l2 ++ l3 -> l1 = l2.
@@ -625,36 +647,37 @@ Module Nur (U : Unif).
     end.
 
 
-    Definition add_ca alts a :=
-      match a with
-      | cut a1 => cut (a1 ++ alts)
-      | call pr t => call pr t
-      end.
+  Definition add_ca alts a :=
+    match a with
+    | cut a1 => cut (a1 ++ alts)
+    | call pr t => call pr t
+    end.
 
-    Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
-      match ats with
-      | no_alt => nilC
-      | more_alt hd tl => (add_ca_deep_goals bt hd) ::: (add_ca_deep bt tl)
-      end
-    with add_ca_deep_goals bt gl :=
-      match gl with
-      | no_goals => nilC 
-      | more_goals hd tl => (add_ca_deep_g bt hd) ::: (add_ca_deep_goals bt tl)
-      end
-    with add_ca_deep_g bt g :=
-      match g with
-      | call pr t => call pr t 
-      | cut ca => cut ((add_ca_deep bt ca) ++ bt)
-      end.
+  Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
+    match ats with
+    | no_alt => nilC
+    | more_alt (hd,xs) tl => (hd, add_ca_deep_goals bt xs) ::: (add_ca_deep bt tl)
+    end
+  with add_ca_deep_goals bt gl :=
+    match gl with
+    | no_goals => nilC 
+    | more_goals hd tl => (add_ca_deep_g bt hd) ::: (add_ca_deep_goals bt tl)
+    end
+  with add_ca_deep_g bt g :=
+    match g with
+    | call pr t => call pr t 
+    | cut ca => cut ((add_ca_deep bt ca) ++ bt)
+    end.
 
   Definition save_goals (a: alts) (gs b:goals) := map (add_ca a) b ++ gs.
 
-  Definition save_alts (a : alts) (gs: goals) (bs : alts) := map (save_goals a gs) bs.
+  Definition save_alts (a : alts) (gs: goals) (bs : alts) := 
+    map (fun '((s,x): Sigma * goals) => (s, save_goals a gs x)) bs.
 
   Definition empty_ca_G g :=
     match g with call _ _ | cut no_alt => true | _ => false end.
   Definition empty_caG goals := all empty_ca_G goals.
-  Definition empty_ca alts := all empty_caG alts.
+  Definition empty_ca alts := all (fun x => empty_caG (snd x)) alts.
 
   Definition a2g p A :=
     match A with
@@ -671,7 +694,7 @@ Module Nur (U : Unif).
   Fixpoint aa2gs p (b: (seq (Sigma * R))) := 
     match b with
     | nil => nilC
-    | x::xs => (a2gs p x.2.(premises)) ::: (aa2gs p xs)
+    | x::xs => (x.1, a2gs p x.2.(premises)) ::: (aa2gs p xs)
     end.
 
   Definition a2gs1 p (b : Sigma * R) :=
@@ -683,10 +706,10 @@ Module Nur (U : Unif).
   | CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s ((cut ca) ::: gl) a s1 r
   | CallE p s s1 a b bs gl r t : 
     F p t s = [:: b & bs ] -> 
-      nur s (save_goals a gl (a2gs1 p b)) (save_alts a gl ((aa2gs p) bs) ++ a) s1 r -> 
+      nur b.1 (save_goals a gl (a2gs1 p b)) (save_alts a gl ((aa2gs p) bs) ++ a) s1 r -> 
         nur s ((call p t) ::: gl) a s1 r
-  | FailE p s s1 t gl a al r : 
-    F p t s = [::] -> nur s a al s1 r -> nur s ((call p t) ::: gl) (a ::: al) s1 r.
+  | FailE p s s1 s2 t gl a al r : 
+    F p t s = [::] -> nur s1 a al s2 r -> nur s ((call p t) ::: gl) ((s1, a) ::: al) s2 r.
 
   Lemma nur_consistent {s G x xs1 xs2 s1 s2} :
     nur s G x s1 xs1 -> nur s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
@@ -699,7 +722,7 @@ Module Nur (U : Unif).
       apply: IH.
       inversion H2; subst; move: H9; rewrite H => //-[??]; subst.
       apply: H10.
-    - move=> p1 s s1 t gl a al r H H1 IH xs2 s2 H2.
+    - move=> p1 s s1 s2 t gl a al r H H1 IH xs2 s3 H2.
       apply: IH.
       inversion H2; subst => //.
       congruence.
@@ -723,14 +746,14 @@ Module Nur (U : Unif).
   Lemma cut_add_ca {l x}: is_cutb' (add_ca l x) = is_cutb' x.
   Proof. case: x => //=*. Qed.
 
-  Definition make_lB0 (xs:alts) (lB0: goals) := map (fun x => x ++ lB0) xs.
+  Definition make_lB0 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, x ++ lB0)) xs.
   
-  Definition make_lB01 (xs:alts) (lB0: goals) := map (fun x => lB0 ++ x) xs.
+  Definition make_lB01 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, lB0 ++ x)) xs.
 
   Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
     match A with
     | no_alt => nilC
-    | more_alt hd tl => (add_deepG bt l hd) ::: (add_deep bt l tl)
+    | more_alt (s,hd) tl => (s,add_deepG bt l hd) ::: (add_deep bt l tl)
     end
     with add_deepG (bt: alts) (l: goals) (A : goals) :=
     match A with
@@ -760,39 +783,39 @@ Module Nur (U : Unif).
       the "great^n uncles" on the right of a cut ARE alternatives
     *)
 
-  Fixpoint state_to_list (A: state) (bt : alts) : alts :=
+  Fixpoint state_to_list (A: state) s (bt : alts) : alts :=
     match A with
-    | OK => (nilC) ::: nilC
-    | Top => (nilC) ::: nilC
+    | OK => (s, nilC) ::: nilC
+    | Top => (s, nilC) ::: nilC
     | Bot => nilC
     | Dead => nilC
-    | Goal _ Cut => ((cut nilC) ::: nilC) ::: nilC
-    | Goal pr (Call t) => ((call pr t) ::: nilC) ::: nilC
-    | Or A _ B => 
-      let lB := state_to_list B nilC in
-      let lA := state_to_list A lB in
+    | Goal _ Cut => (s, ((cut nilC) ::: nilC)) ::: nilC
+    | Goal pr (Call t) => (s, ((call pr t) ::: nilC)) ::: nilC
+    | Or A s1 B => 
+      let lB := state_to_list B (if is_dead A then s else s1) nilC in
+      let lA := state_to_list A s lB in
       add_ca_deep bt (lA ++ lB)
     | And A B0 B =>
-      let lB0 := state_to_list B0 bt in
-      let lA   := state_to_list A bt in
-      if lA is more_alt x xs then 
+      let lB0 := state_to_list B0 s bt in
+      let lA   := state_to_list A s bt in
+      if lA is more_alt (slA, x) xs then 
         (* lA is split into the current goal x and the future alternatives xs *)
         (* in a valid state lB0 has length 0 or 1 (it is a (potentially killed) base and) *)
         match lB0 with
         | no_alt => 
           (* the reset point is empty: it kill all the alternatives in the cut-to *)
-          let lB   := state_to_list B bt in
+          let lB   := state_to_list B s bt in
           make_lB01 lB (kill x)
-        | more_alt hd no_alt =>
+        | more_alt (sB0,hd) no_alt =>
           (* the reset point exists, it has to be added to all cut-to alternatives *)
-          let x := add_deepG bt hd x in
+          let xz := add_deepG bt hd x in
           let xs := add_deep bt hd xs in 
           (* each alt in xs must have hd has rightmost conjunct  *)
           let xs := make_lB0 xs hd in
           (* xs are alternatives that should be added in the deep cuts in B *)
-          let lB   := state_to_list B (xs ++ bt) in
+          let lB   := state_to_list B s (xs ++ bt) in
           (* lB are alternatives, each of them have x has head *)
-          make_lB01 lB x ++ xs
+          (make_lB01 lB xz) ++ xs
         | _ => nilC (*unreachable in a valid_state*)
         end
       else nilC
