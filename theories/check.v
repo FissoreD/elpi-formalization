@@ -277,7 +277,7 @@ Module check (U:Unif).
 
   Lemma expand_next_alt {sP sV s1 A s2 B} : 
     all_cut_followed_by_det sP sV -> no_free_alt sP sV A ->
-      expand s1 A = Success s2 B -> forall s3 : Sigma, next_alt s3 B = None.
+      expand s1 A = Success s2 B -> forall s3, next_alt s3 B = None.
   Proof.
     move=> H.
     elim: A s1 B s2 => //.
@@ -315,7 +315,7 @@ Module check (U:Unif).
   Lemma expandedb_next_alt_done {sP sV s A s1 B b}: 
     all_cut_followed_by_det sP sV -> 
       no_free_alt sP sV A -> expandedb s A (Done s1 B) b ->
-        forall s0 : Sigma, next_alt s0 B = None.
+        forall s0, next_alt s0 B = None.
   Proof.
     remember (Done _ _) as d eqn:Hd => Hz + H.
     elim: H s1 B Hd => //; clear -Hz.
@@ -333,10 +333,10 @@ Module check (U:Unif).
     has_cut A -> next_alt s A = Some (s', B) -> has_cut B.
   Proof.
     elim: A s B s' => //.
-    - move=>/=p[]//??? _ [_<-]//.
+    - move=>/=p[]//[]?//?? _ [_<-]//.
     - move=> A HA s1 B HB s C s' /=.
       move=>/andP[kA kB].
-      do 3 rewrite is_ko_next_alt//; rewrite !if_same//.
+      by rewrite !is_ko_next_alt//; rewrite !if_same//.
     - move=> A HA B0 HB0 B HB s C s' /=.
       case: ifP => //= dA /orP[].
         move=> cA.
@@ -365,14 +365,14 @@ Module check (U:Unif).
     no_free_alt sP sV A -> next_alt s1 A = Some (s2, B) -> no_free_alt sP sV B.
   Proof.
     elim: A s1 B s2 => //.
-    - move=> ??? _ [_<-]//.
-    - move=>/=????? H [_<-]//.
+    - move=> []//??? _ [_<-]//.
+    - move=>/=??[]//??? _ [_<-]//.
     - move=> A HA s B HB s1 C s2 /=.
       move=>/andP[fA].
       case: (ifP (is_dead _)) => dA.
         rewrite has_cut_dead//.
         move=> fB.
-        have:= HB s1 _ _ fB.
+        have:= HB (Some s) _ _ fB.
         case X: next_alt => //[[s3 D]] /(_ _ _ erefl) fD[_ <-]/=.
         rewrite no_alt_dead// has_cut_dead// fD.
       case: ifP => cA.
@@ -427,24 +427,24 @@ Module check (U:Unif).
   Lemma expand_next_alt_failed {sP sV A B C s s'}:
     all_cut_followed_by_det sP sV ->
       no_free_alt sP sV A -> expand s A = Failure B ->
-        next_alt s B = Some (s', C) -> no_free_alt sP sV C.
+        forall sN, next_alt sN B = Some (s', C) -> no_free_alt sP sV C.
   Proof.
     move=> Hz.
     elim: A B C s s' => //.
     - move=> /=????? []<-//.
     - move=> /=????? []<-//.
     - move=> ? []//.
-    - move=> A HA s1 B HB C D s s' /=.
+    - move=> A HA s1 B HB C D s s' /=++sN.
       move=>/andP[fA].
       case: (ifP (is_dead _)) => dA.
         rewrite has_cut_dead// => fB.
         have:= HB _ _ s _ fB.
-        case: expand => // E /(_ _ _ _ erefl) + [<-]/=.
+        case: expand => // E /(_ _ _ _ erefl (Some s1)) + [<-]/=.
         rewrite dA.
-        case: next_alt => // [[s2 F]]/(_ _ _ erefl) + [_<-]/=.
+        case: next_alt => //[[s2 F]] /(_ _ _ erefl) + [_<-]/=.
         by move=> /= ->; rewrite has_cut_dead// no_alt_dead.
       case: ifP => //.
-        have := HA _ _ s _ fA.
+        have := HA _ _ s _ fA _ sN.
         case X: expand => // [E] /(_ _ _ _ erefl) + cA + [?]; subst.
         rewrite /= (expand_not_dead dA X).
         have:= @expand_has_cut _ s cA; rewrite X/= => -[]// cE.
@@ -461,7 +461,7 @@ Module check (U:Unif).
         (* move=>[_<-]/=. *)
         (* rewrite no_alt_dead// has_cut_dead// fB. *)
       move=> cA /eqP->.
-      have:= HA _ _ s _ fA.
+      have:= HA _ _ s _ fA _ sN.
       case X: expand => // [E] /(_ _ _ _ erefl) + [<-]/=.
       have kcB := @is_ko_cutr B.
       rewrite /= (expand_not_dead dA X) (is_ko_next_alt kcB).
@@ -469,7 +469,7 @@ Module check (U:Unif).
       case Y: next_alt => //[[s2 F]].
       move=> /(_ _ _ erefl) fF [_ <-] /=.
       by rewrite fF no_alt_cut cutr2 eqxx if_same.
-    - move=> A HA B0 _ B HB C D s s' /=.
+    - move=> A HA B0 _ B HB C D s s' /= ++sN.
       move=> /orP[].
         move=> kA; rewrite is_ko_expand// => -[<-]/=.
         rewrite is_ko_failed// is_ko_next_alt// if_same//.
@@ -483,42 +483,44 @@ Module check (U:Unif).
           case Y: next_alt => //[[s3 F]|].
             by move=>[_ <-]/=; rewrite cB0 (has_cut_next_alt cB Y) fB0 (no_free_alt_next_alt fB Y) orbT.
           by case: next_alt => // [[s3 F]]; case:ifP=>//_[_<-]/=; rewrite cB0 fB0 orbT.
-        have:= HB _ _ s1 _ fB.
+        have:= HB _ _ s1 _ fB _ sN.
         case Z: expand => // [F] /(_ _ _ _ erefl) + [<-]/=.
         case: ifP => //dE; case:ifP=>FE.
           move=> _.
           by case: next_alt => //[[s3 G]]; case:ifP=>//_[_<-]/=; rewrite cB0 fB0 orbT.
         case Y: next_alt => //[[s3 G]|].
           move=>/(_ _ _ erefl) nG.
-          have [? ->]:= next_alt_some Y s.
+          (* have [? ->]:= next_alt_some Y s. *)
           have := @expand_has_cut _ s1 cB.
           rewrite Z/==>-[]//cF.
           by move=>[_ <-]/=; rewrite cB0 nG fB0 (has_cut_next_alt cF Y) orbT.
-        move=>_; rewrite (next_alt_none Y).
+        have [??]:= expand_solved_same X; subst => _.
+        (* move=>_; rewrite (next_alt_none Y). *)
         case W: next_alt => //[[s3 G]]; case: ifP => // _[_<-]/=.
         by rewrite cB0 fB0 orbT.
-      have:= HA _ _ s _ fA.
+      have:= HA _ _ s _ fA _ sN.
       case X: expand => //[E|s1 E].
         move=> /(_ _ _ _ erefl) + [<-]/=.
         case: ifP => // dS.
         case: ifP => //fE.
           case: next_alt => //[[s4 G]] /(_ _ _ erefl) fG.
           by case: ifP => // _[_<-]/=; rewrite fB0 fG orbT orbT.
-        case Y: (next_alt s B) => //[[s4 G]|].
+        case Y: (next_alt sN B) => //[[s4 G]|].
           by move=> _ [_<-]/=; rewrite (no_free_alt_next_alt fB Y) fB0 (expand_no_free_alt Hz fA X) orbT orbT.
         case: next_alt => //[[s3 G]] /(_ _ _ erefl)fG; case:ifP=>//_[_<-]/=.
         by rewrite fG fB0 orbT orbT.
       move=> _.
-      have:= HB _ _ s1 _ fB.
+      have:= HB _ _ s1 _ fB _ sN.
       case Z: expand => // [F] /(_ _ _ _ erefl) {}HB [<-]/=.
       have /= fE := expand_no_free_alt Hz fA X.
       case: ifP => //dE; case:ifP=>FE.
         case W: next_alt => //[[s3 G]]; case:ifP=>//_[_<-]/=.
         by rewrite fB0 (no_free_alt_next_alt fE W) orbT orbT.
+      move: HB.
       case W: next_alt => //[[s3 G]|].
-        have [? XX]:= next_alt_some W s1.
-        by move: HB => /(_ _ _ XX) fG[_<-]/=; rewrite fG fB0 fE orbT orbT.
-      case T: next_alt => //[[s3 G]]; case:ifP=>//_[_<-]/=.
+        (* have [? XX]:= next_alt_some W s1. *)
+        move=> /(_ _ _ erefl) fG [_<-]/=; rewrite fG fB0 fE orbT orbT//.
+      case T: next_alt => //[[s3 G]] => _; case:ifP => //[fB01][_<-]/=.
       by rewrite fB0 (no_free_alt_next_alt fE T) orbT orbT.
     Qed.
 
@@ -526,18 +528,16 @@ Module check (U:Unif).
     all_cut_followed_by_det sP sV ->
       no_free_alt sP sV A ->
         expandedb s A (Failed B) b1 -> 
-          next_alt s B = Some (s', C) -> no_free_alt sP sV C.
+          forall sN, next_alt sN B = Some (s', C) -> no_free_alt sP sV C.
   Proof.
     remember (Failed _) as f eqn:Hf => Hz + H.
     elim: H B C s' Hf => //; clear -Hz.
     - move=> s A B HA ? C s' [<-] fA nB.
       apply: expand_next_alt_failed Hz fA HA nB.
-    - move=> s s' r A B b HA HB IH C D s1 ? fA nB; subst.
-      have [? H]:= next_alt_some nB s'.
-      apply: IH erefl (expand_no_free_alt Hz fA HA) H.
-    - move=> s s' r A B b HA HB IH C D s1 ? fA nB; subst.
-      have [? H]:= next_alt_some nB s'.
-      apply: IH erefl (expand_no_free_alt Hz fA HA) H.
+    - move=> s s' r A B b HA HB IH C D s1 ? fA sN nB; subst.
+      apply: IH erefl (expand_no_free_alt Hz fA HA) _ nB.
+    - move=> s s' r A B b HA HB IH C D s1 ? fA sN nB; subst.
+      apply: IH erefl (expand_no_free_alt Hz fA HA) _ nB.
   Qed.
 
   Definition is_det A := forall s s' B,
@@ -553,10 +553,10 @@ Module check (U:Unif).
     - move=> s s' A B C b HA -> fA s2.
       have H := expandedb_next_alt_done H1 fA HA _.
       have sB := expanded_Done_success HA.
-      by have:= next_alt_clean_success sB (H empty)=>->.
+      have//:= next_alt_clean_success sB (H s2).
     - move=> s s' r A B C D b1 b2 b3 HA HB HC IH ? fA s2; subst.
       apply: IH.
-      apply: expandedb_next_alt_failed H1 fA HA HB.
+      apply: expandedb_next_alt_failed H1 fA HA _ HB.
   Qed.
 
   Lemma main {sP sV p t}:

@@ -792,7 +792,7 @@ Module Nur (U : Unif).
     | Goal _ Cut => (s, ((cut nilC) ::: nilC)) ::: nilC
     | Goal pr (Call t) => (s, ((call pr t) ::: nilC)) ::: nilC
     | Or A s1 B => 
-      let lB := state_to_list B (if is_dead A then s else s1) nilC in
+      let lB := state_to_list B s1 nilC in
       let lA := state_to_list A s lB in
       add_ca_deep bt (lA ++ lB)
     | And A B0 B =>
@@ -804,7 +804,7 @@ Module Nur (U : Unif).
         match lB0 with
         | no_alt => 
           (* the reset point is empty: it kill all the alternatives in the cut-to *)
-          let lB   := state_to_list B s bt in
+          let lB   := state_to_list B slA bt in
           make_lB01 lB (kill x)
         | more_alt (sB0,hd) no_alt =>
           (* the reset point exists, it has to be added to all cut-to alternatives *)
@@ -813,11 +813,39 @@ Module Nur (U : Unif).
           (* each alt in xs must have hd has rightmost conjunct  *)
           let xs := make_lB0 xs hd in
           (* xs are alternatives that should be added in the deep cuts in B *)
-          let lB   := state_to_list B s (xs ++ bt) in
+          let lB   := state_to_list B slA (xs ++ bt) in
           (* lB are alternatives, each of them have x has head *)
           (make_lB01 lB xz) ++ xs
         | _ => nilC (*unreachable in a valid_state*)
         end
       else nilC
     end.
+
+  Section test.
+    Parameter s1 : Sigma.
+    Parameter p : program.
+    Parameter sx : Sigma.
+    Parameter p1 : program.
+    Notation B := (Goal p Cut).
+    Notation R := (Goal p1 Cut).
+    Notation g := (And (Or OK s1 B) R OK).
+    Goal next_alt (Some sx) g = Some (s1, And (Or Dead s1 B) R R).
+    Proof. move => //=. Qed.
+    Goal clean_success g = And (Or OK s1 B) R Bot.
+    Proof. move => //=. Qed.
+
+    Goal valid_state ((And (Or OK s1 B) R Bot)).
+    Proof. move=> //=. Abort.
+    Goal valid_state ((And (Or Dead s1 B) R R)).
+    Proof. move=> //=. Abort.
+
+    Goal forall s3 l,
+      state_to_list (And (Or OK s1 B) R Bot) s3 l = 
+        state_to_list (And (Or Dead s1 B) R R) s3 l.
+    Proof.
+      move=>s3 l/=.
+      rewrite /=!cat0s ?cat0s.
+      rewrite subnn take0 drop0//.
+    Qed.
+  End test.
 End Nur.

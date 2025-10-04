@@ -388,18 +388,21 @@ Module valid_state (U:Unif).
     case: A => //=-[]//.
   Qed.*)
 
-  Lemma next_alt_aux_base_and {A s}: base_and A -> next_alt s A = Some (s, A).
+  Lemma next_alt_aux_base_and {A s}: base_and A -> next_alt (Some s) A = Some (s, A).
   Proof. elim: A s => //; move=>/=[]//p a _ B0 HB0 B HB s/andP[/eqP->bB]/=. rewrite HB//. Qed.
+
+  Lemma next_alt_aux_base_and_none {A}: base_and A -> next_alt None A = None.
+  Proof. elim: A => //; move=>/=[]//p a _ B0 HB0 B HB /andP[/eqP->bB]/=. rewrite HB//. Qed.
 
   Lemma base_and_ko_failed {A}: base_and_ko A -> failed A.
   Proof. case: A => // -[]//. Qed.
 
-  Lemma next_alt_aux_base_and_ko {A s}: base_and_ko A -> next_alt s A = None.
-  Proof. elim: A s => //=; move=>/=[]//p a _ B0 HB0 B HB s/andP[/eqP->bB]/=. Qed.
+  Lemma next_alt_aux_base_and_ko {A}: base_and_ko A -> forall s, next_alt s A = None.
+  Proof. elim: A => //=; move=>/=[]//p a _ B0 HB0 B HB s/andP[/eqP->bB]/=. Qed.
 
   Lemma next_alt_aux_bbAnd {A} s: 
-    bbAnd A -> next_alt s A = Some (s, A) \/ next_alt s A = None.
-  Proof. rewrite/bbAnd => /orP[/next_alt_aux_base_and|/next_alt_aux_base_and_ko]->; auto. Qed.
+    bbAnd A -> next_alt (Some s) A = Some (s, A) \/ (forall s, next_alt s A = None).
+  Proof. rewrite/bbAnd => /orP[/next_alt_aux_base_and->|]; auto => /next_alt_aux_base_and_ko; auto. Qed.
 
   Lemma base_and_failed {A}: base_and A -> failed A = false.
   Proof. elim: A => //=-[]//=p a _ A HA B HB /andP[]//. Qed.
@@ -438,7 +441,7 @@ Module valid_state (U:Unif).
     - move=>/=[]//p a _ B0 HB0 B HB s/andP[/eqP->bB]/=. 
   Qed.
 
-  Lemma next_alt_aux_base_or_none {A s}: base_or_aux A -> next_alt s A = None -> A = Bot.
+  Lemma next_alt_aux_base_or_none {A s}: base_or_aux A -> next_alt (Some s) A = None -> A = Bot.
   Proof. 
     elim: A s => //. 
     - move=> A HA s B HB s1 /= /andP[bA bB].
@@ -451,8 +454,8 @@ Module valid_state (U:Unif).
     next_alt s1 A = Some (s2, B) -> ((A = Top) * (B = Top)) \/ ((A <> Top) /\ (B <> Top)).
   Proof.
     case: A => //.
-    - move=> [??]; subst; auto.
-    - move=> p a [_<-]; right => //.
+    - case: s1 => []//?[??]; subst; auto.
+    - case: s1 => //s p a [_<-]; right => //.
     - move=> ???/=.
       case: ifP; case: next_alt => //; try by case: ifP => //; case: next_alt => //[[]]????[_<-]; right.
       all: try by (move=> [] ??? -[_<-]; right).
@@ -469,8 +472,8 @@ Module valid_state (U:Unif).
       next_alt s1 A = Some (s2, B) -> ((is_or A = is_or B) * (is_and A = is_and B)).
   Proof.
     elim: A s1 s2 B => //.
-    - move=> ????[_<-]//.
-    - move=> p /= ?????[_<-]//.
+    - move=> []//??? _ [_<-]//.
+    - move=> p /= ?[]//??? _ [_<-]//.
     - move=> A HA s B HB s1 s2 C/=.
       case:ifP => //[dA vB|dA vA].
         case: next_alt => //-[s3 D][_<-]//.
@@ -505,8 +508,8 @@ Module valid_state (U:Unif).
     -> valid_state B.
   Proof.
     elim: A s1 s2 B => //.
-    + move=>/=??? _[_<-]//.
-    + move=> p a s1 s2 A/= _[_<-]//.
+    + move=>/=[]//??? _[_<-]//.
+    + move=> p a []//s1 s2 A/= _[_<-]//.
     + move=> A HA s B HB s1 s2 C/=.
       case: ifP => //[dA vB|dA /andP[vA bB]].
         case X: next_alt => //[[s3 D]] [_<-]/=.
@@ -538,9 +541,16 @@ Module valid_state (U:Unif).
         move: bB; rewrite /bbAnd => /orP[].
           move=>->; rewrite if_same//.
         move=>/base_and_ko_failed; rewrite fB//.
-      rewrite (next_alt_aux_base_and bB).
-      move=>[_<-]/=.
-      rewrite vA sA eqxx bB fA oA// bbAnd_is_and///bbAnd bB//.
+      case: s1 => //[s1|].
+        rewrite (next_alt_aux_base_and bB).
+        move=>[_<-]/=.
+        rewrite vA sA eqxx bB fA oA// bbAnd_is_and///bbAnd bB//.
+      rewrite (next_alt_aux_base_and_none bB).
+      have:= HA None _ _ vA.
+      case N: next_alt => //[[s3 D]] => /(_ _ _ erefl) vD.
+      case: ifP => //fB [_<-]/=.
+      rewrite eqxx (base_and_valid bB) /bbAnd bbAnd_is_and///bbAnd bB// !if_same  vD.
+      rewrite -(is_and_or_next_alt vA N) oA//.
   Qed.
 
   Lemma base_and_clean_success {A}:

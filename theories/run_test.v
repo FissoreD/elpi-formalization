@@ -113,7 +113,7 @@ Module Test5.
   Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
   Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
 
-  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) s1 r /\ next_alt empty r = None.
+  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) s1 r /\ next_alt None r = None.
   Proof.
     repeat eexists.
     apply: run_backtrack.
@@ -170,7 +170,7 @@ Module Test6.
   Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
   Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
 
-  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) s1 r /\ next_alt empty r = None.
+  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) s1 r /\ next_alt None r = None.
   Proof.
     repeat eexists.
     apply: run_backtrack.

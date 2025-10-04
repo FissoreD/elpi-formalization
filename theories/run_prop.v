@@ -520,49 +520,61 @@ Module RunP (A: Unif).
         by rewrite (is_dead_next_alt dA) in HN.
       have /= dB := expanded_not_dead dA HE.
       have [b3 H] := expanded_or_correct_left_fail _ dA HE s2 E.
-      have {}HN: next_alt s (Or B s2 (if b1 then cutr E else E)) = Some (s', Or C s2 (if b1 then cutr E else E)).
-        move=>/=; rewrite ((next_alt_dead HN)) HN//.
+      (* have {}HN: next_alt s (Or B s2 (if b1 then cutr E else E)) = Some (s', Or C s2 (if b1 then cutr E else E)).
+        move=>/=; rewrite ((next_alt_dead HN)) HN//. *)
       have [b4 {}IH1]:= IH s2 E.
       have [b5]:= IH s2 (cutr E).
       rewrite cutr2 if_same => IH2.
-      case: b1 H HN {HE} => H HN; eexists; apply: run_backtrack H HN _ erefl; eassumption.
+      case: b1 H HN {HE} => //=H HN.
+        eexists; apply: run_backtrack H _ _ erefl.
+        rewrite/=dB HN//.
+        apply: IH2.
+      eexists; apply: run_backtrack H _ _ erefl.
+      rewrite/=dB HN//.
+      apply: IH1.
   Qed.
 
-  (*Lemma run_or_complete {s1 s2 A B SOL altAB}:
-    run s1 (Or A s2 B) (Done SOL altAB) ->
-      (exists altA, run s1 A (Done SOL altA)) \/ 
-        (exists altB, run_classic s1 A Failed /\ run s2 B (Done SOL altB)).
+  Lemma run_or_complete {s1 s2 A B SOL altAB}:
+    run s1 (Or A s2 B) SOL altAB ->
+      (exists altA, run s1 A SOL altA) \/ 
+        (exists altB, run s2 B SOL altB).
   Proof.
     remember (Or _ _ _) as O1 eqn:HO1.
-    remember (Done _ _) as D eqn:HD.
-    move=> H.
-    elim: H s2 A B altAB SOL HO1 HD; clear => //=.
-    + move=> s st s' alt + s2 A B altAB SOL ? [] /[subst2] /simpl_expand_or_solved [].
-      + move=> [HA HB].
-        right; eexists; repeat split.
-        + apply: run_classic_fail HA.
-        + apply: run_done HB.
-      + move=> [X [HA HB]]; left.
-        eexists; apply: run_done HA.
-    + by move=> s ? st1 st2 + H1 IH s2 A B altAB SOL /[subst2] /simpl_expand_or_cut.
-    + move=> s ? st1 st2 + H1 IH s2 A B altAB SOL /[subst2] /simpl_expand_or_expanded [|[|[|]]].
-      + move=> [A' [HA]] /[subst1].
-        move: IH => /(_ _ _ _ _ _ erefl erefl) [[altA H]|[altA[HL HR]]].
-        - left; eexists; apply: run_step HA H.
-        - right; eexists; split; [apply: run_classic_step HA HL|apply: HR].
-      + move=> [A' [HA]] /[subst1].
-        move: IH => /(_ _ _ _ _ _ erefl erefl) [[altA H]|[?[HL HR]]].
-        - by left; eexists; apply: run_cut HA H.
-        - by move: (run_cut_fail HR).
-      + move=> [B' [HA [HB]]] /[subst1].
-        move: IH => /(_ _ _ _ _ _ erefl erefl) [[? H]|[?[HL HR]]].
-        by destruct (run_Failure_and_Done HA H).
-        right; eexists; split; auto; apply: run_step HB HR.
-      + move=> [B' [HA [HB]]] /[subst1].
-        move: IH => /(_ _ _ _ _ _ erefl erefl) [[? H]|[? [HL HR]]].
-        by destruct (run_Failure_and_Done HA H).
-        right; eexists; split; auto; apply: run_cut HB HR.
-  Qed. *)
+    move=> [b H].
+    elim: H s2 A B HO1 => //=; clear.
+    + move=> s st s' alt C b H ? s2 D E ?; subst.
+      have /= := expandedb_same_structure H.
+      case: alt H => //= D' s2' E' H /and3P[/eqP? _ _]; subst.
+      have:= expanded_or_complete H.
+      move=> [][dD].
+        move=> [b'[H1?]]; subst.
+        left.
+        eexists (clean_success D'), _.
+        apply: run_done H1 erefl.
+      move=> [?[H1]] H2; subst.
+      admit.
+    + move=> s s1 s2 A B C D b1 b2 b3 H1 H2 H3 IH ? s4 E F ?; subst.
+      have /= := expandedb_same_structure H1.
+      case: B H1 H2 => //= D' s2' E' H1 + /and3P[/eqP? _ _]; subst.
+      case: ifP => dD'.
+        case X: next_alt => //=[[s4 E2]][??]; subst.
+        have [[x [b {}IH]]|[x [b{}IH]]] := IH _ _ _ erefl.
+          admit.
+        left; do 2 eexists.
+        apply: run_backtrack _ _ IH erefl.
+        admit.
+        admit.
+      case X: next_alt => //=[[s4 E2]|].
+        move=> [??]; subst.
+        have [[x [b {}IH]]|[x [b{}IH]]] := IH _ _ _ erefl.
+          admit.
+        admit.
+      case: ifP => //dE.
+      case Y: next_alt => //=[[s4 E2]][??]; subst.
+      have [[x [b {}IH]]|[x [b{}IH]]] := IH _ _ _ erefl.
+        admit.
+      admit.
+  Abort.
 
   (*   Lemma run_or_fail {s1 s2 A B b}:
     run s1 (Or A s2 B) Failed ->
