@@ -1,11 +1,10 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
-From det Require Import run_prop.
+From det Require Import run.
+Import Language.
 
-
-Module valid_state (U:Unif).
-  Module RunP := RunP(U).
-  Import RunP Run Language.
+Section valid_state.
+  Variable u : Unif.
   
   Fixpoint base_and s :=
     match s with
@@ -106,7 +105,7 @@ Module valid_state (U:Unif).
   Lemma is_or_cutl {A}: is_or A -> is_or (cutl A).
   Proof. elim: A => //A HA s B HB/=; rewrite fun_if/=if_same//. Qed.
 
-  Lemma is_or_big_or {p s t}: is_or (big_or p s t).
+  Lemma is_or_big_or {p s t}: is_or (big_or u p s t).
   Proof. rewrite /big_or; case: F => //-[]//. Qed.
 
 
@@ -145,7 +144,7 @@ Module valid_state (U:Unif).
     + by move=> [[s r] rs] IH r1 /=; rewrite IH base_and_big_and.
   Qed.
 
-  Lemma valid_state_big_or {pr s t} : valid_state (big_or pr s t).
+  Lemma valid_state_big_or {pr s t} : valid_state (big_or u pr s t).
   Proof.
     case: t; rewrite /big_or//=.
     + move=> c; case: F => // -[] //s1 r rs/=; rewrite bbOr_big_or_aux//.
@@ -280,7 +279,7 @@ Module valid_state (U:Unif).
         move=>/=; rewrite dA/=; apply: HB sB vB.
       move=>/=/andP[vA bB]; rewrite HA// bbOr_cutr//is_dead_cutl dA//is_and_cutl//.
     move=> A HA B0 HB0 B HB /=/andP[sA sB].
-    rewrite sA/=success_cut//=.
+    rewrite/=success_cut sA/=.
     move=>/and5P[oA vA aB vB bB0].
     rewrite is_or_cutl// HB// /bbAnd bbAnd_cutl//orbT //HA// is_and_cutl//.
   Qed.
@@ -292,7 +291,7 @@ Module valid_state (U:Unif).
     by rewrite (valid_state_compose_and VB bbB0).
   Qed. *)
 
-  Lemma is_or_expand {s A r}: is_or A -> expand s A = r -> is_or (get_state r).
+  Lemma is_or_expand {s A r}: is_or A -> expand u s A = r -> is_or (get_state r).
   Proof.
     move=> + <-; clear r. 
     elim: A s => //.
@@ -300,7 +299,7 @@ Module valid_state (U:Unif).
     - move=> A HA s B HB s1/= _; case: ifP => dA; case: expand => //.
   Qed.
 
-  Lemma expand_top_right {s1 A r}: expand s1 A = r -> get_state r <> Top.
+  Lemma expand_top_right {s1 A r}: expand u s1 A = r -> get_state r <> Top.
   Proof. 
     move=><-; clear r; elim: A s1 => //.
     - move=> p []// t s1; rewrite /=/big_or; case: F=>//[[]]//.
@@ -312,7 +311,7 @@ Module valid_state (U:Unif).
       case: expand => //??; rewrite get_state_And//.
   Qed.
 
-  Lemma is_and_expand {s A r}: is_and A -> expand s A = r -> is_and (get_state r).
+  Lemma is_and_expand {s A r}: is_and A -> expand u s A = r -> is_and (get_state r).
   Proof.
     move=> + <-; clear r. 
     elim: A s => //.
@@ -328,7 +327,7 @@ Module valid_state (U:Unif).
   Proof. rewrite/bbAnd=>->//. Qed.
 
   Lemma valid_state_expand {s A r}:
-    valid_state A -> expand s A = r -> valid_state (get_state r).
+    valid_state A -> expand u s A = r -> valid_state (get_state r).
   Proof.
     move=>+<-; clear r.
     elim: A s => //; try by move=> s r // *; subst.
@@ -337,22 +336,22 @@ Module valid_state (U:Unif).
       case:ifP => //[dA vB|dA/andP[vA bB]].
         rewrite get_state_Or/=dA IHB//.
       have /= := IHA s1 vA.
-      case X: expand => //= H; rewrite (expand_not_dead dA X) H//bbOr_cutr//.
+      case X: expand => //= H; rewrite (expand_not_dead _ dA X) H//bbOr_cutr//.
     + move=> A HA B0 _ B HB s1 /=/and5P[oA vA aB].
       case: ifP => [sA vB /= bB0 | sA /eqP->]/=.
         rewrite succes_is_solved//=.
-        have:= HB s1 vB.
+        have:= HB (get_substS s1 A) vB.
         case X: expand => //[s2 C|s2 C|C|s2 C]/=vC; try by rewrite sA (is_and_expand aB X) vA vC oA//.
-        rewrite is_or_cutl//valid_state_cut//(is_and_expand aB X) success_cut// vC //= /bbAnd bbAnd_cutl//orbT//.
+        rewrite is_or_cutl//valid_state_cut//(is_and_expand aB X) success_cut// vC sA //= /bbAnd bbAnd_cutl//orbT//.
       case: ifP => [fA bB|fA bB].
         rewrite failed_expand//=vA sA eqxx /= bB oA fA aB//.
       have:= HA s1 vA.
       case X: expand => //=[|||s2 C] H; last first; [|rewrite H eqxx /bbAnd bB if_same base_and_valid//if_same (is_or_expand oA X) aB//..].
       have:= HB s2 (base_and_valid bB).
       have /=oC := is_or_expand oA X.
-      have [_ sC]:= expand_solved_success X.
+      have [_ sC]:= expand_solved_same u X.
       case Y: expand => //= H1; rewrite ?oC?H?H1?bB?sC?(base_and_bbAnd bB) (is_and_expand (base_and_is_and bB) Y)//.
-      rewrite is_or_cutl//valid_state_cut//success_cut//= /bbAnd bbAnd_cutl//?orbT//base_and_bbAnd//.
+      rewrite is_or_cutl//valid_state_cut//success_cut//=sC /bbAnd bbAnd_cutl //?orbT// base_and_bbAnd//.
   Qed.
 
   Lemma valid_state_big_or_aux {pr s l} : valid_state (big_or_aux pr s l).
@@ -364,7 +363,7 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma valid_state_expanded {s1 A r}:
-    valid_state A ->  expanded s1 A r -> valid_state (get_state_exp r).
+    valid_state A ->  expanded u s1 A r -> valid_state (get_state_exp r).
   Proof.
     move=> + [b H].
     elim: H; clear.
@@ -597,7 +596,7 @@ Module valid_state (U:Unif).
   Qed.
 
   Lemma runP_run {s1 A s2 B}:
-    valid_state A -> run s1 A s2 B -> valid_state B.
+    valid_state A -> run u s1 A s2 B -> valid_state B.
   Proof.
     move=> + [b H]; elim H; clear.
     + move=> s1 s2 A B C b EA -> VA.
@@ -631,14 +630,14 @@ Module valid_state (U:Unif).
     move=> []//.
   Qed.
 
-  Fixpoint base_and_expanded_done_state A :=
+  (* Fixpoint base_and_expanded_done_state A :=
     match A with
     | And (Goal _ Cut) _ A => base_and_expanded_done_state A
     | Top => true
     | _ => false
-    end.
+    end. *)
 
-  Lemma base_and_expanded_done {s1 A s2 B b}:
+  (* Lemma base_and_expanded_done {s1 A s2 B b}:
     base_and A -> expandedb s1 A (Done s2 B) b -> base_and_expanded_done_state A /\ s1 = s2.
   Proof.
     elim: A s1 B s2 b => //.
@@ -658,5 +657,5 @@ Module valid_state (U:Unif).
         repeat split => //.
       - inversion H0 => // ; destruct a => //; move: H5 => [_ ?]; subst.
         by have:= expandedb_big_or_not_done H2.
-  Qed.
+  Qed. *)
 End valid_state.

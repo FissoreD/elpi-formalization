@@ -1,13 +1,13 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang elpi_prop.
+From det Require Import lang run run_prop valid_state elpi elpi_prop.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
 
-Module NurValidState (U : Unif).
+Import Language.
 
-  Module NurP := NurProp(U).
-  Import NurP Nur VS RunP Run Language.
+Section NurValidState.
+  Variable u : Unif.
 
   Fixpoint valid_caG (gs:goals) (a:alts) (bt:alts) {struct gs} :=
       match gs with
@@ -20,14 +20,14 @@ Module NurValidState (U : Unif).
           let ca' := take n ca in
           valid_caG xs ca' bt
           && valid_caA_aux ca ca' bt
-        else (eqB ca nilC) && empty_caG xs
+        else (ca == nilC) && empty_caG xs
         end
       with valid_caA_aux ca ca1 bt : bool :=
-        if eqB ca bt then true
+        if ca == bt then true
         else
         match ca with
         | no_alt => false
-        | more_alt hd tl => valid_caG hd (behead ca1) bt && valid_caA_aux tl (behead ca1) bt
+        | more_alt hd tl => valid_caG hd.2 (behead ca1) bt && valid_caA_aux tl (behead ca1) bt
       end
       .
 
@@ -35,7 +35,7 @@ Module NurValidState (U : Unif).
   Fixpoint valid_caA L1 L2 (bt:alts) {struct L1} :=
     match L1 with
     | no_alt => true
-    | more_alt hd tl => valid_caG hd (behead L2) bt && valid_caA tl (behead L2) bt
+    | more_alt hd tl => valid_caG hd.2 (behead L2) bt && valid_caA tl (behead L2) bt
     end.
 
   Definition valid_ca L := valid_caA L L nilC.
@@ -48,9 +48,9 @@ Module NurValidState (U : Unif).
   Proof. rewrite//. Qed.
 
 
-  Goal forall r1 r2 z, valid_ca (((cut r1) ::: ((cut r2) ::: nilC)) ::: z ++ r1) -> suffix r2 r1.
+  Goal forall s r1 r2 z, valid_ca ((s, (cut r1) ::: ((cut r2) ::: nilC)) ::: z ++ r1) -> suffix r2 r1.
   Proof.
-    move=> r1 r2 z/=.
+    move=> s r1 r2 z/=.
     rewrite/valid_ca/=/valid_caA/= !suffix0s -!andbA.
     rewrite !subn0 take_size !cats0.
     move => /and4P[]//.
@@ -98,7 +98,7 @@ Module NurValidState (U : Unif).
 
   Lemma valid_caA_aux_refl l x:
     valid_caA_aux l x l.
-  Proof. case: l => //=y ys; rewrite eqb_refl//. Qed.
+  Proof. case: l => //=y ys; rewrite eqxx//. Qed.
 
   Lemma valid_ca_valid_ca_aux {xs ys bt}:
     size xs <= size ys -> valid_caA xs ys bt = valid_caA_aux (xs ++ bt) ys bt.
@@ -107,7 +107,7 @@ Module NurValidState (U : Unif).
       rewrite valid_caA_aux_refl//.
     case: ys => //y ys.
     rewrite behead_cons !size_cons => H.
-    rewrite IH//; case: eqBP => // H1.
+    rewrite IH//; case: eqP => // H1.
     have:= f_equal size H1.
     move=>/(_ _ IsList_alts).
     rewrite size_cons size_cat; lia.
@@ -132,7 +132,7 @@ Module NurValidState (U : Unif).
     move=>[_ _|ca] gs.
       apply: push_bt_outG.
     case: ifP => //=; last first.
-      move=> _ Hbt /andP[/eqBP->] H; rewrite H suffixs0 eqb_refl.
+      move=> _ Hbt /andP[/eqP->] H; rewrite H suffixs0 eqxx.
       case: eqBP => //->; rewrite suffix0s take0.
       rewrite empty_caG_valid//.
     case: ifP => //; last first.
@@ -149,50 +149,29 @@ Module NurValidState (U : Unif).
       rewrite -catA size_cat addnK take_size_cat// in H3.
     clear g gs H3.
     elim: ca {xs} bt l Hbt H1 H2 H4 => //=.
-      move=> xs bt l.
+      move=> /= xs bt l.
       rewrite suffixs0 => /eqBP->//.
-    move=> g gs IH bt l Hbt.
+    move=> [s g] gs IH bt l Hbt.
     rewrite size_cons.
     rewrite{1 2}/suffix/=.
-    case: eqBP.
-      case: bt Hbt => //=[|bt0 bts].
-        case: l => [|l0 ls]//=.
-        rewrite !cat0s.
-        move=>_[??]; subst; rewrite !eqb_refl.
-        rewrite eqb_reflG eqb_reflA//.
-      rewrite behead_cons=>/andP[H1 H2][??]; subst.
-      rewrite !eqb_reflG eqb_reflA/=.
-      case: eqBP => // _.
-      case: eqbPA.
-        move=> H.
-        have:= f_equal size H.
-        move=> /(_ _ IsList_alts).
-        rewrite size_cons size_cat; lia.
-      move=> _.
-      rewrite !size_cat -addSn addnK.
-      change (more_alt _ _) with (consC bt0 (append_alts bts l)).
-      rewrite -cat_cons.
-      rewrite take_size_cat//behead_cons H1/=.
-      move=> H3 _ _.
-      rewrite -valid_ca_valid_ca_aux//.
+    fConsA (s, g) gs.
     replace (suffix_alts _ _) with (suffix l gs) => //.
     replace (suffix_alts (bt++l) _) with (suffix (bt++l) gs) => //.
-    move=> H1.
-    case: eqBP => //=.
-    move=> H2.
-    case: eqbPA => //=.
-      move=>?; subst => //.
-    move=> H3.
-    move=> H4.
-    case: eqbPA => //.
-      case: bt Hbt H1 IH => //=bt1 bts Hbt H1 IH [??]; subst.
-      rewrite !size_cat size_cons subnn take0 -addSn addnK.
-      rewrite cat_cons.
-      change (more_alt _ _) with (consC g (append_alts bts l)).
-      rewrite -cat_cons.
-      rewrite take_size_cat//.
-    move=> H5; move: H4.
-    move=>/suffixP[ca'?]; subst .
+    case X : ((s, g) ::: gs == l); move: X => /eqP //.
+    case eqP.
+      move=>->//.
+    move=> + _.
+    case: eqP.
+      move=>/[dup]+->; rewrite eqxx.
+      case: bt Hbt => //-[s1 x] xs.
+      fConsA (s1, x) xs => /=.
+      rewrite behead_cons cat_cons => /andP[H1 H2] [???] _ _ _ _; subst.
+      rewrite size_cat -addSn addnK take_cons behead_cons take_size_cat//.
+      rewrite H1 -valid_ca_valid_ca_aux//.
+    case: eqP.
+      move=>->//.
+    move=> _ H1 H2.
+    move=>/suffixP[x]?; subst.
     rewrite suffix_catl// =>/andP[_/suffixP[ca?]]; subst.
     rewrite !size_cat -addnA -addSn addnK.
     rewrite -catA take_cons take_size_cat//behead_cons.
@@ -214,9 +193,9 @@ Module NurValidState (U : Unif).
   with valid_caG_cat_empty_ca hd x tl b:
       empty_caG hd -> valid_caG (x ++ hd) tl b = valid_caG x tl b.
   Proof.
-    all: rewrite/make_lB0/valid_caA/empty_caG in valid_ca_make_lB0_empty_ca valid_caG_cat_empty_ca* => H.
+    all: rewrite/make_lB0/empty_caG in valid_ca_make_lB0_empty_ca valid_caG_cat_empty_ca* => H.
     {
-      case: X => //=g gs.
+      case: X => //=-[s g] gs.
       rewrite valid_ca_make_lB0_empty_ca//.
       rewrite valid_caG_cat_empty_ca//.
     }
@@ -245,17 +224,16 @@ Module NurValidState (U : Unif).
   Proof.
     move=>/=.
     {
-    case: ca => [|x xs] Hhd.
+    case: ca => [|[s x] xs] Hhd/=.
       change no_alt with (-nilCA).
       rewrite suffixs0.
       move=>/eqBP->//.
-    move=> /=.
-    change (more_alt _ _) with (x:::xs).
+    fConsA (s, x) xs => /=.
     rewrite size_cons.
-    case: eqBP => //.
+    case: eqP => //.
       move=><- _ _; rewrite size_cons subnn take0 cat0s valid_caA_aux_refl//.
     rewrite/suffix/=.
-    case: eqbPA => //=.
+    case: eqP => //=.
       move=>->//.
     move=> _ H; change (suffix_alts _ _) with (suffix l xs).
     case: l H => //.
@@ -286,7 +264,7 @@ Module NurValidState (U : Unif).
     remember (g ::: gs) as G eqn:HG.
     set n := subn _ _.
     move=>/=.
-    case: eqBP => // _.
+    case: eqP => // _.
     move=> H3 /andP[H4 H5].
     rewrite valid_ca_aux_add_deep_make_lB0//andbT /make_lB0 map_cons behead_cons.
     rewrite -/(make_lB0 (take n (add_deep G hd xs)) hd).
@@ -378,9 +356,8 @@ Module NurValidState (U : Unif).
       valid_caG (add_ca_deep_goals l x) (add_ca_deep l xs) l
     .
   Proof.
-    rewrite /valid_caA in valid_ca_add_ca_deep valid_caG_add_ca_deepG *.
     {
-      case: stl l => //= x xs l.
+      case: stl l => //= -[s x] xs l.
       rewrite/behead/=.
       move=>/andP[H1 H2]; rewrite valid_ca_add_ca_deep//andbT valid_caG_add_ca_deepG//.
     }
@@ -398,8 +375,8 @@ Module NurValidState (U : Unif).
     clear pref gs H2.
     elim: ca l H3 => //=.
       move=> l/=; rewrite cat0s valid_caA_aux_refl//.
-    move=> g gs IH l.
-    case: eqBP => //H.
+    move=> [s g] gs IH l/=.
+    case: eqP => //H.
     rewrite !behead_cons => /andP[H1 H2].
     rewrite valid_caG_add_ca_deepG//IH//.
   Qed.
@@ -407,9 +384,9 @@ Module NurValidState (U : Unif).
   (********************************************************************)
   (* VALID STATE RELATIONS                                            *)
   (********************************************************************)
-  Lemma base_and_valid A r l rs bt:
+  Lemma base_and_valid_caA A s r l rs bt:
     base_and A ->
-      state_to_list A l = r -> valid_caA r rs bt.
+      state_to_list A s l = r -> valid_caA r rs bt.
   Proof.
     rewrite /valid_caA.
     move=>H H1; subst.
@@ -418,29 +395,28 @@ Module NurValidState (U : Unif).
     rewrite H2/=andbT empty_caG_valid//H1//.
   Qed.
 
-  Lemma base_and_ko_valid A r l rs bt:
+  Lemma base_and_ko_valid_caA A s r l rs bt:
     base_and_ko A ->
-      state_to_list A l = r -> valid_caA r rs bt.
+      state_to_list A s l = r -> valid_caA r rs bt.
   Proof. move=>/base_and_ko_state_to_list-><-//. Qed.
 
-  Lemma base_or_aux_ko_valid A r l rs bt:
+  Lemma base_or_aux_ko_valid_caA A s r l rs bt:
     base_or_aux_ko A ->
-      state_to_list A l = r -> valid_caA r rs bt.
+      state_to_list A s l = r -> valid_caA r rs bt.
   Proof. move=>/base_or_aux_ko_state_to_list-><-//. Qed.
 
-      Lemma base_or_aux_valid A r rs:
-    base_or_aux A -> state_to_list A nilC = r -> valid_caA r rs nilC.
+  Lemma base_or_aux_valid_caA A s0 r rs:
+    base_or_aux A -> state_to_list A s0 nilC = r -> valid_caA r rs nilC.
   Proof.
     move=>+<-; clear r.
-    elim: A rs => //=.
-    - move=> A HA s B HB rs/=/andP[bA bB].
+    elim: A rs s0 => //=.
+    - move=> A HA s B HB rs s0 /=/andP[bA bB].
       rewrite add_ca_deep_empty1.
       have [hd H]:= base_and_state_to_list bA.
       rewrite H/= HB//=.
-      have/=:= base_and_valid _ _ _ (rs) nilC bA (H nilC).
-      rewrite/eqB/=.
+      have/=:= base_and_valid_caA _ _ _ _ (rs) nilC bA (H nilC empty).
       move=> /(_ _ IsList_alts _ IsList_alts)//.
-    - move=> []//p a _ _ _ B HB rs/=/andP[/eqP->] bB.
+    - move=> []//p a _ _ _ B HB rs s0/=/andP[/eqP->] bB.
       have [h H]:= base_and_state_to_list bB.
       rewrite H.
       have H1:=base_and_empty_ca bB H.
@@ -450,52 +426,51 @@ Module NurValidState (U : Unif).
       rewrite (empty_caG_valid _ H1)//.
   Qed.
 
-  Lemma bbOr_valid A r rs:
+  Lemma bbOr_valid_caA A s0 r rs:
     bbOr A ->
-      state_to_list A nilC = r -> valid_caA r rs nilC.
+      state_to_list A s0 nilC = r -> valid_caA r rs nilC.
   Proof.
     rewrite/bbOr=>/orP[].
-      apply: base_or_aux_valid.
-    move=>/base_or_aux_ko_valid H/H -/(_ rs nilC)//.
+      apply: base_or_aux_valid_caA.
+    move=>/base_or_aux_ko_valid_caA H/H -/(_ rs nilC)//.
   Qed.
 
 
   (********************************************************************)
   (* FINAL LEMMA                                                      *)
   (********************************************************************)
-  Lemma valid_state_valid_ca_help {A r l}:
-    state_to_list A l = r ->
+  Lemma valid_state_valid_ca_help {A s0 r l}:
+    state_to_list A s0 l = r ->
     valid_state A ->
       valid_caA r r l.
   Proof.
     move=> <-; clear r.
-    elim: A l => //=.
-    - move=> p[|t]//=l _.
+    elim: A l s0 => //=.
+    - move=> p[|t]//=l s0 _.
       rewrite suffix0s suffixs0/=.
       case: eqBP => //->//.
-    - move=> A HA s B HB l/=.
+    - move=> A HA s B HB l s0/=.
       case:ifP => [dA vB|dA /andP[vA bB]].
         rewrite state_to_list_dead//=cat0s.
-        set stl := state_to_list B no_alt.
-        have:= HB _ vB.
+        set stl := state_to_list B s nilC.
+        have:= HB _ _ vB.
         fold stl => H.
         apply: valid_ca_add_ca_deep.
         apply: H.
       apply: valid_ca_add_ca_deep; rewrite ?size_cat//.
       rewrite /valid_ca valid_ca_split.
       rewrite drop_size_cat//.
-      rewrite HB//?VS.bbOr_valid//andbT.
-      have:= HA (state_to_list B nilC) vA.
+      rewrite HB//?bbOr_valid//andbT.
+      have:= HA (state_to_list B s nilC) s0 vA.
       set sB := state_to_list B _ => HH.
       apply: push_bt_out => //.
-      apply: bbOr_valid bB _ => //.
+      apply: bbOr_valid_caA bB _ => //.
       rewrite cats0//.
-      apply: HH.
-    - move=> A HA B0 _ B HB l/= /and5P[oA vA aB]++.
-      have:= HA l vA => {}HA.
+    - move=> A HA B0 _ B HB l s0/= /and5P[oA vA aB]++.
+      have:= HA l s0 vA => {}HA.
       case:ifP => /=[sA vB bB0|sA /eqP?]; subst.
         move: HA.
-        have [xs SA] := success_state_to_list_hd l sA vA; rewrite SA.
+        have SA:= success_state_to_list vA sA; rewrite SA/=.
         move: bB0 => /orP[]bB; last first.
           rewrite (base_and_ko_state_to_list bB)//=.
           rewrite !make_lB01_empty2 behead_cons => H1.
@@ -515,10 +490,10 @@ Module NurValidState (U : Unif).
           rewrite valid_ca_make_lB0_empty_ca?Hhd//.
           apply: valid_ca_add_deep_make_lB0; rewrite//Hhd//.
         apply: HB vB.
-      case lA: state_to_list => [|x xs]//=.
+      case lA: state_to_list => [|[s x] xs]//=.
       move=> bB; have {bB}: bbAnd B by move: bB; case:ifP => //; rewrite /bbAnd => _ -> //.
       move=>/orP[]bB; last first.
-        rewrite (base_and_ko_state_to_list bB)//.
+        rewrite !(base_and_ko_state_to_list bB)//=.
       have [hd H]:= base_and_state_to_list bB.
       have /=H2 := base_and_empty_ca bB H.
       rewrite H/=H/= behead_cons.
@@ -530,8 +505,8 @@ Module NurValidState (U : Unif).
       apply: valid_caG_add_deep_make_lB0 => //.
   Qed.
 
-  Lemma valid_state_valid_ca A r:
-    valid_state A -> state_to_list A nilC = r -> valid_ca r.
+  Lemma valid_state_valid_ca A s r:
+    valid_state A -> state_to_list A s nilC = r -> valid_ca r.
   Proof.
     rewrite/valid_ca => H1 H2.
     have:= valid_state_valid_ca_help H2 H1.

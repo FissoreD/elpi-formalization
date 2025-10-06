@@ -10,27 +10,28 @@ Definition build_progr l := {|
     rules := l;
 |}.
 
-Module UAxioms <: Unif.
-  Axiom unify : Tm -> Tm -> Sigma -> option Sigma.
-  Axiom matching : Tm -> Tm -> Sigma -> option Sigma.
-End UAxioms.
-Module RunAxiom:= Run(UAxioms).
-
-Module Test1.
-
-  Module U <: Unif.
-    Definition unify    (t1 t2 : Tm) (s : Sigma) :=
+(* Module RunAxiom:= Run(UAxioms). *)
+    Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
       match t1, t2 with
       | Code (v X), _ => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t2 else s.(sigma) x) |} | Some t => if t == t2 then Some s else None end
       | _, Code (v X) => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t1 else s.(sigma) x) |} | Some t => if t == t1 then Some s else None end
       | _, _ => if t1 == t2 then Some s else None
       end.
 
-    Definition matching (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
-  End U.
+    Definition matchingF (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
+  Definition unif : Unif := {|
+    unify := unifyF;
+    matching := matchingF
+  |}.
 
-  Module Run := Run(U).
-  Import Run.
+Module Test1.
+
+  (* Module U <: Unif. *)
+  (* End U. *)
+
+  (* Module Run := Run(U). *)
+  (* Import Run. *)
+
 
   Definition v_X := Code (v 0).
   Definition pred_q x  := Comb (Code (p 1)) x.
@@ -53,9 +54,9 @@ Module Test1.
   Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
   Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
 
-  Goal exists r, run empty (Goal p_test (Call (pred_q (Data 1)))) s2 r.
+  Goal exists r, runb unif empty (Goal p_test (Call (pred_q (Data 1)))) s2 r false.
   Proof.
-    do 2 eexists.
+    eexists.
     apply: run_backtrack => //.
     - apply: expanded_step => //=.
       rewrite /big_or/F/select/=.
@@ -87,13 +88,11 @@ Module Test1.
             apply: expanded_done => //=.
             move=>/=.
             reflexivity.
+            reflexivity.
   Qed.
 End Test1.
 
 Module Test5.
-
-  Module Run := Run(Test1.U).
-  Import Run.
 
   Definition v_X := Code (v 0).
   Definition pred_f x  := Comb (Code (p 1)) x.
@@ -113,7 +112,7 @@ Module Test5.
   Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
   Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
 
-  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) s1 r /\ next_alt None r = None.
+  Goal exists r, runb unif empty (Goal p_test (Call (pred_f (Data 0)))) s1 r false /\ next_alt None r = None.
   Proof.
     repeat eexists.
     apply: run_backtrack.
@@ -147,9 +146,6 @@ End Test5.
 
 Module Test6.
 
-  Module Run := Run(Test1.U).
-  Import Run.
-
   Definition v_X := Code (v 0).
   Definition pred_f x  := Comb (Code (p 1)) x.
   Definition pred_g x  := Comb (Code (p 0)) x.
@@ -170,7 +166,7 @@ Module Test6.
   Definition s1 := {| sigma := (fun x => if x == 0 then Some (Data 1) else None) |}.
   Definition s2 := {| sigma := (fun x => if x == 0 then Some (Data 2) else None) |}.
 
-  Goal exists r, run empty (Goal p_test (Call (pred_f (Data 0)))) s1 r /\ next_alt None r = None.
+  Goal exists r, runb unif empty (Goal p_test (Call (pred_f (Data 0)))) s1 r false /\ next_alt None r = None.
   Proof.
     repeat eexists.
     apply: run_backtrack.
@@ -208,12 +204,12 @@ End Test6.
 
 
 Module Test2.
-  Import RunAxiom.
-  Goal expand empty (Or OK empty OK) = Success empty (Or OK empty OK) . by []. Qed.
+  (* Import RunAxiom. *)
+  Goal expand unif empty (Or OK empty OK) = Success empty (Or OK empty OK) . by []. Qed.
 
-  Goal forall p, run empty (Or (Goal p Cut) empty OK) empty (Or Bot empty Bot).
+  Goal forall p, runb unif empty (Or (Goal p Cut) empty OK) empty (Or Bot empty Bot) false.
     move=> pr //=.
-    eexists. apply: run_done => //=. 
+    apply: run_done => //=. 
     apply: expanded_step => //=.
     by apply: expanded_done => /=.
     move=>/=.
@@ -221,8 +217,8 @@ Module Test2.
   Qed.
 
   Goal forall p r, 
-    run empty (Or (Goal p Cut) empty r) empty (Or Bot empty (cutr r)).
-    move=> p; eexists.
+    runb unif empty (Or (Goal p Cut) empty r) empty (Or Bot empty (cutr r)) false.
+    move=> p r.
     apply: run_done.
     apply: expanded_step => //=.
     apply: expanded_done => //=.
@@ -230,13 +226,13 @@ Module Test2.
     reflexivity.
   Qed.
 
-  Goal run empty (Or OK empty (Or OK empty OK)) empty (Or Bot empty (((Or OK empty OK)))).
-  Proof. eexists; apply: run_done => //=. apply: expanded_done => //=.
+  Goal runb unif empty (Or OK empty (Or OK empty OK)) empty (Or Bot empty (((Or OK empty OK)))) false.
+  Proof. apply: run_done => //=. apply: expanded_done => //=.
     move=>/=.
     reflexivity. Qed.
 
   (* (Dead \/ !) \/ C *)
-  Goal expand empty (Or (Or Dead empty (Goal (build_progr [::]) Cut)) empty Top) = Expanded empty (Or (Or Dead empty OK) empty Top) .
+  Goal expand unif empty (Or (Or Dead empty (Goal (build_progr [::]) Cut)) empty Top) = Expanded empty (Or (Or Dead empty OK) empty Top) .
   Proof.
     move=>//=.
   Qed.

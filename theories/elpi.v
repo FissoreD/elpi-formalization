@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang valid_state.
+From det Require Import lang run run_prop valid_state.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
@@ -19,8 +19,8 @@ Section aux.
     @flatten R [seq [::] | _ <- l] = [::].
   Proof. elim: l => //. Qed.
 
-  Lemma cats20 {T: Type} {X Y : list T}: X ++ Y = [::] -> X = [::] /\ Y = [::].
-  Proof. by destruct X. Qed.
+  (* Lemma cats20 {T: Type} {X Y : list T}: X ++ Y = [::] -> X = [::] /\ Y = [::].
+  Proof. by destruct X. Qed. *)
 
   Lemma size_list {T : Type} {l1 l2: list T}: l1 = l2 -> size l1 = size l2.
   Proof. move=>->//. Qed.
@@ -134,77 +134,90 @@ Section aux.
 
 End aux.
 
-Module Nur (U : Unif).
+Class IsList {Th Tl : Type}  := {
+  nilC : Tl;
+  consC : Th -> Tl -> Tl;
+  appendC : Tl -> Tl -> Tl;
+  eqB : Tl -> Tl -> bool;
+  size   : Tl -> nat;
+  take   : nat -> Tl -> Tl;
+  drop   : nat -> Tl -> Tl;
+  behead : Tl -> Tl;
+  suffix : Tl -> Tl -> bool;
+  all: (Th -> bool) -> Tl -> bool;
+  map: (Th -> Th) -> Tl -> Tl;
+  mem: Th -> Tl -> bool;
 
-  Class IsList {Th Tl : Type}  := {
-      nilC : Tl;
-      consC : Th -> Tl -> Tl;
-      appendC : Tl -> Tl -> Tl;
-      eqB : Tl -> Tl -> bool;
-      size   : Tl -> nat;
-      take   : nat -> Tl -> Tl;
-      drop   : nat -> Tl -> Tl;
-      behead : Tl -> Tl;
-      suffix : Tl -> Tl -> bool;
-      all: (Th -> bool) -> Tl -> bool;
-      map: (Th -> Th) -> Tl -> Tl;
-      mem: Th -> Tl -> bool;
+  cat_take_drop : forall (n0 : nat) s, appendC (take n0 s) (drop n0 s) = s;
+  cat_cons : forall x s1 s2, appendC (consC x s1) s2 = consC x (appendC s1 s2);
+  cats0  : forall (x: Tl), appendC x nilC = x;
+  cats20 : forall l1 l2, appendC l1 l2 = nilC -> l1 = nilC /\ l2 = nilC;
+  cat0s  : forall (x: Tl), appendC nilC x = x;
+  catA   : forall l1 l2 l3, appendC l1 (appendC l2 l3) = appendC (appendC l1 l2) l3;
+  suffix0s : forall l, suffix nilC l;
+  suffixs0 : forall l, suffix l nilC = (eqB l nilC);
+  take_size : forall s, take (size s) s = s;
+  drop_size : forall s, drop (size s) s = nilC;
+  size_nil: size nilC = 0;
+  drop0 l : drop 0 l = l;
+  take0 l : take 0 l = nilC;
+  drop_nil n : drop n nilC = nilC;
+  take_nil n : take n nilC = nilC;
+  eqb_refl l1: eqB l1 l1;
+  eqBP l1 l2: reflect (l1 = l2) (eqB l1 l2);
+  size_cat l1 l2: size (appendC l1 l2) = size l1 + size l2;
+  suffix_refl xs : suffix xs xs;
+  suffix_catr xs ys zs : suffix xs ys -> suffix xs (appendC zs ys);
+  take_size_cat n s1 s2: size s1 = n -> take n (appendC s1 s2) = s1;
+  drop_size_cat n s1 s2: size s1 = n -> drop n (appendC s1 s2) = s2;
+  take_cons n x xs: take n.+1 (consC x xs) = consC x (take n xs);
+  drop_cons n x xs: drop n.+1 (consC x xs) = (drop n xs);
+  behead_cons x xs: behead (consC x xs) = xs;
+  suffixP s1 s2: reflect (exists s2', s2 = appendC s2' s1) (suffix s1 s2);
+  size_suffix s1 s2: suffix s1 s2 -> size s1 <= size s2;
+  suffix_catl: forall s1 s2 s3 s3', size s3 = size s3' ->
+    suffix (appendC s1 s3) (appendC s2 s3') = (eqB s3 s3') && suffix s1 s2;
+  all_cat p l1 l2: all p (appendC l1 l2) = all p l1 && all p l2;
+  all_cons p x xs: all p (consC x xs) = p x && all p xs; 
+  size_cons x xs: size (consC x xs) = (size xs).+1;
+  map_cat F l1 l2 : map F (appendC l1 l2) = appendC (map F l1) (map F l2);
+  map_cons F l1 l2 : map F (consC l1 l2) = consC (F l1) (map F l2);
+  size_map F l1 : size (map F l1) = size l1;
+  map_id l1 : map id l1 = l1;
+}.
+Declare Scope SE.
+Global Infix "++" := appendC : SE.
+Open Scope SE.
+Arguments nilC : simpl never.
+Arguments consC : simpl never.
+Arguments appendC: simpl never.
+Arguments eqB : simpl never.
+Arguments size : simpl never.
+Arguments take : simpl never.
+Arguments drop : simpl never.
+Arguments behead : simpl never.
+Arguments suffix : simpl never.
+Arguments all : simpl never.
+Arguments map : simpl never.
+Arguments mem : simpl never.
 
-      cat_take_drop : forall (n0 : nat) s, appendC (take n0 s) (drop n0 s) = s;
-      cat_cons : forall x s1 s2, appendC (consC x s1) s2 = consC x (appendC s1 s2);
-      cats0  : forall (x: Tl), appendC x nilC = x;
-      cats20 : forall l1 l2, appendC l1 l2 = nilC -> l1 = nilC /\ l2 = nilC;
-      cat0s  : forall (x: Tl), appendC nilC x = x;
-      catA   : forall l1 l2 l3, appendC l1 (appendC l2 l3) = appendC (appendC l1 l2) l3;
-      suffix0s : forall l, suffix nilC l;
-      suffixs0 : forall l, suffix l nilC = (eqB l nilC);
-      take_size : forall s, take (size s) s = s;
-      drop_size : forall s, drop (size s) s = nilC;
-      size_nil: size nilC = 0;
-      drop0 l : drop 0 l = l;
-      take0 l : take 0 l = nilC;
-      drop_nil n : drop n nilC = nilC;
-      take_nil n : take n nilC = nilC;
-      eqb_refl l1: eqB l1 l1;
-      eqBP l1 l2: reflect (l1 = l2) (eqB l1 l2);
-      size_cat l1 l2: size (appendC l1 l2) = size l1 + size l2;
-      suffix_refl xs : suffix xs xs;
-      suffix_catr xs ys zs : suffix xs ys -> suffix xs (appendC zs ys);
-      take_size_cat n s1 s2: size s1 = n -> take n (appendC s1 s2) = s1;
-      drop_size_cat n s1 s2: size s1 = n -> drop n (appendC s1 s2) = s2;
-      take_cons n x xs: take n.+1 (consC x xs) = consC x (take n xs);
-      drop_cons n x xs: drop n.+1 (consC x xs) = (drop n xs);
-      behead_cons x xs: behead (consC x xs) = xs;
-      suffixP s1 s2: reflect (exists s2', s2 = appendC s2' s1) (suffix s1 s2);
-      size_suffix s1 s2: suffix s1 s2 -> size s1 <= size s2;
-      suffix_catl: forall s1 s2 s3 s3', size s3 = size s3' ->
-        suffix (appendC s1 s3) (appendC s2 s3') = (eqB s3 s3') && suffix s1 s2;
-      all_cat p l1 l2: all p (appendC l1 l2) = all p l1 && all p l2;
-      all_cons p x xs: all p (consC x xs) = p x && all p xs; 
-      size_cons x xs: size (consC x xs) = (size xs).+1;
-      map_cat F l1 l2 : map F (appendC l1 l2) = appendC (map F l1) (map F l2);
-      map_cons F l1 l2 : map F (consC l1 l2) = consC (F l1) (map F l2);
-      size_map F l1 : size (map F l1) = size l1;
-      map_id l1 : map id l1 = l1;
-    }.
-  Declare Scope SE.
-  Global Infix "++" := appendC : SE.
-  Open Scope SE.
-  Arguments nilC : simpl never.
-  Arguments consC : simpl never.
-  Arguments appendC: simpl never.
-  Arguments eqB : simpl never.
-  Arguments size : simpl never.
-  Arguments take : simpl never.
-  Arguments drop : simpl never.
-  Arguments behead : simpl never.
-  Arguments suffix : simpl never.
-  Arguments all : simpl never.
-  Arguments map : simpl never.
-  Arguments mem : simpl never.
+Global Notation "x ::: xs" :=
+  (consC x xs)
+  (at level 3, no associativity)
+  : SE.
 
-  Module VS := valid_state(U).
-  Import VS RunP Run Language.
+Global Notation "-[]" :=
+  (nilC)
+  (at level 3, no associativity,only printing)
+  : SE.
+
+Global Notation "(( x ))" := (consC x nilC)
+  (at level 3, no associativity,only printing)
+  : SE.
+
+
+
+Import Language.
 
   Inductive G := 
     | call : program -> Tm -> G
@@ -572,30 +585,6 @@ Module Nur (U : Unif).
     Defined.
   End goals.
 
-  Notation "x ::: xs" :=
-    (consC x xs)
-    (at level 3, no associativity)
-    : SE.
-
-  Notation "-[]" :=
-    (nilC)
-    (at level 3, no associativity,only printing)
-    : SE.
-
-  Notation "(( x ))" := (consC x nilC)
-    (at level 3, no associativity,only printing)
-    : SE.
-
-
-  Notation "-nilCG" :=
-    (@nilC _ _ IsList_goals)
-    (at level 2, no associativity, only parsing)
-    : SE.
-  Notation "-nilCA" :=
-    (@nilC _ _ IsList_alts)
-    (at level 2, no associativity, only parsing)
-    : SE.
-
 
   Ltac fConsA x xs := change (more_alt x xs) with (consC x xs).
   Ltac fConsG x xs := change (more_goals x xs) with (consC x xs).
@@ -700,16 +689,19 @@ Module Nur (U : Unif).
   Definition a2gs1 p (b : Sigma * R) :=
     a2gs p b.2.(premises).
 
+Section Nur.
+
+  Variable u : Unif.
 
   Inductive nur : Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
   | StopE s a : nur s nilC a s a
   | CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s ((cut ca) ::: gl) a s1 r
   | CallE p s s1 a b bs gl r t : 
-    F p t s = [:: b & bs ] -> 
+    F u p t s = [:: b & bs ] -> 
       nur b.1 (save_goals a gl (a2gs1 p b)) (save_alts a gl ((aa2gs p) bs) ++ a) s1 r -> 
         nur s ((call p t) ::: gl) a s1 r
   | FailE p s s1 s2 t gl a al r : 
-    F p t s = [::] -> nur s1 a al s2 r -> nur s ((call p t) ::: gl) ((s1, a) ::: al) s2 r.
+    F u p t s = [::] -> nur s1 a al s2 r -> nur s ((call p t) ::: gl) ((s1, a) ::: al) s2 r.
 
   Lemma nur_consistent {s G x xs1 xs2 s1 s2} :
     nur s G x s1 xs1 -> nur s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
@@ -728,6 +720,7 @@ Module Nur (U : Unif).
       congruence.
   Qed.
 
+End Nur. 
   Definition get_ca g :=
     match g with
     | cut a => a 
@@ -821,11 +814,22 @@ Module Nur (U : Unif).
       else nilC
     end.
 
+Global Notation "-nilCG" :=
+  (@nilC _ _ IsList_goals)
+  (at level 2, no associativity, only parsing)
+  : SE.
+Global Notation "-nilCA" :=
+  (@nilC _ _ IsList_alts)
+  (at level 2, no associativity, only parsing)
+  : SE.
+
+
   Section test.
-    Parameter s1 : Sigma.
-    Parameter p : program.
-    Parameter sx : Sigma.
-    Parameter p1 : program.
+    Variable u : Unif.
+    Variable s1 : Sigma.
+    Variable p : program.
+    Variable sx : Sigma.
+    Variable p1 : program.
     Notation B := (Goal p Cut).
     Notation R := (Goal p1 Cut).
     Notation g := (And (Or OK s1 B) R OK).
@@ -848,4 +852,3 @@ Module Nur (U : Unif).
       rewrite subnn take0 drop0//.
     Qed.
   End test.
-End Nur.

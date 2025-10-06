@@ -1,11 +1,14 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
-From det Require Import run_prop.
+From det Require Import run.
 
-Module check (U:Unif).
-  Module VS := RunP(U).
-  Import Language VS Run.
+Import Language.
 
+(* Module check (U:Unif). *)
+  (* Module VS := Run(U). *)
+  (* Import Language VS. *)
+Section check.
+  Variable u : Unif.
   Print sigT.
   Definition sigV := V -> option S.
 
@@ -144,7 +147,7 @@ Module check (U:Unif).
 
     Lemma is_det_no_free_alt {sP sV t s1} {p:program}:
       all_cut_followed_by_det_aux sP sV p.(rules) -> det_term sP sV t -> 
-        no_free_alt sP sV (big_or p s1 t).
+        no_free_alt sP sV (big_or u p s1 t).
     Proof.
       rewrite /big_or/F.
       case: p => rules modes sig1 /=.
@@ -175,14 +178,14 @@ Module check (U:Unif).
     Admitted.
 
   Lemma expand_has_cut {A s}: 
-    has_cut A -> has_cut (get_state (expand s A)) \/ is_cutbrothers (expand s A).
+    has_cut A -> has_cut (get_state (expand u s A)) \/ is_cutbrothers (expand u s A).
   Proof.
     elim: A s; try by move=> /=; auto.
     - by move=> p []//=; right.
     - move=> A HA s1 B HB s /=/andP[kA kB].
       case: ifP => dA.
-        rewrite (is_ko_expand kB)/=kA kB; auto.
-      rewrite (is_ko_expand kA)/=kA kB; auto.
+        rewrite (is_ko_expand _ kB)/=kA kB; auto.
+      rewrite (is_ko_expand _ kA)/=kA kB; auto.
     - move=> A HA B0 _ B HB s /=/orP[].
         move=> /(HA s); case: expand => [s1|s1||s1] C/= []//; auto => cC.
         - by rewrite cC /=; left.
@@ -211,7 +214,7 @@ Module check (U:Unif).
   Lemma expand_no_free_alt {sP sV s1 A r} : 
     (* valid_state A -> *)
     all_cut_followed_by_det sP sV -> no_free_alt sP sV A -> 
-      expand s1 A = r ->
+      expand u s1 A = r ->
         no_free_alt sP sV (get_state r).
   Proof.
     move=> H + <-; clear r.
@@ -224,7 +227,7 @@ Module check (U:Unif).
         move=> nnB.
         case: ifP => //= dA.
           have:= HB s1 nnB.
-          case: expand => //= [_|_||_] C nnC; rewrite fA nnC cA//.
+          case: expand => //= [_|_||_] C nnC/=; rewrite get_state_Or/=fA/=cA?HB//.
         have:= HA s1 fA.
         have := @expand_has_cut _ s1 cA.
         case X: expand => //= -[]// + ->; rewrite ?nnB ?no_alt_cut //=; try by case: has_cut.
@@ -242,7 +245,7 @@ Module check (U:Unif).
         rewrite get_state_And.
         rewrite /= (HB s1) //.
         have := @expand_has_cut _ s1 cB.
-        case H1: (is_cutbrothers (expand s1 B)).
+        case H1: (is_cutbrothers (expand u s1 B)).
           move=>_/=; rewrite has_cut_cutl// no_free_alt_cutl no_free_alt_cutl !orbT//.
         move=> []//H2; rewrite H2 fB0 cB0 orbT//.
       have:= HA s fA.
@@ -277,7 +280,7 @@ Module check (U:Unif).
 
   Lemma expand_next_alt {sP sV s1 A s2 B} : 
     all_cut_followed_by_det sP sV -> no_free_alt sP sV A ->
-      expand s1 A = Success s2 B -> forall s3, next_alt s3 B = None.
+      expand u s1 A = Success s2 B -> forall s3, next_alt s3 B = None.
   Proof.
     move=> H.
     elim: A s1 B s2 => //.
@@ -287,13 +290,13 @@ Module check (U:Unif).
       move=> /=/andP[fA].
       case: (ifP  (is_dead _)) => dA.
         rewrite has_cut_dead// => fB.
-        have:= HB s1 _ _ fB.
+        have:= HB s _ _ fB.
         case X: expand => ///(_ _ _ erefl) H1 [??]; subst => /= s3.
         rewrite dA H1//.
       have:= HA s1 _ _ fA.
       case X: expand => // [s4 A'] /(_ _ _ erefl) H1 + [_<-] s3/=.
-      rewrite (expand_not_dead dA X) H1.
-      rewrite success_has_cut ?(expand_solved_success X)//.
+      rewrite (expand_not_dead _ dA X) H1.
+      rewrite success_has_cut ?(expand_solved_same _ X)//.
       move=>/eqP->.
       rewrite is_ko_next_alt?if_same//is_ko_cutr//.
     - move=> A HA B0 _ B HB s1 C s2 /=.
@@ -304,7 +307,7 @@ Module check (U:Unif).
         have:= HB s3 _ _ fB.
         have sbF:= has_cut_success cB.
         case Y: expand => ///(_ _ _ erefl) H1 [??] s4;subst.
-        have []:= expand_solved_success Y; congruence.
+        have [[]]:= expand_solved_same _ Y; congruence.
       have:= HA s1 _ _ fA.
       case X: expand => //[s3 D]/(_ _ _ erefl) H1.
       have:= HB s3 _ _ fB.
@@ -314,7 +317,7 @@ Module check (U:Unif).
 
   Lemma expandedb_next_alt_done {sP sV s A s1 B b}: 
     all_cut_followed_by_det sP sV -> 
-      no_free_alt sP sV A -> expandedb s A (Done s1 B) b ->
+      no_free_alt sP sV A -> expandedb u s A (Done s1 B) b ->
         forall s0, next_alt s0 B = None.
   Proof.
     remember (Done _ _) as d eqn:Hd => Hz + H.
@@ -426,7 +429,7 @@ Module check (U:Unif).
 
   Lemma expand_next_alt_failed {sP sV A B C s s'}:
     all_cut_followed_by_det sP sV ->
-      no_free_alt sP sV A -> expand s A = Failure B ->
+      no_free_alt sP sV A -> expand u s A = Failure B ->
         forall sN, next_alt sN B = Some (s', C) -> no_free_alt sP sV C.
   Proof.
     move=> Hz.
@@ -438,7 +441,7 @@ Module check (U:Unif).
       move=>/andP[fA].
       case: (ifP (is_dead _)) => dA.
         rewrite has_cut_dead// => fB.
-        have:= HB _ _ s _ fB.
+        have:= HB _ _ s1 _ fB.
         case: expand => // E /(_ _ _ _ erefl (Some s1)) + [<-]/=.
         rewrite dA.
         case: next_alt => //[[s2 F]] /(_ _ _ erefl) + [_<-]/=.
@@ -446,7 +449,7 @@ Module check (U:Unif).
       case: ifP => //.
         have := HA _ _ s _ fA _ sN.
         case X: expand => // [E] /(_ _ _ _ erefl) + cA + [?]; subst.
-        rewrite /= (expand_not_dead dA X).
+        rewrite /= (expand_not_dead _ dA X).
         have:= @expand_has_cut _ s cA; rewrite X/= => -[]// cE.
         case Y: next_alt => //[[s2 F]|].
           move=> /(_ _ _ erefl) fF fB [_ <-] /=.
@@ -464,7 +467,7 @@ Module check (U:Unif).
       have:= HA _ _ s _ fA _ sN.
       case X: expand => // [E] /(_ _ _ _ erefl) + [<-]/=.
       have kcB := @is_ko_cutr B.
-      rewrite /= (expand_not_dead dA X) (is_ko_next_alt kcB).
+      rewrite /= (expand_not_dead _ dA X) (is_ko_next_alt kcB).
       rewrite if_same.
       case Y: next_alt => //[[s2 F]].
       move=> /(_ _ _ erefl) fF [_ <-] /=.
@@ -494,7 +497,7 @@ Module check (U:Unif).
           have := @expand_has_cut _ s1 cB.
           rewrite Z/==>-[]//cF.
           by move=>[_ <-]/=; rewrite cB0 nG fB0 (has_cut_next_alt cF Y) orbT.
-        have [??]:= expand_solved_same X; subst => _.
+        have [??]:= expand_solved_same _ X; subst => _.
         (* move=>_; rewrite (next_alt_none Y). *)
         case W: next_alt => //[[s3 G]]; case: ifP => // _[_<-]/=.
         by rewrite cB0 fB0 orbT.
@@ -527,7 +530,7 @@ Module check (U:Unif).
   Lemma expandedb_next_alt_failed {sP sV s A B C s' b1}: 
     all_cut_followed_by_det sP sV ->
       no_free_alt sP sV A ->
-        expandedb s A (Failed B) b1 -> 
+        expandedb u s A (Failed B) b1 -> 
           forall sN, next_alt sN B = Some (s', C) -> no_free_alt sP sV C.
   Proof.
     remember (Failed _) as f eqn:Hf => Hz + H.
@@ -541,7 +544,7 @@ Module check (U:Unif).
   Qed.
 
   Definition is_det A := forall s s' B,
-    run s A s' B -> forall s2, next_alt s2 B = None.
+    run u s A s' B -> forall s2, next_alt s2 B = None.
 
   Lemma runb_next_alt {sP sV A}: 
     all_cut_followed_by_det sP sV -> 
@@ -552,7 +555,7 @@ Module check (U:Unif).
     elim: H3 H2; clear -H1 => //.
     - move=> s s' A B C b HA -> fA s2.
       have H := expandedb_next_alt_done H1 fA HA _.
-      have sB := expanded_Done_success HA.
+      have sB := expanded_Done_success u HA.
       have//:= next_alt_clean_success sB (H s2).
     - move=> s s' r A B C D b1 b2 b3 HA HB HC IH ? fA s2; subst.
       apply: IH.

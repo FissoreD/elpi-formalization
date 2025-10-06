@@ -1,17 +1,13 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang elpi.
+From det Require Import lang run run_prop valid_state elpi.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
 Import Language.
 
-Module UAxioms <: Unif.
-  Axiom unify : Tm -> Tm -> Sigma -> option Sigma.
-  Axiom matching : Tm -> Tm -> Sigma -> option Sigma.
-End UAxioms.
+Section Nur.
 
-Module Nur:= Nur(UAxioms).
-Import Nur VS.RunP.Run.
+Variable u : Unif.
 
 Fixpoint of_goals l :=
   match l with
@@ -22,7 +18,7 @@ Fixpoint of_goals l :=
 
 Fixpoint of_alt l :=
   match l with
-  | [::] => nilC
+  | [::] => -nilCA
   | x :: xs => (empty, of_goals x) ::: (of_alt xs)
   end.
 
@@ -391,8 +387,10 @@ Goal forall p l,
   let s := ((Or (Or Dead empty (Goal p Cut)) empty Top)) in
   let bt := of_alt([::] :: l) in
   state_to_list s empty (of_alt l) = of_alt[:: [:: cut bt]; [::]] /\ 
-    state_to_list (clean_success (get_state (expand empty s))) empty (of_alt l) ++ (of_alt l) = bt.
+    state_to_list (clean_success (get_state (expand u empty s))) empty (of_alt l) ++ (of_alt l) = bt.
 Proof.
   simpl get_state.
   move=>//=.
 Qed.
+
+End Nur.
