@@ -1349,26 +1349,6 @@ Section NurEqiv.
       apply: HA fA vA H.
     Qed.
 
-  Lemma gggg {B l s s1 ca gs p r zz} :
-    failed B ->
-    valid_state B ->
-      state_to_list B s l = (s1, save_goals ca gs (a2gs1 p r)) ::: zz ->
-        s1 = r.1.
-  Proof.
-    elim: B l s s1 ca gs p r zz => //=.
-    - move=> A HA s B HB l s1 s2 ca gs p r zz.
-      case: ifP => [dA fB vB|dA fA/andP[vA bB]].
-        rewrite (state_to_list_dead dA).
-        case X: state_to_list => //=[[s3 x]xs].
-        move=> [?+?]; subst => H.
-        apply: HB fB vB _.
-        admit.
-      case X: state_to_list => [|[s3 x]xs]/=.
-        case Y: state_to_list => //=[[s3 x]xs][?+?]; subst.
-        Search failed state_to_list.
-
-  Abort.
-
   Lemma runElpiP: forall A, runElpi A.
   Proof.
     move=> A s B s1 b ++ H.
