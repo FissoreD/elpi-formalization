@@ -3,7 +3,6 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Export lang.
 
-Import Language.
 
 Elpi derive.eqbOK.register_axiom program is_program is_program_inhab program_eqb program_eqb_correct program_eqb_refl.
 Lemma program_eqb_OK : Equality.axiom program_eqb.

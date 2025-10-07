@@ -1,7 +1,5 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang run.
-Import Language.
-
 
 Notation "X &&& Y" := (And X _ Y) (at level 3).
 Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).

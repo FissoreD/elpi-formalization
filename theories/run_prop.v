@@ -1,6 +1,5 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import run.
-Import Language.
 
 Section RunP.
   Variable u: Unif.

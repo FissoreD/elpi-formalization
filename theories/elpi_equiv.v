@@ -3,7 +3,6 @@ From det Require Import lang run run_prop valid_state elpi elpi_prop.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
-Import Language.
 
 Section NurEqiv.
   Variable (u : Unif).

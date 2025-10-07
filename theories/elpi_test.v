@@ -3,8 +3,6 @@ From det Require Import lang run run_prop valid_state elpi.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
-Import Language.
-
 Section Nur.
 
 Variable u : Unif.

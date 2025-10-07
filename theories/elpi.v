@@ -217,7 +217,6 @@ Global Notation "(( x ))" := (consC x nilC)
 
 
 
-Import Language.
 
   Inductive G := 
     | call : program -> Tm -> G
@@ -814,6 +813,49 @@ Fixpoint state_to_list (A: state) s (bt : alts) : alts :=
     else nilC
   end.
   Print program.
+
+(* Definition empty_sig : sigT := fun _ => b(d Func).
+
+Definition empty_prog := {|
+    modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
+    sig := empty_sig;
+    rules := [::];
+|}.
+
+Fixpoint list_to_state (l: alts) : state :=
+  match l with
+  | no_alt => Bot
+  | more_alt x no_alt => 
+    let l := goals_to_state x.2 Bot in
+    Or Bot x.1 l
+  | more_alt x (more_alt y ys as t) => 
+    let t := goals_to_state x.2 (list_to_state t) in
+    Or Bot x.1 t
+  end
+with goals_to_state (l:goals) t: (state):=
+  match l with
+  | no_goals => (Or Top empty t)
+  | more_goals x xs => 
+    let '(l, rr) := goal_to_state x t in
+    let r := goals_to_state xs t  in
+    match rr with
+    | Some _ => 
+      (* let spref := list_to_state pref in
+      let ssuff := list_to_state suff in *)
+      (r)
+    | None => 
+      (And l r r)
+    end
+  end
+with goal_to_state (l:G) (t:state) :=
+  match l with
+  | call pr tm => (CallS pr tm, None)
+  | cut ca => 
+      (* let s := size t - size ca in *)
+      (* (CutS, None) *)
+      (CutS, Some ((list_to_state ca), ca))
+  end
+. *)
 
 Global Notation "-nilCG" :=
   (@nilC _ _ IsList_goals)

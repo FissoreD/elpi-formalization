@@ -1,7 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From det Require Import run.
-Import Language.
 
 Section valid_state.
   Variable u : Unif.
