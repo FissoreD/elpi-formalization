@@ -42,8 +42,8 @@ Section check.
 
   Fixpoint has_cut A :=
     match A with
-    | Goal _ Cut => true
-    | Goal _ (Call _) => false
+    | CutS => true
+    | CallS _ _ => false
     | Bot | Dead => true
     | OK | Top => false
     | And A B0 B => has_cut A || (has_cut B0 && has_cut B)
@@ -73,7 +73,8 @@ Section check.
   *)
   Fixpoint no_free_alt (sP:sigT) (sV:sigV) A :=
     match A with
-    | Goal _ a => det_atom sP sV a
+    | CutS => det_atom sP sV (Cut)
+    | CallS _ a => det_atom sP sV (Call a)
     | Top | Bot | OK => true
     | Dead => true
     (* | And (Or A1 _ A2) B0 B ->
@@ -129,7 +130,7 @@ Section check.
     Lemma all_det_nfa_big_and {p sP sV l}: all (det_atom sP sV) l -> no_free_alt sP sV (big_and p l).
     Proof.
       elim: l => //= a l IH/andP[] H1 H2.
-      by rewrite H1 orbT IH//.
+      case: a IH H1 => //= [|t] IH H1; rewrite ?H1 IH//=orbT//.
     Qed.
 
     Lemma cut_followed_by_det_has_cut {sP sV p l}:
@@ -181,7 +182,6 @@ Section check.
     has_cut A -> has_cut (get_state (expand u s A)) \/ is_cutbrothers (expand u s A).
   Proof.
     elim: A s; try by move=> /=; auto.
-    - by move=> p []//=; right.
     - move=> A HA s1 B HB s /=/andP[kA kB].
       case: ifP => dA.
         rewrite (is_ko_expand _ kB)/=kA kB; auto.
@@ -219,7 +219,7 @@ Section check.
   Proof.
     move=> H + <-; clear r.
     elim: A s1 => //.
-    - move=> p []// t s1 /=.
+    - move=> p t s1 /=.
       apply: is_det_no_free_alt.
       by have:= H p.
     - move=> A HA s B HB s1 /=/andP[fA].
@@ -285,7 +285,6 @@ Section check.
     move=> H.
     elim: A s1 B s2 => //.
     - by move=> /= s1 A s2 _ [_ <-]//.
-    - move=> p []//.
     - move=> A HA s B HB s1 C s2.
       move=> /=/andP[fA].
       case: (ifP  (is_dead _)) => dA.
@@ -336,7 +335,7 @@ Section check.
     has_cut A -> next_alt s A = Some (s', B) -> has_cut B.
   Proof.
     elim: A s B s' => //.
-    - move=>/=p[]//[]?//?? _ [_<-]//.
+    - move=>/=[]?//?? _ [_<-]//.
     - move=> A HA s1 B HB s C s' /=.
       move=>/andP[kA kB].
       by rewrite !is_ko_next_alt//; rewrite !if_same//.
@@ -370,6 +369,7 @@ Section check.
     elim: A s1 B s2 => //.
     - move=> []//??? _ [_<-]//.
     - move=>/=??[]//??? _ [_<-]//.
+    - move=> []//??? _ [_<-]//.
     - move=> A HA s B HB s1 C s2 /=.
       move=>/andP[fA].
       case: (ifP (is_dead _)) => dA.
@@ -436,7 +436,6 @@ Section check.
     elim: A B C s s' => //.
     - move=> /=????? []<-//.
     - move=> /=????? []<-//.
-    - move=> ? []//.
     - move=> A HA s1 B HB C D s s' /=++sN.
       move=>/andP[fA].
       case: (ifP (is_dead _)) => dA.
@@ -564,7 +563,7 @@ Section check.
 
   Lemma main {sP sV p t}:
     all_cut_followed_by_det sP sV -> det_term sP sV t -> 
-      is_det (Goal p (Call t)).
+      is_det ((CallS p t)).
   Proof.
     move=> H1 fA HA.
     apply: runb_next_alt H1 _ HA.
@@ -597,7 +596,7 @@ Section check.
     Qed.
 
     Lemma tail_cut_is_det sP sV p t:
-      AllTailCut -> det_term sP sV t -> is_det (Goal p (Call t)).
+      AllTailCut -> det_term sP sV t -> is_det ((CallS p t)).
     Proof.
       move=> /(cut_in_prem_tail_cut sP sV).
       apply main.

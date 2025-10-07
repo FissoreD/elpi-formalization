@@ -776,43 +776,44 @@ End Nur.
       the "great^n uncles" on the right of a cut ARE alternatives
     *)
 
-  Fixpoint state_to_list (A: state) s (bt : alts) : alts :=
-    match A with
-    | OK => (s, nilC) ::: nilC
-    | Top => (s, nilC) ::: nilC
-    | Bot => nilC
-    | Dead => nilC
-    | Goal _ Cut => (s, ((cut nilC) ::: nilC)) ::: nilC
-    | Goal pr (Call t) => (s, ((call pr t) ::: nilC)) ::: nilC
-    | Or A s1 B => 
-      let lB := state_to_list B s1 nilC in
-      let lA := state_to_list A s lB in
-      add_ca_deep bt (lA ++ lB)
-    | And A B0 B =>
-      let lB0 := state_to_list B0 s bt in
-      let lA   := state_to_list A s bt in
-      if lA is more_alt (slA, x) xs then 
-        (* lA is split into the current goal x and the future alternatives xs *)
-        (* in a valid state lB0 has length 0 or 1 (it is a (potentially killed) base and) *)
-        match lB0 with
-        | no_alt => 
-          (* the reset point is empty: it kill all the alternatives in the cut-to *)
-          let lB   := state_to_list B slA bt in
-          make_lB01 lB (kill x)
-        | more_alt (sB0,hd) no_alt =>
-          (* the reset point exists, it has to be added to all cut-to alternatives *)
-          let xz := add_deepG bt hd x in
-          let xs := add_deep bt hd xs in 
-          (* each alt in xs must have hd has rightmost conjunct  *)
-          let xs := make_lB0 xs hd in
-          (* xs are alternatives that should be added in the deep cuts in B *)
-          let lB   := state_to_list B slA (xs ++ bt) in
-          (* lB are alternatives, each of them have x has head *)
-          (make_lB01 lB xz) ++ xs
-        | _ => nilC (*unreachable in a valid_state*)
-        end
-      else nilC
-    end.
+Fixpoint state_to_list (A: state) s (bt : alts) : alts :=
+  match A with
+  | OK => (s, nilC) ::: nilC
+  | Top => (s, nilC) ::: nilC
+  | Bot => nilC
+  | Dead => nilC
+  | CutS => (s, ((cut nilC) ::: nilC)) ::: nilC
+  | CallS pr t => (s, ((call pr t) ::: nilC)) ::: nilC
+  | Or A s1 B => 
+    let lB := state_to_list B s1 nilC in
+    let lA := state_to_list A s lB in
+    add_ca_deep bt (lA ++ lB)
+  | And A B0 B =>
+    let lB0 := state_to_list B0 s bt in
+    let lA   := state_to_list A s bt in
+    if lA is more_alt (slA, x) xs then 
+      (* lA is split into the current goal x and the future alternatives xs *)
+      (* in a valid state lB0 has length 0 or 1 (it is a (potentially killed) base and) *)
+      match lB0 with
+      | no_alt => 
+        (* the reset point is empty: it kill all the alternatives in the cut-to *)
+        let lB   := state_to_list B slA bt in
+        make_lB01 lB (kill x)
+      | more_alt (sB0,hd) no_alt =>
+        (* the reset point exists, it has to be added to all cut-to alternatives *)
+        let xz := add_deepG bt hd x in
+        let xs := add_deep bt hd xs in 
+        (* each alt in xs must have hd has rightmost conjunct  *)
+        let xs := make_lB0 xs hd in
+        (* xs are alternatives that should be added in the deep cuts in B *)
+        let lB   := state_to_list B slA (xs ++ bt) in
+        (* lB are alternatives, each of them have x has head *)
+        (make_lB01 lB xz) ++ xs
+      | _ => nilC (*unreachable in a valid_state*)
+      end
+    else nilC
+  end.
+  Print program.
 
 Global Notation "-nilCG" :=
   (@nilC _ _ IsList_goals)
@@ -830,22 +831,20 @@ Global Notation "-nilCA" :=
     Variable p : program.
     Variable sx : Sigma.
     Variable p1 : program.
-    Notation B := (Goal p Cut).
-    Notation R := (Goal p1 Cut).
-    Notation g := (And (Or OK s1 B) R OK).
-    Goal next_alt (Some sx) g = Some (s1, And (Or Dead s1 B) R R).
+    Notation g := (And (Or OK s1 CutS) CutS OK).
+    Goal next_alt (Some sx) g = Some (s1, And (Or Dead s1 CutS) CutS CutS).
     Proof. move => //=. Qed.
-    Goal clean_success g = And (Or OK s1 B) R Bot.
+    Goal clean_success g = And (Or OK s1 CutS) CutS Bot.
     Proof. move => //=. Qed.
 
-    Goal valid_state ((And (Or OK s1 B) R Bot)).
+    Goal valid_state ((And (Or OK s1 CutS) CutS Bot)).
     Proof. move=> //=. Abort.
-    Goal valid_state ((And (Or Dead s1 B) R R)).
+    Goal valid_state ((And (Or Dead s1 CutS) CutS CutS)).
     Proof. move=> //=. Abort.
 
     Goal forall s3 l,
-      state_to_list (And (Or OK s1 B) R Bot) s3 l = 
-        state_to_list (And (Or Dead s1 B) R R) s3 l.
+      state_to_list (And (Or OK s1 CutS) CutS Bot) s3 l = 
+        state_to_list (And (Or Dead s1 CutS) CutS CutS) s3 l.
     Proof.
       move=>s3 l/=.
       rewrite /=!cat0s ?cat0s.

@@ -416,14 +416,11 @@ Section NurValidState.
       rewrite H/= HB//=.
       have/=:= base_and_valid_caA _ _ _ _ (rs) nilC bA (H nilC empty).
       move=> /(_ _ IsList_alts _ IsList_alts)//.
-    - move=> []//p a _ _ _ B HB rs s0/=/andP[/eqP->] bB.
-      have [h H]:= base_and_state_to_list bB.
-      rewrite H.
+    - move=> A; case: A => //[p a|] _ _ _ B HB rs s0/=/andP[/eqP->] bB;
+      have [h H]:= base_and_state_to_list bB;
       have H1:=base_and_empty_ca bB H.
-      case: a => [|t]//=; rewrite !cats0 H/=.
-        rewrite cats0 size_nil take0 suffix0s/=.
-        rewrite (empty_caG_valid _ H1)//.
-      rewrite (empty_caG_valid _ H1)//.
+        rewrite H/= (empty_caG_valid _ H1)//.
+      rewrite H/= cats0 size_nil take0 suffix0s/= (empty_caG_valid _ H1)//.
   Qed.
 
   Lemma bbOr_valid_caA A s0 r rs:
@@ -446,7 +443,7 @@ Section NurValidState.
   Proof.
     move=> <-; clear r.
     elim: A l s0 => //=.
-    - move=> p[|t]//=l s0 _.
+    - move=> l s0 _.
       rewrite suffix0s suffixs0/=.
       case: eqBP => //->//.
     - move=> A HA s B HB l s0/=.

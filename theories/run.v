@@ -17,12 +17,15 @@ apply: iffP2 Sigma_eqb_correct Sigma_eqb_refl.
 Qed.
 HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
 
+Print A.
+
 Inductive state :=
   | Bot : state
   | OK : state
   | Top : state
   | Dead : state
-  | Goal : program  -> A -> state
+  | CallS : program  -> Tm -> state
+  | CutS : state
   | Or  : state -> Sigma -> state -> state  (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
   | And : state -> state -> state -> state  (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
   .
@@ -42,7 +45,7 @@ Definition is_expanded X := match X with Expanded _ _ => true | _ => false end.
 Definition is_fail A := match A with Failure _ => true | _ => false end.
 Definition is_cutbrothers X := match X with CutBrothers _ _ => true | _ => false end.
 Definition is_solved X := match X with Success _ _ => true | _ => false end.
-Definition is_cut X := match X with Goal _ Cut => true | _ => false end.
+Definition is_cut X := match X with Cut => true | _ => false end.
 
 
 Inductive exp_res := Done of Sigma & state | Failed of state.
@@ -62,7 +65,7 @@ Section state_op.
   Fixpoint dead1 A :=
     match A with
     | Dead => Dead
-    | OK | Bot | Goal _ _ | Top => Dead
+    | OK | Bot | CutS | CallS _ _ | Top => Dead
     | And A B0 B => And (dead1 A) (dead1 B0) (dead1 B)
     | Or A s B => Or (dead1 A) s (dead1 B)
     end.
@@ -70,7 +73,7 @@ Section state_op.
   Fixpoint is_dead A :=
     match A with
     | Dead => true
-    | OK | Bot | Goal _ _ | Top => false
+    | OK | Bot | CutS | CallS  _ _ | Top => false
     (* Note: "is_dead A || (success A && dead B)" is wrong
       A counter example is: "(OK \/ p) /\ Dead"
       In this case, a valid alternative is "p /\ B0"
@@ -82,7 +85,7 @@ Section state_op.
   Fixpoint is_ko A :=
     match A with
     | Dead | Bot => true
-    | OK | Goal _ _ | Top => false
+    | OK | CutS | CallS  _ _ | Top => false
     | And A B0 B => is_ko A
     | Or A s B => is_ko A && is_ko B
     end.
@@ -90,7 +93,7 @@ Section state_op.
   Fixpoint success (A : state) : bool :=
     match A with
     | OK => true
-    | Top | Goal _ _ | Bot | Dead => false
+    | Top | CutS | CallS _ _ | Bot | Dead => false
     | And A _ B => success A && success B
     (* We need to keep the if condition to reflect the behavior of expand:
       For example, an interesting proprety of expand is:
@@ -110,7 +113,7 @@ Section state_op.
         state into a "Failure Bot" (it does not introduce a Dead state).
     *)
     | Bot | Dead => true
-    | Top | Goal _ _ | OK => false
+    | Top | CutS | CallS _ _ | OK => false
     | And A _ B => failed A || (success A && failed B)
     (* We keep the if condition to have the right behavior in next_alt *)
     | Or A _ B => if is_dead A then failed B else failed A (*&& failed B*)
@@ -119,7 +122,7 @@ Section state_op.
 
   Fixpoint cutr A :=
     match A with
-    | Goal _ _ | Top | Bot => Bot
+    | CutS | CallS _ _ | Top | Bot => Bot
     | OK => Bot
     | Dead => Dead
     | And A B0 B => And (cutr A) (cutr B0) (cutr B)
@@ -129,7 +132,7 @@ Section state_op.
   Fixpoint cutl A :=
     (* if A == dead A then Dead else *)
     match A with
-    | Goal _ _ | Top | Bot => Bot
+    | CutS | CallS _ _ | Top | Bot => Bot
     | Dead | OK => A
     | And A B0 B => And (cutl A) (cutl B0) (cutl B)
     | Or A s B => 
@@ -309,10 +312,16 @@ Proof. by case: B. Qed.
 Lemma get_state_Or A s B : get_state (mkOr A s B) = Or A s (get_state B).
 Proof. by case: B. Qed.
 
+Definition A2CallCut pr (A:A) : state :=
+  match A with
+  | Cut => CutS
+  | Call tm => CallS pr tm
+  end.
+
 Fixpoint big_and pr (a : list A) : state :=
   match a with
   | [::] => Top
-  | x :: xs => And (Goal pr x)  (big_and pr xs) (big_and pr xs)
+  | x :: xs => And (A2CallCut pr x)  (big_and pr xs) (big_and pr xs)
   end.
 
 Fixpoint big_or_aux pr (r : list A) (l : seq (Sigma * R)) : state :=
@@ -322,10 +331,10 @@ Fixpoint big_or_aux pr (r : list A) (l : seq (Sigma * R)) : state :=
   end.
 
 Lemma big_and_dead {p l}: is_dead (big_and p l) = false.
-Proof. elim l => //. Qed.
+Proof. elim l => //-[]//. Qed.
 
 Lemma big_and_cut {p l}: big_and p l = cutl (big_and p l) -> False.
-Proof. elim l => //. Qed.
+Proof. elim l => //-[]//. Qed.
 
 Record Unif := {
   unify : Tm -> Tm -> Sigma -> option Sigma;
@@ -381,8 +390,8 @@ Section main.
     
     (* lang *)
     | Top              => Expanded s OK
-    | Goal _ Cut       => CutBrothers s OK
-    | Goal pr (Call t) => Expanded s (big_or pr s t)
+    | CutS       => CutBrothers s OK
+    | CallS pr t => Expanded s (big_or pr s t)
 
     (* recursive cases *)
     | Or A sB B =>
@@ -415,7 +424,7 @@ Section main.
     match A with
     | Bot | OK => None
     | Dead => None
-    | Top | Goal _ _ => if s is Some (s) then Some (s, A) else None
+    | Top | CutS | CallS _ _ => if s is Some (s) then Some (s, A) else None
     | And A B0 B =>
       if is_dead A then None else
       if failed A then 
@@ -459,7 +468,7 @@ Section main.
   Fixpoint clean_success (A: state):= 
     match A with
     | OK => Bot
-    | Bot | Dead | Top | Goal _ _ => A
+    | Bot | Dead | Top | CutS | CallS _ _ => A
     | Or A s B => 
       if is_dead A then Or A s (clean_success B)
       else Or (clean_success A) s B
@@ -576,7 +585,7 @@ Section main.
   Qed.
 
   Lemma is_dead_big_and {p r}: is_dead (big_and p r) = false.
-  Proof. elim: r p => //=. Qed.
+  Proof. elim: r p => //=-[]//. Qed.
 
   Lemma is_dead_big_or {p r rs}: is_dead (big_or_aux p r rs) = false.
   Proof. 
@@ -623,7 +632,7 @@ Section main.
 
   Fixpoint get_substS s A :=
     match A with
-    | Top | Goal _ _ | Bot | OK | Dead => s
+    | Top | CutS | CallS _ _ | Bot | OK | Dead => s
     | Or A s1 B => if is_dead A then get_substS s1 B else get_substS s A
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
@@ -645,7 +654,6 @@ Section main.
   Proof.
     elim: A s1 s2 B => //.
     + by move=> /= ??? [] /[subst2].
-    + move=> ? [] //.
     + move=> A HA s B HB s1 s2 C/=.
       case: ifP => dA/=.
         case X: expand =>//-[??];subst => /=.
@@ -691,7 +699,7 @@ Section main.
     expand s1 A = CutBrothers s2 B -> s2 = get_substS s1 A.
   Proof.
     elim: A B s1 s2 => //=.
-    - move=> p []//B s1 s2 []//.
+    - move=> B s1 s2 []//.
     - move=> A HA s B HB C s1 s2; case: ifP => dA; case: expand => //.
     - move=> A HA B0 _ B HB C s1 s2.
       case e: expand => //[s' A'|s' A'].
@@ -708,7 +716,7 @@ Section main.
   Proof.
     move=> + <-.
     elim: A s; clear; try by move=> //=.
-    + move=> p [|t]//= s _; apply dead_big_or.
+    - move=> p t s/= _; apply dead_big_or.
     + move=> A HA s B HB s1 => //=.
       case: ifP => dA/=.
         rewrite get_state_Or/=dA; apply: HB.
@@ -914,9 +922,10 @@ Section main.
   Lemma next_alt_dead {A D s1 s2}: 
     next_alt s1 A = Some (s2, D) -> ((is_dead A = false) * (is_dead D = false))%type.
   Proof.
-    elim: A D s1 s2 => //.
+    elim: A D s1 s2 => //=.
     - move=>/=?[]??// [_<-]//.
     - move=>/=???[]??//[_<-]//.
+    - move=> d []// ?? [_<-]//.
     - move=> A HA s B HB C s1 s2/=.
       case: ifP => dA.
         case X: next_alt => //[[s3 D]].
@@ -945,9 +954,10 @@ Section main.
   Lemma next_alt_failed {s A s1 B}:
     next_alt s A = Some (s1, B) -> ((failed B = false) * (success B = false))%type.
   Proof.
-    elim: A B s s1 => //.
+    elim: A B s s1 => //=.
     - move=>/=?[]??//[_<-]//.
     - move=>???[]?//?[_<-]//.
+    - move=>?[]//??[_<-]//.
     - move=> A HA s B HB C s1 s2/=.
       case X: next_alt => [[s3 D]|].
         case: ifP => dA.

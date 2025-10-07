@@ -41,9 +41,9 @@ Section NurEqiv.
     - move=> A s B/andP[H1 H2].
       have [hd X]:= base_and_state_to_list H1.
       rewrite X/= => -[???]//.
-    - move=> []//=p a _ B /andP[/eqP->]bB.
-      have [hd X]:= base_and_state_to_list bB.
-      case: a => [|t]/=; rewrite X/= => -[]//.
+    - move=> A; case: A => //[p a|] _ B /andP[/eqP->]bB;
+      have [hd X]:= base_and_state_to_list bB;
+      rewrite !X//=X=> -[]//.
   Qed.
 
   Lemma get_substS_base_and_ko {A s1}:
@@ -290,7 +290,6 @@ Section NurEqiv.
   Proof.
     elim: A s B s1 s2 s3 C l => //.
     - move=> /= ???????? [<-]//.
-    - move=> p [|t]//.
     - move=> A HA s B HB /= s1 C s2 s3 s4 D l.
       case: ifP => [dA vB|dA /andP[vA bB]].
         case eB: expand => // [B'] [<-]/=; rewrite dA.
@@ -629,7 +628,7 @@ Section NurEqiv.
     expand u s1 A = CutBrothers s2 B -> failed B = false.
   Proof.
     elim: A B s1 s2 => //=.
-    - move=> p[]//=t s1 s2 _ [_<-]//.
+    - move=> B s1 s2 _ [_<-]//.
     - move=> A HA s B HB C s1 s2.
       case: ifP => //[dA fB|dA fA]; case e: expand => //.
     - move=> A HA B0 _ B HB C s1 s2 /and5P[_ vA _].
@@ -661,7 +660,7 @@ Section NurEqiv.
     valid_state A -> expand u s1 A = CutBrothers s2 B -> ((s2 = get_substS s1 A) * (get_substS s1 A = get_substS s1 B)).
   Proof.
     elim: A B s1 s2 => //=.
-    - move=> p []// B s1 s2 _ [<-<-]//.
+    - move=> B s1 s2 _ [<-<-]//.
     - move=> A HA s B HB C s1 s2; case: ifP => dA; case: expand => //.
     - move=> A HA B0 _ B HB C s1 s2 /and5P[_ vA _].
       case e: expand => //[s' A'|s' A'].
@@ -683,7 +682,7 @@ Section NurEqiv.
   Proof.
     move=>/=.
     elim: A sA s1 s2 B l1 => //.
-    - move=> p []//= ??????[_<-]/=; by do 2 eexists.
+    - move=> //= ??????[_<-]/=; by do 2 eexists.
     - move=> A HA s B HB sA s1 s2 C l1 /=.
       by case: ifP => [dA vB|dA/andP[vA bB]]; case eB: expand => //[s1' B'][??]; subst.
     - move=> A HA B0 _ B HB sA s1 s2 C l1/=/and5P[oA vA aB].
@@ -731,7 +730,6 @@ Section NurEqiv.
   Proof.
     elim: A B s1 s2 s4 l1 ws => //=; auto.
     - move=> B s1 s2 s4 l1 ws _ [<-<-][<-<-]//.
-    - move=> p[]//.
     - move=> A HA s B HB C s1 s2 s4 l1 ws/=.
       case:ifP => [dA vB|dA/andP[vA bB]].
         rewrite state_to_list_dead//=.
@@ -784,7 +782,6 @@ Section NurEqiv.
   Proof.
     move=>++<-; clear r.
     elim: A l l1 ca tl alts s1 s2 => //=.
-    - move=> p[]//.
     - move=> A HA s0 B HB l l1 ca tl alts s1 s2.
       case: ifP => //[dA vB|dA/andP[vA bB]].
         rewrite (state_to_list_dead dA)/=.
@@ -889,7 +886,6 @@ Section NurEqiv.
         state_to_list B s0 l1 ++ l1 = (s3, x) ::: ca))%type.
   Proof.
     elim: A s0 B s1 s3 ca x tl l1 => //.
-    - move=> p []//.
     - move=> A HA s B HB s0 C s1 s3 c1 x tl l1 /=.
       case: ifP => //=[dA vB|dA /andP[vA bB]].
         rewrite !(state_to_list_dead dA)/=.
@@ -988,7 +984,7 @@ Section NurEqiv.
       .
   Proof.
     elim: A B s s' s3 l p t gs xs => //=.
-    - move=> p[]//=t C s1 s2 s3 l p1 t1 gs xs ? [??][??]???; subst.
+    - move=> p t C s1 s2 s3 l p1 t1 gs xs ? [??][??]???; subst.
       rewrite failed_big_or/big_or; case: F => [|[s4 r1] rs]/=; auto.
       rewrite !cats0 !cat0s !(s2l_big_or empty)/=cat0s make_lB0_empty2; auto.
     - move=> A HA s B HB C s1 s2 s3 l p t gs xs.
@@ -1096,7 +1092,7 @@ Section NurEqiv.
   Proof.
     elim: A B C s s' s1 b l sx x xs => //=.
     - move=> B C s1 s2 s3 b l sx x xs _ [-><-]; inversion 1 => //; subst; auto.
-    - move=> p []//t B C s1 s2 s3 b l sx x xs _ [_<-]/=.
+    - move=> p t B C s1 s2 s3 b l sx x xs _ [_<-]/=.
       move=>/expandedb_big_or_not_done//.
     - move=> A HA s B HB C D s1 s2 s3 b l sx x xs.
       case: ifP => /=[dA vB|dA/andP[vA bB]].
@@ -1308,7 +1304,8 @@ Section NurEqiv.
     elim: A x xs s s3 l => //=.
     - move=> x xs s s3 l A _ []//.
     - move=> x xs s s3 l A _ []//.
-    - move=> p0 [|t0]//=x xs s s3 l _ _ []//.
+    - move=> p0 t0//=x xs s s3 l _ _ []//.
+    - move=> x xs s s3 l A _ []//.
     - move=> A HA s B HB x xs s1 s3 l.
       case: ifP => [dA fB vB|dA fA /andP[vA bB]].
         rewrite state_to_list_dead//cat0s.

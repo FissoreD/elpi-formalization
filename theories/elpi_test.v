@@ -26,7 +26,7 @@ Definition tester l r :=
   state_to_list l empty nilC = r.
 
 Goal forall B B0 p,
-let f x := (Goal p (Call x)) in
+let f x := (CallS p x) in
   tester (And (Or OK empty (f B)) (f B0) Bot) 
     ((empty, (call p B) ::: ((call p B0) ::: nilC)) ::: nilC).
 Proof.
@@ -35,9 +35,9 @@ Qed.
 
 Goal forall A B D0 D p,
   (* (((! \/ A) \/ B)) /\ (D) *)
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   tester 
-    (And (Or ((Or (Goal p Cut) empty (f A))) empty (f B)) (f D0) (f D)) 
+    (And (Or ((Or (CutS) empty (f A))) empty (f B)) (f D0) (f D)) 
     (of_alt [:: 
       [::cut (of_alt [:: [:: call p B; call p D0]]); call p D];
       [:: call p A; call p D0]; 
@@ -49,10 +49,10 @@ Qed.
 
 
 Goal forall B C D E F p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (A \/_{empty} B) /\_C ((! \/_{empty} D) /\_{E} F) *)
   tester 
-    (And (Or OK empty (f B)) (f C) (And (Or (Goal p Cut) empty (f D)) (f E) (f F)))
+    (And (Or OK empty (f B)) (f C) (And (Or (CutS) empty (f D)) (f E) (f F)))
     (of_alt [:: 
       [:: cut (of_alt [:: [:: call p B; call p C]]); call p F];
       [:: call p D; call p E]; 
@@ -64,10 +64,10 @@ Qed.
 
 
 Goal forall A B C p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   tester 
-    (And (Or ((Or (Goal p Cut) empty (f A))) empty (f B)) Bot (Or (Goal p Cut) empty (f C))) 
+    (And (Or ((Or (CutS) empty (f A))) empty (f B)) Bot (Or (CutS) empty (f C))) 
     (of_alt [:: 
       [::cut nilC ; cut nilC ];
       [::cut nilC ; call p C]]).
@@ -77,10 +77,10 @@ Proof.
 Qed.
 
 Goal forall A B C0 C p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   tester 
-    (And (Or ((Or (Goal p Cut) empty (f A))) empty (f B)) (f C0) (Or (Goal p Cut) empty (f C)))
+    (And (Or ((Or (CutS) empty (f A))) empty (f B)) (f C0) (Or (CutS) empty (f C)))
     (of_alt[:: 
       [::cut (of_alt [:: [:: call p B; call p C0]]); cut (of_alt [::[:: call p A; call p C0]; [:: call p B; call p C0]])];
       [::cut (of_alt [:: [:: call p B; call p C0]]); call p C];
@@ -96,7 +96,7 @@ Qed.
 
 Goal forall A B0 p,
     (* (OK \/ A) /\_B0 OK *)
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   tester (And (Or OK empty (f A)) (f B0) OK) (of_alt [::[::]; [::call p A; call p B0]]).
 Proof.
   move=> A B0 p.
@@ -105,7 +105,7 @@ Qed.
 
 Goal forall A B0 p,
   (* (Bot \/ B) /\_b0 B0  *)
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   tester (And (Or Bot empty (f A)) (f B0) (f B0))
   (of_alt [::[::call p A; call p B0]]).
 Proof.
@@ -114,7 +114,7 @@ Proof.
 Qed.
 
 Goal forall p x y z w a, 
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   tester (
     And 
       (Or (f x) empty (f y)) (f a) 
@@ -128,7 +128,7 @@ Proof.
 Qed.
 
 Goal forall p z w a, 
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   tester (
     And 
       (Or Top empty Bot) (f a) 
@@ -142,7 +142,7 @@ Qed.
 
 (* THIS IS IMPORTANT *)
 Goal forall p a b c d, 
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   tester (
     And 
       (Or Bot empty (f a)) (f b) 
@@ -158,15 +158,15 @@ Goal forall p a b,
 (* (! \/ a) \/ b *)
   tester (
     Or 
-      (Or (Goal p Cut) empty (Goal p (Call a))) empty
-      (Goal p (Call b)))
+      (Or (CutS) empty (CallS p a)) empty
+      (CallS p b))
   (of_alt [:: [:: cut (of_alt[:: [:: call p b]])]; [:: call p a]; [:: call p b]]).
 Proof.
   move=>p a b; rewrite/state_to_list/=.
   by []. Qed.
 
 Goal forall A1 A2 s  C0 B p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   tester (And (Or (f A1) s (f A2)) (Bot) (And Bot (f C0) (f B))) nilC
   .
 Proof.
@@ -176,7 +176,7 @@ Proof.
 Qed.
 
 Goal forall A B C p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   tester (And (Or (f A) empty (f B)) (Bot) (f C))
   (of_alt[:: [:: call p A; call p C]]).
 Proof.
@@ -186,7 +186,7 @@ Proof.
 Qed.
 
 Goal forall A1 A2 B0 C0 B p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   tester (And (Or (f A1) empty (f A2)) (f B0) (And Bot (f C0) (f B)))
   (of_alt [:: [:: call p A2 ; call p B0 ]]).
 Proof.
@@ -197,8 +197,8 @@ Qed.
 Goal forall b0 p a b c, 
   tester (
     Or 
-      (Or (And (Goal p (Call c)) (Goal p (Call b0)) (Goal p Cut)) empty (Goal p (Call a))) empty
-      (Goal p (Call b)))
+      (Or (And (CallS p c) (CallS p b0) (CutS)) empty (CallS p a)) empty
+      (CallS p b))
   (of_alt[:: [:: call p c; cut (of_alt[:: [:: call p b]])]; [:: call p a]; [:: call p b]]).
 Proof.
   move=> b0 p a b c.
@@ -207,9 +207,9 @@ Proof.
 Qed.
 
 Goal forall B C Res p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (OK \/ B) /\ (! \/ C) -> [cut_[B,Reset]; C; (B, Reset)] *)
-  tester (And (Or OK empty (f B)) (f Res) (Or (Goal p Cut) empty (f C))) 
+  tester (And (Or OK empty (f B)) (f Res) (Or (CutS) empty (f C))) 
     (of_alt[::[::cut (of_alt[::[:: call p B; call p Res]])]; [::call p C]; [:: call p B; call p Res]]).
 Proof.
   move=> B C Res p.
@@ -218,9 +218,9 @@ Proof.
 Qed.
 
 Goal forall B C Res Reempty p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (OK \/ B) /\ (! /\ C) -> [cut_[]; C; (B, Reset)] *)
-  tester (And (Or OK empty (f B)) (f Res) (And (Goal p Cut) (f Reempty) (f C))) 
+  tester (And (Or OK empty (f B)) (f Res) (And (CutS) (f Reempty) (f C))) 
     (of_alt[::[::cut nilC; call p C]; [:: call p B; call p Res]]).
 Proof.
   move=> B C Res Reempty p/=.
@@ -229,9 +229,9 @@ Proof.
 Qed.
 
 Goal forall A B C C0 p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (A /\ ((! \/ B) \/ C) *)
-  tester (And (f A) (f C0) (Or (Or (Goal p Cut) empty (f B)) empty (f C))) 
+  tester (And (f A) (f C0) (Or (Or (CutS) empty (f B)) empty (f C))) 
   (of_alt [:: 
     [:: call p A; cut (of_alt[:: [:: call p C]])]; 
     [:: call p A; call p B]; 
@@ -243,10 +243,10 @@ Proof.
 Qed.
 
 Goal forall A B C D E p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (A \/_{empty} B) /\_C ((! \/_{empty} D) \/_{empty} E) *)
   tester 
-    (And (Or (f A) empty (f B)) (f C) (Or (Or (Goal p Cut) empty (f D)) empty (f E))) 
+    (And (Or (f A) empty (f B)) (f C) (Or (Or (CutS) empty (f D)) empty (f E))) 
     (of_alt[:: 
     [:: call p A; cut (of_alt [:: [:: call p E]; [:: call p B; call p C]])];
     [:: call p A; call p D]; [:: call p A; call p E];
@@ -266,10 +266,10 @@ Qed.
   The second rejects (B,C) which is an alternatives at higher level
 *)
 Goal forall B C D E p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (OK \/_{empty} B) /\_C ((! \/_{empty} D) /\_{E} !) *)
   tester 
-    (And (Or OK empty (f B)) (f C) (And (Or (Goal p Cut) empty (f D)) (f E) (Goal p Cut))) 
+    (And (Or OK empty (f B)) (f C) (And (Or (CutS) empty (f D)) (f E) (CutS))) 
     (of_alt [:: 
       [:: cut (of_alt[:: [:: call p B; call p C]]); cut nilC ];
       [:: call p D; call p E]; 
@@ -281,10 +281,10 @@ Proof.
 Qed.
 
 Goal forall A B C p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* ((! \/ ! \/ A) \/ B) \/ C *)
   tester
-    (Or (Or (Or (Goal p Cut) empty ((Or (Goal p Cut) empty (f A)))) empty (f B)) empty (f C))
+    (Or (Or (Or (CutS) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C))
     (of_alt[:: 
       [::cut (of_alt[:: [:: call p B]; [::call p C]])];
       [::cut (of_alt[:: [:: call p B]; [::call p C]])];
@@ -298,10 +298,10 @@ Proof.
 Qed.
 
 Goal forall A B C p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* ((! \/ ! \/ A) \/ B) \/ C *)
   tester 
-    (Or (Or (Or (And (Goal p Cut) Top Top) empty ((Or (Goal p Cut) empty (f A)))) empty (f B)) empty (f C)) 
+    (Or (Or (Or (And (CutS) Top Top) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C)) 
     (of_alt[:: 
       [::cut (of_alt[:: [:: call p B]; [::call p C]])];
       [::cut (of_alt[:: [:: call p B]; [::call p C]])];
@@ -316,10 +316,10 @@ Qed.
 
 
 Goal forall A B C D0 D p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (((! \/ ! \/ A) \/ B) \/ C) /\ D*)
   tester
-    (And (Or (Or (Or (Goal p Cut) empty ((Or (Goal p Cut) empty (f A)))) empty (f B)) empty (f C)) (f D0) (f D))
+    (And (Or (Or (Or (CutS) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C)) (f D0) (f D))
     (of_alt[:: 
       [::cut (of_alt [:: [:: call p B; call p D0]; [::call p C; call p D0]]); call p D];
       [::cut (of_alt [:: [:: call p B; call p D0]; [::call p C; call p D0]]); call p D0];
@@ -333,10 +333,10 @@ Proof.
 Qed.
 
 Goal forall X A B C D0 D p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* ((X \/ ((! \/ ! \/ A) \/ B) \/ C)) /\ D*)
   tester 
-    (And (Or (f X) empty (Or (Or (Or (Goal p Cut) empty ((Or (Goal p Cut) empty (f A)))) empty (f B)) empty (f C))) (f D0) (f D))
+    (And (Or (f X) empty (Or (Or (Or (CutS) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C))) (f D0) (f D))
     (of_alt[:: 
       [:: call p X; call p D];
       [::cut (of_alt[:: [:: call p B; call p D0]; [::call p C; call p D0]]); call p D0];
@@ -351,10 +351,10 @@ Proof.
 Qed.
 
 Goal forall B0 A B C D p,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (((A /\ (! \/ B)) \/ C \/ D)) *)
   tester 
-    (Or (Or (f C) empty (And (f A) (f B0) (Or (Goal p Cut) empty (f B)))) empty (f D))
+    (Or (Or (f C) empty (And (f A) (f B0) (Or (CutS) empty (f B)))) empty (f D))
     (of_alt[:: 
       [:: call p C]; 
       [:: call p A; cut (of_alt[:: [:: call p D]])]; 
@@ -366,10 +366,10 @@ Proof.
 Qed.
 
 Goal forall p A B C,
-  let f x := (Goal p (Call x)) in
+  let f x := (CallS p x) in
   (* (((! \/ A) \/ !) \/ B) \/ C *)
   tester 
-    (Or (Or (Or (Or (Goal p Cut) empty (f A)) empty (Goal p Cut)) empty (f B)) empty (f C))
+    (Or (Or (Or (Or (CutS) empty (f A)) empty (CutS)) empty (f B)) empty (f C))
     (of_alt[:: 
       [::cut (of_alt[::[::cut (of_alt[::[::call p B]; [::call p C]])]; [::call p B]; [::call p C]])];
       [::call p A];
@@ -383,8 +383,8 @@ Proof.
   rewrite//.
 Qed.
 
-Goal forall p l,
-  let s := ((Or (Or Dead empty (Goal p Cut)) empty Top)) in
+Goal forall l,
+  let s := ((Or (Or Dead empty (CutS)) empty Top)) in
   let bt := of_alt([::] :: l) in
   state_to_list s empty (of_alt l) = of_alt[:: [:: cut bt]; [::]] /\ 
     state_to_list (clean_success (get_state (expand u empty s))) empty (of_alt l) ++ (of_alt l) = bt.
