@@ -1299,13 +1299,6 @@ Section NurEqiv.
       by exists (xs' ++ l), gs1; split => //=.
   Qed.
 
-  Definition runElpi A :=
-    forall s B s1 b sIgn,
-      valid_state A ->
-        runb u s A s1 B b -> 
-          exists x xs, state_to_list A s nilC = x ::: xs /\ 
-            nur u x.1 x.2 xs s1 (state_to_list B sIgn nilC).
-
   Lemma tttt {A x xs s s3 l} :
     failed A = false ->
     valid_state A ->
@@ -1348,6 +1341,13 @@ Section NurEqiv.
       rewrite H/=H1/=H1=> -[???]; subst.
       apply: HA fA vA H.
     Qed.
+
+  Definition runElpi A :=
+    forall s B s1 b sIgn,
+      valid_state A ->
+        runb u s A s1 B b -> 
+          exists x xs, state_to_list A s nilC = x ::: xs /\ 
+            nur u x.1 x.2 xs s1 (state_to_list B sIgn nilC).
 
   Lemma runElpiP: forall A, runElpi A.
   Proof.
