@@ -1230,7 +1230,7 @@ Section NurEqiv.
         exists p t ca gs, (will_call x (xs++l)) = Some (p,t,ca,gs) /\
           if (F u p t (get_substS s A)) is (b1::bs)
           then
-           ((y = save_goals (ca) gs (a2gs1 p b1)) * 
+           ((s1 = b1.1) * (y = save_goals (ca) gs (a2gs1 p b1)) * 
             (ys ++ l = save_alts (ca) gs ((aa2gs p bs)) ++ ca)
             )%type
           else 
@@ -1349,6 +1349,26 @@ Section NurEqiv.
       apply: HA fA vA H.
     Qed.
 
+  Lemma gggg {B l s s1 ca gs p r zz} :
+    failed B ->
+    valid_state B ->
+      state_to_list B s l = (s1, save_goals ca gs (a2gs1 p r)) ::: zz ->
+        s1 = r.1.
+  Proof.
+    elim: B l s s1 ca gs p r zz => //=.
+    - move=> A HA s B HB l s1 s2 ca gs p r zz.
+      case: ifP => [dA fB vB|dA fA/andP[vA bB]].
+        rewrite (state_to_list_dead dA).
+        case X: state_to_list => //=[[s3 x]xs].
+        move=> [?+?]; subst => H.
+        apply: HB fB vB _.
+        admit.
+      case X: state_to_list => [|[s3 x]xs]/=.
+        case Y: state_to_list => //=[[s3 x]xs][?+?]; subst.
+        Search failed state_to_list.
+
+  Abort.
+
   Lemma runElpiP: forall A, runElpi A.
   Proof.
     move=> A s B s1 b ++ H.
@@ -1379,18 +1399,16 @@ Section NurEqiv.
         move => -[]???; subst => //.
       have [p[t[ca[gs[H1 H2]]]]] := s2l_expanded_Failed_not_failed vA f sA HA sC' all_suffix_nil.
       rewrite !cats0 in H1 H2.
-      have ? := tttt f vA sA.
-      subst.
-      elim: x xs H1 H2 {sA}=> //-[p1 t1|ca1]/= gs1 IH xs H1 H2.
+      have ? := tttt f vA sA; subst.
+      elim: x xs H1 H2 {sA}=> //.
+      move=> [p1 t1|ca1]/= gs1 IH xs H1 H2.
         move: H1 => -[????]; subst.
         move: H2; case FF: F => [|r rs].
           move=>?; subst.
           apply: FailE FF H.
-        move=>[??]; subst.
-        apply: CallE FF _.
-          Search failed state_to_list next_alt None.
-           (* FF H. *)
-          admit.
+        move=>[[??]?]; subst.
+        apply: CallE FF H.
+        subst => //.
       apply: CutE.
       apply: IH H1 H2.
   Qed.

@@ -470,7 +470,7 @@ Section NurValidState.
       have:= HA l s0 vA => {}HA.
       case:ifP => /=[sA vB bB0|sA /eqP?]; subst.
         move: HA.
-        have SA:= success_state_to_list vA sA; rewrite SA/=.
+        have SA:= success_state_to_list empty vA sA; rewrite SA/=.
         move: bB0 => /orP[]bB; last first.
           rewrite (base_and_ko_state_to_list bB)//=.
           rewrite !make_lB01_empty2 behead_cons => H1.
