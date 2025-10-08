@@ -23,12 +23,12 @@ Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
 
 Definition matchingF (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
 
-Definition derefF (s:Sigma) (t1:Tm) : Tm := t1.
+(* Definition derefF (s:Sigma) (t1:Tm) : Tm := t1. *)
 
 Definition unif : Unif := {|
   unify := unifyF;
   matching := matchingF;
-  deref := derefF;
+  (* deref := derefF; *)
 |}.
 
 Definition r := (IKp 2).

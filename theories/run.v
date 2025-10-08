@@ -337,7 +337,7 @@ Proof. elim l => //-[]//. Qed.
 Record Unif := {
   unify : Tm -> Tm -> Sigma -> option Sigma;
   matching : Tm -> Tm -> Sigma -> option Sigma;
-  deref : Sigma -> Tm -> Tm;
+  (* deref : Sigma -> Tm -> Tm; *)
 }.  
 
 
@@ -351,6 +351,16 @@ Section main.
     | [:: i & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(matching) a1 a2) (H ml q h s)
     | [:: o & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(unify) a1 a2) (H ml q h s)
     | _, _, _ => None
+    end.
+
+    Print Option.
+
+  (* TODO: deref is too easy? Yes if sigma is a mapping from vars to lambdas in a future version *)
+  Fixpoint deref (s: Sigma) (tm:Tm) :=
+    match tm with
+    | Tm_V V => Option.default tm (s.(sigma) V)
+    | Tm_Kp _ | Tm_Kd _ => tm
+    | Tm_Comb h ag => Tm_Comb (deref s h) ag
     end.
 
   Fixpoint select (query : RCallable) (modes:list mode) (rules: list R) sigma : seq (Sigma * R) :=
@@ -377,11 +387,11 @@ Section main.
     | Callable_V v => Tm_V v
     | Callable_Comb h t => Tm_Comb (Callable2Tm h) t
     end.
-  Coercion Callable2Tm : Callable >-> Tm.
+  (* Coercion Callable2Tm : Callable >-> Tm. *)
 
   Definition F pr (query:Callable) s : seq (Sigma * R) :=
     let rules := pr.(rules) in
-    match tm2RC (u.(deref) s query) with
+    match tm2RC (deref s (Callable2Tm query)) with
     | None => [::] (*this is a call with flex head, in elpi it is an error! *)
     | Some query =>
       let modes := pr.(modes) query in

@@ -96,12 +96,10 @@ Section check.
   *)
   Fixpoint no_free_alt (sP:sigT) A :=
     match A with
-    | CutS => det_atom sP (ACut)
-    | CallS _ a => det_atom sP (ACall a)
+    | CutS => true
+    | CallS _ a => det_term sP a
     | Top | Bot | OK => true
     | Dead => true
-    (* | And (Or A1 _ A2) B0 B ->
-      ((is_ko A1 || is_ko B) && (is_ko A2 || is_ko B0)) *)
     | And A B0 B =>
       (is_ko A) || 
         [&& (has_cut B0 && has_cut B) || no_free_alt sP A, 
@@ -167,8 +165,28 @@ Section check.
 
   Variable u : Unif.
 
+  Lemma tm2RC_kp {t1 k} : 
+    tm2RC t1 = Some (RCallable_Kp k) -> t1 = Tm_Kp k.
+  Proof.
+    case: t1 k => //=.
+    - move=> k1 k2 []; congruence.
+    - move=> h b k; case X: tm2RC => //.
+  Qed.
+
+  Lemma deref_kp {s1 t k}:
+    tm2RC (deref s1 t) = Some (RCallable_Kp k) ->
+      (t = Tm_Kp k) \/ (exists v, t = Tm_V v /\ sigma s1 v = Some (Tm_Kp k)).
+  Proof.
+    case: t k => //=.
+    - move=> k1 k2 []; left; congruence.
+    - move=> v k; case x: sigma => [t1|]//=.
+      move=>/tm2RC_kp?; subst.
+      right; by eexists.
+    - move=> h b k; case X: tm2RC => //.
+  Qed.
+
   Lemma tiki_taka {sP s s3 modes t q hd1}:
-    let t' := tm2RC (deref u s (Callable2Tm t)) in
+    let t' := tm2RC (deref s (Callable2Tm t)) in
     t' = Some q ->
     det_term sP t ->
       H u modes q hd1 s = Some s3 ->
@@ -177,16 +195,25 @@ Section check.
     move=>/=.
     elim: modes q hd1 t s s3 => //=.
       move=> []//=k []//= k1 t s1 s2; case: eqP => //=<-.
-      admit.
+      move=>/deref_kp [].
+        case: t => //= k2 [->]//.
+      move=> [v[]]; case: t => //.
     move=> []//ml IH []//h1 b1 []//=h2 b2 t s1 s2 H1 H2 H3.
       move: H3; case e: H => //=[s1'] H3.
-      move: H1; case de: deref => //= [h1' b1'].
-      case X: tm2RC => //=[h1''].
-      move=>[??]; subst.
-      apply: IH _ _ e.
-      admit. (*should have props on deref and matching *)
-    admit. (*similar proof but with unify*)
-  Admitted.
+      case: t H1 H2 => //= c t.
+      case H : tm2RC => //=[h1'] [??]; subst => /=.
+      rewrite/det_term/=.
+      case X: get_hd_signature => //[S] H1.
+      apply: IH H _ e.
+      rewrite/det_term X//.
+    move: H3; case e: H => //=[s1'] H3.
+    case: t H1 H2 => //= c t.
+    case H : tm2RC => //=[h1'] [??]; subst => /=.
+    rewrite/det_term/=.
+    case X: get_hd_signature => //[S] H1.
+    apply: IH H _ e.
+    rewrite/det_term X//.
+  Qed.
 
 
   Lemma is_det_no_free_alt {sP t s1} {p:program}:
@@ -204,7 +231,7 @@ Section check.
       apply: IH X H1' H2.
     clear IH.
     move: H.
-    set t' := deref u s t.
+    (* set t' := deref s t. *)
     move: H1 => /orP[]; last first.
       move=> + _.
       elim: rules H1' bo => //=.
