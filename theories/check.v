@@ -2,9 +2,27 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From det Require Import run.
 
+Lemma tm2RC_kp {t1 k} : 
+  tm2RC t1 = Some (RCallable_Kp k) -> t1 = Tm_Kp k.
+Proof.
+  case: t1 k => //=.
+  - move=> k1 k2 []; congruence.
+  - move=> h b k; case X: tm2RC => //.
+Qed.
 
-Section checker.  
-  Print sigT.
+Lemma deref_kp {s1 t k}:
+  tm2RC (deref s1 t) = Some (RCallable_Kp k) ->
+    (t = Tm_Kp k) \/ (exists v, t = Tm_V v /\ sigma s1 v = Some (Tm_Kp k)).
+Proof.
+  case: t k => //=.
+  - move=> k1 k2 []; left; congruence.
+  - move=> v k; case x: sigma => [t1|]//=.
+    move=>/tm2RC_kp?; subst.
+    right; by eexists.
+  - move=> h b k; case X: tm2RC => //.
+Qed.
+
+Section checker.
   Definition sigV := V -> option S.
 
   Fixpoint is_det_sig (sig:S) : bool :=
@@ -15,36 +33,48 @@ Section checker.
     | arr _ _ s => is_det_sig s
     end.
 
-  Fixpoint det_rcallable (sP: sigT) (t:RCallable) : bool :=
-    match t with
-    | RCallable_Comb h _ => det_rcallable sP h
-    | RCallable_Kp k => is_det_sig (sP k)
-    end.
-
-  Fixpoint get_hd_signature (sP: sigT) (t: Callable) : option S :=
+  Fixpoint getS_Callable (sP: sigT) (t: Callable) : option S :=
     match t with
     | Callable_Kp pn => Some (sP pn)
     | Callable_V vn => None (*TODO: use sV vn instead*)
-    | Callable_Comb hd _ => get_hd_signature sP hd
+    | Callable_Comb hd _ => getS_Callable sP hd
     end.
 
-  Definition det_term (sP: sigT) (t : Callable) :=
-    match get_hd_signature sP t with 
-    | None => false
-    | Some sig => is_det_sig sig
+  Fixpoint rcallable_is_det (sP: sigT) (t:RCallable) : bool :=
+    match t with
+    | RCallable_Comb h _ => rcallable_is_det sP h
+    | RCallable_Kp k => is_det_sig (sP k)
     end.
 
-  Definition det_callable (sP: sigT) (t : Callable) :=
-    match get_hd_signature sP t with 
-    | None => false
-    | Some sig => is_det_sig sig
-    end.
+  Definition tm_is_det (sP: sigT) (t : Callable) :=
+    odflt false (omap is_det_sig (getS_Callable sP t)).
 
-  Definition det_atom sP (a: A) :=
+  Definition check_atom sP (a: A) :=
     match a with
     | ACut => true
-    | ACall t => det_term sP t
+    | ACall t => tm_is_det sP t
     end. 
+
+  Fixpoint check_atoms (sP :sigT) (s: seq A) :=
+    match s with
+    | [::] => false
+    | ACut :: xs => all (check_atom sP) xs || check_atoms sP xs
+    | ACall _ :: xs => check_atoms sP xs
+    end.
+
+
+  Definition check_rule sP head prems :=
+    (rcallable_is_det sP head == false) || 
+      check_atoms sP prems.
+
+  Definition check_rules sP rules :=
+    all (fun x => check_rule sP x.(head) x.(premises)) rules.
+
+  Definition check_program sP := 
+    forall pr, check_rules sP (rules pr).
+End checker.
+
+Section check.
 
   Fixpoint has_cut A :=
     match A with
@@ -56,22 +86,6 @@ Section checker.
     | Or _ _ _ => is_ko A
     end.
 
-  Fixpoint cut_followed_by_det (sP :sigT) (s: seq A) :=
-    match s with
-    | [::] => false
-    | ACut :: xs => all (det_atom sP) xs || cut_followed_by_det sP xs
-    | ACall _ :: xs => cut_followed_by_det sP xs
-    end.
-
-  Definition all_cut_followed_by_det_aux sP rules :=
-    all (fun x => (det_rcallable sP x.(head) == false) || 
-      cut_followed_by_det sP x.(premises)) rules.
-
-  Definition checkr sP := 
-    forall pr, all_cut_followed_by_det_aux sP (rules pr).
-End checker.
-
-Section check.
 
   Lemma has_cut_cut {B}: has_cut (cutr B).
   Proof. 
@@ -97,7 +111,7 @@ Section check.
   Fixpoint no_free_alt (sP:sigT) A :=
     match A with
     | CutS => true
-    | CallS _ a => det_term sP a
+    | CallS _ a => tm_is_det sP a
     | Top | Bot | OK => true
     | Dead => true
     | And A B0 B =>
@@ -133,18 +147,18 @@ Section check.
     rewrite HB0//HB//orbT//.
   Qed.
 
-  Lemma all_det_nfa_big_and {p sP l}: all (det_atom sP) l -> no_free_alt sP (big_and p l).
+  Lemma all_det_nfa_big_and {p sP l}: all (check_atom sP) l -> no_free_alt sP (big_and p l).
   Proof.
     elim: l => //= a l IH/andP[] H1 H2.
     case: a IH H1 => //= [|t] IH H1; rewrite ?H1 IH//=orbT//.
   Qed.
 
   Lemma cut_followed_by_det_has_cut {sP p l}:
-      cut_followed_by_det sP l -> has_cut (big_and p l).
+      check_atoms sP l -> has_cut (big_and p l).
   Proof. by elim: l => //= -[]//= _ l H/H->. Qed.
 
   Lemma cut_followed_by_det_nfa_and {sP p bo} :
-    cut_followed_by_det sP bo -> no_free_alt sP (big_and p bo).
+    check_atoms sP bo -> no_free_alt sP (big_and p bo).
   Proof.
     elim: bo => //=.
     move=> [|t] /= l IH.
@@ -165,32 +179,12 @@ Section check.
 
   Variable u : Unif.
 
-  Lemma tm2RC_kp {t1 k} : 
-    tm2RC t1 = Some (RCallable_Kp k) -> t1 = Tm_Kp k.
-  Proof.
-    case: t1 k => //=.
-    - move=> k1 k2 []; congruence.
-    - move=> h b k; case X: tm2RC => //.
-  Qed.
-
-  Lemma deref_kp {s1 t k}:
-    tm2RC (deref s1 t) = Some (RCallable_Kp k) ->
-      (t = Tm_Kp k) \/ (exists v, t = Tm_V v /\ sigma s1 v = Some (Tm_Kp k)).
-  Proof.
-    case: t k => //=.
-    - move=> k1 k2 []; left; congruence.
-    - move=> v k; case x: sigma => [t1|]//=.
-      move=>/tm2RC_kp?; subst.
-      right; by eexists.
-    - move=> h b k; case X: tm2RC => //.
-  Qed.
-
   Lemma tiki_taka {sP s s3 modes t q hd1}:
     let t' := tm2RC (deref s (Callable2Tm t)) in
     t' = Some q ->
-    det_term sP t ->
+    tm_is_det sP t ->
       H u modes q hd1 s = Some s3 ->
-        det_rcallable sP hd1.
+        rcallable_is_det sP hd1.
   Proof.
     move=>/=.
     elim: modes q hd1 t s s3 => //=.
@@ -202,22 +196,22 @@ Section check.
       move: H3; case e: H => //=[s1'] H3.
       case: t H1 H2 => //= c t.
       case H : tm2RC => //=[h1'] [??]; subst => /=.
-      rewrite/det_term/=.
-      case X: get_hd_signature => //[S] H1.
+      rewrite/tm_is_det/=.
+      case X: getS_Callable => //[S] H1.
       apply: IH H _ e.
-      rewrite/det_term X//.
+      rewrite/tm_is_det X//.
     move: H3; case e: H => //=[s1'] H3.
     case: t H1 H2 => //= c t.
     case H : tm2RC => //=[h1'] [??]; subst => /=.
-    rewrite/det_term/=.
-    case X: get_hd_signature => //[S] H1.
+    rewrite/tm_is_det/=.
+    case X: getS_Callable => //[S] H1.
     apply: IH H _ e.
-    rewrite/det_term X//.
+    rewrite/tm_is_det X//.
   Qed.
 
 
   Lemma is_det_no_free_alt {sP t s1} {p:program}:
-    all_cut_followed_by_det_aux sP p.(rules) -> det_term sP t -> 
+    check_rules sP p.(rules) -> tm_is_det sP t -> 
       no_free_alt sP (big_or u p s1 t).
   Proof.
     rewrite /big_or/F.
@@ -271,7 +265,7 @@ Section check.
   Qed.
 
   Lemma expand_no_free_alt {sP s1 A r} : 
-    checkr sP -> no_free_alt sP A -> 
+    check_program sP -> no_free_alt sP A -> 
       expand u s1 A = r ->
         no_free_alt sP (get_state r).
   Proof.
@@ -337,7 +331,7 @@ Section check.
   Qed.
 
   Lemma expand_next_alt {sP s1 A s2 B} : 
-    checkr sP -> no_free_alt sP A ->
+    check_program sP -> no_free_alt sP A ->
       expand u s1 A = Success s2 B -> forall s3, next_alt s3 B = None.
   Proof.
     move=> H.
@@ -373,7 +367,7 @@ Section check.
   Qed.
 
   Lemma expandedb_next_alt_done {sP s A s1 B b}: 
-    checkr sP -> 
+    check_program sP -> 
       no_free_alt sP A -> expandedb u s A (Done s1 B) b ->
         forall s0, next_alt s0 B = None.
   Proof.
@@ -484,7 +478,7 @@ Section check.
 
 
   Lemma expand_next_alt_failed {sP A B C s s'}:
-    checkr sP ->
+    check_program sP ->
       no_free_alt sP A -> expand u s A = Failure B ->
         forall sN, next_alt sN B = Some (s', C) -> no_free_alt sP C.
   Proof.
@@ -577,7 +571,7 @@ Section check.
     Qed.
 
   Lemma expandedb_next_alt_failed {sP s A B C s' b1}: 
-    checkr sP ->
+    check_program sP ->
       no_free_alt sP A ->
         expandedb u s A (Failed B) b1 -> 
           forall sN, next_alt sN B = Some (s', C) -> no_free_alt sP C.
@@ -596,7 +590,7 @@ Section check.
     run u s A s' B -> forall s2, next_alt s2 B = None.
 
   Lemma runb_next_alt {sP A}: 
-    checkr sP -> 
+    check_program sP -> 
       no_free_alt sP A -> is_det A.
   Proof.
     rewrite/is_det.
@@ -612,7 +606,7 @@ Section check.
   Qed.
 
   Lemma main {sP p t}:
-    checkr sP -> det_term sP t -> 
+    check_program sP -> tm_is_det sP t -> 
       is_det ((CallS p t)).
   Proof.
     move=> H1 fA HA.
@@ -629,14 +623,15 @@ Section check.
     
     Definition AllTailCut := (forall pr : program, all tail_cut (rules pr)).
 
-    Lemma cut_in_prem_tail_cut sP: AllTailCut -> checkr sP.
+    Lemma cut_in_prem_tail_cut sP: AllTailCut -> check_program sP.
     Proof.
-      rewrite /AllTailCut /checkr.
-      rewrite /tail_cut /all_cut_followed_by_det_aux.
+      rewrite /AllTailCut /check_program.
+      rewrite /tail_cut /check_rules.
       move=> + pr => /(_ pr).
       remember (rules pr) as RS.
       apply: sub_all => r; clear.
-      case X: det_rcallable => //=.
+      rewrite /check_rule.
+      case X: rcallable_is_det => //=.
       case: r X => //= hd []//= + l.
       elim: l => //=.
       move=> x xs IH []//=; last first.
@@ -645,7 +640,7 @@ Section check.
     Qed.
 
     Lemma tail_cut_is_det sP p t:
-      AllTailCut -> det_term sP t -> is_det ((CallS p t)).
+      AllTailCut -> tm_is_det sP t -> is_det ((CallS p t)).
     Proof.
       move=> /(cut_in_prem_tail_cut sP).
       apply main.
