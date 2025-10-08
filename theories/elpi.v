@@ -219,7 +219,7 @@ Global Notation "(( x ))" := (consC x nilC)
 
 
   Inductive G := 
-    | call : program -> Tm -> G
+    | call : program -> Callable -> G
     | cut : alts -> G
   with alts :=
     | no_alt
@@ -669,8 +669,8 @@ Global Notation "(( x ))" := (consC x nilC)
 
   Definition a2g p A :=
     match A with
-    | Cut => cut nilC
-    | Call t => call p t
+    | ACut => cut nilC
+    | ACall t => call p t
     end.
 
   Fixpoint a2gs p (b: seq A) := 

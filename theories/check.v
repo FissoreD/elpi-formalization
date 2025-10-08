@@ -7,14 +7,6 @@ Section checker.
   Print sigT.
   Definition sigV := V -> option S.
 
-  Fixpoint get_head (sP: sigT) (sV: sigV) (t: Tm) : option S :=
-    match t with
-    | Code (p pn) => Some (sP pn)
-    | Code (v vn) => sV vn
-    | Data _ => Some (b Exp)
-    | Comb hd _ => get_head sP sV hd
-    end.
-
   Fixpoint is_det_sig (sig:S) : bool :=
     match sig with
     | b (d Func) => true
@@ -23,17 +15,36 @@ Section checker.
     | arr _ _ s => is_det_sig s
     end.
 
-  Definition det_term (sP: sigT) (sV: sigV) (t : Tm) :=
-    match get_head sP sV t with 
+  Fixpoint det_rcallable (sP: sigT) (t:RCallable) : bool :=
+    match t with
+    | RCallable_Comb h _ => det_rcallable sP h
+    | RCallable_Kp k => is_det_sig (sP k)
+    end.
+
+  Fixpoint get_hd_signature (sP: sigT) (sV: sigV) (t: Callable) : option S :=
+    match t with
+    | Callable_Kp pn => Some (sP pn)
+    | Callable_V vn => None (*TODO: use sV vn instead*)
+    | Callable_Comb hd _ => get_hd_signature sP sV hd
+    end.
+
+  Definition det_term (sP: sigT) (sV: sigV) (t : Callable) :=
+    match get_hd_signature sP sV t with 
+    | None => false
+    | Some sig => is_det_sig sig
+    end.
+
+  Definition det_callable (sP: sigT) (sV: sigV) (t : Callable) :=
+    match get_hd_signature sP sV t with 
     | None => false
     | Some sig => is_det_sig sig
     end.
 
   Definition det_atom sig s (a: A) :=
     match a with
-    | Cut => true
-    | Call t => det_term sig s t
-    end.
+    | ACut => true
+    | ACall t => det_term sig s t
+    end. 
 
   Fixpoint has_cut A :=
     match A with
@@ -48,12 +59,13 @@ Section checker.
   Fixpoint cut_followed_by_det (sP :sigT) (sV:sigV) (s: seq A) :=
     match s with
     | [::] => false
-    | Cut :: xs => all (det_atom sP sV) xs || cut_followed_by_det sP sV xs
-    | Call _ :: xs => cut_followed_by_det sP sV xs
+    | ACut :: xs => all (det_atom sP sV) xs || cut_followed_by_det sP sV xs
+    | ACall _ :: xs => cut_followed_by_det sP sV xs
     end.
 
   Definition all_cut_followed_by_det_aux sP sV rules :=
-    all (fun x => (det_term sP sV x.(head) == false) || cut_followed_by_det sP sV x.(premises)) rules.
+    all (fun x => (det_rcallable sP x.(head) == false) || 
+      cut_followed_by_det sP sV x.(premises)) rules.
 
   Definition checkr sP sV := 
     forall pr, all_cut_followed_by_det_aux sP sV (rules pr).
@@ -84,8 +96,8 @@ Section check.
   *)
   Fixpoint no_free_alt (sP:sigT) (sV:sigV) A :=
     match A with
-    | CutS => det_atom sP sV (Cut)
-    | CallS _ a => det_atom sP sV (Call a)
+    | CutS => det_atom sP sV (ACut)
+    | CallS _ a => det_atom sP sV (ACall a)
     | Top | Bot | OK => true
     | Dead => true
     (* | And (Or A1 _ A2) B0 B ->
@@ -155,37 +167,61 @@ Section check.
 
   Variable u : Unif.
 
+  Lemma tiki_taka {sP sV s s3 modes t q hd1}:
+    let t' := tm2RC (deref u s (Callable2Tm t)) in
+    t' = Some q ->
+    det_term sP sV t ->
+      H u modes q hd1 s = Some s3 ->
+        det_rcallable sP hd1.
+  Proof.
+    move=>/=.
+    elim: modes q hd1 t s s3 => //=.
+      move=> []//=k []//= k1 t s1 s2; case: eqP => //=<-.
+      admit.
+    move=> []//ml IH []//h1 b1 []//=h2 b2 t s1 s2 H1 H2 H3.
+      move: H3; case e: H => //=[s1'] H3.
+      move: H1; case de: deref => //= [h1' b1'].
+      case X: tm2RC => //=[h1''].
+      move=>[??]; subst.
+      apply: IH _ _ e.
+      admit. (*should have props on deref and matching *)
+    admit. (*similar proof but with unify*)
+  Admitted.
+
+
   Lemma is_det_no_free_alt {sP sV t s1} {p:program}:
     all_cut_followed_by_det_aux sP sV p.(rules) -> det_term sP sV t -> 
       no_free_alt sP sV (big_or u p s1 t).
   Proof.
     rewrite /big_or/F.
+    case X: tm2RC => //=[q].
     case: p => rules modes sig1 /=.
     generalize {| rules := rules; modes := modes; sig := sig1 |} as pr => pr.
-    clear.
-    elim: rules modes s1 t pr => //.
-    move=> [] hd bo rules IH modes sig1/= t p /andP[H1 H1'] H2.
+    clear -X.
+    elim: rules modes s1 t pr q X => //=.
+    move=> [] hd bo rules IH modes s/= t p q X /andP[H1 H1'] H2.
     case H: H => /= [s2|]; last first.
-      apply IH => //.
+      apply: IH X H1' H2.
     clear IH.
     move: H.
-    generalize (modes t) as m => {}modes.
-    have X: t = hd by admit.
-    subst.
-    move=> _Ign. (* TODO *)
-    rewrite H2 in H1.
-    elim: rules H1' bo H1 => //=.
-      move=> _ bo.
-      apply cut_followed_by_det_nfa_and.
-    move=> [] hd1 bo1/= l IH /andP [H3 H4] bo H1.
-    case H: H => [s3|]//=; last first.
-      by apply: IH.
-    rewrite (cut_followed_by_det_has_cut H1).
-    have ?: hd = hd1 by admit.
-    subst.
-    rewrite H2 in H3.
-    by rewrite (cut_followed_by_det_nfa_and H1) IH// if_same.
-  Admitted.
+    set t' := deref u s t.
+    move: H1 => /orP[]; last first.
+      move=> + _.
+      elim: rules H1' bo => //=.
+        move=> _ bo.
+        apply cut_followed_by_det_nfa_and.
+      move=> [] hd1 bo1/= l IH /andP [H3 H4] bo H1.
+      case H: H => [s3|]//=; last first.
+        by apply: IH.
+      rewrite (cut_followed_by_det_has_cut H1).
+      rewrite cut_followed_by_det_nfa_and//=.
+      rewrite IH//=.
+      move: H3 => /orP[] => //.
+      move=> /eqP H3; exfalso.
+      have /= := tiki_taka X H2 H; congruence.
+    move=> /eqP H3 H4.
+    have /= := tiki_taka X H2 H4; congruence.
+  Qed.
 
   Lemma expand_has_cut {A s}: 
     has_cut A -> has_cut (get_state (expand u s A)) \/ is_cutbrothers (expand u s A).
@@ -562,7 +598,7 @@ Section check.
   Section tail_cut.
 
     Definition tail_cut (r : R) :=
-    match r.(premises) with [::] => false | x :: xs => last x xs == Cut end.
+    match r.(premises) with [::] => false | x :: xs => last x xs == ACut end.
     
     Definition AllTailCut := (forall pr : program, all tail_cut (rules pr)).
 
@@ -573,7 +609,7 @@ Section check.
       move=> + pr => /(_ pr).
       remember (rules pr) as RS.
       apply: sub_all => r; clear.
-      case X: det_term => //=.
+      case X: det_rcallable => //=.
       case: r X => //= hd []//= + l.
       elim: l => //=.
       move=> x xs IH []//=; last first.

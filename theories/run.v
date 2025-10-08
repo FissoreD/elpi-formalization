@@ -23,7 +23,7 @@ Inductive state :=
   | OK : state
   | Top : state
   | Dead : state
-  | CallS : program  -> Tm -> state
+  | CallS : program  -> Callable -> state
   | CutS : state
   | Or  : state -> Sigma -> state -> state  (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
   | And : state -> state -> state -> state  (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
@@ -44,7 +44,6 @@ Definition is_expanded X := match X with Expanded _ _ => true | _ => false end.
 Definition is_fail A := match A with Failure _ => true | _ => false end.
 Definition is_cutbrothers X := match X with CutBrothers _ _ => true | _ => false end.
 Definition is_solved X := match X with Success _ _ => true | _ => false end.
-Definition is_cut X := match X with Cut => true | _ => false end.
 
 
 Inductive exp_res := Done of Sigma & state | Failed of state.
@@ -313,8 +312,8 @@ Proof. by case: B. Qed.
 
 Definition A2CallCut pr (A:A) : state :=
   match A with
-  | Cut => CutS
-  | Call tm => CallS pr tm
+  | ACut => CutS
+  | ACall tm => CallS pr tm
   end.
 
 Fixpoint big_and pr (a : list A) : state :=
@@ -337,22 +336,24 @@ Proof. elim l => //-[]//. Qed.
 
 Record Unif := {
   unify : Tm -> Tm -> Sigma -> option Sigma;
-  matching : Tm -> Tm -> Sigma -> option Sigma
-}.
+  matching : Tm -> Tm -> Sigma -> option Sigma;
+  deref : Sigma -> Tm -> Tm;
+}.  
+
 
 Section main.
-  Variable unif: Unif.
+  Variable u: Unif.
 
 
-  Fixpoint H (ml : list mode) (q : Tm) (h: Tm) s : option Sigma :=
+  Fixpoint H (ml : list mode) (q : RCallable) (h: RCallable) s : option Sigma :=
     match ml,q,h with
-    | [::], Code c, Code c1 => if c == c1 then Some s else None
-    | [:: i & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (unif.(matching) a1 a2 s) 
-    | [:: o & ml], (Comb q a1), (Comb h a2) => obind (H ml q h) (unif.(unify) a1 a2 s) 
+    | [::], RCallable_Kp c, RCallable_Kp c1 => if c == c1 then Some s else None
+    | [:: i & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(matching) a1 a2) (H ml q h s)
+    | [:: o & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(unify) a1 a2) (H ml q h s)
     | _, _, _ => None
     end.
 
-  Fixpoint select (query : Tm) (modes:list mode) (rules: list R) sigma : seq (Sigma * R) :=
+  Fixpoint select (query : RCallable) (modes:list mode) (rules: list R) sigma : seq (Sigma * R) :=
     match rules with
     | [::] => [::]
     | rule :: rules =>
@@ -362,11 +363,31 @@ Section main.
       end
     end.
 
-  Definition F pr query s : seq (Sigma * R) :=
+  Fixpoint tm2RC (t : Tm) : option RCallable :=
+    match t with
+    | Tm_Kd _ => None
+    | Tm_V _ => None
+    | Tm_Kp p => Some (RCallable_Kp p)
+    | Tm_Comb t1 t2 => omap (fun x => RCallable_Comb x t2) (tm2RC t1)
+    end.
+
+  Fixpoint Callable2Tm (c : Callable) : Tm :=
+    match c with
+    | Callable_Kp p => Tm_Kp p
+    | Callable_V v => Tm_V v
+    | Callable_Comb h t => Tm_Comb (Callable2Tm h) t
+    end.
+  Coercion Callable2Tm : Callable >-> Tm.
+
+  Definition F pr (query:Callable) s : seq (Sigma * R) :=
     let rules := pr.(rules) in
-    let modes := pr.(modes) query in
-    let rules := select query modes rules s in
-    rules.
+    match tm2RC (u.(deref) s query) with
+    | None => [::] (*this is a call with flex head, in elpi it is an error! *)
+    | Some query =>
+      let modes := pr.(modes) query in
+      let rules := select query modes rules s in
+      rules
+      end.
 
   Definition big_or pr s t :=
     let l := F pr t s in
