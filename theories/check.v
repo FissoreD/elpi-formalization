@@ -445,7 +445,7 @@ Lemma cut_followed_by_det_nfa_and {sP sV bo} p:
   check_atoms_w_cut sP sV bo -> (det_tree_aux sP sV (big_and p bo) Func).1 = Func.
 Proof. move=>/andP[]/eqP/all_det_nfa_big_and//. Qed.
 
-Lemma tiki_taka {modes sP sV u s t q hd s2}:
+(* Lemma tiki_taka {modes sP sV u s t q hd s2}:
   tm2RC (deref s (Callable2Tm t)) = Some q ->
   H u (modes q) q hd s = Some s2 ->
   getS_Callable sP sV t = Some (b (d Func)) -> rcallable_is_det sP hd.
@@ -538,339 +538,343 @@ Proof.
 
   elim: t sV => //=.
   - move=> k sV.
-Qed.
+Qed. *)
+
 
   (* 
     Given a checked program, and a deterministic tree,
     then calling expand produces a tree which is still deterministic.
   *)
-  Lemma expand_det_tree {sP s1 A r} : 
-    check_program sP -> det_tree sP A -> 
-      expand u s1 A = r ->
-        det_tree sP (get_state r).
-  Proof.
-    move=> H + <-; clear r.
-    elim: A s1 => //.
-    - move=> p t s1 /=.
-      apply: is_det_det_tree.
-      by have:= H p.
-    - move=> A HA s B HB s1 /=/andP[fA].
-      case: ifP => //= cA.
-        move=> nnB.
-        case: ifP => //= dA.
-          have:= HB s1 nnB.
-          case: expand => //= [_|_||_] C nnC/=; rewrite get_state_Or/=fA/=cA?HB//.
-        have:= HA s1 fA.
-        have := @expand_has_cut _ s1 cA.
-        case X: expand => //= -[]// + ->; rewrite ?nnB ?no_alt_cut //=; try by case: has_cut.
-        by rewrite cutr2 eqxx if_same.
-      move/eqP->.
-      case: ifP => [dA|].
-        rewrite get_state_Or/=cA no_alt_dead//=is_ko_expand//=?is_ko_cutr//cutr2//.
-      have:= HA s1 fA => + dA.
-      case Y: expand => /=->; rewrite !cutr2 eqxx no_alt_cut if_same//.
-    - move=> A HA B0 HB0 B HB s /=.
-      move=>/orP[].
-        move=>kA; rewrite is_ko_expand///=kA//.
-      move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
-        case X: expand => //= [|||s1 C]; try rewrite cB0 cB/= fB0 fB !orbT//.
-        rewrite get_state_And.
-        rewrite /= (HB s1) //.
-        have := @expand_has_cut _ s1 cB.
-        case H1: (is_cutbrothers (expand u s1 B)).
-          move=>_/=; rewrite has_cut_cutl// det_tree_cutl det_tree_cutl !orbT//.
-        move=> []//H2; rewrite H2 fB0 cB0 orbT//.
-      have:= HA s fA.
-      case X: expand => //= [|||s1 C] H1; try rewrite H1 orbT fB fB0 orbT//.
-      have:= HB s1 fB; case Y: expand => //= H2; try rewrite fB0 H2 H1 orbT !orbT//.
-      rewrite !det_tree_cutl H2 !orbT//.
-  Qed.
+Lemma expand_det_tree {u sP s1 A r} : 
+  check_program sP -> det_tree sP A -> 
+    expand u s1 A = r ->
+      det_tree sP (get_state r).
+Proof.
+  move=> H + <-; clear r.
+  elim: A s1 => //.
+  - move=> p t s1 /=.
+    rewrite/det_tree.
+    move: H.
+    rewrite /check_program.
+    apply: is_det_det_tree.
+    by have:= H p.
+  - move=> A HA s B HB s1 /=/andP[fA].
+    case: ifP => //= cA.
+      move=> nnB.
+      case: ifP => //= dA.
+        have:= HB s1 nnB.
+        case: expand => //= [_|_||_] C nnC/=; rewrite get_state_Or/=fA/=cA?HB//.
+      have:= HA s1 fA.
+      have := @expand_has_cut _ s1 cA.
+      case X: expand => //= -[]// + ->; rewrite ?nnB ?no_alt_cut //=; try by case: has_cut.
+      by rewrite cutr2 eqxx if_same.
+    move/eqP->.
+    case: ifP => [dA|].
+      rewrite get_state_Or/=cA no_alt_dead//=is_ko_expand//=?is_ko_cutr//cutr2//.
+    have:= HA s1 fA => + dA.
+    case Y: expand => /=->; rewrite !cutr2 eqxx no_alt_cut if_same//.
+  - move=> A HA B0 HB0 B HB s /=.
+    move=>/orP[].
+      move=>kA; rewrite is_ko_expand///=kA//.
+    move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
+      case X: expand => //= [|||s1 C]; try rewrite cB0 cB/= fB0 fB !orbT//.
+      rewrite get_state_And.
+      rewrite /= (HB s1) //.
+      have := @expand_has_cut _ s1 cB.
+      case H1: (is_cutbrothers (expand u s1 B)).
+        move=>_/=; rewrite has_cut_cutl// det_tree_cutl det_tree_cutl !orbT//.
+      move=> []//H2; rewrite H2 fB0 cB0 orbT//.
+    have:= HA s fA.
+    case X: expand => //= [|||s1 C] H1; try rewrite H1 orbT fB fB0 orbT//.
+    have:= HB s1 fB; case Y: expand => //= H2; try rewrite fB0 H2 H1 orbT !orbT//.
+    rewrite !det_tree_cutl H2 !orbT//.
+Qed.
 
-  Lemma expand_next_alt {sP s1 A s2 B} : 
-    check_program sP -> det_tree sP A ->
-      expand u s1 A = Success s2 B -> forall s3, next_alt s3 B = None.
-  Proof.
-    move=> H.
-    elim: A s1 B s2 => //.
-    - by move=> /= s1 A s2 _ [_ <-]//.
-    - move=> A HA s B HB s1 C s2.
-      move=> /=/andP[fA].
-      case: (ifP  (is_dead _)) => dA.
-        rewrite has_cut_dead// => fB.
-        have:= HB s _ _ fB.
-        case X: expand => ///(_ _ _ erefl) H1 [??]; subst => /= s3.
-        rewrite dA H1//.
-      have:= HA s1 _ _ fA.
-      case X: expand => // [s4 A'] /(_ _ _ erefl) H1 + [_<-] s3/=.
-      rewrite (expand_not_dead _ dA X) H1.
-      rewrite success_has_cut ?(expand_solved_same _ X)//.
-      move=>/eqP->.
-      rewrite is_ko_next_alt?if_same//is_ko_cutr//.
-    - move=> A HA B0 _ B HB s1 C s2 /=.
-      move=>/orP[].
-        move=> kA; rewrite is_ko_expand//.
-      move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
-        case X: expand => // [s3 D].
-        have:= HB s3 _ _ fB.
-        have sbF:= has_cut_success cB.
-        case Y: expand => ///(_ _ _ erefl) H1 [??] s4;subst.
-        have [[]]:= expand_solved_same _ Y; congruence.
-      have:= HA s1 _ _ fA.
-      case X: expand => //[s3 D]/(_ _ _ erefl) H1.
+Lemma expand_next_alt {sP s1 A s2 B} : 
+  check_program sP -> det_tree sP A ->
+    expand u s1 A = Success s2 B -> forall s3, next_alt s3 B = None.
+Proof.
+  move=> H.
+  elim: A s1 B s2 => //.
+  - by move=> /= s1 A s2 _ [_ <-]//.
+  - move=> A HA s B HB s1 C s2.
+    move=> /=/andP[fA].
+    case: (ifP  (is_dead _)) => dA.
+      rewrite has_cut_dead// => fB.
+      have:= HB s _ _ fB.
+      case X: expand => ///(_ _ _ erefl) H1 [??]; subst => /= s3.
+      rewrite dA H1//.
+    have:= HA s1 _ _ fA.
+    case X: expand => // [s4 A'] /(_ _ _ erefl) H1 + [_<-] s3/=.
+    rewrite (expand_not_dead _ dA X) H1.
+    rewrite success_has_cut ?(expand_solved_same _ X)//.
+    move=>/eqP->.
+    rewrite is_ko_next_alt?if_same//is_ko_cutr//.
+  - move=> A HA B0 _ B HB s1 C s2 /=.
+    move=>/orP[].
+      move=> kA; rewrite is_ko_expand//.
+    move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
+      case X: expand => // [s3 D].
       have:= HB s3 _ _ fB.
-      case Y: expand => ///(_ _ _ erefl) H2 [??];subst => /= s4.
-      by rewrite H1 H2; rewrite !if_same.
-  Qed.
+      have sbF:= has_cut_success cB.
+      case Y: expand => ///(_ _ _ erefl) H1 [??] s4;subst.
+      have [[]]:= expand_solved_same _ Y; congruence.
+    have:= HA s1 _ _ fA.
+    case X: expand => //[s3 D]/(_ _ _ erefl) H1.
+    have:= HB s3 _ _ fB.
+    case Y: expand => ///(_ _ _ erefl) H2 [??];subst => /= s4.
+    by rewrite H1 H2; rewrite !if_same.
+Qed.
 
-  Lemma expandedb_next_alt_done {sP s A s1 B b}: 
-    check_program sP -> 
-      det_tree sP A -> expandedb u s A (Done s1 B) b ->
-        forall s0, next_alt s0 B = None.
-  Proof.
-    remember (Done _ _) as d eqn:Hd => Hz + H.
-    elim: H s1 B Hd => //; clear -Hz.
-    - {
-      move=> s s' A B HA s1 C [_ <-] fA; clear s1 C.
-      apply: expand_next_alt Hz fA HA.
-    } 
-    - move=> s1 s2 r A B b HA HB IH s3 C ? fA; subst.
-      apply: IH erefl (expand_det_tree Hz fA HA).
-    - move=> s1 s2 r A B b HA HB IH s3 C ? fA; subst.
-      apply: IH erefl (expand_det_tree Hz fA HA).
-  Qed.
+Lemma expandedb_next_alt_done {sP s A s1 B b}: 
+  check_program sP -> 
+    det_tree sP A -> expandedb u s A (Done s1 B) b ->
+      forall s0, next_alt s0 B = None.
+Proof.
+  remember (Done _ _) as d eqn:Hd => Hz + H.
+  elim: H s1 B Hd => //; clear -Hz.
+  - {
+    move=> s s' A B HA s1 C [_ <-] fA; clear s1 C.
+    apply: expand_next_alt Hz fA HA.
+  } 
+  - move=> s1 s2 r A B b HA HB IH s3 C ? fA; subst.
+    apply: IH erefl (expand_det_tree Hz fA HA).
+  - move=> s1 s2 r A B b HA HB IH s3 C ? fA; subst.
+    apply: IH erefl (expand_det_tree Hz fA HA).
+Qed.
 
 
-  Lemma det_tree_next_alt {sP s1 A s2 B}:
-    det_tree sP A -> next_alt s1 A = Some (s2, B) -> det_tree sP B.
-  Proof.
-    elim: A s1 B s2 => //.
-    - move=> []//??? _ [_<-]//.
-    - move=>/=??[]//??? _ [_<-]//.
-    - move=> []//??? _ [_<-]//.
-    - move=> A HA s B HB s1 C s2 /=.
-      move=>/andP[fA].
-      case: (ifP (is_dead _)) => dA.
-        rewrite has_cut_dead//.
-        move=> fB.
-        have:= HB (Some s) _ _ fB.
-        case X: next_alt => //[[s3 D]] /(_ _ _ erefl) fD[_ <-]/=.
-        rewrite no_alt_dead// has_cut_dead// fD.
-      case: ifP => cA.
-        move=> fB.
-        have:= (HA s1 _ _ fA).
-        case X: next_alt => //[[s3 D]|].
-          have cD:= has_cut_next_alt cA X.
-          by move=> /(_ _ _ erefl) fD[_<-]/=; rewrite fD cD fB.
-        move=> _.
-        case: ifP => dB//.
-        have idA := @is_dead_dead A.
-          case Y: next_alt => //[[s3 D]].
-          move=>[_ <-]/=.
-          rewrite no_alt_dead// has_cut_dead//.
-          apply: HB fB Y.
-      move=>/eqP->; rewrite (is_ko_next_alt is_ko_cutr) if_same.
-      have:= HA s1 _ _ fA.
-      case: next_alt => // [[s3 D]]/(_ _ _ erefl) fD [_ <-]/=.
-      by rewrite fD cutr2 eqxx no_alt_cut if_same.
-    - move=> A HA B0 HB0 B HB s1 C s2 /=.
-      case: (ifP (is_dead _)) => dA//.
-      move=>/orP[].
-        move=>kA.
-        by rewrite is_ko_failed// is_ko_next_alt//.
-      move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
-        case: ifP => // fA.
-          case: next_alt => // [[s3 D]]; case: ifP => // _ [_ <-]/=.
-          by rewrite cB0 fB0 orbT.
-        have:= HB s1 _ _ fB.
-        case X: next_alt => // [[s3 D]|].
-          by move=> /(_ _ _ erefl) fD [_ <-]/=; rewrite cB0 (has_cut_next_alt cB X) fD fB0 orbT.
-        move=> _; case: next_alt => // [[s3 D]]; case: ifP => // _ [_ <-]/=.
-        by rewrite cB0 fB0 orbT.
-      case: ifP => // _.
-        have:= HA s1 _ _ fA.
-        case X: next_alt => // [[s3 D]].
-        move=> /(_ _ _ erefl) fD; case: ifP => // _ [_ <-]/=.
-        by rewrite fD orbT fB0 orbT.
-      have:= HB s1 _ _ fB.
-      case: next_alt => // [[s3 D]|].
-        by move=> /(_ _ _ erefl) fD [_ <-]/=; rewrite fA fD fB0 !orbT.
+Lemma det_tree_next_alt {sP s1 A s2 B}:
+  det_tree sP A -> next_alt s1 A = Some (s2, B) -> det_tree sP B.
+Proof.
+  elim: A s1 B s2 => //.
+  - move=> []//??? _ [_<-]//.
+  - move=>/=??[]//??? _ [_<-]//.
+  - move=> []//??? _ [_<-]//.
+  - move=> A HA s B HB s1 C s2 /=.
+    move=>/andP[fA].
+    case: (ifP (is_dead _)) => dA.
+      rewrite has_cut_dead//.
+      move=> fB.
+      have:= HB (Some s) _ _ fB.
+      case X: next_alt => //[[s3 D]] /(_ _ _ erefl) fD[_ <-]/=.
+      rewrite no_alt_dead// has_cut_dead// fD.
+    case: ifP => cA.
+      move=> fB.
+      have:= (HA s1 _ _ fA).
+      case X: next_alt => //[[s3 D]|].
+        have cD:= has_cut_next_alt cA X.
+        by move=> /(_ _ _ erefl) fD[_<-]/=; rewrite fD cD fB.
       move=> _.
+      case: ifP => dB//.
+      have idA := @is_dead_dead A.
+        case Y: next_alt => //[[s3 D]].
+        move=>[_ <-]/=.
+        rewrite no_alt_dead// has_cut_dead//.
+        apply: HB fB Y.
+    move=>/eqP->; rewrite (is_ko_next_alt is_ko_cutr) if_same.
+    have:= HA s1 _ _ fA.
+    case: next_alt => // [[s3 D]]/(_ _ _ erefl) fD [_ <-]/=.
+    by rewrite fD cutr2 eqxx no_alt_cut if_same.
+  - move=> A HA B0 HB0 B HB s1 C s2 /=.
+    case: (ifP (is_dead _)) => dA//.
+    move=>/orP[].
+      move=>kA.
+      by rewrite is_ko_failed// is_ko_next_alt//.
+    move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
+      case: ifP => // fA.
+        case: next_alt => // [[s3 D]]; case: ifP => // _ [_ <-]/=.
+        by rewrite cB0 fB0 orbT.
+      have:= HB s1 _ _ fB.
+      case X: next_alt => // [[s3 D]|].
+        by move=> /(_ _ _ erefl) fD [_ <-]/=; rewrite cB0 (has_cut_next_alt cB X) fD fB0 orbT.
+      move=> _; case: next_alt => // [[s3 D]]; case: ifP => // _ [_ <-]/=.
+      by rewrite cB0 fB0 orbT.
+    case: ifP => // _.
       have:= HA s1 _ _ fA.
       case X: next_alt => // [[s3 D]].
       move=> /(_ _ _ erefl) fD; case: ifP => // _ [_ <-]/=.
       by rewrite fD orbT fB0 orbT.
-  Qed.
+    have:= HB s1 _ _ fB.
+    case: next_alt => // [[s3 D]|].
+      by move=> /(_ _ _ erefl) fD [_ <-]/=; rewrite fA fD fB0 !orbT.
+    move=> _.
+    have:= HA s1 _ _ fA.
+    case X: next_alt => // [[s3 D]].
+    move=> /(_ _ _ erefl) fD; case: ifP => // _ [_ <-]/=.
+    by rewrite fD orbT fB0 orbT.
+Qed.
 
-  Lemma expand_next_alt_failed {sP A B C s s'}:
-    check_program sP ->
-      det_tree sP A -> expand u s A = Failure B ->
-        forall sN, next_alt sN B = Some (s', C) -> det_tree sP C.
-  Proof.
-    move=> Hz.
-    elim: A B C s s' => //.
-    - move=> /=????? []<-//.
-    - move=> /=????? []<-//.
-    - move=> A HA s1 B HB C D s s' /=++sN.
-      move=>/andP[fA].
-      case: (ifP (is_dead _)) => dA.
-        rewrite has_cut_dead// => fB.
-        have:= HB _ _ s1 _ fB.
-        case: expand => // E /(_ _ _ _ erefl (Some s1)) + [<-]/=.
-        rewrite dA.
-        case: next_alt => //[[s2 F]] /(_ _ _ erefl) + [_<-]/=.
-        by move=> /= ->; rewrite has_cut_dead// no_alt_dead.
-      case: ifP => //.
-        have := HA _ _ s _ fA _ sN.
-        case X: expand => // [E] /(_ _ _ _ erefl) + cA + [?]; subst.
-        rewrite /= (expand_not_dead _ dA X).
-        have:= @expand_has_cut _ s cA; rewrite X/= => -[]// cE.
-        case Y: next_alt => //[[s2 F]|].
-          move=> /(_ _ _ erefl) fF fB [_ <-] /=.
-          have cF:= has_cut_next_alt cE Y.
-          by rewrite fF cF fB.
-        move=>_ fB.
-        case: ifP => // dB.
-        have dDe := @is_dead_dead E.
-          case nB : next_alt => //= [[s2 F]] [_<-]/=.
-          rewrite no_alt_dead// has_cut_dead// (det_tree_next_alt fB nB)//.
-      move=> cA /eqP->.
-      have:= HA _ _ s _ fA _ sN.
-      case X: expand => // [E] /(_ _ _ _ erefl) + [<-]/=.
-      have kcB := @is_ko_cutr B.
-      rewrite /= (expand_not_dead _ dA X) (is_ko_next_alt kcB).
-      rewrite if_same.
-      case Y: next_alt => //[[s2 F]].
-      move=> /(_ _ _ erefl) fF [_ <-] /=.
-      by rewrite fF no_alt_cut cutr2 eqxx if_same.
-    - move=> A HA B0 _ B HB C D s s' /= ++sN.
-      move=> /orP[].
-        move=> kA; rewrite is_ko_expand// => -[<-]/=.
-        rewrite is_ko_failed// is_ko_next_alt// if_same//.
-      move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
-        case X: expand => //[E|s1 E].
-          move=> [<-]/=.
-          case: ifP => // dS.
-          case: ifP => // fS.
-            case nE: next_alt => [[s3 F]|]//.
-            by case: ifP => //FB0 [_<-]/=; rewrite cB0 fB0 orbT.
-          case Y: next_alt => //[[s3 F]|].
-            by move=>[_ <-]/=; rewrite cB0 (has_cut_next_alt cB Y) fB0 (det_tree_next_alt fB Y) orbT.
-          by case: next_alt => // [[s3 F]]; case:ifP=>//_[_<-]/=; rewrite cB0 fB0 orbT.
-        have:= HB _ _ s1 _ fB _ sN.
-        case Z: expand => // [F] /(_ _ _ _ erefl) + [<-]/=.
-        case: ifP => //dE; case:ifP=>FE.
-          move=> _.
-          by case: next_alt => //[[s3 G]]; case:ifP=>//_[_<-]/=; rewrite cB0 fB0 orbT.
-        case Y: next_alt => //[[s3 G]|].
-          move=>/(_ _ _ erefl) nG.
-          have := @expand_has_cut _ s1 cB.
-          rewrite Z/==>-[]//cF.
-          by move=>[_ <-]/=; rewrite cB0 nG fB0 (has_cut_next_alt cF Y) orbT.
-        have [??]:= expand_solved_same _ X; subst => _.
-        case W: next_alt => //[[s3 G]]; case: ifP => // _[_<-]/=.
-        by rewrite cB0 fB0 orbT.
-      have:= HA _ _ s _ fA _ sN.
+Lemma expand_next_alt_failed {sP A B C s s'}:
+  check_program sP ->
+    det_tree sP A -> expand u s A = Failure B ->
+      forall sN, next_alt sN B = Some (s', C) -> det_tree sP C.
+Proof.
+  move=> Hz.
+  elim: A B C s s' => //.
+  - move=> /=????? []<-//.
+  - move=> /=????? []<-//.
+  - move=> A HA s1 B HB C D s s' /=++sN.
+    move=>/andP[fA].
+    case: (ifP (is_dead _)) => dA.
+      rewrite has_cut_dead// => fB.
+      have:= HB _ _ s1 _ fB.
+      case: expand => // E /(_ _ _ _ erefl (Some s1)) + [<-]/=.
+      rewrite dA.
+      case: next_alt => //[[s2 F]] /(_ _ _ erefl) + [_<-]/=.
+      by move=> /= ->; rewrite has_cut_dead// no_alt_dead.
+    case: ifP => //.
+      have := HA _ _ s _ fA _ sN.
+      case X: expand => // [E] /(_ _ _ _ erefl) + cA + [?]; subst.
+      rewrite /= (expand_not_dead _ dA X).
+      have:= @expand_has_cut _ s cA; rewrite X/= => -[]// cE.
+      case Y: next_alt => //[[s2 F]|].
+        move=> /(_ _ _ erefl) fF fB [_ <-] /=.
+        have cF:= has_cut_next_alt cE Y.
+        by rewrite fF cF fB.
+      move=>_ fB.
+      case: ifP => // dB.
+      have dDe := @is_dead_dead E.
+        case nB : next_alt => //= [[s2 F]] [_<-]/=.
+        rewrite no_alt_dead// has_cut_dead// (det_tree_next_alt fB nB)//.
+    move=> cA /eqP->.
+    have:= HA _ _ s _ fA _ sN.
+    case X: expand => // [E] /(_ _ _ _ erefl) + [<-]/=.
+    have kcB := @is_ko_cutr B.
+    rewrite /= (expand_not_dead _ dA X) (is_ko_next_alt kcB).
+    rewrite if_same.
+    case Y: next_alt => //[[s2 F]].
+    move=> /(_ _ _ erefl) fF [_ <-] /=.
+    by rewrite fF no_alt_cut cutr2 eqxx if_same.
+  - move=> A HA B0 _ B HB C D s s' /= ++sN.
+    move=> /orP[].
+      move=> kA; rewrite is_ko_expand// => -[<-]/=.
+      rewrite is_ko_failed// is_ko_next_alt// if_same//.
+    move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
       case X: expand => //[E|s1 E].
-        move=> /(_ _ _ _ erefl) + [<-]/=.
+        move=> [<-]/=.
         case: ifP => // dS.
-        case: ifP => //fE.
-          case: next_alt => //[[s4 G]] /(_ _ _ erefl) fG.
-          by case: ifP => // _[_<-]/=; rewrite fB0 fG orbT orbT.
-        case Y: (next_alt sN B) => //[[s4 G]|].
-          by move=> _ [_<-]/=; rewrite (det_tree_next_alt fB Y) fB0 (expand_det_tree Hz fA X) orbT orbT.
-        case: next_alt => //[[s3 G]] /(_ _ _ erefl)fG; case:ifP=>//_[_<-]/=.
-        by rewrite fG fB0 orbT orbT.
-      move=> _.
+        case: ifP => // fS.
+          case nE: next_alt => [[s3 F]|]//.
+          by case: ifP => //FB0 [_<-]/=; rewrite cB0 fB0 orbT.
+        case Y: next_alt => //[[s3 F]|].
+          by move=>[_ <-]/=; rewrite cB0 (has_cut_next_alt cB Y) fB0 (det_tree_next_alt fB Y) orbT.
+        by case: next_alt => // [[s3 F]]; case:ifP=>//_[_<-]/=; rewrite cB0 fB0 orbT.
       have:= HB _ _ s1 _ fB _ sN.
-      case Z: expand => // [F] /(_ _ _ _ erefl) {}HB [<-]/=.
-      have /= fE := expand_det_tree Hz fA X.
+      case Z: expand => // [F] /(_ _ _ _ erefl) + [<-]/=.
       case: ifP => //dE; case:ifP=>FE.
-        case W: next_alt => //[[s3 G]]; case:ifP=>//_[_<-]/=.
-        by rewrite fB0 (det_tree_next_alt fE W) orbT orbT.
-      move: HB.
-      case W: next_alt => //[[s3 G]|].
-        move=> /(_ _ _ erefl) fG [_<-]/=; rewrite fG fB0 fE orbT orbT//.
-      case T: next_alt => //[[s3 G]] => _; case:ifP => //[fB01][_<-]/=.
-      by rewrite fB0 (det_tree_next_alt fE T) orbT orbT.
-    Qed.
-
-  Lemma expandedb_next_alt_failed {sP s A B C s' b1}: 
-    check_program sP ->
-      det_tree sP A ->
-        expandedb u s A (Failed B) b1 -> 
-          forall sN, next_alt sN B = Some (s', C) -> det_tree sP C.
-  Proof.
-    remember (Failed _) as f eqn:Hf => Hz + H.
-    elim: H B C s' Hf => //; clear -Hz.
-    - move=> s A B HA ? C s' [<-] fA nB.
-      apply: expand_next_alt_failed Hz fA HA nB.
-    - move=> s s' r A B b HA HB IH C D s1 ? fA sN nB; subst.
-      apply: IH erefl (expand_det_tree Hz fA HA) _ nB.
-    - move=> s s' r A B b HA HB IH C D s1 ? fA sN nB; subst.
-      apply: IH erefl (expand_det_tree Hz fA HA) _ nB.
+        move=> _.
+        by case: next_alt => //[[s3 G]]; case:ifP=>//_[_<-]/=; rewrite cB0 fB0 orbT.
+      case Y: next_alt => //[[s3 G]|].
+        move=>/(_ _ _ erefl) nG.
+        have := @expand_has_cut _ s1 cB.
+        rewrite Z/==>-[]//cF.
+        by move=>[_ <-]/=; rewrite cB0 nG fB0 (has_cut_next_alt cF Y) orbT.
+      have [??]:= expand_solved_same _ X; subst => _.
+      case W: next_alt => //[[s3 G]]; case: ifP => // _[_<-]/=.
+      by rewrite cB0 fB0 orbT.
+    have:= HA _ _ s _ fA _ sN.
+    case X: expand => //[E|s1 E].
+      move=> /(_ _ _ _ erefl) + [<-]/=.
+      case: ifP => // dS.
+      case: ifP => //fE.
+        case: next_alt => //[[s4 G]] /(_ _ _ erefl) fG.
+        by case: ifP => // _[_<-]/=; rewrite fB0 fG orbT orbT.
+      case Y: (next_alt sN B) => //[[s4 G]|].
+        by move=> _ [_<-]/=; rewrite (det_tree_next_alt fB Y) fB0 (expand_det_tree Hz fA X) orbT orbT.
+      case: next_alt => //[[s3 G]] /(_ _ _ erefl)fG; case:ifP=>//_[_<-]/=.
+      by rewrite fG fB0 orbT orbT.
+    move=> _.
+    have:= HB _ _ s1 _ fB _ sN.
+    case Z: expand => // [F] /(_ _ _ _ erefl) {}HB [<-]/=.
+    have /= fE := expand_det_tree Hz fA X.
+    case: ifP => //dE; case:ifP=>FE.
+      case W: next_alt => //[[s3 G]]; case:ifP=>//_[_<-]/=.
+      by rewrite fB0 (det_tree_next_alt fE W) orbT orbT.
+    move: HB.
+    case W: next_alt => //[[s3 G]|].
+      move=> /(_ _ _ erefl) fG [_<-]/=; rewrite fG fB0 fE orbT orbT//.
+    case T: next_alt => //[[s3 G]] => _; case:ifP => //[fB01][_<-]/=.
+    by rewrite fB0 (det_tree_next_alt fE T) orbT orbT.
   Qed.
 
-  Definition is_det A := forall s s' B,
-    run u s A s' B -> forall s2, next_alt s2 B = None.
+Lemma expandedb_next_alt_failed {sP s A B C s' b1}: 
+  check_program sP ->
+    det_tree sP A ->
+      expandedb u s A (Failed B) b1 -> 
+        forall sN, next_alt sN B = Some (s', C) -> det_tree sP C.
+Proof.
+  remember (Failed _) as f eqn:Hf => Hz + H.
+  elim: H B C s' Hf => //; clear -Hz.
+  - move=> s A B HA ? C s' [<-] fA nB.
+    apply: expand_next_alt_failed Hz fA HA nB.
+  - move=> s s' r A B b HA HB IH C D s1 ? fA sN nB; subst.
+    apply: IH erefl (expand_det_tree Hz fA HA) _ nB.
+  - move=> s s' r A B b HA HB IH C D s1 ? fA sN nB; subst.
+    apply: IH erefl (expand_det_tree Hz fA HA) _ nB.
+Qed.
 
-  Lemma runb_next_alt {sP A}: 
-    check_program sP -> 
-      det_tree sP A -> is_det A.
-  Proof.
-    rewrite/is_det.
-    move=> H1 H2 s s' B []b H3.
-    elim: H3 H2; clear -H1 => //.
-    - move=> s s' A B C b HA -> fA s2.
-      have H := expandedb_next_alt_done H1 fA HA _.
-      have sB := expanded_Done_success u HA.
-      have//:= next_alt_clean_success sB (H s2).
-    - move=> s s' r A B C D b1 b2 b3 HA HB HC IH ? fA s2; subst.
-      apply: IH.
-      apply: expandedb_next_alt_failed H1 fA HA _ HB.
-  Qed.
+Definition is_det A := forall s s' B,
+  run u s A s' B -> forall s2, next_alt s2 B = None.
 
-  Lemma main {sP p t}:
-    check_program sP -> callable_is_det sP t -> 
-      is_det ((CallS p t)).
-  Proof.
-    move=> H1 fA HA.
-    apply: runb_next_alt H1 _ HA.
-    apply: fA.
-  Qed.
+Lemma runb_next_alt {sP A}: 
+  check_program sP -> 
+    det_tree sP A -> is_det A.
+Proof.
+  rewrite/is_det.
+  move=> H1 H2 s s' B []b H3.
+  elim: H3 H2; clear -H1 => //.
+  - move=> s s' A B C b HA -> fA s2.
+    have H := expandedb_next_alt_done H1 fA HA _.
+    have sB := expanded_Done_success u HA.
+    have//:= next_alt_clean_success sB (H s2).
+  - move=> s s' r A B C D b1 b2 b3 HA HB HC IH ? fA s2; subst.
+    apply: IH.
+    apply: expandedb_next_alt_failed H1 fA HA _ HB.
+Qed.
 
-  Print Assumptions  main.
+Lemma main {sP p t}:
+  check_program sP -> callable_is_det sP t -> 
+    is_det ((CallS p t)).
+Proof.
+  move=> H1 fA HA.
+  apply: runb_next_alt H1 _ HA.
+  apply: fA.
+Qed.
+
+Print Assumptions  main.
+
+Section tail_cut.
+
+  Definition tail_cut (r : R) :=
+  match r.(premises) with [::] => false | x :: xs => last x xs == ACut end.
   
-  Section tail_cut.
+  Definition AllTailCut := (forall pr : program, all tail_cut (rules pr)).
 
-    Definition tail_cut (r : R) :=
-    match r.(premises) with [::] => false | x :: xs => last x xs == ACut end.
-    
-    Definition AllTailCut := (forall pr : program, all tail_cut (rules pr)).
+  Lemma cut_in_prem_tail_cut sP: AllTailCut -> check_program sP.
+  Proof.
+    rewrite /AllTailCut /check_program.
+    rewrite /tail_cut /check_rules.
+    move=> + pr => /(_ pr).
+    remember (rules pr) as RS.
+    apply: sub_all => r; clear.
+    rewrite /check_rule.
+    case X: rcallable_is_det => //=.
+    case: r X => //= hd []//= + l.
+    elim: l => //=.
+    move=> x xs IH []//=; last first.
+      move=> _; apply IH.
+    by move=> H1 H2; rewrite IH//orbT.
+  Qed.
 
-    Lemma cut_in_prem_tail_cut sP: AllTailCut -> check_program sP.
-    Proof.
-      rewrite /AllTailCut /check_program.
-      rewrite /tail_cut /check_rules.
-      move=> + pr => /(_ pr).
-      remember (rules pr) as RS.
-      apply: sub_all => r; clear.
-      rewrite /check_rule.
-      case X: rcallable_is_det => //=.
-      case: r X => //= hd []//= + l.
-      elim: l => //=.
-      move=> x xs IH []//=; last first.
-        move=> _; apply IH.
-      by move=> H1 H2; rewrite IH//orbT.
-    Qed.
+  Lemma tail_cut_is_det sP p t:
+    AllTailCut -> callable_is_det sP t -> is_det ((CallS p t)).
+  Proof.
+    move=> /(cut_in_prem_tail_cut sP).
+    apply main.
+  Qed.
+End tail_cut.
 
-    Lemma tail_cut_is_det sP p t:
-      AllTailCut -> callable_is_det sP t -> is_det ((CallS p t)).
-    Proof.
-      move=> /(cut_in_prem_tail_cut sP).
-      apply main.
-    Qed.
-  End tail_cut.
-
-  Print Assumptions tail_cut_is_det.
+Print Assumptions tail_cut_is_det.
 
 End check.
