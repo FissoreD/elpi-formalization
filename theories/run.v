@@ -353,8 +353,6 @@ Section main.
     | _, _, _ => None
     end.
 
-    Print Option.
-
   (* TODO: deref is too easy? Yes if sigma is a mapping from vars to lambdas in a future version *)
   Fixpoint deref (s: Sigma) (tm:Tm) :=
     match tm with

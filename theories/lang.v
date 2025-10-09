@@ -15,12 +15,15 @@ Notation "x '--o-->' y" := (arr o x y) (at level 3).
 derive D.
 Elpi derive.eqbOK.register_axiom D is_D is_nat_inhab D_eqb D_eqb_correct D_eqb_refl.
 HB.instance Definition _ := hasDecEq.Build D D_eqb_OK.
+derive B.
+Elpi derive.eqbOK.register_axiom B is_B is_nat_inhab B_eqb B_eqb_correct B_eqb_refl.
+HB.instance Definition _ := hasDecEq.Build B B_eqb_OK.
 derive mode.
 Elpi derive.eqbOK.register_axiom mode is_mode is_nat_inhab mode_eqb mode_eqb_correct mode_eqb_refl.
 HB.instance Definition _ := hasDecEq.Build mode mode_eqb_OK.
-(* derive S.
+derive S.
 Elpi derive.eqbOK.register_axiom S is_S is_nat_inhab S_eqb S_eqb_correct S_eqb_refl.
-HB.instance Definition _ := hasDecEq.Build S S_eqb_OK. *)
+HB.instance Definition _ := hasDecEq.Build S S_eqb_OK.
 
 Inductive Kp := IKp : nat -> Kp.
 derive Kp.
