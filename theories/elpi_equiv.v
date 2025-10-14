@@ -13,23 +13,6 @@ Section NurEqiv.
     | more_alt (_,x) xs => (s1, x) ::: xs
     end.
 
-  (* Lemma topotip A s1 s2 s3 s4 E l x xs:
-    valid_state A ->
-    success A -> next_alt s1 A = Some (s2, E) ->
-      state_to_list E s3 l = more_alt (s4, x) xs ->
-        s3 = s4.
-  Proof.
-    elim: A s1 s2 s3 s4 E l x xs => //=.
-    - move=> A HA s B HB s1 s2 s3 s4 E l x xs.
-      case: ifP => //[dA vB sB|dA /andP[vA bB]sA].
-        case N: next_alt => [[s5 B']|]//[??]; subst => /=.
-        rewrite state_to_list_dead//=.
-        case X: state_to_list => //=[[s5 y]ys][???]; subst.
-        have:= HB _ _ _ _ _ _ _ _ vB sB N X.
-        move=> ?; subst.
-        apply: HB vB _ _ _.
-        apply: *)
-
   Lemma s2l_bbOr_same_subst {A s1 s2 xs ys l}:
     bbOr A -> state_to_list A s1 l = (s2, xs) ::: ys -> s1 = s2.
   Proof.
