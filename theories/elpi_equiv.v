@@ -480,20 +480,6 @@ Section NurEqiv.
       rewrite !H/=H//.
   Qed.
 
-
-  (* Lemma get_subst_alt s1 A B:
-    get_substS (get_substS (get_substS (get_substS s1 A) B) A) B =
-      get_substS (get_substS s1 A) B.
-  Proof.
-    elim: A s1 B => //=. *)
-
-  (* Lemma get_substS2 {s B}: get_substS (get_substS s B) B = get_substS s B.
-  Proof. 
-    elim: B s => //=.
-    - move=> A HA s B HB s1; case: ifP => //->//.
-    - move=> A HA B0 _ B HB s1; case: ifP => sA; rewrite sA//.
-     *)
-
   Lemma expand_solved {s A} l sx:
     valid_state A ->
     success A ->
@@ -548,12 +534,6 @@ Section NurEqiv.
       have bB:= bbAnd_cutl bB0.
       rewrite base_and_ko_state_to_list//=HB//.
   Qed.
-  
-  (* Lemma map_nil (l: alts):
-    map (appendC^~ nilC) l = l.
-  Proof.
-    elim: l => //=x xs H; rewrite map_cons H cats0//.
-  Qed. *)
 
   Lemma save_alt_add_ca_deepA bt a gs bs:
     empty_ca bs ->
