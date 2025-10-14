@@ -587,19 +587,6 @@ Ltac fConsG x xs := change (more_goals x xs) with (consC x xs).
 Ltac fNilA := change no_alt with (@nilC _ _ IsList_alts).
 Ltac fNilG := change no_goals with nilC.
 
-(* Elpi Tactic fold_goal.
-Elpi Accumulate lp:{{
-  solve (goal _ _ Gty _ _ as R) Y :- 
-    % refine Gty R Y,
-    (pi x y\ sizecopy {{more_alt lp:x lp:y}} {{@consC lp:X lp:Y lp:Z lp:x lp:y}}) ==>
-    copy Gty Z,
-    coq.say {coq.term->string Gty},
-    coq.say {coq.term->string Z},
-    % std.spy!(refine Z R Y),
-    true
-    .
-}}. *)
-
 Lemma cat_right_same {l1 l2} (l3:alts): 
   l1 ++ l3 = l2 ++ l3 -> l1 = l2.
 Proof.
