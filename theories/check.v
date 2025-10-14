@@ -10,6 +10,14 @@ OK, (r X \/ s X) => backchain for q X gives two solutions
 Is it important that the substitution in the Or note, X is a function?
 *)
 
+Set Implicit Arguments.
+Inductive typecheck A :=
+  | ty_ok : A -> typecheck
+  | ty_err.
+
+Arguments ty_err {_}.
+
+
 Lemma tm2RC_kp {t1 k} : 
   tm2RC t1 = Some (RCallable_Kp k) -> t1 = Tm_Kp k.
 Proof.
@@ -84,6 +92,39 @@ Proof.
     by case: expand => [s2|s2||s2] D /=; auto => -[]// ->; rewrite cB0 orbT; left.
 Qed.
 
+
+
+(* Lemma has_cut_big_or {u p s c}: has_cut (big_or u p s c) = false.
+Proof.
+  rewrite/big_or; case: F => //=.
+    admit.
+  move=> []/=.
+  Search is_ko big_or_aux. *)
+
+(* Lemma expand_has_cut_false {u A s}: 
+  has_cut A = false -> 
+    has_cut (get_state (expand u s A)) = false.
+Proof.
+  elim: A s; try by move=> /=; auto.
+  - move=> p []//=.
+    elim
+  - move=> A HA s1 B HB s /=/andP[kA kB].
+    case: ifP => dA.
+      rewrite (is_ko_expand _ kB)/=kA kB; auto.
+    rewrite (is_ko_expand _ kA)/=kA kB; auto.
+  - move=> A HA B0 _ B HB s /=/orP[].
+      move=> /(HA s); case: expand => [s1|s1||s1] C/= []//; auto => cC.
+      - by rewrite cC /=; left.
+      - by rewrite cC /=; left.
+      left; rewrite get_state_And /=.
+      by case: ifP; rewrite ?cC // has_cut_cutl.
+    case/andP=> cB0 cB.
+    case: expand => [s1|s1||s1] C/=; rewrite ?cB ?cB0 ?orbT; auto.
+    move: (HB s1 cB).
+    by case: expand => [s2|s2||s2] D /=; auto => -[]// ->; rewrite cB0 orbT; left.
+Qed. *)
+
+
 Lemma has_cut_success {A}:
   has_cut A -> success A = false.
 Proof.
@@ -141,13 +182,6 @@ Qed.
 Section checker.
   Definition sigV := V -> option S.
 
-  Fixpoint get_prop_rightmost sig := (*this is the signature of predicate that should end in prop...*)
-    match sig with
-    | b (d r) => r
-    | b Exp => Func (*TODO: type error*)
-    | arr _ _ s => get_prop_rightmost s
-    end.
-
   Fixpoint is_det_sig (sig:S) : bool :=
     match sig with
     | b (d Func) => true
@@ -156,19 +190,19 @@ Section checker.
     | arr _ _ s => is_det_sig s
     end.
 
-  Fixpoint getS_tm (sP : sigT) (sV : sigV) (tm: Tm) : option S :=
+  Fixpoint get_tm_hd_sig (sP : sigT) (sV : sigV) (tm: Tm) : option S :=
     match tm with
-    | Tm_Kd _ => Some (b Exp)
-    | Tm_Kp k => Some (sP k)
+    | Tm_Kd _ => (Some (b Exp))
+    | Tm_Kp k => (Some (sP k))
     | Tm_V v => sV v
-    | Tm_Comb h _ => getS_tm sP sV h
+    | Tm_Comb h _ => get_tm_hd_sig sP sV h
     end.
 
-  Definition getS_Callable (sP: sigT) sV (t: Callable) : option S :=
-    getS_tm sP sV (Callable2Tm t).
+  Definition get_callable_hd_sig (sP: sigT) sV (t: Callable) : option S :=
+    get_tm_hd_sig sP sV (Callable2Tm t).
 
   Definition callable_is_det (sP: sigT) sV (t : Callable) :=
-    odflt false (omap is_det_sig (getS_Callable sP sV t)).
+    odflt false (omap is_det_sig (get_callable_hd_sig sP sV t)).
 
   Definition maxD (d1 d2 : D) :=
     match d1, d2 with
@@ -182,27 +216,56 @@ Section checker.
     | Pred, Pred => Pred
     end.
 
-  Fixpoint incl_aux f1 f2 s1 s2 :=
-    match s1, s2 with
-    | b Exp, b Exp => true
-    | b(d D1), b(d D2) => f1 D1 D2 == D1
-    | arr i l1 r1, arr i l2 r2 => incl_aux f2 f1 l1 l2 && incl_aux f1 f2 r1 r2
-    | arr o l1 r1, arr o l2 r2 => incl_aux f1 f2 l1 l2 && incl_aux f1 f2 r1 r2
-    | _, _ => false (*TODO: this is type error*)
+  Lemma maxD_refl {r}: maxD r r = r.
+  Proof. case: r => //. Qed.
+
+  Lemma maxD_comm {l r}: maxD l r = maxD r l.
+  Proof. case: l; case: r => //. Qed.
+
+  Lemma minD_refl {r}: minD r r = r.
+  Proof. case: r => //. Qed.
+
+  Lemma minD_comm {l r}: minD l r = minD r l.
+  Proof. case: l; case: r => //. Qed.
+
+  Lemma maxD_assoc {x y z}: maxD x (maxD y z) = maxD (maxD x y) z.
+  Proof. case: x => //=; case: y => //=; case: z => //. Qed.
+
+  Lemma minD_assoc {x y z}: minD x (minD y z) = minD (minD x y) z.
+  Proof. case: x => //=; case: y => //=; case: z => //. Qed.
+
+  Definition map_ty {A B} (F: A -> typecheck B) (ob1: typecheck A) : (typecheck B) :=
+    match ob1 with
+    | ty_err => ty_err
+    | ty_ok cnt => F cnt
     end.
 
-  Fixpoint min_max f1 f2 s1 s2 :=
+  Definition map_ty_bool ob1 ob2 : typecheck bool :=
+    map_ty (fun x => map_ty (fun y => ty_ok (x && y)) ob1)  ob2.
+
+  Fixpoint incl_aux f1 f2 s1 s2 : typecheck _:=
     match s1, s2 with
-    | b Exp, b Exp => b Exp
-    | b(d D1), b(d D2) => b(d(f1 D1 D2))
-    | arr i l1 r1, arr i l2 r2 => arr i (min_max f2 f1 l1 r1) (min_max f1 f2 r1 r2)
-    | arr o l1 r1, arr o l2 r2 => arr o (min_max f1 f2 l1 r1) (min_max f1 f2 r1 r2)
-    | _, _ => b Exp (*TODO: this is type error*)
+    | b Exp, b Exp => ty_ok true
+    | b(d D1), b(d D2) => ty_ok (f1 D1 D2 == D1)
+    | arr i l1 r1, arr i l2 r2 => map_ty_bool (incl_aux f2 f1 l1 l2) (incl_aux f1 f2 r1 r2)
+    | arr o l1 r1, arr o l2 r2 => map_ty_bool (incl_aux f1 f2 l1 l2) (incl_aux f1 f2 r1 r2)
+    | _, _ => ty_err
+    end.
+
+  Definition map_ty_s m (ob1:typecheck S) ob2 : typecheck S :=
+    map_ty (fun x => map_ty (fun y => ty_ok (arr m x y)) ob2) ob1.
+
+  Fixpoint min_max f1 f2 s1 s2 : typecheck _ :=
+    match s1, s2 with
+    | b Exp, b Exp => ty_ok (b Exp)
+    | b(d D1), b(d D2) => ty_ok (b(d(f1 D1 D2)))
+    | arr i l1 r1, arr i l2 r2 => map_ty_s i (min_max f2 f1 l1 r1) (min_max f1 f2 r1 r2)
+    | arr o l1 r1, arr o l2 r2 => map_ty_s o (min_max f1 f2 l1 r1) (min_max f1 f2 r1 r2)
+    | _, _ => ty_err
     end.
 
   Definition incl := incl_aux minD maxD.
   Definition min := min_max minD maxD.
-  Definition max := min_max maxD minD.
   
   Fixpoint strong s :=
     match s with
@@ -224,136 +287,189 @@ Section checker.
       (arr i (arr i (b Exp) (arr o (b Exp) (b(d Func)))) (arr i (b Exp) (arr o (b Exp) (b(d Func))))).
     Definition WMap := 
       (arr i (arr i (b Exp) (arr o (b Exp) (b(d Func)))) (arr i (b Exp) (arr o (b Exp) (b(d Pred))))).
-    Goal incl SMap WMap && ~~(incl WMap SMap). Proof. move=>//. Qed.
+    Goal incl SMap WMap = ty_ok true. Proof. move=>//=. Qed.
+    Goal  (incl WMap SMap) = ty_ok false. Proof. move=>//=. Qed.
     Goal (weak SMap) == WMap. Proof. move=> //=. Qed.
   End test.
 
-  Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm) : (S * bool) :=
-    match tm with
-    | Tm_Kd k => (b Exp, true)
-    | Tm_Kp k => (sP k, true) 
-    | Tm_V v => (odflt (b Exp) (sV v), true) (*TODO: what to return if v is not in sV ??*)
-    | Tm_Comb l r => 
-      let '(s1, b1) := check_tm sP sV l in
-      match s1 with
-      | arr i tl tr => 
-        let '(s2, b2) := check_tm sP sV r in
-        let r := b1 && b2 && incl s2 tl in
-        if r then (tr, true)
-        else (weak tr, false)
-      | arr o tl tr => if b1 then (check_tm sP sV l) else (weak tr, false)
-      | _ => (b Exp, false) (*TODO: this is a typechecking error...*)
-      end
+  Definition map_ty_opt {A B: Type} (f: A -> typecheck (option B)) t :=
+    match t with
+    | ty_ok (Some e) => (f e)
+    | ty_err => ty_err
+    | ty_ok None => ty_ok (@None B)
     end.
 
-  Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : Tm) (s : S): sigV :=
+  (* takes a tm and returns its signature + if it is well-called
+     the tm has no signature if its head is a variable with no assignment in sV *)
+  Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm) : typecheck (option (S * bool)) :=
     match tm with
-    | Tm_Kd _ | Tm_Kp _ => sV
+    | Tm_Kd k => ty_ok (Some (b Exp, true))
+    | Tm_Kp k => ty_ok (Some (sP k, true) )
+    | Tm_V v => if sV v is Some s then ty_ok (Some (s, true)) else ty_ok None
+    | Tm_Comb l r => 
+      map_ty_opt (
+        fun '(s1, b1) => 
+        match s1 with
+          | arr i tl tr => 
+            map_ty_opt (fun '(s2, b2) =>
+              map_ty (fun bi => 
+                ty_ok (Some (if b1 && b2 && bi then (tr, true) else (weak tr, false)))
+              ) (incl s2 tl))
+            (check_tm sP sV r)
+          | arr o tl tr => if b1 then (check_tm sP sV l) else ty_ok (Some (weak tr, false))
+          | _ => ty_err
+          end
+      ) (check_tm sP sV l)
+    end.
+
+  Definition add_sig sV v s : sigV := 
+    (fun x => if x == v then Some s else sV x).
+
+  (* takes a tm and a signature and updates variable signatures
+     updates are performed only on toplevel variables or variables in input positions *)
+  Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : Tm) (s : S): typecheck sigV :=
+    match tm with
+    | Tm_Kd _ | Tm_Kp _ => ty_ok sV
     | Tm_V v =>
-      let t' := sV v in
-      fun x => if x == v then Some (odflt s (omap (fun x => min x s) t')) else sV x
+      if sV v is Some s' then map_ty (fun s'' => ty_ok (add_sig sV v s'')) (min s s')
+      else ty_ok (add_sig sV v s)
     | Tm_Comb l r =>
       match s with
       | arr i tl tr =>
-        let sP' := assume_tm sP sV l tl in
-        assume_tm sP sP' r tr
+        map_ty (fun sP' => assume_tm sP sP' r tr) (assume_tm sP sV l tl)
       | arr o tl tr => assume_tm sP sV l tl
-      | _ => sV (*TODO: this is type error...*)
+      | _ => ty_err
       end
     end.
 
-  Fixpoint assume_call (sP:sigT) (sV:sigV) (c : Callable) (s : S): sigV :=
+  (* assumes the output tm and then it goes on inputs *)
+  Fixpoint assume_call (sP:sigT) (sV:sigV) (c : Callable) (s : S): typecheck sigV :=
     match c with
-    | Callable_Kp _ => sV
-    | Callable_V v => sV
+    | Callable_Kp _ => ty_ok sV
+    | Callable_V v => ty_ok sV
     | Callable_Comb l r =>
       match s with
       | arr i tl tr => assume_call sP sV l tl
       | arr o tl tr => 
-        let sV' := assume_call sP sV l tl in
-        assume_tm sP sV' r tr
-      | _ => sV (*TODO: this is type error*)
+        map_ty (fun sV' => assume_tm sP sV' r tr) (assume_call sP sV l tl)
+      | _ => ty_err
       end
     end.
 
-  Fixpoint assume_hd (sP:sigT) (sV:sigV) (s : S) (tm:Tm) : sigV :=
+  (* assumes variables in input positions *)
+  Fixpoint assume_hd (sP:sigT) (sV:sigV) (s : S) (tm:Tm) : typecheck sigV :=
     match tm with
-    | Tm_Kd _ => sV
-    | Tm_Kp _ => sV
-    | Tm_V v => fun x => if x == v then Some s else sV x
+    | Tm_Kd _ => ty_ok sV
+    | Tm_Kp _ => ty_ok sV
+    | Tm_V v =>
+      if sV v is Some s' then
+        let m := min s s' in
+        map_ty (fun s'' => ty_ok (fun x => if x == v then Some s'' else sV x)) m
+      else 
+        ty_ok (fun x => if x == v then Some s else sV x) 
     | Tm_Comb l r => 
       match s with
-      | arr i tl tr => assume_hd sP (assume_hd sP sV tl l) tr r
+      | arr i tl tr => 
+        map_ty (fun sV' => assume_hd sP sV' tr r) (assume_hd sP sV tl l)
       | arr o tl _ => (assume_hd sP sV tl l)
-      | _ => sV (*TODO: wrong type, should be unreachable*)
+      | _ => ty_err
       end
     end.
 
-  Fixpoint check_hd (sP:sigT) (sV:sigV) (s : S) (tm:Tm) : bool :=
+  (* verifies variables in outputs positions *)
+  Fixpoint check_hd (sP:sigT) (sV:sigV) (s : S) (tm:Tm) : typecheck bool :=
     match tm with
-    | Tm_Kd _ => true
-    | Tm_Kp k => sP k == s
-    | Tm_V v => odflt false (omap (fun x => x == s) (sV v))
+    | Tm_Kd _ => incl (b Exp) s
+    | Tm_Kp k => incl (sP k) s
+    | Tm_V v => 
+      if sV v is Some s' then incl s' s
+      else ty_ok false
     | Tm_Comb l r => 
       match s with
       | arr i tl _ => (check_hd sP sV tl l)
       | arr o tl tr => 
-        let '(t, b1) := check_tm sP sV r in 
-        (t == s) && b1 && (check_hd sP sV tl l)
-      | _ => false (*TODO: wrong type, should be unreachable*)
+        match  (check_tm sP sV r) with
+        | ty_err => ty_err
+        | ty_ok None => ty_ok false
+        | ty_ok (Some (t, b1)) => 
+          map_ty 
+            (fun b2 => map_ty (fun bi => ty_ok (bi && b1 && b2)) (incl t s))
+          (check_hd sP sV tl l) 
+        end 
+      | _ => ty_err
       end
     end.
 
-  Definition check_callable sP sV (c: Callable) : (D * sigV) :=
-    let '(x, b1) := check_tm sP sV (Callable2Tm c) in (*TODO: we hope b1 to be Func or Pred*)
+  (* checks inputs and assumes outputs of a callable *)
+  Definition check_callable sP sV (c: Callable) d : typecheck (D * sigV) :=
+    match check_tm sP sV (Callable2Tm c)  with
+    | ty_err => ty_err
+    | ty_ok None => ty_ok (Pred, sV)
+    | ty_ok (Some ((b Exp | arr _ _ _), _)) => ty_err (*NOTE: callable have type prop!*)
+    | ty_ok (Some ((b(d x)), b1)) =>
       if b1 then 
-        if x is b(d x) then
-          if getS_Callable sP sV c is Some s then
-            let sV' := assume_call sP sV c s in
-            (maxD x (get_prop_rightmost s), sV')
-          else (Pred, sV)
-        else (Pred, sV) (*TODO: type error*) 
-      else (Pred, sV).
+        if get_callable_hd_sig sP sV c is Some s then
+          map_ty (fun sV' => ty_ok (maxD x d, sV')) (assume_call sP sV c s)
+        else ty_ok (Pred, sV)
+      else ty_ok (Pred, sV)
+    end.
 
-  Definition check_atom sP sV (a: A) (s:D) : (D * sigV) :=
+  Definition check_atom sP sV (a: A) (s:D) : typecheck (D * sigV) :=
     match a with
-    | ACut => (Func, sV)
-    | ACall t => check_callable sP sV t
+    | ACut => ty_ok (Func, sV)
+    | ACall t => check_callable sP sV t s
     end. 
 
   Fixpoint check_atoms sP sV l s :=
     match l with
-    | [::] => (s, sV)
+    | [::] => ty_ok (s, sV)
     | x :: xs => 
-      let '(s', sV') := check_atom sP sV x s in
-      check_atoms sP sV' xs s'
+      map_ty (fun '(s', sV') => check_atoms sP sV' xs s') (check_atom sP sV x s)
     end.
 
   (* all bodies should have a cut followed by checked atoms *)
   (* ACCEPTED: a1 ... an, !, b1 ... bm *)
   (* we want that b1 ... bm is func *)
   (* NOTE: flags about determinacy can be obtained from a1...an *)
-  Definition check_atoms_w_cut (sP :sigT) sV (l: seq A) :=
-    ((check_atoms sP sV l Func).1 == Func) && (ACut \in l).
+  (* Definition check_atoms_w_cut (sP :sigT) sV (l: seq A) :=
+    map_ty (fun '(d1, sV') => ty_ok (((d1 == Func)), sV')) 
+      (check_atoms sP sV l Func). *)
 
-  Fixpoint rcallable_is_det (sP: sigT) (t:RCallable) : bool :=
+  Fixpoint RCallable2Callable rc := 
+    match rc with
+    | RCallable_Comb h bo => Callable_Comb (RCallable2Callable h) bo
+    | RCallable_Kp k => Callable_Kp (k)
+    end.
+
+  Fixpoint RCallable_sig (sP: sigT) (t:RCallable) : S :=
     match t with
-    | RCallable_Comb h _ => rcallable_is_det sP h
-    | RCallable_Kp k => is_det_sig (sP k)
+    | RCallable_Comb h _ => RCallable_sig sP h
+    | RCallable_Kp k => (sP k)
     end.
 
   Definition empty_ctx : sigV := fun x => None.
   
-  (* The rules passes the check if it is 
-     implementating a relation predicate.
-     Otherwiser its atoms should pass the check
+  (* The rules passes the check if:
+     - it is implementing a relation, the output are ok
+     - it is implementing a function, the body is function, the outputs are ok
   *)
   Definition check_rule sP sV head prems :=
-    (rcallable_is_det sP head == false) ||
-    check_atoms_w_cut sP sV prems.
+    let hd_sig := RCallable_sig sP head in
+    let is_det_head := is_det_sig hd_sig in
+    let tm_head := (Callable2Tm (RCallable2Callable head)) in
+    let ass_hd := assume_hd sP sV hd_sig tm_head in
+    map_ty (fun '(sV') => 
+      let ck_A := check_atoms sP sV' prems Func in
+      map_ty (fun '(b1, sV'') =>
+        if is_det_head && (b1 == Pred) then ty_ok false
+        else check_hd sP sV'' hd_sig tm_head) ck_A) ass_hd.
 
   Definition check_rules sP sV rules :=
-    all (fun x => check_rule sP sV x.(head) x.(premises)) rules.
+    all (fun x => 
+      match check_rule sP sV x.(head) x.(premises) with 
+      | ty_ok b1 => b1 
+      | ty_err => false
+      end) rules.
 
   Definition check_program sP := 
     forall pr, check_rules sP empty_ctx (rules pr).
@@ -366,25 +482,29 @@ End checker.
   "((A, A') ; B) , C" is OK if B is dead already (cutr by predecessor of A for example)
 
 *)
-Fixpoint det_tree_aux (sP:sigT) (sV : sigV) A dd : D * sigV :=
+Fixpoint det_tree_aux (sP:sigT) (sV : sigV) A dd : typecheck (D * sigV) :=
   match A with
-  | CutS => (Func, sV)
-  | CallS _ a => check_atom sP sV (ACall a) dd
-  | Top | Bot | OK => (dd, sV)
-  | Dead => (dd, sV)
+  | CutS => ty_ok (Func, sV)
+  | CallS _ a => 
+    map_ty (fun '(dd', sV') =>  ty_ok (maxD dd dd', sV')) (check_callable sP sV a dd)
+  | Top | Bot | OK | Dead => ty_ok (dd, sV)
   | And A B0 B =>
-    if is_ko A then (dd, sV)
+    if is_ko A then ty_ok (dd, sV)
     else
-      let '(dd', sV') := det_tree_aux sP sV A dd in
-      let '(ddB0, sVB0) := det_tree_aux sP sV' B0 dd' in
-      let '(ddB, sVB) := det_tree_aux sP sV' B dd' in
-      (maxD ddB0 ddB, sV')
+      let rA := (det_tree_aux sP sV A dd) in
+      map_ty (fun '(dd', sV') =>
+        let rB0 := (det_tree_aux sP sV' B0 dd') in
+        let rB := (det_tree_aux sP sV' B dd') in
+        map_ty (fun '(ddB0, sVB0) =>
+          map_ty (fun '(ddB, sVB) =>
+            ty_ok (maxD ddB0 ddB, sV')) rB) rB0) rA
   | Or A _ B =>
-      let '(sVA, sV') := det_tree_aux sP sV A dd in
-      let '(sVB, _) := det_tree_aux sP sV B dd in
-      if has_cut A then (maxD sVA sVB, sV) else 
-      if (is_ko B) then (sVA, sV')
-      else (Pred, sV)
+      map_ty (
+        fun '(sVA, sV') => 
+        map_ty (fun '(sVB, _) =>
+      if has_cut A then ty_ok (maxD sVA sVB, sV) else 
+      if (is_ko B) then ty_ok (sVA, sV')
+      else ty_ok (Pred, sV)) (det_tree_aux sP sV B dd)) (det_tree_aux sP sV A dd)
   end.
 
 Definition det_tree sP A := (det_tree_aux sP empty_ctx A Func).1 == Func.
@@ -400,7 +520,7 @@ Proof.
   + move=> A HA B0 HB0 B HB /= ->//.
 Qed.
 
-  Lemma no_alt_cut {sP A}: det_tree sP (cutr A).
+Lemma no_alt_cut {sP A}: det_tree sP (cutr A).
 Proof. apply: no_alt_ko is_ko_cutr. Qed.
 
 
@@ -414,27 +534,29 @@ Proof.
   elim: l sV r => //=.
   move=> A As IH sV r.
   case X: check_atom => [dA sVA].
-  move=> {}/IH H.
-  case: A X => //=.
+  (* rewrite eqxx. *)
+  case YY : A X => //=[|c].
     move=> [??]; subst => /=.
+    move=> {}/IH H.
     case: det_tree_aux H => //=-[]//.
-  move=> c.
   rewrite/check_callable.
-  case Z: check_tm => [S []]/=; last first.
-    move=> [??]; subst.
-    case: det_tree_aux H => -[]//.
-  case: S Z => //=; last first.
-    move=> m s1 s2 Z [??]; subst.
-    case: det_tree_aux H => -[]//.
-  move=> []//=.
-    move=> +[??]; subst.
-    case: det_tree_aux H => -[]//.
-  move=> d.
-  case X: getS_Callable => //=[SS|].
-    move=> +[??]; subst.
-    case: det_tree_aux H => //=-[]//.
-  move=> +[??]; subst.
-  case: det_tree_aux H => //=-[]//.
+  case X: check_tm => [d []]//; last first.
+    move=> [??]; subst => //=; rewrite maxD_comm/=.
+    move=> /IH/=; case: det_tree_aux => //-[]//.
+  case: d X => //; last first.
+    move=> m s1 s2 H [??]; subst => //=; rewrite maxD_comm.
+    move=> /IH/=; case: det_tree_aux => //.
+    move=>[]//.
+  move=> []//.
+    move=> H [??]; subst => //=; rewrite maxD_comm.
+    move=> /IH/=; case: det_tree_aux => //-[]//.
+  move=> d; case Y: get_callable_hd_sig => //[s|]H[]??; subst.
+    move=> /IH.
+    rewrite maxD_comm maxD_assoc maxD_refl.
+    case: det_tree_aux => //-[]//.
+  rewrite maxD_comm/=.
+  move=> /IH.
+  case: det_tree_aux => //-[]//.
 Qed.
 
 Lemma cut_followed_by_det_has_cut {sP sV l} p:
@@ -445,159 +567,159 @@ Lemma cut_followed_by_det_nfa_and {sP sV bo} p:
   check_atoms_w_cut sP sV bo -> (det_tree_aux sP sV (big_and p bo) Func).1 = Func.
 Proof. move=>/andP[]/eqP/all_det_nfa_big_and//. Qed.
 
-(* Lemma tiki_taka {modes sP sV u s t q hd s2}:
-  tm2RC (deref s (Callable2Tm t)) = Some q ->
-  H u (modes q) q hd s = Some s2 ->
-  getS_Callable sP sV t = Some (b (d Func)) -> rcallable_is_det sP hd.
+Lemma deterf_empty c: 
+  deref empty c = c.
+Proof. elim: c => //= t IH tm H; rewrite IH//. Qed.
+
+(* Lemma tiki_taka {modes sP u q hd s1 c}:
+  tm2RC (Callable2Tm c) = Some q ->
+  H u (modes q) q hd empty = Some s1 ->
+  check_tm sP empty_ctx (Callable2Tm c) = (b (d Func), true)
+   -> rcallable_is_det sP hd.
 Proof.
   generalize (modes q) => {}modes/=.
-  elim: modes q hd t s s2 => //=.
-    move=> []//=k []//= k1 t s1 s2; case: eqP => //=<-.
-    move=>/deref_kp [].
-      case: t => //= k2[->] _ [->]//.
-    move=> [v[]]; case: t => //= v1 [->] H _.
-    rewrite /getS_Callable/=.
-    admit.
-  move=> []//ml IH []//h1 b1 []//=h2 b2 t s1 s2 H1 H2 H3.
-    move: H2; case e: H => //=[s1']H2.
-    case: t H1 H3 => //=.
+  elim: modes q hd s1 c => //=.
+    move=> []//=k []//= k1 s1 c; case: eqP => //=?+[?]; subst.
+    elim: c k1 => //=.
+      move=> k k1 [<-][->]//.
+    move=> c IH t k1.
+    case: tm2RC => //.
+  move=> [] ms IH []//= r t []//=r1 tm1 s1 []//=r2 tm2.
+    case X: tm2RC => //=[r3][??]; subst.
+    case Y: H => //=[s3] H1.
+    case Z: check_tm => //=[[|m sx sy]b1]//.
+    case: m Z => H2.
+      case W: check_tm => [sw b2].
+      case: ifP => //; case: b1 H2 => //; case: b2 W => //=.
+      move=> H2 W H3 [?]; subst.
       admit.
-    move=> c t.
-    case H : tm2RC => //=[h1'] [??]; subst => /=H1.
-    apply: IH H e H1.
-  move: H2; case e: H => //=[s1']H2.
-  case: t H1 H3 => //=.
     admit.
-  move=> c t.
-  case H : tm2RC => //=[h1'] [??]; subst => /=H1.
-  apply: IH H e H1.
-Admitted.
+  case X: tm2RC => //=[r3][??]; subst.
+  case Y: H => //=[s3] H1.
+  case Z: check_tm => //=[[|m sx sy]b1]//.
+  case: m Z => H2.
+    case W: check_tm => [sw b2].
+    case: ifP => //; case: b1 H2 => //; case: b2 W => //=.
+    move=> H2 W H3 [?]; subst.
+    admit.
+  admit.
+Admitted. *)
 
-(* TODO: HERE
-  Given a deterministic predicate p,
+(* Given a deterministic predicate p,
   Let t, be a valid call to p,
   Given a list of valid rules in a program p, then
   backchaining produces a deterministic tree!
 *)
-Lemma is_det_det_tree {u sP t s1 sV} {p:program}:
-  (* TODO: s1 and sV should be linked somehow *)
-  check_rules sP sV p.(rules) -> (check_callable sP sV t).1 = Func -> 
-    (det_tree_aux sP sV (big_or u p s1 t) Func).1 = Func.
+
+Lemma is_det_det_tree {u} {p c sP}:
+  (forall pr : program, check_rules sP empty_ctx (rules pr)) ->
+  (det_tree_aux sP empty_ctx (CallS p c) Func).1 == Func ->
+  (det_tree_aux sP empty_ctx (big_or u p empty c) Func).1 == Func.
 Proof.
-  rewrite/check_callable.
+  rewrite/check_rules/=/check_rule.
+  rewrite/=.
   rewrite /big_or/F.
   case X: tm2RC => //[rc].
+  move=> /(_ p).
   case: p => rules modes sig1 /=.
   generalize {| rules := rules; modes := modes; sig := sig1 |} as pr => pr.
   clear -X.
-  elim: rules modes s1 t pr rc X => //=.
-  move=> [] hd bo rules IH modes s/= t p q X /andP[H1 H1'] H2.
-  case H: H => /= [s2|]; last first.
-    apply: IH X H1' H2.
-  clear IH.
-  move: H.
-  (* set t' := deref s t. *)
-  move: H1 => /orP[]; last first.
-    move=> + _.
-    elim: rules sV H1' H2 bo => //=.
-      move=> sV _ _ bo.
-      move=>/(cut_followed_by_det_nfa_and p).
-      case: det_tree_aux => //=-[]//.
-    move=> [] hd1 bo1/= l IH sV /andP [H3 H4] H2 bo H1.
-    case H: H => [s3|]//=; last first.
-      by apply: IH.
-    rewrite (cut_followed_by_det_has_cut _ H1).
-    have:= cut_followed_by_det_nfa_and p H1.
-    case Y: det_tree_aux => //=[? sV']?; subst.
-    case Z: det_tree_aux => [d sV''].
-    move: H2; case W: check_tm => //=[d1 []]//.
-    case: d1 W => //=-[]// d1.
-    case: d Z => //.
-    suffices Hz : (getS_Callable sP sV t = Some (b (lang.d d1))).
-      rewrite Hz/=.
-      case: d1 Hz => //= Hz Z H5 _.
-      move: H3 => /orP[]H3; last first.
-        have:= IH sV.
-        rewrite H4 H5/= Hz/= => /(_ isT erefl _ H3).
-        rewrite Z//.
-      admit.
-    admit.
-  move=> /eqP H3 H4.
-  case W: det_tree_aux => [[|]sV1]//.
-  move: H2; case C: check_tm => [S []]//.
-  case: S C => //=-[]//=d C.
-  case Z: getS_Callable => //=[S].
-  case: d C => //= C.
-  case K: get_prop_rightmost => //=.
-  
-  case: S Z => //=.
-  have:= tiki_taka X H4 .
-  have /= := tiki_taka X H2 H4; congruence.
+  rewrite/check_callable.
+  elim: rules modes c pr rc X => //=.
+  move=> [] hd bo rules IH modes /= c p q X /andP[Hx Hy].
+  case Y: check_tm => [s []]//=.
+  case: s Y => // -[]//=d H1.
+  case Z: get_callable_hd_sig => //=[s].
+  rewrite maxD_comm/=.
+  case: d H1 => //= H2 _.
+  have {IH} := IH _ _ _ _ X Hy; rewrite H2/=Z/= => -/(_ modes p erefl).
+  case W: run.H => [s1|]//=.
+  move/orP: Hx => [].
+    rewrite deterf_empty in X.
+    admit. (*TODO: hd = q = c and c is func: *)
+  move=>/[dup]/cut_followed_by_det_nfa_and -/(_ p)+H.
+  case R: select => //=[|x xs].
+    case: det_tree_aux => -[]//.
+  case : x R => [sx bx]/=.
+  case T: det_tree_aux => [dy sr]/=+?; subst => /=.
+  case U: det_tree_aux => //=[[] bw]//=+ _.
+  case: ifP => //=.
+  case: ifP => //=.
+  have:= cut_followed_by_det_has_cut _ H.
+  move=> ->//.
+Admitted.
 
-  case r: rules => //=.
-
-  elim: t sV => //=.
-  - move=> k sV.
-Qed. *)
-
-
-  (* 
-    Given a checked program, and a deterministic tree,
-    then calling expand produces a tree which is still deterministic.
-  *)
-Lemma expand_det_tree {u sP s1 A r} : 
+(* 
+  Given a checked program, and a deterministic tree,
+  then calling expand produces a tree which is still deterministic.
+*)
+Lemma expand_det_tree {u sP A r} : 
   check_program sP -> det_tree sP A -> 
-    expand u s1 A = r ->
+    expand u empty A = r ->
       det_tree sP (get_state r).
 Proof.
+  rewrite/det_tree.
   move=> H + <-; clear r.
-  elim: A s1 => //.
-  - move=> p t s1 /=.
+  elim: A => //.
+  - move=> p c /=.
     rewrite/det_tree.
     move: H.
     rewrite /check_program.
-    apply: is_det_det_tree.
-    by have:= H p.
-  - move=> A HA s B HB s1 /=/andP[fA].
-    case: ifP => //= cA.
-      move=> nnB.
-      case: ifP => //= dA.
-        have:= HB s1 nnB.
-        case: expand => //= [_|_||_] C nnC/=; rewrite get_state_Or/=fA/=cA?HB//.
-      have:= HA s1 fA.
-      have := @expand_has_cut _ s1 cA.
-      case X: expand => //= -[]// + ->; rewrite ?nnB ?no_alt_cut //=; try by case: has_cut.
-      by rewrite cutr2 eqxx if_same.
-    move/eqP->.
-    case: ifP => [dA|].
-      rewrite get_state_Or/=cA no_alt_dead//=is_ko_expand//=?is_ko_cutr//cutr2//.
-    have:= HA s1 fA => + dA.
-    case Y: expand => /=->; rewrite !cutr2 eqxx no_alt_cut if_same//.
-  - move=> A HA B0 HB0 B HB s /=.
-    move=>/orP[].
-      move=>kA; rewrite is_ko_expand///=kA//.
-    move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
-      case X: expand => //= [|||s1 C]; try rewrite cB0 cB/= fB0 fB !orbT//.
-      rewrite get_state_And.
-      rewrite /= (HB s1) //.
-      have := @expand_has_cut _ s1 cB.
-      case H1: (is_cutbrothers (expand u s1 B)).
-        move=>_/=; rewrite has_cut_cutl// det_tree_cutl det_tree_cutl !orbT//.
-      move=> []//H2; rewrite H2 fB0 cB0 orbT//.
-    have:= HA s fA.
-    case X: expand => //= [|||s1 C] H1; try rewrite H1 orbT fB fB0 orbT//.
-    have:= HB s1 fB; case Y: expand => //= H2; try rewrite fB0 H2 H1 orbT !orbT//.
-    rewrite !det_tree_cutl H2 !orbT//.
-Qed.
+    apply is_det_det_tree.
+  - move=> A HA s B HB/=.
+    case X: det_tree_aux => [dA sA].
+    case Y: det_tree_aux => [dB sB].
+    case: ifP => /=.
+      case: dA X => //=; case: dB Y => //= H1 H2 H3 _.
+      case: ifP => DA.
+        rewrite get_state_Or/= H2/=.
+        move: HB; rewrite H1/=H3 => /(_ erefl).
+        (* TODO: the IH for is not enough generalized... *)
+        admit.
+      move: HA; rewrite H2/= => -/(_ erefl).
+      have:= @expand_has_cut u _ empty H3.
+      case X: expand => //=[s' A'|s' A'|A'|s' A']; 
+      case d: det_tree_aux => //=[s2 sA']; try by move=> []//->/eqP->; rewrite H1//.
+      rewrite is_ko_cutr=> + /eqP?; subst =>/=.
+      have:= @no_alt_cut sP B; rewrite /det_tree.
+      case: det_tree_aux => //= -[]// _ _; case:ifP => //.
+    case: ifP => //; case: dA X => //= X kB cA _.
+    rewrite (is_ko_expand _ kB)/=.
+    case: ifP => dA/=.
+      rewrite X Y cA kB//.
+    move: HA; rewrite X => -/(_ erefl).
+    case e: expand => //=[s' A'|s' A'|A'|s' A']/eqP; try by
+      case: det_tree_aux => -[]//= b _; rewrite Y kB;
+      have:= @no_alt_ko sP B kB;
+      rewrite/det_tree Y => /eqP/=->; case: ifP => //.
+    case: det_tree_aux => -[]//=.
+    have:= @no_alt_cut sP B.
+    rewrite/det_tree.
+    case: det_tree_aux => -[]//= _ _ b _; rewrite is_ko_cutr; case: ifP => //.
+  - move=> A HA B0 HB0 B HB /=.
+    case: ifP => kA.
+      rewrite (is_ko_expand _ kA)/=kA//.
+    move: HA; case dA: det_tree_aux => //=[DA SA] {}HA.
+    (* case: ifP. *)
+    (* move=> /eqP->. *)
+    case dB0: det_tree_aux => //[DB0 SB0]/=.
+    case dB: det_tree_aux => //[DB SB]/=.
+    case: DB0 dB0 => //=; case: DB dB => //= DB DB0 _.
+    move: HA; case e: expand => //=[s' A'|s' A'|A'|s' A']; 
+    rewrite ?eqxx; try case: ifP => //=.
+      case dt: det_tree_aux => //=[dx sx].
+      case: DA dA DB DB0 => //=.
+        move=> ++++/(_ erefl)/eqP?; subst.
+Admitted.
 
-Lemma expand_next_alt {sP s1 A s2 B} : 
+Lemma expand_next_alt {u sP s1 A s2 B} : 
   check_program sP -> det_tree sP A ->
     expand u s1 A = Success s2 B -> forall s3, next_alt s3 B = None.
 Proof.
   move=> H.
   elim: A s1 B s2 => //.
   - by move=> /= s1 A s2 _ [_ <-]//.
-  - move=> A HA s B HB s1 C s2.
+  - move=> A HA s B HB s1 C s2/=.
     move=> /=/andP[fA].
     case: (ifP  (is_dead _)) => dA.
       rewrite has_cut_dead// => fB.

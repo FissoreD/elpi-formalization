@@ -489,7 +489,7 @@ Section NurProp.
       state_to_list B s2 l = state_to_list D s2 l.
   Proof.
     elim: B s s1 s2 D l => //.
-    - move=>/=[]//????? _[_<-]//.
+    - move=>/=??????[_<-]//.
     - move=> A HA s B HB s1 s2 s3 C l/=/andP[bA bB].
       rewrite base_and_dead//.
       rewrite next_alt_aux_base_and//.
@@ -502,7 +502,7 @@ Section NurProp.
     bbOr B -> next_alt (Some s1) B = Some(s2, C) -> state_to_list B l = state_to_list C l.
   Proof.
     elim: B s1 s2 C l => //.
-    - move=> /= []//?????[_<-]//.
+    - move=> /= //?????[_<-]//.
     - move=> A HA s B HB s1 s2 C l/=; rewrite /bbOr/=.
       move=>/orP[]/andP[bA bB].
         rewrite base_and_dead//.

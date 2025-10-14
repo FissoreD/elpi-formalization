@@ -144,7 +144,7 @@ Section valid_state.
     elim: l s => //=; clear.
     + move=> []//a l; rewrite /base_or_aux //= base_and_big_and eqxx//.
       case: a => //.
-    + by move=> [[s r] rs] IH r1 /=; rewrite IH base_and_big_and.
+    + move=> [s r] rs IH r1 /=; rewrite IH base_and_big_and//.
   Qed.
 
   Lemma valid_state_big_or {pr s t} : valid_state (big_or u pr s t).

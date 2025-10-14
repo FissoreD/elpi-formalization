@@ -13,22 +13,117 @@ Definition build_progr l := {|
     rules := l;
 |}.
 
-(* Section RunAxiom:= Run(UAxioms). *)
-Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
-  match t1, t2 with
-  | Tm_V X, _ => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t2 else s.(sigma) x) |} | Some t => if t == t2 then Some s else None end
-  | _, Tm_V X => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t1 else s.(sigma) x) |} | Some t => if t == t1 then Some s else None end
-  | _, _ => if t1 == t2 then Some s else None
+(* Lemma deref_vars:
+  de *)
+
+Definition inter {T : eqType} (s1 s2 : seq T) :=
+  [seq x <- s1 | x \in s2].
+
+Eval compute in inter [:: 1; 2; 3] [:: 2; 3; 4].
+
+(* Lemma deref_superset s t3:
+  all (mem s.(all_vars)) ((vars (deref s t3))).
+Proof.
+  elim: t3 => //=.
+  - move=> v; case: s => //= s av H1 H2.
+    case X: s => [t1|]/=; last first.
+      rewrite andbT.
+    Admitted. *)
+
+(* Fixpoint subst (tm:Tm) (k:V) (v:Tm) :=
+  match tm with
+  | Tm_V k' => if k == k' then v else tm
+  | Tm_Kd _ | Tm_Kp _ => tm
+  | Tm_Comb hd bo => Tm_Comb (subst hd k v) (subst bo k v)
   end.
+
+Definition add_subst (s:Sigma) (k:V) (v:Tm) : Sigma.
+Proof.
+  case: s; rewrite/valid_sigma_def => /= s av H1 H2.
+  refine {|sigma := foldl (fun s' v' => fun k => if k == v' then ((omap (fun tm => subst tm k v) (s' v'))) else s' v') s av |}.
+  let l := s.(all_vars) in
+  foldl (fun s' v' => ) s l. *)
+
+(* Section RunAxiom:= Run(UAxioms). *)
+Definition unifyF  : forall  (t1 t2 : Tm) (s : Sigma), option Sigma.
+Proof.
+  move=> t1 t2 s.
+  remember (deref s t1) as t1' eqn:H1.
+  remember (deref s t2) as t2' eqn:H2.
+  case X : (t1' == t2'); move /eqP: X => H; subst.
+    apply: Some s.
+  case: t1 H => /=.
+  - move=> k; case: t2 => /=.
+    - move=> _ _; apply: None.
+    - move=> _ _; apply: None.
+    - move=>v. 
+      case S: sigma => //=[a|]; last first.
+      - move=> H.
+        refine (Some {| 
+          sigma := (fun x => if (x == v) then Some (Tm_Kp k) else s.(sigma) x); 
+          all_vars := v :: s.(all_vars) |}) => /=.
+        - move=> v'; rewrite in_cons; case: eqP => //=; case: s S => /= sigma av H1 H2 H3 S//.
+        - (*TODO: this is wrong... since we need do explore all the subst and make all v to point to k...*)
+
+  
+Definition unifyF  : forall  (t1 t2 : Tm) (s : Sigma), option Sigma.
+Proof.
+  move=> t1 t2 s.
+  refine (let t1 := deref s t1 in let t2 := deref s t2 in
+    if t1 == t2 then Some s else
+    match t1, t2 with
+    | Tm_V X, t2 => 
+      if X \in vars t2 then None 
+      else 
+        Some {| 
+          sigma := (fun x => if (x == X) then Some t2 else s.(sigma) x); 
+          all_vars := X :: s.(all_vars) |} 
+    | _, Tm_V X => 
+      if X \in vars t1 then None 
+      else 
+        Some {| 
+          sigma := (fun x => if (x == X) then Some t1 else s.(sigma) x); 
+          all_vars := X :: s.(all_vars) |} 
+    | _, _ => None
+  end) => //=; rewrite/t1/t2.
+  (* Show Proof. *)
+  -
+    { move=> x; case: eqP => //=; case: s {t1 t2} => //=sigma v1 H H1.
+        move=> ->; rewrite /=in_cons?eqxx//=.
+      rewrite in_cons; case: eqP => //=; rewrite !andbT?andbF.
+    }
+    {
+      case: s t1 t2; rewrite/valid_sigma_def => /= sigma av H1 H2 _ _.
+      move=> x t; case: eqP.
+        move=> ?[]?; subst.
+        elim: t3 => //=.
+        - move=> v; case H3: sigma => [t|]//=.
+          - 
+        - move=> _.
+    }
+
+
+        
+        ; case: eqP => //=; rewrite ?andbT//=.
+  Admitted.
+
 
 Definition matchingF (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
 
 (* Definition derefF (s:Sigma) (t1:Tm) : Tm := t1. *)
 
+Lemma match_propF (s : Sigma) (t1 t2 : Tm) (r : Sigma):
+matchingF t1 t2 s = Some r ->
+let v1 := vars t1 in all (fun x => sigma r x == None) v1 .
+Admitted.
+Lemma smaller_sigmaF s1 s2 : smaller_sigmaD unifyF s1 s2.
+Admitted.
+
 Definition unif : Unif := {|
   unify := unifyF;
   matching := matchingF;
-  (* deref := derefF; *)
+  match_prop := match_propF;
+  smaller_sigma := smaller_sigmaF;
 |}.
 
 Definition r := (IKp 2).

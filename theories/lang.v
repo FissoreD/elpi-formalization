@@ -80,8 +80,32 @@ HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
 Notation R := (@R_ A).
 HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK _ _ A_eqb_OK).
 
-Record Sigma := { sigma : V -> option Tm }.
-Definition empty : Sigma := {| sigma := fun _ => None |}.
+Fixpoint vars (x:Tm) :=
+  match x with
+  | Tm_V v => [::v]
+  | Tm_Kd _ | Tm_Kp _ => [::]
+  | Tm_Comb h bo => vars h ++ vars bo
+  end.
+
+(* 
+  A substitution is valid if it is the most dereferences one, i.e.
+  the variables in a term must not exists in the subst.
+  NOTE: this avoids to have looping terms, like: X = f X
+*)
+Definition valid_sigma_def (s:V -> option Tm) := 
+  forall x t, s x = Some t -> all (fun x => s x == None) (vars t).
+
+Record Sigma := { 
+  sigma : V -> option Tm; all_vars : list V; 
+  sigma_vars: forall x, x \in all_vars <-> sigma x <> None;
+  valid_sigma : valid_sigma_def sigma
+}.
+
+Definition empty : Sigma.
+Proof.
+  refine {| sigma := fun _ => None; all_vars := [::] |} => //=.
+Qed.
+
 
 Definition index := list R.
 Definition mode_ctx := RCallable -> list mode.
@@ -89,6 +113,9 @@ Definition sigT := Kp -> S.
 (* 
   The program knows about the signature of all predicates, therefore,
   for each predicate we return a S (not an option S)
+*)
+(* TODO: a program is valid if the variables in a rules are disjoint from the variables of the
+    other rules
 *)
 Record program := { (*depth : nat;*) rules : index; modes : mode_ctx; sig : sigT }.
 

@@ -334,11 +334,39 @@ Proof. elim l => //-[]//. Qed.
 Lemma big_and_cut {p l}: big_and p l = cutl (big_and p l) -> False.
 Proof. elim l => //-[]//. Qed.
 
+(* t1 is less_precise then t2 if it has "more" variables then t2 *)
+Fixpoint less_precise t1 t2 :=
+  match t1, t2 with
+  | Tm_V _, _ => true
+  | _, Tm_V _ => false
+  | Tm_Comb h1 b1, Tm_Comb h2 b2 => less_precise h1 h2 && less_precise b1 b2
+  | _, _ => true
+  end.
+
+Definition smaller_sigmaP (unify: Tm -> Tm -> Sigma -> option Sigma) (s1 s2:Sigma) : bool :=
+  all 
+      (fun (x:V) => 
+        odflt true 
+          (omap 
+            (fun (t1:Tm) => odflt false 
+              (omap (fun (t2:Tm) => less_precise t1 t2 && unify t1 t2 s1 != @None Sigma) 
+              (s2.(sigma) x))
+            ) (s1.(sigma) x)))
+      s1.(all_vars).
+
+(* Definition smaller_sigmaD (unify: Tm -> Tm -> Sigma -> option Sigma) s1 s2 :=
+  forall x t1 s, s1.(sigma) x = Some t1 -> exists t2 s3, (s2.(sigma) x == Some t2) && 
+    less_precise t1 t2 && (unify t1 t2 s == Some s3). *)
+
 Record Unif := {
   unify : Tm -> Tm -> Sigma -> option Sigma;
-  matching : Tm -> Tm -> Sigma -> option Sigma;
-  (* deref : Sigma -> Tm -> Tm; *)
-}.  
+  matching : Tm -> Tm -> Sigma -> option Sigma; (*TODO: matching can be used if vars t1 is disjoint vars t2*)
+  (* Next two lemmas says that a valid subst  *)
+  smaller_sigma (s1 s2 : Sigma) := smaller_sigmaP unify s1 s2;
+  match_prop s t1 t2 r :
+    matching t1 t2 s = Some r -> 
+    let v1 := vars t1 in all (fun x => r.(sigma) x == None) v1;
+}.
 
 
 Section main.
