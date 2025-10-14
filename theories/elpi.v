@@ -215,9 +215,6 @@ Global Notation "(( x ))" := (consC x nilC)
   (at level 3, no associativity,only printing)
   : SE.
 
-
-
-
   Inductive G := 
     | call : program -> Callable -> G
     | cut : alts -> G
@@ -866,30 +863,29 @@ Global Notation "-nilCA" :=
   (at level 2, no associativity, only parsing)
   : SE.
 
+Section test.
+  Variable u : Unif.
+  Variable s1 : Sigma.
+  Variable p : program.
+  Variable sx : Sigma.
+  Variable p1 : program.
+  Notation g := (And (Or OK s1 CutS) CutS OK).
+  Goal next_alt (Some sx) g = Some (s1, And (Or Dead s1 CutS) CutS CutS).
+  Proof. move => //=. Qed.
+  Goal clean_success g = And (Or OK s1 CutS) CutS Bot.
+  Proof. move => //=. Qed.
 
-  Section test.
-    Variable u : Unif.
-    Variable s1 : Sigma.
-    Variable p : program.
-    Variable sx : Sigma.
-    Variable p1 : program.
-    Notation g := (And (Or OK s1 CutS) CutS OK).
-    Goal next_alt (Some sx) g = Some (s1, And (Or Dead s1 CutS) CutS CutS).
-    Proof. move => //=. Qed.
-    Goal clean_success g = And (Or OK s1 CutS) CutS Bot.
-    Proof. move => //=. Qed.
+  Goal valid_state ((And (Or OK s1 CutS) CutS Bot)).
+  Proof. move=> //=. Abort.
+  Goal valid_state ((And (Or Dead s1 CutS) CutS CutS)).
+  Proof. move=> //=. Abort.
 
-    Goal valid_state ((And (Or OK s1 CutS) CutS Bot)).
-    Proof. move=> //=. Abort.
-    Goal valid_state ((And (Or Dead s1 CutS) CutS CutS)).
-    Proof. move=> //=. Abort.
-
-    Goal forall s3 l,
-      state_to_list (And (Or OK s1 CutS) CutS Bot) s3 l = 
-        state_to_list (And (Or Dead s1 CutS) CutS CutS) s3 l.
-    Proof.
-      move=>s3 l/=.
-      rewrite /=!cat0s ?cat0s.
-      rewrite subnn take0 drop0//.
-    Qed.
-  End test.
+  Goal forall s3 l,
+    state_to_list (And (Or OK s1 CutS) CutS Bot) s3 l = 
+      state_to_list (And (Or Dead s1 CutS) CutS CutS) s3 l.
+  Proof.
+    move=>s3 l/=.
+    rewrite /=!cat0s ?cat0s.
+    rewrite subnn take0 drop0//.
+  Qed.
+End test.
