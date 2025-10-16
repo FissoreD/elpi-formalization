@@ -32,7 +32,6 @@ Section NurValidState.
       end
       .
 
-  (* to be valid: size L1 <= size L2, in a sense L1 should be a suffix of L2 *)
   Fixpoint valid_caA L1 L2 (bt:alts) {struct L1} :=
     match L1 with
     | no_alt => true
@@ -127,13 +126,13 @@ Section NurValidState.
   .
   Proof.
     {
-      elim: r bt s l => //=r rs IH bt s l Hbt.
-      case: s => //=x xs.
-      rewrite !size_cons cat_cons !behead_cons.
+      case: r => // p a Hbt; fConsA p a.
+      case: s => //x xs; fConsA x xs.
+      rewrite /= !size_cons cat_cons !behead_cons.
       case: eqP => //=.
       case: eqP => // H1 H2.
       move=> H /andP[H3 H4].
-      rewrite IH//andbT.
+      rewrite push_bt_out//andbT.
       apply: push_bt_outG Hbt H3.
     }
     case g => //=.
