@@ -26,7 +26,9 @@ Section NurValidState.
         else
         match ca with
         | no_alt => false
-        | more_alt hd tl => valid_caG hd.2 (behead ca1) bt && valid_caA_aux tl (behead ca1) bt
+        | more_alt hd tl => 
+          if ca1 == nilC then empty_caG hd.2 && empty_ca tl 
+          else valid_caG hd.2 (behead ca1) bt && valid_caA_aux tl (behead ca1) bt
       end
       .
 
@@ -34,7 +36,9 @@ Section NurValidState.
   Fixpoint valid_caA L1 L2 (bt:alts) {struct L1} :=
     match L1 with
     | no_alt => true
-    | more_alt hd tl => valid_caG hd.2 (behead L2) bt && valid_caA tl (behead L2) bt
+    | more_alt hd tl => 
+      if L2 == nilC then empty_caG hd.2 && empty_ca tl 
+      else valid_caG hd.2 (behead L2) bt && valid_caA tl (behead L2) bt
     end.
 
   Definition valid_ca L := valid_caA L L nilC.
@@ -63,15 +67,13 @@ Section NurValidState.
   with empty_caG_valid {hd l} g:
     empty_caG g -> valid_caG g hd l.
   Proof.
-    all: rewrite/empty_ca /empty_caG /valid_caA /= in empty_ca_valid empty_caG_valid*.
+    all: rewrite/empty_ca /empty_caG /= in empty_ca_valid empty_caG_valid*.
     {
       case: hd => //=.
-      move=> g gs/andP[H1 H2].
-      case: bt.
-        rewrite empty_caG_valid//=.
-        apply: empty_ca_valid H2.
-      move=> x xs.
-      rewrite empty_caG_valid//empty_ca_valid//.
+      move=> g gs; rewrite all_cons => /andP[H1 H2].
+      rewrite /empty_caG empty_caG_valid//=H1/=/empty_ca H2.
+      case: ifP => // _.
+      apply: empty_ca_valid H2.
     }
     case: g => //=-[p t|[]] gs//=.
       rewrite /all/=.
@@ -88,11 +90,15 @@ Section NurValidState.
   Lemma valid_ca_split {x y l} bt:
     (valid_caA (x ++ y) l bt) = (valid_caA x l bt) && (valid_caA y (drop (size x) l) bt).
   Proof.
-    elim: x y l bt => //=.
+    elim: x y l bt => //.
     move=> g gs IH y l bt.
-    rewrite IH -andbA; do 2 f_equal.
-    rewrite size_cons.
-    case: l; rewrite// !drop_nil//.
+    fConsA g gs; rewrite size_cons.
+    case: l.
+      rewrite /= drop_nil /empty_ca all_cat -andbA.
+      case: y => //.
+    move=> p a; fConsA p a.
+    rewrite cat_cons/=; case: eqP => // _.
+    rewrite behead_cons drop_cons IH -andbA//.
   Qed.
 
   Lemma valid_caA_aux_refl l x:
@@ -102,12 +108,14 @@ Section NurValidState.
   Lemma valid_ca_valid_ca_aux {xs ys bt}:
     size xs <= size ys -> valid_caA xs ys bt = valid_caA_aux (xs ++ bt) ys bt.
   Proof.
-    elim: xs ys => //=[|x xs IH] ys.
+    elim: xs ys => //[|x xs IH] ys.
       rewrite valid_caA_aux_refl//.
     case: ys => //y ys.
-    rewrite behead_cons !size_cons => H.
+    fConsA y ys; fConsA x xs.
+    rewrite /= behead_cons !size_cons => H.
     rewrite IH//; case: eqP => // H1.
-    have:= f_equal size H1.
+    case: eqP => //= H2.
+    have:= f_equal size H2.
     move=>/(_ _ IsList_alts).
     rewrite size_cons size_cat; lia.
   Qed.
@@ -119,13 +127,14 @@ Section NurValidState.
   .
   Proof.
     {
-      rewrite/valid_caA.
       elim: r bt s l => //=r rs IH bt s l Hbt.
       case: s => //=x xs.
       rewrite !size_cons cat_cons !behead_cons.
-      move=> H /andP[H1 H2].
+      case: eqP => //=.
+      case: eqP => // H1 H2.
+      move=> H /andP[H3 H4].
       rewrite IH//andbT.
-      apply: push_bt_outG Hbt H1.
+      apply: push_bt_outG Hbt H3.
     }
     case g => //=.
     move=>[_ _|ca] gs.
@@ -197,6 +206,13 @@ Section NurValidState.
       case: X => //=-[s g] gs.
       rewrite valid_ca_make_lB0_empty_ca//.
       rewrite valid_caG_cat_empty_ca//.
+      case: eqP => //?; subst.
+      rewrite/empty_caG/=all_cat H andbT.
+      f_equal.
+      elim: gs => // -[s3 p] a; fConsA (s3,p) a => /=.
+      rewrite /empty_ca/=!all_cons/=.
+      move=><-.
+      rewrite /empty_caG all_cat H andbT//.
     }
     case: x => //=.
       rewrite cat0s empty_caG_valid//.
@@ -392,6 +408,7 @@ Section NurValidState.
     have [hd H2]:= base_and_state_to_list H.
     have /=H1:= base_and_empty_ca H H2.
     rewrite H2/=andbT empty_caG_valid//H1//.
+    case: ifP => //.
   Qed.
 
   Lemma base_and_ko_valid_caA A s r l rs bt:
@@ -409,17 +426,24 @@ Section NurValidState.
   Proof.
     move=>+<-; clear r.
     elim: A rs s0 => //=.
+    - move=> rs; case: ifP => //.
     - move=> A HA s B HB rs s0 /=/andP[bA bB].
       rewrite add_ca_deep_empty1.
       have [hd H]:= base_and_state_to_list bA.
       rewrite H/= HB//=.
       have/=:= base_and_valid_caA _ _ _ _ (rs) nilC bA (H nilC empty).
       move=> /(_ _ IsList_alts _ IsList_alts)//.
+      case: eqP => // _.
+      move=>/andP[->]; rewrite bbOr_empty_ca///bbOr bB//.
     - move=> A; case: A => //[p a|] _ _ _ B HB rs s0/=/andP[/eqP->] bB;
       have [h H]:= base_and_state_to_list bB;
       have H1:=base_and_empty_ca bB H.
         rewrite H/= (empty_caG_valid _ H1)//.
+        case: eqP => //= _; move: H1.
+        rewrite /empty_caG all_cat/= make_lB0_empty1 => ->//.
       rewrite H/= cats0 size_nil take0 suffix0s/= (empty_caG_valid _ H1)//.
+      case: eqP => // _; move: H1.
+      rewrite /empty_caG cats0 make_lB0_empty1 all_cat/= => ->//.
   Qed.
 
   Lemma bbOr_valid_caA A s0 r rs:
