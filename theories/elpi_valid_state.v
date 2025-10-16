@@ -120,18 +120,23 @@ Section NurValidState.
   Qed.
 
   Lemma push_bt_out bt r s l:
-    valid_caA bt bt l -> size r <= size s -> valid_caA r s (bt++l) -> valid_caA r (s ++ bt) l
+    valid_caA bt bt l -> valid_caA r s (bt++l) -> valid_caA r (s ++ bt) l
   with push_bt_outG g xs bt l:
     valid_caA bt bt l -> valid_caG g xs (bt++l) -> valid_caG g (xs ++ bt) l
   .
   Proof.
     {
       case: r => // p a Hbt; fConsA p a.
-      case: s => //x xs; fConsA x xs.
-      rewrite /= !size_cons cat_cons !behead_cons.
-      case: eqP => //=.
-      case: eqP => // H1 H2.
-      move=> H /andP[H3 H4].
+      case: s => //.
+        fNilA.
+        move=> /=; case: bt Hbt => // x xs.
+        fConsA x xs => /=; case: eqP => //.
+        rewrite behead_cons => _ /andP[H1 H2] /andP[H3 H4].
+        rewrite empty_caG_valid//empty_ca_valid//.      
+      move=> x xs; fConsA x xs.
+      rewrite /=; do 2 case: eqP => // _.
+      rewrite cat_cons !behead_cons.
+      move=> /andP[H3 H4].
       rewrite push_bt_out//andbT.
       apply: push_bt_outG Hbt H3.
     }
