@@ -9,38 +9,36 @@ Section NurValidState.
   Variable u : Unif.
 
   Fixpoint valid_caG (gs:goals) (a:alts) (bt:alts) {struct gs} :=
-      match gs with
-      | no_goals => true
-      | more_goals (call _ _) xs => valid_caG xs a bt
-      | more_goals (cut ca) xs =>
-        if suffix bt ca then
-          suffix ca (a ++ bt) &&
-          let n := size ca - size bt in
-          let ca' := take n ca in
-          valid_caG xs ca' bt
-          && valid_caA_aux ca ca' bt
-        else (ca == nilC) && empty_caG xs
-        end
-      with valid_caA_aux ca ca1 bt : bool :=
-        if ca == bt then true
-        else
-        match ca with
-        | no_alt => false
-        | more_alt hd tl => 
-          if ca1 == nilC then empty_caG hd.2 && empty_ca tl 
-          else valid_caG hd.2 (behead ca1) bt && valid_caA_aux tl (behead ca1) bt
+    match gs with
+    | no_goals => true
+    | more_goals (call _ _) xs => valid_caG xs a bt
+    | more_goals (cut ca) xs =>
+      if suffix bt ca then
+        suffix ca (a ++ bt) &&
+        let n := size ca - size bt in
+        let ca' := take n ca in
+        valid_caG xs ca' bt
+        && valid_caA_aux true ca ca' bt
+      else (ca == nilC) && empty_caG xs
       end
-      .
+    (* b tells if ca should have bt as suffix *)
+    with valid_caA_aux b ca ca1 bt : bool :=
+      if b && (ca == bt) then true
+      else
+      match ca with
+      | no_alt => ~~b (*here b = true and bt is not its suffix, i.e. error*)
+      | more_alt hd tl => 
+        if ca1 == nilC then empty_caG hd.2 && empty_ca tl 
+        else valid_caG hd.2 (behead ca1) bt && valid_caA_aux b tl (behead ca1) bt
+    end
+    .
 
-  Fixpoint valid_caA L1 L2 (bt:alts) {struct L1} :=
-    match L1 with
-    | no_alt => true
-    | more_alt hd tl => 
-      if L2 == nilC then empty_caG hd.2 && empty_ca tl 
-      else valid_caG hd.2 (behead L2) bt && valid_caA tl (behead L2) bt
-    end.
+  Definition valid_caA := valid_caA_aux false.
 
   Definition valid_ca L := valid_caA L L nilC.
+
+  Lemma fold_valid_caA : valid_caA_aux false = valid_caA.
+  Proof. move=> //. Qed.
 
   (********************************************************************)
   (* VALID CA PROPERTOES                                              *)
@@ -97,16 +95,17 @@ Section NurValidState.
       case: y => //.
     move=> p a; fConsA p a.
     rewrite cat_cons/=; case: eqP => // _.
-    rewrite behead_cons drop_cons IH -andbA//.
+    rewrite fold_valid_caA behead_cons drop_cons -andbA IH//.
   Qed.
 
   Lemma valid_caA_aux_refl l x:
-    valid_caA_aux l x l.
+    valid_caA_aux true l x l.
   Proof. case: l => //=y ys; rewrite eqxx//. Qed.
 
   Lemma valid_ca_valid_ca_aux {xs ys bt}:
-    size xs <= size ys -> valid_caA xs ys bt = valid_caA_aux (xs ++ bt) ys bt.
+    size xs <= size ys -> valid_caA xs ys bt = valid_caA_aux true (xs ++ bt) ys bt.
   Proof.
+    rewrite/valid_caA.
     elim: xs ys => //[|x xs IH] ys.
       rewrite valid_caA_aux_refl//.
     case: ys => //y ys.
@@ -132,13 +131,13 @@ Section NurValidState.
         move=> /=; case: bt Hbt => // x xs.
         fConsA x xs => /=; case: eqP => //.
         rewrite behead_cons => _ /andP[H1 H2] /andP[H3 H4].
-        rewrite empty_caG_valid//empty_ca_valid//.      
+        rewrite empty_caG_valid//; apply: empty_ca_valid H4.
       move=> x xs; fConsA x xs.
       rewrite /=; do 2 case: eqP => // _.
       rewrite cat_cons !behead_cons.
       move=> /andP[H3 H4].
-      rewrite push_bt_out//andbT.
-      apply: push_bt_outG Hbt H3.
+      rewrite push_bt_outG//.
+      apply: push_bt_out => //.
     }
     case g => //=.
     move=>[_ _|ca] gs.
@@ -208,12 +207,13 @@ Section NurValidState.
     all: rewrite/make_lB0/empty_caG in valid_ca_make_lB0_empty_ca valid_caG_cat_empty_ca* => H.
     {
       case: X => //=-[s g] gs.
-      rewrite valid_ca_make_lB0_empty_ca//.
+      have:= valid_ca_make_lB0_empty_ca _ gs; rewrite/valid_caA => H1.
+      rewrite H1//.
       rewrite valid_caG_cat_empty_ca//.
       case: eqP => //?; subst.
       rewrite/empty_caG/=all_cat H andbT.
       f_equal.
-      elim: gs => // -[s3 p] a; fConsA (s3,p) a => /=.
+      elim: gs {H1} => // -[s3 p] a; fConsA (s3,p) a => /=.
       rewrite /empty_ca/=!all_cons/=.
       move=><-.
       rewrite /empty_caG all_cat H andbT//.
@@ -229,15 +229,15 @@ Section NurValidState.
 
   Lemma valid_ca_aux_add_deep_make_lB0 ca l hd:
     let pref := take (size ca - size l) (add_deep l hd ca) in
-    empty_caG hd -> suffix l ca -> valid_caA_aux ca (take (size ca - size l) ca) l ->
-      valid_caA_aux (pref ++ l) 
+    empty_caG hd -> suffix l ca -> valid_caA_aux true ca (take (size ca - size l) ca) l ->
+      valid_caA_aux true (pref ++ l) 
         (make_lB0 (pref) hd) l 
     with valid_caG_aux_add_deep_make_lB0 x xs G hd:
       let n := size xs - size G in
       empty_caG hd ->
       suffix G xs ->
       valid_caG x (take n xs) G ->
-      valid_caA_aux xs (take n xs) G ->
+      valid_caA_aux true xs (take n xs) G ->
       valid_caG (add_deepG G hd x) (make_lB0 (take n (add_deep G hd xs)) hd) G
     .
   Proof.
@@ -378,7 +378,10 @@ Section NurValidState.
     {
       case: stl l => //= -[s x] xs l.
       rewrite/behead/=.
-      move=>/andP[H1 H2]; rewrite valid_ca_add_ca_deep//andbT valid_caG_add_ca_deepG//.
+      fConsA (s,x) xs.
+      rewrite/valid_ca /= !behead_cons => /andP[H1 H2].
+      rewrite valid_caG_add_ca_deepG//=.
+      apply: valid_ca_add_ca_deep => //.
     }
     case: x => //=-[p t| ca]/= gs.
       apply: valid_caG_add_ca_deepG.
@@ -425,6 +428,7 @@ Section NurValidState.
       state_to_list A s l = r -> valid_caA r rs bt.
   Proof. move=>/base_or_aux_ko_state_to_list-><-//. Qed.
 
+
   Lemma base_or_aux_valid_caA A s0 r rs:
     base_or_aux A -> state_to_list A s0 nilC = r -> valid_caA r rs nilC.
   Proof.
@@ -434,7 +438,7 @@ Section NurValidState.
     - move=> A HA s B HB rs s0 /=/andP[bA bB].
       rewrite add_ca_deep_empty1.
       have [hd H]:= base_and_state_to_list bA.
-      rewrite H/= HB//=.
+      rewrite H/=fold_valid_caA HB//=.
       have/=:= base_and_valid_caA _ _ _ _ (rs) nilC bA (H nilC empty).
       move=> /(_ _ IsList_alts _ IsList_alts)//.
       case: eqP => // _.
