@@ -360,10 +360,10 @@ Section valid_state.
       rewrite valid_state_big_and bbOr_big_or_aux IH if_same//.
   Qed.
 
-  Lemma valid_state_expanded {s1 A r}:
-    valid_state A ->  expanded u s1 A r -> valid_state (get_state_exp r).
+  Lemma valid_state_expanded {s1 A r b}:
+    valid_state A ->  expandedb u s1 A r b -> valid_state (get_state_exp r).
   Proof.
-    move=> + [b H].
+    move=> + H.
     elim: H; clear.
     + move=> s1 s2 A B HA VA /=; apply: valid_state_expand VA HA.
     + move=> s A B HA VA; apply: valid_state_expand VA HA.
@@ -596,15 +596,15 @@ Section valid_state.
       rewrite eqxx//aB//.
   Qed.
 
-  Lemma runP_run {s1 A s2 B}:
-    valid_state A -> run u s1 A s2 B -> valid_state B.
+  Lemma runP_run {s1 A s2 B b}:
+    valid_state A -> runb u s1 A s2 B b -> valid_state B.
   Proof.
-    move=> + [b H]; elim H; clear.
+    move=> + H; elim H; clear.
     + move=> s1 s2 A B C b EA -> VA.
-      have /= H := valid_state_expanded VA (ex_intro _ _ EA).
+      have /= H := valid_state_expanded VA EA.
       by apply: valid_state_clean_success.
     + move=> s1 s2 s3 A B C D b1 b2 b3 HA HB HC IH Hb VA.
-      have VB := valid_state_expanded VA (ex_intro _ _ HA).
+      have VB := valid_state_expanded VA HA.
       have NA := valid_state_next_alt VB HB.
       apply: IH NA.
   Qed.

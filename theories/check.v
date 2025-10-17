@@ -586,15 +586,15 @@ Section check.
       apply: IH erefl (expand_no_free_alt Hz fA HA) _ nB.
   Qed.
 
-  Definition is_det A := forall s s' B,
-    run u s A s' B -> forall s2, next_alt s2 B = None.
+  Definition is_det A := forall b s s' B,
+    runb u s A s' B b -> forall s2, next_alt s2 B = None.
 
   Lemma runb_next_alt {sP A}: 
     check_program sP -> 
       no_free_alt sP A -> is_det A.
   Proof.
     rewrite/is_det.
-    move=> H1 H2 s s' B []b H3.
+    move=> H1 H2 b s s' B H3.
     elim: H3 H2; clear -H1 => //.
     - move=> s s' A B C b HA -> fA s2.
       have H := expandedb_next_alt_done H1 fA HA _.

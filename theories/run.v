@@ -514,11 +514,11 @@ Section main.
         expandedb s A (Failed B) b1 -> next_alt None B = (Some (s1, C)) -> 
           runb s1 C s2 D b2 -> b3 = (b1 || b2) -> runb s A s2 D b3.
 
-  Definition expanded s A r := exists b, expandedb s A r b.
+  (* Definition expandedb s A r := exists b, expandedb s A r b.
   Definition run s A s1 B := exists b, runb s A s1 B b.
 
   Definition run_classic s A s1 B := runb s A s1 B false. 
-  Definition expanded_classic s A r := expandedb s A r false. 
+  Definition expanded_classic s A r := expandedb s A r false.  *)
 
 
   (********************************************************************)
@@ -707,10 +707,10 @@ Section main.
     move=> s s' A B /expand_solved_same H ??; rewrite !H => -[_<-]; rewrite H//.
   Qed.
 
-  Lemma run_Solved_id {s s1 A r alt}:
-      expand s A = Success s1 alt -> expanded s A r -> r = Done s1 alt.
+  Lemma run_Solved_id {s s1 A r alt b}:
+      expand s A = Success s1 alt -> expandedb s A r b -> r = Done s1 alt.
   Proof.
-    move=> + [b H]; by case: H => //=; clear; congruence.
+    move=> + H; by case: H => //=; clear; congruence.
   Qed.
 
   Lemma expanded_consistent: forall {s0 A s1 s2 b1 b2},
@@ -719,7 +719,7 @@ Section main.
     move=> s0 A s1 + b1 + H.
     elim:H; clear.
     + move=> s s' A alt H b1 b2 H1.
-      move: (run_Solved_id H (ex_intro _ _ H1)) => /[subst1].
+      move: (run_Solved_id H H1) => /[subst1].
       by inversion H1; try congruence; subst.
     + move=> s A B HA r b H0.
       inversion H0; try congruence; subst.

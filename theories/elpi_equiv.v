@@ -1212,7 +1212,7 @@ Section NurEqiv.
       rewrite (expand_cb_same_subst1 vA HA)//.
     - move=> s s' r A B b HA HB IH C x xs y ys ? l s1 s3 vA fA sA sD SUFF; subst.
       have /= vB := (valid_state_expand _ vA HA).
-      have /= vC := (valid_state_expanded _ vB (ex_intro _ _ HB)).
+      have /= vC := (valid_state_expanded _ vB HB).
       case: x sA SUFF => //.
         move=> sA SUFF.
         have [[[[fB] Hw] Hz] Hx Hr] := s2l_Expanded_nil vA sA HA; subst.
@@ -1317,7 +1317,7 @@ Section NurEqiv.
       move=>[->].
       by eexists ((get_substS s A), x), _.
     + move=> s s' s2 A B C D b1 b2 b3 HA HB HC IH ? sIgn vA; subst.
-      have /=vB := valid_state_expanded _ vA (ex_intro _ _ HA).
+      have /=vB := valid_state_expanded _ vA HA.
       have /=vC := valid_state_next_alt vB HB.
       have {IH} := IH sIgn vC.
       move=> [[s1 y][ys[sC /=H]]].
@@ -1327,7 +1327,7 @@ Section NurEqiv.
       have [s3 [x[xs sA]]]:= expandedb_failure_next_alt_state_to_list_cons vA HA HB (s2l_cons sC') s nilC.
       rewrite sA.
       do 2 eexists; split => //=.
-      have /= vB := valid_state_expanded _ vA (ex_intro _ _ HA).
+      have /= vB := valid_state_expanded _ vA HA.
       have fB := expandedb_failed _ HA.
       move: sC'; fConsA (s1, y) ys => sC'.
       rewrite -(failed_next_alt_some_state_to_list s vB fB HB) in sC'.

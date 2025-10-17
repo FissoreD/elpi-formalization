@@ -147,7 +147,7 @@ three functions and four inductives to animate a program. Specifically:
   a cut whose effect should be visible outside the current state).
 
 - **runb**: This inductive represents the interpreter of our language. It
-  iterates over **expandedb** until reaching a success. If **expanded** results
+  iterates over **expandedb** until reaching a success. If **expandedb** results
   in a failure, it backtracks and continues calling **expandedb**.
 
 - **next_alt**: Backtracking is enabled by the `next_alt` procedure. It takes a
@@ -241,47 +241,47 @@ expandedb s (And A B0 B) (Done s' C) b ->
 
 We prove `expanded_and_correct`:
 ```
-expanded s0 A (Done s1 B) -> 
+expandedb s0 A (Done s1 B) -> 
   expandedb s1 C (Done s2 D) b ->
-    expanded s0 (And A B0 C) 
+    expandedb s0 (And A B0 C) 
       (Done s2 (And (if b then cutl B else B) (if b then cutl B0 else B0) D)).
 ```
 
 We prove `expanded_and_fail`:
 ```
-expanded s (And A B0 B) (Failed C) ->
-  (exists C', expanded s A (Failed C')) \/ 
-    (exists s' A' B', expanded s A (Done s' A') /\ expanded s' B (Failed B')).
+expandedb s (And A B0 B) (Failed C) ->
+  (exists C', expandedb s A (Failed C')) \/ 
+    (exists s' A' B', expandedb s A (Done s' A') /\ expandedb s' B (Failed B')).
 ```
 > TODO: Refine this proof to specify that C is `And A' B0' B'` and eliminate
 > the existential quantifiers `C', A', B'`.
 
 We prove `expanded_and_fail_left`:
 ```
-expanded s A (Failed FA) ->
-  forall B, expanded s (And A B0 B) (Failed (And FA B0 B)).
+expandedb s A (Failed FA) ->
+  forall B, expandedb s (And A B0 B) (Failed (And FA B0 B)).
 ```
 
 We prooe `run_and_fail_both`:
 ```
 run_and_fail_both:
-  expanded s A (Done s' SA) -> expandedb s' B (Failed FB) b ->
-      expanded s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)).
+  expandedb s A (Done s' SA) -> expandedb s' B (Failed FB) b ->
+      expandedb s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)).
 ```
 
 We prove `expanded_or_correct_left`:
 ```
 expandedb s A (Done s' A') b ->
   forall s2 B,
-    expanded s (Or A s2 B) (Done s' (Or A' s2 (if b then cutr B else B))).
+    expandedb s (Or A s2 B) (Done s' (Or A' s2 (if b then cutr B else B))).
 ```
 
-We prove `expanded_or_complete`:
+We prove `expanded_or_complete_done`:
 ```
 expandedb s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
   (is_dead A = false /\ 
     exists b, expandedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
-      (is_dead A /\ A = A' /\ expanded s B (Done s' B')).
+      (is_dead A /\ A = A' /\ expandedb s B (Done s' B')).
 ```
 
 We prove `expanded_or_correct_left_fail`:
@@ -289,7 +289,7 @@ We prove `expanded_or_correct_left_fail`:
 is_dead A = false ->
   expandedb s A (Failed A') b ->
     forall s2 B, 
-      expanded s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))).
+      expandedb s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))).
 ```
 
 ## Determinacy checking: check.v
@@ -349,7 +349,7 @@ We prove the following properties:
 - `bbAnd_valid`: `bbAnd B -> valid_state B.`
 - `bbOr_valid`: `bbOr B -> valid_state B.`
 - `valid_state_expand`: `valid_state A -> expand s A = r -> valid_state (get_state r).`
-- `valid_state_expanded`: `valid_state A -> expanded s1 A r -> valid_state (get_state_exp r).`
+- `valid_state_expanded`: `valid_state A -> expandedb s1 A r -> valid_state (get_state_exp r).`
 - `valid_state_next_alt`: `valid_state A -> next_alt s1 A = Some (s2, B) -> valid_state B.`
 - `valid_state_clean_success`: `valid_state A -> valid_state (clean_success A).`
 - `runP_run`: `valid_state A -> run s1 A s2 B -> valid_state B.`  

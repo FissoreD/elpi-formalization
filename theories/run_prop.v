@@ -5,15 +5,15 @@ Section RunP.
   Variable u: Unif.
   (* Notation *)
 
-  Lemma expanded_classic_expanded {s A r}:
-    expanded_classic u s A r -> expanded u s A r.
-  Proof. by exists false. Qed.
+  (* Lemma expanded_classic_expanded {s A r}:
+    expanded_classic u s A r -> expandedb u s A r.
+  Proof. by exists false. Qed. *)
   
-  Lemma run_classic_run {s A s1 B}:
+  (* Lemma run_classic_run {s A s1 B}:
     run_classic u s A s1 B -> run u s A s1 B.
-  Proof. by exists false. Qed.
+  Proof. by exists false. Qed. *)
 
-  Lemma run_classic_cut {s s2 A B s3 C}:
+  (* Lemma run_classic_cut {s s2 A B s3 C}:
     run_classic u s A s3 C -> expand u s A = CutBrothers s2 B -> False.
   Proof.
     rewrite /run_classic; remember false as f eqn:Hf => H.
@@ -22,7 +22,7 @@ Section RunP.
     + move=> s1 s2 r A A' B C b1 b2 b3 HE HN HR IH + s4 A2 /[subst1] +.
       destruct b1, b2 => // _ HC.
       inversion HE; congruence.
-  Qed.
+  Qed. *)
 
   Lemma ges_subst_cutl {s A} : get_substS s (cutl A) = get_substS s A.
   Proof.
@@ -103,8 +103,8 @@ Section RunP.
 
   Lemma expand_success_done {A B0 s1 B s2 B' b}: 
     success A -> expandedb u (get_substS s1 A) B (Done s2 B') b ->
-      expanded u s1 (And A B0 B) 
-        (Done s2 (And (if b then cutl A else A) (if b then cutl B0 else B0) B')).
+      exists b1, expandedb u s1 (And A B0 B) 
+        (Done s2 (And (if b then cutl A else A) (if b then cutl B0 else B0) B')) b1.
   Proof.
     remember (get_substS _ _) as S eqn:HS.
     remember (Done _ _) as RD eqn:HRD => + H.
@@ -159,12 +159,12 @@ Section RunP.
       move=>/=; rewrite //= (succes_is_solved _ _ sB) HA//.
   Qed.
 
-  Lemma expanded_and_correct {s0 s1 s2 A C B0 B D x} :
-      expanded u s0 A (Done s1 B) -> expandedb u s1 C (Done s2 D) x ->
-        expanded u s0 (And A B0 C) 
-          (Done s2 (And (if x then cutl B else B) (if x then cutl B0 else B0) D)).
+  Lemma expanded_and_correct {s0 s1 s2 A C B0 B D b1 x} :
+      expandedb u s0 A (Done s1 B) b1 -> expandedb u s1 C (Done s2 D) x ->
+        exists b3, expandedb u s0 (And A B0 C) 
+          (Done s2 (And (if x then cutl B else B) (if x then cutl B0 else B0) D)) b3.
   Proof.
-    remember (Done _ _) as RD eqn:HRD => -[b H].
+    remember (Done _ _) as RD eqn:HRD => H.
     elim: H s1 s2 C B0 B D HRD x => //=; clear.
     + move=> s1 s2 A B eA s3 s4 C D E F [??] b;subst.
       have [??]:= expand_solved_same _ eA; subst.
@@ -183,9 +183,9 @@ Section RunP.
   Qed.
 
   (* Lemma expandes_and_fail {s A B0 B C}:
-    expanded u s (And A B0 B) (Failed C) ->
-      (exists C', expanded u s A (Failed C')) \/ 
-        (exists s' A' B', expanded u s A (Done s' A') /\ expanded u s B (Failed B')).
+    expandedb u s (And A B0 B) (Failed C) ->
+      (exists C', expandedb u s A (Failed C')) \/ 
+        (exists s' A' B', expandedb u s A (Done s' A') /\ expandedb u s B (Failed B')).
   Proof.
     remember (And _ _ _) as R eqn:HR.
     remember (Failed _) as F eqn:HF => -[b H].
@@ -239,11 +239,11 @@ Section RunP.
       eexists; apply: expanded_step H3 H5.
   Qed. *)
 
-  Lemma expanded_and_fail_left {s A B0 FA}:
-    expanded u s A (Failed FA) ->
-      forall B, expanded u s (And A B0 B) (Failed (And FA B0 B)).
+  Lemma expanded_and_fail_left {s A B0 FA b1}:
+    expandedb u s A (Failed FA) b1 ->
+      forall B, exists b2, expandedb u s (And A B0 B) (Failed (And FA B0 B)) b2.
   Proof.
-    move=> [? H].
+    move=> H.
     remember (Failed _) as F eqn:HF.
     elim: H FA B0 HF => //=; clear.
     + move=> s A H H1 FA ? [] /[subst1] ?.
@@ -261,11 +261,11 @@ Section RunP.
       + apply: IH.
   Qed.
 
-  Lemma run_and_fail_both {s s' A B B0 SA FB b}:
-    expanded u s A (Done s' SA) -> expandedb u s' B (Failed FB) b ->
-      expanded u s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)).
+  Lemma run_and_fail_both {s s' A B B0 SA FB b1 b}:
+    expandedb u s A (Done s' SA) b1 -> expandedb u s' B (Failed FB) b ->
+      exists b2, expandedb u s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)) b2.
   Proof.
-    move=> [b1 H].
+    move=> H.
     remember (Done _ _) as D eqn:HD.
     elim: H B s' SA HD b => //=; clear.
     + move=> s1 s2 A B HA C s3 D [??] b H; subst.
@@ -285,7 +285,7 @@ Section RunP.
 
   Lemma expanded_or_correct_left {s s' A A'} b:
     expandedb u s A (Done s' A') b ->
-      forall s2 B, expanded u s (Or A s2 B) (Done s' (Or A' s2 (if b then cutr B else B))).
+      forall s2 B, exists b2, expandedb u s (Or A s2 B) (Done s' (Or A' s2 (if b then cutr B else B))) b2.
   Proof.
     remember (Done _ _) as D eqn:HD => H.
     elim: H s' A' HD => //=; clear.
@@ -314,9 +314,8 @@ Section RunP.
     expandedb u s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
       (is_dead A = false /\ 
         exists b, expandedb u s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
-        (is_dead A /\ A = A' /\ expanded u s2 B (Done s' B')).
+        (is_dead A /\ A = A' /\ exists b1, expandedb u s2 B (Done s' B') b1).
   Proof.
-    rewrite /expanded.
     remember (Done _ _) as RD eqn:HRD.
     remember (Or A _ _) as RO eqn:HRO => H.
     elim: H s' s2 A' B' A B HRO HRD => //=; clear.
@@ -350,11 +349,20 @@ Section RunP.
         apply: expanded_cut eA H1.
       move=>/=; rewrite cutr2 if_same//.
   Qed.
+
+
+  Lemma expanded_or_complete_fail {s s2 A A' B B' b}:
+    expandedb u s (Or A s2 B) (Failed (Or A' s2 B')) b ->
+      (is_dead A = false /\ 
+        exists b, expandedb u s A (Failed A') b /\ B' = if b then cutr B else B) \/ 
+        (is_dead A /\ A = A' /\ exists b1, expandedb u s2 B (Failed B') b1).
+  Proof.
+  Abort. (*TODO*)
   
   Lemma expanded_or_correct_left_fail {s A A'} b:
     is_dead A = false ->
     expandedb u s A (Failed A') b ->
-      forall s2 B, expanded u s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))).
+      forall s2 B, exists b1, expandedb u s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))) b1.
   Proof.
     remember (Failed _) as D eqn:HD => + H.
     elim: H A' HD => //=; clear.
@@ -376,7 +384,7 @@ Section RunP.
 
   Lemma run_or_correct_left {s1 A s2 A' b sB B}:
     runb u s1 A s2 A' b ->
-      run u s1 (Or A sB B) s2 (Or A' sB (if b then cutr B else B)).
+      exists b1, runb u s1 (Or A sB B) s2 (Or A' sB (if b then cutr B else B)) b1.
   Proof.
     move => H.
     elim: H sB B => //; clear.
@@ -419,13 +427,13 @@ Section RunP.
       rewrite (is_dead_next_alt dA)//.
   Qed.
 
-  Lemma run_or_complete {s1 s2 A B SOL altAB}:
-    run u s1 (Or A s2 B) SOL altAB ->
-      (exists altA, run u s1 A SOL altA) \/ 
-        (exists altB, run u s2 B SOL altB).
+  Lemma run_or_complete {s1 s2 A B SOL altAB b}:
+    runb u s1 (Or A s2 B) SOL altAB b ->
+      (exists altA b1, runb u s1 A SOL altA b1) \/ 
+        (exists altB b1, runb u s2 B SOL altB b1).
   Proof.
     remember (Or _ _ _) as O1 eqn:HO1.
-    move=> [b H].
+    move=> H.
     elim: H s2 A B HO1 => //=; clear.
     + move=> s st s' alt C b H ? s2 D E ?; subst.
       have /= := expandedb_same_structure _ H.
