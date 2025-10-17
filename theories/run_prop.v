@@ -24,45 +24,6 @@ Section RunP.
       inversion HE; congruence.
   Qed.
 
-  Lemma run_Solved_id {s s1 A r alt}:
-      expand u s A = Success s1 alt -> expanded u s A r -> r = Done s1 alt.
-  Proof.
-    move=> + [b H]; by case: H => //=; clear; congruence.
-  Qed.
-
-  Lemma expanded_consistent: forall {s0 A s1 s2 b1 b2},
-    expandedb u s0 A s1 b1 -> expandedb u s0 A s2 b2 -> ((s1 = s2) * (b1 = b2))%type.
-  Proof.
-    move=> s0 A s1 + b1 + H.
-    elim:H; clear.
-    + move=> s s' A alt H b1 b2 H1.
-      move: (run_Solved_id H (ex_intro _ _ H1)) => /[subst1].
-      by inversion H1; try congruence; subst.
-    + move=> s A B HA r b H0.
-      inversion H0; try congruence; subst.
-      move: H; rewrite HA => -[] /[subst1]//.
-    + move=> s1 s2 r A B b HA HB IH s3 b1; inversion 1; try congruence; subst.
-      move: H0; rewrite HA => -[] /[subst2].
-      by have:= IH _ _ H1 => -[] /[subst2].
-    + move=> s1 s2 r A B b1 + HB IH r2 b2 HA.
-      by inversion HA; try congruence; subst; rewrite H => -[] /[subst2]; auto.
-  Qed.
-
-  Lemma run_consistent {s A s1 B b1}:
-    runb u s A s1 B b1 -> forall {s2 C b2}, runb u s A s2 C b2 -> ((s1 = s2) * (B = C) * (b1 = b2))%type.
-  Proof.
-    move=> H; elim: H; clear.
-    + move=> s s' A B C b H -> s2 D b2 H1.
-      inversion H1; clear H1; subst;
-        by have:= expanded_consistent H H0 => -[] // [->->]->.
-    + move=> s s1 s2 A B C D b1 b2 b3 HA HB HC IH ? s3 E s4 H1; subst.
-      inversion H1; subst; have [] := expanded_consistent HA H => //.
-      move=>[??]; subst.
-      move: H0; rewrite HB => -[??]; subst.
-      have {}H := IH _ _ _ H2.
-      rewrite !H//.
-  Qed.
-
   Lemma ges_subst_cutl {s A} : get_substS s (cutl A) = get_substS s A.
   Proof.
     elim: A s => //=.
@@ -429,7 +390,7 @@ Section RunP.
     + move=> s s' r A B C D b1 b2 b3 HE HN HR IH ? s2 E;subst.
       case dA: (is_dead A).
         have H := is_dead_expanded _ s dA.
-        have [[?]?] := expanded_consistent (H _) HE; subst.
+        have [[?]?] := expanded_consistent _ (H _) HE; subst.
         by rewrite (is_dead_next_alt dA) in HN.
       have /= dB := expanded_not_dead _ dA HE.
       have [b3 H] := expanded_or_correct_left_fail _ dA HE s2 E.

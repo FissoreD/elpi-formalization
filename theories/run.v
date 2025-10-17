@@ -707,25 +707,63 @@ Section main.
     move=> s s' A B /expand_solved_same H ??; rewrite !H => -[_<-]; rewrite H//.
   Qed.
 
-  Lemma expanded_success {s A r b}: 
-    success A -> expandedb s A r b -> ((r = Done (get_substS s A) A) * (b = false))%type.
+  Lemma run_Solved_id {s s1 A r alt}:
+      expand s A = Success s1 alt -> expanded s A r -> r = Done s1 alt.
   Proof.
-    move=> sA H.
-    inversion H; subst.
-    - have:= succes_is_solved s sA.
-      rewrite H0 => -[<-<-]//.
-    - have:= succes_is_solved s sA; congruence. 
-    - have := succes_is_solved s sA; congruence.
-    - have := succes_is_solved s sA; congruence.
+    move=> + [b H]; by case: H => //=; clear; congruence.
   Qed.
 
-  Lemma runb_success {s1 s2 A B b}: 
-    success A -> runb s1 A s2 B b -> ((s2 = (get_substS s1 A)) * (b = false) * (B = clean_success A))%type.
+  Lemma expanded_consistent: forall {s0 A s1 s2 b1 b2},
+    expandedb s0 A s1 b1 -> expandedb s0 A s2 b2 -> ((s1 = s2) * (b1 = b2))%type.
   Proof.
-    move=> sA H.
-    inversion H; subst.
-    - have [[??]?] := expanded_success sA H0; subst => //.
-    - by have [] := expanded_success sA H0.
+    move=> s0 A s1 + b1 + H.
+    elim:H; clear.
+    + move=> s s' A alt H b1 b2 H1.
+      move: (run_Solved_id H (ex_intro _ _ H1)) => /[subst1].
+      by inversion H1; try congruence; subst.
+    + move=> s A B HA r b H0.
+      inversion H0; try congruence; subst.
+      move: H1; rewrite HA => -[] /[subst1]//.
+    + move=> s1 s2 r A B b HA HB IH s3 b1; inversion 1; try congruence; subst.
+      move: H1; rewrite HA => -[] /[subst2].
+      by have:= IH _ _ H2 => -[] /[subst2].
+    + move=> s1 s2 r A B b1 + HB IH r2 b2 HA.
+      inversion HA; try congruence; subst; rewrite H0 => -[] /[subst2]; auto.
+  Qed.
+
+  Lemma run_consistent {s A s1 B b1}:
+    runb s A s1 B b1 -> forall {s2 C b2}, runb s A s2 C b2 -> ((s1 = s2) * (B = C) * (b1 = b2))%type.
+  Proof.
+    move=> H; elim: H; clear.
+    + move=> s s' A B C b H -> s2 D b2 H1.
+      inversion H1; clear H1; subst;
+        by have:= expanded_consistent H H0 => -[] // [->->]->.
+    + move=> s s1 s2 A B C D b1 b2 b3 HA HB HC IH ? s3 E s4 H1; subst.
+      inversion H1; subst; have [] := expanded_consistent HA H0 => //.
+      move=>[??]; subst.
+      move: H2; rewrite HB => -[??]; subst.
+      have {}H := IH _ _ _ H3.
+      rewrite !H//.
+  Qed.
+
+  Lemma expanded_success1 {A} s: 
+    success A -> expandedb s A (Done (get_substS s A) A) false.
+  Proof.
+    move=> sA.
+    apply: expanded_done.
+    apply: succes_is_solved sA.
+  Qed.
+
+  Lemma expanded_success {s A r b}: 
+    success A -> expandedb s A r b -> ((r = Done (get_substS s A) A) * (b = false))%type.
+  Proof. move=> sA H; have:= expanded_success1 s sA => /(expanded_consistent H)//. Qed.
+
+  Lemma runb_success {A} s1: 
+    success A -> runb s1 A (get_substS s1 A) (clean_success A) false.
+  Proof.
+    move=> sA.
+    apply: run_done erefl.
+    apply: expanded_success1 sA.
   Qed.
 
   Lemma expand_not_solved_not_success {s1 A r}:
