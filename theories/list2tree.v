@@ -68,37 +68,7 @@ with erase_goals' (a : goals') : goals :=
     behead := _; eqB := _; suffix:= _; all:= _;
     map := _; mem := _ *)
     |}.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
+  Admit Obligations.
 
 
     #[program] Global Instance IsList_goals' : @IsList G' goals' :=
@@ -109,37 +79,8 @@ with erase_goals' (a : goals') : goals :=
     behead := _; eqB := _; suffix:= _; all:= _;
     map := _; mem := _ *)
     |}.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
+    Admit Obligations.
+
 
 Definition add_ca' alts a :=
   match a with

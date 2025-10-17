@@ -177,34 +177,6 @@ Qed.
 
 Definition ed := (erase_decorate_alts, erase_decorate_goals, erase_decorate_G).
 
-(* Inductive nurk u : Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
-| StopE s a : nurk s nilC a s a
-| CutE s s1 a ca r gl : nurk s gl ca s1 r -> nurk s ((cut ca) ::: gl) a s1 r
-| CallE p s s1 a b bs gl r t : 
-  F u p t s = [:: b & bs ] -> 
-    nurk b.1 (save_goals a gl (a2gs1 p b)) (save_alts a gl ((aa2gs p) bs) ++ a) s1 r -> 
-      nurk s ((call p t) ::: gl) a s1 r
-| FailE p s s1 s2 t gl a al r : 
-  F u p t s = [::] -> nurk s1 a al s2 r -> nurk s ((call p t) ::: gl) ((s1, a) ::: al) s2 r. *)
-
-(* Lemma two u s s1 a a1 xs  : nurk u s xs a s1 a1 -> { a' & { a1' & { xs' |
-  erase_alts' a' = a /\ erase_alts' a1' = a1 /\ erase_goals' xs' = xs /\
-    nur' u s xs' a' s1 a1'}}}.
-elim; clear.
-- move=> s2 a2 *.
-  exists (decorate_alts a2).
-  exists (decorate_alts a2).
-  exists (decorate_goals nilC).
-  rewrite !ed /=; repeat split.
-  apply: StopE' => //=.
-
-- move=> s s1 a ca r gl H [a' [a1' [xs' [Ha' [Ha1' [Hxs' H']]]]]].
-  eexists (decorate_alts a), a1', (decorate_goals ((cut ca) ::: gl)) => /=.
-  rewrite !ed /=; repeat split => //.
-  by apply: CutE' H' _; subst; rewrite /hd' /= !ed.
-
-Admitted. *)
-
 Lemma one u s xs a s1 a1: nur' u s xs a s1 a1 -> 
   nur u s (erase_goals' xs) (erase_alts' a) s1 (erase_alts' a1).
 Proof.
@@ -215,48 +187,10 @@ Proof.
     apply: CallE H _.
     move: H2.
     rewrite/save_goals/=/map/=/save_goals'/=.
-    admit.
+    admit. (*SHOULD BE OK*)
   - move=> p s s1 s2 t gl a al r _ _ H H1 H2.
     apply: FailE H H2.
 Admitted.
-
-Definition empty_ca_G' '((_, g) : nat * _) :=
-  match g with call' _ _ | cut' no_alt' => true | _ => false end.
-Definition empty_caG' goals := all empty_ca_G' goals.
-Definition empty_ca' alts := all (fun x => empty_caG (snd x)) alts.
-
-Fixpoint valid_caG' (gs:goals') (a:alts') (bt:alts') {struct gs} :=
-    match gs with
-    | no_goals' => true
-    | more_goals' (_, call' _ _) xs => valid_caG' xs a bt
-    | more_goals' (_, cut' ca) xs =>
-      if suffix bt ca then
-        suffix ca (a ++ bt) &&
-        let n := size ca - size bt in
-        let ca' := take n ca in
-        valid_caG' xs ca' bt
-        && valid_caA_aux' ca ca' bt
-      else (match ca with no_alt' => true | _ => false end) && empty_caG' xs
-      end
-    with valid_caA_aux' ca ca1 bt : bool :=
-      if ca == bt then true
-      else
-      match ca with
-      | no_alt' => false
-      | more_alt' hd tl => valid_caG' hd.2 (behead ca1) bt && valid_caA_aux' tl (behead ca1) bt
-    end
-    .
-
-  (* to be valid: size L1 <= size L2, in a sense L1 should be a suffix of L2 *)
-  Fixpoint valid_caA' L1 L2 (bt:alts') {struct L1} :=
-    match L1 with
-    | no_alt' => true
-    | more_alt' hd tl => valid_caG' hd.2 (behead L2) bt && valid_caA' tl (behead L2) bt
-    end.
-
-  Definition valid_ca' L := valid_caA' L L nilC.
-
-
 
 Lemma two' u s s1 a a1 xs  : nur u s xs a s1 a1 -> exists a' a1' xs',
   [/\ (erase_alts' a' = a), (erase_alts' a1' = a1), (erase_goals' xs' = xs) &
@@ -279,6 +213,7 @@ elim; clear.
 - move=> p s s1 a [s2 r] bs gl rs t H1/= H2 [a'[a1'[xs']]][H3 ? H4] IH; subst.
   do 3 eexists; repeat split; last first => //.
   apply: CallE' H1 _.
+  (* THIS IS DIFFICULT *)
   admit.
 
 - 

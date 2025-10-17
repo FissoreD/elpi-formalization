@@ -719,6 +719,15 @@ Section main.
     - have := succes_is_solved s sA; congruence.
   Qed.
 
+  Lemma runb_success {s1 s2 A B b}: 
+    success A -> runb s1 A s2 B b -> ((s2 = (get_substS s1 A)) * (b = false) * (B = clean_success A))%type.
+  Proof.
+    move=> sA H.
+    inversion H; subst.
+    - have [[??]?] := expanded_success sA H0; subst => //.
+    - by have [] := expanded_success sA H0.
+  Qed.
+
   Lemma expand_not_solved_not_success {s1 A r}:
     expand s1 A = r -> ~ (is_solved r) -> success A = false.
   Proof.
