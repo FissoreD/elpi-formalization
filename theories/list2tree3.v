@@ -132,27 +132,15 @@ Qed.
 
 Lemma expanded_a2t_ign {u ign1 s1 bt b A r} ign2:
   expandedb u ign1 (a2t_ (state_to_list A s1 bt)) r b ->
-    (expandedb u ign2 (a2t_ (state_to_list A s1 bt)) r b) * is_failed r.
+    (expandedb u ign2 (a2t_ (state_to_list A s1 bt)) r b).
 Proof.
   remember (a2t_ _) as A2 eqn:HA2 => H.
   elim: H A s1 bt HA2 ign2; clear.
-  - move=> s s' A B HA C s3 bt ? H2; subst; by have:= expand_a2t_fail HA.
-  - move=> s1 A B HA C s2 bt ? s3; subst; split => //; apply: expanded_fail.
-    rewrite (expand_a2t_ign s1)//.
-  - move=> s s' r A B b HA HB IH C s1 bt ? ign2; subst; by have:= expand_a2t_fail HA.
-  - move=> s s' r A B b HA HB IH C s1 bt ? ign2; subst; by have:= expand_a2t_fail HA.
-Qed.
-
-Lemma expanded_a2t_ign {u ign1 s1 bt b A r} ign2:
-  expandedb u ign1 (a2t_ (state_to_list A s1 bt)) r b ->
-  expandedb u ign2 (a2t_ (state_to_list A s1 bt)) r b.
-Proof.
-  remember (a2t_ _) as A2 eqn:HA2 => H.
-  elim: H A s1 bt HA2; clear.
-  - move=> s s' A B + C bt ? H2; subst; rewrite expand_a2t//.
-  - move=> s1 A B + C bt ? s3; subst; rewrite expand_a2t//.
-  - move=> s s' r A B b + HB IH C bt ? ign2; subst; rewrite expand_a2t//.
-  - move=> s s' r A B b + HB IH C bt ? ign2; subst; rewrite expand_a2t//.
+  - move=> s s' A B + C s3 bt ? H2; subst; rewrite expand_a2t//.
+  - move=> s1 A B HA C s2 bt ? s3; subst; apply: expanded_fail.
+    rewrite -HA !expand_a2t//.
+  - move=> s s' r A B b + HB IH C s1 bt ? ign2; subst; rewrite expand_a2t//.
+  - move=> s s' r A B b + HB IH C s1 bt ? ign2; subst; rewrite expand_a2t//.
 Qed.
 
 Lemma run_a2t_ign {u s1 s2 C D b2 sIgn1} sIgn2:
@@ -160,10 +148,9 @@ Lemma run_a2t_ign {u s1 s2 C D b2 sIgn1} sIgn2:
     runb u sIgn2 (a2t_ (state_to_list C s1 nilC)) s2 D b2.
 Proof.
   inversion 1; subst.
-  - by have := expanded_a2t_ign H0.
+  - by have := expanded_a2t_failed H0.
   - apply: run_backtrack; (try eassumption) => //.
-    apply: (expanded_a2t_ign sIgn2 H0).1.
-    all: (try eassumption || move=> //).
+    apply: (expanded_a2t_ign sIgn2 H0).
 Qed.
 
 (* Lemma titi u s1 X B b1 bt:
