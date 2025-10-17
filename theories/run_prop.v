@@ -310,7 +310,7 @@ Section RunP.
       apply IH. 
   Qed.
 
-  Lemma expanded_or_complete {s s' s2 A A' B B' b}:
+  Lemma expanded_or_complete_done {s s' s2 A A' B B' b}:
     expandedb u s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
       (is_dead A = false /\ 
         exists b, expandedb u s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
@@ -430,7 +430,7 @@ Section RunP.
     + move=> s st s' alt C b H ? s2 D E ?; subst.
       have /= := expandedb_same_structure _ H.
       case: alt H => //= D' s2' E' H /and3P[/eqP? _ _]; subst.
-      have:= expanded_or_complete H.
+      have:= expanded_or_complete_done H.
       move=> [][dD].
         move=> [b'[H1?]]; subst.
         left.
@@ -447,7 +447,11 @@ Section RunP.
         case X: next_alt => //=[[s4 E2]][??]; subst.
         have [[x [b {}IH]]|[x [b{}IH]]] := IH _ _ _ erefl.
           by have:= is_dead_runb dD' IH.
-        Search expandedb u Failed Or.
+        Search expandedb Or Failed.
+        left.
+        eexists.
+        (* apply: runba
+        Search expandedb u Failed Or. *)
         admit.
       case X: next_alt => //=[[s4 E2]|].
         move=> [??]; subst.

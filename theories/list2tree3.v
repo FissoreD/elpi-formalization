@@ -99,88 +99,56 @@ Section s.
   Qed.
 End s.
 
-Lemma expand_a2t {u ign1 C s3 bt}: 
-  expand u ign1 (a2t_ (state_to_list C s3 bt)) = Failure (a2t_ (state_to_list C s3 bt)).
-Proof.
-  case: C => //=.
-  - move=> A s B.
-    rewrite add_ca_deep_cat.
-    generalize (state_to_list B s nilC) => L.
-    generalize (state_to_list A s3 L) => L1; clear.
-    case: L1 => [|[]]//; case: L => //-[]//.
-  - move=> A B0 B.
-    case X: state_to_list => //=[[sx x] xs].
-    case Y: state_to_list => //=[|[sy y] ys].
-    - set Z := state_to_list _ _ _.
-      case: Z => //=-[]//.
-    - set Z := (_ ++ _).
-      case: ys Y => //=.
-      case: Z => //-[]//.
-Qed.
+Lemma expand_a2t {u ign1 L}: 
+  expand u ign1 (a2t_ L) = Failure (a2t_ L).
+Proof. case: L => //=-[]//. Qed.
 
-Lemma expanded_a2t_failed {u ign1 s1 bt b A r}:
-  expandedb u ign1 (a2t_ (state_to_list A s1 bt)) r b ->
-    r = Failed (a2t_ (state_to_list A s1 bt)).
-Proof.
-  remember (a2t_ _) as A2 eqn:HA2 => H.
-  elim: H A s1 bt HA2; clear.
-  - move=> s s' A B + C bt ? H2; subst; rewrite expand_a2t//.
-  - move=> s1 A B + C bt ? s3; subst; rewrite expand_a2t//; congruence.
-  - move=> s s' r A B b + HB IH C bt ? ign2; subst; rewrite expand_a2t//.
-  - move=> s s' r A B b + HB IH C bt ? ign2; subst; rewrite expand_a2t//.
-Qed.
+Lemma expanded_a2t u ign1 L:
+  expandedb u ign1 (a2t_ L) (Failed (a2t_ L)) false.
+Proof. case: L => [|[s g]gs]/=; constructor => //. Qed.
 
-Lemma expanded_a2t_ign {u ign1 s1 bt b A r} ign2:
-  expandedb u ign1 (a2t_ (state_to_list A s1 bt)) r b ->
-    (expandedb u ign2 (a2t_ (state_to_list A s1 bt)) r b).
+(* Lemma runb_a2t {u ign1 L s r b}:
+  runb u ign1 (a2t_ L) s r b -> b = false.
 Proof.
-  remember (a2t_ _) as A2 eqn:HA2 => H.
-  elim: H A s1 bt HA2 ign2; clear.
-  - move=> s s' A B + C s3 bt ? H2; subst; rewrite expand_a2t//.
-  - move=> s1 A B HA C s2 bt ? s3; subst; apply: expanded_fail.
-    rewrite -HA !expand_a2t//.
-  - move=> s s' r A B b + HB IH C s1 bt ? ign2; subst; rewrite expand_a2t//.
-  - move=> s s' r A B b + HB IH C s1 bt ? ign2; subst; rewrite expand_a2t//.
-Qed.
+  remember (a2t_ L) as a eqn:Ha => H.
+  elim: H L Ha; clear.
+  - move=> s1 s2 A B C b + _ L ?; subst.
+    move=> /(expanded_consistent _ (expanded_a2t u s1 L)) []//.
+  - move=> s1 s2 s3 A B C D b1 b2 b3 + _ _ H ? L ?; subst.
+    move=> /(expanded_consistent _ (expanded_a2t u s1 L)) []// _ <-//.
+    congruence.
 
-Lemma run_a2t_ign {u s1 s2 C D b2 sIgn1} sIgn2:
-  runb u sIgn1 (a2t_ (state_to_list C s1 nilC)) s2 D b2 ->
-    runb u sIgn2 (a2t_ (state_to_list C s1 nilC)) s2 D b2.
+  
+  case: L => [|[s g]gs]/=; constructor => //. Qed. *)
+
+Lemma run_a2t_ign {u s2 D b2 sIgn1 L} sIgn2:
+  runb u sIgn1 (a2t_ L) s2 D b2 ->
+    runb u sIgn2 (a2t_ L) s2 D b2.
 Proof.
   inversion 1; subst.
-  - by have := expanded_a2t_failed H0.
+  - have:= expanded_a2t u sIgn1 L.
+    move=> /(expanded_consistent _ H0) []//.
   - apply: run_backtrack; (try eassumption) => //.
-    apply: (expanded_a2t_ign sIgn2 H0).
+    have:= expanded_a2t u sIgn1 L.
+    move=> /(expanded_consistent _ H0) []//[??]; subst.
+    apply: expanded_a2t.
 Qed.
 
-(* Lemma titi u s1 X B b1 bt:
-  expandedb u s1 (a2t_ X) (Failed B) b1 ->
-    exists B', expandedb u s1 (a2t_ (add_ca_deep bt X)) (Failed B') false. *)
-
-Lemma run_success_add_ca_deep {u s s1 B D bt b2 res }:
+Lemma run_success_add_ca_deep {u s s1 B D bt bt1 res b}:
   success B ->
-  runb u s1 (a2t_ (state_to_list B s bt)) res D b2 ->
+    runb u s1 (a2t_ (state_to_list B s bt)) res D b ->
     exists D0 b0,
-      runb u s1 (a2t_ (add_ca_deep bt (state_to_list B s bt))) res D0 b0.
+      runb u s1 (a2t_ (add_ca_deep bt1 (state_to_list B s bt))) res D0 b0 .
 Proof.
-  remember (a2t_ _) as a eqn:Ha => + H.
-  elim: H B s bt Ha; clear.
-  - move=> s1 s2 A B _ b H _ C s3 bt ? sC; subst.
-    by have [] := expanded_a2t_ign empty H.
-  - move=> s1 s2 s3 A B C D b1 b2 b3 HA HB HC IH ? E s4 bt ? sE; subst.
-    do 2 eexists.
-    apply: run_backtrack => //.
-    -  
+  elim: B s s1 D bt bt1 res b => //=.
+  - move=> s s1 D _ _ res b _.
+    do 2 eexists; eassumption.
+  - move=> A HA s0 B HB s s1 C bt bt1 res b.
+    case: ifP => [dA sB|dA sA].
+      rewrite state_to_list_dead//.
+Admitted.
 
-
-
-
-
-
-
-
-
-Lemma gg u s1 C bt:
+Lemma run_a2t_success {C} u s1 bt:
   success C ->
   exists D b2, runb u s1 (a2t_ (state_to_list C s1 bt)) (get_substS s1 C) D b2.
 Proof.
@@ -196,9 +164,48 @@ Proof.
     case: ifP => [dA sB | dA sA].
     - rewrite state_to_list_dead//cat0s.
       have {HB HA} [D[b2]]:= HB s nilC sB; clear -sB.
-      move=> /(run_a2t_ign s1).
-  
+      move=> /(run_a2t_ign s1) H.
+      apply: run_success_add_ca_deep sB H.
+    - rewrite add_ca_deep_cat.
+      admit.
+  - move=> A HA B0 _ B HB.
+Admitted.
 
+Lemma runb_a2t_expandedb {u s A s' B b bt}:
+  valid_state A ->
+  expandedb u s A (Done s' B) b ->
+    exists C b2,
+    runb u s (a2t_ (state_to_list A s bt)) s' C b2.
+Proof.
+  remember (Done _ _) as d eqn:Hd => +H.
+  elim: H s' B Hd; clear => //=.
+  - move=> s1 s2 A B HA s3 C [??]vA; subst.
+    have [[??] sC]:= expand_solved_same _ HA; subst.
+    apply: run_a2t_success sC.
+  - move=> s1 s2 r A B b HA HB IH s3 C ? vA; subst.
+    have /=vB := valid_state_expand _ vA HA.
+    have {IH} := IH _ _ erefl vB.
+    have [x[tl[[H1 H2] H3]]]:= s2l_CutBrothers _ s1 bt vA HA.
+    rewrite H1 H2/=.
+    move=> [C1[b2 IH]].
+    inversion IH; subst; clear IH.
+      inversion H => //.
+    inversion H; subst; clear H => //.
+    move: H8 => //[?]; subst.
+    move: H0 => /=; rewrite andbF; case: ifP => //dx.
+    case X: next_alt => [[s4 D]|]//[??]; subst.
+    have [H5 H6]:= expand_cb_same_subst1 _ vA HA; subst.
+    do 2 eexists.
+    apply: run_backtrack => //.
+    - apply: expanded_fail => //.
+    - rewrite /=H6 X//.
+    - apply: run_done => //.
+      do 2 apply: expanded_step => //.
+      apply: expanded_done => //=.
+      rewrite 
+
+
+Admitted.
 
 Definition not_run A:= forall u s s' B b, runb u s A s' B b -> False.
 
@@ -214,15 +221,5 @@ Lemma xx u s1 s2 A B b1:
 Proof.
   elim; clear.
   - move=> s s' A B _ b H _.
-    remember (Done _ _) as D eqn:HD.
-    {
-      elim: H s' B HD; clear.
-      - move=> s1 s2 A B H s3 C [??]; subst.
-        have [[??] sC]:= expand_solved_same _ H; subst.
-        do 2 eexists.
-        apply: run_done _ erefl.
-          apply: expanded_done.
-
-      -
-      -
-      -
+    apply: runb_a2t_expandedb H.
+  - 

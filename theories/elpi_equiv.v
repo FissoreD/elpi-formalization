@@ -1060,7 +1060,7 @@ Section NurEqiv.
       case: ifP => /=[dA vB|dA/andP[vA bB]].
         case e: expand => //=[s1' B'|s1' B'][??]; subst;
         move=>/[dup]/expandedb_same_structure/=; case: D => // A' s' B2 /and3P[/eqP? _ _];
-        subst => /expanded_or_complete; rewrite !(state_to_list_dead dA) dA// => //-[][]// _ [? [b1 H]]; subst.
+        subst => /expanded_or_complete_done; rewrite !(state_to_list_dead dA) dA// => //-[][]// _ [? [b1 H]]; subst.
           case X: state_to_list => //[[s y] ys]/= [???]; subst.
           have [[{}HB|[H1[ca[tl[?{}HB]]]]]Y]:= HB _ _ _ _ _ _ _ _ _ _ vB e H X; rewrite Y-?HB?X; subst; split; auto.
           rewrite cats0 in HB.
@@ -1072,7 +1072,7 @@ Section NurEqiv.
         by right; split => //; do 2 eexists => //.
       case e: expand => //=[s1' B'|s1' B'][??]; subst;
       move=>/[dup]/expandedb_same_structure/=; case: D => // A' s' B2 /and3P[/eqP? _ _]; 
-      subst => /expanded_or_complete; rewrite (valid_state_dead1 (valid_state_expand _ vA e)) => -[][]// _;
+      subst => /expanded_or_complete_done; rewrite (valid_state_dead1 (valid_state_expand _ vA e)) => -[][]// _;
       move=> [b1 [H1 H2]]; subst.
         set X := state_to_list B _ _.
         have [s4 [y [ys H]]]:= failed_state_to_list vA (expand_not_failed _ e notF) s1 X.
