@@ -693,7 +693,7 @@ Section RunP.
       do 2 eexists; eassumption.
   Qed.
 
-  Lemma next_alt_runb A B C s s2 b1:
+  Lemma next_alt_runb {A B C s s2 b1}:
     next_alt A = Some B ->
       runb u s B s2 C b1 ->
         exists G b, runb u s A s2 G b.
@@ -772,6 +772,57 @@ Section RunP.
       have {H2} [[_ ?]?]:= run_consistent _ H H2; subst.
       right; apply: next_alt_runb X H.
   Qed.
+
+  Lemma run_or_correct_dead {s1 s2 A B}:
+    dead_run u s1 A -> dead_run u s2 B -> dead_run u s1 (Or A s2 B).
+  Proof.
+    move=> H1 H2 sr r b H.
+    remember (Or _ _ _) as O1 eqn:HO1.
+    elim: H A B s2 H1 H2 HO1; clear.
+    - move=> s s1 A B C b H1 _ D E s2 H2 H3 ?; subst.
+      have:= expandedb_same_structure _ H1.
+      case: B H1 => //= D' s2' E' H1 /and3P[/eqP? _ _]; subst.
+      have [[dD [b1 [H4?]]]|[dD [?[b1 H4]]]] := expanded_or_complete_done H1; subst.
+        apply: H2.
+        apply: run_done H4 erefl.
+      apply: H3.
+      apply: run_done H4 erefl.
+    - move=> s s1 A B C D b1 b2 b3 H1 H2 H3 IH ? E F s2 H4 H5 ?; subst.
+      have:= expandedb_same_structure _ H1.
+      case: B H1 H2 => //= E' s2' F' H1 + /and3P[/eqP? _ _]; subst.
+      have {H1} [] := expanded_or_complete_fail H1.
+        move=> [dE [H6 [b3 H7]]].
+        rewrite (expanded_not_dead _ dE H7).
+        have rF': dead_run u s2' F'.
+          case: b1 H6 => [?|[?|?]]; subst => //;
+          by move=> ???; apply: is_ko_runb; by rewrite is_ko_cutr.
+        case X: next_alt => //[E''|].
+          move=>[?]; subst.
+          have {}IH := IH _ _ _ _ rF' erefl.
+          apply: IH => sx B b H.
+          apply: H4.
+          apply: run_backtrack H7 X H erefl.
+        case: ifP => //dF'.
+        case Y: next_alt => //[F''][?]; subst.
+        have rE' : dead_run u s (dead1 E').
+          move=> sx B b H.
+          apply: is_ko_runb H.
+          rewrite is_dead_is_ko// is_dead_dead//.
+        have {}IH := IH _ _ _ rE' _ erefl.
+        apply: IH => sX B b H.
+        case: b1 H6 => [|[]]?; subst.
+        - rewrite is_ko_next_alt//is_ko_cutr// in Y.
+        - rewrite is_ko_next_alt//is_ko_cutr// in Y.
+        - have [G[b1 H1]]:= next_alt_runb Y H.
+          apply: H5; eassumption.
+      move=>[dE[?[b3 H]]]; subst.
+      rewrite dE; case X: next_alt => //[F''][?]; subst.
+      have {}IH := IH _ _ _ H4 _ erefl.
+      apply: IH => sx B b H1.
+      apply: H5.
+      apply: run_backtrack H X H1 erefl.
+    Qed.
+
 
   (*   Lemma run_or_fail {s1 s2 A B b}:
     run u s1 (Or A s2 B) Failed ->

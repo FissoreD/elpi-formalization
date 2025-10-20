@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
-From det Require Import run.
+From det Require Import run run_prop.
 
 Lemma tm2RC_kp {t1 k} : 
   tm2RC t1 = Some (RCallable_Kp k) -> t1 = Tm_Kp k.
@@ -332,7 +332,7 @@ Section check.
 
   Lemma expand_next_alt {sP s1 A s2 B} : 
     check_program sP -> no_free_alt sP A ->
-      expand u s1 A = Success s2 B -> dead_run u (clean_success B).
+      expand u s1 A = Success s2 B -> forall s, dead_run u s (clean_success B).
   Proof.
     rewrite/dead_run.
     move=> H.
@@ -345,13 +345,21 @@ Section check.
         have {HA HB} := HB s _ _ fB.
         case X: expand => ///(_ _ _ erefl) H1 [??]; subst => /= s3.
         rewrite dA.
-        admit.
+        move=> sx D b.
+        apply: run_or_correct_dead.
+          move=> sy E b1.
+          apply: is_ko_runb (is_dead_is_ko dA).
+        apply: H1.
       have {HA HB} := HA s1 _ _ fA.
       case X: expand => // [s4 A'] /(_ _ _ erefl) H1 + [_<-] s3/=.
       rewrite (expand_not_dead _ dA X).
       rewrite success_has_cut ?(expand_solved_same _ X)//.
       move=>/eqP->.
-      admit.
+      move=> sx D b.
+      apply: run_or_correct_dead.
+        move=> sy E b1.
+        apply: H1.
+      move=> ???; apply: is_ko_runb is_ko_cutr.
     - move=> A HA B0 _ B HB s1 C s2 /=.
       move=>/orP[].
         move=> kA; rewrite is_ko_expand//.
@@ -366,13 +374,14 @@ Section check.
       have {HB} := HB s3 _ _ fB.
       case Y: expand => ///(_ _ _ erefl) H2 [??];subst => /= s4.
       rewrite (expand_solved_same _ X).
+      
       admit.
   Admitted.
 
   Lemma expandedb_next_alt_done {sP s A s1 B b}: 
     check_program sP -> 
       no_free_alt sP A -> expandedb u s A (Done s1 B) b ->
-        dead_run u (clean_success B).
+        forall s, dead_run u s (clean_success B).
   Proof.
     remember (Done _ _) as d eqn:Hd => Hz + H.
     elim: H s1 B Hd => //; clear -Hz.
@@ -634,7 +643,7 @@ Section check.
   Qed.
 
   Definition is_det A := forall b s s' B,
-    runb u s A s' B b -> dead_run u B.
+    runb u s A s' B b -> forall s, dead_run u s B.
 
   Lemma runb_next_alt {sP A}: 
     check_program sP -> 

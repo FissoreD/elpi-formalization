@@ -106,7 +106,7 @@ Section Test5.
     ].
 
   Goal exists r, runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 r false 
-    /\ dead_run unif r.
+    /\ forall s, dead_run unif s r.
   Proof.
     repeat eexists.
     apply: run_backtrack.
@@ -166,7 +166,7 @@ Section Test6.
 
   Goal exists r, 
     runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) s1 r false 
-      /\ dead_run unif r.
+      /\ forall s, dead_run unif s r.
   Proof.
     repeat eexists.
     apply: run_backtrack.

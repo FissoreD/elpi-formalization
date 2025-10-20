@@ -568,7 +568,7 @@ Section main.
           (* Note: if a next_alt exists the subst considered is taken from the tree *)
           runb s C s2 D b2 -> b3 = (b1 || b2) -> runb s A s2 D b3.
 
-  Definition dead_run A := forall s1 s2 B b, runb s1 A s2 B b -> False.
+  Definition dead_run s1 A := forall s2 B b, runb s1 A s2 B b -> False.
 
   (* Definition expandedb s A r := exists b, expandedb s A r b.
   Definition run s A s1 B := exists b, runb s A s1 B b.
