@@ -376,7 +376,7 @@ Section check.
       rewrite (expand_solved_same _ X).
       have [[??]sD]:= expand_solved_same _ X; subst.
       have [[??]sB]:= expand_solved_same _ Y; subst.
-      
+
 
       
       admit.
@@ -426,18 +426,16 @@ Section check.
         case: next_alt => // [D|].
           move=>/(_ _ erefl) cD.
           case: ifP => //= fA.
-            case: ifP => //= fB0 [?]; subst.
-            by rewrite /= cD.
-          case: next_alt => //[E|].
-            case: ifP => sA [<-]/=; rewrite cA//.
-          case: ifP => fB //[<-]/=; rewrite ?cA//.
-          rewrite has_cut_clean_success//.
+            move=> [<-]/=; rewrite cD//.
+          case: ifP => fB.
+            case X: next_alt => //-[<-]/=; rewrite ?has_cut_clean_success//cA//.
+          move=>[<-]/=; rewrite cA//.
         move=> _; case: ifP => //= fA.
         case: ifP => [sA|sA[<-]]/=; rewrite?cA//.
         case: next_alt => [D|][<-]/=; rewrite ?has_cut_clean_success// cA//.
       move=>/andP[cB0 cB].
       case: ifP => /= fA.
-        by case: next_alt => //= [D]; case: ifP => // fB0 [<-]/=; rewrite cB0 orbT.
+        case: next_alt => //= [D][<-]/=; rewrite cB0 orbT//.
       have:= HB _ cB.
       case: next_alt => //= [D|].
         move=> /(_ _ erefl) cD.
@@ -503,7 +501,7 @@ Section check.
         by rewrite is_ko_failed// is_ko_next_alt//.
       move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
         case: ifP => // fA.
-          case: next_alt => // [D]; case: ifP => // _ [<-]/=.
+          case: next_alt => // [D][<-]/=.
           by rewrite cB0 fB0 orbT.
         have:= HB _ fB.
         case X: next_alt => // [D|].
@@ -516,7 +514,7 @@ Section check.
       case: ifP => // _.
         have:= HA _ fA.
         case X: next_alt => // [D].
-        move=> /(_ _ erefl) fD; case: ifP => // _ [<-]/=.
+        move=> /(_ _ erefl) fD[<-]/=.
         by rewrite fD orbT fB0 orbT.
       have:= HB _ fB.
       move=> _; case: ifP => sA.
@@ -577,8 +575,7 @@ Section check.
           move=> [<-]/=.
           case: ifP => // dS.
           case: ifP => // fS.
-            case nE: next_alt => [F|]//.
-            by case: ifP => //FB0 [<-]/=; rewrite cB0 fB0 orbT.
+            case nE: next_alt => [F|]//[<-]/=; rewrite cB0 fB0 orbT//.
           case: ifP => [sE|sE[<-]]/=.
             case Y: next_alt => //[F|][<-]/=.
               by rewrite fB0 (has_cut_next_alt cB Y) (no_free_alt_next_alt fB Y) /= cB0 orbT.
@@ -588,7 +585,7 @@ Section check.
         case Z: expand => // [F] /(_ _ _ erefl) + [<-]/=.
         case: ifP => //dE; case:ifP=>FE.
           move=> _.
-          by case: next_alt => //[G]; case:ifP=>//_[<-]/=; rewrite cB0 fB0 orbT.
+          case: next_alt => //[G][<-]/=; rewrite cB0 fB0 orbT//.
         case Y: next_alt => //[G|].
           move=>/(_ _ erefl) nG.
           have := @expand_has_cut _ s1 cB.
@@ -604,8 +601,8 @@ Section check.
         move=> /(_ _ _ erefl) + [<-]/=.
         case: ifP => // dS.
         case: ifP => //fE.
-          case: next_alt => //[G] /(_ _ erefl) fG.
-          by case: ifP => // _[<-]/=; rewrite fB0 fG orbT orbT.
+          case: next_alt => //[G] /(_ _ erefl) fG [<-]/=.
+          by rewrite fB0 fG orbT orbT.
         case: ifP => sE.
           case Y: (next_alt B) => //[G|] _ [<-]/=.
             by rewrite (expand_no_free_alt _ _ X)//fB0 (no_free_alt_next_alt fB Y) !orbT.
@@ -618,7 +615,7 @@ Section check.
       case Z: expand => // [F] /(_ _ _ erefl) {}HB [<-]/=.
       have /= fE := expand_no_free_alt Hz fA X.
       case: ifP => //dE; case:ifP=>FE.
-        case W: next_alt => //[G]; case:ifP=>//_[<-]/=.
+        case W: next_alt => //[G][<-]/=.
         by rewrite fB0 (no_free_alt_next_alt fE W) orbT orbT.
       move: HB.
       case W: next_alt => //[G|].

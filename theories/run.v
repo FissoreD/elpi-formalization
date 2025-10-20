@@ -473,8 +473,7 @@ Section main.
       if failed A then 
         match next_alt A with
         | None => None
-        (* TODO: could be failed but could have an alternative *)
-        | Some (A) => if failed B0 then None else Some (And A B0 B0)
+        | Some (A) => Some (And A B0 B0)
         end
       else
       if success A then
@@ -1148,7 +1147,7 @@ Section main.
     case: ifP => dA//.
     case: ifP => fA.
       case X: next_alt => //[A0].
-      case: ifP => fB0//[<-]/=; rewrite ((HA _ X))//.
+      move=> [<-]/=; rewrite HA//.
     case: ifP => sA/=.
       case X: next_alt => [B'|][<-]/=.
         rewrite dA//.

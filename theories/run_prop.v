@@ -461,8 +461,6 @@ Section RunP.
         by rewrite (is_dead_next_alt dA) in HN.
       have /= dB := expanded_not_dead _ dA HE.
       have [b3 H] := expanded_or_correct_left_fail _ dA HE s2 E.
-      (* have {}HN: next_alt s (Or B s2 (if b1 then cutr E else E)) = Some (s', Or C s2 (if b1 then cutr E else E)).
-        move=>/=; rewrite ((next_alt_dead HN)) HN//. *)
       have [b4 {}IH1]:= IH s2 E.
       have [b5]:= IH s2 (cutr E).
       rewrite cutr2 if_same => IH2.
@@ -702,7 +700,7 @@ Section RunP.
       case: ifP => dD'//.
       case: ifP => fD.
         case X: next_alt => //=[E2].
-        case: ifP => // fF' [?]; subst.
+        move=> [?]; subst.
         have [A'[B'[b3[b4[sm [[H4 H5]|[H4 H5]]]]]]] := IH _ _ _ erefl.
           Search expandedb Failed And.
           admit.

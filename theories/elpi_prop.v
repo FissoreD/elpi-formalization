@@ -389,12 +389,11 @@ Section NurProp.
         rewrite (failed_success _ fA) fA/==>/eqP->bB[<-]/=.
         rewrite (expand_not_dead _ (valid_state_dead1 vA) eA)fA'.
         case nA: next_alt => [D|].
-          move: bB; rewrite/bbAnd=>/orP[]bB.
-            rewrite base_and_failed//.
-          rewrite base_and_ko_failed//.
+          move: bB; rewrite/bbAnd=>/orP[]bB//.
+          (* rewrite base_and_ko_failed//.
           rewrite !(base_and_ko_state_to_list bB)//.
           case: state_to_list => [|[s6 ?]?]//=.
-          by rewrite !(base_and_ko_state_to_list bB)//.
+          by rewrite !(base_and_ko_state_to_list bB)//. *)
         by rewrite (HA _ _ _ _ vA eA nA)//.
       have [[??]sA]:= expand_solved_same _ eA; subst.
       rewrite sA => vB bB0.
@@ -422,7 +421,7 @@ Section NurProp.
       case: ifP => dA//.
       case: ifP => fA.
         case nB: next_alt => [B'|]//.
-        case: ifP => // _ [<-]//.
+        move=> [<-]//.
       case: ifP => sA.
         case nB: next_alt => [A'|]//[<-]//.
       move=>[<-]//.
