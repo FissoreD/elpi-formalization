@@ -444,6 +444,17 @@ Section main.
     end
   .
 
+  Fixpoint clean_success (A: state):= 
+    match A with
+    | OK => Bot
+    | Bot | Dead | Top | CutS | CallS _ _ => A
+    | Or A s B => 
+      if is_dead A then Or A s (clean_success B)
+      else Or (clean_success A) s B
+    | And A B0 B =>
+      if success A then And A B0 (clean_success B)
+      else And A B0 B
+    end.
 
   (* OK returns None since,
      We can have the state "A" = (OK \/ B) /\ C
@@ -451,6 +462,7 @@ Section main.
      "A" becomes: (OK \/ B) /\ Bot.
      The OK node should be transformed into a Dead so that 
      "B /\ C" is tried with the subst for B *)
+    (* TODO: togliere s come argomento? *)
   Fixpoint next_alt (s : option Sigma) (A : state) : option (state) :=
     match A with
     | Bot | OK => None
@@ -489,24 +501,39 @@ Section main.
         end
   end.
 
+  Lemma success_next_alt {B x} y:
+    success B -> next_alt x B = next_alt y B.
+  Proof.
+    elim: B x y => //=.
+    - move=> A HA s B HB x y; case:ifP => //dA sA; rewrite (HA _ y sA)//.
+    - move=> A HA B0 _ B HB x y /andP[sA sB].
+      rewrite success_is_dead// success_failed//.
+      rewrite (HB _ y sB) (HA _ y sA)//.
+  Qed.
+
+  Lemma failed_next_alt {B x} y:
+    failed B ->
+      next_alt x B = next_alt y B.
+  Proof.
+    elim: B x y => //=.
+    - move=> A HA s B HB x y.
+      case: ifP => dA f.
+        case X: next_alt => //.
+      rewrite (HA _ y)//.
+    - move=> A HA B0 _ B HB x y.
+      case: ifP => // dA.
+      move=> /orP[fA|/andP[sA fB]].
+        rewrite fA //.
+        rewrite (HA _ y)//.
+      rewrite success_failed//.
+      rewrite (HB _ y)//(success_next_alt y)//.
+  Qed.
+
   Inductive expandedb : Sigma -> state -> exp_res -> bool -> Prop :=
     | expanded_done {s s' A alt}     : expand s A = Success s' alt  -> expandedb s A (Done s' alt) false
     | expanded_fail {s A B}          : expand s A = Failure B -> expandedb s A (Failed B) false
     | expanded_cut {s s' r A B b}      : expand s A = CutBrothers s' B -> expandedb s B r b -> expandedb s A r true
     | expanded_step {s s' r A B b}     : expand s A = Expanded s' B  -> expandedb s B r b -> expandedb s A r b.
-
-
-  Fixpoint clean_success (A: state):= 
-    match A with
-    | OK => Bot
-    | Bot | Dead | Top | CutS | CallS _ _ => A
-    | Or A s B => 
-      if is_dead A then Or A s (clean_success B)
-      else Or (clean_success A) s B
-    | And A B0 B =>
-      if success A then And A B0 (clean_success B)
-      else And A B0 B
-    end.
 
   Inductive runb : Sigma -> state -> Sigma -> state -> bool -> Prop :=
     | run_done {s s' A B C b}        : 
