@@ -340,7 +340,6 @@ Proof. elim l => //-[]//. Qed.
 Record Unif := {
   unify : Tm -> Tm -> Sigma -> option Sigma;
   matching : Tm -> Tm -> Sigma -> option Sigma;
-  (* deref : Sigma -> Tm -> Tm; *)
 }.  
 
 
@@ -390,7 +389,6 @@ Section main.
     | Callable_V v => Tm_V v
     | Callable_Comb h t => Tm_Comb (Callable2Tm h) t
     end.
-  (* Coercion Callable2Tm : Callable >-> Tm. *)
 
   Definition F pr (query:Callable) s : seq (Sigma * R) :=
     let rules := pr.(rules) in
@@ -758,6 +756,40 @@ Section main.
       rewrite !H//.
   Qed.
 
+  Lemma is_ko_next_alt {s A}: is_ko A -> next_alt s A = None.
+  Proof.
+    elim: A s => //.
+      move=> A HA s1 B HB s2 /=/andP[kA kB].
+      rewrite HA//!HB//!if_same//.
+    move=> A HA B0 _ B HB /= s1 kA.
+    rewrite is_ko_failed//HA//if_same//.
+  Qed.
+
+  Lemma is_ko_runb {s s1 A B b}: is_ko A -> runb s A s1 B b -> False.
+  Proof.
+    elim: A s s1 B b => //=.
+    - move=> s s1 B b _; inversion 1; inversion H1 => //; subst.
+      move: H13 => [?]; subst => //.
+    - move=> s s1 B b _; inversion 1; inversion H1 => //; subst.
+      move: H13 => [?]; subst => //.
+    - move=> A HA s B HB s1 s2 C b /andP[H1 H2].
+      inversion 1; subst.
+      - have:= @is_ko_expanded s1 (Or A s B) => /=.
+        rewrite H1 H2 => /(_ isT).
+        move=> /(expanded_consistent H3)[]//.
+      - have:= @is_ko_expanded s1 (Or A s B) => /=.
+        rewrite H1 H2 => /(_ isT).
+        move=> /(expanded_consistent H3)[]//[??]; subst.
+        rewrite is_ko_next_alt//=H1 H2// in H4.
+    - move=> A HA B0 HB0 B HB s1 s2 C b kA. 
+      inversion 1; subst.
+      - have:= @is_ko_expanded s1 (And A B0 B) kA.
+        move=> /(expanded_consistent H1)[]//.
+      - have:= @is_ko_expanded s1 (And A B0 B) kA.
+        move=> /(expanded_consistent H1)[]//[??]; subst.
+        rewrite is_ko_next_alt// in H2.
+  Qed.
+
   Lemma expanded_success {s A r b}: 
     success A -> expandedb s A r b -> ((r = Done (get_substS s A) A) * (b = false))%type.
   Proof. move=> sA H; have:= expanded_success1 s sA => /(expanded_consistent H)//. Qed.
@@ -920,15 +952,6 @@ Section main.
   (********************************************************************)
   (* NEXT_ALT OP PROPERTIES                                           *)
   (********************************************************************)
-
-  Lemma is_ko_next_alt {s A}: is_ko A -> next_alt s A = None.
-  Proof.
-    elim: A s => //.
-      move=> A HA s1 B HB s2 /=/andP[kA kB].
-      rewrite HA//!HB//!if_same//.
-    move=> A HA B0 _ B HB /= s1 kA.
-    rewrite is_ko_failed//HA//if_same//.
-  Qed.
 
   Lemma is_dead_next_alt {s A}: is_dead A -> next_alt s A = None.
   Proof. move=>/is_dead_is_ko/is_ko_next_alt//. Qed.
