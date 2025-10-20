@@ -323,19 +323,19 @@ Section NurProp.
       all: rewrite next_alt_aux_base_and//.
   Qed.
 
-  Lemma bbOr_next_alt_Some {s s1 B R}:
-    bbOr B -> next_alt (Some s) B = Some (s1, R) -> bbOr R.
+  Lemma bbOr_next_alt_Some {s B R}:
+    bbOr B -> next_alt (Some s) B = Some (R) -> bbOr R.
   Proof.
     move=> /orP[]; last first.
       move=>/next_alt_aux_base_or_ko->//.
-    elim: B s s1 R => //=.
-    - move=> ????[] _ <-//.
-    - move=> A HA s B HB s1 s2 l/=; rewrite /bbOr/=.
+    elim: B s R => //=.
+    - move=> ??? []<-//.
+    - move=> A HA s B HB s1 l/=; rewrite /bbOr/=.
       move=>/andP[bA bB].
       rewrite base_and_dead// next_alt_aux_base_and//.
-      move=>[_<-]/=; rewrite bA bB//.
-    - move=>A; case: A=>// [p a|] _ B0 _ B HB s s1 R/=/andP[/eqP->]bB.
-      all: rewrite /bbOr next_alt_aux_base_and// => -[_<-]/=; rewrite eqxx bB//.
+      move=>[<-]/=; rewrite bA bB//.
+    - move=>A; case: A=>// [p a|] _ B0 _ B HB s R/=/andP[/eqP->]bB.
+      all: rewrite /bbOr next_alt_aux_base_and// => -[<-]/=; rewrite eqxx bB//.
   Qed.
 
   Lemma success_next_alt_state_to_list {s1 s2 A l}:
@@ -359,7 +359,7 @@ Section NurProp.
       rewrite success_is_dead// success_failed//.
       case X: next_alt => [[]|]//.
       have {}HB := HB _ _ _ vB sB X.
-      case Y: next_alt => [[s3 C]|]//.
+      case Y: next_alt => [C|]//.
         move: bB0; rewrite /bbAnd.
         case Z: base_and => //=.
           rewrite base_and_failed//.
@@ -403,7 +403,7 @@ Section NurProp.
         have [fA fA']:= expand_failure_failed _ eA.
         rewrite (failed_success _ fA) fA/==>/eqP->bB[<-]/=.
         rewrite (expand_not_dead _ (valid_state_dead1 vA) eA)fA'.
-        case nA: next_alt => [[s5 D]|].
+        case nA: next_alt => [D|].
           move: bB; rewrite/bbAnd=>/orP[]bB.
             rewrite base_and_failed//.
           rewrite base_and_ko_failed//.
@@ -417,7 +417,7 @@ Section NurProp.
       rewrite success_is_dead//success_failed//.
       case nB': next_alt => [[]|]//.
       have {}HB:= (HB _ _ _ _ _ vB eB nB').
-      case nA': next_alt => [[s5 D]|]//.
+      case nA': next_alt => [D|]//.
         move: bB0; rewrite/bbAnd=>/orP[]bB.
           rewrite base_and_failed//.
         rewrite base_and_ko_failed//.
@@ -431,29 +431,29 @@ Section NurProp.
       rewrite HB//.
   Qed.
 
-  Lemma next_alt_propagate_cut {s1 s2 A B}:
-    next_alt s1 A = Some (s2, B) -> is_or A = is_or B.
+  Lemma next_alt_propagate_cut {s1 A B}:
+    next_alt s1 A = Some (B) -> is_or A = is_or B.
   Proof.
-    elim: A s1 s2 B => //.
-    - move=> []//??? [_<-]//.
-    - move=> p/= ?[]//??? [_<-]//.
-    - move=> []//??? [_<-]//.
-    - move=> A HA s B HB s1 s2 C/=.
+    elim: A s1 B => //.
+    - move=> []//?? [<-]//.
+    - move=> p/= ?[]//?? [<-]//.
+    - move=> []//?? [<-]//.
+    - move=> A HA s B HB s1 C/=.
       case: ifP => dA.
-        by case nB: next_alt => [[s3 B']|]//[_<-]//.
-      case nA: next_alt => [[s3 B']|]//.
-        by move=> [_<-]//.
+        by case nB: next_alt => [B'|]//[<-]//.
+      case nA: next_alt => [B'|]//.
+        by move=> [<-]//.
       case: ifP => //dB.
-      case nB: next_alt => [[s3 B']|]//[_<-]//.
-    - move=> A HA B0 _ B HB s1 s2 C/=.
+      case nB: next_alt => [B'|]//[<-]//.
+    - move=> A HA B0 _ B HB s1 s2/=.
       case: ifP => dA//.
       case: ifP => fA.
-        case nB: next_alt => [[s3 B']|]//.
-        case: ifP => // _ [_<-]//.
-      case nB: next_alt => [[s3 A']|]//.
-        move=>[_<-]//.
-      case nA: next_alt => [[s3 A']|]//.
-      case: ifP => //fB0[_<-]//.
+        case nB: next_alt => [B'|]//.
+        case: ifP => // _ [<-]//.
+      case nB: next_alt => [A'|]//.
+        move=>[<-]//.
+      case nA: next_alt => [A'|]//.
+      case: ifP => //fB0[<-]//.
   Qed.
 
 
@@ -484,34 +484,34 @@ Section NurProp.
       rewrite (HB _ _ _ _ eB)//.
   Qed.
 
-  Lemma base_or_aux_next_alt_some {s B s1 s2 D l}:
-    base_or_aux B -> next_alt (Some s) B = Some (s1, D) -> 
+  Lemma base_or_aux_next_alt_some {s B s2 D l}:
+    base_or_aux B -> next_alt (Some s) B = Some (D) -> 
       state_to_list B s2 l = state_to_list D s2 l.
   Proof.
-    elim: B s s1 s2 D l => //.
-    - move=>/=[]//????? _[_<-]//.
-    - move=> A HA s B HB s1 s2 s3 C l/=/andP[bA bB].
+    elim: B s s2 D l => //.
+    - move=>/=[]//???? _[<-]//.
+    - move=> A HA s B HB s2 s3 C l/=/andP[bA bB].
       rewrite base_and_dead//.
       rewrite next_alt_aux_base_and//.
-      move=>[?<-]//=; subst; rewrite base_and_dead//.
-    - move=> A; case: A => //[p a|] _ B0 _ B HB s1 s2 s3 C l/=/andP[/eqP->bB].
-      all: rewrite next_alt_aux_base_and// => -[_<-]//.
+      move=>[<-]//=; subst; rewrite base_and_dead//.
+    - move=> A; case: A => //[p a|] _ B0 _ B HB s2 s3 C l/=/andP[/eqP->bB].
+      all: rewrite next_alt_aux_base_and// => -[<-]//.
   Qed.
 
-  Lemma bbOr_next_alt_some {s1 s2 B C l}:
-    bbOr B -> next_alt (Some s1) B = Some(s2, C) -> state_to_list B l = state_to_list C l.
+  Lemma bbOr_next_alt_some {s1 B C l}:
+    bbOr B -> next_alt (Some s1) B = Some(C) -> state_to_list B l = state_to_list C l.
   Proof.
-    elim: B s1 s2 C l => //.
-    - move=> /= []//?????[_<-]//.
-    - move=> A HA s B HB s1 s2 C l/=; rewrite /bbOr/=.
+    elim: B s1 C l => //.
+    - move=> /= []//????[<-]//.
+    - move=> A HA s B HB s1 C l/=; rewrite /bbOr/=.
       move=>/orP[]/andP[bA bB].
         rewrite base_and_dead//.
         rewrite next_alt_aux_base_and//.
-        move=>[_<-]//.        
+        move=>[<-]//.        
       rewrite base_and_ko_is_dead// base_or_aux_is_dead//.
       rewrite(next_alt_aux_base_or_ko bB) (next_alt_aux_base_and_ko bA)//.
-    - move=> A; case: A => //[p a|] _ B0 _ B HB s1 s2 C l/=; rewrite/bbOr/=orbF => /andP[/eqP->bB].
-      all: rewrite next_alt_aux_base_and// => -[_<-]//.
+    - move=> A; case: A => //[p a|] _ B0 _ B HB s1 C l/=; rewrite/bbOr/=orbF => /andP[/eqP->bB].
+      all: rewrite next_alt_aux_base_and// => -[<-]//.
   Qed.
 
 End NurProp.

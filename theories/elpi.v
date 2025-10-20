@@ -856,7 +856,7 @@ Section test.
   Variable sx : Sigma.
   Variable p1 : program.
   Notation g := (And (Or OK s1 CutS) CutS OK).
-  Goal next_alt (Some sx) g = Some (s1, And (Or Dead s1 CutS) CutS CutS).
+  Goal next_alt (Some sx) g = Some (And (Or Dead s1 CutS) CutS CutS).
   Proof. move => //=. Qed.
   Goal clean_success g = And (Or OK s1 CutS) CutS Bot.
   Proof. move => //=. Qed.

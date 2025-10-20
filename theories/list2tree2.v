@@ -4,6 +4,8 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
 
+Search exapnedb failed.
+
 Fixpoint a2t_ l :=
   match l with
   | no_alt => Bot
