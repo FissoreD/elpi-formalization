@@ -722,6 +722,7 @@ Section RunP.
   Qed.
 
   Lemma run_or_complete {s1 s2 A B SOL altAB b}:
+  (* TODO: be more precise on altAB *)
     runb u s1 (Or A s2 B) SOL altAB b ->
       (exists altA b1, runb u s1 A SOL altA b1) \/ 
         (exists altB b1, runb u s2 B SOL altB b1).
@@ -776,6 +777,18 @@ Section RunP.
   Lemma run_or_correct_dead {s1 s2 A B}:
     dead_run u s1 A -> dead_run u s2 B -> dead_run u s1 (Or A s2 B).
   Proof.
+    move=> HA HB sX C b H.
+    have [] := run_or_complete H.
+      move=> [x[b1]]; apply: HA.
+    move=> [x[b1]]; apply: HB.
+  Qed.
+
+  (* Lemma run_and_correct_dead {s0 sn A B B0 C b}:
+  (* TODO: be more precise on C *)
+    runb u s0 (And A B0 B) sn C b -> exists A' (*B0'*) B' b1 b2 sm, (*C = And A' B0' B' /\*)
+    (runb u s0 A sm A' b1 /\ runb u sm B sn B' b2) \/
+    (runb u s0 (clean_success A) sm A' b1 /\ runb u sm B0 sn B' b2).
+  Proof.
     move=> H1 H2 sr r b H.
     remember (Or _ _ _) as O1 eqn:HO1.
     elim: H A B s2 H1 H2 HO1; clear.
@@ -821,7 +834,9 @@ Section RunP.
       apply: IH => sx B b H1.
       apply: H5.
       apply: run_backtrack H X H1 erefl.
-    Qed.
+  Qed. *)
+
+  
 
 
   (*   Lemma run_or_fail {s1 s2 A B b}:

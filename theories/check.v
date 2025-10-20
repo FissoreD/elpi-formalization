@@ -374,6 +374,10 @@ Section check.
       have {HB} := HB s3 _ _ fB.
       case Y: expand => ///(_ _ _ erefl) H2 [??];subst => /= s4.
       rewrite (expand_solved_same _ X).
+      have [[??]sD]:= expand_solved_same _ X; subst.
+      have [[??]sB]:= expand_solved_same _ Y; subst.
+      
+
       
       admit.
   Admitted.
