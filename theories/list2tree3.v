@@ -29,8 +29,6 @@ with g2t_ l :=
   | call p t => (CallS p t, None)
   end.
 
-(* Definition a2t (l:alts) := a2t_ (rev (map (fun '(s,x) => (s, rev x)) l)). *)
-
 Fixpoint of_goals l :=
   match l with
     | [::] => nilC
@@ -107,31 +105,15 @@ Lemma expanded_a2t u ign1 L:
   expandedb u ign1 (a2t_ L) (Failed (a2t_ L)) false.
 Proof. case: L => [|[s g]gs]/=; constructor => //. Qed.
 
-(* Lemma runb_a2t {u ign1 L s r b}:
-  runb u ign1 (a2t_ L) s r b -> b = false.
-Proof.
-  remember (a2t_ L) as a eqn:Ha => H.
-  elim: H L Ha; clear.
-  - move=> s1 s2 A B C b + _ L ?; subst.
-    move=> /(expanded_consistent _ (expanded_a2t u s1 L)) []//.
-  - move=> s1 s2 s3 A B C D b1 b2 b3 + _ _ H ? L ?; subst.
-    move=> /(expanded_consistent _ (expanded_a2t u s1 L)) []// _ <-//.
-    congruence.
-
-  
-  case: L => [|[s g]gs]/=; constructor => //. Qed. *)
-
 Lemma run_a2t_ign {u s2 D b2 sIgn1 L} sIgn2:
   runb u sIgn1 (a2t_ L) s2 D b2 ->
-    runb u sIgn2 (a2t_ L) s2 D b2.
+    exists b2, runb u sIgn2 (a2t_ L) s2 D b2.
 Proof.
-  inversion 1; subst.
-  - have:= expanded_a2t u sIgn1 L.
-    move=> /(expanded_consistent _ H0) []//.
-  - apply: run_backtrack; (try eassumption) => //.
-    have:= expanded_a2t u sIgn1 L.
-    move=> /(expanded_consistent _ H0) []//[??]; subst.
-    apply: expanded_a2t.
+  case: L => //=.
+    move=> /is_ko_runb -/(_ isT)//.
+  move=> [s g]gs.
+  set X:= (Or _ empty _); generalize X; clear X => X H.
+  apply: run_or_is_ko_left_ign_subst H => //.
 Qed.
 
 Lemma run_success_add_ca_deep {u s s1 B D bt bt1 res b}:
@@ -146,6 +128,7 @@ Proof.
   - move=> A HA s0 B HB s s1 C bt bt1 res b.
     case: ifP => [dA sB|dA sA].
       rewrite state_to_list_dead//.
+
 Admitted.
 
 Lemma run_a2t_success {C} u s1 bt:
@@ -164,7 +147,7 @@ Proof.
     case: ifP => [dA sB | dA sA].
     - rewrite state_to_list_dead//cat0s.
       have {HB HA} [D[b2]]:= HB s nilC sB; clear -sB.
-      move=> /(run_a2t_ign s1) H.
+      move=> /(run_a2t_ign s1) [b3 H].
       apply: run_success_add_ca_deep sB H.
     - rewrite add_ca_deep_cat.
       admit.
@@ -193,33 +176,28 @@ Proof.
     inversion H; subst; clear H => //.
     move: H8 => //[?]; subst.
     move: H0 => /=; rewrite andbF; case: ifP => //dx.
-    case X: next_alt => [[s4 D]|]//[??]; subst.
+    case X: next_alt => //[x'][?]; subst.
     have [H5 H6]:= expand_cb_same_subst1 _ vA HA; subst.
     do 2 eexists.
     apply: run_backtrack => //.
     - apply: expanded_fail => //.
-    - rewrite /=H6 X//.
-    - apply: run_done => //.
-      do 2 apply: expanded_step => //.
-      apply: expanded_done => //=.
-      rewrite 
-
-
+    - rewrite //.
+    - admit.
+  - admit.
 Admitted.
 
-Definition not_run A:= forall u s s' B b, runb u s A s' B b -> False.
-
 Inductive equiv_run : state -> state -> Prop :=
-  | equiv_run_fail A B : not_run A -> not_run B -> equiv_run A B
-  | equiv_run_success u s1 s2 A B A' B' :
-    run u s1 A s2 A' -> run u s1 B s2 B' -> equiv_run A' B' -> equiv_run A B.
+  | equiv_run_fail u s A B : dead_run u s A -> dead_run u s B -> equiv_run A B
+  | equiv_run_success u s1 s2 A B A' B' b1 b2 :
+    runb u s1 A s2 A' b1 -> runb u s1 B s2 B' b2 -> equiv_run A' B' -> equiv_run A B.
 
 Lemma xx u s1 s2 A B b1: 
-  
   runb u s1 A s2 B b1 -> 
     exists C b2, runb u s1 (a2t_ (state_to_list A s1 nilC)) s2 C b2. (*/\ equiv_run B C*)
 Proof.
   elim; clear.
   - move=> s s' A B _ b H _.
     apply: runb_a2t_expandedb H.
-  - 
+    admit.
+  - admit.
+Admitted. 

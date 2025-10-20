@@ -77,6 +77,7 @@ Section valid_state.
         if success A then valid_state B 
         else (B0 == B)
         (* We should notice that in (OK \/ KO) /\ OK the reset point is forced to be cut *)
+        (* failed_state_to_list needs this if condition *)
         & (if success A || failed A then bbAnd B0 else base_and B0)]
     end.
 

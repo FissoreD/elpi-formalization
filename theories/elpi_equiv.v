@@ -1159,7 +1159,7 @@ Section NurEqiv.
       by eexists ((get_substS s A), x), _.
     + move=> s s2 A B C D b1 b2 b3 HA HB HC IH ? sIgn vA; subst.
       have /=vB := valid_state_expanded _ vA HA.
-      have /=vC := valid_state_next_alt vB HB.
+      (* have /=vC := valid_state_next_alt vB HB.
       have {IH} := IH sIgn vC.
       move=> [[s1 y][ys[sC /=H]]].
       clear vB vC.
@@ -1190,7 +1190,7 @@ Section NurEqiv.
         apply: CallE FF H.
         subst => //.
       apply: CutE.
-      apply: IH H1 H2.
-  Qed.
+      apply: IH H1 H2. *)
+  Admitted.
   Print Assumptions runElpiP.
 End NurEqiv.

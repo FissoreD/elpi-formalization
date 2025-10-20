@@ -677,6 +677,90 @@ Section RunP.
     move=> [x[b1]]; apply: HB.
   Qed.
 
+  Lemma expandedb_or_is_ko_left_ign_subst {A s B D b2 sIgn1} sIgn2:
+    is_ko A -> expandedb u sIgn1 (Or A s B) D b2 ->
+      exists b2, expandedb u sIgn2 (Or A s B) D b2.
+  Proof.
+    remember (Or _ _ _) as o eqn:Ho => + H.
+    elim: H s A B sIgn2 Ho => //=; clear.
+    - move=> s s' A A' + s1 B B' sIgn2 ? kB; subst.
+      move=> /=; rewrite (is_ko_expand _ kB).
+      case: ifP => //dB.
+      case X: expand => //[s1' B''][??]; subst.
+      have [[??]sB''] := expand_solved_same _ X; subst.
+      eexists; apply: expanded_done => /=.
+      rewrite dB X//.
+    - move=> s A A' + s1 B B' sIgn2 ? kB; subst => /=.
+      rewrite (is_ko_expand _ kB).
+      case: ifP => dB.
+        case X: expand => //[B''][?]; subst.
+        have ?:= (expand_failed_same _ X); subst.
+        eexists; apply: expanded_fail => /=; rewrite dB X//.
+      move=>[?]; subst.
+      eexists; apply: expanded_fail => /=; rewrite dB (is_ko_expand)//.
+    - move=> s1 s2 r A B b + HB IH s3 C D sIgn2 ? kC; subst => /=.
+      case: ifP => dC; case X: expand => //.
+    - move=> s1 s2 r A B b + HB IH s3 C D sIgn2 ? kC; subst => /=.
+      case: ifP => dC.
+        case X: expand => //=[s3' D'|s3' D'][??]; subst;
+        have [b2 {}IH] := IH _ _ _ sIgn2 erefl kC;
+        eexists; apply: expanded_step IH; rewrite/=dC X//.
+      rewrite is_ko_expand//.
+  Qed.
+
+  Lemma run_or_is_ko_left_ign_subst {A s B s2 D b2 sIgn1} sIgn2:
+    is_ko A -> runb u sIgn1 (Or A s B) s2 D b2 ->
+      exists b2, runb u sIgn2 (Or A s B) s2 D b2.
+  Proof.
+    remember (Or _ _ _) as o eqn:Ho => + H.
+    elim: H s A B sIgn2 Ho; clear.
+    - move=> s s' A B C b H1 ? s2 D E sIgn2 ? H; subst.
+      have:= expandedb_same_structure _ H1.
+      case: B H1 => //= D' s2' E' H1 /and3P[/eqP? _ _]; subst.
+      have:= expanded_or_complete_done H1.
+      move=> [[dD [b1 [H2 ?]]]| [dD[?[b1 H2]]]]; subst.
+        have:= is_ko_expanded u s H.
+        move=> /(expanded_consistent _ H2) []//.
+      rewrite dD.
+      have [b2 H3] := expanded_or_correct_right sIgn2 dD H2.
+      eexists.
+      apply: run_done H3 _.
+      move=> /=; rewrite dD//.
+    - move=> s s1 A B C D b1 b2 b3 HA HB HC IH ? s2 E F sIgn2 ? kE; subst.
+      have:= expandedb_same_structure _ HA.
+      case: B HA HB => //= E' s2' F' HA + /and3P[/eqP? _ _]; subst.
+      case: ifP => dE'.
+        case X: next_alt => //[F''][?]; subst.
+        have {IH} := IH _ _ _ _ erefl.
+        have [[dE [H1 [b3 H2]]]|[dE[?[b4 H1]]]] := expanded_or_complete_fail HA; subst.
+          have:= is_ko_expanded u s kE.
+          move=> /(expanded_consistent _ H2) [][??]; subst.
+          congruence.
+        move=> /(_ sIgn2 kE) [b3 IH].
+        have [b5 H2]:= expanded_or_correct_right_fail dE H1 sIgn2.
+        eexists; apply: run_backtrack H2 _ IH erefl.
+        move=> /=; rewrite dE X//.
+      case X: next_alt => //[E''|].
+        move=>[?]; subst.
+        have {IH} := IH _ _ _ _ erefl.
+        have [[dE [H1 [b3 H2]]]|[dE[?[b4 H1]]]] := expanded_or_complete_fail HA; subst; [|congruence].
+        have:= is_ko_expanded u s kE.
+        move=> /(expanded_consistent _ H2) [][??]; subst.
+        rewrite (is_ko_next_alt)// in X.
+      case: ifP => //dF'.
+      case W: next_alt => //[F''][?]; subst.
+      have [b3{}IH] := IH _ _ _ sIgn2 erefl (is_dead_is_ko is_dead_dead).
+      have [[dE [H [b4 H1]]]|[dE [?[b4 H1]]]] := expanded_or_complete_fail HA; subst; [|congruence].
+      have:= is_ko_expanded u s kE.
+      move=> /(expanded_consistent _ H1) [][??]; subst.
+      case: b1 H HA => [?|[?|?]]; subst=> HA.
+      - rewrite (is_ko_next_alt is_ko_cutr)// in W.
+      - rewrite (is_ko_next_alt is_ko_cutr)// in W.
+      have [b4 H2] := expandedb_or_is_ko_left_ign_subst sIgn2 kE HA.
+      eexists.
+      apply: run_backtrack H2 _ IH erefl; rewrite/= dE X dF' W//.
+  Qed.
+
   Lemma run_and_correct_dead {s0 sn A B B0 C b}:
   (* TODO: be more precise on C *)
     runb u s0 (And A B0 B) sn C b -> exists A' (*B0'*) B' b1 b2 sm, (*C = And A' B0' B' /\*)
@@ -700,7 +784,7 @@ Section RunP.
       case: ifP => dD'//.
       case: ifP => fD.
         case X: next_alt => //=[E2].
-        move=> [?]; subst.
+        (* move=> [?]; subst.
         have [A'[B'[b3[b4[sm [[H4 H5]|[H4 H5]]]]]]] := IH _ _ _ erefl.
           Search expandedb Failed And.
           admit.
@@ -711,7 +795,7 @@ Section RunP.
           have {IH} := IH _ _ _ erefl.
           admit.
         admit.
-      admit.
+      admit. *)
   Abort.
 
   
