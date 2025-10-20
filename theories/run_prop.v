@@ -159,7 +159,7 @@ Section RunP.
       move=>/=; rewrite //= (succes_is_solved _ _ sB) HA//.
   Qed.
 
-  Lemma expanded_and_correct {s0 s1 s2 A C B0 B D b1 x} :
+  Lemma expanded_and_correct {s0 s1 s2 A C} B0 {B D b1 x} :
       expandedb u s0 A (Done s1 B) b1 -> expandedb u s1 C (Done s2 D) x ->
         exists b3, expandedb u s0 (And A B0 C) 
           (Done s2 (And (if x then cutl B else B) (if x then cutl B0 else B0) D)) b3.
@@ -258,7 +258,7 @@ Section RunP.
       rewrite /= H//.
   Qed.
 
-  Lemma run_and_fail_both {s s' A B B0 SA FB b1 b}:
+  Lemma run_and_fail_both {s s' A B} B0 {SA FB b1 b}:
     expandedb u s A (Done s' SA) b1 -> expandedb u s' B (Failed FB) b ->
       exists b2, expandedb u s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)) b2.
   Proof.
@@ -644,41 +644,82 @@ Section RunP.
       rewrite dA HB//.
   Qed.
 
+  Lemma expandedb_exists s A:
+    exists r b, expandedb u s A r b.
+  Proof.
+    elim: A s => //=.
+    - move=> s; do 2 eexists; apply: expanded_fail => //.
+    - move=> s; do 2 eexists; apply: expanded_done => //.
+    - move=> s; do 2 eexists; apply: expanded_step => //.
+      apply: expanded_done => //.
+    - move=> s; do 2 eexists; apply: expanded_fail => //.
+    - move=> p c s.
+      case X : (F u p c s) => [|[s' x] xs].
+        do 2 eexists.
+        apply: expanded_step => //=.
+        apply: expanded_fail.
+        rewrite/big_or X//.
+      do 2 eexists.
+      apply: expanded_step => //=.
+      apply: expanded_fail.
+      rewrite/big_or X//.
+    - move=> s; do 2 eexists.
+      apply: expanded_cut => //.
+      apply: expanded_done => //.
+    - move=> A HA s B HB s1.
+      have [r[b {}HA]]:= HA s1.
+      have [r1 [b1 {}HB]] := HB s.
+      case: r HA => [s1' A'|A'] HA.
+        have [b' H1] := expanded_or_correct_left _ HA s B.
+        do 2 eexists; eassumption.
+      case dA: (is_dead A).
+        case: r1 HB => [s' B'|B'] H1.
+          have [b2]:= expanded_or_correct_right s1 dA H1.
+          do 2 eexists; eassumption.
+        have [b2]:= expanded_or_correct_right_fail dA H1 s1.
+        do 2 eexists; eassumption.
+      have [b2] := expanded_or_correct_left_fail _ dA HA s B.
+      do 2 eexists; eassumption.
+    - move=> A HA B0 _ B HB s.
+      have [r[bA {}HA]] := HA s.
+      case: r HA => [s' A'|A'] HA.
+        have [r[bB {}HB]]:= HB s'.
+        case: r HB => [s'' B'|B'] HB.
+          have [b3]:= expanded_and_correct B0 HA HB.
+          do 2 eexists; eassumption.
+        have [b]:= run_and_fail_both B0 HA HB.
+        do 2 eexists; eassumption.
+      have [b]:= expanded_and_fail_left HA B0 B.
+      do 2 eexists; eassumption.
+  Qed.
+
   Lemma next_alt_runb A B C s s2 b1:
     next_alt A = Some B ->
       runb u s B s2 C b1 ->
         exists G b, runb u s A s2 G b.
   Proof.
-    elim: A B C s s2 b1 => //=.
-    - move=> B C s s2 b1 [<-]; do 2 eexists; eassumption.
-    - move=> B C s s2 b1 [<-]; do 2 eexists; eassumption.
-    - move=> p c B C s1 s2 b [<-]; do 2 eexists; eassumption.
-    - move=> B C s s2 b1 [<-]; do 2 eexists; eassumption.
-    - move=> A HA s B HB C D s1 s2 b1.
-      case: ifP => dA.
-        case X: next_alt => //=[B'][<-] H.
-        have [E [b2 [H1 H2]]] := run_dead_left1 dA H; subst.
-        have [G[b {}HB]]:= HB _ _ _ _ _ X H2.
-        inversion HB; subst.
-          have [b3 H1] := expanded_or_correct_right s1 dA H0.
-          do 2 eexists.
-          apply: run_done H1 erefl.
-        have [b4 H4]:= expanded_or_correct_right_fail dA H0 s1.
-        have [b5 H5]:= run_dead_left2 s1 dA H3.
-        do 2 eexists; apply: run_backtrack erefl.
-        - apply: H4.
-        - have fB0 := expandedb_failed _ H0.
-          move=> /=; rewrite dA H1//.
-        - apply: H5.
-      case X: next_alt => //[A'|].
-        move=> [?] H; subst.
-        admit.
-      case: ifP => //dB; case Y: next_alt => //[B'][<-] H.
-      do 2 eexists; apply: run_backtrack erefl.
-      (* - apply:  *)
-
-
-  Abort.
+    have [r[b H]]:= expandedb_exists s A.
+    elim: H B C s2 b1; clear.
+    - move=> s s' A A' HA B C s2 b1 nA HB.
+      have [[??]sA]:= expand_solved_same _ HA; subst.
+      have:= next_alt_not_failed _ (success_failed _ sA).
+      rewrite nA => -[]?; subst.
+      do 2 eexists; eassumption.
+    - move=> s A B HA B0 C s2 b1 nA HB.
+      do 2 eexists; apply: run_backtrack nA HB erefl.
+      apply: expanded_fail.
+      have?:= (expand_failed_same _ HA); subst => //.
+    - move=> s s' r A B b HA HB IH B0 C s2 b1 nA H.
+      have fA:= expand_not_failed _ HA notF.
+      have:= next_alt_not_failed _ fA.
+      rewrite nA => -[?]; subst.
+      do 2 eexists; eassumption.
+    - move=> s s' r A B b HA HB IH B0 C s2 b1 nA H.
+      have fA:= expand_not_failed _ HA notF.
+      have:= next_alt_not_failed _ fA.
+      rewrite nA => -[?]; subst.
+      do 2 eexists; eassumption.
+  Qed.
 
   Lemma run_or_complete {s1 s2 A B SOL altAB b}:
     runb u s1 (Or A s2 B) SOL altAB b ->
@@ -726,19 +767,11 @@ Section RunP.
       case X: next_alt => //[E''][?]; subst.
       have {IH} [[aA [b3 H]]|[aA [b3 H]]] := IH _ _ _ erefl.
         by have:= runb_dead H.
-      case: b1 H2 H1 => [|[]] ? H1; subst.
-      - by rewrite next_alt_cutr in X.
-      - by rewrite next_alt_cutr in X.
-      right.
+      case: b1 H2 H1 => [|[]] ? H1; subst; try by rewrite next_alt_cutr in X.
       have [B'[b1 [? H2]]]:= run_dead_left1 is_dead_dead H3; subst.
-      have {H2} [[??]?]:= run_consistent _ H H2; subst.
-      rename E into A.
-      rename D' into B.
-      rename F into C.
-      rename E'' into D.
-      rename B' into E.
-      (* apply: next_alt_runb X H. *)
-  Abort.
+      have {H2} [[_ ?]?]:= run_consistent _ H H2; subst.
+      right; apply: next_alt_runb X H.
+  Qed.
 
   (*   Lemma run_or_fail {s1 s2 A B b}:
     run u s1 (Or A s2 B) Failed ->

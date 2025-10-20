@@ -342,11 +342,11 @@ Section check.
       move=> /=/andP[fA].
       case: (ifP  (is_dead _)) => dA.
         rewrite has_cut_dead// => fB.
-        have:= HB s _ _ fB.
+        have {HA HB} := HB s _ _ fB.
         case X: expand => ///(_ _ _ erefl) H1 [??]; subst => /= s3.
         rewrite dA.
         admit.
-      have:= HA s1 _ _ fA.
+      have {HA HB} := HA s1 _ _ fA.
       case X: expand => // [s4 A'] /(_ _ _ erefl) H1 + [_<-] s3/=.
       rewrite (expand_not_dead _ dA X).
       rewrite success_has_cut ?(expand_solved_same _ X)//.
@@ -361,9 +361,9 @@ Section check.
         have sbF:= has_cut_success cB.
         case Y: expand => ///(_ _ _ erefl) H1 [??] s4;subst.
         have [[]]:= expand_solved_same _ Y; congruence.
-      have:= HA s1 _ _ fA.
+      have {HA} := HA s1 _ _ fA.
       case X: expand => //[s3 D]/(_ _ _ erefl) H1.
-      have:= HB s3 _ _ fB.
+      have {HB} := HB s3 _ _ fB.
       case Y: expand => ///(_ _ _ erefl) H2 [??];subst => /= s4.
       rewrite (expand_solved_same _ X).
       admit.

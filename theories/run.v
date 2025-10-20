@@ -503,6 +503,21 @@ Section main.
         end
   end.
 
+  Lemma next_alt_not_failed A:
+    (failed A) = false -> next_alt A = Some A.
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB; case: ifP => dA fB.
+        rewrite HB//=.
+      rewrite HA//.
+    - move=> A HA B0 _ B HB.
+      case: ifP => dA.
+        rewrite is_dead_failed//.
+      case: ifP => //=fA.
+      case: ifP => //=sA fB.
+      rewrite HB//.
+  Qed.
+
   Goal next_alt (And (Or OK empty Top) OK Bot) = Some (And (Or Bot empty Top) OK OK).
   Proof. move=> //=. Qed.
 
@@ -738,6 +753,25 @@ Section main.
       have {}HA := HA _ _ _ X.
       have {}HB := HB _ _ _ Y.
       rewrite /= !HA !HB !HA//.
+  Qed.
+
+  Lemma expand_failed_same {s1 A B}: 
+    expand s1 A = Failure B -> ((A = B))%type.
+  Proof.
+    elim: A s1 B => //.
+    + move=> s1 B[<-]//.
+    + move=> s1 B[<-]//.
+    + move=> A HA s B HB s1 C/=.
+      case: ifP => dA/=.
+        case X: expand =>//-[?];subst => /=.
+        rewrite (HB _ _ X)//.
+      case X: expand => //=-[?]; subst => /=.
+      rewrite (HA _ _ X)//.
+    + move=> A HA B0 _ B HB s1 C /=.
+      case X: expand => // [A'|s' A'].
+        move=> [<-]; rewrite (HA _ _ X)//.
+      case Y: expand => //=[B'][<-].
+      rewrite (HB _ _ Y) (expand_solved_same X)//.
   Qed.
 
   Lemma expanded_Done_success {s1 A s2 B b}: 
