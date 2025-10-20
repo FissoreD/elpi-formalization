@@ -59,11 +59,10 @@ Section Test1.
   Proof.
     eexists.
     apply: run_backtrack => //.
-    - apply: expanded_step => //=.
-      rewrite /big_or/F/select/=.
-
-      (* apply: expanded_step => //=. *)
-      apply: expanded_fail => //=.
+    - apply: expanded_step.
+      - move=> //.
+      - rewrite /big_or/F/select//=.
+        apply: expanded_fail => //=.
     - move=>/=. reflexivity.
     - apply: run_backtrack => //.
       - apply: expanded_step => //=.
@@ -78,7 +77,10 @@ Section Test1.
           apply: expanded_fail => //=.
         - move=> //=.
         - apply: run_backtrack => //.
-          - apply: expanded_step => //=.
+          - apply: expanded_fail => //.
+          - move=> //.
+          - apply: run_backtrack.
+            apply: expanded_step => //=.
             apply: expanded_step => //=.
             rewrite /big_or/F//=.
             (* apply: expanded_step => //=. *)
@@ -88,6 +90,7 @@ Section Test1.
             apply: expanded_step => //=.
             apply: expanded_step => //=.
             apply: expanded_done => //=.
+            reflexivity.
             reflexivity.
             reflexivity.
   Qed.
@@ -102,7 +105,8 @@ Section Test5.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
     ].
 
-  Goal exists r, runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 r false /\ next_alt None r = None.
+  Goal exists r, runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 r false 
+    /\ dead_run unif r.
   Proof.
     repeat eexists.
     apply: run_backtrack.
@@ -130,7 +134,21 @@ Section Test5.
       apply: expanded_done => //=.
       reflexivity.
       reflexivity.
-    reflexivity.
+    move=> s1 s2 B b.
+    inversion 1; subst => //.
+      inversion H0 => //.
+    inversion H0; clear H0 => //; subst.
+    inversion H6; clear H6; subst => //.
+    inversion H1; clear H1; subst => //.
+    inversion H2; clear H2; subst => //.
+      inversion H0 => //.
+    inversion H0; clear H0 => //; subst.
+    inversion H6; subst => //; clear H6.
+    inversion H1; clear H1; subst => //.
+    inversion_clear H3; subst.
+    inversion_clear H0 => //.
+    inversion_clear H0 => //.
+    move: H3 => [?]; subst => //.
   Qed.
 End Test5.
 
@@ -147,7 +165,8 @@ Section Test6.
   ].
 
   Goal exists r, 
-    runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) s1 r false /\ next_alt None r = None.
+    runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) s1 r false 
+      /\ dead_run unif r.
   Proof.
     repeat eexists.
     apply: run_backtrack.
@@ -179,7 +198,26 @@ Section Test6.
       reflexivity.
       reflexivity.
       reflexivity.
-      reflexivity.
+    - move=> s1 s2 A b H.
+      inversion_clear H.
+        by inversion_clear H0.
+      inversion_clear H0 => //.
+      case: H => ?; subst.
+      case: H1 => ?; subst.
+      inversion_clear H2 => //.
+      inversion_clear H => //.
+      inversion_clear H => //.
+      case: H2 => ?; subst.
+      case: H0 => ?; subst.
+      inversion_clear H1 => //.
+        by inversion_clear H => //.
+      inversion_clear H => //.
+      case: H1 => ?; subst.
+      case: H0 => ?; subst.
+      inversion_clear H2 => //.
+        by inversion_clear H => //.
+      inversion_clear H => //.
+      case: H2 => ?; subst => //.
   Qed.
 End Test6.
 

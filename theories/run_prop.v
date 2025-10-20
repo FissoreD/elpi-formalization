@@ -490,8 +490,8 @@ Section RunP.
       expandedb u s ((cutr A)) (Failed ((cutr A))) false.
   Proof. apply:is_ko_expanded is_ko_cutr. Qed.
 
-  Lemma next_alt_cutr {s A}:
-    next_alt s (cutr A) = None.
+  Lemma next_alt_cutr {A}:
+    next_alt (cutr A) = None.
   Proof. apply: is_ko_next_alt is_ko_cutr. Qed.
 
   Lemma runb_dead {s s1 A B b}: runb u s (dead1 A) s1 B b -> False.
@@ -625,10 +625,7 @@ Section RunP.
       have [B' [b4 [? H]]] := IH _ _ _ erefl dE; subst.
       repeat eexists.
       apply: run_backtrack H2 _ H erefl.
-      have [] := expanded_or_complete_fail H1; rewrite dE => -[]//.
-      move=> _ [?[b]] H; subst.
-      have fE := expandedb_failed _ H.
-      move: X; rewrite (failed_next_alt None fE)//.
+      have [] := expanded_or_complete_fail H1; rewrite dE//.
   Qed.
 
   Lemma run_dead_left2 {s2 X B B' SOL b1} sIgn:
@@ -644,15 +641,16 @@ Section RunP.
       have [b4 {}IH] := IH sIgn.
       eexists; apply: run_backtrack H _ IH erefl => /=.
       have fE := expandedb_failed _ HA.
-      rewrite (failed_next_alt None fE)//dA HB//.
+      rewrite dA HB//.
   Qed.
 
   Lemma next_alt_runb A B C s s2 b1:
-    next_alt (Some s) A = Some B ->
+    next_alt A = Some B ->
       runb u s B s2 C b1 ->
         exists G b, runb u s A s2 G b.
   Proof.
     elim: A B C s s2 b1 => //=.
+    - move=> B C s s2 b1 [<-]; do 2 eexists; eassumption.
     - move=> B C s s2 b1 [<-]; do 2 eexists; eassumption.
     - move=> p c B C s1 s2 b [<-]; do 2 eexists; eassumption.
     - move=> B C s s2 b1 [<-]; do 2 eexists; eassumption.
@@ -670,14 +668,16 @@ Section RunP.
         do 2 eexists; apply: run_backtrack erefl.
         - apply: H4.
         - have fB0 := expandedb_failed _ H0.
-          move=> /=; rewrite dA (failed_next_alt None fB0) H1//.
+          move=> /=; rewrite dA H1//.
         - apply: H5.
       case X: next_alt => //[A'|].
         move=> [?] H; subst.
-
         admit.
       case: ifP => //dB; case Y: next_alt => //[B'][<-] H.
       do 2 eexists; apply: run_backtrack erefl.
+      (* - apply:  *)
+
+
   Abort.
 
   Lemma run_or_complete {s1 s2 A B SOL altAB b}:
@@ -709,9 +709,7 @@ Section RunP.
         have := expanded_or_complete_fail H1 => -[][]dE []H []b4 H2; subst.
           have /= := expanded_not_dead _ dE H2; congruence.
         right; do 2 eexists.
-        apply: run_backtrack (H2) _ _ erefl.
-        have fE := expandedb_failed _ H2.
-        move: X; rewrite (failed_next_alt None fE) => ->//.
+        apply: run_backtrack (H2) (X) _ erefl.
         apply: IH.
       case W: next_alt => [D''|].
         move=>[?]; subst.
