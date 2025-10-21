@@ -219,7 +219,9 @@ Section RunP.
       have [[??] ?] //:= expanded_consistent _ H IH1; subst; clear H.
       right; repeat eexists; last first.
         apply: expanded_cut Y _.
-        admit.
+        rewrite ges_subst_cutl in IH2.
+        eassumption.
+      rewrite ges_subst_cutl in IH1.
       admit.
     + move=> s1 s2 r A B b + HB IH C D0 D C' D0' D' ??; subst => /=.
       case X: expand => //[s1' C1|s1' C1].
@@ -234,9 +236,10 @@ Section RunP.
       have [[??] sC1] := expand_solved_same _ X; subst.
       move => [[b1 IH]|[sm [b1 [b2 [IH1 IH2]]]]].
         left; eexists; eassumption.
+      have:= expanded_success1 u s1 sC1.
+      move=> /(expanded_consistent _ IH1) [][]???; subst.
       right; repeat eexists; try eassumption.
-      apply: expanded_step IH2.
-      admit.
+      apply: expanded_step Y IH2.
   Admitted.
 
   Lemma expanded_and_fail_left {s A FA b1}:
