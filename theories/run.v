@@ -125,6 +125,7 @@ Section state_op.
     | Or A s B => Or (cutr A) s (cutr B)
     end.
 
+  (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
     (* if A == dead A then Dead else *)
     match A with

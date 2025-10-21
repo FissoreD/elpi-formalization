@@ -182,6 +182,51 @@ Section RunP.
       by apply: IH.
   Qed.
 
+  Lemma expand_cutl_cb {s C s' B}: expand u s (cutl C) = CutBrothers s' B -> False.
+  Proof.
+    elim: C s s' B=> //=.
+    - move=> A HA s B HB s1 s2 C; rewrite fun_if/=.
+      case: ifP => //=dA; rewrite ?is_dead_cutl dA; case expand => //.
+    - move=> A HA B0 _ B HB s1 s2 C.
+      case e: expand => //[s1' A'|s1' A'].
+        by have:= HA _ _ _ e.
+      case f: expand => //[s1'' B'].
+      by have:= HB _ _ _ f.
+  Qed.
+
+  Lemma expand_cutl_exp {s C s' B}: expand u s (cutl C) = Expanded s' B -> False.
+  Proof.
+    elim: C s s' B=> //=.
+    - move=> A HA s B HB s1 s2 C; rewrite fun_if/=.
+      case: ifP => //=dA; rewrite ?is_dead_cutl dA.
+        case X: expand => //=.
+          by have:= HB _ _ _ X.
+        by have:= expand_cutl_cb X.
+      case X: expand => //.
+        by have:= HA _ _ _ X.
+      by have:= expand_cutl_cb X.
+    - move=> A HA B0 _ B HB s1 s2 C.
+      case e: expand => //[s1' A'|s1' A'].
+        by have:= HA _ _ _ e.
+      case f: expand => //[s1'' B'].
+      by have:= HB _ _ _ f.
+  Qed.
+
+  Lemma expandedb_cutl_success {s1 A sm C b}:
+    expandedb u s1 (cutl A) (Done sm C) b -> success A.
+  Proof.
+    remember (cutl _) as c eqn:Hc.
+    remember (Done _ _) as d eqn:Hd.
+    move=> H.
+    elim: H A C sm Hc Hd; clear => //.
+    - move=> s s' A A' HA B B' sm ? []??; subst.
+      have [[??]?]:= expand_solved_same _ HA; subst.
+      rewrite -success_cut//.
+    - move=> s s' r A B b HA HB IH C D sm ??; subst; by have:= expand_cutl_cb HA.
+    - move=> s s' r A B b HA HB IH C D sm ??; subst; by have:= expand_cutl_exp HA.
+  Qed.
+      
+
   (* TODO: here *)
   Lemma expandes_and_fail {s A B0 B A' B0' B' b}:
     expandedb u s (And A B0 B) (Failed (And A' B0' B')) b ->
