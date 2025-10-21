@@ -474,15 +474,7 @@ Section RunP.
   Qed.
 
   Lemma is_dead_runb {s1 s2 A B b}: is_dead A -> runb u s1 A s2 B b -> False.
-  Proof.
-    move=> +H.
-    elim: H; clear.
-    - move=> s s' A B C b /expandedb_Done_not_failed ++ /is_dead_failed; congruence.
-    - move=> s1 s2 A B C D b1 b2 b3 +++++ H; move:H.
-      move=>/[dup]dA/is_dead_expanded- /(_ _ s1).
-      move=> /[dup]H1/(_ u) /expanded_consistent H {}/H[][??]; subst.
-      rewrite (is_dead_next_alt dA)//.
-  Qed.
+  Proof. move=> H; apply: is_ko_runb (is_dead_is_ko H). Qed.
 
   Lemma expandedb_failed_refl s A:
       expandedb u s ((cutr A)) (Failed ((cutr A))) false.
