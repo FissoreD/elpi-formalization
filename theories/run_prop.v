@@ -182,10 +182,11 @@ Section RunP.
       by apply: IH.
   Qed.
 
-  (* Lemma expandes_and_fail {s A B0 B C}:
-    expandedb u s (And A B0 B) (Failed C) ->
-      (exists C', expandedb u s A (Failed C')) \/ 
-        (exists s' A' B', expandedb u s A (Done s' A') /\ expandedb u s B (Failed B')).
+  (* TODO: here *)
+  (* Lemma expandes_and_fail {s A B0 B C b}:
+    expandedb u s (And A B0 B) (Failed (And A' B)) b ->
+      (exists C' b1, expandedb u s A (Failed C') b1) \/ 
+        (exists s' A' B' b1 b2, expandedb u s A (Done s' A') b1 /\ expandedb u s B (Failed B') b2).
   Proof.
     remember (And _ _ _) as R eqn:HR.
     remember (Failed _) as F eqn:HF => -[b H].
@@ -475,10 +476,6 @@ Section RunP.
 
   Lemma is_dead_runb {s1 s2 A B b}: is_dead A -> runb u s1 A s2 B b -> False.
   Proof. move=> H; apply: is_ko_runb (is_dead_is_ko H). Qed.
-
-  Lemma expandedb_failed_refl s A:
-      expandedb u s ((cutr A)) (Failed ((cutr A))) false.
-  Proof. apply:is_ko_expanded is_ko_cutr. Qed.
 
   Lemma next_alt_cutr {A}:
     next_alt (cutr A) = None.
@@ -775,9 +772,12 @@ Section RunP.
       case: B H1 H2 => //= E' F' G' H1 + _.
       case: ifP => dD'//.
       case: ifP => fD.
-        case X: next_alt => //=[E2].
-        (* move=> [?]; subst.
+        case X: next_alt => //=[E2][?]; subst.
         have [A'[B'[b3[b4[sm [[H4 H5]|[H4 H5]]]]]]] := IH _ _ _ erefl.
+
+
+
+        (* move=> [?]; subst.
           Search expandedb Failed And.
           admit.
         admit.
@@ -788,7 +788,7 @@ Section RunP.
           admit.
         admit.
       admit. *)
-  Abort.
+  Admitted.
 
   
 

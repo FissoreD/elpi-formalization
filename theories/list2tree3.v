@@ -201,3 +201,7 @@ Proof.
     admit.
   - admit.
 Admitted. 
+
+
+(* Lemma yy:
+  nur g gs s a -> run (a2t_ (g::gs)) *)

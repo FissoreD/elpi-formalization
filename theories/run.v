@@ -16,8 +16,6 @@ apply: iffP2 Sigma_eqb_correct Sigma_eqb_refl.
 Qed.
 HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
 
-Print A.
-
 Inductive state :=
   | Bot : state
   | OK : state
@@ -355,8 +353,6 @@ Section main.
     | _, _, _ => None
     end.
 
-    Print Option.
-
   (* TODO: deref is too easy? Yes if sigma is a mapping from vars to lambdas in a future version *)
   Fixpoint deref (s: Sigma) (tm:Tm) :=
     match tm with
@@ -452,6 +448,7 @@ Section main.
       if is_dead A then Or A s (clean_success B)
       else Or (clean_success A) s B
     | And A B0 B =>
+    (* TODO: cambiare con And (clean_success A) B0 B0 *)
       if success A then And A B0 (clean_success B)
       else And A B0 B
     end.

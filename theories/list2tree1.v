@@ -192,6 +192,12 @@ Proof.
     apply: FailE H H2.
 Admitted.
 
+Lemma erase_append x a b : erase_alts' x = a ++ b -> exists a' b', erase_alts' a' = a /\ erase_alts' b' = b /\ x = a' ++ b'.
+elim: x a b.
+  case => //=; case => //= _ ; exists nilC, nilC; repeat split.
+move=> p a IH b c.
+Admitted.
+
 Lemma two' u s s1 a a1 xs  : nur u s xs a s1 a1 -> exists a' a1' xs',
   [/\ (erase_alts' a' = a), (erase_alts' a1' = a1), (erase_goals' xs' = xs) &
     (nur' u s xs' a' s1 a1')].
@@ -210,7 +216,14 @@ elim; clear.
   move=> //=.
   rewrite ed//.
 
+
 - move=> p s s1 a [s2 r] bs gl rs t H1/= H2 [a'[a1'[xs']]][H3 ? H4] IH; subst.
+  have [sa' [a'' [Esa' [? ?]]]] := erase_append _ _ _ H3.
+  subst.
+  exists a'', a1', (decorate_goals ((call p t) ::: gl)).
+   repeat split; rewrite ?ed => //=.
+     apply: CallE' H1 _.
+simpl.
   do 3 eexists; repeat split; last first => //.
   apply: CallE' H1 _.
   (* THIS IS DIFFICULT *)
