@@ -45,7 +45,7 @@ Fixpoint erase_G' (g : G') : G :=
   | call' p c => call p c
   | cut' a => cut (erase_alts' a)
   end
-with erase_alts' (a : alts') : alts :=
+with erase_alts' (a : alts') : alts := 
   match a with
   | no_alt' => nilC
   | more_alt' (_, s,gl') a' => (s,erase_goals' gl') ::: (erase_alts' a')
@@ -72,10 +72,18 @@ with erase_goals' (a : goals') : goals :=
   Proof. apply: iffP2 xx xx_refl. Qed.
   HB.instance Definition _ : hasDecEq _ := hasDecEq.Build _ alts_eqb_OK'.
 
+  Fixpoint map_alts' F l :=
+    match l with
+    | no_alt' => no_alt'
+    | more_alt' x xs => more_alt' (F x) (map_alts' F xs)
+    end.
+
+
   #[program] Global Instance IsList_alts' : @IsList (nat * Sigma * goals') alts' :=
     {| 
     nilC := no_alt'; consC := more_alt';
     appendC := append_alts'; 
+    map := map_alts';
     (*size := _; take := _; drop := _;
     behead := _; eqB := _; suffix:= _; all:= _;
     map := _; mem := _ *)
@@ -88,10 +96,18 @@ with erase_goals' (a : goals') : goals :=
     | more_goals' (n, hd) tl => more_goals' (n, hd) (append_goals' tl l2)
     end.
 
+  Fixpoint map_goals' F l :=
+    match l with
+    | no_goals' => no_goals'
+    | more_goals' x xs => more_goals' (F x) (map_goals' F xs)
+    end.
+
+
   #[program] Global Instance IsList_goals' : @IsList _ _ :=
     {| 
     nilC := no_goals'; consC := more_goals';
-    appendC := append_goals'; 
+    appendC := append_goals';
+    map := map_goals';
     (*size := _; take := _; drop := _;
     behead := _; eqB := _; suffix:= _; all:= _;
     map := _; mem := _ *)
@@ -137,7 +153,7 @@ Definition same' x y := erase_alts' x = erase_alts' y.
 
 Definition hd' x y ys := erase_goals' x = (erase_G' y) ::: (erase_goals' ys).
 
-Inductive nur' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Prop :=
+Inductive nur' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Type :=
 | StopE' s a : nur' s nilC a s a
 | CutE' s s1 a ca r gl n1 : nur' s gl ca s1 r -> nur' s ((n1, cut' ca) ::: gl) a s1 r
 | CallE' p s s1 a b bs gl r t n1: 
@@ -177,6 +193,11 @@ Qed.
 
 Definition ed := (erase_decorate_alts, erase_decorate_goals, erase_decorate_G).
 
+Notation elpi_annot := nur'.
+Notation elpi := nur.
+
+(* Lemma e erase_goals' (map (add_ca' a)) = mapG (add_ca (erase_alts' a)) *)
+
 Lemma one u s xs a s1 a1: nur' u s xs a s1 a1 -> 
   nur u s (erase_goals' xs) (erase_alts' a) s1 (erase_alts' a1).
 Proof.
@@ -184,7 +205,7 @@ Proof.
   - move=> *; constructor.
   - move=> *; constructor => //.
   - move=> p s s1 a [s2 r] rs gl a1 t n/= H H1 H2.
-    apply: CallE H _.
+    apply: CallE H _ => /=.
     move: H2.
     rewrite/save_goals/=/map/=/save_goals'/=.
     admit. (*SHOULD BE OK*)
@@ -198,47 +219,84 @@ elim: x a b.
 move=> p a IH b c.
 Admitted.
 
-Lemma two' u s s1 a a1 xs  : nur u s xs a s1 a1 -> exists a' a1' xs',
-  [/\ (erase_alts' a' = a), (erase_alts' a1' = a1), (erase_goals' xs' = xs) &
-    (nur' u s xs' a' s1 a1')].
-elim; clear.
-- move=> s2 a2 *.
-  exists (decorate_alts a2).
-  exists (decorate_alts a2).
-  exists (decorate_goals nilC).
-  rewrite !ed /=; repeat split.
-  apply: StopE'.
-
-- move=> s s1 a ca r gl H [a'[a1'[xs']]] [??? IH]; subst.
-  exists (decorate_alts a).
-  do 2 eexists; repeat split; last first => //=.
-  apply: CutE' 3 IH => /=.
-  move=> //=.
-  rewrite ed//.
-
-
-- move=> p s s1 a [s2 r] bs gl rs t H1/= H2 [a'[a1'[xs']]][H3 ? H4] IH; subst.
-  have [sa' [a'' [Esa' [? ?]]]] := erase_append _ _ _ H3.
-  subst.
-  exists a'', a1', (decorate_goals ((call p t) ::: gl)).
-   repeat split; rewrite ?ed => //=.
-     apply: CallE' H1 _.
-simpl.
-  do 3 eexists; repeat split; last first => //.
-  apply: CallE' H1 _.
-  (* THIS IS DIFFICULT *)
-  admit.
-
-- 
-
+Lemma cat_erase_alts' a x : erase_alts' a ++ erase_alts' x = erase_alts' (a ++ x).
 Admitted.
 
-Definition l2l' {s s1 a a1 xs} (H : nur s xs a s1 a1) : alts' :=
-   projT1 (projT2 (two s s1 a a1 xs H)).
+Lemma save_alts_erase x y gl :
+  save_alts (erase_alts' x) (erase_goals' y) (erase_alts' gl) =
+  erase_alts' (save_alts' x y gl)
+with save_goals_erase x y gl :
+  save_goals (erase_alts' x) (erase_goals' y) (erase_goals' gl) =
+  erase_goals' (save_goals' x y gl).
+- rewrite /save_alts.
+  case: gl => //= -[[? s] gl] a.
+  rewrite map_cons.
+  congr ((_,_) ::: _).
+    by rewrite save_goals_erase.
+  by rewrite [LHS]save_alts_erase.
+- case: gl => //= -[? g gs] //=.
+  rewrite /save_goals /save_goals' !map_cons /= [in RHS]cat_cons /=.
+  rewrite cat_cons.
+  case: g => /= [p c|a].
+  congr (_ ::: _).
+    by rewrite -save_goals_erase.
+  congr ((cut _) ::: _); try rewrite -save_goals_erase //.
+  exact: cat_erase_alts'.
+Qed.
 
-Lemma l2l'P s s1 a a1 xs (H : nur s xs a s1 a1) :
-  erase_alts' (l2l' H) = a1.
-by rewrite /l2l'; case: two => /= ? [? []] //= ? [] ? [] ? [] ?.
+Lemma aa2gs_erase n p bs : (aa2gs p bs) = erase_alts' (aa2gs' n p bs).
+Admitted.
+Lemma a2gs1_erase n p bs : (a2gs1 p bs) = erase_goals' (a2gs1' n p bs).
+Admitted.
+
+Lemma two' {u s s1 alts alts_left andg}  : nur u s andg alts s1 alts_left -> forall alts' andg',
+  (erase_alts' alts' = alts) -> 
+  (erase_goals' andg' = andg) ->
+  Texists alts_left',
+  (erase_alts' alts_left' = alts_left) /\ (nur' u s andg' alts' s1 alts_left').
+elim; clear.
+
+move=> s a a' [|[]//] ? _; subst.
+by eexists; split => //; apply: StopE'.
+
+move=> s s1 a ca r gl H IH ? [|[n g gs]]// H1 [H2 H3].
+case: g H2 => //= [? [?]]; subst.
+have [x [? ?]] := IH _ _ erefl erefl.
+subst.
+eexists; split => //.
+by apply: CutE'.
+
+move=> p s1 s2 old_alts [s0 b0]/= bs andg new_alts c EF He IH old_alts' [|[n [p'|ct]] c'] // andg' E1 /= [-> ->] E2.
+subst.
+rewrite (aa2gs_erase n.+1) save_alts_erase cat_erase_alts' in IH.
+have {}IH:= (IH _ _ erefl).
+rewrite (a2gs1_erase n.+1) save_goals_erase in IH.
+have {IH} [new_alts' [H1 H2]]:= (IH _ erefl).
+eexists; split; try eassumption.
+apply: CallE' EF H2 => /=.
+
+move=> p s s1 s2 c gl gl1 al al1 BC H1 IH [//|[[]]] /= n s3 g' a' [//|[m [|]//]] p' c' g'' [???] [???].
+subst.
+have [new_alts' [? ?]] := (IH _ _ erefl erefl).
+eexists; split; try eassumption.
+by apply: FailE' BC _  => /=.
+
+Qed.
+
+
+Definition l2l' {u s s1 a a1 xs} (H : elpi u s xs a s1 a1) : { xs' & { a' & {a1' & elpi_annot u s xs' a' s1 a1' }}}.
+have H1 : erase_alts' (decorate_alts a) = a by rewrite ed.
+have H2 : erase_goals' (decorate_goals xs) = xs by rewrite ed.
+exists (decorate_goals xs), (decorate_alts a).
+have ? := two' H _ _ H1 H2.
+have [a' [??]]:= two' H _ _ H1 H2.
+by exists a'.
+Qed.
+
+
+Lemma l2l'P u s s1 a a1 xs (H : nur u s xs a s1 a1) :
+  erase_alts' (projT1 (projT2 (projT2 (l2l' H)))) = a1.
+case: l2l'=> x [? []] /= *.
 Qed.
 
 

@@ -2,6 +2,19 @@ From mathcomp Require Import all_ssreflect.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
+Declare Scope type2_scope.
+Delimit Scope type2_scope with type2.
+
+Notation "a /\ b" := (a%type2 * b%type2)%type : type2_scope.
+
+Notation "'Texists' x .. y , p" := (Specif.sigT (fun x => .. (Specif.sigT (fun y => p%type2)) ..))
+  (at level 200, x binder, right associativity)
+  : type_scope .
+
+Lemma orPT b1 b2 : (b1 || b2) -> (b1 + b2)%type.
+by case: b1; case: b2; constructor.
+Qed.
+
 Notation "[subst]" := ltac:(subst).
 Notation "[subst1]" := ltac:(move=> ?;subst).
 Notation "[subst2]" := ltac:(move=> ??;subst).

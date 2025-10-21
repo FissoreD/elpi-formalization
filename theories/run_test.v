@@ -55,7 +55,7 @@ Section Test1.
     ].
 
 
-  Goal exists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) s2 r false.
+  Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) s2 r false.
   Proof.
     eexists.
     apply: run_backtrack => //.
@@ -105,7 +105,7 @@ Section Test5.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
     ].
 
-  Goal exists r, runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 r false 
+  Goal Texists r, runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 r false 
     /\ forall s, dead_run unif s r.
   Proof.
     repeat eexists.
@@ -164,7 +164,7 @@ Section Test6.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
   ].
 
-  Goal exists r, 
+  Goal Texists r, 
     runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) s1 r false 
       /\ forall s, dead_run unif s r.
   Proof.

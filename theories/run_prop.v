@@ -45,8 +45,8 @@ Section RunP.
 
   Lemma expanded_and_complete {s s' C A B0 B b} :
     expandedb u s (And A B0 B) (Done s' C) b ->
-      exists s'' A' B' b1 b2, expandedb u s A (Done s'' A') b1 /\
-        expandedb u s'' B (Done s' B') b2 /\ b = b1 || b2.
+      Texists s'' A' B' b1 b2, expandedb u s A (Done s'' A') b1 /\
+        (expandedb u s'' B (Done s' B') b2) /\ b = b1 || b2.
   Proof.
     move=>/[dup] /expandedb_same_structure.
     case: C => //= A' B0' B' _.
@@ -103,7 +103,7 @@ Section RunP.
 
   Lemma expand_success_done {A B0 s1 B s2 B' b}: 
     success A -> expandedb u (get_substS s1 A) B (Done s2 B') b ->
-      exists b1, expandedb u s1 (And A B0 B) 
+      Texists b1, expandedb u s1 (And A B0 B) 
         (Done s2 (And (if b then cutl A else A) (if b then cutl B0 else B0) B')) b1.
   Proof.
     remember (get_substS _ _) as S eqn:HS.
@@ -161,7 +161,7 @@ Section RunP.
 
   Lemma expanded_and_correct {s0 s1 s2 A C} B0 {B D b1 x} :
       expandedb u s0 A (Done s1 B) b1 -> expandedb u s1 C (Done s2 D) x ->
-        exists b3, expandedb u s0 (And A B0 C) 
+        Texists b3, expandedb u s0 (And A B0 C) 
           (Done s2 (And (if x then cutl B else B) (if x then cutl B0 else B0) D)) b3.
   Proof.
     remember (Done _ _) as RD eqn:HRD => H.
@@ -185,8 +185,8 @@ Section RunP.
   (* TODO: here *)
   (* Lemma expandes_and_fail {s A B0 B C b}:
     expandedb u s (And A B0 B) (Failed (And A' B)) b ->
-      (exists C' b1, expandedb u s A (Failed C') b1) \/ 
-        (exists s' A' B' b1 b2, expandedb u s A (Done s' A') b1 /\ expandedb u s B (Failed B') b2).
+      (Texists C' b1, expandedb u s A (Failed C') b1) \/ 
+        (Texists s' A' B' b1 b2, expandedb u s A (Done s' A') b1 /\ expandedb u s B (Failed B') b2).
   Proof.
     remember (And _ _ _) as R eqn:HR.
     remember (Failed _) as F eqn:HF => -[b H].
@@ -242,7 +242,7 @@ Section RunP.
 
   Lemma expanded_and_fail_left {s A FA b1}:
     expandedb u s A (Failed FA) b1 ->
-      forall B0 B, exists b2, expandedb u s (And A B0 B) (Failed (And FA B0 B)) b2.
+      forall B0 B, Texists b2, expandedb u s (And A B0 B) (Failed (And FA B0 B)) b2.
   Proof.
     move=> H.
     remember (Failed _) as F eqn:HF.
@@ -261,7 +261,7 @@ Section RunP.
 
   Lemma run_and_fail_both {s s' A B} B0 {SA FB b1 b}:
     expandedb u s A (Done s' SA) b1 -> expandedb u s' B (Failed FB) b ->
-      exists b2, expandedb u s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)) b2.
+      Texists b2, expandedb u s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)) b2.
   Proof.
     move=> H.
     remember (Done _ _) as D eqn:HD.
@@ -283,7 +283,7 @@ Section RunP.
 
   Lemma expanded_or_correct_left {s s' A A'} b:
     expandedb u s A (Done s' A') b ->
-      forall s2 B, exists b2, expandedb u s (Or A s2 B) (Done s' (Or A' s2 (if b then cutr B else B))) b2.
+      forall s2 B, Texists b2, expandedb u s (Or A s2 B) (Done s' (Or A' s2 (if b then cutr B else B))) b2.
   Proof.
     remember (Done _ _) as D eqn:HD => H.
     elim: H s' A' HD => //=; clear.
@@ -311,7 +311,7 @@ Section RunP.
   Lemma expanded_or_correct_right {s s' X A A' b} sIgn:
     is_dead X ->
     expandedb u s A (Done s' A') b ->
-      exists b1, expandedb u sIgn (Or X s A) (Done s' (Or X s A')) b1.
+      Texists b1, expandedb u sIgn (Or X s A) (Done s' (Or X s A')) b1.
   Proof.
     remember (Done _ _) as D eqn:HD => dX H.
     elim: H s' A' HD; clear -dX => //.
@@ -327,9 +327,9 @@ Section RunP.
 
   Lemma expanded_or_complete_done {s s' s2 A A' B B' b}:
     expandedb u s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
-      (is_dead A = false /\ 
-        exists b, expandedb u s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
-        (is_dead A /\ A = A' /\ exists b1, expandedb u s2 B (Done s' B') b1).
+      ((is_dead A = false) * 
+        Texists b, expandedb u s A (Done s' A') b /\ B' = if b then cutr B else B) +
+        (is_dead A /\ A = A' /\ Texists b1, expandedb u s2 B (Done s' B') b1)%type2.
   Proof.
     remember (Done _ _) as RD eqn:HRD.
     remember (Or A _ _) as RO eqn:HRO => H.
@@ -368,9 +368,9 @@ Section RunP.
 
   Lemma expanded_or_complete_fail {s s2 A A' B B' b}:
     expandedb u s (Or A s2 B) (Failed (Or A' s2 B')) b ->
-      (is_dead A = false /\ (if b then B' = cutr B else (B' = cutr B \/ B' = B)) /\ 
-        exists b1, expandedb u s A (Failed A') b1 ) \/ 
-        (is_dead A /\ A = A' /\ exists b1, expandedb u s2 B (Failed B') b1).
+      (is_dead A = false /\ (if b then (B' = cutr B) :> Type else ((B' = cutr B) + (B' = B)))%type2 /\ 
+        Texists b1, expandedb u s A (Failed A') b1 )%type2 +
+        (is_dead A /\ A = A' /\ Texists b1, expandedb u s2 B (Failed B') b1)%type2.
   Proof.
     remember (Failed _) as RD eqn:HRD.
     remember (Or A _ _) as RO eqn:HRO => H.
@@ -404,7 +404,7 @@ Section RunP.
   Lemma expanded_or_correct_left_fail {s A A'} b:
     is_dead A = false ->
     expandedb u s A (Failed A') b ->
-      forall s2 B, exists b1, expandedb u s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))) b1.
+      forall s2 B, Texists b1, expandedb u s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))) b1.
   Proof.
     remember (Failed _) as D eqn:HD => + H.
     elim: H A' HD => //=; clear.
@@ -427,7 +427,7 @@ Section RunP.
   Lemma expanded_or_correct_right_fail {s2 X A A' b}:
     is_dead X = true ->
     expandedb u s2 A (Failed A') b ->
-      forall s, exists b1, expandedb u s (Or X s2 A) (Failed (Or X s2 A')) b1.
+      forall s, Texists b1, expandedb u s (Or X s2 A) (Failed (Or X s2 A')) b1.
   Proof.
     remember (Failed _) as D eqn:HD => dX H.
     elim: H A' HD => //=; clear -dX.
@@ -444,7 +444,7 @@ Section RunP.
 
   Lemma run_or_correct_left {s1 A s2 A' b sB B}:
     runb u s1 A s2 A' b ->
-      exists b1, runb u s1 (Or A sB B) s2 (Or A' sB (if b then cutr B else B)) b1.
+      Texists b1, runb u s1 (Or A sB B) s2 (Or A' sB (if b then cutr B else B)) b1.
   Proof.
     move => H.
     elim: H sB B => //; clear.
@@ -486,7 +486,7 @@ Section RunP.
 
   Lemma run_dead_left1 {s1 s2 A B X SOL b}:
     is_dead A -> runb u s1 (Or A s2 B) SOL X b ->
-      exists B' b1,
+      Texists B' b1,
         X = (Or A s2 B') /\ runb u s2 B SOL B' b1.
   Proof.
     remember (Or A _ _) as o1 eqn:Ho1 => + H.
@@ -513,7 +513,7 @@ Section RunP.
 
   Lemma run_dead_left2 {s2 X B B' SOL b1} sIgn:
     is_dead X -> runb u s2 B SOL B' b1 ->
-    exists b, runb u sIgn (Or X s2 B) SOL (Or X s2 B') b.
+    Texists b, runb u sIgn (Or X s2 B) SOL (Or X s2 B') b.
   Proof.
     move=> dA HB; elim: HB sIgn; clear -dA.
     - move=> s1 s2 A B C b H1 H2 sIgn; subst.
@@ -528,7 +528,7 @@ Section RunP.
   Qed.
 
   Lemma expandedb_exists s A:
-    exists r b, expandedb u s A r b.
+    Texists r b, expandedb u s A r b.
   Proof.
     elim: A s => //=.
     - move=> s; do 2 eexists; apply: expanded_fail => //.
@@ -579,7 +579,7 @@ Section RunP.
   Lemma next_alt_runb {A B C s s2 b1}:
     next_alt A = Some B ->
       runb u s B s2 C b1 ->
-        exists G b, runb u s A s2 G b.
+        Texists G b, runb u s A s2 G b.
   Proof.
     have [r[b H]]:= expandedb_exists s A.
     elim: H B C s2 b1; clear.
@@ -607,8 +607,8 @@ Section RunP.
   Lemma run_or_complete {s1 s2 A B SOL altAB b}:
   (* TODO: be more precise on altAB *)
     runb u s1 (Or A s2 B) SOL altAB b ->
-      (exists altA b1, runb u s1 A SOL altA b1) \/ 
-        (exists altB b1, runb u s2 B SOL altB b1).
+      (Texists altA b1, runb u s1 A SOL altA b1) + 
+        (Texists altB b1, runb u s2 B SOL altB b1).
   Proof.
     remember (Or _ _ _) as O1 eqn:HO1.
     move=> H.
@@ -668,7 +668,7 @@ Section RunP.
 
   Lemma expandedb_or_is_ko_left_ign_subst {A s B D b2 sIgn1} sIgn2:
     is_ko A -> expandedb u sIgn1 (Or A s B) D b2 ->
-      exists b2, expandedb u sIgn2 (Or A s B) D b2.
+      Texists b2, expandedb u sIgn2 (Or A s B) D b2.
   Proof.
     remember (Or _ _ _) as o eqn:Ho => + H.
     elim: H s A B sIgn2 Ho => //=; clear.
@@ -699,7 +699,7 @@ Section RunP.
 
   Lemma run_or_is_ko_left_ign_subst {A s B s2 D b2 sIgn1} sIgn2:
     is_ko A -> runb u sIgn1 (Or A s B) s2 D b2 ->
-      exists b2, runb u sIgn2 (Or A s B) s2 D b2.
+      Texists b2, runb u sIgn2 (Or A s B) s2 D b2.
   Proof.
     remember (Or _ _ _) as o eqn:Ho => + H.
     elim: H s A B sIgn2 Ho; clear.
@@ -752,9 +752,9 @@ Section RunP.
 
   Lemma run_and_correct_dead {s0 sn A B B0 C b}:
   (* TODO: be more precise on C *)
-    runb u s0 (And A B0 B) sn C b -> exists A' (*B0'*) B' b1 b2 sm, (*C = And A' B0' B' /\*)
-    (runb u s0 A sm A' b1 /\ runb u sm B sn B' b2) \/
-    (runb u s0 (clean_success A) sm A' b1 /\ runb u sm B0 sn B' b2).
+    runb u s0 (And A B0 B) sn C b -> Texists A' (*B0'*) B' b1 b2 sm, (*C = And A' B0' B' /\*)
+    ((runb u s0 A sm A' b1 /\ runb u sm B sn B' b2)%type2 +
+    (runb u s0 (clean_success A) sm A' b1 /\ runb u sm B0 sn B' b2)%type2)%type.
   Proof.
     remember (And _ _ _) as O1 eqn:HO1.
     move=> H.

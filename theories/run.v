@@ -550,13 +550,13 @@ Section main.
       rewrite (HB _ y)//(success_next_alt y)//.
   Qed. *)
 
-  Inductive expandedb : Sigma -> state -> exp_res -> bool -> Prop :=
+  Inductive expandedb : Sigma -> state -> exp_res -> bool -> Type :=
     | expanded_done {s s' A alt}     : expand s A = Success s' alt  -> expandedb s A (Done s' alt) false
     | expanded_fail {s A B}          : expand s A = Failure B -> expandedb s A (Failed B) false
     | expanded_cut {s s' r A B b}      : expand s A = CutBrothers s' B -> expandedb s B r b -> expandedb s A r true
     | expanded_step {s s' r A B b}     : expand s A = Expanded s' B  -> expandedb s B r b -> expandedb s A r b.
 
-  Inductive runb : Sigma -> state -> Sigma -> state -> bool -> Prop :=
+  Inductive runb : Sigma -> state -> Sigma -> state -> bool -> Type :=
     | run_done {s s' A B C b}        : 
       expandedb s A (Done s' B) b -> C = clean_success B -> runb s A s' C b
     | run_backtrack {s s2 A B C D b1 b2 b3} : 
@@ -579,8 +579,8 @@ Section main.
 
   Lemma simpl_expand_or_solved {s s1 s2 A B C} :
     expand s1 (Or A s B) = Success s2 C ->
-      (exists A', expand s1 A = Success s2 A' /\ C = Or A' s B) \/
-      (exists B', is_dead A /\ expand s B = Success s2 B' /\ C = Or A s B').
+      (Texists A', expand s1 A = Success s2 A' /\ C = Or A' s B) +
+      (Texists B', is_dead A /\ expand s B = Success s2 B' /\ C = Or A s B').
   Proof.
     move=> //=.
     case: ifP => dA.
@@ -593,8 +593,8 @@ Section main.
 
   Lemma simpl_expand_or_fail {s s1 A B C} :
     expand s1 (Or A s B) = Failure C -> 
-      (exists A', is_dead A = false /\ expand s1 A = Failure A' /\ C = Or A' s B) \/
-      (exists B', is_dead A /\ expand s B = Failure B' /\ C = Or A s B').
+      (Texists A', is_dead A = false /\ expand s1 A = Failure A' /\ C = Or A' s B) +
+      (Texists B', is_dead A /\ expand s B = Failure B' /\ C = Or A s B').
   Proof.
     move=>/=; case: ifP => dA.
       rewrite /mkOr. 
@@ -606,7 +606,7 @@ Section main.
 
   Lemma simpl_expand_and_solved {s s2 A B0 B C} :
     expand s (And A B0 B) = Success s2 C -> 
-      exists s' A' B', 
+      Texists s' A' B', 
         expand s A = Success s' A' /\
           expand s' B = Success s2 B' /\ C = And A' B0 B'.
   Proof.
@@ -618,8 +618,8 @@ Section main.
 
   Lemma simpl_expand_and_fail {s A B B0 C} :
     expand s (And A B0 B) = Failure C ->
-      (exists A', expand s A = Failure A' /\ C = And A' B0 B) \/ 
-        (exists s' A' B', expand s A = Success s' A' /\  
+      (Texists A', expand s A = Failure A' /\ C = And A' B0 B) +
+        (Texists s' A' B', expand s A = Success s' A' /\  
           expand s' B = Failure B' /\ C = And A' B0 B').
   Proof.
     move=> //=; case X: expand => //= [D|s' D].
@@ -630,8 +630,8 @@ Section main.
 
   Lemma simpl_expand_and_cut {s s2 A B B0 C}:
     expand s (And A B0 B) = CutBrothers s2 C ->
-    (exists A', expand s A = CutBrothers s2 A' /\ C = And A' B0 B ) \/
-      (exists s' A' B', expand s A = Success s' A' /\ expand s' B = CutBrothers s2 B' /\ C = And (cutl A') (cutl B0) B').
+    (Texists A', expand s A = CutBrothers s2 A' /\ C = And A' B0 B ) +
+      (Texists s' A' B', expand s A = Success s' A' /\ expand s' B = CutBrothers s2 B' /\ C = And (cutl A') (cutl B0) B').
   Proof.
     move=> //=; case X: expand => //=.
     + by move=> [] /[subst1]; left; eexists.
@@ -642,8 +642,8 @@ Section main.
 
   Lemma simpl_expand_and_expanded {s s2 A B B0 C}:
     expand s (And A B0 B) = Expanded s2 C ->
-    (exists A', expand s A = Expanded s2 A' /\ C = And A' B0 B ) \/
-      (exists s' A' B', expand s A = Success s' A' /\ expand s' B = Expanded s2 B' /\ C = And A' B0 B').
+    (Texists A', expand s A = Expanded s2 A' /\ C = And A' B0 B ) +
+      (Texists s' A' B', expand s A = Success s' A' /\ expand s' B = Expanded s2 B' /\ C = And A' B0 B').
   Proof.
     move=> /=; case X: expand => //=.
     + by move=> [] /[subst1]; left; eexists.

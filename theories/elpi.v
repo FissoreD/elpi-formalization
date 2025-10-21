@@ -676,7 +676,7 @@ Section Nur.
 
 Variable u : Unif.
 
-Inductive nur : Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
+Inductive nur : Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
 | StopE s a : nur s nilC a s a
 | CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s ((cut ca) ::: gl) a s1 r
 | CallE p s s1 a b bs gl r t : 

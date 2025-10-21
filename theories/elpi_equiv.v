@@ -324,9 +324,9 @@ Section NurEqiv.
   Lemma expand_solved {s A} l sx:
     valid_state A ->
     success A ->
-    exists x xs,
-      state_to_list A s l = (get_substS s A, x) ::: xs /\
-      nur u (get_substS s A) x xs (get_substS s A) (state_to_list (clean_success A) sx l).
+    { x & { xs &
+      ((state_to_list A s l = (get_substS s A, x) ::: xs) *
+      (nur u (get_substS s A) x xs (get_substS s A) (state_to_list (clean_success A) sx l)))%type } }.
   Proof.
     move=> vA sA.
     do 2 eexists; split.
@@ -478,10 +478,10 @@ Section NurEqiv.
 
   Lemma s2l_CutBrothers {s1 A s2 B} sA l1:
     valid_state A -> expand u s1 A = CutBrothers s2 B -> 
-      exists x tl, 
-        ((state_to_list A sA l1 = (get_substS sA A, (cut nilC) ::: x) ::: tl) *
-          (forall l sB, (state_to_list B sB l = (get_substS sB B, x) ::: nilC)) * 
-            (empty_caG x))%type.
+      Texists x tl, 
+        ((state_to_list A sA l1 = (get_substS sA A, (cut nilC) ::: x) ::: tl) /\
+          (forall l sB, (state_to_list B sB l = (get_substS sB B, x) ::: nilC)) /\ 
+            (empty_caG x)).
   Proof.
     move=>/=.
     elim: A sA s1 s2 B l1 => //.
@@ -493,7 +493,7 @@ Section NurEqiv.
         rewrite (expand_not_solved_not_success _ eA notF)/=(expand_not_failed _ eA notF).
         move=>/eqP->bB [_<-]/=.
         have [y  H1] /=:= base_and_state_to_list bB.
-        have {HA}[x [tl [[H3 H4] H5]]] := HA sA _ _ _ l1 vA eA.
+        have {HA}[x [tl [H3 [H4 H5]]]] := HA sA _ _ _ l1 vA eA.
         have /= H6 := base_and_empty_ca bB H1.
         do 2 eexists; repeat split.
         - rewrite H1 H3/= take0 drop0 make_lB0_empty1 H1 !cat_cons//(get_substS_base_and bB)//.
@@ -507,23 +507,25 @@ Section NurEqiv.
       rewrite (success_state_to_list empty (valid_state_expand _ vA eA) sAx)/=.
       have [H2|[hd[H2 H3]]] := bbAnd_state_to_list bB0; rewrite H2/=.
         have {HB}[x[tl [H H1]]] := HB (get_substS sA A')  _ _ _ l1 vB eB.
-        do 2 eexists; split; try eassumption.
-        rewrite H/make_lB01 map_cons; f_equal; f_equal; split => //.
+        do 2 eexists; repeat split; try eassumption.
+        rewrite H/make_lB01 map_cons; f_equal; f_equal; repeat split => //.
         move=> l sb.
         rewrite state_to_list_cutl//=.
-        rewrite (base_and_ko_state_to_list (bbAnd_cutl bB0)) H//=.
+        rewrite (base_and_ko_state_to_list (bbAnd_cutl bB0))//=H1.
         rewrite/make_lB01 map_cons; do 2 f_equal.
         rewrite success_cut sAx ges_subst_cutl//.
+        rewrite H1//.
       set X:= make_lB0 _ _.
-      have [x[tl [H H1]]] := HB (get_substS sA A') _ _ _ (X++l1) vB eB.
+      have [x[tl [H [H1 H4]]]] := HB (get_substS sA A') _ _ _ (X++l1) vB eB.
       rewrite H//=.
       do 2 eexists; split; try eassumption.
       rewrite make_lB01_empty2//=cat_cons; f_equal; f_equal; split => //.
+      rewrite H4; split => //.
       move=> //l sB.
       rewrite state_to_list_cutl//.
       have:= bbAnd_cutl bB0.
       move=>/base_and_ko_state_to_list->/=.
-      rewrite H///make_lB01 map_cons; repeat f_equal.
+      rewrite H1///make_lB01 map_cons; repeat f_equal.
       rewrite success_cut sAx ges_subst_cutl//.
   Qed.
 
@@ -607,7 +609,7 @@ Section NurEqiv.
         rewrite size_add_ca_deep size_cat -/SB?SB'?size_cons; try by lia.
         case: size => //.
         have [?[?[]]]:= s2l_CutBrothers s1 SB vA E.
-        by move=>[]; rewrite SA//.
+        by rewrite SA//.
       move=> {}HB.
       move=>[???]; subst.
       move: SA; fConsG (cut ca') gs; fConsA (s2, (cut ca') ::: gs) tl' => SA.
@@ -633,10 +635,10 @@ Section NurEqiv.
           case eB: expand => //=[s' B'] _.
           rewrite make_lB01_empty2.
           set X:= make_lB0 _ _.
-          have [hd1[tl1[Hz Hw]]] := s2l_CutBrothers  (get_substS s1 A) (X ++ l) vB eB.
+          have [hd1[tl1[Hz [Hw Hy]]]] := s2l_CutBrothers  (get_substS s1 A) (X ++ l) vB eB.
           rewrite !Hz/= => -[???]; subst.
-          rewrite (success_state_to_list empty)?success_cut//?valid_state_cut//=Hz.
-          rewrite base_and_ko_state_to_list//=bbAnd_cutl//.
+          rewrite (success_state_to_list empty)?success_cut//?valid_state_cut//=!Hw/=.
+          by rewrite base_and_ko_state_to_list//=bbAnd_cutl//.
         rewrite ((success_state_to_list empty) _ sA)//= H size_cat size_map.
         set SA' := state_to_list (clean_success _) _ _.
         case X : state_to_list => [|r rs]/=.
@@ -699,11 +701,11 @@ Section NurEqiv.
           move: HB; rewrite !cats0.
           case sB': state_to_list => [|w ws]//[??]; subst; right.
           by rewrite-cat_cons; f_equal.
-        have [y[ys [H1 H2]]]:= s2l_CutBrothers s nilC vB eB.
+        have [y[ys [H1 [H2 H2']]]]:= s2l_CutBrothers s nilC vB eB.
         rewrite !H1/= => -[????]; subst.
         rewrite (expand_cb_failedF vB eB) (expand_cb_same_subst _ eB) (expand_cb_same_subst1 _ eB)//.
         repeat split => //; right.
-        by rewrite cat_cons//.
+        by rewrite !H2/= cat_cons //.
       case eA: expand => //[s0' A'|s0' A']/=[??]; subst;
       rewrite add_ca_deep_cat?size_cat//=; set SB:= state_to_list _ _ nilC;
       rewrite (expand_not_dead _ dA eA).
@@ -714,8 +716,8 @@ Section NurEqiv.
         repeat split; case:HA => [{}H|{}HA].
           by rewrite H -/SB/= !add_ca_deep_cat; auto.
         by rewrite HA; right => //.
-      have [z[zs [H1 H2]]] := s2l_CutBrothers s0 SB vA eA.
-      rewrite !H1/=.
+      have [z[zs [H1 [H1' H2]]]] := s2l_CutBrothers s0 SB vA eA.
+      rewrite !H1/=!H1'.
       rewrite state_to_list_cutr_empty ?bbOr_valid// cat0s/=.
       rewrite (expand_cb_failedF vA eA) (expand_cb_same_subst _ eA).
       move=>[????]; subst; auto.
@@ -889,9 +891,9 @@ Section NurEqiv.
     expandedb u s B (Done s1 C) b ->
     let s2lA := state_to_list A s l in
     s2lA = (sx, x) ::: xs ->
-      ((s2lA = state_to_list B s l)
-        \/ 
-      (sx = get_substS s B /\ exists ca tl, x = (cut ca) ::: tl /\state_to_list B s l ++ l = (sx, tl) ::: ca)) /\ get_substS s B = get_substS s A.
+      (((s2lA = state_to_list B s l)
+        +
+      (sx = get_substS s B /\ Texists ca tl, x = (cut ca) ::: tl /\state_to_list B s l ++ l = (sx, tl) ::: ca)%type2) /\ get_substS s B = get_substS s A)%type2.
   Proof.
     elim: A B C s s' s1 b l sx x xs => //=.
     - move=> B C s1 s2 s3 b l sx x xs _ [-><-]; inversion 1 => //; subst; auto.
@@ -906,9 +908,9 @@ Section NurEqiv.
           have [[{}HB|[H1[ca[tl[?{}HB]]]]]Y]:= HB _ _ _ _ _ _ _ _ _ _ vB e H X; rewrite Y-?HB?X; subst; split; auto.
           rewrite cats0 in HB.
           rewrite {2}Y HB/=; right; repeat split; do 2 eexists => //.
-        have [y[ys [H2 H3]]] := s2l_CutBrothers s' nilC vB e.
+        have [y[ys [H2 [H2' H3]]]] := s2l_CutBrothers s' nilC vB e.
         have?:= expand_cb_same_subst _ e; subst.
-        rewrite !H2/= => -[???]; subst.
+        rewrite !H2/=H2' => -[???]; subst.
         rewrite (expand_cb_same_subst1 vB e); split => //.
         by right; split => //; do 2 eexists => //.
       case e: expand => //=[s1' B'|s1' B'][??]; subst;
@@ -923,11 +925,11 @@ Section NurEqiv.
         subst.
         rewrite HA Y; right; split; auto.
         by do 2 eexists => //.
-      have [y[ys[H3 H4]]]:= s2l_CutBrothers s1 (state_to_list B s' nilC) vA e.
+      have [y[ys[H3 [H3' H4]]]]:= s2l_CutBrothers s1 (state_to_list B s' nilC) vA e.
       have?:= expand_cb_same_subst _ e; subst.
       rewrite (expand_cb_same_subst1 vA e)//.
       split; auto.
-      move: H; rewrite !H3/= => -[???]; subst; right.
+      move: H; rewrite !H3/=H3' => -[???]; subst; right.
       rewrite (expand_cb_same_subst1 vA e)//; split => //.
       do 2 eexists; rewrite state_to_list_cutr_empty//bbOr_valid//.
     - move=> A HA B0 _ B HB C D s1 s2 s3 b l sx x xs /and5P[_ vA _].
@@ -984,9 +986,9 @@ Section NurEqiv.
   Lemma s2l_expanded_Done {s s' A B b} sx:
     valid_state A ->
     expandedb u s A (Done s' B) b ->
-    exists x xs,
-      state_to_list A s nilC = (get_substS s A, x) ::: xs /\
-      nur u (get_substS s A) x xs s' (state_to_list (clean_success B) sx nilC).
+    Texists x xs,
+      ((state_to_list A s nilC = (get_substS s A, x) ::: xs) /\
+      (nur u (get_substS s A) x xs s' (state_to_list (clean_success B) sx nilC))).
   Proof.
     remember (Done _ _) as d eqn:Hd => + H.
     elim: H s' B Hd sx => //; clear.
@@ -997,7 +999,7 @@ Section NurEqiv.
       have {IH} := IH _ _ erefl sx (valid_state_expand _ vA HA).
       have [s2 [x[xs sA]]]:= expand_state_to_list_cons _ vA HA notF s nilC.
       move=> [y[ys[sB H]]].
-      have [w [tl [+ H1]]] := s2l_CutBrothers s nilC vA HA.
+      have [w [tl [+ [+ H1]]]] := s2l_CutBrothers s nilC vA HA.
       rewrite sA/= => -[][]???; subst.
       move => H2.
       move: sB; rewrite H2 => -[??]; subst.
@@ -1041,7 +1043,7 @@ Section NurEqiv.
     - move=> s A B HA C x xs y ys _ l s1 s3 _.
       rewrite (expand_failure_failed _ HA)//.
     - move=> s s' r A B b HA HB IH C x xs y ys ? l s1 s3 vA fA sA sD SUFF; subst.
-      have [hd[tl[[+ H2] H3]]]:= s2l_CutBrothers s l vA HA.
+      have [hd[tl[+ [H2 H3]]]]:= s2l_CutBrothers s l vA HA.
       rewrite sA => /=.
       move=> -[???].
       subst => /=.
@@ -1146,8 +1148,9 @@ Section NurEqiv.
     forall s B s1 b sIgn,
       valid_state A ->
         runb u s A s1 B b -> 
-          exists x xs, state_to_list A s nilC = x ::: xs /\ 
-            nur u x.1 x.2 xs s1 (state_to_list B sIgn nilC).
+          Texists x xs,
+            ((state_to_list A s nilC = x ::: xs) /\
+            (nur u x.1 x.2 xs s1 (state_to_list B sIgn nilC))).
 
   Lemma runElpiP: forall A, runElpi A.
   Proof.

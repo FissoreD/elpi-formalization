@@ -91,7 +91,7 @@ Section NurProp.
       - move=>[]//.
     Qed.
 
-    Lemma base_and_state_to_list {A}: base_and A -> exists hd, forall l s, state_to_list A s l = (s, hd) ::: nilC.
+    Lemma base_and_state_to_list {A}: base_and A -> Texists hd, forall l s, state_to_list A s l = (s, hd) ::: nilC.
     Proof.
       elim: A => //=.
       - by eexists.
@@ -117,11 +117,11 @@ Section NurProp.
 
     Lemma bbAnd_state_to_list {A}:
       bbAnd A -> 
-        ((forall l s, state_to_list A s l = nilC) \/ 
-          exists hd, (forall l s, 
+        ((forall l s, state_to_list A s l = nilC) + 
+          Texists hd, (forall l s, 
             state_to_list A s l = (s, hd) ::: nilC) /\ empty_caG hd).
     Proof.
-      rewrite/bbAnd=>/orP[]; last first.
+      rewrite/bbAnd =>/orPT[]; last first.
         move=>/base_and_ko_state_to_list; auto.
       move=>/[dup]H/base_and_state_to_list; auto.
       move=>[hd H1]; right; exists hd.
@@ -210,7 +210,7 @@ Section NurProp.
   Qed.
 
   Definition state_to_list_cons A :=
-    forall m l, exists s x xs, state_to_list A m l = (s, x) ::: xs.
+    forall m l, Texists s x xs, state_to_list A m l = (s, x) ::: xs.
 
   Section shape.
     Lemma s2l_size {A s1 l1} s2 l2: 
@@ -271,10 +271,13 @@ Section NurProp.
         rewrite X/=.
         have [s2 [x[xs {}HB]]]:= HB vB fB s1 l.
         move: bB0.
-        rewrite /bbOr => /orP[] bB; last first.
+        rewrite /bbAnd => //.
+        case bB: base_and; last first => /=.
+          move=> {}bB.
           rewrite (base_and_ko_state_to_list bB)/=.
           have [s[hd [tl ->]]]:= s2l_cons HB (get_substS s1 A) l.
           by do 3 eexists.
+        move=> _.
         have [hd H1]:= base_and_state_to_list bB.
         rewrite H1/=.
         set Y:= make_lB0 _ _.
