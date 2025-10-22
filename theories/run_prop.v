@@ -917,7 +917,7 @@ Section RunP.
         - rewrite (expandedb_has_bt H1)//clean_success2//; apply: run_done H2 erefl.
         - move=> //.
       have := expanded_Done_success _ H1.
-      rewrite -success_cut => sA''.
+      (* rewrite -success_cut => sA''.
       rewrite sA'' => -[???]; subst.
       repeat eexists.
       - apply: run_done H1 erefl.
@@ -977,7 +977,7 @@ Section RunP.
       move=>[A''[b3[b4[sm [rE2 [+ H6]]]]]]; subst.
       have /= := is_ko_runb _ _ rE2.
       rewrite success_cut in sA'''.
-      move=> /(_ (clean_success_cutl _ sA'''))//.
+      move=> /(_ (clean_success_cutl _ sA'''))//. *)
   Admitted.
 
   (* Lemma run_and_correct_success_left {s0 sn A B B0 C b}:

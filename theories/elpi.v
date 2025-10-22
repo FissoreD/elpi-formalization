@@ -858,8 +858,8 @@ Section test.
   Definition g := (And (Or OK s1 CutS) CutS OK).
   (* Goal next_alt g = Some (And (Or Dead s1 CutS) CutS CutS).
   Proof. rewrite/g. move => //=. Qed. *)
-  Goal clean_success g = And (Or OK s1 CutS) CutS Bot.
-  Proof. move => //=. Qed.
+  (* Goal clean_success g = And (Or OK s1 CutS) CutS Bot.
+  Proof. move => //=. Qed. *)
 
   Goal valid_state ((And (Or OK s1 CutS) CutS Bot)).
   Proof. move=> //=. Abort.

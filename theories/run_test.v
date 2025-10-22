@@ -134,11 +134,21 @@ Section Test5.
       apply: expanded_done => //=.
       reflexivity.
       reflexivity.
-    move=> s1 s2 B b.
-    inversion 1; subst => //.
+    move=> s1 s2 B b H.
+    inversion_clear H.
       inversion H0 => //.
     inversion H0; clear H0 => //; subst.
     inversion H6; clear H6; subst => //.
+    case: H1 => ?; subst.
+    inversion_clear H2; subst.
+      inversion H => //.
+    inversion_clear H; subst => //.
+    case: H2 => ?; subst => //.
+    case: H0 => //?; subst.
+    inversion_clear H1.
+      inversion_clear H => //.
+    inversion_clear H => //.
+    case: H1 => ?; subst => //.
   Qed.
 End Test5.
 
@@ -194,6 +204,21 @@ Section Test6.
       inversion_clear H0 => //.
       move: H => //= [?]; subst.
       move=> //.
+
+    case: H1 => ?; subst.
+    inversion_clear H2; subst.
+      inversion H => //.
+    inversion_clear H; subst => //.
+    case: H2 => ?; subst => //.
+    case: H0 => //?; subst.
+    inversion_clear H1.
+      inversion_clear H => //.
+    inversion_clear H => //.
+    case: H1 => ?; subst => //.
+    case: H0 => ?; subst => //.
+    inversion_clear H2; subst => //;
+      inversion_clear H; subst => //.
+    case: H2 => ?; subst => //.
   Qed.
 End Test6.
 

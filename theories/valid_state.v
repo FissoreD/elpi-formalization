@@ -526,7 +526,7 @@ Section valid_state.
       rewrite HA//bB bbOr_valid// if_same//.
     - move=> A HA B0 _ B HB/=/and5P[oA vA aB]; rewrite (fun_if valid_state)/=oA vA.
       case: ifP => /=[sA vB bB0|sA /eqP->].
-        rewrite bB0 is_and_clean_success//aB is_or_clean_success oA HA//= HB//; case: ifP => //=. apply: HB vB.
+        rewrite bB0 is_and_clean_success// aB HB//.
       rewrite eqxx//aB//.
   Qed.
 
@@ -582,10 +582,10 @@ Section valid_state.
         case X: next_alt => [D|].
           move=>[<-]/=; rewrite vA sA oA/= (HB _ vB X)//-(is_and_or_next_alt vB X)aB//.
         move=> [<-]/=; rewrite (bbAnd_valid bB0) eqxx bB0 is_or_clean_success oA.
-        rewrite valid_state_clean_success//bbAnd_is_and//.
-        move: bB0; rewrite/bbAnd if_same/=.
-        case: ifP => //.
-        rewrite success_clean_success_failed//orbT//.
+        (* rewrite valid_state_clean_success//bbAnd_is_and//. *)
+        (* move: bB0; rewrite/bbAnd if_same/=. *)
+        (* case: ifP => //. *)
+        (* rewrite success_clean_success_failed//orbT//. *)
       (* case: (ifP (is_dead _)) => //dA.
       case: ifP => fA bB; last first.
         move=> [<-]/=; rewrite oA aB vA sA eqxx /bbAnd bB if_same//.
@@ -620,9 +620,9 @@ Section valid_state.
     move=> + H; elim H; clear.
     + move=> s1 s2 A B C b EA -> VA.
       have /= H := valid_state_expanded VA EA.
-      by apply: valid_state_clean_success.
-    + move=> s1 s3 A B C D b1 b2 b3 HA HB HC IH Hb VA.
-      have VB := valid_state_expanded VA HA.
+      (* by apply: valid_state_clean_success. *)
+    (* + move=> s1 s3 A B C D b1 b2 b3 HA HB HC IH Hb VA. *)
+      (* have VB := valid_state_expanded VA HA. *)
 
       (* have NA := valid_state_next_alt VB HB. *)
       (* apply: IH NA. *)

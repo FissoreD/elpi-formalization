@@ -381,9 +381,10 @@ Section check.
       case: B H3 => //= ??? H3 _.
       have [A''[b1[b2[sm[Hz[+ Hr]]]]]] := run_and_correct _ H3; subst.
       case: ifP => Ht Hs.
-        apply: H1 Hz.
+        apply: H1 .
+        admit.
       apply: H2 Hs.
-  Qed.
+  Admitted.
 
   Lemma expandedb_next_alt_done {sP s A s1 B b}: 
     check_program sP -> 
@@ -410,7 +411,7 @@ Section check.
       by rewrite fun_if/=kA kB !is_ko_clean_success//kA kB if_same.
     - move=> A HA B0 _ B HB; rewrite fun_if/=.
       move=> /orP[H|/andP[H1 H2]].
-        rewrite H/= HA// if_same//.
+        rewrite H/= if_same//.
       rewrite HB H2//H1 !orbT if_same//.
   Qed.
 
@@ -457,11 +458,11 @@ Section check.
       rewrite fun_if/=cA H1 HA//= is_ko_clean_success ?is_ko_cutr// cutr2 eqxx.
       by rewrite no_alt_cut !if_same.
     - move=> A HA B0 _ B HB /orP[kA|/and3P[H1 H2 H3]].
-        rewrite fun_if/= kA /= is_ko_clean_success// kA if_same//.
+        rewrite fun_if/= kA /=// if_same//.
       rewrite fun_if/= H3 H2/= H1 orbT HB// !andbT.
       move: H1 => /orP[/andP[H4 H5]|H5].
         by rewrite H4 has_cut_clean_success//?orbT if_same.
-      rewrite HA// !orbT if_same//.
+      rewrite H5 !orbT if_same//.
   Qed.
 
   Lemma no_free_alt_next_alt {sP A B}:

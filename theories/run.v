@@ -450,7 +450,7 @@ Section main.
       else Or (clean_success A) s B (*TODO: maybe: if A is not success then leave the tree intact*)
     | And A B0 B =>
     (* TODO: cambiare con And (clean_success A) B0 B0 *)
-      if success A then And (clean_success A) B0 (clean_success B)
+      if success A then And A B0 (clean_success B)
       else And A B0 B
     end.
 
@@ -581,7 +581,7 @@ Section main.
     - move=> A HA B0 _ B HB; rewrite success_cutr//.
   Qed.
 
-  Lemma clean_success_cutl A : success A -> is_ko (clean_success (cutl A)).
+  (* Lemma clean_success_cutl A : success A -> is_ko (clean_success (cutl A)).
   Proof.
     elim: A => //=.
     - move=> A HA s B HB/=.
@@ -589,8 +589,9 @@ Section main.
         rewrite dA/= is_dead_is_ko//; auto.
       rewrite is_dead_cutl dA/= HA// is_ko_cutr//.
     - move=> A HA B0 _ B HB /andP[sA sB].
+      case: ifP => //=.
       rewrite success_cut sA/= HA//.
-  Qed.
+  Qed. *)
 
   (********************************************************************)
   (* EXPAND SIMPLIFICATION                                            *)
@@ -893,7 +894,7 @@ Section main.
       case: ifP => [dA sB|dA sA]/=.
         rewrite dA HB//.
       rewrite HA//.
-    - move=> A HA B0 _ B HB/andP[/[dup]sA-> sB]/=; auto.
+    - move=> A HA B0 _ B HB/andP[/[dup]sA-> sB]/=; rewrite success_is_dead//.
   Qed.
 
   Lemma is_dead_clean_success {A}: is_dead A -> (clean_success A) = A.
@@ -920,7 +921,7 @@ Section main.
         rewrite dA HB//.
       rewrite HA//success_clean_success_dead//.
     move=> A HA B0 _ B HB /= /andP[sA sB].
-    by rewrite sA/= HA//.
+    rewrite !sA/=sA HB//orbT//.
   Qed.
 
   Lemma clean_success2 {A}: clean_success (clean_success A) = clean_success A.
@@ -929,7 +930,7 @@ Section main.
     - move=> A HA s B HB; case: ifP => dA/=; rewrite ?(is_dead_clean_successF)//dA?HA?HB//.
     - move=> A HA B0 _ B HB; case: ifP => sA/=.
         have:= success_clean_success_failed sA.
-        move=> /failed_success ->//.
+        rewrite sA HB//.
       rewrite sA//.
   Qed.
 

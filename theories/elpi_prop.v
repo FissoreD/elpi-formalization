@@ -165,17 +165,6 @@ Section NurProp.
     case: x H1 => //=-[]//.
   Qed.
 
-  Lemma is_dead_clean_success {A}:
-    is_dead A = false -> is_dead (clean_success A) = false.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB.
-      case X: is_dead => //=.
-        move=>/HB->; rewrite andbF//.
-      rewrite HA//.
-    - move=> A HA B0 _ B HB dA; rewrite fun_if/= dA if_same//.
-  Qed.
-
   (* Fixpoint get_substS s A :=
     match A with
     | Top | Goal _ _ | Bot | OK | Dead => s
