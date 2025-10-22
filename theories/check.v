@@ -377,7 +377,7 @@ Section check.
       have [[??]sD]:= expand_solved_same _ X; subst.
       have [[??]sB]:= expand_solved_same _ Y; subst.
       move=> s2 B b H3.
-      have [A'[B'[b1[b2[sm[]]]]]]:= run_and_correct_dead _ H3.
+      have [A'[B'[b1[b2[sm[]]]]]]:= run_and_correct _ H3.
         move=> [H4]; apply: H2.
       move=> [+H4]; apply: H1.
   Qed.
