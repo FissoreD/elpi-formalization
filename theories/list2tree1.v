@@ -198,21 +198,6 @@ Notation elpi := nur.
 
 (* Lemma e erase_goals' (map (add_ca' a)) = mapG (add_ca (erase_alts' a)) *)
 
-Lemma one u s xs a s1 a1: nur' u s xs a s1 a1 -> 
-  nur u s (erase_goals' xs) (erase_alts' a) s1 (erase_alts' a1).
-Proof.
-  elim => /=; clear.
-  - move=> *; constructor.
-  - move=> *; constructor => //.
-  - move=> p s s1 a [s2 r] rs gl a1 t n/= H H1 H2.
-    apply: CallE H _ => /=.
-    move: H2.
-    rewrite/save_goals/=/map/=/save_goals'/=.
-    admit. (*SHOULD BE OK*)
-  - move=> p s s1 s2 t gl a al r _ _ H H1 H2.
-    apply: FailE H H2.
-Admitted.
-
 Lemma erase_append x a b : erase_alts' x = a ++ b -> exists a' b', erase_alts' a' = a /\ erase_alts' b' = b /\ x = a' ++ b'.
 elim: x a b.
   case => //=; case => //= _ ; exists nilC, nilC; repeat split.
@@ -248,6 +233,25 @@ Lemma aa2gs_erase n p bs : (aa2gs p bs) = erase_alts' (aa2gs' n p bs).
 Admitted.
 Lemma a2gs1_erase n p bs : (a2gs1 p bs) = erase_goals' (a2gs1' n p bs).
 Admitted.
+
+Lemma one u s xs a s1 a1: nur' u s xs a s1 a1 -> 
+  nur u s (erase_goals' xs) (erase_alts' a) s1 (erase_alts' a1).
+Proof.
+  elim => /=; clear.
+  - move=> *; constructor.
+  - move=> *; constructor => //.
+  - move=> p s s1 a [s2 r] rs gl a1 t n/= H H1 H2.
+    apply: CallE H _ => /=.
+    move: H2.
+    rewrite/save_goals/=/map/=/save_goals'/=.
+    rewrite -!save_goals_erase => H.
+    congr (elpi _ _ _ _ _) : H.
+      by rewrite /save_goals/map/= -a2gs1_erase.
+    by rewrite (aa2gs_erase n.+1) save_alts_erase cat_erase_alts'.
+  - move=> p s s1 s2 t gl a al r _ _ H H1 H2.
+    apply: FailE H H2.
+Qed.
+
 
 Lemma two' {u s s1 alts alts_left andg}  : nur u s andg alts s1 alts_left -> forall alts' andg',
   (erase_alts' alts' = alts) -> 
