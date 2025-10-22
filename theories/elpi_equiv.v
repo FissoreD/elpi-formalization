@@ -179,10 +179,11 @@ Section NurEqiv.
       rewrite (base_or_aux_next_alt_some bB nB)//.
     - move=> A HA B0 _ B HB s C/= s3 D l /and5P[oA vA aB].
       case eA: expand => //[A'|s1 A'].
-        rewrite (expand_not_solved_not_success _ eA notF) (expand_failure_failed _ eA)/=.
+        have [? fA] := expand_failed_same _ eA; subst.
+        rewrite (expand_not_solved_not_success _ eA notF) fA/=.
         move=> /eqP-> bB[<-]/=.
         case: ifP => //dA.
-        rewrite (expand_failure_failed _ eA).
+        rewrite fA.
         case nA': next_alt => //[E] //[<-]/=.
         move: bB; rewrite /bbAnd.
         case Z:base_and_ko.
@@ -941,7 +942,7 @@ Section NurEqiv.
         have [s5 [y[ys H]]]:= failed_state_to_list vA (expand_not_failed _ e notF) s1 l.
         have [h H3] := base_and_state_to_list bB.
         rewrite H/= H3/=!H3 => -[???]; subst.
-        have [[{}HA|{}HA]X] := HA _ _ _ _ _ _ _ _ _ _ vA e H1 H; rewrite X (get_substS_base_and bB) if_same//; split => //.
+        have [[{}HA|{}HA]X] := HA _ _ _ _ _ _ _ _ _ _ vA e b2 H; rewrite X (get_substS_base_and bB) if_same//; split => //.
           rewrite -HA H/=H3; auto.
         have [?[ca[tl[?{}HA]]]] := HA; subst => /=.
         rewrite {2}X; right; split => //.
@@ -961,10 +962,10 @@ Section NurEqiv.
       move=>/expanded_and_complete [s4 [A3 [B3 [b1 [b2 [H1 [H2 ?]]]]]]]; subst.
       have [H|[hd [H H3]]]:= bbAnd_state_to_list bB.
         rewrite (success_state_to_list empty vA sA)/=.
-        have [[??]?]:= expanded_success _ sA H1; subst.
+        have [[??]?]:= expanded_success _ sA b2; subst.
         rewrite H/= !make_lB01_empty2 sA.
-        apply: HB vB e1 H2.
-      have [[??]?] := expanded_success _ sA H1; subst.
+        apply: HB vB e1 H1.
+      have [[??]?] := expanded_success _ sA b2; subst.
       rewrite (success_state_to_list empty)//=.
       rewrite H/=sA.
       set X:= make_lB0 _ _.
@@ -972,7 +973,7 @@ Section NurEqiv.
       have:= failed_state_to_list vB (expand_not_failed _ e1 notF) Y (X++l).
       move=> [s5 [y[ys Hy]]].
       rewrite !Hy !make_lB01_empty2 cat_cons => -[???]; subst.
-      have [[{}HB|{}HB]Z] := HB _ _ _ _ _ _ _ _ _ _ vB e1 H2 Hy; rewrite Z; split => //.
+      have [[{}HB|{}HB]Z] := HB _ _ _ _ _ _ _ _ _ _ vB e1 H1 Hy; rewrite Z; split => //.
         move: HB; rewrite Hy -/Y =><-; auto.
       move: HB => [?[ca[tl[? ]]]]; subst => {}HB.
       rewrite Z.
@@ -1041,7 +1042,8 @@ Section NurEqiv.
     move=> +++ H.
     elim: H B x xs y ys Heqe l s1 s3 => //=; clear.
     - move=> s A B HA C x xs y ys _ l s1 s3 _.
-      rewrite (expand_failure_failed _ HA)//.
+      have [? fA] := expand_failed_same _ HA; subst.
+      congruence.
     - move=> s s' r A B b HA HB IH C x xs y ys ? l s1 s3 vA fA sA sD SUFF; subst.
       have [hd[tl[+ [H2 H3]]]]:= s2l_CutBrothers s l vA HA.
       rewrite sA => /=.

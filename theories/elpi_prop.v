@@ -388,9 +388,9 @@ Section NurProp.
       move=> H; rewrite (next_alt_aux_base_or_none H nB')//.
     - move=> A HA B0 _ B HB s2 s3 C l/=/and5P[oA vA aB].
       case eA: expand => //[A'|s' A'].
-        have [fA fA']:= expand_failure_failed _ eA.
+        have [? fA]:= expand_failed_same _ eA; subst.
         rewrite (failed_success _ fA) fA/==>/eqP->bB[<-]/=.
-        rewrite (expand_not_dead _ (valid_state_dead1 vA) eA)fA'.
+        rewrite (expand_not_dead _ (valid_state_dead1 vA) eA) fA.
         case nA: next_alt => [D|].
           move: bB; rewrite/bbAnd=>/orP[]bB//.
           (* rewrite base_and_ko_failed//.
@@ -446,9 +446,8 @@ Section NurProp.
       have ->// := HA _ _ _ _ eA.
     - move=> A HA B0 _ B HB s sx C l/=.
       case eA: expand => //[A'|s1 A'].
-        have H := expand_failure_failed _ eA.
-        move=> [<-]/=.
-        rewrite (HA _ _ _ _ eA)//.
+        have [? H] := expand_failed_same _ eA; subst.
+        move=> [<-]//=.
       have [[??]sA] := (expand_solved_same _ eA); subst.
       case eB: expand => //[B'][<-]/=.
       case: state_to_list => //= -[s2 x] xs.

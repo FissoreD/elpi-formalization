@@ -377,9 +377,9 @@ Section check.
       have [[??]sD]:= expand_solved_same _ X; subst.
       have [[??]sB]:= expand_solved_same _ Y; subst.
       move=> s2 B b H3.
-      have [A'[B'[b1[b2[sm[]]]]]]:= run_and_correct _ H3.
-        move=> [H4]; apply: H2.
-      move=> [+H4]; apply: H1.
+      have [A'[B0'[B'[b1[b2[sm [?[[H4 H5]|[A''[H4[H5 H6]]]]]]]]]]] := run_and_correct_success_left _ sD H3; subst.
+        apply: H2 H4.
+      apply: H1 H4.
   Qed.
 
   Lemma expandedb_next_alt_done {sP s A s1 B b}: 
