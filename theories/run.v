@@ -441,18 +441,24 @@ Section main.
     end
   .
 
-  Fixpoint clean_success (A: state):= 
+  (* Fixpoint clean_success (A: state):= 
     match A with
-    | OK => Bot
-    | Bot | Dead | Top | CutS | CallS _ _ => A
+    | OK | Dead => None
+    | Bot | Top | CutS | CallS _ _ => Some A
     | Or A s B => 
-      if is_dead A then Or A s (clean_success B)
-      else Or (clean_success A) s B (*TODO: maybe: if A is not success then leave the tree intact*)
+      if is_dead A then 
+        match clean_success B with
+        | None => None 
+        | Some B => Or A s B
+      else 
+        match clean_success with 
+        | None => Or 
+        | Some A => Or A s B (*TODO: maybe: if A is not success then leave the tree intact*)
     | And A B0 B =>
     (* TODO: cambiare con And (clean_success A) B0 B0 *)
-      if success A then And A B0 (clean_success B)
+      if success A then And (clean_success A) B0 B0
       else And A B0 B
-    end.
+    end. *)
 
   (* OK returns None since,
      We can have the state "A" = (OK \/ B) /\ C
@@ -461,47 +467,58 @@ Section main.
      The OK node should be transformed into a Dead so that 
      "B /\ C" is tried with the subst for B *)
     (* TODO: togliere s come argomento? *)
-  Fixpoint next_alt (A : state) : option (state) :=
+  Fixpoint next_alt b (A : state) : option (state) :=
     match A with
     | Bot => None
     | Dead => None
-    | OK | Top | CutS | CallS _ _ => Some A
+    | OK => if b then None else Some OK
+    | Top | CutS | CallS _ _ => Some A
     | And A B0 B =>
       if is_dead A then None else
       if failed A then 
-        match next_alt A with
+        match next_alt false A with
         | None => None
-        | Some (A) => Some (And A B0 B0)
+        | Some (A) => 
+          match next_alt false B0 with
+          | None => None
+          | Some B0' => Some (And A B0 B0')
+          end
         end
       else
       if success A then
-        match next_alt B with
-        | None => Some (And (clean_success A) B0 B0)
+        match next_alt b B with
+        | None => 
+          match next_alt true A with
+          | None => None
+          | Some A =>
+            match next_alt false B0 with
+            | None => None
+            | Some B0' => Some (And A B0 B0')
+            end
+          end
         | Some (B) => Some (And A B0 B)
         end
       else Some (And A B0 B)
     | Or A sB B => 
       if is_dead A then
-        match next_alt B with
+        match next_alt b B with
         | None => None
         | Some B => Some (Or A sB B)
         end
       else
-        match next_alt A with
+        match next_alt b A with
         | None =>
           if is_dead B then None else 
-          (* if failed B then  *)
-            match next_alt B with
+            match next_alt false B with
             | None => None
             | Some B => Some (Or (dead1 A) sB B)
             end
-          (* else Some (sB, Or (dead1 A) sB B) *)
         | Some (A) => Some (Or A sB B)
         end
   end.
 
   Lemma next_alt_not_failed A:
-    (failed A) = false -> next_alt A = Some A.
+    (failed A) = false -> next_alt false A = Some A.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB; case: ifP => dA fB.
@@ -515,41 +532,16 @@ Section main.
       rewrite HB//.
   Qed.
 
-  Goal next_alt (And (Or OK empty Top) OK Bot) = Some (And (Or Bot empty Top) OK OK).
+  Goal next_alt false (And (Or OK empty Top) OK Bot) = Some (And (Or Dead empty Top) OK OK).
   Proof. move=> //=. Qed.
 
-  Goal next_alt (And (Or OK empty OK) OK Bot) = Some (And (Or Bot empty OK) OK OK).
+  Goal next_alt false (And (Or OK empty OK) OK Bot) = Some (And (Or Dead empty OK) OK OK).
   Proof. move=> //=. Qed.
 
-  Goal (next_alt (Or Bot empty OK)) = Some (Or Dead empty OK). move=> //=. Qed.
+  Goal next_alt true (And (Or OK empty OK) Top OK) = Some (And (Or Dead empty OK) Top Top).
+  Proof. move=> //=. Qed.
 
-  (* Lemma success_next_alt {B x} y:
-    success B -> next_alt x B = next_alt y B.
-  Proof.
-    elim: B x y => //=.
-    - move=> A HA s B HB x y; case:ifP => //dA sA; rewrite (HA _ y sA)//.
-    - move=> A HA B0 _ B HB x y /andP[sA sB].
-      rewrite success_is_dead// success_failed//.
-      rewrite (HB _ y sB) (HA _ y sA)//.
-  Qed.
-
-  Lemma failed_next_alt {B x} y:
-    failed B ->
-      next_alt x B = next_alt y B.
-  Proof.
-    elim: B x y => //=.
-    - move=> A HA s B HB x y.
-      case: ifP => dA f.
-        case X: next_alt => //.
-      rewrite (HA _ y)//.
-    - move=> A HA B0 _ B HB x y.
-      case: ifP => // dA.
-      move=> /orP[fA|/andP[sA fB]].
-        rewrite fA //.
-        rewrite (HA _ y)//.
-      rewrite success_failed//.
-      rewrite (HB _ y)//(success_next_alt y)//.
-  Qed. *)
+  Goal (next_alt false (Or Bot empty OK)) = Some (Or Dead empty OK). move=> //=. Qed.
 
   Inductive expandedb : Sigma -> state -> exp_res -> nat -> Type :=
     | expanded_done {s s' A alt}     : expand s A = Success s' alt  -> expandedb s A (Done s' alt) 0
@@ -557,11 +549,11 @@ Section main.
     | expanded_cut {s s' r A B b}      : expand s A = CutBrothers s' B -> expandedb s B r b -> expandedb s A r b.+1
     | expanded_step {s s' r A B b}     : expand s A = Expanded s' B  -> expandedb s B r b -> expandedb s A r b.
 
-  Inductive runb : Sigma -> state -> Sigma -> state -> nat -> Type :=
+  Inductive runb : Sigma -> state -> Sigma -> option state -> nat -> Type :=
     | run_done {s s' A B C b}        : 
-      expandedb s A (Done s' B) b -> C = clean_success B -> runb s A s' C b
+      expandedb s A (Done s' B) b -> next_alt true B = C -> runb s A s' C b
     | run_backtrack {s s2 A B C D b1 b2 b3} : 
-        expandedb s A (Failed B) b1 -> next_alt B = (Some (C)) -> 
+        expandedb s A (Failed B) b1 -> next_alt false B = (Some (C)) -> 
           (* Note: if a next_alt exists the subst considered is taken from the tree *)
           runb s C s2 D b2 -> b3 = b1 + b2 -> runb s A s2 D (b3).
 
@@ -574,14 +566,14 @@ Section main.
   Definition expanded_classic s A r := expandedb s A r false.  *)
 
 
-  Lemma clean_success_cutr A : (clean_success (cutr A)) = cutr A.
+  (* Lemma clean_success_cutr b A : (next_alt b (cutr A)) = None.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB; rewrite /=HA HB if_same//.
     - move=> A HA B0 _ B HB; rewrite success_cutr//.
   Qed.
 
-  (* Lemma clean_success_cutl A : success A -> is_ko (clean_success (cutl A)).
+  Lemma clean_success_cutl A : success A -> is_ko (clean_success (cutl A)).
   Proof.
     elim: A => //=.
     - move=> A HA s B HB/=.
@@ -589,7 +581,6 @@ Section main.
         rewrite dA/= is_dead_is_ko//; auto.
       rewrite is_dead_cutl dA/= HA// is_ko_cutr//.
     - move=> A HA B0 _ B HB /andP[sA sB].
-      case: ifP => //=.
       rewrite success_cut sA/= HA//.
   Qed. *)
 
@@ -707,30 +698,6 @@ Section main.
   Lemma is_dead_expanded s {A}: 
     is_dead A -> expandedb s A (Failed A) 0.
   Proof. move=>/is_dead_is_ko/is_ko_expanded//. Qed.
-
-  (* Lemma expand_solved_success {s1 A s2 B}: 
-    expand s1 A = Success s2 B -> (success A * success B)%type.
-  Proof.
-    elim: A s1 s2 B => //.
-    + by move=> /= ??? [] /[subst2].
-    + move=> p [] //.
-    + move=> A HA s B HB s1 s2 C/=.
-      case: ifP => dA.
-        case X: expand =>//-[??];subst => /=.
-        rewrite dA.
-        by have := HB _ _ _ X.
-      have:= HA s1; case: expand => //.
-      move=> D E /(_ _ _ erefl)[->] sE [??]; subst => /=.
-      rewrite sE.
-      move: sE.
-      by move=>/success_is_dead->.
-    + move=> A HA ? _ B HB s1 s2 C /=.
-      have:= HA s1.
-      case: expand => // s D /(_ _ _ erefl)[]->.
-      have:= HB s.
-      case: expand => // s3 E /(_ _ _ erefl)[]->.
-      by move=> sE sD [??]; subst => /=; rewrite sE sD.
-  Qed. *)
 
   Fixpoint get_substS s A :=
     match A with
@@ -857,7 +824,7 @@ Section main.
     runb s A s1 B b1 -> forall {s2 C b2}, runb s A s2 C b2 -> ((s1 = s2) * (B = C) * (b1 = b2))%type.
   Proof.
     move=> H; elim: H; clear.
-    + move=> s s' A B C b H -> s2 D b2 H1.
+    + move=> s s' A B C b H <- s2 D b2 H1.
       inversion H1; clear H1; subst;
       by have:= expanded_consistent H H0 => -[] // [->->]->//.
     + move=> s s1 A B C D b1 b2 b3 HA HB HC IH s3 E s4 n H; subst.
@@ -868,16 +835,16 @@ Section main.
       rewrite !H//.
   Qed.
 
-  Lemma is_ko_next_alt {A}: is_ko A -> next_alt A = None.
+  Lemma is_ko_next_alt {A} b: is_ko A -> next_alt b A = None.
   Proof.
-    elim: A => //.
-      move=> A HA s1 B HB /=/andP[kA kB].
-      rewrite HA//!HB//!if_same//.
-    move=> A HA B0 _ B HB /= kA.
-    rewrite is_ko_failed//HA//if_same//.
+    elim: A b => //.
+      move=> A HA s1 B HB b /= /andP[kA kB].
+      rewrite HA//!HB// !if_same//.
+    move=> A HA B0 _ B HB /= b kA.
+    rewrite is_ko_failed//HA// if_same//.
   Qed.
 
-  Lemma is_ko_clean_success {A}: is_ko A -> clean_success A = A.
+  (* Lemma is_ko_clean_success {A}: is_ko A -> clean_success A = A.
   Proof.
     elim: A => //.
       move=> A HA s1 B HB /=/andP[kA kB].
@@ -894,7 +861,7 @@ Section main.
       case: ifP => [dA sB|dA sA]/=.
         rewrite dA HB//.
       rewrite HA//.
-    - move=> A HA B0 _ B HB/andP[/[dup]sA-> sB]/=; rewrite success_is_dead//.
+    - move=> A HA B0 _ B HB/andP[sA sB]; rewrite sA/=HA//.
   Qed.
 
   Lemma is_dead_clean_success {A}: is_dead A -> (clean_success A) = A.
@@ -921,18 +888,19 @@ Section main.
         rewrite dA HB//.
       rewrite HA//success_clean_success_dead//.
     move=> A HA B0 _ B HB /= /andP[sA sB].
-    rewrite !sA/=sA HB//orbT//.
+    rewrite sA/= HA//.
   Qed.
 
   Lemma clean_success2 {A}: clean_success (clean_success A) = clean_success A.
   Proof.
     elim: A => //=.
-    - move=> A HA s B HB; case: ifP => dA/=; rewrite ?(is_dead_clean_successF)//dA?HA?HB//.
+    - move=> A HA s B HB; case: ifP => dA/=.
+        rewrite dA HB//.
+      rewrite is_dead_clean_successF dA HA//.
     - move=> A HA B0 _ B HB; case: ifP => sA/=.
-        have:= success_clean_success_failed sA.
-        rewrite sA HB//.
+        case: ifP; rewrite // HA//.
       rewrite sA//.
-  Qed.
+  Qed. *)
 
   Lemma is_ko_runb {s s1 A B b}: is_ko A -> runb s A s1 B b -> False.
   Proof.
@@ -964,7 +932,7 @@ Section main.
   Proof. move=> sA H; have:= expanded_success1 s sA => /(expanded_consistent H)//. Qed.
 
   Lemma runb_success {A} s1: 
-    success A -> runb s1 A (get_substS s1 A) (clean_success A) false.
+    success A -> runb s1 A (get_substS s1 A) (next_alt true A) false.
   Proof.
     move=> sA.
     apply: run_done erefl.
@@ -1110,7 +1078,7 @@ Section main.
   (* NEXT_ALT OP PROPERTIES                                           *)
   (********************************************************************)
 
-  Lemma is_dead_next_alt {A}: is_dead A -> next_alt A = None.
+  Lemma is_dead_next_alt {A} b: is_dead A -> next_alt b A = None.
   Proof. move=>/is_dead_is_ko/is_ko_next_alt//. Qed.
 
   (* Definition same_sol (A B : option (Sigma * state)) := 
@@ -1180,32 +1148,36 @@ Section main.
     by case X: next_alt => // [[s4 C]]/eqP->; eexists.
   Qed. *)
 
-  Lemma next_alt_dead {A D}: 
-    next_alt A = Some (D) -> ((is_dead A = false) * (is_dead D = false))%type.
+  Lemma next_alt_dead {A D b}: 
+    next_alt b A = Some (D) -> ((is_dead A = false) * (is_dead D = false))%type.
   Proof.
-    elim: A D => //=; try by move=>/=?[]//<-//.
-    - move=>/= p c d []// <-//.
-    - move=> A HA s B HB C/=.
+    elim: A D b => //=.
+    - move=> D []//[<-]//.
+    - move=> D _ [<-]//.
+    - move=>/= p c d _ []// <-//.
+    - move=> D _ [<-]//.
+    - move=> A HA s B HB C b/=.
       case: ifP => dA.
-        case X: next_alt => //[D].
-        have [??]:= HB _ X.
-        move=> []?;subst => /=; split => //.
-        rewrite dA//.
+        case X: next_alt => //[D][<-]/=; rewrite dA/=.
+        rewrite !(HB _ _ X)//.
       case X: next_alt => //= [D|].
-        move=>[<-]; split => //=; rewrite ((HA _ X))//.
+        move=>[<-]; split => //=; rewrite ((HA _ _ X))//.
       case: ifP => dB//.
         case Y: next_alt => //[D] [<-]/=.
-        rewrite is_dead_dead ((HB _ Y))//.
-    move=> A HA B0 _ B HB C /=.
+        rewrite is_dead_dead ((HB _ _ Y))//.
+    move=> A HA B0 _ B HB C b /=.
     case: ifP => dA//.
     case: ifP => fA.
       case X: next_alt => //[A0].
-      move=> [<-]/=; rewrite HA//.
-    case: ifP => sA/=.
-      case X: next_alt => [B'|][<-]/=.
-        rewrite dA//.
-      rewrite success_clean_success_dead//.
-    move=>[<-]//.
+      case Y: next_alt => //[B0'].
+      move=> [<-]/=; rewrite (HA _ _ X)//.
+    case: ifP => sA/=; last first.
+      move=>[<-]//.
+    case X: next_alt => [B'|].
+      move=> [<-]/=; rewrite dA//.
+    case Y: next_alt => //=[A'].
+    case W: next_alt => //[B0'] [<-]/=.
+    rewrite (HA _ _ Y)//.
   Qed.
 
   (* Lemma next_alt_failed {A B}:
@@ -1245,7 +1217,7 @@ Section main.
     rewrite fA sA//.
   Qed. *)
 
-  Lemma next_alt_clean_success {B}:
+  (* Lemma next_alt_clean_success {B}:
     success B -> next_alt B = None ->
       next_alt (clean_success B) = None.
   Proof.
@@ -1265,7 +1237,7 @@ Section main.
     - move=> A HA B0 _ B HB/= /andP[sA sB].
       rewrite sA/= success_is_dead//success_failed//.
       case Y: next_alt => [C|]//.
-  Qed.
+  Qed. *)
 
   Section same_structure.
 
@@ -1371,13 +1343,13 @@ Section main.
         apply: same_structure_trans.
     Qed.
 
-    Lemma same_structure_clean_success {A}:
+    (* Lemma same_structure_clean_success {A}:
       same_structure A (clean_success A).
     Proof.
       elim: A => //.
       - move=> A HA s B HB/=; case: ifP => //_; rewrite ?HA?HB same_structure_id eqxx//.
       - move=> A HA B0 _ B HB/=; case: ifP => _; rewrite !same_structure_id//?HA//.
-    Qed.
+    Qed. *)
 
     Definition same_structure_sup A B :=
       match A with
@@ -1394,26 +1366,34 @@ Section main.
       | _ => true
       end.
 
+    Lemma next_alt_same_structure {b A B}:
+      next_alt b A = Some B -> same_structure_sup A B.
+    Proof.
+      case: A => //=.
+      - move=> ???; case: ifP => _.
+          case: next_alt => //[?][<-]//.
+        case next_alt => //[?[<-]|]//; case: ifP => _//.
+        case: next_alt => //?[<-]//.
+      - move=> ???; case: ifP => // _; case: ifP => _.
+          do 2 case: next_alt => // ?.
+          move=> [<-]//.
+        case: ifP => //[_|_[<-]]//; case: next_alt => //[?[<-]|]//.
+        (do 2 case: next_alt => //?).
+        move=> [<-]//.
+    Qed.
 
     Lemma runb_same_structure {s A s1 B b}:
-      runb s A s1 B b -> same_structure_sup A B.
+      runb s A s1 (Some B) b -> same_structure_sup A B.
     Proof.
-      elim; clear.
+      remember (Some _) as S eqn:HS => H.
+      elim: H B HS; clear.
       - move=> s s' A B C b.
-        move=> /expandedb_same_structure/= + ->.
-        destruct A, B => //=; case: ifP => //.
-      - move=> s s1 A B C D b1 b2 b3 /expandedb_same_structure/=.
-        destruct A, B => //= _.
-          case: ifP => // _.
-            case: next_alt => // [?] [<-]//.
-          case: next_alt => // [?|].
-            move=> [<-]//.
-          case: ifP => // _.
-          case: next_alt => // [?][<-]//.
-        do 2 case: ifP => // _.
-          case: next_alt => //[?][<-]//.
-        case: ifP => // [_ |_ [<-]]//.
-        case: next_alt => //[?|][<-]//.
+        move=> /expandedb_same_structure/= + <- B1 /next_alt_same_structure.
+        destruct A, B => //.
+      - move=> s s1 A B C D b1 b2 b3 /expandedb_same_structure/= H.
+        move=> /next_alt_same_structure H1 H2 IH _ ??; subst.
+        have {}IH := IH _ erefl.
+        destruct A, B, C => //.
     Qed.
   End same_structure.
 End main.

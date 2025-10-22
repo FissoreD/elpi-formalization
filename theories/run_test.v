@@ -55,7 +55,7 @@ Section Test1.
     ].
 
 
-  Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) s2 r false.
+  Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) s2 r 0.
   Proof.
     eexists.
     apply: run_backtrack => //.
@@ -77,22 +77,16 @@ Section Test1.
           apply: expanded_fail => //=.
         - move=> //=.
         - apply: run_backtrack => //.
-          - apply: expanded_fail => //.
+          - apply: expanded_step => //.
+          - apply: expanded_step => //=.
+          - apply: expanded_fail => //=.
           - move=> //.
-          - apply: run_backtrack.
-            apply: expanded_step => //=.
-            apply: expanded_step => //=.
-            rewrite /big_or/F//=.
-            (* apply: expanded_step => //=. *)
-            apply: expanded_fail => //=.
-          - move=>//.
           - apply: run_done.
             apply: expanded_step => //=.
             apply: expanded_step => //=.
             apply: expanded_done => //=.
-            reflexivity.
-            reflexivity.
-            reflexivity.
+            move=> //.
+            move=> //.
   Qed.
 End Test1.
 
@@ -105,8 +99,7 @@ Section Test5.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
     ].
 
-  Goal Texists r, runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 r false 
-    /\ forall s, dead_run unif s r.
+  Goal runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 None false .
   Proof.
     repeat eexists.
     apply: run_backtrack.
@@ -134,21 +127,6 @@ Section Test5.
       apply: expanded_done => //=.
       reflexivity.
       reflexivity.
-    move=> s1 s2 B b H.
-    inversion_clear H.
-      inversion H0 => //.
-    inversion H0; clear H0 => //; subst.
-    inversion H6; clear H6; subst => //.
-    case: H1 => ?; subst.
-    inversion_clear H2; subst.
-      inversion H => //.
-    inversion_clear H; subst => //.
-    case: H2 => ?; subst => //.
-    case: H0 => //?; subst.
-    inversion_clear H1.
-      inversion_clear H => //.
-    inversion_clear H => //.
-    case: H1 => ?; subst => //.
   Qed.
 End Test5.
 
@@ -164,9 +142,7 @@ Section Test6.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
   ].
 
-  Goal Texists r, 
-    runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) s1 r false 
-      /\ forall s, dead_run unif s r.
+  Goal     runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) s1 None false .
   Proof.
     repeat eexists.
     apply: run_backtrack.
@@ -198,27 +174,6 @@ Section Test6.
       reflexivity.
       reflexivity.
       reflexivity.
-    - move=> s1 s2 A b H.
-      inversion_clear H.
-        by inversion_clear H0.
-      inversion_clear H0 => //.
-      move: H => //= [?]; subst.
-      move=> //.
-
-    case: H1 => ?; subst.
-    inversion_clear H2; subst.
-      inversion H => //.
-    inversion_clear H; subst => //.
-    case: H2 => ?; subst => //.
-    case: H0 => //?; subst.
-    inversion_clear H1.
-      inversion_clear H => //.
-    inversion_clear H => //.
-    case: H1 => ?; subst => //.
-    case: H0 => ?; subst => //.
-    inversion_clear H2; subst => //;
-      inversion_clear H; subst => //.
-    case: H2 => ?; subst => //.
   Qed.
 End Test6.
 
@@ -227,25 +182,24 @@ Section Test2.
   (* Import RunAxiom. *)
   Goal expand unif empty (Or OK empty OK) = Success empty (Or OK empty OK) . by []. Qed.
 
-  Goal runb unif empty (Or (CutS) empty OK) empty (Or Bot empty Bot) false.
+  Goal runb unif empty (Or (CutS) empty OK) empty (None) false.
     apply: run_done => //=. 
     apply: expanded_step => //=.
     by apply: expanded_done => /=.
-    move=>/=.
-    reflexivity. 
+    move=>//=.
   Qed.
 
   Goal forall r, 
-    runb unif empty (Or (CutS) empty r) empty (Or Bot empty (cutr r)) false.
+    runb unif empty (Or (CutS) empty r) empty None false.
     move=> r.
     apply: run_done.
     apply: expanded_step => //=.
     apply: expanded_done => //=.
     move=>/=.
-    reflexivity.
+    rewrite is_ko_next_alt?if_same//is_ko_cutr//.
   Qed.
 
-  Goal runb unif empty (Or OK empty (Or OK empty OK)) empty (Or Bot empty (((Or OK empty OK)))) false.
+  Goal runb unif empty (Or OK empty (Or OK empty OK)) empty (Some (Or Dead empty (((Or OK empty OK))))) false.
   Proof. apply: run_done => //=. apply: expanded_done => //=.
     move=>/=.
     reflexivity. Qed.

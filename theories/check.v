@@ -381,7 +381,8 @@ Section check.
       case: B H3 => //= ??? H3 _.
       have [A''[b1[b2[sm[Hz[+ Hr]]]]]] := run_and_correct _ H3; subst.
       case: ifP => Ht Hs.
-        apply: H1 .
+        have [[? Hj]?] := run_consistent _ Hz (runb_success u s4 sD); subst.
+        (* should be ok: has_bt should be false *)
         admit.
       apply: H2 Hs.
   Admitted.
