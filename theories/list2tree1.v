@@ -285,85 +285,80 @@ have [new_alts' [? ?]] := (IH _ _ erefl erefl).
 eexists; split; try eassumption.
 by apply: FailE' BC _  => /=.
 
-Qed.
+Defined.
 
 
-Definition l2l' {u s s1 a a1 xs} (H : elpi u s xs a s1 a1) : { xs' & { a' & {a1' & elpi_annot u s xs' a' s1 a1' }}}.
-have H1 : erase_alts' (decorate_alts a) = a by rewrite ed.
-have H2 : erase_goals' (decorate_goals xs) = xs by rewrite ed.
+Definition l2l' {u s s1 a a1 xs} (H : elpi u s xs a s1 a1) :
+  Texists xs' a' a1', erase_alts' a1' = a1 /\ elpi_annot u s xs' a' s1 a1'.
+have @H1 : erase_alts' (decorate_alts a) = a by rewrite ed.
+have @H2 : erase_goals' (decorate_goals xs) = xs by rewrite ed.
 exists (decorate_goals xs), (decorate_alts a).
-have ? := two' H _ _ H1 H2.
+have @H3 := two' H _ _ H1 H2.
 have [a' [??]]:= two' H _ _ H1 H2.
 by exists a'.
+Defined.
+
+Definition annotate_left_alts {u s s1 a a1 xs} (H : elpi u s xs a s1 a1) : alts' :=
+  projT1 (projT2 (projT2 (l2l' H))).
+
+Definition annotate_start_alts {u s s1 a a1 xs} (H : elpi u s xs a s1 a1) : alts' :=
+  projT1 (projT2 (l2l' H)).
+
+Definition annotate_start_gls {u s s1 a a1 xs} (H : elpi u s xs a s1 a1) : goals' :=
+ (projT1 (l2l' H)).
+
+Lemma annotate_start_gls_call p u s c s1 a1 (H : elpi u s ((call p c):::nilC) nilC s1 a1) :
+  annotate_start_gls H = (((0,call' p c):::nilC)).
+by [].
+Qed.
+
+Lemma annotate_start_alts_nil u s s1 a1 g (H : elpi u s g nilC s1 a1) :
+  annotate_start_alts H = nilC.
+by [].
 Qed.
 
 
-Lemma l2l'P u s s1 a a1 xs (H : nur u s xs a s1 a1) :
-  erase_alts' (projT1 (projT2 (projT2 (l2l' H)))) = a1.
-case: l2l'=> x [? []] /= *.
+
+Lemma l2l'P {u s s1 a a1 xs} (H : elpi u s xs a s1 a1) :
+  elpi_annot u s (annotate_start_gls H) (annotate_start_alts H) s1 (annotate_left_alts H).
+Proof.
+  rewrite /annotate_left_alts /annotate_start_gls /annotate_start_alts.
+   move: (l2l' _) => [? [? [? [? ? ]]]] //=.
 Qed.
 
+Fixpoint la2t (a : alts') : state :=
+  match a with
+  | no_alt' => Bot
+  | more_alt' (n,s,gl) a => g2t gl
+  end
+with g2t (g : goals') : state :=
+  match g with
+  | no_goals' => Top
+  | more_goals' (n,g) gs => G2t g
+  end
+with G2t (g : G') : state :=
+  match g with
+  | call' p c => CallS p c
+  | cut' ca => CutS
+end
+.
 
-Axiom F : alts' -> state.
 
-Lemma titi u s xs' a' s1 a1': nur' u s xs' a' s1 a1' -> valid_state (F ((s, xs') ::: a')) /\
-  run u s (F ((s, xs'):::a')) s1 (F a1').
+Definition l2tP {u s xs a s' a'} : elpi_annot u s xs a s' a' ->
+  Texists b n, runb u s (la2t ((n,s,xs):::a)) s' (la2t a') b.
 Admitted.
 
+Lemma init_valid  u s g a s1 a1 (H : elpi u s g a s1 a1) :
+  valid_state (la2t (annotate_start_alts H)).
+Admitted.
 
-
-Definition G'2s (g : G') : state :=
-  match g with
-  | cut' _ => CutS
-  | call' p t => CallS p t 
-  end.
-
-Fixpoint upto_append (a : goals') : state :=
-  match a with
-  | no_goals' => Top
-  | append_goals' _ _ => Top
-  | more_goals' x xs => And (G'2s x) (upto_append xs) (upto_append xs)
-  end.
-
-
-
-
-runtree t -> nur (t2l t)
-nulr' g g' a a' -> nur g a
-nulr' |g'| g' |a'| a' -> nur |g'| |a'|
-
-
-nur |g'| |a'| = s |b'| -> nulr' |g'| g' |a'| a'  = s |b| b'
-
-nur g a = s b -> exists g' a' b', |g'| = g /\ nur' g g' a a'  = s b b'
-
-nur g [] -> nur' g g' [] []
-
-
-
-
-(* todo, flip everything *)
-(* Fixpoint alts'2s (a : alts') : state :=
-  match a with
-  | no_alt' => Bot
-  | more_alt' (s,a) a1 => Bot
-  | append_alt' a1 a2 => 
-       Or (aux Top a1) empty (alts'2s a2)
-  end
-with goals'2s (g : goals') : state :=
-  Top 
-with aux reset (a : alts') : state := 
-  match a with
-  | no_alt' => Bot
-  | more_alt' (s,a) a1 =>
-     (* a may not be unexplored, the reset point is reset *)
-     (* one alternative for this level *)
-     And (upto_append a) reset a
-  | append_alt' a1 a2 => 
-     (* the level had only one applicable rule *)
-  | more_alt' (s,a) a1 => And reset aux (upto_append a) a1
-
-  end
-
-. *)
-
+Lemma final p u s c s1 a1 (H : elpi u s ((call p c):::nilC) nilC s1 a1) :
+  runb u s (CallS p c) s1 (la2t (annotate_left_alts H)) 0.
+Proof.
+  have H' := l2l'P H.
+  have [b [n H1]] := l2tP H'.
+  rewrite !(annotate_start_gls_call,annotate_start_alts_nil) /= in H' H1.
+  simpl in H'.
+  suff <- : b = 0 by [].
+  admit.
+Admitted.
