@@ -139,16 +139,6 @@ Section Test5.
       inversion H0 => //.
     inversion H0; clear H0 => //; subst.
     inversion H6; clear H6; subst => //.
-    inversion H1; clear H1; subst => //.
-    inversion H2; clear H2; subst => //.
-      inversion H0 => //.
-    inversion H0; clear H0 => //; subst.
-    inversion H6; subst => //; clear H6.
-    inversion H1; clear H1; subst => //.
-    inversion_clear H3; subst.
-    inversion_clear H0 => //.
-    inversion_clear H0 => //.
-    move: H3 => [?]; subst => //.
   Qed.
 End Test5.
 
@@ -202,22 +192,8 @@ Section Test6.
       inversion_clear H.
         by inversion_clear H0.
       inversion_clear H0 => //.
-      case: H => ?; subst.
-      case: H1 => ?; subst.
-      inversion_clear H2 => //.
-      inversion_clear H => //.
-      inversion_clear H => //.
-      case: H2 => ?; subst.
-      case: H0 => ?; subst.
-      inversion_clear H1 => //.
-        by inversion_clear H => //.
-      inversion_clear H => //.
-      case: H1 => ?; subst.
-      case: H0 => ?; subst.
-      inversion_clear H2 => //.
-        by inversion_clear H => //.
-      inversion_clear H => //.
-      case: H2 => ?; subst => //.
+      move: H => //= [?]; subst.
+      move=> //.
   Qed.
 End Test6.
 

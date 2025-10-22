@@ -510,7 +510,9 @@ Section valid_state.
   Proof.
     elim: A => //.
     - move=> A HA s B HB/=; rewrite fun_if if_same//.
-    - move=> A HA B0 _ B HB/=; rewrite fun_if/= HB if_same//.
+    - move=> A HA B0 _ B HB/=.
+      case: ifP => //=.
+      case: A HA => //=???; case: ifP => //.
   Qed.
 
   Lemma valid_state_clean_success {A}:
@@ -524,7 +526,7 @@ Section valid_state.
       rewrite HA//bB bbOr_valid// if_same//.
     - move=> A HA B0 _ B HB/=/and5P[oA vA aB]; rewrite (fun_if valid_state)/=oA vA.
       case: ifP => /=[sA vB bB0|sA /eqP->].
-        rewrite bB0 andbT is_and_clean_success//aB; apply: HB vB.
+        rewrite bB0 is_and_clean_success//aB is_or_clean_success oA HA//= HB//; case: ifP => //=. apply: HB vB.
       rewrite eqxx//aB//.
   Qed.
 

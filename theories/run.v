@@ -447,10 +447,10 @@ Section main.
     | Bot | Dead | Top | CutS | CallS _ _ => A
     | Or A s B => 
       if is_dead A then Or A s (clean_success B)
-      else Or (clean_success A) s B
+      else Or (clean_success A) s B (*TODO: maybe: if A is not success then leave the tree intact*)
     | And A B0 B =>
     (* TODO: cambiare con And (clean_success A) B0 B0 *)
-      if success A then And A B0 (clean_success B)
+      if success A then And (clean_success A) B0 (clean_success B)
       else And A B0 B
     end.
 
@@ -573,6 +573,24 @@ Section main.
   Definition run_classic s A s1 B := runb s A s1 B false. 
   Definition expanded_classic s A r := expandedb s A r false.  *)
 
+
+  Lemma clean_success_cutr A : (clean_success (cutr A)) = cutr A.
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB; rewrite /=HA HB if_same//.
+    - move=> A HA B0 _ B HB; rewrite success_cutr//.
+  Qed.
+
+  Lemma clean_success_cutl A : success A -> is_ko (clean_success (cutl A)).
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB/=.
+      case: ifP=> dA/= ss.
+        rewrite dA/= is_dead_is_ko//; auto.
+      rewrite is_dead_cutl dA/= HA// is_ko_cutr//.
+    - move=> A HA B0 _ B HB /andP[sA sB].
+      rewrite success_cut sA/= HA//.
+  Qed.
 
   (********************************************************************)
   (* EXPAND SIMPLIFICATION                                            *)
@@ -875,8 +893,7 @@ Section main.
       case: ifP => [dA sB|dA sA]/=.
         rewrite dA HB//.
       rewrite HA//.
-    - move=> A HA B0 _ B HB/andP[/[dup]sA-> sB]/=.
-      rewrite success_is_dead//.
+    - move=> A HA B0 _ B HB/andP[/[dup]sA-> sB]/=; auto.
   Qed.
 
   Lemma is_dead_clean_success {A}: is_dead A -> (clean_success A) = A.
@@ -895,13 +912,6 @@ Section main.
     - move=> A HA B0 _ B HB; case: ifP=> sA//.
   Qed.
 
-  Lemma clean_success2 {A}: clean_success (clean_success A) = clean_success A.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB; case: ifP => dA/=; rewrite ?(is_dead_clean_successF)//dA?HA?HB//.
-    - move=> A HA B0 _ B HB; case: ifP => sA/=; rewrite sA ?HB//.
-  Qed.
-
   Lemma success_clean_success_failed {A}: success A -> failed (clean_success A).
   Proof.
     elim: A => //.
@@ -910,7 +920,17 @@ Section main.
         rewrite dA HB//.
       rewrite HA//success_clean_success_dead//.
     move=> A HA B0 _ B HB /= /andP[sA sB].
-    by rewrite sA/= sA HB// orbT.
+    by rewrite sA/= HA//.
+  Qed.
+
+  Lemma clean_success2 {A}: clean_success (clean_success A) = clean_success A.
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB; case: ifP => dA/=; rewrite ?(is_dead_clean_successF)//dA?HA?HB//.
+    - move=> A HA B0 _ B HB; case: ifP => sA/=.
+        have:= success_clean_success_failed sA.
+        move=> /failed_success ->//.
+      rewrite sA//.
   Qed.
 
   Lemma is_ko_runb {s s1 A B b}: is_ko A -> runb s A s1 B b -> False.
@@ -1356,6 +1376,43 @@ Section main.
       elim: A => //.
       - move=> A HA s B HB/=; case: ifP => //_; rewrite ?HA?HB same_structure_id eqxx//.
       - move=> A HA B0 _ B HB/=; case: ifP => _; rewrite !same_structure_id//?HA//.
+    Qed.
+
+    Definition same_structure_sup A B :=
+      match A with
+      | And A1 B0 B1 =>
+        match B with 
+        | And A' B0' B' => true
+        | _ => false
+        end
+      | Or A1 s B1 =>
+        match B with 
+        | Or A' s' B' => true
+        | _ => false
+        end
+      | _ => true
+      end.
+
+
+    Lemma runb_same_structure {s A s1 B b}:
+      runb s A s1 B b -> same_structure_sup A B.
+    Proof.
+      elim; clear.
+      - move=> s s' A B C b.
+        move=> /expandedb_same_structure/= + ->.
+        destruct A, B => //=; case: ifP => //.
+      - move=> s s1 A B C D b1 b2 b3 /expandedb_same_structure/=.
+        destruct A, B => //= _.
+          case: ifP => // _.
+            case: next_alt => // [?] [<-]//.
+          case: next_alt => // [?|].
+            move=> [<-]//.
+          case: ifP => // _.
+          case: next_alt => // [?][<-]//.
+        do 2 case: ifP => // _.
+          case: next_alt => //[?][<-]//.
+        case: ifP => // [_ |_ [<-]]//.
+        case: next_alt => //[?|][<-]//.
     Qed.
   End same_structure.
 End main.

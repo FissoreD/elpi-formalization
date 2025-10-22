@@ -831,31 +831,164 @@ Section RunP.
       apply: run_backtrack H2 _ IH erefl; rewrite/= dE X dF' W//.
   Qed.
 
-  (* Lemma clean_success_cutr A : (clean_success (cutr A)) = cutr A.
+  Fixpoint has_bt A B :=
+    match A, B with
+    | Or A _ B, Or A' _ B' =>
+        if is_dead A' then 
+          if is_dead A then has_bt B B'
+          else true (*I'm creating a new dead state = call to backtrack*)
+        else false
+    | _, _ => false
+    end.
+
+  Lemma has_bt_id {A} : has_bt A A = false.
   Proof.
     elim: A => //=.
-    - move=> A HA s B HB; rewrite /=HA HB if_same//.
-    - move=> A HA B0 _ B HB; rewrite success_cutr//.
+    move=> A HA _ B HB; case: ifP => dA//; rewrite dA//.
   Qed.
 
-  Lemma clean_success_cutl A : is_ko (clean_success (cutl A)).
+  Lemma expand_has_bt {s A r}:
+    expand u s A = r -> has_bt A (get_state r) = false.
   Proof.
-    elim: A => //=.
-    - move=> A HA s B HB; rewrite /= (fun_if clean_success)/= !(fun_if (is_ko))/=.
-      rewrite is_ko_cutr clean_success_cutr HA HB is_ko_cutr !andbT.
-      case: ifP => dA; rewrite ?is_dead_cutl dA//is_dead_is_ko//.
-    - move=> A HA B0 _ B HB; rewrite (fun_if is_ko)/=. *)
+    move=> <-; clear r.
+    elim: A s => //=.
+    move=> A HA s B HB s1; case: ifP => dA.
+      move: (HB s); case X: expand => /= ->; rewrite if_same//.
+    move: (HA s1); case X: expand => /=; rewrite (expand_not_dead _ dA X)//.
+  Qed.
 
-  Lemma run_and_correct_success_left {s0 sn A B B0 C b}:
-  (* TODO: be more precise on C *)
+  Lemma has_bt_trans {A B C}:
+    same_structure A B -> same_structure B C ->
+    has_bt A B = false -> has_bt B C = false -> has_bt A C = false.
+  Proof.
+    elim: A B C => //= A HA s B HB C D; destruct C, D => //= /and3P[_ Hx Hy] /and3P[_ H1 H2].
+    case: ifP => dC1; last first.
+      move=> _; case: ifP => dD1//.
+    case: ifP => //dA bB.
+    case: ifP => // dD1 bC.
+    apply: HB Hy H2 bB bC.
+  Qed.
+
+  (* Lemma has_bt_trans1 {A B C}:
+    same_structure A B -> same_structure B C ->
+    has_bt A B = false -> has_bt B C = true -> has_bt A C = true.
+  Proof.
+    elim: A B C => //= A HA s B HB C D; destruct C, D => //= /and3P[_ Hx Hy] /and3P[_ H1 H2].
+    case: ifP => dC1; last first.
+      move=> _; case: ifP => dD1//.
+    case: ifP => //dA bB.
+    case: ifP => // dD1 bC.
+    apply: HB Hy H2 bB bC.
+  Qed. *)
+
+  Lemma expandedb_has_bt {s A r b}:
+    expandedb u s A r b -> has_bt A (get_state_exp r) = false.
+  Proof.
+    elim; clear.
+    - move=> s s' A A' /expand_solved_same [[??]sA]; subst; rewrite/=has_bt_id//.
+    - move=> s A B /expand_failed_same [? fB]; subst; rewrite/=has_bt_id//.
+    - move=> s s' r A B b HA HB H. apply: has_bt_trans (expand_has_bt HA) H.
+      apply: expand_same_structure HA. apply: expandedb_same_structure HB.
+    - move=> s s' r A B b HA HB H. apply: has_bt_trans (expand_has_bt HA) H.
+      apply: expand_same_structure HA. apply: expandedb_same_structure HB.
+  Qed.
+
+  Lemma run_and_correct {s0 sn A B B0 A' B0' B' b}:
+    runb u s0 (And A B0 B) sn (And A' B0' B') b -> Texists A'' b1 b2 sm,
+    (* TODO: be more precise on B0: it is cut if B' has a cut *)
+    ( runb u s0 A sm (clean_success A'') b1 /\
+      (if has_bt A A'' then runb u sm B0 sn (clean_success B' ) b2
+      else runb u sm B sn (clean_success B' ) b2) /\
+      A' = clean_success (if b2 == 0 then A'' else cutl A'')).
+  Proof.
+    remember (And _ _ _) as O1 eqn:HO1.
+    remember (And A' _ _) as O2 eqn:HO2.
+    move=> H.
+    elim: H A B B0 A' B0' B' HO1 HO2 => //=; clear.
+    + move=> s st s' alt C b H ? A B B0 A' B0' B' ? H1; subst.
+      have := expandedb_same_structure _ H.
+      case: alt H H1 => //= Ax B0x Bx H + _.
+      have [s''[b1[b2[A''[H1[H2 [?]]]]]]]:= expanded_and_complete H; subst.
+      case: eqP => H3 ?; subst.
+        have sA'' := expanded_Done_success _ H1.
+        rewrite sA'' => -[???]; subst.
+        repeat eexists.
+        - apply: run_done H1 erefl.
+        - rewrite (expandedb_has_bt H1)//clean_success2//; apply: run_done H2 erefl.
+        - move=> //.
+      have := expanded_Done_success _ H1.
+      rewrite -success_cut => sA''.
+      rewrite sA'' => -[???]; subst.
+      repeat eexists.
+      - apply: run_done H1 erefl.
+      - rewrite  (expandedb_has_bt H1)//clean_success2//; apply: run_done H2 erefl.
+      - case: eqP => //.
+    + move=> s s1 A B C D b1 b2 b3 H1 H2 H3 IH ? Ax B0x Bx A' B' C' ??; subst.
+      have /= := expandedb_same_structure _ H1.
+      case: B H1 H2 => //= E' F' G' H1 + _.
+      case: ifP => dD'//.
+      have {H1} [[H1 [??]]|[s'[b5[b6[A'''[H1[H5 [H [Hx Hy]]]]]]]]] := expandes_and_fail H1; subst.
+        (* we are in the case (E /\ G) with E failing for expandedb *)
+        rewrite (expandedb_failed _ H1).
+        case X: next_alt => //=[E2][?]; subst.
+        have {IH} := IH _ _ _ _ _ _ erefl erefl.
+        move=>[A''[b3[b4[sm [rE2 [+ H5]]]]]]; subst.
+        rewrite if_same.
+        repeat eexists.
+        apply: run_backtrack H1 X rE2 erefl.
+        case: ifP => bt//.
+        admit. (*should be OK: has_bt Ax A'' should be true *)
+      have sA''' := expanded_Done_success _ H1.
+      case: b6 H5 Hx Hy => /= [|n] H5 Hx Hy; subst.
+        rewrite success_failed sA'''//.
+        case W: next_alt => [G''|][?]; subst.
+          have {IH} := IH _ _ _ _ _ _ erefl erefl.
+          move=>[A''[b3[b4[sm [rE2 [+ H6]]]]]]; subst.
+          have [[? H ]?] := run_consistent _ rE2 (runb_success _ _ sA'''); subst.
+          case: ifP => hbt H2.
+            repeat eexists.
+            apply: run_done H1 H.
+            case: ifP => hbt1.
+              admit.
+            admit. (*should be OK: has_bt Ax A'' should be true *)
+          repeat eexists.
+          apply: run_done H1 H.
+          case: ifP; last first => Hz.
+            apply: run_backtrack H5 W _ erefl.
+            admit. (*should be ok: need lemma: next_alt, the input subst for run is ignorable*)
+          admit. (*should be ok: has_bt A''' A' is true*)
+        have {IH} := IH _ _ _ _ _ _ erefl erefl.
+        move=>[A''[b3[b4[sm [rE2 [+ H6]]]]]]; subst.
+        rewrite if_same => H.
+        repeat eexists.
+        apply: run_done H1 _.
+          admit. (*?what*)
+        admit.
+      rewrite -success_cut in sA'''.
+      rewrite success_failed//sA'''.
+      case W: next_alt => [G''|][?]; subst.
+        have {IH} := IH _ _ _ _ _ _ erefl erefl.
+        move=>[A''[b3[b4[sm [rE2 [+ H6]]]]]]; subst.
+        have [[? H ]?] := run_consistent _ rE2 (runb_success _ _ sA'''); subst.
+        have:= clean_success_cutl _ sA'''.
+        rewrite cutl2 -H => Hw.
+        admit.
+      have {IH} := IH _ _ _ _ _ _ erefl erefl.
+      move=>[A''[b3[b4[sm [rE2 [+ H6]]]]]]; subst.
+      have /= := is_ko_runb _ _ rE2.
+      rewrite success_cut in sA'''.
+      move=> /(_ (clean_success_cutl _ sA'''))//.
+  Admitted.
+
+  (* Lemma run_and_correct_success_left {s0 sn A B B0 C b}:
     success A ->
-    runb u s0 (And A B0 B) sn C b -> Texists A' B0' B' b1 b2 sm, C = And A' B0' B' /\
-    (   (runb u sm B sn (clean_success B' ) b2 /\ 
-         A' = (if b2 == 0 then A else cutl A))%type2 +
+    runb u s0 (And A B0 B) sn C b -> Texists A' B0' B' b1 b2, C = And A' B0' B' /\
+    (   (runb u (get_substS s0 A) B sn (clean_success B' ) b2 /\ 
+         A' = clean_success (if b2 == 0 then A else cutl A))%type2 +
     
-        Texists A'', (runb u s0 (clean_success A) sm (clean_success A'') b1 /\ 
+        Texists sm A'', (runb u s0 (clean_success A) sm (clean_success A'') b1 /\ 
          runb u sm B0 sn (clean_success B') b2 /\
-         A' = (if b2 == 0 then A'' else cutl A''))%type2
+         A' = clean_success (if b2 == 0 then A'' else cutl A''))%type2
     )%type.
   Proof.
     remember (And _ _ _) as O1 eqn:HO1.
@@ -870,15 +1003,11 @@ Section RunP.
       move=> /(expanded_consistent _ H1) [][]???; subst.
       case: eqP => H3 ?; subst.
         rewrite sA.
-        repeat eexists; left; split.
-        apply: run_done H2 _.
-        rewrite clean_success2//.
-        move=> //.
+        repeat eexists; left; split; (try apply: run_done H2 _);rewrite?clean_success2//.
       rewrite success_cut sA.
       repeat eexists; left; repeat split.
-        apply: run_done H2 _.
-        rewrite clean_success2//.
-        case: eqP => //.
+        apply: run_done H2 _; rewrite clean_success2//.
+      case: eqP => //.
     + move=> s s1 A B C D b1 b2 b3 H1 H2 H3 IH ? E G F ? sE; subst.
       have /= := expandedb_same_structure _ H1.
       case: B H1 H2 => //= E' F' G' H1 + _.
@@ -886,106 +1015,32 @@ Section RunP.
       have Hz := expanded_success1 u s sE.
       have {H1} [[H1 [??]]|[s'[b5[b6[A'''[H1[H5 [H [Hx Hy]]]]]]]]] := expandes_and_fail H1; subst.
         by have [] := expanded_consistent _ H1 Hz.
-  Admitted.
-
-  Lemma run_and_correct {s0 sn A B B0 C b}:
-  (* TODO: be more precise on C *)
-    runb u s0 (And A B0 B) sn C b -> Texists A' A'' B0' B' b1 b2 sm, C = And A' B0' B' /\
-    (   (runb u s0 A sm (clean_success A'') b1 /\ 
-         runb u sm B sn (clean_success B' ) b2 /\ 
-         A' = (if b2 == 0 then A'' else cutl A''))%type2 +
-    
-        (runb u s0 (clean_success A) sm (clean_success A'') b1 /\ 
-         runb u sm B0 sn (clean_success B') b2 /\
-         A' = (if b2 == 0 then A'' else cutl A''))%type2
-    )%type.
-  Proof.
-    remember (And _ _ _) as O1 eqn:HO1.
-    move=> H.
-    elim: H A B B0 HO1 => //=; clear.
-    + move=> s st s' alt C b H ? A B B0 ?; subst.
-      have /= := expandedb_same_structure _ H.
-      case: alt H => // A' B0' B' H _.
-      move=> /=.
-      have [s''[b1[b2[A''[H1[H2 [?]]]]]]]:= expanded_and_complete H; subst.
-      case: eqP => H3 ?; subst.
-        case: ifP => sA.
-          repeat eexists; left; split.
-            apply: run_done H1 erefl.
-          split.
-            apply: run_done H2 _.
-            rewrite clean_success2//.
-          move=>//.
-        repeat eexists; left.
-        split.
-          apply: run_done H1 erefl.
-        split.
-          apply: run_done H2 erefl.
-        move=>//.
-      have sA'' := expanded_Done_success _ H1.
-      rewrite success_cut sA''.
-      repeat eexists; left; split.
-        apply: run_done H1 erefl.
-      split.
-        rewrite clean_success2.
-        apply: run_done H2 erefl.
-      case: eqP => //.
-    + move=> s s1 A B C D b1 b2 b3 H1 H2 H3 IH ? E G F ?; subst.
-      have /= := expandedb_same_structure _ H1.
-      case: B H1 H2 => //= E' F' G' H1 + _.
-      case: ifP => dD'//.
-      have {H1} [[H1 [??]]|[s'[b5[b6[A'''[H1[H5 [H [Hx Hy]]]]]]]]] := expandes_and_fail H1; subst.
-        (* we are in the case (E /\ G) with E failing for expandedb *)
-        rewrite (expandedb_failed _ H1).
-        case X: next_alt => //=[E2][?]; subst.
-        have {IH} := IH _ _ _ erefl.
-        move=>[A'[A''[B0'[B'[b3[b4[sm [? [[H2 [H4 ?]]|[H2 [H4?]]]]]]]]]]]; subst.
-          repeat eexists; left; split; try eassumption.
-            apply: run_backtrack H1 X H2 erefl.
-          split => //.
-          admit.
-        repeat eexists; right; repeat split; try eassumption.
-        (* apply: run_backtrack H1 X H2 erefl.
-      (* we are in the case (E /\ G) where E succeeds and G fails *)
-      have sA''' := expanded_Done_success _ H1.
-      case: b6 H5 Hx Hy => /= [|n] H5 Hx Hy; subst.
-        rewrite success_failed sA'''//.
-        case W: next_alt => [G''|][?]; subst.
-          have {IH} := IH _ _ _ erefl.
-          move=>[A'[A''[B0'[B'[b3[b4[sm [? [[H2 [H4 ?]]|[H2 [H4?]]]]]]]]]]]; subst.
-            admit.
-          admit.
-        have {IH} := IH _ _ _ erefl.
-        move=>[A'[A''[B0'[B'[b3[b4[sm [? [[H2 [H4 ?]]|[H2 [H4?]]]]]]]]]]]; subst.
-          repeat eexists; left; repeat split.
-            admit.
-          admit.
-        repeat eexists.
-        right; repeat split; eauto.
-        (* TODO: this should be proven outise: 
-          "expandedb u s E (DOne s' A''') b5 -> 
-            runb u s (clean_success A''') sm (clean_success A'') b3 -> 
-              runb u s E sm (clean_success A'') ?b10"  *)
+      have {H1}[[]???] := expanded_consistent _ Hz H1; subst A'''; subst.
+      case: b6 H5 Hx Hy => //= [|n] H5 ??; subst.
+        rewrite success_failed sE//.
+        case X: next_alt => //[G''|][?]; subst.
+          have {IH} [A'[B0'[B'[b1[b3[? [[H1 H2]|[sm[A'' [H4 [H6 H7]]]]]]]]]]] := IH _ _ _ erefl sE; subst.
+            repeat eexists; left; split => //.
+            apply: run_backtrack H5 X H1 erefl.
+          by repeat eexists; right; repeat eexists; try eassumption.
         admit.
-      rewrite -success_cut in sA'''.
-      rewrite success_failed//sA'''.
-      case W: next_alt => [G''|][?]; subst.
-        have {IH} := IH _ _ _ erefl.
-        move=>[A'[A''[B0'[B'[b3[b4[sm [? [[H2 [H4 ?]]|[H2 [H4?]]]]]]]]]]]; subst.
+      rewrite -success_cut in sE.
+      rewrite success_failed//sE.
+      case X: next_alt => [G''|][?]; subst.
+        have {IH} [A'[B0'[B'[b1[b3[? [[H1 H2]|[sm[A'' [H4 [H6 H7]]]]]]]]]]] := IH _ _ _ erefl sE; subst.
           repeat eexists.
           left; repeat split.
-            admit.
-          admit.
-        repeat eexists; right; repeat split.
-          admit.
-        admit.
-      have {IH} := IH _ _ _ erefl.
-      move=>[A'[A''[B0'[B'[b3[b4[sm [? [[H2 [H4 ?]]|[H2 [H4?]]]]]]]]]]]; subst.
-      Search clean_success cutl.
-        repeat eexists.
-        
-      admit. *)
-  Admitted.
+          rewrite ges_subst_cutl in H1.
+          apply: run_backtrack H5 X H1 erefl.
+          by rewrite cutl2 if_same.
+        rewrite success_cut in sE.
+        by have:= is_ko_runb _ (clean_success_cutl _ sE) H4.
+      have /= := is_ko_runb _ _ H3.
+      rewrite success_cut in sE.
+      by move=> /(_ (clean_success_cutl _ sE)).
+  Admitted. *)
+
+  
 
 
   (*   Lemma run_or_fail {s1 s2 A B b}:
