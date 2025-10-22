@@ -1,0 +1,17 @@
+-Q theories/ det
+
+-arg -w -arg -notation-overridden
+
+theories/zify_ssreflect.v
+
+theories/lang.v
+theories/run.v
+theories/run_test.v
+theories/run_prop.v
+theories/check.v
+theories/valid_state.v
+theories/elpi.v
+theories/elpi_test.v
+theories/elpi_prop.v
+theories/elpi_equiv.v
+theories/elpi_valid_state.v
