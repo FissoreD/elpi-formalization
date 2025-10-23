@@ -266,6 +266,16 @@ Section state_op.
   Lemma is_dead_cutl {A}: is_dead (cutl A) = is_dead A.
   Proof. elim: A => //A HA s B HB/=; rewrite fun_if/=HB HA is_dead_cutr if_same//. Qed.
 
+  Lemma failed_success_cut {A}: failed (cutl A) = ~~ (success (cutl A)).
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB; case: ifP => dA/=; rewrite?is_dead_cutl dA//.
+    - move=> A HA B0 _ B HB/= ; rewrite HA HB.
+      case: success => //.
+  Qed.
+
+  Lemma success_failed_cut {A}: success (cutl A) = ~~ (failed (cutl A)).
+  Proof. rewrite failed_success_cut; case: success => //. Qed.
 
   Lemma success_cut {A} : success (cutl A) = success A.
   Proof.
@@ -848,7 +858,7 @@ Section main.
     next_alt b (cutr A) = None.
   Proof. apply: is_ko_next_alt is_ko_cutr. Qed.
 
-  Lemma next_alt_cutl {A}:
+  Lemma next_alt_cutl_success {A}:
     success A -> next_alt true (cutl A) = None.
   Proof.
     elim: A => //=.
@@ -863,6 +873,37 @@ Section main.
       rewrite success_failed//.
   Qed.
 
+  Lemma next_alt_cutl_failed {A b}:
+    failed (cutl A) -> next_alt b (cutl A) = None.
+  Proof.
+    elim: A b => //=.
+    - move=> A HA s B HB b.
+      case: ifP => dA /=; rewrite?is_dead_cutl dA => Hf.
+        rewrite HB//.
+      rewrite HA// next_alt_cutr if_same//.
+    - move=> A HA B0 _ B HB b /orP[fA|/andP[sA fB]].
+        rewrite fA HA// if_same//.
+      rewrite success_failed// sA HB//.
+      rewrite next_alt_cutl_success?if_same// -success_cut//.
+  Qed.
+
+  Lemma next_alt_cutl_failedF {A b}:
+    failed A -> next_alt b (cutl A) = None.
+  Proof. move=> /failed_cut /next_alt_cutl_failed//. Qed.
+
+  Lemma next_alt_cutl {A}:
+    next_alt true (cutl A) = None.
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB; case: ifP => /= dA.
+        rewrite dA HB//.
+      rewrite is_dead_cutl dA HA next_alt_cutr if_same//.
+    - move=> A HA B0 _ B HB; case: ifP => //dA.
+      case: ifP => fA.
+        rewrite next_alt_cutl_failed//.
+      rewrite HB HA.
+      rewrite success_failed_cut fA//.
+  Qed.
 
   Lemma is_ko_runb {s s1 A B b}: is_ko A -> runb s A s1 B b -> False.
   Proof.
