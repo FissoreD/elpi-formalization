@@ -1,5 +1,6 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang run run_prop valid_state elpi elpi_equiv elpi_prop.
+From det Require Import lang run run_prop elpi elpi_equiv elpi_prop run_prop_hard.
+From det Require Import valid_state.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
@@ -107,19 +108,19 @@ Proof. case: L => [|[s g]gs]/=; constructor => //. Qed.
 
 Lemma run_a2t_ign {u s2 D b2 sIgn1 L} sIgn2:
   runb u sIgn1 (a2t_ L) s2 D b2 ->
-    exists b2, runb u sIgn2 (a2t_ L) s2 D b2.
+    Texists b2, runb u sIgn2 (a2t_ L) s2 D b2.
 Proof.
   case: L => //=.
     move=> /is_ko_runb -/(_ isT)//.
   move=> [s g]gs.
   set X:= (Or _ empty _); generalize X; clear X => X H.
-  apply: run_or_is_ko_left_ign_subst H => //.
+  apply: run_or_is_ko_left_ign_subst _ H => //.
 Qed.
 
 Lemma run_success_add_ca_deep {u s s1 B D bt bt1 res b}:
   success B ->
     runb u s1 (a2t_ (state_to_list B s bt)) res D b ->
-    exists D0 b0,
+    Texists D0 b0,
       runb u s1 (a2t_ (add_ca_deep bt1 (state_to_list B s bt))) res D0 b0 .
 Proof.
   elim: B s s1 D bt bt1 res b => //=.
@@ -133,7 +134,7 @@ Admitted.
 
 Lemma run_a2t_success {C} u s1 bt:
   success C ->
-  exists D b2, runb u s1 (a2t_ (state_to_list C s1 bt)) (get_substS s1 C) D b2.
+  Texists D b2, runb u s1 (a2t_ (state_to_list C s1 bt)) (get_substS s1 C) D b2.
 Proof.
   elim: C s1 bt => //=.
   - move=> s1 _; do 2 eexists.
@@ -157,7 +158,7 @@ Admitted.
 Lemma runb_a2t_expandedb {u s A s' B b bt}:
   valid_state A ->
   expandedb u s A (Done s' B) b ->
-    exists C b2,
+    Texists C b2,
     runb u s (a2t_ (state_to_list A s bt)) s' C b2.
 Proof.
   remember (Done _ _) as d eqn:Hd => +H.
@@ -168,7 +169,7 @@ Proof.
   - move=> s1 s2 r A B b HA HB IH s3 C ? vA; subst.
     have /=vB := valid_state_expand _ vA HA.
     have {IH} := IH _ _ erefl vB.
-    have [x[tl[[H1 H2] H3]]]:= s2l_CutBrothers _ s1 bt vA HA.
+    have [x[tl[H1 [H2 H3]]]]:= s2l_CutBrothers _ s1 bt vA HA.
     rewrite H1 H2/=.
     move=> [C1[b2 IH]].
     inversion IH; subst; clear IH.
@@ -178,30 +179,109 @@ Proof.
     move: H0 => /=; rewrite andbF; case: ifP => //dx.
     case X: next_alt => //[x'][?]; subst.
     have [H5 H6]:= expand_cb_same_subst1 _ vA HA; subst.
+    have:= run_dead_left1 _ _ H4 => /= /(_ isT) [b1[r' [Hx Hy]]].
     do 2 eexists.
     apply: run_backtrack => //.
     - apply: expanded_fail => //.
     - rewrite //.
-    - admit.
-  - admit.
+    - apply: run_dead_left2 is_dead_dead _.
+      apply: run_or_correct_left.
+      admit.
+  - move=> s1 s2 r A B b HA HB IH s3 C ? vA; subst.
+    have [D[b2 {}IH]]:= IH _ _ erefl (valid_state_expand _ vA HA).
+    admit.
 Admitted.
 
 Inductive equiv_run : state -> state -> Prop :=
   | equiv_run_fail u s A B : dead_run u s A -> dead_run u s B -> equiv_run A B
   | equiv_run_success u s1 s2 A B A' B' b1 b2 :
-    runb u s1 A s2 A' b1 -> runb u s1 B s2 B' b2 -> equiv_run A' B' -> equiv_run A B.
+    runb u s1 A s2 (Some A') b1 -> runb u s1 B s2 (Some B') b2 -> equiv_run A' B' -> equiv_run A B.
 
 Lemma xx u s1 s2 A B b1: 
+  valid_state A ->
   runb u s1 A s2 B b1 -> 
-    exists C b2, runb u s1 (a2t_ (state_to_list A s1 nilC)) s2 C b2. (*/\ equiv_run B C*)
+    Texists C b2, runb u s1 (a2t_ (state_to_list A s1 nilC)) s2 C b2. (*/\ equiv_run B C*)
 Proof.
-  elim; clear.
-  - move=> s s' A B _ b H _.
-    apply: runb_a2t_expandedb H.
+  move=> +H; elim: H; clear.
+  - move=> s s' A B C b HA HB vA.
+    apply: runb_a2t_expandedb vA HA.
+  - move=> s1 s2 A B C r b1 b2 b3 HA HB HC IH ? vA; subst.
+    have /= vB := valid_state_expanded _ vA HA.
+    have vC := valid_state_next_alt vB HB.
+    have [r'[bx {}IH]]:= IH vC.
+    repeat eexists.
+    apply: run_backtrack IH erefl.
+Admitted.
+
+
+Lemma zz u s1 s2 A B b1: 
+  valid_state A ->
+  runb u s1 A s2 B b1 -> 
+    Texists C b2, runb u s1 (a2t_ (state_to_list A s1 nilC)) s2 C b2. (*/\ equiv_run B C*)
+Proof.
+  elim: A B s1 s2 b1 => //=.
+  - by repeat eexists; eauto.
+  - move=> B s1 s2 b1 _ H.
+    inversion H; subst.
+      inversion H0 => //; subst.
+      case: H6 => ??; subst.
+      repeat eexists.
+      apply: run_backtrack erefl.
+        apply: expanded_fail => //.
+        move=> //.
+      apply : run_done erefl.
+      apply: expanded_step => //=.
+      apply: expanded_done => //=.
+    inversion H0 => //.
+  - move=> B s1 s2 b1 _ H.
+    inversion H; subst; last first.
+      inversion H0 => //; subst.
+      case: H3 => ??; subst.
+      inversion H4 => //.
+    inversion H0 => //; subst.
+    case: H1 => ??; subst.
+    inversion H2; subst => //.
+    case: H7 => ??; subst.
+    repeat eexists.
+    apply: run_backtrack erefl.
+      apply: expanded_fail => //.
+      move=>//.
+    apply: run_done => //.
+    apply: expanded_step => //.
+    apply: expanded_done => //.
+  - move=> p c r s1 s2 b _ H.
+    repeat eexists.
+    apply: run_backtrack erefl.
+      apply: expanded_fail => //.
+      by [].
+    apply: run_dead_left2 => //.
+    apply: run_or_ko_right1 => //.
     admit.
-  - admit.
-Admitted. 
-
-
-(* Lemma yy:
-  nur g gs s a -> run (a2t_ (g::gs)) *)
+  - move=> B s1 s2 b1 _ H; repeat eexists.
+    apply: run_backtrack.
+      apply: expanded_fail => //.
+      move=> //.
+      apply: run_dead_left2 is_dead_dead _.
+      apply: run_or_ko_right1 => //.
+      admit.
+    move=> //.
+  - move=> A HA s B HB C s1 s2 b1.
+    case: ifP => [dA vB|dA/andP[vA bB]].
+      move=>/(run_dead_left1 _ (is_dead_is_ko dA)) [b2 [r'[H1 H2]]].
+      have {HA}[D[b3 H3]] := HB _ _ _ _ vB H1.
+      rewrite state_to_list_dead//.
+      admit.
+    rewrite add_ca_deep_cat.
+    admit.
+  - move=> A HA B0 _ B HB C s1 s2 b1 /and5P[_ vA _ ].
+  (* OLD PROOF *)
+  (* move=> +H; elim: H; clear.
+  - move=> s s' A B C b HA HB vA.
+    apply: runb_a2t_expandedb vA HA.
+  - move=> s1 s2 A B C r b1 b2 b3 HA HB HC IH ? vA; subst.
+    have /= vB := valid_state_expanded _ vA HA.
+    have vC := valid_state_next_alt vB HB.
+    have [r'[bx {}IH]]:= IH vC.
+    repeat eexists.
+    apply: run_backtrack IH erefl. *)
+Admitted.
