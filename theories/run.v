@@ -844,6 +844,10 @@ Section main.
     rewrite is_ko_failed//HA// if_same//.
   Qed.
 
+  Lemma next_alt_cutr {A b}:
+    next_alt b (cutr A) = None.
+  Proof. apply: is_ko_next_alt is_ko_cutr. Qed.
+
   (* Lemma is_ko_clean_success {A}: is_ko A -> clean_success A = A.
   Proof.
     elim: A => //.
@@ -926,6 +930,13 @@ Section main.
         move=> /(expanded_consistent H1)[]//[??]; subst.
         rewrite is_ko_next_alt// in H2.
   Qed.
+
+  Lemma is_dead_runb {s1 s2 A B b}: is_dead A -> runb s1 A s2 B b -> False.
+  Proof. move=> H; apply: is_ko_runb (is_dead_is_ko H). Qed.
+
+  Lemma runb_dead {s s1 A B b}: runb s (dead1 A) s1 B b -> False.
+  Proof. apply: is_ko_runb (is_dead_is_ko is_dead_dead). Qed.
+
 
   Lemma expanded_success {s A r b}: 
     success A -> expandedb s A r b -> ((r = Done (get_substS s A) A) * (b = 0))%type.
@@ -1360,7 +1371,7 @@ Section main.
         end
       | Or A1 s B1 =>
         match B with 
-        | Or A' s' B' => true
+        | Or A' s' B' => s == s'
         | _ => false
         end
       | _ => true
@@ -1389,11 +1400,12 @@ Section main.
       elim: H B HS; clear.
       - move=> s s' A B C b.
         move=> /expandedb_same_structure/= + <- B1 /next_alt_same_structure.
-        destruct A, B => //.
+        destruct A, B => //= /and3P[/eqP->]//.
       - move=> s s1 A B C D b1 b2 b3 /expandedb_same_structure/= H.
         move=> /next_alt_same_structure H1 H2 IH _ ??; subst.
         have {}IH := IH _ erefl.
         destruct A, B, C => //.
+        move: H H1 => /= /and3P[/eqP->] _ _ /eqP->//.
     Qed.
   End same_structure.
 End main.

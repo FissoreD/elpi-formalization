@@ -3,6 +3,7 @@ From det Require Import lang run run_prop valid_state elpi elpi_prop.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
+      Arguments suffixP1 {_ _ _ _ _}.
 
 
 Section NurValidState.
@@ -159,14 +160,14 @@ Section NurValidState.
       rewrite empty_caG_valid//.
     case: ifP => //; last first.
       move=> H.
-      move=>/suffixP[zs?]; subst.
+      move=>/suffixP1[zs?]; subst.
       rewrite catA suffix_catr//suffix_refl// in H.
     rewrite -catA.
     move=>H1 H2 Hbt /and3P[->]/=H3 H4.
     apply/andP; split.
-      move/suffixP:H1 => [w?]; subst.
+      move/suffixP1:H1 => [w?]; subst.
       rewrite size_cat addnK take_size_cat//.
-      move: H2; rewrite suffix_catl// => /andP[_/suffixP[r?]]; subst.
+      move: H2; rewrite suffix_catl// => /andP [_/suffixP1[r?]]; subst.
       apply: push_bt_outG Hbt _.
       rewrite -catA size_cat addnK take_size_cat// in H3.
     clear g gs H3.
@@ -193,8 +194,8 @@ Section NurValidState.
     case: eqP.
       move=>->//.
     move=> _ H1 H2.
-    move=>/suffixP[x]?; subst.
-    rewrite suffix_catl// =>/andP[_/suffixP[ca?]]; subst.
+    move=>/suffixP1[x]?; subst.
+    rewrite suffix_catl// =>/andP[_/suffixP1[ca?]]; subst.
     rewrite !size_cat -addnA -addSn addnK.
     rewrite -catA take_cons take_size_cat//behead_cons.
     rewrite addnA addnK addSn take_cons behead_cons -size_cat catA take_size_cat//.
@@ -315,19 +316,19 @@ Section NurValidState.
       rewrite empty_caG_valid//.
     move=> H1 /and3P[H2 H3 H4] H5.
     case: ifP => //; last first.
-      move/suffixP: H1 suff => [x?]/suffixP[w?]; subst.
+      move/suffixP1: H1 suff => [x?]/suffixP1[w?]; subst.
       rewrite size_cat addnK add_deep_cat take_size_cat?size_add_deep//.
       rewrite drop_size_cat//suffix_catr//suffix_refl//.
     replace (drop (size ca - size G) ca) with G; last first.
-      move/suffixP: H1 => [w->]; rewrite size_cat addnK drop_size_cat//.
+      move/suffixP1: H1 => [w->]; rewrite size_cat addnK drop_size_cat//.
     move=> H6.
     apply/andP; split.
-      move/suffixP: H1 => [z?]; subst.
+      move/suffixP1: H1 => [z?]; subst.
       rewrite size_cat addnK add_deep_cat take_size_cat?size_add_deep//.
       rewrite suffix_catl//eqb_refl/=.
-      move/suffixP: suff => [x?]; subst.
+      move/suffixP1: suff => [x?]; subst.
       rewrite size_cat addnK add_deep_cat take_size_cat ?size_add_deep//.
-      move/suffixP: H2.
+      move/suffixP1: H2.
       rewrite size_cat addnK take_size_cat// => -[w H].
       suffices: x = append_alts w z.
         move=>?; subst; rewrite add_deep_cat {2}/make_lB0.
@@ -401,11 +402,11 @@ Section NurValidState.
     move=>/andP[H1 /andP[H2 H3]].
     rewrite suffix_catr?suffix_refl//size_cat addnK take_size_cat//.
     rewrite suffix_catl//eqb_refl/=.
-    move: H1; case: suffixP => //.
-    move=> [pref ?]; subst.
+    case: (suffixP1 H1) => //.
+    move=> pref ?; subst.
     rewrite add_ca_deep_cat suffix_catr// ?suffix_refl//=.
-    rewrite valid_caG_add_ca_deepG//= => _.
-    clear pref gs H2.
+    rewrite valid_caG_add_ca_deepG//=.
+    clear pref gs H1 H2.
     elim: ca l H3 => //=.
       move=> l/=; rewrite cat0s valid_caA_aux_refl//.
     move=> [s g] gs IH l/=.

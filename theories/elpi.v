@@ -173,7 +173,8 @@ Class IsList {Th Tl : Type}  := {
   take_cons n x xs: take n.+1 (consC x xs) = consC x (take n xs);
   drop_cons n x xs: drop n.+1 (consC x xs) = (drop n xs);
   behead_cons x xs: behead (consC x xs) = xs;
-  suffixP s1 s2: reflect (exists s2', s2 = appendC s2' s1) (suffix s1 s2);
+  suffixP s1 s2: (Texists s2', s2 = appendC s2' s1) -> (suffix s1 s2);
+  suffixP1 s1 s2: (suffix s1 s2) -> (Texists s2', s2 = appendC s2' s1);
   size_suffix s1 s2: suffix s1 s2 -> size s1 <= size s2;
   suffix_catl: forall s1 s2 s3 s3', size s3 = size s3' ->
     suffix (appendC s1 s3) (appendC s2 s3') = (eqB s3 s3') && suffix s1 s2;
@@ -363,23 +364,37 @@ Section alts.
     | more_alt _ xs => suffix_alts l1 xs
     end.
 
-  Lemma suffixPA s1 s2: reflect (exists s2', s2 = append_alts s2' s1) (suffix_alts s1 s2).
+  Lemma suffixA_refl A: suffix_alts A A.
+  Proof. case: A => //=[[??][]]//=*; rewrite eqxx//. Qed.
+
+  Lemma size_cat_alts xs ys:
+    size_alts (append_alts xs ys) = (size_alts xs) + (size_alts ys).
+  Proof. elim: xs ys => //= _ xs IH ys; rewrite IH; lia. Qed.
+
+  Lemma suffixPA s1 s2: (Texists s2', s2 = append_alts s2' s1) -> (suffix_alts s1 s2).
   Proof.
+    move=> [{}s2]->; clear.
     elim: s2 s1 => //=.
-      move=>[|[S g] gs]; constructor.
-        by exists no_alt.
-      by move=>[]-[]//.
+      move=> s1; apply: suffixA_refl.
     move=> [s g] gs IH s1.
     case: ifP.
-      move=>/eqbPA->; constructor; exists no_alt => //.
-    move=> H.
-    have [H1|H1] := IH s1; constructor.
-      case: H1 => x->; exists (more_alt (s, g) x) => //.
-    move=> [x H2]; apply: H1.
-    case: x H2 => [|[s2 x] xs]/=.
-      move=>?; subst.
-      rewrite eqxx// in H.
-    move=>[_ _ ->]; exists xs => //.
+      move=> /eqbPA.
+      move=> /(f_equal size_alts)/=; rewrite size_cat_alts; lia.
+    move=> _.
+    clear.
+    elim: gs => //=.
+      apply: suffixA_refl.
+    move=> [??]? H; case: ifP => //.
+  Qed.
+
+  Lemma suffixPA1 s1 s2: (suffix_alts s1 s2) -> (Texists s2', s2 = append_alts s2' s1).
+  Proof.
+    elim: s2 s1 => /= A.
+      case: eqP => // ->; exists no_alt => //.
+    move=> s1 IH s2; case: ifP.
+      move=> /eqP -> _; (eexists no_alt) => //.
+    move=> _ /IH [s2'] ->.
+    exists ((more_alt A s2')) => //.
   Qed.
 
   Lemma catAA x y z: append_alts x (append_alts y z) = append_alts (append_alts x y) z.
@@ -387,10 +402,6 @@ Section alts.
 
   Lemma cats0A l: append_alts l no_alt = l.
   Proof. elim: l => //= -[s x] xs ->//. Qed.  
-
-  Lemma size_cat_alts xs ys:
-    size_alts (append_alts xs ys) = (size_alts xs) + (size_alts ys).
-  Proof. elim: xs ys => //= _ xs IH ys; rewrite IH; lia. Qed.
 
   Lemma suffix_catlA s1 s2 s3 s3':
     size_alts s3 = size_alts s3' ->
@@ -442,7 +453,8 @@ Section alts.
     move=> n; elim: n => [|n IH] []//=g xs ys []/IH->//.
     move=> n; elim: n => [|n IH][]//= _ xs ys []/IH->//.
     apply: suffixPA.
-    move=>s1 s2 /suffixPA [x ->]; rewrite size_cat_alts; lia.
+    apply: suffixPA1.
+    move=>s1 s2 /suffixPA1 [x ->]; rewrite size_cat_alts; lia.
     apply: suffix_catlA.
     move=> p l1; elim: l1 => //= g gs IH l2; rewrite IH -andbA//.
     move=> F l1; elim: l1 => //=x xs IH l1; rewrite IH//.
@@ -502,22 +514,37 @@ Section goals.
     | more_goals x xs => more_goals (F x) (mapG F xs)
     end.
 
-  Lemma suffixPG s1 s2: reflect (exists s2', s2 = append_goals s2' s1) (suffix_goals s1 s2).
+  Lemma suffixG_refl A: suffix_goals A A.
+  Proof. case: A => //= g g0; rewrite eqxx//. Qed.
+
+  Lemma size_cat_goals xs ys:
+    size_goals (append_goals xs ys) = (size_goals xs) + (size_goals ys).
+  Proof. elim: xs ys => //= _ xs IH ys; rewrite IH; lia. Qed.
+
+  Lemma suffixPG s1 s2: (Texists s2', s2 = append_goals s2' s1) -> (suffix_goals s1 s2).
   Proof.
+    move=> [{}s2]->; clear.
     elim: s2 s1 => //=.
-      move=>[|g gs]; constructor.
-        by exists no_goals.
-      by move=>[]-[]//.
+      move=> s1; apply: suffixG_refl.
     move=> g gs IH s1.
     case: ifP.
-      move=>/eqbPG->; constructor; exists no_goals => //.
-    move=>/eqP H.
-    have [H1|H1] := IH s1; constructor.
-      case: H1 => x->; exists (more_goals g x) => //.
-    move=> [x H2]; apply: H1.
-    case: x H2 => [|x xs]/=.
-      by move=>?; subst.
-    move=>[_->]; exists xs => //.
+      move=> /eqbPG.
+      move=> /(f_equal size_goals)/=; rewrite size_cat_goals; lia.
+    move=> _.
+    clear.
+    elim: gs => //=.
+      apply: suffixG_refl.
+    move=> ?? H; case: ifP => //.
+  Qed.
+
+  Lemma suffixPG1 s1 s2: (suffix_goals s1 s2) -> (Texists s2', s2 = append_goals s2' s1).
+  Proof.
+    elim: s2 s1 => /= A.
+      case: eqP => // ->; exists no_goals => //.
+    move=> s1 IH s2; case: ifP.
+      move=> /eqP -> _; (eexists no_goals) => //.
+    move=> _ /IH [s2'] ->.
+    exists ((more_goals A s2')) => //.
   Qed.
 
   Lemma catAG x y z: append_goals x (append_goals y z) = append_goals (append_goals x y) z.
@@ -525,10 +552,6 @@ Section goals.
 
   Lemma cats0G l: append_goals l no_goals = l.
   Proof. elim: l => //= x xs ->//. Qed.  
-
-  Lemma size_cat_goal xs ys:
-    size_goals (append_goals xs ys) = (size_goals xs) + (size_goals ys).
-  Proof. elim: xs ys => //= _ xs IH ys; rewrite IH; lia. Qed.
 
   Lemma suffix_catlG s1 s2 s3 s3':
     size_goals s3 = size_goals s3' ->
@@ -572,7 +595,8 @@ Section goals.
     move=> n; elim: n => [|n IH] []//=g xs ys []/IH->//.
     move=> n; elim: n => [|n IH][]//= _ xs ys []/IH->//.
     apply: suffixPG.
-    move=>s1 s2 /suffixPG [x ->]; rewrite size_cat_goal; lia.
+    apply: suffixPG1.
+    move=>s1 s2 /suffixPG1 [x ->]; rewrite size_cat_goals; lia.
     apply: suffix_catlG.
     move=> p l1; elim: l1 => //= g gs IH l2; rewrite IH -andbA//.
     move=> F l1; elim: l1 => //=x xs IH l1; rewrite IH//.

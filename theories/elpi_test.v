@@ -380,12 +380,11 @@ Proof.
   rewrite/state_to_list/=.
   rewrite//.
 Qed.
-
 Goal forall l,
   let s := ((Or (Or Dead empty (CutS)) empty Top)) in
   let bt := of_alt([::] :: l) in
   state_to_list s empty (of_alt l) = of_alt[:: [:: cut bt]; [::]] /\ 
-    state_to_list (clean_success (get_state (expand u empty s))) empty (of_alt l) ++ (of_alt l) = bt.
+    state_to_list (odflt Bot (next_alt true (get_state (expand u empty s)))) empty (of_alt l) ++ (of_alt l) = bt.
 Proof.
   simpl get_state.
   move=>//=.

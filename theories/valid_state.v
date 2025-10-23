@@ -372,20 +372,6 @@ Section valid_state.
     + move=> s1 s2 r A B b HA _ IH VA; apply (IH (valid_state_expand VA HA)).
   Qed.
 
-  (* Lemma next_alt_aux_base_and1 {A s}: base_and A -> next_alt s A = None.
-  Proof.
-    elim: A s => //=. s => //-[]//p a _ B0 _ B HB/= c.
-    move=>/andP[]/eqP? bB;subst.
-    by rewrite HB.
-  Qed.
-
-  Lemma next_alt_aux_bbase_and1 {A s}: bbAnd A -> next_alt s A = None.
-  Proof.
-    move=>/orP[].
-      apply: next_alt_aux_base_and1.
-    case: A => //=-[]//.
-  Qed.*)
-
   Lemma next_alt_aux_base_and {A} b: base_and A -> next_alt b A = Some (A).
   Proof. elim: A => //; move=>a; case: a => //=[p t|] _ B0 HB0 B HB s/andP[/eqP->bB]/=; rewrite HB//. Qed.
 
@@ -394,10 +380,6 @@ Section valid_state.
 
   Lemma next_alt_aux_base_and_ko {A} b: base_and_ko A -> next_alt b A = None.
   Proof. elim: A => //=; move=>/=[]//p a _ B0 HB0 B HB s/andP[/eqP->bB]/=. Qed.
-
-  (* Lemma next_alt_aux_bbAnd {A} s: 
-    bbAnd A -> next_alt (Some s) A = Some (A) \/ (forall s, next_alt s A = None).
-  Proof. rewrite/bbAnd => /orP[/next_alt_aux_base_and->|]; auto => /next_alt_aux_base_and_ko; auto. Qed. *)
 
   Lemma base_and_failed {A}: base_and A -> failed A = false.
   Proof. elim: A => //=-[]//=p a _ A HA B HB /andP[]//. Qed.

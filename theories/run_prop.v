@@ -525,63 +525,56 @@ Section RunP.
   Qed.
 
   Lemma run_or_correct_left {s1 A s2 A' b sB B}:
-    runb u s1 A s2 A' b ->
-      runb u s1 (Or A sB B) s2 (Or A' sB (if b == 0 then B else cutr B)) 0.
+    runb u s1 A s2 (Some A') b ->
+      runb u s1 (Or A sB B) s2 (Some (Or A' sB (if b == 0 then B else cutr B))) 0.
   Proof.
+    remember (Some _) as S eqn:HS.
     move => H.
-    elim: H sB B => //; clear.
-    + move=> s s' A B C b H -> s2 A'.
-      have H1 := expanded_or_correct_left _ H s2 A'.
-      apply: run_done H1 _.
+    elim: H A' HS sB B => //; clear.
+    + move=> s s' A B C b H <- A' HB s2 B0.
+      have H1 := expanded_or_correct_left _ H s2 B0.
       have sB := expanded_Done_success _ H.
-      move=>/=.
-      rewrite success_is_dead//.
-    + move=> s s' A B C D b1 b2 b3 HE HN HR IH ? s2 E;subst.
-      case dA: (is_dead A).
+      apply: run_done H1 _.
+      move=>/=; rewrite success_is_dead// HB//.
+    + move=> s s' A1 A2 A3 D b1 b2 b3 HA1 HA2 HA3 IH ? A4 ? s2 B;subst.
+      have {}IH := IH _ erefl.
+      case dA: (is_dead A1).
         have H := is_dead_expanded _ s dA.
-        have [[?]?] := expanded_consistent _ (H _) HE; subst.
-        by rewrite (is_dead_next_alt dA) in HN.
-      have /= dB := expanded_not_dead _ dA HE.
-      have H := expanded_or_correct_left_fail _ dA HE s2 E.
+        have [[?]?] := expanded_consistent _ (H _) HA1; subst.
+        by rewrite (is_dead_next_alt _ dA) in HA2.
+      have /= dB := expanded_not_dead _ dA HA1.
+      have H := expanded_or_correct_left_fail _ dA HA1 s2 B.
       move: H; case: eqP => Hb1 H; subst.
         case: eqP => ?; subst.
           destruct b2 => //.
           rewrite eqxx in IH.
           apply: run_backtrack H _ (IH _ _) erefl.
-          move=> /=; rewrite dB HN//.
+          move=> /=; rewrite dB HA2//.
         destruct b2 => //=; simpl in IH.
         apply: run_backtrack H _ (IH _ _) erefl.
-        move=> /=; rewrite dB HN//.
+        move=> /=; rewrite dB HA2//.
       destruct b1 => //=.
-      have {}IH := IH s2 (cutr E); rewrite cutr2 if_same in IH.
+      have {}IH := IH s2 (cutr B); rewrite cutr2 if_same in IH.
       apply: run_backtrack H _ IH erefl.
-      move=> /=; rewrite dB HN//.
+      move=> /=; rewrite dB HA2//.
   Qed.
 
-  Lemma is_dead_runb {s1 s2 A B b}: is_dead A -> runb u s1 A s2 B b -> False.
-  Proof. move=> H; apply: is_ko_runb (is_dead_is_ko H). Qed.
-
-  Lemma next_alt_cutr {A}:
-    next_alt (cutr A) = None.
-  Proof. apply: is_ko_next_alt is_ko_cutr. Qed.
-
-  Lemma runb_dead {s s1 A B b}: runb u s (dead1 A) s1 B b -> False.
-  Proof. apply: is_ko_runb (is_dead_is_ko is_dead_dead). Qed.
-
-  Lemma run_dead_left1 {s1 s2 A B X SOL b}:
-    is_dead A -> runb u s1 (Or A s2 B) SOL X b ->
-      Texists B' b,
-        X = (Or A s2 B') /\ runb u s2 B SOL B' b.
+  (* Lemma run_dead_left1 {s1 s2 A B A' B' b sx}:
+    is_dead A -> runb u s1 (Or A s2 B) sx (Some (Or A' s2 B')) b ->
+      (A = A' /\ Texists b, runb u s2 B sx (Some B') b)%type2.
   Proof.
-    remember (Or A _ _) as o1 eqn:Ho1 => + H.
-    elim: H s2 A B Ho1; clear.
-    - move=> s1 s2 A B C b H1 H2 s3 D E ? dD; subst.
-      have:= expandedb_same_structure _ H1.
-      case: B H1 => //= D' s3' E' H1 /and3P[/eqP? _ _]; subst.
-      have:= expanded_or_complete_done H1 => -[][]H []; try congruence.
+    remember (Or A _ _) as o1 eqn:Ho1.
+    remember (Some _) as S eqn:HS => + H.
+    elim: H A B A' B' s2 HS Ho1; clear.
+    - move=> s1 s2 A1 A2 _ b HA1 _ B1 C1 B2 C2 s3 HA2 ? /[subst] dE.
+      have:= expandedb_same_structure _ HA1.
+      case: A2 HA1 HA2 => // B1' s3' C1'/= HA1 + /and3P[/eqP? _ _]; subst.
+      have:= expanded_or_complete_done HA1 => -[][]H []; try congruence.
       move=> ? [b1 H2]; subst.
-      rewrite dD; repeat eexists.
-      apply: run_done H2 erefl.
+      rewrite dE.
+      case X: next_alt => //[C1''] [??]; subst.
+      repeat eexists.
+      apply: run_done H2 X.
     - move=> s1 s2 A B C D b1 b2 b3 HA HB HC IH ? s3 E F ? dE; subst.
       have:= expandedb_same_structure _ HA.
       case: B HA HB => //= D' s3' E' H1 + /and3P[/eqP? _ _]; subst.
@@ -978,7 +971,7 @@ Section RunP.
       have /= := is_ko_runb _ _ rE2.
       rewrite success_cut in sA'''.
       (* move=> /(_ (clean_success_cutl _ sA'''))//. *)
-  Admitted.
+  Admitted. *)
 
   (* Lemma run_and_correct_success_left {s0 sn A B B0 C b}:
     success A ->
