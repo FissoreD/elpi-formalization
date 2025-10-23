@@ -1072,6 +1072,14 @@ Section main.
   Lemma is_dead_next_alt {A} b: is_dead A -> next_alt b A = None.
   Proof. move=>/is_dead_is_ko/is_ko_next_alt//. Qed.
 
+  Lemma next_altF_success {A} : success A -> next_alt false A = Some A.
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB; case: ifP => [dA sB|dA sA]; rewrite?(HB sB)//HA//.
+    - move=> A HA B0 _ B HB /andP[sA sB]; rewrite HA//HB//sA.
+      rewrite success_is_dead// success_failed//.
+  Qed.
+
   Lemma next_alt_dead {A D b}: 
     next_alt b A = Some (D) -> ((is_dead A = false) * (is_dead D = false))%type.
   Proof.
