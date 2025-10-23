@@ -84,16 +84,16 @@ Section s.
   Qed.
 
 
-  Definition same_or s1 s2 := 
+  Definition same_or left s1 s2 := 
     match s1, s2 with
     | None, None => True
-    | Some (Or _ _ A), Some A' => A = A'
+    | Some (Or A _ B), Some A' => if left then A = A' else B = A'
     | _, _ => False
     end.
 
   Lemma run_dead_left1 {s1 s2 A B b sx r}:
     is_ko A -> runb u s1 (Or A s2 B) sx r b ->
-      (Texists b r', runb u s2 B sx r' b /\ same_or r r').
+      (Texists b r', runb u s2 B sx r' b /\ same_or false r r').
   Proof.
     remember (Or A _ _) as o1 eqn:Ho1 => + H.
     elim: H A B s2 Ho1; clear.
@@ -146,6 +146,74 @@ Section s.
       apply: run_backtrack H _ IH erefl => /=.
       have fE := expandedb_failed _ HA.
       rewrite dA HB//.
+  Qed.
+
+  Lemma run_or_ko_right1 {s2 X B B' SOL b1} sIgn:
+    is_ko X -> runb u s2 B SOL B' b1 ->
+    runb u s2 (Or B sIgn X) SOL (omap (fun x => Or x sIgn (if b1 == 0 then X else cutr X)) B') 0.
+  Proof.
+    move=> +HB; elim: HB sIgn X; clear.
+    - move=> s1 s2 A B C b H1 H2 sIgn X kX; subst.
+      have H2 := expanded_or_correct_left _ _ H1 sIgn X.
+      apply: run_done H2 _.
+      have sB:= expanded_Done_success _ H1.
+      rewrite/= success_is_dead//.
+      case W: next_alt => //.
+      case: ifP => //= dB.
+      case: ifP; rewrite is_ko_next_alt//is_ko_cutr//.
+    - move=> s1 s2 A B C D b1 b2 b3 HA HB HC IH ? sIgn X kX; subst.
+      case dA': (is_dead A).
+        have [[??]] := expanded_consistent _ HA (is_dead_expanded u s1 dA'); subst.
+        by rewrite (is_dead_next_alt _ dA') in HB.
+      case: b1 HA => [|n] HA.
+        apply: run_backtrack.
+          apply: expanded_or_correct_left_fail dA' HA _ _.
+          move=> /=; rewrite (expanded_not_dead _ dA' HA) HB//.
+          apply: IH kX.
+          by [].
+      move=> /=.
+      apply: run_backtrack.
+      apply: expanded_or_correct_left_fail dA' HA _ _.
+      move=> /=; rewrite (expanded_not_dead _ dA' HA) HB//.
+      have:= IH sIgn (cutr X).
+      rewrite cutr2 if_same is_ko_cutr; eauto.
+      by [].
+  Qed.
+
+  Lemma run_or_ko_right2 {s2 X B SOL r sIgn b}:
+    is_ko X -> runb u s2 (Or B sIgn X) SOL r b ->
+      Texists b1 r', runb u s2 B SOL r' b1 /\ same_or true r r'.
+  Proof.
+    remember (Or _ _ _) as o eqn:Ho => +HB.
+    elim: HB B sIgn X Ho; clear.
+    - move=> s1 s2 A B C b H1 H2 D sIgn X Ho kX; subst.
+      have:= expandedb_same_structure _ H1.
+      case: B H1 => //= D' sIgn' X' H1 /and3P[/eqP? _ _]; subst.
+      have {H1} [[dD[b1[H2?]]]|[dD[?[b1 H2]]]] := expanded_or_complete_done _ H1; subst.
+        repeat eexists.
+          apply: run_done H2 erefl.
+        rewrite (expanded_not_dead _ dD H2).
+        case: next_alt => //.
+        case: ifP => //=.
+        case: ifP; rewrite is_ko_next_alt//is_ko_cutr//.
+      by have [] := expanded_consistent _ H2 (is_ko_expanded _ _ kX).
+    - move=> s1 s2 A B C D b1 b2 b3 HA HB HC IH ? E sIgn X Ho kX; subst.
+      have:= expandedb_same_structure _ HA.
+      case: B HA HB => //= D' sIgn' X' HA + /and3P[/eqP? _ _]; subst.
+      have {HA} [[dE[b3[H1 H2]]]|[dE[?[b3 H1]]]] := expanded_or_complete_fail _ HA; subst.
+        rewrite (expanded_not_dead _ dE H1).
+        have kX' : is_ko X'.
+          move: H2; case: ifP => _ ?; subst => //; rewrite is_ko_cutr//.
+        case Y: next_alt => //[D''|].
+          move=>[?]; subst.
+          have [b4[r'[H3 H4]]]:= IH _ _ _ erefl kX'.
+          repeat eexists; eauto.
+          apply: run_backtrack H1 Y H3 erefl.
+        case: ifP => //dX'.
+        rewrite is_ko_next_alt//.
+      rewrite dE.
+      have [[]??] := expanded_consistent _ H1 (is_ko_expanded _ _ kX); subst.
+      rewrite is_ko_next_alt//.
   Qed.
 
   Lemma run_or_complete {s1 s2 A B SOL altAB b}:
