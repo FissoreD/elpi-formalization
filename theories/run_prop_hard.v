@@ -5,57 +5,6 @@ From det Require Import zify_ssreflect.
 Section s.
   Variable u : Unif.
 
-  Definition same_or s1 s2 := 
-    match s1, s2 with
-    | None, None => True
-    | Some (Or _ _ A), Some A' => A = A'
-    | _, _ => False
-    end.
-  
-
-  Lemma run_dead_left1 {s1 s2 A B b sx r}:
-    is_dead A -> runb u s1 (Or A s2 B) sx r b ->
-      (Texists b r', runb u s2 B sx r' b /\ same_or r r').
-  Proof.
-    remember (Or A _ _) as o1 eqn:Ho1 => + H.
-    elim: H A B s2 Ho1; clear.
-    - move=> s1 s2 A1 A2 _ b HA1 <- B1 C1 s3 ? /[subst] dE.
-      have:= expandedb_same_structure _ HA1.
-      case: A2 HA1 => // B1' s3' C1' /= HA1 /and3P[/eqP? _ _]; subst.
-      have:= expanded_or_complete_done _ HA1 => -[][]H []; try congruence.
-      move=> ? [b1 H2]; subst.
-      rewrite dE.
-      repeat eexists.
-        apply: run_done H2 erefl.
-      case X: next_alt => //.
-    - move=> s1 s2 ? X C D b1 b2 b3 HA HB HC IH ? A B s3 ? dE; subst.
-      have:= expandedb_same_structure _ HA.
-      case: X HA HB => //= A' s3' B' H1 + /and3P[/eqP? _ _]; subst.
-      have:= expanded_or_complete_fail _ H1 => -[][]; try congruence.
-      move=> _ [?][b3 H2]; subst.
-      rewrite dE.
-      case X: next_alt => //[E''][?]; subst.
-      have {IH} [bx [r' [H3 H4]]] := IH _ _ _ erefl dE; subst.
-      repeat eexists; eauto.
-      apply: run_backtrack erefl; eassumption.
-  Qed.
-
-  Lemma run_dead_left2 {s2 X B B' SOL b1} sIgn:
-    is_dead X -> runb u s2 B SOL B' b1 ->
-    runb u sIgn (Or X s2 B) SOL (omap (fun x => Or X s2 x) B') 0.
-  Proof.
-    move=> dA HB; elim: HB sIgn; clear -dA.
-    - move=> s1 s2 A B C b H1 H2 sIgn; subst.
-      have H := expanded_or_correct_right _ sIgn dA H1.
-      apply: run_done H _ => /=; rewrite dA//.
-    - move=> s1 s2 A B C D b1 b2 b3 HA HB HC IH ? sIgn; subst.
-      have H := expanded_or_correct_right_fail _ dA HA sIgn.
-      have {}IH := IH sIgn.
-      apply: run_backtrack H _ IH erefl => /=.
-      have fE := expandedb_failed _ HA.
-      rewrite dA HB//.
-  Qed.
-
   Lemma expandedb_exists s A:
     Texists r b, expandedb u s A r b.
   Proof.
@@ -105,10 +54,11 @@ Section s.
       do 2 eexists; eassumption.
   Qed.
 
+
   Lemma next_alt_runb {A B C s s2 b1}:
     next_alt false A = Some B ->
       runb u s B s2 C b1 ->
-        Texists G b, runb u s A s2 G b.
+        Texists b, runb u s A s2 C b.
   Proof.
     have [r[b H]]:= expandedb_exists s A.
     elim: H B C s2 b1; clear.
@@ -116,21 +66,86 @@ Section s.
       have [[??]sA]:= expand_solved_same _ HA; subst.
       have:= next_alt_not_failed _ (success_failed _ sA).
       rewrite nA => -[]?; subst.
-      do 2 eexists; eassumption.
+      eexists; eassumption.
     - move=> s A B HA B0 C s2 b1 nA HB.
       have [? fA]:= (expand_failed_same _ HA); subst => //.
-      do 2 eexists; apply: run_backtrack nA HB erefl.
+      eexists; apply: run_backtrack nA HB erefl.
       apply: expanded_fail HA.
     - move=> s s' r A B b HA HB IH B0 C s2 b1 nA H.
       have fA:= expand_not_failed _ HA notF.
       have:= next_alt_not_failed _ fA.
       rewrite nA => -[?]; subst.
-      do 2 eexists; eassumption.
+      eexists; eassumption.
     - move=> s s' r A B b HA HB IH B0 C s2 b1 nA H.
       have fA:= expand_not_failed _ HA notF.
       have:= next_alt_not_failed _ fA.
       rewrite nA => -[?]; subst.
-      do 2 eexists; eassumption.
+      eexists; eassumption.
+  Qed.
+
+
+  Definition same_or s1 s2 := 
+    match s1, s2 with
+    | None, None => True
+    | Some (Or _ _ A), Some A' => A = A'
+    | _, _ => False
+    end.
+
+  Lemma run_dead_left1 {s1 s2 A B b sx r}:
+    is_ko A -> runb u s1 (Or A s2 B) sx r b ->
+      (Texists b r', runb u s2 B sx r' b /\ same_or r r').
+  Proof.
+    remember (Or A _ _) as o1 eqn:Ho1 => + H.
+    elim: H A B s2 Ho1; clear.
+    - move=> s1 s2 A1 A2 _ b HA1 <- B1 C1 s3 ? /[subst] dE.
+      have:= expandedb_same_structure _ HA1.
+      case: A2 HA1 => // B1' s3' C1' /= HA1 /and3P[/eqP? _ _]; subst.
+      have:= expanded_or_complete_done _ HA1.
+      move=> []; last first.
+        move=> [dB1[?[b1 H]]]; subst.
+        rewrite dB1.
+        repeat eexists.
+        apply: run_done H erefl.
+        case: next_alt => //.
+      move=> [dB1[b1[H1?]]]; subst.
+      by have [] := expanded_consistent _ H1 (is_ko_expanded u s1 dE).
+    - move=> s1 s2 ? X C D b1 b2 b3 HA HB HC IH ? A B s3 ? dE; subst.
+      have:= expandedb_same_structure _ HA.
+      case: X HA HB => //= A' s3' B' H1 + /and3P[/eqP? _ _]; subst.
+      have:= expanded_or_complete_fail _ H1.
+      move=> [].
+        move=> [dA[b3 [H2 H3]]].
+        rewrite (expanded_not_dead _ dA H2).
+        have [[??]] := expanded_consistent _ H2 (is_ko_expanded u s1 dE); subst.
+        simpl in H3; subst.
+        rewrite is_ko_next_alt//.
+        case: ifP => //dB'.
+        case X: next_alt => //=[B''][?]; subst.
+        have [b[r' [H4 H5]]]:= IH _ _ _ erefl (is_dead_is_ko is_dead_dead).
+        have [? H6]:= next_alt_runb X H4.
+        repeat eexists; eauto.
+      move=> [dA[?[b3 H2]]]; subst.
+      rewrite dA.
+      case X: next_alt => //[E''][?]; subst.
+      have {IH} [bx [r' [H3 H4]]] := IH _ _ _ erefl dE; subst.
+      repeat eexists; eauto.
+      apply: run_backtrack erefl; eassumption.
+  Qed.
+
+  Lemma run_dead_left2 {s2 X B B' SOL b1} sIgn:
+    is_dead X -> runb u s2 B SOL B' b1 ->
+    runb u sIgn (Or X s2 B) SOL (omap (fun x => Or X s2 x) B') 0.
+  Proof.
+    move=> dA HB; elim: HB sIgn; clear -dA.
+    - move=> s1 s2 A B C b H1 H2 sIgn; subst.
+      have H := expanded_or_correct_right _ sIgn dA H1.
+      apply: run_done H _ => /=; rewrite dA//.
+    - move=> s1 s2 A B C D b1 b2 b3 HA HB HC IH ? sIgn; subst.
+      have H := expanded_or_correct_right_fail _ dA HA sIgn.
+      have {}IH := IH sIgn.
+      apply: run_backtrack H _ IH erefl => /=.
+      have fE := expandedb_failed _ HA.
+      rewrite dA HB//.
   Qed.
 
   Lemma run_or_complete {s1 s2 A B SOL altAB b}:
@@ -169,7 +184,7 @@ Section s.
         have {IH} [[aA [b3 H]]|[aA [b3 H]]] := IH _ _ _ erefl.
           have {H1} [[dE [b4 [H1 H2]]]|[dE[?[b4 H1]]]] := expanded_or_complete_fail _ H1; subst.
             left; repeat eexists; apply: run_backtrack H1 W H erefl.
-          by have:= next_alt_runb W H; auto.
+          congruence.
         have [[dE [b4 [H2 H4]]]|[dE[?[b4 H2]]]] := expanded_or_complete_fail _ H1; subst; try congruence.
         right; case: b4 H2 H4 => /= [|n] H2 H4; subst.
         - repeat eexists; eassumption.
@@ -180,9 +195,9 @@ Section s.
       have {IH} [[aA [b3 H]]|[aA [b3 H]]] := IH _ _ _ erefl.
         by have:= runb_dead _ H.
       case: b4 H2 H4 => [|n] /= H2 ?; subst => /=; try by rewrite next_alt_cutr in X.
-      have [b4[r [H4 H5]]]:= run_dead_left1 is_dead_dead H3; subst.
+      have [b4[r [H4 H5]]]:= run_dead_left1 (is_dead_is_ko is_dead_dead) H3; subst.
       have {H2} [[_ ?]?]:= run_consistent _ H H4; subst.
-      right; apply: next_alt_runb X H.
+      right; eexists; apply: next_alt_runb X H.
   Qed.
 
   Lemma run_or_correct_dead {s1 s2 A B}:
