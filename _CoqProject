@@ -8,6 +8,7 @@ theories/lang.v
 theories/run.v
 theories/run_test.v
 theories/run_prop.v
+theories/run_prop_hard.v
 theories/check.v
 theories/valid_state.v
 theories/elpi.v
