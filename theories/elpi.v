@@ -649,6 +649,12 @@ Definition add_ca alts a :=
   | call pr t => call pr t
   end.
 
+(* Definition add_ca_deep_g F bt g := apply_cut (fun x => F x ++ bt) g.
+Definition add_ca_deep_goals F bt gl := map (add_ca_deep_g F bt) gl.
+Fixpoint add_ca_deep bt a := 
+  map (fun '(s, gs) => (s, add_ca_deep_goals (add_ca_deep bt) bt gs)) a.
+ *)
+
 Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
   match ats with
   | no_alt => nilC

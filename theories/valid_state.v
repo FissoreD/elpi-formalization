@@ -361,7 +361,7 @@ Section valid_state.
       rewrite valid_state_big_and bbOr_big_or_aux IH if_same//.
   Qed.
 
-  Lemma valid_state_expanded {s1 A r b}:
+  (* Lemma valid_state_expanded {s1 A r b}:
     valid_state A ->  expandedb u s1 A r b -> valid_state (get_state_exp r).
   Proof.
     move=> + H.
@@ -370,7 +370,7 @@ Section valid_state.
     + move=> s A B HA VA; apply: valid_state_expand VA HA.
     + move=> s1 s2 r A B b HA _ IH VA; apply (IH (valid_state_expand VA HA)).
     + move=> s1 s2 r A B b HA _ IH VA; apply (IH (valid_state_expand VA HA)).
-  Qed.
+  Qed. *)
 
   Lemma next_alt_aux_base_and {A} b: base_and A -> next_alt b A = Some (A).
   Proof. elim: A => //; move=>a; case: a => //=[p t|] _ B0 HB0 B HB s/andP[/eqP->bB]/=; rewrite HB//. Qed.
@@ -561,13 +561,14 @@ Section valid_state.
   Proof.
     remember (Some _) as S eqn:HS => +H.
     elim: H B HS; clear.
-    + move=> s1 s2 A B C b + <- B' + vA.
-      move=> /(valid_state_expanded vA)/= vB.
-      move=> /(valid_state_next_alt vB)//.
-    + move=> s1 s3 A B C D b1 b2 b3 HA HB HC IH ? B' ? vA; subst.
-      apply: IH erefl _.
-      apply: valid_state_next_alt HB.
-      apply: valid_state_expanded vA HA.
+    + move=> s1 s2 r A B /expand_solved_same[[??]sA] ? C H vA; subst.
+      by apply: valid_state_next_alt vA H.
+    + move=> s1 s2 s3 r A B n eA rB IH C ? vA; subst.
+      apply: IH erefl (valid_state_expand vA eA).
+    + move=> s1 s2 s3 r A B n eA rB IH C ? vA; subst.
+      apply: IH erefl (valid_state_expand vA eA).
+    + move=> s1 s2 A B C r n /expand_failed_same [? fB] nB rC IH D ? vA; subst.
+      apply: IH erefl (valid_state_next_alt vA nB).
   Qed.
 
   Lemma base_and_ko_succes {B}: base_and_ko B -> success B = false.

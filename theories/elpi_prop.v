@@ -319,9 +319,9 @@ Section NurProp.
     valid_state A -> expand u s A = r -> ~ (is_fail r) -> state_to_list_cons A.
   Proof. case: r => //[s1 B|s1 B|s1 B]vA H _; apply: failed_state_to_list vA (expand_not_failed _ H notF). Qed.
 
-  Lemma expandb_done_state_to_list_cons {s A s1 B b}:
+  (* Lemma expandb_done_state_to_list_cons {s A s1 B b}:
     valid_state A -> expandedb u s A (Done s1 B) b -> state_to_list_cons A.
-  Proof. move=> vA /expandedb_Done_not_failed; apply: failed_state_to_list vA. Qed.
+  Proof. move=> vA /expandedb_Done_not_failed; apply: failed_state_to_list vA. Qed. *)
 
   Lemma bbOr_next_alt_none {s1 B l b}:
     bbOr B -> next_alt b B = None -> state_to_list B s1 l = nilC.

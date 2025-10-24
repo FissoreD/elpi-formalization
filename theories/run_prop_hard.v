@@ -25,7 +25,7 @@ Section s.
       case Y: expand => //=[s'' B'|s'' B'] /(_ erefl erefl) ->//.
   Qed.
 
-  Lemma next_alt_exp_Failed {s1 A B C b1}:
+  (* Lemma next_alt_exp_Failed {s1 A B C b1}:
     expandedb u s1 A (Failed B) b1 ->
       next_alt false B = Some C ->
         if A == B then true
@@ -43,9 +43,9 @@ Section s.
       have {IH} := IH _ _ erefl HB.
       case: eqP => H; subst;
       rewrite (next_alt_exp_same HA1 erefl erefl) eqxx if_same//.
-  Qed.
+  Qed. *)
 
-  Lemma expandedb_exists s A:
+  (* Lemma expandedb_exists s A:
     Texists r b, expandedb u s A r b.
   Proof.
     elim: A s => //=.
@@ -92,17 +92,28 @@ Section s.
         do 2 eexists; eassumption.
       have [b]:= expanded_and_fail_left _ HA B0 B.
       do 2 eexists; eassumption.
-  Qed.
+  Qed. *)
 
 
-  Lemma next_alt_runb {A B C s s2 b1}:
+  (* Lemma next_alt_runb {A B C s s2 b1}:
     next_alt false A = Some B ->
       runb u s B s2 C b1 ->
         Texists b, runb u s A s2 C b.
   Proof.
-    have [r[b H]]:= expandedb_exists s A.
-    elim: H B C s2 b1; clear.
-    - move=> s s' A A' HA B C s2 b1 nA HB.
+    elim: A B C s s2 b1 => //=.
+    - move=> B C s1 s2 b1 [<-]; by eexists; eauto.
+    - move=> B C s1 s2 b1 [<-]; by eexists; eauto.
+    - move=> p c B C s1 s2 b1 [<-]; by eexists; eauto.
+    - move=> B C s1 s2 b1 [<-]; by eexists; eauto.
+    - move=> A HA s B HB C D s1 s2 b1.
+      case:ifP => dA.
+        case X: next_alt => //[B'][<-].
+        move=> H.
+        eexists; apply: run_fail H.
+          rewrite/=dA.
+          rewrite 
+        have:= HA _ _ _ _ _ X.
+        apply: HA.
       have [[??]sA]:= expand_solved_same _ HA; subst.
       have:= next_alt_not_failed _ (success_failed _ sA).
       rewrite nA => -[]?; subst.
@@ -121,7 +132,7 @@ Section s.
       have:= next_alt_not_failed _ fA.
       rewrite nA => -[?]; subst.
       eexists; eassumption.
-  Qed.
+  Qed. *)
 
 
   Definition same_or left s1 s2 := 
@@ -137,6 +148,15 @@ Section s.
   Proof.
     remember (Or A _ _) as o1 eqn:Ho1 => + H.
     elim: H A B s2 Ho1; clear.
+    + move=> s s' r A B H ->  A' B' s2 ? kA'; subst.
+      have [[??]sA]:= expand_solved_same _ H; subst.
+      move: sA => /=.
+      case: ifP => [dA sB|dA sA]; last first.
+        by rewrite is_ko_success in sA.
+      repeat eexists.
+        apply: run_done (succes_is_solved _ _ sB) erefl.
+      case: next_alt => //.
+    - move=> s1 s2 s3
     - move=> s1 s2 A1 A2 _ b HA1 <- B1 C1 s3 ? /[subst] dE.
       have:= expandedb_same_structure _ HA1.
       case: A2 HA1 => // B1' s3' C1' /= HA1 /and3P[/eqP? _ _]; subst.

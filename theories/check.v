@@ -352,7 +352,7 @@ Section check.
       rewrite HB//HA//.
   Qed.
 
-  Lemma expandedb_next_alt_done {sP s A s1 B b}: 
+  (* Lemma expandedb_next_alt_done {sP s A s1 B b}: 
     check_program sP -> 
       no_free_alt sP A -> expandedb u s A (Done s1 B) b ->
         next_alt true B = None.
@@ -367,7 +367,7 @@ Section check.
       apply: IH erefl (expand_no_free_alt Hz fA HA).
     - move=> s1 s2 r A B b HA HB IH s3 C ? fA; subst.
       apply: IH erefl (expand_no_free_alt Hz fA HA).
-  Qed. 
+  Qed.  *)
 
   Lemma has_cut_next_alt {A B b}: 
     has_cut A -> next_alt b A = Some B -> has_cut B.
@@ -485,7 +485,7 @@ Section check.
     by have:= no_free_alt_next_alt H5 H4.
   Qed.
 
-  Lemma expandedb_next_alt_failed {sP s A B C b b1}: 
+  (* Lemma expandedb_next_alt_failed {sP s A B C b b1}: 
     check_program sP ->
       no_free_alt sP A ->
         expandedb u s A (Failed B) b1 -> 
@@ -499,7 +499,7 @@ Section check.
       apply: IH erefl (expand_no_free_alt Hz fA HA) nB.
     - move=> s s' r A B b' HA HB IH b C D ? fA nB; subst.
       apply: IH erefl (expand_no_free_alt Hz fA HA) nB.
-  Qed.
+  Qed. *)
 
   Definition is_det A := forall b s s' B,
     runb u s A s' B b -> B = None.
@@ -511,13 +511,14 @@ Section check.
     rewrite/is_det.
     move=> H1 H2 b s s' B H3.
     elim: H3 H2; clear -H1 => //.
-    - move=> s s' A B C b HA <- fA.
-      have H := expandedb_next_alt_done H1 fA HA.
-      have sB := expanded_Done_success u HA.
-      apply: H.
-    - move=> s r A B C D b1 b2 b3 HA HB HC IH ? fA; subst.
-      apply: IH.
-      apply: expandedb_next_alt_failed H1 fA HA HB.
+    - move=> s1 s2 r A B  /expand_solved_same [[??]sA] ? fB; subst.
+      apply: expand_next_alt H1 fB sA.
+    - move=> s1 s2 s3 r A B n eA rB IH fA.
+      by apply: IH; apply: expand_no_free_alt eA.
+    - move=> s1 s2 s3 r A B n eA rB IH fA.
+      by apply: IH; apply: expand_no_free_alt eA.
+    - move=> s1 s2 A B C r n /expand_failed_same [? fB] nB rC IH fA; subst.
+      by apply: IH; apply: no_free_alt_next_alt nB.
   Qed.
 
   Lemma main {sP p t}:

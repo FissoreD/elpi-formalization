@@ -58,35 +58,19 @@ Section Test1.
   Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) s2 r 0.
   Proof.
     eexists.
-    apply: run_backtrack => //.
-    - apply: expanded_step.
-      - move=> //.
-      - rewrite /big_or/F/select//=.
-        apply: expanded_fail => //=.
-    - move=>/=. reflexivity.
-    - apply: run_backtrack => //.
-      - apply: expanded_step => //=.
-        rewrite /big_or/F/select/= -/s1 -/s2.
-        (* apply: expanded_step => //=. *)
-        apply: expanded_fail => //=.
-      - reflexivity.
-      - apply: run_backtrack => //.
-        - apply: expanded_step => //=.
-          apply: expanded_step => //=.
-          (* apply: expanded_step => //=. *)
-          apply: expanded_fail => //=.
-        - move=> //=.
-        - apply: run_backtrack => //.
-          - apply: expanded_step => //.
-          - apply: expanded_step => //=.
-          - apply: expanded_fail => //=.
-          - move=> //.
-          - apply: run_done.
-            apply: expanded_step => //=.
-            apply: expanded_step => //=.
-            apply: expanded_done => //=.
-            move=> //.
-            move=> //.
+    apply: run_step => //.
+    apply: run_fail => //=.
+    apply: run_step => //=.
+    apply: run_fail => //=.
+    apply: run_step => //=.
+    apply: run_step => //=.
+    apply: run_fail => //=.
+    apply: run_step => //=.
+    apply: run_step => //.
+    apply: run_fail => //=.
+    apply: run_step => //.
+    apply: run_step => //.
+    apply: run_done => //.
   Qed.
 End Test1.
 
@@ -99,34 +83,18 @@ Section Test5.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
     ].
 
-  Goal runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 None false .
+  Goal runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 None 0.
   Proof.
     repeat eexists.
-    apply: run_backtrack.
-    apply: expanded_step.
-    + move=> //.
-    + rewrite /big_or/F/select/=.
-      (* apply: expanded_step => //=. *)
-      apply: expanded_fail => //.
-      reflexivity.
-    apply: run_backtrack => //.
-      apply: expanded_step => //=.
-    + rewrite /big_or/F/select/=.
-      (* apply: expanded_step => //=. *)
-      apply: expanded_fail => //=.
-      reflexivity.
-      rewrite -/s1-/s2.
-      apply: run_done.
-      apply: expanded_step => //.
-      rewrite [CutS]lock.
-      apply: expanded_step => //=.
-      rewrite -lock [mkAnd]lock /= -/s1 -/s2.
-      rewrite -lock [mkOr]lock /=.
-      rewrite -lock //=.
-      apply: expanded_step => //=.
-      apply: expanded_done => //=.
-      reflexivity.
-      reflexivity.
+    apply: run_step => //.
+    apply: run_fail => //=.
+    apply: run_step => //=.
+    apply: run_fail => //=.
+    apply: run_step => //=.
+    apply: run_step => //=.
+    apply: run_step => //=.
+    rewrite-/s1-/s2.
+    apply: run_done => //.
   Qed.
 End Test5.
 
@@ -142,38 +110,21 @@ Section Test6.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
   ].
 
-  Goal     runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) s1 None false .
+  Goal     runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) s1 None 0 .
   Proof.
     repeat eexists.
-    apply: run_backtrack.
-    apply: expanded_step.
-    + move=> //.
-    + rewrite /big_or/F/select/=.
-      (* apply: expanded_step => //=. *)
-      apply: expanded_fail => //.
-      reflexivity.
-    apply: run_backtrack => //.
-      apply: expanded_step => //=.
-    + rewrite /big_or/F/select/=.
-      (* apply: expanded_step => //=. *)
-      apply: expanded_fail => //=.
-      rewrite -/s2 -/s1.
-      reflexivity.
-      apply: run_backtrack.
-      apply: expanded_step => //.
-      (* rewrite [Cut]lock. *)
-      apply: expanded_step => //=.
-      (* apply: expanded_step => //=. *)
-      apply: expanded_fail => //=.
-      move=>//.
-      apply: run_done.
-      apply: expanded_step => //=.
-      apply: expanded_step => //=.
-      apply: expanded_step => //=.
-      apply: expanded_done => //=.
-      reflexivity.
-      reflexivity.
-      reflexivity.
+    apply: run_step => //.
+    apply: run_fail => //=.
+    apply: run_step => //=.
+    apply: run_fail => //=.
+    apply: run_step => //=.
+    apply: run_step => //=.
+    apply: run_fail => //=.
+    apply: run_step => //=.
+    rewrite-/s1-/s2.
+    apply: run_step => //=.
+    apply: run_step => //.
+    apply: run_done => //.
   Qed.
 End Test6.
 
@@ -182,27 +133,21 @@ Section Test2.
   (* Import RunAxiom. *)
   Goal expand unif empty (Or OK empty OK) = Success empty (Or OK empty OK) . by []. Qed.
 
-  Goal runb unif empty (Or (CutS) empty OK) empty (None) false.
-    apply: run_done => //=. 
-    apply: expanded_step => //=.
-    by apply: expanded_done => /=.
-    move=>//=.
+  Goal runb unif empty (Or (CutS) empty OK) empty (None) 0.
+    apply: run_step => //=.
+    apply: run_done => //.
   Qed.
 
   Goal forall r, 
-    runb unif empty (Or (CutS) empty r) empty None false.
+    runb unif empty (Or (CutS) empty r) empty None 0.
     move=> r.
-    apply: run_done.
-    apply: expanded_step => //=.
-    apply: expanded_done => //=.
-    move=>/=.
+    apply: run_step => //.
+    apply: run_done => //=.
     rewrite is_ko_next_alt?if_same//is_ko_cutr//.
   Qed.
 
-  Goal runb unif empty (Or OK empty (Or OK empty OK)) empty (Some (Or Dead empty (((Or OK empty OK))))) false.
-  Proof. apply: run_done => //=. apply: expanded_done => //=.
-    move=>/=.
-    reflexivity. Qed.
+  Goal runb unif empty (Or OK empty (Or OK empty OK)) empty (Some (Or Dead empty (((Or OK empty OK))))) 0.
+  Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
   Goal expand unif empty (Or (Or Dead empty (CutS)) empty Top) = Expanded empty (Or (Or Dead empty OK) empty Top) .
