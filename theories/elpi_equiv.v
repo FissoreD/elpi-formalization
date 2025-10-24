@@ -605,8 +605,7 @@ Section NurEqiv.
         rewrite get_state_Or/= state_to_list_dead//=.
         set X:= state_to_list _ _ _ .
         case Y: X => [|[]]//=.
-        have:= HB _ nilC _ _ _ _ _ vB SB.
-        move=> /(_ _ IsList_alts).
+        have:= [elaborate (HB _ nilC _ _ _ _ _ vB SB)].
         rewrite -/X Y//.
       have:= HB nilC _ _ _ _ _ _ (bbOr_valid bB).
       set SB := state_to_list B _ _.
@@ -654,8 +653,7 @@ Section NurEqiv.
         case X : state_to_list => [|r rs]/=.
           rewrite cat0s.
           move=>_ H2.
-          have:= f_equal size H2.
-          move=>/(_ _ IsList_alts).
+          have:= [elaborate f_equal size H2].
           rewrite /make_lB0 !size_map size_cons !size_add_deep /SA/SA'.
           rewrite (s2l_size empty l1) => ->; lia.
         rewrite make_lB01_empty2.

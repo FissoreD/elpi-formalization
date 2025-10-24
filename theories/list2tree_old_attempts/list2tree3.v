@@ -98,6 +98,26 @@ Section s.
   Qed.
 End s.
 
+(* Fixpoint a2t_right_most_cat T1 T2 :=
+  match T1 with
+  | Or X s1 Y => Or X s1 (a2t_right_most_cat Y T2)
+  | X => Or X empty T2
+  end. *)
+
+
+(* Lemma a2t_cat {L1 L2}:
+  a2t_ (L1 ++ L2) = if L1 == nilC then (a2t_ L2) else a2t_right_most_cat (a2t_ L1) (a2t_ L2).
+Proof.
+  elim: L1 L2 => //[[s g]gs IH] L2.
+  fConsA (s, g) gs.
+  rewrite cat_cons/=.
+  f_equal.
+  case: gs.
+
+  - fNilA; rewrite cat0s/=.
+  - move=> /=. *)
+  
+
 Lemma expand_a2t {u ign1 L}: 
   expand u ign1 (a2t_ L) = Failure (a2t_ L).
 Proof. case: L => //=-[]//. Qed.
@@ -214,14 +234,14 @@ Proof.
 Admitted.
 
 
-Lemma zz u s1 s2 A B b1: 
+Lemma zz u s1 s2 A B b1 bt: 
   valid_state A ->
   runb u s1 A s2 B b1 -> 
-    Texists C b2, runb u s1 (a2t_ (state_to_list A s1 nilC)) s2 C b2. (*/\ equiv_run B C*)
+    Texists C b2, runb u s1 (a2t_ (state_to_list A s1 bt)) s2 C b2. (*/\ equiv_run B C*)
 Proof.
-  elim: A B s1 s2 b1 => //=.
+  elim: A B s1 s2 b1 bt => //=.
   - by repeat eexists; eauto.
-  - move=> B s1 s2 b1 _ H.
+  - move=> B s1 s2 b1 bt _ H.
     inversion H; subst.
       inversion H0 => //; subst.
       case: H6 => ??; subst.
@@ -233,7 +253,7 @@ Proof.
       apply: expanded_step => //=.
       apply: expanded_done => //=.
     inversion H0 => //.
-  - move=> B s1 s2 b1 _ H.
+  - move=> B s1 s2 b1 bt _ H.
     inversion H; subst; last first.
       inversion H0 => //; subst.
       case: H3 => ??; subst.
@@ -249,26 +269,27 @@ Proof.
     apply: run_done => //.
     apply: expanded_step => //.
     apply: expanded_done => //.
-  - move=> p c r s1 s2 b _ H.
+  - move=> p c r s1 s2 b bt _ H.
     repeat eexists.
     apply: run_backtrack erefl.
       apply: expanded_fail => //.
       by [].
     apply: run_dead_left2 => //.
     apply: run_or_ko_right1 => //.
-    admit.
+    admit. (*OK by applying an aux lemma on And*)
   - move=> B s1 s2 b1 _ H; repeat eexists.
     apply: run_backtrack.
       apply: expanded_fail => //.
       move=> //.
       apply: run_dead_left2 is_dead_dead _.
       apply: run_or_ko_right1 => //.
+      (*OK by applying an aux lemma on And (the one used in admit before)*)
       admit.
     move=> //.
-  - move=> A HA s B HB C s1 s2 b1.
+  - move=> A HA s B HB C s1 s2 b1 bt.
     case: ifP => [dA vB|dA/andP[vA bB]].
       move=>/(run_dead_left1 _ (is_dead_is_ko dA)) [b2 [r'[H1 H2]]].
-      have {HA}[D[b3 H3]] := HB _ _ _ _ vB H1.
+      have {HA HB}[D[b3 H3]] := HB _ _ _ _ nilC vB H1.
       rewrite state_to_list_dead//.
       admit.
     rewrite add_ca_deep_cat.
