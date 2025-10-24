@@ -5,6 +5,46 @@ From det Require Import zify_ssreflect.
 Section s.
   Variable u : Unif.
 
+  Lemma next_alt_exp_same {s A r}:
+    expand u s A = r -> is_fail r = false -> is_solved r = false ->
+      next_alt false A = Some A.
+  Proof.
+    move=> <-; elim: A s {r} => //=.
+    - move=> A HA s B HB s1.
+      case: ifP => dA.
+        have:= HB s; case: expand => //=s' B'/(_ erefl)->//.
+      have:= HA s1; case: expand => //= _ _ /(_ erefl)->//.
+    - move=> A HA B0 _ B HB s; case: ifP => dA.
+        rewrite is_dead_expand//.
+      have:= HA s; case X: expand => //=[s' A'|s' A'|s' A'] /(_ erefl).
+        move=> /(_ erefl)->; rewrite (expand_not_failed _ X notF) (expand_not_solved_not_success _ X notF)//.
+        move=> /(_ erefl)->; rewrite (expand_not_failed _ X notF) (expand_not_solved_not_success _ X notF)//.
+      have [[??]sA] := expand_solved_same _ X; subst.
+      rewrite sA success_failed//.
+      have:= HB (get_substS s A').
+      case Y: expand => //=[s'' B'|s'' B'] /(_ erefl erefl) ->//.
+  Qed.
+
+  Lemma next_alt_exp_Failed {s1 A B C b1}:
+    expandedb u s1 A (Failed B) b1 ->
+      next_alt false B = Some C ->
+        if A == B then true
+        else next_alt false A == Some A.
+  Proof.
+    remember (Failed _) as f eqn:Hf => H.
+    elim: H B C Hf; clear => //.
+    - move=> s A B HA C D [<-] H.
+      rewrite  (expand_failed_same _ HA) eqxx//.
+    - move=> s1 s2 r A1 A2 b HA1 HA2 IH B C ? HB; subst.
+      have {IH} := IH _ _ erefl HB.
+      case: eqP => H; subst;
+      rewrite (next_alt_exp_same HA1 erefl erefl) eqxx if_same//.
+    - move=> s1 s2 r A1 A2 b HA1 HA2 IH B C ? HB; subst.
+      have {IH} := IH _ _ erefl HB.
+      case: eqP => H; subst;
+      rewrite (next_alt_exp_same HA1 erefl erefl) eqxx if_same//.
+  Qed.
+
   Lemma expandedb_exists s A:
     Texists r b, expandedb u s A r b.
   Proof.
@@ -146,6 +186,95 @@ Section s.
       apply: run_backtrack H _ IH erefl => /=.
       have fE := expandedb_failed _ HA.
       rewrite dA HB//.
+  Qed.
+
+  Lemma run_ko_left2 {s2 X B r SOL b1} sIgn:
+    is_ko X -> runb u s2 B SOL r b1 ->
+    Texists r', runb u sIgn (Or X s2 B) SOL r' 0 /\ (
+      match r, r' with
+      | None, None => true
+      | Some L, Some (Or K _ R) => ((K = X) + (K = dead1 X)) /\ L = R
+      | _, _ => false
+      end
+    ).
+  Proof.
+    move=> + HB; elim: HB sIgn X; clear.
+    - move=> s1 s2 A B C b H1 H2 sIgn X kX; subst.
+      case dX: (is_dead X).
+        repeat eexists.
+        apply: run_done erefl.
+          by apply: expanded_or_correct_right dX H1.
+        move=> /=; rewrite dX.
+        case Z: next_alt => //=; auto.
+      have fA : failed A = false.
+        case F: failed => //.
+        by have [] := expanded_consistent _ H1 (failed_expandedb _ _ F).
+      repeat eexists.
+        apply: run_backtrack.
+          apply: expanded_fail; rewrite/= dX is_ko_expand//.
+          move=> /=; rewrite dX is_ko_next_alt//.
+          case: ifP => dA.
+            by have [] := expanded_consistent _ H1 (is_dead_expanded _ _ dA).
+          rewrite (next_alt_not_failed)//.
+          apply: run_done.
+          apply: expanded_or_correct_right is_dead_dead H1.
+          move=> //=.
+          by [].
+        rewrite is_dead_dead.
+        case: next_alt => //; auto.
+    - move=> s1 s2 A B C D b1 b2 b3 HA HB HC IH ? sIgn X kX; subst.
+      have:= next_alt_exp_Failed HA HB.
+      case: eqP => Hs; subst.
+        move=> _.
+        case dX: (is_dead X).
+          have [b4 HH]:= next_alt_runb HB HC.
+          repeat eexists.
+          apply: run_dead_left2 dX HH.
+        case: D HC IH HH => //=[D'] HC IH HH.
+        auto.
+      have {IH} [r' [H1 H2]] := IH sIgn (dead1 X) (is_dead_is_ko is_dead_dead).
+      repeat eexists.
+      apply: run_backtrack.
+        apply: expanded_or_correct_left_fail dX _ _ _.
+        apply: is_ko_expanded kX.
+        rewrite/= dX is_ko_next_alt//.
+        rewrite HB.
+        case: ifP => //.
+        move=> /[dup] H /(is_dead_expanded u s1) /(expanded_consistent _ HA) [??]; subst.
+          by rewrite (is_dead_next_alt) in HB.
+        eauto.
+        by[].
+        case: D H2 {HC} => //=[E].
+        case: r' {H1} => //=-[]//? _ ?.
+        move=> [[?|?]?]; subst; rewrite?dead2; auto.
+      case dX: (is_dead X).
+        (* have {IH} [r' [H1 H2]] := IH sIgn (dead1 X) (is_dead_is_ko is_dead_dead). *)
+        have {IH} [r' [H1 H2]] := IH sIgn X (kX).
+        repeat eexists.
+        apply: run_backtrack H1 _.
+        apply: expanded_or_correct_right_fail dX HA _.
+        move=> /=; rewrite dX HB//.
+        by [].
+        move=>//.
+      move=>/eqP Hr.
+
+      have {IH} [r' [H1 H2]] := IH sIgn (dead1 X) (is_dead_is_ko is_dead_dead).
+      repeat eexists.
+      apply: run_backtrack.
+        apply: expanded_fail => /=.
+        rewrite dX is_ko_expand//.
+        move=> /=; rewrite dX is_ko_next_alt//.
+        case: ifP => dA.
+          have [[?]?] := expanded_consistent _ HA (is_dead_expanded _ _ dA); subst.
+          by rewrite (is_dead_next_alt _ dA)// in HB.
+        rewrite Hr//.
+        apply: run_backtrack H1 erefl.
+        apply: expanded_or_correct_right_fail is_dead_dead HA _.
+        move=> /=; rewrite is_dead_dead HB//.
+        move=>//.
+      case: D H2 HC => //[s].
+      case: r' H1 => //sx.
+      case: sx => //=??? _ [[?|?]?]; subst; rewrite ?dead2; auto.
   Qed.
 
   Lemma run_or_ko_right1 {s2 X B B' SOL b1} sIgn:
