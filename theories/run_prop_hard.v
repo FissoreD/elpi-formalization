@@ -131,7 +131,7 @@ Section s.
     | _, _ => False
     end.
 
-  Lemma run_dead_left1 {s1 s2 A B b sx r}:
+  Lemma run_ko_left1 {s1 s2 A B b sx r}:
     is_ko A -> runb u s1 (Or A s2 B) sx r b ->
       (Texists b r', runb u s2 B sx r' b /\ same_or false r r').
   Proof.
@@ -392,7 +392,7 @@ Section s.
       have {IH} [[aA [b3 H]]|[aA [b3 H]]] := IH _ _ _ erefl.
         by have:= runb_dead _ H.
       case: b4 H2 H4 => [|n] /= H2 ?; subst => /=; try by rewrite next_alt_cutr in X.
-      have [b4[r [H4 H5]]]:= run_dead_left1 (is_dead_is_ko is_dead_dead) H3; subst.
+      have [b4[r [H4 H5]]]:= run_ko_left1 (is_dead_is_ko is_dead_dead) H3; subst.
       have {H2} [[_ ?]?]:= run_consistent _ H H4; subst.
       right; eexists; apply: next_alt_runb X H.
   Qed.
