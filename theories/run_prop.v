@@ -561,4 +561,41 @@ Section RunP.
       rewrite/= (next_alt_dead HB) HB//.
   Qed.
 
+  Lemma run_or_correct_right {s1 A s2 A' b sB B}:
+    (* TODO: be more general and cosider the case result = None *)
+    runb u s1 A s2 (Some A') b ->
+      runb u s1 (Or A sB B) s2 (Some (Or A' sB (if b == 0 then B else cutr B))) 0.
+  Proof.
+    remember (Some _) as S eqn:HS.
+    move => H.
+    elim: H A' HS sB B => //; clear.
+    + move=> s s' r A B H ->  A' HB s2 B0/=.
+      have [[??] sA]:= expand_solved_same _ H; subst.
+      apply: run_done.
+        rewrite /=success_is_dead// succes_is_solved//.
+      move=> /=; rewrite success_is_dead// HB//.
+    + move=> s1 s2 s3 r A B n HA HB IH C ? sB D; subst.
+      have {}IH := IH _ erefl.
+      apply: run_step => /=.
+        case: ifP => dA.
+          by rewrite is_dead_expand in HA.
+        rewrite HA //.
+      have:= IH sB (cutr D).
+      by rewrite cutr2 if_same.
+    + move=> s1 s2 s3 r A B n HA HB IH C ? sB D; subst.
+      have {}IH := IH _ erefl.
+      apply: run_step => /=.
+        case: ifP => dA.
+          by rewrite is_dead_expand in HA.
+        rewrite HA //.
+      apply: IH.
+    + move=> s1 s2 A B C r n HA HB HC IH D ? sB E; subst.
+      have [? fB]:= expand_failed_same _ HA; subst.
+      have {}IH := IH _ erefl.
+      apply: run_fail (IH _ _).
+        move=>/=; rewrite HA.
+        rewrite (next_alt_dead HB)//.
+      rewrite/= (next_alt_dead HB) HB//.
+  Qed.
+
 End RunP.

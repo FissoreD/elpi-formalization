@@ -20,6 +20,28 @@ with l2t_G g :=
   | cut _ => CutS
   end. *)
 
+Lemma s2l_nil_is_ko {A s1 bt}:
+  (* THIS IS WRONG: a valid state is (OK /\ KO), the list its empty but it is not is_ko *)
+  valid_state A ->
+  state_to_list A s1 bt = nilC ->
+    is_ko A.
+Proof.
+  elim: A s1 bt => //=.
+  - move=> A HA s B HB s1 bt; case: ifP => [dA vB|dA /andP[vA bB]].
+      rewrite (state_to_list_dead dA) => //.
+      case X: state_to_list => [|[]]//= _.
+      rewrite is_dead_is_ko//(HB s nilC)//.
+    case X: state_to_list => [|[s2 y]ys]//.
+    case Y: state_to_list => [|[s3 z]zs]//.
+    rewrite (HA s1 (state_to_list B s nilC))//(HB s nilC)//bbOr_valid//.
+  - move=> A HA B0 HB0 B HB s1 bt /and5P[_ vA _].
+    case: ifP => /=[sA vB bB0|sA/eqP->{HB0}].
+      rewrite (success_state_to_list s1)//=. (*TODO: not sure it is s1*)
+      move/orP: bB0 => []bB; last first.
+        rewrite base_and_ko_state_to_list//=.
+        case X: state_to_list => //=.
+Abort.
+
 Lemma s2l_nil_is_ko u {A s1 bt}:
   valid_state A ->
   state_to_list A s1 bt = nilC ->
@@ -73,7 +95,7 @@ Proof.
 Admitted.
 
 
-Lemma state_to_list_success {u A s s1 bt xs}:
+(* Lemma state_to_list_success {u A s s1 bt xs}:
   state_to_list A s bt = (s1, nilC) ::: xs ->
     Texists A', expandedb u s A (Done (get_substS s A) A') 0. (*TODO: specify better A'*)
 Proof.
@@ -87,7 +109,7 @@ Proof.
       case Y: state_to_list => [|[s4 [|??]]zs]//[??]; subst.
       move: Y; fNilG; fConsA (s1, nilC) zs => Y.
       have {HA HB} [b1 H] := HB _ _ _ _ Y.
-Abort.
+Abort. *)
 
 Lemma s2l_add_ca {A s bt1 xs}:
   state_to_list A s bt1 = add_ca_deep bt1 xs ->
@@ -146,26 +168,24 @@ Lemma xx {u A s s1 bt xs}:
 Proof.
   elim: A s s1 bt xs => //=.
   - move=> s s1 bt [|[]]//= _ [->].
-    repeat eexists.
-      apply: run_done (expanded_done _ _) _ => //.
-    (* move=> //. *)
-  - move=> s s1 bt [|[]]//= _ [->]; repeat eexists.
-      apply: run_done (expanded_step _ _ (expanded_done _ _)) _ => //.
-    (* move=>//. *)
-  - move=> A HA s B HB s1 s2 bt a.
+    repeat eexists; by apply: run_done.
+  - move=> s s1 bt [|[]]//= _ [->].
+    repeat eexists; apply: run_step => //; by apply: run_done.
+  - move=> A HA s B HB s1 s2 bt xs.
+    case: ifP => [dA vB|dA /andP[vA bB]].
+      rewrite state_to_list_dead//.
+      case X: state_to_list => //[[s3 [|??]]ys]//=[??]; subst.
+      have [b1[n H]]:= HB _ _ _ _ vB X.
+      repeat eexists.
+      have [r[{}HB ?]]:= run_ko_left2 _ s1 (is_dead_is_ko dA) H; subst.
+      rewrite dA in HB.
+      eauto.
     rewrite add_ca_deep_cat.
-    case:ifP => [dA vB|dA /andP[vA bB]].
-      rewrite state_to_list_dead//=.
-      case X: state_to_list => //[[s3 [|??]]xs]//=[? H]; subst.
-      move: X; fNilG; fConsA (s2, nilC) xs => X.
-      have {HB} := [elaborate HB s s2 nilC xs vB X].
-      move=> [r [n H]].
-      have [r''[H3 H4]] := run_ko_left2 _ s1 (is_dead_is_ko dA) H.
-      repeat eexists; eauto.
-    case X: state_to_list => [|[sx x]xs].
-      fNilA; case Y: state_to_list => //[[s3 [|??]]ys]//[??]; subst.
-      move: Y; fNilG; fConsA (s2, nilC) ys => Y.
+    case X: state_to_list => [|[s3 [|??]]ys]//.
+      case Y: state_to_list => //[[s3 [|??]]ys]//=[??]; subst.
+      have [B'[n{}HB]] := HB _ _ _ _ (bbOr_valid bB) Y.
       have H := s2l_nil_is_ko u vA X s1.
+      Search bbOr state_to_list.
       (* have:=  *)
 Admitted.
     
