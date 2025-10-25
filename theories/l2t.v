@@ -185,9 +185,56 @@ Proof.
       case Y: state_to_list => //[[s3 [|??]]ys]//=[??]; subst.
       have [B'[n{}HB]] := HB _ _ _ _ (bbOr_valid bB) Y.
       have H := s2l_nil_is_ko u vA X s1.
-      Search bbOr state_to_list.
-      (* have:=  *)
+      (* this should? be ok: A \/ B with A fail and run B, 
+         attention: if A has a superficial cut is B cut away? *)
+      (* That is: can I have: (! /\ Bot) \/ B*)
+      (* It should not be a valid state! *)
+      admit.
+    rewrite /=cat_cons => -[??]; subst.
+    have [A'[n H1]] := HA _ _ _ _ vA X.
+    have [r' [{}H1]]:= run_or_correct_left _ s B H1.
+    repeat eexists; eauto.
+  - move=> A HA B0 HB0 B HB s1 s2 bt xs /and5P[_ vA _].
+    case: ifP => /= [sA vB |sA /eqP -> {HB0}].
+      rewrite (success_state_to_list s1)//=. (*TODO: not sure of subst s1*)
+      move=> /orPT []bB; last first.
+        rewrite base_and_ko_state_to_list//=.
+        rewrite make_lB01_empty2 => H.
+        have [r[n {}HB]] := HB _ _ _ _ vB H.
+        admit. (*this is ok: A /\ B with success A and run B*)
+      have [hd H]:= base_and_state_to_list bB.
+      rewrite H/=make_lB01_empty2.
+      case X: state_to_list => [|[sy [|??]]ys]//.
+        case W: next_alt => //=[A'].
+        case Y: state_to_list => //[[sw [|??]] ws]//=.
+        case: hd H X => //H X[??]; subst.
+        have:= HB0 empty empty no_alt no_alt (base_and_valid bB). (*TODO: not sure empty and no_alt*)
+        rewrite H=> /(_ erefl) [r[n {}HB0]].
+        admit. (*this is ok: A /\ B -> A success, B fails, 
+                 but next_alt A exists and run B04*)
+      move=> [??]; subst.
+      have [r[n {}HB]] := HB _ _ _ _ vB X.
+      (* this is ok: A /\ B, A success and run B *)
+      admit.
+    case X: state_to_list => //[[sy y]ys].
+    case: ifP => [fA|fA bB].
+      move=> /orPT []bB; last first.
+        rewrite !base_and_ko_state_to_list//=.
+      have [hd H]:= base_and_state_to_list bB.
+      rewrite H/=H/make_lB01 map_cons.
+      case: y X => //; case: hd H => //H X [??]; subst.
+      have [r[n {}HA]] := HA _ _ _ _ vA X.
+      have [r'[n' {}HB]] := HB _ _ _ _ (base_and_valid bB) (H nilC empty).
+      admit. (*this is ok: A /\ B with run A and run B and B0 = B*)
+    have [hd H]:= base_and_state_to_list bB.
+    rewrite H/=H/make_lB01 map_cons.
+    case: y X => //; case: hd H => //H X [??]; subst.
+    have [r[n {}HA]] := HA _ _ _ _ vA X.
+    have [r'[n' {}HB]] := HB _ _ _ _ (base_and_valid bB) (H nilC empty).
+    admit. (*this is ok: A /\ B with run A and run B and B0 = B*)
 Admitted.
+
+Search runb And.
     
 
 Lemma two' {u s s1} {alts alts_left : alts} {andg : goals}  : 
