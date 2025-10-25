@@ -552,7 +552,7 @@ Section main.
               expand s1 A = Failure B -> next_alt false B = Some C ->
               runb s1 C s2 r n -> runb s1 A s2 r n.
 
-  Definition dead_run s1 A := forall s2 B n, runb s1 A s2 B n -> False.
+  Definition dead_run s1 A : Type := forall s2 B n, runb s1 A s2 B n -> False.
 
   (* Definition expandedb s A r := exists b, expandedb s A r b.
   Definition run s A s1 B := exists b, runb s A s1 B b.

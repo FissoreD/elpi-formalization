@@ -81,6 +81,13 @@ Section valid_state.
         & (if success A || failed A then bbAnd B0 else base_and B0)]
     end.
 
+  Goal forall x r, (valid_state (And CutS x r)) -> is_ko r = false.
+  Proof.
+    move=> x r/=/and3P[_ /eqP->].
+    elim: r => //-[]//.
+  Qed.
+
+
   Lemma valid_state_dead {A} : is_dead A -> valid_state A = false.
   Proof.
     elim: A => //.

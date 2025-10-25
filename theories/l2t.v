@@ -65,7 +65,7 @@ Proof.
   - move=> A HA B0 HB0 B HB s1 bt /and5P[_ vA _].
     case: ifP => /=[sA vB bB0|sA/eqP->{HB0}].
       rewrite (success_state_to_list s1)//=. (*TODO: not sure it is s1*)
-      move/orP: bB0 => []bB; last first.
+      move/orPT: bB0 => []bB; last first.
         rewrite base_and_ko_state_to_list//=.
         case X: state_to_list => //= _ s2 s3 r b H1.
         have {}HB := HB _ _ vB X.
@@ -81,7 +81,7 @@ Proof.
         move=> _ s3 s4 r b H.
         have [sm[r1[b1 H1]]]:= run_and_correct _ H.
         by apply: HA H1; eauto.
-      move/orP: bB => []bB; last first.
+      move/orPT: bB => []bB; last first.
         rewrite base_and_ko_state_to_list//=.
         case Y: state_to_list => //= _ s4 s5 r b H1.
         have {}HB := HB _ _ (base_and_ko_valid bB) Y.
@@ -185,10 +185,12 @@ Proof.
       case Y: state_to_list => //[[s3 [|??]]ys]//=[??]; subst.
       have [B'[n{}HB]] := HB _ _ _ _ (bbOr_valid bB) Y.
       have H := s2l_nil_is_ko u vA X s1.
+      have:= H empty (Some A) n.
       (* this should? be ok: A \/ B with A fail and run B, 
          attention: if A has a superficial cut is B cut away? *)
-      (* That is: can I have: (! /\ Bot) \/ B*)
+      (* That is: can I have: (! /\ fail) \/ B*)
       (* It should not be a valid state! *)
+      (* Therefore, in a lemma like  *)
       admit.
     rewrite /=cat_cons => -[??]; subst.
     have [A'[n H1]] := HA _ _ _ _ vA X.

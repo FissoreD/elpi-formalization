@@ -614,10 +614,11 @@ Section RunP.
       by rewrite/= HB (next_alt_dead HB).
   Qed.
 
-  Lemma run_or_correct_right {s1 A s2 A' b sB B}:
+  (* Lemma run_or_correct_right {sA A srA rA bA} {sB B srB rB bB}:
     (* TODO: be more general and cosider the case result = None *)
-    runb u s1 A s2 (Some A') b ->
-      runb u s1 (Or A sB B) s2 (Some (Or A' sB (if b == 0 then B else cutr B))) 0.
+    (runb u sA A srA rA bA -> False) -> runb u sB B srB rB bB ->
+      if bA == 0 then dead_run u sA (Or A sB B)
+      else runb u sA (Or A sB B) srB (omap (fun x => Or (if is_dead A then A else dead1 A) srB x) rB) 0.
   Proof.
     remember (Some _) as S eqn:HS.
     move => H.
@@ -649,6 +650,6 @@ Section RunP.
         move=>/=; rewrite HA.
         rewrite (next_alt_dead HB)//.
       rewrite/= (next_alt_dead HB) HB//.
-  Qed.
+  Qed. *)
 
 End RunP.
