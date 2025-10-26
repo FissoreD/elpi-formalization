@@ -614,42 +614,26 @@ Section RunP.
       by rewrite/= HB (next_alt_dead HB).
   Qed.
 
+  (* Lemma run_or_complete:
+    runb u sA (Or A sB B) s3 r n1 ->
+      (runb u sA A srA rA n /\ ()) \/ () *)
+
   (* Lemma run_or_correct_right {sA A srA rA bA} {sB B srB rB bB}:
-    (* TODO: be more general and cosider the case result = None *)
     (runb u sA A srA rA bA -> False) -> runb u sB B srB rB bB ->
-      if bA == 0 then dead_run u sA (Or A sB B)
-      else runb u sA (Or A sB B) srB (omap (fun x => Or (if is_dead A then A else dead1 A) srB x) rB) 0.
+      if bA == 0 then (runb u sA (Or A sB B) srB (omap (fun x => Or (if is_dead A then A else dead1 A) srB x) rB) 0 :> Type)
+      else dead_run u sA (Or A sB B).
   Proof.
-    remember (Some _) as S eqn:HS.
-    move => H.
-    elim: H A' HS sB B => //; clear.
-    + move=> s s' r A B H ->  A' HB s2 B0/=.
-      have [[??] sA]:= expand_solved_same _ H; subst.
-      apply: run_done.
-        rewrite /=success_is_dead// succes_is_solved//.
-      move=> /=; rewrite success_is_dead// HB//.
-    + move=> s1 s2 s3 r A B n HA HB IH C ? sB D; subst.
-      have {}IH := IH _ erefl.
-      apply: run_step => /=.
-        case: ifP => dA.
-          by rewrite is_dead_expand in HA.
-        rewrite HA //.
-      have:= IH sB (cutr D).
-      by rewrite cutr2 if_same.
-    + move=> s1 s2 s3 r A B n HA HB IH C ? sB D; subst.
-      have {}IH := IH _ erefl.
-      apply: run_step => /=.
-        case: ifP => dA.
-          by rewrite is_dead_expand in HA.
-        rewrite HA //.
-      apply: IH.
-    + move=> s1 s2 A B C r n HA HB HC IH D ? sB E; subst.
-      have [? fB]:= expand_failed_same _ HA; subst.
-      have {}IH := IH _ erefl.
-      apply: run_fail (IH _ _).
-        move=>/=; rewrite HA.
-        rewrite (next_alt_dead HB)//.
-      rewrite/= (next_alt_dead HB) HB//.
+    case: bA => /=[|n]; last first.
+      move=> HA _ s3 s4 n1 H.
+      apply: HA.
+      admit.
+    move=> + H.
+    elim: H sA A srA rA; clear.
+    + move=> s1 s2 r B B' /[dup] /expand_solved_same [[??]SB] eB ? sA A srA rA H1.
+      case: ifP => dA.
+        admit.
+      apply: run_fail.
+      apply: H1.
   Qed. *)
 
 End RunP.

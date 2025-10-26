@@ -277,17 +277,22 @@ Section valid_state.
         rewrite bbAnd_cutl
         move=>/H->. *)
 
-  Lemma valid_state_cut {A}: success A -> valid_state A -> valid_state (cutl A).
+  Lemma valid_state_cut {A}: valid_state A -> valid_state (cutl A).
   Proof.
     elim: A => //.
       move=> A HA s B HB => /=.
-      case: ifP => //[dA sB vB| dA sA].
-        move=>/=; rewrite dA/=; apply: HB sB vB.
-      move=>/=/andP[vA bB]; rewrite HA// bbOr_cutr//is_dead_cutl dA//is_and_cutl//.
-    move=> A HA B0 HB0 B HB /=/andP[sA sB].
-    rewrite/=success_cut sA/=.
-    move=>/and5P[oA vA aB vB bB0].
-    rewrite is_or_cutl// HB// /bbAnd bbAnd_cutl//orbT //HA// is_and_cutl//.
+      case: ifP => //[dA vB| dA /andP[vA bB]]/=.
+        rewrite dA HB//.
+      rewrite is_dead_cutl dA HA// bbOr_cutr//.
+    move=> A HA B0 HB0 B HB /= /and5P[oA vA aB].
+    rewrite success_cut.
+    case: ifP => //=[sA vB bB0|sA/eqP->{B0 HB0}].
+      by rewrite is_or_cutl// HA// HB// is_and_cutl///bbAnd bbAnd_cutl//orbT.
+    rewrite eqxx is_or_cutl// is_and_cutl// HA//=.
+    case: ifP => [fA bB|fA bB].
+      by rewrite failed_cut///bbAnd bbAnd_cutl// orbT.
+    rewrite failed_success_cut success_cut sA/=.
+    by rewrite /bbAnd base_and_cutl//orbT.
   Qed.
 
   (* Lemma simpl_valid_state_and {A B0 B}: valid_state (And A B0 B) -> 
