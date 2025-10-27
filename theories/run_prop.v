@@ -162,34 +162,13 @@ Section RunP.
       rewrite HA//.
   Qed. *)
 
-  Lemma expand_cutl_cb {s C s' B}: expand u s (cutl C) = CutBrothers s' B -> False.
+  Lemma expand_cutl_ {s C s' B b}: expand u s (cutl C) = Expanded b s' B -> False.
   Proof.
-    elim: C s s' B=> //=.
-    - move=> A HA s B HB s1 s2 C; rewrite fun_if/=.
-      case: ifP => //=dA; rewrite ?is_dead_cutl dA; case expand => //.
-    - move=> A HA B0 _ B HB s1 s2 C.
-      case e: expand => //[s1' A'|s1' A'].
-        by have:= HA _ _ _ e.
-      case f: expand => //[s1'' B'].
-      by have:= HB _ _ _ f.
-  Qed.
-
-  Lemma expand_cutl_exp {s C s' B}: expand u s (cutl C) = Expanded s' B -> False.
-  Proof.
-    elim: C s s' B=> //=.
-    - move=> A HA s B HB s1 s2 C; rewrite fun_if/=.
-      case: ifP => //=dA; rewrite ?is_dead_cutl dA.
-        case X: expand => //=.
-          by have:= HB _ _ _ X.
-        by have:= expand_cutl_cb X.
-      case X: expand => //.
-        by have:= HA _ _ _ X.
-      by have:= expand_cutl_cb X.
-    - move=> A HA B0 _ B HB s1 s2 C.
-      case e: expand => //[s1' A'|s1' A'].
-        by have:= HA _ _ _ e.
-      case f: expand => //[s1'' B'].
-      by have:= HB _ _ _ f.
+    case X: (success (cutl C)).
+      rewrite succes_is_solved//.
+    have:= @failed_success_cut C.
+    rewrite X/= => fA.
+    rewrite failed_expand//.
   Qed.
 
   (* Lemma expandedb_cutl_success {s1 A sm C b1}:
@@ -546,64 +525,17 @@ Section RunP.
       case Z: next_alt => //=[C'|].
         rewrite (next_alt_dead Z); repeat eexists; rewrite is_dead_dead//.
       rewrite if_same//.
-    + move=> s1 s2 s3 r A B n HA HB IH X/=.
-      case: n HB IH => //=.
-        move=> + /(_ (cutr X)) [r'[{}H1]].
-        case: r => [B'|].
-          move=> HB?; subst.
-          repeat eexists => //.
-          apply: run_step.
-            by rewrite/=HA; case: ifP => //dA; rewrite is_dead_expand in HA.
-          by [].
-        rewrite (is_ko_next_alt _ is_ko_cutr) => H2 ?; subst.
-        repeat eexists => //.
-        apply: run_step.
+    + move=> s1 s2 s3 r A B n b nn HA HB IH ? X/=; subst.
+      have [r'[{}IH H1]] := IH ((if b then cutr X else X)).
+      repeat eexists.
+        apply: run_step IH _.
           by rewrite/=HA; case: ifP => //dA; rewrite is_dead_expand in HA.
         by [].
-      move=> n + /(_ (cutr X)) [r'[{}H1]].
+      case: b {HA IH} H1 => //=.
       rewrite cutr2.
-      case: r => [B'|].
-      move=> HB?; subst.
-        repeat eexists => //.
-        apply: run_step.
-          by rewrite/=HA; case: ifP => //dA; rewrite is_dead_expand in HA.
-        by [].
-      move => H2 ?; subst.
-      repeat eexists => //.
-      apply: run_step.
-        by rewrite/=HA; case: ifP => //dA; rewrite is_dead_expand in HA.
-      by [].
-    + move=> s1 s2 s3 r A B n HA HB IH X/=.
-      case: n HB IH => //=.
-        move=> + /(_ X) [r'[{}H1]].
-        case: r => [B'|].
-          move=> HB?; subst.
-          repeat eexists => //.
-          apply: run_step.
-            by rewrite/=HA; case: ifP => //dA; rewrite is_dead_expand in HA.
-          by [].
-        case Y: next_alt => [X'|].
-          move=> HB [A'' [dA'' ?]]; subst.
-          repeat eexists; eauto.
-          apply: run_step; eauto; rewrite/= HA.
-          by case: ifP => // dA; rewrite is_dead_expand in HA.
-        move=> rB ?; subst.
-        repeat eexists => //.
-        apply: run_step.
-          by move=> /=; rewrite HA; case: ifP => //dA;rewrite is_dead_expand in HA.
-        by [].
-      move=> n + /(_ (X)) [r'[{}H1]].
-      case: r => [B'|].
-      move=> HB?; subst.
-        repeat eexists => //.
-        apply: run_step.
-          by rewrite/=HA; case: ifP => //dA; rewrite is_dead_expand in HA.
-        by [].
-      move => H2 ?; subst.
-      repeat eexists => //.
-      apply: run_step.
-        by rewrite/=HA; case: ifP => //dA; rewrite is_dead_expand in HA.
-      by [].
+      case: eqP => H; subst => //.
+      case: r {HB} => //=.
+      by rewrite next_alt_cutr.
     + move=> s1 s2 A B C r n HA HB HC + X.
       move=> /(_ X)[r' [H1 H2]].
       repeat eexists; try eassumption.

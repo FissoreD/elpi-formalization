@@ -150,7 +150,7 @@ Section Test2.
   Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
-  Goal expand unif empty (Or (Or Dead empty (CutS)) empty Top) = Expanded empty (Or (Or Dead empty OK) empty Top) .
+  Goal expand unif empty (Or (Or Dead empty (CutS)) empty Top) = Expanded false empty (Or (Or Dead empty OK) empty Top) .
   Proof.
     move=>//=.
   Qed.

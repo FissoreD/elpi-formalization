@@ -327,7 +327,7 @@ Section valid_state.
     move=> + <-; clear r. 
     elim: A s => //.
     move=> A HA B0 _ B HB s1/= aB.
-    case eA: expand => //=[? A'|? A'|A'|? A']; have /=H := (expand_top_right eA); try by destruct A, A'.
+    case eA: expand => //=[b ? A'|A'|? A']; have /=H := (expand_top_right eA); try by destruct A, A'.
     rewrite get_state_And/=.
     have {}aB : is_and B by destruct A.
     rewrite (HB _ aB).
@@ -347,22 +347,27 @@ Section valid_state.
       case:ifP => //[dA vB|dA/andP[vA bB]].
         rewrite get_state_Or/=dA IHB//.
       have /= := IHA s1 vA.
-      case X: expand => //= H; rewrite (expand_not_dead _ dA X) H//bbOr_cutr//.
+      case X: expand => //=[b s1' A'|A'|s1' A'] ->; rewrite (expand_not_dead _ dA X)//.
+      case: ifP; rewrite //bbOr_cutr//.
     + move=> A HA B0 _ B HB s1 /=/and5P[oA vA aB].
       case: ifP => [sA vB /= bB0 | sA /eqP->]/=.
         rewrite succes_is_solved//=.
         have:= HB (get_substS s1 A) vB.
-        case X: expand => //[s2 C|s2 C|C|s2 C]/=vC; try by rewrite sA (is_and_expand aB X) vA vC oA//.
-        rewrite is_or_cutl//valid_state_cut//(is_and_expand aB X) success_cut// vC sA //= /bbAnd bbAnd_cutl//orbT//.
+        case X: expand => //[b s2 C|C|s2 C]/=vC; try by rewrite sA (is_and_expand aB X) vA vC oA//.
+      case: ifP => //; last first.
+        rewrite sA (is_and_expand aB X) vA vC oA//.
+      rewrite is_or_cutl//valid_state_cut//(is_and_expand aB X) success_cut// vC sA //= /bbAnd bbAnd_cutl//orbT//.
       case: ifP => [fA bB|fA bB].
         rewrite failed_expand//=vA sA eqxx /= bB oA fA aB//.
       have:= HA s1 vA.
-      case X: expand => //=[|||s2 C] H; last first; [|rewrite H eqxx /bbAnd bB if_same base_and_valid//if_same (is_or_expand oA X) aB//..].
+      case X: expand => //=[||s2 C] H; last first; [|rewrite H eqxx /bbAnd bB if_same base_and_valid//if_same (is_or_expand oA X) aB//..].
       have:= HB s2 (base_and_valid bB).
       have /=oC := is_or_expand oA X.
       have [_ sC]:= expand_solved_same u X.
       case Y: expand => //= H1; rewrite ?oC?H?H1?bB?sC?(base_and_bbAnd bB) (is_and_expand (base_and_is_and bB) Y)//.
-      rewrite is_or_cutl//valid_state_cut//success_cut//=sC /bbAnd bbAnd_cutl //?orbT// base_and_bbAnd//.
+      case: ifP.
+        rewrite is_or_cutl//valid_state_cut//success_cut//=sC /bbAnd bbAnd_cutl //?orbT// base_and_bbAnd//.
+      rewrite ?oC?H?H1?bB?sC?(base_and_bbAnd bB)//.
   Qed.
 
   Lemma valid_state_big_or_aux {pr s l} : valid_state (big_or_aux pr s l).
@@ -585,9 +590,7 @@ Section valid_state.
     elim: H B HS; clear.
     + move=> s1 s2 r A B /expand_solved_same[[??]sA] ? C H vA; subst.
       by apply: valid_state_next_alt vA H.
-    + move=> s1 s2 s3 r A B n eA rB IH C ? vA; subst.
-      apply: IH erefl (valid_state_expand vA eA).
-    + move=> s1 s2 s3 r A B n eA rB IH C ? vA; subst.
+    + move=> s1 s2 s3 r A B n b1 nn eA rB IH ? C ? vA; subst.
       apply: IH erefl (valid_state_expand vA eA).
     + move=> s1 s2 A B C r n /expand_failed_same [? fB] nB rC IH D ? vA; subst.
       apply: IH erefl (valid_state_next_alt vA nB).

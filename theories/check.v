@@ -245,7 +245,7 @@ Section check.
   Qed.
 
   Lemma expand_has_cut {A s}: 
-    has_cut A -> has_cut (get_state (expand u s A)) \/ is_cutbrothers (expand u s A).
+    has_cut A -> has_cut (get_state (expand u s A)) || is_cutbrothers (expand u s A).
   Proof.
     elim: A s; try by move=> /=; auto.
     - move=> A HA s1 B HB s /=/andP[kA kB].
@@ -253,15 +253,18 @@ Section check.
         rewrite (is_ko_expand _ kB)/=kA kB; auto.
       rewrite (is_ko_expand _ kA)/=kA kB; auto.
     - move=> A HA B0 _ B HB s /=/orP[].
-        move=> /(HA s); case: expand => [s1|s1||s1] C/= []//; auto => cC.
-        - by rewrite cC /=; left.
-        - by rewrite cC /=; left.
-        left; rewrite get_state_And /=.
+        move=> /(HA s); case: expand => [b s1||s1] C/= /orP[]//; auto => cC.
+        - by rewrite cC /=.
+        - by rewrite cC /= orbT.
+        - by rewrite cC.
+        rewrite get_state_And /=.
         by case: ifP; rewrite ?cC // has_cut_cutl.
       case/andP=> cB0 cB.
-      case: expand => [s1|s1||s1] C/=; rewrite ?cB ?cB0 ?orbT; auto.
-      move: (HB s1 cB).
-      by case: expand => [s2|s2||s2] D /=; auto => -[]// ->; rewrite cB0 orbT; left.
+      case: expand => [b1 s1||s1] C/=; rewrite ?cB ?cB0 ?orbT; auto.
+      move: (HB s1 cB) => {HB}.
+      case expand => //=[b1 s2 ||s2]B'; try by (rewrite orbF => H; rewrite H cB0 orbT).
+      case: b1; rewrite?orbT ?orbF//.
+      by move=> ->; rewrite cB0 orbT.
   Qed.
 
   Lemma expand_no_free_alt {sP s1 A r} : 
@@ -279,31 +282,31 @@ Section check.
         move=> nnB.
         case: ifP => //= dA.
           have:= HB s1 nnB.
-          case: expand => //= [_|_||_] C nnC/=; rewrite get_state_Or/=fA/=cA?HB//.
+          by case: expand => //= [_ _||_] C nnC/=; rewrite get_state_Or/=fA/=cA?HB//.
         have:= HA s1 fA.
         have := @expand_has_cut _ s1 cA.
-        case X: expand => //= -[]// + ->; rewrite ?nnB ?no_alt_cut //=; try by case: has_cut.
-        by rewrite cutr2 eqxx if_same.
+        case X: expand => //= [[]||]//; rewrite ?orbF ?orbT; try by (move=>->->//).
+        by rewrite no_alt_cut cutr2 eqxx if_same andbT.
       move/eqP->.
       case: ifP => [dA|].
         rewrite get_state_Or/=cA no_alt_dead//=is_ko_expand//=?is_ko_cutr//cutr2//.
       have:= HA s1 fA => + dA.
-      case Y: expand => /=->; rewrite !cutr2 eqxx no_alt_cut if_same//.
+      by case Y: expand => [[]||]//=->/=; rewrite !cutr2 eqxx no_alt_cut if_same//.
     - move=> A HA B0 HB0 B HB s /=.
       move=>/orP[].
         move=>kA; rewrite is_ko_expand///=kA//.
       move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
-        case X: expand => //= [|||s1 C]; try rewrite cB0 cB/= fB0 fB !orbT//.
+        case X: expand => //= [||s1 C]; try rewrite cB0 cB/= fB0 fB !orbT//.
         rewrite get_state_And.
         rewrite /= (HB s1) //.
         have := @expand_has_cut _ s1 cB.
         case H1: (is_cutbrothers (expand u s1 B)).
           move=>_/=; rewrite has_cut_cutl// no_free_alt_cutl no_free_alt_cutl !orbT//.
-        move=> []//H2; rewrite H2 fB0 cB0 orbT//.
+        by rewrite orbF => ->; rewrite fB0 cB0/= orbT.
       have:= HA s fA.
-      case X: expand => //= [|||s1 C] H1; try rewrite H1 orbT fB fB0 orbT//.
-      have:= HB s1 fB; case Y: expand => //= H2; try rewrite fB0 H2 H1 orbT !orbT//.
-      rewrite !no_free_alt_cutl H2 !orbT//.
+      case X: expand => //= [||s1 C] H1; try rewrite H1 orbT fB fB0 orbT//.
+      have:= HB s1 fB; case Y: expand => [b s1' B'||]//= H2; try rewrite fB0 H2 H1 orbT !orbT//.
+      by case: b Y => //=; rewrite H2 ?H1 ?no_free_alt_cutl ?fB0 !orbT.
   Qed.
 
   Goal forall sP s, no_free_alt sP (Or OK s OK) == false.
@@ -513,9 +516,7 @@ Section check.
     elim: H3 H2; clear -H1 => //.
     - move=> s1 s2 r A B  /expand_solved_same [[??]sA] ? fB; subst.
       apply: expand_next_alt H1 fB sA.
-    - move=> s1 s2 s3 r A B n eA rB IH fA.
-      by apply: IH; apply: expand_no_free_alt eA.
-    - move=> s1 s2 s3 r A B n eA rB IH fA.
+    - move=> s1 s2 s3 r A B n b1 nn eA rB IH ? fA; subst.
       by apply: IH; apply: expand_no_free_alt eA.
     - move=> s1 s2 A B C r n /expand_failed_same [? fB] nB rC IH fA; subst.
       by apply: IH; apply: no_free_alt_next_alt nB.

@@ -30,17 +30,16 @@ derive state.
 HB.instance Definition _ := hasDecEq.Build state state_eqb_OK.
 
 Inductive expand_res :=
-  | Expanded    of Sigma & state
-  | CutBrothers of Sigma & state
+  | Expanded    of bool & Sigma & state (*the bool tells if a cut has been executed*)
   | Failure     of state
   | Success      of Sigma & state.
 derive expand_res.
 HB.instance Definition _ := hasDecEq.Build expand_res expand_res_eqb_OK.
 
-Definition get_state r := match r with | Failure A | Success _ A | CutBrothers _ A | Expanded _ A => A end.
-Definition is_expanded X := match X with Expanded _ _ => true | _ => false end.
+Definition get_state r := match r with | Failure A | Success _ A | Expanded _ _ A => A end.
+Definition is_expanded X := match X with Expanded b1 _ _ => ~~ b1 | _ => false end.
 Definition is_fail A := match A with Failure _ => true | _ => false end.
-Definition is_cutbrothers X := match X with CutBrothers _ _ => true | _ => false end.
+Definition is_cutbrothers X := match X with Expanded b1 _ _ => b1 | _ => false end.
 Definition is_solved X := match X with Success _ _ => true | _ => false end.
 
 Section state_op.
@@ -294,21 +293,19 @@ End state_op.
 Definition mkOr A sB r :=
   match r with
   | Failure B       => Failure     (Or A sB B)
-  | Expanded s B    => Expanded s  (Or A sB B)
-  | CutBrothers s B => Expanded s  (Or A sB B)
+  | Expanded _ s B   => Expanded false s  (Or A sB B)
   | Success s B      => Success   s  (Or A sB B)
   end.
 
 Definition mkAnd A B0 r :=
   match r with
   | Failure B       => Failure       (And A B0 B)
-  | Expanded s B    => Expanded    s (And A B0 B)
-  | CutBrothers s B => CutBrothers s (And (cutl A) (cutl B0) B)
+  | Expanded b1 s B   => Expanded    b1 s (And (if b1 then cutl A else A) (if b1 then cutl B0 else B0) B)
   | Success s B      => Success      s (And A B0 B)
   end.
 
 Lemma get_state_And A B0 B : get_state (mkAnd A B0 B) = And (if is_cutbrothers B then cutl A else A) ((if is_cutbrothers B then cutl B0 else B0)) (get_state B).
-Proof. by case: B. Qed.
+Proof. by case: B => //= s1 A' []//. Qed.
 
 Lemma get_state_Or A s B : get_state (mkOr A s B) = Or A s (get_state B).
 Proof. by case: B. Qed.
@@ -418,9 +415,9 @@ Section main.
     | Dead => Failure Dead
     
     (* lang *)
-    | Top              => Expanded s OK
-    | CutS       => CutBrothers s OK
-    | CallS pr t => Expanded s (big_or pr s t)
+    | Top              => Expanded false s OK
+    | CutS       => Expanded true s OK
+    | CallS pr t => Expanded false s (big_or pr s t)
 
     (* recursive cases *)
     | Or A sB B =>
@@ -428,15 +425,13 @@ Section main.
         else
         match expand s A with
         | Success s A    => Success s      (Or A sB B)
-        | Expanded s A    => Expanded s  (Or A sB B)
-        | CutBrothers s A => Expanded s  (Or A sB (cutr B))
+        | Expanded b1 s A    => Expanded false s   (Or A sB (if b1 then cutr B else B))
         | Failure A     => Failure       (Or A sB B)
         end
     | And A B0 B =>
         match expand s A with
         | Success s1 A     => mkAnd    A B0  (expand s1 B)
-        | Expanded s A    => Expanded s     (And A B0 B)
-        | CutBrothers s A => CutBrothers s  (And A B0 B)
+        | Expanded s b1 A    => Expanded s     b1 (And A B0 B)
         | Failure A       => Failure        (And A B0 B)
         end
     end
@@ -546,8 +541,8 @@ Section main.
 
   Inductive runb : Sigma -> state -> Sigma -> option state -> nat -> Type :=
     | run_done {s1 s2 r A B}         : expand s1 A = Success     s2 B -> r = (next_alt true B) -> runb s1 A s2 r 0
-    | run_cut  {s1 s2 s3 r A B n}    : expand s1 A = CutBrothers s2 B -> runb s1 B s3 r n -> runb s1 A s3 r n.+1
-    | run_step {s1 s2 s3 r A B n}    : expand s1 A = Expanded    s2 B -> runb s1 B s3 r n -> runb s1 A s3 r n
+    (* | run_cut  {s1 s2 s3 r A B n}    : expand s1 A = CutBrothers s2 B -> runb s1 B s3 r n -> runb s1 A s3 r n.+1 *)
+    | run_step {s1 s2 s3 r A B n b1 nn}    : expand s1 A = Expanded    b1 s2 B -> runb s1 B s3 r n -> nn = (if b1 then n.+1 else n) -> runb s1 A s3 r nn
     | run_fail {s1 s2 A B C r n}     : 
               expand s1 A = Failure B -> next_alt false B = Some C ->
               runb s1 C s2 r n -> runb s1 A s2 r n.
@@ -635,26 +630,26 @@ Section main.
   Qed.
 
   Lemma simpl_expand_and_cut {s s2 A B B0 C}:
-    expand s (And A B0 B) = CutBrothers s2 C ->
-    (Texists A', expand s A = CutBrothers s2 A' /\ C = And A' B0 B ) +
-      (Texists s' A' B', expand s A = Success s' A' /\ expand s' B = CutBrothers s2 B' /\ C = And (cutl A') (cutl B0) B').
+    expand s (And A B0 B) = Expanded true s2 C ->
+    (Texists A', expand s A = Expanded true s2 A' /\ C = And A' B0 B ) +
+      (Texists s' A' B', expand s A = Success s' A' /\ expand s' B = Expanded true s2 B' /\ C = And (cutl A') (cutl B0) B').
   Proof.
     move=> //=; case X: expand => //=.
-    + by move=> [] /[subst1]; left; eexists.
-    + case Y: expand => //= -[] /[subst1]; right; subst.
+    + by move=> [???]; subst; left; eexists; eauto.
+    + case Y: expand => //=[?[]?]//= -[] /[subst1]; right; subst.
        do 3 eexists; repeat split => //=.
        apply Y.
   Qed.
 
   Lemma simpl_expand_and_expanded {s s2 A B B0 C}:
-    expand s (And A B0 B) = Expanded s2 C ->
-    (Texists A', expand s A = Expanded s2 A' /\ C = And A' B0 B ) +
-      (Texists s' A' B', expand s A = Success s' A' /\ expand s' B = Expanded s2 B' /\ C = And A' B0 B').
+    expand s (And A B0 B) = Expanded false s2 C ->
+    (Texists A', expand s A = Expanded false s2 A' /\ C = And A' B0 B ) +
+      (Texists s' A' B', expand s A = Success s' A' /\ expand s' B = Expanded false s2 B' /\ C = And A' B0 B').
   Proof.
     move=> /=; case X: expand => //=.
-    + by move=> [] /[subst1]; left; eexists.
-    + case Y: expand => //= -[] /[subst1]; right; subst.
-      do 3 eexists; repeat split => //=; eassumption.
+    + by move=> [???]; subst; left; eexists; eauto.
+    + case Y: expand => //=[?[]?]//=[??]; right; subst.
+      do 3 eexists; repeat split => //=; eauto.
   Qed.
 
   (********************************************************************)
@@ -747,12 +742,11 @@ Section main.
       case X: expand => //=->//.
     + move=> A HA B0 _ B HB s1 //= dA.
       have:= HA s1 dA.
-      case X: expand => [|||s A']//=dA'.
+      case X: expand => [||s A']//=dA'.
       rewrite get_state_And/= fun_if dA'.
       case Y: expand => //[s2 C]/=.
       have [[??]]:= expand_solved_same X; subst.
-      rewrite -success_cut.
-      apply: success_is_dead.
+      by rewrite -success_cut is_dead_cutl dA if_same.
   Qed.
 
   Lemma expand_failed_same {s1 A B}: 
@@ -806,13 +800,9 @@ Section main.
     + move=> s1 s2 r A B HA ? s3 C n2 H; subst.
       have [[??]sA]:= expand_solved_same HA; subst.
       by apply: runb_success sA H.
-    + move=> s1 s2 s3 r n1 A B HA HB IH s4 r' n2 H.
+    + move=> s1 s2 s3 r A B n b1 nn HA HB IH ? s4 r' n2 H; subst.
       inversion_clear H; try congruence; subst.
-      move: H0; rewrite HA => -[??]; subst.
-      rewrite !(IH _ _ _ H1)//.
-    + move=> s1 s2 s3 r n1 A B HA HB IH s4 r' n2 H.
-      inversion_clear H; try congruence; subst.
-      move: H0; rewrite HA => -[??]; subst.
+      move: H0; rewrite HA => -[???]; subst.
       rewrite !(IH _ _ _ H1)//.
     + move=> s1 s2 A B C r n1 HA HB HC IH s3 r' n2 H.
       inversion_clear H; try congruence; subst.
@@ -909,11 +899,12 @@ Section main.
   Lemma expand_not_solved_not_success {s1 A r}:
     expand s1 A = r -> ~ (is_solved r) -> success A = false.
   Proof.
-    case: r=> //[s|s|]B/=; case X: success; try by rewrite // (succes_is_solved s1 X).
+    move=> <-/=.
+    case X: success => //; rewrite succes_is_solved//.
   Qed.
 
   Lemma expand_cb_same_subst {A B s1 s2}:
-    expand s1 A = CutBrothers s2 B -> s2 = get_substS s1 A.
+    expand s1 A = Expanded true s2 B -> s2 = get_substS s1 A.
   Proof.
     elim: A B s1 s2 => //=.
     - move=> B s1 s2 []//.
@@ -924,7 +915,7 @@ Section main.
         rewrite (HA _ _ _ e) (expand_not_solved_not_success e)//.
       have [[??] SA] := expand_solved_same e; subst.
       rewrite SA.
-      case e1: expand => //=[s3 B'][<-] _.
+      case e1: expand => //=[[] s3 B']//=[??]; subst.
       apply: HB e1.
   Qed.
 
@@ -958,7 +949,8 @@ Section main.
       by have:= HA s1; case X: expand.
     - move=> A HA B0 _ B HB s1/=.
       have:= HA s1.
-      case X: expand => //= [||s2 C] ->; try by rewrite?(expand_not_solved_not_success X)//.
+      case X: expand => //= [|s2 C] ->//=.
+        rewrite (expand_not_solved_not_success X)//.
       rewrite (expand_solved_same X)/=.
       have:= HB (get_substS s1 A).
       case Y: expand => //= ->//; rewrite andbF//.
@@ -966,7 +958,7 @@ Section main.
 
   Lemma expand_not_failed_Expanded {s1 A s2 B}:
     (* This is wrong: if A is a call and there is no impl, then B = Bot which is failed *)
-    expand s1 A = Expanded s2 B -> failed B = false.
+    expand s1 A = Expanded false s2 B -> failed B = false.
   Proof.
   Abort.
 
@@ -1143,26 +1135,25 @@ Section main.
       expand s A = r -> same_structure A (get_state r).
     Proof.
       elim: A s r => //.
-        move=> A HA s B HB s1 [s2|s2||s2] C.
+        move=> A HA s B HB s1 [b s2||s2] C.
         - move=> /=.
           case: ifP => dA.
-            case eB: expand => //[s1' B'|s1' B'][_<-]; rewrite eqxx same_structure_id (HB _ _ eB)//.
-          case eA: expand => //[s1' A'|s1' A'][_<-]; rewrite eqxx (HA _ _ eA)?same_structure_id// same_structure_cutr//same_structure_id//.
-        - move=> /=; case: ifP => dA; case: expand => //.
+            case eB: expand => //[b1 s1' B'][???]; subst; rewrite eqxx same_structure_id (HB _ _ eB)//.
+          case eA: expand => //[[] s1' A'] [_ _<-]; rewrite eqxx (HA _ _ eA)?same_structure_id// same_structure_cutr//same_structure_id//.
         - move=> /simpl_expand_or_fail [].
             by move=>[A'[_[HA'->]]]/=; rewrite eqxx (HA _ _ HA') same_structure_id.
           by move=> [B'[_ [HB'->]]]/=; rewrite eqxx same_structure_id (HB _ _ HB').
         - move=> /simpl_expand_or_solved[].
             by move=>[A'[HA'->]]/=; rewrite eqxx same_structure_id (HA _ _ HA').
           by move=> [B'[_ [HB'->]]]/=; rewrite eqxx same_structure_id (HB _ _ HB').
-      move=> A HA B0 HB0 B HB s1 [s2|s2||s2]C.
-      - move=> /simpl_expand_and_expanded[].
-          by move=>[A'[HA'->]]/=; rewrite !same_structure_id (HA _ _ HA').
-        by move=> [s'[A'[B' [HA'[HB' ->]]]]]/=; rewrite (HA _ _ HA') (HB _ _ HB') same_structure_id.
+      move=> A HA B0 HB0 B HB s1 [[] s2||s2]C.
       - move=> /simpl_expand_and_cut[].
           by move=>[A'[HA'->]]/=; rewrite !same_structure_id (HA _ _ HA').
         move=>[s'[A'[B'[HA'[HB' ->]]]]]/=; rewrite (HB _ _ HB')//(same_structure_cut same_structure_id).
         by have:= (HA _ _ HA') => /same_structure_cut->.
+      - move=> /simpl_expand_and_expanded[].
+          by move=>[A'[HA'->]]/=; rewrite !same_structure_id (HA _ _ HA').
+        by move=> [s'[A'[B' [HA'[HB' ->]]]]]/=; rewrite (HA _ _ HA') (HB _ _ HB') same_structure_id.
       - move=> /simpl_expand_and_fail[].
           by move=> [A'[HA'->]]/=; rewrite !same_structure_id (HA _ _ HA').
         by move=> [s'[A'[B'[HA'[HB' ->]]]]]/=; rewrite (HA _ _ HA') (HB _ _ HB') same_structure_id.
@@ -1232,10 +1223,7 @@ Section main.
       elim: H B Hso; clear.
       - move=> s s' r A B /expand_same_structure/= + -> C /next_alt_same_structure/=.
         destruct A, B => //= /and3P[/eqP->]//.
-      - move=> s1 s2 s3 r A B n /expand_same_structure + H + C?; subst.
-        move=> /= + /(_ _ erefl).
-        destruct A, B => //= /and3P[/eqP->]//.
-      - move=> s1 s2 s3 r A B n /expand_same_structure + H + C?; subst.
+      - move=> s1 s2 s3 r A B n b nn /expand_same_structure + H + ? C?; subst.
         move=> /= + /(_ _ erefl).
         destruct A, B => //= /and3P[/eqP->]//.
       - move=> s1 s2 A B C r n /expand_same_structure/= + /next_alt_same_structure + _ + D ?; subst.

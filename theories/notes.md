@@ -239,7 +239,7 @@ expandedb s (And A B0 B) (Done s' C) b ->
         b = b1 || b2`.
 ```
 
-We prove `expanded_and_correct`:
+We prove `expanded_and_correct_done`:
 ```
 expandedb s0 A (Done s1 B) -> 
   expandedb s1 C (Done s2 D) b ->

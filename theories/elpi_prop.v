@@ -320,7 +320,7 @@ Section NurProp.
 
   Lemma expand_state_to_list_cons {s A r}:
     valid_state A -> expand u s A = r -> ~ (is_fail r) -> state_to_list_cons A.
-  Proof. case: r => //[s1 B|s1 B|s1 B]vA H _; apply: failed_state_to_list vA (expand_not_failed _ H notF). Qed.
+  Proof. case: r => //[b s1 B|s1 B]vA H _; apply: failed_state_to_list vA (expand_not_failed _ H notF). Qed.
 
   (* Lemma expandb_done_state_to_list_cons {s A s1 B b}:
     valid_state A -> expandedb u s A (Done s1 B) b -> state_to_list_cons A.
