@@ -399,6 +399,9 @@ Section valid_state.
   Lemma base_and_is_dead {A}: base_and A -> is_dead A = false.
   Proof. move=>/base_and_failed; apply: contraFF is_dead_failed. Qed.
 
+  Lemma base_and_ko_is_ko {A}: base_and_ko A -> is_ko A.
+  Proof. elim: A => //=-[]//. Qed.
+
   Lemma base_and_ko_is_dead {A}: base_and_ko A -> is_dead A = false.
   Proof. case: A => //-[]//. Qed.
 
@@ -407,6 +410,13 @@ Section valid_state.
 
   Lemma base_or_is_dead {A}: base_or_aux A -> is_dead A = false.
   Proof. move=>/base_or_failed; apply: contraFF is_dead_failed. Qed.
+
+  Lemma base_or_aux_ko_is_ko {A}: base_or_aux_ko A -> is_ko A.
+  Proof.
+    elim: A => //=.
+    - by move=> A HA _ B HB /andP[]/base_and_ko_is_ko->/HB->.
+    - move=> []//.
+  Qed.
 
   Lemma base_or_aux_is_dead {A}: base_or_aux_ko A -> is_dead A = false.
   Proof. elim: A => //.
