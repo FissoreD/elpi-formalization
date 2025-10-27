@@ -74,12 +74,15 @@ Section NurProp.
   Qed.
 
   Section t2l_base.
-    Lemma state_to_list_dead {A l s}: is_dead A -> state_to_list A s l = nilC.
+    Lemma is_ko_state_to_list {A s l}: is_ko A -> state_to_list A s l = nilC.
     Proof.
       elim: A l s => //.
       - move=> A HA s B HB/= l s1/andP[dA dB]; rewrite HB// HA//.
       - move=> A HA B0 HB0 B HB l s1 /=dA; rewrite HA//=.
     Qed.
+
+    Lemma state_to_list_dead {A l s}: is_dead A -> state_to_list A s l = nilC.
+    Proof. by move=>/is_dead_is_ko; apply: is_ko_state_to_list. Qed.
 
     Lemma base_and_ko_state_to_list {A l s}: base_and_ko A -> state_to_list A s l = nilC.
     Proof. elim: A => //=-[]//. Qed.
