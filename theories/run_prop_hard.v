@@ -25,18 +25,18 @@ Section s.
       case Y: expand => //=[s'' B'|s'' B'] /(_ erefl erefl) ->//.
   Qed.
 
-  Lemma runb_or0 {s1 A s B s2 r b}:
-    runb u s1 (Or A s B) s2 r b -> b = 0.
+  Lemma runb_or0 {s1 A s B s2 r n b}:
+    runb u s1 (Or A s B) s2 r n b -> n = 0.
   Proof.
     remember (Or _ _ _) as o eqn:Ho => H.
     elim: H A s B Ho; clear => //.
-    - move=> s1 s2 s3 r A B n + _ _ C s D ?; subst => /=.
+    - move=> s1 s2 s3 r A B n b + _ _ C s D ?; subst => /=.
       by case: ifP; case: expand => //.
-    - move=> s1 s2 s3 r A B n + HB IH C s D ?; subst => /=.
+    - move=> s1 s2 s3 r A B n b + HB IH C s D ?; subst => /=.
       case: ifP => dC.
         case X: expand => //[s' D'|s' D'][??]; subst; by apply: IH.
       case Y: expand=> //[s1' C'|s1' C'][??]; subst; by apply: IH.
-    - move=> s1 s2 A B C r n /expand_failed_same [? _] + _ IH D s3 E ?; subst => /=.
+    - move=> s1 s2 A B C r n b /expand_failed_same [? _] + _ IH D s3 E ?; subst => /=.
       case: ifP => //dD.
         by case: next_alt => //? [?]; subst; apply: IH.
       case: next_alt => //. 
@@ -174,20 +174,24 @@ Section s.
       auto.
   Qed. *)
 
-  Lemma next_alt_runb {A B C s s2 b1}:
+  Lemma next_alt_runb {A B C s s2 n b}:
     next_alt false A = Some B ->
-      runb u s B s2 C b1 ->
-        runb u s A s2 C b1.
+      runb u s B s2 C n b ->
+        runb u s A s2 C n ((A != B) || b).
   Proof.
+    move=> HA HB.
     case fA: (failed A).
+      rewrite next_alt_failed_diff//.
       repeat eexists; apply: run_fail; eauto.
       by apply: failed_expand.
-    by rewrite next_alt_not_failed// => -[->].  
+    rewrite (next_alt_not_failed)// in HA.
+    case: HA => ?; subst.
+    by rewrite eqxx//.
   Qed.
 
-  Lemma run_ko_left1 {s1 s2 A B b sx r}:
-    is_ko A -> runb u s1 (Or A s2 B) sx r b ->
-      Texists b r', runb u s2 B sx r' b /\ 
+  Lemma run_ko_left1 {s1 s2 A B n b sx r}:
+    is_ko A -> runb u s1 (Or A s2 B) sx r n b ->
+      Texists n r' b1, runb u s2 B sx r' n b1/\ 
         (omap (fun x => Or (if is_dead A then A else dead1 A) s2 x) r' = r).
   Proof.
     remember (Or A _ _) as o1 eqn:Ho1 => + H.
@@ -199,35 +203,35 @@ Section s.
         by rewrite is_ko_success in sA.
       repeat eexists; auto.
       apply: run_done (succes_is_solved _ _ sB) erefl.
-    - move=> s1 s2 s3 r A B n + HB IH C D s4 ? kC; subst => /=.
+    - move=> s1 s2 s3 r A B n b + HB IH C D s4 ? kC; subst => /=.
       case: ifP => dC; case X: expand => //.
-    - move=> s1 s2 s3 r A B n + HB IH C D s4 ? kC; subst => /=.
+    - move=> s1 s2 s3 r A B n b + HB IH C D s4 ? kC; subst => /=.
       case: ifP => dC.
-        case X: expand => //[s4' D'|s4' D'][??]; subst; 
-        have {IH} [b[r'[H1 H2]]]:= IH _ _ _ erefl kC; subst; rewrite dC in HB; subst;
+        case X: expand => //[s4' D'|s4' D'][??]; subst;
+        have {IH} [n'[r'[b'[H1 H2]]]]:= IH _ _ _ erefl kC; subst; rewrite dC in HB; subst;
         rewrite dC; repeat eexists.
           apply:run_step X H1.
         apply:run_cut X H1.
       by rewrite is_ko_expand.
-    - move=> s1 s2 A B C r n /expand_failed_same [? +] + rC IH D E s3 ? kD; subst.
+    - move=> s1 s2 A B C r n b /expand_failed_same [? +] + rC IH D E s3 ? kD; subst.
       rewrite /=(is_ko_next_alt _ kD).
       case: ifP => [dD fE|dD fD].
         case X: next_alt => //[E'][?]; subst.
-        have [b[r'[{}IH H]]] := IH _ _ _ erefl kD; subst; rewrite dD/= in rC; subst.
+        have [n'[r'[b'[{}IH H]]]] := IH _ _ _ erefl kD; subst; rewrite dD/= in rC; subst.
         rewrite dD; repeat eexists.
         apply: run_fail; eauto.
         by apply: failed_expand.
       case: ifP => //dE.
       case W: next_alt => //[E'][?]; subst.
-      have [b[r'[{}IH H]]] := IH _ _ _ erefl (is_dead_is_ko is_dead_dead).
+      have [n'[r'[b'[{}IH H]]]] := IH _ _ _ erefl (is_dead_is_ko is_dead_dead).
       rewrite is_dead_dead/= in H; subst.
       have {W IH} := next_alt_runb W IH.
       repeat eexists; eauto.
   Qed.
 
-  Lemma run_ko_left2 {s2 X B r SOL b1} sIgn:
-    is_ko X -> runb u s2 B SOL r b1 ->
-    Texists r', runb u sIgn (Or X s2 B) SOL r' 0 /\ 
+  Lemma run_ko_left2 {s2 X B r SOL n b} sIgn:
+    is_ko X -> runb u s2 B SOL r n b ->
+    Texists r', runb u sIgn (Or X s2 B) SOL r' 0 (if is_dead X then b else true) /\ 
       (omap (fun x => Or (if is_dead X then X else dead1 X) s2 x) r = r').
   Proof.
     move=> + HB; elim: HB sIgn X; clear.
@@ -245,10 +249,10 @@ Section s.
       apply: run_done.
         rewrite/= (succes_is_solved _ _ sB) is_dead_dead//.
       rewrite /=is_dead_dead//.
-    + move=> s1 s2 s3 r A B n HA HB IH sIgn X kX.
+    + move=> s1 s2 s3 r A B n b HA HB IH sIgn X kX.
       case dX: (is_dead X).
         have [r'[{}IH H]]:= IH sIgn _ kX.
-        rewrite dX in H; subst.
+        rewrite dX in H, IH; subst.
         repeat eexists.
         apply: run_step.
           rewrite /= dX HA//.
@@ -264,10 +268,10 @@ Section s.
       apply: run_step IH.
       rewrite /=is_dead_dead HA//.
     (* TODO: the following case is same as previous... *)
-    + move=> s1 s2 s3 r A B n HA HB IH sIgn X kX.
+    + move=> s1 s2 s3 r A B n b HA HB IH sIgn X kX.
       case dX: (is_dead X).
         have [r'[{}IH H]]:= IH sIgn _ kX.
-        rewrite dX in H; subst.
+        rewrite dX in H, IH; subst.
         repeat eexists.
         apply: run_step.
           rewrite /= dX HA//.
@@ -282,7 +286,7 @@ Section s.
         rewrite next_alt_not_failed//failed_dead//.
       apply: run_step IH.
       rewrite /=is_dead_dead HA//.
-    + move=> s1 s2 A B C r n /expand_failed_same [? fB] nB rC IH sIgn X kX; subst.
+    + move=> s1 s2 A B C r n b /expand_failed_same [? fB] nB rC IH sIgn X kX; subst.
       case dX: (is_dead X).
         have [r'[{}IH H]]:= IH sIgn _ kX.
         rewrite dX in H; subst.
@@ -298,7 +302,7 @@ Section s.
       move=>/=; rewrite dX is_ko_next_alt//(next_alt_dead nB) nB//.
   Qed.
 
-  Lemma run_or_ko_right1 {s2 X B B' SOL b1} sIgn:
+  (* Lemma run_or_ko_right1 {s2 X B B' SOL b1} sIgn:
     is_ko X -> runb u s2 B SOL B' b1 ->
     runb u s2 (Or B sIgn X) SOL (omap (fun x => Or x sIgn (if b1 == 0 then X else cutr X)) B') 0.
   Proof.
@@ -458,21 +462,21 @@ Section s.
     case: ifP => //dA bB.
     case: ifP => // dD1 bC.
     apply: HB Hy H2 bB bC.
-  Qed. *)
+  Qed. *) *)
 
   Lemma failed_cutl_runb A:
     failed (cutl A) -> forall s, dead_run u s (cutl A).
   Proof.
-    elim: A => //=.
+    (* elim: A => //=.
     - move=> _ s1 s2 B n; inversion 1; subst => //; inversion H0; subst => //.
     - move=> _ s1 s2 B n; inversion 1; subst => //; inversion H0; subst => //.
     - move=> _ s1 s2 B n; inversion 1; subst => //; inversion H0; subst => //.
     - move=> _ _ _ s1 s2 B n; inversion 1; subst => //; inversion H0; subst => //.
     - move=> _ s1 s2 B n; inversion 1; subst => //; inversion H0; subst => //.
     - move=> A HA s B HB; case: ifP => dA/=; rewrite ?is_dead_cutl dA => F.
-        move=> s1 s2 r n H.
-        have [b[r' [H1 H2]]] := run_ko_left1 (is_dead_is_ko dA) H; eauto.
-        apply: HB F _ _ _ _ _.
+        move=> s1 s2 r n b' H.
+        have [b[r' [? [H1 H2]]]] := run_ko_left1 (is_dead_is_ko dA) H; eauto.
+        apply: HB F _ _ _ _ _ _.
         by eauto.
       move=> s1 s2 r n H.
       have [b[r' [H1 H2]]] := run_or_ko_right2 is_ko_cutr H; eauto; subst.
@@ -487,21 +491,207 @@ Section s.
       inversion H; subst; move: H0 => /=; rewrite succes_is_solved//= failed_expand//=.
       move=>[?]; subst; move: H1; rewrite /= sA success_failed//=.
       rewrite (next_alt_cutl_failed fB) next_alt_cutl_success//?if_same//.
-      rewrite -success_cut//.
-  Qed.
+      rewrite -success_cut//. *)
+  Admitted.
 
-  Lemma run_and_correct {s0 sn A B0 B r b}:
-    runb u s0 (And A B0 B) sn r b ->
-    (Texists sm r1 b1, runb u s0 A sm r1 b1 /\
-      Texists b2 r2, ((runb u sm B sn r2 b2) + 
+  Lemma run_and_correct {s0 sn A B0 B r n b}:
+    runb u s0 (And A B0 B) sn r n b ->
+    Texists sm r1 n1 b1, runb u s0 A sm r1 n1 b1 /\
+      Texists n2 r2 b2, 
+        if ~~b1 then  runb u sm B sn r2 n2 b2
+        else Texists sm, runb u sm B0 sn r2 n2 b2.
+  Proof.
+    remember (And _ _ _) as a eqn:Ha => H.
+    elim: H A B0 B Ha; clear.
+    - move=> s1 s2 r A B /expand_solved_same [[??]+] ? C D E ?; subst => /=.
+      move=> /andP[sC sE].
+      repeat eexists.
+        apply: run_done (succes_is_solved _ _ sC) erefl.
+      rewrite /=sC; apply: run_done erefl.
+      apply: succes_is_solved sE.
+    - move=> s1 s2 s3 r A B n b + rB IH C D E ?; subst => /=.
+      case X: expand => //[s1' C'|s1' C'].
+        move=> [??]; subst.
+        have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+        repeat eexists; eauto.
+        apply: run_cut X IH.
+      case Y: expand => //=[s1'' E'][??]; subst.
+      have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+      do 4 eexists; split.
+        apply: run_done X erefl.
+      have [[??]sC]:= expand_solved_same _ X; subst.
+      have sC' := sC.
+        rewrite -success_cut in sC'.
+      have {IH} [?[?[??]]] := run_consistent _ IH (runb_success1 _ _ sC'); subst.
+      rewrite ges_subst_cutl/= in H2.
+      move=> /=.
+      repeat eexists; apply: run_cut Y H2.
+    - move=> s1 s2 s3 r A B n b + rB IH C D E ?; subst => /=.
+      case X: expand => //[s1' C'|s1' C'].
+        move=> [??]; subst.
+        have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+        repeat eexists; eauto.
+        apply: run_step X IH.
+      case Y: expand => //=[s1'' E'][??]; subst.
+      have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+      do 4 eexists; split.
+        apply: run_done X erefl.
+      have [[??]sC]:= expand_solved_same _ X; subst.
+      have {IH} [?[?[??]]] := run_consistent _ IH (runb_success1 _ _ sC); subst.
+      move=> /=; repeat eexists; apply: run_step Y H2.
+    - move=> s1 s2 A B C r n b /expand_failed_same [? +] + rC IH D E F ?; subst.
+      move=> /= /orPT[fD|/andP[sD fF]].
+        rewrite fD; case: ifP => //dD.
+        case W: next_alt => //=[D'].
+        case X: next_alt => //=[E'][?]; subst.
+        have [sm[r1[n1 [b1[{}IH [n2[r2[b2 H2]]]]]]]]:= IH _ _ _ erefl.
+        do 4 eexists; split.
+          apply: run_fail (failed_expand _ fD) W IH.
+        move=> /=.
+        case: b1 IH H2 => /=IH H2.
+          by case: H2 => H2; repeat eexists; eauto.
+        repeat eexists.
+        apply: next_alt_runb X H2.
+      rewrite success_failed// success_is_dead//sD.
+      case W: next_alt => //=[F'|].
+        move=>[?]; subst.
+        have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+        do 4 eexists; split; eauto.
+        case: b1 IH H2 => /=.
+          move=> IH [sm' H2]; repeat eexists; eauto.
+        repeat eexists.
+        apply: next_alt_runb W H2.
+      case X: next_alt => //=[D'].
+      case Y: next_alt => //=[E'][?]; subst.
+      have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+      do 4 eexists; split.
+        apply: run_done erefl.
+        apply: succes_is_solved sD.
+      move=> /=.
+      case: b1 IH H2 => /=.
+        move=> IH [sm' H2]; repeat eexists.
+        admit.
+      move=> IH H2.
+      repeat eexists.
+      admit.
+  Qed. *)
+
+
+  Lemma run_and_correct {s0 sn A B0 B r n b}:
+    runb u s0 (And A B0 B) sn r n b ->
+    (Texists sm r1 n1 b1, runb u s0 A sm r1 n1 b1 /\
+      Texists n2 r2 b2, ((runb u sm B sn r2 n2 b2) + 
         (* TODO: it should not be Texsists sm, but I should provide the right substitution *)
         (* The problem is given by a state like (A \/ B) /\ C
            A succeeds, C fails, the substitution on which we should run C0
            is the one obtained by running B (i.e. next_alt A).
         *)
-        (Texists sm, runb u sm B0 sn r2 b2))).
+        (if b1 then runb u sm B0 sn r2 n2 b2
+        else Texists sm, runb u sm B0 sn r2 n2 b2))).
   Proof.
     remember (And _ _ _) as a eqn:Ha => H.
+    elim: H A B0 B Ha; clear.
+    - move=> s1 s2 r A B /expand_solved_same [[??]+] ? C D E ?; subst => /=.
+      move=> /andP[sC sE].
+      repeat eexists.
+        apply: run_done (succes_is_solved _ _ sC) erefl.
+      rewrite sC; left; apply: run_done erefl.
+      apply: succes_is_solved sE.
+    - move=> s1 s2 s3 r A B n b + rB IH C D E ?; subst => /=.
+      case X: expand => //[s1' C'|s1' C'].
+        move=> [??]; subst.
+        have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+        repeat eexists; eauto.
+        apply: run_cut X IH.
+      case Y: expand => //=[s1'' E'][??]; subst.
+      have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+      do 4 eexists; split.
+        apply: run_done X erefl.
+      have [[??]sC]:= expand_solved_same _ X; subst.
+      have sC' := sC.
+        rewrite -success_cut in sC'.
+      have {IH} [?[?[??]]] := run_consistent _ IH (runb_success1 _ _ sC'); subst.
+      rewrite ges_subst_cutl in H2.
+      case: H2 => H2.
+        by repeat eexists; left; apply: run_cut Y H2.
+      move: H2 => [sm H2].
+      case sD: (success (cutl D)).
+        have [?[??]] := run_consistent _ H2 (runb_success1 _ _ sD); subst.
+        repeat eexists; right.
+        rewrite success_cut in sD.
+        rewrite ges_subst_cutl.
+        eexists; apply: runb_success1 sD.
+      have:= @failed_success_cut D.
+      rewrite sD/= => H1.
+      by have:= failed_cutl_runb _ H1 _ _ _ _ _ H2.
+    - move=> s1 s2 s3 r A B n b + rB IH C D E ?; subst => /=.
+      case X: expand => //[s1' C'|s1' C'].
+        move=> [??]; subst.
+        have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+        repeat eexists; eauto.
+        apply: run_step X IH.
+      case Y: expand => //=[s1'' E'][??]; subst.
+      have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+      do 4 eexists; split.
+        apply: run_done X erefl.
+      have [[??]sC]:= expand_solved_same _ X; subst.
+      have {IH} [?[?[??]]] := run_consistent _ IH (runb_success1 _ _ sC); subst.
+      case: H2 => H2.
+        repeat eexists; left; apply: run_step Y H2.
+      by repeat eexists; eauto.
+    - move=> s1 s2 A B C r n b /expand_failed_same [? +] + rC IH D E F ?; subst.
+      move=> /= /orPT[fD|/andP[sD fF]].
+        rewrite fD; case: ifP => //dD.
+        case W: next_alt => //=[D'].
+        case X: next_alt => //=[E'][?]; subst.
+        have [sm[r1[n1 [b1[{}IH [n2[r2[b2 H2]]]]]]]]:= IH _ _ _ erefl.
+        do 4 eexists; split.
+          apply: run_fail (failed_expand _ fD) W IH.
+        case: b1 IH H2 => IH H2.
+          case: H2 => H2; repeat eexists; eauto.
+          right; apply: next_alt_runb X H2.
+        case: H2 => H2.
+          repeat eexists; eauto; right; apply: next_alt_runb X H2.
+        case: H2 => sm' H2.
+        repeat eexists; right. X H2.
+        
+      rewrite success_failed// success_is_dead//sD.
+      case W: next_alt => //=[F'|].
+        move=>[?]; subst.
+        have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+        do 4 eexists; split; eauto.
+        case: H2 => H2; repeat eexists; eauto.
+        left; apply: next_alt_runb W H2.
+      case X: next_alt => //=[D'].
+      case Y: next_alt => //=[E'][?]; subst.
+      have [sm[r1[n1 [b1[{}IH [b2[n2[r2 H2]]]]]]]]:= IH _ _ _ erefl.
+      do 4 eexists; split.
+        apply: run_done erefl.
+        apply: succes_is_solved sD.
+      case: H2 => H2; repeat eexists.
+        right; eexists; apply: next_alt_runb Y _.
+        eauto.
+      repeat eexists; right; eauto.
+  Qed. *)
+
+  (* Lemma run_and_complete_succL {s1 s2 A B0 B r n}:
+    success A -> runb u (get_substS s1 A) B s2 r n ->
+      (* TODO: be more precise on r' *)
+      Texists r', runb u s1 (And A B0 B) s2 r' n.
+  Proof.
+    elim: A s1 s2 B0 B r n => //=.
+    - move=> s1 s2 B0 B r n _ H.
+      inversion H; clear H; subst => //=.
+      - eexists; apply: run_done => //=; rewrite H0//=.
+      - eexists; apply: run_cut => /=.
+          by rewrite H0 => //.
+        apply: run_cut.
+
+      eexists; apply: run_cut H1 => //=; rewrite H0//=.
+      - eexists; apply: run_step H1 => //=; rewrite H0//=.
+      - eexists; apply: run_done => //=; rewrite H0//=.
+      apply: 
+    remember (get_substS _ _) as a eqn:Ha => +H.
     elim: H A B0 B Ha; clear.
     - move=> s1 s2 r A B /expand_solved_same [[??]+] ? C D E ?; subst => /=.
       move=> /andP[sC sE].
@@ -578,7 +768,8 @@ Section s.
         right; eexists; apply: next_alt_runb Y _.
         eauto.
       repeat eexists; right; eauto.
-  Qed.
+  Qed. *)
+
 
 
   (* Lemma run_and_correct {s0 sn A B B0 A' B0' B' b}:

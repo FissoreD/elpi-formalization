@@ -55,7 +55,7 @@ Section Test1.
     ].
 
 
-  Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) s2 r 0.
+  Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) s2 r 0 true.
   Proof.
     eexists.
     apply: run_step => //.
@@ -83,7 +83,7 @@ Section Test5.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
     ].
 
-  Goal runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 None 0.
+  Goal runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) s1 None 0 true.
   Proof.
     repeat eexists.
     apply: run_step => //.
@@ -110,7 +110,7 @@ Section Test6.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
   ].
 
-  Goal     runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) s1 None 0 .
+  Goal     runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) s1 None 0 true.
   Proof.
     repeat eexists.
     apply: run_step => //.
@@ -133,20 +133,20 @@ Section Test2.
   (* Import RunAxiom. *)
   Goal expand unif empty (Or OK empty OK) = Success empty (Or OK empty OK) . by []. Qed.
 
-  Goal runb unif empty (Or (CutS) empty OK) empty (None) 0.
+  Goal runb unif empty (Or (CutS) empty OK) empty (None) 0 false.
     apply: run_step => //=.
     apply: run_done => //.
   Qed.
 
   Goal forall r, 
-    runb unif empty (Or (CutS) empty r) empty None 0.
+    runb unif empty (Or (CutS) empty r) empty None 0 false.
     move=> r.
     apply: run_step => //.
     apply: run_done => //=.
     rewrite is_ko_next_alt?if_same//is_ko_cutr//.
   Qed.
 
-  Goal runb unif empty (Or OK empty (Or OK empty OK)) empty (Some (Or Dead empty (((Or OK empty OK))))) 0.
+  Goal runb unif empty (Or OK empty (Or OK empty OK)) empty (Some (Or Dead empty (((Or OK empty OK))))) 0 false.
   Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
