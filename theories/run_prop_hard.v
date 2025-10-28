@@ -227,8 +227,7 @@ Section s.
 
   Lemma run_ko_left2 {s2 X B r SOL b1} sIgn:
     is_ko X -> runb u s2 B SOL r b1 ->
-    Texists r', runb u sIgn (Or X s2 B) SOL r' 0 /\ 
-      (omap (fun x => Or (if is_dead X then X else dead1 X) s2 x) r = r').
+    runb u sIgn (Or X s2 B) SOL (omap (fun x => Or (if is_dead X then X else dead1 X) s2 x) r) 0.
   Proof.
     move=> + HB; elim: HB sIgn X; clear.
     + move=> s s' r A B /expand_solved_same [[??]sB] ? sIgn X kX; subst => /=.
@@ -247,14 +246,13 @@ Section s.
       rewrite /=is_dead_dead//.
     + move=> s1 s2 s3 r A B n HA HB IH sIgn X kX.
       case dX: (is_dead X).
-        have [r'[{}IH H]]:= IH sIgn _ kX.
-        rewrite dX in H; subst.
-        repeat eexists.
+        have {}IH := IH sIgn _ kX.
+        rewrite dX in IH.
         apply: run_step.
           rewrite /= dX HA//.
         by eassumption.
-      have [r'[{}IH H]]:= IH sIgn (dead1 X) (is_dead_is_ko is_dead_dead).
-      rewrite is_dead_dead in H; subst.
+      have {}IH:= IH sIgn (dead1 X) (is_dead_is_ko is_dead_dead).
+      rewrite is_dead_dead in IH.
       repeat eexists.
       apply: run_fail.
         rewrite/=dX is_ko_expand//.
@@ -266,14 +264,13 @@ Section s.
     (* TODO: the following case is same as previous... *)
     + move=> s1 s2 s3 r A B n HA HB IH sIgn X kX.
       case dX: (is_dead X).
-        have [r'[{}IH H]]:= IH sIgn _ kX.
-        rewrite dX in H; subst.
-        repeat eexists.
+        have {}IH := IH sIgn _ kX.
+        rewrite dX in IH.
         apply: run_step.
           rewrite /= dX HA//.
         by eassumption.
-      have [r'[{}IH H]]:= IH sIgn (dead1 X) (is_dead_is_ko is_dead_dead).
-      rewrite is_dead_dead in H; subst.
+      have {}IH:= IH sIgn (dead1 X) (is_dead_is_ko is_dead_dead).
+      rewrite is_dead_dead in IH.
       repeat eexists.
       apply: run_fail.
         rewrite/=dX is_ko_expand//.
@@ -284,14 +281,14 @@ Section s.
       rewrite /=is_dead_dead HA//.
     + move=> s1 s2 A B C r n /expand_failed_same [? fB] nB rC IH sIgn X kX; subst.
       case dX: (is_dead X).
-        have [r'[{}IH H]]:= IH sIgn _ kX.
-        rewrite dX in H; subst.
+        have {}IH:= IH sIgn _ kX.
+        rewrite dX in IH; subst.
         repeat eexists.
         apply: run_fail IH.
           rewrite/= dX failed_expand//.
         rewrite/= dX nB//.
-      have [r'[{}IH H]]:= IH sIgn (dead1 X) (is_dead_is_ko is_dead_dead).
-      rewrite is_dead_dead in H; subst.
+      have {}IH:= IH sIgn (dead1 X) (is_dead_is_ko is_dead_dead).
+      rewrite is_dead_dead in IH; subst.
       repeat eexists; repeat eexists.
       apply: run_fail IH.
         rewrite/=dX is_ko_expand//.
@@ -419,7 +416,7 @@ Section s.
   Proof.
     move=> H1 H2.
     have [b1[r1 [H3 H4]]]:= run_ko_left1 H1 H2.
-    by have [r'[H5 H6]] := run_ko_left2 sIgn2 H1 H3; subst.
+    by have H5 := run_ko_left2 sIgn2 H1 H3; subst.
   Qed.
 
   (* Fixpoint has_bt A B :=

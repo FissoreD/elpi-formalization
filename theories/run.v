@@ -143,6 +143,9 @@ Section state_op.
     - move=> A HA B0 _ B HB/=/HA->//.
   Qed.
 
+  Lemma failed_is_ko {A}: failed A = false -> is_ko A = false.                    (*2*)
+  Proof. by case X: is_ko => //; rewrite is_ko_failed//. Qed.
+
   Lemma failed_success A: failed A -> success A = false.          (*3*)
   Proof.
     elim: A => //.
