@@ -126,6 +126,13 @@ with clean_ca_G_suffix bt g :=
   | cut ca => cut ((take (size ca - size bt) (clean_ca_suffix bt ca)))
   end.
 
+Lemma clean_ca_suffix_size {bt L}: size (clean_ca_suffix bt L) = size L
+with clean_ca_goal_suffix_size {bt L}: size (clean_ca_goals_suffix bt L) = size L.
+Proof.
+  - case: L => /=//[[s g]gs]/=; rewrite !size_cons clean_ca_suffix_size//.
+  - case: L => /=//[g gs]/=; rewrite !size_cons clean_ca_goal_suffix_size//=.
+Qed.
+
 Lemma clean_ca_suffix_cat {bt L1 L2}:
   clean_ca_suffix bt (L1 ++ L2) = clean_ca_suffix bt (L1) ++ clean_ca_suffix bt L2.
 Proof. by elim: L1 bt L2 => //= [[s g] gs] IH bt L2; rewrite IH cat_cons. Qed.
@@ -396,6 +403,14 @@ Proof.
     by rewrite vA' oA' base_and_is_and// eqxx base_and_valid///bbAnd bB !if_same.
 Qed.
 
+(* Lemma xx {A s bt s1 x xs}:
+  valid_state A ->
+  failed A = false -> success A = false -> 
+    state_to_list A s bt = (s1, x) ::: xs -> x <> nilC.
+Proof.
+  elim: A s bt s1 x xs => //.
+  - move=> s _ s1 x xs _ _ _ [_<-]. *)
+
 
 Lemma next_cut_s2l u {A B s bt s1 ca gl a}:
   failed A = false -> valid_state A ->
@@ -475,12 +490,32 @@ Proof.
         have bcl := base_and_cutl bB.
         rewrite base_and_ko_state_to_list//=.
         rewrite make_lB01_empty2 ges_subst_cutl.
-        replace bt with (ml ++ bt) by admit.
-        rewrite HB//.
+        have [x[tl]]:= s2l_CutBrothers _ (get_substS s A) (ml++bt) vB H2.
+        rewrite H1 => -[][????] [Hz Hw]; subst.
+        rewrite Hz//=.
+        have [_ HH] := expand_cb_same_subst1 _ vB H2.
+        by rewrite HH; auto.
       rewrite (success_state_to_list empty)//=.
       rewrite H/=.
       rewrite -/ml make_lB01_empty2 clean_ca_suffix_cat.
-      admit.
+      have [[[Hx fA' ?]]] := s2l_Expanded_cut _ vB H2 H1; subst.
+      rewrite Hx/= => -[] Hz.
+        rewrite Hz/=.
+        rewrite cat_cons.
+        move: HB; rewrite Hz/=.
+        move=> [Hw] He; have:= [elaborate f_equal size He].
+        by rewrite size_cons; clear; lia.
+      move: HB Hz.
+      set X:= state_to_list _ _ _.
+      case: X => //=-[s2 y]ys[?] ++ [???]; subst.
+      rewrite Hx.
+      set K:= get_substS _ _.
+      move=> _.
+      set XX:= clean_ca_goals_suffix _ _.
+      rewrite !size_cat addnA addnK.
+      change (append_alts ys _) with (ys ++ (ml ++ bt)) => _.
+      rewrite catA !clean_ca_suffix_cat cat_cons take_size_cat//.
+      by rewrite size_cat !clean_ca_suffix_size.
     case Y: next_cut => [b' A']/= + [??]; subst => /=.
     case Z: (next_cut B) => [b'' B'].
     have [s2[x[xs H]]] := failed_state_to_list vA fA s bt.
@@ -491,7 +526,37 @@ Proof.
       case: h H1 => //-[]//ca' gs H1[????]; subst.
       have:= HB _ s no_alt _ _ _ _ (base_and_failed bB) (base_and_valid bB) _ Z.
       rewrite H1 => /= /(_ _ _ _ _ erefl).
-      move=> [].
+      move=> [H2 H3].
+      admit. (*I think it is wrong: s2l A s bt = (s1, L) ::: xs, L can be empty?*)
+    move=> []//ca' gs H[????]; subst.
+    have:= HA _ s bt _ _ _ _ fA vA _ Y.
+    rewrite H/= => /(_ _ _ _ _ erefl) [H2 H3].
+    case: b Y H3 => //= Y H3; rewrite H3; repeat split.
+      have [x[tl]]:= s2l_CutBrothers _ s bt vA H3.
+      rewrite H => -[][]???? [H4 H5]; subst.
+      rewrite H4/= H1 make_lB0_empty1 cats0 sub0n take0.
+      by rewrite (expand_cb_same_subst1 _ vA H3).
+    have [[[Hx fA' ?]]] := s2l_Expanded_cut _ vA H3 H; subst.
+    move=> []Hz.
+      rewrite Hz/= H1/= size_cat clean_ca_suffix_cat.
+      set X:= make_lB0 _ _.
+      set W:= take _ _.
+      set K:= clean_ca_goals_suffix _ _.
+      move: H2; rewrite Hz => /= -[]HH.
+      have:= [elaborate f_equal size HH].
+      rewrite !size_cons; clear; lia.
+    move: {HA HB} H2; case X: state_to_list => //[[sy y]ys][?]; subst.
+    rewrite Hx.
+    move: Hz; rewrite X => -[??]; subst => _.
+    change (append_alts _ _) with (ys ++ bt).
+    rewrite size_cat addnK clean_ca_suffix_cat.
+    rewrite take_size_cat?clean_ca_suffix_size//.
+    move=> _.
+    rewrite drop_size_cat//.
+    rewrite !H1/=; f_equal.
+    rewrite add_deep_cat take_size_cat?size_add_deep// size_cat addnK.
+    rewrite clean_ca_suffix_cat take_size_cat//.
+    rewrite clean_ca_suffix_size//.
 Admitted.
 
 
@@ -501,7 +566,7 @@ Lemma two' {u s1 s2} {alts alts_left : alts} {andg : goals}  :
   (state_to_list t s nilC) = ((s1,andg) ::: alts) -> 
   Texists t1 n,
     runb u s t s2 t1 n
-      (* /\ state_to_list (odflt Bot t1) s1 bt1 = add_ca_deep bt1 alts_left  *)
+      (* /\ state_to_list (odflt Bot t1) s1 nilC = alts_left  *)
     .
 Proof.
   elim; clear.
