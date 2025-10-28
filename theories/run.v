@@ -265,6 +265,12 @@ Section state_op.
       case: success => //.
   Qed.
 
+  Lemma failed_cutl_is_ko {A}:
+    failed (cutl A) -> is_ko (cutl A).
+  Proof.
+    (* THIS IS WRONG *)
+  Abort.
+
   Lemma success_failed_cut {A}: success (cutl A) = ~~ (failed (cutl A)).
   Proof. rewrite failed_success_cut; case: success => //. Qed.
 

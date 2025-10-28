@@ -64,32 +64,38 @@ Proof.
     by apply: HB H1; eauto; apply: bbOr_valid bB.
   - move=> A HA B0 HB0 B HB s1 bt /and5P[_ vA _].
     case: ifP => /=[sA vB bB0|sA/eqP->{HB0}].
-      rewrite (success_state_to_list s1)//=. (*TODO: not sure it is s1*)
+      rewrite (success_state_to_list s1)//=.
       move/orPT: bB0 => []bB; last first.
         rewrite base_and_ko_state_to_list//=.
         case X: state_to_list => //= _ s2 s3 r b H1.
         have {}HB := HB _ _ vB X.
         have {}HB0 := HB0 empty no_alt (base_and_ko_valid bB) (base_and_ko_state_to_list bB).
-        admit. (*should be ok: but B and B0 fail*)
+        have [sm[r1[b1[H2 [b2[r2 [H3|[sm' H3]]]]]]]] := run_and_correct _ H1.
+          by apply: HB; eauto.
+        by apply: HB0; eauto.
       have [hd H]:= base_and_state_to_list bB; rewrite H/=.
       case X: state_to_list => //.
       case Y: state_to_list => [|[]]// _ s2 s3 r b H1.
       have {}HB := HB _ _ vB X.
+      have [sm[r1[b1[H2 [b2[r2 [H3|[sm' H3]]]]]]]] := run_and_correct _ H1.
+        by apply: HB H3.
       admit. (*should be ok: A success, B fails and A has no alternatives*)
     case: ifP => [fA bB|fA bB].
       case X: state_to_list => [|[s2 x]xs].
         move=> _ s3 s4 r b H.
-        have [sm[r1[b1 H1]]]:= run_and_correct _ H.
+        have [sm[r1[b1 [H1 H2]]]]:= run_and_correct _ H.
         by apply: HA H1; eauto.
       move/orPT: bB => []bB; last first.
         rewrite base_and_ko_state_to_list//=.
         case Y: state_to_list => //= _ s4 s5 r b H1.
         have {}HB := HB _ _ (base_and_ko_valid bB) Y.
-        admit. (*should be ok: A is any, B and B0 (which is equal to B) fail*)
+        have [sm[r1[b1[H2 [b2[r2 [H3|[sm' H3]]]]]]]] := run_and_correct _ H1.
+          by apply: HB H3.
+        by apply: HB H3.
       have [hd H]:= base_and_state_to_list bB; rewrite H/=H//=.
     case X: state_to_list => [|[s2 x]xs].
       move=> _ s3 s4 r b H.
-      have [sm[r1[b1 H1]]]:= run_and_correct _ H.
+      have [sm[r1[b1 [H1 H2]]]]:= run_and_correct _ H.
       by apply: HA H1; eauto.
     have [hd H]:= base_and_state_to_list bB; rewrite H/=H//=.
 Admitted.
@@ -476,9 +482,7 @@ Proof.
       have:= H empty (Some A) n.
       (* this should? be ok: A \/ B with A fail and run B, 
          attention: if A has a superficial cut is B cut away? *)
-      (* That is: can I have: (! /\ fail) \/ B*)
-      (* It should not be a valid state! *)
-      (* Therefore, in a lemma like  *)
+      (* That is: can I have: (! /\ fail) \/ B ?*)
       admit.
     rewrite /=cat_cons => -[??]; subst.
     have [A'[n H1]] := HA _ _ _ _ vA X.
@@ -491,6 +495,7 @@ Proof.
         rewrite base_and_ko_state_to_list//=.
         rewrite make_lB01_empty2 => H.
         have [r[n {}HB]] := HB _ _ _ _ vB H.
+        
         admit. (*this is ok: A /\ B with success A and run B*)
       have [hd H]:= base_and_state_to_list bB.
       rewrite H/=make_lB01_empty2.
