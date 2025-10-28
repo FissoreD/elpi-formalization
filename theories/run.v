@@ -980,6 +980,72 @@ Section main.
   (* NEXT_ALT OP PROPERTIES                                           *)
   (********************************************************************)
 
+  Lemma next_alt_success_diff {A B}: 
+    success A -> next_alt true A = Some B -> (A != B).
+  Proof.
+    elim: A B => //=.
+    - move=> A HA s B HB C; case: ifP => [dA sB|dA sA].
+        case X: next_alt => //[B'][<-]/=.
+        have:= HB _ sB X.
+        repeat case: eqP => //; try congruence.
+      case X: next_alt => //[A'|].
+        move=> [<-].
+        have:= HA _ sA X.
+        repeat case: eqP => //; try congruence.
+      case: ifP => //dB.
+      case Y: next_alt => //[B'].
+      move=> [<-]/=.
+      case: eqP => //-[H ?]; subst.
+      by move: dA; rewrite H is_dead_dead.
+    - move=> A HA B0 _ B HB C /andP[sA sB].
+      case: ifP => // dA.
+      rewrite success_failed sA//.
+      case X: next_alt => [B'|]//.
+        move=> [<-].
+        have:= HB _ sB X.
+        repeat case: eqP => //; try congruence.
+      case Y: next_alt => [A'|]//.
+      case Z: next_alt => [B0'|]//[<-].
+      have:= HA _ sA Y.
+      repeat case: eqP => //; try congruence.
+  Qed.
+
+  Lemma next_alt_failed_diff {A B}: 
+    failed A -> next_alt false A = Some B -> (A != B).
+  Proof.
+    elim: A B => //=.
+    - move=> A HA s B HB C; case: ifP => [dA fB|dA fA].
+        case X: next_alt => //[B'][<-]/=.
+        have:= HB _ fB X.
+        repeat case: eqP => //; try congruence.
+      case X: next_alt => //[A'|].
+        move=> [<-].
+        have:= HA _ fA X.
+        repeat case: eqP => //; try congruence.
+      case: ifP => //dB.
+      case Y: next_alt => //[B'].
+      move=> [<-]/=.
+      case: eqP => //-[H ?]; subst.
+      by move: dA; rewrite H is_dead_dead.
+    - move=> A HA B0 _ B HB C.
+      case: ifP => // dA.
+      move=> /orP[fA|/andP[sA fB]].
+        rewrite fA.
+        case X: next_alt => [A'|]//.
+        case Y: next_alt => [B0'|]//[<-]/=.
+        have:= HA _ fA X.
+        repeat case: eqP => //; try congruence.
+      rewrite success_failed//sA.
+      case X: next_alt => [B'|]//.
+        move=>[<-].
+        have:= HB _ fB X.
+        repeat case: eqP => //; try congruence.
+      case Y: next_alt => [A'|]//.
+      case Z: next_alt => [B0'|]//[<-]/=.
+      have:= next_alt_success_diff sA Y.
+      repeat case: eqP => //; try congruence.
+    Qed.
+
   Lemma is_dead_next_alt {A} b: is_dead A -> next_alt b A = None.
   Proof. move=>/is_dead_is_ko/is_ko_next_alt//. Qed.
 

@@ -490,7 +490,7 @@ Section s.
       rewrite -success_cut//.
   Qed.
 
-    Lemma run_and_correct {s0 sn A B0 B r b}:
+  Lemma run_and_correct {s0 sn A B0 B r b}:
     runb u s0 (And A B0 B) sn r b ->
     (Texists sm r1 b1, runb u s0 A sm r1 b1 /\
       Texists b2 r2, ((runb u sm B sn r2 b2) + 
