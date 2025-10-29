@@ -110,10 +110,10 @@ Proof.
     by rewrite map_cons add_ca_deep_goals_map.
 Qed.
 
-Fixpoint clean_ca_suffix (bt:alts) (ats: alts) : alts :=
+Fixpoint clean_ca (bt:alts) (ats: alts) : alts :=
   match ats with
   | no_alt => nilC
-  | more_alt (hd,xs) tl => (hd, clean_ca_goals_suffix bt xs) ::: (clean_ca_suffix bt tl)
+  | more_alt (hd,xs) tl => (hd, clean_ca_goals_suffix bt xs) ::: (clean_ca bt tl)
   end
 with clean_ca_goals_suffix bt gl :=
   match gl with
@@ -123,18 +123,18 @@ with clean_ca_goals_suffix bt gl :=
 with clean_ca_G_suffix bt g :=
   match g with
   | call pr t => call pr t 
-  | cut ca => cut ((take (size ca - size bt) (clean_ca_suffix bt ca)))
+  | cut ca => cut ((take (size ca - size bt) (clean_ca bt ca)))
   end.
 
-Lemma clean_ca_suffix_size {bt L}: size (clean_ca_suffix bt L) = size L
+Lemma clean_ca_size {bt L}: size (clean_ca bt L) = size L
 with clean_ca_goal_suffix_size {bt L}: size (clean_ca_goals_suffix bt L) = size L.
 Proof.
-  - case: L => /=//[[s g]gs]/=; rewrite !size_cons clean_ca_suffix_size//.
+  - case: L => /=//[[s g]gs]/=; rewrite !size_cons clean_ca_size//.
   - case: L => /=//[g gs]/=; rewrite !size_cons clean_ca_goal_suffix_size//=.
 Qed.
 
-Lemma clean_ca_suffix_cat {bt L1 L2}:
-  clean_ca_suffix bt (L1 ++ L2) = clean_ca_suffix bt (L1) ++ clean_ca_suffix bt L2.
+Lemma clean_ca_cat {bt L1 L2}:
+  clean_ca bt (L1 ++ L2) = clean_ca bt (L1) ++ clean_ca bt L2.
 Proof. by elim: L1 bt L2 => //= [[s g] gs] IH bt L2; rewrite IH cat_cons. Qed.
 
 Lemma clean_ca_goals_suffix_cat {bt L1 L2}:
@@ -142,7 +142,7 @@ Lemma clean_ca_goals_suffix_cat {bt L1 L2}:
 Proof. by elim: L1 bt L2 => //= g gs IH bt L2; rewrite IH cat_cons. Qed.
 
 Lemma clean_ca_add_ca {bt1 L}:
-  clean_ca_suffix bt1 (add_ca_deep bt1 L) = L
+  clean_ca bt1 (add_ca_deep bt1 L) = L
 with clean_ca_goals_add_ca_goal bt1 x:
   clean_ca_goals_suffix bt1 (add_ca_deep_goals bt1 x) = x.
 Proof.
@@ -150,18 +150,18 @@ Proof.
   - case: x => /=//g gs; rewrite clean_ca_goals_add_ca_goal.
     case: g => //= a.
     congr ((cut _) ::: _).
-    rewrite size_cat addnK clean_ca_suffix_cat clean_ca_add_ca.
+    rewrite size_cat addnK clean_ca_cat clean_ca_add_ca.
     by rewrite take_size_cat// size_add_ca_deep.
     Guarded.
 Qed.
 
-Lemma clean_ca_suffix_nil {L}: clean_ca_suffix nilC L = L
+Lemma clean_ca_nil {L}: clean_ca nilC L = L
 with clean_ca_goals_nil {L}: clean_ca_goals_suffix nilC L = L
 with clean_ca_G_nil {L}: clean_ca_G_suffix nilC L = L.
 Proof.
-  - case: L => /=// [[sx x]xs]; rewrite clean_ca_goals_nil clean_ca_suffix_nil//.
+  - case: L => /=// [[sx x]xs]; rewrite clean_ca_goals_nil clean_ca_nil//.
   - case: L => /=// g gs; rewrite clean_ca_goals_nil clean_ca_G_nil//.
-  - case: L => /=// ca; rewrite clean_ca_suffix_nil subn0 take_size//.
+  - case: L => /=// ca; rewrite clean_ca_nil subn0 take_size//.
 Qed.
 
 
@@ -454,9 +454,9 @@ Section next_cut.
   Lemma next_cut_s2l u {A B s bt s1 ca gl a}:
     (* is_kill_top A -> *)
     failed A = false -> valid_state A ->
-      clean_ca_suffix bt (state_to_list A s bt) = (s1, (cut ca) ::: gl) ::: a ->
+      clean_ca bt (state_to_list A s bt) = (s1, (cut ca) ::: gl) ::: a ->
       next_cut A = B ->
-        clean_ca_suffix bt (state_to_list B.2 s bt) = (s1, gl) ::: ca /\
+        clean_ca bt (state_to_list B.2 s bt) = (s1, gl) ::: ca /\
         if B.1 then expand u s A = CutBrothers s1 B.2
         else expand u s A = Expanded s1 B.2.
   Proof.
@@ -469,10 +469,10 @@ Section next_cut.
         case X: state_to_list => [|[sx [|[p' c'|ca'] ys]] xs]//[????][??]; subst.
         case Y: next_cut => [b' B']/=.
         rewrite state_to_list_dead//=.
-        rewrite -(@clean_ca_suffix_nil (state_to_list B s nilC)) in X.
+        rewrite -(@clean_ca_nil (state_to_list B s nilC)) in X.
         have /=[{}HB H] := HB _ _ _ _ _ _ _ fB vB X Y.
-        rewrite clean_ca_suffix_nil in HB.
-        rewrite HB/= size_cat addnK clean_ca_suffix_cat take_size_cat//; last first.
+        rewrite clean_ca_nil in HB.
+        rewrite HB/= size_cat addnK clean_ca_cat take_size_cat//; last first.
           by rewrite clean_ca_add_ca size_add_ca_deep.
         split => //; case: b' H Y => //->//.
       have [s'[x[xs H]]] := [elaborate failed_state_to_list vA fA s1 (state_to_list B s nilC)].
@@ -488,7 +488,7 @@ Section next_cut.
         rewrite cat0s// subnn take0 add_ca_deep_empty2; repeat split.
         rewrite H1//.
       have [[[Hx fA' ?]]] := s2l_Expanded_cut _ vA H1 H; subst.
-      move=> []Hy; rewrite Hy/=size_cat addnK clean_ca_suffix_cat !clean_ca_add_ca take_size_cat ?size_add_ca_deep//.
+      move=> []Hy; rewrite Hy/=size_cat addnK clean_ca_cat !clean_ca_add_ca take_size_cat ?size_add_ca_deep//.
         move=> []Hz.
         have:= [elaborate f_equal size Hz].
         rewrite size_cons; lia.
@@ -514,7 +514,7 @@ Section next_cut.
           by rewrite base_and_ko_state_to_list//=  make_lB01_empty2 HB.
         have [h H]:= base_and_state_to_list bB.
         rewrite H/= make_lB01_empty2/=.
-        rewrite clean_ca_suffix_cat.
+        rewrite clean_ca_cat.
         set ml:= make_lB0 _ _.
         have [s2[x[xs H1]]] := [elaborate failed_state_to_list vB fB (get_substS s A) (ml ++ bt)].
         rewrite H1/=.
@@ -537,7 +537,7 @@ Section next_cut.
           by rewrite HH; auto.
         rewrite (success_state_to_list empty)//=.
         rewrite H/=.
-        rewrite -/ml make_lB01_empty2 clean_ca_suffix_cat.
+        rewrite -/ml make_lB01_empty2 clean_ca_cat.
         have [[[Hx fA' ?]]] := s2l_Expanded_cut _ vB H2 H1; subst.
         rewrite Hx/= => -[] Hz.
           rewrite Hz/=.
@@ -554,8 +554,8 @@ Section next_cut.
         set XX:= clean_ca_goals_suffix _ _.
         rewrite !size_cat addnA addnK.
         change (append_alts ys _) with (ys ++ (ml ++ bt)) => _.
-        rewrite catA !clean_ca_suffix_cat cat_cons take_size_cat//.
-        by rewrite size_cat !clean_ca_suffix_size.
+        rewrite catA !clean_ca_cat cat_cons take_size_cat//.
+        by rewrite size_cat !clean_ca_size.
       case Y: next_cut => [b' A']/= + [??]; subst => /=.
       case Z: (next_cut B) => [b'' B'].
       have [s2[x[xs H]]] := failed_state_to_list vA fA s bt.
@@ -576,7 +576,7 @@ Section next_cut.
         by rewrite (expand_cb_same_subst1 _ vA H3).
       have [[[Hx fA' ?]]] := s2l_Expanded_cut _ vA H3 H; subst.
       move=> []Hz.
-        rewrite Hz/= H1/= size_cat clean_ca_suffix_cat.
+        rewrite Hz/= H1/= size_cat clean_ca_cat.
         set X:= make_lB0 _ _.
         set W:= take _ _.
         set K:= clean_ca_goals_suffix _ _.
@@ -587,14 +587,14 @@ Section next_cut.
       rewrite Hx.
       move: Hz; rewrite X => -[??]; subst => _.
       change (append_alts _ _) with (ys ++ bt).
-      rewrite size_cat addnK clean_ca_suffix_cat.
-      rewrite take_size_cat?clean_ca_suffix_size//.
+      rewrite size_cat addnK clean_ca_cat.
+      rewrite take_size_cat?clean_ca_size//.
       move=> _.
       rewrite drop_size_cat//.
       rewrite !H1/=; f_equal.
       rewrite add_deep_cat take_size_cat?size_add_deep// size_cat addnK.
-      rewrite clean_ca_suffix_cat take_size_cat//.
-      rewrite clean_ca_suffix_size//.
+      rewrite clean_ca_cat take_size_cat//.
+      rewrite clean_ca_size//.
   Admitted.
 End next_cut.
 
@@ -850,9 +850,9 @@ Proof.
         have /= vA' := (valid_state_next_alt vA nA).
         have /= vA'':= next_cut_valid fA' vA' X.
         rewrite (failed_next_alt_some_state_to_list _ vA fA nA) in H.
-        rewrite -(@clean_ca_suffix_nil (state_to_list A' s nilC)) in H.
+        rewrite -(@clean_ca_nil (state_to_list A' s nilC)) in H.
         have [H1 H2] := next_cut_s2l u fA' vA' H X.
-        rewrite clean_ca_suffix_nil/= in H1.
+        rewrite clean_ca_nil/= in H1.
         have /= [t1[n {}IH]] := IH _ _ vA'' H1.
         case: b X H2 => /= X H2.
           repeat eexists.
@@ -864,10 +864,10 @@ Proof.
           apply: failed_expand fA.
         apply: run_step H2 IH.
       case X: (next_cut A) => [b A'].
-      rewrite -(@clean_ca_suffix_nil (state_to_list A s nilC)) in H.
+      rewrite -(@clean_ca_nil (state_to_list A s nilC)) in H.
       have /= [H1 H2] := next_cut_s2l u fA vA H X.
       have /= vA':= next_cut_valid fA vA X.
-      rewrite (clean_ca_suffix_nil) in H1.
+      rewrite (clean_ca_nil) in H1.
       have /= [t1[n {}IH]] := IH _ _ vA' H1.
       case: b X H2 => /= X H2.
         repeat eexists.
