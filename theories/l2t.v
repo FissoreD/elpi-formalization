@@ -113,21 +113,21 @@ Qed.
 Fixpoint clean_ca (bt:alts) (ats: alts) : alts :=
   match ats with
   | no_alt => nilC
-  | more_alt (hd,xs) tl => (hd, clean_ca_goals_suffix bt xs) ::: (clean_ca bt tl)
+  | more_alt (hd,xs) tl => (hd, clean_ca_goals bt xs) ::: (clean_ca bt tl)
   end
-with clean_ca_goals_suffix bt gl :=
+with clean_ca_goals bt gl :=
   match gl with
   | no_goals => nilC 
-  | more_goals hd tl => (clean_ca_G_suffix bt hd) ::: (clean_ca_goals_suffix bt tl)
+  | more_goals hd tl => (clean_ca_G bt hd) ::: (clean_ca_goals bt tl)
   end
-with clean_ca_G_suffix bt g :=
+with clean_ca_G bt g :=
   match g with
   | call pr t => call pr t 
   | cut ca => cut ((take (size ca - size bt) (clean_ca bt ca)))
   end.
 
 Lemma clean_ca_size {bt L}: size (clean_ca bt L) = size L
-with clean_ca_goal_suffix_size {bt L}: size (clean_ca_goals_suffix bt L) = size L.
+with clean_ca_goal_suffix_size {bt L}: size (clean_ca_goals bt L) = size L.
 Proof.
   - case: L => /=//[[s g]gs]/=; rewrite !size_cons clean_ca_size//.
   - case: L => /=//[g gs]/=; rewrite !size_cons clean_ca_goal_suffix_size//=.
@@ -137,14 +137,14 @@ Lemma clean_ca_cat {bt L1 L2}:
   clean_ca bt (L1 ++ L2) = clean_ca bt (L1) ++ clean_ca bt L2.
 Proof. by elim: L1 bt L2 => //= [[s g] gs] IH bt L2; rewrite IH cat_cons. Qed.
 
-Lemma clean_ca_goals_suffix_cat {bt L1 L2}:
-  clean_ca_goals_suffix bt (L1 ++ L2) = clean_ca_goals_suffix bt (L1) ++ clean_ca_goals_suffix bt L2.
+Lemma clean_ca_goals_cat {bt L1 L2}:
+  clean_ca_goals bt (L1 ++ L2) = clean_ca_goals bt (L1) ++ clean_ca_goals bt L2.
 Proof. by elim: L1 bt L2 => //= g gs IH bt L2; rewrite IH cat_cons. Qed.
 
 Lemma clean_ca_add_ca {bt1 L}:
   clean_ca bt1 (add_ca_deep bt1 L) = L
 with clean_ca_goals_add_ca_goal bt1 x:
-  clean_ca_goals_suffix bt1 (add_ca_deep_goals bt1 x) = x.
+  clean_ca_goals bt1 (add_ca_deep_goals bt1 x) = x.
 Proof.
   - by case: L => /=//-[s1 x] xs/=; rewrite clean_ca_add_ca clean_ca_goals_add_ca_goal.
   - case: x => /=//g gs; rewrite clean_ca_goals_add_ca_goal.
@@ -156,13 +156,16 @@ Proof.
 Qed.
 
 Lemma clean_ca_nil {L}: clean_ca nilC L = L
-with clean_ca_goals_nil {L}: clean_ca_goals_suffix nilC L = L
-with clean_ca_G_nil {L}: clean_ca_G_suffix nilC L = L.
+with clean_ca_goals_nil {L}: clean_ca_goals nilC L = L
+with clean_ca_G_nil {L}: clean_ca_G nilC L = L.
 Proof.
   - case: L => /=// [[sx x]xs]; rewrite clean_ca_goals_nil clean_ca_nil//.
   - case: L => /=// g gs; rewrite clean_ca_goals_nil clean_ca_G_nil//.
   - case: L => /=// ca; rewrite clean_ca_nil subn0 take_size//.
 Qed.
+
+(* Lemma clean_ca_s2l {bt A}:
+  valid_state A -> clean_ca bt (state_to_list A bt) = state_to_list nilC. *)
 
 
 Lemma valid_state_nil_run {u A s s1 bt xs}:
@@ -551,7 +554,7 @@ Section next_cut.
         rewrite Hx.
         set K:= get_substS _ _.
         move=> _.
-        set XX:= clean_ca_goals_suffix _ _.
+        set XX:= clean_ca_goals _ _.
         rewrite !size_cat addnA addnK.
         change (append_alts ys _) with (ys ++ (ml ++ bt)) => _.
         rewrite catA !clean_ca_cat cat_cons take_size_cat//.
@@ -579,7 +582,7 @@ Section next_cut.
         rewrite Hz/= H1/= size_cat clean_ca_cat.
         set X:= make_lB0 _ _.
         set W:= take _ _.
-        set K:= clean_ca_goals_suffix _ _.
+        set K:= clean_ca_goals _ _.
         move: H2; rewrite Hz => /= -[]HH.
         have:= [elaborate f_equal size HH].
         rewrite !size_cons; clear; lia.
@@ -763,24 +766,24 @@ Section next_callS.
       by rewrite /bbAnd bB base_and_valid// !if_same.
   Qed.
 
-  Lemma next_callS_s2l u {A B s3 s1 p t gl a s0 r0 rs}:
+  Lemma next_callS_s2l u {A B s3 s1 bt p t gl a s0 r0 rs}:
     (* is_kill_top A -> *)
     failed A = false -> valid_state A ->
-      (state_to_list A s3 nilC) = (s1, (call p t) ::: gl) ::: a ->
+      clean_ca bt (state_to_list A s3 bt) = (s1, (call p t) ::: gl) ::: a ->
       F u p t s1 = (s0, r0) :: rs ->
       next_callS u s1 A = B ->
-        (state_to_list B s3 nilC) = 
+        clean_ca bt (state_to_list B s3 bt) = 
           (s0, save_goals a gl (a2gs1 p (s0, r0))) ::: (save_alts a gl (aa2gs p rs) ++ a) /\
         expand u s3 A = Expanded s1 B.
   Proof.
-    (* elim: A B s3 bt s1 p t gl a s0 r0 rs => //=. *)
-    (* - move=> p c B s3 bt s1 p1 t1 gl a s4 r rs _ _ [?????] H ?; subst. *)
-      (* rewrite/big_or H//. *)
-      (* have:= @s2l_big_or s1 s4 p1 (premises r) rs bt no_goals.
+    elim: A B s3 bt s1 p t gl a s0 r0 rs => //=.
+    - move=> p c B s3 bt s1 p1 t1 gl a s4 r rs _ _ [?????] H ?; subst.
+      rewrite/big_or H//.
+      have:= @s2l_big_or s1 s4 p1 (premises r) rs bt no_goals.
       rewrite make_lB0_empty2 => <-.
       rewrite /save_goals !cats0.
       Search state_to_list big_or_aux.
-     move=> p c B s bt s1 gl p1 c1 tl _ _ [?????] H; subst => <-/=; by rewrite/big_or H.
+     (* move=> p c B s bt s1 gl p1 c1 tl _ _ [?????] H; subst => <-/=; by rewrite/big_or H.
     - move=> A HA s B HB C s1 bt s2 gl p c tl.
       case: ifP => [dA fB vB|dA fA /andP[vA bB]].
         rewrite state_to_list_dead => //=.
