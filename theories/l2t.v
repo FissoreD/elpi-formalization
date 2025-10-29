@@ -305,6 +305,7 @@ Proof.
       rewrite !clean_ca_mk_lb0//.
       case X: next_alt => //[A']/=.
       rewrite !clean_ca_add_deep//=.
+      (* the problem is how to prove the property on next_alt? *)
       admit.
     have:= [elaborate @s2l_size A s (x++bt) s (clean_ca bt x)].
     have {HA}:= HA s x bt vA.
@@ -917,7 +918,7 @@ Lemma two' {u s1 s2} {alts alts_left : alts} {andg : goals}  :
     .
 Proof.
   elim; clear.
-  - move=> s a A s1 vA /= Ht.
+  - move=> s a s1 A vA /= Ht.
     (* rewrite (s2l_clean_ca vt erefl) => Ht. *)
     apply: valid_state_nil_run vA Ht.
   - move=> s1 s2 a ca r gl ELPI IH s A vA H.
