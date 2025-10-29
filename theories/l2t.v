@@ -721,116 +721,6 @@ Section next_cut.
   Admitted.
 End next_cut.
 
-Section next_callF.
-  Fixpoint next_callF A := 
-    match A with
-    | OK | Top | Dead | Bot | CutS => A
-    | CallS _ _ => Bot
-    | Or A s B => if is_dead A then Or A s (next_callF B) else Or (next_callF A) s B
-    | And A B0 B =>
-      if success A then And A B0 (next_callF B) else And (next_callF A) B0 B
-  end.
-
-  Lemma next_callF_is_and {A B}:
-    is_and A -> next_callF A = B -> is_and B.
-  Proof.
-    move=> + <- {B}; elim: A => //-[]//=.
-    - move=> A s B _ C HC D HD /[dup] aD /HD; (repeat case: ifP => //=).
-    - move=> A B0 B _ C HC D HD/[dup] aD /HD; repeat case: ifP => //.
-  Qed.
-
-  Lemma next_callF_is_or {A B}:
-    is_or A -> next_callF A = B -> is_or B.
-  Proof.
-    move=> + <- {B}; elim: A => //-[]//=.
-    - move=> A s B _ C s1 D _.
-      repeat case: ifP => //.
-    - move=> A B0 B _ s1 D HD _.
-      repeat case: ifP => //.
-  Qed.
-
-  Lemma next_callF_atop {A B}: A!=Top->next_callF A = B -> B != Top.
-  Proof.
-    move=> +<-{B}.
-    case: A => //=.
-    - by move=> A s B _; case: ifP => //; case X: next_callF => //.
-    - by move=> A B0 B; case: ifP; case: next_callF => //.
-  Qed.
-
-  Lemma next_callF_valid {A B}: 
-    valid_state A -> failed A = false -> next_callF A = B -> valid_state B.
-  Proof.
-    move=> ++ <-; clear B.
-    elim: A => //=.
-    - move=> A HA s B HB.
-      case: ifP => [dA vB fB|dA /andP[vA bB] fA]/=.
-        by rewrite dA HB.
-      by rewrite bB HA// bbOr_valid// if_same.
-    - move=> A HA B0 _ B HB /and5P[oA vA /andP[aB aT]].
-      case fA: failed => //=.
-      case: ifP => /=[sA vB bB fB|sA /eqP->{B0} bB _].
-        move: (HB vB fB) => {HA HB} vB'.
-        by rewrite vA vB' (next_callF_is_and aB)//aT sA bB oA.
-      rewrite (next_callF_is_or oA)//HA//aB (next_callF_atop _ erefl)// eqxx/=.
-      by rewrite /bbAnd bB base_and_valid// !if_same.
-  Qed.
-
-  Lemma next_callF_s2l u {A B s bt s1 gl p c tl}:
-    (* is_kill_top A -> *)
-    failed A = false -> valid_state A ->
-      state_to_list A s bt = (s1, (call p c) ::: gl) ::: tl ->
-      F u p c s1 = [::] ->
-      next_callF A = B ->
-        state_to_list B s bt = tl /\
-        expand u s A = Expanded s1 B.
-  Proof.
-    elim: A B s bt s1 gl p c tl => //=.
-    - move=> p c B s bt s1 gl p1 c1 tl _ _ [?????] H; subst => <-/=; by rewrite/big_or H.
-    - move=> A HA s B HB C s1 bt s2 gl p c tl.
-      case: ifP => [dA fB vB|dA fA /andP[vA bB]].
-        rewrite state_to_list_dead => //=.
-        case X: state_to_list => //[[sx [|[p1 c1|ca] ys]] xs]//[?????] H?; subst.
-        have [H1 H2] := HB _ _ _ _ _ _ _ _ fB vB X H erefl; subst.
-        by rewrite/= state_to_list_dead// H2; auto.
-      have [s'[x[xs H]]] := [elaborate failed_state_to_list vA fA s1 (state_to_list B s nilC)].
-      rewrite H/=; case: x H => //[[p1 c1|ca']gs]// H [?????] H1 ?; subst.
-      have {HA HB} [H2 H3] := HA _ _ _ _ _ _ _ _ fA vA H H1 erefl.
-      rewrite/=H2 H3//.
-    - move=> A HA B0 _ B HB C s bt s1 gl p c tl + /and5P[oA vA /andP[_ aT]] +++ H ?; subst.
-      case fA: failed => //=.
-      case: ifP => //=[sA fB vB bB|sA _ /eqP-> {B0} bB]; subst => /=.
-        rewrite (success_state_to_list empty)//=.
-        move/orPT: bB => []bB; last first.
-          rewrite base_and_ko_state_to_list//= !make_lB01_empty2 => H1.
-          have [H2 H3] := HB _ _ _ _ _ _ _ _ fB vB H1 H erefl.
-          by rewrite H2 succes_is_solved // H3.
-        have [h H1]:= base_and_state_to_list bB.
-        rewrite H1/= make_lB01_empty2/=.
-        set ml:= make_lB0 _ _.
-        have [s2[x[xs H2]]] := [elaborate failed_state_to_list vB fB (get_substS s A) (ml ++ bt)].
-        rewrite H2/=.
-        case: x H2 => //[[]]// p' c' gs H2 [?????]; subst.
-        have [H3 H4] := HB _ _ _ _ _ _ _ _ fB vB H2 H erefl.
-        by rewrite H3 make_lB01_empty2 succes_is_solved// H4.
-      rename H into H0.
-      have [s2[x[xs H]]] := failed_state_to_list vA fA s bt.
-      have [hd H1]:= base_and_state_to_list bB.
-      rewrite H/=H1/=!H1/=.
-      case: x H => //=.
-
-        (* The problem is no-op in tree: we can have a state (KO \/ Top) /\_! (BLA) *)
-        admit. (*I think it is wrong: s2l A s bt = (s1, L) ::: xs, L can be empty?*)
-
-      move=> []//p' c' gs H[?????]; subst.
-      have [H2 H3] := HA _ _ _ _ _ _ _ _ fA vA H H0 erefl.
-      rewrite H2 H3.
-      repeat split.
-      case: xs H H2 => //=[[s2 gs']al] H.
-      rewrite !H1//=.
-  Admitted.
-
-End next_callF.
-
 Section next_callS.
   Fixpoint next_callS u s A := 
     match A with
@@ -1096,24 +986,28 @@ Proof.
     }
   - move=> p s1 s2 s3 t gl a al r B ELPI IH s4 A vA H.
     {
-      (* CALL FAIL CASE *)
+      (* CALL SUCCESS CASE *)
       case fA: (failed A). (*here we have some Bot before reaching callF *)
         case nA: (next_alt false A) => [A'|]; last first.
           by rewrite (failed_next_alt_none_state_to_list vA fA nA) in H.
-        pose cFA := (next_callF A').
+        pose cFA := (next_callS u s1 A').
         have /= fA' := next_alt_failed nA.
         have /= vA' := (valid_state_next_alt vA nA).
-        have /= vA'':= next_callF_valid vA' fA' erefl.
+        have /= vA'':= @next_callS_valid u s1 _ _ vA' fA' erefl.
         rewrite (failed_next_alt_some_state_to_list _ vA fA nA) in H.
-        have [H1 H2] := next_callF_s2l u fA' vA' H B erefl.
+        rewrite -(@clean_ca_nil (state_to_list A' _ _)) in H.
+        have [H1 H2] := next_callS_s2l u fA' vA' H.
+        rewrite B clean_ca_nil/= in H1.
         have /= [t1[n {}IH]] := IH _ _ vA'' H1.
         repeat eexists.
         apply: run_fail nA _.
           apply: failed_expand fA.
         apply: run_step H2 IH.
-      pose cFA:= (next_callF A).
-      have /= vcFA := next_callF_valid vA fA erefl.
-      have [H1 H2] := next_callF_s2l u fA vA H B erefl.
+      pose cFA:= (next_callS u s1 A).
+      rewrite -(@clean_ca_nil (state_to_list A _ _)) in H.
+      have /= vcFA := @next_callS_valid u s1 _ _ vA fA erefl.
+      have [H1 H2] := next_callS_s2l u fA vA H.
+      rewrite B clean_ca_nil/= in H1.
       have /= [t1[n {}IH]] := IH _ _ vcFA H1.
       repeat eexists.
       apply: run_step H2 IH.
