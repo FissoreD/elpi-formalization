@@ -73,7 +73,7 @@ Section valid_state.
       if is_dead A then valid_state B
       else valid_state A && (bbOr B)
     | And A B0 B => 
-      [&& is_or A, valid_state A, is_and B,
+      [&& is_or A, valid_state A, (is_and B && (A != Top)),
         if success A then valid_state B 
         else (B0 == B)
         (* We should notice that in (OK \/ KO) /\ OK the reset point is forced to be cut *)
@@ -277,6 +277,9 @@ Section valid_state.
         rewrite bbAnd_cutl
         move=>/H->. *)
 
+  Lemma cutl_atop {A}: A != Top -> cutl A != Top.
+  Proof. by case: A=> //=*; case: ifP. Qed.
+
   Lemma valid_state_cut {A}: valid_state A -> valid_state (cutl A).
   Proof.
     elim: A => //.
@@ -284,15 +287,15 @@ Section valid_state.
       case: ifP => //[dA vB| dA /andP[vA bB]]/=.
         rewrite dA HB//.
       rewrite is_dead_cutl dA HA// bbOr_cutr//.
-    move=> A HA B0 HB0 B HB /= /and5P[oA vA aB].
+    move=> A HA B0 HB0 B HB /= /and5P[oA vA /andP[aB aT]].
     rewrite success_cut.
     case: ifP => //=[sA vB bB0|sA/eqP->{B0 HB0}].
-      by rewrite is_or_cutl// HA// HB// is_and_cutl///bbAnd bbAnd_cutl//orbT.
+      rewrite is_or_cutl// HA// HB// is_and_cutl///bbAnd bbAnd_cutl//orbT cutl_atop//.
     rewrite eqxx is_or_cutl// is_and_cutl// HA//=.
     case: ifP => [fA bB|fA bB].
-      by rewrite failed_cut///bbAnd bbAnd_cutl// orbT.
+      by rewrite failed_cut///bbAnd bbAnd_cutl// orbT cutl_atop.
     rewrite failed_success_cut success_cut sA/=.
-    by rewrite /bbAnd base_and_cutl//orbT.
+    by rewrite /bbAnd base_and_cutl//orbT cutl_atop.
   Qed.
 
   (* Lemma simpl_valid_state_and {A B0 B}: valid_state (And A B0 B) -> 
@@ -337,6 +340,15 @@ Section valid_state.
   Lemma base_and_bbAnd {A}: base_and A -> bbAnd A.
   Proof. rewrite/bbAnd=>->//. Qed.
 
+  Lemma expand_atop {A s1 r}: A != Top -> expand u s1 A = r -> get_state r != Top.
+  Proof.
+    move=> +<-.
+    case: A => //=.
+    - move=> p c; rewrite/big_or; case: F => []//[]//.
+    - move=> A s2 B _; case: ifP; by case X: expand.
+    - move=> A B0 B _; case: expand => //*; by case: expand.
+  Qed.
+
   Lemma valid_state_expand {s A r}:
     valid_state A -> expand u s A = r -> valid_state (get_state r).
   Proof.
@@ -348,21 +360,19 @@ Section valid_state.
         rewrite get_state_Or/=dA IHB//.
       have /= := IHA s1 vA.
       case X: expand => //= H; rewrite (expand_not_dead _ dA X) H//bbOr_cutr//.
-    + move=> A HA B0 _ B HB s1 /=/and5P[oA vA aB].
+    + move=> A HA B0 _ B HB s1 /=/and5P[oA vA /andP[aB aT]].
       case: ifP => [sA vB /= bB0 | sA /eqP->]/=.
         rewrite succes_is_solved//=.
         have:= HB (get_substS s1 A) vB.
-        case X: expand => //[s2 C|s2 C|C|s2 C]/=vC; try by rewrite sA (is_and_expand aB X) vA vC oA//.
-        rewrite is_or_cutl//valid_state_cut//(is_and_expand aB X) success_cut// vC sA //= /bbAnd bbAnd_cutl//orbT//.
+        case X: expand => //[s2 C|s2 C|C|s2 C]/=vC; try by rewrite sA (is_and_expand aB X) vA vC oA//aT.
+        rewrite is_or_cutl//valid_state_cut//(is_and_expand aB X) success_cut// vC sA //= /bbAnd bbAnd_cutl//orbT//cutl_atop//.
       case: ifP => [fA bB|fA bB].
-        rewrite failed_expand//=vA sA eqxx /= bB oA fA aB//.
+        by rewrite failed_expand//=vA sA eqxx /= bB oA fA aB//aT.
       have:= HA s1 vA.
-      case X: expand => //=[|||s2 C] H; last first; [|rewrite H eqxx /bbAnd bB if_same base_and_valid//if_same (is_or_expand oA X) aB//..].
-      have:= HB s2 (base_and_valid bB).
-      have /=oC := is_or_expand oA X.
-      have [_ sC]:= expand_solved_same u X.
-      case Y: expand => //= H1; rewrite ?oC?H?H1?bB?sC?(base_and_bbAnd bB) (is_and_expand (base_and_is_and bB) Y)//.
-      rewrite is_or_cutl//valid_state_cut//success_cut//=sC /bbAnd bbAnd_cutl //?orbT// base_and_bbAnd//.
+      case X: expand => //[s1' A'|s1' A'|A'|s1' A']/=vA'; last first;
+       [|by rewrite (is_or_expand oA X) aB//vA' base_and_valid//eqxx /bbAnd bB !if_same (expand_atop aT X)..].
+      have [[??] sA']:= expand_solved_same _ X; subst.
+      congruence.
   Qed.
 
   Lemma valid_state_big_or_aux {pr s l} : valid_state (big_or_aux pr s l).
@@ -486,7 +496,7 @@ Section valid_state.
         case: next_alt => //=D[<-]//.
       case: next_alt => [D [<-]|]//.
       case: ifP => //; case: next_alt => // D _ [<-]//.
-    - move=> A HA B0 _ B HB/= C b /and5P[oA vA aB].
+    - move=> A HA B0 _ B HB/= C b /and5P[oA vA /andP[aB aT]].
       case: ifP => //=[sA vB bB0|sA /eqP->].
         rewrite (valid_state_dead1 vA) success_failed//.
         case nB: next_alt => //[D|].
@@ -540,6 +550,26 @@ Section valid_state.
 
         rewrite success_is_dead. *)
 
+  Lemma next_alt_atop {A A' b}: A != Top -> next_alt b A = Some A' -> A' != Top.
+  Proof.
+    case: A => //=.
+    - case: ifP => //= _ _ [<-]//.
+    - move=> p c _ []//<-//.
+    - move=> _ [<-]//.
+    - move=> A s B _.
+      case: ifP => dA.
+        by case X: next_alt => //-[<-].
+      case: next_alt => //.
+        move=> ?[<-]//.
+      case: ifP => //.
+      case: next_alt => // ? _ [<-]//.
+    - move=> A B0 B _; case: ifP => //_.
+      case: ifP => //_.
+        (do 2 case : next_alt) => // ?? [<-]//.
+      case: ifP => [|_[<-]]//.
+      case: next_alt => [? _ [<-]|]//.
+      by (do 2 case: next_alt) => // ?? _ [<-].
+  Qed.
 
   Lemma valid_state_next_alt {A B b}: 
     valid_state A -> next_alt b A = Some (B) 
@@ -558,24 +588,24 @@ Section valid_state.
         move=>[<-]/=; rewrite bbOr_valid// bB (HA _ _ vA X) if_same//.
       case: ifP => //dB.
       case Y: next_alt => [D|]//[<-]/=; rewrite is_dead_dead (HB _ _ _ Y)//bbOr_valid//.
-    + move=> A HA B0 HB0 B HB  C b /=/and5P[oA vA aB].
+    + move=> A HA B0 HB0 B HB  C b /=/and5P[oA vA /andP[aB aT]].
       case: ifP => /=[sA vB bB0|sA /eqP?]; subst.
         rewrite success_is_dead//success_failed//.
         case X: next_alt => [D|].
-          move=>[<-]/=; rewrite vA sA oA/= (HB _ _ vB X)//-(is_and_or_next_alt vB X)aB//.
+          move=>[<-]/=; rewrite vA sA oA/= (HB _ _ vB X)//-(is_and_or_next_alt vB X)aB aT//.
         case Y: next_alt => //=[A'].
         move: bB0 => /orPT[]/[dup]bB; last first.
           move=> /(next_alt_aux_base_and_ko false) -> //.
         move=> /next_alt_aux_base_and->[<-]/=.
-        rewrite (base_and_valid bB) eqxx /bbAnd bB/= (HA _ _ vA Y) -(is_and_or_next_alt vA Y) oA base_and_is_and //!if_same//.
+        by rewrite (base_and_valid bB) eqxx /bbAnd bB/= (HA _ _ vA Y) -(is_and_or_next_alt vA Y) oA base_and_is_and //!if_same// (next_alt_atop aT Y).
       case: (ifP (is_dead _)) => //dA.
       case: ifP => fA bB; last first.
-        move=> [<-]/=; rewrite oA aB vA sA eqxx /bbAnd bB if_same//.
+        move=> [<-]/=; rewrite oA aB vA sA eqxx /bbAnd bB if_same//aT//.
       case X: next_alt => [D|]//.
       move: bB => /orPT[]/[dup]bB; last first.
         move=> /(next_alt_aux_base_and_ko false) -> //.
       move=> /next_alt_aux_base_and->[<-]/=.
-      rewrite (base_and_valid bB) eqxx /bbAnd bB/= (HA _ _ vA X) -(is_and_or_next_alt vA X) oA base_and_is_and //!if_same//.
+      by rewrite (base_and_valid bB) eqxx /bbAnd bB/= (HA _ _ vA X) -(is_and_or_next_alt vA X) oA base_and_is_and //!if_same// (next_alt_atop aT X).
     Qed.
 
   Lemma runP_run {s1 A s2 B b}:
