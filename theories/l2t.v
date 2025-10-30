@@ -4,86 +4,6 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
 
-Lemma s2l_nil_is_ko {A s1 bt}:
-  (* THIS IS WRONG: a valid state is (OK /\ KO), the list its empty but it is not is_ko *)
-  valid_state A ->
-  state_to_list A s1 bt = nilC ->
-    is_ko A.
-Proof.
-  elim: A s1 bt => //=.
-  - move=> A HA s B HB s1 bt; case: ifP => [dA vB|dA /andP[vA bB]].
-      rewrite (state_to_list_dead dA) => //.
-      case X: state_to_list => [|[]]//= _.
-      rewrite is_dead_is_ko//(HB s nilC)//.
-    case X: state_to_list => [|[s2 y]ys]//.
-    case Y: state_to_list => [|[s3 z]zs]//.
-    rewrite (HA s1 (state_to_list B s nilC))//(HB s nilC)//bbOr_valid//.
-  - move=> A HA B0 HB0 B HB s1 bt /and5P[_ vA _].
-    case: ifP => /=[sA vB bB0|sA/eqP->{HB0}].
-      rewrite (success_state_to_list s1)//=. (*TODO: not sure it is s1*)
-      move/orP: bB0 => []bB; last first.
-        rewrite base_and_ko_state_to_list//=.
-        case X: state_to_list => //=.
-Abort.
-
-Lemma s2l_nil_is_ko u {A s1 bt}:
-  valid_state A ->
-  state_to_list A s1 bt = nilC ->
-    forall s, dead_run u s A.
-Proof.
-  elim: A s1 bt => //=.
-  - move=> ???????? H.
-    apply: is_ko_runb _ _ H => //.
-  - move=> A HA s B HB s1 bt; case: ifP => [dA vB|dA /andP[vA bB]].
-      rewrite state_to_list_dead => //.
-      case X: state_to_list => [|[]]// _ s2 s3 r b H.
-      have [[A' [b' H1]]|[B'[b' H1]]]:= run_or_complete _ H.
-        by apply: is_dead_runb dA H1.
-      by apply: HB H1; eauto.
-    case X: state_to_list => [|[]]//.
-    case Y: state_to_list => [|[]]// _.
-    move=> s2 s3 r b H.
-    have [[A' [b' H1]]|[B'[b' H1]]]:= run_or_complete _ H.
-      by apply: HA H1; eauto.
-    by apply: HB H1; eauto; apply: bbOr_valid bB.
-  - move=> A HA B0 HB0 B HB s1 bt /and5P[_ vA _].
-    case: ifP => /=[sA vB bB0|sA/eqP->{HB0}].
-      rewrite (success_state_to_list s1)//=.
-      move/orPT: bB0 => []bB; last first.
-        rewrite base_and_ko_state_to_list//=.
-        case X: state_to_list => //= _ s2 s3 r b H1.
-        have {}HB := HB _ _ vB X.
-        have {}HB0 := HB0 empty no_alt (base_and_ko_valid bB) (base_and_ko_state_to_list bB).
-        have [sm[r1[b1[H2 [b2[r2 [H3|[sm' H3]]]]]]]] := run_and_correct _ H1.
-          by apply: HB; eauto.
-        by apply: HB0; eauto.
-      have [hd H]:= base_and_state_to_list bB; rewrite H/=.
-      case X: state_to_list => //.
-      case Y: state_to_list => [|[]]// _ s2 s3 r b H1.
-      have {}HB := HB _ _ vB X.
-      have [sm[r1[b1[H2 [b2[r2 [H3|[sm' H3]]]]]]]] := run_and_correct _ H1.
-        by apply: HB H3.
-      admit. (*should be ok: A success, B fails and A has no alternatives*)
-    case: ifP => [fA bB|fA bB].
-      case X: state_to_list => [|[s2 x]xs].
-        move=> _ s3 s4 r b H.
-        have [sm[r1[b1 [H1 H2]]]]:= run_and_correct _ H.
-        by apply: HA H1; eauto.
-      move/orPT: bB => []bB; last first.
-        rewrite base_and_ko_state_to_list//=.
-        case Y: state_to_list => //= _ s4 s5 r b H1.
-        have {}HB := HB _ _ (base_and_ko_valid bB) Y.
-        have [sm[r1[b1[H2 [b2[r2 [H3|[sm' H3]]]]]]]] := run_and_correct _ H1.
-          by apply: HB H3.
-        by apply: HB H3.
-      have [hd H]:= base_and_state_to_list bB; rewrite H/=H//=.
-    case X: state_to_list => [|[s2 x]xs].
-      move=> _ s3 s4 r b H.
-      have [sm[r1[b1 [H1 H2]]]]:= run_and_correct _ H.
-      by apply: HA H1; eauto.
-    have [hd H]:= base_and_state_to_list bB; rewrite H/=H//=.
-Admitted.
-
 Lemma s2l_add_ca {A s bt1 xs}:
   state_to_list A s bt1 = add_ca_deep bt1 xs ->
     forall bt2, state_to_list A s bt2 = add_ca_deep bt2 xs.
@@ -97,7 +17,6 @@ Proof.
   - move=> s bt []//[]// s1 []// []//= [|[]]//=[]//[|[]]//; case: bt => //=.
 Abort.
 
-
 Lemma add_ca_deep_map bt1 xs:
   map (fun '(s, xs0) => (s, (add_ca_deep_goals bt1 xs0))) xs =
     add_ca_deep bt1 xs
@@ -110,151 +29,181 @@ Proof.
     by rewrite map_cons add_ca_deep_goals_map.
 Qed.
 
-Fixpoint clean_ca (bt:alts) (ats: alts) : alts :=
-  match ats with
-  | no_alt => nilC
-  | more_alt (hd,xs) tl => (hd, clean_ca_goals bt xs) ::: (clean_ca bt tl)
-  end
-with clean_ca_goals bt gl :=
-  match gl with
-  | no_goals => nilC 
-  | more_goals hd tl => (clean_ca_G bt hd) ::: (clean_ca_goals bt tl)
-  end
-with clean_ca_G bt g :=
-  match g with
-  | call pr t => call pr t 
-  | cut ca => cut ((take (size ca - size bt) (clean_ca bt ca)))
-  end.
-
-Lemma clean_ca_size {bt L}: size (clean_ca bt L) = size L
-with clean_ca_goal_suffix_size  {bt L}: size (clean_ca_goals bt L) = size L.
+Lemma add_ca_deep_inj {bt a1 a2}:  
+  add_ca_deep bt a1 = add_ca_deep bt a2 -> a1 = a2
+with add_ca_deep_goals_inj {bt g1 g2}:
+  add_ca_deep_goals bt g1 = add_ca_deep_goals bt g2 -> g1 = g2
+with add_ca_deep_g_inj {bt g1 g2}:
+  add_ca_deep_g bt g1 = add_ca_deep_g bt g2 -> g1 = g2.
 Proof.
-  - case: L => /=// [[s g]gs]/=; rewrite !size_cons clean_ca_size//.
-  - case: L => /=//[g gs]/=; rewrite !size_cons clean_ca_goal_suffix_size//=.
+  - case: a1 => [|[]].
+      case: a2 => [|[]]//.
+    case: a2 => [|[]]//s1 x xs s2 y ys[?] /add_ca_deep_goals_inj ? /add_ca_deep_inj ?; by subst.
+  - case: g1; case: g2 => //= x xs y ys []/add_ca_deep_g_inj? /add_ca_deep_goals_inj?; by subst.
+  - by case: g1; case: g2 => //xs ys [] /append_sameR /add_ca_deep_inj->.
 Qed.
 
-Lemma clean_ca_cat {bt L1 L2}:
-  clean_ca bt (L1 ++ L2) = clean_ca bt (L1) ++ clean_ca bt L2.
-Proof. by elim: L1 bt L2 => //= [[s g] gs] IH bt L2; rewrite IH cat_cons. Qed.
 
-Lemma clean_ca_goals_cat {bt L1 L2}:
-  clean_ca_goals bt (L1 ++ L2) = clean_ca_goals bt (L1) ++ clean_ca_goals bt L2.
-Proof. by elim: L1 bt L2 => //= g gs IH bt L2; rewrite IH cat_cons. Qed.
+Section clean_ca.
+  Fixpoint clean_ca (bt:alts) (ats: alts) : alts :=
+    match ats with
+    | no_alt => nilC
+    | more_alt (hd,xs) tl => (hd, clean_ca_goals bt xs) ::: (clean_ca bt tl)
+    end
+  with clean_ca_goals bt gl :=
+    match gl with
+    | no_goals => nilC 
+    | more_goals hd tl => (clean_ca_G bt hd) ::: (clean_ca_goals bt tl)
+    end
+  with clean_ca_G bt g :=
+    match g with
+    | call pr t => call pr t 
+    | cut ca => cut ((take (size ca - size bt) (clean_ca bt ca)))
+    end.
 
-Lemma clean_ca_add_ca {pref bt1 L}:
-  clean_ca bt1 (add_ca_deep (pref++bt1) L) = add_ca_deep (clean_ca bt1 pref) L
-with clean_ca_goals_add_ca_goal pref bt1 L:
-  clean_ca_goals bt1 (add_ca_deep_goals (pref++bt1) L) = add_ca_deep_goals (clean_ca bt1 pref) L.
-Proof.
-  - case: L => /=//-[s x] xs//=; rewrite clean_ca_add_ca clean_ca_goals_add_ca_goal//.
-  - case: L => /=//g gs; rewrite clean_ca_goals_add_ca_goal.
-    case: g => //=ca.
-    rewrite clean_ca_cat clean_ca_add_ca; repeat f_equal.
-    rewrite !size_cat addnA addnK clean_ca_cat catA take_size_cat//.
-    by rewrite size_cat !size_add_ca_deep clean_ca_size.
-    Guarded.
-Qed.
+  Lemma clean_ca_size {bt L}: size (clean_ca bt L) = size L
+  with clean_ca_goal_suffix_size  {bt L}: size (clean_ca_goals bt L) = size L.
+  Proof.
+    - case: L => /=// [[s g]gs]/=; rewrite !size_cons clean_ca_size//.
+    - case: L => /=//[g gs]/=; rewrite !size_cons clean_ca_goal_suffix_size//=.
+  Qed.
 
-Lemma clean_ca_add_ca1 {bt1 L}:
-  clean_ca bt1 (add_ca_deep (bt1) L) = L
-with clean_ca_goals_add_ca_goal1 bt1 L:
-  clean_ca_goals bt1 (add_ca_deep_goals bt1 L) = L.
-Proof.
-  - case: L => /=//-[s x] xs//=; rewrite clean_ca_add_ca1 clean_ca_goals_add_ca_goal1//.
-  - case: L => /=//g gs; rewrite clean_ca_goals_add_ca_goal1.
-    case: g => //=ca.
-    rewrite size_cat addnK clean_ca_cat clean_ca_add_ca1 take_size_cat//.
-    by rewrite size_add_ca_deep.
-    Guarded.
-Qed.
+  Lemma clean_ca_cat {bt L1 L2}:
+    clean_ca bt (L1 ++ L2) = clean_ca bt (L1) ++ clean_ca bt L2.
+  Proof. by elim: L1 bt L2 => //= [[s g] gs] IH bt L2; rewrite IH cat_cons. Qed.
 
-Lemma clean_ca_nil {L}: clean_ca nilC L = L
-with clean_ca_goals_nil {L}: clean_ca_goals nilC L = L
-with clean_ca_G_nil {L}: clean_ca_G nilC L = L.
-Proof.
-  - case: L => /=// [[sx x]xs]; rewrite clean_ca_goals_nil clean_ca_nil//.
-  - case: L => /=// g gs; rewrite clean_ca_goals_nil clean_ca_G_nil//.
-  - case: L => /=// ca.
-  rewrite clean_ca_nil subn0 take_size//.
-Qed.
+  Lemma clean_ca_goals_cat {bt L1 L2}:
+    clean_ca_goals bt (L1 ++ L2) = clean_ca_goals bt (L1) ++ clean_ca_goals bt L2.
+  Proof. by elim: L1 bt L2 => //= g gs IH bt L2; rewrite IH cat_cons. Qed.
 
-Lemma clean_ca_goals_empty {bt A}:
-  empty_caG A -> clean_ca_goals bt A = A.
-Proof.
-  elim: A bt => //=g gs IH bt; rewrite/empty_caG all_cons => /andP[H1 H2].
-  rewrite IH//; case: g H1 => //-[]//.
-Qed.
+  Lemma clean_ca_add_ca {pref bt1 L}:
+    clean_ca bt1 (add_ca_deep (pref++bt1) L) = add_ca_deep (clean_ca bt1 pref) L
+  with clean_ca_goals_add_ca_goal pref bt1 L:
+    clean_ca_goals bt1 (add_ca_deep_goals (pref++bt1) L) = add_ca_deep_goals (clean_ca bt1 pref) L.
+  Proof.
+    - case: L => /=//-[s x] xs//=; rewrite clean_ca_add_ca clean_ca_goals_add_ca_goal//.
+    - case: L => /=//g gs; rewrite clean_ca_goals_add_ca_goal.
+      case: g => //=ca.
+      rewrite clean_ca_cat clean_ca_add_ca; repeat f_equal.
+      rewrite !size_cat addnA addnK clean_ca_cat catA take_size_cat//.
+      by rewrite size_cat !size_add_ca_deep clean_ca_size.
+      Guarded.
+  Qed.
 
-Lemma clean_ca_empty {bt A}:
-  empty_ca A -> clean_ca bt A = A.
-Proof.
-  elim: A bt => //=-[sg g] gs IH bt; rewrite/empty_ca all_cons => /andP[H1 H2].
-  rewrite IH//clean_ca_goals_empty//.
-Qed.
+  Lemma clean_ca_add_ca1 {bt1 L}:
+    clean_ca bt1 (add_ca_deep (bt1) L) = L
+  with clean_ca_goals_add_ca_goal1 bt1 L:
+    clean_ca_goals bt1 (add_ca_deep_goals bt1 L) = L.
+  Proof.
+    - case: L => /=//-[s x] xs//=; rewrite clean_ca_add_ca1 clean_ca_goals_add_ca_goal1//.
+    - case: L => /=//g gs; rewrite clean_ca_goals_add_ca_goal1.
+      case: g => //=ca.
+      rewrite size_cat addnK clean_ca_cat clean_ca_add_ca1 take_size_cat//.
+      by rewrite size_add_ca_deep.
+      Guarded.
+  Qed.
 
-Lemma clean_ca_mk_lb0 {bt L g}:
-  empty_caG g -> clean_ca bt (make_lB0 L g) = make_lB0 (clean_ca bt L) g.
-Proof.
-  rewrite/make_lB0.
-  elim: L g bt => // [[s1 g]gs] IH hd bt E/=.
-  rewrite map_cons/= clean_ca_goals_cat.
-  rewrite (clean_ca_goals_empty E)//=IH//.
-Qed.
+  Lemma clean_ca_nil {L}: clean_ca nilC L = L
+  with clean_ca_goals_nil {L}: clean_ca_goals nilC L = L
+  with clean_ca_G_nil {L}: clean_ca_G nilC L = L.
+  Proof.
+    - case: L => /=// [[sx x]xs]; rewrite clean_ca_goals_nil clean_ca_nil//.
+    - case: L => /=// g gs; rewrite clean_ca_goals_nil clean_ca_G_nil//.
+    - case: L => /=// ca.
+    rewrite clean_ca_nil subn0 take_size//.
+  Qed.
 
-Lemma take_add_deep {n bt hd L}:
-  take n (add_deep bt hd L) = add_deep bt hd (take n L).
-Proof.
-  elim: L n => //=[|[s x] xs IH] n.
-    rewrite take_nil//.
-  case: n => //= n; rewrite take_cons IH//.
-Qed.
+  Lemma clean_ca_goals_empty {bt A}:
+    empty_caG A -> clean_ca_goals bt A = A.
+  Proof.
+    elim: A bt => //=g gs IH bt; rewrite/empty_caG all_cons => /andP[H1 H2].
+    rewrite IH//; case: g H1 => //-[]//.
+  Qed.
 
-Lemma clean_ca_drop {n bt L}:
-  clean_ca bt (drop n L) = drop n (clean_ca bt L).
-Proof. elim: L n => //=[|[s g]gs IH] n/=; case: n => //. Qed.
+  Lemma clean_ca_empty {bt A}:
+    empty_ca A -> clean_ca bt A = A.
+  Proof.
+    elim: A bt => //=-[sg g] gs IH bt; rewrite/empty_ca all_cons => /andP[H1 H2].
+    rewrite IH//clean_ca_goals_empty//.
+  Qed.
 
-Lemma clean_ca_add_deep {x bt hd L}:
-  empty_caG hd ->
-  clean_ca bt (add_deep (x ++ bt) hd L) = 
-    add_deep (clean_ca bt x) hd (clean_ca bt L)
-with clean_ca_add_deep_gs {x bt hd L}:
-  empty_caG hd ->
-  clean_ca_goals bt (add_deepG (x ++ bt) hd L) = 
-    add_deepG (clean_ca bt x) hd (clean_ca_goals bt L).
-Proof.
-  - move=> H; case: L => //=-[]s g a/=; rewrite clean_ca_add_deep //clean_ca_add_deep_gs//.
-  - move=> H; case: L => //=g gs; rewrite clean_ca_add_deep_gs//=; congr (_ ::: _).
-    case: g => //= ca; f_equal.
-    rewrite !size_cat !size_map.
-    rewrite !clean_ca_cat clean_ca_mk_lb0//.
-    rewrite !take_add_deep.
-    rewrite clean_ca_add_deep//.
-    rewrite size_add_deep .
-    rewrite -size_cat cat_take_drop.
-    rewrite -take_add_deep.
-    rewrite clean_ca_drop.
-    rewrite !clean_ca_size.
-Admitted.
+  Lemma clean_ca_mk_lb0 {bt L g}:
+    empty_caG g -> clean_ca bt (make_lB0 L g) = make_lB0 (clean_ca bt L) g.
+  Proof.
+    rewrite/make_lB0.
+    elim: L g bt => // [[s1 g]gs] IH hd bt E/=.
+    rewrite map_cons/= clean_ca_goals_cat.
+    rewrite (clean_ca_goals_empty E)//=IH//.
+  Qed.
 
-Lemma clean_ca_save_alts {x bt hd L}:
-  empty_ca L ->
-  clean_ca bt (save_alts (x ++ bt) hd L) = 
-    save_alts (clean_ca bt x) (clean_ca_goals bt hd) L
-with clean_ca_save_goals {x bt hd L}:
-  empty_caG hd ->
-  clean_ca_goals bt (save_goals (x ++ bt) L hd) = 
-    save_goals (clean_ca bt x) (clean_ca_goals bt L) hd.
-Proof.
-  - case: L => // -[]s g a.
-    rewrite/empty_ca /= all_cons => /andP[H1 H2].
-    rewrite clean_ca_save_alts//clean_ca_save_goals//.
-  - case: hd => //=g gs; rewrite/empty_caG all_cons => /andP[H1 H2].
-    rewrite clean_ca_save_goals//.
-    case: g H1 => //= -[]// _.
-    rewrite !size_cat addnA addnK !clean_ca_cat catA take_size_cat; last first.
-      by rewrite size_cat !clean_ca_size.
-    rewrite/save_goals cat_cons; f_equal.
-Qed.
+  Lemma take_add_deep {n bt hd L}:
+    take n (add_deep bt hd L) = add_deep bt hd (take n L).
+  Proof.
+    elim: L n => //=[|[s x] xs IH] n.
+      rewrite take_nil//.
+    case: n => //= n; rewrite take_cons IH//.
+  Qed.
+
+  Lemma clean_ca_drop {n bt L}:
+    clean_ca bt (drop n L) = drop n (clean_ca bt L).
+  Proof. elim: L n => //=[|[s g]gs IH] n/=; case: n => //. Qed.
+
+  Lemma clean_ca_take {n bt L}:
+    clean_ca bt (take n L) = take n (clean_ca bt L).
+  Proof. elim: L n => //=[|[s g]gs IH] n/=; case: n => //n; rewrite !take_cons/=IH//. Qed.
+
+  Lemma take_make_lb0 {n hd L}:
+    take n (make_lB0 L hd) = make_lB0 (take n L) hd.
+  Proof. elim: L n => //=[|[s g]gs IH] []//=n; rewrite !take_cons IH//. Qed.
+
+  Lemma clean_ca_add_deep {x bt hd L}:
+    empty_caG hd ->
+    clean_ca bt (add_deep (x ++ bt) hd L) = 
+      add_deep (clean_ca bt x) hd (clean_ca bt L)
+  with clean_ca_add_deep_gs {x bt hd L}:
+    empty_caG hd ->
+    clean_ca_goals bt (add_deepG (x ++ bt) hd L) = 
+      add_deepG (clean_ca bt x) hd (clean_ca_goals bt L).
+  Proof.
+    - move=> H; case: L => //=-[]s g a/=; rewrite clean_ca_add_deep //clean_ca_add_deep_gs//.
+    - move=> H; case: L => //=g gs; rewrite clean_ca_add_deep_gs//=; congr (_ ::: _).
+      case: g => //= ca; f_equal.
+      rewrite !size_cat !size_map.
+      rewrite !clean_ca_cat clean_ca_mk_lb0//.
+      rewrite !take_add_deep.
+      rewrite clean_ca_add_deep//.
+      rewrite size_add_deep .
+      rewrite -size_cat cat_take_drop.
+      rewrite -take_add_deep.
+      rewrite clean_ca_drop.
+      rewrite !clean_ca_size.
+      rewrite !clean_ca_take  -!take_add_deep -!take_make_lb0.
+      set L1 := make_lB0 _ _.
+      set L2 := clean_ca _ _.
+      rewrite subnDAC.
+      set N := size ca - size bt.
+      set M := size x.
+  Admitted.
+
+  Lemma clean_ca_save_alts {x bt hd L}:
+    empty_ca L ->
+    clean_ca bt (save_alts (x ++ bt) hd L) = 
+      save_alts (clean_ca bt x) (clean_ca_goals bt hd) L
+  with clean_ca_save_goals {x bt hd L}:
+    empty_caG hd ->
+    clean_ca_goals bt (save_goals (x ++ bt) L hd) = 
+      save_goals (clean_ca bt x) (clean_ca_goals bt L) hd.
+  Proof.
+    - case: L => // -[]s g a.
+      rewrite/empty_ca /= all_cons => /andP[H1 H2].
+      rewrite clean_ca_save_alts//clean_ca_save_goals//.
+    - case: hd => //=g gs; rewrite/empty_caG all_cons => /andP[H1 H2].
+      rewrite clean_ca_save_goals//.
+      case: g H1 => //= -[]// _.
+      rewrite !size_cat addnA addnK !clean_ca_cat catA take_size_cat; last first.
+        by rewrite size_cat !clean_ca_size.
+      rewrite/save_goals cat_cons; f_equal.
+  Qed.
 
 (* Lemma clean_ca_s2l_next_alt {A x bt s A'}:
   valid_state A ->
@@ -284,146 +233,218 @@ Proof.
   - move=> A HA B0 _ B HB . *)
 
 
-Lemma clean_ca_s2l {s x bt A}:
-  valid_state A -> clean_ca bt (state_to_list A s (x ++ bt)) = state_to_list A s (clean_ca bt x).
-Proof.
-  elim: A s x bt => //=.
-  - move=> A HA s B HB s1 x bt.
-    set X:= (state_to_list _ _ _ ++ _).
-    by rewrite clean_ca_add_ca.
-  - move=> A HA B0 _ B HB s x bt /and5P[_ vA _].
-    case: ifP => /=[sA vB bB|sA /eqP-> {B0}].
-      rewrite !(success_state_to_list empty _ sA)//=.
-      move/orPT : bB => []bB; last first.
-        rewrite !(base_and_ko_state_to_list bB)//= !make_lB01_empty2.
-        apply: HB vB.
+  Lemma clean_ca_s2l {s x bt A}:
+    valid_state A -> clean_ca bt (state_to_list A s (x ++ bt)) = state_to_list A s (clean_ca bt x).
+  Proof.
+    elim: A s x bt => //=.
+    - move=> A HA s B HB s1 x bt.
+      set X:= (state_to_list _ _ _ ++ _).
+      by rewrite clean_ca_add_ca.
+    - move=> A HA B0 _ B HB s x bt /and5P[_ vA _].
+      case: ifP => /=[sA vB bB|sA /eqP-> {B0}].
+        rewrite !(success_state_to_list empty _ sA)//=.
+        move/orPT : bB => []bB; last first.
+          rewrite !(base_and_ko_state_to_list bB)//= !make_lB01_empty2.
+          apply: HB vB.
+        have [hd H]:= base_and_state_to_list bB.
+        rewrite !H/= !make_lB01_empty2.
+        rewrite clean_ca_cat.
+        have E:= base_and_empty_ca bB H.
+        rewrite catA HB//= clean_ca_cat.
+        rewrite !clean_ca_mk_lb0//.
+        case X: next_alt => //[A']/=.
+        rewrite !clean_ca_add_deep//=.
+        (* the problem is how to prove the property on next_alt? *)
+        admit.
+      have:= [elaborate @s2l_size A s (x++bt) s (clean_ca bt x)].
+      have {HA}:= HA s x bt vA.
+      case X: (state_to_list A _ (_ ++ _)) => [|[sy y]ys]; 
+      case Y: (state_to_list A _ (clean_ca _ _)) => [|[sz z]yz]//.
+      move=> [???]; subst => _.
+      move=> bB; have {}bB: bbAnd B by move: bB; case: ifP; rewrite /bbAnd// => _ -> //.
+      move/orPT: bB => []bB; last first.
+        by rewrite !(base_and_ko_state_to_list bB)//.
       have [hd H]:= base_and_state_to_list bB.
-      rewrite !H/= !make_lB01_empty2.
-      rewrite clean_ca_cat.
-      have E:= base_and_empty_ca bB H.
-      rewrite catA HB//= clean_ca_cat.
-      rewrite !clean_ca_mk_lb0//.
-      case X: next_alt => //[A']/=.
-      rewrite !clean_ca_add_deep//=.
-      (* the problem is how to prove the property on next_alt? *)
-      admit.
-    have:= [elaborate @s2l_size A s (x++bt) s (clean_ca bt x)].
-    have {HA}:= HA s x bt vA.
-    case X: (state_to_list A _ (_ ++ _)) => [|[sy y]ys]; 
-    case Y: (state_to_list A _ (clean_ca _ _)) => [|[sz z]yz]//.
-    move=> [???]; subst => _.
-    move=> bB; have {}bB: bbAnd B by move: bB; case: ifP; rewrite /bbAnd// => _ -> //.
-    move/orPT: bB => []bB; last first.
-      by rewrite !(base_and_ko_state_to_list bB)//.
-    have [hd H]:= base_and_state_to_list bB.
-    have E := base_and_empty_ca bB H.
-    rewrite !H/=!H/=.
-      rewrite/make_lB01/=map_cons cat_cons; f_equal.
-      rewrite clean_ca_goals_cat (clean_ca_goals_empty E).
-      rewrite clean_ca_add_deep_gs//= .
-    rewrite clean_ca_mk_lb0// clean_ca_add_deep//.
-Admitted.
+      have E := base_and_empty_ca bB H.
+      rewrite !H/=!H/=.
+        rewrite/make_lB01/=map_cons cat_cons; f_equal.
+        rewrite clean_ca_goals_cat (clean_ca_goals_empty E).
+        rewrite clean_ca_add_deep_gs//= .
+      rewrite clean_ca_mk_lb0// clean_ca_add_deep//.
+  Admitted.
 
-Lemma what_I_want {A s bt}:
-  valid_state A -> clean_ca bt (state_to_list A s bt) = state_to_list A s nilC.
-Proof.
-  move=> vA.
-  have:= [elaborate @clean_ca_s2l s nilC bt _ vA].
-  move=> //.
-Qed.
+  Lemma what_I_want {A s bt}:
+    valid_state A -> clean_ca bt (state_to_list A s bt) = state_to_list A s nilC.
+  Proof.
+    move=> vA.
+    have:= [elaborate @clean_ca_s2l s nilC bt _ vA].
+    move=> //.
+  Qed.
+End clean_ca.
+
+Section empty_head.
 
 
-Lemma valid_state_nil_run {u A s s1 bt xs}:
-  valid_state A ->
-  state_to_list A s bt = (s1, nilC) ::: xs ->
-  Texists B n,
-    runb u s A s1 B n 
-    (* /\  *)
-    (* state_to_list (odflt Bot B) s bt2 = add_ca_deep bt2 a *)
-    .
-Proof.
-  elim: A s s1 bt xs => //=.
-  - move=> s s1 bt [|[]]//= _ [->].
-    repeat eexists; by apply: run_done.
-  - move=> s s1 bt [|[]]//= _ [->].
-    repeat eexists; apply: run_step => //; by apply: run_done.
-  - move=> A HA s B HB s1 s2 bt xs.
-    case: ifP => [dA vB|dA /andP[vA bB]].
-      rewrite state_to_list_dead//.
-      case X: state_to_list => //[[s3 [|??]]ys]//=[??]; subst.
-      have [b1[n H]]:= HB _ _ _ _ vB X.
-      repeat eexists.
-      have {}HB:= run_ko_left2 _ s1 (is_dead_is_ko dA) H; subst.
-      rewrite dA in HB.
-      eauto.
-    rewrite add_ca_deep_cat.
-    case X: state_to_list => [|[s3 [|??]]ys]//.
-      case Y: state_to_list => //[[s3 [|??]]ys]//=[??]; subst.
-      have [B'[n{}HB]] := HB _ _ _ _ (bbOr_valid bB) Y.
-      have H := s2l_nil_is_ko u vA X s1.
-      have:= H empty (Some A) n.
-      (* this should? be ok: A \/ B with A fail and run B, 
-         attention: if A has a superficial cut is B cut away? *)
-      (* That is: can I have: (! /\ fail) \/ B ?*)
-      admit.
-    rewrite /=cat_cons => -[??]; subst.
-    have [A'[n H1]] := HA _ _ _ _ vA X.
-    have [r' [{}H1]]:= run_or_correct_left _ s B H1.
-    repeat eexists; eauto.
-  - move=> A HA B0 HB0 B HB s1 s2 bt xs /and5P[_ vA _].
-    case: ifP => /= [sA vB |sA /eqP -> {HB0}].
-      rewrite (success_state_to_list s1)//=. (*TODO: not sure of subst s1*)
-      move=> /orPT []bB; last first.
-        rewrite base_and_ko_state_to_list//=.
-        rewrite make_lB01_empty2 => H.
-        have [r[n {}HB]] := HB _ _ _ _ vB H.
-        
-        admit. (*this is ok: A /\ B with success A and run B*)
-      have [hd H]:= base_and_state_to_list bB.
-      rewrite H/=make_lB01_empty2.
-      case X: state_to_list => [|[sy [|??]]ys]//.
-        case W: next_alt => //=[A'].
-        case Y: state_to_list => //[[sw [|??]] ws]//=.
-        case: hd H X => //H X[??]; subst.
-        have:= HB0 empty empty no_alt no_alt (base_and_valid bB). (*TODO: not sure empty and no_alt*)
-        rewrite H=> /(_ erefl) [r[n {}HB0]].
-        admit. (*this is ok: A /\ B -> A success, B fails, 
-                 but next_alt A exists and run B04*)
-      move=> [??]; subst.
-      have [r[n {}HB]] := HB _ _ _ _ vB X.
-      (* this is ok: A /\ B, A success and run B *)
-      admit.
-    case X: state_to_list => //[[sy y]ys].
-    case: ifP => [fA|fA bB].
-      move=> /orPT []bB; last first.
-        rewrite !base_and_ko_state_to_list//=.
+  Lemma s2l_nil_is_ko {A s1 bt}:
+    (* THIS IS WRONG: a valid state is (OK /\ KO), the list its empty but it is not is_ko *)
+    valid_state A ->
+    state_to_list A s1 bt = nilC ->
+      is_ko A.
+  Proof.
+    elim: A s1 bt => //=.
+    - move=> A HA s B HB s1 bt; case: ifP => [dA vB|dA /andP[vA bB]].
+        rewrite (state_to_list_dead dA) => //.
+        case X: state_to_list => [|[]]//= _.
+        rewrite is_dead_is_ko//(HB s nilC)//.
+      case X: state_to_list => [|[s2 y]ys]//.
+      case Y: state_to_list => [|[s3 z]zs]//.
+      rewrite (HA s1 (state_to_list B s nilC))//(HB s nilC)//bbOr_valid//.
+    - move=> A HA B0 HB0 B HB s1 bt /and5P[_ vA _].
+      case: ifP => /=[sA vB bB0|sA/eqP->{HB0}].
+        rewrite (success_state_to_list s1)//=. (*TODO: not sure it is s1*)
+        move/orP: bB0 => []bB; last first.
+          rewrite base_and_ko_state_to_list//=.
+          case X: state_to_list => //=.
+  Abort.
+
+  Lemma s2l_nil_is_ko u {A s1 bt}:
+    valid_state A ->
+    state_to_list A s1 bt = nilC ->
+      forall s, dead_run u s A.
+  Proof.
+    elim: A s1 bt => //=.
+    - move=> ???????? H.
+      apply: is_ko_runb _ _ H => //.
+    - move=> A HA s B HB s1 bt; case: ifP => [dA vB|dA /andP[vA bB]].
+        rewrite state_to_list_dead => //.
+        case X: state_to_list => [|[]]// _ s2 s3 r b H.
+        have [[A' [b' H1]]|[B'[b' H1]]]:= run_or_complete _ H.
+          by apply: is_dead_runb dA H1.
+        by apply: HB H1; eauto.
+      case X: state_to_list => [|[]]//.
+      case Y: state_to_list => [|[]]// _.
+      move=> s2 s3 r b H.
+      have [[A' [b' H1]]|[B'[b' H1]]]:= run_or_complete _ H.
+        by apply: HA H1; eauto.
+      by apply: HB H1; eauto; apply: bbOr_valid bB.
+    - move=> A HA B0 HB0 B HB s1 bt /and5P[_ vA _].
+      case: ifP => /=[sA vB bB0|sA/eqP->{HB0}].
+        rewrite (success_state_to_list s1)//=.
+        move/orPT: bB0 => []bB; last first.
+          rewrite base_and_ko_state_to_list//=.
+          case X: state_to_list => //= _ s2 s3 r b H1.
+          have {}HB := HB _ _ vB X.
+          have {}HB0 := HB0 empty no_alt (base_and_ko_valid bB) (base_and_ko_state_to_list bB).
+          have [sm[r1[b1[H2 [b2[r2 [H3|[sm' H3]]]]]]]] := run_and_correct _ H1.
+            by apply: HB; eauto.
+          by apply: HB0; eauto.
+        have [hd H]:= base_and_state_to_list bB; rewrite H/=.
+        case X: state_to_list => //.
+        case Y: state_to_list => [|[]]// _ s2 s3 r b H1.
+        have {}HB := HB _ _ vB X.
+        have [sm[r1[b1[H2 [b2[r2 [H3|[sm' H3]]]]]]]] := run_and_correct _ H1.
+          by apply: HB H3.
+        admit. (*should be ok: A success, B fails and A has no alternatives*)
+      case: ifP => [fA bB|fA bB].
+        case X: state_to_list => [|[s2 x]xs].
+          move=> _ s3 s4 r b H.
+          have [sm[r1[b1 [H1 H2]]]]:= run_and_correct _ H.
+          by apply: HA H1; eauto.
+        move/orPT: bB => []bB; last first.
+          rewrite base_and_ko_state_to_list//=.
+          case Y: state_to_list => //= _ s4 s5 r b H1.
+          have {}HB := HB _ _ (base_and_ko_valid bB) Y.
+          have [sm[r1[b1[H2 [b2[r2 [H3|[sm' H3]]]]]]]] := run_and_correct _ H1.
+            by apply: HB H3.
+          by apply: HB H3.
+        have [hd H]:= base_and_state_to_list bB; rewrite H/=H//=.
+      case X: state_to_list => [|[s2 x]xs].
+        move=> _ s3 s4 r b H.
+        have [sm[r1[b1 [H1 H2]]]]:= run_and_correct _ H.
+        by apply: HA H1; eauto.
+      have [hd H]:= base_and_state_to_list bB; rewrite H/=H//=.
+  Admitted.
+
+
+  Lemma valid_state_nil_run {u A s s1 bt xs}:
+    valid_state A ->
+    state_to_list A s bt = (s1, nilC) ::: xs ->
+    Texists B n,
+      runb u s A s1 B n 
+      (* /\  *)
+      (* state_to_list (odflt Bot B) s bt2 = add_ca_deep bt2 a *)
+      .
+  Proof.
+    elim: A s s1 bt xs => //=.
+    - move=> s s1 bt [|[]]//= _ [->].
+      repeat eexists; by apply: run_done.
+    - move=> s s1 bt [|[]]//= _ [->].
+      repeat eexists; apply: run_step => //; by apply: run_done.
+    - move=> A HA s B HB s1 s2 bt xs.
+      case: ifP => [dA vB|dA /andP[vA bB]].
+        rewrite state_to_list_dead//.
+        case X: state_to_list => //[[s3 [|??]]ys]//=[??]; subst.
+        have [b1[n H]]:= HB _ _ _ _ vB X.
+        repeat eexists.
+        have {}HB:= run_ko_left2 _ s1 (is_dead_is_ko dA) H; subst.
+        rewrite dA in HB.
+        eauto.
+      rewrite add_ca_deep_cat.
+      case X: state_to_list => [|[s3 [|??]]ys]//.
+        case Y: state_to_list => //[[s3 [|??]]ys]//=[??]; subst.
+        have [B'[n{}HB]] := HB _ _ _ _ (bbOr_valid bB) Y.
+        have H := s2l_nil_is_ko u vA X s1.
+        have:= H empty (Some A) n.
+        (* this should? be ok: A \/ B with A fail and run B, 
+          attention: if A has a superficial cut is B cut away? *)
+        (* That is: can I have: (! /\ fail) \/ B ?*)
+        admit.
+      rewrite /=cat_cons => -[??]; subst.
+      have [A'[n H1]] := HA _ _ _ _ vA X.
+      have [r' [{}H1]]:= run_or_correct_left _ s B H1.
+      repeat eexists; eauto.
+    - move=> A HA B0 HB0 B HB s1 s2 bt xs /and5P[_ vA _].
+      case: ifP => /= [sA vB |sA /eqP -> {HB0}].
+        rewrite (success_state_to_list s1)//=. (*TODO: not sure of subst s1*)
+        move=> /orPT []bB; last first.
+          rewrite base_and_ko_state_to_list//=.
+          rewrite make_lB01_empty2 => H.
+          have [r[n {}HB]] := HB _ _ _ _ vB H.
+          
+          admit. (*this is ok: A /\ B with success A and run B*)
+        have [hd H]:= base_and_state_to_list bB.
+        rewrite H/=make_lB01_empty2.
+        case X: state_to_list => [|[sy [|??]]ys]//.
+          case W: next_alt => //=[A'].
+          case Y: state_to_list => //[[sw [|??]] ws]//=.
+          case: hd H X => //H X[??]; subst.
+          have:= HB0 empty empty no_alt no_alt (base_and_valid bB). (*TODO: not sure empty and no_alt*)
+          rewrite H=> /(_ erefl) [r[n {}HB0]].
+          admit. (*this is ok: A /\ B -> A success, B fails, 
+                  but next_alt A exists and run B04*)
+        move=> [??]; subst.
+        have [r[n {}HB]] := HB _ _ _ _ vB X.
+        (* this is ok: A /\ B, A success and run B *)
+        admit.
+      case X: state_to_list => //[[sy y]ys].
+      case: ifP => [fA|fA bB].
+        move=> /orPT []bB; last first.
+          rewrite !base_and_ko_state_to_list//=.
+        have [hd H]:= base_and_state_to_list bB.
+        rewrite H/=H/make_lB01 map_cons.
+        case: y X => //; case: hd H => //H X [??]; subst.
+        have [r[n {}HA]] := HA _ _ _ _ vA X.
+        have [r'[n' {}HB]] := HB _ _ _ _ (base_and_valid bB) (H nilC empty).
+        admit. (*this is ok: A /\ B with run A and run B and B0 = B*)
       have [hd H]:= base_and_state_to_list bB.
       rewrite H/=H/make_lB01 map_cons.
       case: y X => //; case: hd H => //H X [??]; subst.
       have [r[n {}HA]] := HA _ _ _ _ vA X.
       have [r'[n' {}HB]] := HB _ _ _ _ (base_and_valid bB) (H nilC empty).
       admit. (*this is ok: A /\ B with run A and run B and B0 = B*)
-    have [hd H]:= base_and_state_to_list bB.
-    rewrite H/=H/make_lB01 map_cons.
-    case: y X => //; case: hd H => //H X [??]; subst.
-    have [r[n {}HA]] := HA _ _ _ _ vA X.
-    have [r'[n' {}HB]] := HB _ _ _ _ (base_and_valid bB) (H nilC empty).
-    admit. (*this is ok: A /\ B with run A and run B and B0 = B*)
-Admitted.
+  Admitted.
+End empty_head.
 
-Lemma add_ca_deep_inj {bt a1 a2}:  
-  add_ca_deep bt a1 = add_ca_deep bt a2 -> a1 = a2
-with add_ca_deep_goals_inj {bt g1 g2}:
-  add_ca_deep_goals bt g1 = add_ca_deep_goals bt g2 -> g1 = g2
-with add_ca_deep_g_inj {bt g1 g2}:
-  add_ca_deep_g bt g1 = add_ca_deep_g bt g2 -> g1 = g2.
-Proof.
-  - case: a1 => [|[]].
-      case: a2 => [|[]]//.
-    case: a2 => [|[]]//s1 x xs s2 y ys[?] /add_ca_deep_goals_inj ? /add_ca_deep_inj ?; by subst.
-  - case: g1; case: g2 => //= x xs y ys []/add_ca_deep_g_inj? /add_ca_deep_goals_inj?; by subst.
-  - by case: g1; case: g2 => //xs ys [] /append_sameR /add_ca_deep_inj->.
-Qed.
 
 Section next_cut.
 
