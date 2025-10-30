@@ -521,9 +521,11 @@ Section kill_top.
 
   Lemma is_kill_top_nilC1 {A s bt s2 xs}:
     valid_state A -> failed A = false ->
-    state_to_list (kill_top A) s bt = (s2, nilC) ::: xs -> success (kill_top A).
+    state_to_list (kill_top A) s bt = (s2, nilC) ::: xs -> success (kill_top A) /\ (s2 = get_substS s (kill_top A)).
   Proof.
     elim: A s bt s2 xs => //=.
+    - by move=> s1 _ s2 xs _ _ [<-].
+    - by move=> s1 _ s2 xs _ _ [<-].
     - move=> A HA s B HB s1 bt s2 x.
       case: ifP => [dA vB fB|dA /andP[vA bB] fA]/=.
         rewrite state_to_list_dead//=dA.
@@ -554,7 +556,7 @@ Section kill_top.
         rewrite (success_state_to_list empty)//=?valid_kill_top//.
         rewrite H1/= kill_top_s2l_id_base_and// H1 make_lB01_empty2 skA.
         case: hd H1 => //= H1 [??]; subst.
-        have {}H1 := H1 no_alt empty.
+        have {}H1 := H1 no_alt (get_substS s (kill_top A) ).
         rewrite -kill_top_s2l_id_base_and// in H1.
         apply: HB (base_and_valid bB) (base_and_failed bB) H1.
       rewrite skA/=.
@@ -1140,13 +1142,14 @@ Proof.
       have /= vA' := (valid_state_next_alt vA nA).
       rewrite (failed_next_alt_some_state_to_list _ vA fA nA) in H.
       rewrite -kill_top_s2l_id// in H.
-      have skA:= is_kill_top_nilC1 vA' fA' H.
-      repeat eexists; apply: runb_kill_top; apply: run_done erefl.
-      admit.
+      have [skA ?]:= is_kill_top_nilC1 vA' fA' H; subst.
+      repeat eexists.
+      apply: run_fail nA _.
+        apply: failed_expand fA.
+      apply: runb_kill_top; apply: run_done erefl; apply: succes_is_solved skA.
     rewrite -kill_top_s2l_id// in H.
-    have skA:= is_kill_top_nilC1 vA fA H.
-    repeat eexists; apply: runb_kill_top; apply: run_done erefl.
-    admit.
+    have [skA ?]:= is_kill_top_nilC1 vA fA H; subst.
+    repeat eexists; apply: runb_kill_top; apply: run_done erefl; apply: succes_is_solved skA.
   - move=> s1 s2 a ca r gl ELPI IH s A vA H.
     {
       (* CUT CASE *)
