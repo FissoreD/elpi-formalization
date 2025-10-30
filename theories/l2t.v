@@ -205,33 +205,66 @@ Section clean_ca.
       rewrite/save_goals cat_cons; f_equal.
   Qed.
 
-(* Lemma clean_ca_s2l_next_alt {A x bt s A'}:
-  valid_state A ->
-  (forall (s : Sigma) (x bt : alts),
-  clean_ca bt (state_to_list A s (x ++ bt)) =
-  state_to_list A s (clean_ca bt x)) ->
-  next_alt true A = Some A' ->
-  clean_ca bt (state_to_list A' s (x ++ bt)) =
-  state_to_list A' s (clean_ca bt x).
-Proof.
-  elim: A s x bt A' => //=.
-  - move=> s x bt A' _ IH [<-]//.
-  - move=> p c s x bt A' _ IH [<-]//.
-  - move=> s x bt A' _ IH [<-]//.
-  - move=> A HA s B HB s1 x bt C.
-    case: ifP => [dA vB|dA /andP[vA bB]] IH.
-      case X: next_alt => //[B'][<-]/=.
-      rewrite state_to_list_dead//=cat0s.
-      rewrite clean_ca_add_ca//.
-    case X: next_alt => //[A'|].
-      move=> [<-]/=.
+  Lemma clean_ca_s2l_next_alt {A x bt s A'}:
+    valid_state A ->
+    success A ->
+    next_alt true A = Some A' ->
+    clean_ca bt (state_to_list A' s (x ++ bt)) =
+    state_to_list A' s (clean_ca bt x).
+  Proof.
+    elim: A s x bt A' => //=.
+    - move=> A HA s B HB s1 x bt C.
+      case: ifP => [dA vB sB|dA /andP[vA bB]sA].
+        case X: next_alt => //[B'][<-]/=.
+        rewrite state_to_list_dead//=cat0s.
+        rewrite clean_ca_add_ca//.
+      case X: next_alt => //[A'|].
+        move=> [<-]/=.
+        rewrite !clean_ca_add_ca//.
+      case: ifP => //.
+      case W: next_alt => //[B0'] _ [<-]/=.
+      rewrite state_to_list_dead?is_dead_dead//cat0s.
       rewrite !clean_ca_add_ca//.
-    case: ifP => //.
-    case W: next_alt => //[B0'] _ [<-]/=.
-    rewrite state_to_list_dead?is_dead_dead//cat0s.
-    rewrite !clean_ca_add_ca//.
-  - move=> A HA B0 _ B HB . *)
-
+    - move=> A HA B0 _ B HB s1 x bt C /and5P[_ vA _] ++/andP[sA sB].
+      rewrite sA/= => vB bB.
+      rewrite success_is_dead// success_failed//.
+      case X: (next_alt _ B) => [B'|].
+        move=> [<-]{C}/=.
+        rewrite !(success_state_to_list empty _ sA)//=.
+        move/orPT : bB => []bB; last first.
+          rewrite !(base_and_ko_state_to_list bB)//= !make_lB01_empty2.
+          by apply: HB.
+        have [hd H]:= base_and_state_to_list bB.
+        rewrite !H/= !make_lB01_empty2.
+        rewrite !clean_ca_cat.
+        have E:= base_and_empty_ca bB H.
+        set W := make_lB0 _ _.
+        set Z := make_lB0 _ _.
+        rewrite !catA.
+        have: clean_ca bt W = Z.
+          rewrite/W/Z => {W Z}.
+          rewrite !clean_ca_mk_lb0// clean_ca_add_deep//.
+          repeat f_equal.
+          case Y: next_alt => //=[A'].
+          apply: HA => //.
+        move=> <-.
+        f_equal.
+        by rewrite HB// clean_ca_cat.
+      case Y: next_alt => //[A'].
+      case W: next_alt => //[B0'][<-]{C}/=.
+      have:= [elaborate @s2l_size A' s1 (x++bt) s1 (clean_ca bt x)].
+      case M: state_to_list => [|[sy y]ys]; case N: state_to_list => [|[sz z]zs]//=.
+      move/orPT : bB => []bB; last first.
+        by rewrite (is_ko_next_alt)//base_and_ko_is_ko// in W.
+      move: W; rewrite next_alt_aux_base_and// => -[?] _; subst.
+      have [hd H]:= base_and_state_to_list bB.
+      rewrite !H/=!H/=/make_lB01 map_cons cat_cons cat0s.
+      have E:= base_and_empty_ca bB H.
+      rewrite clean_ca_mk_lb0//clean_ca_add_deep//clean_ca_goals_cat clean_ca_add_deep_gs//.
+      have {HA} := HA s1 x bt _ vA sA Y.
+      rewrite M N /= => -[???]; subst.
+      by rewrite (clean_ca_goals_empty E)//.
+  Qed.
 
   Lemma clean_ca_s2l {s x bt A}:
     valid_state A -> clean_ca bt (state_to_list A s (x ++ bt)) = state_to_list A s (clean_ca bt x).
@@ -254,8 +287,7 @@ Proof.
         rewrite !clean_ca_mk_lb0//.
         case X: next_alt => //[A']/=.
         rewrite !clean_ca_add_deep//=.
-        (* the problem is how to prove the property on next_alt? *)
-        admit.
+        repeat f_equal; apply: clean_ca_s2l_next_alt X => //; apply: HA => //.
       have:= [elaborate @s2l_size A s (x++bt) s (clean_ca bt x)].
       have {HA}:= HA s x bt vA.
       case X: (state_to_list A _ (_ ++ _)) => [|[sy y]ys]; 
@@ -271,7 +303,7 @@ Proof.
         rewrite clean_ca_goals_cat (clean_ca_goals_empty E).
         rewrite clean_ca_add_deep_gs//= .
       rewrite clean_ca_mk_lb0// clean_ca_add_deep//.
-  Admitted.
+  Qed.
 
   Lemma what_I_want {A s bt}:
     valid_state A -> clean_ca bt (state_to_list A s bt) = state_to_list A s nilC.

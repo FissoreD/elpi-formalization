@@ -185,6 +185,8 @@ Class IsList {Th Tl : Type}  := {
   map_cons F l1 l2 : map F (consC l1 l2) = consC (F l1) (map F l2);
   size_map F l1 : size (map F l1) = size l1;
   map_id l1 : map id l1 = l1;
+  append_same_len {l1 l1' l2 l2'}: 
+    size l1 = size l1' -> size l2 = size l2' -> appendC l1 l2 = appendC l1' l2' -> (l1 = l1' /\ l2 = l2')%type2;
   append_sameR {l1 l2 l3}: appendC l1 l3 = appendC l2 l3 -> l1 = l2; 
 }.
 Declare Scope SE.
@@ -461,6 +463,7 @@ Section alts.
     move=> F l1; elim: l1 => //=x xs IH l1; rewrite IH//.
     move=> F l1; elim: l1 => //=_ xs->//.
     move=>l; elim: l => //=g gs->//.
+    elim => [|[s g] gs IH] [|[s1 g1] gs1]// l2 l2' [H1 H2] [?? H3]; subst; by rewrite !(IH _ _ _ H1 H2 H3).
     elim => [|[s g] gs IH] [|[s1 g1] gs1]//= l3.
       + move=> /(f_equal size_alts)/=; rewrite size_cat_alts; lia.
       + move=> /(f_equal size_alts)/=; rewrite size_cat_alts; lia.
@@ -607,6 +610,7 @@ Section goals.
     move=> F l1; elim: l1 => //=x xs IH l1; rewrite IH//.
     move=> F l1; elim: l1 => //=_ xs->//.
     move=> l; elim: l => //=x xs->//.
+    elim => [|g gs IH] [|g1 gs1]// l2 l2' [H1 H2] [? H3]; subst; by rewrite !(IH _ _ _ H1 H2 H3).
     elim => [|g gs IH] [|g1 gs1]//= l3.
       + move=> /(f_equal size_goals)/=; rewrite size_cat_goals; lia.
       + move=> /(f_equal size_goals)/=; rewrite size_cat_goals; lia.
