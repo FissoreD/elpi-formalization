@@ -568,34 +568,29 @@ Section kill_top.
   Qed.
 
 
-    Lemma runb_kill_top {u s A s2 r n}: runb u s (kill_top A) s2 r n -> runb u s A s2 r n.
-    Proof.
-      elim: A s s2 r n => //=.
-      - move=> s1 s2 r n H; apply: run_step H => //.
-      - move=> A HA s B HB s1 s2 r n.
-        case: ifP => dA H.
-          have ? := runb_or0 _ H; subst.
-          have [b[r' [{}H ?]]] := run_ko_left1 _ (is_dead_is_ko dA) H; subst.
-          have {HA}HB := HB _ _ _ _ H.
-          apply: run_ko_left2 (is_dead_is_ko dA) HB.
-        have [n'[r' []]] := run_or_complete _ H.
-          move=> [H1 H2].
-          have {H1}HA := HA _ _ _ _ H1.
-          have:= run_or_correct_left _ s B HA.
-          move=> [rx [Hx Hy]].
-          have ? := runb_or0 _ H; subst.
-          move: Hy H2; case: eqP => [?|???]; subst => //.
-          case: r' HA => [A' HA ??|HA]; subst => //.
-          case: next_alt => //=[A'|??]; subst => //.
-          move=> [A''][dA'']?[A'''][dA''']?; subst.
-          admit.
+  Lemma runb_kill_top {u s A s2 r n}: runb u s (kill_top A) s2 r n -> runb u s A s2 r n.
+  Proof.
+    elim: A s s2 r n => //=.
+    - move=> s1 s2 r n H; apply: run_step H => //.
+    - move=> A HA s B HB s1 s2 r n.
+      case: ifP => dA H.
+        have ? := runb_or0 _ H; subst.
+        have [b[r' [{}H ?]]] := run_ko_left1 _ (is_dead_is_ko dA) H; subst.
+        have {HA}HB := HB _ _ _ _ H.
+        apply: run_ko_left2 (is_dead_is_ko dA) HB.
+      have [n'[r' []]] := run_or_complete _ H.
+        move=> [H1 H2].
+        have {H1}HA := HA _ _ _ _ H1.
+        have:= run_or_correct_left _ s B HA.
+        move=> [rx [Hx Hy]].
+        have ? := runb_or0 _ H; subst.
+        have ? := build_or_state_inj u _ H2 Hy; subst => //.
+      admit.
+    - move=> A HA B0 _ B HB s1 s2 r n.
+      case: ifP => skA H.
         admit.
-      - move=> A HA B0 _ B HB s1 s2 r n.
-        case: ifP => skA H.
-          admit.
-        admit.
-    Admitted.
-
+      admit.
+  Admitted.
 
 End kill_top.
 

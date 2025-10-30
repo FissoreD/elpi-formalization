@@ -225,19 +225,36 @@ Section s.
       apply: next_alt_runb W IH.
   Qed.
 
+  Definition build_or_state cn sR R r rOR :=
+    if cn == 0 then
+      if r is Some A' 
+        then (rOR = (Some (Or A' sR R))) :> Type
+      else if next_alt false R is Some R' 
+        then Texists A'', is_dead A'' /\ (rOR = Some (Or A'' sR R'))
+      else rOR = None
+    else rOR = omap (fun x => Or x sR (cutr R)) r.
+
+  Lemma build_or_state_inj {cn sR R r rOR} rOR1:
+    build_or_state cn sR R r rOR ->
+      build_or_state cn sR R r rOR1 -> rOR = rOR1.
+  Proof.
+    rewrite/build_or_state.
+    case: eqP => [?|???]; subst => //.
+    case: r => [???|]; subst => //.
+    case: next_alt => [?|??]; subst => //.
+    (* TODO: solve this issue by removing the existential and
+       add the state in option None in runb *)
+    move=> [A1 [dA1 ?]] [A2 [dA2 ?]]; subst.
+    repeat f_equal.
+  Admitted.
+
   Lemma run_or_correct_left {s1 A s2 b r} sX X:
     runb u s1 A s2 r b ->
       Texists r', 
         runb u s1 (Or A sX X) s2 r' 0 /\
-          if b == 0 then
-            if r is Some A' 
-              then (r' = (Some (Or A' sX X))) :> Type
-            else if next_alt false X is Some X' 
-              then Texists A'', is_dead A'' /\ (r' = Some (Or A'' sX X'))
-            else r' = None
-          else r' = omap (fun x => Or x sX (cutr X)) r
-           .
+          build_or_state b sX X r r'.
   Proof.
+    rewrite/build_or_state.
     move=> H; elim: H X; clear.
     + move=> s s' r A B /[dup] /(expand_solved_same) [[??]sA] H ? X; subst.
       repeat eexists.
@@ -319,20 +336,11 @@ Section s.
   (* TODO: be more precise on altAB *)
     runb u s1 (Or A s2 B) s3 r b ->
       (Texists n r', (
-        (runb u s1 A s3 r' n /\ 
-          (
-            if n == 0 then
-              if r' is Some A' 
-                then (r = (Some (Or A' s2 B))) :> Type
-              else if next_alt false B is Some B' 
-                then Texists A'', is_dead A'' /\ (r = Some (Or A'' s2 B'))
-              else r = None
-            else r = omap (fun x => Or x s2 (cutr B)) r'
-          )
-        )%type2
+        (runb u s1 A s3 r' n /\ build_or_state n s2 B r' r)%type2
          + 
         (runb u s2 B s3 r' n))%type).
   Proof.
+    rewrite/build_or_state.
     remember (Or _ _ _) as O1 eqn:HO1 => H.
     elim: H s2 A B HO1 => //=; clear.
     + move=> s1 s2 r A B /expand_solved_same [[??] +] ? s3 C D ?; subst => /=.
