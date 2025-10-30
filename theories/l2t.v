@@ -578,6 +578,8 @@ Section kill_top.
           have [b[r' [{}H ?]]] := run_ko_left1 _ (is_dead_is_ko dA) H; subst.
           have {HA}HB := HB _ _ _ _ H.
           apply: run_ko_left2 (is_dead_is_ko dA) HB.
+        (* have [[A'[b' H']]|[A'[b' H']]] := run_or_complete _ H. *)
+        have:= run_or_correct_left.
         admit.
       - move=> A HA B0 _ B HB s1 s2 r n.
         case: ifP => skA H.
