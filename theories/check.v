@@ -352,22 +352,10 @@ Section check.
       rewrite HB//HA//.
   Qed.
 
-  (* Lemma expandedb_next_alt_done {sP s A s1 B b}: 
-    check_program sP -> 
-      no_free_alt sP A -> expandedb u s A (Done s1 B) b ->
-        next_alt true B = None.
-  Proof.
-    remember (Done _ _) as d eqn:Hd => Hz + H.
-    elim: H s1 B Hd => //; clear -Hz.
-    - {
-      move=> s s' A B /expand_solved_same [][?? sB] s1 C [_ <-] fA; subst.
-      apply: expand_next_alt Hz fA sB.
-    } 
-    - move=> s1 s2 r A B b HA HB IH s3 C ? fA; subst.
-      apply: IH erefl (expand_no_free_alt Hz fA HA).
-    - move=> s1 s2 r A B b HA HB IH s3 C ? fA; subst.
-      apply: IH erefl (expand_no_free_alt Hz fA HA).
-  Qed.  *)
+  Lemma build_na_is_dead {sP A}:
+    check_program sP -> no_free_alt sP A -> success A ->
+      (build_na A (next_alt true A)) = dead1 A.
+  Proof. move=> H1 H2 H3; by rewrite (expand_next_alt H1)//=. Qed.
 
   Lemma has_cut_next_alt {A B b}: 
     has_cut A -> next_alt b A = Some B -> has_cut B.
@@ -427,7 +415,7 @@ Section check.
         move=> fB.
         have:= HB _ b fB.
         case X: next_alt => //[D] /(_ _ erefl) fD[<-]/=.
-        rewrite no_alt_dead// has_cut_dead// fD.
+        rewrite no_alt_dead//?is_dead_dead//has_cut_dead// is_dead_dead//.
       case: ifP => cA.
         move=> fB.
         have:= (HA _ b fA).
@@ -501,8 +489,16 @@ Section check.
       apply: IH erefl (expand_no_free_alt Hz fA HA) nB.
   Qed. *)
 
+  Lemma no_free_alt_dead {sP A}:
+    is_dead A -> no_free_alt sP A.
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB /andP[dA dB]; by rewrite has_cut_dead//HA//HB.
+    - by move=> A HA B0 _ B HB dA; rewrite is_dead_is_ko//.
+  Qed.
+
   Definition is_det A := forall b s s' B,
-    runb u s A s' B b -> B = None.
+    runb u s A s' B b -> is_dead B.
 
   Lemma runb_next_alt {sP A}: 
     check_program sP -> 
@@ -512,13 +508,15 @@ Section check.
     move=> H1 H2 b s s' B H3.
     elim: H3 H2; clear -H1 => //.
     - move=> s1 s2 r A B  /expand_solved_same [[??]sA] ? fB; subst.
-      apply: expand_next_alt H1 fB sA.
+      by rewrite (build_na_is_dead H1 fB sA) is_dead_dead.
     - move=> s1 s2 s3 r A B n eA rB IH fA.
       by apply: IH; apply: expand_no_free_alt eA.
     - move=> s1 s2 s3 r A B n eA rB IH fA.
       by apply: IH; apply: expand_no_free_alt eA.
-    - move=> s1 s2 A B C r n /expand_failed_same [? fB] nB rC IH fA; subst.
-      by apply: IH; apply: no_free_alt_next_alt nB.
+    - move=> s1 s2 A B r n fA nA H IH FA.
+      apply: IH.
+      apply: no_free_alt_next_alt FA nA.
+    - by move=> *; rewrite is_dead_dead.
   Qed.
 
   Lemma main {sP p t}:

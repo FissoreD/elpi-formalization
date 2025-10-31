@@ -608,19 +608,21 @@ Section valid_state.
       by rewrite (base_and_valid bB) eqxx /bbAnd bB/= (HA _ _ vA X) -(is_and_or_next_alt vA X) oA base_and_is_and //!if_same// (next_alt_atop aT X).
     Qed.
 
-  Lemma runP_run {s1 A s2 B b}:
-    valid_state A -> runb u s1 A s2 (Some B) b -> valid_state B.
+  Lemma valid_state_run {s1 A s2 B b}:
+    valid_state A -> runb u s1 A s2 B b -> (B = dead1 B) + valid_state B.
   Proof.
-    remember (Some _) as S eqn:HS => +H.
-    elim: H B HS; clear.
-    + move=> s1 s2 r A B /expand_solved_same[[??]sA] ? C H vA; subst.
-      by apply: valid_state_next_alt vA H.
-    + move=> s1 s2 s3 r A B n eA rB IH C ? vA; subst.
-      apply: IH erefl (valid_state_expand vA eA).
-    + move=> s1 s2 s3 r A B n eA rB IH C ? vA; subst.
-      apply: IH erefl (valid_state_expand vA eA).
-    + move=> s1 s2 A B C r n /expand_failed_same [? fB] nB rC IH D ? vA; subst.
-      apply: IH erefl (valid_state_next_alt vA nB).
+    move=> + H; elim: H; clear => //=.
+    + move=> s1 s2 A B _ /expand_solved_same[[??]sA] <- vA; subst.
+      case X: next_alt => [B'|]/=.
+        by rewrite (valid_state_next_alt vA X); auto.
+      by rewrite dead2; auto.
+    + move=> s1 s2 s3 r A B n eA rB IH vA; subst.
+      apply: IH (valid_state_expand vA eA).
+    + move=> s1 s2 s3 r A B n eA rB IH vA; subst.
+      apply: IH (valid_state_expand vA eA).
+    + move=> s1 s2 A B r n fA + rB + vA; subst.
+      move=> /(valid_state_next_alt vA) vB /(_ vB)//.
+    + by move => *; rewrite dead2; auto.
   Qed.
 
   Lemma base_and_ko_succes {B}: base_and_ko B -> success B = false.

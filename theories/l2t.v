@@ -254,8 +254,9 @@ Section clean_ca.
           rewrite/W/Z => {W Z}.
           rewrite !clean_ca_mk_lb0// clean_ca_add_deep//.
           repeat f_equal.
-          case Y: next_alt => //=[A'].
-          apply: HA => //.
+          case Y: next_alt => //=[A'|].
+            apply: HA => //.
+          rewrite !state_to_list_dead//is_dead_dead//.
         move=> <-.
         f_equal.
         by rewrite HB// clean_ca_cat.
@@ -294,9 +295,10 @@ Section clean_ca.
         have E:= base_and_empty_ca bB H.
         rewrite catA HB//= clean_ca_cat.
         rewrite !clean_ca_mk_lb0//.
-        case X: next_alt => //[A']/=.
-        rewrite !clean_ca_add_deep//=.
-        repeat f_equal; apply: clean_ca_s2l_next_alt X => //; apply: HA => //.
+        case X: next_alt => //[A'|]/=.
+          rewrite !clean_ca_add_deep//=.
+          repeat f_equal; apply: clean_ca_s2l_next_alt X => //; apply: HA => //.
+        rewrite !(state_to_list_dead is_dead_dead)//.
       have:= [elaborate @s2l_size A s (x++bt) s (clean_ca bt x)].
       have {HA}:= HA s x bt vA.
       case X: (state_to_list A _ (_ ++ _)) => [|[sy y]ys]; 
@@ -582,22 +584,20 @@ Section kill_top.
     elim: A s s2 r n => //=.
     - move=> s1 s2 r n H; apply: run_step H => //.
     - move=> A HA s B HB s1 s2 r n.
-      case: ifP => dA H.
-        have ? := runb_or0 _ H; subst.
-        have [b[r' [{}H ?]]] := run_ko_left1 _ (is_dead_is_ko dA) H; subst.
+      case: ifP => dA /[dup]/runb_or0->{n}/[dup]/runb_same_structure/=; case: r => //= A' _ B' /eqP<- H.
+        have [b[{}H ?]] := run_ko_left1 _ (is_dead_is_ko dA) H; subst.
         have {HA}HB := HB _ _ _ _ H.
         apply: run_ko_left2 (is_dead_is_ko dA) HB.
-      have [n'[r' []]] := run_or_complete _ H.
-        move=> [H1 H2].
-        have {H1}HA := HA _ _ _ _ H1.
-        have:= run_or_correct_left _ s B HA.
-        move=> [rx [Hx Hy]].
-        have ? := runb_or0 _ H; subst.
-        have ? := build_or_state_inj u _ H2 Hy; subst => //.
-      admit.
-    - move=> A HA B0 _ B HB s1 s2 r n.
-      case: ifP => skA H.
+      have:= @run_or_correct_left u s1 A A' s2 0.
+      have [n1] := run_or_complete _ H.
+      case: s2 H => [s2|] H.
         admit.
+      move=> [H1[+[H2 H3]]].
+      have {}HA := HA _ _ _ _ H1.
+      case: eqP => H4; subst.
+        move=> [n2 H4] /(_ HA empty Bot) dA'.
+        admit.
+      move=>?; subst.
       admit.
   Admitted.
 
@@ -1144,7 +1144,7 @@ Lemma two' {u s1 s2} {alts alts_left : alts} {andg : goals}  :
   valid_state t ->
   (state_to_list t s nilC) = ((s1,andg) ::: alts) -> 
   Texists t1 n,
-    runb u s t s2 t1 n
+    runb u s t (Some s2) t1 n
       (* /\ state_to_list (odflt Bot t1) s1 nilC = alts_left  *)
     .
 Proof.
@@ -1159,8 +1159,7 @@ Proof.
       rewrite -kill_top_s2l_id// in H.
       have [skA ?]:= is_kill_top_nilC1 vA' fA' H; subst.
       repeat eexists.
-      apply: run_fail nA _.
-        apply: failed_expand fA.
+      apply: run_fail fA nA _.
       apply: runb_kill_top; apply: run_done erefl; apply: succes_is_solved skA.
     rewrite -kill_top_s2l_id// in H.
     have [skA ?]:= is_kill_top_nilC1 vA fA H; subst.
@@ -1187,19 +1186,13 @@ Proof.
         move: H1 H2 vnA IH; case X: (next_cut (kill_top _)) => [b A2]/= H1 H2 vnA IH.
         case: b X H2 => /= X H2.
           repeat eexists.
-          apply: run_fail.
-            apply: failed_expand fA.
-            apply: nA.
-            apply: runb_kill_top.
-            apply: run_cut H2 IH.
-
-        repeat eexists.
-          apply: run_fail.
-          apply: failed_expand fA.
-          apply: nA.
+          apply: run_fail fA nA _.
           apply: runb_kill_top.
-          apply: run_step H2 IH.
-
+          apply: run_cut H2 IH.
+        repeat eexists.
+        apply: run_fail fA nA _.
+        apply: runb_kill_top.
+        apply: run_step H2 IH.
       have /= vA'':= next_cut_valid fA vA erefl.
       rewrite -kill_top_s2l_id// in H.
       have vKa := valid_kill_top vA.
@@ -1212,9 +1205,8 @@ Proof.
       move: H1 H2 vnA IH; case X: (next_cut (kill_top _)) => [b A2]/= H1 H2 vnA IH.
       case: b X H2 => /= X H2.
         repeat eexists.
-          apply: runb_kill_top.
-          apply: run_cut H2 IH.
-
+        apply: runb_kill_top.
+        apply: run_cut H2 IH.
       repeat eexists.
         apply: runb_kill_top.
         apply: run_step H2 IH.
@@ -1239,9 +1231,7 @@ Proof.
         rewrite B/= in H1.
         have /= [t1[n {}IH]] := IH _ _ (vnA _ _) H1.
         repeat eexists.
-        apply: run_fail.
-        apply: failed_expand fA.
-        apply: nA.
+        apply: run_fail fA nA _.
         apply: runb_kill_top.
         apply: run_step H2 IH.
       have /= vA'':= next_cut_valid fA vA erefl.
@@ -1277,9 +1267,7 @@ Proof.
         rewrite B/= in H1.
         have /= [t1[n {}IH]] := IH _ _ (vnA _ _) H1.
         repeat eexists.
-        apply: run_fail.
-        apply: failed_expand fA.
-        apply: nA.
+        apply: run_fail fA nA _.
         apply: runb_kill_top.
         apply: run_step H2 IH.
       have /= vA'':= next_cut_valid fA vA erefl.

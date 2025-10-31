@@ -352,7 +352,7 @@ We prove the following properties:
 - `valid_state_expanded`: `valid_state A -> expandedb s1 A r -> valid_state (get_state_exp r).`
 - `valid_state_next_alt`: `valid_state A -> next_alt s1 A = Some (s2, B) -> valid_state B.`
 - `valid_state_clean_success`: `valid_state A -> valid_state (clean_success A).`
-- `runP_run`: `valid_state A -> run s1 A s2 B -> valid_state B.`  
+- `valid_state_run`: `valid_state A -> run s1 A s2 B -> valid_state B.`  
 
 
 ## Elpi interpreter: elpi.v
