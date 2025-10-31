@@ -448,35 +448,8 @@ Section main.
         | CutBrothers s A => CutBrothers s  (And A B0 B)
         | Failure A       => Failure        (And A B0 B)
         end
-    end
-  .
+    end.
 
-  (* Fixpoint clean_success (A: state):= 
-    match A with
-    | OK | Dead => None
-    | Bot | Top | CutS | CallS _ _ => Some A
-    | Or A s B => 
-      if is_dead A then 
-        match clean_success B with
-        | None => None 
-        | Some B => Or A s B
-      else 
-        match clean_success with 
-        | None => Or 
-        | Some A => Or A s B (*TODO: maybe: if A is not success then leave the tree intact*)
-    | And A B0 B =>
-    (* TODO: cambiare con And (clean_success A) B0 B0 *)
-      if success A then And (clean_success A) B0 B0
-      else And A B0 B
-    end. *)
-
-  (* OK returns None since,
-     We can have the state "A" = (OK \/ B) /\ C
-     It happens that the current substitution makes C to fail
-     "A" becomes: (OK \/ B) /\ Bot.
-     The OK node should be transformed into a Dead so that 
-     "B /\ C" is tried with the subst for B *)
-    (* TODO: togliere s come argomento? *)
   Fixpoint next_alt b (A : state) : option (state) :=
     match A with
     | Bot => None
