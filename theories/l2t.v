@@ -183,6 +183,15 @@ Section clean_ca.
       rewrite subnDAC.
       set N := size ca - size bt.
       set M := size x.
+      have: N <= size L2.
+        rewrite /L2 clean_ca_size/N.
+        lia.
+      clear.
+      have: size L1 = size ca.
+        by rewrite/L1 size_map size_add_deep clean_ca_size//.
+      move=> K1 K2.
+      have: size L2 <= size L1.
+        rewrite/L2 clean_ca_size; lia.
   Admitted.
 
   Lemma clean_ca_save_alts {x bt hd L}:
@@ -1286,7 +1295,7 @@ Proof.
       apply: runb_kill_top.
       apply: run_step H2 IH.
     }
-Admitted.
+Qed.
 
 
 
