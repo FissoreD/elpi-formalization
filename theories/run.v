@@ -196,6 +196,13 @@ Section state_op.
   Lemma dead_cutr {a}: dead1 (cutr a) = dead1 a.
   Proof. elim: a => //= [A HA s B HB|A HA B0 HB0 B HB]; rewrite HA HB//HB0//. Qed.
 
+  Lemma dead_cutl {a}: dead1 (cutl a) = dead1 a.
+  Proof. 
+    elim: a => //= [A HA s B HB|A HA B0 HB0 B HB].
+      by rewrite fun_if/=HA HB dead_cutr if_same.
+    rewrite HA HB//HB0//. 
+  Qed.
+
   Lemma cutlr {A}: cutl (cutr A) = cutr A.
   Proof.
     elim: A => //.

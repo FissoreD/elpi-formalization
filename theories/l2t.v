@@ -192,6 +192,7 @@ Section clean_ca.
       move=> K1 K2.
       have: size L2 <= size L1.
         rewrite/L2 clean_ca_size; lia.
+      (* THE PROOF is in test.v *)
   Admitted.
 
   Lemma clean_ca_save_alts {x bt hd L}:
@@ -588,16 +589,35 @@ Section kill_top.
         have [b[{}H ?]] := run_ko_left1 _ (is_dead_is_ko dA) H; subst.
         have {HA}HB := HB _ _ _ _ H.
         apply: run_ko_left2 (is_dead_is_ko dA) HB.
-      have:= @run_or_correct_left u s1 A A' s2 0.
       have [n1] := run_or_complete _ H.
       case: s2 H => [s2|] H.
+        move=> [].
+          move=> [H1?]; subst.
+          have {}HA := HA _ _ _ _ H1.
+          by have:= run_or_correct_left _ HA s B.
+        move=> [H1 H2].  
+        have {H H1 HB}HA := HA _ _ _ _ H1.
+        have := run_or_correct_left _ HA _ _ _ _ _ H2.
+        rewrite/get_dead dA/= dead2; case: eqP => [He H3|He [Hf H3]].
+          rewrite He in HA.
+          {
+              
+            inversion H3; try congruence; subst; clear H3.
+            - move: H0 H5 => /expand_solved_same [[??]+]; subst => /=.
+              rewrite dA => sA.
+              by have [] := run_consistent _ (runb_success1 _ _ sA) HA.
+            - move: H; rewrite /=dA.
+              case X: expand => //[s1' A''|s1' A''] [??]; subst.
+                admit.
+              admit.
+            - admit.
+          }
         admit.
-      move=> [H1[+[H2 H3]]].
-      have {}HA := HA _ _ _ _ H1.
-      case: eqP => H4; subst.
-        move=> [n2 H4] /(_ HA empty Bot) dA'.
+      move=> [] /HA{}HA.
+      case:eqP => Hn1; subst.
+        move=> [[n2 rB] [dA' dB']].
         admit.
-      move=>?; subst.
+      move=> [?[dA' _]]; subst.
       admit.
   Admitted.
 
