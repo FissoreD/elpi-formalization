@@ -595,29 +595,19 @@ Section kill_top.
           move=> [H1?]; subst.
           have {}HA := HA _ _ _ _ H1.
           by have:= run_or_correct_left _ HA s B.
-        move=> [H1 H2].  
+        move=> [H1 H2].
         have {H H1 HB}HA := HA _ _ _ _ H1.
         have := run_or_correct_left _ HA _ _ _ _ _ H2.
-        rewrite/get_dead dA/= dead2; case: eqP => [He H3|He [Hf H3]].
-          rewrite He in HA.
-          {
-              
-            inversion H3; try congruence; subst; clear H3.
-            - move: H0 H5 => /expand_solved_same [[??]+]; subst => /=.
-              rewrite dA => sA.
-              by have [] := run_consistent _ (runb_success1 _ _ sA) HA.
-            - move: H; rewrite /=dA.
-              case X: expand => //[s1' A''|s1' A''] [??]; subst.
-                admit.
-              admit.
-            - admit.
-          }
+        rewrite/get_dead dA/= dead2 => -[He H3].
         admit.
       move=> [] /HA{}HA.
       case:eqP => Hn1; subst.
         move=> [[n2 rB] [dA' dB']].
-        admit.
-      move=> [?[dA' _]]; subst.
+        have := run_or_correct_left _ HA _ _ _ _ _ rB.
+        by rewrite dA => -[]//.
+      move=> [?[dA' Hr]]; subst.
+      have:= run_or_correct_left _ HA.
+      (* TODO: should be the true branch in run_or_correct_left *)
       admit.
   Admitted.
 
