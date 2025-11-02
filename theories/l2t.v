@@ -595,11 +595,11 @@ Section kill_top.
           move=> [H1?]; subst.
           have {}HA := HA _ _ _ _ H1.
           by have:= run_or_correct_left _ HA s B.
-        move=> [H1 H2].
+        rewrite /get_dead is_dead_kill_top dA.
+        move=> [kA' [H1 H2]].
         have {H H1 HB}HA := HA _ _ _ _ H1.
         have := run_or_correct_left _ HA _ _ _ _ _ H2.
-        rewrite/get_dead dA/= dead2 => -[He H3].
-        admit.
+        rewrite dA => -[Hx]//.
       move=> [] /HA{}HA.
       case:eqP => Hn1; subst.
         move=> [[n2 rB] [dA' dB']].

@@ -494,9 +494,15 @@ Section s.
         if s3 is Some s3 then
           ((runb u s1 A (Some s3) A' n1 /\ B' = build_or_state n1 A' B)%type2
           +
-          (runb u s1 A None (dead1 A') 0 /\ runb u s2 B (Some s3) B' n1)%type2)%type
+          (if is_dead A then 
+              A' = get_dead A B' /\
+              runb u s1 A None (dead1 A') 0 /\ runb u s2 B (Some s3) B' n1
+           else (A' = dead1 A') /\ runb u s1 A None A' 0
+              /\ runb u s2 B (Some s3) B' n1)%type2)%type
         else
-          runb u s1 A None A' n1 /\ (if n1 == 0 then Texists n2, runb u s2 B None B' n2 else B' = dead1 B) /\ A' = dead1 A' /\ B' = dead1 B'
+          runb u s1 A None A' n1 /\ (if n1 == 0 then Texists n2, 
+            runb u s2 B None B' n2 else B' = dead1 B) /\ A' = dead1 A' 
+              /\ B' = dead1 B'
           ).
   Proof.
     rewrite/build_or_state.
@@ -509,12 +515,14 @@ Section s.
       case: ifP => [dA1 sB1|dA sA1].
         case nB1: next_alt => [B1'|]//=[??]; subst.
           rewrite next_alt_not_failed//?success_failed//=if_same dA1.
-          eexists; right; split.
+          eexists; right; repeat split; auto.
+            rewrite/get_dead dA1 (next_alt_dead nB1)//=.
             apply: run_dead (is_dead_failed dA1) (is_dead_next_alt _ dA1).
           apply: run_done.
             apply: succes_is_solved sB1.
           rewrite nB1//.
-        eexists; right; rewrite dead2; split.
+        eexists; right; rewrite dead2; repeat split; auto.
+          rewrite/get_dead dA1 is_dead_dead//.
           apply: run_dead (is_dead_failed dA1) (is_dead_next_alt _ dA1).
         apply: run_done.
           apply: succes_is_solved sB1.
@@ -554,9 +562,9 @@ Section s.
             move=> [].
               move=>[H1 ?]; subst.
               by have [] := run_dead1 _ dA1 H1.
-            move=> [H1 H2].
+            rewrite dA1 => -[?[H1 H2]]; subst.
             have [_[H3 _]] := run_dead1 _ dA1 H1.
-            eexists; right; split => //.
+            eexists; right; repeat split; auto.
             apply: run_step X H2.
           move=> [H1[+[H3 H4]]]; subst.
           case:eqP => H5; subst.
@@ -574,8 +582,8 @@ Section s.
             eexists; left; split.
               apply: H1.
             by have []:= run_dead1 _ dA1 H1.
-          move=> [H1 H2].
-          eexists; right; split; auto.
+          rewrite dA1 => -[?[H1 H2]]; subst.
+          eexists; right; repeat split; auto.
           apply: run_cut X H2.
         move=> [H1[H2[H3 H4]]]; subst.
         repeat eexists; eauto; move:H2; case:eqP => H; subst.
@@ -590,8 +598,8 @@ Section s.
             eexists; left; split.
               apply: run_step X H1.
             by move=> //.
-          move=> []H1 H2.
-          eexists; right; split; eauto.
+          rewrite (expand_not_dead _ dA1 X) => -[Hz [H1 H2]].
+          eexists; right; repeat split; eauto.
           apply: run_step X H1.
         move=> [H1[H2[H3 H4]]]; subst.
         repeat eexists; eauto.
@@ -602,7 +610,7 @@ Section s.
           eexists; left; split.
             apply: run_cut X H1.
           by rewrite next_alt_cutr/= cutr2 if_same dead_cutr.
-        move=>[H1 H2].
+        rewrite (expand_not_dead _ dA1 X) => -[Hz [H1 H2]].
         by have [] := run_consistent H2 (is_ko_runb is_ko_cutr).
       move=> [H1[H2[H3 H4]]]; subst.
       move: H2; case:eqP => H; subst.
@@ -619,12 +627,12 @@ Section s.
       move=> /=; case: ifP => [dA fB|dA fA].
         case X: next_alt => //[B1'][?]; subst.
         have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
-        case: r {rB} => //[s3|].
+        case: r rB => //[s3|] rB.
           move=> [].
             move=> [H1 ?]; subst.
             by have [] := run_dead1 _ dA H1.
-          move=> [H1 H2].
-          eexists; right; split; auto.
+          rewrite dA => -[?[H1 H2]]; subst.
+          eexists; right; repeat split; auto.
           apply: run_fail fB X H2.
         move=> [H1 [H2[H3 H4]]]; subst.
         case: n1 H1 H2 => //=[|n1] H1.
@@ -634,13 +642,14 @@ Section s.
       case nA1 : next_alt => [A1'|]//.
         move=> [?]; subst.
         have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
-        case: r {rB} => //[s3|].
+        case: r rB => //[s3|] rB.
           move=> [].
             move=> [H1 ?]; subst.
             eexists; left; split; eauto.
             apply: run_fail fA nA1 H1.
-          move=> [H1 H2].
-          eexists; right; split; eauto.
+          rewrite (next_alt_dead nA1)/=.
+          move=> [Hx [H1 H2]].
+          eexists; right; repeat split; eauto.
           apply: run_fail fA nA1 H1.
         move=> [H1 [H2[H3 H4]]]; subst.
         case: n1 H1 H2 => //=[|n1] H1.
@@ -653,12 +662,16 @@ Section s.
       case:ifP => //dB1.
       case nB1: next_alt => [B1'|]//=[?]; subst.
       have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
-      case: r {rB} => //[s3|].
+      case: r rB => //[s3|] rB.
         move=> [].
           move=>[H1 ?]; subst.
           by have [] := run_dead2 _ H1.
-        move=> [H1 H2].
-        eexists; right; split.
+        rewrite is_dead_dead.
+        move=> [?[H1 H2]]; subst.
+        eexists; right; repeat split; eauto.
+          rewrite/get_dead is_dead_dead/= dead2 if_same dead2//.
+          rewrite/get_dead dead2 if_same.
+          rewrite/get_dead dead2 if_same dead2 in H1.
           apply: next_alt_runb nA1 H1.
         apply: next_alt_runb nB1 H2.
       move=> [H1 [H2[H3 H4]]]; subst.
