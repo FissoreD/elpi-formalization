@@ -626,10 +626,14 @@ Section kill_top.
     - move=> A HA B0 HB0 B HB s r C n.
       case:ifP => skA H; have:= runb_same_structure _ H; case: C H => //= A' B0' B' H _.
         have rkA := runb_success1 u s skA.
-        have {rkA}HA := HA _ _ _ _ rkA.
-        move: HA.
+        (* have {rkA}HA := HA _ _ _ _ rkA.
+        move: HA. *)
         case X: next_alt => [A''|]/=; last first.
-          rewrite dead_kill_top/= => HA.
+          have {H X} := run_and_correct_successL _ skA X H.
+          move=> [rkB [??]]; subst.
+          have {rkB} HB := HB _ _ _ _ rkB.
+          have {}HA := HA _ _ _ _ rkA.
+          rewrite dead_kill_top.
           admit.
         admit.
       admit.
