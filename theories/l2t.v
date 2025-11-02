@@ -327,40 +327,6 @@ Section clean_ca.
 End clean_ca.
 
 Section kill_top.
-  Fixpoint kill_top A :=
-    match A with
-    | Top => OK
-    | OK | CallS _ _ | CutS | Bot | Dead => A
-    | Or A s B => if is_dead A then (Or A s (kill_top B)) else (Or (kill_top A) s B)
-    | And A B0 B =>
-        let A' := kill_top A in
-        if success A' then And A' B0 (kill_top B)
-        else And A' B0 B
-    end.
-
-  Fixpoint is_kill_top A :=
-    match A with
-    | Top => true
-    | OK | CallS _ _ | CutS | Bot | Dead => false
-    | Or A s B => if is_dead A then is_kill_top B else is_kill_top A
-    | And A B0 B =>
-      if success A then is_kill_top B
-      else is_kill_top A
-    end.
-
-  Lemma is_dead_kill_top {A}: is_dead (kill_top A) = is_dead A.
-  Proof.
-    elim: A => //=.
-    - by move=> A HA s B HB; rewrite fun_if /= HB HA if_same.
-    - by move=> A HA B0 _ B HB; rewrite fun_if/= HA if_same.
-  Qed.
-
-  Lemma success_kill_top {A}: success A -> (kill_top A) = A.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB; case: ifP => [dA sB|dA sA]/=; rewrite ?is_dead_kill_top//?dA ?HB//HA//.
-    - move=> A HA B0 _ B HB /andP[sA sB]/=; rewrite HA//HB//if_same//.
-  Qed.
 
   Lemma base_and_failed_kill_top {A}: base_and A -> failed (kill_top A) = false.
   Proof. elim: A => //= -[]//. Qed.
@@ -392,37 +358,6 @@ Section kill_top.
         by rewrite HB// success_failed.
       case: ifP => //= fA bB _.
       by rewrite fun_if/=HA//=if_same.
-  Qed.
-
-  Lemma is_kill_top_kill_top {A}:
-     is_kill_top (kill_top A) = false.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB; by case: ifP => dA/=; rewrite?is_dead_kill_top dA//.
-    - move=> A HA B0 _ B HB; case: ifP => sA/=; rewrite sA//.
-  Qed.
-
-  Lemma is_kill_top_exp {u s1 A r}: is_kill_top A -> expand u s1 A = r -> is_expanded r.
-  Proof.
-    move=> +<-{r}.
-    elim: A s1 => //=.
-    - move=> A HA s B HB s1; case: ifP => dA k/=.
-        have:= HB s k; case X: expand => //.
-      have:= HA s1 k; case: expand => //.
-    - move=> A HA B0 _ B HB s1.
-      case: ifP => s k.
-        rewrite succes_is_solved//.
-        have:= HB (get_substS s1 A) k; case: expand => //.
-      have:= HA s1 k; case: expand => //.
-  Qed.
-
-  Lemma is_kill_topF_kill_top_refl {A}: is_kill_top A = false -> kill_top A = A.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB; case: ifP => dA k; rewrite?HA//?HB//.
-    - move=> A HA B0 _ B HB; case: ifP => sA k.
-        by rewrite HB// success_kill_top// if_same.
-      by rewrite HA// sA.
   Qed.
 
   Lemma is_kill_top_nilC {A s bt s2 xs}:
@@ -578,66 +513,6 @@ Section kill_top.
       exfalso.
       apply: is_kill_top_nilC (valid_kill_top vA) skA (failedF_kill_top vA fA) is_kill_top_kill_top H.
   Qed.
-
-  Lemma get_substS_kill_top {s A}: get_substS s (kill_top A) = get_substS s A.
-  Proof.
-    elim: A s => //=.
-    - by move=> A HA s B HB s1; case: ifP => dA/=; rewrite?is_dead_kill_top dA//.
-    - move=> A HA B0 _ B HB s; rewrite 2!fun_if/= HA HB if_same.
-      case:ifP => //sA.
-        rewrite success_kill_top// sA//.
-      case: ifP => // skA.
-      (* THIS IS WRONG! *)
-  Abort.
-
-  Lemma dead_kill_top {A}: dead1 (kill_top A) = dead1 A.
-  Proof. elim: A => //=[A HA s B HB|A HA B0 _ B HB]; rewrite fun_if/= HA HB if_same//. Qed.
-
-  Lemma runb_kill_top {u s A s2 r n}: runb u s (kill_top A) s2 r n -> runb u s A s2 r n.
-  Proof.
-    elim: A s s2 r n => //=.
-    - move=> s1 s2 r n H; apply: run_step H => //.
-    - move=> A HA s B HB s1 s2 r n.
-      case: ifP => dA /[dup]/runb_or0->{n}/[dup]/runb_same_structure/=; case: r => //= A' _ B' /eqP<- H.
-        have [b[{}H ?]] := run_ko_left1 _ (is_dead_is_ko dA) H; subst.
-        have {HA}HB := HB _ _ _ _ H.
-        apply: run_ko_left2 (is_dead_is_ko dA) HB.
-      have [n1] := run_or_complete _ H.
-      case: s2 H => [s2|] H.
-        move=> [].
-          move=> [H1?]; subst.
-          have {}HA := HA _ _ _ _ H1.
-          by have:= run_or_correct_left _ HA s B.
-        rewrite /get_dead is_dead_kill_top dA.
-        move=> [kA' [H1 H2]].
-        have {H H1 HB}HA := HA _ _ _ _ H1.
-        have := run_or_correct_left _ HA.
-        move=> /(_ _ _ _ _ _ H2).
-        rewrite dA//.
-      move=> [] /HA{}HA.
-      case:eqP => Hn1; subst.
-        move=> [[n2 rB] [dA' dB']].
-        have := run_or_correct_left _ HA.
-        move=>/(_ _ _ _ _ _ rB).
-        rewrite dA//.
-      move=> [?[dA' Hr]]; subst.
-      have:= run_or_correct_left _ HA.
-      case: eqP => //.
-    - move=> A HA B0 HB0 B HB s r C n.
-      case:ifP => skA H; have:= runb_same_structure _ H; case: C H => //= A' B0' B' H _.
-        have rkA := runb_success1 u s skA.
-        (* have {rkA}HA := HA _ _ _ _ rkA.
-        move: HA. *)
-        case X: next_alt => [A''|]/=; last first.
-          have {H X} := run_and_correct_successL _ skA X H.
-          move=> [rkB [??]]; subst.
-          have {rkB} HB := HB _ _ _ _ rkB.
-          have {}HA := HA _ _ _ _ rkA.
-          rewrite dead_kill_top.
-          admit.
-        admit.
-      admit.
-  Admitted.
 
 End kill_top.
 
