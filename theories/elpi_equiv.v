@@ -965,7 +965,7 @@ Section NurEqiv.
     move=> A s B s1 b ++ H.
     remember (Some _) as r eqn:Hr.
     elim: H s1 Hr; clear => //.
-    + move=> s1 s2 A B _ /expand_solved_same [[??]sA] <- _ [<-] sIgn vA; subst.
+    + move=> s1 _ A _ sA <-<- _ [<-] sIgn vA; subst.
       rewrite (success_state_to_list sIgn)//.
       repeat eexists.
       apply: StopE.

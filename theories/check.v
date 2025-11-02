@@ -507,8 +507,8 @@ Section check.
     rewrite/is_det.
     move=> H1 H2 b s s' B H3.
     elim: H3 H2; clear -H1 => //.
-    - move=> s1 s2 r A B  /expand_solved_same [[??]sA] ? fB; subst.
-      by rewrite (build_na_is_dead H1 fB sA) is_dead_dead.
+    - move=> s1 s2 A B sA _ <- fA.
+      by rewrite (build_na_is_dead H1 fA sA) is_dead_dead.
     - move=> s1 s2 s3 r A B n eA rB IH fA.
       by apply: IH; apply: expand_no_free_alt eA.
     - move=> s1 s2 s3 r A B n eA rB IH fA.

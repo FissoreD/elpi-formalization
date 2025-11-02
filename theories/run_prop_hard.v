@@ -30,44 +30,43 @@ Section s.
     success A -> runb u s A (Some (get_substS s A)) (build_na A (next_alt true A)) 0.
   Proof.
     move=> sA.
-    apply: run_done.
-    apply: succes_is_solved sA.
-    move=> //.
+    by apply: run_done.
   Qed.
 
   Lemma runb_success {A s1 s2 r n}: 
     success A -> runb u s1 A s2 r n -> (s2 = Some (get_substS s1 A) /\ r = build_na A (next_alt true A) /\ n = 0)%type2.
   Proof.
     move=> sA H; have:= succes_is_solved u s1 sA.
-    inversion H; clear H; try congruence; subst.
-    - by rewrite H0 => -[??]; subst.
-    - by rewrite failed_success in sA.
-    - by rewrite failed_success in sA.
+    by inversion H; clear H; try congruence; subst; rewrite succes_is_solved//; rewrite failed_success in sA.
   Qed.
 
   Lemma run_consistent {s A s1 B s2 C n1 n2}:
     runb u s A s1 B n1 -> runb u s A s2 C n2 -> ((s2 = s1) /\ (C = B) /\ (n2 = n1))%type2.
   Proof.
     move=> H; elim: H s2 C n2; clear.
-    + move=> s1 s2 r A B HA ? s3 C n2 H; subst.
-      have [[??]sA]:= expand_solved_same _ HA; subst.
+    + move=> s1 _ A _ sA <-<- s3 C n2 H; subst.
       by apply: runb_success sA H.
-    + move=> s1 s2 s3 r n1 A B HA HB IH s4 r' n2 H.
+    + move=> s1 s2 s3 r A B n1 HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
-      - move: H0; rewrite HA => -[??]; subst; by rewrite !(IH _ _ _ H1)//.
+      - by rewrite succes_is_solved in HA.
+      - move: H0; rewrite HA => -[??]; subst.
+        by rewrite !(IH _ _ _ H1).
       - by rewrite failed_expand in HA.
       - by rewrite failed_expand in HA.
-    + move=> s1 s2 s3 r n1 A B HA HB IH s4 r' n2 H.
+    + move=> s1 s2 s3 r A B n1 HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
+      - by rewrite succes_is_solved in HA.
       - move: H0; rewrite HA => -[??]; subst; by rewrite !(IH _ _ _ H1)//.
       - by rewrite failed_expand in HA.
       - by rewrite failed_expand in HA.
     + move=> s1 s2 A B r n1 fA nB rB IH s3 C n2 H.
       inversion H; clear H; try congruence; subst; try by rewrite failed_expand in H0.
+        by rewrite success_failed in fA.
       move: H1; rewrite nB => -[?]; subst.
       by apply: IH.
     + move=> s1 A fA nA s2 C n2 H.
       inversion H; subst; try congruence; try rewrite //failed_expand// in H0.
+      by rewrite success_failed in fA.
   Qed.
 
   Lemma is_ko_runb {s A}: is_ko A -> runb u s A None (dead1 A) 0.
@@ -148,21 +147,18 @@ Section s.
     remember (Or A _ _) as o1 eqn:Ho1.
     remember (Or A' _ _) as o2 eqn:Ho2 => + H.
     elim: H A B A' B' s2 Ho1 Ho2; clear.
-    + move=> s s' A B _ + <-  A1 B1 A2 B2 s2 ? + kA'; subst.
-      move=> /expand_solved_same [[??]+]; subst => /=.
+    + move=> s _ A _ + <-<- A1 B1 A2 B2 s2 ? + kA'; subst => /=.
       rewrite (is_ko_success kA') (is_ko_next_alt _ kA').
       case: ifP =>// dA1 sB1.
       case X: next_alt => //=[B1'|] [??]; subst.
         repeat eexists.
-          apply: run_done.
-            apply: succes_is_solved sB1.
+          apply: run_done sB1 erefl _.
           by rewrite X.
         rewrite (next_alt_dead X)//.
+      rewrite is_dead_dead.
       repeat eexists.
-      apply: run_done.
-        apply: succes_is_solved sB1.
-        rewrite X => //.
-      rewrite is_dead_dead//.
+      apply: run_done sB1 erefl _.
+      rewrite X => //.
     - move=> s1 s2 s3 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
       case: ifP => dC; case X: expand => //.
     - move=> s1 s2 s3 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
@@ -210,10 +206,11 @@ Section s.
   Proof.
     rewrite/get_dead.
     move=> + HB; elim: HB sIgn X; clear.
-    + move=> s s' r A B /expand_solved_same [[??]sB] ? sIgn X kX; subst => /=.
+    + move=> s _ A _ sA <-<- sIgn X kX; subst => /=.
       case dX: (is_dead X) => /=.
         apply: run_done.
-          by rewrite/= (succes_is_solved _ _ sB) is_ko_expand// dX.
+          by rewrite/= sA dX.
+          rewrite /= dX//.
         rewrite/=dX; case Y: next_alt => //=[A'|].
           by rewrite (next_alt_dead Y)//.
         by rewrite is_dead_dead//.
@@ -221,7 +218,8 @@ Section s.
         by rewrite dX is_ko_failed.
         by rewrite/= dX is_ko_next_alt// success_is_dead// next_alt_not_failed// success_failed//.
       apply: run_done.
-        rewrite/= (succes_is_solved _ _ sB) is_dead_dead//.
+        rewrite /= is_dead_dead//.
+        rewrite/= is_dead_dead//.
       by rewrite /=is_dead_dead//; case: next_alt => //=; rewrite dead2//.
     + move=> s1 s2 s3 r A B n HA HB IH sIgn X kX.
       case dX: (is_dead X) => /=.
@@ -273,10 +271,9 @@ Section s.
     runb u s2 (Or B sIgn X) SOL (Or B' sIgn (if is_dead B' then dead1 X else if b1 == 0 then X else cutr X)) 0.
   Proof.
     move=> + HB; elim: HB sIgn X; clear.
-    + move=> s s' r A B /expand_solved_same [[??]sB] ? sIgn X kX; subst => /=.
-      apply: run_done.
-        by rewrite/= success_is_dead// succes_is_solved//.
-      rewrite/= success_is_dead// (is_ko_next_alt _ kX)// if_same//.
+    + move=> s _ A _ sA <-<- sIgn X kX; subst => /=.
+      apply: run_done => /=; rewrite?sA ?(success_is_dead sA)//.
+      rewrite (is_ko_next_alt _ kX) if_same.
       case W: next_alt => //=[A'|].
         rewrite (next_alt_dead W)//.
       rewrite is_dead_dead//.
@@ -308,21 +305,18 @@ Section s.
     remember (Or A _ _) as o1 eqn:Ho1.
     remember (Or A' _ _) as o2 eqn:Ho2 => + H.
     elim: H A X A' X' Ho1 Ho2; clear.
-    + move=> s s' A B _ + <-  A1 B1 A2 B2 ? + kB'; subst.
-      move=> /expand_solved_same [[??]+]; subst => /=.
+    + move=> s  _ A _ + <-<- A1 B1 A2 B2 ? + kB'; subst => /=.
       rewrite (is_ko_success kB') (is_ko_next_alt _ kB').
       case: ifP =>// dA1 sB1.
       rewrite (is_ko_next_alt _ kB') if_same.
       case X: next_alt => //=[B1'|][??]; subst.
         repeat eexists.
-          apply: run_done.
-            apply: succes_is_solved sB1.
+          apply: run_done sB1 erefl _.
           by rewrite X.
         by rewrite (next_alt_dead X)//.
       repeat eexists.
-      apply: run_done.
-        apply: succes_is_solved sB1.
-        rewrite X => //.
+      apply: run_done sB1 erefl _.
+        rewrite X//.
       rewrite is_dead_dead//.
     - move=> s1 s2 s3 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
       case: ifP => dC; case X: expand => //.
@@ -406,10 +400,8 @@ Section s.
   Proof.
     rewrite/build_or_state.
     move=> H; elim: H; clear => //.
-    + move=> s s' A B r /[dup] /(expand_solved_same) [[??]sA] eA nB sX X; subst => /=.
-      apply: run_done => //=.
-        by rewrite eA success_is_dead//=.
-      rewrite /= success_is_dead//=.
+    + move=> s _ A _ sA <-<- sX X; subst => /=.
+      apply: run_done; rewrite /=?(success_is_dead sA)//.
       case W: next_alt => //=[B'|].
         by rewrite (next_alt_dead W)//=.
       rewrite is_dead_dead.
@@ -488,12 +480,9 @@ Section s.
       inversion H; subst; clear H.
       - apply: run_fail => /=.
           rewrite dB//.
-          rewrite dB nB next_alt_not_failed//=.
-            by case:ifP => //dX; rewrite is_dead_expand// in H0.
-          by rewrite (expand_not_failed _ H0).
-        apply: run_done => //=.
-          rewrite H0 is_dead_dead//.
-        rewrite/=is_dead_dead; case W: next_alt => //=.
+          rewrite dB nB success_is_dead//=next_alt_not_failed//success_failed//.
+        apply: run_done; rewrite /= is_dead_dead//.
+        case W: next_alt => //=.
         rewrite dead2//.
       - apply: run_fail => /=.
           rewrite dB//.
@@ -544,29 +533,25 @@ Section s.
     remember 0 as z eqn:Hz.
     remember (Or A' _ _) as o2 eqn:Ho2 => H.
     elim: H s2 A B A' B' Ho1 Ho2 Hz => //=; clear.
-    + move=> s1 s2 A B oB ++ s3 A1 B1 A2 B2 ?? _; subst.
-      move=> /expand_solved_same [[??] +]; subst => /=.
+    + move=> s1 _ A _ + <-<- s3 A1 B1 A2 B2 ? + _; subst => /=.
       case: ifP => [dA1 sB1|dA sA1].
         case nB1: next_alt => [B1'|]//=[??]; subst.
           rewrite next_alt_not_failed//?success_failed//=if_same dA1.
           eexists; right; repeat split; auto.
             rewrite/get_dead dA1 (next_alt_dead nB1)//=.
             apply: run_dead (is_dead_failed dA1) (is_dead_next_alt _ dA1).
-          apply: run_done.
-            apply: succes_is_solved sB1.
+          apply: run_done => //.
           rewrite nB1//.
         eexists; right; rewrite dead2; repeat split; auto.
           rewrite/get_dead dA1 is_dead_dead//.
           apply: run_dead (is_dead_failed dA1) (is_dead_next_alt _ dA1).
-        apply: run_done.
-          apply: succes_is_solved sB1.
+        apply: run_done => //.
         rewrite nB1//.
       case nA1 : next_alt => [A1'|]//=.
         move=>[??]; subst.
         rewrite (next_alt_dead nA1).
         eexists;left; split.
-          apply: run_done.
-            apply: succes_is_solved sA1.
+          apply: run_done => //=.
           rewrite nA1//.
         move=> //.
       case:ifP => dB1/=.
@@ -574,19 +559,16 @@ Section s.
         rewrite is_dead_dead.
         rewrite is_dead_next_alt//.
         eexists; left; split.
-          apply: run_done.
-            apply: succes_is_solved sA1.
+          apply: run_done => //.
           rewrite nA1//.
         by[].
       case nB1: next_alt => //[B1'|][??]; subst; eexists; rewrite is_dead_dead dead2; left.
         split.
-          apply: run_done.
-            apply: succes_is_solved sA1.
+          apply: run_done => //=.
           rewrite nA1//.
         move=> //.
       split.
-        apply: run_done.
-          apply: succes_is_solved sA1.
+        apply: run_done => //.
         rewrite nA1//.
       move=> //.
     + move=> s1 s2 s3 r A B n + HB IH s4 A1 A2 B1 B2 ???; subst => //=.
@@ -875,20 +857,16 @@ Section s.
     remember (And A _ _) as a eqn:Ha.
     remember (And A' _ _) as a' eqn:Ha' => ++H.
     elim: H A B0 B Ha A' B0' B' Ha'; clear => //=.
-    - move=> s1 s2 A B r ++ A1 B01 B1 ? A2 B02 B2 ?; subst.
-      move=> /expand_solved_same => -[[??]]; subst => /= /andP[sA1 sB1].
+    - move=> s1 _ A _ + <-<- A1 B01 B1 ? A2 B02 B2; subst => /=/andP[sA1 sB1].
       rewrite success_is_dead// success_failed//sA1.
       case nB1: next_alt => [B1'|]/=.
         move=> [???] _ nA2; subst.
-        rewrite (next_alt_dead nB1).
-        repeat eexists.
-        apply: run_done.
-          apply: succes_is_solved sB1.
+        rewrite (next_alt_dead nB1); repeat split.
+        apply: run_done sB1 erefl _.
         rewrite nB1//.
       case nA1: next_alt => //=-[???] _ _; subst.
       rewrite is_dead_dead; repeat split.
-      apply: run_done.
-        apply: succes_is_solved sB1.
+      apply: run_done => //.
       rewrite nB1//.
     - move=> s1 s2 s3 r A B n + _ IH A1 B01 B1 ? A2 B02 B2 ?; subst => /= + sA1 nA1.
       rewrite succes_is_solved//=.

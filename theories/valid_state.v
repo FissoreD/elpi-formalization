@@ -612,7 +612,7 @@ Section valid_state.
     valid_state A -> runb u s1 A s2 B b -> (B = dead1 B) + valid_state B.
   Proof.
     move=> + H; elim: H; clear => //=.
-    + move=> s1 s2 A B _ /expand_solved_same[[??]sA] <- vA; subst.
+    + move=> s1 s2 A B sA _ <- vA.
       case X: next_alt => [B'|]/=.
         by rewrite (valid_state_next_alt vA X); auto.
       by rewrite dead2; auto.

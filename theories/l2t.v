@@ -1072,10 +1072,10 @@ Proof.
       have [skA ?]:= is_kill_top_nilC1 vA' fA' H; subst.
       repeat eexists.
       apply: run_fail fA nA _.
-      apply: runb_kill_top; apply: run_done erefl; apply: succes_is_solved skA.
+      by apply: runb_kill_top; apply: run_done => //.
     rewrite -kill_top_s2l_id// in H.
     have [skA ?]:= is_kill_top_nilC1 vA fA H; subst.
-    repeat eexists; apply: runb_kill_top; apply: run_done erefl; apply: succes_is_solved skA.
+    by repeat eexists; apply: runb_kill_top; apply: run_done.
   - move=> s1 s2 a ca r gl ELPI IH s A vA H.
     {
       (* CUT CASE *)

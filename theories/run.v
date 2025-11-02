@@ -525,16 +525,23 @@ Section main.
   Definition build_na A oA := odflt (dead1 A) oA.
   Definition build_s (s:Sigma) (oA: option state) := Option.map (fun _ => s)  oA.
 
+  Fixpoint get_substS s A :=
+    match A with
+    | Top | CutS | CallS _ _ | Bot | OK | Dead => s
+    | Or A s1 B => if is_dead A then get_substS s1 B else get_substS s A
+    | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
+    end.
+
   Inductive runb : Sigma -> state -> option Sigma -> state -> nat -> Type :=
-    | run_done {s1 s2 A B oB}         : expand s1 A = Success     s2 B -> build_na B (next_alt true B) = oB -> runb s1 A (Some s2) oB 0
+    | run_done {s1 s2 A B}         : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> runb s1 A (Some s2) B 0
     | run_cut  {s1 s2 s3 r A B n}    : expand s1 A = CutBrothers s2 B -> runb s1 B s3 r n -> runb s1 A s3 r n.+1
     | run_step {s1 s2 s3 r A B n}    : expand s1 A = Expanded    s2 B -> runb s1 B s3 r n -> runb s1 A s3 r n
-    | run_fail   {s1 s2 B B' r n}     : 
-          failed B -> next_alt false B = Some B' ->
-              runb s1 B' s2 r n -> runb s1 B s2 r n
-    | run_dead {s1 B} : 
-          failed B -> next_alt false B = None ->
-              runb s1 B None (dead1 B) 0.
+    | run_fail   {s1 s2 A B r n}     : 
+          failed A -> next_alt false A = Some B ->
+              runb s1 B s2 r n -> runb s1 A s2 r n
+    | run_dead {s1 A} : 
+          failed A -> next_alt false A = None ->
+              runb s1 A None (dead1 A) 0.
 
   Definition dead_run s1 A : Type := forall B n, runb s1 A None B n.
 
@@ -677,13 +684,6 @@ Section main.
   Lemma is_dead_expanded s {A}: 
     is_dead A -> expandedb s A (Failed A) 0.
   Proof. move=>/is_dead_is_ko/is_ko_expanded//. Qed. *)
-
-  Fixpoint get_substS s A :=
-    match A with
-    | Top | CutS | CallS _ _ | Bot | OK | Dead => s
-    | Or A s1 B => if is_dead A then get_substS s1 B else get_substS s A
-    | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
-    end.
 
   Lemma succes_is_solved s {A}: success A -> expand s A = Success (get_substS s A) A.
   Proof.
@@ -1198,12 +1198,11 @@ Section main.
       runb s A s1 r n -> same_structure_sup A r.
     Proof.
       elim; clear => //.
-      - move=> s1 s2 A B oB /expand_same_structure/=.
-        case X: next_alt => [B'|]/=+?; subst; move: X.
-          move=> /next_alt_same_structure/= H2 H1.
-          apply: same_structure_sup2_trans H1 H2.
-        move=> _ H.
-        apply: same_structure_sup2_trans H same_structure_sup_dead.
+      - move=> s1 s2 A B sA _ <-/=.
+        case X: next_alt => [B'|]/=; subst; move: X.
+          move=> /next_alt_same_structure//.
+        move=> _.
+        apply: same_structure_sup_dead.
       - move=> s1 s2 s3 r A B n /expand_same_structure/= + _.
         apply: same_structure_sup2_trans.
       - move=> s1 s2 s3 r A B n /expand_same_structure/= + _.
@@ -1217,8 +1216,9 @@ Section main.
     Lemma run_dead1 {s1 B s2 r n}:  
       is_dead B -> runb s1 B s2 r n -> (s2 = None /\ r = dead1 B /\ n = 0)%type2.
     Proof.
-      move=> dB H; inversion H; clear H; subst; (try congruence);
+      move=> dB H; inversion H; clear H; subst;
         try rewrite // is_dead_expand//is_dead_dead in H0.
+        by rewrite success_is_dead in dB.
       rewrite is_dead_next_alt// in H1.
     Qed.
 
