@@ -590,6 +590,9 @@ Section kill_top.
       (* THIS IS WRONG! *)
   Abort.
 
+  Lemma dead_kill_top {A}: dead1 (kill_top A) = dead1 A.
+  Proof. elim: A => //=[A HA s B HB|A HA B0 _ B HB]; rewrite fun_if/= HA HB if_same//. Qed.
+
   Lemma runb_kill_top {u s A s2 r n}: runb u s (kill_top A) s2 r n -> runb u s A s2 r n.
   Proof.
     elim: A s s2 r n => //=.
@@ -621,10 +624,13 @@ Section kill_top.
       have:= run_or_correct_left _ HA.
       case: eqP => //.
     - move=> A HA B0 HB0 B HB s r C n.
-      case:ifP => skA H.
+      case:ifP => skA H; have:= runb_same_structure _ H; case: C H => //= A' B0' B' H _.
         have rkA := runb_success1 u s skA.
         have {rkA}HA := HA _ _ _ _ rkA.
-        Search runb And.
+        move: HA.
+        case X: next_alt => [A''|]/=; last first.
+          rewrite dead_kill_top/= => HA.
+          admit.
         admit.
       admit.
   Admitted.
@@ -1103,7 +1109,6 @@ Section next_callS.
         move=> []; last first.
           move=> [? [Hr]].
           by rewrite (failed_next_callS vB fB kB H1) in Hr.
-          (* admit. this should not allowed, i.e. failed (next_callS w ...) should be true *)
         case X: F => [|[sz z]zs].
           move=> [Hm Hn].
           rewrite Hn//clean_ca_cat//.
