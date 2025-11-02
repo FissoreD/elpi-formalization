@@ -380,17 +380,17 @@ Section s.
   Admitted. *)
 
   Lemma runb_none_dead_res {s A B cn} :
-    runb u s A None B cn -> is_dead B.
+    runb u s A None B cn -> dead1 B = B.
   Proof.
     move=> H.
     remember None as n eqn:Hn.
-    by elim: H Hn; clear => // _ B fB; rewrite is_dead_dead.
+    by elim: H Hn; clear => // _ B fB; rewrite dead2.
   Qed.
 
   Lemma run_or_correct_left {s1 A A' s2 b}:
     runb u s1 A s2 A' b ->
         if s2 is None then
-          if b == 0 then (A' = dead1 A' /\ 
+          if b == 0 then (
             forall sX X s3 X' n1, runb u sX X s3 X' n1 ->
             if is_dead A then 
               (runb u s1 (Or A sX X) s3 (Or (get_dead A X') sX X') 0)%type2
@@ -425,20 +425,19 @@ Section s.
         case: ifP => //dA.
         by rewrite is_dead_expand in HA.
       case:eqP => H; subst.
-        move=> [H1] IH sX X.
-        rewrite H1.
+        move=> IH sX X.
         apply: run_step.
           rewrite/= HA; case: ifP => // dA.
           by rewrite is_dead_expand in HA.
         have:= run_or_ko_right1 sX (@is_ko_cutr X) HB.
-        by rewrite H1 is_dead_dead dead2 dead_cutr.
+        rewrite /= -(runb_none_dead_res HB) is_dead_dead dead_cutr//.
       move=> IH sX X.
       apply: run_step.
         rewrite/= HA; case: ifP => // dA.
         by rewrite is_dead_expand in HA.
       have:= run_or_ko_right1 sX (@is_ko_cutr X) HB.
       rewrite cutr2 if_same dead_cutr.
-      rewrite (runb_none_dead_res HB)//.
+      rewrite /= -(runb_none_dead_res HB) is_dead_dead//.
     + move=> s1 s2 s3 r A B n HA _.
       case: s3 => //[s3|].
         move=> + sX X.
@@ -448,20 +447,19 @@ Section s.
         case: ifP => //dA.
         by rewrite is_dead_expand in HA.
       case:eqP => H; subst.
-        move=> [H1] IH; rewrite H1 dead2; split => //.
+        move=> IH.
         move=> sX X s3 X' n1 H.
         rewrite/get_dead/=.
         case: ifP => dA.
           by rewrite is_dead_expand in HA.
         apply: run_step.
           rewrite/= HA dA//.
-        have:= IH _ _ _ _ _ H; rewrite (expand_not_dead _ dA HA).
-        rewrite H1 dead2//.
+        by have:= IH _ _ _ _ _ H; rewrite (expand_not_dead _ dA HA).
       move=> IH sX X.
       apply: run_step.
         rewrite/= HA; case: ifP => // dA.
         by rewrite is_dead_expand in HA.
-      apply: IH.
+      by apply: IH.
     + move=> s1 s2 A B r n fA nA _.
       case: s2 => //[s2|] IH; auto.
         move=> sX X.
@@ -469,8 +467,8 @@ Section s.
         rewrite nA//.
       move: IH.
       case:eqP => //Hn; subst.
-        move=> [->]//; rewrite /get_dead !(next_alt_dead nA) dead2.
-        move=> IH; split => //.
+        rewrite  !(next_alt_dead nA)//.
+        move=> IH.
         move=> sX X s3 X' n1 H.
         apply: run_fail => /=.
           rewrite  !(next_alt_dead nA)//.
@@ -481,7 +479,7 @@ Section s.
         rewrite  !(next_alt_dead nA)//.
         rewrite  !(next_alt_dead nA) nA//.
       apply: IH.
-    + move=> s1 B fB nB/=; rewrite dead2; split => //sX X s3 X' n1 H.
+    + move=> s1 B fB nB/=sX X s3 X' n1 H.
       rewrite /get_dead.
       case: ifP => dB.
         rewrite dB/=.
@@ -782,8 +780,15 @@ Section s.
         by rewrite next_alt_cutl next_alt_cutl_failed// if_same.
   Qed.
 
-  (* Lemma run_and_correct {s0 sn A B0 B r b}:
-    runb u s0 (And A B0 B) sn r b ->
+  (*Lemma run_and_correct {s0 sn A B0 B A' B0' B' b}:
+    runb u s0 (And A B0 B) sn (And A' B0' B') b ->
+    if sn is Some sn then true :> Type
+    else (
+      runb u s0 A None A' b + 
+      (Texists s0', runb u s0 A (Some s0') )
+    
+    ).
+(*     true
     (Texists sm r1 b1, runb u s0 A sm r1 b1 /\
       Texists b2 r2, ((runb u sm B sn r2 b2) + 
         (* TODO: it should not be Texsists sm, but I should provide the right substitution *)
@@ -791,7 +796,7 @@ Section s.
            A succeeds, C fails, the substitution on which we should run C0
            is the one obtained by running B (i.e. next_alt A).
         *)
-        (Texists sm, runb u sm B0 sn r2 b2))).
+        (Texists sm, runb u sm B0 sn r2 b2))). *)
   Proof.
     remember (And _ _ _) as a eqn:Ha => H.
     elim: H A B0 B Ha; clear.

@@ -579,6 +579,16 @@ Section kill_top.
       apply: is_kill_top_nilC (valid_kill_top vA) skA (failedF_kill_top vA fA) is_kill_top_kill_top H.
   Qed.
 
+  Lemma get_substS_kill_top {s A}: get_substS s (kill_top A) = get_substS s A.
+  Proof.
+    elim: A s => //=.
+    - by move=> A HA s B HB s1; case: ifP => dA/=; rewrite?is_dead_kill_top dA//.
+    - move=> A HA B0 _ B HB s; rewrite 2!fun_if/= HA HB if_same.
+      case:ifP => //sA.
+        rewrite success_kill_top// sA//.
+      case: ifP => // skA.
+      (* THIS IS WRONG! *)
+  Abort.
 
   Lemma runb_kill_top {u s A s2 r n}: runb u s (kill_top A) s2 r n -> runb u s A s2 r n.
   Proof.
@@ -598,19 +608,25 @@ Section kill_top.
         rewrite /get_dead is_dead_kill_top dA.
         move=> [kA' [H1 H2]].
         have {H H1 HB}HA := HA _ _ _ _ H1.
-        have [_] := run_or_correct_left _ HA.
+        have := run_or_correct_left _ HA.
         move=> /(_ _ _ _ _ _ H2).
         rewrite dA//.
       move=> [] /HA{}HA.
       case:eqP => Hn1; subst.
         move=> [[n2 rB] [dA' dB']].
-        have [_] := run_or_correct_left _ HA.
+        have := run_or_correct_left _ HA.
         move=>/(_ _ _ _ _ _ rB).
         rewrite dA//.
       move=> [?[dA' Hr]]; subst.
       have:= run_or_correct_left _ HA.
       case: eqP => //.
-    - admit.
+    - move=> A HA B0 HB0 B HB s r C n.
+      case:ifP => skA H.
+        have rkA := runb_success1 u s skA.
+        have {rkA}HA := HA _ _ _ _ rkA.
+        Search runb And.
+        admit.
+      admit.
   Admitted.
 
 End kill_top.
