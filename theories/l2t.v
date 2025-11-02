@@ -598,17 +598,19 @@ Section kill_top.
         rewrite /get_dead is_dead_kill_top dA.
         move=> [kA' [H1 H2]].
         have {H H1 HB}HA := HA _ _ _ _ H1.
-        have := run_or_correct_left _ HA _ _ _ _ _ H2.
-        rewrite dA => -[Hx]//.
+        have [_] := run_or_correct_left _ HA.
+        move=> /(_ _ _ _ _ _ H2).
+        rewrite dA//.
       move=> [] /HA{}HA.
       case:eqP => Hn1; subst.
         move=> [[n2 rB] [dA' dB']].
-        have := run_or_correct_left _ HA _ _ _ _ _ rB.
-        by rewrite dA => -[]//.
+        have [_] := run_or_correct_left _ HA.
+        move=>/(_ _ _ _ _ _ rB).
+        rewrite dA//.
       move=> [?[dA' Hr]]; subst.
       have:= run_or_correct_left _ HA.
-      (* TODO: should be the true branch in run_or_correct_left *)
-      admit.
+      case: eqP => //.
+    - admit.
   Admitted.
 
 End kill_top.

@@ -379,15 +379,28 @@ Section s.
     repeat f_equal.
   Admitted. *)
 
+  Lemma runb_none_dead_res {s A B cn} :
+    runb u s A None B cn -> is_dead B.
+  Proof.
+    move=> H.
+    remember None as n eqn:Hn.
+    by elim: H Hn; clear => // _ B fB; rewrite is_dead_dead.
+  Qed.
+
   Lemma run_or_correct_left {s1 A A' s2 b}:
     runb u s1 A s2 A' b ->
         if s2 is None then
-          if b == 0 then forall sX X s3 X' n1, runb u sX X s3 X' n1 ->
-            if is_dead A then runb u s1 (Or A sX X) s3 (Or (get_dead A X') sX X') 0
+          if b == 0 then (A' = dead1 A' /\ 
+            forall sX X s3 X' n1, runb u sX X s3 X' n1 ->
+            if is_dead A then 
+              (runb u s1 (Or A sX X) s3 (Or (get_dead A X') sX X') 0)%type2
             else
-            (A' = dead1 A' /\ runb u s1 (Or A sX X) s3 (Or A' sX X') 0)%type2
-          else true
-          (* TODO: forall B, runb (A \/ B) returns None, since B is cut! *)
+            (runb u s1 (Or A sX X) s3 (Or A' sX X') 0))%type2
+          else
+            (
+              forall sX X,
+                runb u s1 (Or A sX X) None (Or A' sX (dead1 X)) 0
+            )
         else forall sX X, runb u s1 (Or A sX X) s2 (Or A' sX (build_or_state b A' X)) 0
           .
   Proof.
@@ -411,8 +424,21 @@ Section s.
         rewrite HA.
         case: ifP => //dA.
         by rewrite is_dead_expand in HA.
-      move=> //.
-      (* by move=> H s3 X' n1 H1. *)
+      case:eqP => H; subst.
+        move=> [H1] IH sX X.
+        rewrite H1.
+        apply: run_step.
+          rewrite/= HA; case: ifP => // dA.
+          by rewrite is_dead_expand in HA.
+        have:= run_or_ko_right1 sX (@is_ko_cutr X) HB.
+        by rewrite H1 is_dead_dead dead2 dead_cutr.
+      move=> IH sX X.
+      apply: run_step.
+        rewrite/= HA; case: ifP => // dA.
+        by rewrite is_dead_expand in HA.
+      have:= run_or_ko_right1 sX (@is_ko_cutr X) HB.
+      rewrite cutr2 if_same dead_cutr.
+      rewrite (runb_none_dead_res HB)//.
     + move=> s1 s2 s3 r A B n HA _.
       case: s3 => //[s3|].
         move=> + sX X.
@@ -421,36 +447,46 @@ Section s.
         rewrite HA.
         case: ifP => //dA.
         by rewrite is_dead_expand in HA.
-      case:eqP => //.
-      move=> ? IH s3 X' r' X'' r'' H1; subst.
-      case:ifP => dA; subst.
+      case:eqP => H; subst.
+        move=> [H1] IH; rewrite H1 dead2; split => //.
+        move=> sX X s3 X' n1 H.
+        rewrite/get_dead/=.
+        case: ifP => dA.
+          by rewrite is_dead_expand in HA.
+        apply: run_step.
+          rewrite/= HA dA//.
+        have:= IH _ _ _ _ _ H; rewrite (expand_not_dead _ dA HA).
+        rewrite H1 dead2//.
+      move=> IH sX X.
+      apply: run_step.
+        rewrite/= HA; case: ifP => // dA.
         by rewrite is_dead_expand in HA.
-      have := IH _ _ _ _ _ H1.
-      rewrite (expand_not_dead _ dA HA)/= => -[H2 {}IH]; subst.
-      repeat split => //.
-      apply: run_step IH.
-      rewrite /=HA dA//.
+      apply: IH.
     + move=> s1 s2 A B r n fA nA _.
       case: s2 => //[s2|] IH; auto.
         move=> sX X.
         apply: run_fail; rewrite /=?(next_alt_dead nA)//.
         rewrite nA//.
-      case:eqP => //?; subst.
-      move=> s3 X' r' X'' n' H; subst.
-      have {IH} := IH _ _ _ _ _ H.
-      rewrite/get_dead !(next_alt_dead nA)/=.
-      move=> [H2 H3].
-      repeat split => //.
-      apply: run_fail H3; rewrite /=(next_alt_dead nA)//nA//.
-    + move=> +B.
-      rewrite !eqxx.
-      move=> s1 fB nB sX X s3 X' n1 H.
-      rewrite/get_dead.
-      case:ifP => dB.
+      move: IH.
+      case:eqP => //Hn; subst.
+        move=> [->]//; rewrite /get_dead !(next_alt_dead nA) dead2.
+        move=> IH; split => //.
+        move=> sX X s3 X' n1 H.
+        apply: run_fail => /=.
+          rewrite  !(next_alt_dead nA)//.
+        rewrite !(next_alt_dead nA) nA//.
+        apply: IH H.
+      move=> IH sX X.
+      apply: run_fail => /=.
+        rewrite  !(next_alt_dead nA)//.
+        rewrite  !(next_alt_dead nA) nA//.
+      apply: IH.
+    + move=> s1 B fB nB/=; rewrite dead2; split => //sX X s3 X' n1 H.
+      rewrite /get_dead.
+      case: ifP => dB.
         rewrite dB/=.
         have:= run_ko_left2 s1 (is_dead_is_ko dB) H.
         rewrite/get_dead dB/=//.
-      rewrite dead2; repeat split.
       inversion H; subst; clear H.
       - apply: run_fail => /=.
           rewrite dB//.
