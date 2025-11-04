@@ -13,7 +13,6 @@ Definition build_progr l := {|
     rules := l;
 |}.
 
-(* Section RunAxiom:= Run(UAxioms). *)
 Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
   match t1, t2 with
   | Tm_V X, _ => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t2 else s.(sigma) x) |} | Some t => if t == t2 then Some s else None end
@@ -23,12 +22,9 @@ Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
 
 Definition matchingF (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
 
-(* Definition derefF (s:Sigma) (t1:Tm) : Tm := t1. *)
-
 Definition unif : Unif := {|
   unify := unifyF;
   matching := matchingF;
-  (* deref := derefF; *)
 |}.
 
 Definition r := (IKp 2).
@@ -121,7 +117,6 @@ End Test6.
 
 
 Section Test2.
-  (* Import RunAxiom. *)
   Goal expand unif empty (Or OK empty OK) = Success (Or OK empty OK) . by []. Qed.
 
   Goal runb unif empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) 0.
@@ -145,22 +140,4 @@ Section Test2.
   Proof.
     move=>//=.
   Qed.
-
-  (* Goal forall s s1 p R B, 
-    failed p = false -> failed R = false -> 
-      run s (And (Or OK s1 p) R OK) s B -> 
-        next_alt s B = Some (s1, And (Or Dead s1 p) R R).
-  Proof.
-    move=> s s1 p R B fP fR [b H].
-    inversion H; clear H; subst.
-      inversion H0; subst => //.
-      case: H6 => <-.
-      simpl clean_success.
-      simpl.
-      rewrite (failed_dead fP)fR.
-      case X: next_alt => [[x xs]|].
-      case: ifP => // dP _.
-      rewrite fP fR//.
-    inversion H0; subst => //.
-  Qed. *)
 End Test2.

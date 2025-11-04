@@ -19,7 +19,6 @@ HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
 Inductive state :=
   | Bot : state
   | OK : state
-  (* | Top : state *)
   | Dead : state
   | CallS : program  -> Callable -> state
   | CutS : state
@@ -95,7 +94,7 @@ Section state_op.
 
   Fixpoint failed (A : state) : bool :=
     match A with
-    (* Bot is considered as a failure, so that the next_alt can put it
+    (* Bot is considered as a failure, so that next_alt can put it
         into Dead. This is because, we want expand to transform a Bot
         state into a "Failure Bot" (it does not introduce a Dead state).
     *)
@@ -103,7 +102,7 @@ Section state_op.
     | CutS | CallS _ _ | OK => false
     | And A _ B => failed A || (success A && failed B)
     (* We keep the if condition to have the right behavior in next_alt *)
-    | Or A _ B => if is_dead A then failed B else failed A (*&& failed B*)
+    | Or A _ B => if is_dead A then failed B else failed A
     end.
 
 
@@ -118,7 +117,6 @@ Section state_op.
 
   (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
-    (* if A == dead A then Dead else *)
     match A with
     | CutS | CallS _ _ | Bot => Bot
     | Dead | OK => A
@@ -205,28 +203,9 @@ Section state_op.
     rewrite fun_if/= HA HB !dead_cutr if_same//.
   Qed.
 
-  (* Lemma cutr_dead {A}: cutr A = dead1 A -> dead1 A = A.
-  Proof.
-    elim: A=> //=. [A HA s B HB|A HA B0 HB0 B HB]. []*; rewrite HA// HB//HB0//. Qed. *)
-
-  (* Lemma cutl_dead {A}: cutl A = dead1 A -> A = dead1 A.
-  Proof. 
-    elim: A=> //.
-      move=> A HA s B HB/=.
-      case: ifP => dA[].
-        move=><-/HB<-//.
-      move=> H H1; rewrite -HA//. cutr_dead//.
-    move=> A HA B0 HB0 B HB/=[/HA<-]/HB0<-/HB<-//.
-  Qed. *)
-
   (* IS_DEAD + IS_KO + FAILED + SUCCESS with cutr, cutl, dead1 *)
   Lemma is_dead_dead {A}: is_dead (dead1 A).
   Proof. elim: A => // A HA s B HB/=; rewrite HA//. Qed.
-
-  (* Lemma dead_cutr_is_dead {A}: is_dead (cutr A) = is_dead A.
-  Proof. elim: A => //. ; by move=> A HA s B HB /=; rewrite HA HB. Qed.   *)
-
-
 
   Lemma is_ko_cutr {B}: is_ko (cutr B).
   Proof. elim: B => // A HA s B HB/=; rewrite HA HB//. Qed.
@@ -559,31 +538,6 @@ Section main.
 
   Definition dead_run s1 A : Type := forall B n, runb s1 A None B n.
 
-  (* Definition expandedb s A r := exists b, expandedb s A r b.
-  Definition run s A s1 B := exists b, runb s A s1 B b.
-
-  Definition run_classic s A s1 B := runb s A s1 B false. 
-  Definition expanded_classic s A r := expandedb s A r false.  *)
-
-
-  (* Lemma clean_success_cutr b A : (next_alt b (cutr A)) = None.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB; rewrite /=HA HB if_same//.
-    - move=> A HA B0 _ B HB; rewrite success_cutr//.
-  Qed.
-
-  Lemma clean_success_cutl A : success A -> is_ko (clean_success (cutl A)).
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB/=.
-      case: ifP=> dA/= ss.
-        rewrite dA/= is_dead_is_ko//; auto.
-      rewrite is_dead_cutl dA/= HA// is_ko_cutr//.
-    - move=> A HA B0 _ B HB /andP[sA sB].
-      rewrite success_cut sA/= HA//.
-  Qed. *)
-
   (********************************************************************)
   (* EXPAND PROPERTIES                                                *)
   (********************************************************************)
@@ -899,14 +853,6 @@ Section main.
   Lemma is_dead_next_alt {A} b: is_dead A -> next_alt b A = None.
   Proof. move=>/is_dead_is_ko/is_ko_next_alt//. Qed.
 
-  (* Lemma next_altF_success {A} : success A -> next_alt false A = Some A.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB; case: ifP => [dA sB|dA sA]; rewrite?(HB sB)//HA//.
-    - move=> A HA B0 _ B HB /andP[sA sB]; rewrite HA//HB//sA.
-      rewrite success_is_dead// success_failed//.
-  Qed. *)
-
   Lemma next_alt_dead {A D b}: 
     next_alt b A = Some (D) -> ((is_dead A = false) * (is_dead D = false))%type.
   Proof.
@@ -962,35 +908,8 @@ Section main.
       have:= HB0 false; by case Y: next_alt => //=[B0'] ->->; rewrite andbF.
   Qed.
 
-  (* Lemma expandedb_big_or_not_done {s p s1 t res b}:
-    expandedb s (big_or p s1 t) res b -> is_done res = false.
-  Proof.
-    rewrite /big_or; case f: F => [|[s2 r] rs].
-      inversion 1; subst => //.
-    inversion 1; subst => //.
-  Qed. *)
-
   Lemma failed_big_or p s t: failed (big_or p s t).
   Proof. rewrite/big_or; case: F => //-[]//. Qed.
-
-  (* Lemma expandedb_failed {s1 A B b1}: expandedb s1 A (Failed B) b1 -> failed B.
-  Proof.
-    remember (Failed B) as fB eqn:HfB => H.
-    elim: H B HfB => //; clear.
-    move=> s1 A B H C []<-.
-    have []:= expand_failed_same H => //.
-  Qed. *)
-
-  (* Lemma failed_expandedb {B} s1: failed B -> expandedb s1 B (Failed B) 0.
-  Proof.
-    elim: B s1 b => //=; try by move=>*; constructor.
-    - move=> A HA s B HB s1 b; case: ifP => [dA fB|dA fA];
-      apply: expanded_fail; rewrite /=dA failed_expand//.
-    - move=> A HA B0 _ B HB s1 b /orPT [fA|/andP[sA fB]].
-        apply: expanded_fail; rewrite /=failed_expand//.
-      apply: expanded_fail; rewrite /=succes_is_solved//=failed_expand//.
-  Qed. *)
-
 
   Section same_structure.
 

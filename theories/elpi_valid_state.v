@@ -10,7 +10,7 @@ Section NurValidState.
   Variable u : Unif.
 
 
-  (* Give a list, 
+  (* Given a list, 
      I have two cuts in 2 different disjuncts: [.... !1 .....] Y0 ... Yn [.... !2 ....] X0 X1 ... Xn
      The second cut points to a suffix Xn, it means that
      - the first cut cannot point to X0 X1 ... X(n-1), beacause:
@@ -53,7 +53,7 @@ Section NurValidState.
   Proof. move=> //. Qed.
 
   (********************************************************************)
-  (* VALID CA PROPERTOES                                              *)
+  (* VALID CA PROPERTIES                                              *)
   (********************************************************************)
 
   Lemma valid_ca_nil: valid_ca nilC.

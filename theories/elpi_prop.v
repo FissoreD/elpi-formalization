@@ -168,13 +168,6 @@ Section NurProp.
     case: x H1 => //=-[]//.
   Qed.
 
-  (* Fixpoint get_substS s A :=
-    match A with
-    | Top | Goal _ _ | Bot | OK | Dead => s
-    | Or A s1 B => if is_dead A then get_substS s1 B else get_substS s A
-    | And A _ B => get_substS (get_substS s A) B
-    end. *)
-
   Lemma base_or_aux_next_alt_state_to_list {A B s bt}: 
     base_or_aux A -> next_alt false A = Some B -> state_to_list A s bt = state_to_list B s bt.
   Proof.

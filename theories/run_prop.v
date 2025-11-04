@@ -5,16 +5,6 @@ From det Require Import zify_ssreflect.
 Section RunP.
   Variable u: Unif.
 
-  (* Lemma ges_subst_cutr {s A} : get_substS s (cutr A) = get_substS s A.
-  Proof.
-    elim: A s => //=.
-    - move=> A HA s B HB s1; rewrite is_dead_cutr HA HB//.
-    - move=> A HA B0 _ B HB s; rewrite success_cutr HA; case: ifP => //.
-        rewrite success_cut sA/=HA//.
-      rewrite success_cutr.
-        rewrite success_cut => sA; rewrite sA HA//.
-  Qed. *)
-
   Lemma ges_subst_cutl {s A} : 
     success A -> get_substS s (cutl A) = get_substS s A.
   Proof.

@@ -101,14 +101,15 @@ Section check.
     - move=> A HA B0 _ B HB dA; rewrite HA//.
   Qed.
 
-  (* a free alternative can be reached without encountering a cutr following SLD 
-  
-    "((A, !, A') ; B) , C" is OK since B is not free
+  (* a tree is deterministic if it call deterministic atoms. 
+    delicate cases are And and Or subtrees.
+
+    "((A, !, A') ; B) , C" is OK due to the cut in LHS of Or
     "((A, A') ; B) , !, C" is OK because any alt from first conjunct dies
     "((A, A') ; B) , C" is OK if B is dead already (cutr by predecessor of A for example)
   
   *)
-  Fixpoint no_free_alt (sP:sigT) A :=
+  Fixpoint det_tree (sP:sigT) A :=
     match A with
     | CutS => true
     | CallS _ a => tm_is_det sP a
@@ -116,21 +117,21 @@ Section check.
     | Dead => true
     | And A B0 B =>
       (is_ko A) || 
-        [&& (has_cut B0 && has_cut B) || no_free_alt sP A, 
-          no_free_alt sP B & no_free_alt sP B0]
+        [&& (has_cut B0 && has_cut B) || det_tree sP A, 
+          det_tree sP B & det_tree sP B0]
     | Or A _ B =>
-        no_free_alt sP A && 
-          if has_cut A then no_free_alt sP B else (B == cutr B) (* TODO: should be is_ko *)
+        det_tree sP A && 
+          if has_cut A then det_tree sP B else (B == cutr B)
     end.
 
-  Lemma no_alt_cut {sP A}: no_free_alt sP (cutr A).
+  Lemma no_alt_cut {sP A}: det_tree sP (cutr A).
   Proof.
     elim: A => //.
     + by move=> A HA s B HB /=; rewrite HA HB cutr2 eqxx if_same.
     + move=> A HA B0 HB0 B HB /=; rewrite is_ko_cutr//.
   Qed.
 
-  Lemma no_alt_dead {sP A}: is_dead A -> no_free_alt sP A.
+  Lemma no_alt_dead {sP A}: is_dead A -> det_tree sP A.
   Proof.
     elim: A => //.
     + move=> A HA s B HB /=/andP[dA]; rewrite HA// has_cut_dead//.
@@ -149,7 +150,7 @@ Section check.
     move=>/andP[cB0] /HB->; rewrite orbT//.
   Qed.
 
-  Lemma all_det_nfa_big_and {p sP l}: all (check_atom sP) l -> no_free_alt sP (big_and p l).
+  Lemma all_det_nfa_big_and {p sP l}: all (check_atom sP) l -> det_tree sP (big_and p l).
   Proof.
     elim: l => //= a l IH/andP[] H1 H2.
     case: a IH H1 => //= [|t] IH H1; rewrite ?H1 IH//=orbT//.
@@ -160,7 +161,7 @@ Section check.
   Proof. by elim: l => //= -[]//= _ l H/H->. Qed.
 
   Lemma cut_followed_by_det_nfa_and {sP p bo} :
-    check_atoms sP bo -> no_free_alt sP (big_and p bo).
+    check_atoms sP bo -> det_tree sP (big_and p bo).
   Proof.
     elim: bo => //=.
     move=> [|t] /= l IH.
@@ -168,7 +169,7 @@ Section check.
     by move=> H; rewrite IH//!andbT andbb (cut_followed_by_det_has_cut H).
   Qed.
 
-  Lemma no_free_alt_cutl {sP A}: no_free_alt sP (cutl A).
+  Lemma no_free_alt_cutl {sP A}: det_tree sP (cutl A).
   Proof.
     elim: A => //.
       move=> A HA s B HB/=.
@@ -214,7 +215,7 @@ Section check.
 
   Lemma is_det_no_free_alt {sP t s1} {p:program}:
     check_rules sP p.(rules) -> tm_is_det sP t -> 
-      no_free_alt sP (big_or u p s1 t).
+      det_tree sP (big_or u p s1 t).
   Proof.
     rewrite /big_or/F.
     case X: tm2RC => //=[q].
@@ -227,7 +228,6 @@ Section check.
       apply: IH X H1' H2.
     clear IH.
     move: H.
-    (* set t' := deref s t. *)
     move: H1 => /orP[]; last first.
       move=> + _.
       elim: rules H1' bo => //=.
@@ -267,9 +267,9 @@ Section check.
   Qed.
 
   Lemma expand_no_free_alt {sP s1 A r} : 
-    check_program sP -> no_free_alt sP A -> 
+    check_program sP -> det_tree sP A -> 
       expand u s1 A = r ->
-        no_free_alt sP (get_state r).
+        det_tree sP (get_state r).
   Proof.
     move=> H + <-; clear r.
     elim: A s1 => //.
@@ -308,7 +308,7 @@ Section check.
       rewrite !no_free_alt_cutl no_alt_cut H2 !orbT//.
   Qed.
 
-  Goal forall sP s, no_free_alt sP (Or OK s OK) == false.
+  Goal forall sP s, det_tree sP (Or OK s OK) == false.
   Proof. move=> ?? //=. Qed.
 
   Lemma has_cut_success {A}:
@@ -333,7 +333,7 @@ Section check.
   Qed.
 
   Lemma expand_next_alt {sP A} : 
-    check_program sP -> no_free_alt sP A -> success A ->
+    check_program sP -> det_tree sP A -> success A ->
       next_alt true A = None.
   Proof.
     move=> H; elim: A => //=.
@@ -355,7 +355,7 @@ Section check.
   Qed.
 
   Lemma build_na_is_dead {sP A}:
-    check_program sP -> no_free_alt sP A -> success A ->
+    check_program sP -> det_tree sP A -> success A ->
       (build_na A (next_alt true A)) = dead1 A.
   Proof. move=> H1 H2 H3; by rewrite (expand_next_alt H1)//=. Qed.
 
@@ -403,7 +403,7 @@ Section check.
   Qed.
 
   Lemma no_free_alt_next_alt {sP A B b}:
-    no_free_alt sP A -> next_alt b A = Some B -> no_free_alt sP B.
+    det_tree sP A -> next_alt b A = Some B -> det_tree sP B.
   Proof.
     elim: A B b => //=.
     - move=> /= B b _; case: ifP => // _[<-]//.
@@ -466,32 +466,16 @@ Section check.
 
   Lemma expand_next_alt_failed {sP A B C s b}:
     check_program sP ->
-      no_free_alt sP A -> expand u s A = Failure B ->
-        next_alt b B = Some (C) -> no_free_alt sP C.
+      det_tree sP A -> expand u s A = Failure B ->
+        next_alt b B = Some (C) -> det_tree sP C.
   Proof.
     move=> H1 H2 H3 H4.
     have /= H5 := expand_no_free_alt H1 H2 H3.
     by have:= no_free_alt_next_alt H5 H4.
   Qed.
 
-  (* Lemma expandedb_next_alt_failed {sP s A B C b b1}: 
-    check_program sP ->
-      no_free_alt sP A ->
-        expandedb u s A (Failed B) b1 -> 
-          next_alt b B = Some (C) -> no_free_alt sP C.
-  Proof.
-    remember (Failed _) as f eqn:Hf => Hz + H.
-    elim: H b B C Hf => //; clear -Hz.
-    - move=> s A B HA b ? C [<-] fA nB.
-      apply: expand_next_alt_failed Hz fA HA nB.
-    - move=> s s' r A B b' HA HB IH b C D ? fA nB; subst.
-      apply: IH erefl (expand_no_free_alt Hz fA HA) nB.
-    - move=> s s' r A B b' HA HB IH b C D ? fA nB; subst.
-      apply: IH erefl (expand_no_free_alt Hz fA HA) nB.
-  Qed. *)
-
   Lemma no_free_alt_dead {sP A}:
-    is_dead A -> no_free_alt sP A.
+    is_dead A -> det_tree sP A.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB /andP[dA dB]; by rewrite has_cut_dead//HA//HB.
@@ -503,7 +487,7 @@ Section check.
 
   Lemma runb_next_alt {sP A}: 
     check_program sP -> 
-      no_free_alt sP A -> is_det A.
+      det_tree sP A -> is_det A.
   Proof.
     rewrite/is_det.
     move=> H1 H2 b s s' B H3.

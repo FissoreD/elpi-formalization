@@ -19,9 +19,6 @@ Section aux.
     @flatten R [seq [::] | _ <- l] = [::].
   Proof. elim: l => //. Qed.
 
-  (* Lemma cats20 {T: Type} {X Y : list T}: X ++ Y = [::] -> X = [::] /\ Y = [::].
-  Proof. by destruct X. Qed. *)
-
   Lemma size_list {T : Type} {l1 l2: list T}: l1 = l2 -> size l1 = size l2.
   Proof. move=>->//. Qed.
 
@@ -711,12 +708,6 @@ Definition add_ca alts a :=
   | call pr t => call pr t
   end.
 
-(* Definition add_ca_deep_g F bt g := apply_cut (fun x => F x ++ bt) g.
-Definition add_ca_deep_goals F bt gl := map (add_ca_deep_g F bt) gl.
-Fixpoint add_ca_deep bt a := 
-  map (fun '(s, gs) => (s, add_ca_deep_goals (add_ca_deep bt) bt gs)) a.
- *)
-
 Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
   match ats with
   | no_alt => nilC
@@ -854,7 +845,6 @@ Definition kill (A: goals) := map (apply_cut (fun x => nilC)) A.
 Fixpoint state_to_list (A: state) s (bt : alts) : alts :=
 match A with
 | OK => (s, nilC) ::: nilC
-(* | Top => (s, nilC) ::: nilC *)
 | Bot => nilC
 | Dead => nilC
 | CutS => (s, ((cut nilC) ::: nilC)) ::: nilC
@@ -905,10 +895,6 @@ Section test.
   Variable sx : Sigma.
   Variable p1 : program.
   Definition g := (And (Or OK s1 CutS) CutS OK).
-  (* Goal next_alt g = Some (And (Or Dead s1 CutS) CutS CutS).
-  Proof. rewrite/g. move => //=. Qed. *)
-  (* Goal clean_success g = And (Or OK s1 CutS) CutS Bot.
-  Proof. move => //=. Qed. *)
 
   Goal valid_state ((And (Or OK s1 CutS) CutS Bot)).
   Proof. move=> //=. Abort.

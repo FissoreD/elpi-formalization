@@ -132,10 +132,6 @@ Inductive nur' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Prop :=
 | FailE' p s s1 s2 t gl a al r : 
   F u p t s = [::] -> nur' s1 a al s2 r -> nur' s ((call' p t) ::: gl) ((s1, a) ::: al) s2 r.
 
-Lemma listP' {l x xs} : erase_goals' l = x ::: xs ->
-  exists y ys, erase_goals' l = (erase_G' y) ::: (erase_goals' ys).
-Admitted.
-
 Fixpoint decorate_G (g : G) : G' :=
   match g with
   | call p c => call' p c
