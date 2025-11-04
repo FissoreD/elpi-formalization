@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
-From det Require Import tree.
+From det Require Import tree tree_prop.
 
 Section valid_tree.
   Variable u : Unif.
