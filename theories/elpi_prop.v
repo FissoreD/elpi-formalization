@@ -327,7 +327,7 @@ Section NurProp.
 
   Lemma expand_state_to_list_cons {s A r}:
     valid_state A -> expand u s A = r -> ~ (is_fail r) -> state_to_list_cons A.
-  Proof. case: r => //[B|B|s1 B]vA H _; apply: failed_state_to_list vA (expand_not_failed _ H notF). Qed.
+  Proof. case: r => //[B|B|B]vA H/=; try (move=> _; apply: failed_state_to_list vA (expand_not_failed _ H notF)). Qed.
 
   Lemma bbOr_next_alt_none {s1 B l b}:
     bbOr B -> next_alt b B = None -> state_to_list B s1 l = nilC.
@@ -365,7 +365,7 @@ Section NurProp.
         move=> /base_or_aux_ko_state_to_list->//.
       move=> H; rewrite (next_alt_aux_base_or_none H nB')//.
     - move=> A HA B0 _ B HB s2 s3 C l b/=/and5P[oA vA aB].
-      case eA: expand => //[A'|s' A'].
+      case eA: expand => //[A'|A'].
         have [? fA]:= expand_failed_same _ eA; subst.
         rewrite (failed_success _ fA) fA/==>/eqP->bB[<-]/=.
         rewrite (expand_not_dead _ (valid_state_dead1 vA) eA) fA.
@@ -376,7 +376,7 @@ Section NurProp.
             by rewrite (base_and_ko_state_to_list bB)//=.
           by rewrite next_alt_aux_base_and//.
         by rewrite (HA _ _ _ _ _ vA eA nA)//.
-      have [[??]sA]:= expand_solved_same _ eA; subst.
+      have [? sA]:= expand_solved_same _ eA; subst.
       rewrite sA => vB bB0.
       case eB: expand => //[B'][<-]/=.
       rewrite success_is_dead//success_failed//sA.
@@ -407,10 +407,10 @@ Section NurProp.
       case eA: expand => //[A'][<-]/=.
       have ->// := HA _ _ _ _ eA.
     - move=> A HA B0 _ B HB s sx C l/=.
-      case eA: expand => //[A'|s1 A'].
+      case eA: expand => //[A'|A'].
         have [? H] := expand_failed_same _ eA; subst.
         move=> [<-]//=.
-      have [[??]sA] := (expand_solved_same _ eA); subst.
+      have [? sA] := (expand_solved_same _ eA); subst.
       case eB: expand => //[B'][<-]/=.
       case: state_to_list => //= -[s2 x] xs.
       case: state_to_list => //=.

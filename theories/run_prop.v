@@ -47,7 +47,7 @@ Section RunP.
         by have:= HA _ _ X.
       by have:= expand_cutl_cb X.
     - move=> A HA B0 _ B HB s1 C.
-      case e: expand => //[A'|s1' A'].
+      case e: expand => //[A'|A'].
         by have:= HA _ _ e.
       case f: expand => //[B'].
       by have:= HB _ _ f.

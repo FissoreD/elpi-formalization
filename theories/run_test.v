@@ -133,7 +133,7 @@ End Test6.
 
 Section Test2.
   (* Import RunAxiom. *)
-  Goal expand unif empty (Or OK empty OK) = Success empty (Or OK empty OK) . by []. Qed.
+  Goal expand unif empty (Or OK empty OK) = Success (Or OK empty OK) . by []. Qed.
 
   Goal runb unif empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) 0.
     apply: run_step => //=.

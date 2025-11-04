@@ -178,7 +178,7 @@ Section NurEqiv.
       rewrite (state_to_list_dead is_dead_dead)/=.
       rewrite (base_or_aux_next_alt_some bB nB)//.
     - move=> A HA B0 _ B HB s C/= s3 D l /and5P[oA vA aB].
-      case eA: expand => //[A'|s1 A'].
+      case eA: expand => //[A'|A'].
         have [? fA] := expand_failed_same _ eA; subst.
         rewrite (expand_not_solved_not_success _ eA notF) fA/=.
         move=> /eqP-> bB[<-]/=.
@@ -193,7 +193,7 @@ Section NurEqiv.
         have:= next_alt_aux_base_and false bB.
         rewrite nB => -[?]; subst.
         rewrite (HA _ _ _ _ _ vA eA nA')//.
-      have [[??]sA] := (expand_solved_same _ eA); subst.
+      have [? sA] := (expand_solved_same _ eA); subst.
       rewrite sA/= => vB bB0.
       rewrite (success_state_to_list s3 vA sA)/=.
       case eB: expand => //[B'][<-]/=; clear C.
@@ -447,12 +447,12 @@ Section NurEqiv.
     - move=> A HA s B HB C s1.
       case: ifP => //[dA fB|dA fA]; case e: expand => //.
     - move=> A HA B0 _ B HB C s1 /and5P[_ vA _].
-      case e: expand => //[A'|s1' A'].
+      case e: expand => //[A'|A'].
         rewrite (expand_not_solved_not_success _ e)//(expand_not_failed _ e)//=.
         move=>/eqP->bB [<-]/=.
         rewrite (base_and_failed bB) andbF.
         rewrite (HA _ _ vA e)//(expand_not_failed e)//.
-      have [[??]sA] := expand_solved_same _ e; subst.
+      have [? sA] := expand_solved_same _ e; subst.
       rewrite sA success_failed//=.
       case e1: expand => //[B'] vB bB0 [<-]/=.
       move: sA; rewrite -success_cut.
@@ -478,11 +478,11 @@ Section NurEqiv.
     - move=> B s1 _ [<-]//.
     - move=> A HA s B HB C s1;  case: ifP => dA; case: expand => //.
     - move=> A HA B0 _ B HB C s1 /and5P[_ vA _].
-      case e: expand => //[A'|s' A'].
+      case e: expand => //[A'|A'].
         rewrite (expand_not_solved_not_success _ e)//=(expand_not_failed _ e)//=.
         move=>/eqP-> bB [<-]/=; rewrite (get_substS_base_and bB)// if_same.
         rewrite !(HA _ _ vA e)//.
-      have [[??]sA] := expand_solved_same _ e; subst.
+      have [? sA] := expand_solved_same _ e; subst.
       rewrite sA/= => vB bB.
       case e1: expand => //=[B'][<-]/=; rewrite success_cut sA ges_subst_cutl.
       rewrite !(HB _ _ vB e1)//.
@@ -501,7 +501,7 @@ Section NurEqiv.
     - move=> A HA s B HB sA s1 C l1 /=.
       by case: ifP => [dA vB|dA/andP[vA bB]]; case eB: expand => //[s1' B'][??]; subst.
     - move=> A HA B0 _ B HB sA s1 C l1/=/and5P[oA vA aB].
-      case eA: expand => //[A'|s3 A'].
+      case eA: expand => //[A'|A'].
         rewrite (expand_not_solved_not_success _ eA notF)/=(expand_not_failed _ eA notF).
         move=>/eqP->bB [<-]/=.
         have [y  H1] /=:= base_and_state_to_list bB.
@@ -513,7 +513,7 @@ Section NurEqiv.
           rewrite (get_substS_base_and bB)// if_same//.
         - rewrite !empty_caG_add_deepG///empty_caG all_cat.
           apply/andP; split => //; apply:H6.
-      have [[??]sAx] := expand_solved_same _ eA; subst.
+      have [? sAx] := expand_solved_same _ eA; subst.
       rewrite sAx/==> vB bB0.
       case eB: expand => //[B'] [<-]/=.
       rewrite (success_state_to_list empty (valid_state_expand _ vA eA) sAx)/=.
@@ -563,7 +563,7 @@ Section NurEqiv.
       have [x[tl[H1 H2]]]:= s2l_CutBrothers s1 ((state_to_list B s nilC)) vA eA.
       by rewrite H1//=.
     - move=> A HA B0 _ B HB C s1 s4 l1 ws/=/and5P[oA vA aB].
-      case eA: expand => //[A'|s1' A'].
+      case eA: expand => //[A'|A'].
         rewrite (expand_not_solved_not_success _ eA notF)(expand_not_failed _ eA notF)/=.
         move=> /eqP->bB.
         have [hd H]:= base_and_state_to_list bB; rewrite H.
@@ -574,7 +574,7 @@ Section NurEqiv.
         rewrite !HA/=H/=!HA/=H base_and_failed//andbF//.
         repeat split.
         move=> x; rewrite (get_substS_base_and bB) if_same//.
-      have [[??] sA] := expand_solved_same _ eA; subst.
+      have [? sA] := expand_solved_same _ eA; subst.
       case eB: expand => //[B']; rewrite sA/= => vB bB0.
       move=>+[<-]/=; subst.
       rewrite (success_state_to_list empty)//=.
@@ -616,7 +616,7 @@ Section NurEqiv.
         move=>+[????]; subst.
         move=> /(_ _ IsList_alts _ _ _ _ s0); rewrite-/SB SB'.
         move=> -/(_ _ _ _ _ _ erefl) HH.
-        case E: expand => [A'|A'|A'|s' A']/=; 
+        case E: expand => [A'|A'|A'|A']/=; 
         rewrite size_add_ca_deep size_cat -/SB?SB'?size_cons; try by lia.
         case: size => //.
         have [?[?[]]]:= s2l_CutBrothers s1 SB vA E.
@@ -625,7 +625,7 @@ Section NurEqiv.
       move=>[???]; subst.
       move: SA; fConsG (cut ca') gs; fConsA (s2, (cut ca') ::: gs) tl' => SA.
       have:= HA _ SB _ _ _ _ _ vA SA.
-      case e: expand => [A'|A'|A'|s' A']/=; 
+      case e: expand => [A'|A'|A'|A']/=; 
       rewrite size_add_ca_deep size_cat -/SB ?SB'; case X: size => //[n].
       set Y:= state_to_list (cutr B) _ _.
       rewrite (s2l_size s1 SB) X//.
@@ -672,7 +672,7 @@ Section NurEqiv.
         move=> Hx.
         rewrite make_lB01_empty2.
         move=>[??]; subst.
-        case e: expand => [A'|A'|A'|s' A']/=.
+        case e: expand => [A'|A'|A'|A']/=.
         - have H1 := (s2l_Expanded_nil vA Hx e).
           have {H1} := f_equal size ((H1.1).1).2.
           move=>/(_ _ IsList_alts).
@@ -685,12 +685,12 @@ Section NurEqiv.
           move=>/(_ _ IsList_alts).
           rewrite (s2l_size s1 l1).
           by case: state_to_list => //=[[? x] xs]; rewrite H !size_cat !size_map H//.
-        - have [[??]]:= (expand_solved_same _ e); congruence.
+        - have [??]:= (expand_solved_same _ e); congruence.
       move=> []//ca1 l2 SA []???; subst.
       have:= HA _ l1 _ _ _ _ _ vA SA.
-      case e: expand => [A'|A'|A'|s' A']/=; last first;
+      case e: expand => [A'|A'|A'|A']/=; last first;
         [|by (case SA': state_to_list => //=[[? x] xs]; rewrite H !size_cat !size_map size_add_deep H//)..].
-      have [[??]]:= expand_solved_same _ e; congruence.
+      have [??]:= expand_solved_same _ e; congruence.
   Qed.
 
   Lemma s2l_Expanded_cut {A B s0 s3 ca x tl l1}:
@@ -734,7 +734,7 @@ Section NurEqiv.
       rewrite (expand_cb_same_subst1 _ eA)//; repeat split.
       by right; rewrite cat_cons//.
     - move=> /= A HA B0 _ B HB s1 C s4 ca x tl l1 /and5P[_ vA _].
-      case eA: expand => //[A'|s0' A']/=.
+      case eA: expand => //[A'|A']/=.
         rewrite (expand_not_solved_not_success _ eA notF)/=(expand_not_failed _ eA notF).
         move=>/eqP->bB[<-]/=.
         case SA : state_to_list => //[[s5 w] ws].
@@ -764,7 +764,7 @@ Section NurEqiv.
         move=>[??]; subst.
         rewrite size_cat addnK drop_size_cat//add_deep_cat take_size_cat//?size_add_deep//.
         by rewrite  SB/=.
-      have [[??]sA]:= expand_solved_same _ eA; subst.
+      have [? sA]:= expand_solved_same _ eA; subst.
       rewrite sA => /= vB bB.
       case eB: expand => //[B']/=[<-]//=; subst.
       rewrite (success_state_to_list empty vA)//=.
@@ -847,7 +847,7 @@ Section NurEqiv.
       rewrite save_alt_add_ca_deepA//.
       apply: empty_ca_atoms1.
     - move=> A HA B0 _ B HB C s1 s3 l p t gs xs /and5P[_ vA _].
-      case e: expand => //[A'|s1' A'].
+      case e: expand => //[A'|A'].
         have /=fA := expand_not_failed _ e notF.
         rewrite (expand_not_solved_not_success _ e)//fA/=.
         move=>/eqP->bB [<-]/=; subst.
@@ -879,7 +879,7 @@ Section NurEqiv.
         rewrite -!cat_cons; f_equal.
         rewrite add_deep_goalsP//?empty_ca_atoms//.
         rewrite add_deep_altsP//?empty_ca_atoms1//.
-      have [[??]sA] := expand_solved_same _ e; subst.
+      have [? sA] := expand_solved_same _ e; subst.
       rewrite sA success_failed//= => vB bB.
       case e1: expand => //[B'][<-]/=; subst.
       rewrite (success_failed _ sA)/=sA/=.
