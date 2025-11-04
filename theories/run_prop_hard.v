@@ -46,17 +46,17 @@ Section s.
     move=> H; elim: H s2 C n2; clear.
     + move=> s1 _ A _ sA <-<- s3 C n2 H; subst.
       by apply: runb_success sA H.
-    + move=> s1 s2 s3 r A B n1 HA HB IH s4 r' n2 H.
+    + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
       - by rewrite succes_is_solved in HA.
-      - move: H0; rewrite HA => -[??]; subst.
+      - move: H0; rewrite HA => -[?]; subst.
         by rewrite !(IH _ _ _ H1).
       - by rewrite failed_expand in HA.
       - by rewrite failed_expand in HA.
-    + move=> s1 s2 s3 r A B n1 HA HB IH s4 r' n2 H.
+    + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
       - by rewrite succes_is_solved in HA.
-      - move: H0; rewrite HA => -[??]; subst; by rewrite !(IH _ _ _ H1)//.
+      - move: H0; rewrite HA => -[?]; subst; by rewrite !(IH _ _ _ H1)//.
       - by rewrite failed_expand in HA.
       - by rewrite failed_expand in HA.
     + move=> s1 s2 A B r n1 fA nB rB IH s3 C n2 H.
@@ -92,12 +92,12 @@ Section s.
   Proof.
     remember (Or _ _ _) as o eqn:Ho => H.
     elim: H A s B Ho; clear => //.
-    - move=> s1 s2 s3 r A B n + _ _ C s D ?; subst => /=.
+    - move=> s1 s2 r A B n + _ _ C s D ?; subst => /=.
       by case: ifP; case: expand => //.
-    - move=> s1 s2 s3 r A B n + HB IH C s D ?; subst => /=.
+    - move=> s1 s2 r A B n + HB IH C s D ?; subst => /=.
       case: ifP => dC.
-        case X: expand => //[s' D'|s' D'][??]; subst; by apply: IH.
-      case Y: expand=> //[s1' C'|s1' C'][??]; subst; by apply: IH.
+        case X: expand => //[D'|D'][?]; subst; by apply: IH.
+      case Y: expand=> //[C'|C'][?]; subst; by apply: IH.
     - move=> s1 s2 A B r n _ + H IH C s3 D ?; subst => /=.
       case: ifP => //= _.
         case: next_alt => //= ? [/esym]; apply IH.
@@ -159,12 +159,12 @@ Section s.
       repeat eexists.
       apply: run_done sB1 erefl _.
       rewrite X => //.
-    - move=> s1 s2 s3 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
+    - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
       case: ifP => dC; case X: expand => //.
-    - move=> s1 s2 s3 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
+    - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
       rewrite (is_ko_expand _ kA1)//.
       case: ifP => dC//.
-      case X: expand => //[s4' D'|s4' D'][??]; subst;
+      case X: expand => //[D'|D'][?]; subst;
       have {IH} [b[H1 ?]] := IH _ _ _ _ _ erefl erefl kA1; subst; rewrite dC/=;
       repeat eexists.
         apply:run_step X H1.
@@ -221,7 +221,7 @@ Section s.
         rewrite /= is_dead_dead//.
         rewrite/= is_dead_dead//.
       by rewrite /=is_dead_dead//; case: next_alt => //=; rewrite dead2//.
-    + move=> s1 s2 s3 r A B n HA HB IH sIgn X kX.
+    + move=> s1 s2 r A B n HA HB IH sIgn X kX.
       case dX: (is_dead X) => /=.
         have {}IH := IH sIgn _ kX.
         rewrite dX in IH.
@@ -236,7 +236,7 @@ Section s.
       apply: run_step IH.
       rewrite /=is_dead_dead HA//.
     (* TODO: the following case is same as previous... *)
-    + move=> s1 s2 s3 r A B n HA HB IH sIgn X kX.
+    + move=> s1 s2 r A B n HA HB IH sIgn X kX.
       case dX: (is_dead X) => /=.
         have {}IH := IH sIgn _ kX.
         rewrite dX in IH.
@@ -277,12 +277,12 @@ Section s.
       case W: next_alt => //=[A'|].
         rewrite (next_alt_dead W)//.
       rewrite is_dead_dead//.
-    + move=> s1 s2 s3 r A B n HA HB IH sIgn X kX.
+    + move=> s1 s2 r A B n HA HB IH sIgn X kX.
       apply: run_step.
         by rewrite/= HA; case: ifP => //dA; rewrite is_dead_expand in HA.
       have:= IH sIgn (cutr X) is_ko_cutr.
       rewrite cutr2 if_same dead_cutr//.
-    + move=> s1 s2 s3 r A B n HA HB IH sIgn X kX.
+    + move=> s1 s2 r A B n HA HB IH sIgn X kX.
       apply: run_step.
         by rewrite/= HA; case: ifP => //dA; rewrite is_dead_expand in HA.
       apply: IH => //.
@@ -318,12 +318,12 @@ Section s.
       apply: run_done sB1 erefl _.
         rewrite X//.
       rewrite is_dead_dead//.
-    - move=> s1 s2 s3 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
+    - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
       case: ifP => dC; case X: expand => //.
-    - move=> s1 s2 s3 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
+    - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
       rewrite (is_ko_expand _ kA1)//=.
       case: ifP => dC//.
-      case X: expand => //[s4' D'|s4' D'][??]; subst;
+      case X: expand => //[D'|D'][?]; subst;
       have := IH _ _ _ _ erefl erefl.
         move=> /(_ kA1) [b [{}IH ?]]; subst.
         repeat eexists.
@@ -408,8 +408,8 @@ Section s.
       case: ifP => dX.
         by rewrite is_dead_next_alt//.
       by case X: next_alt => //.
-    + move=> s1 s2 s3 r A B n HA HB.
-      case: s3 HB => [s3|] HB/=.
+    + move=> s1 s2 r A B n HA HB.
+      case: s2 HB => //= [s2|] HB/=.
         move=> + sX X.
         move=> /(_ sX (cutr X)); rewrite next_alt_cutr cutr2 if_same dead_cutr.
         apply: run_step => /=.
@@ -430,7 +430,7 @@ Section s.
       have:= run_or_ko_right1 sX (@is_ko_cutr X) HB.
       rewrite cutr2 if_same dead_cutr.
       rewrite /= -(runb_none_dead_res HB) is_dead_dead//.
-    + move=> s1 s2 s3 r A B n HA _.
+    + move=> s1 s3 r A B n HA _.
       case: s3 => //[s3|].
         move=> + sX X.
         move=> /(_ sX X).
@@ -571,9 +571,9 @@ Section s.
         apply: run_done => //.
         rewrite nA1//.
       move=> //.
-    + move=> s1 s2 s3 r A B n + HB IH s4 A1 A2 B1 B2 ???; subst => //=.
+    + move=> s1 s3 r A B n + HB IH s4 A1 A2 B1 B2 ???; subst => //=.
       case: ifP => dA1.
-        case X: expand => //[s4' B''|s4' B''][??]; subst; have {IH}[n1+] := IH _ _ _ _ _ erefl erefl erefl.
+        case X: expand => //[B''|B''][?]; subst; have {IH}[n1+] := IH _ _ _ _ _ erefl erefl erefl.
           case: s3 HB => [s3|] HB//.
             move=> [].
               move=>[H1 ?]; subst.
@@ -607,7 +607,7 @@ Section s.
           eexists; apply: run_cut X H.
         move=> ?; subst.
         by have [_[??]] := run_dead1 _ dA1 H1; subst.
-      case X: expand => //[s4' D'|s4' D'][??]; subst; have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
+      case X: expand => //[D'|D'][?]; subst; have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
         case: s3 HB => [s3|] HB//.
           move=> [].
             move=> [H1?]; subst.
@@ -868,20 +868,20 @@ Section s.
       rewrite is_dead_dead; repeat split.
       apply: run_done => //.
       rewrite nB1//.
-    - move=> s1 s2 s3 r A B n + _ IH A1 B01 B1 ? A2 B02 B2 ?; subst => /= + sA1 nA1.
+    - move=> s1 s3 r A B n + _ IH A1 B01 B1 ? A2 B02 B2 ?; subst => /= + sA1 nA1.
       rewrite succes_is_solved//=.
-      case eA1: expand => //[s1' B1'][??]; subst.
+      case eA1: expand => //[B1'][?]; subst.
       have {IH} := IH _ _ _ erefl _ _ _ erefl.
       rewrite next_alt_cutl success_cut => /(_ sA1 erefl).
-      have ? := expand_cb_same_subst _ eA1; subst.
+      (* have ? := expand_cb_same_subst _ eA1; subst. *)
       rewrite ges_subst_cutl cutl2 if_same dead_cutl.
       move=> [rB1'[??]]; subst.
       rewrite dead_cutl cutl2 if_same.
       repeat split.
       apply: run_cut eA1 rB1'.
-    - move=> s1 s2 s3 r A B n + _ IH A1 B01 B1 ? A2 B02 B2 ?; subst => /= + sA1 nA1.
+    - move=> s1 s3 r A B n + _ IH A1 B01 B1 ? A2 B02 B2 ?; subst => /= + sA1 nA1.
       rewrite succes_is_solved//=.
-      case eA1: expand => //[s1' B1'][??]; subst.
+      case eA1: expand => //[B1'][?]; subst.
       have {IH} := IH _ _ _ erefl _ _ _ erefl.
       move => /(_ sA1 nA1).
       move=> [rB1' [??]]; subst.

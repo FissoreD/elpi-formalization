@@ -23,33 +23,33 @@ Section RunP.
   Lemma choose_cutl_lt {b2 A}: 0 < b2 -> choose_cutl b2 A = cutl A.
   Proof. rewrite/choose_cutl; case: eqP => //; lia. Qed.
 
-  Lemma expand_cutl_cb {s C s' B}: expand u s (cutl C) = CutBrothers s' B -> False.
+  Lemma expand_cutl_cb {s C B}: expand u s (cutl C) = CutBrothers B -> False.
   Proof.
-    elim: C s s' B=> //=.
-    - move=> A HA s B HB s1 s2 C; rewrite fun_if/=.
+    elim: C s B=> //=.
+    - move=> A HA s B HB s1 C; rewrite fun_if/=.
       case: ifP => //=dA; rewrite ?is_dead_cutl dA; case expand => //.
-    - move=> A HA B0 _ B HB s1 s2 C.
-      case e: expand => //[s1' A'|s1' A'].
-        by have:= HA _ _ _ e.
-      case f: expand => //[s1'' B'].
-      by have:= HB _ _ _ f.
+    - move=> A HA B0 _ B HB s1 C.
+      case e: expand => //[ A'| A'].
+        by have:= HA _ _ e.
+      case f: expand => //[B'].
+      by have:= HB _ _ f.
   Qed.
 
-  Lemma expand_cutl_exp {s C s' B}: expand u s (cutl C) = Expanded s' B -> False.
+  Lemma expand_cutl_exp {s C B}: expand u s (cutl C) = Expanded B -> False.
   Proof.
-    elim: C s s' B=> //=.
-    - move=> A HA s B HB s1 s2 C; rewrite fun_if/=.
+    elim: C s B=> //=.
+    - move=> A HA s B HB s1 C; rewrite fun_if/=.
       case: ifP => //=dA; rewrite ?is_dead_cutl dA.
         case X: expand => //=.
-          by have:= HB _ _ _ X.
+          by have:= HB _ _ X.
         by have:= expand_cutl_cb X.
       case X: expand => //.
-        by have:= HA _ _ _ X.
+        by have:= HA _ _ X.
       by have:= expand_cutl_cb X.
-    - move=> A HA B0 _ B HB s1 s2 C.
-      case e: expand => //[s1' A'|s1' A'].
-        by have:= HA _ _ _ e.
-      case f: expand => //[s1'' B'].
-      by have:= HB _ _ _ f.
+    - move=> A HA B0 _ B HB s1 C.
+      case e: expand => //[A'|s1' A'].
+        by have:= HA _ _ e.
+      case f: expand => //[B'].
+      by have:= HB _ _ f.
   Qed.
 End RunP.

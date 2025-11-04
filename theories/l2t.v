@@ -672,8 +672,8 @@ Section next_cut.
       clean_ca bt (state_to_list A s bt) = (s1, (cut ca) ::: gl) ::: a ->
       next_cut A = B ->
         clean_ca bt (state_to_list B.2 s bt) = (s1, gl) ::: ca /\
-        if B.1 then expand u s A = CutBrothers s1 B.2
-        else expand u s A = Expanded s1 B.2.
+        if B.1 then expand u s A = CutBrothers B.2
+        else expand u s A = Expanded B.2.
   Proof.
     elim: A B s bt s1 ca gl a => //=.
     - move=> [b B] s bt s1 c gl a _ _ _ [????][??]; subst => //.
@@ -702,7 +702,7 @@ Section next_cut.
         rewrite !H3/= => -[Hx]; rewrite Hx state_to_list_cutr_empty//?bbOr_valid//.
         rewrite cat0s// subnn take0 add_ca_deep_empty2; repeat split.
         rewrite H1//.
-      have [[[Hx fA' ?]]] := s2l_Expanded_cut _ vA H1 H; subst.
+      have [[Hx fA']] := s2l_Expanded_cut _ vA H1 H; subst.
       move=> []Hy; rewrite Hy/=size_cat addnK clean_ca_cat !clean_ca_add_ca1 take_size_cat ?size_add_ca_deep//.
         move=> []Hz.
         have:= [elaborate f_equal size Hz].
@@ -748,23 +748,24 @@ Section next_cut.
           have [x[tl]]:= s2l_CutBrothers _ (get_substS s A) (ml++bt) vB H2.
           rewrite H1 => -[][????] [Hz Hw]; subst.
           rewrite Hz//=.
-          have [_ HH] := expand_cb_same_subst1 _ vB H2.
+          have HH := expand_cb_same_subst1 _ vB H2.
           by rewrite HH; auto.
         rewrite (success_state_to_list empty)//=.
         rewrite H/=.
         rewrite -/ml make_lB01_empty2 clean_ca_cat.
-        have [[[Hx fA' ?]]] := s2l_Expanded_cut _ vB H2 H1; subst.
-        rewrite Hx/= => -[] Hz.
+        have [[Hx fA']] := s2l_Expanded_cut _ vB H2 H1; subst.
+        move => -[] Hz.
           rewrite Hz/=.
           rewrite cat_cons.
           move: HB; rewrite Hz/=.
-          move=> [Hw] He; have:= [elaborate f_equal size He].
+          move=> []Hw.
+          have {Hw}:= [elaborate f_equal size Hw].
           by rewrite size_cons; clear; lia.
         move: HB Hz.
         set X:= state_to_list _ _ _.
         case: X => //=-[s2 y]ys[?] ++ [???]; subst.
-        rewrite Hx.
-        set K:= get_substS _ _.
+        (* rewrite Hx. *)
+        (* set K:= get_substS _ _. *)
         move=> _.
         set XX:= clean_ca_goals _ _.
         rewrite !size_cat addnA addnK.
@@ -788,7 +789,7 @@ Section next_cut.
         rewrite H => -[][]???? [H4 H5]; subst.
         rewrite H4/= H1 make_lB0_empty1 cats0 sub0n take0.
         by rewrite (expand_cb_same_subst1 _ vA H3).
-      have [[[Hx fA' ?]]] := s2l_Expanded_cut _ vA H3 H; subst.
+      have [[Hx fA']] := s2l_Expanded_cut _ vA H3 H; subst.
       move=> []Hz.
         rewrite Hz/= H1/= size_cat clean_ca_cat.
         set X:= make_lB0 _ _.
@@ -798,7 +799,7 @@ Section next_cut.
         have:= [elaborate f_equal size HH].
         rewrite !size_cons; clear; lia.
       move: {HA HB} H2; case X: state_to_list => //[[sy y]ys][?]; subst.
-      rewrite Hx.
+      (* rewrite Hx. *)
       move: Hz; rewrite X => -[??]; subst => _.
       change (append_alts _ _) with (ys ++ bt).
       rewrite size_cat addnK clean_ca_cat.
@@ -926,7 +927,7 @@ Section next_callS.
       clean_ca bt (state_to_list A s3 bt) = (s1, (call p t) ::: gl) ::: a ->
         clean_ca bt (state_to_list (next_callS u s1 A) s3 bt) = 
           (save_alts a gl (aa2gs p (F u p t s1)) ++ a) /\
-        expand u s3 A = Expanded s1 (next_callS u s1 A).
+        expand u s3 A = Expanded (next_callS u s1 A).
   Proof.
     elim: A s3 bt s1 p t gl a => //=.
     - move=> p c s3 bt s1 p1 c1 gl a _ _ _ [?????]; subst.
@@ -1050,7 +1051,6 @@ Section next_callS.
   Qed.
 End next_callS.
 
-(* TODO: should clean leading Top from the state which are no-op in the list version... *)
 Lemma two' {u s1 s2} {alts alts_left : alts} {andg : goals}  : 
   nur u s1 andg alts s2 alts_left -> forall s t,
   valid_state t ->

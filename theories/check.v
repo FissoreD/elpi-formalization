@@ -253,15 +253,15 @@ Section check.
         rewrite (is_ko_expand _ kB)/=kA kB; auto.
       rewrite (is_ko_expand _ kA)/=kA kB; auto.
     - move=> A HA B0 _ B HB s /=/orP[].
-        move=> /(HA s); case: expand => [s1|s1||s1] C/= []//; auto => cC.
+        move=> /(HA s); case: expand => [|||s1] C/= []//; auto => cC.
         - by rewrite cC /=; left.
         - by rewrite cC /=; left.
         left; rewrite get_state_And /=.
         by case: ifP; rewrite ?cC // has_cut_cutl.
       case/andP=> cB0 cB.
-      case: expand => [s1|s1||s1] C/=; rewrite ?cB ?cB0 ?orbT; auto.
+      case: expand => [|||s1] C/=; rewrite ?cB ?cB0 ?orbT; auto.
       move: (HB s1 cB).
-      by case: expand => [s2|s2||s2] D /=; auto => -[]// ->; rewrite cB0 orbT; left.
+      by case: expand => [|||s2] D /=; auto => -[]// ->; rewrite cB0 orbT; left.
   Qed.
 
   Lemma expand_no_free_alt {sP s1 A r} : 
@@ -279,7 +279,7 @@ Section check.
         move=> nnB.
         case: ifP => //= dA.
           have:= HB s1 nnB.
-          case: expand => //= [_|_||_] C nnC/=; rewrite get_state_Or/=fA/=cA?HB//.
+          case: expand => //= [|||_] C nnC/=; rewrite get_state_Or/=fA/=cA?HB//.
         have:= HA s1 fA.
         have := @expand_has_cut _ s1 cA.
         case X: expand => //= -[]// + ->; rewrite ?nnB ?no_alt_cut //=; try by case: has_cut.
@@ -509,9 +509,9 @@ Section check.
     elim: H3 H2; clear -H1 => //.
     - move=> s1 s2 A B sA _ <- fA.
       by rewrite (build_na_is_dead H1 fA sA) is_dead_dead.
-    - move=> s1 s2 s3 r A B n eA rB IH fA.
+    - move=> s1 s2 r A B n eA rB IH fA.
       by apply: IH; apply: expand_no_free_alt eA.
-    - move=> s1 s2 s3 r A B n eA rB IH fA.
+    - move=> s1 s2 r A B n eA rB IH fA.
       by apply: IH; apply: expand_no_free_alt eA.
     - move=> s1 s2 A B r n fA nA H IH FA.
       apply: IH.
