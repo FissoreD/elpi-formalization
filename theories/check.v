@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
-From det Require Import run run_prop.
+From det Require Import tree tree_prop.
 
 Lemma tm2RC_kp {t1 k} : 
   tm2RC t1 = Some (RCallable_Kp k) -> t1 = Tm_Kp k.
@@ -247,7 +247,7 @@ Section check.
   Qed.
 
   Lemma expand_has_cut {A s}: 
-    has_cut A -> has_cut (get_state (expand u s A)) \/ is_cutbrothers (expand u s A).
+    has_cut A -> has_cut (get_tree (expand u s A)) \/ is_cutbrothers (expand u s A).
   Proof.
     elim: A s; try by move=> /=; auto.
     - move=> A HA s1 B HB s /=/andP[kA kB].
@@ -258,7 +258,7 @@ Section check.
         move=> /(HA s); case: expand => [|||] C/= []//; auto => cC.
         - by rewrite cC /=; left.
         - by rewrite cC /=; left.
-        left; rewrite get_state_And /=.
+        left; rewrite get_tree_And /=.
         by case: ifP; rewrite ?cC // has_cut_cutl.
       case/andP=> cB0 cB.
       case: expand => [|||] C/=; rewrite ?cB ?cB0 ?orbT; auto.
@@ -269,7 +269,7 @@ Section check.
   Lemma expand_no_free_alt {sP s1 A r} : 
     check_program sP -> det_tree sP A -> 
       expand u s1 A = r ->
-        det_tree sP (get_state r).
+        det_tree sP (get_tree r).
   Proof.
     move=> H + <-; clear r.
     elim: A s1 => //.
@@ -281,14 +281,14 @@ Section check.
         move=> nnB.
         case: ifP => //= dA.
           have:= HB s1 nnB.
-          case: expand => //= [|||] C nnC/=; rewrite get_state_Or/=fA/=cA?HB//.
+          case: expand => //= [|||] C nnC/=; rewrite get_tree_Or/=fA/=cA?HB//.
         have:= HA s1 fA.
         have := @expand_has_cut _ s1 cA.
         case X: expand => //= -[]// + ->; rewrite ?nnB ?no_alt_cut //=; try by case: has_cut.
         by rewrite cutr2 eqxx if_same.
       move/eqP->.
       case: ifP => [dA|].
-        rewrite get_state_Or/=cA no_alt_dead//=is_ko_expand//=?is_ko_cutr//cutr2//.
+        rewrite get_tree_Or/=cA no_alt_dead//=is_ko_expand//=?is_ko_cutr//cutr2//.
       have:= HA s1 fA => + dA.
       case Y: expand => /=->; rewrite !cutr2 eqxx no_alt_cut if_same//.
     - move=> A HA B0 HB0 B HB s /=.
@@ -296,7 +296,7 @@ Section check.
         move=>kA; rewrite is_ko_expand///=kA//.
       move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
         case X: expand => //= [|||C]; try rewrite cB0 cB/= fB0 fB !orbT//.
-        rewrite get_state_And.
+        rewrite get_tree_And.
         rewrite /= (HB (get_substS s C)) //.
         have := @expand_has_cut _ (get_substS s C) cB.
         case H1: (is_cutbrothers (expand u (get_substS s C) B)).

@@ -1,9 +1,9 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang run run_prop valid_state elpi elpi_prop.
+From det Require Import tree tree_prop tree_valid_state elpi t2l t2l_prop.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
-      Arguments suffixP1 {_ _ _ _ _}.
+Arguments suffixP1 {_ _ _ _ _}.
 
 
 Section NurValidState.
@@ -420,11 +420,11 @@ Section NurValidState.
   (********************************************************************)
   Lemma base_and_valid_caA A s r l rs bt:
     base_and A ->
-      state_to_list A s l = r -> valid_caA r rs bt.
+      t2l A s l = r -> valid_caA r rs bt.
   Proof.
     rewrite /valid_caA.
     move=>H H1; subst.
-    have [hd H2]:= base_and_state_to_list H.
+    have [hd H2]:= base_and_t2l H.
     have /=H1:= base_and_empty_ca H H2.
     rewrite H2/=andbT empty_caG_valid//H1//.
     case: ifP => //.
@@ -432,31 +432,31 @@ Section NurValidState.
 
   Lemma base_and_ko_valid_caA A s r l rs bt:
     base_and_ko A ->
-      state_to_list A s l = r -> valid_caA r rs bt.
-  Proof. move=>/base_and_ko_state_to_list-><-//. Qed.
+      t2l A s l = r -> valid_caA r rs bt.
+  Proof. move=>/base_and_ko_t2l-><-//. Qed.
 
   Lemma base_or_aux_ko_valid_caA A s r l rs bt:
     base_or_aux_ko A ->
-      state_to_list A s l = r -> valid_caA r rs bt.
-  Proof. move=>/base_or_aux_ko_state_to_list-><-//. Qed.
+      t2l A s l = r -> valid_caA r rs bt.
+  Proof. move=>/base_or_aux_ko_t2l-><-//. Qed.
 
 
   Lemma base_or_aux_valid_caA A s0 r rs:
-    base_or_aux A -> state_to_list A s0 nilC = r -> valid_caA r rs nilC.
+    base_or_aux A -> t2l A s0 nilC = r -> valid_caA r rs nilC.
   Proof.
     move=>+<-; clear r.
     elim: A rs s0 => //=.
     - move=> rs; case: ifP => //.
     - move=> A HA s B HB rs s0 /=/andP[bA bB].
       rewrite add_ca_deep_empty1.
-      have [hd H]:= base_and_state_to_list bA.
+      have [hd H]:= base_and_t2l bA.
       rewrite H/=fold_valid_caA HB//=.
       have/=:= base_and_valid_caA _ _ _ _ (rs) nilC bA (H nilC empty).
       move=> /(_ _ IsList_alts _ IsList_alts)//.
       case: eqP => // _.
       move=>/andP[->]; rewrite bbOr_empty_ca///bbOr bB//.
     - move=> A; case: A => //[p a|] _ _ _ B HB rs s0/=/andP[/eqP->] bB;
-      have [h H]:= base_and_state_to_list bB;
+      have [h H]:= base_and_t2l bB;
       have H1:=base_and_empty_ca bB H.
         rewrite H/= (empty_caG_valid _ H1)//.
         case: eqP => //= _; move: H1.
@@ -468,7 +468,7 @@ Section NurValidState.
 
   Lemma bbOr_valid_caA A s0 r rs:
     bbOr A ->
-      state_to_list A s0 nilC = r -> valid_caA r rs nilC.
+      t2l A s0 nilC = r -> valid_caA r rs nilC.
   Proof.
     rewrite/bbOr=>/orP[].
       apply: base_or_aux_valid_caA.
@@ -479,9 +479,9 @@ Section NurValidState.
   (********************************************************************)
   (* FINAL LEMMA                                                      *)
   (********************************************************************)
-  Lemma valid_state_valid_ca_help {A s0 r l}:
-    state_to_list A s0 l = r ->
-    valid_state A ->
+  Lemma valid_tree_valid_ca_help {A s0 r l}:
+    t2l A s0 l = r ->
+    valid_tree A ->
       valid_caA r r l.
   Proof.
     move=> <-; clear r.
@@ -491,8 +491,8 @@ Section NurValidState.
       case: eqBP => //->//.
     - move=> A HA s B HB l s0/=.
       case:ifP => [dA vB|dA /andP[vA bB]].
-        rewrite state_to_list_dead//=cat0s.
-        set stl := state_to_list B s nilC.
+        rewrite t2l_dead//=cat0s.
+        set stl := t2l B s nilC.
         have:= HB _ _ vB.
         fold stl => H.
         apply: valid_ca_add_ca_deep.
@@ -501,8 +501,8 @@ Section NurValidState.
       rewrite /valid_ca valid_ca_split.
       rewrite drop_size_cat//.
       rewrite HB//?bbOr_valid//andbT.
-      have:= HA (state_to_list B s nilC) s0 vA.
-      set sB := state_to_list B _ => HH.
+      have:= HA (t2l B s nilC) s0 vA.
+      set sB := t2l B _ => HH.
       apply: push_bt_out => //.
       apply: bbOr_valid_caA bB _ => //.
       rewrite cats0//.
@@ -510,12 +510,12 @@ Section NurValidState.
       have:= HA l s0 vA => {}HA.
       case:ifP => /=[sA vB bB0|sA /eqP?]; subst.
         move: HA.
-        have SA:= success_state_to_list empty vA sA; rewrite SA/=.
+        have SA:= success_t2l empty vA sA; rewrite SA/=.
         move: bB0 => /orP[]bB; last first.
-          rewrite (base_and_ko_state_to_list bB)//=.
+          rewrite (base_and_ko_t2l bB)//=.
           rewrite !make_lB01_empty2 behead_cons => H1.
           apply: HB vB.
-        have [hd H]:= base_and_state_to_list bB.
+        have [hd H]:= base_and_t2l bB.
         have /= Hhd:= base_and_empty_ca bB H.
         rewrite H/=behead_cons => H1.
         rewrite make_lB01_empty2.
@@ -530,11 +530,11 @@ Section NurValidState.
           rewrite valid_ca_make_lB0_empty_ca?Hhd//.
           apply: valid_ca_add_deep_make_lB0; rewrite//Hhd//.
         apply: HB vB.
-      case lA: state_to_list => [|[s x] xs]//=.
+      case lA: t2l => [|[s x] xs]//=.
       move=> bB; have {bB}: bbAnd B by move: bB; case:ifP => //; rewrite /bbAnd => _ -> //.
       move=>/orP[]bB; last first.
-        rewrite !(base_and_ko_state_to_list bB)//=.
-      have [hd H]:= base_and_state_to_list bB.
+        rewrite !(base_and_ko_t2l bB)//=.
+      have [hd H]:= base_and_t2l bB.
       have /=H2 := base_and_empty_ca bB H.
       rewrite H/=H/= behead_cons.
       rewrite -/(valid_caA (make_lB0 (add_deep l hd xs) hd) (make_lB0 (add_deep l hd xs) hd) l).
@@ -545,12 +545,12 @@ Section NurValidState.
       apply: valid_caG_add_deep_make_lB0 => //.
   Qed.
 
-  Lemma valid_state_valid_ca A s r:
-    valid_state A -> state_to_list A s nilC = r -> valid_ca r.
+  Lemma valid_tree_valid_ca A s r:
+    valid_tree A -> t2l A s nilC = r -> valid_ca r.
   Proof.
     rewrite/valid_ca => H1 H2.
-    have:= valid_state_valid_ca_help H2 H1.
+    have:= valid_tree_valid_ca_help H2 H1.
     move=>//.
   Qed.
-  Print Assumptions valid_state_valid_ca.
+  Print Assumptions valid_tree_valid_ca.
 End NurValidState.

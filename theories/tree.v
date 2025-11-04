@@ -16,33 +16,33 @@ apply: iffP2 Sigma_eqb_correct Sigma_eqb_refl.
 Qed.
 HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
 
-Inductive state :=
-  | Bot : state
-  | OK : state
-  | Dead : state
-  | CallS : program  -> Callable -> state
-  | CutS : state
-  | Or  : state -> Sigma -> state -> state  (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
-  | And : state -> state -> state -> state  (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
+Inductive tree :=
+  | Bot : tree
+  | OK : tree
+  | Dead : tree
+  | CallS : program  -> Callable -> tree
+  | CutS : tree
+  | Or  : tree -> Sigma -> tree -> tree  (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
+  | And : tree -> tree -> tree -> tree  (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
   .
-derive state.
-HB.instance Definition _ := hasDecEq.Build state state_eqb_OK.
+derive tree.
+HB.instance Definition _ := hasDecEq.Build tree tree_eqb_OK.
 
 Inductive expand_res :=
-  | Expanded    of state
-  | CutBrothers of state
-  | Failure     of state
-  | Success      of state.
+  | Expanded    of tree
+  | CutBrothers of tree
+  | Failure     of tree
+  | Success      of tree.
 derive expand_res.
 HB.instance Definition _ := hasDecEq.Build expand_res expand_res_eqb_OK.
 
-Definition get_state r := match r with | Failure A | Success A | CutBrothers A | Expanded A => A end.
+Definition get_tree r := match r with | Failure A | Success A | CutBrothers A | Expanded A => A end.
 Definition is_expanded X := match X with Expanded _ => true | _ => false end.
 Definition is_fail A := match A with Failure _ => true | _ => false end.
 Definition is_cutbrothers X := match X with CutBrothers _ => true | _ => false end.
 Definition is_solved X := match X with Success _ => true | _ => false end.
 
-Section state_op.
+Section tree_op.
 
   (********************************************************************)
   (* STATE OP DEFINITIONS                                             *)
@@ -76,7 +76,7 @@ Section state_op.
     | Or A s B => is_ko A && is_ko B
     end.
 
-  Fixpoint success (A : state) : bool :=
+  Fixpoint success (A : tree) : bool :=
     match A with
     | OK => true
     | CutS | CallS _ _ | Bot | Dead => false
@@ -92,11 +92,11 @@ Section state_op.
     | Or A _ B => if is_dead A  then success B else success A
     end.
 
-  Fixpoint failed (A : state) : bool :=
+  Fixpoint failed (A : tree) : bool :=
     match A with
     (* Bot is considered as a failure, so that next_alt can put it
         into Dead. This is because, we want expand to transform a Bot
-        state into a "Failure Bot" (it does not introduce a Dead state).
+        tree into a "Failure Bot" (it does not introduce a Dead tree).
     *)
     | Bot | Dead => true
     | CutS | CallS _ _ | OK => false
@@ -304,7 +304,7 @@ Section state_op.
       rewrite failed_success//= failed_cutr//.
     rewrite sA success_cut sA HB// orbT//.
   Qed.    
-End state_op.
+End tree_op.
 
 Definition mkOr A sB r :=
   match r with
@@ -322,25 +322,25 @@ Definition mkAnd A B0 r :=
   | Success B      => Success      (And A B0 B)
   end.
 
-Lemma get_state_And A B0 B : get_state (mkAnd A B0 B) = And (if is_cutbrothers B then cutl A else A) ((if is_cutbrothers B then cutr B0 else B0)) (get_state B).
+Lemma get_tree_And A B0 B : get_tree (mkAnd A B0 B) = And (if is_cutbrothers B then cutl A else A) ((if is_cutbrothers B then cutr B0 else B0)) (get_tree B).
 Proof. by case: B. Qed.
 
-Lemma get_state_Or A s B : get_state (mkOr A s B) = Or A s (get_state B).
+Lemma get_tree_Or A s B : get_tree (mkOr A s B) = Or A s (get_tree B).
 Proof. by case: B. Qed.
 
-Definition A2CallCut pr (A:A) : state :=
+Definition A2CallCut pr (A:A) : tree :=
   match A with
   | ACut => CutS
   | ACall tm => CallS pr tm
   end.
 
-Fixpoint big_and pr (a : list A) : state :=
+Fixpoint big_and pr (a : list A) : tree :=
   match a with
   | [::] => OK
   | x :: xs => And (A2CallCut pr x)  (big_and pr xs) (big_and pr xs)
   end.
 
-Fixpoint big_or_aux pr (r : list A) (l : seq (Sigma * R)) : state :=
+Fixpoint big_or_aux pr (r : list A) (l : seq (Sigma * R)) : tree :=
   match l with 
   | [::] => big_and pr r
   | (s,r1) :: xs => Or (big_and pr r) s (big_or_aux pr r1.(premises) xs)
@@ -459,7 +459,7 @@ Section main.
         end
     end.
 
-  Fixpoint next_alt b (A : state) : option (state) :=
+  Fixpoint next_alt b (A : tree) : option (tree) :=
     match A with
     | Bot => None
     | Dead => None
@@ -520,12 +520,12 @@ Section main.
 
   Goal (next_alt false (Or Bot empty OK)) = Some (Or Dead empty OK). move=> //=. Qed.
 
-  (* build next_alt state *)
+  (* build next_alt tree *)
   Definition build_na A oA := odflt (dead1 A) oA.
-  Definition build_s (s:Sigma) (oA: option state) := Option.map (fun _ => s)  oA.
+  Definition build_s (s:Sigma) (oA: option tree) := Option.map (fun _ => s)  oA.
 
 
-  Inductive runb : Sigma -> state -> option Sigma -> state -> nat -> Type :=
+  Inductive runb : Sigma -> tree -> option Sigma -> tree -> nat -> Type :=
     | run_done {s1 s2 A B}         : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> runb s1 A (Some s2) B 0
     | run_cut  {s1 s2 r A B n}    : expand s1 A = CutBrothers B -> runb s1 B s2 r n -> runb s1 A s2 r n.+1
     | run_step {s1 s2 r A B n}    : expand s1 A = Expanded    B -> runb s1 B s2 r n -> runb s1 A s2 r n
@@ -608,21 +608,21 @@ Section main.
   Qed.
 
   Lemma expand_not_dead {s A r}: 
-    is_dead A = false -> expand s A = r -> is_dead (get_state r) = false.
+    is_dead A = false -> expand s A = r -> is_dead (get_tree r) = false.
   Proof.
     move=> + <-.
     elim: A s; clear; try by move=> //=.
     - move=> p t s/= _; apply dead_big_or.
     + move=> A HA s B HB s1 => //=.
       case: ifP => dA/=.
-        rewrite get_state_Or/=dA; apply: HB.
+        rewrite get_tree_Or/=dA; apply: HB.
       move=> _.
       have:= HA s1 dA.
       case X: expand => //=->//.
     + move=> A HA B0 _ B HB s1 //= dA.
       have:= HA s1 dA.
       case X: expand => [|||A']//=dA'.
-      rewrite get_state_And/= fun_if dA'.
+      rewrite get_tree_And/= fun_if dA'.
       case Y: expand => //[C]/=.
       have [?]:= expand_solved_same X; subst.
       rewrite -success_cut.
@@ -974,7 +974,7 @@ Section main.
     Qed.
 
     Lemma expand_same_structure {s A r}: 
-      expand s A = r -> same_structure A (get_state r).
+      expand s A = r -> same_structure A (get_tree r).
     Proof.
       move=><-{r}.
       elim: A s => //.

@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import run run_prop.
+From det Require Import tree tree_prop.
 From det Require Import zify_ssreflect.
 
 Section s.

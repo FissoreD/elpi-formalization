@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang run run_prop valid_state elpi.
+From det Require Import lang tree tree_prop tree_valid_state elpi t2l.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
@@ -21,7 +21,7 @@ Fixpoint of_alt l :=
   end.
 
 Definition tester l r :=
-  state_to_list l empty nilC = r.
+  t2l l empty nilC = r.
 
 Goal forall B B0 p,
 let f x := (CallS p x) in
@@ -71,7 +71,7 @@ Goal forall A B C p,
       [::cut nilC ; call p C]]).
 Proof.
   move=> A B C p/=.
-  rewrite/state_to_list//.
+  rewrite/t2l//.
 Qed.
 
 Goal forall A B C0 C p,
@@ -86,7 +86,7 @@ Goal forall A B C0 C p,
       [:: call p B; call p C0]]).
 Proof.
   move=> A B C0 C p/=.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   move=>//.
 Qed.
 
@@ -98,7 +98,7 @@ Goal forall A B0 p,
   tester (And (Or OK empty (f A)) (f B0) OK) (of_alt [::[::]; [::call p A; call p B0]]).
 Proof.
   move=> A B0 p.
-  rewrite/state_to_list//=.
+  rewrite/t2l//=.
 Qed.
 
 Goal forall A B0 p,
@@ -108,7 +108,7 @@ Goal forall A B0 p,
   (of_alt [::[::call p A; call p B0]]).
 Proof.
   move=> A B0 p.
-  rewrite/state_to_list//=.
+  rewrite/t2l//=.
 Qed.
 
 Goal forall p x y z w a, 
@@ -134,7 +134,7 @@ Goal forall p z w a,
     (of_alt [:: [:: call p z]; [:: call p w]]).
 Proof.
   move=>p z w a.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   by [].
 Qed.
 
@@ -160,7 +160,7 @@ Goal forall p a b,
       (CallS p b))
   (of_alt [:: [:: cut (of_alt[:: [:: call p b]])]; [:: call p a]; [:: call p b]]).
 Proof.
-  move=>p a b; rewrite/state_to_list/=.
+  move=>p a b; rewrite/t2l/=.
   by []. Qed.
 
 Goal forall A1 A2 s  C0 B p,
@@ -169,7 +169,7 @@ Goal forall A1 A2 s  C0 B p,
   .
 Proof.
   move=> A1 A2 s  C0 B p.
-  rewrite/state_to_list.
+  rewrite/t2l.
   by [].
 Qed.
 
@@ -179,7 +179,7 @@ Goal forall A B C p,
   (of_alt[:: [:: call p A; call p C]]).
 Proof.
   move=> s A B C p.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   by [].
 Qed.
 
@@ -200,7 +200,7 @@ Goal forall b0 p a b c,
   (of_alt[:: [:: call p c; cut (of_alt[:: [:: call p b]])]; [:: call p a]; [:: call p b]]).
 Proof.
   move=> b0 p a b c.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   rewrite//=.
 Qed.
 
@@ -211,7 +211,7 @@ Goal forall B C Res p,
     (of_alt[::[::cut (of_alt[::[:: call p B; call p Res]])]; [::call p C]; [:: call p B; call p Res]]).
 Proof.
   move=> B C Res p.
-  rewrite /state_to_list/=.
+  rewrite /t2l/=.
   move=>//.
 Qed.
 
@@ -222,7 +222,7 @@ Goal forall B C Res Reempty p,
     (of_alt[::[::cut nilC; call p C]; [:: call p B; call p Res]]).
 Proof.
   move=> B C Res Reempty p/=.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   f_equal => //.
 Qed.
 
@@ -236,7 +236,7 @@ Goal forall A B C C0 p,
     [:: call p A; call p C]]).
 Proof.
   move=> A B C C0 p.
-  rewrite /state_to_list/=.
+  rewrite /t2l/=.
   repeat f_equal => //.
 Qed.
 
@@ -252,7 +252,7 @@ Goal forall A B C D E p,
   .
 Proof.
   move=> empty A B C D E p/=.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   move=>//.
 Qed.
 
@@ -274,7 +274,7 @@ Goal forall B C D E p,
       [:: call p B; call p C]]).
 Proof.
   move=> B C D E p/=.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   move=>//.
 Qed.
 
@@ -291,7 +291,7 @@ Goal forall A B C p,
       [:: call p C] ]).
 Proof.
   move=> A B C p/=.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   move=>//=.
 Qed.
 
@@ -308,7 +308,7 @@ Goal forall A B C p,
       [:: call p C] ]).
 Proof.
   move=> A B C p/=.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   move=>//=.
 Qed.
 
@@ -326,7 +326,7 @@ Goal forall A B C D0 D p,
       [:: call p C; call p D0] ]).
 Proof.
   move=> A B C D0 D p/=.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   f_equal => //.
 Qed.
 
@@ -344,7 +344,7 @@ Goal forall X A B C D0 D p,
       [:: call p C; call p D0] ]).
 Proof.
   move=> X A B C D0 D p/=.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   f_equal => //.
 Qed.
 
@@ -359,7 +359,7 @@ Goal forall B0 A B C D p,
       [:: call p A; call p B]; [:: call p D]]).
 Proof.
   move=> B0 A B C D p/=.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   rewrite//.
 Qed.
 
@@ -377,16 +377,16 @@ Goal forall p A B C,
     ]).
 Proof.
   move=> p A B C/=.
-  rewrite/state_to_list/=.
+  rewrite/t2l/=.
   rewrite//.
 Qed.
 Goal forall l,
   let s := ((Or (Or Dead empty (CutS)) empty OK)) in
   let bt := of_alt([::] :: l) in
-  state_to_list s empty (of_alt l) = of_alt[:: [:: cut bt]; [::]] /\ 
-    state_to_list (odflt Bot (next_alt true (get_state (expand u empty s)))) empty (of_alt l) ++ (of_alt l) = bt.
+  t2l s empty (of_alt l) = of_alt[:: [:: cut bt]; [::]] /\ 
+    t2l (odflt Bot (next_alt true (get_tree (expand u empty s)))) empty (of_alt l) ++ (of_alt l) = bt.
 Proof.
-  simpl get_state.
+  simpl get_tree.
   move=>//=.
 Qed.
 
