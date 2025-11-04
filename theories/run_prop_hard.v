@@ -745,28 +745,35 @@ Section s.
       have /= := run_or_ko_right1 s (@is_ko_cutr B) HA.
       by rewrite is_dead_dead dead_cutr.
     - move=> A HA B0 _ B HB.
-      case F: failed => //=.
-        move=> _ s1.
-        have {}HA := HA F s1.
-        inversion HA; subst; clear HA.
+      case:ifP => //= sA.
+        rewrite failed_success_cut success_cut sA/=.
+        move=> fB s.
+        have {}HB := HB fB (get_substS s A).
+        inversion HB; clear HB; subst => //.
         - rewrite failed_expand// in H.
         - rewrite next_alt_cutl_failed// in H0.
         - rewrite dead_cutl -/(dead1 (And A B0 B)) -/(cutl (And A B0 B)) -dead_cutl.
-          by apply: run_dead; rewrite/=F//H3 if_same.
-      move=> /andP[sA fB]s; have {}HB := HB fB s.
-      inversion HB; subst; clear HB.
-      - rewrite failed_expand// in H.
+          replace (And _ _ _) with (cutl (And A B0 B)).
+            apply: run_dead; rewrite/= sA/= success_cut sA ?fB?orbT//.
+            rewrite !next_alt_cutl/= failed_success_cut success_cut sA/= H3 if_same//.
+          rewrite/=sA//.
+      move=> _ s.
+      have:= (HA _ s).
+      rewrite failed_success_cut success_cut sA/=.
+      move=> /(_ isT) {}HA; inversion HA; clear HA; subst.
+      - rewrite failed_expand//failed_success_cut success_cut sA// in H.
       - rewrite next_alt_cutl_failed// in H0.
       - rewrite dead_cutl -/(dead1 (And A B0 B)) -/(cutl (And A B0 B)) -dead_cutl.
-        apply: run_dead; rewrite/=F sA ?fB//.
-        by rewrite next_alt_cutl next_alt_cutl_failed// if_same.
+        replace (And _ _ _) with (cutl (And A B0 B)); last first.
+          rewrite/= sA//=.
+        apply: run_dead; rewrite/= sA/= failed_cutr//.
+        by rewrite next_alt_cutr if_same.
   Qed.
 
 
-  Section kill_top.
+  (* Section kill_top.
     Fixpoint kill_top A :=
       match A with
-      | Top => OK
       | OK | CallS _ _ | CutS | Bot | Dead => A
       | Or A s B => if is_dead A then (Or A s (kill_top B)) else (Or (kill_top A) s B)
       | And A B0 B =>
@@ -844,13 +851,13 @@ Section s.
     Lemma dead_kill_top {A}: dead1 (kill_top A) = dead1 A.
     Proof. elim: A => //=[A HA s B HB|A HA B0 _ B HB]; rewrite fun_if/= HA HB if_same//. Qed.
 
-  End kill_top.
+  End kill_top. *)
 
   Lemma run_and_correct_successL {s0 sn A B0 B A' B0' B' b}:
     success A -> next_alt true A = None ->
     runb u s0 (And A B0 B) sn (And A' B0' B') b ->
     (runb u (get_substS s0 A) B sn B' b /\ 
-      (B0' = if is_dead B' then dead1 B0 else if b == 0 then B0 else cutl B0) /\
+      (B0' = if is_dead B' then dead1 B0 else if b == 0 then B0 else cutr B0) /\
       (A' = if is_dead B' then dead1 A else if b == 0 then A else cutl A)
     )%type2.
   Proof.
@@ -874,9 +881,9 @@ Section s.
       have {IH} := IH _ _ _ erefl _ _ _ erefl.
       rewrite next_alt_cutl success_cut => /(_ sA1 erefl).
       (* have ? := expand_cb_same_subst _ eA1; subst. *)
-      rewrite ges_subst_cutl cutl2 if_same dead_cutl.
+      rewrite ges_subst_cutl// cutl2 if_same dead_cutl.
       move=> [rB1'[??]]; subst.
-      rewrite dead_cutl cutl2 if_same.
+      rewrite cutr2 dead_cutr !if_same.
       repeat split.
       apply: run_cut eA1 rB1'.
     - move=> s1 s3 r A B n + _ IH A1 B01 B1 ? A2 B02 B2 ?; subst => /= + sA1 nA1.
@@ -900,7 +907,7 @@ Section s.
       apply: run_dead fB1 X.
   Qed.
 
-  Lemma runb_kill_top {s A s2 r n}: runb u s (kill_top A) s2 r n -> runb u s A s2 r n.
+  (* Lemma runb_kill_top {s A s2 r n}: runb u s (kill_top A) s2 r n -> runb u s A s2 r n.
   Proof.
     elim: A s s2 r n => //=.
     - move=> s1 s2 r n H; apply: run_step H => //.
@@ -946,7 +953,7 @@ Section s.
           admit.
         admit.
       admit.
-  Admitted.
+  Admitted. *)
 
 
 

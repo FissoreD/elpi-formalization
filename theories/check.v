@@ -81,7 +81,7 @@ Section check.
     | CutS => true
     | CallS _ _ => false
     | Bot | Dead => true
-    | OK | Top => false
+    | OK => false
     | And A B0 B => has_cut A || (has_cut B0 && has_cut B)
     | Or _ _ _ => is_ko A
     end.
@@ -112,7 +112,7 @@ Section check.
     match A with
     | CutS => true
     | CallS _ a => tm_is_det sP a
-    | Top | Bot | OK => true
+    | Bot | OK => true
     | Dead => true
     | And A B0 B =>
       (is_ko A) || 
@@ -141,10 +141,12 @@ Section check.
   Proof.
     elim: A => //.
       move=> A HA s B HB/=/andP[kA kB]; rewrite fun_if/= is_ko_cutr kA !is_ko_cutl// if_same//.
-    move=> A HA B0 HB0 B HB /=/orP[].
+    move=> A HA B0 HB0 B HB /=; rewrite fun_if/=.
+    rewrite !has_cut_cut/=.
+    case:ifP => // _.
+    move=> /orP[].
       by move=>/HA->.
-    move=>/andP[cB0 cB].
-    rewrite HB0//HB//orbT//.
+    move=>/andP[cB0] /HB->; rewrite orbT//.
   Qed.
 
   Lemma all_det_nfa_big_and {p sP l}: all (check_atom sP) l -> no_free_alt sP (big_and p l).
@@ -174,7 +176,7 @@ Section check.
       case: ifP => //dA.
       rewrite has_cut_dead//no_alt_dead//.
     move=> A HA B0 HB0 B HB /=.
-    rewrite HA HB HB0 !orbT//.
+    rewrite fun_if/= HA HB !has_cut_cut/= !no_alt_cut/= !orbT if_same//.
   Qed.
 
   Variable u : Unif.
@@ -298,12 +300,12 @@ Section check.
         rewrite /= (HB (get_substS s C)) //.
         have := @expand_has_cut _ (get_substS s C) cB.
         case H1: (is_cutbrothers (expand u (get_substS s C) B)).
-          move=>_/=; rewrite has_cut_cutl// no_free_alt_cutl no_free_alt_cutl !orbT//.
+          move=>_/=; rewrite has_cut_cut// no_free_alt_cutl no_alt_cut !orbT//.
         move=> []//H2; rewrite H2 fB0 cB0 orbT//.
       have:= HA s fA.
       case X: expand => //= [|||C] H1; try rewrite H1 orbT fB fB0 orbT//.
       have:= HB (get_substS s C) fB; case Y: expand => //= H2; try rewrite fB0 H2 H1 orbT !orbT//.
-      rewrite !no_free_alt_cutl H2 !orbT//.
+      rewrite !no_free_alt_cutl no_alt_cut H2 !orbT//.
   Qed.
 
   Goal forall sP s, no_free_alt sP (Or OK s OK) == false.
@@ -405,7 +407,6 @@ Section check.
   Proof.
     elim: A B b => //=.
     - move=> /= B b _; case: ifP => // _[<-]//.
-    - move=> B _ _ [<-]//.
     - move=> p c B _ _ [<-]//.
     - move=> B _ _ [<-]//.
     - move=> A HA s B HB C /= b.

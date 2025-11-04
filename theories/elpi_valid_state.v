@@ -506,7 +506,7 @@ Section NurValidState.
       apply: push_bt_out => //.
       apply: bbOr_valid_caA bB _ => //.
       rewrite cats0//.
-    - move=> A HA B0 _ B HB l s0/= /and5P[oA vA aB]++.
+    - move=> A HA B0 _ B HB l s0/= /and3P[vA]++.
       have:= HA l s0 vA => {}HA.
       case:ifP => /=[sA vB bB0|sA /eqP?]; subst.
         move: HA.

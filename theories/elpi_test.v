@@ -129,7 +129,7 @@ Goal forall p z w a,
   let f x := (CallS p x) in
   tester (
     And 
-      (Or Top empty Bot) (f a) 
+      (Or OK empty Bot) (f a) 
       (Or (f z) empty (f w))) 
     (of_alt [:: [:: call p z]; [:: call p w]]).
 Proof.
@@ -299,7 +299,7 @@ Goal forall A B C p,
   let f x := (CallS p x) in
   (* ((! \/ ! \/ A) \/ B) \/ C *)
   tester 
-    (Or (Or (Or (And (CutS) Top Top) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C)) 
+    (Or (Or (Or (And (CutS) OK OK) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C)) 
     (of_alt[:: 
       [::cut (of_alt[:: [:: call p B]; [::call p C]])];
       [::cut (of_alt[:: [:: call p B]; [::call p C]])];
@@ -381,7 +381,7 @@ Proof.
   rewrite//.
 Qed.
 Goal forall l,
-  let s := ((Or (Or Dead empty (CutS)) empty Top)) in
+  let s := ((Or (Or Dead empty (CutS)) empty OK)) in
   let bt := of_alt([::] :: l) in
   state_to_list s empty (of_alt l) = of_alt[:: [:: cut bt]; [::]] /\ 
     state_to_list (odflt Bot (next_alt true (get_state (expand u empty s)))) empty (of_alt l) ++ (of_alt l) = bt.

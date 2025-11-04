@@ -5,11 +5,22 @@ From det Require Import zify_ssreflect.
 Section RunP.
   Variable u: Unif.
 
-  Lemma ges_subst_cutl {s A} : get_substS s (cutl A) = get_substS s A.
+  (* Lemma ges_subst_cutr {s A} : get_substS s (cutr A) = get_substS s A.
   Proof.
     elim: A s => //=.
-    - move=> A HA s B HB s1; case:ifP => //=dA; rewrite ?is_dead_cutl dA//.
-    - move=> A HA B0 _ B HB s; case:ifP; rewrite success_cut => sA; rewrite sA HA//.
+    - move=> A HA s B HB s1; rewrite is_dead_cutr HA HB//.
+    - move=> A HA B0 _ B HB s; rewrite success_cutr HA; case: ifP => //.
+        rewrite success_cut sA/=HA//.
+      rewrite success_cutr.
+        rewrite success_cut => sA; rewrite sA HA//.
+  Qed. *)
+
+  Lemma ges_subst_cutl {s A} : 
+    success A -> get_substS s (cutl A) = get_substS s A.
+  Proof.
+    elim: A s => //=.
+    - move=> A HA s B HB s1; case:ifP => //=dA; rewrite ?is_dead_cutl dA//; auto.
+    - move=> A HA B0 _ B HB s /andP[sA sB]; rewrite sA/=success_cut sA HA// HB//.
   Qed.
 
   Definition choose_cutl b1 A := (if (b1 == 0) then A else cutl A).
@@ -29,10 +40,12 @@ Section RunP.
     - move=> A HA s B HB s1 C; rewrite fun_if/=.
       case: ifP => //=dA; rewrite ?is_dead_cutl dA; case expand => //.
     - move=> A HA B0 _ B HB s1 C.
-      case e: expand => //[ A'| A'].
-        by have:= HA _ _ e.
-      case f: expand => //[B'].
-      by have:= HB _ _ f.
+      case:ifP => sA//=.
+        case X: expand => //=[A'|A'].
+          by have:= HA _ _ X.
+        case e: expand => //[ A''].
+        by have:= HB _ _ e.
+      rewrite is_ko_expand//is_ko_cutr//.
   Qed.
 
   Lemma expand_cutl_exp {s C B}: expand u s (cutl C) = Expanded B -> False.
@@ -47,9 +60,11 @@ Section RunP.
         by have:= HA _ _ X.
       by have:= expand_cutl_cb X.
     - move=> A HA B0 _ B HB s1 C.
-      case e: expand => //[A'|A'].
-        by have:= HA _ _ e.
-      case f: expand => //[B'].
-      by have:= HB _ _ f.
+      case:ifP => sA/=.
+        case e: expand => //[A'|A'].
+          by have:= HA _ _ e.
+        case X: expand => //[B'].
+        by have:= HB _ _ X.
+      rewrite is_ko_expand//is_ko_cutr//.
   Qed.
 End RunP.

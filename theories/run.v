@@ -19,7 +19,7 @@ HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
 Inductive state :=
   | Bot : state
   | OK : state
-  | Top : state
+  (* | Top : state *)
   | Dead : state
   | CallS : program  -> Callable -> state
   | CutS : state
@@ -52,7 +52,7 @@ Section state_op.
   Fixpoint dead1 A :=
     match A with
     | Dead => Dead
-    | OK | Bot | CutS | CallS _ _ | Top => Dead
+    | OK | Bot | CutS | CallS _ _ => Dead
     | And A B0 B => And (dead1 A) (dead1 B0) (dead1 B)
     | Or A s B => Or (dead1 A) s (dead1 B)
     end.
@@ -60,7 +60,7 @@ Section state_op.
   Fixpoint is_dead A :=
     match A with
     | Dead => true
-    | OK | Bot | CutS | CallS  _ _ | Top => false
+    | OK | Bot | CutS | CallS  _ _ => false
     (* Note: "is_dead A || (success A && dead B)" is wrong
       A counter example is: "(OK \/ p) /\ Dead"
       In this case, a valid alternative is "p /\ B0"
@@ -72,7 +72,7 @@ Section state_op.
   Fixpoint is_ko A :=
     match A with
     | Dead | Bot => true
-    | OK | CutS | CallS  _ _ | Top => false
+    | OK | CutS | CallS  _ _ => false
     | And A B0 B => is_ko A
     | Or A s B => is_ko A && is_ko B
     end.
@@ -80,7 +80,7 @@ Section state_op.
   Fixpoint success (A : state) : bool :=
     match A with
     | OK => true
-    | Top | CutS | CallS _ _ | Bot | Dead => false
+    | CutS | CallS _ _ | Bot | Dead => false
     | And A _ B => success A && success B
     (* We need to keep the if condition to reflect the behavior of expand:
       For example, an interesting proprety of expand is:
@@ -100,7 +100,7 @@ Section state_op.
         state into a "Failure Bot" (it does not introduce a Dead state).
     *)
     | Bot | Dead => true
-    | Top | CutS | CallS _ _ | OK => false
+    | CutS | CallS _ _ | OK => false
     | And A _ B => failed A || (success A && failed B)
     (* We keep the if condition to have the right behavior in next_alt *)
     | Or A _ B => if is_dead A then failed B else failed A (*&& failed B*)
@@ -109,7 +109,7 @@ Section state_op.
 
   Fixpoint cutr A :=
     match A with
-    | CutS | CallS _ _ | Top | Bot => Bot
+    | CutS | CallS _ _| Bot => Bot
     | OK => Bot
     | Dead => Dead
     | And A B0 B => And (cutr A) (cutr B0) (cutr B)
@@ -120,9 +120,11 @@ Section state_op.
   Fixpoint cutl A :=
     (* if A == dead A then Dead else *)
     match A with
-    | CutS | CallS _ _ | Top | Bot => Bot
+    | CutS | CallS _ _ | Bot => Bot
     | Dead | OK => A
-    | And A B0 B => And (cutl A) (cutl B0) (cutl B)
+    | And A B0 B =>
+      if success A then And (cutl A) (cutr B0) (cutl B)
+      else And (cutr A) (cutr B0) (cutr B)
     | Or A s B => 
         if is_dead A then Or A s (cutl B)
         else  Or (cutl A) s (cutr B)
@@ -200,35 +202,7 @@ Section state_op.
   Proof. 
     elim: a => //= [A HA s B HB|A HA B0 HB0 B HB].
       by rewrite fun_if/=HA HB dead_cutr if_same.
-    rewrite HA HB//HB0//. 
-  Qed.
-
-  Lemma cutlr {A}: cutl (cutr A) = cutr A.
-  Proof.
-    elim: A => //.
-    - move=> A HA s B HB/=.
-      rewrite HA HB cutr2 if_same//.
-    - move=> A HA B0 HB0 B HB/=.
-        rewrite HA HB0 HB//.
-  Qed.
-
-  Lemma cutrl {A}: cutr (cutl A) = cutr A.
-  Proof.
-    elim: A => //.
-    - move=> A HA s B HB/=.
-      rewrite fun_if/= HA HB cutr2 if_same//.
-    - move=> A HA B0 HB0 B HB/=.
-      rewrite HA HB0 HB//.
-  Qed.
-
-
-  Lemma cutl2 {a}: cutl (cutl a) = cutl a.
-  Proof.
-    elim: a => //=.
-    + move=> A HA s B HB.
-      rewrite (fun_if cutl)/= HA HB cutrl cutlr cutr2 if_same.
-      case: ifP => //->//.
-    + move=> A -> B0 -> B ->//.
+    rewrite fun_if/= HA HB !dead_cutr if_same//.
   Qed.
 
   (* Lemma cutr_dead {A}: cutr A = dead1 A -> dead1 A = A.
@@ -249,14 +223,41 @@ Section state_op.
   Lemma is_dead_dead {A}: is_dead (dead1 A).
   Proof. elim: A => // A HA s B HB/=; rewrite HA//. Qed.
 
-  Lemma is_ko_cutr {B}: is_ko (cutr B).
-  Proof. elim: B => // A HA s B HB/=; rewrite HA HB//. Qed.
-
   (* Lemma dead_cutr_is_dead {A}: is_dead (cutr A) = is_dead A.
   Proof. elim: A => //. ; by move=> A HA s B HB /=; rewrite HA HB. Qed.   *)
 
-  Lemma is_ko_cutl {B}: is_ko B -> is_ko (cutl B).
-  Proof. elim: B => //=A HA s B HB/andP[kA kB]; rewrite fun_if/=kA HA//HB// is_ko_cutr if_same//. Qed.
+
+
+  Lemma is_ko_cutr {B}: is_ko (cutr B).
+  Proof. elim: B => // A HA s B HB/=; rewrite HA HB//. Qed.
+
+  Lemma cutlr {A}: cutl (cutr A) = cutr A.
+  Proof.
+    elim: A => //.
+    - move=> A HA s B HB/=.
+      rewrite HA HB cutr2 if_same//.
+    - move=> A HA B0 HB0 B HB/=.
+      rewrite !cutr2 is_ko_success//is_ko_cutr//.
+  Qed.
+
+  Lemma cutrl {A}: cutr (cutl A) = cutr A.
+  Proof.
+    elim: A => //.
+    - move=> A HA s B HB/=.
+      rewrite fun_if/= HA HB cutr2 if_same//.
+    - move=> A HA B0 HB0 B HB/=.
+      rewrite fun_if/= HA HB !cutr2 if_same//.
+  Qed.
+
+  Lemma is_dead_cutr {A}: is_dead (cutr A) = is_dead A.
+  Proof. elim: A => //A HA s B HB/=; rewrite HA HB//. Qed.
+
+  Lemma is_dead_cutl {A}: is_dead (cutl A) = is_dead A.
+  Proof. 
+    elim: A => //=.
+    - move=> A HA s B HB; rewrite fun_if/= HA HB is_dead_cutr if_same//.
+    - move=> A HA B0 HB0 B HB; rewrite fun_if/= HA is_dead_cutr// if_same//.
+  Qed.
 
   Lemma failed_cutr {A}: failed (cutr A).
   Proof. elim: A => //=A->// _ B ->; rewrite if_same//. Qed.
@@ -264,18 +265,43 @@ Section state_op.
   Lemma success_cutr {A} : success (cutr A) = false.
   Proof. apply: failed_success failed_cutr. Qed.
 
-  Lemma is_dead_cutr {A}: is_dead (cutr A) = is_dead A.
-  Proof. elim: A => //A HA s B HB/=; rewrite HA HB//. Qed.
+  Lemma success_cut {A} : success (cutl A) = success A.
+  Proof.
+    elim: A => //. 
+    + move=> A HA s B HB /=.
+      case: ifP => /= dA; rewrite ?is_dead_cutl dA//.
+    + move=> A HA B HB C HC /=.
+      rewrite fun_if/= HA HC !success_cutr/=.
+      case: ifP => //=->//.
+  Qed.
 
-  Lemma is_dead_cutl {A}: is_dead (cutl A) = is_dead A.
-  Proof. elim: A => //A HA s B HB/=; rewrite fun_if/=HB HA is_dead_cutr if_same//. Qed.
+  Lemma cutl2 {a}: cutl (cutl a) = cutl a.
+  Proof.
+    elim: a => //=.
+    + move=> A HA s B HB.
+      rewrite (fun_if cutl)/= HA HB cutrl cutlr cutr2 if_same.
+      case: ifP => //->//.
+    + move=> A HA B0 HB0 B HB.
+      case: ifP => //= sA.
+        rewrite success_cut sA HA HB cutr2//.
+      rewrite success_cutr !cutr2//.
+  Qed.
+
+  Lemma is_ko_cutl {B}: is_ko B -> is_ko (cutl B).
+  Proof. 
+    elim: B => //. 
+    - move=> //=A HA s B HB/andP[kA kB].
+      by rewrite fun_if/=kA HA//HB///= is_ko_cutr if_same.
+    - move=> A HA B0 _ B HB/= kA; rewrite fun_if/=; rewrite HA//is_ko_cutr if_same//.
+  Qed.
 
   Lemma failed_success_cut {A}: failed (cutl A) = ~~ (success (cutl A)).
   Proof.
     elim: A => //=.
     - move=> A HA s B HB; case: ifP => dA/=; rewrite?is_dead_cutl dA//.
-    - move=> A HA B0 _ B HB/= ; rewrite HA HB.
-      case: success => //.
+    - move=> A HA B0 _ B HB/=. 
+      rewrite fun_if/= (fun_if success) /=!failed_cutr success_cutr success_cut/=.
+      rewrite HA HB !success_cut; case: ifP => //->//.
   Qed.
 
   Lemma failed_cutl_is_ko {A}:
@@ -287,14 +313,6 @@ Section state_op.
   Lemma success_failed_cut {A}: success (cutl A) = ~~ (failed (cutl A)).
   Proof. rewrite failed_success_cut; case: success => //. Qed.
 
-  Lemma success_cut {A} : success (cutl A) = success A.
-  Proof.
-    elim: A => //. 
-    + move=> A HA s B HB /=.
-      case: ifP => /= dA; rewrite ?is_dead_cutl dA//.
-    + move=> A HA B HB C HC /=.
-      rewrite HA// HC//.
-  Qed.
 
   Lemma failed_cut {A}: failed A -> failed (cutl A).
   Proof.
@@ -302,11 +320,10 @@ Section state_op.
       move=> A HA s B HB /=.
       rewrite (fun_if failed)/= !failed_cutr.
       by case: ifP => ///eqP dA /HA->; rewrite if_same.
-    move=> A HA B0 _ B HB /=.
-    move=>/orP[].
-      by move=>/HA ->.
-    move=>/andP[sA fB].
-    rewrite success_cut//sA/=HB//orbT//.
+    move=> A HA B0 _ B HB /=; rewrite fun_if/=.
+    move=>/orP[fA|/andP[sA fB]].
+      rewrite failed_success//= failed_cutr//.
+    rewrite sA success_cut sA HB// orbT//.
   Qed.    
 End state_op.
 
@@ -322,11 +339,11 @@ Definition mkAnd A B0 r :=
   match r with
   | Failure B       => Failure       (And A B0 B)
   | Expanded B    => Expanded    (And A B0 B)
-  | CutBrothers B => CutBrothers (And (cutl A) (cutl B0) B)
+  | CutBrothers B => CutBrothers (And (cutl A) (cutr B0) B)
   | Success B      => Success      (And A B0 B)
   end.
 
-Lemma get_state_And A B0 B : get_state (mkAnd A B0 B) = And (if is_cutbrothers B then cutl A else A) ((if is_cutbrothers B then cutl B0 else B0)) (get_state B).
+Lemma get_state_And A B0 B : get_state (mkAnd A B0 B) = And (if is_cutbrothers B then cutl A else A) ((if is_cutbrothers B then cutr B0 else B0)) (get_state B).
 Proof. by case: B. Qed.
 
 Lemma get_state_Or A s B : get_state (mkOr A s B) = Or A s (get_state B).
@@ -340,7 +357,7 @@ Definition A2CallCut pr (A:A) : state :=
 
 Fixpoint big_and pr (a : list A) : state :=
   match a with
-  | [::] => Top
+  | [::] => OK
   | x :: xs => And (A2CallCut pr x)  (big_and pr xs) (big_and pr xs)
   end.
 
@@ -351,9 +368,6 @@ Fixpoint big_or_aux pr (r : list A) (l : seq (Sigma * R)) : state :=
   end.
 
 Lemma big_and_dead {p l}: is_dead (big_and p l) = false.
-Proof. elim l => //-[]//. Qed.
-
-Lemma big_and_cut {p l}: big_and p l = cutl (big_and p l) -> False.
 Proof. elim l => //-[]//. Qed.
 
 Record Unif := {
@@ -429,7 +443,7 @@ Section main.
 
   Fixpoint get_substS s A :=
     match A with
-    | Top | CutS | CallS _ _ | Bot | OK | Dead => s
+    | CutS | CallS _ _ | Bot | OK | Dead => s
     | Or A s1 B => if is_dead A then get_substS s1 B else get_substS s A
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
@@ -444,7 +458,6 @@ Section main.
     | Dead => Failure Dead
     
     (* lang *)
-    | Top              => Expanded OK
     | CutS       => CutBrothers OK
     | CallS pr t => Expanded (big_or pr s t)
 
@@ -472,7 +485,7 @@ Section main.
     | Bot => None
     | Dead => None
     | OK => if b then None else Some OK
-    | Top | CutS | CallS _ _ => Some A
+    | CutS | CallS _ _ => Some A
     | And A B0 B =>
       if is_dead A then None else
       if failed A then 
@@ -517,13 +530,13 @@ Section main.
         end
   end.
 
-  Goal next_alt false (And (Or OK empty Top) OK Bot) = Some (And (Or Dead empty Top) OK OK).
+  Goal next_alt false (And (Or OK empty OK) OK Bot) = Some (And (Or Dead empty OK) OK OK).
   Proof. move=> //=. Qed.
 
   Goal next_alt false (And (Or OK empty OK) OK Bot) = Some (And (Or Dead empty OK) OK OK).
   Proof. move=> //=. Qed.
 
-  Goal next_alt true (And (Or OK empty OK) Top OK) = Some (And (Or Dead empty OK) Top Top).
+  Goal next_alt true (And (Or OK empty OK) OK OK) = Some (And (Or Dead empty OK) OK OK).
   Proof. move=> //=. Qed.
 
   Goal (next_alt false (Or Bot empty OK)) = Some (Or Dead empty OK). move=> //=. Qed.
@@ -640,7 +653,7 @@ Section main.
       rewrite /= !HA !HB//.
   Qed.
 
-    Lemma expand_not_dead {s A r}: 
+  Lemma expand_not_dead {s A r}: 
     is_dead A = false -> expand s A = r -> is_dead (get_state r) = false.
   Proof.
     move=> + <-.
@@ -711,10 +724,9 @@ Section main.
         rewrite dA HB//.
       rewrite is_dead_cutl dA HA// next_alt_cutr if_same//.
     - move=> A HA B0 HB0 B HB /andP[sA sB].
-      rewrite success_cut is_dead_cutl success_is_dead//sA.
-      rewrite HB//HA//.
-      rewrite -success_cut in sA.
-      rewrite success_failed//.
+      rewrite sA/= is_dead_cutl success_cut sA HA// HB//.
+      rewrite success_is_dead//.
+      rewrite failed_success_cut success_cut sA//.
   Qed.
 
   Lemma next_alt_cutl_failed {A b}:
@@ -725,10 +737,12 @@ Section main.
       case: ifP => dA /=; rewrite?is_dead_cutl dA => Hf.
         rewrite HB//.
       rewrite HA// next_alt_cutr if_same//.
-    - move=> A HA B0 _ B HB b /orP[fA|/andP[sA fB]].
-        rewrite fA HA// if_same//.
-      rewrite success_failed// sA HB//.
-      rewrite next_alt_cutl_success?if_same// -success_cut//.
+    - move=> A HA B0 _ B HB b.
+      case: ifP => sA/=.
+        rewrite failed_success_cut success_cut sA/= is_dead_cutl success_is_dead//.
+        move=> fB.
+        rewrite HB//=next_alt_cutl_success//.
+      by rewrite !next_alt_cutr success_cutr failed_cutr if_same.
   Qed.
 
   Lemma next_alt_cutl_failedF {A b}:
@@ -742,11 +756,10 @@ Section main.
     - move=> A HA s B HB; case: ifP => /= dA.
         rewrite dA HB//.
       rewrite is_dead_cutl dA HA next_alt_cutr if_same//.
-    - move=> A HA B0 _ B HB; case: ifP => //dA.
-      case: ifP => fA.
-        rewrite next_alt_cutl_failed//.
-      rewrite HB HA.
-      rewrite success_failed_cut fA//.
+    - move=> A HA B0 _ B HB; case: ifP => //sA/=.
+        rewrite failed_success_cut success_cut sA/=.
+        rewrite HB HA if_same//.
+      rewrite !next_alt_cutr success_cutr failed_cutr if_same//.
   Qed.
 
   Lemma expand_not_solved_not_success {s1 A r}:
@@ -899,7 +912,6 @@ Section main.
   Proof.
     elim: A D b => //=.
     - move=> D []//[<-]//.
-    - move=> D _ [<-]//.
     - move=>/= p c d _ []// <-//.
     - move=> D _ [<-]//.
     - move=> A HA s B HB C b/=.
@@ -926,7 +938,7 @@ Section main.
     rewrite (HA _ _ Y)//.
   Qed.
 
-  Lemma next_alt_failed {b A r}: next_alt b A = r -> failed (odflt Top r) = false.
+  Lemma next_alt_failed {b A r}: next_alt b A = r -> failed (odflt OK r) = false.
   Proof.
     move=><-; elim: A b {r} => //=.
     - move=> []//.
@@ -1031,7 +1043,8 @@ Section main.
         by rewrite eqxx HA// same_structure_cutr//.
       move=> A HA B0 HB0 B HB []//A' B0' B'/=. 
       move=> /and3P[sB0 sA sB].
-      rewrite HA//HB0//HB//.
+      case: ifP => //=sA'; rewrite !same_structure_cutr//=.
+      rewrite HA//HB//.
     Qed.
     
     Lemma same_structure_dead {B}: same_structure B (dead1 B).
@@ -1056,7 +1069,7 @@ Section main.
       have:= (HA s1).
       case eA: expand => //=[A'|A'|A'|A'] {}HA; rewrite ?HA ?same_structure_id//.
       have := (HB (get_substS s1 A')).
-      case eB: expand => //=[B'|B'|B'|B'] H; rewrite ?same_structure_cut// ?same_structure_id// HA//.
+      case eB: expand => //=[B'|B'|B'|B'] H; rewrite ?same_structure_cut// ?same_structure_cutr// ?same_structure_id// ?HA//.
     Qed.
 
     Definition same_structure_sup A B :=

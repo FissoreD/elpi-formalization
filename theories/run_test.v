@@ -63,14 +63,10 @@ Section Test1.
     apply: run_step => //=.
     apply: run_fail => //=.
     apply: run_step => //=.
-    apply: run_step => //=.
     apply: run_fail => //=.
     apply: run_step => //=.
-    apply: run_step => //.
-    apply: run_fail => //=.
-    apply: run_step => //.
-    apply: run_step => //.
-    apply: run_done => //.
+    apply: run_fail => //.
+    apply: run_done => //=.
   Qed.
 End Test1.
 
@@ -91,10 +87,7 @@ Section Test5.
     apply: run_step => //=.
     apply: run_fail => //=.
     apply: run_step => //=.
-    apply: run_step => //=.
-    apply: run_step => //=.
-    rewrite-/s1-/s2.
-    apply: run_done => //.
+    apply: run_done => //=.
     by [].
   Qed.
 End Test5.
@@ -119,12 +112,8 @@ Section Test6.
     apply: run_step => //=.
     apply: run_fail => //=.
     apply: run_step => //=.
-    apply: run_step => //=.
     apply: run_fail => //=.
     apply: run_step => //=.
-    rewrite-/s1-/s2.
-    apply: run_step => //=.
-    apply: run_step => //.
     apply: run_done => //.
     by [].
   Qed.
@@ -152,7 +141,7 @@ Section Test2.
   Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
-  Goal expand unif empty (Or (Or Dead empty (CutS)) empty Top) = Expanded (Or (Or Dead empty OK) empty Top) .
+  Goal expand unif empty (Or (Or Dead empty (CutS)) empty OK) = Expanded (Or (Or Dead empty OK) empty OK) .
   Proof.
     move=>//=.
   Qed.

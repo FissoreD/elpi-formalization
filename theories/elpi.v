@@ -805,7 +805,7 @@ Definition kill (A: goals) := map (apply_cut (fun x => nilC)) A.
 Fixpoint state_to_list (A: state) s (bt : alts) : alts :=
 match A with
 | OK => (s, nilC) ::: nilC
-| Top => (s, nilC) ::: nilC
+(* | Top => (s, nilC) ::: nilC *)
 | Bot => nilC
 | Dead => nilC
 | CutS => (s, ((cut nilC) ::: nilC)) ::: nilC
