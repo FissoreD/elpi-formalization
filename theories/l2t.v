@@ -170,8 +170,10 @@ Section clean_ca.
       rewrite !size_cat !size_map.
       rewrite !clean_ca_cat clean_ca_mk_lb0//.
       rewrite !take_add_deep.
-      rewrite clean_ca_add_deep//.
       rewrite size_add_deep .
+      rewrite -take_add_deep clean_ca_take.
+      rewrite clean_ca_add_deep//.
+      rewrite take_add_deep -clean_ca_take.
       rewrite -size_cat cat_take_drop.
       rewrite -take_add_deep.
       rewrite clean_ca_drop.
@@ -182,17 +184,36 @@ Section clean_ca.
       rewrite subnDAC.
       set N := size ca - size bt.
       set M := size x.
-      have: N <= size L2.
-        rewrite /L2 clean_ca_size/N.
-        lia.
       clear.
-      have: size L1 = size ca.
-        by rewrite/L1 size_map size_add_deep clean_ca_size//.
-      move=> K1 K2.
-      have: size L2 <= size L1.
-        rewrite/L2 clean_ca_size; lia.
-      (* THE PROOF is in test.v *)
-  Admitted.
+      have K1: N <= size L2 by rewrite /L2 clean_ca_size/N; lia.
+      have K2: size L1 = size ca by rewrite/L1 size_map size_add_deep clean_ca_size//.
+      have K3: size L2 <= size L1 by rewrite/L2 clean_ca_size; lia.
+      rewrite take_cat.
+      rewrite !size_take.
+      case: ifP.
+        by case:ifP; lia.
+      case: ifP => H3.
+        case:ifP => H4 H5.
+          rewrite take_drop.
+          have {}H3 : N - M <= N by lia.
+          rewrite subnK//; f_equal.
+          rewrite -take_min.
+          by replace (minn (N - M) N) with (N - M) by lia.
+        have H6 : N = size L2 by lia.
+        rewrite H6.
+        rewrite take_size -take_min.
+        replace (minn _ _) with (size L2 - M) by lia; f_equal.
+        have: (size L2 - (size L2 - M)) = size (drop (size L2 - M) L2).
+          rewrite size_drop//.
+        move=> ->.
+        rewrite take_size//.
+      case: ifP => H4 H5; last first; try by lia.
+      have H : N = size L2 by lia.
+      rewrite H -take_min.
+      replace (minn (size L2 - M) (size L2)) with (size L2 - M) by lia.
+      f_equal.
+      rewrite take_size take_oversize // size_drop; lia.
+  Qed.
 
   Lemma clean_ca_save_alts {x bt hd L}:
     empty_ca L ->

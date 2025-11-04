@@ -188,6 +188,14 @@ Class IsList {Th Tl : Type}  := {
   append_same_len {l1 l1' l2 l2'}: 
     size l1 = size l1' -> size l2 = size l2' -> appendC l1 l2 = appendC l1' l2' -> (l1 = l1' /\ l2 = l2')%type2;
   append_sameR {l1 l2 l3}: appendC l1 l3 = appendC l2 l3 -> l1 = l2; 
+  take_cat (n0 : nat) s1 s2:
+    take n0 (appendC s1 s2) =
+    (if n0 < size s1 then take n0 s1 else appendC s1 (take (n0 - size s1) s2));
+  size_take n0 s: size (take n0 s) = (if n0 < size s then n0 else size s);
+  take_drop i j s: take i (drop j s) = drop j (take (i + j) s);
+  take_min i j s: take (minn i j) s = take i (take j s);
+  size_drop n0 s: size (drop n0 s) = size s - n0;
+  take_oversize [n : nat] [s]: size s <= n -> take n s = s;
 }.
 Declare Scope SE.
 Global Infix "++" := appendC : SE.
@@ -430,6 +438,15 @@ Section alts.
     | more_alt x xs => (e == x) || memA e xs
     end.
 
+  Lemma take_dropA: forall (i j : nat) (s : alts),
+    take_alts i (drop_alts j s) =
+    drop_alts j (take_alts (i + j) s).
+  Admitted.
+
+  Lemma take_minA: forall (i j : nat) (s : alts),
+    take_alts (minn i j) s = take_alts i (take_alts j s).
+  Admitted.
+
   #[refine] Global Instance IsList_alts : @IsList (Sigma * goals) alts :=
     {| 
     nilC := no_alt; consC := more_alt;
@@ -468,7 +485,19 @@ Section alts.
       + move=> /(f_equal size_alts)/=; rewrite size_cat_alts; lia.
       + move=> /(f_equal size_alts)/=; rewrite size_cat_alts; lia.
       + by move=> [??]/IH?; subst.
+    elim => //=[|n IH][]//=[s1 b] l1 l2/=.
+      rewrite IH subSS.
+      replace (_.+1 < _) with (n < size_alts l1) by lia.
+      case: ifP => //.
+    elim => [|n IH] []//= _ l; rewrite IH.
+      replace (_.+1 < _) with (n < size_alts l) by lia.
+      case: ifP=>//.
+    apply: take_dropA.
+    apply: take_minA.
+    elim => [|n IH] []//=.
+    elim => [|n IH][]//=[s g] gs /IH ->//.
   Defined.
+
 End alts.
 
 Section goals.
@@ -577,7 +606,16 @@ Section goals.
     match l with
     | no_goals => false
     | more_goals x xs => (e == x) || memG e xs
-    end.    
+    end.
+
+  Lemma take_dropG: forall (i j : nat) s,
+    take_goals i (drop_goals j s) =
+    drop_goals j (take_goals (i + j) s).
+  Admitted.
+
+  Lemma take_minG: forall (i j : nat) s,
+    take_goals (minn i j) s = take_goals i (take_goals j s).
+  Admitted.
 
   #[refine] Global Instance IsList_goals : @IsList G goals :=
     {| nilC := no_goals; consC := more_goals; map:= mapG;
@@ -615,6 +653,17 @@ Section goals.
       + move=> /(f_equal size_goals)/=; rewrite size_cat_goals; lia.
       + move=> /(f_equal size_goals)/=; rewrite size_cat_goals; lia.
       + by move=> [?]/IH?; subst.
+    elim => //=[|n IH][]//=b l1 l2/=.
+      rewrite IH subSS.
+      replace (_.+1 < _) with (n < size_goals l1) by lia.
+      case: ifP => //.
+    elim => [|n IH] []//= _ l; rewrite IH.
+      replace (_.+1 < _) with (n < size_goals l) by lia.
+      case: ifP=>//.
+    apply: take_dropG.
+    apply: take_minG.
+    elim => [|n IH] []//=.
+    elim => [|n IH][]//=g gs /IH ->//.
   Defined.
 End goals.
 
@@ -839,49 +888,6 @@ match A with
     end
   else nilC
 end.
-
-(* Definition empty_sig : sigT := fun _ => b(d Func).
-
-Definition empty_prog := {|
-    modes := (fix rec (t : Tm) := match t with Comb h _ => o :: rec h | Code _ | Data _ => [::] end);
-    sig := empty_sig;
-    rules := [::];
-|}.
-
-Fixpoint list_to_state (l: alts) : state :=
-  match l with
-  | no_alt => Bot
-  | more_alt x no_alt => 
-    let l := goals_to_state x.2 Bot in
-    Or Bot x.1 l
-  | more_alt x (more_alt y ys as t) => 
-    let t := goals_to_state x.2 (list_to_state t) in
-    Or Bot x.1 t
-  end
-with goals_to_state (l:goals) t: (state):=
-  match l with
-  | no_goals => (Or Top empty t)
-  | more_goals x xs => 
-    let '(l, rr) := goal_to_state x t in
-    let r := goals_to_state xs t  in
-    match rr with
-    | Some _ => 
-      (* let spref := list_to_state pref in
-      let ssuff := list_to_state suff in *)
-      (r)
-    | None => 
-      (And l r r)
-    end
-  end
-with goal_to_state (l:G) (t:state) :=
-  match l with
-  | call pr tm => (CallS pr tm, None)
-  | cut ca => 
-      (* let s := size t - size ca in *)
-      (* (CutS, None) *)
-      (CutS, Some ((list_to_state ca), ca))
-  end
-. *)
 
 Global Notation "-nilCG" :=
   (@nilC _ _ IsList_goals)
