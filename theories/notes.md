@@ -639,4 +639,3 @@ list `x::xs`, then `x` should treat `B` as its natural execution tail, while
 `xs` should use `B0` as its execution tail. This implies that `B0` is appended
 as a tail-conjunct to all cut-to alternatives in `x` and `xs` that do not
 come from `C`.
-
