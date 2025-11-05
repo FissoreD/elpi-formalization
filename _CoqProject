@@ -1,0 +1,24 @@
+-Q theories/ det
+
+-arg -w -arg -notation-overridden
+
+theories/zify_ssreflect.v
+
+theories/lang.v
+
+theories/tree.v
+theories/tree_test.v
+theories/tree_prop.v
+theories/tree_valid_state.v
+theories/tree_prop_hard.v
+
+theories/check.v
+
+theories/elpi.v
+theories/elpi_test.v
+
+theories/t2l.v
+theories/t2l_prop.v
+
+theories/elpi_equiv.v
+theories/elpi_valid_state.v

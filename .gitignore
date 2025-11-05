@@ -10,3 +10,15 @@
 
 pdf
 code/rocq/_opam
+_opam
+
+**/*.aux
+**/*.vos
+**/*.vok
+**/*.glob
+**/.lia.cache
+**/.nia.cache
+**/*.generated*
+**/*.vo
+**/*.generate
+**/_build
