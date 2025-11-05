@@ -4,18 +4,6 @@ From HB Require Import structures.
 From det Require Export lang.
 
 
-Elpi derive.eqbOK.register_axiom program is_program is_program_inhab program_eqb program_eqb_correct program_eqb_refl.
-Lemma program_eqb_OK : Equality.axiom program_eqb.
-apply: iffP2 program_eqb_correct program_eqb_refl.
-Qed.
-HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eqb_OK.
-
-Elpi derive.eqbOK.register_axiom Sigma is_Sigma is_Sigma_inhab Sigma_eqb Sigma_eqb_correct Sigma_eqb_refl.
-Lemma Sigma_eqb_OK : Equality.axiom Sigma_eqb.
-apply: iffP2 Sigma_eqb_correct Sigma_eqb_refl.
-Qed.
-HB.instance Definition _ : hasDecEq Sigma := hasDecEq.Build Sigma Sigma_eqb_OK.
-
 Inductive tree :=
   | Bot : tree
   | OK : tree
@@ -24,6 +12,7 @@ Inductive tree :=
   | CutS : tree
   | Or  : tree -> Sigma -> tree -> tree  (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
   | And : tree -> tree -> tree -> tree  (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
+  (* | PiImpl : V -> R_ A -> A -> A. *)
   .
 derive tree.
 HB.instance Definition _ := hasDecEq.Build tree tree_eqb_OK.
@@ -368,6 +357,12 @@ Record Unif := {
 Section main.
   Variable u: Unif.
 
+  Fixpoint get_rcallable_hd r :=
+    match r with
+    | RCallable_Kp k => k
+    | RCallable_Comb t _ => get_rcallable_hd t
+    end.
+
 
   Fixpoint H (ml : list mode) (q : RCallable) (h: RCallable) s : option Sigma :=
     match ml,q,h with
@@ -380,7 +375,7 @@ Section main.
   (* TODO: deref is too easy? Yes if sigma is a mapping from vars to lambdas in a future version *)
   Fixpoint deref (s: Sigma) (tm:Tm) :=
     match tm with
-    | Tm_V V => Option.default tm (s.(sigma) V)
+    | Tm_V V => Option.default tm (lookup V s)
     | Tm_Kp _ | Tm_Kd _ => tm
     | Tm_Comb h ag => Tm_Comb (deref s h) ag
     end.
@@ -415,9 +410,10 @@ Section main.
     match tm2RC (deref s (Callable2Tm query)) with
     | None => [::] (*this is a call with flex head, in elpi it is an error! *)
     | Some query =>
-      let modes := pr.(modes) query in
-      let rules := select query modes rules s in
-      rules
+      match lookup (get_rcallable_hd query) pr.(modes) with 
+        | None => [::]
+        | Some modes => select query modes rules s
+        end
       end.
 
   Definition big_or pr s t :=

@@ -5,18 +5,18 @@ Notation "X &&& Y" := (And X _ Y) (at level 3).
 Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).
 Notation "` X" := ((ACall X)) (at level 3).
 
-Definition empty_sig : sigT := fun _ => b(d Func).
+Definition empty_sig : sigT := [::].
 
 Definition build_progr l := {|
-    modes := (fix rec t := match t with RCallable_Comb h _ => o :: rec h | RCallable_Kp _ => [::] end);
+    modes := [::(IKp 0,[::o]);(IKp 1,[::o]);(IKp 2,[::o]); (IKp 200, [::])];
     sig := empty_sig;
     rules := l;
 |}.
 
 Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
   match t1, t2 with
-  | Tm_V X, _ => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t2 else s.(sigma) x) |} | Some t => if t == t2 then Some s else None end
-  | _, Tm_V X => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t1 else s.(sigma) x) |} | Some t => if t == t1 then Some s else None end
+  | Tm_V X, _ => match lookup X s with None => Some (add X t2 s) | Some t => if t == t2 then Some s else None end
+  | _, Tm_V X => match lookup X s with None => Some (add X t2 s) | Some t => if t == t1 then Some s else None end
   | _, _ => if t1 == t2 then Some s else None
   end.
 
@@ -37,8 +37,8 @@ Definition pred_p x  := Tm_Comb (Tm_Kp q) x.
 Definition pred_r x  := Tm_Comb (Tm_Kp r) x.
 Definition pred_fail := Tm_Kp (IKp 100).
 
-Definition s1 := {| sigma := (fun x => if x == IV 0 then Some (Tm_Kd (IKd 1)) else None) |}.
-Definition s2 := {| sigma := (fun x => if x == IV 0 then Some (Tm_Kd (IKd 2)) else None) |}.
+Definition s1 : Sigma := [::(IV 0, Tm_Kd (IKd 1))].
+Definition s2 : Sigma := [::(IV 0, Tm_Kd (IKd 2))].
 
 Section Test1.
 

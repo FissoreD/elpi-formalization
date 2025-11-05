@@ -49,7 +49,6 @@ Inductive V := IV : nat -> V.
 derive V.
 HB.instance Definition _ := hasDecEq.Build V V_eqb_OK.
 
-
 Inductive Tm := 
   | Tm_Kp    : Kp -> Tm
   | Tm_Kd    : Kd -> Tm
@@ -81,33 +80,45 @@ Inductive A :=
 derive A.
 HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
 
-
-  (* | PiImpl : V -> R_ A -> A -> A. *)
 Notation R := (@R_ A).
 HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK _ _ A_eqb_OK).
 
-Record Sigma := { sigma : V -> option Tm }.
-Definition empty : Sigma := {| sigma := fun _ => None |}.
+Notation Sigma := (list (V * Tm)).
+Definition empty : Sigma := [::].
 
-Definition index := list R.
-Definition mode_ctx := RCallable -> list mode.
-Definition sigT := Kp -> S.
+Section Lookup.
+  Set Implicit Arguments.
+  Variables (K : eqType) (V : Type).
+
+  (* get the first value (option) for key k *)
+  Fixpoint lookup (k : K) (l : seq (K * V)) : option V :=
+    match l with
+    | [::] => None
+    | (k',v)::xs => if k' == k then Some v else lookup k xs
+    end.
+
+  Definition add k v l : (seq (K*V)):= (k,v) :: l.
+
+End Lookup.
+Arguments lookup {_ _}.
+Arguments add {_ _}.
+
+Notation index := (list R).
+Notation mode_ctx := (list (Kp * list mode)).
+Notation sigT := (list (Kp * S)).
 (* 
   The program knows about the signature of all predicates, therefore,
   for each predicate we return a S (not an option S)
 *)
-Record program := { (*depth : nat;*) rules : index; modes : mode_ctx; sig : sigT }.
+Record program := { 
+    (*depth : nat;*) 
+    rules : index; 
+    modes : mode_ctx; 
+    sig   : sigT
+  }.
 
-Parameter program_eqb : program -> program -> bool.
-Parameter is_program : program -> Type.
-Parameter is_program_inhab : forall p : program, is_program p.
-Parameter program_eqb_correct : forall p1 p2, program_eqb p1 p2 -> p1 = p2.
-Parameter program_eqb_refl : forall x, program_eqb x x.
+derive program.
+HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eqb_OK.
 
-Parameter Sigma_eqb : Sigma -> Sigma -> bool.
-Parameter is_Sigma : Sigma -> Type.
-Parameter is_Sigma_inhab : forall p : Sigma, is_Sigma p.
-Parameter Sigma_eqb_correct : forall p1 p2, Sigma_eqb p1 p2 -> p1 = p2.
-Parameter Sigma_eqb_refl : forall x, Sigma_eqb x x.
-
-
+Goal forall (p: program), exists p', p == p'.
+Proof. by move=>p; exists p; rewrite eqxx. Qed. 

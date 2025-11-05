@@ -110,7 +110,7 @@ Section valid_tree.
     elim: l s => //=; clear.
     + move=> []//a l; rewrite /base_or_aux //= base_and_big_and eqxx//.
       case: a => //.
-    + by move=> [[s r] rs] IH r1 /=; rewrite IH base_and_big_and.
+    + by move=> [s r] rs IH r1 /=; rewrite IH base_and_big_and.
   Qed.
 
   Lemma valid_tree_big_or {pr s t} : valid_tree (big_or u pr s t).
