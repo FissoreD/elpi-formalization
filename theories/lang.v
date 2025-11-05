@@ -27,11 +27,15 @@ Notation "x '--i-->' y" := (arr i x y) (at level 3).
 Notation "x '--o-->' y" := (arr o x y) (at level 3).
 derive D.
 HB.instance Definition _ := hasDecEq.Build D D_eqb_OK.
+derive B.
+HB.instance Definition _ := hasDecEq.Build B B_eqb_OK.
 derive mode.
 HB.instance Definition _ := hasDecEq.Build mode mode_eqb_OK.
-(* derive S.
+derive S.
 Elpi derive.eqbOK.register_axiom S is_S is_nat_inhab S_eqb S_eqb_correct S_eqb_refl.
-HB.instance Definition _ := hasDecEq.Build S S_eqb_OK. *)
+HB.instance Definition _ := hasDecEq.Build S S_eqb_OK.
+
+Goal b Exp == b Exp. by []. Qed.
 
 Inductive Kp := IKp : nat -> Kp.
 derive Kp.
