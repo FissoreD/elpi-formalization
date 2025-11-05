@@ -68,7 +68,7 @@ Section valid_tree.
   Qed.
 
 
-  Lemma valid_tree_dead {A} : is_dead A -> valid_tree A = false.
+  Lemma is_dead_valid_tree {A} : is_dead A -> valid_tree A = false.
   Proof.
     elim: A => //.
       move=> A HA s B HB/=/andP[]dA dB.
@@ -77,8 +77,8 @@ Section valid_tree.
     rewrite HA// andbF//.
   Qed.
 
-  Lemma valid_tree_dead1 {A} : valid_tree A -> is_dead A = false.
-  Proof. apply: contraPF => /valid_tree_dead->//. Qed.
+  Lemma valid_tree_is_dead {A} : valid_tree A -> is_dead A = false.
+  Proof. apply: contraPF => /is_dead_valid_tree->//. Qed.
 
   Lemma base_and_valid {A} : base_and A -> valid_tree A.
   Proof.
@@ -366,7 +366,7 @@ Section valid_tree.
       case Y: next_alt => [D|]//[<-]/=; rewrite is_dead_dead (HB _ _ _ Y)//bbOr_valid//.
     + move=> A HA B0 HB0 B HB  C b /=/and3P[vA].
       case: ifP => /=[sA vB bB0|sA /eqP?]; subst.
-        rewrite success_is_dead//success_failed//.
+        rewrite success_failed//.
         case X: next_alt => [D|].
           move=>[<-]/=; rewrite vA sA/= (HB _ _ vB X)//.
         case Y: next_alt => //=[A'].
@@ -374,7 +374,6 @@ Section valid_tree.
           move=> /(next_alt_aux_base_and_ko false) -> //.
         move=> /next_alt_aux_base_and->[<-]/=.
         by rewrite (base_and_valid bB) eqxx /bbAnd bB/= (HA _ _ vA Y) !if_same//.
-      case: (ifP (is_dead _)) => //dA.
       case: ifP => fA bB; last first.
         move=> [<-]/=; rewrite vA sA eqxx /bbAnd bB if_same//.
       case X: next_alt => [D|]//.
@@ -385,7 +384,7 @@ Section valid_tree.
     Qed.
 
   Lemma valid_tree_run {s1 A s2 B b}:
-    valid_tree A -> runb u s1 A s2 B b -> (B = dead1 B) + valid_tree B.
+    valid_tree A -> runb u s1 A s2 B b -> (B = dead B) + valid_tree B.
   Proof.
     move=> + H; elim: H; clear => //=.
     + move=> s1 s2 A B sA _ <- vA.

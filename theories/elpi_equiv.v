@@ -318,7 +318,7 @@ Section clean_ca.
       rewrite !clean_ca_add_ca//.
     - move=> A HA B0 _ B HB s1 x bt C /and3P[vA] ++/andP[sA sB].
       rewrite sA/= => vB bB.
-      rewrite success_is_dead// success_failed//.
+      rewrite success_failed//.
       case X: (next_alt _ B) => [B'|].
         move=> [<-]{C}/=.
         rewrite !(success_t2l empty _ sA)//=.
@@ -413,7 +413,7 @@ Section next_cut.
   Fixpoint next_cut (A: tree) :=
     match A with
     | Or A s B =>
-      if is_ko A then (false, Or (if is_dead A then A else dead1 A) s (next_cut B).2)
+      if is_ko A then (false, Or (if is_dead A then A else dead A) s (next_cut B).2)
       else 
         let '(b1, A') := next_cut A in
         (false, Or A' s (if b1 then cutr B else B))
@@ -455,7 +455,7 @@ Section next_cut.
         by rewrite is_ko_failed in fA.
       move: (HA fA vA).
       case X: next_cut => [b A']/= vA'.
-      rewrite valid_tree_dead1//=vA'.
+      rewrite valid_tree_is_dead//=vA'.
       case: ifP; rewrite//= bbOr_cutr//.
     - move=> A HA B0 _ B HB + /and3P[vA].
       case fA: failed => //=.
@@ -843,7 +843,7 @@ End next_callS.
 Lemma s2l_next_alt_tl {A s1 bt}:
   valid_tree A ->
   success A -> 
-    (t2l (build_na A (next_alt true A)) s1 bt) = (behead ((t2l A s1 bt))).
+    t2l (build_na A (next_alt true A)) s1 bt = behead (t2l A s1 bt).
 Proof.
   elim: A s1 bt => //=.
   - move=> A HA s B HB s1 bt.
@@ -865,7 +865,7 @@ Proof.
     rewrite behead_cons.
     rewrite X/=(t2l_dead is_dead_dead)/=behead_cons.
     have vB := bbOr_valid bB.
-    rewrite valid_tree_dead1//=.
+    rewrite valid_tree_is_dead//=.
     rewrite/SB => {SB}.
     move/orP: bB => []bB; last first.
       rewrite is_ko_next_alt//?base_or_aux_ko_is_ko//=.
@@ -876,7 +876,7 @@ Proof.
     rewrite (next_alt_aux_base_or_none bB Y)//.
   - move=> A HA B0 HB0 B HB s1 bt /and3P[vA].
     case:ifP => //= sA vB bB sB.
-    rewrite success_is_dead// success_failed//.
+    rewrite success_failed//.
     move /orP: bB => []bB; last first.
       rewrite (success_t2l (get_substS s1 A) vA sA)//=.
       rewrite (base_and_ko_t2l bB)//=.

@@ -146,8 +146,7 @@ Section RunP.
         rewrite dA HB//.
       rewrite is_dead_cutl dA HA// next_alt_cutr if_same//.
     - move=> A HA B0 HB0 B HB /andP[sA sB].
-      rewrite sA/= is_dead_cutl success_cut sA HA// HB//.
-      rewrite success_is_dead//.
+      rewrite sA/= success_cut sA HA// HB//.
       rewrite failed_success_cut success_cut sA//.
   Qed.
 
@@ -161,10 +160,10 @@ Section RunP.
       rewrite HA// next_alt_cutr if_same//.
     - move=> A HA B0 _ B HB b.
       case: ifP => sA/=.
-        rewrite failed_success_cut success_cut sA/= is_dead_cutl success_is_dead//.
+        rewrite failed_success_cut success_cut sA/=.
         move=> fB.
         rewrite HB//=next_alt_cutl_success//.
-      by rewrite !next_alt_cutr success_cutr failed_cutr if_same.
+      rewrite !next_alt_cutr success_cutr failed_cutr//.
   Qed.
 
   Lemma next_alt_cutl_failedF {A b}:
@@ -180,8 +179,8 @@ Section RunP.
       rewrite is_dead_cutl dA HA next_alt_cutr if_same//.
     - move=> A HA B0 _ B HB; case: ifP => //sA/=.
         rewrite failed_success_cut success_cut sA/=.
-        rewrite HB HA if_same//.
-      rewrite !next_alt_cutr success_cutr failed_cutr if_same//.
+        rewrite HB HA //.
+      rewrite !next_alt_cutr success_cutr failed_cutr //.
   Qed.
 
   Lemma expand_not_solved_not_success {s1 A r}:
@@ -189,25 +188,6 @@ Section RunP.
   Proof.
     case: r=> //[s|s|]/=; case X: success => //; try by rewrite // (succes_is_solved s1 X).
   Qed.
-
-  (* Lemma expand_cb_same_subst {A B s1 s2}:
-    expand u s1 A = CutBrothers B -> s2 = get_substS s1 A.
-  Proof.
-    elim: A B s1 s2 => //=.
-    - move=> B s1 s2 []//.
-    - move=> A HA s B HB C s1 s2; case: ifP => dA; case: expand u => //.
-    - move=> A HA B0 _ B HB C s1 s2.
-      case e: expand u => //[s' A'|s' A'].
-        move=>[??]; subst.
-        rewrite (HA _ _ _ e) (expand_not_solved_not_success e)//.
-      have [[??] SA] := expand_solved_same e; subst.
-      rewrite SA.
-      case e1: expand u => //=[s3 B'][<-] _.
-      apply: HB e1.
-  Qed. *)
-
-  Lemma expand_solved_cutl {s1 A B}: expand u s1 A = Success B -> cutl A = cutl B.
-  Proof. move=> /expand_solved_same->//. Qed.
 
   Lemma failed_expand {s1 A}:
     failed A -> expand u s1 A = Failure A.
@@ -270,7 +250,6 @@ Section RunP.
       case: eqP => //-[H ?]; subst.
       by move: dA; rewrite H is_dead_dead.
     - move=> A HA B0 _ B HB C /andP[sA sB].
-      case: ifP => // dA.
       rewrite success_failed sA//.
       case X: next_alt => [B'|]//.
         move=> [<-].
@@ -300,7 +279,6 @@ Section RunP.
       case: eqP => //-[H ?]; subst.
       by move: dA; rewrite H is_dead_dead.
     - move=> A HA B0 _ B HB C.
-      case: ifP => // dA.
       move=> /orP[fA|/andP[sA fB]].
         rewrite fA.
         case X: next_alt => [A'|]//.
@@ -338,18 +316,17 @@ Section RunP.
         case Y: next_alt => //[D] [<-]/=.
         rewrite is_dead_dead ((HB _ _ Y))//.
     move=> A HA B0 _ B HB C b /=.
-    case: ifP => dA//.
     case: ifP => fA.
       case X: next_alt => //[A0].
       case Y: next_alt => //[B0'].
-      move=> [<-]/=; rewrite (HA _ _ X)//.
+      move=> [<-]/=; rewrite !(HA _ _ X)//.
     case: ifP => sA/=; last first.
-      move=>[<-]//.
+      move=>[<-]//=; rewrite failed_dead//.
     case X: next_alt => [B'|].
-      move=> [<-]/=; rewrite dA//.
+      move=> [<-]//=; rewrite success_is_dead//.
     case Y: next_alt => //=[A'].
     case W: next_alt => //[B0'] [<-]/=.
-    rewrite (HA _ _ Y)//.
+    rewrite !(HA _ _ Y)//.
   Qed.
 
   Lemma next_alt_failed {b A r}: next_alt b A = r -> failed (odflt OK r) = false.
@@ -364,7 +341,7 @@ Section RunP.
       case: ifP => //dB.
       by have {HB} := HB false; case: next_alt; rewrite//=is_dead_dead//.
     - move=> A HA B0 HB0 B HB b.
-      case: ifP => // dA; case: ifP => fA.
+      case: ifP => fA.
         have:= HA false; case: next_alt => //=A'.
         have:= HB0 false; by case Y: next_alt => //=[B0'] ->->; rewrite andbF.
       case: ifP => sA/=; last first.
@@ -434,7 +411,7 @@ Section RunP.
       rewrite HA//HB//.
     Qed.
     
-    Lemma same_structure_dead {B}: same_structure B (dead1 B).
+    Lemma same_structure_dead {B}: same_structure B (dead B).
     Proof. 
       elim: B => //=.
         move=> A HA s B HB; rewrite eqxx HA HB//.
@@ -485,7 +462,7 @@ Section RunP.
           case: next_alt => //[?][<-]//.
         case next_alt => //[?[<-]|]//; case: ifP => _//.
         case: next_alt => //?[<-]//.
-      - move=> ???; case: ifP => // _; case: ifP => _.
+      - move=> ???; case: ifP => // _.
           do 2 case: next_alt => // ?.
           move=> [<-]//.
         case: ifP => //[_|_[<-]]//; case: next_alt => //[?[<-]|]//.
@@ -502,7 +479,7 @@ Section RunP.
     Proof. move=> B A C; by destruct A, B => //; destruct C => //=; do 2 case: eqP => ?//; subst. Qed.
 
     Lemma same_structure_sup_dead {A}:
-      same_structure_sup A (dead1 A).
+      same_structure_sup A (dead A).
     Proof. case: A => //=. Qed.
 
     Lemma runb_same_structure {s A s1 r n}:
@@ -525,7 +502,7 @@ Section RunP.
     Qed.
 
     Lemma run_dead1 {s1 B s2 r n}:  
-      is_dead B -> runb u s1 B s2 r n -> (s2 = None /\ r = dead1 B /\ n = 0)%type2.
+      is_dead B -> runb u s1 B s2 r n -> (s2 = None /\ r = dead B /\ n = 0)%type2.
     Proof.
       move=> dB H; inversion H; clear H; subst;
         try rewrite // is_dead_expand//is_dead_dead in H0.
@@ -534,7 +511,7 @@ Section RunP.
     Qed.
 
     Lemma run_dead2 {s1 B s2 r n}:  
-      runb u s1 (dead1 B) s2 r n -> (s2 = None /\ r = dead1 B /\ n = 0)%type2.
+      runb u s1 (dead B) s2 r n -> (s2 = None /\ r = dead B /\ n = 0)%type2.
     Proof. move=> /(run_dead1 is_dead_dead)//; rewrite dead2//. Qed.
 
   End same_structure.
@@ -558,37 +535,4 @@ Section RunP.
   Lemma choose_cutl_lt {b2 A}: 0 < b2 -> choose_cutl b2 A = cutl A.
   Proof. rewrite/choose_cutl; case: eqP => //; lia. Qed.
 
-  Lemma expand_cutl_cb {s C B}: expand u s (cutl C) = CutBrothers B -> False.
-  Proof.
-    elim: C s B=> //=.
-    - move=> A HA s B HB s1 C; rewrite fun_if/=.
-      case: ifP => //=dA; rewrite ?is_dead_cutl dA; case expand => //.
-    - move=> A HA B0 _ B HB s1 C.
-      case:ifP => sA//=.
-        case X: expand => //=[A'|A'].
-          by have:= HA _ _ X.
-        case e: expand => //[ A''].
-        by have:= HB _ _ e.
-      rewrite is_ko_expand//is_ko_cutr//.
-  Qed.
-
-  Lemma expand_cutl_exp {s C B}: expand u s (cutl C) = Expanded B -> False.
-  Proof.
-    elim: C s B=> //=.
-    - move=> A HA s B HB s1 C; rewrite fun_if/=.
-      case: ifP => //=dA; rewrite ?is_dead_cutl dA.
-        case X: expand => //=.
-          by have:= HB _ _ X.
-        by have:= expand_cutl_cb X.
-      case X: expand => //.
-        by have:= HA _ _ X.
-      by have:= expand_cutl_cb X.
-    - move=> A HA B0 _ B HB s1 C.
-      case:ifP => sA/=.
-        case e: expand => //[A'|A'].
-          by have:= HA _ _ e.
-        case X: expand => //[B'].
-        by have:= HB _ _ X.
-      rewrite is_ko_expand//is_ko_cutr//.
-  Qed.
 End RunP.

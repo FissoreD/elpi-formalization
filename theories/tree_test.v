@@ -125,7 +125,7 @@ Section Test2.
   Qed.
 
   Goal forall r, 
-    runb unif empty (Or (CutS) empty r) (Some empty) (dead1 (Or (CutS) empty r)) 0.
+    runb unif empty (Or (CutS) empty r) (Some empty) (dead (Or (CutS) empty r)) 0.
     move=> r.
     apply: run_step => //.
     apply: run_done => //=.

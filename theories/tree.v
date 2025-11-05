@@ -48,12 +48,12 @@ Section tree_op.
   (* STATE OP DEFINITIONS                                             *)
   (********************************************************************)
 
-  Fixpoint dead1 A :=
+  Fixpoint dead A :=
     match A with
     | Dead => Dead
     | OK | Bot | CutS | CallS _ _ => Dead
-    | And A B0 B => And (dead1 A) (dead1 B0) (dead1 B)
-    | Or A s B => Or (dead1 A) s (dead1 B)
+    | And A B0 B => And (dead A) (dead B0) (dead B)
+    | Or A s B => Or (dead A) s (dead B)
     end.
 
   Fixpoint is_dead A :=
@@ -124,7 +124,9 @@ Section tree_op.
       if success A then And (cutl A) (cutr B0) (cutl B)
       else And (cutr A) (cutr B0) (cutr B)
     | Or A s B => 
+        (* if A is dead then the success is to be found in B *)
         if is_dead A then Or A s (cutl B)
+        (* otherwise we cutl A and completely kill B with cutr *)
         else  Or (cutl A) s (cutr B)
     end.
 
@@ -133,20 +135,20 @@ Section tree_op.
   (********************************************************************)
   
   (* IS_DEAD + IS_KO + FAILED + SUCCESS *)
-  Lemma is_dead_is_ko {A}: is_dead A -> is_ko A.                  (*1*)
+  Lemma is_dead_is_ko {A}: is_dead A -> is_ko A.
   Proof. elim: A => // A HA s B HB/=/andP[/HA->/HB]//. Qed.
 
-  Lemma is_ko_failed {A}: is_ko A -> failed A.                    (*2*)
+  Lemma is_ko_failed {A}: is_ko A -> failed A.
   Proof.
     elim: A => //.
     - move=> A HA s B HB/=/andP[/HA->/HB->]; rewrite if_same//.
     - move=> A HA B0 _ B HB/=/HA->//.
   Qed.
 
-  Lemma failed_is_ko {A}: failed A = false -> is_ko A = false.                    (*2*)
+  Lemma failed_is_ko {A}: failed A = false -> is_ko A = false.
   Proof. by case X: is_ko => //; rewrite is_ko_failed//. Qed.
 
-  Lemma failed_success A: failed A -> success A = false.          (*3*)
+  Lemma failed_success A: failed A -> success A = false.
   Proof.
     elim: A => //.
     + move=> A HA s B HB /=; case: ifP => //.
@@ -183,28 +185,28 @@ Section tree_op.
     move=>/is_dead_success; rewrite H//.
   Qed.
 
-  (* cutl + cutr + dead1 *)
-  Lemma dead2 {A}: dead1 (dead1 A) = dead1 A.
+  (* cutl + cutr + dead *)
+  Lemma dead2 {A}: dead (dead A) = dead A.
   Proof. elim: A => //=[A HA s B HB|A HA B0 HB0 B HB]; rewrite HA HB//HB0//. Qed.
 
   Lemma cutr2 {a}: cutr (cutr a) = cutr a.
   Proof. elim: a => //= [A HA s B HB|A HA B0 HB0 B HB]; rewrite HA HB//HB0//. Qed.
   
-  Lemma cutr_dead {a}: cutr (dead1 a) = dead1 a.
+  Lemma cutr_dead {a}: cutr (dead a) = dead a.
   Proof. elim: a => //= [A HA s B HB|A HA B0 HB0 B HB]; rewrite HA HB//HB0//. Qed.
 
-  Lemma dead_cutr {a}: dead1 (cutr a) = dead1 a.
+  Lemma dead_cutr {a}: dead (cutr a) = dead a.
   Proof. elim: a => //= [A HA s B HB|A HA B0 HB0 B HB]; rewrite HA HB//HB0//. Qed.
 
-  Lemma dead_cutl {a}: dead1 (cutl a) = dead1 a.
+  Lemma dead_cutl {a}: dead (cutl a) = dead a.
   Proof. 
     elim: a => //= [A HA s B HB|A HA B0 HB0 B HB].
       by rewrite fun_if/=HA HB dead_cutr if_same.
     rewrite fun_if/= HA HB !dead_cutr if_same//.
   Qed.
 
-  (* IS_DEAD + IS_KO + FAILED + SUCCESS with cutr, cutl, dead1 *)
-  Lemma is_dead_dead {A}: is_dead (dead1 A).
+  (* IS_DEAD + IS_KO + FAILED + SUCCESS with cutr, cutl, dead *)
+  Lemma is_dead_dead {A}: is_dead (dead A).
   Proof. elim: A => // A HA s B HB/=; rewrite HA//. Qed.
 
   Lemma is_ko_cutr {B}: is_ko (cutr B).
@@ -283,12 +285,6 @@ Section tree_op.
       rewrite HA HB !success_cut; case: ifP => //->//.
   Qed.
 
-  Lemma failed_cutl_is_ko {A}:
-    failed (cutl A) -> is_ko (cutl A).
-  Proof.
-    (* THIS IS WRONG *)
-  Abort.
-
   Lemma success_failed_cut {A}: success (cutl A) = ~~ (failed (cutl A)).
   Proof. rewrite failed_success_cut; case: success => //. Qed.
 
@@ -303,7 +299,21 @@ Section tree_op.
     move=>/orP[fA|/andP[sA fB]].
       rewrite failed_success//= failed_cutr//.
     rewrite sA success_cut sA HB// orbT//.
-  Qed.    
+  Qed.
+
+  Lemma failed_cutl_is_ko {A}:
+    failed (cutl A) -> is_ko (cutl A).
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB; case: ifP => dA/=; rewrite?is_dead_cutl dA/=.
+        rewrite is_dead_is_ko//.
+      move=> /HA ->; rewrite is_ko_cutr//.
+    - move=> A HA B0 _ B HB; case:ifP => sA/=.
+        rewrite success_cut sA failed_success_cut success_cut sA/=.
+        move=> /HB.
+      (* THIS IS WRONG *)
+  Abort.
+
 End tree_op.
 
 Definition mkOr A sB r :=
@@ -432,8 +442,6 @@ Section main.
     (* meta *)
     | OK => Success OK
     | Bot => Failure Bot
-
-    (* meta *)
     | Dead => Failure Dead
     
     (* lang *)
@@ -466,7 +474,7 @@ Section main.
     | OK => if b then None else Some OK
     | CutS | CallS _ _ => Some A
     | And A B0 B =>
-      if is_dead A then None else
+      (* if is_dead A then None else *)
       if failed A then 
         match next_alt false A with
         | None => None
@@ -503,7 +511,7 @@ Section main.
           if is_dead B then None else 
             match next_alt false B with
             | None => None
-            | Some B => Some (Or (dead1 A) sB B)
+            | Some B => Some (Or (dead A) sB B)
             end
         | Some (A) => Some (Or A sB B)
         end
@@ -521,7 +529,7 @@ Section main.
   Goal (next_alt false (Or Bot empty OK)) = Some (Or Dead empty OK). move=> //=. Qed.
 
   (* build next_alt tree *)
-  Definition build_na A oA := odflt (dead1 A) oA.
+  Definition build_na A oA := odflt (dead A) oA.
   Definition build_s (s:Sigma) (oA: option tree) := Option.map (fun _ => s)  oA.
 
 
@@ -534,7 +542,7 @@ Section main.
               runb s1 B s2 r n -> runb s1 A s2 r n
     | run_dead {s1 A} : 
           failed A -> next_alt false A = None ->
-              runb s1 A None (dead1 A) 0.
+              runb s1 A None (dead A) 0.
 
   Definition dead_run s1 A : Type := forall B n, runb s1 A None B n.
 End main.

@@ -350,13 +350,13 @@ Section check.
         move=> /is_ko_success->//.
       move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0]/andP[sA sB].
         rewrite success_has_cut// in cB.
-      rewrite success_is_dead// success_failed//sA.
+      rewrite success_failed//sA.
       rewrite HB//HA//.
   Qed.
 
   Lemma build_na_is_dead {sP A}:
     check_program sP -> det_tree sP A -> success A ->
-      (build_na A (next_alt true A)) = dead1 A.
+      (build_na A (next_alt true A)) = dead A.
   Proof. move=> H1 H2 H3; by rewrite (expand_next_alt H1)//=. Qed.
 
   Lemma has_cut_next_alt {A B b}: 
@@ -368,7 +368,7 @@ Section check.
       move=>/andP[kA kB].
       by rewrite !is_ko_next_alt//; rewrite !if_same//.
     - move=> A HA B0 HB0 B HB C b/=.
-      case: ifP => //= dA /orP[].
+      move=> /orP[].
         move=> cA.
         case X: next_alt => // [A'|].
           case: ifP => //= fA.
@@ -435,7 +435,6 @@ Section check.
       case: next_alt; rewrite ?if_same// => D /(_ _ erefl) fD [<-]/=.
       by rewrite fD cutr2 eqxx no_alt_cut if_same.
     - move=> A HA B0 HB0 B HB C b /=.
-      case: (ifP (is_dead _)) => dA//.
       move=>/orP[].
         move=>kA.
         by rewrite is_ko_failed// is_ko_next_alt//.

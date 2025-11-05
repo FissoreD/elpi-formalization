@@ -195,7 +195,7 @@ Section NurProp.
       have {HB}HA //=:= [elaborate HA (t2l B sb nilC) s s1 vA sA].
       rewrite HA//=; f_equal.
       case nA: next_alt => //=.
-      rewrite (valid_tree_dead1 (bbOr_valid bB)).
+      rewrite (valid_tree_is_dead (bbOr_valid bB)).
       rewrite (t2l_dead is_dead_dead)/=.
       move/orPT : bB => []bB; last first.
         rewrite base_or_aux_ko_t2l//next_alt_aux_base_or_ko//=.
@@ -208,7 +208,7 @@ Section NurProp.
       rewrite sA/==> vB bB.
       have {}HA := HA _ _ _ vA sA. repeat erewrite HA => /=.
       have {}HB := HB _ _ _ vB sB; repeat erewrite HB => /=.
-      rewrite success_is_dead//success_failed//.
+      rewrite success_failed//.
       have:= bB; rewrite/bbAnd=>/orP[]{}bB; last first.
         rewrite !(base_and_ko_t2l bB)//=.
         rewrite (next_alt_aux_base_and_ko _ bB).
@@ -350,7 +350,7 @@ Section NurProp.
       rewrite (expand_not_dead _ dA eA).
       case nA': next_alt => [[]|]//.
       have vB := bbOr_valid bB.
-      rewrite valid_tree_dead1//.
+      rewrite valid_tree_is_dead//.
       case nB': next_alt => [[]|]// _.
       rewrite (HA _ _ _ _ _ vA eA nA')/=.
       move: bB; rewrite /bbOr => /orP[]; last first.
@@ -360,7 +360,7 @@ Section NurProp.
       case eA: expand => //[A'|A'].
         have [? fA]:= expand_failed_same _ eA; subst.
         rewrite (failed_success _ fA) fA/==>/eqP->bB[<-]/=.
-        rewrite (expand_not_dead _ (valid_tree_dead1 vA) eA) fA.
+        rewrite fA.
         case nA: next_alt => [D|].
           move: bB; rewrite/bbAnd=>/orP[]bB//; last first.
             rewrite (base_and_ko_t2l bB)//=.
@@ -371,7 +371,7 @@ Section NurProp.
       have [? sA]:= expand_solved_same _ eA; subst.
       rewrite sA => vB bB0.
       case eB: expand => //[B'][<-]/=.
-      rewrite success_is_dead//success_failed//sA.
+      rewrite success_failed//sA.
       case nB': next_alt => [[]|]//.
       rewrite (success_t2l empty) => //=.
       move /orP: bB0 => []bB; last first.
@@ -427,14 +427,14 @@ Section NurProp.
   Lemma add_ca_deep_goals_map ca X:
     empty_caG X -> map (add_ca ca) X = add_ca_deep_goals ca X 
   with
-    aaa ca g: empty_ca_G g -> add_ca ca g = add_ca_deep_g ca g.
+    add_ca_deep_map ca g: empty_ca_G g -> add_ca ca g = add_ca_deep_g ca g.
   Proof.
     {
       case: X => /=.
         reflexivity.
       move=> g gs.
       rewrite/empty_caG all_cons => /andP[H1 H2].
-      rewrite map_cons add_ca_deep_goals_map//aaa//.
+      rewrite map_cons add_ca_deep_goals_map//add_ca_deep_map//.
     }
     case: g => //=-[]//.
   Qed.
@@ -499,7 +499,7 @@ Section NurProp.
     - move=> A HA B0 HB0 B HB s2 b/=/and3P[vA]++++l.
       case: ifP => /=[sA vB bB0|sA/eqP->].
         rewrite (success_t2l empty)//=.
-        rewrite success_failed//=success_is_dead// => fB.
+        rewrite success_failed//= => fB.
         case X: next_alt => [[]|]//.
         move/orP: bB0 => []bB; last first.
           by rewrite base_and_ko_t2l//= (HB _ _ _ _ X)//.
@@ -509,7 +509,7 @@ Section NurProp.
         rewrite next_alt_aux_base_and//.
         by rewrite !(t2l_dead is_dead_dead)/=.
       rewrite orbF => +fA; rewrite fA.
-      rewrite valid_tree_dead1// => bB.
+      move => bB.
       case X: next_alt => //[A'|].
         move/orP: bB => []bB; last first.
           rewrite (base_and_ko_t2l bB)/=.
@@ -539,7 +539,6 @@ Section NurProp.
       rewrite (base_or_aux_next_alt_some bB Y) !add_ca_deep_cat (failed_next_alt_none_t2l vA fA X).
       rewrite (t2l_dead is_dead_dead)//.
     - move=> A HA B0 HB0 B HB s1 C l b /=/and3P[vA].
-      case: (ifP (is_dead _)) => //dA.
       case: ifP => /=[sA vB bB0|sA/eqP->].
         rewrite success_failed//= => fB.
         case X: next_alt => [D|]//.
@@ -1032,7 +1031,7 @@ Section NurProp.
         rewrite save_alt_add_ca_deepA//?empty_ca_atoms1//.
       set SB := t2l B s nilC.
       case e: expand => //=[A'|A'][<-]/=; subst;
-      rewrite (valid_tree_dead1 (valid_tree_expand _ vA e)); last first.
+      rewrite (valid_tree_is_dead (valid_tree_expand _ vA e)); last first.
         have [w[ws []+[]]]:= s2l_CutBrothers s1 SB vA e.
         move=>->//.
       have [s5 [y[ys sA]]]:= failed_t2l vA (expand_not_failed _ e notF) s1 SB.
