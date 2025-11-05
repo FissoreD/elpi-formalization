@@ -306,14 +306,14 @@ Section clean_ca.
     elim: A s x bt A' => //=.
     - move=> A HA s B HB s1 x bt C.
       case: ifP => [dA vB sB|dA /andP[vA bB]sA].
+        rewrite is_dead_next_alt//.
         case X: next_alt => //[B'][<-]/=.
         rewrite t2l_dead//=cat0s.
         rewrite clean_ca_add_ca//.
       case X: next_alt => //[A'|].
         move=> [<-]/=.
         rewrite !clean_ca_add_ca//.
-      case: ifP => //.
-      case W: next_alt => //[B0'] _ [<-]/=.
+      case W: next_alt => //[B0'] [<-]/=.
       rewrite t2l_dead?is_dead_dead//cat0s.
       rewrite !clean_ca_add_ca//.
     - move=> A HA B0 _ B HB s1 x bt C /and3P[vA] ++/andP[sA sB].
@@ -848,6 +848,7 @@ Proof.
   elim: A s1 bt => //=.
   - move=> A HA s B HB s1 bt.
     case:ifP => [dA vB sB|dA /andP[vA bB] sA].
+      rewrite is_dead_next_alt//.
       rewrite (t2l_dead dA) cat0s.
       have:= HB s nilC vB sB.
       case X: next_alt => [B'|]/=.
@@ -865,7 +866,6 @@ Proof.
     rewrite behead_cons.
     rewrite X/=(t2l_dead is_dead_dead)/=behead_cons.
     have vB := bbOr_valid bB.
-    rewrite valid_tree_is_dead//=.
     rewrite/SB => {SB}.
     move/orP: bB => []bB; last first.
       rewrite is_ko_next_alt//?base_or_aux_ko_is_ko//=.

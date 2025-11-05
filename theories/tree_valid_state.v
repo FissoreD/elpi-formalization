@@ -358,11 +358,11 @@ Section valid_tree.
     + move=> B _ _ [<-]//.
     + move=> A HA s B HB  C b/=.
       case: ifP => //[dA vB|dA /andP[vA bB]].
+        rewrite is_dead_next_alt//.
         case X: next_alt => //[D] [<-]/=.
         rewrite dA (HB _ _ vB X)//.
       case X: next_alt => [D|].
         move=>[<-]/=; rewrite bbOr_valid// bB (HA _ _ vA X) if_same//.
-      case: ifP => //dB.
       case Y: next_alt => [D|]//[<-]/=; rewrite is_dead_dead (HB _ _ _ Y)//bbOr_valid//.
     + move=> A HA B0 HB0 B HB  C b /=/and3P[vA].
       case: ifP => /=[sA vB bB0|sA /eqP?]; subst.

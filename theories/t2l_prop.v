@@ -186,7 +186,7 @@ Section NurProp.
     elim: A m s s1 => //.
     - move=> A HA sb B HB/= m s s1.
       case: ifP => [dA vB sB|dA /andP[vA bB] sA].
-        rewrite /=!(t2l_dead dA)!cat0s.
+        rewrite is_dead_next_alt// /=!(t2l_dead dA)!cat0s.
         have H := [elaborate HB nilC sb sb vB sB].
         rewrite H//=.
         case X: next_alt => //[B'|]/=.
@@ -195,7 +195,6 @@ Section NurProp.
       have {HB}HA //=:= [elaborate HA (t2l B sb nilC) s s1 vA sA].
       rewrite HA//=; f_equal.
       case nA: next_alt => //=.
-      rewrite (valid_tree_is_dead (bbOr_valid bB)).
       rewrite (t2l_dead is_dead_dead)/=.
       move/orPT : bB => []bB; last first.
         rewrite base_or_aux_ko_t2l//next_alt_aux_base_or_ko//=.
@@ -328,7 +327,6 @@ Section NurProp.
     - move=> A HA s B HB s1  l/=; rewrite /bbOr/=.
       move=>/orP[]/andP[bA bB].
         rewrite base_and_dead// next_alt_aux_base_and//.
-      rewrite base_and_ko_is_dead// base_or_aux_is_dead//.
       rewrite base_and_ko_t2l// base_or_aux_ko_t2l//.
     - move=> A; case: A => //=[p a|] _ B0 _ B HB s s1 l/=; rewrite /bbOr/=orbF => /andP[/eqP->bB].
   Qed.
@@ -343,14 +341,13 @@ Section NurProp.
     - move=> A HA s B HB/=s1 s2 E l b.
       case: ifP => //[dA vB|dA/andP[vA bB]].
         case eB: expand => //[B'][<-]/=.
-        rewrite dA.
+        rewrite is_dead_next_alt// dA.
         case nB': next_alt => [[]|]// _.
         by rewrite (HB _ _ _ _ _ vB eB nB')/=t2l_dead//.
       case eA: expand => //[A'][<-]/=.
       rewrite (expand_not_dead _ dA eA).
       case nA': next_alt => [[]|]//.
       have vB := bbOr_valid bB.
-      rewrite valid_tree_is_dead//.
       case nB': next_alt => [[]|]// _.
       rewrite (HA _ _ _ _ _ vA eA nA')/=.
       move: bB; rewrite /bbOr => /orP[]; last first.
@@ -487,11 +484,9 @@ Section NurProp.
     elim: A s b => //.
     - move=> A HA s B HB s2 b/=.
       case: ifP => [dA vB fB|dA /andP[vA bB] fA].
+        rewrite is_dead_next_alt//.
         case X: next_alt => [C|]//.
         move=> _ l; rewrite (HB _ _ _ _ X)// t2l_dead//.
-      case: ifP => dB.
-        case X: next_alt => [C|]//.
-        move=>_ l; rewrite (HA _ _ _ _ X)//t2l_dead//.
       case Y: next_alt => [[]|]//.
       case Z: next_alt => [D|]// _ l.
       rewrite (HA s2 b)//=.
@@ -527,12 +522,12 @@ Section NurProp.
     elim: A s3 B l b => //.
     - move=> A HA s B HB s3 C l b/=.
       case: ifP => [dA vB fB|dA /andP[vA bB] fA].
+        rewrite is_dead_next_alt//.
         case X: next_alt => [D|]//[<-]/=.
         by rewrite !(t2l_dead dA)//=(HB _ _ _ _ vB fB X)//.
       case X: next_alt => [A'|]//.
         move=>[?]/=; subst => /=.
         by rewrite (HA _ A' _ b)//.
-      case: ifP => dB//.
       move/orP: bB => -[]bB; last first.
         rewrite next_alt_aux_base_or_ko//.
       case Y: next_alt => [A'|]//[<-]/=.

@@ -129,7 +129,7 @@ Section Test2.
     move=> r.
     apply: run_step => //.
     apply: run_done => //=.
-    rewrite next_alt_cutr if_same /= dead_cutr//.
+    rewrite next_alt_cutr /= dead_cutr//.
   Qed.
 
   Goal runb unif empty (Or OK empty (Or OK empty OK)) (Some empty) ((Or Dead empty (((Or OK empty OK))))) 0.

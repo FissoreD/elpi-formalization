@@ -474,7 +474,6 @@ Section main.
     | OK => if b then None else Some OK
     | CutS | CallS _ _ => Some A
     | And A B0 B =>
-      (* if is_dead A then None else *)
       if failed A then 
         match next_alt false A with
         | None => None
@@ -500,18 +499,11 @@ Section main.
         end
       else Some (And A B0 B)
     | Or A sB B => 
-      if is_dead A then
-        match next_alt b B with
-        | None => None
-        | Some B => Some (Or A sB B)
-        end
-      else
         match next_alt b A with
         | None =>
-          if is_dead B then None else 
-            match next_alt false B with
+            match next_alt (if is_dead A then b else false) B with
             | None => None
-            | Some B => Some (Or (dead A) sB B)
+            | Some B => Some (Or (if is_dead A then A else dead A) sB B)
             end
         | Some (A) => Some (Or A sB B)
         end

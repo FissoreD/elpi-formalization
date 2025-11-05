@@ -339,10 +339,10 @@ Section check.
     move=> H; elim: A => //=.
     - move=> A HA s B HB /andP[nA IH].
       case: ifP => [dA sB|dA sA].
-        rewrite HB//.
+        rewrite is_dead_next_alt// HB//.
         move: IH; case: ifP => //.
         move=> _ /eqP->; rewrite no_alt_cut//.
-      rewrite HA//; case: ifP => // dB.
+      rewrite HA//.
       move: IH; case: ifP.
         move=> /has_cut_success; congruence.
       move=> _ /eqP->; rewrite next_alt_cutr//.
@@ -412,6 +412,7 @@ Section check.
     - move=> A HA s B HB C /= b.
       move=>/andP[fA].
       case: (ifP (is_dead _)) => dA.
+        rewrite is_dead_next_alt//.
         rewrite has_cut_dead//.
         move=> fB.
         have:= HB _ b fB.
@@ -424,7 +425,6 @@ Section check.
           have cD:= has_cut_next_alt cA X.
           by move=> /(_ _ erefl) fD[<-]/=; rewrite fD cD fB.
         move=> _.
-        case: ifP => dB//.
         have idA := @is_dead_dead A.
           case Y: next_alt => //[D].
           move=>[<-]/=.

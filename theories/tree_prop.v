@@ -137,14 +137,17 @@ Section RunP.
     next_alt b (cutr A) = None.
   Proof. apply: is_ko_next_alt is_ko_cutr. Qed.
 
+  Lemma is_dead_next_alt {A} b: is_dead A -> next_alt b A = None.
+  Proof. move=>/is_dead_is_ko/is_ko_next_alt//. Qed.
+
   Lemma next_alt_cutl_success {A}:
     success A -> next_alt true (cutl A) = None.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB.
       case: ifP => [dA sB|dA sA]/=.
-        rewrite dA HB//.
-      rewrite is_dead_cutl dA HA// next_alt_cutr if_same//.
+        rewrite dA HB// is_dead_next_alt//.
+      rewrite is_dead_cutl dA HA// next_alt_cutr//.
     - move=> A HA B0 HB0 B HB /andP[sA sB].
       rewrite sA/= success_cut sA HA// HB//.
       rewrite failed_success_cut success_cut sA//.
@@ -156,8 +159,8 @@ Section RunP.
     elim: A b => //=.
     - move=> A HA s B HB b.
       case: ifP => dA /=; rewrite?is_dead_cutl dA => Hf.
-        rewrite HB//.
-      rewrite HA// next_alt_cutr if_same//.
+        rewrite HB// is_dead_next_alt//.
+      rewrite HA// next_alt_cutr//.
     - move=> A HA B0 _ B HB b.
       case: ifP => sA/=.
         rewrite failed_success_cut success_cut sA/=.
@@ -175,8 +178,8 @@ Section RunP.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB; case: ifP => /= dA.
-        rewrite dA HB//.
-      rewrite is_dead_cutl dA HA next_alt_cutr if_same//.
+        rewrite dA HB//is_dead_next_alt//.
+      rewrite is_dead_cutl dA HA next_alt_cutr//.
     - move=> A HA B0 _ B HB; case: ifP => //sA/=.
         rewrite failed_success_cut success_cut sA/=.
         rewrite HB HA //.
@@ -237,6 +240,7 @@ Section RunP.
   Proof.
     elim: A B => //=.
     - move=> A HA s B HB C; case: ifP => [dA sB|dA sA].
+        rewrite is_dead_next_alt//.
         case X: next_alt => //[B'][<-]/=.
         have:= HB _ sB X.
         repeat case: eqP => //; try congruence.
@@ -244,7 +248,6 @@ Section RunP.
         move=> [<-].
         have:= HA _ sA X.
         repeat case: eqP => //; try congruence.
-      case: ifP => //dB.
       case Y: next_alt => //[B'].
       move=> [<-]/=.
       case: eqP => //-[H ?]; subst.
@@ -266,6 +269,7 @@ Section RunP.
   Proof.
     elim: A B => //=.
     - move=> A HA s B HB C; case: ifP => [dA fB|dA fA].
+        rewrite is_dead_next_alt//.
         case X: next_alt => //[B'][<-]/=.
         have:= HB _ fB X.
         repeat case: eqP => //; try congruence.
@@ -273,7 +277,6 @@ Section RunP.
         move=> [<-].
         have:= HA _ fA X.
         repeat case: eqP => //; try congruence.
-      case: ifP => //dB.
       case Y: next_alt => //[B'].
       move=> [<-]/=.
       case: eqP => //-[H ?]; subst.
@@ -296,9 +299,6 @@ Section RunP.
       repeat case: eqP => //; try congruence.
     Qed.
 
-  Lemma is_dead_next_alt {A} b: is_dead A -> next_alt b A = None.
-  Proof. move=>/is_dead_is_ko/is_ko_next_alt//. Qed.
-
   Lemma next_alt_dead {A D b}: 
     next_alt b A = Some (D) -> ((is_dead A = false) * (is_dead D = false))%type.
   Proof.
@@ -308,13 +308,13 @@ Section RunP.
     - move=> D _ [<-]//.
     - move=> A HA s B HB C b/=.
       case: ifP => dA.
+        rewrite is_dead_next_alt//.
         case X: next_alt => //[D][<-]/=; rewrite dA/=.
         rewrite !(HB _ _ X)//.
       case X: next_alt => //= [D|].
         move=>[<-]; split => //=; rewrite ((HA _ _ X))//.
-      case: ifP => dB//.
-        case Y: next_alt => //[D] [<-]/=.
-        rewrite is_dead_dead ((HB _ _ Y))//.
+      case Y: next_alt => //[D] [<-]/=.
+      rewrite is_dead_dead ((HB _ _ Y))//.
     move=> A HA B0 _ B HB C b /=.
     case: ifP => fA.
       case X: next_alt => //[A0].
@@ -335,10 +335,10 @@ Section RunP.
     - move=> []//.
     - move=> A HA s B HB b.
       case: ifP => //=dA.
+        rewrite is_dead_next_alt//.
         by have := HB b; case : next_alt; rewrite //= dA//.
       have:= HA b; case X: next_alt => //=[A'|].
         rewrite (next_alt_dead X)//.
-      case: ifP => //dB.
       by have {HB} := HB false; case: next_alt; rewrite//=is_dead_dead//.
     - move=> A HA B0 HB0 B HB b.
       case: ifP => fA.
@@ -458,9 +458,10 @@ Section RunP.
       next_alt b A = Some B -> same_structure_sup A B.
     Proof.
       case: A => //=.
-      - move=> ???; case: ifP => _.
+      - move=> ???; case: ifP => dA.
+          rewrite is_dead_next_alt//.
           case: next_alt => //[?][<-]//.
-        case next_alt => //[?[<-]|]//; case: ifP => _//.
+        case next_alt => //[?[<-]|]//.
         case: next_alt => //?[<-]//.
       - move=> ???; case: ifP => // _.
           do 2 case: next_alt => // ?.
