@@ -467,6 +467,11 @@ Section main.
         end
     end.
 
+  (* Next_alt takes a tree "T" returns a new tree "T'" representing the next
+     alternative wrt "T", if no new alternative exists, None is returned.
+     Next_alt takes a boolean b to know if a successful path should be erased in
+     "T".
+  *)
   Fixpoint next_alt b (A : tree) : option (tree) :=
     match A with
     | Bot => None
@@ -475,34 +480,63 @@ Section main.
     | CutS | CallS _ _ => Some A
     | And A B0 B =>
       if failed A then 
+      (* If A is a failing state, then we look for the next alternative in A,
+         the boolean is set to false since no success path exists *)
         match next_alt false A with
         | None => None
-        | Some (A) => 
+        | Some (A) =>
+          (* since a new alternative in A exists, then we look attach the reset
+             point as its continuation, the reset point is cleaned: next_alt false B0
+             is used to kill in advance potential dead subtrees in B0. *)
           match next_alt false B0 with
-          | None => None
+          | None => None (*if B0 as no alternatives then the full tree collapses*)
           | Some B0' => Some (And A B0 B0')
           end
         end
       else
       if success A then
+        (* if A is successfull, we need, at first, to seek for alternatives in B
+           For example, in (OK \/ (Call f)) /\ (OK \/ (Call g)), we need to
+           give priority to the call to g instead of the call to f
+        *)
         match next_alt b B with
         | None => 
+          (* if B has no alternatives, it means that we need to find a new alternative
+             in A removing its successfull path *)
           match next_alt true A with
           | None => None
           | Some A =>
+            (* similarly to the branch before, we clean the reset point *)
             match next_alt false B0 with
             | None => None
             | Some B0' => Some (And A B0 B0')
             end
           end
+        (* If the alternative in B exists, then we return on the RHS of the And node *)
         | Some (B) => Some (And A B0 B)
         end
       else Some (And A B0 B)
-    | Or A sB B => 
+    | Or A sB B =>
+       (* we look for alternatives in A, which have higher priority then the one in B *)
         match next_alt b A with
         | None =>
+            (* if no alternative exists in A, then we look in B. Moreover, the boolean
+               should be carefully be set.
+               There are two interesting scenarios:
+               1: "next_alt tree (OK \/ (OK \/ Call f))"
+                  In the first case we want to erase a success, we go left,
+                  we see that the "OK" is not dead, therefore, we kill it.
+                  Then we understand that no alternative exists in the LHS of the OR,
+                  therefore wee look for the next alternative in "OK \/ Call f"
+                  without erasing the success, the boolean we pass is false
+               2: "next_alt tree (Dead \/ (OK \/ Call f))"
+                  Here we want to erase, again, to erase a success, this success
+                  is not on the LHS of the OR node, therefore we erase it on the RHS
+               *)
             match next_alt (if is_dead A then b else false) B with
             | None => None
+                      (* we want to preserve at most the structure of the tree, if LHS is dead 
+                         we keep it as it is, this is helpful for lemmas like "next_alt_not_failed"*)
             | Some B => Some (Or (if is_dead A then A else dead A) sB B)
             end
         | Some (A) => Some (Or A sB B)
