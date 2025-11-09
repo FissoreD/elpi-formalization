@@ -348,76 +348,12 @@ Fixpoint big_or_aux pr (r : list A) (l : seq (Sigma * R)) : tree :=
 Lemma big_and_dead {p l}: is_dead (big_and p l) = false.
 Proof. elim l => //-[]//. Qed.
 
-Record Unif := {
-  unify : Tm -> Tm -> Sigma -> option Sigma;
-  matching : Tm -> Tm -> Sigma -> option Sigma;
-}.  
-
 
 Section main.
   Variable u: Unif.
 
-  Fixpoint get_rcallable_hd r :=
-    match r with
-    | RCallable_Kp k => k
-    | RCallable_Comb t _ => get_rcallable_hd t
-    end.
-
-
-  Fixpoint H (ml : list mode) (q : RCallable) (h: RCallable) s : option Sigma :=
-    match ml,q,h with
-    | [::], RCallable_Kp c, RCallable_Kp c1 => if c == c1 then Some s else None
-    | [:: i & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(matching) a1 a2) (H ml q h s)
-    | [:: o & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(unify) a1 a2) (H ml q h s)
-    | _, _, _ => None
-    end.
-
-  (* TODO: deref is too easy? Yes if sigma is a mapping from vars to lambdas in a future version *)
-  Fixpoint deref (s: Sigma) (tm:Tm) :=
-    match tm with
-    | Tm_V V => Option.default tm (lookup V s)
-    | Tm_Kp _ | Tm_Kd _ => tm
-    | Tm_Comb h ag => Tm_Comb (deref s h) ag
-    end.
-
-  Fixpoint select (query : RCallable) (modes:list mode) (rules: list R) sigma : seq (Sigma * R) :=
-    match rules with
-    | [::] => [::]
-    | rule :: rules =>
-      match H modes query rule.(head) sigma with
-      | None => select query modes rules sigma
-      | Some sigma' => (sigma', rule) :: select query modes rules sigma
-      end
-    end.
-
-  Fixpoint tm2RC (t : Tm) : option RCallable :=
-    match t with
-    | Tm_Kd _ => None
-    | Tm_V _ => None
-    | Tm_Kp p => Some (RCallable_Kp p)
-    | Tm_Comb t1 t2 => omap (fun x => RCallable_Comb x t2) (tm2RC t1)
-    end.
-
-  Fixpoint Callable2Tm (c : Callable) : Tm :=
-    match c with
-    | Callable_Kp p => Tm_Kp p
-    | Callable_V v => Tm_V v
-    | Callable_Comb h t => Tm_Comb (Callable2Tm h) t
-    end.
-
-  Definition F pr (query:Callable) s : seq (Sigma * R) :=
-    let rules := pr.(rules) in
-    match tm2RC (deref s (Callable2Tm query)) with
-    | None => [::] (*this is a call with flex head, in elpi it is an error! *)
-    | Some query =>
-      match lookup (get_rcallable_hd query) pr.(modes) with 
-        | None => [::]
-        | Some modes => select query modes rules s
-        end
-      end.
-
   Definition big_or pr s t :=
-    let l := F pr t s in
+    let l := F u pr t s in
     if l is (s,r) :: xs then (Or Bot s (big_or_aux pr r.(premises) xs))
     else Bot.
 
