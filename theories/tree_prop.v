@@ -536,4 +536,17 @@ Section RunP.
   Lemma choose_cutl_lt {b2 A}: 0 < b2 -> choose_cutl b2 A = cutl A.
   Proof. rewrite/choose_cutl; case: eqP => //; lia. Qed.
 
+
+  Lemma next_alt_not_failed A:
+    (failed A) = false -> next_alt false A = Some A.
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB; case: ifP => dA fB.
+        rewrite is_dead_next_alt// HB//=.
+      rewrite HA//.
+    - move=> A HA B0 _ B HB.
+      case: ifP => //=fA.
+      case: ifP => //=sA fB.
+      rewrite HB//.
+  Qed.
 End RunP.

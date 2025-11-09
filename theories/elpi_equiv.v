@@ -8,11 +8,11 @@ Section NurEqiv.
   Variable (u : Unif).
 
   Lemma tree_to_elpi A s B s1 b sIgn:
-      valid_tree A ->
-        runb u s A (Some s1) B b -> 
-          Texists x xs,
-            ((t2l A s nilC = x ::: xs) /\
-            (nur u x.1 x.2 xs s1 (t2l B sIgn nilC))).
+    valid_tree A ->
+      runb u s A (Some s1) B b -> 
+        Texists x xs,
+          t2l A s nilC = x ::: xs /\
+          nur u x.1 x.2 xs s1 (t2l B sIgn nilC).
   Proof.
     move=> +H.
     remember (Some _) as r eqn:Hr.

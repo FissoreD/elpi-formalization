@@ -86,19 +86,6 @@ Section s.
       case: next_alt => //= ? [/esym]; apply IH.
   Qed.
 
-  Lemma next_alt_not_failed A:
-    (failed A) = false -> next_alt false A = Some A.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB; case: ifP => dA fB.
-        rewrite is_dead_next_alt// HB//=.
-      rewrite HA//.
-    - move=> A HA B0 _ B HB.
-      case: ifP => //=fA.
-      case: ifP => //=sA fB.
-      rewrite HB//.
-  Qed.
-
   Lemma next_alt_runb {A B C s s2 b1}:
     next_alt false A = B ->
       runb u s (build_na A B) s2 C b1 ->
@@ -768,6 +755,56 @@ Section s.
       rewrite is_dead_dead; repeat split.
       apply: run_dead fB1 X.
   Qed.
+
+  Lemma next_alt_big_and {p r}:
+    next_alt false (big_and p r) = Some (big_and p r).
+  Proof. elim: r p => //=x xs IH p; case: x => //=. Qed.
+
+  Lemma run_big_and_total {r p s}:
+      Texists r0 B n, runb u s ((big_and p r)) r0 B n.
+  Proof.
+    elim: r s => //=.
+    - move=> s; repeat eexists; apply: run_done => //.
+    - move=> x xs IH s.
+      admit.
+  Admitted.
+
+  Lemma run_big_or_total {sr r rs p c s}:
+    F u p c s = (sr, r) :: rs -> 
+      Texists r0 B n, runb u s (CallS p c) r0 B n.
+  Proof.
+    elim: rs sr r p c s => //=.
+    - move=> sr r p c s H.
+      have [r0[B [n H1]]] := @run_big_and_total (premises r) p sr.
+      repeat eexists.
+      apply: run_step; rewrite /=/big_or?H//.
+      apply: run_fail => //=.
+        rewrite next_alt_big_and//.
+      by apply: run_ko_left2; eauto.
+    - move=> [sx r] rs IH sr r' p c s H.
+  Abort.
+
+  Lemma run_is_total {s A}:
+    Texists r B n, runb u s A r B n.
+  Proof.
+    elim: A s.
+    - repeat eexists; apply: run_dead => //.
+    - repeat eexists; apply: run_done => //.
+    - repeat eexists; apply: run_dead => //.
+    - move=> p c s.
+      case F: (F u p c s) => [|[sr r] rs].
+        repeat eexists.
+        apply: run_step => //.
+        rewrite/big_or F; apply: run_dead => //.
+      repeat eexists.
+      apply: run_step => //=.
+      rewrite/big_or; rewrite F.
+      apply: run_fail => //=.
+      admit.
+    (* - repeat eexists; apply: run_cut => //; apply: run_done => //. *)
+    (* - admit. *)
+    (* - admit. *)
+  Abort.
 
   (*Lemma run_and_correct {s0 sn A B0 B A' B0' B' b}:
     runb u s0 (And A B0 B) sn (And A' B0' B') b ->
