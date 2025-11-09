@@ -5,6 +5,22 @@ Definition make_lB0 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, x ++ lB0)) 
 
 Definition make_lB01 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, lB0 ++ x)) xs.
 
+Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
+  match ats with
+  | no_alt => nilC
+  | more_alt (hd,xs) tl => (hd, add_ca_deep_goals bt xs) ::: (add_ca_deep bt tl)
+  end
+with add_ca_deep_goals bt gl :=
+  match gl with
+  | no_goals => nilC 
+  | more_goals hd tl => (add_ca_deep_g bt hd) ::: (add_ca_deep_goals bt tl)
+  end
+with add_ca_deep_g bt g :=
+  match g with
+  | call pr t => call pr t 
+  | cut ca => cut ((add_ca_deep bt ca) ++ bt)
+  end.
+
 Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
   match A with
   | no_alt => nilC

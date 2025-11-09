@@ -708,22 +708,6 @@ Definition add_ca alts a :=
   | call pr t => call pr t
   end.
 
-Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
-  match ats with
-  | no_alt => nilC
-  | more_alt (hd,xs) tl => (hd, add_ca_deep_goals bt xs) ::: (add_ca_deep bt tl)
-  end
-with add_ca_deep_goals bt gl :=
-  match gl with
-  | no_goals => nilC 
-  | more_goals hd tl => (add_ca_deep_g bt hd) ::: (add_ca_deep_goals bt tl)
-  end
-with add_ca_deep_g bt g :=
-  match g with
-  | call pr t => call pr t 
-  | cut ca => cut ((add_ca_deep bt ca) ++ bt)
-  end.
-
 Definition save_goals (a: alts) (gs b:goals) := map (add_ca a) b ++ gs.
 
 Definition save_alts (a : alts) (gs: goals) (bs : alts) := 

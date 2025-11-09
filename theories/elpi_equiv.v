@@ -77,33 +77,6 @@ Proof.
   - move=> s bt []//[]// s1 []// []//= [|[]]//=[]//[|[]]//; case: bt => //=.
 Abort.
 
-Lemma add_ca_deep_map bt1 xs:
-  map (fun '(s, xs0) => (s, (add_ca_deep_goals bt1 xs0))) xs =
-    add_ca_deep bt1 xs
-with add_ca_deep_goals_map bt1 x:
-  map (add_ca_deep_g bt1) x = add_ca_deep_goals bt1 x.
-Proof.
-  - case: xs => [|[sx x] xs]; [reflexivity|].
-    by rewrite !map_cons add_ca_deep_map /=.
-  - case: x => [|g gs]; [reflexivity|].
-    by rewrite map_cons add_ca_deep_goals_map.
-Qed.
-
-Lemma add_ca_deep_inj {bt a1 a2}:  
-  add_ca_deep bt a1 = add_ca_deep bt a2 -> a1 = a2
-with add_ca_deep_goals_inj {bt g1 g2}:
-  add_ca_deep_goals bt g1 = add_ca_deep_goals bt g2 -> g1 = g2
-with add_ca_deep_g_inj {bt g1 g2}:
-  add_ca_deep_g bt g1 = add_ca_deep_g bt g2 -> g1 = g2.
-Proof.
-  - case: a1 => [|[]].
-      case: a2 => [|[]]//.
-    case: a2 => [|[]]//s1 x xs s2 y ys[?] /add_ca_deep_goals_inj ? /add_ca_deep_inj ?; by subst.
-  - case: g1; case: g2 => //= x xs y ys []/add_ca_deep_g_inj? /add_ca_deep_goals_inj?; by subst.
-  - by case: g1; case: g2 => //xs ys [] /append_sameR /add_ca_deep_inj->.
-Qed.
-
-
 Section clean_ca.
   Fixpoint clean_ca (bt:alts) (ats: alts) : alts :=
     match ats with

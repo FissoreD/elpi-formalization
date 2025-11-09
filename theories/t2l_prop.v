@@ -7,6 +7,32 @@ From det Require Import zify_ssreflect.
 Section NurProp.
   Variable u: Unif.
 
+  Lemma add_ca_deep_map bt1 xs:
+    map (fun '(s, xs0) => (s, (add_ca_deep_goals bt1 xs0))) xs =
+      add_ca_deep bt1 xs
+  with add_ca_deep_goals_map bt1 x:
+    map (add_ca_deep_g bt1) x = add_ca_deep_goals bt1 x.
+  Proof.
+    - case: xs => [|[sx x] xs]; [reflexivity|].
+      by rewrite !map_cons add_ca_deep_map /=.
+    - case: x => [|g gs]; [reflexivity|].
+      by rewrite map_cons add_ca_deep_goals_map.
+  Qed.
+
+  Lemma add_ca_deep_inj {bt a1 a2}:  
+    add_ca_deep bt a1 = add_ca_deep bt a2 -> a1 = a2
+  with add_ca_deep_goals_inj {bt g1 g2}:
+    add_ca_deep_goals bt g1 = add_ca_deep_goals bt g2 -> g1 = g2
+  with add_ca_deep_g_inj {bt g1 g2}:
+    add_ca_deep_g bt g1 = add_ca_deep_g bt g2 -> g1 = g2.
+  Proof.
+    - case: a1 => [|[]].
+        case: a2 => [|[]]//.
+      case: a2 => [|[]]//s1 x xs s2 y ys[?] /add_ca_deep_goals_inj ? /add_ca_deep_inj ?; by subst.
+    - case: g1; case: g2 => //= x xs y ys []/add_ca_deep_g_inj? /add_ca_deep_goals_inj?; by subst.
+    - by case: g1; case: g2 => //xs ys [] /append_sameR /add_ca_deep_inj->.
+  Qed.
+
   Lemma size_add_deep l hd tl:
     size (add_deep l hd tl) = size tl.
   Proof. elim: tl => //=-[s x] xs H; rewrite size_cons H//. Qed.
@@ -421,17 +447,18 @@ Section NurProp.
     - move=> A; case: A => //[p a|] _ B0 _ B HB s2 C l/=/andP[/eqP->bB][<-]//.
   Qed.
 
-  Lemma add_ca_deep_goals_map ca X:
+  Lemma add_ca_deep_map_empty ca X:
     empty_caG X -> map (add_ca ca) X = add_ca_deep_goals ca X 
   with
-    add_ca_deep_map ca g: empty_ca_G g -> add_ca ca g = add_ca_deep_g ca g.
+    add_ca_deep_goals_map_empty ca g: empty_ca_G g -> add_ca ca g = add_ca_deep_g ca g.
   Proof.
     {
       case: X => /=.
         reflexivity.
       move=> g gs.
       rewrite/empty_caG all_cons => /andP[H1 H2].
-      rewrite map_cons add_ca_deep_goals_map//add_ca_deep_map//.
+      rewrite map_cons add_ca_deep_goals_map_empty//.
+      rewrite add_ca_deep_map_empty//.
     }
     case: g => //=-[]//.
   Qed.
@@ -468,11 +495,11 @@ Section NurProp.
       have:= empty_ca_atoms p1 b.
       set X := (a2gs _ _).
       generalize X => {}X.
-      move=> /add_ca_deep_goals_map->//.
+      move=> /add_ca_deep_map_empty->//.
     move=> [s1 [hd bo]]/=rs IH s2 b ca gs/=.
     rewrite add_ca_deep_empty1 add_ca_deep_cat /make_lB0 map_cat s2l_big_and/=map_cons.
     rewrite cat_cons cat0s; f_equal.
-      rewrite -add_ca_deep_goals_map//.
+      rewrite -add_ca_deep_map_empty//.
       rewrite empty_ca_atoms//.
     apply: IH.
   Qed.
