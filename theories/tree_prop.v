@@ -133,6 +133,32 @@ Section RunP.
     rewrite is_ko_failed//HA// if_same//.
   Qed.
 
+  (* Lemma next_alt_None_is_ko {A}: next_alt false A = None -> is_ko A.
+  Proof.
+    elim: A => //=.
+    - move=> A HA s1 B HB/=.
+      case nA: next_alt => //.
+      rewrite HA//=.
+      case:ifP => dA; case nB: next_alt => //; rewrite HB//.
+    - move=> A HA B0 HB0 B HB.
+      case:ifP => fA.
+        case nA: next_alt => [A'|].
+          case nB0: next_alt => [B0'|]//=.
+  Qed. *)
+
+  Lemma next_alt_None_failed {A}: next_alt false A = None -> failed A.
+  Proof.
+    elim: A => //=.
+    - move=> A HA s1 B HB/=.
+      case nA: next_alt => //.
+      rewrite HA//=.
+      case:ifP => dA; case nB: next_alt => //; rewrite HB//.
+    - move=> A HA B0 HB0 B HB.
+      case:ifP => fA//.
+      case:ifP => sA//=.
+      by case nB: next_alt => [B'|]//=; auto.
+  Qed.
+
   Lemma next_alt_cutr {A b}:
     next_alt b (cutr A) = None.
   Proof. apply: is_ko_next_alt is_ko_cutr. Qed.
