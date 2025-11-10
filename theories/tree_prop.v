@@ -575,4 +575,19 @@ Section RunP.
       case: ifP => //=sA fB.
       rewrite HB//.
   Qed.
+
+  Lemma next_alt_not_success A:
+    failed A = false ->
+      (success A) = false -> next_alt true A = Some A.
+  Proof.
+    elim: A => //=.
+    - move=> A HA s B HB; case: ifP => dA fB sB.
+        rewrite is_dead_next_alt// HB//=.
+      rewrite HA//.
+    - move=> A HA B0 _ B HB.
+      case: ifP => //=fA.
+      case: ifP => //=sA fB sB.
+      rewrite HB//.
+  Qed.
+
 End RunP.
