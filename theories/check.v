@@ -1144,7 +1144,7 @@ Proof.
       rewrite (failed_is_ko)//=fA'.
       destruct DA => //=.
         have {HA} := HA _ _ _ _ fA dtA nA; subst.
-        case: det_tree_aux => /=[[[] sVA']|]//= _.
+        case dtA': det_tree_aux => /=[[[] sVA']|]//= _.
         have ? : sVA' = sV2 by admit.
         subst.
         rewrite dtB0//=.
