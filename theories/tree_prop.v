@@ -379,6 +379,12 @@ Section RunP.
       have:= HB0 false; by case Y: next_alt => //=[B0'] ->->; rewrite andbF.
   Qed.
 
+  Lemma next_alt_is_ko {b A r}: next_alt b A = r -> (is_ko (odflt OK r) = false)%type2.
+  Proof.
+    move=>/next_alt_failed.
+    by move=> /failed_is_ko.
+  Qed.
+
   Lemma failed_big_or p s t: failed (big_or u p s t).
   Proof. rewrite/big_or; case: F => //-[]//. Qed.
 
@@ -589,5 +595,26 @@ Section RunP.
       case: ifP => //=sA fB sB.
       rewrite HB//.
   Qed.
+
+
+  Lemma next_alt_false_true {A b}:
+    failed A ->
+      next_alt b A = next_alt false A.
+  Proof.
+    elim: A b => //=.
+    - move=> A HA s B HB b.
+      case: ifP => [dA fB|dA fA].
+        by rewrite !(is_dead_next_alt _ dA)//= HB.
+      by rewrite HA//.
+    - move=> A HA B0 _ B HB b.
+      move=> /orP[fA|/andP[sA fB]].
+        by rewrite fA//.
+      by rewrite sA success_failed//= HB//.
+  Qed.
+
+  Lemma next_alt_big_and {p r}:
+    next_alt false (big_and p r) = Some (big_and p r).
+  Proof. elim: r p => //=x xs IH p; case: x => //=. Qed.
+
 
 End RunP.

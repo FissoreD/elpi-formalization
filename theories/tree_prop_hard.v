@@ -756,10 +756,6 @@ Section s.
       apply: run_dead fB1 X.
   Qed.
 
-  Lemma next_alt_big_and {p r}:
-    next_alt false (big_and p r) = Some (big_and p r).
-  Proof. elim: r p => //=x xs IH p; case: x => //=. Qed.
-
   Lemma run_big_and_total {r p s}:
       Texists r0 B n, runb u s ((big_and p r)) r0 B n.
   Proof.
