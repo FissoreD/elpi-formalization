@@ -261,8 +261,8 @@ Section checker.
     match s1, s2 with
     | b Exp, b Exp => ty_ok (b Exp)
     | b(d D1), b(d D2) => ty_ok (b(d(f1 D1 D2)))
-    | arr i l1 r1, arr i l2 r2 => map_ty_s i (min_max f2 f1 l1 r1) (min_max f1 f2 r1 r2)
-    | arr o l1 r1, arr o l2 r2 => map_ty_s o (min_max f1 f2 l1 r1) (min_max f1 f2 r1 r2)
+    | arr i l1 r1, arr i l2 r2 => map_ty_s i (min_max f2 f1 l1 l2) (min_max f1 f2 r1 r2)
+    | arr o l1 r1, arr o l2 r2 => map_ty_s o (min_max f1 f2 l1 l2) (min_max f1 f2 r1 r2)
     | _, _ => ty_err
     end.
 
@@ -338,32 +338,41 @@ Section checker.
       - move=> []//; case: S2 => //.
         - by move=> []//=[?]; subst.
         - move=> []//= d1 d2[<-].
-          destruct d1, d2 => //=.
-      - move=> []; case: S2 => //= -[]//= _ s1 s2 s3;
-        case X: min_max => //=[S1]; case Y: min_max => //=[S2][?]; subst.
-        - have H1 := min_incl _ _ _ Y.
-          have H2 := max_incl _ _ _ X.
-          admit.
-        - have H1 := min_incl _ _ _ Y.
-          have H2 := min_incl _ _ _ X.
-          admit.
+          by destruct d1, d2 => //=.
+      - move=> []; case: S2 => //= -[]//= s1 s2 s3 s4;
+        case X: min_max => //=[S1]; case Y: min_max => //=[S2][?]/=; subst.
+        - have /=-> := min_incl _ _ _ Y.
+          by have /=-> := max_incl _ _ _ X.
+        - have /=-> := min_incl _ _ _ Y.
+          by have /=-> := min_incl _ _ _ X.
     - case: S1 => //=[].
       - move=> []//; case: S2 => //.
         - by move=> []//=[?]; subst.
         - move=> []//= d1 d2[<-].
           destruct d1, d2 => //=.
-      - move=> []; case: S2 => //= -[]//= _ s1 s2 s3;
+      - move=> []; case: S2 => //= -[]//= s1 s2 s3 s4;
         case X: min_max => //=[S1]; case Y: min_max => //=[S2][?]; subst.
-        - have H1 := max_incl _ _ _ Y.
-          have H2 := min_incl _ _ _ X.
-          admit.
-        - have H1 := max_incl _ _ _ Y.
-          have H2 := max_incl _ _ _ X.
-          admit.
-  Admitted.
+        - have /=-> := max_incl _ _ _ Y.
+          by have /=-> := min_incl _ _ _ X.
+        - have /=-> := max_incl _ _ _ Y.
+          by have /=-> := max_incl _ _ _ X.
+  Qed.
 
-  Lemma min_comm {A B}: min A B = min B A.
-  Admitted.
+  Lemma min_comm {A B}: min A B = min B A
+  with max_comm {A B}: max A B = max B A.
+  Proof.
+    all: rewrite/min/max in min_comm max_comm *.
+    - case: A => /=.
+      - by move=> []; case: B => /=//-[]// [][]//.
+      - move=> []; case: B => /=-[]// ????.
+          rewrite max_comm//=min_comm//.
+        by rewrite min_comm; f_equal; auto.
+    - case: A => /=.
+      - by move=> []; case: B => /=//-[]// [][]//.
+      - move=> []; case: B => /=-[]// ????.
+          rewrite max_comm//=min_comm//.
+        by rewrite max_comm; f_equal; auto.
+  Qed.
   
   Fixpoint strong s :=
     match s with
