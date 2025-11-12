@@ -90,6 +90,14 @@ Section Lookup.
   Set Implicit Arguments.
   Variables (K : eqType) (V : Type).
 
+  Definition remove k (L : seq (K*V)) := (filter (fun y => k == y.1) L).
+  
+  Fixpoint valid_sig (L : seq (K*V)) :=
+    match L with
+    | [::] => true
+    | x::xs => (size (remove x.1 xs) == 0) && valid_sig xs
+    end.
+
   (* get the first value (option) for key k *)
   Fixpoint lookup (k : K) (l : seq (K * V)) : option V :=
     match l with
@@ -97,7 +105,39 @@ Section Lookup.
     | (k',v)::xs => if k' == k then Some v else lookup k xs
     end.
 
-  Definition add k v l : (seq (K*V)):= (k,v) :: l.
+  Fixpoint add k v l : (seq (K*V)) :=
+    match l with
+    | [::] => [::(k, v)]
+    | x :: xs => if x.1 == k then (k, v) :: xs else x :: add k v xs
+    end.
+
+  Lemma valid_sig_add_diff {k k' v' l}:
+    size [seq y <- l | k == y.1] = 0 ->
+      k <> k' ->
+        size [seq y <- add k' v' l | k == y.1] = 0.
+  Proof.
+    elim: l k k' v' => //=.
+      move=> k k' v' _; case: eqP => //.
+    move=> [k v] l IH k1 k2 v'.
+    case:eqP => //= H1 H2 H3.
+    have IH' := IH _ _ _ H2 H3.
+    case:eqP => //= H4; subst; case: eqP => //=.
+  Qed.
+
+  Lemma valid_sig_add {l k v r}:
+    valid_sig l -> add k v l = r -> valid_sig r.
+  Proof.
+    move=> +<-{r}.
+    elim: l k v => //= [[k v]] l IH k' v'/= /andP[/eqP H1 H2].
+    case:eqP => H3; subst => /=.
+      rewrite H1//.
+    rewrite IH//andbT.
+    case:eqP => //= H; exfalso; apply: H.
+    apply: valid_sig_add_diff H1 H3.
+  Qed.
+
+  Goal forall k v l, size (add k v l) <> 0.
+  Proof. move=> ??[]//=*; case: ifP => //. Qed.
 
 End Lookup.
 Arguments lookup {_ _}.

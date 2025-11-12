@@ -1,9 +1,9 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang tree tree_prop.
 
-Notation "X &&& Y" := (And X _ Y) (at level 3).
+(* Notation "X &&& Y" := (And X _ Y) (at level 3).
 Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).
-Notation "` X" := ((ACall X)) (at level 3).
+Notation "` X" := ((ACall X)) (at level 3). *)
 
 Definition empty_sig : sigT := [::].
 
@@ -50,6 +50,13 @@ Section Test1.
         [:: ACall (Callable_Comb (Callable_Kp p) v_X) ; ACall (Callable_Comb (Callable_Kp r) v_X) ] 
     ].
 
+  Goal unify unif v_X (Tm_Kd (IKd 1)) empty = Some s1.
+  Proof.
+    rewrite/unif.
+    rewrite [unifyF]lock/=-lock.
+    rewrite/unifyF [add]lock/= -lock.
+    move=> //.
+  Qed.
 
   Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) (Some s2) r 0.
   Proof.

@@ -598,18 +598,17 @@ Section RunP.
 
 
   Lemma next_alt_false_true {A b}:
-    failed A ->
+    success A = false ->
       next_alt b A = next_alt false A.
   Proof.
     elim: A b => //=.
     - move=> A HA s B HB b.
-      case: ifP => [dA fB|dA fA].
+      case: ifP => [dA sB|dA sA].
         by rewrite !(is_dead_next_alt _ dA)//= HB.
       by rewrite HA//.
     - move=> A HA B0 _ B HB b.
-      move=> /orP[fA|/andP[sA fB]].
-        by rewrite fA//.
-      by rewrite sA success_failed//= HB//.
+      case sA: success => //=sB.
+      rewrite success_failed//=HB//=.
   Qed.
 
   Lemma next_alt_big_and {p r}:
