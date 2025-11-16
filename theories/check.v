@@ -41,6 +41,28 @@ End tc.
 Arguments ty_err {_}.
 Arguments ty_ok {_}.
 
+Definition map_ty {A B:eqType} (F: A -> typecheck B) (ob1: typecheck A) : (typecheck B) :=
+  match ob1 with
+  | ty_err => ty_err
+  | ty_ok cnt => F cnt
+  end.
+
+Definition map_ty' {T1 T2:eqType} F t1 :=
+  @map_ty T1 T2 (fun x => ty_ok (F x)) t1.
+
+
+Definition map_ty_bool ob1 ob2 : typecheck bool :=
+  map_ty (fun x => map_ty (fun y => ty_ok (x && y)) ob2)  ob1.
+
+Definition tydflt {T:eqType} dflt (t:typecheck T) :=
+  match t with
+  | ty_ok t => t
+  | ty_err => dflt
+  end.
+
+Definition map_ty_s m (ob1:typecheck S) ob2 : typecheck S :=
+  map_ty (fun x => map_ty (fun y => ty_ok (arr m x y)) ob2) ob1.
+
 
 Lemma tm2RC_kp {t1 k} : 
   tm2RC t1 = Some (RCallable_Kp k) -> t1 = Tm_Kp k.
@@ -61,6 +83,15 @@ Proof.
     right; by eexists.
   - move=> h b k; case X: tm2RC => //.
 Qed.
+
+Definition ty2bool t:= match t with ty_ok b1 => b1 | _ => false end.
+
+Definition map_ty_opt {A B: eqType} (f: A -> typecheck (option B)) t :=
+  match t with
+  | ty_ok (Some e) => (f e)
+  | ty_err => ty_err
+  | ty_ok None => ty_ok (@None B)
+  end.
 
 Section has_cut.
   (* tells if A has a superficial cut *)
@@ -172,31 +203,8 @@ End has_cut.
 Definition full_sP {K:eqType} {V:Type} (s: list (K*V)) := forall k, lookup k s <> None.
 Notation sigV := (list (V * S)).
 
-Section checker.
-
-  Fixpoint is_det_sig (sig:S) : bool :=
-    match sig with
-    | b (d Func) => true
-    | b (d Pred) => false
-    | b Exp => false
-    | arr _ _ s => is_det_sig s
-    end.
-
-  Fixpoint get_tm_hd_sig (sP : sigT) (sV : sigV) (tm: Tm) : option S :=
-    match tm with
-    | Tm_Kd _ => (Some (b Exp))
-    | Tm_Kp k => (lookup k sP) (*TODO: sP should be complete*)
-    | Tm_V v => lookup v sV
-    | Tm_Comb h _ => get_tm_hd_sig sP sV h
-    end.
-
-  Definition get_callable_hd_sig (sP: sigT) sV (t: Callable) : option S :=
-    get_tm_hd_sig sP sV (Callable2Tm t).
-
-  Definition callable_is_det (sP: sigT) sV (t : Callable) :=
-    odflt false (omap is_det_sig (get_callable_hd_sig sP sV t)).
-
-  Definition maxD (d1 d2 : D) :=
+Section min_max.
+    Definition maxD (d1 d2 : D) :=
     match d1 with
     | Pred => Pred
     | _ => d2
@@ -226,25 +234,6 @@ Section checker.
   Lemma minD_assoc {x y z}: minD x (minD y z) = minD (minD x y) z.
   Proof. case: x => //=; case: y => //=; case: z => //. Qed.
 
-  Definition map_ty {A B:eqType} (F: A -> typecheck B) (ob1: typecheck A) : (typecheck B) :=
-    match ob1 with
-    | ty_err => ty_err
-    | ty_ok cnt => F cnt
-    end.
-
-  Definition map_ty' {T1 T2:eqType} F t1 :=
-    @map_ty T1 T2 (fun x => ty_ok (F x)) t1.
-
-
-  Definition map_ty_bool ob1 ob2 : typecheck bool :=
-    map_ty (fun x => map_ty (fun y => ty_ok (x && y)) ob2)  ob1.
-
-  Definition tydflt {T:eqType} dflt (t:typecheck T) :=
-    match t with
-    | ty_ok t => t
-    | ty_err => dflt
-    end.
-
   Fixpoint incl_aux f1 f2 s1 s2 : typecheck _:=
     match s1, s2 with
     | b Exp, b Exp => ty_ok true
@@ -253,9 +242,6 @@ Section checker.
     | arr o l1 r1, arr o l2 r2 => map_ty_bool (incl_aux f1 f2 l1 l2) (incl_aux f1 f2 r1 r2)
     | _, _ => ty_err
     end.
-
-  Definition map_ty_s m (ob1:typecheck S) ob2 : typecheck S :=
-    map_ty (fun x => map_ty (fun y => ty_ok (arr m x y)) ob2) ob1.
 
   Fixpoint min_max f1 f2 s1 s2 : typecheck _ :=
     match s1, s2 with
@@ -283,8 +269,6 @@ Section checker.
       - move=> [//=|][]/=//.
       - move=> []*; rewrite !not_incl_refl//incl_refl//.
   Qed.
-
-  Definition ty2bool t:= match t with ty_ok b1 => b1 | _ => false end.
 
   Lemma incl_trans {A B C}:
     incl A B = ty_ok true -> incl B C = ty_ok true -> incl A C = ty_ok true
@@ -373,6 +357,18 @@ Section checker.
           rewrite max_comm//=min_comm//.
         by rewrite max_comm; f_equal; auto.
   Qed.
+
+  Lemma min_refl {A}: min A A = ty_ok A
+  with max_refl {A}: max A A = ty_ok A.
+  Proof.
+    all: rewrite/min/max in min_refl max_refl *.
+    - case: A => /=.
+      - move=> []//= ?; rewrite minD_refl//.
+      - move=> [] ??; rewrite ?max_refl !min_refl//=.
+    - case: A => /=.
+      - move=> []//= ?; rewrite maxD_refl//.
+      - move=> [] ??; rewrite ?min_refl//= !max_refl//.
+  Qed.
   
   Fixpoint strong s :=
     match s with
@@ -399,12 +395,34 @@ Section checker.
     Goal (weak SMap) == WMap. Proof. move=> //=. Qed.
   End test.
 
-  Definition map_ty_opt {A B: eqType} (f: A -> typecheck (option B)) t :=
-    match t with
-    | ty_ok (Some e) => (f e)
-    | ty_err => ty_err
-    | ty_ok None => ty_ok (@None B)
+
+
+End min_max.
+
+
+Section checker.
+
+  Fixpoint is_det_sig (sig:S) : bool :=
+    match sig with
+    | b (d Func) => true
+    | b (d Pred) => false
+    | b Exp => false
+    | arr _ _ s => is_det_sig s
     end.
+
+  Fixpoint get_tm_hd_sig (sP : sigT) (sV : sigV) (tm: Tm) : option S :=
+    match tm with
+    | Tm_Kd _ => (Some (b Exp))
+    | Tm_Kp k => (lookup k sP) (*TODO: sP should be complete*)
+    | Tm_V v => lookup v sV
+    | Tm_Comb h _ => get_tm_hd_sig sP sV h
+    end.
+
+  Definition get_callable_hd_sig (sP: sigT) sV (t: Callable) : option S :=
+    get_tm_hd_sig sP sV (Callable2Tm t).
+
+  Definition callable_is_det (sP: sigT) sV (t : Callable) :=
+    odflt false (omap is_det_sig (get_callable_hd_sig sP sV t)).
 
   (* takes a tm and returns its signature + if it is well-called
      the tm has no signature if its head is a variable with no assignment in sV *)
@@ -582,6 +600,128 @@ Proof. move=> H; rewrite/full_ko //is_ko_next_alt//. Qed.
 Lemma is_dead_full_ko_state {A}: is_dead A -> full_ko A.
 Proof. move=> /is_dead_is_ko; exact: is_ko_full_ko_state. Qed.
 
+Section lookup.
+  Lemma key_absent_remove {T: eqType} {K:Type} {k} {l: seq (T*K)}:
+    (key_absent k l) -> remove k l = l.
+  Proof.
+    rewrite/key_absent.
+    elim: l k => //= [[k v]] xs IH k'; case: eqP => //= H1 H2.
+    rewrite IH//.
+    case:eqP => //; congruence.
+  Qed.
+
+  Lemma lookup_remove_None {T: eqType} {K:Type} {k} {l: seq (T*K)}:
+    (lookup k (remove k l)) = None.
+  Proof.
+    elim: l k => //= -[k v] l IH k'/=.
+    case:eqP => //= H; rewrite IH; case: eqP; congruence.
+  Qed.
+
+  Lemma lookup_remove_diff {T: eqType} {K:Type} {k k'} {l: seq (T*K)}:
+     k' <> k ->
+      lookup k (remove k' l) = lookup k l.
+  Proof.
+    elim: l k k' => //= -[k v] l IH k1 k2 H.
+    case:eqP => //= H1; subst.
+      by case:eqP => //= _; apply: IH.
+    case: eqP => //= H2; subst.
+    by apply: IH.
+  Qed.
+
+  Lemma remove_comm {T: eqType} {K:Type} {x y} {l: seq (T*K)}:
+    remove x (remove y l) = remove y (remove x l).
+  Proof.
+    elim: l x y => //= -[k v] xs IH/= x y.
+    case: eqP => H/=; subst.
+      case: eqP => H1/=; subst.
+        apply: IH.
+      rewrite eqxx/=; apply: IH.
+    case:eqP => //=H1; subst.
+    case:eqP => //= _; f_equal.
+    apply: IH.
+  Qed.
+
+  Lemma lookup_cat {T : eqType} {K:Type} {k} {X Y : seq (T * K)}:
+      lookup k (X ++ Y) = 
+        if key_absent k X then lookup k Y
+        else lookup k X.
+  Proof.
+    rewrite/key_absent.
+    elim: X k Y => [|[k v] xs IH] k' ys//=.
+    case:eqP => //<-{k'}.
+  Qed.
+
+  Lemma valid_sig_cat {T : eqType} {K:Type} {k} {X Y : seq (T * K)}:
+      valid_sig (X ++ k ::  Y) ->
+        key_absent k.1 X.
+  Proof.
+    rewrite/key_absent.
+    elim: X k Y => //= [[k v] xs] IH [k' v'] ys/= /andP[H1 H2].
+    have/= {IH}:= IH _ _ H2.
+    move: H1; rewrite/key_absent.
+    rewrite lookup_cat.
+    rewrite/key_absent.
+    case:eqP => H//; subst.
+    case: lookup => //=.
+    by rewrite eqxx.
+  Qed.
+
+  Lemma add_cat {T: eqType} {K:Type} (L: seq (T*K)) {k v1 v2 xs}:
+    key_absent k L ->
+    add k v1 (L ++ (k, v2) :: xs) = (L ++ (k, v1) :: xs).
+  Proof.
+    rewrite/key_absent.
+    elim: L k v1 v2 xs => //= [|[k v]xs IH] k1 v1 v2 ys/=.
+      by rewrite eqxx.
+    case: eqP => H//; subst.
+    move=> /IH->//.
+  Qed.
+
+End lookup.
+
+Section merge.
+  Definition update (s:sigV) '((k, v): (V * _)) : typecheck (sigV) :=
+    match lookup k s with
+    | None => ty_ok (add k v s)
+    | Some e => 
+        map_ty' (fun m => add k m s) (min v e)
+    end.
+
+  Fixpoint merge_sig (s1 s2: sigV) :=
+    match s2 with
+    | [::] => ty_ok s1
+    | x::xs => map_ty (fun (s1':sigV) => merge_sig s1' xs) (update s1 x)
+    end.
+
+  Lemma merge_pref {L A}: 
+    valid_sig (L ++ A) -> merge_sig (L ++ A) A = ty_ok (L ++ A).
+  Proof.
+    elim: A L => //=[[k v] xs] IH/= L H.
+    rewrite lookup_cat/= eqxx.
+    have H1 := valid_sig_cat H.
+    rewrite (valid_sig_cat H) min_refl//= add_cat//=.
+    rewrite -cat_rcons; apply: IH.
+    rewrite cat_rcons//.
+  Qed.
+
+  Lemma merge_refl {A}: 
+    valid_sig A -> merge_sig A A = ty_ok A.
+  Proof. apply: @merge_pref [::] _. Qed.
+
+  Lemma valid_sig_merge {A B C}:
+    valid_sig A -> valid_sig B -> merge_sig A B = ty_ok C -> valid_sig C.
+  Proof.
+    elim: B A C => //= [|[k v]xs IH] A C vA.
+    - move=> _ [<-]//.
+    - move=> /andP[/=H1 H2].
+      case L: lookup => [A'|]//=.
+        case M: min => //=[vm].
+        apply: IH => //=.
+        by apply: valid_sig_add.
+      apply: IH => //=.
+      by apply: valid_sig_add.
+  Qed.
+End merge.
 (* a free alternative can be reached without encountering a cutr following SLD 
 
   "((A, !, A') ; B) , C" is OK since B is not free
@@ -603,19 +743,16 @@ Fixpoint det_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : typecheck (D * sigV)%type
     else
       let rA := (det_tree_aux sP sV A dd) in
       if failed A || nB then 
-        map_ty (fun '(dd', sV') =>
-          let rB0 := (det_tree_aux sP sV' B0 dd') in
-          (* map_ty (fun '(ddB0, sVB0) => ty_ok (ddB0, sV') ) rB0 *)
-          rB0
-          ) rA
+        map_ty (fun '(dd', sV') => det_tree_aux sP sV' B0 dd') rA
       (* add case: if next_alt_B0 == None then cat A and B *)
       else
       map_ty (fun '(dd', sV') =>
         let rB0 := (det_tree_aux sP sV' B0 dd') in
         let rB := (det_tree_aux sP sV' B dd') in
         map_ty (fun '(ddB0, sVB0) =>
-          map_ty' (fun '(ddB, sVB) =>
-            (maxD ddB0 ddB, sV')) rB) rB0) rA
+          map_ty (fun '(ddB, sVB) =>
+            map_ty' (fun x => 
+            (maxD ddB0 ddB, x)) (merge_sig sVB sVB0)) rB) rB0) rA
   | Or A _ B =>
       let dtA := det_tree_aux sP sV A dd in
       let dtB := det_tree_aux sP sV B dd in
@@ -626,6 +763,448 @@ Fixpoint det_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : typecheck (D * sigV)%type
         map_ty' (fun '(sVB, _) =>
           (if has_cut A then maxD sVA sVB else Pred, sV)) dtB) dtA
   end.
+
+Section less_precise.
+  
+  (* tells if s1 is less precise then s2 *)
+  (* e.g. s2 has more mapping then s1, and/or the mappings have less holes *)
+  Fixpoint less_precise (s1 s2: sigV) :=
+    match s1 with
+    | [::] => true
+    | (k,v)::xs => 
+      match lookup k s2 with
+      | None => false
+      | Some v' => 
+        tydflt false (incl v' v) && 
+        less_precise xs (remove k s2)
+      end
+    end.
+
+  Lemma lookup_less_precise {k l1 l2 r}:
+    lookup k l1 = Some r ->
+      less_precise l1 l2 ->
+        exists r', lookup k l2 = Some r' /\ incl r' r = ty_ok true.
+  Proof.
+    elim: l1 k l2 r => //= -[k v] sV IH k' sV' r.
+    case:eqP => //=H; subst.
+      move=> [<-]{r}.
+      case L: lookup => //=[S].
+      case H1: incl => //=[[]]//= H2.
+      exists S; repeat split; auto.
+    move=> H1; case H2: lookup => //[r'].
+    case H3: incl => //=[[]]//= H4.
+    have [r''[H5 H6]] := IH _ _ _ H1 H4.
+    exists r''; split => //.
+    by rewrite lookup_remove_diff in H5.
+  Qed.
+
+  Lemma less_precise_remove2 {k s l}:
+    less_precise l (remove k s) -> less_precise l s.
+  Proof.
+    elim: l k s => //= -[k v] xs IH k' ys.
+    case kk': (k' == k); move /eqP: kk' => K; subst.
+      by rewrite lookup_remove_None.
+    rewrite (lookup_remove_diff)//.
+    case L1: lookup => //=[S] /andP[-> H2]/=.
+    rewrite remove_comm in H2.
+    apply: IH H2.
+  Qed.
+
+  Lemma less_precise_remove1 {k s l}:
+    less_precise l s -> less_precise (remove k l) s.
+  Proof.
+    elim: l k s => //= -[k v] xs IH k' ys/=.
+    case L1: lookup => //=[S] /andP[H1 H2].
+    case eqP => //= H; subst.
+      apply: IH (less_precise_remove2 H2).
+    rewrite L1 H1/=.
+    apply: IH H2.
+  Qed.
+
+  Lemma less_precise_remove_both {k s l}:
+    less_precise l s -> less_precise (remove k l) (remove k s).
+  Proof.
+    elim: l k s => //= -[k v] xs IH k' ys/=.
+    case L1: lookup => //=[S] /andP[H1 H2].
+    case eqP => //= H; subst.
+      apply: IH (less_precise_remove2 H2).
+    rewrite lookup_remove_diff//=L1 H1/=.
+    rewrite remove_comm IH//.
+  Qed.
+
+  Lemma less_precise_add_None {v sv1 S}:
+    valid_sig sv1 ->
+    lookup v sv1 = None ->
+      less_precise sv1 (add v S sv1).
+  Proof.
+    elim: sv1 v S => //=-[k v] l IH k' v' /= /andP[c vl].
+    case:eqP => //= H1 H2.
+    rewrite eqxx incl_refl//=.
+    rewrite key_absent_remove//.
+      by apply: IH.
+    rewrite key_absent_add_diff//; congruence.
+  Qed.
+
+  Lemma less_precise_add_None_left {k v A C}:
+    lookup k A = None ->
+      less_precise (add k v A) C -> less_precise A C.
+  Proof.
+    elim: A k v C => //=[[k v] xs] IH k' v' /= C.
+    case:eqP => //= H1 H2.
+    case X: lookup => //=[v''] /andP[H3 H4].
+    rewrite H3/=.
+    by apply: IH H2 H4.
+  Qed.
+
+  Lemma less_precise_remove_count {k s l}:
+    less_precise l (remove k s) -> key_absent k l.
+  Proof.
+    rewrite/key_absent.
+    elim: l k s => //= -[k v] xs IH k' ys.
+    case x: lookup => //=[S] /andP[H1 H2].
+    case:eqP => //= H3; subst.
+      by rewrite lookup_remove_None in x.
+    apply: IH (less_precise_remove2 H2).
+  Qed.
+
+  Lemma less_precise_refl {s}: 
+    valid_sig s -> less_precise s s.
+  Proof.
+    elim: s => //=[[k v] l] IH/=/andP[H1 H2].
+    rewrite eqxx//=incl_refl//=key_absent_remove//IH//.
+  Qed.
+
+  Lemma less_precise_add_Some {v sv1 S S'}:
+    valid_sig sv1 ->
+    lookup v sv1 = Some S -> incl S' S = ty_ok true ->
+      less_precise sv1 (add v S' sv1).
+  Proof.
+    elim: sv1 v S S' => //=-[k v] l IH k' S S' /= /andP[c vl].
+    case:eqP => //= H; subst.
+      move=> [?]; subst => H.
+      rewrite eqxx/= H/= key_absent_remove//=.
+      rewrite less_precise_refl//.
+    move=> H1 H2.
+    rewrite eqxx incl_refl/=.
+    rewrite key_absent_remove.
+      apply: IH; eauto.
+    rewrite key_absent_add_diff//; congruence.
+  Qed.
+
+  Lemma less_precise_add_Some_left {k v m A A' C}:
+    lookup k A = Some A' -> min v A' = ty_ok m ->
+      less_precise (add k m A) C -> less_precise A C.
+  Proof.
+    elim: A A' C k v m => //=[[k v] xs] IH A' C k' v' m + H.
+    case: eqP => //= H1; subst.
+      move=> [?]; subst.
+      case X: lookup => //=[C'] /andP[H1 H2].
+      rewrite H2 andbT.
+      move: H1; case I: incl => //=[[]]//= _.
+      rewrite min_comm in H.
+      have H1 := min_incl H.
+      rewrite (incl_trans I H1)//.
+    move=> L.
+    case X: lookup => //=[C'] /andP[H2 H3].
+    rewrite H2.
+    apply: IH L H H3.
+  Qed.
+
+  Lemma valid_sig_mp_trans {s s1}: 
+    valid_sig s1 -> less_precise s s1 -> valid_sig s.
+  Proof.
+    elim: s s1 => //= [[k v] l] IH/= s vs.
+    case x: lookup => //[S] /andP[H1 H2].
+    rewrite (less_precise_remove_count H2)/=.
+    apply: IH vs (less_precise_remove2 H2).
+  Qed.
+
+  Lemma less_precise_trans {A B C}:
+    less_precise A B -> less_precise B C -> less_precise A C.
+  Proof.
+    elim: A B C => //=.
+    move=> [v s] l IH []//= -[v' s'] l' z.
+    case:eqP => H; subst.
+      rewrite eqxx/=.
+      case H1 : incl => //= [[]]//=H2.
+      case L: lookup => //=[s0].
+      case H3 : incl => //= [[]]//=H4.
+      rewrite (incl_trans H3 H1)/=.
+      apply: (IH _ (remove v z) H2).
+      apply: less_precise_remove1 H4.
+    case L: lookup => //=[s0].
+    case H1 : incl => //= [[]]//=.
+    case:eqP; subst; [congruence|] => _.
+    case L1: lookup => //=[s1].
+    case H3 : incl => //= [[]]//= H4 H5.
+    have/=[s3[+ H7]] := lookup_less_precise L H5.
+    rewrite lookup_remove_diff//= => H8.
+    rewrite H8 (incl_trans H7 H1)/=.
+    apply: IH H4 _.
+    move=> /=.
+    rewrite lookup_remove_diff; [|congruence].
+    rewrite L1 H3/=.
+    rewrite remove_comm less_precise_remove_both//.
+  Qed.
+
+  Lemma assume_tm_less_precise {sP sv1 svA c S}:
+    valid_sig sv1 ->
+    (assume_tm sP sv1 c S) = ty_ok (svA) -> valid_sig svA /\ less_precise sv1 svA.
+  Proof.
+    elim: c sv1 svA S => //=.
+    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
+    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
+    - move=> v sv1 svA S sv1V.
+      case L: lookup => [S'|]; last first.
+        move=> [<-]/={svA}.
+        rewrite (valid_sig_add)//=; split => //.
+        by apply: less_precise_add_None.
+      case M: min => //=[S''][<-].
+      rewrite valid_sig_add//=; split => //.
+      apply: less_precise_add_Some; eauto.
+      rewrite min_comm in M.
+      apply: min_incl M.
+    - move=> l Hl r Hr sv1 sv2 [//|[s1 s2|s1 _]] sv1v; last first.
+        by apply: Hl.
+      case al: assume_tm => //[sv1']/= ar.
+      have [sv1'v {}Hl] := Hl _ _ _ sv1v al.
+      have [sv2v {}Hr] := Hr _ _ _ sv1'v ar.
+      rewrite sv2v; split => //.
+      apply: less_precise_trans Hl Hr.
+  Qed.
+
+  Lemma assume_call_less_precise {sP sv1 svA c S}:
+    valid_sig sv1 ->
+    (assume_call sP sv1 c S) = ty_ok (svA) -> 
+      (valid_sig svA /\ less_precise sv1 svA)%type2.
+  Proof.
+    elim: c sv1 svA S => //=.
+    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
+    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
+    - move=> c IH t sv1 sv2 []//= m sl s3.
+      case: m; [apply: IH|].
+      case ac: assume_call => //=[sv1'] sv1v.
+      have {IH}[sv1'v mp] := IH _ _ _ sv1v ac.
+      move=> H1.
+      have [H2 H3] := assume_tm_less_precise sv1'v H1.
+      rewrite H2; split => //.
+      apply: less_precise_trans mp H3.
+  Qed.
+
+  Lemma check_callable_less_precise {sP sv1 svA c d ign}:
+    valid_sig sv1 ->
+    check_callable sP sv1 c ign = ty_ok (d, svA) ->
+    (maxD d ign = d /\ valid_sig svA /\ less_precise sv1 svA)%type2.
+  Proof.
+    simpl in *.
+    rewrite/check_callable/=.
+    case C: check_tm => //=[[[[[//|D]|//] B]|]]; last first.
+      move=> H[<-<-]; repeat split => //.
+      apply: less_precise_refl H.
+    case: B C => C; last first.
+      move=> H[<-<-]; rewrite H; repeat split => //; apply: less_precise_refl H.
+    case gc: get_callable_hd_sig => [S|]; last first.
+      move=> H[<-<-]; rewrite H; repeat split => //; apply: less_precise_refl H.
+    move=> sv1v.
+    case ac: assume_call => //=[sv2][??]; subst.
+    by rewrite -maxD_assoc maxD_refl; repeat split;
+    rewrite (assume_call_less_precise sv1v ac).
+  Qed.
+
+  Lemma less_precise_merge {A B C}:
+    valid_sig A -> valid_sig B -> merge_sig A B = ty_ok C -> less_precise A C.
+  Proof.
+    elim: B A C => //=.
+    - move=> A C vA _ [<-]; apply: less_precise_refl vA.
+    - move=> [k v] xs IH A C vA /= /andP[H1 H2].
+      case L: lookup => [A'|]//=.
+        case M: min => /=[m|]// H.
+        have:= IH _ _ (valid_sig_add _ vA) H2 H.
+        by apply: less_precise_add_Some_left L M.
+      move=> H.
+      have:= IH _ _ (valid_sig_add _ vA) H2 H.
+      apply: less_precise_add_None_left L.
+  Qed.
+
+  Lemma det_tree_aux_less_precise {sP sv1 svA A d ign}:
+    valid_sig sv1 ->
+    det_tree_aux sP sv1 A ign = ty_ok (d, svA) ->
+    (valid_sig svA * less_precise sv1 svA)%type.
+  Proof.
+    simpl in *.
+    elim: A sv1 svA d ign => //=.
+    - by move=> ???? H [??]; subst; rewrite less_precise_refl.
+    - by move=> ???? H [??]; subst; rewrite less_precise_refl.
+    - by move=> ???? H [??]; subst; rewrite less_precise_refl.
+    - move=> _ ????? H1.
+      case c: check_callable => //=[[]][??]; subst.
+      rewrite !(check_callable_less_precise H1 c)//.
+    - by move=> ???? H [??]; subst; rewrite less_precise_refl.
+    - move=> A HA s B HB sv1 sv2 d ign vs1v.
+      case:eqP => nA; [by apply: HB|].
+      case:eqP => nB; [by apply: HA|].
+      case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
+      case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//= => -[??]; subst.
+      by rewrite less_precise_refl.
+    - move=> A HA B0 HB0 B HB sv1 sv2 d ign sv1s.
+      case fA: failed => /=.
+        case:eqP => nB0/=.
+          move=> [??]; subst.
+          rewrite less_precise_refl//.
+        case:eqP => nA/=.
+          move=>[??]; subst.
+          by rewrite less_precise_refl//.
+        case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
+        case dtB: (det_tree_aux _ _ B0) => /=[[DB sVB]|]//= => -[??]; subst.
+        have [H1 H2] := HA _ _ _ _ sv1s dtA.
+        have [H3 H4] := HB0 _ _ _ _ H1 dtB.
+        split => //.
+        apply: less_precise_trans H2 H4.
+      case:eqP => nA/=.
+        move=>[??]; subst.
+        by rewrite less_precise_refl//.
+      case:eqP => nB0/=.
+        case:eqP => nB/=.
+          move=>[??]; subst.
+          by rewrite less_precise_refl//.
+        case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
+        case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
+        case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//=.
+        case X: merge_sig => //=[V][??]; subst.
+        have [H1 H2] := HA _ _ _ _ sv1s dtA.
+        have [H3 H4] := HB0 _ _ _ _ H1 dtB0.
+        have [H5 H6] := HB _ _ _ _ H1 dtB.
+        have V := valid_sig_merge H5 H3 X.
+        rewrite V; repeat split.
+        apply: less_precise_trans H2 _.
+        apply: less_precise_trans H6 _.
+        apply: less_precise_merge H5 H3 X.
+      case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=; rewrite?if_same//.
+      case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=; rewrite?if_same//.
+      case:eqP => nB/=.
+        move=>[??]; subst.
+        have [H1 H2] := HA _ _ _ _ sv1s dtA.
+        have [H3 H4] := HB0 _ _ _ _ H1 dtB0.
+        split => //.
+        apply: less_precise_trans H2 H4.
+      case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//=. 
+      case X: merge_sig => //=[V][??]; subst.
+      have [H1 H2] := HA _ _ _ _ sv1s dtA.
+      have [H3 H4] := HB0 _ _ _ _ H1 dtB0.
+      have [H5 H6] := HB _ _ _ _ H1 dtB.
+      have V := valid_sig_merge H5 H3 X.
+      rewrite V; repeat split.
+      apply: less_precise_trans H2 _.
+      apply: less_precise_trans H6 _.
+      apply: less_precise_merge H5 H3 X.
+  Qed.
+
+  Lemma check_callable_func2 {sP sV A s ign d1}:
+    check_callable sP sV A ign = ty_ok (d1, s) ->
+      exists d2, minD d2 d1 = d2 /\ check_callable sP sV A Func = ty_ok (d2, s).
+  Proof.
+    rewrite/check_callable.
+    case: check_tm => //=-[[sA bA]|]; last first.
+      by move=> [<-<-]; exists Pred.
+    case: sA => //-[]//d.
+    case: bA; last first.
+      by move=> [<-<-]; exists Pred.
+    case: get_callable_hd_sig; last first.
+      by move=> [<-<-]; exists Pred.
+    move=> X.
+    case: assume_call => //= s' [<-<-].
+    case: ign; rewrite maxD_comm/=; last first.
+      rewrite maxD_comm/=; exists d.
+      rewrite minD_comm/=; case: d => //.
+    exists d; case: d => //.
+  Qed.
+
+  Lemma check_callable_pred {sP sV c d1 d2 s}:
+    check_callable sP sV c d1 = ty_ok (d2, s) ->
+      maxD d2 d1 = d2.
+  Proof.
+    rewrite/check_callable.
+    case: check_tm => //= -[[[|] []]|[<-]]//.
+    move=> d [|[<-]]//.
+    case gc: get_callable_hd_sig => [S|]; last first.
+      move=> [<-]//.
+    case ac: assume_call => //=[sV'][??]; subst.
+    rewrite -maxD_assoc maxD_refl maxD_comm//.
+  Qed.
+
+  Lemma det_tree_aux_func2 {sP sV A s ign d1}:
+    det_tree_aux sP sV A ign = ty_ok (d1, s) ->
+      exists d2, minD d2 d1 = d2 /\ det_tree_aux sP sV A Func = ty_ok (d2, s).
+  Proof.
+    elim: A d1 sV s ign => //=.
+    - move=> d1 sV s ign [??]; subst; exists Func => //.
+    - move=> d1 sV s ign [??]; subst; exists Func => //.
+    - move=> d1 sV s ign [??]; subst; exists Func => //.
+    - move=> _ c d1 sV1 sV2 ign.
+      case Z: check_callable => //=[[DA SVA]][??]; subst.
+      have H2:= check_callable_pred Z; subst => //.
+      rewrite -H2 maxD_comm -maxD_assoc maxD_refl.
+      have [d2[H3 H4]]:= check_callable_func2 Z.
+      rewrite H4/=.
+      case: d2 H3 H4 => //=.
+      - by exists Func.
+      - case: DA H2 Z => //= _ _ _ _.
+        by exists Pred.
+    - by move=> d1 sV s _ [<-<-]; exists Func.
+    - move=> A HA s B HB d1 sV1 sV2 ign.
+      case:eqP => kA; [apply: HB|].
+      case:eqP => kB; [apply: HA|].
+      case dtA: (det_tree_aux _ _ A) => //= [[dA sVA]]/=.
+      case dtB: (det_tree_aux _ _ B) => //= [[dB sVB]]/=.
+      move=>[??]; subst.
+      have [d2[H1 H2]]:= HA _ _ _ _ dtA.
+      have [d3[H3 H4]]:= HB _ _ _ _ dtB.
+      rewrite H2 H4/=.
+      rewrite -H1 -H3.
+      case: ifP => cA.
+        exists (maxD (minD d2 dA) (minD d3 dB)); repeat split.
+        destruct d2, dA => //=; destruct d3, dB => //.
+      by exists Pred.
+    - move=> A HA B0 HB0 B HB d1 sV sV' ign.
+      case:ifP => H.
+        move=> [??]; subst.
+        by exists Func.
+      case:ifP => fA.
+        case dtA: (det_tree_aux _ _ A) => //= [[dA sVA]].
+        case dtB0: (det_tree_aux _ _ B0) => //= [[dB0 sVB0]].
+        move=> []??; subst.
+        have [d2[H1 H2]] := (HA _ _ _ _ dtA).
+        move: dtA; rewrite H2/=.
+        have [d3[H3 H4]] := (HB0 _ _ _ _ dtB0).
+        destruct d2.
+          rewrite H4/=; exists d3; repeat split.
+          rewrite -H3 -minD_assoc minD_refl//.
+        destruct dA => //.
+        rewrite dtB0/=.
+        exists d1; rewrite minD_refl//.
+      case dtA: (det_tree_aux _ _ A) => //= [[dA sVA]].
+      case dtB0: (det_tree_aux _ _ B0) => //= [[dB0 sVB0]].
+      case dtB: (det_tree_aux _ _ B) => //= [[dB sVB]].
+      case X: merge_sig => //=[S] [??]; subst.
+      have {HA}[d2[H1 H2]] := HA _ _ _ _ dtA.
+      rewrite H2/=.
+      have {HB0}[d3[H3 H4]] := HB0 _ _ _ _ dtB0.
+      have {HB}[d4[H5 H6]] := HB _ _ _ _ dtB.
+      destruct d2.
+        rewrite H4/=.
+          destruct dB; rewrite H6/=.
+          rewrite maxD_comm/=.
+          rewrite -H3 X.
+          exists (maxD (minD d3 dB0) d4); repeat split.
+          by destruct d3, dB0, d4 => //.
+        rewrite X/=.
+        by repeat eexists; rewrite (@maxD_comm dB0)/= minD_comm//=.
+      destruct dA => //.
+      rewrite dtB0/=dtB/= X/=.
+      repeat eexists; rewrite minD_refl//.
+  Qed.
+End less_precise.
+
 
 Lemma is_ko_det_tree_aux {sP sV A d}:
   is_ko A -> det_tree_aux sP sV A d = ty_ok(d, sV).
@@ -646,39 +1225,54 @@ Definition typ_func (A: typecheck (_ * sigV)%type) := match A with ty_ok (Func, 
 Definition det_tree sP A := typ_func (det_tree_aux sP empty_ctx A Func).
 
 Lemma all_det_nfa_big_and {sP sV l r} p: 
+  valid_sig sV ->
   typ_func (check_atoms sP sV l r)-> 
     typ_func (det_tree_aux sP sV (big_and p l) r).
 Proof.
   elim: l sV r => //=.
-  move=> A As IH sV r.
+  move=> A As IH sV r V.
   case X: check_atom => /=[[dA sVA]|]//=.
   rewrite next_alt_big_and//=.
   case YY : A X => //=[|c].
     move=> [??]; subst => //=.
     move=> {}/IH H.
-    case: det_tree_aux H => //=-[][]//=.
+    have {H}:= H V.
+    case dt: det_tree_aux V => //=[[[b|]]]//= V _.
+    rewrite merge_refl//=.
+    by have [] := det_tree_aux_less_precise V dt.
   rewrite/check_callable.
   case X: check_tm => //[[[d b]|]]//=; last first.
     move=> [??]; subst => /=; rewrite maxD_comm/=.
-    move=> /IH/=; case: det_tree_aux => //-[]/=[]//.
+    move=> /IH/= -/(_ V); case dtA: det_tree_aux => //=[[[b|]]]//=.
+    rewrite merge_refl//=.
+    by have [] := det_tree_aux_less_precise V dtA.
   case: d X => //-[]//=d.
   case Y: get_callable_hd_sig => //[s|].
     case: b => //=.
       case X: assume_call => //=[ts] H [??]; subst.
-      move=> /IH.
+      have [H1 H2] := assume_call_less_precise V X.
+      move=> /IH -/(_ H1).
       rewrite maxD_comm maxD_assoc maxD_refl.
-      case: det_tree_aux => //-[]//=[]//.
-    move=> H [??]; subst => /IH.
+      case dt: det_tree_aux => //=[[[]S]]//= _.
+      rewrite merge_refl//=.
+      by have [] := det_tree_aux_less_precise H1 dt.
+    move=> H [??]; subst => /IH -/(_ V).
     rewrite maxD_comm/=.
-    case: det_tree_aux => //-[]//=[]//.
+    case dt: det_tree_aux => //[[[]b]]//=.
+    rewrite merge_refl//=.
+    by have [] := det_tree_aux_less_precise V dt.
   case: b => //=.
     move=> H [??]; subst.
-    move=> /IH.
+    move=> /IH-/(_ V).
     rewrite maxD_comm/=.
-    case: det_tree_aux => //-[]//=[]//.
-  move=> H [??]; subst => /IH.
+    case dt: det_tree_aux => //[[[]S]]//= _.
+    rewrite merge_refl//=.
+    by have [] := det_tree_aux_less_precise V dt.
+  move=> H [??]; subst => /IH -/(_ V).
   rewrite maxD_comm/=.
-  case: det_tree_aux => //-[]//=[]//.
+  case dt: det_tree_aux => //[[[]S]]//= _.
+  rewrite merge_refl//=.
+  by have [] := det_tree_aux_less_precise V dt.
 Qed.
 
 Lemma deterf_empty c: 
@@ -710,19 +1304,6 @@ Fixpoint sigma2ctx (sP:sigT) (s: Sigma) : seq (typecheck (V * S)%type):=
     case X: H => //=[s']; rewrite IH andbT.
     rewrite cr//.
   Qed.
-
-Lemma check_callable_pred {sP sV c d1 d2 s}:
-  check_callable sP sV c d1 = ty_ok (d2, s) ->
-    maxD d2 d1 = d2.
-Proof.
-  rewrite/check_callable.
-  case: check_tm => //= -[[[|] []]|[<-]]//.
-  move=> d [|[<-]]//.
-  case gc: get_callable_hd_sig => [S|]; last first.
-    move=> [<-]//.
-  case ac: assume_call => //=[sV'][??]; subst.
-  rewrite -maxD_assoc maxD_refl maxD_comm//.
-Qed.
 
 Definition same_ty {T Q:eqType} (F: T -> Q) (A B: (typecheck T)) :=
   (map_ty' F A) == (map_ty' F B). 
@@ -757,13 +1338,19 @@ Proof.
     have {HA} := HA d1 d2 sV.
     case: (det_tree_aux _ _ A) => /=[[dA sA]|]//;
     case: (det_tree_aux _ _ A) => /=[[dA' sA']|]//; last first.
+      rewrite !if_same.
+      case: ifP => //=.
     case:ifP => //kA.
     move=>/eqP[->].
     have {HB0}/= := HB0 dA dA' sA'.
-    do 2 case: (det_tree_aux _ _ B0) => /=[[??]|]//; try by case:ifP.
-    move=> /eqP [?]; subst.
+    case dtB0: det_tree_aux => //=[[x y]|]; case dtB0': det_tree_aux => //=[[z w]]/=.
+    move=> /eqP[?]; subst.
     have {HB}/= := HB dA dA' sA'.
-    do 2 case: (det_tree_aux _ _ B) => /=[[??]|]//; by repeat case:ifP => //.
+    case dtB: det_tree_aux => //=[[a b]|]; case dtB': det_tree_aux => /=[[c d]|]//=.
+      move=> /eqP[?]; subst.
+      case: ifP => //=.
+      case X: merge_sig => //=.
+    case: ifP => //=.
 Qed.
 
 Lemma next_alt_None_det_tree_aux {sP sV A d}:
@@ -800,7 +1387,7 @@ Proof.
   - admit.
   - *)
 
-Lemma same_ty_next_alt sP sV i1 i2 {b A B}:
+(* Lemma same_ty_next_alt sP sV i1 i2 {b A B}:
   is_ty_ok (det_tree_aux sP sV A i1) ->
   next_alt b A = Some B ->
   is_ty_ok (det_tree_aux sP sV B i2).
@@ -1000,7 +1587,87 @@ Proof.
     subst.
     rewrite dtB0/==> /(_ isT).
     case dtB0x: (det_tree_aux _ _ B0') => //=.
-Admitted.
+Admitted. *)
+
+Lemma success_det_tree_next_alt {sP A A' d sV1 sV2 ign ign1}:
+  success A -> (det_tree_aux sP sV1 A ign) = ty_ok (d, sV2) ->
+    (next_alt true A) = Some A' ->
+    minD ign1 ign = ign1 ->
+    exists d1, minD d1 d = d1 /\ 
+    (det_tree_aux sP sV1 A' ign1) = ty_ok (d1, sV2).
+Proof.
+  simpl in sV2, d.
+  elim: A A' sV1 sV2 ign d ign1 => //=.
+  - move=> A HA s B HB C S1 S2 ign d ign1.
+    case:ifP => [dA sB|dA sA].
+      rewrite (is_dead_next_alt _ dA)//=.
+      case X: det_tree_aux => //=[[dB sVB]][??]; subst.
+      rewrite !(is_dead_next_alt _ dA)//=.
+      have := (HB _ _ _ _ _ _ sB X); subst.
+      case nB: (next_alt _ B) => [B'|]//=.
+      move=> /(_ _ _ erefl) {}HB[<-]{C}/= H.
+      have /=fB' := next_alt_failed nB.
+      rewrite (next_alt_not_failed _ fB') !(is_dead_next_alt _ dA)//=.
+      have [d1[H1 H2]] := HB _ H.
+      by repeat eexists; eauto.
+    have fA := success_failed _ sA.
+    rewrite (next_alt_not_failed _ fA)/=success_has_cut//.
+    case nB: next_alt => [B'|]; last first => /=.
+      move=> /(HA _ _ _ _ _ _ sA).
+      case nA: (next_alt _ A) => [A'|]//=.
+      move=> {}HB [<-]{C} H/=.
+      have /=fA' := next_alt_failed nA.
+      rewrite nB/= next_alt_not_failed//=.
+      have [d1[H1 H2]] := HB _ _ erefl H.
+      by repeat eexists; eauto.
+    case dtA: (det_tree_aux _ _ A) => //=[[DA sVA]].
+    case dtB: (det_tree_aux _ _ B) => //=[[DB sVB]]//.
+    move=> [??]; subst.
+    case nA: (next_alt _ A) => [A'|]//=.
+      move=> [<-]{C} H/=.
+      have /=fA' := next_alt_failed nA.
+      rewrite nB/= next_alt_not_failed//=.
+      rewrite -(has_cutF_next_alt nA) success_has_cut//=.
+      have [d1[H1 H2]] := HA _ _ _ _ _ _ sA dtA nA H.
+      rewrite H2/=.
+      destruct ign1; simpl in H; subst => //=.
+        have [d2[H3 H4]] := det_tree_aux_func2 dtB.
+        by rewrite H4/=; repeat eexists => //.
+      by rewrite dtB//=; repeat eexists.
+    move=> [<-]{C} H/=.
+    have dA' := @is_dead_dead A.
+    rewrite is_dead_next_alt//=.
+    have := (HB _ _ _ _ _ _ sB X); subst.
+    have [d1[H1 H2]] := HA _ _ _ _ _ _ sA dtA nA H.
+    rewrite H2/=.
+    destruct ign1; simpl in H; subst => //=.
+      have [d2[H3 H4]] := det_tree_aux_func2 dtB.
+      by rewrite H4/=; repeat eexists => //.
+    by rewrite dtB//=; repeat eexists.
+    move=> 
+      
+      have [d1[H1 H2]] := HB _ _ erefl H.
+      by repeat eexists; eauto.
+
+
+  - move=> A HA B0 HB0 B HB sV1 sV2 ign /andP[sA sB].
+    have fA := success_failed _ sA.
+    have fB := success_failed _ sB.
+    rewrite fA/= !(next_alt_not_failed _ fA)/= !(next_alt_not_failed _ fB)/=andbF sA.
+    case dA: (det_tree_aux _ _ A) => //=[[DA sVA]].
+    case dB0: (det_tree_aux _ _ B0) => //=[[DB0 sVB0]].
+    case dB: (det_tree_aux _ _ B) => //=[[DB sVB]].
+    case M: merge_sig => //=[S][??]; subst.
+    destruct DB0, DB => //=.
+    have [?]:= HB _ _ _ sB dB; subst.
+    have [?]:= HA _ _ _ sA dA; subst.
+    case nB: (next_alt _ B) => [B'|]/=.
+      by rewrite sA fA (next_alt_not_failed _ (next_alt_failed nB))//.
+    case nA: (next_alt _ A) => [A'|]/=.
+      by rewrite (next_alt_not_failed _ (next_alt_failed nA))//.
+    have DA := @is_dead_dead A. 
+    rewrite is_dead_success//is_dead_failed// is_dead_next_alt//.
+Qed.
 
 Lemma success_det_tree_next_alt {sP A sV1 sV2 ign}:
   success A -> (det_tree_aux sP sV1 A ign) = ty_ok (Func, sV2) ->
@@ -1036,470 +1703,26 @@ Proof.
     case dA: (det_tree_aux _ _ A) => //=[[DA sVA]].
     case dB0: (det_tree_aux _ _ B0) => //=[[DB0 sVB0]].
     case dB: (det_tree_aux _ _ B) => //=[[DB sVB]].
-    move=>[??]; subst.
+    case M: merge_sig => //=[S][??]; subst.
     destruct DB0, DB => //=.
     have [?]:= HB _ _ _ sB dB; subst.
     have [?]:= HA _ _ _ sA dA; subst.
     case nB: (next_alt _ B) => [B'|]/=.
       by rewrite sA fA (next_alt_not_failed _ (next_alt_failed nB))//.
     case nA: (next_alt _ A) => [A'|]/=.
-      rewrite (next_alt_not_failed _ (next_alt_failed nA))//.
+      by rewrite (next_alt_not_failed _ (next_alt_failed nA))//.
     have DA := @is_dead_dead A. 
     rewrite is_dead_success//is_dead_failed// is_dead_next_alt//.
 Qed.
 
-
-Section lookup.
-  Lemma key_absent_remove {T: eqType} {K:Type} {k} {l: seq (T*K)}:
-    (key_absent k l) -> remove k l = l.
-  Proof.
-    rewrite/key_absent.
-    elim: l k => //= [[k v]] xs IH k'; case: eqP => //= H1 H2.
-    rewrite IH//.
-  Qed.    
-
-  Lemma lookup_remove_None {T: eqType} {K:Type} {k} {l: seq (T*K)}:
-    (lookup k (remove k l)) = None.
-  Proof.
-    elim: l k => //= -[k v] l IH k'/=.
-    case:eqP => //= H; rewrite IH; case: eqP; congruence.
-  Qed.
-
-  Lemma lookup_remove_diff {T: eqType} {K:Type} {k k'} {l: seq (T*K)}:
-     k' <> k ->
-      lookup k (remove k' l) = lookup k l.
-  Proof.
-    elim: l k k' => //= -[k v] l IH k1 k2 H.
-    case:eqP => //= H1; subst.
-      by case:eqP => //= _; apply: IH.
-    case: eqP => //= H2; subst.
-    by apply: IH.
-  Qed.
-
-  Lemma remove_comm {T: eqType} {K:Type} {x y} {l: seq (T*K)}:
-    remove x (remove y l) = remove y (remove x l).
-  Proof.
-    elim: l x y => //= -[k v] xs IH/= x y.
-    case: eqP => H/=; subst.
-      case: eqP => H1/=; subst.
-        apply: IH.
-      rewrite eqxx/=; apply: IH.
-    case:eqP => //=H1; subst.
-    case:eqP => //= _; f_equal.
-    apply: IH.
-  Qed.
-
-End lookup.
-
-Section less_precise.
-  
-  (* tells if s1 is less precise then s2 *)
-  (* e.g. s2 has more mapping then s1, and/or the mappings have less holes *)
-  Fixpoint less_precise (s1 s2: sigV) :=
-    match s1 with
-    | [::] => true
-    | (k,v)::xs => 
-      match lookup k s2 with
-      | None => false
-      | Some v' => 
-        tydflt false (incl v' v) && 
-        less_precise xs (remove k s2)
-      end
-    end.
-
-  Lemma lookup_less_precise {k l1 l2 r}:
-    lookup k l1 = Some r ->
-      less_precise l1 l2 ->
-        exists r', lookup k l2 = Some r' /\ incl r' r = ty_ok true.
-  Proof.
-    elim: l1 k l2 r => //= -[k v] sV IH k' sV' r.
-    case:eqP => //=H; subst.
-      move=> [<-]{r}.
-      case L: lookup => //=[S].
-      case H1: incl => //=[[]]//= H2.
-      exists S; repeat split; auto.
-    move=> H1; case H2: lookup => //[r'].
-    case H3: incl => //=[[]]//= H4.
-    have [r''[H5 H6]] := IH _ _ _ H1 H4.
-    exists r''; split => //.
-    by rewrite lookup_remove_diff in H5.
-  Qed.
-
-  Lemma less_precise_remove2 {k s l}:
-    less_precise l (remove k s) -> less_precise l s.
-  Proof.
-    elim: l k s => //= -[k v] xs IH k' ys.
-    case kk': (k' == k); move /eqP: kk' => K; subst.
-      by rewrite lookup_remove_None.
-    rewrite (lookup_remove_diff)//.
-    case L1: lookup => //=[S] /andP[-> H2]/=.
-    rewrite remove_comm in H2.
-    apply: IH H2.
-  Qed.
-
-  Lemma less_precise_remove1 {k s l}:
-    less_precise l s -> less_precise (remove k l) s.
-  Proof.
-    elim: l k s => //= -[k v] xs IH k' ys/=.
-    case L1: lookup => //=[S] /andP[H1 H2].
-    case eqP => //= H; subst.
-      apply: IH (less_precise_remove2 H2).
-    rewrite L1 H1/=.
-    apply: IH H2.
-  Qed.
-
-  Lemma less_precise_remove_both {k s l}:
-    less_precise l s -> less_precise (remove k l) (remove k s).
-  Proof.
-    elim: l k s => //= -[k v] xs IH k' ys/=.
-    case L1: lookup => //=[S] /andP[H1 H2].
-    case eqP => //= H; subst.
-      apply: IH (less_precise_remove2 H2).
-    rewrite lookup_remove_diff//=L1 H1/=.
-    rewrite remove_comm IH//.
-  Qed.
-
-  Lemma less_precise_add_None {v sv1 S}:
-    valid_sig sv1 ->
-    lookup v sv1 = None ->
-      less_precise sv1 (add v S sv1).
-  Proof.
-    elim: sv1 v S => //=-[k v] l IH k' v' /= /andP[c vl].
-    case:eqP => //= H1 H2.
-    rewrite eqxx incl_refl//=.
-    rewrite key_absent_remove//.
-      by apply: IH.
-    rewrite key_absent_add_diff//.
-  Qed.
-
-  Lemma less_precise_remove_count {k s l}:
-    less_precise l (remove k s) -> key_absent k l.
-  Proof.
-    rewrite/key_absent.
-    elim: l k s => //= -[k v] xs IH k' ys.
-    case x: lookup => //=[S] /andP[H1 H2].
-    case:eqP => //= H3; subst.
-      by rewrite lookup_remove_None in x.
-    apply: IH (less_precise_remove2 H2).
-  Qed.
-
-  Lemma less_precise_refl {s}: 
-    valid_sig s -> less_precise s s.
-  Proof.
-    elim: s => //=[[k v] l] IH/=/andP[H1 H2].
-    rewrite eqxx//=incl_refl//=key_absent_remove//IH//.
-  Qed.
-
-  Lemma less_precise_add_Some {v sv1 S S'}:
-    valid_sig sv1 ->
-    lookup v sv1 = Some S -> incl S' S = ty_ok true ->
-      less_precise sv1 (add v S' sv1).
-  Proof.
-    elim: sv1 v S S' => //=-[k v] l IH k' S S' /= /andP[c vl].
-    case:eqP => //= H; subst.
-      move=> [?]; subst => H.
-      rewrite eqxx/= H/= key_absent_remove//=.
-      rewrite less_precise_refl//.
-    move=> H1 H2.
-    rewrite eqxx incl_refl/=.
-    rewrite key_absent_remove.
-      apply: IH; eauto.
-    by rewrite key_absent_add_diff.
-  Qed.
-
-  Lemma valid_sig_mp_trans {s s1}: 
-    valid_sig s1 -> less_precise s s1 -> valid_sig s.
-  Proof.
-    elim: s s1 => //= [[k v] l] IH/= s vs.
-    case x: lookup => //[S] /andP[H1 H2].
-    rewrite (less_precise_remove_count H2)/=.
-    apply: IH vs (less_precise_remove2 H2).
-  Qed.
-
-  Lemma less_precise_trans {A B C}:
-    less_precise A B -> less_precise B C -> less_precise A C.
-  Proof.
-    elim: A B C => //=.
-    move=> [v s] l IH []//= -[v' s'] l' z.
-    case:eqP => H; subst.
-      rewrite eqxx/=.
-      case H1 : incl => //= [[]]//=H2.
-      case L: lookup => //=[s0].
-      case H3 : incl => //= [[]]//=H4.
-      rewrite (incl_trans H3 H1)/=.
-      apply: (IH _ (remove v z) H2).
-      apply: less_precise_remove1 H4.
-    case L: lookup => //=[s0].
-    case H1 : incl => //= [[]]//=.
-    case:eqP; subst; [congruence|] => _.
-    case L1: lookup => //=[s1].
-    case H3 : incl => //= [[]]//= H4 H5.
-    have/=[s3[+ H7]] := lookup_less_precise L H5.
-    rewrite lookup_remove_diff//= => H8.
-    rewrite H8 (incl_trans H7 H1)/=.
-    apply: IH H4 _.
-    move=> /=.
-    rewrite lookup_remove_diff; [|congruence].
-    rewrite L1 H3/=.
-    rewrite remove_comm less_precise_remove_both//.
-  Qed.
-
-  Lemma assume_tm_less_precise {sP sv1 svA c S}:
-    valid_sig sv1 ->
-    (assume_tm sP sv1 c S) = ty_ok (svA) -> valid_sig svA /\ less_precise sv1 svA.
-  Proof.
-    elim: c sv1 svA S => //=.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
-    - move=> v sv1 svA S sv1V.
-      case L: lookup => [S'|]; last first.
-        move=> [<-]/={svA}.
-        rewrite (valid_sig_add)//=; split => //.
-        by apply: less_precise_add_None.
-      case M: min => //=[S''][<-].
-      rewrite valid_sig_add//=; split => //.
-      apply: less_precise_add_Some; eauto.
-      rewrite min_comm in M.
-      apply: min_incl M.
-    - move=> l Hl r Hr sv1 sv2 [//|[s1 s2|s1 _]] sv1v; last first.
-        by apply: Hl.
-      case al: assume_tm => //[sv1']/= ar.
-      have [sv1'v {}Hl] := Hl _ _ _ sv1v al.
-      have [sv2v {}Hr] := Hr _ _ _ sv1'v ar.
-      rewrite sv2v; split => //.
-      apply: less_precise_trans Hl Hr.
-  Qed.
-
-  Lemma assume_call_less_precise {sP sv1 svA c S}:
-    valid_sig sv1 ->
-    (assume_call sP sv1 c S) = ty_ok (svA) -> 
-      (valid_sig svA /\ less_precise sv1 svA)%type2.
-  Proof.
-    elim: c sv1 svA S => //=.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
-    - move=> c IH t sv1 sv2 []//= m sl s3.
-      case: m; [apply: IH|].
-      case ac: assume_call => //=[sv1'] sv1v.
-      have {IH}[sv1'v mp] := IH _ _ _ sv1v ac.
-      move=> H1.
-      have [H2 H3] := assume_tm_less_precise sv1'v H1.
-      rewrite H2; split => //.
-      apply: less_precise_trans mp H3.
-  Qed.
-
-  Lemma check_callable_less_precise {sP sv1 svA c d ign}:
-    valid_sig sv1 ->
-    check_callable sP sv1 c ign = ty_ok (d, svA) ->
-    (maxD d ign = d /\ valid_sig svA /\ less_precise sv1 svA)%type2.
-  Proof.
-    simpl in *.
-    rewrite/check_callable/=.
-    case C: check_tm => //=[[[[[//|D]|//] B]|]]; last first.
-      move=> H[<-<-]; repeat split => //.
-      apply: less_precise_refl H.
-    case: B C => C; last first.
-      move=> H[<-<-]; rewrite H; repeat split => //; apply: less_precise_refl H.
-    case gc: get_callable_hd_sig => [S|]; last first.
-      move=> H[<-<-]; rewrite H; repeat split => //; apply: less_precise_refl H.
-    move=> sv1v.
-    case ac: assume_call => //=[sv2][??]; subst.
-    by rewrite -maxD_assoc maxD_refl; repeat split;
-    rewrite (assume_call_less_precise sv1v ac).
-  Qed.
-
-  Lemma det_tree_aux_less_precise {sP sv1 svA A d ign}:
-    valid_sig sv1 ->
-    det_tree_aux sP sv1 A ign = ty_ok (d, svA) ->
-    (valid_sig svA * less_precise sv1 svA)%type.
-  Proof.
-    simpl in *.
-    elim: A sv1 svA d ign => //=.
-    - by move=> ???? H [??]; subst; rewrite less_precise_refl.
-    - by move=> ???? H [??]; subst; rewrite less_precise_refl.
-    - by move=> ???? H [??]; subst; rewrite less_precise_refl.
-    - move=> _ ????? H1.
-      case c: check_callable => //=[[]][??]; subst.
-      rewrite !(check_callable_less_precise H1 c)//.
-    - by move=> ???? H [??]; subst; rewrite less_precise_refl.
-    - move=> A HA s B HB sv1 sv2 d ign vs1v.
-      case:eqP => nA; [by apply: HB|].
-      case:eqP => nB; [by apply: HA|].
-      case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
-      case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//= => -[??]; subst.
-      by rewrite less_precise_refl.
-    - move=> A HA B0 HB0 B HB sv1 sv2 d ign sv1s.
-      case fA: failed => /=.
-        case:eqP => nB0/=.
-          move=> [??]; subst.
-          rewrite less_precise_refl//.
-        case:eqP => nA/=.
-          move=>[??]; subst.
-          by rewrite less_precise_refl//.
-        case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
-        case dtB: (det_tree_aux _ _ B0) => /=[[DB sVB]|]//= => -[??]; subst.
-        have [H1 H2] := HA _ _ _ _ sv1s dtA.
-        have [H3 H4] := HB0 _ _ _ _ H1 dtB.
-        split => //.
-        apply: less_precise_trans H2 H4.
-      case:eqP => nA/=.
-        move=>[??]; subst.
-        by rewrite less_precise_refl//.
-      case:eqP => nB0/=.
-        case:eqP => nB/=.
-          move=>[??]; subst.
-          by rewrite less_precise_refl//.
-        case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
-        case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
-        case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//=.
-        move=>[??]; subst.
-        by apply: HA dtA.
-      case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=; rewrite?if_same//.
-      case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=; rewrite?if_same//.
-      case:eqP => nB/=.
-        move=>[??]; subst.
-        have [H1 H2] := HA _ _ _ _ sv1s dtA.
-        have [H3 H4] := HB0 _ _ _ _ H1 dtB0.
-        split => //.
-        apply: less_precise_trans H2 H4.
-      case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//=[??]; subst.
-      by apply: HA dtA.
-  Qed.
-
-  Lemma boh {sP sv1 sv2 A A' d}:
-    failed A ->
-    next_alt false A = Some A' ->
-      det_tree_aux sP sv1 A' d = ty_ok (Func, sv2) ->
-        d = Func.
-  Proof.
-    elim: A sv1 sv2 A' d => //=.
-    - move=> A HA s B HB sv1 sv2 C d.
-      case:ifP => [dA fB|dA fA].
-        rewrite is_dead_next_alt//=.
-        case nB: next_alt => //[B'][<-]/=.
-        rewrite is_dead_next_alt//=.
-        by apply: HB.
-      case nA: next_alt => //=[A'|].
-        move=> [<-]/=.
-        rewrite (next_alt_not_failed _ (next_alt_failed nA))//=.
-        admit.
-      admit.
-    - move=> A HA B0 HB0 B HB sv1 sv2 C d.
-      move=> /orP[fA|/andP[sA fB]].
-        rewrite fA.
-        case nA: next_alt => //[A'].
-        case nB0: next_alt => //[B0'][<-]/=.
-        have /= fA' := next_alt_failed nA.
-        have /= fB0' := next_alt_failed nB0.
-        rewrite fA'/= nB0/= !next_alt_not_failed//=.
-        case dtA: (det_tree_aux _ _ A') => //= [[dA' sVA']].
-        case dtB0: (det_tree_aux _ _ B0) => //= [[dB0' sVB0']].
-        case dtB0': (det_tree_aux _ _ B0') => //= [[dB0'' sVB0'']].
-        destruct dB0', dB0'' => //= -[?]; subst.
-  Abort.
-
-  Lemma check_callable_func2 {sP sV A s ign d1}:
-    check_callable sP sV A ign = ty_ok (d1, s) ->
-      exists d2, minD d2 d1 = d2 /\ check_callable sP sV A Func = ty_ok (d2, s).
-  Proof.
-    rewrite/check_callable.
-    case: check_tm => //=-[[sA bA]|]; last first.
-      by move=> [<-<-]; exists Pred.
-    case: sA => //-[]//d.
-    case: bA; last first.
-      by move=> [<-<-]; exists Pred.
-    case: get_callable_hd_sig; last first.
-      by move=> [<-<-]; exists Pred.
-    move=> X.
-    case: assume_call => //= s' [<-<-].
-    case: ign; rewrite maxD_comm/=; last first.
-      rewrite maxD_comm/=; exists d.
-      rewrite minD_comm/=; case: d => //.
-    exists d; case: d => //.
-  Qed.
-
-  Lemma det_tree_aux_func2 {sP sV A s ign d1}:
-    det_tree_aux sP sV A ign = ty_ok (d1, s) ->
-      exists d2, minD d2 d1 = d2 /\ det_tree_aux sP sV A Func = ty_ok (d2, s).
-  Proof.
-    elim: A d1 sV s ign => //=.
-    - move=> d1 sV s ign [??]; subst; exists Func => //.
-    - move=> d1 sV s ign [??]; subst; exists Func => //.
-    - move=> d1 sV s ign [??]; subst; exists Func => //.
-    - move=> _ c d1 sV1 sV2 ign.
-      case Z: check_callable => //=[[DA SVA]][??]; subst.
-      have H2:= check_callable_pred Z; subst => //.
-      rewrite -H2 maxD_comm -maxD_assoc maxD_refl.
-      have [d2[H3 H4]]:= check_callable_func2 Z.
-      rewrite H4/=.
-      case: d2 H3 H4 => //=.
-      - by exists Func.
-      - case: DA H2 Z => //= _ _ _ _.
-        by exists Pred.
-    - by move=> d1 sV s _ [<-<-]; exists Func.
-    - move=> A HA s B HB d1 sV1 sV2 ign.
-      case:eqP => kA; [apply: HB|].
-      case:eqP => kB; [apply: HA|].
-      case dtA: (det_tree_aux _ _ A) => //= [[dA sVA]]/=.
-      case dtB: (det_tree_aux _ _ B) => //= [[dB sVB]]/=.
-      move=>[??]; subst.
-      have [d2[H1 H2]]:= HA _ _ _ _ dtA.
-      have [d3[H3 H4]]:= HB _ _ _ _ dtB.
-      rewrite H2 H4/=.
-      rewrite -H1 -H3.
-      case: ifP => cA.
-        exists (maxD (minD d2 dA) (minD d3 dB)); repeat split.
-        destruct d2, dA => //=; destruct d3, dB => //.
-      by exists Pred.
-    - move=> A HA B0 HB0 B HB d1 sV sV' ign.
-      case:ifP => H.
-        move=> [??]; subst.
-        by exists Func.
-      case:ifP => fA.
-        case dtA: (det_tree_aux _ _ A) => //= [[dA sVA]].
-        case dtB0: (det_tree_aux _ _ B0) => //= [[dB0 sVB0]].
-        move=> []??; subst.
-        have [d2[H1 H2]] := (HA _ _ _ _ dtA).
-        move: dtA; rewrite H2/=.
-        have [d3[H3 H4]] := (HB0 _ _ _ _ dtB0).
-        destruct d2.
-          rewrite H4/=; exists d3; repeat split.
-          rewrite -H3 -minD_assoc minD_refl//.
-        destruct dA => //.
-        rewrite dtB0/=.
-        exists d1; rewrite minD_refl//.
-      case dtA: (det_tree_aux _ _ A) => //= [[dA sVA]].
-      case dtB0: (det_tree_aux _ _ B0) => //= [[dB0 sVB0]].
-      case dtB: (det_tree_aux _ _ B) => //= [[dB sVB]].
-      move=> [??]; subst.
-      have {HA}[d2[H1 H2]] := HA _ _ _ _ dtA.
-      rewrite H2/=.
-      have {HB0}[d3[H3 H4]] := HB0 _ _ _ _ dtB0.
-      have {HB}[d4[H5 H6]] := HB _ _ _ _ dtB.
-      destruct d2.
-        rewrite H4/=.
-          destruct dB; rewrite H6/=.
-          rewrite maxD_comm/=.
-          rewrite -H3.
-          exists (maxD (minD d3 dB0) d4); repeat split.
-          destruct d3, dB0, d4 => //.
-        rewrite-H3 maxD_comm/=.
-        exists (maxD (minD d3 dB0) d4); rewrite minD_comm/=.
-        destruct (maxD) => //.
-      destruct dA => //.
-      rewrite dtB0/=dtB/=.
-      exists (maxD dB0 dB); repeat split.
-      destruct dB0, dB => //.
-  Qed.
-End less_precise.
-
-(* Lemma failed_det_tree_next_alt {sP A B sV1 sV2 d ign}:
+Lemma failed_det_tree_next_alt {sP A B sV1 sV2 d ign}:
+  valid_sig sV1 ->
   det_tree_aux sP sV1 A ign = ty_ok (d, sV2) ->
     next_alt false A = Some B ->
-        (det_tree_aux sP sV1 B ign) = ty_ok (d, sV2) .
+        (det_tree_aux sP sV1 B ign) = ty_ok (d, sV2).
 Proof.
   elim: A B sV1 sV2 d ign => //=; last first; [|admit..].
-  move=> A HA B0 HB0 B HB C sv1 sv2 d ign.
+  move=> A HA B0 HB0 B HB C sv1 sv2 d ign V.
   case fA: failed => /=.
     case nA: (next_alt _ A) => //=[A']; rewrite orbF.
     case nB0: (next_alt _ B0) => //=[B0'] + [<-]{C}/=.
@@ -1510,183 +1733,214 @@ Proof.
     case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
     case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
     move=>[??]; subst.
-    have {}HA := (HA _ _ _ _ _ dtA nA).
-    rewrite HA/= dtB0/=.
-    have {}HB0 := HB0 _ _ _ _ _ dtB0 nB0.
-    rewrite HB0/= maxD_refl.
-    admit.
-  case nA: (next_alt _ A) => //=[A'|].
-    case nB0: (next_alt _ B0) => //=[B0'|].
-    have /= fA' := next_alt_failed nA.
-    have /= fB0' := next_alt_failed nB0.
-    rewrite fA'/= (next_alt_not_failed _ fA')//=.
-    rewrite (next_alt_not_failed _ fB0')/= andbF.
-    case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
-    case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
-    move=>[??] H1 H2 H; subst.
-    move: H1.
+    have {}HA := (HA _ _ _ _ _ V dtA nA).
+    have [V' H] := det_tree_aux_less_precise V dtA.
+    have {}HB0 := HB0 _ _ _ _ _ V' dtB0 nB0.
+    rewrite HA/= dtB0/= HB0/= maxD_refl merge_refl//=.
+    by have [] := det_tree_aux_less_precise V' dtB0.
+  case nA: next_alt => [A'|]//=.
+    case nB0: next_alt => [B0'|]//=.
+      case nB: next_alt => [B'|]//=.
+        case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
+        case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
+        case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//=.
+        case M: merge_sig => //=[S][??]; subst.
+        have /=fB := next_alt_failed nB.
+        have [V' H] := det_tree_aux_less_precise V dtA.
+        case: ifP => //=sA[<-]/=; rewrite nA nB0/= ?(next_alt_not_failed _ fB) dtA/= dtB0 /=.
+          rewrite success_failed//=.
+          have {}HB := (HB _ _ _ _ _ V' dtB nB).
+          rewrite HB/=M//=.
+        rewrite !andbF nB !orbF/=fA.
+        rewrite dtB/=M//.
+      case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=dtB0.
+      case:ifP => sA.
+        case nA': next_alt => {nA}[{}A'|]//=[<-]/=.
+        have /=fA':= next_alt_failed nA'.
+        have /=fB0':= next_alt_failed nB0.
+        rewrite fA'/= nB0 !next_alt_not_failed//=.
+        {
+          case X: det_tree_aux => /=[[d' s']|]//=.
+            have?: s' = sVA; subst.
+              admit.
+            (* have {}HA := (HA _ _ _ _ _ V dtA nA). *)
+            have [V' H] := det_tree_aux_less_precise V dtA.
+            have {}HB0 := HB0 _ _ _ _ _ V' dtB0 nB0.
+            rewrite HA/= dtB0/= HB0/= maxD_refl merge_refl//=.
 
 
-    move: H1.
-      
+        }
+        admit.
+      move=> [<-]/=; rewrite fA/=nB0 nB next_alt_not_failed//= dtA//=.
+    case nB: next_alt => [B'|]//=.
+      case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
+      case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
+      case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//=.
+      case M: merge_sig => //=[S][??]; subst.
+      have /=fB := next_alt_failed nB.
+      have [V' H] := det_tree_aux_less_precise V dtA.
+      case: ifP => //=sA[<-]/=; rewrite nA nB0/= ?(next_alt_not_failed _ fB) dtA/= dtB0 /=.
+        rewrite success_failed//=.
+        have {}HB := (HB _ _ _ _ _ V' dtB nB).
+        by rewrite HB/=M//=.
+      rewrite nB !orbF/=fA/=.
+      by rewrite dtB/=M//.
+    move=> [??]; subst.
+    (* case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=dtB0. *)
+    case:ifP => sA.
+      case nA': next_alt => {nA}[{}A'|]//=.
+    move=> [<-]/=.
+    have /=fA':= next_alt_failed nA.
+    have /=fB0':= next_alt_failed nB0.
+    by rewrite fA/= nA nB0 nB//=.
+  move=> [??]; subst.
+  by rewrite (next_alt_None_failed nA) in fA.
+Abort.
 
-  - admit. *)
+(*
+Lemma next_alt_flow {sP sV1 A A' B0 ign1 ign2 DA sVA sV2 d sX d1}:
+  valid_sig sV1 ->
+  det_tree_aux sP sV1 A ign1 = ty_ok (DA, sVA) ->
+  minD DA d1 = d1 -> minD ign1 ign2 = ign2 ->
+  next_alt false A = Some A' ->
+  det_tree_aux sP sV1 A' ign2 = ty_ok (d1, sX) ->
+  det_tree_aux sP sVA B0 DA = ty_ok (d, sV2) ->
+  exists d' sV2', 
+    minD d d' = d' /\ less_precise sV2 sV2' /\
+    det_tree_aux sP sX B0 d1 = ty_ok (d', sV2').
+Proof.
+  simpl in *.
+  elim: A sV1 A' B0 ign1 ign2 DA sVA sV2 d sX d1 => //=.
+  - move=> sV1 []// B0 ign1 ign2 DA sVA sV2 d sX d1 V [??]/=; subst.
+    move=> H1 H2 H3 [??] H4; subst.
+    rewrite -H1; destruct DA => /=.
+      rewrite H4/=; repeat eexists; rewrite ?minD_refl//less_precise_refl//.
+      by have []:= det_tree_aux_less_precise V H4.
+    have [d'[<- H5]] := det_tree_aux_func2 H4.
+    have [H6 H7] := det_tree_aux_less_precise V H4.
+    destruct d1; rewrite ?H4?H5; repeat eexists; rewrite?less_precise_refl//=?minD_refl//.
+    rewrite minD_comm -minD_assoc minD_refl//.
+  - move=> p c sV1 A// B0 ign1 ign2 DA sVA sV2 d sX d1 V.
+    case C: check_callable => //=[[D S]][??]; subst.
+    move=> <-<-[?]; subst => /=.
+    have [H1 [V1 H2]] := check_callable_less_precise V C. 
+    destruct ign1 => /=.
+      rewrite C/= => -[+?]; subst.
+      move=> + /[dup]/det_tree_aux_less_precise -/(_ V1) [H3 H4].
+      destruct D => //=.
+        move=> _  ->; repeat eexists; rewrite ?minD_refl//less_precise_refl//.
+      move=> <-{d1}->; repeat eexists; rewrite ?minD_refl//less_precise_refl//.
+    rewrite maxD_comm/= in H1; subst.
+    have [d2 [<- H3]]:= check_callable_func2 C.
+    rewrite minD_comm/= in H3.
+    move=> + /[dup]/det_tree_aux_less_precise -/(_ V1) [H4 H5].
+    destruct ign2; rewrite ?C?H3/= => -[??]; subst => H.
+      have [d2[<- H6]] := det_tree_aux_func2 H.
+      destruct d1; rewrite ?H?H6/=; repeat eexists; rewrite?less_precise_refl//?minD_refl//.
+      rewrite minD_comm -minD_assoc minD_refl//.
+    rewrite H/=; repeat eexists; rewrite ?minD_refl//less_precise_refl//.
+  - move=> sV1 []//= B ign1 ign2 []// sVA sV2 d sX []// V [<-]{sVA} _ _ _ [<-]{sX}.
+    move=> /[dup]/det_tree_aux_less_precise -/(_ V) [H4 H5].
+    move=> ->; repeat eexists; rewrite ?minD_refl//less_precise_refl//.
+  - move=> A HA s B HB sV1 C B0 ign1 ign2 D sV sV2 d sX d1 H.
+    case nA: next_alt => //=[A'|].
+      move=> +++[<-]/=.  
+      have /=fA' := next_alt_failed nA.
+      rewrite (next_alt_not_failed _ fA').
+      rewrite (has_cutF_next_alt nA)//=.
+      case nB: next_alt => //=[B'|].
+        case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
+        case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//= => -[??]<-<-; subst.
+        case dtA': (det_tree_aux _ _ A') => /=[[DA' sVA']|]//=.
+        case dtB': (det_tree_aux _ _ B) => /=[[DB' sVB']|]//= => -[] + ?; subst.
+        have := HA _ _ _ _ _ _ _ _ _ _ _ H dtA _ _ nA dtA'.
+        rewrite minD_assoc minD_refl.
+        move => -/(_ _ _ _ _ erefl) {}HA.
+        case:ifP => cA/=.
+          move=> H1 H2.
+          destruct DA; simpl in *.
+            destruct DB; simpl in *.
+              rewrite H2; repeat eexists; admit.
+            have [d2 [<- H3]] := det_tree_aux_func2 H2.
+            destruct d1; simpl in *; rewrite ?H3?H2/=; repeat eexists; admit.
+          have [d2 [<- H3]] := det_tree_aux_func2 H2.
+          destruct d1; simpl in *; rewrite ?H3?H2/=; repeat eexists; admit.
+        move=> ?; subst.
+        move=> H2; rewrite H2/=; repeat eexists; admit.
+      move=> H1 H2 H3 H4 H5.
+      by apply: HA H H1 _ H3 nA H4 H5.
+    move=> H1 H2 H3.
+    rewrite if_same.
+    case nB: next_alt => //[B'][<-]/=.
+    rewrite (fun_if (fun x => next_alt false x)) nA (is_dead_next_alt _ is_dead_dead) if_same//=.
+    apply: HB H H1 H2 H3 nB.
+  - move=> A HA B0 HB0 B HB sV1 C E ign1 ign2 D sV sV2 d sX d1 H.
+    case fA: failed => //=.
+      case nB0: next_alt => //=[B0'|].
+        rewrite orbF.
+        case nA: next_alt => //=[A'].
+        case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//= dtB0.
+        have /= fA' := next_alt_failed nA.
+        have /= fB0' := next_alt_failed nB0.
+        move=> H1 H2 [<-]{C}/=.
+        rewrite (next_alt_not_failed _ fA') fA'/= nB0/=.
+        rewrite (next_alt_not_failed _ fB0')/=.
+        case dtA': (det_tree_aux _ _ A') => /=[[DA' sVA']|]//=.
+        case dtB: (det_tree_aux _ _ B0) => /=[[DB sVB]|]//=.
+        case dtB': (det_tree_aux _ _ B0') => /=[[DB' sVB']|]//= => -[] + ?; subst.
+        move=> H3 H4.
+        have [V L] := det_tree_aux_less_precise H dtA'.
+        have {}HA := HA _ _ _ _ _ _ _ _ _ _ _ H dtA _ _ nA dtA'.
+        apply: HB0 nB0 _ H4.
+        have {}HB0 := HB0 _ _ _ _ _ _ _ _ _ _ _ V _ _ _ nB0 _ H4.
+        apply: HB0. dtB0'.
+        destruct DB; simpl in *; subst.
+          destruct D; simpl in *; subst.
+            apply: HB0; eauto.
+            destruct ign1; simpl in *; subst.
+              destruct DA'; subst; auto.
 
+        apply: HB0.
+        apply: HA nA _ H4. *)
 
-Lemma failed_det_tree_next_alt {sP A B sV1 sV2 sV1' d ign ign1 b}:
-  valid_sig sV1' ->
+Lemma failed_det_tree_next_alt {sP A B sV1 sV2 d ign ign1 b}:
+  valid_sig sV1 ->
   det_tree_aux sP sV1 A ign = ty_ok (d, sV2) ->
-    is_ty_ok (det_tree_aux sP sV1' A ign1) ->
-    less_precise sV1 sV1' ->
+    (* is_ty_ok (det_tree_aux sP sV1' A ign1) -> *)
+    (* less_precise sV1 sV1' -> *)
     next_alt b A = Some B ->
       minD ign ign1 = ign1 ->
       exists d1 sV2', minD d d1 = d1 /\ (less_precise sV2 sV2') /\
-        (det_tree_aux sP sV1' B ign1) = ty_ok (d1, sV2') .
+        (det_tree_aux sP sV1 B ign1) = ty_ok (d1, sV2') .
 Proof.
-  elim: A b B sV1 sV2 sV1' ign ign1 d => //=.
-  (* - move=>  []//[]// sv1 sv2 ign D sv1v [??] _ H1 _ <-; subst => /=.
-    subst; eexists (minD D ign1), sV1'.
-    rewrite minD_assoc minD_refl H1//.
-  - move=> p c _ B sv1 sv2 ign d sv1v + + lp [<-]/=.
-    case x: check_callable => //=[[DA SVA]] [<-<-] + <-.
-    case y: check_callable => //=[[DA' SVA']] _.
-    have [H1[H2 H3]] := check_callable_less_precise (valid_sig_mp_trans sv1v lp) x.
-    have [H4[H5 H6]] := check_callable_less_precise sv1v y.
-    rewrite -H1 maxD_comm -maxD_assoc maxD_refl.
-    destruct ign => /=. *)
-      (* rewrite y/= maxD_comm/=.
-      repeat eexists; admit.
-    rewrite maxD_comm/=.
-    have [d2[H7 H8]]:= check_callable_func2 y.
-    destruct ign1; rewrite?H8?y/=; repeat eexists; *)
-    admit.
-  (* - move=> _ []//sv1 sv2 ign D vs1v [??] _; subst; repeat eexists; auto. *)
-  - admit.
-  - admit.
-  - admit.
-  (* - move=> A HA s B HB b C sV1 sV2 ign d sv1.
-    case eqP=> nA.
-      move=> dtB.
-      have fA := next_alt_None_failed nA.
-      have sA := failed_success _ fA.
-      rewrite next_alt_false_true//=nA.
-      case:ifP => dA.
-        case nB: next_alt => //=[B'] H1 H2 [<-]/={C}/= H3.
-        rewrite nA/=.
-        by apply: HB; eauto.
-      case nB: next_alt => //=[B'] H1 H2 [<-]/={C}/= H3.
-      have DA:= @is_dead_dead A.
-      rewrite is_dead_next_alt//=.
-      by apply: HB; eauto.
-    case:eqP => nB.
-      have fB := next_alt_None_failed nB.
-      apply failed_success in fB.
-      rewrite (next_alt_false_true fB)//nB.
-      case nA': next_alt => //=[A']// H1 H2 + [<-]/={C}/=.
-      rewrite (next_alt_not_failed _ (next_alt_failed nA'))/=nB/= => dtA H3.
-      by apply: HA; eauto.
-    
-    case dtAv: (det_tree_aux _ sV1' A) => /=[[DA' sVA']|]//=.
-    case dtBv: (det_tree_aux _ sV1' B) => /=[[DB' sVB']|]//=.
-    
-    case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
-    case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//= => -[??] H1 H2; subst.
-    move: nB; case nB: next_alt => //=[B'] _.
-    move: nA; case nA: next_alt => //= [A'] _.
-    case sA: (success A); last first.
-      rewrite next_alt_false_true//nA => // -[<-]/= H.
-      have /= fA:= next_alt_failed nA.
-      rewrite next_alt_not_failed//=.
-      rewrite nB/=. *)
-(* 
-      have {HA} [d1 [sv2[H1 [H2 H3]]]]:= (HA _ _ _ _ _ _ sv1 dtA nA H).
-      rewrite H3/=.
-      {
-        destruct ign; simpl in H; subst.
-          rewrite dtB/=.
-          exists (if has_cut A' then maxD d1 DB else Pred), sV2; repeat split.
-            rewrite (has_cutF_next_alt nA) -H1.
-            case:ifP => //=.
-            by destruct DA, DB, d1 => //.
-          by apply: less_precise_refl.
-        have [d2[H4 H5]] := det_tree_aux_func2 dtB.
-        destruct ign1; rewrite ?H5?dtB/=; repeat eexists; try by apply: less_precise_refl.
-          rewrite (has_cutF_next_alt nA) -H1 -H4.
-          case:ifP => //=.
-          by destruct DA, DB, d1, d2 => //.
-        rewrite (has_cutF_next_alt nA) -H1.
-        case:ifP => //=.
-        by destruct DA, DB, d1 => //.
-      }
-    have {nA A'} fA := success_failed _ sA.
-    rewrite success_is_dead//=success_has_cut//=.
-    destruct b; last first.
-      rewrite next_alt_not_failed?success_failed// => -[<-]/= H.
-      rewrite next_alt_not_failed//=success_has_cut//.
-      rewrite nB/=.
-      destruct ign; simpl in H; subst.
-        rewrite dtA/=dtB/=.
-        by repeat eexists; apply: less_precise_refl.
-      destruct ign1.
-        have [d2[H1 H2]] := det_tree_aux_func2 dtA.
-        rewrite H2/=.
-        have [d3[H3 H4]] := det_tree_aux_func2 dtB.
-        by rewrite H4/=; repeat eexists; apply: less_precise_refl.
-      rewrite dtB/=dtA/=.
-      by repeat eexists; apply: less_precise_refl.
-    case nA: next_alt => //[A'|].
-      have /= fA' := next_alt_failed nA.
-      move=> [<-]/= H.
-      rewrite next_alt_not_failed//=.
-      rewrite nB/=.
-      have [d1 [sv2[H1 [H2 H3]]]] := (HA _ _ _ _ _ _ sv1 dtA nA H).
-      have [H4 H5] := det_tree_aux_less_precise sv1 dtA.
-      rewrite H3/=.
-      destruct ign; simpl in H; subst.
-        rewrite dtB/=.
-        repeat eexists.
-        by apply: less_precise_refl.
-      have [d2[H6 H7]]:= det_tree_aux_func2 dtB.
-      destruct ign1;rewrite ?H7?dtB/=; repeat eexists;
-      by apply: less_precise_refl.
-    rewrite nB => -[<-]/= H.
-    have dA:= @is_dead_dead A.
-    rewrite is_dead_next_alt//=.
-    have  [d1 [sv2[H1 [H2 H3]]]] := (HB _ _ _ _ _ _ sv1 dtB nB H).
-    rewrite H3; exists d1, sv2; repeat split.
-    rewrite (det_tree_aux_less_precise _ H3)//. *)
-      (* admit.
-    admit. *)
-  - move=> A HA B0 HB0 B HB b C sV1 sV2 sV1' ign1 ign2 d vsv1.
+  elim: A b B sV1 sV2 ign ign1 d => //=; last first; [|admit..].
+  - move=> A HA B0 HB0 B HB b C sV1 sV2 ign1 ign2 d sV1v.
     case fA: failed => /=.
       case nA: (next_alt _ A) => //=[A']; rewrite orbF.
-      case nB0: (next_alt _ B0) => //=[B0'] +++ [<-]{C}/=.
+      case nB0: (next_alt _ B0) => //=[B0'] + [<-]{C}/=.
       have /= fA' := next_alt_failed nA.
       have /= fB0' := next_alt_failed nB0.
       rewrite fA'/= (next_alt_not_failed _ fA')//=.
       rewrite (next_alt_not_failed _ fB0')/= andbF.
       case dtA: (det_tree_aux _ _ A) => /=[[DA sVA]|]//=.
       case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
-      move=>[??] H1 H2 H; subst.
-      move: H1.
-      
-      case dtAv: (det_tree_aux _ sV1' A) => /=[[DA' sVA']|]//=.
-      case dtBv: (det_tree_aux _ sVA' B0) => /=[[DB' sVB']|]//= _.
+      move=> [??] H; subst.
 
-      have:= HA _ _ _ _ _ _ ign2 _ vsv1 dtA _ H2 nA H.
-      rewrite dtAv => /(_ isT) => -[d1 [sv2[H3 [H4 H5]]]].
+      have {HA}:= HA _ _ _ _ _ _ _ sV1v dtA nA H.
+      move => -[d1 [sX[H3 [H4 H5]]]].
       rewrite H5/=.
-      
-
-      (* have:= HB0 _ _ _ _ _ _ sv1v dtB0 _ _ nB0. *)
-      have:= HB0 _ _ _ _ _ _ _ _ _ _ _ _ nB0.
+      have [sVAv L] := det_tree_aux_less_precise sV1v dtA.
+      have {HB0} := HB0 _ _ _ _ _ _ _ sVAv dtB0 nB0 H3.
+      move => -[d2 [sY[H6 [H7 H8]]]].
+      rewrite  H8.
+      (* rewrite H8. *)
       (* sV1 <= sVA <= sV2
          sV1 <= sV1' <= sVA' <= sVB'
          sVA <= sv2
          sV1' <= sv2
 
       *)
-
+(*
 
       have {HB HB0} := (HB0 _ _ _ _ _ _ (det_tree_aux_less_precise sv1v dtA).1 dtB0 nB0).
       move=> HB0.
@@ -1972,8 +2226,8 @@ Proof.
     case dtA: det_tree_aux => /=[[[] svA']|]//= _.
     apply: dtB.
     rewrite/det_tree/typ_func.
-    have := (failed_det_tree_next_alt _ dtA _ _ nA erefl) => /(_ empty_ctx isT).
-    rewrite dtA less_precise_refl//= => /(_ isT isT).
+    have := (failed_det_tree_next_alt _ dtA nA erefl) => /(_ isT).
+    (* rewrite dtA less_precise_refl//= => /(_ isT isT). *)
     move=> [d1 [sV2'[H1 [H2 H3]]]].
     by rewrite H3; destruct d1.
   - move=> *.
@@ -2019,5 +2273,39 @@ Section tail_cut.
     apply main.
   Qed. *)
 End tail_cut.
+
+Module elpi.
+  From det Require Import elpi elpi_equiv.
+  From det Require Import tree t2l_prop tree_valid_state tree_prop.
+
+  Definition is_det g := forall u s s' a',
+    nur u s g nilC s' a' -> a' = nilC.
+
+  Lemma elpi_is_det {sP p c ign}: 
+    check_program sP -> 
+      check_callable sP [::] c Func = ty_ok (Func, ign) -> 
+      is_det ((call p c):::nilC).
+  Proof.
+    simpl in *.
+    move=> H1 H2 u s s' a'.
+    move=> /elpi_to_tree /(_ _ (CallS p c))/=.
+    move=> /(_ _ isT erefl) [t1'[n [H3 H4]]].
+    have := run_is_det H1 .
+    move=> /(_ (CallS p c))/=.
+    rewrite/det_tree /=.
+    rewrite H2/= => /(_ isT).
+    rewrite /check.is_det -H4.
+    move=> /(_ _ _ _ _ _ H3) H.
+    have:= valid_tree_run _ _ H3 => /(_ isT).
+    move=> [].
+      move=> ->.
+      rewrite t2l_dead//is_dead_dead//.
+    move=> vt1'.
+    have ft1':= next_alt_None_failed H.
+    have:= failed_next_alt_none_t2l vt1' ft1' H.
+    by move=> ->.
+  Qed.
+
+End elpi.
 
 (* Print Assumptions tail_cut_is_det. *)

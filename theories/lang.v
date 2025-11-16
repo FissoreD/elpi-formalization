@@ -90,20 +90,22 @@ Section Lookup.
   Set Implicit Arguments.
   Variables (K : eqType) (V : Type).
 
-  Definition key_absent k (L : seq (K*V)) := all (fun y => k != y.1) L.
   Definition remove k (L : seq (K*V)) := filter (fun y => k != y.1) L.
   
-  Fixpoint valid_sig (L : seq (K*V)) :=
-    match L with
-    | [::] => true
-    | x::xs => key_absent x.1 xs && valid_sig xs
-    end.
-
   (* get the first value (option) for key k *)
   Fixpoint lookup (k : K) (l : seq (K * V)) : option V :=
     match l with
     | [::] => None
     | (k',v)::xs => if k' == k then Some v else lookup k xs
+    end.
+
+  Definition key_absent k (l: seq (K * V)) := 
+    match lookup k l with None => true | _ => false end.
+
+  Fixpoint valid_sig (L : seq (K*V)) :=
+    match L with
+    | [::] => true
+    | x::xs => key_absent x.1 xs && valid_sig xs
     end.
 
   Fixpoint add k v l : (seq (K*V)) :=
@@ -126,14 +128,11 @@ Section Lookup.
   Qed.
 
   Lemma key_absent_add_diff {k k' v} l:
-    k <> k' -> key_absent k (add k' v l) = key_absent k l.
+    k <> k' -> key_absent k' (add k v l) = key_absent k' l.
   Proof.
-    elim: l k k' v => //=.
-      move=> k k' v; case:eqP => //.
-    move=> [k v] l IH k1 k2 v1 H/=.
-    case: eqP => //=H1; subst.
-      by case:eqP => //=.
-    case:eqP => H2//=; subst.
+    rewrite/key_absent.
+    elim: l k k' v => //=[|[k v]xs IH] k1 k2 v1//=; repeat case: eqP => //=; try congruence.
+    move=> H1 H2 H3.
     by apply: IH.
   Qed.
 
@@ -143,7 +142,7 @@ Section Lookup.
     elim: l k v => //= [[k v]] l IH k' v'/= /andP[H1 H2].
     case:eqP => H3; subst => /=.
       rewrite H1//.
-    rewrite IH//andbT key_absent_add_diff//.
+    rewrite IH//andbT key_absent_add_diff//; congruence.
   Qed.
 
   Goal forall k v l, size (add k v l) <> 0.
