@@ -569,7 +569,7 @@ Section RunP.
   Proof. rewrite/choose_cutl; case: eqP => //; lia. Qed.
 
 
-  Lemma next_alt_not_failed A:
+  Lemma next_alt_not_failed {A}:
     (failed A) = false -> next_alt false A = Some A.
   Proof.
     elim: A => //=.
@@ -582,9 +582,9 @@ Section RunP.
       rewrite HB//.
   Qed.
 
-  Lemma next_alt_not_success A:
+  Lemma next_alt_not_success {A b}:
     failed A = false ->
-      (success A) = false -> next_alt true A = Some A.
+      (success A) = false -> next_alt b A = Some A.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB; case: ifP => dA fB sB.
@@ -596,6 +596,13 @@ Section RunP.
       rewrite HB//.
   Qed.
 
+  Lemma next_alt_alt_None_sf {b A}:
+    next_alt b A = None -> success A \/ failed A.
+  Proof.
+    case s: success; auto.
+    case f: failed; auto.
+    rewrite next_alt_not_success//.
+  Qed.
 
   Lemma next_alt_false_true {A b}:
     success A = false ->
