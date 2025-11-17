@@ -1836,6 +1836,20 @@ Proof.
   rewrite !(expand_solved_same _ E)//.
 Qed.
 
+(* Lemma cb_failed {u s A B}:
+  expand u s A = CutBrothers B -> failed B = false.
+Proof.
+  elim: A s B => //=.
+  - move=> _ []//.
+  - move=> A HA s B HB s1 C; case:ifP => [dA|dA]; case: expand => //=.
+  - move=> A HA B0 HB0 B HB s C.
+    case E: expand => //=[A'|A'].
+      move=> [<-]{C}/=.
+      rewrite (HA _ _ E)/=.
+      have:= expnofail
+      rewrite (HA _ _ )
+      move=> //. *)
+
 (* 
   Given a checked program, and a deterministic tree,
   then calling expand produces a tree which is still deterministic.
@@ -2077,8 +2091,16 @@ Proof.
         case nA: next_alt => [A''|]//=; last first.
           by repeat eexists; rewrite minD_refl.
         have [xx[//H2 H3]] := det_tree_aux_func2 dtB.
+        have /=[S[d'[H4 H5]]] := HA _ _ _ _ _ _ H dtA e.
+        have := same_ty_det_tree_aux sP sV1 A' DA' (maxD DB0 DB).
+        rewrite H5; case dtA': det_tree_aux => //=[[d2 blah]]/eqP[?]; subst blah.
         case: ifP => fA'.
-          have [S[d'[H4 H5]]] := HA _ _ _ _ _ _ H dtA e.
+          admit.
+        rewrite orbF/=.
+        case:ifP => H1/=.
+          case:ifP.
+            repeat eexists; rewrite minD_refl//.
+          move=> /eqP nB.
           admit.
         admit.
       rewrite !orbT/=!andbT/=.
@@ -2128,13 +2150,29 @@ Proof.
             case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
             case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//=.
             case M: merge_sig => //=[S'][??]; subst.
+            have := same_ty_det_tree_aux sP sV1 A ign (maxD DB0 DB).
+            rewrite dtA; case dtA': det_tree_aux => //=[[d2 blah]]/eqP[?]; subst blah.
+            
+            have := same_ty_det_tree_aux sP sVA B0 DA' d2.
+            rewrite dtB0; case dtB0': det_tree_aux => //=[[d3 blah]]/eqP[?]; subst blah.
+
+            have /= := HB _ _ _ _ _ _ _ dtB e1.
             admit.
           move=> dtB.
           case nB: next_alt => [B''|]//=.
             apply: HB _ _ _ _ _ _ dtB e1.
             admit.
+          repeat eexists; rewrite minD_refl//.
+        case nB0: next_alt => [B0'|]//=.
+          case dtA: (det_tree_aux _ _ A) => /=[[DA' sVA]|]//=dtB.
+        have [S[]]:= HA _ _ _ _ _ _ H dtA e.
+        have := same_ty_det_tree_aux sP sV1 A ign d.
           admit.
-        admit.
+        move=> dtB.
+        case nB: next_alt => [B''|]//=.
+          apply: HB _ _ _ _ _ _ dtB e1.
+          admit.
+        repeat eexists; rewrite minD_refl//.
       - have fB:= expand_not_failed _ e1 notF.
         have sB:= expand_not_solved_not_success _ e1 notF.
         rewrite (next_alt_not_failed fB)//= andbF/=.
