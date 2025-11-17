@@ -1822,6 +1822,20 @@ Proof.
   rewrite cr//.
 Qed.
 
+Lemma expand_Exp_has_cut {u s A B}:
+  (* we have a superficial cut, it cannot be eaten, otherwise we should have
+     CutBrothers *)
+  has_cut A -> expand u s A = Expanded B -> has_cut B.
+Proof.
+  elim: A s B => //=.
+  move=> A HA B0 _ B HB s C cA.
+  case E: expand => //=[A'|A'].
+    move=> [?]; subst => /=.
+    apply: HA cA E.
+  rewrite success_has_cut// in cA.
+  rewrite !(expand_solved_same _ E)//.
+Qed.
+
 (* 
   Given a checked program, and a deterministic tree,
   then calling expand produces a tree which is still deterministic.
@@ -1879,8 +1893,29 @@ Proof.
         rewrite dtB/=; case dtB': det_tree_aux => //=[[Dy Sy]] /eqP[?]; subst Sy.
         case M1: merge_sig => /=[S'|].
           repeat eexists.
-          case: ifP => cA//.
-          admit.
+          move: dtB' dtA'.
+          case: ifP => cA// {HB}.
+          destruct DA' => //=.
+          destruct DB => //=.
+          rewrite H2 => +[?]; subst.
+          have [[][//_ Hz]] := det_tree_aux_func2 dtB.
+          rewrite Hz => -[?]; subst; rewrite maxD_comm/=.
+          simpl in H1; subst.
+          rewrite (expand_Exp_has_cut _ e)//=.
+        (* BELOW: SHOULD NOT BE REACHABLE: merge_sig S sVB is a ty_ok *)
+        (* sV1 <= sVA
+           sV1 <= sVB
+           sVA + sVB = sV2
+           sV1 <= S 
+           ==========> 
+           goal: merge_sig S sVB = ty_ok
+           IDEA: all vars in S have "compatible" with sVA
+           and all variables not appearing in sVA are also not in sVB, i.e. they are fresh
+
+           FORMALLY:
+            forall x \in S, if x \in sVA, then they are compatible,
+                            else x is not in sVB
+        *)
         admit.
       move=> H2.
       have /=[S[d' [H3 H4]]]  := HA _ _ _ _ _ _ H H2 e.
@@ -1993,7 +2028,8 @@ Proof.
         case: ifP => fA'.
           have := same_ty_det_tree_aux sP sV1 A' DA' (maxD DB0 DB).
           rewrite H5; case dtA': det_tree_aux => //=[[d2 blah]]/eqP[?]; subst blah.
-          admit.
+          (* in S there are more assignemnts than in sV1 *)
+          admit. (*difficult*)
         rewrite orbF.
         case: ifP.
           move=> /andP[sA' /eqP nA'].
@@ -2001,9 +2037,14 @@ Proof.
           rewrite H7/=.
           case nB: next_alt => [B'|]//=; last first.
             by repeat eexists; rewrite minD_refl.
+          (* (DEAD \/ (OK /\ ... ! /\ ... OK) \/ Any) /\ B  -> OK /\ B *)
           admit.
         have := same_ty_det_tree_aux sP sV1 A' DA' (maxD DB0 DB).
         rewrite H5; case dtA': det_tree_aux => //=[[d2 blah]]/eqP[?]; subst blah.
+        case sA' : success => //=.
+          move=> {nA A''}.
+          case nA: next_alt => [A''|]//= _.
+          admit.
         admit.
       case nB: next_alt => [B'|]//=.
         case dtA: (det_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
@@ -2040,6 +2081,20 @@ Proof.
           have [S[d'[H4 H5]]] := HA _ _ _ _ _ _ H dtA e.
           admit.
         admit.
+      rewrite !orbT/=!andbT/=.
+      case nB: next_alt => [B'|]//=; rewrite?orbF ?orbT/=; last first.
+        by move=> [??]; subst; repeat eexists; rewrite minD_refl.
+      case dtA: (det_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
+      case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
+      case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//=.
+      case M: merge_sig => //=[S'][??]; subst.
+      have fA': failed A' = false by admit.
+      rewrite fA'/= next_alt_not_failed//=.
+      case:ifP => sA'.
+        admit. (*launch B on sv1 (not svA...)*)
+      have /=[S[d'[H4 H5]]] := HA _ _ _ _ _ _ H dtA e.
+      have := same_ty_det_tree_aux sP sV1 A' DA' (maxD DB0 DB).
+      rewrite H5; case dtA': det_tree_aux => //=[[d2 blah]]/eqP[?]; subst blah.
       admit.
     - have [? fA]:= expand_failed_same _ e; subst A' => +<-{r}/=.
       rewrite fA/=.
@@ -2053,7 +2108,12 @@ Proof.
       rewrite dtB0; case dtB0' : det_tree_aux => /=[[DB0'' blah]|]//=/eqP[?]; subst blah.
       repeat eexists.
       destruct d => //=.
-      admit.
+      move: H1.
+      case nB0: next_alt => [B0'|]//=; rewrite orbF.
+      case nA: next_alt => [A'|]//= _.
+      have /=[S[d'[H4 H5]]] := HA _ _ _ _ _ _ H dtA e.
+      destruct DA'; destruct DA''; simpl in H4; try congruence.
+      have [[][//_]] := det_tree_aux_func2 dtB0; congruence.
     - have [? sA]:= expand_solved_same _ e; subst A'.
       have fA:= success_failed _ sA.
       rewrite sA fA (next_alt_not_failed fA)/=.
@@ -2146,6 +2206,25 @@ Proof.
             case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
             case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//=.
             case M: merge_sig => //=[S'][??]; subst.
+            have /=[Sx [d'[H1 H2]]] := HA _ _ _ _ _ _ H dtA e.
+            (* have /= := HB _ _ _ _ _ _ _ dtB e1. *)
+            have:= same_ty_det_tree_aux sP sV1 A ign (maxD DB0 DB).
+            rewrite dtA; case dtA' : det_tree_aux => /=[[DA'' blah]|]//=/eqP[?]; subst blah.
+            have:= same_ty_det_tree_aux sP sVA B0 DA' DA''.
+            rewrite dtB0; case dtB0' : det_tree_aux => /=[[DB0'' blah]|]//=/eqP[?]; subst blah.
+            have:= same_ty_det_tree_aux sP sVA B DA' DA''.
+            rewrite dtB; case dtB' : det_tree_aux => /=[[DB'' blah]|]//=/eqP[?]; subst blah.
+            rewrite M/=.
+            repeat eexists.
+            destruct DB0 => //=.
+            destruct DB => //=.
+            simpl in *.
+            have [[][//_ H3]] := det_tree_aux_func2 dtB0.
+            have [[][//_ H4]] := det_tree_aux_func2 dtB.
+            destruct DA''.
+              have->/=: DB0'' = Func by congruence.
+              by have->/=: DB'' = Func by congruence.
+            destruct DA'; simpl in H1; subst => //=; try congruence.
             admit.
           move=> dtB.
           have:= same_ty_det_tree_aux sP sV1 B ign d.
