@@ -1870,7 +1870,8 @@ Proof.
         rewrite H1/=.
         have [[] [//= _ H2]] := det_tree_aux_func2 dtB.
         rewrite H2/=.
-        admit.
+        have [VS H3] := det_tree_aux_less_precise (sigma2ctx_valid H) H1.
+        admit. (*difficult*)
       move=> H2.
       have /=[S H1]  := HA _ _ _ _ _ H H2 e.
       rewrite H1/=.
@@ -1944,10 +1945,38 @@ Proof.
           by eexists.
         have [[][//H2 H3]] := det_tree_aux_func2 dtB.
         case: ifP => fA'.
+          have [d2[H4 H5]] := det_tree_aux_func2 dtA.
           have /={}HA := HA _ _ _ _ _ H _ e.
           admit.
+        rewrite orbF.
+        case: ifP.
+          move=> /andP[sA' /eqP nA'].
+          have [[][//H4 H5]] := next_alt_None_dt sP sV1 Func nA'.
+          rewrite H5/=.
+          case nB: next_alt => [B'|]//=; last first.
+            by eexists.
+          admit.
         admit.
-      admit.
+      case nB: next_alt => [B'|]//=.
+        case dtA: (det_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
+        case dtB0: (det_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
+        case dtB: (det_tree_aux _ _ B) => /=[[DB sVB]|]//=.
+        case M: merge_sig => //=[S'].
+        destruct DB0, DB => //= -[?]; subst.
+        rewrite orbF andbT.
+        case nA: next_alt => [A''|]//=; last first; rewrite?orbF?orbT/=.
+          by eexists.
+        rewrite andbT.
+        case: ifP => fA'.
+          by eexists.
+        rewrite fA'.
+        have [[][//H2 H3]] := det_tree_aux_func2 dtB.
+        case: ifP => sA'.
+          have [d2[H4 H5]] := det_tree_aux_func2 dtA.
+          admit.
+        admit.
+      move=> [??]; subst.
+      rewrite andbT orbT; by eexists.
     - have fA:= expand_not_failed _ e notF.
       have sA:= expand_not_solved_not_success _ e notF.
       rewrite fA (next_alt_not_failed fA)//= sA/= => +<-{r}/=.
