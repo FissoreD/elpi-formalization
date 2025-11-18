@@ -32,7 +32,6 @@ HB.instance Definition _ := hasDecEq.Build B B_eqb_OK.
 derive mode.
 HB.instance Definition _ := hasDecEq.Build mode mode_eqb_OK.
 derive S.
-Elpi derive.eqbOK.register_axiom S is_S is_nat_inhab S_eqb S_eqb_correct S_eqb_refl.
 HB.instance Definition _ := hasDecEq.Build S S_eqb_OK.
 
 Goal b Exp == b Exp. by []. Qed.
