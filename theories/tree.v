@@ -70,12 +70,12 @@ Section tree_op.
     | OK => true
     | CutS | CallS _ _ | Bot | Dead => false
     | And A _ B => success A && success B
-    (* We need to keep the if condition to reflect the behavior of expand:
-      For example, an interesting proprety of expand is:
-      - success A -> expand A = Success B
+    (* We need to keep the if condition to reflect the behavior of step:
+      For example, an interesting proprety of step is:
+      - success A -> step A = Success B
       - if we replace following branch with:
           "success A || success B" (i.e. we remove the if), then
-          Bot \/ OK is success but expand (Bot \/ OK) is not Success but
+          Bot \/ OK is success but step (Bot \/ OK) is not Success but
           rather Expanded
     *)
     | Or A _ B => if is_dead A  then success B else success A
@@ -84,7 +84,7 @@ Section tree_op.
   Fixpoint failed (A : tree) : bool :=
     match A with
     (* Bot is considered as a failure, so that next_alt can put it
-        into Dead. This is because, we want expand to transform a Bot
+        into Dead. This is because, we want step to transform a Bot
         tree into a "Failure Bot" (it does not introduce a Dead tree).
     *)
     | Bot | Dead => true
@@ -369,7 +369,7 @@ Section main.
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
 
-  Fixpoint expand s A : expand_res :=
+  Fixpoint step s A : expand_res :=
     match A with
     (* meta *)
     | OK => Success OK
@@ -382,17 +382,17 @@ Section main.
 
     (* recursive cases *)
     | Or A sB B =>
-        if is_dead A then mkOr A sB (expand sB B)
+        if is_dead A then mkOr A sB (step sB B)
         else
-        match expand s A with
+        match step s A with
         | Success A    => Success      (Or A sB B)
         | Expanded A    => Expanded  (Or A sB B)
         | CutBrothers A => Expanded (Or A sB (cutr B))
         | Failure A     => Failure       (Or A sB B)
         end
     | And A B0 B =>
-        match expand s A with
-        | Success A     => mkAnd    A B0  (expand (get_substS s A) B)
+        match step s A with
+        | Success A     => mkAnd    A B0  (step (get_substS s A) B)
         | Expanded A    => Expanded     (And A B0 B)
         | CutBrothers A => CutBrothers (And A B0 B)
         | Failure A       => Failure        (And A B0 B)
@@ -493,8 +493,8 @@ Section main.
 
   Inductive runb : Sigma -> tree -> option Sigma -> tree -> nat -> Type :=
     | run_done {s1 s2 A B}         : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> runb s1 A (Some s2) B 0
-    | run_cut  {s1 s2 r A B n}    : expand s1 A = CutBrothers B -> runb s1 B s2 r n -> runb s1 A s2 r n.+1
-    | run_step {s1 s2 r A B n}    : expand s1 A = Expanded    B -> runb s1 B s2 r n -> runb s1 A s2 r n
+    | run_cut  {s1 s2 r A B n}    : step s1 A = CutBrothers B -> runb s1 B s2 r n -> runb s1 A s2 r n.+1
+    | run_step {s1 s2 r A B n}    : step s1 A = Expanded    B -> runb s1 B s2 r n -> runb s1 A s2 r n
     | run_fail   {s1 s2 A B r n}     : 
           failed A -> next_alt false A = Some B ->
               runb s1 B s2 r n -> runb s1 A s2 r n

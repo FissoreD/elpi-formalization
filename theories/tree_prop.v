@@ -10,7 +10,7 @@ Section RunP.
   (* EXPAND PROPERTIES                                                *)
   (********************************************************************)
 
-  Lemma is_ko_expand {A s1}: is_ko A -> expand u s1 A = Failure A.
+  Lemma is_ko_expand {A s1}: is_ko A -> step u s1 A = Failure A.
   Proof.
     elim: A s1 => //.
     - move=> A HA s B HB s1 /=.
@@ -32,7 +32,7 @@ Section RunP.
   Qed. 
 
   Lemma is_dead_expand {s A}: 
-    is_dead A -> expand u s A = Failure A.
+    is_dead A -> step u s A = Failure A.
   Proof. move=>/is_dead_is_ko/is_ko_expand//. Qed.
 
   (* Lemma is_ko_expanded s {A}: 
@@ -43,7 +43,7 @@ Section RunP.
     is_dead A -> expandedb s A (Failed A) 0.
   Proof. move=>/is_dead_is_ko/is_ko_expanded//. Qed. *)
 
-  Lemma succes_is_solved s {A}: success A -> expand u s A = Success A.
+  Lemma succes_is_solved s {A}: success A -> step u s A = Success A.
   Proof.
     elim: A s => //; try by do 2 eexists.
     + move=> A HA s1 B HB s /=.
@@ -56,27 +56,27 @@ Section RunP.
   Qed.
 
   Lemma expand_solved_same {s1 A B}: 
-    expand u s1 A = Success B -> (((A = B)) * (success B))%type.
+    step u s1 A = Success B -> (((A = B)) * (success B))%type.
   Proof.
     elim: A s1 B => //.
     + move=> /= ?? [] <-//.
     + move=> A HA s B HB s1 C/=.
       case: ifP => dA/=.
-        case X: expand =>//-[?];subst => /=.
+        case X: step =>//-[?];subst => /=.
         rewrite dA !(HB _ _ X)//.
-      case X: expand => //=-[?]; subst => /=.
+      case X: step => //=-[?]; subst => /=.
       have {}HA := HA _ _ X.
       rewrite success_is_dead !HA//.
     + move=> A HA B0 _ B HB s1 C /=.
-      case X: expand => // [A'].
-      case Y: expand => //=[B'][?]; subst.
+      case X: step => // [A'].
+      case Y: step => //=[B'][?]; subst.
       have {}HA := HA _ _ X.
       have {}HB := HB _ _ Y.
       rewrite /= !HA !HB//.
   Qed.
 
   Lemma expand_not_dead {s A r}: 
-    is_dead A = false -> expand u s A = r -> is_dead (get_tree r) = false.
+    is_dead A = false -> step u s A = r -> is_dead (get_tree r) = false.
   Proof.
     move=> + <-.
     elim: A s; clear; try by move=> //=.
@@ -86,33 +86,33 @@ Section RunP.
         rewrite get_tree_Or/=dA; apply: HB.
       move=> _.
       have:= HA s1 dA.
-      case X: expand => //=->//.
+      case X: step => //=->//.
     + move=> A HA B0 _ B HB s1 //= dA.
       have:= HA s1 dA.
-      case X: expand => [|||A']//=dA'.
+      case X: step => [|||A']//=dA'.
       rewrite get_tree_And/= fun_if dA'.
-      case Y: expand => //[C]/=.
+      case Y: step => //[C]/=.
       have [?]:= expand_solved_same X; subst.
       rewrite -success_cut.
       apply: success_is_dead.
   Qed.
 
   Lemma expand_failed_same {s1 A B}: 
-    expand u s1 A = Failure B -> ((A = B) * failed B)%type.
+    step u s1 A = Failure B -> ((A = B) * failed B)%type.
   Proof.
     elim: A s1 B => //.
     + move=> s1 B[<-]//.
     + move=> s1 B[<-]//.
     + move=> A HA s B HB s1 C/=.
       case: ifP => dA/=.
-        case X: expand =>//-[?];subst => /=.
+        case X: step =>//-[?];subst => /=.
         rewrite !(HB _ _ X)//dA//.
-      case X: expand => //=-[?]; subst => /=.
+      case X: step => //=-[?]; subst => /=.
       rewrite !(HA _ _ X)// (expand_not_dead dA X)//.
     + move=> A HA B0 _ B HB s1 C /=.
-      case X: expand => // [A'|A'].
+      case X: step => // [A'|A'].
         move=> [<-]; rewrite /= !(HA _ _ X)//.
-      case Y: expand => //=[B'][<-].
+      case Y: step => //=[B'][<-].
       rewrite (expand_solved_same X)//=!(HB _ _ Y)(expand_solved_same X) orbT//.
   Qed.
 
@@ -213,13 +213,13 @@ Section RunP.
   Qed.
 
   Lemma expand_not_solved_not_success {s1 A r}:
-    expand u s1 A = r -> ~ (is_solved r) -> success A = false.
+    step u s1 A = r -> ~ (is_solved r) -> success A = false.
   Proof.
     case: r=> //[s|s|]/=; case X: success => //; try by rewrite // (succes_is_solved s1 X).
   Qed.
 
   Lemma failed_expand {s1 A}:
-    failed A -> expand u s1 A = Failure A.
+    failed A -> step u s1 A = Failure A.
   Proof.
     elim: A s1; clear => //; try by move=> ? [] //.
     + move=> A HA s1 B HB s2/=.
@@ -235,25 +235,25 @@ Section RunP.
   Qed. 
 
   Lemma expand_not_failed {s1 A r}:
-    expand u s1 A = r -> ~ (is_fail r) -> failed A = false.
+    step u s1 A = r -> ~ (is_fail r) -> failed A = false.
   Proof.
     move=><-; clear r.
     elim: A s1; try by move=> // s1 <-//=.
     - move=> A HA s B HB s1/=.
       case: ifP => dA.
-        by have:= HB s; case X: expand.
-      by have:= HA s1; case X: expand.
+        by have:= HB s; case X: step.
+      by have:= HA s1; case X: step.
     - move=> A HA B0 _ B HB s1/=.
       have:= HA s1.
-      case X: expand => //= [||C] ->; try by rewrite?(expand_not_solved_not_success X)//.
+      case X: step => //= [||C] ->; try by rewrite?(expand_not_solved_not_success X)//.
       rewrite (expand_solved_same X)/=.
       have:= HB (get_substS s1 C).
-      case Y: expand => //= ->//=; rewrite andbF//.
+      case Y: step => //= ->//=; rewrite andbF//.
   Qed.
 
   Lemma expand_not_failed_Expanded {s1 A B}:
     (* This is wrong: if A is a call and there is no impl, then B = Bot which is failed *)
-    expand u s1 A = Expanded B -> failed B = false.
+    step u s1 A = Expanded B -> failed B = false.
   Proof.
   Abort.
 
@@ -451,21 +451,21 @@ Section RunP.
     Qed.
 
     Lemma expand_same_structure {s A r}: 
-      expand u s A = r -> same_structure A (get_tree r).
+      step u s A = r -> same_structure A (get_tree r).
     Proof.
       move=><-{r}.
       elim: A s => //.
         move=> A HA s B HB s1; subst => /=.
         case: ifP => dA.
           move: (HB s).
-          case eB: expand => //=[B'|B'|B'|B']; rewrite eqxx same_structure_id//.
+          case eB: step => //=[B'|B'|B'|B']; rewrite eqxx same_structure_id//.
         move: (HA s1).
-        case eA: expand => //=[A'|A'|A'|A'] ->; rewrite eqxx ?same_structure_cutr//same_structure_id//.
+        case eA: step => //=[A'|A'|A'|A'] ->; rewrite eqxx ?same_structure_cutr//same_structure_id//.
       move=> A HA B0 HB0 B HB s1; subst => /=.
       have:= (HA s1).
-      case eA: expand => //=[A'|A'|A'|A'] {}HA; rewrite ?HA ?same_structure_id//.
+      case eA: step => //=[A'|A'|A'|A'] {}HA; rewrite ?HA ?same_structure_id//.
       have := (HB (get_substS s1 A')).
-      case eB: expand => //=[B'|B'|B'|B'] H; rewrite ?same_structure_cut// ?same_structure_cutr// ?same_structure_id// ?HA//.
+      case eB: step => //=[B'|B'|B'|B'] H; rewrite ?same_structure_cut// ?same_structure_cutr// ?same_structure_id// ?HA//.
     Qed.
 
     Definition same_structure_sup A B :=

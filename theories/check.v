@@ -15,7 +15,7 @@ Is it important that the substitution in the Or note, X is a function?
 
 
 Require Import FunInd.
-Functional Scheme expand_ind := Induction for expand Sort Prop.
+Functional Scheme expand_ind := Induction for step Sort Prop.
 
 Definition sV_expand (S:sigV) Sexp:=
   forall k, 
@@ -37,7 +37,7 @@ Lemma expand_det_tree {u sP sV sV' A r s ign d} :
   check_program sP ->
     sigma2ctx sP s = Some sV ->
       det_tree_aux sP sV A ign = ty_ok (d, sV') ->
-        expand u s A = r ->
+        step u s A = r ->
           exists S d', minD d d' = d' /\ 
           (* sV_expand sV' S /\ *)
             det_tree_aux sP sV (get_tree r) d = ty_ok (d', S).
@@ -45,7 +45,7 @@ Proof.
   simpl in *.
   move=> C.
   move: sV sV' r d ign.
-  pattern u, s, A, (expand u s A).
+  pattern u, s, A, (step u s A).
   apply: expand_ind; clear.
   - move=> s []//= _ ???? _ _ [_ ->] <-/=; repeat eexists; rewrite ?minD_refl//.
     (* apply: sV_expand_refl. *)
@@ -338,7 +338,7 @@ Proof.
     have [? sA]:= expand_solved_same _ eA; subst A'.
     have fA:= success_failed _ sA.
     rewrite sA fA (next_alt_not_failed fA)/=.
-    case e1: expand => //=[B'|B'|B'|B'].
+    case e1: step => //=[B'|B'|B'|B'].
     - have fB:= expand_not_failed _ e1 notF.
       have sB:= expand_not_solved_not_success _ e1 notF.
       rewrite (next_alt_not_failed fB)//= andbF/=.
@@ -516,13 +516,13 @@ Admitted.
 
 (* 
   Given a checked program, and a deterministic tree,
-  then calling expand produces a tree which is still deterministic.
+  then calling step produces a tree which is still deterministic.
 *)
 Lemma expand_det_tree1 {u sP sV sV' A r s ign d} : 
   check_program sP ->
     sigma2ctx sP s = Some sV ->
       det_tree_aux sP sV A ign = ty_ok (d, sV') ->
-        expand u s A = r ->
+        step u s A = r ->
           exists S d', minD d d' = d' /\ sV_expand sV' S /\
             det_tree_aux sP sV (get_tree r) d = ty_ok (d', S).
 Proof.
@@ -549,7 +549,7 @@ Proof.
         move=> H2.
         by have:= HB _ _ _ _ _ _ H H2 erefl.
       }
-    case e: expand => [A'|A'|A'|A']//=.
+    case e: step => [A'|A'|A'|A']//=.
     - have fA:= expand_not_failed _ e notF.
       rewrite next_alt_not_failed//=.
       move=> + <-{r}/=.

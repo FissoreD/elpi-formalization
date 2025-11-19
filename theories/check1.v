@@ -2076,11 +2076,11 @@ Qed.
 Lemma expand_Exp_has_cut {u s A B}:
   (* we have a superficial cut, it cannot be eaten, otherwise we should have
      CutBrothers *)
-  has_cut A -> expand u s A = Expanded B -> has_cut B.
+  has_cut A -> step u s A = Expanded B -> has_cut B.
 Proof.
   elim: A s B => //=.
   move=> A HA B0 _ B HB s C cA.
-  case E: expand => //=[A'|A'].
+  case E: step => //=[A'|A'].
     move=> [?]; subst => /=.
     apply: HA cA E.
   rewrite success_has_cut// in cA.
@@ -2088,13 +2088,13 @@ Proof.
 Qed.
 
 (* Lemma cb_failed {u s A B}:
-  expand u s A = CutBrothers B -> failed B = false.
+  step u s A = CutBrothers B -> failed B = false.
 Proof.
   elim: A s B => //=.
   - move=> _ []//.
-  - move=> A HA s B HB s1 C; case:ifP => [dA|dA]; case: expand => //=.
+  - move=> A HA s B HB s1 C; case:ifP => [dA|dA]; case: step => //=.
   - move=> A HA B0 HB0 B HB s C.
-    case E: expand => //=[A'|A'].
+    case E: step => //=[A'|A'].
       move=> [<-]{C}/=.
       rewrite (HA _ _ E)/=.
       have:= expnofail

@@ -249,7 +249,7 @@ Section valid_tree.
   Proof. rewrite/bbAnd=>->//. Qed.
 
   Lemma valid_tree_expand {s A r}:
-    valid_tree A -> expand u s A = r -> valid_tree (get_tree r).
+    valid_tree A -> step u s A = r -> valid_tree (get_tree r).
   Proof.
     move=>+<-; clear r.
     elim: A s => //; try by move=> s r // *; subst.
@@ -258,18 +258,18 @@ Section valid_tree.
       case:ifP => //[dA vB|dA/andP[vA bB]].
         rewrite get_tree_Or/=dA IHB//.
       have /= := IHA s1 vA.
-      case X: expand => //= H; rewrite (expand_not_dead _ dA X) H//bbOr_cutr//.
+      case X: step => //= H; rewrite (expand_not_dead _ dA X) H//bbOr_cutr//.
     + move=> A HA B0 _ B HB s1 /=/and3P[vA].
       case: ifP => [sA vB /= bB0 | sA /eqP->]/=.
         rewrite succes_is_solved//=.
         have {HB} := HB (get_substS s1 A) vB.
-        case X: expand => //[C|C|C|C]/=vC; try by rewrite sA vA vC.
+        case X: step => //[C|C|C|C]/=vC; try by rewrite sA vA vC.
         rewrite success_cut sA/= vC valid_tree_cut//.
         rewrite bbAnd_cutr//.
       case: ifP => [fA bB|fA bB].
         rewrite failed_expand//=vA sA eqxx bB/=fA//.
       have:= HA s1 vA.
-      case X: expand => //[A'|A'|A'|A']/=vA'; last first;
+      case X: step => //[A'|A'|A'|A']/=vA'; last first;
        [|rewrite //vA' base_and_valid///bbAnd bB eqxx !if_same//..].
       have [? sA']:= expand_solved_same _ X; subst.
       congruence.

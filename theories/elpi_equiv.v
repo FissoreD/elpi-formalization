@@ -493,8 +493,8 @@ Section next_cut.
       clean_ca bt (t2l A s bt) = (s1, (cut ca) ::: gl) ::: a ->
       next_cut A = B ->
         clean_ca bt (t2l B.2 s bt) = (s1, gl) ::: ca /\
-        if B.1 then expand u s A = CutBrothers B.2
-        else expand u s A = Expanded B.2.
+        if B.1 then step u s A = CutBrothers B.2
+        else step u s A = Expanded B.2.
   Proof.
     elim: A B s bt s1 ca gl a => //=.
     - by move=> [b B] s bt s1 c gl a _ _ [????][??]; subst.
@@ -702,7 +702,7 @@ Section next_callS.
       clean_ca bt (t2l A s3 bt) = (s1, (call p t) ::: gl) ::: a ->
         clean_ca bt (t2l (next_callS u s1 A) s3 bt) = 
           (save_alts a gl (aa2gs p (F u p t s1)) ++ a) /\
-        expand u s3 A = Expanded (next_callS u s1 A).
+        step u s3 A = Expanded (next_callS u s1 A).
   Proof.
     elim: A s3 bt s1 p t gl a => //=.
     - move=> p c s3 bt s1 p1 c1 gl a _ _ [?????]; subst.

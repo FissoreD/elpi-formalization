@@ -72,11 +72,11 @@ Section s.
     remember (Or _ _ _) as o eqn:Ho => H.
     elim: H A s B Ho; clear => //.
     - move=> s1 s2 r A B n + _ _ C s D ?; subst => /=.
-      by case: ifP; case: expand => //.
+      by case: ifP; case: step => //.
     - move=> s1 s2 r A B n + HB IH C s D ?; subst => /=.
       case: ifP => dC.
-        case X: expand => //[D'|D'][?]; subst; by apply: IH.
-      case Y: expand=> //[C'|C'][?]; subst; by apply: IH.
+        case X: step => //[D'|D'][?]; subst; by apply: IH.
+      case Y: step=> //[C'|C'][?]; subst; by apply: IH.
     - move=> s1 s2 A B r n _ + H IH C s3 D ?; subst => /=.
       case: ifP => //= dA.
         rewrite is_dead_next_alt//.
@@ -124,11 +124,11 @@ Section s.
       apply: run_done sB1 erefl _.
       rewrite X => //.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
-      case: ifP => dC; case X: expand => //.
+      case: ifP => dC; case X: step => //.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
       rewrite (is_ko_expand _ kA1)//.
       case: ifP => dC//.
-      case X: expand => //[D'|D'][?]; subst;
+      case X: step => //[D'|D'][?]; subst;
       have {IH} [b[H1 ?]] := IH _ _ _ _ _ erefl erefl kA1; subst; rewrite dC/=;
       repeat eexists.
         apply:run_step X H1.
@@ -280,11 +280,11 @@ Section s.
         rewrite X//.
       rewrite is_dead_dead//.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
-      case: ifP => dC; case X: expand => //.
+      case: ifP => dC; case X: step => //.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
       rewrite (is_ko_expand _ kA1)//=.
       case: ifP => dC//.
-      case X: expand => //[D'|D'][?]; subst;
+      case X: step => //[D'|D'][?]; subst;
       have := IH _ _ _ _ erefl erefl.
         move=> /(_ kA1) [b [{}IH ?]]; subst.
         repeat eexists.
@@ -510,7 +510,7 @@ Section s.
       move=> //.
     + move=> s1 s3 r A B n + HB IH s4 A1 A2 B1 B2 ???; subst => //=.
       case: ifP => dA1.
-        case X: expand => //[B''|B''][?]; subst; have {IH}[n1+] := IH _ _ _ _ _ erefl erefl erefl.
+        case X: step => //[B''|B''][?]; subst; have {IH}[n1+] := IH _ _ _ _ _ erefl erefl erefl.
           case: s3 HB => [s3|] HB//.
             move=> [].
               move=>[H1 ?]; subst.
@@ -544,7 +544,7 @@ Section s.
           eexists; apply: run_cut X H.
         move=> ?; subst.
         by have [_[??]] := run_dead1 _ dA1 H1; subst.
-      case X: expand => //[D'|D'][?]; subst; have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
+      case X: step => //[D'|D'][?]; subst; have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
         case: s3 HB => [s3|] HB//.
           move=> [].
             move=> [H1?]; subst.
@@ -727,7 +727,7 @@ Section s.
       rewrite nB1//.
     - move=> s1 s3 r A B n + _ IH A1 B01 B1 ? A2 B02 B2 ?; subst => /= + sA1 nA1.
       rewrite succes_is_solved//=.
-      case eA1: expand => //[B1'][?]; subst.
+      case eA1: step => //[B1'][?]; subst.
       have {IH} := IH _ _ _ erefl _ _ _ erefl.
       rewrite next_alt_cutl success_cut => /(_ sA1 erefl).
       rewrite ges_subst_cutl// cutl2 if_same dead_cutl.
@@ -737,7 +737,7 @@ Section s.
       apply: run_cut eA1 rB1'.
     - move=> s1 s3 r A B n + _ IH A1 B01 B1 ? A2 B02 B2 ?; subst => /= + sA1 nA1.
       rewrite succes_is_solved//=.
-      case eA1: expand => //[B1'][?]; subst.
+      case eA1: step => //[B1'][?]; subst.
       have {IH} := IH _ _ _ erefl _ _ _ erefl.
       move => /(_ sA1 nA1).
       move=> [rB1' [??]]; subst.
@@ -829,12 +829,12 @@ Section s.
       rewrite sC; left; apply: run_done erefl.
       apply: succes_is_solved sE.
     - move=> s1 s2 s3 r A B n + rB IH C D E ?; subst => /=.
-      case X: expand => //[s1' C'|s1' C'].
+      case X: step => //[s1' C'|s1' C'].
         move=> [??]; subst.
         have [sm[r1[b1 [{}IH [b2[r2 H2]]]]]]:= IH _ _ _ erefl.
         repeat eexists; eauto.
         apply: run_cut X IH.
-      case Y: expand => //=[s1'' E'][??]; subst.
+      case Y: step => //=[s1'' E'][??]; subst.
       have [sm[r1[b1 [{}IH [b2[r2 H2]]]]]]:= IH _ _ _ erefl.
       do 3 eexists; split.
         apply: run_done X erefl.
@@ -856,12 +856,12 @@ Section s.
       rewrite sD/= => H1.
       by have:= failed_cutl_runb _ H1 _ _ _ _ H2.
     - move=> s1 s2 s3 r A B n + rB IH C D E ?; subst => /=.
-      case X: expand => //[s1' C'|s1' C'].
+      case X: step => //[s1' C'|s1' C'].
         move=> [??]; subst.
         have [sm[r1[b1 [{}IH [b2[r2 H2]]]]]]:= IH _ _ _ erefl.
         repeat eexists; eauto.
         apply: run_step X IH.
-      case Y: expand => //=[s1'' E'][??]; subst.
+      case Y: step => //=[s1'' E'][??]; subst.
       have [sm[r1[b1 [{}IH [b2[r2 H2]]]]]]:= IH _ _ _ erefl.
       do 3 eexists; split.
         apply: run_done X erefl.

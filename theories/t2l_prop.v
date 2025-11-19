@@ -343,7 +343,7 @@ Section NurProp.
   Qed.
 
   Lemma expand_t2l_cons {s A r}:
-    valid_tree A -> expand u s A = r -> ~ (is_fail r) -> t2l_cons A.
+    valid_tree A -> step u s A = r -> ~ (is_fail r) -> t2l_cons A.
   Proof. case: r => //[B|B|B]vA H/=; try (move=> _; apply: failed_t2l vA (expand_not_failed _ H notF)). Qed.
 
   Lemma bbOr_next_alt_none {s1 B l}:
@@ -359,18 +359,18 @@ Section NurProp.
 
   Lemma expand_failure_next_alt_none_empty {A s1 s3 E l b}:
     valid_tree A ->
-      expand u s1 A = Failure E ->
+      step u s1 A = Failure E ->
         next_alt b E = None ->
           t2l A s3 l = nilC.
   Proof.
     elim: A s1 s3 E l b => //.
     - move=> A HA s B HB/=s1 s2 E l b.
       case: ifP => //[dA vB|dA/andP[vA bB]].
-        case eB: expand => //[B'][<-]/=.
+        case eB: step => //[B'][<-]/=.
         rewrite is_dead_next_alt// dA.
         case nB': next_alt => [[]|]// _.
         by rewrite (HB _ _ _ _ _ vB eB nB')/=t2l_dead//.
-      case eA: expand => //[A'][<-]/=.
+      case eA: step => //[A'][<-]/=.
       rewrite (expand_not_dead _ dA eA).
       case nA': next_alt => [[]|]//.
       have vB := bbOr_valid bB.
@@ -380,7 +380,7 @@ Section NurProp.
         move=> /base_or_aux_ko_t2l->//.
       move=> H; rewrite (next_alt_aux_base_or_none H nB')//.
     - move=> A HA B0 _ B HB s2 s3 C l b/=/and3P[vA].
-      case eA: expand => //[A'|A'].
+      case eA: step => //[A'|A'].
         have [? fA]:= expand_failed_same _ eA; subst.
         rewrite (failed_success _ fA) fA/==>/eqP->bB[<-]/=.
         rewrite fA.
@@ -393,7 +393,7 @@ Section NurProp.
         by rewrite (HA _ _ _ _ _ vA eA nA)//.
       have [? sA]:= expand_solved_same _ eA; subst.
       rewrite sA => vB bB0.
-      case eB: expand => //[B'][<-]/=.
+      case eB: step => //[B'][<-]/=.
       rewrite success_failed//sA.
       case nB': next_alt => [[]|]//.
       rewrite (success_t2l empty) => //=.
@@ -409,7 +409,7 @@ Section NurProp.
 
 
   Lemma expand_failure_t2l_same {s s1 A B l}:
-      expand u s A = Failure B ->
+      step u s A = Failure B ->
           t2l A s1 l = t2l B s1 l.
   Proof.
     elim: A s s1 B l => //.
@@ -417,16 +417,16 @@ Section NurProp.
     - move=> /= ???? [<-]//.
     - move=> A HA s B HB /= s1 s2 C l.
       case: ifP => dA.
-        case eB: expand => // [B'] [<-]/=.
+        case eB: step => // [B'] [<-]/=.
         rewrite 2!(t2l_dead dA) (HB _ _ _ _ eB)//dA//.
-      case eA: expand => //[A'][<-]/=.
+      case eA: step => //[A'][<-]/=.
       have ->// := HA _ _ _ _ eA.
     - move=> A HA B0 _ B HB s sx C l/=.
-      case eA: expand => //[A'|A'].
+      case eA: step => //[A'|A'].
         have [? H] := expand_failed_same _ eA; subst.
         move=> [<-]//=.
       have [? sA] := (expand_solved_same _ eA); subst.
-      case eB: expand => //[B'][<-]/=.
+      case eB: step => //[B'][<-]/=.
       case: t2l => //= -[s2 x] xs.
       case: t2l => //=.
         rewrite (HB _ _ _ _ eB)//.
@@ -637,19 +637,19 @@ Section NurProp.
 
   Lemma expand_cb_same_subst1 {A B s1}:
   (* TODO: put this prop inside s2l_CutBrothers *)
-    valid_tree A -> expand u s1 A = CutBrothers B -> ((get_substS s1 A = get_substS s1 B)).
+    valid_tree A -> step u s1 A = CutBrothers B -> ((get_substS s1 A = get_substS s1 B)).
   Proof.
     elim: A B s1 => //=.
     - move=> B s1 _ [<-]//.
-    - move=> A HA s B HB C s1;  case: ifP => dA; case: expand => //.
+    - move=> A HA s B HB C s1;  case: ifP => dA; case: step => //.
     - move=> A HA B0 _ B HB C s1 /and3P[vA].
-      case e: expand => //[A'|A'].
+      case e: step => //[A'|A'].
         rewrite (expand_not_solved_not_success _ e)//=(expand_not_failed _ e)//=.
         move=>/eqP-> bB [<-]/=; rewrite (get_substS_base_and bB)// if_same.
         rewrite !(HA _ _ vA e)//.
       have [? sA] := expand_solved_same _ e; subst.
       rewrite sA/= => vB bB.
-      case e1: expand => //=[B'][<-]/=; rewrite success_cut sA ges_subst_cutl//.
+      case e1: step => //=[B'][<-]/=; rewrite success_cut sA ges_subst_cutl//.
       rewrite !(HB _ _ vB e1)//.
   Qed.
 
@@ -671,7 +671,7 @@ Section NurProp.
 
 
   Lemma s2l_CutBrothers {s1 A B} sA l1:
-    valid_tree A -> expand u s1 A = CutBrothers B -> 
+    valid_tree A -> step u s1 A = CutBrothers B -> 
       Texists x tl, 
         ((t2l A sA l1 = (get_substS sA A, (cut nilC) ::: x) ::: tl) /\
           (forall l sB, (t2l B sB l = (get_substS sB B, x) ::: nilC)) /\ 
@@ -681,9 +681,9 @@ Section NurProp.
     elim: A sA s1 B l1 => //.
     - move=> //=?????[<-]/=; by do 2 eexists.
     - move=> A HA s B HB sA s1 C l1 /=.
-      by case: ifP => [dA vB|dA/andP[vA bB]]; case eB: expand => //[s1' B'][??]; subst.
+      by case: ifP => [dA vB|dA/andP[vA bB]]; case eB: step => //[s1' B'][??]; subst.
     - move=> A HA B0 _ B HB sA s1 C l1/=/and3P[vA].
-      case eA: expand => //[A'|A'].
+      case eA: step => //[A'|A'].
         rewrite (expand_not_solved_not_success _ eA notF)/=(expand_not_failed _ eA notF).
         move=>/eqP->bB [<-]/=.
         have [y  H1] /=:= base_and_t2l bB.
@@ -697,7 +697,7 @@ Section NurProp.
           apply/andP; split => //; apply:H6.
       have [? sAx] := expand_solved_same _ eA; subst.
       rewrite sAx/==> vB bB0.
-      case eB: expand => //[B'] [<-]/=.
+      case eB: step => //[B'] [<-]/=.
       rewrite (success_t2l empty (valid_tree_expand _ vA eA) sAx)/=.
       have [H2|[hd[H2 H3]]] := bbAnd_t2l bB0; rewrite H2/=.
         have {HB}[x[tl [H H1]]] := HB (get_substS sA A')  _ _ l1 vB eB.
@@ -760,21 +760,21 @@ Section NurProp.
 
   Lemma expand_cb_failedF {s1 A B}:
     valid_tree A ->
-    expand u s1 A = CutBrothers B -> failed B = false.
+    step u s1 A = CutBrothers B -> failed B = false.
   Proof.
     elim: A B s1 => //=.
     - move=> B _ _ [<-]//.
     - move=> A HA s B HB C s1.
-      case: ifP => //[dA fB|dA fA]; case e: expand => //.
+      case: ifP => //[dA fB|dA fA]; case e: step => //.
     - move=> A HA B0 _ B HB C s1 /and3P[vA].
-      case e: expand => //[A'|A'].
+      case e: step => //[A'|A'].
         rewrite (expand_not_solved_not_success _ e)//(expand_not_failed _ e)//=.
         move=>/eqP->bB [<-]/=.
         rewrite (base_and_failed bB) andbF.
         rewrite (HA _ _ vA e)//(expand_not_failed e)//.
       have [? sA] := expand_solved_same _ e; subst.
       rewrite sA success_failed//=.
-      case e1: expand => //[B'] vB bB0 [<-]/=.
+      case e1: step => //[B'] vB bB0 [<-]/=.
       move: sA; rewrite -success_cut.
       move=>/success_failed->/=.
       rewrite (HB _ _ vB e1)andbF//.
@@ -820,7 +820,7 @@ Section NurProp.
   Lemma xxx {A l ca tl alts r} {s1 s2} l1:
     valid_tree A ->
     t2l A s1 l = ((s2, ((cut ca) ::: tl)) ::: alts) ->
-      expand u s1 A = r -> size(t2l (get_tree r) s1 l1) <> 0.
+      step u s1 A = r -> size(t2l (get_tree r) s1 l1) <> 0.
   Proof.
     move=>++<-; clear r.
     elim: A l l1 ca tl alts s1 s2 => //=.
@@ -841,7 +841,7 @@ Section NurProp.
         move=>+[????]; subst.
         move=> /(_ _ IsList_alts _ _ _ _ s0); rewrite-/SB SB'.
         move=> -/(_ _ _ _ _ _ erefl) HH.
-        case E: expand => [A'|A'|A'|A']/=; 
+        case E: step => [A'|A'|A'|A']/=; 
         rewrite size_add_ca_deep size_cat -/SB?SB'?size_cons; try by lia.
         case: size => //.
         have [?[?[]]]:= s2l_CutBrothers s1 SB vA E.
@@ -850,7 +850,7 @@ Section NurProp.
       move=>[???]; subst.
       move: SA; fConsG (cut ca') gs; fConsA (s2, (cut ca') ::: gs) tl' => SA.
       have:= HA _ SB _ _ _ _ _ vA SA.
-      case e: expand => [A'|A'|A'|A']/=; 
+      case e: step => [A'|A'|A'|A']/=; 
       rewrite size_add_ca_deep size_cat -/SB ?SB'; case X: size => //[n].
       set Y:= t2l (cutr B) _ _.
       rewrite (s2l_size s1 SB) X//.
@@ -861,14 +861,14 @@ Section NurProp.
         have [H|[hd[H H1]]]:= bbAnd_t2l bB0; rewrite H/=.
           rewrite make_lB01_empty2.
           move=>/(HB _ _ _ _  _ _ _ vB).
-          case e: expand => //= Hz; rewrite (success_t2l empty)//=?H?success_cut//?valid_tree_cut//?size_map//.
+          case e: step => //= Hz; rewrite (success_t2l empty)//=?H?success_cut//?valid_tree_cut//?size_map//.
           have vB0 := bbAnd_valid bB0.
           rewrite t2l_cutr_empty//=.
           rewrite make_lB01_empty2 ges_subst_cutl//.
         set SA := t2l (odflt _ _) _ _.
         rewrite get_tree_And/=.
         case: ifP => //.
-          case eB: expand => //=[B'] _.
+          case eB: step => //=[B'] _.
           rewrite make_lB01_empty2.
           set X:= make_lB0 _ _.
           have [hd1[tl1[Hz [Hw Hy]]]] := s2l_CutBrothers  (get_substS s1 A) (X ++ l) vB eB.
@@ -898,7 +898,7 @@ Section NurProp.
         move=> Hx.
         rewrite make_lB01_empty2.
         move=>[??]; subst.
-        case e: expand => [A'|A'|A'|A']/=.
+        case e: step => [A'|A'|A'|A']/=.
         - have []:= s2l_empty_hd_success vA (expand_not_failed _ e notF) Hx.
           rewrite (expand_not_solved_not_success _ e)//.
         - have []:= s2l_empty_hd_success vA (expand_not_failed _ e notF) Hx.
@@ -911,13 +911,13 @@ Section NurProp.
         - have [??]:= (expand_solved_same _ e); congruence.
       move=> []//ca1 l2 SA []???; subst.
       have:= HA _ l1 _ _ _ _ _ vA SA.
-      case e: expand => [A'|A'|A'|A']/=; last first;
+      case e: step => [A'|A'|A'|A']/=; last first;
         [|by (case SA': t2l => //=[[? x] xs]; rewrite H !size_cat !size_map size_add_deep H//)..].
       have [??]:= expand_solved_same _ e; congruence.
   Qed.
 
   Lemma s2l_Expanded_cut {A B s0 s3 ca x tl l1}:
-    valid_tree A -> expand u s0 A = Expanded B ->
+    valid_tree A -> step u s0 A = Expanded B ->
       t2l A s0 l1 = (s3, ((cut ca) ::: x)) ::: tl ->
       ((get_substS s0 A = get_substS s0 B) * (failed B = false) * 
         ( (t2l B s0 l1 ++ l1 = (s3, x) ::: ca))%type )%type.
@@ -926,7 +926,7 @@ Section NurProp.
     - move=> A HA s B HB s0 C s3 c1 x tl l1 /=.
       case: ifP => //=[dA vB|dA /andP[vA bB]].
         rewrite !(t2l_dead dA)/=.
-        case eB: expand => //[B'|B']/=[?]; subst => /=; rewrite !(t2l_dead dA) dA.
+        case eB: step => //[B'|B']/=[?]; subst => /=; rewrite !(t2l_dead dA) dA.
           case sB : t2l =>  [|[sx[|[]ca' gs tl']]]//=[????]; subst.
           have [[XX fB]{}HB] := HB _ _ _ _ _ _ _ vB eB sB; subst; rewrite fB XX; repeat split.
           move: HB; rewrite !cats0.
@@ -937,7 +937,7 @@ Section NurProp.
         rewrite (expand_cb_failedF vB eB) (expand_cb_same_subst1 _ eB)//.
         repeat split => //.
         by rewrite !H2/= cat_cons //.
-      case eA: expand => //[A'|A']/=[?]; subst;
+      case eA: step => //[A'|A']/=[?]; subst;
       rewrite add_ca_deep_cat?size_cat//=; set SB:= t2l _ _ nilC;
       rewrite (expand_not_dead _ dA eA).
         have FA := expand_not_failed _ eA notF.
@@ -952,7 +952,7 @@ Section NurProp.
       move=>[????]; subst; auto.
       by rewrite (expand_cb_same_subst1 _ eA)//.
     - move=> /= A HA B0 _ B HB s1 C s4 ca x tl l1 /and3P[vA].
-      case eA: expand => //[A'|A']/=.
+      case eA: step => //[A'|A']/=.
         rewrite (expand_not_solved_not_success _ eA notF)/=(expand_not_failed _ eA notF).
         move=>/eqP->bB[<-]/=.
         case SA : t2l => //[[s5 w] ws].
@@ -981,7 +981,7 @@ Section NurProp.
         by rewrite  SB/=.
       have [? sA]:= expand_solved_same _ eA; subst.
       rewrite sA => /= vB bB.
-      case eB: expand => //[B']/=[<-]//=; subst.
+      case eB: step => //[B']/=[<-]//=; subst.
       rewrite (success_t2l empty vA)//=.
       rewrite sA (success_failed)//=.
       have [H|[hd [H H3]]] := bbAnd_t2l bB; rewrite H/=.
@@ -1021,7 +1021,7 @@ Section NurProp.
 
   Lemma s2l_Expanded_call {s s3 A B l p t gs xs}:
     valid_tree A ->
-    expand u s A = Expanded B -> 
+    step u s A = Expanded B -> 
     t2l A s l = (s3, (call p t) ::: gs) ::: xs ->
     ((s3 = (get_substS s A)) * ((if F u p t (get_substS s A) is w :: ws then
       (failed B * (t2l B s l = (w.1, save_goals (xs++l) gs (a2gs1 p w)) ::: 
@@ -1037,7 +1037,7 @@ Section NurProp.
     - move=> A HA s B HB C s1 s3 l p t gs xs.
       case: ifP => //[dA vB|dA /andP[vA bB]].
         rewrite t2l_dead//=cat0s.
-        case e: expand => //[B'|B']/=[<-]/=; subst; rewrite dA; last first.
+        case e: step => //[B'|B']/=[<-]/=; subst; rewrite dA; last first.
           have [w[ws []+[]]]:= s2l_CutBrothers s nilC vB e.
           by move=>->//.
         case SB: t2l =>  [|[sx[|[]p1// t1 tl ys]]]//=[?????]; subst.
@@ -1052,7 +1052,7 @@ Section NurProp.
         rewrite save_alt_add_ca_deepG//?empty_ca_atoms//.
         rewrite save_alt_add_ca_deepA//?empty_ca_atoms1//.
       set SB := t2l B s nilC.
-      case e: expand => //=[A'|A'][<-]/=; subst;
+      case e: step => //=[A'|A'][<-]/=; subst;
       rewrite (valid_tree_is_dead (valid_tree_expand _ vA e)); last first.
         have [w[ws []+[]]]:= s2l_CutBrothers s1 SB vA e.
         move=>->//.
@@ -1075,7 +1075,7 @@ Section NurProp.
       rewrite save_alt_add_ca_deepA//.
       apply: empty_ca_atoms1.
     - move=> A HA B0 _ B HB C s1 s3 l p t gs xs /and3P[vA].
-      case e: expand => //[A'|A'].
+      case e: step => //[A'|A'].
         have /=fA := expand_not_failed _ e notF.
         rewrite (expand_not_solved_not_success _ e)//fA/=.
         move=>/eqP->bB [<-]/=; subst.
@@ -1106,7 +1106,7 @@ Section NurProp.
         rewrite add_deep_altsP//?empty_ca_atoms1//.
       have [? sA] := expand_solved_same _ e; subst.
       rewrite sA success_failed//= => vB bB.
-      case e1: expand => //[B'][<-]/=; subst.
+      case e1: step => //[B'][<-]/=; subst.
       rewrite (success_failed _ sA)/=sA/=.
       rewrite (success_t2l empty)//=.
       have [H|[hd[H H1]]]:= bbAnd_t2l bB; rewrite H/=!make_lB01_empty2.
