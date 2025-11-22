@@ -178,7 +178,7 @@ Proof.
       case dtB01: (tc_tree_aux _ _ B0) => /=[[DB01 sVB01]|]//=/eqP[?]; subst sVB01.
       have:= HR _ _ _ _ _ _ dtB eB.
       admit.
-    - 
+    - have:= @cutr_tc_tree_aux sP .
        admit.
     - have [? fB] := expand_failed_same _ eB; subst B'.
       have:= same_ty_tc_tree_aux sP sV A ign (maxD DB0 DB).
@@ -248,7 +248,7 @@ Proof.
   - move=> s1 s2 A B r n fA nA _ IH sV sV' H1 H2.
     have V := sigma2ctx_valid H1.
     have := failed_det_tree_next_alt false V H2 nA.
-    move => -[[]// [s [? [X [Y Z]]]]]//.
+    move => -[[]// [s [? [X _]]]]//.
     apply: IH (H1) X.
   - move=> *.
     rewrite is_dead_next_alt//is_dead_dead//.
