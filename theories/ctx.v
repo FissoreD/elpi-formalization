@@ -217,5 +217,28 @@ Section lookup.
     by f_equal; apply: IH.
   Admitted.
   
+      (* TODO: move in ctx *)
+  Lemma valid_sig_remove {K:eqType} {V:Type} {k} {A: seq (K * V)}:
+    valid_sig A -> valid_sig (remove k A).
+  Proof.
+    elim: A k => //=[[k v] A IH] k1 /andP[H1 H2]/=.
+    case: eqP => H/=; subst.
+      apply: IH => //.
+    move: H1.
+    rewrite /key_absent lookup_remove_diff//=.
+    case LA: lookup => //= _.
+    apply: IH H2.
+  Qed.
+
+    (* TODO: move in ctx *)
+  Lemma remove2 {K:eqType} {V:Type} {k} {A: seq (K * V)}:
+    remove k (remove k A) = remove k A.
+  Proof.
+    elim: A k => //=[[k v] A IH] k1/=.
+    case: eqP => //=H.
+    case: eqP => //= _.
+    by rewrite IH.
+  Qed.
+
 End lookup.
 

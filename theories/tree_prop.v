@@ -31,7 +31,7 @@ Section RunP.
     - move=> [s r] l/= H rs p; rewrite H andbF//.
   Qed. 
 
-  Lemma is_dead_expand {s A}: 
+  Lemma is_dead_step {s A}: 
     is_dead A -> step u s A = Failure A.
   Proof. move=>/is_dead_is_ko/is_ko_expand//. Qed.
 
@@ -39,7 +39,7 @@ Section RunP.
     is_ko A -> dead_run s A (Failed A) 0.
   Proof. move=> dA; apply: expanded_fail (is_ko_expand _) => //. Qed.
 
-  Lemma is_dead_expanded s {A}: 
+  Lemma is_dead_steped s {A}: 
     is_dead A -> expandedb s A (Failed A) 0.
   Proof. move=>/is_dead_is_ko/is_ko_expanded//. Qed. *)
 
@@ -538,7 +538,7 @@ Section RunP.
       is_dead B -> runb u s1 B s2 r n -> (s2 = None /\ r = dead B /\ n = 0)%type2.
     Proof.
       move=> dB H; inversion H; clear H; subst;
-        try rewrite // is_dead_expand//is_dead_dead in H0.
+        try rewrite // is_dead_step//is_dead_dead in H0.
         by rewrite success_is_dead in dB.
       rewrite is_dead_next_alt// in H1.
     Qed.

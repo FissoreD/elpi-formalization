@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
-From det Require Import tree tree_prop.
+From det Require Import ctx tree tree_prop.
 From det Require Import check1.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
@@ -57,22 +57,15 @@ Proof.
   - move=> s []//= _ ???? _ _ [_ ->] <-/=; repeat eexists; rewrite ?minD_refl//.
     (* apply: sV_expand_refl. *)
   - move=> s INIT A sB B HINIT dA IH sV sV' r d ign H/=.
-    case dtA: (tc_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
-    case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=.
-    case M: merge_sig => //=[m][??]<-{r}; subst.
-    rewrite //=get_tree_Or/= is_dead_has_cut//=.
     have ?: sB = s by admit.
     subst.
-    have {IH}[S[d' [H1 H2]]]:= IH _ _ _ _ _ H dtB erefl.
-    have:= same_ty_tc_tree_aux sP sV A ign Pred.
-    rewrite dtA/=.
-    case dtA': tc_tree_aux => //=[[D S']]/eqP[?]; subst.
-    remember ((get_tree _)) as T eqn:HT.
-    have:= same_ty_tc_tree_aux sP sV T DB Pred.
-    rewrite H2/=.
-    case dtB': tc_tree_aux => //=[[D1 S1]]/eqP[?]; subst.
-    admit.
+    rewrite dA.
+    move=> tcA <-/=.
+    rewrite get_tree_Or /= is_dead_has_cut/= dA//.
+    apply: IH; eauto.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
+    case: ifP => DA.
+      by rewrite is_dead_step in eA.
     have fA:= expand_not_failed _ eA notF.
     move=> + <-{r}/=.
     (* case nB: next_alt => [B'|]//=. *)
@@ -84,6 +77,7 @@ Proof.
     rewrite (expand_Exp_has_cut eA).
     admit.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
+    rewrite dA.
     have fA:= expand_not_failed _ eA notF.
     case dtA: (tc_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
     case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=.
@@ -98,6 +92,7 @@ Proof.
     admit.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
     have [? fA] := expand_failed_same _ eA; subst A'.
+    rewrite dA.
     move=> +<-{r}/=.
     have:= same_ty_tc_tree_aux sP sV A ign d.
     case dtA1: (tc_tree_aux _ _ A) => /=[[DA1 sVA1]|]//=.
@@ -106,11 +101,13 @@ Proof.
     case dtB1: (tc_tree_aux _ _ B) => /=[[DB1 sVB1]|]//=.
     case dtB2: (tc_tree_aux _ _ B) => /=[[DB2 sVB2]|]//=/eqP[?]; subst sVB2.
     case M: merge_sig => //=[S'][??]; subst.
+    rewrite dA.
     repeat eexists; case:ifP => //=.
     rewrite failed_has_cut//=.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
     have [? sA]:= expand_solved_same _ eA; subst A'.
     move=> +<-{r}/=.
+    rewrite dA.
     rewrite success_has_cut//=.
     have:= same_ty_tc_tree_aux sP sV A ign d.
     case dtA1: (tc_tree_aux _ _ A) => /=[[DA1 sVA1]|]//=.

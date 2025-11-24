@@ -240,12 +240,12 @@ Section s.
       rewrite is_dead_dead//.
     + move=> s1 s2 r A B n HA HB IH sIgn X kX.
       apply: run_step.
-        by rewrite/= HA; case: ifP => //dA; rewrite is_dead_expand in HA.
+        by rewrite/= HA; case: ifP => //dA; rewrite is_dead_step in HA.
       have:= IH sIgn (cutr X) is_ko_cutr.
       rewrite cutr2 if_same dead_cutr//.
     + move=> s1 s2 r A B n HA HB IH sIgn X kX.
       apply: run_step.
-        by rewrite/= HA; case: ifP => //dA; rewrite is_dead_expand in HA.
+        by rewrite/= HA; case: ifP => //dA; rewrite is_dead_step in HA.
       apply: IH => //.
     + move=> s1 s2 A B r n fA nA rB IH sIgn X kX.
       apply: run_fail => /=.
@@ -360,18 +360,18 @@ Section s.
         apply: run_step => /=.
         rewrite HA.
         case: ifP => //dA.
-        by rewrite is_dead_expand in HA.
+        by rewrite is_dead_step in HA.
       case:eqP => H; subst.
         move=> IH sX X.
         apply: run_step.
           rewrite/= HA; case: ifP => // dA.
-          by rewrite is_dead_expand in HA.
+          by rewrite is_dead_step in HA.
         have:= run_or_ko_right1 sX (@is_ko_cutr X) HB.
         rewrite /= -(runb_none_dead_res HB) is_dead_dead dead_cutr//.
       move=> IH sX X.
       apply: run_step.
         rewrite/= HA; case: ifP => // dA.
-        by rewrite is_dead_expand in HA.
+        by rewrite is_dead_step in HA.
       have:= run_or_ko_right1 sX (@is_ko_cutr X) HB.
       rewrite cutr2 if_same dead_cutr.
       rewrite /= -(runb_none_dead_res HB) is_dead_dead//.
@@ -382,20 +382,20 @@ Section s.
         apply: run_step => /=.
         rewrite HA.
         case: ifP => //dA.
-        by rewrite is_dead_expand in HA.
+        by rewrite is_dead_step in HA.
       case:eqP => H; subst.
         move=> IH.
         move=> sX X s3 X' n1 H.
         rewrite/get_dead/=.
         case: ifP => dA.
-          by rewrite is_dead_expand in HA.
+          by rewrite is_dead_step in HA.
         apply: run_step.
           rewrite/= HA dA//.
         by have:= IH _ _ _ _ _ H; rewrite (expand_not_dead _ dA HA).
       move=> IH sX X.
       apply: run_step.
         rewrite/= HA; case: ifP => // dA.
-        by rewrite is_dead_expand in HA.
+        by rewrite is_dead_step in HA.
       by apply: IH.
     + move=> s1 s2 A B r n fA nA _.
       case: s2 => //[s2|] IH; auto.
