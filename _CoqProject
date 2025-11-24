@@ -4,6 +4,7 @@
 
 theories/zify_ssreflect.v
 
+theories/ctx.v
 theories/lang.v
 
 theories/tree.v

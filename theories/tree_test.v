@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang tree tree_prop.
+From det Require Import ctx lang tree tree_prop.
 
 (* Notation "X &&& Y" := (And X _ Y) (at level 3).
 Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).

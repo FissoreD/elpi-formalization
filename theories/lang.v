@@ -1,6 +1,7 @@
 From mathcomp Require Import all_ssreflect.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
+From det Require Import ctx.
 
 Declare Scope type2_scope.
 Delimit Scope type2_scope with type2.
@@ -85,74 +86,6 @@ HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK _ _ A_eqb_OK).
 Notation Sigma := (list (V * Tm)).
 Definition empty : Sigma := [::].
 
-Section Lookup.
-  Set Implicit Arguments.
-  Variables (K : eqType) (V : Type).
-
-  Definition remove k (L : seq (K*V)) := filter (fun y => k != y.1) L.
-  
-  (* get the first value (option) for key k *)
-  Fixpoint lookup (k : K) (l : seq (K * V)) : option V :=
-    match l with
-    | [::] => None
-    | (k',v)::xs => if k' == k then Some v else lookup k xs
-    end.
-
-  Definition key_absent k (l: seq (K * V)) := 
-    match lookup k l with None => true | _ => false end.
-
-  Fixpoint valid_sig (L : seq (K*V)) :=
-    match L with
-    | [::] => true
-    | x::xs => key_absent x.1 xs && valid_sig xs
-    end.
-
-  Fixpoint add k v l : (seq (K*V)) :=
-    match l with
-    | [::] => [::(k, v)]
-    | x :: xs => if x.1 == k then (k, v) :: xs else x :: add k v xs
-    end.
-
-  Lemma valid_sig_add_diff {k k' v' l}:
-    size [seq y <- l | k == y.1] = 0 ->
-      k <> k' ->
-        size [seq y <- add k' v' l | k == y.1] = 0.
-  Proof.
-    elim: l k k' v' => //=.
-      move=> k k' v' _; case: eqP => //.
-    move=> [k v] l IH k1 k2 v'.
-    case:eqP => //= H1 H2 H3.
-    have IH' := IH _ _ _ H2 H3.
-    case:eqP => //= H4; subst; case: eqP => //=.
-  Qed.
-
-  Lemma key_absent_add_diff {k k' v} l:
-    k <> k' -> key_absent k' (add k v l) = key_absent k' l.
-  Proof.
-    rewrite/key_absent.
-    elim: l k k' v => //=[|[k v]xs IH] k1 k2 v1//=; repeat case: eqP => //=; try congruence.
-    move=> H1 H2 H3.
-    by apply: IH.
-  Qed.
-
-  Lemma valid_sig_add {l k v}:
-    valid_sig l -> valid_sig (add k v l).
-  Proof.
-    elim: l k v => //= [[k v]] l IH k' v'/= /andP[H1 H2].
-    case:eqP => H3; subst => /=.
-      rewrite H1//.
-    rewrite IH//andbT key_absent_add_diff//; congruence.
-  Qed.
-
-  Goal forall k v l, size (add k v l) <> 0.
-  Proof. move=> ??[]//=*; case: ifP => //. Qed.
-
-End Lookup.
-Arguments lookup {_ _}.
-Arguments remove {_ _}.
-Arguments add {_ _}.
-Arguments valid_sig {_ _}.
-Arguments key_absent {_ _}.
 
 Notation index := (list R).
 Notation mode_ctx := (list (Kp * list mode)).
