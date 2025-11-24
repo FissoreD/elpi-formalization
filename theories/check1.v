@@ -920,24 +920,64 @@ Proof. move=> H; rewrite/full_ko //is_ko_next_alt//. Qed.
 Lemma is_dead_full_ko_state {A}: is_dead A -> full_ko A.
 Proof. move=> /is_dead_is_ko; exact: is_ko_full_ko_state. Qed.
 
-  Section merge.
+Section merge.
   Definition update (s:sigV) '((k, v): (V * _)) : typecheck (sigV) :=
     match lookup k s with
-    | None => ty_ok (add k v s)
+    | None => ty_ok (add k (weak v) s)
     | Some e => 
         map_ty' (fun m => add k m s) (max v e)
     end.
 
-  Fixpoint merge_sig (s1 s2: sigV) :=
+  Fixpoint merge_sig1 (s1 s2: sigV) : typecheck (sigV) :=
     match s2 with
     | [::] => ty_ok s1
-    | x::xs => map_ty (fun (s1':sigV) => merge_sig s1' xs) (update s1 x)
+    | x::xs => map_ty (fun (s1':sigV) => merge_sig1 s1' xs) (update s1 x)
     end.
 
-  Lemma merge_pref {L A}: 
-    valid_sig (L ++ A) -> merge_sig (L ++ A) A = ty_ok (L ++ A).
+  Definition weak_bf_merge (s1 s2: sigV) : sigV :=  
+      map (fun '(k,v) => if lookup k s2 == None then (k, weak v) else (k, v)) s1.
+  
+  Definition weak_all (s:sigV) := map (fun '(k,v) => (k, weak v)) s.
+
+  Definition merge_sig s1 s2 :=
+    let s1' := weak_bf_merge s1 s2 in
+    merge_sig1 s1' s2.
+
+  Lemma weak_bf_merge_cons_key_absent {k v xs ys}:
+    lookup k xs = None ->
+      weak_bf_merge xs ((k, v) :: ys) = weak_bf_merge xs ys.
   Proof.
-    elim: A L => //=[[k v] xs] IH/= L H.
+    elim: xs k v ys => //=[[k v] A IH] k1 v2 B.
+    case: eqP => H//; subst.
+    case H1: (eq_op k1); move: H1 => /eqP; [congruence|] => _ H2.
+    rewrite IH//=.
+  Qed.
+
+  Lemma weak_bf_merge_refl {L1}: valid_sig L1 -> weak_bf_merge L1 L1 = L1.
+  Proof.
+    elim: L1 => //=-[k v] xs IH; rewrite eqxx/= /key_absent.
+    case L: lookup => //= Vxs.
+    rewrite weak_bf_merge_cons_key_absent// IH//.
+  Qed.
+
+  Lemma weak_bf_merge_pref {L1 L2}: valid_sig L1 -> valid_sig L2 -> weak_bf_merge (L1 ++ L2) L2 = weak_all L1 ++ L2.
+  Proof.
+    elim: L1 L2 => //=[|[k v] A IH] B + VB.
+    - rewrite weak_bf_merge_refl//.
+    - rewrite/key_absent/=.
+      case LA: lookup => //= vA.
+      rewrite IH//=; f_equal.
+      case L: lookup => //=.  
+
+  Admitted.
+
+  Lemma merge_pref {L A}: 
+    valid_sig (L ++ A) -> merge_sig (L ++ A) A = ty_ok ((weak_all L) ++ A).
+  Proof.
+    rewrite/merge_sig.
+    elim: A L => //=[|[k v] xs IH] /= L H.
+      rewrite !cats0//.
+    
     rewrite lookup_cat/= eqxx.
     have H1 := valid_sig_cat H.
     rewrite (valid_sig_cat H) ?max_refl?min_refl//= add_cat//=.
@@ -1071,7 +1111,9 @@ Proof. move=> /is_dead_is_ko; exact: is_ko_full_ko_state. Qed.
       move=> H2.
       have:= lookup_add_diff H => /(_ _ v B).
       rewrite H1 => H3.
-      by have:= IH _ _ _ _ H3 H2.
+      have:= IH _ _ k' _ _ H2.
+      rewrite lookup_add_diff//.
+      by move=> /(_ _ H1).
     case M: max => //=[m] H6.
     have:= lookup_add_diff H => /(_ _ m B).
     rewrite H1 => H3.
@@ -1117,10 +1159,10 @@ Proof. move=> /is_dead_is_ko; exact: is_ko_full_ko_state. Qed.
       | None => lookup k A = None /\ lookup k B = None
       | Some vC => 
         match lookup k A with
-        | None => lookup k B = Some vC
+        | None => omap weak (lookup k B) = Some vC
         | Some vA => 
           match lookup k B with
-          | None => vA = vC
+          | None => weak vA = vC
           | Some vB => max vA vB = ty_ok vC
           end
         end
@@ -1128,7 +1170,7 @@ Proof. move=> /is_dead_is_ko; exact: is_ko_full_ko_state. Qed.
   Proof.
     rewrite merge_comm/=.
     elim: A B C k => //=[|[k v] A IH] B C k1/=.
-      by move=> _ [->]; case: lookup => //.
+      move=> _ [->]; case L: lookup => //=.
     move=> /andP[+ VA].
     rewrite/key_absent; case LA: lookup => //= _.
     case: eqP => H; subst.
