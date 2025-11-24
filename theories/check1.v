@@ -2313,6 +2313,68 @@ Section more_precise.
     admit.
   Admitted.
 
+  Lemma more_precise_merge2 {A1 B1 A2 B2 C2}:
+    valid_sig A2 -> valid_sig B2 ->
+    more_precise A1 A2 -> more_precise B1 B2 -> merge_sig A2 B2 = ty_ok C2 -> 
+    exists C1, merge_sig A1 B1 = ty_ok C1 /\ more_precise C1 C2.
+  Proof.
+  Admitted.
+
+
+
+  Lemma more_precise_tc_tree_aux {sP A s1 s2 d0 dA sA d'}:
+    valid_sig s2 ->
+      tc_tree_aux sP s2 A d0 = ty_ok (dA, sA) ->
+        minD d' d0 = d' ->
+        more_precise s1 s2 ->
+          exists dA' sA', minD dA' dA = dA' /\ tc_tree_aux sP s1 A d' = ty_ok (dA', sA')
+            /\ more_precise sA' sA.
+  Proof.
+    elim: A s1 s2 d0 dA sA d' => //=.
+    - move=> s1 s2 d0 dA sA d' _ [??]; subst; repeat eexists; auto.
+    - move=> s1 s2 d0 dA sA d' _ [??]; subst; repeat eexists; auto.
+    - move=> s1 s2 d0 dA sA d' _ [??]; subst; repeat eexists; auto.
+    - move=> _ c s1 s2 d0 dA sA d' V + H1 H2.
+      case X: check_callable => //= [[dc sc]][??]; subst.
+      admit.
+    - move=> s1 s2 d0 dA sA d' _ [??]; subst; repeat eexists; auto.
+    - move=> A HA s B HB s1 s2 d0 dA sA d' V + H1 H2.
+      case: ifP => DA.
+        move=> H.
+        by apply: HB; eauto.
+      case dtA: (tc_tree_aux _ _ A) => //=[[dA' svA]].
+      case dtB: (tc_tree_aux _ _ B) => //=[[dB sVB]].
+      case M: merge_sig => //= [m] [??]; subst.
+      have {HA}[dA''[sA'[H3 [H4 H5]]]]:= HA _ _ _ _ _ _ V dtA H1 H2.
+      have {HB}[dB''[sB'[H6 [H7 H8]]]]:= HB _ _ _ _ _ _ V dtB H1 H2.
+      rewrite H4 H7/=.
+      have VA := tc_tree_aux_valid_sig V dtA.
+      have VB := tc_tree_aux_valid_sig V dtB.
+      have [E[M1 H9]] := more_precise_merge2 VA VB H5 H8 M.
+      rewrite M1/=; repeat eexists; auto.
+      case: ifP => //=.
+      rewrite minD_comm; destruct dA', dB => //=.
+      destruct dA'', dB'' => //.
+    - move=> A HA B0 HB0 B HB s1 s2 d0 dA sA d' V.
+      case dtA: (tc_tree_aux _ _ A) => //=[[dA' svA]].
+      case dtB0: (tc_tree_aux _ _ B0) => //=[[dB0 sVB0]].
+      case dtB: (tc_tree_aux _ _ B) => //=[[dB sVB]].
+      case M: merge_sig => //=[m][??]; subst => H1 H2.
+      have {HA}[dA''[sA'[H3 [H4 H5]]]] := HA _ _ _ _ _ _ V dtA H1 H2.
+      have VA := tc_tree_aux_valid_sig V dtA.
+      have {HB0}[dB0'[sB0'[H6 [H7 H8]]]] := HB0 _ _ _ _ _ _ VA dtB0 H3 H5.
+      have {HB}[dB'[sB'[H9 [H10 H11]]]] := HB _ _ _ _ _ _ VA dtB H3 H5.
+      rewrite H4 H7 H10/=.
+      have VB := tc_tree_aux_valid_sig VA dtB.
+      have VB0 := tc_tree_aux_valid_sig VA dtB0.
+      have [E[M1 H12]] := more_precise_merge2 VB VB0 H11 H8 M.
+      rewrite M1/=; repeat eexists; eauto.
+      rewrite minD_comm; destruct dB0, dB, dB0', dB' => //.
+  Admitted.
+
+
+
+
 End more_precise.
 
 
@@ -2907,6 +2969,9 @@ Section next_alt.
       rewrite is_dead_failed//= is_dead_next_alt//.
   Qed.
 
+  Lemma TO_FIX: False. Admitted.
+  Ltac to_fix := by exfalso; apply: TO_FIX.
+
   Lemma failed_det_tree_next_alt {sP A sV1 sV2 d ign B} b:
     valid_sig sV1 ->
     tc_tree_aux sP sV1 A ign = ty_ok (d, sV2) ->
@@ -2955,7 +3020,6 @@ Section next_alt.
       have /=[d3 H] := @is_dead_tc_tree_aux sP s2 A d2 V.
       have VS := tc_tree_aux_valid_sig V dtB'.
       have L1 := tc_tree_aux_less_precise V dtB'.
-      have /=[D H1]:= less_precise_merge VS L1.
       rewrite merge_comm in M.
       have:= merge_more_precise0 M.
       apply: more_precise_trans; auto.
@@ -2974,29 +3038,25 @@ Section next_alt.
       have {HA} := HA _ _ _ _ _ _ V dtA nA.
       move=>[d'[S [m [tcA' K]]]]/=.
       rewrite tcA'/=.
-      (* have /=[da'[sa' [H Hw]]] := less_precise1_tc_tree_aux dtB0 m K.
-      rewrite H/=.
-      have V' := tc_tree_aux_valid_sig V tcA'.
-      have {HB0}[dx[sx[n[H1 H2]]]] := HB0 _ _ _ _ _ _ V' H nB0.
-      have V2 := tc_tree_aux_valid_sig V' H1.
-      have V3 := tc_tree_aux_valid_sig V' H.
-      rewrite H1/= .
-      have /=[C Hc] := less_precise1_merge1 H2; rewrite Hc/=.
-      repeat eexists.
-        rewrite minD_comm; destruct DB0, DB => //=.
-        destruct da' => //=.
-          destruct dx => //=.
-        admit.
-      have H4 := less_precise1_merge2 V2 V3 H2 Hc.
-      apply: less_precise1_trans (H4) _.
-      apply: less_precise1_trans Hw _.
+      have /=[dA'[sA'[H1 [H2 H3]]]] := more_precise_tc_tree_aux VA dtB0 m K.
+      have {HB0}[dx[sx[n[Hx Hy]]]] := HB0 _ _ _ _ _ _ VA dtB0 nB0.
+      have /=[dA''[sA''[H1' [H2' H3']]]] := more_precise_tc_tree_aux VA Hx m K.
+      rewrite H2 H2'/=.
+      have Z := more_precise_trans VB0 H3' Hy.
+      have [E[Hr Hs]]:= more_precise_merge2 VB0 VB0 Z H3 (merge_refl VB0).
+      rewrite Hr/=.
+      repeat eexists; eauto.
+        rewrite minD_comm; destruct DB0, DB, dA', dA'' => //=.
+        by destruct dx; simpl in *.
+
       rewrite merge_comm in M.
-      by have HY:= merge_less_precise0 M. *)
-      admit.
+      have:= merge_more_precise0 M.
+      apply: more_precise_trans => //.
+      apply: merge_sig_valid_sig M; auto.
     case: ifP => sA; last first.
       move=> [<-]{C}/=; rewrite dtA/= dtB0 dtB/= M/=.
       have ? := merge_sig_valid_sig VB VB0 M.
-      repeat eexists; rewrite ?minD_refl//?more_precise_refl//=.
+      by repeat eexists; rewrite ?minD_refl//?more_precise_refl//=.
     case nB: next_alt => //=[B'|].
       move=> [<-]{C}/=.
       rewrite dtA/=.
@@ -3009,10 +3069,26 @@ Section next_alt.
     case nA: next_alt => //=[A'].
     case nB0: next_alt => //=[B0'][<-]{C}/=.
     have:= HA _ _ _ _ _ _ V dtA nA.
-    move=>[d'[S [m [tcA' L]]]]/=.
+    move=>[d'[S [m [tcA' K]]]]/=.
     rewrite tcA'/=.
-    admit.
-  Admitted.
+
+    have /=[dA'[sA'[H1 [H2 H3]]]] := more_precise_tc_tree_aux VA dtB0 m K.
+    have {HB0}[dx[sx[n[Hx Hy]]]] := HB0 _ _ _ _ _ _ VA dtB0 nB0.
+    have /=[dA''[sA''[H1' [H2' H3']]]] := more_precise_tc_tree_aux VA Hx m K.
+    rewrite H2 H2'/=.
+    have Z := more_precise_trans VB0 H3' Hy.
+    have [E[Hr Hs]]:= more_precise_merge2 VB0 VB0 Z H3 (merge_refl VB0).
+    rewrite Hr/=.
+    repeat eexists; eauto.
+      rewrite minD_comm; destruct DB0, DB, dA', dA'' => //=.
+      by destruct dx; simpl in *.
+
+    rewrite merge_comm in M.
+    have:= merge_more_precise0 M.
+    apply: more_precise_trans => //.
+    apply: merge_sig_valid_sig M; auto.
+  Qed.
+  Print Assumptions failed_det_tree_next_alt.
 
 End next_alt.
 
