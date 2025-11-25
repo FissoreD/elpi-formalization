@@ -75,7 +75,7 @@ Section RunP.
       rewrite /= !HA !HB//.
   Qed.
 
-  Lemma expand_not_dead {s A r}: 
+  Lemma step_not_dead {s A r}: 
     is_dead A = false -> step u s A = r -> is_dead (get_tree r) = false.
   Proof.
     move=> + <-.
@@ -108,7 +108,7 @@ Section RunP.
         case X: step =>//-[?];subst => /=.
         rewrite !(HB _ _ X)//dA//.
       case X: step => //=-[?]; subst => /=.
-      rewrite !(HA _ _ X)// (expand_not_dead dA X)//.
+      rewrite !(HA _ _ X)// (step_not_dead dA X)//.
     + move=> A HA B0 _ B HB s1 C /=.
       case X: step => // [A'|A'].
         move=> [<-]; rewrite /= !(HA _ _ X)//.

@@ -74,7 +74,8 @@ Proof.
     case M: merge_sig => //=[S']; subst.
     have {IH}/=[S[d'[H1 H2]]]:= IH _ _ _ _ _ H dtA eA.
     move=> [??]; subst.
-    rewrite (expand_Exp_has_cut eA).
+    rewrite (expand_Exp_has_cut eA) (step_not_dead _ dA eA).
+    Search step is_dead.
     admit.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
     rewrite dA.

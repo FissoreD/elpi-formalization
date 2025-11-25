@@ -258,7 +258,7 @@ Section valid_tree.
       case:ifP => //[dA vB|dA/andP[vA bB]].
         rewrite get_tree_Or/=dA IHB//.
       have /= := IHA s1 vA.
-      case X: step => //= H; rewrite (expand_not_dead _ dA X) H//bbOr_cutr//.
+      case X: step => //= H; rewrite (step_not_dead _ dA X) H//bbOr_cutr//.
     + move=> A HA B0 _ B HB s1 /=/and3P[vA].
       case: ifP => [sA vB /= bB0 | sA /eqP->]/=.
         rewrite succes_is_solved//=.

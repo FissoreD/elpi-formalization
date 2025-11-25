@@ -371,7 +371,7 @@ Section NurProp.
         case nB': next_alt => [[]|]// _.
         by rewrite (HB _ _ _ _ _ vB eB nB')/=t2l_dead//.
       case eA: step => //[A'][<-]/=.
-      rewrite (expand_not_dead _ dA eA).
+      rewrite (step_not_dead _ dA eA).
       case nA': next_alt => [[]|]//.
       have vB := bbOr_valid bB.
       case nB': next_alt => [[]|]// _.
@@ -939,7 +939,7 @@ Section NurProp.
         by rewrite !H2/= cat_cons //.
       case eA: step => //[A'|A']/=[?]; subst;
       rewrite add_ca_deep_cat?size_cat//=; set SB:= t2l _ _ nilC;
-      rewrite (expand_not_dead _ dA eA).
+      rewrite (step_not_dead _ dA eA).
         have FA := expand_not_failed _ eA notF.
         have [s4 [y[ys YY]]]:= failed_t2l vA FA s0 SB.
         rewrite YY/=; case: y YY => //-[]//ca tl1 YY [????]; subst.

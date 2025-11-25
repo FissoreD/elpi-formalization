@@ -391,7 +391,7 @@ Section s.
           by rewrite is_dead_step in HA.
         apply: run_step.
           rewrite/= HA dA//.
-        by have:= IH _ _ _ _ _ H; rewrite (expand_not_dead _ dA HA).
+        by have:= IH _ _ _ _ _ H; rewrite (step_not_dead _ dA HA).
       move=> IH sX X.
       apply: run_step.
         rewrite/= HA; case: ifP => // dA.
@@ -551,7 +551,7 @@ Section s.
             eexists; left; split.
               apply: run_step X H1.
             by move=> //.
-          rewrite (expand_not_dead _ dA1 X) => -[Hz [H1 H2]].
+          rewrite (step_not_dead _ dA1 X) => -[Hz [H1 H2]].
           eexists; right; repeat split; eauto.
           apply: run_step X H1.
         move=> [H1[H2[H3 H4]]]; subst.
@@ -563,7 +563,7 @@ Section s.
           eexists; left; split.
             apply: run_cut X H1.
           by rewrite next_alt_cutr/= cutr2 if_same dead_cutr.
-        rewrite (expand_not_dead _ dA1 X) => -[Hz [H1 H2]].
+        rewrite (step_not_dead _ dA1 X) => -[Hz [H1 H2]].
         by have [] := run_consistent H2 (is_ko_runb is_ko_cutr).
       move=> [H1[H2[H3 H4]]]; subst.
       move: H2; case:eqP => H; subst.
