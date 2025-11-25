@@ -5,15 +5,6 @@ From det Require Import check1.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
-(* TODO:
-A valid state for substitutions is mandatory?
-Given the following program execution
-(main X) => (p X, q X) => p X succeeds setting X to func, then
-OK, (r X \/ s X) => backchain for q X gives two solutions
-Is it important that the substitution in the Or note, X is a function?
-*)
-
-
 Require Import FunInd.
 Functional Scheme expand_ind := Induction for step Sort Prop.
 
@@ -75,8 +66,21 @@ Proof.
     have {IH}/=[S[d'[H1 H2]]]:= IH _ _ _ _ _ H dtA eA.
     move=> [??]; subst.
     rewrite (expand_Exp_has_cut eA) (step_not_dead _ dA eA).
-    Search step is_dead.
-    admit.
+    have:= same_ty_tc_tree_aux sP sV A' DA' (if has_cut A' then maxD DA' DB else Pred).
+    rewrite H2/=.
+    case dtA2: (tc_tree_aux _ _ A') => /=[[DA2 sVA2]|]//=/eqP[?]; subst sVA2.
+    have:= same_ty_tc_tree_aux sP sV B ign (if has_cut A' then maxD DA' DB else Pred).
+    rewrite dtB.
+    case dtB1: (tc_tree_aux _ _ B) => /=[[DB2 sVB2]|]//=/eqP[?]; subst sVB2.
+    have: exists T, merge_sig S sVB = ty_ok T by admit.
+    move=> [SS HH]; rewrite HH/=.
+    move: dtA2 dtB1.
+    case: ifP; repeat eexists => //=.
+    destruct DA', DB => //=; simpl in *; subst.
+    destruct DA2; [|congruence].
+    have [d2[Hx]] := tc_tree_aux_func2 dtB.
+    rewrite dtB1 => -[?]; subst.
+    by destruct d2.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
     rewrite dA.
     have fA:= expand_not_failed _ eA notF.
@@ -90,6 +94,21 @@ Proof.
     case Hz : tc_tree_aux => //=[[Dx sX]][?]; subst sX.
     move=> <-{r}/=.
     rewrite Hz/=.
+    rewrite (step_not_dead _ dA eA).
+    have V := sigma2ctx_valid H.
+    have:= @cutr_tc_tree_aux sP sV B (if has_cut A then maxD DA' DB else Pred) V.
+    move=> [SB dtB']; rewrite dtB'/=.
+    have: exists T, merge_sig S sV = ty_ok T by admit.
+    move=> [SS HH]; rewrite HH/=.
+    move: Hz dtB'.
+    case: ifP => cA Hz dtB'; repeat eexists.
+    case cA': (has_cut A').
+      destruct DA', DB => //=; simpl in *; subst.
+      destruct Dx; [|congruence] => /=.
+      (* TODO: this is not provable in the current setting, should change the definition of tc_tree_aux if cutr is rhs of OR? *)
+      admit.
+    destruct DA'; simpl in *; subst => //.
+    destruct DB => //=.
     admit.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
     have [? fA] := expand_failed_same _ eA; subst A'.
@@ -126,14 +145,17 @@ Proof.
     case dtB1: (tc_tree_aux _ _ B) => /=[[DB1 sVB1]|]//=.
     case M: merge_sig => //=[S'][??]; subst.
     have {IH}/=[S[d'[H1 H2]]] := IH _ _ _ _ _ H dtA1 eA.
-    admit.
+    have:= same_ty_tc_tree_aux sP sV A' DA1 (maxD DB01 DB1).
+    rewrite H2.
+    case dtA1': (tc_tree_aux _ _ A') => /=[[DA1' sVA1']|]//=/eqP[?]; subst sVA1'.
+    admit. (*TODO: pb with tc_tree_aux ran with a more precise subst then the hyp, should be solved using more_precise_tc_tree_aux *)
   - move=> s INIT A B0 B HINIT IH A' eA sV sV' r d ign H/=.
     case dtA: (tc_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
     case dtB0: (tc_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
     case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=.
     case M: merge_sig => //=[S'][??]; subst.
     move=> <-{r}/=.
-    admit.
+    admit. (*same as above...*)
   - move=> s INIT A B0 B HINIT IH A' eA sV sV' r d ign H/=.
     have [? fA]:= expand_failed_same _ eA; subst A' => +<-{r}/=.
     case dtA: (tc_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
@@ -175,8 +197,8 @@ Proof.
       rewrite dtB0/=.
       case dtB01: (tc_tree_aux _ _ B0) => /=[[DB01 sVB01]|]//=/eqP[?]; subst sVB01.
       have:= HR _ _ _ _ _ _ dtB eB.
-      admit.
-    - have:= @cutr_tc_tree_aux sP .
+      admit. (*PB with ctx*)
+    - (*TODO: pb with cutl: no lemma for it...*)
        admit.
     - have [? fB] := expand_failed_same _ eB; subst B'.
       have:= same_ty_tc_tree_aux sP sV A ign (maxD DB0 DB).
