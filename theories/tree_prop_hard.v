@@ -126,7 +126,7 @@ Section s.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
       case: ifP => dC; case X: step => //.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
-      rewrite (is_ko_expand _ kA1)//.
+      rewrite (is_ko_step _ kA1)//.
       case: ifP => dC//.
       case X: step => //[D'|D'][?]; subst;
       have {IH} [b[H1 ?]] := IH _ _ _ _ _ erefl erefl kA1; subst; rewrite dC/=;
@@ -282,7 +282,7 @@ Section s.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
       case: ifP => dC; case X: step => //.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
-      rewrite (is_ko_expand _ kA1)//=.
+      rewrite (is_ko_step _ kA1)//=.
       case: ifP => dC//.
       case X: step => //[D'|D'][?]; subst;
       have := IH _ _ _ _ erefl erefl.

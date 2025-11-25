@@ -10,7 +10,7 @@ Section RunP.
   (* EXPAND PROPERTIES                                                *)
   (********************************************************************)
 
-  Lemma is_ko_expand {A s1}: is_ko A -> step u s1 A = Failure A.
+  Lemma is_ko_step {A s1}: is_ko A -> step u s1 A = Failure A.
   Proof.
     elim: A s1 => //.
     - move=> A HA s B HB s1 /=.
@@ -33,15 +33,15 @@ Section RunP.
 
   Lemma is_dead_step {s A}: 
     is_dead A -> step u s A = Failure A.
-  Proof. move=>/is_dead_is_ko/is_ko_expand//. Qed.
+  Proof. move=>/is_dead_is_ko/is_ko_step//. Qed.
 
-  (* Lemma is_ko_expanded s {A}: 
+  (* Lemma is_ko_steped s {A}: 
     is_ko A -> dead_run s A (Failed A) 0.
-  Proof. move=> dA; apply: expanded_fail (is_ko_expand _) => //. Qed.
+  Proof. move=> dA; apply: expanded_fail (is_ko_step _) => //. Qed.
 
   Lemma is_dead_steped s {A}: 
     is_dead A -> expandedb s A (Failed A) 0.
-  Proof. move=>/is_dead_is_ko/is_ko_expanded//. Qed. *)
+  Proof. move=>/is_dead_is_ko/is_ko_steped//. Qed. *)
 
   Lemma succes_is_solved s {A}: success A -> step u s A = Success A.
   Proof.
