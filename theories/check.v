@@ -39,12 +39,16 @@ Proof.
   pattern u, s, A, (step u s A).
   apply: expand_ind; clear.
   - move=> s []//= _ ???? _ _ [_ ->] <-/=; repeat eexists; rewrite ?minD_refl//.
-    (* apply: sV_expand_refl. *)
   - move=> s []//= _ ???? _ _ [_ ->] <-/=; repeat eexists; rewrite ?minD_refl//.
-    (* apply: sV_expand_refl. *)
   - move=> s []//= _ ???? _ _ [_ ->] <-/=; repeat eexists; rewrite ?minD_refl//.
-    (* apply: sV_expand_refl. *)
-  - admit.
+  - (*here the checker comes into the game*)
+    move=> /=s A pr t HA sV1 sV2 r d ign + + <-/=; clear.
+    {
+      rewrite/big_or.
+      case X: F => /=[|[sr1 r1] rs]/=.
+      - repeat eexists; rewrite minD_refl//.
+      -  
+    }
   - move=> s []//= _ ???? _ _ [_ ->] <-/=; repeat eexists; rewrite ?minD_refl//.
     (* apply: sV_expand_refl. *)
   - move=> s INIT A sB B HINIT dA IH sV sV' r d ign H/=.
