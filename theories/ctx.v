@@ -1,149 +1,244 @@
-From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
-From det Require Import finmap.
 
-Set Implicit Arguments.
+Section Lookup.
+  Set Implicit Arguments.
+  Variables (K : eqType) (V : Type).
 
-(******* finite maps *********************************************************)
-(*                                                                           *)
-(* Finite maps are finite functions (from finfun) where the domain is        *)
-(* obtained by the coercion of a {fset A} to the finType of its elements     *)
-(* Operations on finmap:                                                     *)
-(* The following notations are in the %fmap scope                            *)
-(*                                                                           *)
-(*           f.[? k] == returns Some v if k maps to v, otherwise None        *)
-(*             f.[p] == returns v if p has type k \in f, and k maps to v     *)
-(*        f.[k <- v] == f extended with the mapping k -> v                   *)
-(*            domf f == finite set (of type {fset K}) of keys of f           *)
-(*          codomf f == finite set (of type {fset V}) of values of f         *)
-(*           k \in f == k is a key of f                                      *)
-(*                   := k \in domf f                                         *)
-(*            [fmap] == the empty finite map                                 *)
-(* [fmap x : S => E] == the finmap defined by E on the support S             *)
-(*           f.[& A] == f restricted to A (intersected with domf f)          *)
-(*           f.[\ A] := f.[& domf `\` A]                                     *)
-(*                   == f where all the keys in A have been removed          *)
-(*           f.[~ k] := f.[\ [fset k]]                                       *)
-(*             f + g == concatenation of f and g,                            *)
-(*                      the keys of g override the keys of f                 *)
-(*                                                                           *)
+  Definition remove k (L : seq (K*V)) := filter (fun y => k != y.1) L.
+  
+  (* get the first value (option) for key k *)
+  Fixpoint lookup (k : K) (l : seq (K * V)) : option V :=
+    match l with
+    | [::] => None
+    | (k',v)::xs => if k' == k then Some v else lookup k xs
+    end.
 
-Section Theory.
-  Variables (K : countType) (V : eqType).
+  Definition key_absent k (l: seq (K * V)) := 
+    match lookup k l with None => true | _ => false end.
 
-  Open Scope fmap_scope.
+  Fixpoint valid_sig (L : seq (K*V)) :=
+    match L with
+    | [::] => true
+    | x::xs => key_absent x.1 xs && valid_sig xs
+    end.
 
-  Notation ctx A B := {fmap A -> B}.
+  Fixpoint add k v l : (seq (K*V)) :=
+    match l with
+    | [::] => [::(k, v)]
+    | x :: xs => if x.1 == k then (k, v) :: xs else x :: add k v xs
+    end.
 
-  Implicit Types c d  : ctx K V.
-
-  Notation key_absent k c := (k \notin c) (only parsing).
-  Notation remove k c := c.[~ k] (only parsing).
-  Notation lookup k c := c.[? k] (only parsing).
-  Notation add k v c := c.[k <- v] (only parsing).
-
-  Lemma valid_sig_add_diff {k k' v' c}: 
-    k \notin c ->
+  Lemma valid_sig_add_diff {k k' v' l}:
+    size [seq y <- l | k == y.1] = 0 ->
       k <> k' ->
-        k \notin (add k' v' c).
+        size [seq y <- add k' v' l | k == y.1] = 0.
   Proof.
-    by move=> + Neq; apply: contra; rewrite !inE /=; case: eqP Neq => [->|].
+    elim: l k k' v' => //=.
+      move=> k k' v' _; case: eqP => //.
+    move=> [k v] l IH k1 k2 v'.
+    case:eqP => //= H1 H2 H3.
+    have IH' := IH _ _ _ H2 H3.
+    case:eqP => //= H4; subst; case: eqP => //=.
   Qed.
 
-
-  Lemma key_absent_add_diff {k k' v c}:
-    k <> k' -> key_absent k' (add k v c) = key_absent k' c.
+  Lemma key_absent_add_diff {k k' v} l:
+    k <> k' -> key_absent k' (add k v l) = key_absent k' l.
   Proof.
-    by rewrite !inE negb_or eq_sym => /eqP ->.
+    rewrite/key_absent.
+    elim: l k k' v => //=[|[k v]xs IH] k1 k2 v1//=; repeat case: eqP => //=; try congruence.
+    move=> H1 H2 H3.
+    by apply: IH.
   Qed.
 
-  Lemma key_absent_remove {k c} : (key_absent k c) -> remove k c = c.
+  Lemma valid_sig_add {l k v}:
+    valid_sig l -> valid_sig (add k v l).
   Proof.
-    by exact: remf1_id.
+    elim: l k v => //= [[k v]] l IH k' v'/= /andP[H1 H2].
+    case:eqP => H3; subst => /=.
+      rewrite H1//.
+    rewrite IH//andbT key_absent_add_diff//; congruence.
   Qed.
 
-  Lemma lookup_remove_None {k c}:
-    (lookup k (remove k c)) = None.
+  Goal forall k v l, size (add k v l) <> 0.
+  Proof. move=> ??[]//=*; case: ifP => //. Qed.
+
+End Lookup.
+Arguments lookup {_ _}.
+Arguments remove {_ _}.
+Arguments add {_ _}.
+Arguments valid_sig {_ _}.
+Arguments key_absent {_ _}.
+
+
+
+Section lookup.
+  Lemma key_absent_remove {T: eqType} {K:Type} {k} {l: seq (T*K)}:
+    (key_absent k l) -> remove k l = l.
   Proof.
-    by rewrite fnd_rem1 eqxx.
+    rewrite/key_absent.
+    elim: l k => //= [[k v]] xs IH k'; case: eqP => //= H1 H2.
+    rewrite IH//.
+    case:eqP => //; congruence.
   Qed.
 
-  Lemma lookup_remove_diff {k k' c}:
+  Lemma lookup_remove_None {T: eqType} {K:Type} {k} {l: seq (T*K)}:
+    (lookup k (remove k l)) = None.
+  Proof.
+    elim: l k => //= -[k v] l IH k'/=.
+    case:eqP => //= H; rewrite IH; case: eqP; congruence.
+  Qed.
+
+  Lemma lookup_remove_diff {T: eqType} {K:Type} {k k'} {l: seq (T*K)}:
      k' <> k ->
-      lookup k (remove k' c) = lookup k c.
+      lookup k (remove k' l) = lookup k l.
   Proof.
-    by rewrite fnd_rem1 eq_sym => /eqP->.
+    elim: l k k' => //= -[k v] l IH k1 k2 H.
+    case:eqP => //= H1; subst.
+      by case:eqP => //= _; apply: IH.
+    case: eqP => //= H2; subst.
+    by apply: IH.
   Qed.
 
-  Lemma remove_comm {x y c}:
-    remove x (remove y c) = remove y (remove x c).
+  Lemma remove_comm {T: eqType} {K:Type} {x y} {l: seq (T*K)}:
+    remove x (remove y l) = remove y (remove x l).
   Proof.
-    by apply/fmapP => k; rewrite !fnd_rem1; case: eqP; case: eqP.
+    elim: l x y => //= -[k v] xs IH/= x y.
+    case: eqP => H/=; subst.
+      case: eqP => H1/=; subst.
+        apply: IH.
+      rewrite eqxx/=; apply: IH.
+    case:eqP => //=H1; subst.
+    case:eqP => //= _; f_equal.
+    apply: IH.
   Qed.
 
-  Open Scope fset_scope.
-
-  Lemma lookup_cat {k} {c d}:
-      lookup k (d + c) = 
-        if key_absent k c then lookup k d
-        else lookup k c.
+  Lemma lookup_cat {T : eqType} {K:Type} {k} {X Y : seq (T * K)}:
+      lookup k (X ++ Y) = 
+        if key_absent k X then lookup k Y
+        else lookup k X.
   Proof.
-    by rewrite fnd_cat; case: ifP.
+    rewrite/key_absent.
+    elim: X k Y => [|[k v] xs IH] k' ys//=.
+    case:eqP => //<-{k'}.
   Qed.
 
-  Lemma add2  {k v v1} {c} : add k v (add k v1 c) = add k v c.
+  Lemma valid_sig_cat {T : eqType} {K:Type} {k} {X Y : seq (T * K)}:
+      valid_sig (X ++ k ::  Y) ->
+        key_absent k.1 X.
   Proof.
-    by apply/fmapP=> k'; rewrite !fnd_set; case: eqP.
+    rewrite/key_absent.
+    elim: X k Y => //= [[k v] xs] IH [k' v'] ys/= /andP[H1 H2].
+    have/= {IH}:= IH _ _ H2.
+    move: H1; rewrite/key_absent.
+    rewrite lookup_cat.
+    rewrite/key_absent.
+    case:eqP => H//; subst.
+    case: lookup => //=.
+    by rewrite eqxx.
   Qed.
 
-  Lemma add_cat c {k v1 v2 d}:
-    key_absent k c ->
-    add k v1 (d.[k <- v2] + c) = (d.[k <- v1] + c).
+  Lemma add2  {T: eqType} {K:Type} {k v v1} {A:seq (T*K)} : add k v (add k v1 A) = add k v A.
   Proof.
-    by move=> /negPf Hin; rewrite setf_catr [RHS]catf_setl Hin catf_setl !inE eqxx /= catf_setr.
+    elim: A k v v1 => //=[|[k v] xs IH] k' v' v2/=.
+      rewrite eqxx => //.
+    case: eqP => //= H; subst.
+      rewrite eqxx//=.
+    case: eqP => //=; rewrite IH//.
   Qed.
 
-  Lemma lookup_add_same {c} {k v}:
-    lookup k (add k v c) = Some v.
+  Lemma add_cat {T: eqType} {K:Type} (L: seq (T*K)) {k v1 v2 xs}:
+    key_absent k L ->
+    add k v1 (L ++ (k, v2) :: xs) = (L ++ (k, v1) :: xs).
   Proof.
-    by rewrite fnd_set eqxx.
+    rewrite/key_absent.
+    elim: L k v1 v2 xs => //= [|[k v]xs IH] k1 v1 v2 ys/=.
+      by rewrite eqxx.
+    case: eqP => H//; subst.
+    move=> /IH->//.
   Qed.
 
-  Lemma lookup_add_Some {c} {k k' v' v}:
-    lookup k (add k' v' c) = Some v ->
+  Lemma lookup_add_same {T: eqType} {K:Type} {S: seq (T*K)} {k v}:
+    lookup k (add k v S) = Some v.
+  Proof.
+    elim: S k v => //= [|[k v] xs IH] k1 k2/=; case: eqP => //= H; subst; case: eqP => //.
+  Qed.
+
+  Lemma lookup_add_Some {T: eqType} {K:Type} {S: seq (T*K)} {k k' v' v}:
+    lookup k (add k' v' S) = Some v ->
       if k' == k then v = v'
-      else lookup k c = Some v.
+      else lookup k S = Some v.
   Proof.
-    by rewrite fnd_set eq_sym; case: eqP => [? [->]|].
+    elim: S k k' v v' => //=[|[k v] xs IH] k1 k2 v1 v2.
+    - case: eqP => //=; congruence.
+    - case: eqP => /= H; subst.
+        case: eqP => //=; congruence.
+      case: eqP => //= H1; subst.
+        case: eqP => //=; congruence.
+      apply: IH.
   Qed.
 
-  Lemma lookup_add_diff {k k' v} {c}:
-      k <> k' -> lookup k' (add k v c) = lookup k' c.
+  Lemma lookup_add_diff {T: eqType} {K:Type} {k k' v} {S: seq (T*K)}:
+      k <> k' -> lookup k' (add k v S) = lookup k' S.
   Proof.
-    by move=>/eqP /negPf H; rewrite fnd_set eq_sym H.
+    elim: S k k' v => //= [|[k v] xs IH] k1 k2 v1/=.
+      case:eqP => //=.
+    case:eqP => H1 => //= H2.
+      repeat case:eqP => //=; congruence.
+    (repeat case: eqP) => // H.
+    by apply: IH.
   Qed.
 
-  Lemma lookup_add_Some2 {kB k'} k v {c}:
-    lookup k' c = Some kB ->
+  Lemma lookup_add_Some2 {T: eqType} {K:Type} {kB k'} k v {S: seq (T*K)}:
+    lookup k' S = Some kB ->
     exists kB',
-      lookup k' (add k v c) = Some kB'.
+      lookup k' (add k v S) = Some kB'.
   Proof.
-    case: (k =P k') => [-> H|/eqP/negPf H].
-      by exists v; rewrite fnd_set eqxx.
-    by exists kB; rewrite fnd_set eq_sym H.
+    elim: S k k' kB v => [|[k v] xs IH]//= k1 k2 v1 v2/=.
+    case: eqP => H1//=; subst.
+      move=> [?]; subst.
+      case: eqP => H; subst => /=; rewrite eqxx; by eexists.
+    case: eqP => H2 H3; subst => /=; case: eqP => H4; subst => //.
+      by rewrite H3; eexists.
+    by apply: IH H3.
   Qed.
 
-  Lemma add_comm {k1 k2 m1 m2}  {c}:
-    k1 <> k2 -> add k1 m1 (add k2 m2 c) = add k2 m2 (add k1 m1 c).
+  Lemma add_comm {T: eqType} {K:Type} {k1 k2 m1 m2}  {S: seq (T*K)}:
+    k1 <> k2 -> add k1 m1 (add k2 m2 S) = add k2 m2 (add k1 m1 S).
   Proof.
-      by move=> /eqP/negPf H; rewrite setfC H.
+    elim: S k1 k2 m1 m2 => //=[|[k v]xs IH] k1 k2 m1 m2 H/=.
+      do 2 case: eqP => //=; try congruence.
+      admit. (*should be ok by ordering element*)
+    case eqP => //=H1; subst.
+      repeat case: eqP; try congruence.
+      move=> /=.
+      rewrite eqxx//.
+    repeat case: eqP => /=; try congruence.
+    move=> H3 H4.
+    by f_equal; apply: IH.
+  Admitted.
+  
+      (* TODO: move in ctx *)
+  Lemma valid_sig_remove {K:eqType} {V:Type} {k} {A: seq (K * V)}:
+    valid_sig A -> valid_sig (remove k A).
+  Proof.
+    elim: A k => //=[[k v] A IH] k1 /andP[H1 H2]/=.
+    case: eqP => H/=; subst.
+      apply: IH => //.
+    move: H1.
+    rewrite /key_absent lookup_remove_diff//=.
+    case LA: lookup => //= _.
+    apply: IH H2.
   Qed.
 
-  Lemma remove2 {k} {c}:
-    remove k (remove k c) = remove k c.
+    (* TODO: move in ctx *)
+  Lemma remove2 {K:eqType} {V:Type} {k} {A: seq (K * V)}:
+    remove k (remove k A) = remove k A.
   Proof.
-    by rewrite restrictf_comp domf_rem fsetDDl fsetUid fsetIid.
+    elim: A k => //=[[k v] A IH] k1/=.
+    case: eqP => //=H.
+    case: eqP => //= _.
+    by rewrite IH.
   Qed.
 
-End Theory.
+End lookup.
 
