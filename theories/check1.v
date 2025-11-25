@@ -2617,6 +2617,20 @@ Section dead_cutr_cutl.
     apply: is_ko_tc_tree_aux => //.
     apply: is_dead_is_ko is_dead_dead.
   Qed.
+
+  Lemma cutl_tc_tree_aux {sP sV A d}:
+    valid_sig sV -> success A ->
+    tc_tree_aux sP sV (cutl A) d = ty_ok(d, sV).
+  Proof.
+    elim: A sV d => //=.
+    - move=> A HA s B HB sV d V; case: ifP => [dA sB|dA sA]/=.
+        by rewrite is_dead_is_ko//=; apply: HB.
+      rewrite success_is_ko?success_cut//is_ko_cutr//=.
+      by apply: HA.
+    - move=>A HA B0 HB0 B HB sV d V /andP[sA sB].
+      rewrite sA/= success_is_ko?success_cut//=HA//=.
+      rewrite HB//=cutr_tc_tree_aux//=merge_refl//=maxD_refl//.
+  Qed.
 End dead_cutr_cutl.
 
 Section next_alt.

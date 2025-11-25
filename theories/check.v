@@ -270,7 +270,10 @@ Proof.
       case dtB01: (tc_tree_aux _ _ B0) => /=[[DB01 sVB01]|]//=/eqP[?]; subst sVB01.
       have:= HR _ _ _ _ _ _ dtB eB.
       admit. (*PB with ctx*)
-    -  admit. (*PB with cutl*)
+    - have V := sigma2ctx_valid H.
+      rewrite cutl_tc_tree_aux// cutr_tc_tree_aux//=.
+      have /= := HR _ _ _ _ _ _ dtB eB.
+      admit. (*PB with ctx*)
     - have [? fB] := expand_failed_same _ eB; subst B'.
       have:= same_ty_tc_tree_aux sP sV A ign (maxD DB0 DB).
       rewrite dtA.
