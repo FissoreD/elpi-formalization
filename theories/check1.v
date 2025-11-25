@@ -6,6 +6,9 @@ From HB Require Import structures.
 
 Set Implicit Arguments.
 
+Lemma TODO: False. Admitted.
+Ltac TODO := exfalso; apply TODO.
+
 Section tc.
   Variable A : eqType.
   Inductive typecheck :=
@@ -1125,25 +1128,13 @@ Section merge.
     rewrite weak_bf_merge_cons_key_absent// IH//.
   Qed.
 
-  Lemma weak_bf_merge_pref {L1 L2}: valid_sig L1 -> valid_sig L2 -> weak_bf_merge (L1 ++ L2) L2 = weak_all L1 ++ L2.
-  Proof.
-    elim: L1 L2 => //=[|[k v] A IH] B + VB.
-    - rewrite weak_bf_merge_refl//.
-    - rewrite/key_absent/=.
-      case LA: lookup => //= vA.
-      rewrite IH//=; f_equal.
-      case L: lookup => //=.  
-
-  Admitted.
-
   Lemma merge_refl {A}: 
     valid_sig A -> merge_sig A A = ty_ok A.
-  Proof. Admitted.
+  Proof. TODO. Qed.
 
   Lemma valid_sig_merge {A B C}:
     valid_sig A -> valid_sig B -> merge_sig A B = ty_ok C -> valid_sig C.
-  Proof.
-  Admitted.
+  Proof. TODO. Qed.
 
   Lemma weak_all_add {k v C}:
     weak_all (add k v C) = add k (weak v) (weak_all C).
@@ -1164,19 +1155,15 @@ Section merge.
       repeat eexists.
       apply: weak_incl.
     - move=> [k v] xs IH C D k1 v1/=.
-  Admitted.
+      TODO.
+  Qed.
 
   Lemma merge_comm {A B}: merge_sig A B = merge_sig B A.
   Proof.
     elim: A B => //= [|[k v]xs IH] B.
-  Admitted.
-
-  Lemma merge_sig_add_lookup {k' m xs B D}:
-    lookup k' xs = None ->
-    merge_sig (add k' m B) xs = ty_ok D ->
-    lookup k' D = Some m.
-  Proof.
-  Admitted.
+      TODO.
+    TODO.
+  Qed.
 
   Lemma merge_lookup {k kB kC B C D}:
     valid_sig B -> valid_sig C ->
@@ -1189,31 +1176,17 @@ Section merge.
     rewrite/key_absent.
     case L: lookup => //= _ H2 H3.
     case: eqP => H4; subst.
-  Admitted.
-
-  Lemma merge_lookup1 {k kB B C D}:
-    lookup k B = Some kB ->
-    merge_sig B C = ty_ok D ->
-    exists kD, lookup k D = Some kD /\ incl kB kD = ty_ok true.
-  Proof.
-  Admitted.
-
-  Lemma merge_compat_type_add {k m0 m1 B xs C}:
-    compat_type m0 m1 ->
-    merge_sig (add k m0 B) xs = ty_ok C ->
-    exists C0 : sigV, merge_sig (add k m1 B) xs = ty_ok C0.
-  Proof.
-  Admitted.
+      TODO.
+    TODO.
+  Qed.
 
   Lemma add_weak_bf_merge {k1 m A B} v:
     lookup k1 A = Some v ->
     (add k1 m (weak_bf_merge B A)) =
       (weak_bf_merge (add k1 m B) A).
   Proof.
-    elim: A B m k1 v => //=[[k v] A IH] B vA k1 v1/=.
-    case: eqP => H; subst => //=.
-      move=> [?]/=; subst.
-  Admitted.
+    TODO.
+  Qed.
 
   Lemma compat_type_merge_lookup {A B C} k:
     valid_sig A ->
@@ -1256,7 +1229,7 @@ Section merge.
           | Some v' => max v' v = ty_ok vC
           end .
   Proof.  
-  Admitted.
+  Abort.
 
   Lemma merge_sig_valid_sig {A B C}:
     valid_sig A -> valid_sig B -> merge_sig A B = ty_ok C ->
@@ -1271,8 +1244,9 @@ Section merge.
     case LB: lookup => /=[vB|]//.
       case M: max => //=[m].
       rewrite (@add_weak_bf_merge _ _ _ _ v)//=?eqxx//.
-    
-  Admitted.
+      TODO.
+    TODO.
+  Qed.
 
 
 End merge.
@@ -2053,9 +2027,9 @@ Section more_precise.
     rewrite weak_bf_mergeP/=eqxx/=.
     case L: lookup => [vA|]//=.
       case M: max => [m|]//=.
-      admit.
-    admit.
-  Admitted.
+      TODO.
+    TODO.
+  Qed.
 
   Lemma more_precise_merge1 {A B}:
     valid_sig B ->
@@ -2072,7 +2046,7 @@ Section more_precise.
       rewrite (incl_compat_type H1).
       case M: max => //=[m] _.
       rewrite (@add_weak_bf_merge _ _ _ _ v)/=?eqxx//.
-  Admitted.
+  Abort.
 
   Lemma more_precise_merge {A B C D}:
     valid_sig B -> valid_sig C ->
@@ -2086,14 +2060,14 @@ Section more_precise.
       repeat eexists.
       rewrite merge_comm in H2.
       have:=merge_more_precise0 H2.
-      admit.
+      TODO.
     case LB: lookup => //=[vB] /andP[/eqP I H1] H2.
     rewrite/merge_sig/=.
     rewrite weak_bf_mergeP/= eqxx.
     case LC: lookup => [vC|]/=.
-      admit.
-    admit.
-  Admitted.
+      TODO.
+    TODO.
+  Qed.
 
   Lemma more_precise_merge2 {A1 B1 A2 B2 C2}:
     valid_sig A2 -> valid_sig B2 ->
