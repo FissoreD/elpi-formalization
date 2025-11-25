@@ -61,6 +61,10 @@ Proof.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
     case: ifP => kA.
       by rewrite is_ko_step in eA.
+    case: ifP => kB.
+      move=> dtA <-/=.
+      rewrite kB.
+      admit.
     have fA:= expand_not_failed _ eA notF.
     move=> + <-{r}/=.
     (* case nB: next_alt => [B'|]//=. *)
@@ -80,6 +84,7 @@ Proof.
       have: exists T, merge_sig S sVB = ty_ok T by admit.
       move=> [SS HH]; rewrite HH/=.
       move: dtA2 dtB1.
+      rewrite kB.
       case: ifP; repeat eexists => //=.
       destruct DA', DB => //=; simpl in *; subst.
       destruct DA2; [|congruence].
@@ -93,6 +98,11 @@ Proof.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
     case: ifP => kA.
       by rewrite is_ko_step in eA.
+    case: ifP => kB.
+      move=> dtA <-/=.
+      rewrite (expand_CB_is_ko eA) is_ko_cutr.
+      have /=[S[d'[H1 H2]]] := IH _ _ _ _ _ H dtA eA.
+      by rewrite H2; repeat eexists.
     have fA:= expand_not_failed _ eA notF.
     case dtA: (tc_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
     case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=.
@@ -111,6 +121,7 @@ Proof.
     have: exists T, merge_sig S sV = ty_ok T by admit.
     move=> [SS HH]; rewrite HH/=.
     move: Hz dtB'.
+    rewrite is_ko_cutr.
     case: ifP => cA Hz dtB'; repeat eexists.
     case cA': (has_cut A').
       destruct DA', DB => //=; simpl in *; subst.
@@ -130,6 +141,14 @@ Proof.
       repeat eexists; destruct d => //=.
       have:= tc_tree_aux_func2 dtB; rewrite dtB'.
       move=> [][]//=[]// _ []//.
+    case: ifP => kB.
+      move=> dtA <-{r}/=; rewrite kB kA.
+      have:= same_ty_tc_tree_aux sP sV A ign d.
+      rewrite dtA.
+      case dtB': tc_tree_aux => //=[[D1 S1]]/=/eqP[?]; subst.
+      repeat eexists; destruct d => //=.
+      have:= tc_tree_aux_func2 dtA; rewrite dtB'.
+      move=> [][]//=[]// _ []//.
     move=> +<-{r}/=.
     have:= same_ty_tc_tree_aux sP sV A ign d.
     case dtA1: (tc_tree_aux _ _ A) => /=[[DA1 sVA1]|]//=.
@@ -138,12 +157,20 @@ Proof.
     case dtB1: (tc_tree_aux _ _ B) => /=[[DB1 sVB1]|]//=.
     case dtB2: (tc_tree_aux _ _ B) => /=[[DB2 sVB2]|]//=/eqP[?]; subst sVB2.
     case M: merge_sig => //=[S'][??]; subst.
-    rewrite kA.
+    rewrite kA kB.
     repeat eexists; case:ifP => //=.
     rewrite failed_has_cut//=.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
     have [? sA]:= expand_solved_same _ eA; subst A'.
     rewrite success_is_ko//=.
+    case: ifP => kB.
+      move=> dtA <-{r}/=; rewrite success_is_ko// kB.
+      have:= same_ty_tc_tree_aux sP sV A ign d.
+      rewrite dtA.
+      case dtB': tc_tree_aux => //=[[D1 S1]]/=/eqP[?]; subst.
+      repeat eexists; destruct d => //=.
+      have:= tc_tree_aux_func2 dtA; rewrite dtB'.
+      by move=> [][]//=[]// _ []//.
     move=> +<-{r}/=.
     rewrite success_has_cut//=.
     have:= same_ty_tc_tree_aux sP sV A ign d.
@@ -153,7 +180,7 @@ Proof.
     case dtB1: (tc_tree_aux _ _ B) => /=[[DB1 sVB1]|]//=.
     case dtB2: (tc_tree_aux _ _ B) => /=[[DB2 sVB2]|]//=/eqP[?]; subst sVB2.
     case M: merge_sig => //=[S'][??]; subst.
-    rewrite success_is_ko//.
+    rewrite success_is_ko// kB.
     repeat eexists.
   - move=> s INIT A B0 B HINIT IH A' eA sV sV' r d ign H/= + <-/=.
     have fA:= expand_not_failed _ eA notF.
