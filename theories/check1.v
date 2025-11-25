@@ -660,6 +660,38 @@ Section min_max.
   with strong2 {A}: strong (strong A) = strong A.
   Proof. all: case: A; [clear|] => /=-[]//= S1 S2; rewrite?weak2?strong2//. Qed.
 
+  Lemma incl_weak {A B C}: incl A B = ty_ok C -> weak A = weak B
+  with not_incl_strong {A B C}: not_incl A B = ty_ok C -> strong A = strong B.
+  Proof.
+    all: rewrite/min/max in incl_weak not_incl_strong *.
+    - case: A => /=.
+      - move=> []//; case: B => //=-[|[]]//=; congruence.
+      - move=> [] s1 s2; case: B => //= -[]//= S1 S2; rewrite /incl/=;
+        case M1: incl_aux => /=[m|]//; case M2: incl_aux => [m2|]//=.
+          rewrite (incl_weak _ _ _ M2) (not_incl_strong _ _ _ M1)//.
+        rewrite (incl_weak _ _ _ M2) (incl_weak _ _ _ M1)//.
+    - case: A => /=.
+      - move=> []//; case: B => //=-[|[]]//=; congruence.
+      - move=> [] s1 s2; case: B => //= -[]//= S1 S2; rewrite /not_incl/=;
+        case M1: incl_aux => /=[m|]//; case M2: incl_aux => [m2|]//=.
+          rewrite (not_incl_strong _ _ _ M2) (incl_weak _ _ _ M1)//.
+        rewrite (not_incl_strong _ _ _ M2) (not_incl_strong _ _ _ M1)//.
+  Qed.
+
+  Lemma weak_strong {A B}: weak A = weak B -> strong A = strong B
+  with strong_weak {A B}: strong A = strong B -> weak A = weak B.
+  Proof.
+    - case: A.
+      - move=> [|d]/=; case: B => [[]|[]]//.
+      - move=> [] S1 S2; case: B => //= [[]|]//= -[]//= S3 S4 []H1 H2.
+          rewrite (weak_strong _ _ H2) (strong_weak _ _ H1)//. 
+        rewrite (weak_strong _ _ H2) (weak_strong _ _ H1)//.
+    - case: A.
+      - move=> [|d]/=; case: B => [[]|[]]//.
+      - move=> [] S1 S2; case: B => //= [[]|]//= -[]//= S3 S4 []H1 H2.
+          rewrite (strong_weak _ _ H2) (weak_strong _ _ H1)//. 
+        rewrite (strong_weak _ _ H2) (strong_weak _ _ H1)//.
+  Qed.
 
 End min_max.
 
@@ -810,24 +842,32 @@ Section checker.
     | Tm_Kp k => ty_ok (omap (fun x => (x, true)) (lookup k sP)) (*TODO: sP should be complete*)
     | Tm_V v => ty_ok (omap (fun x => (x, true)) (lookup v sV))
     | Tm_Comb l r => 
+      let checkl := check_tm sP sV l in
+      let checkr := check_tm sP sV r in
       map_ty_opt (
         fun '(s1, b1) => 
         match s1 with
           | arr i tl tr => 
-            map_ty_opt (fun '(s2, b2) =>
+            match checkr with
+            | ty_err => ty_err
+              (* TODO: should return a sV' where I deduce the types in l to be the weak from sV *)
+            | ty_ok None => 
+                if tl == weak tl then ty_ok (Some (tr, true))
+                else ty_ok (Some (weak tr, false))
+            | ty_ok (Some (s2, b2)) =>
               map_ty (fun bi => 
                 ty_ok (Some (if b1 && b2 && bi then (tr, true) else (weak tr, false)))
-              ) (incl s2 tl))
-            (check_tm sP sV r)
+              ) (incl s2 tl)
+              end
           | arr o tl tr => if b1 then 
-              match check_tm sP sV l with
-              | ((ty_err | ty_ok None) as K) => K
+              match checkl with
+              | (ty_err | ty_ok None) => checkl
               | ty_ok (Some ((arr _ _ r), b1)) => ty_ok (Some (r, b1))
               | ty_ok (Some (_, _)) => ty_err
               end else ty_ok (Some (weak tr, false))
           | _ => ty_err
           end
-      ) (check_tm sP sV l)
+      ) checkl
     end.
 
   (* takes a tm and a signature and updates variable signatures
@@ -2415,19 +2455,46 @@ Section more_precise.
         case X: check_tm => //[s3]/=.
         have {Hl}[r1[H5 H6]] := Hl _ _ _ H H1 H2.
         case: s3 X => //=[s3|] H3; last first.
-          move=> [<-]{sol}/=.
           rewrite H5/=.
-          case: r1 H5 H6 => //=; [|repeat eexists].
+          case: eqP => Hz [<-]{sol}; last first.
+            case: r1 H5 H6 => //=; [|(repeat eexists); rewrite/= weak2//].
+            move=> []//s3 b; rewrite/incl/=.
+            move=> H7 [+ H8].
+            case: s3 H7 H8 => //=.
+              move => []//.
+            have {Hr}[r2[H5 H6]] := Hr _ _ _ H3 H1 H2.
+            move=> []//s3 s4 H4.
+            rewrite -/incl -/not_incl not_incl_incl.
+            rewrite H5/=.
+            case: r2 H5 H6 => /=[[]|]//.
+            move=> H6 H7 H8 H9.
+            move: H8.
+            case I1: incl => /=[[]|]//; case I2: incl => /=[[]|]//= _.
+            case: eqP => Hy; repeat eexists; last first.
+              rewrite (incl_weak I2) incl_refl//.
+            apply: incl_trans I2 _.
+            apply: min_incl.
+            apply: min_weak.
+          case: r1 H5 H6 => //=; last first.
+            repeat eexists; rewrite/=.
+            move: H6 => []//.
           move=> []//s3 b; rewrite/incl/=.
           move=> H7 [+ H8].
           case: s3 H7 H8 => //=.
             move => []//.
-          have [r2[H5 H6]] := Hr _ _ _ H3 H1 H2.
+          have {Hr}[r2[H5 H6]] := Hr _ _ _ H3 H1 H2.
           move=> []//s3 s4 H4.
           rewrite -/incl -/not_incl not_incl_incl.
           rewrite H5/=.
-          case: r2 H5 H6 => /=; [|repeat eexists].
-          move=> [s5 b1]//.
+          case: r2 H5 H6 => /=[[]|]//.
+          move=> H6 H7 H8 H9.
+          move: H8.
+          case I1: incl => /=[[]|]//; case I2: incl => /=[[]|]//= _.
+          move: I1; rewrite Hz.
+          move=> /incl_min; rewrite min_comm.
+          move=> /min_weak1 ?; subst.
+          rewrite weak2 eqxx.
+          by repeat eexists.
         case: s3 H3 => s3 b1 H3.
         case I: incl => //=[b][<-]{sol}/=.
         have {Hr}[r2[H7 H8]] := Hr _ _ _ H3 H1 H2.
@@ -2436,58 +2503,62 @@ Section more_precise.
           move=> H5 [H9]; case: B H => //= H Hz.
           repeat eexists.
           by case: ifP => //=; rewrite?weak2//.
-        repeat eexists; rewrite/=weak2//.
-      move=> []/=s4 b2 H4 [].
-      rewrite /incl.
-      case: s4 H4 => //=[[]|]//=[]//=s4 s5 H4.
-      rewrite -/incl -/not_incl not_incl_incl.
-      case I1: incl => /=[[]|]; case I2: incl => /=[[]|]//= + _.
-      case: r2 H7 H8 => //=; last first.
-        move=> H7 H8 H0; repeat eexists.
-        destruct b; rewrite?andbT?andbF?weak2//.
-        destruct B => //=;rewrite?weak2//.
-        destruct b1 => //=;rewrite?weak2//.
-        destruct b2 => //=.
-        move: I; rewrite H8.
-        move=> /incl_min; rewrite min_comm => /min_weak1?; subst.
-        move: I1.
-        move=> /incl_min; rewrite min_comm => /min_weak1?; subst.
-        (* TODO: here *)
-        admit.
-      move=> [s6 b3] H6 [] + H7.
-      destruct b => //=.
-        rewrite (incl_trans H7 (incl_trans I I1))/= andbT => Hx Hy.
-        repeat eexists => /=.
-        case Hw : andb => /=.
-          case Hz: andb => //=.
-          destruct B, b1 => //=.
-          by destruct b2, b3 => //.
-        case Hz: andb => //=.
-          repeat split.
-          destruct b2, b3 => //=.
+          repeat eexists; rewrite/=weak2//.
+        move=> []/=s4 b2 H4 [].
+        rewrite /incl.
+        (* INPUT CASE *)
+        case: s4 H4 => //=[[]|]//=[]//=s4 s5 H4.
+        rewrite -/incl -/not_incl not_incl_incl.
+        case I1: incl => /=[[]|]//; case I2: incl => /=[[]|]//= + _.
+        case: r2 H7 H8 => //=; last first.
+          move=> H7 H8 H0.
+          case: eqP; repeat eexists; case X: andb => //=.
+          - repeat split.
+            apply: incl_trans I2 _.
+            apply: min_incl min_weak.
+          - destruct b, b1, B => //.
+            have:= incl_trans I I1.
+            rewrite H8.
+            move=> /incl_min; rewrite min_comm => /min_weak1.
+            move=> ?; subst.
+            by rewrite weak2 in n.
+          - rewrite (incl_weak I2) incl_refl//.
+        move=> [s6 b3] H6 [] + H7.
+        have C1 := incl_compat_type I.
+        have C2 := incl_compat_type H7.
+        have C3 := incl_compat_type I1.
+        have {C1 C2 C3} := compat_type_trans1 C2 (compat_type_trans1 C1 C3).
+        rewrite /compat_type.
+        case I3: incl => //=[b4] _ Hz Hy.
+        case Hx: andb; repeat eexists.
+          destruct b2, b3, b4 => //.
+          case Hw: andb => /=; repeat split; auto.
           apply: incl_trans I2 _.
-          apply: min_incl.
-          apply: min_weak.
-        repeat split.
-        admit.
-      
-      destruct b1.
-        admit.
-      admit.
-    have {Hl}[r1[H3 H4]] := Hl _ _ _ H H1 H2.
-    rewrite H3/=.
-    destruct r1; [|repeat eexists]; last first.
-      move: H0; destruct B => -[<-]{sol}//=; rewrite?weak2//=.
-      move: H4 => -[_ <-]//.
-    case: p H3 H4 => /=[s3 b] + [+ ].
-    case: s3 => [[]|]//=[]//s3 s4 H3 +.
-    rewrite/incl/=.
-    rewrite -/incl -/not_incl.
-    case I1: incl => /=[[]|]; case I2: incl => /=[[]|]//= + _.
-    destruct b; repeat eexists; move: H0; destruct B => -[<-]{sol}//=; repeat split.
-      admit.
-    admit.
-  Admitted.
+          apply: min_incl min_weak.
+        case Hw: andb => //=.
+          destruct B, b1, b => //=.
+          destruct b2, b3 => //=.
+          destruct b4 => //=.
+          have:= incl_trans H7 (incl_trans I I1).
+          congruence.
+        rewrite (incl_weak I2) incl_refl//.
+      have {Hl}[r1[H3 H4]] := Hl _ _ _ H H1 H2.
+      rewrite H3/=.
+      destruct r1; [|repeat eexists]; last first.
+        move: H0; destruct B => -[<-]{sol}//=; rewrite?weak2//=.
+        move: H4 => -[_ <-]//.
+      case: p H3 H4 => /=[s3 b] + [+ ].
+      (* OUTPUT CASE *)
+      case: s3 => [[]|]//=[]//s3 s4 H3 +.
+      rewrite/incl/=.
+      rewrite -/incl -/not_incl.
+      case I1: incl => /=[[]|]//; case I2: incl => /=[[]|]//= + _.
+      destruct b; repeat eexists; move: H0; destruct B => -[<-]{sol}//=; repeat split.
+        apply: incl_trans I2 _.
+        apply: min_incl.
+        apply: min_weak.
+      rewrite (incl_weak I2) incl_refl//.
+  Qed.
 
   Lemma more_precise_check_callable {sP s1 s2 c d0 d' dc sA}:
     check_callable sP s2 c d0 = ty_ok (dc, sA) -> minD d' d0 = d' ->
