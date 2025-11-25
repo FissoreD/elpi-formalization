@@ -1136,47 +1136,13 @@ Section merge.
 
   Admitted.
 
-  (* Lemma merge_pref {L A}: 
-    valid_sig (L ++ A) -> merge_sig (L ++ A) A = ty_ok ((weak_all L) ++ A).
-  Proof.
-    rewrite/merge_sig.
-    elim: A L => //=[|[k v] xs IH] /= L H.
-      rewrite !cats0//.
-    
-    rewrite lookup_cat/= eqxx.
-    have H1 := valid_sig_cat H.
-    rewrite (valid_sig_cat H) ?max_refl?min_refl//= add_cat//=.
-    rewrite -cat_rcons; apply: IH.
-    rewrite cat_rcons//.
-  Qed. *)
-
   Lemma merge_refl {A}: 
     valid_sig A -> merge_sig A A = ty_ok A.
   Proof. Admitted.
 
-  (* Lemma merge_suff {L A}: 
-    valid_sig (L ++ A) -> merge_sig A (L ++ A) = ty_ok (L ++ A).
-  Proof.
-    elim: L A => /=[|[k v] xs IH] A.
-      apply: merge_refl.
-    move=>/andP[].
-    rewrite/key_absent lookup_cat.
-    rewrite/key_absent; case L: lookup => //=.
-    case L1: lookup => //= _ H.
-  Abort. *)
-
   Lemma valid_sig_merge {A B C}:
     valid_sig A -> valid_sig B -> merge_sig A B = ty_ok C -> valid_sig C.
   Proof.
-    (* elim: B A C => //= [|[k v]xs IH] A C vA.
-    - move=> _ [<-]//.
-    - move=> /andP[/=H1 H2].
-      case L: lookup => [A'|]//=.
-        case M: max => //=[vm].
-        apply: IH => //=.
-        by apply: valid_sig_add.
-      apply: IH => //=.
-      by apply: valid_sig_add. *)
   Admitted.
 
   Lemma weak_all_add {k v C}:
@@ -1198,31 +1164,11 @@ Section merge.
       repeat eexists.
       apply: weak_incl.
     - move=> [k v] xs IH C D k1 v1/=.
-      (* rewrite 
-      case H: (k1 == k); move:H => /eqP H; subst; rewrite?lookup_add_same?lookup_add_diff//=.
-      - case M: max => //=[m]; rewrite add2 => H.
-        have [x[H1 H2]] := IH _ _ _ _ H.
-        rewrite H1; repeat eexists.
-        apply: incl_trans H2.
-        rewrite max_comm in M.
-        rewrite incl_not_incl; apply: max_incl M.
-      - case L: lookup => //= [m|]; last first.
-        - rewrite add_comm; [|congruence] => H1.
-          have [x[H2 H3]]:= IH _ _ _ _ H1.
-          by rewrite H2; repeat eexists.
-        - case M: max => //=[m1]; rewrite add_comm; [|congruence] => H1.
-          have [x[H2 H3]]:= IH _ _ _ _ H1.
-          by rewrite H2; repeat eexists.
-  Qed. *)
   Admitted.
 
   Lemma merge_comm {A B}: merge_sig A B = merge_sig B A.
   Proof.
     elim: A B => //= [|[k v]xs IH] B.
-    (* - move=> _ vB; have:= @merge_suff B [::]; rewrite cats0 => ->//.
-    - move=> /=/andP[H1 H2] vB.
-      have H := IH _ H2 vB.
-      case L: lookup => //=[v'|]. *)
   Admitted.
 
   Lemma merge_sig_add_lookup {k' m xs B D}:
@@ -1230,16 +1176,6 @@ Section merge.
     merge_sig (add k' m B) xs = ty_ok D ->
     lookup k' D = Some m.
   Proof.
-    (* elim: xs  k' m B D => //= [|[k v] xs IH] k' m S1 S2.
-      move=> _ [<-].
-      rewrite lookup_add_same//.
-    case: eqP => H; subst => //= H1.
-    case L: lookup => [S|]//=.
-      case M: max => //=[m1].
-      rewrite add_comm//.
-      by apply: IH.
-    rewrite add_comm//.
-    by apply: IH. *)
   Admitted.
 
   Lemma merge_lookup {k kB kC B C D}:
@@ -1253,21 +1189,6 @@ Section merge.
     rewrite/key_absent.
     case L: lookup => //= _ H2 H3.
     case: eqP => H4; subst.
-      (* move=> [?]; subst.
-      rewrite H3/=.
-      case M: max => //=[m] MG.
-      rewrite max_comm M; repeat eexists.
-      by apply: merge_sig_add_lookup MG.
-    move=> H5.
-    case L1: lookup => //=[S|].
-      case M: max => //=[m] H6.
-      apply: IH H2 _ H5 H6.
-        by apply: valid_sig_add.
-      rewrite (lookup_add_diff)//.
-    move=> H6.
-    apply: IH H2 _ H5 H6.
-      by apply: valid_sig_add.
-    by rewrite (lookup_add_diff). *)
   Admitted.
 
   Lemma merge_lookup1 {k kB B C D}:
@@ -1275,28 +1196,6 @@ Section merge.
     merge_sig B C = ty_ok D ->
     exists kD, lookup k D = Some kD /\ incl kB kD = ty_ok true.
   Proof.
-    (* elim: C B D k kB => //=.
-      move=> B D k kB H [<-]{D}; rewrite H; repeat eexists.
-      rewrite incl_refl//.
-    move=> [k v xs IH] B D k' kB H1/=.
-    case H: (k == k'); move: H => /eqP H; subst.
-      rewrite H1.
-      case M: max => //=[m] H6.
-      have [kd[H2 H3]] := IH _ _ _ _ (lookup_add_same) H6.
-      rewrite H2; repeat eexists.
-      apply: incl_trans H3.
-      move: M; rewrite max_comm => /max_incl; rewrite not_incl_incl//.
-    case L: lookup => //=[S|]; last first.
-      move=> H2.
-      have:= lookup_add_diff H => /(_ _ v B).
-      rewrite H1 => H3.
-      have:= IH _ _ k' _ _ H2.
-      rewrite lookup_add_diff//.
-      by move=> /(_ _ H1).
-    case M: max => //=[m] H6.
-    have:= lookup_add_diff H => /(_ _ m B).
-    rewrite H1 => H3.
-    by have:= IH _ _ _ _ H3 H6. *)
   Admitted.
 
   Lemma merge_compat_type_add {k m0 m1 B xs C}:
@@ -1304,31 +1203,6 @@ Section merge.
     merge_sig (add k m0 B) xs = ty_ok C ->
     exists C0 : sigV, merge_sig (add k m1 B) xs = ty_ok C0.
   Proof.
-    (* elim: xs k m0 m1 B C => //= [|[k0 v0] xs IH] k m0 m1 B C H1/=.
-    - repeat eexists.
-    - case H: (k0 == k); move: H => /eqP H; subst.
-      - rewrite !lookup_add_same.
-        case M: max => //=[m].
-        have:= @compat_type_max v0 m0; rewrite M/= => /esym H2.
-        have := compat_type_trans1 H2 H1.
-        rewrite -compat_type_max.
-        case M1: max => //=[m2] _.
-        rewrite !add2.
-        apply: IH.
-        apply max_incl in M, M1.
-        rewrite not_incl_incl in M1.
-        apply: compat_type_trans1 (incl_compat_type M1).
-        apply not_incl_max in M.
-        rewrite -compat_type_max M//.
-      - rewrite !lookup_add_diff; try congruence.
-        case L1: lookup => //= [v|]; last first.
-          rewrite !(add_comm H) => HH.
-          have [D H2] := IH _ _ _ _ _ H1 HH.
-          rewrite H2; repeat eexists.
-        case M: max => [m|]//=.
-        rewrite !(add_comm H) => HH.
-        have [D H2] := IH _ _ _ _ _ H1 HH.
-        rewrite H2; repeat eexists. *)
   Admitted.
 
   Lemma add_weak_bf_merge {k1 m A B} v:
@@ -1340,26 +1214,6 @@ Section merge.
     case: eqP => H; subst => //=.
       move=> [?]/=; subst.
   Admitted.
-
-  (* Lemma add_weak_bf_merge_cons {k m A B} v:
-    key_absent k A ->
-    add k m (weak_bf_merge B ((k,v):: A)) =
-      add k m (weak_bf_merge B A).
-  Proof.
-    rewrite/key_absent; case LA: lookup => //= _.
-    elim: B A m k v LA => //=[[k v] A IH] B vA k1 v1/= LB.
-    case E: (k1 == k); move: E => /eqP E; subst => /=.
-      rewrite eqxx/=LB/=eqxx; f_equal.
-      apply: IH.
-        case LB: lookup => /=[vB|]; rewrite eqxx; f_equal.
-        
-        apply: IH.
-
-      rewrite/weak_bf_merge/=.
-      case: eqP.
-    case: eqP => H; subst => //=.
-      move=> [?]/=; subst.
-  Admitted. *)
 
   Lemma compat_type_merge_lookup {A B C} k:
     valid_sig A ->
@@ -1389,27 +1243,6 @@ Section merge.
     case: eqP => H; subst.
       case L: lookup => [vB|]//=.
         case M: max => //=[m].
-        (* rewrite (add_weak_bf_merge).
-        rewrite 
-
-        have:= IH _ _ _ _ H.
-        have {IH}:= IH _ _ k1 VA H.
-        rewrite LA lookup_add_same.
-        case L1: lookup => [vC|]; last first.
-          by move=> []//.
-        congruence.
-      move=> H1.
-      have:= IH _ _ k1 VA H1.
-      rewrite lookup_add_same LA.
-      case: lookup; [congruence|] => -[]//.
-    case L: lookup => //=[vB|].
-      case M: max => //=[m] H1.
-      have {IH} := IH _ _ k1 VA H1.
-      by rewrite lookup_add_diff//.
-    move=> H1.
-    have {IH}:= IH _ _ k1 VA H1.
-    rewrite lookup_add_diff//.
-  Qed. *)
   Admitted.
 
   Lemma merge_sig_add_compat {k vB' v A B B'}:
@@ -1423,75 +1256,7 @@ Section merge.
           | Some v' => max v' v = ty_ok vC
           end .
   Proof.  
-    (* elim: B A  B' v k vB' => //=[|[k v] A IH] B C v1 k1 vC/=.
-    - move=> _ _ [->] L1 D; repeat eexists; rewrite lookup_add_same //.
-    - rewrite/key_absent.
-      move=> VB /andP[+ VA] + LC CP.
-      case LA: lookup => //= _.
-      case LB: lookup => //=[vA|].
-      - case M: max => //=[m] H1.
-        case: eqP => H2; subst.
-        - rewrite lookup_add_same.
-          have:= compat_type_merge_lookup k1 (valid_sig_add _ VB) H1.
-          rewrite LC lookup_add_same LA => H; subst.
-          have CP1: compat_type v v1.
-            rewrite compat_type_comm.
-            apply: compat_type_trans1 CP _.
-            move: M => /max_incl; rewrite not_incl_incl.
-            move=> /incl_compat_type; rewrite compat_type_comm//.
-          move: (CP1); rewrite -compat_type_max; case M1: max => //=[m] _.
-          have CP2: compat_type m vC.
-            apply: compat_type_trans1 CP.
-            rewrite max_comm in M1.
-            move: M1 => /max_incl; rewrite not_incl_incl.
-            move=> /incl_compat_type; rewrite compat_type_comm//.
-          rewrite add2.
-          have [D[vD]]:= IH _ _ m _ _ (valid_sig_add _ VB) VA H1 LC CP2.
-          rewrite add2 LA => -[H2[H3 H4]]; subst.
-          by rewrite H2; repeat eexists; auto.
-        - rewrite lookup_add_diff;[|congruence]; rewrite LB M/=.
-          rewrite add_comm//.
-          have [D[vD]] := IH _ _ v1 _ _ (valid_sig_add _ VB) VA H1 LC CP.
-          by move=> [H3[H4 H5]]; rewrite H3; repeat eexists; eauto.
-      - case: eqP => H H1; subst.
-        - rewrite lookup_add_same.
-          have:= compat_type_merge_lookup k1 (valid_sig_add _ VB) H1.
-          rewrite LC lookup_add_same LA => ?; subst.
-          rewrite max_comm.
-          move: (CP); rewrite -compat_type_max.
-          case M: max => //=[m] _.
-          rewrite add2.
-          have CP1 : compat_type m vC.
-            rewrite max_comm in M.
-            move: M => /max_incl; rewrite not_incl_incl => /incl_compat_type.
-            rewrite compat_type_comm//.
-          have [D[vD]]:= IH _ _ m _ _ (valid_sig_add _ VB) VA H1 LC CP1.
-          rewrite add2 LA => -[H2[H3 ?]]; subst.
-          by rewrite H2; repeat eexists; eauto.
-        - rewrite lookup_add_diff; [|congruence].
-          rewrite LB/= add_comm//.
-          by have := IH _ _ v1 _ _ (valid_sig_add _ VB) VA H1 LC CP.
-  Qed. *)
   Admitted.
-
-  (* Lemma merge_sig_add_ok {k kv v xs B B'}:
-    lookup k B = Some kv -> compat_type kv v ->
-    merge_sig B xs = ty_ok B' ->
-      exists C, merge_sig (add k v B) xs = ty_ok C.
-  Proof.
-    move=> H1 H2 H3.
-    have:= compat_type_merge_lookup k H3.
-    rewrite H1.
-    case L1: lookup => //[vB'] /eqP H.
-    have:=(incl_compat_type H).
-    rewrite compat_type_comm => H4.
-    have:= compat_type_trans1 H4 H2.
-    rewrite compat_type_comm => H5.
-    have:= merge_sig_add_compat H3 L1 H5.
-    move=> [C[kC [H6 [H7 H8]]]].
-    rewrite H6.
-    repeat eexists.
-  Qed. *)
 
   Lemma merge_sig_valid_sig {A B C}:
     valid_sig A -> valid_sig B -> merge_sig A B = ty_ok C ->
@@ -1864,15 +1629,6 @@ Section less_precise.
     apply: IH L H H3.
   Qed.
 
-  (* Lemma valid_sig_mp_trans {s s1}: 
-    valid_sig s1 -> less_precise s s1 -> valid_sig s.
-  Proof.
-    elim: s s1 => //= [[k v] l] IH/= s vs.
-    case x: lookup => //[S] /andP[H1 H2].
-    rewrite (less_precise_remove_count H2)/=.
-    apply: IH vs (less_precise_remove2 H2).
-  Qed. *)
-
   Lemma less_precise_trans {A B C}:
     less_precise A B -> less_precise B C -> less_precise A C.
   Proof.
@@ -2030,8 +1786,6 @@ Section more_precise.
       end
     end.
 
-
-
   Lemma more_precise_key_absent {k s l}:
     more_precise l (remove k s) -> key_absent k l.
   Proof.
@@ -2099,29 +1853,6 @@ Section more_precise.
     apply: IH H2 (valid_sig_remove VB) _.
     rewrite lookup_remove_diff// H3//.
   Qed.
-
-  (* Lemma more_precise_removel1 {k A B v}:
-    valid_sig B ->
-      more_precise A (remove k B) -> more_precise A B.
-  Proof.
-    rewrite/key_absent; case L: lookup => // + _.
-    elim: A k B v L => //=[|[k v] A IH] k1 B/= v1 + VB.
-      move=> _ KB.
-      elim: B v1 k1 VB KB => //=[[k v] B IH] v1 k1 /= /andP[kB VB].
-      case: eqP => H; subst => /=.
-        move=> []?; subst => /=.
-        rewrite eqxx/= weak2 eqxx//=.
-        rewrite key_absent_remove//.
-      case: eqP; [congruence|] => //= _.
-      move=> H1; f_equal.
-      by apply: IH; eauto.
-    case: eqP => //= H1 H2 H3.
-    rewrite lookup_remove_diff; [|congruence].
-    case LB: lookup => //=[vB]; f_equal.
-    rewrite remove_comm//.
-    apply: IH H2 (valid_sig_remove VB) _.
-    rewrite lookup_remove_diff// H3//.
-  Qed. *)
 
   Lemma lookup_more_precise {k l1 l2 r}:
     lookup k l1 = Some r ->
@@ -2325,51 +2056,6 @@ Section more_precise.
       admit.
     admit.
   Admitted.
-
-
-  (* Lemma merge_more_precise {A B C D}:
-    valid_sig A -> valid_sig B -> valid_sig C ->
-    more_precise A B -> more_precise A C ->
-    merge_sig B C = ty_ok D -> more_precise A D.
-  Proof.
-    elim: A B C D => //= [[k v] xs] IH B C D.
-    case L1: lookup => //=[kB].
-    case L2: lookup => //=[kC].
-    move=> /andP[H1 H2] VB VC /andP[H3 H4] /andP[H5 H6] H.
-    have {}IH := IH _ _ _ H2 VB VC H4 H6 H.
-    rewrite IH.
-    have /=[kd [H7 H8]] := merge_lookup VB VC L1 L2 H.
-    rewrite H8/=andbT.
-    move: H3 H5; rewrite !incl_not_incl.
-    case I1: not_incl => //=[[]]//=.
-    case I2: not_incl => //=[[]]//= _ _.
-    by erewrite max2_incl1; eauto.
-  Qed. *)
-
-  (* Lemma more_precise_add_None1 {A k v xs}:
-    more_precise A ((k, v) :: xs) ->
-    lookup k A = None -> more_precise A xs.
-  Proof.
-    elim: A k v xs => //=-[k v] xs IH k1 v1 xs'.
-    case: eqP => H; subst.
-      move=> /andP[/eqP I M].
-      rewrite eqxx //.
-    case L: lookup => //=[m] /andP[/eqP I M].
-    case: eqP => //= H1 H2.
-    rewrite I/=.
-    apply: IH M H2.
-  Qed. *)
-    
-
-  (* Lemma valid_sig_more_precise {A B}:
-    valid_sig B -> more_precise A B -> valid_sig A.
-  Proof.
-    elim: B A => //=.
-      move=> A _; case: A => //=-[k v] x//=.
-    move=> [k v] xs IH A/= /andP[H1 H2] H3.
-    case L: (lookup k A) => [A'|]; last first.
-      have:= more_precise_add_None1 H3 L.
-      by apply: IH. *)
 
   Lemma more_precise_merge1 {A B}:
     valid_sig B ->
@@ -2634,7 +2320,6 @@ Section more_precise.
       by apply: more_precise_trans H2 IH.
   Qed.
 
-
   Lemma more_precise_check_callable {sP s1 s2 c d0 d' dc sA}:
     check_callable sP s2 c d0 = ty_ok (dc, sA) -> minD d' d0 = d' ->
     more_precise s1 s2 -> valid_sig s2 ->
@@ -2742,7 +2427,6 @@ Section more_precise.
       rewrite M1/=; repeat eexists; eauto.
       rewrite minD_comm; destruct dB0, dB, dB0', dB' => //.
   Qed.
-
 End more_precise.
 
 
@@ -2928,9 +2612,6 @@ Section next_alt.
       rewrite is_dead_failed//= is_dead_next_alt//.
   Qed.
 
-  Lemma TO_FIX: False. Admitted.
-  Ltac to_fix := by exfalso; apply: TO_FIX.
-
   Lemma failed_det_tree_next_alt {sP A sV1 sV2 d ign B} b:
     valid_sig sV1 ->
     tc_tree_aux sP sV1 A ign = ty_ok (d, sV2) ->
@@ -3110,17 +2791,3 @@ Proof.
     case X: step => //=[B'][<-]{C}/=.
     rewrite success_has_cut//=.
 Qed.
-
-(* Lemma cb_failed {u s A B}:
-  step u s A = CutBrothers B -> failed B = false.
-Proof.
-  elim: A s B => //=.
-  - move=> _ []//.
-  - move=> A HA s B HB s1 C; case:ifP => [dA|dA]; case: step => //=.
-  - move=> A HA B0 HB0 B HB s C.
-    case E: step => //=[A'|A'].
-      move=> [<-]{C}/=.
-      rewrite (HA _ _ E)/=.
-      have:= expnofail
-      rewrite (HA _ _ )
-      move=> //. *)
