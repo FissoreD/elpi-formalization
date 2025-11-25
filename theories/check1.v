@@ -1264,6 +1264,8 @@ Fixpoint tc_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : typecheck (D * sigV)%type 
     map_ty (fun '(dd', sV') =>  ty_ok (maxD dd dd', sV')) (check_callable sP sV a dd)
   | Bot | OK | Dead => ty_ok (dd, sV)
   | And A B0 B =>
+    if is_ko A then ty_ok (dd, sV)
+    else
     match tc_tree_aux sP sV A dd with
     | ty_err => ty_err
     | ty_ok (D, T) =>
@@ -1344,6 +1346,9 @@ Section func2.
       case: ifP => //=.
       by destruct d2, d3, dA, dB => //=.
     - move=> A HA B0 HB0 B HB d1 sV sV' ign.
+      case:ifP => kA.
+        move=> [??]; subst.
+        by repeat eexists; auto.
       case dtA: (tc_tree_aux _ _ A) => //= [[dA sVA]].
       case dtB0: (tc_tree_aux _ _ B0) => //= [[dB0 sVB0]].
       case dtB: (tc_tree_aux _ _ B) => //= [[dB sVB]].
@@ -1441,6 +1446,8 @@ Section valid_sig_preservation.
       have {}HB := HB _ _ _ _ vs1v dtB.
       by rewrite (valid_sig_merge HA HB M).
     - move=> A HA B0 HB0 B HB sv1 sv2 d ign sv1s.
+      case:ifP => kA.
+        by move=> []; congruence.
       case dtA: (tc_tree_aux _ _ A) => /=[[DA sVA]|]//=; rewrite?if_same//.
       case dtB0: (tc_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=; rewrite?if_same//.
       case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=. 
@@ -1734,6 +1741,8 @@ Section less_precise.
       have VB := tc_tree_aux_valid_sig V dtB.
       by apply: merge_less_precise HA HB M; auto.
     - move=> A HA B0 HB0 B HB sv1 sv2 d ign V.
+      case: ifP => kA.
+        by move=> [??]; subst; rewrite less_precise_refl.
       case dtA: (tc_tree_aux _ _ A) => /=[[DA sVA]|]//=; rewrite?if_same//.
       case dtB0: (tc_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=; rewrite?if_same//.
       case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=. 
@@ -2395,6 +2404,9 @@ Section more_precise.
       rewrite minD_comm; destruct dA', dB => //=.
       destruct dA'', dB'' => //.
     - move=> A HA B0 HB0 B HB s1 s2 d0 dA sA d' V.
+      case:ifP => kA.
+        move=> [??]; subst.
+        by repeat eexists; auto.
       case dtA: (tc_tree_aux _ _ A) => //=[[dA' svA]].
       case dtB0: (tc_tree_aux _ _ B0) => //=[[dB0 sVB0]].
       case dtB: (tc_tree_aux _ _ B) => //=[[dB sVB]].
@@ -2503,6 +2515,8 @@ Section same_ty.
       move=> /eqP[?]; subst.
       case M: merge_sig => //=.
     - move=> A HA B0 HB0 B HB d1 d2 sV.
+      case:ifP => kA.
+        rewrite//=eqxx.
       have {HA} := HA d1 d2 sV.
       case: (tc_tree_aux _ _ A) => /=[[dA sA]|]//;
       case: (tc_tree_aux _ _ A) => /=[[dA' sA']|]//; last first.
@@ -2558,6 +2572,9 @@ Section same_ty.
       rewrite dtA dtB/= M/=; repeat eexists; case: ifP => //=.
       destruct D4, D3, z, x => //=.
     - move=> A HA B0 HB0 B HB d1 d2 sV D1 S.
+      case:ifP => kA.
+        move=> [??]; subst.
+        by repeat eexists.
       case dtA: (tc_tree_aux _ _ A) => /=[[dA sA]|]//.
       case dtB0: (tc_tree_aux _ _ B0) => //=[[x y]]; case dtB: (tc_tree_aux _ _ B) => /=[[z w]|]//=.
       case X: merge_sig => //=[m] [?? H]; subst.
@@ -2570,44 +2587,37 @@ Section same_ty.
 
 End same_ty.
 
-Lemma is_dead_tc_tree_aux {sP sV A d}:
-  valid_sig sV ->
-  exists d', tc_tree_aux sP sV (dead A) d = ty_ok(d', sV).
-Proof.
-  elim: A sV d=> //=; try by eexists.
-  - move=> A HA s B HB sV d H.
-    rewrite (is_dead_is_ko (is_dead_dead)).
-    by apply: HB.
-  - move=> A HA B0 HB0 B HB sV d H.
-    have [dA {}HA]:= HA _ d H.
-    have VA := tc_tree_aux_valid_sig H HA.
-    rewrite HA/=.
-    have [dB0 -> ]:= HB0 _ dA VA.
-    have [dB -> ]:= HB _ dA VA.
-    rewrite /= merge_refl//=; repeat eexists.
-Qed.
+Section dead_cutr_cutl.
 
-Lemma cutr_tc_tree_aux {sP sV A d}:
-  valid_sig sV ->
-  exists d', tc_tree_aux sP sV (cutr A) d = ty_ok(d', sV).
-Proof.
-  elim: A sV d=> //=; try by eexists.
-  - move=> A HA s B HB sV d H.
-    case:ifP => DA.
-      by apply: HB.
-    case:ifP => DB.
-      by apply: HA.
-    have [dA ->]:= HA _ d H. 
-    have [dB ->]:= HB _ d H.
-    rewrite/= merge_refl//has_cut_cutr/=; repeat eexists.
-  - move=> A HA B0 HB0 B HB sV d H.
-    have [dA {}HA]:= HA _ d H.
-    have VA := tc_tree_aux_valid_sig H HA.
-    rewrite HA/=.
-    have [dB0 -> ]:= HB0 _ dA VA.
-    have [dB -> ]:= HB _ dA VA.
-    rewrite /= merge_refl//=; repeat eexists.
-Qed.
+  Lemma is_ko_tc_tree_aux {sP sV A d}:
+    valid_sig sV -> is_ko A ->
+    tc_tree_aux sP sV A d = ty_ok(d, sV).
+  Proof.
+    elim: A sV d=> //=; try by eexists.
+    - move=> A HA s B HB sV d H /andP[kA kB].
+      rewrite kA; by apply: HB.
+    - move=> A HA B0 HB0 B HB sV d H kA.
+      rewrite kA; repeat eexists.
+  Qed.
+
+  Lemma cutr_tc_tree_aux {sP sV A d}:
+    valid_sig sV ->
+    tc_tree_aux sP sV (cutr A) d = ty_ok(d, sV).
+  Proof.
+    move=> H.
+    apply: is_ko_tc_tree_aux => //.
+    apply: is_ko_cutr.
+  Qed.
+
+  Lemma is_dead_tc_tree_aux {sP sV A d}:
+    valid_sig sV ->
+    tc_tree_aux sP sV (dead A) d = ty_ok(d, sV).
+  Proof.
+    move=> H.
+    apply: is_ko_tc_tree_aux => //.
+    apply: is_dead_is_ko is_dead_dead.
+  Qed.
+End dead_cutr_cutl.
 
 Section next_alt.
   Lemma success_det_tree_next_alt {sP A sV1 sV2 ign}:
@@ -2639,6 +2649,7 @@ Section next_alt.
         by rewrite H if_same is_ko_next_alt//.
       rewrite is_dead_dead !(is_dead_next_alt _ is_dead_dead)//.
     - move=> A HA B0 HB0 B HB sV1 sV2 ign /andP[sA sB].
+      rewrite success_is_ko//=.
       have fA := success_failed _ sA.
       have fB := success_failed _ sB.
       rewrite fA/= sA/=.
@@ -2718,7 +2729,7 @@ Section next_alt.
       rewrite (next_alt_none_has_cut nA).
       rewrite dtB'; repeat eexists.
         destruct d' => //.
-      have /=[d3 H] := @is_dead_tc_tree_aux sP s2 A d2 V.
+      have /=H := @is_dead_tc_tree_aux sP s2 A d2 V.
       have VS := tc_tree_aux_valid_sig V dtB'.
       have L1 := tc_tree_aux_less_precise V dtB'.
       rewrite merge_comm in M.
@@ -2726,6 +2737,8 @@ Section next_alt.
       apply: more_precise_trans; auto.
       apply: merge_sig_valid_sig VB VA M.
     move=> A HA B0 HB0 B HB C s1 s2 d1 d2 b V.
+    case: ifP => kA.
+      by rewrite is_ko_failed//is_ko_next_alt//=.
     case dtA: (tc_tree_aux _ _ A) => /=[[DA sVA]|]//=.
     have VA := tc_tree_aux_valid_sig V dtA.
     case dtB0: (tc_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
@@ -2745,7 +2758,7 @@ Section next_alt.
       rewrite H2 H2'/=.
       have Z := more_precise_trans VB0 H3' Hy.
       have [E[Hr Hs]]:= more_precise_merge2 VB0 VB0 Z H3 (merge_refl VB0).
-      rewrite Hr/=.
+      rewrite Hr/= (next_alt_is_ko nA)//=.
       repeat eexists; eauto.
         rewrite minD_comm; destruct DB0, DB, dA', dA'' => //=.
         by destruct dx; simpl in *.
@@ -2756,11 +2769,12 @@ Section next_alt.
       apply: merge_sig_valid_sig M; auto.
     case: ifP => sA; last first.
       move=> [<-]{C}/=; rewrite dtA/= dtB0 dtB/= M/=.
+      rewrite failed_is_ko//.
       have ? := merge_sig_valid_sig VB VB0 M.
       by repeat eexists; rewrite ?minD_refl//?more_precise_refl//=.
     case nB: next_alt => //=[B'|].
       move=> [<-]{C}/=.
-      rewrite dtA/=.
+      rewrite dtA/=kA.
       have:= HB _ _ _ _ _ _ VA dtB nB.
       move=>[d'[S [m [tcB' L]]]]/=.
       rewrite tcB'/= dtB0/=.
@@ -2779,7 +2793,7 @@ Section next_alt.
     rewrite H2 H2'/=.
     have Z := more_precise_trans VB0 H3' Hy.
     have [E[Hr Hs]]:= more_precise_merge2 VB0 VB0 Z H3 (merge_refl VB0).
-    rewrite Hr/=.
+    rewrite Hr/= (next_alt_is_ko nA).
     repeat eexists; eauto.
       rewrite minD_comm; destruct DB0, DB, dA', dA'' => //=.
       by destruct dx; simpl in *.

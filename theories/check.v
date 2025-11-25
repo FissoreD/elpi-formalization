@@ -34,20 +34,43 @@ Lemma expand_det_tree {u sP sV sV' A r s ign d} :
             tc_tree_aux sP sV (get_tree r) d = ty_ok (d', S).
 Proof.
   simpl in *.
-  move=> C.
+  move=> CKPR.
   move: sV sV' r d ign.
   pattern u, s, A, (step u s A).
-  apply: expand_ind; clear.
+  apply: expand_ind; clear -CKPR.
   - move=> s []//= _ ???? _ _ [_ ->] <-/=; repeat eexists; rewrite ?minD_refl//.
   - move=> s []//= _ ???? _ _ [_ ->] <-/=; repeat eexists; rewrite ?minD_refl//.
   - move=> s []//= _ ???? _ _ [_ ->] <-/=; repeat eexists; rewrite ?minD_refl//.
   - (*here the checker comes into the game*)
-    move=> /=s A pr t HA sV1 sV2 r d ign + + <-/=; clear.
+    move=> /=s A pr t HA sV1 sV2 r d ign + + <-/=; clear -CKPR.
     {
       rewrite/big_or.
       case X: F => /=[|[sr1 r1] rs]/=.
       - repeat eexists; rewrite minD_refl//.
-      -  admit.
+      - case C: check_callable => //=[[D SIG]].
+        move: C; rewrite /check_callable.
+        case C: check_tm => //=[[[S B]|]]//=; last first.
+          move=> [??] + [??]; subst.
+          rewrite maxD_comm/=.
+
+          (* call to unkown variable *)
+          admit.
+        move=> ++[??]; subst.
+        case: S C => //=-[]//= d1.
+        case: B; last first.
+          (* miscall *)
+          move=> + [??]; subst.
+          rewrite maxD_comm/=.
+          admit.
+        case G: get_callable_hd_sig => [hd|]; last first.
+          move=> +[??]; subst.
+          rewrite maxD_comm/=.
+          admit.
+        case ASS: assume_call => //=[SEND] + [??]; subst.
+        rewrite maxD_comm -maxD_assoc maxD_refl.
+        destruct d1 => //=; last first.
+          admit.
+        admit.
     }
   - move=> s []//= _ ???? _ _ [_ ->] <-/=; repeat eexists; rewrite ?minD_refl//.
     (* apply: sV_expand_refl. *)
@@ -62,9 +85,13 @@ Proof.
     case: ifP => kA.
       by rewrite is_ko_step in eA.
     case: ifP => kB.
-      move=> dtA <-/=.
+      move=> dtA <-{r}/=.
       rewrite kB.
-      admit.
+      have {IH}/=[S[d'[H1 H2]]]:= IH _ _ _ _ _ H dtA eA.
+      rewrite H2.
+      rewrite is_ko_tc_tree_aux//=?(sigma2ctx_valid H)//.
+      case: ifP; repeat eexists; auto.
+      rewrite minD_refl//.
     have fA:= expand_not_failed _ eA notF.
     move=> + <-{r}/=.
     (* case nB: next_alt => [B'|]//=. *)
@@ -116,21 +143,15 @@ Proof.
     rewrite Hz/=.
     rewrite (expand_CB_is_ko eA).
     have V := sigma2ctx_valid H.
-    have:= @cutr_tc_tree_aux sP sV B (if has_cut A then maxD DA' DB else Pred) V.
-    move=> [SB dtB']; rewrite dtB'/=.
+    rewrite cutr_tc_tree_aux//=.
     have: exists T, merge_sig S sV = ty_ok T by admit.
     move=> [SS HH]; rewrite HH/=.
-    move: Hz dtB'.
+    move: Hz.
     rewrite is_ko_cutr.
-    case: ifP => cA Hz dtB'; repeat eexists.
-    case cA': (has_cut A').
-      destruct DA', DB => //=; simpl in *; subst.
-      destruct Dx; [|congruence] => /=.
-      (* TODO: this is not provable in the current setting, should change the definition of tc_tree_aux if cutr is rhs of OR? *)
-      admit.
+    case: ifP => cA; repeat eexists.
     destruct DA'; simpl in *; subst => //.
     destruct DB => //=.
-    admit.
+    congruence.
   - move=> s INIT A sB B HINIT dA IH A' eA sV sV' r d ign H/=.
     have [? fA] := expand_failed_same _ eA; subst A'.
     case: ifP => kA.
@@ -185,6 +206,7 @@ Proof.
   - move=> s INIT A B0 B HINIT IH A' eA sV sV' r d ign H/= + <-/=.
     have fA:= expand_not_failed _ eA notF.
     have sA:= expand_not_solved_not_success _ eA notF.
+    rewrite failed_is_ko//=.
     case dtA1: (tc_tree_aux _ _ A) => /=[[DA1 sVA1]|]//=.
     case dtB01: (tc_tree_aux _ _ B0) => /=[[DB01 sVB01]|]//=.
     case dtB1: (tc_tree_aux _ _ B) => /=[[DB1 sVB1]|]//=.
@@ -195,6 +217,8 @@ Proof.
     case dtA1': (tc_tree_aux _ _ A') => /=[[DA1' sVA1']|]//=/eqP[?]; subst sVA1'.
     admit. (*TODO: pb with tc_tree_aux ran with a more precise subst then the hyp, should be solved using more_precise_tc_tree_aux *)
   - move=> s INIT A B0 B HINIT IH A' eA sV sV' r d ign H/=.
+    have fA:= expand_not_failed _ eA notF.
+    rewrite failed_is_ko//=.
     case dtA: (tc_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
     case dtB0: (tc_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
     case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=.
@@ -203,6 +227,8 @@ Proof.
     admit. (*same as above...*)
   - move=> s INIT A B0 B HINIT IH A' eA sV sV' r d ign H/=.
     have [? fA]:= expand_failed_same _ eA; subst A' => +<-{r}/=.
+    case:ifP => kA.
+      move=> [??]; subst; repeat eexists; rewrite minD_refl//.
     case dtA: (tc_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
     case dtB0: (tc_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
     case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=.
@@ -227,14 +253,15 @@ Proof.
       move: dtB01; rewrite dtB0 => -[<-]/=; congruence.
     have [[][//= _]] := tc_tree_aux_func2 dtA.
     rewrite dtA1 => -[?]; subst.
-    destruct DB01;[|congruence] => /=; congruence.
+    destruct DB01 => /=;congruence.
   - move=> s INIT A B0 B HINIT HL A' eA HR sV sV' r d ign H/= + <-{r}/=.
+    have [? sA] := expand_solved_same _ eA; subst A'.
+    rewrite success_is_ko//=.
     case dtA: (tc_tree_aux _ _ A) => /=[[DA' sVA]|]//=.
     case dtB0: (tc_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=.
     case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=.
     case M: merge_sig => //=[S'][??]; subst.
-    have [? sA] := expand_solved_same _ eA; subst A'.
-    case eB: step => //=[B'|B'|B'|B'].
+    case eB: step => //=[B'|B'|B'|B']; rewrite success_is_ko//?success_cut//.
     - have:= same_ty_tc_tree_aux sP sV A ign (maxD DB0 DB).
       rewrite dtA.
       case dtA1: (tc_tree_aux _ _ A) => /=[[DA1 sVA1]|]//=/eqP[?]; subst sVA1.
@@ -243,8 +270,7 @@ Proof.
       case dtB01: (tc_tree_aux _ _ B0) => /=[[DB01 sVB01]|]//=/eqP[?]; subst sVB01.
       have:= HR _ _ _ _ _ _ dtB eB.
       admit. (*PB with ctx*)
-    - (*TODO: pb with cutl: no lemma for it...*)
-       admit.
+    -  admit. (*PB with cutl*)
     - have [? fB] := expand_failed_same _ eB; subst B'.
       have:= same_ty_tc_tree_aux sP sV A ign (maxD DB0 DB).
       rewrite dtA.
