@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import ctx lang.
+From det Require Import finmap ctx lang.
 From det Require Import tree tree_prop.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
@@ -76,7 +76,7 @@ Lemma deref_kp {s1 t k}:
 Proof.
   case: t k => //=.
   - move=> k1 k2 []; left; congruence.
-  - move=> v k; case x: lookup => [t1|]//=.
+  - move=> v k; case x: (lookup _ _) => [t1|]//=.
     move=>/tm2RC_kp?; subst.
     right; by eexists.
   - move=> h b k; case X: tm2RC => //.
@@ -201,8 +201,17 @@ Section has_cut.
   Qed.
 End has_cut.
 
-Definition full_sP {K:eqType} {V:Type} (s: list (K*V)) := forall k, lookup k s <> None.
-Notation sigV := (list (V * S)).
+Definition full_sP {K:countType} {V:eqType} (s: ctx K V) := forall k, lookup k s <> None.
+
+Definition sigV := (ctx V S).
+
+Definition is_sigV (x : sigV) := unit.
+Lemma is_sigV_inhab : forall x, is_sigV x. Proof. exact (fun x => tt). Qed.
+Definition sigV_eqb (x y : sigV) := x == y.
+Lemma sigV_eqb_correct : forall x, eqb_correct_on sigV_eqb x. Proof. by move=>??/eqP. Qed.
+Lemma sigV_eqb_refl : forall x, eqb_refl_on sigV_eqb x. Proof. by move=>?; exact: eqxx. Qed.
+Elpi derive.eqbOK.register_axiomx sigV is_sigV is_sigV_inhab sigV_eqb sigV_eqb_correct sigV_eqb_refl.
+HB.instance Definition _ : hasDecEq sigV := Equality.copy sigV _.
 
 Section min_max.
     Definition maxD (d1 d2 : D) :=
@@ -987,7 +996,7 @@ Section checker.
     | RCallable_Kp k => (lookup k sP) (*TODO: sP should be complete*)
     end.
 
-  Definition empty_ctx : sigV := [::].
+  Definition empty_ctx : sigV := [fmap].
   
   (* The rules passes the check if:
      - it is implementing a function or a relation, the body is function, the outputs are ok
@@ -1040,7 +1049,31 @@ Lemma is_dead_full_ko_state {A}: is_dead A -> full_ko A.
 Proof. move=> /is_dead_is_ko; exact: is_ko_full_ko_state. Qed.
 
 Section merge.
-  Definition update (s:sigV) '((k, v): (V * _)) : typecheck (sigV) :=
+
+  Open Scope fset_scope.
+
+Lemma fsetULVRX {T : choiceType} {x} {A B : {fset T}} :
+  x \in A `|` B -> 
+    ((x \in A) * (x \in B)) +
+    ((x \in A) * (x \notin B)) +
+    ((x \in B) * (x \notin A)).
+Proof. by rewrite in_fsetE; case: (x \in A); case: (x \in B); [left;left|left;right|right|by[]]. Qed.
+
+  Definition merge_sig1 (f g: sigV) : sigV :=
+      [fmap k : domf f `|` domf g =>
+          match fsetULVRX (valP k) with
+            | inl (inl (kf,kg)) => match max f.[kf] g.[kg] with ty_ok x => x | _ =>  f.[kf] end
+            | inl (inr (kf, _)) => f.[kf]
+            | inr      (kg, _)  => weak g.[kg]
+          end].
+
+  Definition weak_all (s:sigV) := [fmap x : domf s => weak s.[valP x]].
+
+  Definition weak_bf_merge (s1 s2: sigV) : sigV :=  
+      [fmap x : domf s1 => if s2.[? val x] then s1.[valP x] else weak s1.[valP x]].
+
+
+  (* Definition update (s:sigV) '((k, v): (V * _)) : typecheck (sigV) :=
     match lookup k s with
     | None => ty_ok (add k (weak v) s)
     | Some e => 
@@ -1051,32 +1084,26 @@ Section merge.
     match s2 with
     | [::] => ty_ok s1
     | x::xs => map_ty (fun (s1':sigV) => merge_sig1 s1' xs) (update s1 x)
-    end.
+    end. *)
 
-  Definition weak_bf_merge (s1 s2: sigV) : sigV :=  
-      map (fun '(k,v) => if lookup k s2 == None then (k, weak v) else (k, v)) s1.
-  
-  Definition weak_all (s:sigV) := map (fun '(k,v) => (k, weak v)) s.
-
+ 
   Lemma lookup_weak_all {k A}:
     lookup k (weak_all A) = omap weak (lookup k A).
   Proof.
-    elim: A k => //=[[k v] A IH] k1.
-    case: eqP => //=.
+    case: fndP => /= HwA; symmetry; case: fndP => /= HA //.
+    by rewrite ffunE /=; congr (Some (weak A.[_])); apply bool_irrelevance. 
+    by rewrite HwA in HA.
+    by rewrite HA in HwA.
   Qed.
-
-  Lemma valid_sig_weal_all {A}: valid_sig A -> valid_sig (weak_all A).
-  Proof.
-    elim: A => //=[[k v] A IH]/=.
-    rewrite /key_absent; case L: lookup => //= vA.
-    rewrite IH//=andbT lookup_weak_all L//.
-  Qed.
-
-
 
   Lemma weak_bf_merge_0s {L}:
-    weak_bf_merge L [::] = weak_all L.
-  Proof. move=> //. Qed.
+    weak_bf_merge L [fmap] = weak_all L.
+  Proof. 
+    apply/fmapP => k; rewrite lookup_weak_all.
+    case: fndP => /= HwA.
+       by rewrite ffunE in_fnd /= not_fnd //=; congr (Some (weak L.[_])); apply bool_irrelevance. 
+    by rewrite not_fnd. 
+  Qed.
 
   Definition merge_sig s1 s2 :=
     let s1' := weak_bf_merge s1 s2 in
@@ -1089,10 +1116,11 @@ Section merge.
       | None => omap weak (lookup k A)
       end.
   Proof.
-    elim: A k B => //=.
-      by move=> k B; case: lookup => //.
-    move=> [k v] A IH k1 B.
-    case LB: lookup => [vB|]//=; case: eqP => //= H; subst; rewrite LB//.
+    rewrite /weak_bf_merge. case: fndP => /= kA; case: (fndP B) => kB; rewrite ?[in omap _ _]/= ?ffunE.
+      by rewrite !in_fnd /=; congr (Some _.[_]); apply bool_irrelevance.
+      by rewrite not_fnd // in_fnd /=; congr (Some (weak _.[_])); apply bool_irrelevance.
+      by rewrite not_fnd.
+      by rewrite not_fnd.
   Qed.
 
   (* Lemma weak_bf_merge_cons_key_absent {k v1 v2 A B}:
@@ -1111,14 +1139,14 @@ Section merge.
     rewrite IH//=.
   Qed. *)
 
-  Lemma weak_bf_merge_cons_key_absent {k v xs ys}:
+  Lemma weak_bf_merge_cons_key_absent {k v} {xs ys:sigV}:
     lookup k xs = None ->
-      weak_bf_merge xs ((k, v) :: ys) = weak_bf_merge xs ys.
+      weak_bf_merge xs ys.[k <- v] = weak_bf_merge xs ys.
   Proof.
-    elim: xs k v ys => //=[[k v] A IH] k1 v2 B.
-    case: eqP => H//; subst.
-    case H1: (eq_op k1); move: H1 => /eqP; [congruence|] => _ H2.
-    rewrite IH//=.
+    move=> Hk; apply/fmapP=> k'.
+    rewrite !weak_bf_mergeP fnd_set; case: eqP => [->|].
+      by rewrite Hk; case: fnd.
+    by case: fnd.
   Qed.
 
   Lemma weak_bf_merge_refl {L1}: valid_sig L1 -> weak_bf_merge L1 L1 = L1.

@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
-From det Require Import ctx.
+From det Require Import finmap ctx.
 
 Declare Scope type2_scope.
 Delimit Scope type2_scope with type2.
@@ -40,6 +40,11 @@ Goal b Exp == b Exp. by []. Qed.
 Inductive Kp := IKp : nat -> Kp.
 derive Kp.
 HB.instance Definition _ := hasDecEq.Build Kp Kp_eqb_OK.
+Definition Kp_of_nat x := IKp x.
+Definition nat_of_Kp x := match x with IKp x => x end.
+Lemma Kp_is_nat : cancel nat_of_Kp Kp_of_nat.
+Proof. by case. Qed.
+HB.instance Definition _ := Countable.copy Kp (can_type Kp_is_nat).
 
 Inductive Kd := IKd : nat -> Kd.
 derive Kd.
@@ -48,7 +53,11 @@ HB.instance Definition _ := hasDecEq.Build Kd Kd_eqb_OK.
 Inductive V := IV : nat -> V.
 derive V.
 HB.instance Definition _ := hasDecEq.Build V V_eqb_OK.
-
+Definition V_of_nat x := IV x.
+Definition nat_of_V x := match x with IV x => x end.
+Lemma V_is_nat : cancel nat_of_V V_of_nat.
+Proof. by case. Qed.
+HB.instance Definition _ := Countable.copy V (can_type V_is_nat).
 Inductive Tm := 
   | Tm_Kp    : Kp -> Tm
   | Tm_Kd    : Kd -> Tm
@@ -83,24 +92,80 @@ HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
 Notation R := (@R_ A).
 HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK _ _ A_eqb_OK).
 
-Notation Sigma := (list (V * Tm)).
-Definition empty : Sigma := [::].
+Elpi Command derive.eqbOK.register_axiomx.
+Elpi Accumulate Db derive.eqb.db.
+Elpi Accumulate Db derive.eqbcorrect.db.
+Elpi Accumulate Db derive.param1.db.
+Elpi Accumulate Db derive.param1.trivial.db.
+Elpi Accumulate Db derive.eqType.db.
+From elpi.apps.derive.elpi Extra Dependency "eqType.elpi" as eqType.
+Elpi Accumulate File eqType.
+Elpi Accumulate lp:{{
+   main [str Type, str IsT, str IsTinhab, str Eqb, str Correct, str Refl] :- !,
+     coq.locate Type GrType,
+     coq.locate IsT GRisT,
+     coq.locate IsTinhab GRisTinhab,
+     coq.locate Eqb GrEqb,
+     coq.locate Correct GrCorrect,
+     coq.locate Refl GrRefl,
+     GrRefl = const R,
+     GrCorrect = const C,
+     coq.elpi.accumulate _ "derive.eqb.db" (clause _ _ (eqb-done GrType)),
+     coq.elpi.accumulate _ "derive.eqb.db" (clause _ (before "eqb-for:whd") (eqb-for (global GrType) (global GrType) (global GrEqb))),
+     coq.elpi.accumulate _ "derive.eqbcorrect.db" (clause _ _ (eqcorrect-for GrType C R)),
+     coq.elpi.accumulate _ "derive.eqbcorrect.db" (clause _ _ (correct-lemma-for (global GrType) (global GrCorrect))),
+     coq.elpi.accumulate _ "derive.eqbcorrect.db" (clause _ _ (refl-lemma-for (global GrType) (global GrRefl))),
+     coq.elpi.accumulate _ "derive.eqType.db" (clause _ _ (eqType GrType eqb.axiom)),
+     coq.elpi.accumulate _ "derive.param1.db" (clause _ _ (reali-done GrType)),
+     coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "reali:fail") (reali (global GrType) (global GRisT) :- !)),
+     coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "realiR:fail") (realiR (global GrType) (global GRisT) :- !)),
+     coq.elpi.accumulate _ "derive.param1.trivial.db" (clause _ _ (param1-inhab-db (global GRisT) (global GRisTinhab))).
+  main _ :- coq.error "usage: derive.eqbOK.register_axiom T is_T is_T_inhab eqb eqb_correct eqb_refl.".
+}}.
+Elpi Export derive.eqbOK.register_axiomx.
 
+Definition Sigma := (ctx V Tm).
+Definition empty : Sigma := empty.
+
+Definition is_Sigma (x : Sigma) := unit.
+Lemma is_Sigma_inhab : forall x, is_Sigma x. Proof. exact (fun x => tt). Qed.
+Definition Sigma_eqb (x y : Sigma) := x == y.
+Lemma Sigma_eqb_correct : forall x, eqb_correct_on Sigma_eqb x. Proof. by move=>??/eqP. Qed.
+Lemma Sigma_eqb_refl : forall x, eqb_refl_on Sigma_eqb x. Proof. by move=>?; exact: eqxx. Qed.
+Elpi derive.eqbOK.register_axiomx Sigma is_Sigma is_Sigma_inhab Sigma_eqb Sigma_eqb_correct Sigma_eqb_refl.
+HB.instance Definition _ : hasDecEq Sigma := Equality.copy Sigma _.
 
 Notation index := (list R).
-Notation mode_ctx := (list (Kp * list mode)).
-Notation sigT := (list (Kp * S)).
+Definition mode_ctx := {fmap Kp -> (list mode)}.
+Definition sigT := {fmap Kp -> S}.
+Definition empty_sig : sigT := [fmap].
+
 (* 
   The program knows about the signature of all predicates, therefore,
   for each predicate we return a S (not an option S)
 *)
+Definition is_mode_ctx (x : mode_ctx) := unit.
+Lemma is_mode_ctx_inhab : forall x, is_mode_ctx x. Proof. exact (fun x => tt). Qed.
+Definition mode_ctx_eqb (x y : mode_ctx) := x == y.
+Lemma mode_ctx_eqb_correct : forall x, eqb_correct_on mode_ctx_eqb x. Proof. by move=>??/eqP. Qed.
+Lemma mode_ctx_eqb_refl : forall x, eqb_refl_on mode_ctx_eqb x. Proof. by move=>?; exact: eqxx. Qed.
+Elpi derive.eqbOK.register_axiomx mode_ctx is_mode_ctx is_mode_ctx_inhab mode_ctx_eqb mode_ctx_eqb_correct mode_ctx_eqb_refl.
+HB.instance Definition _ : hasDecEq mode_ctx := Equality.copy mode_ctx _.
+
+Definition is_sigT (x : sigT) := unit.
+Lemma is_sigT_inhab : forall x, is_sigT x. Proof. exact (fun x => tt). Qed.
+Definition sigT_eqb (x y : sigT) := x == y.
+Lemma sigT_eqb_correct : forall x, eqb_correct_on sigT_eqb x. Proof. by move=>??/eqP. Qed.
+Lemma sigT_eqb_refl : forall x, eqb_refl_on sigT_eqb x. Proof. by move=>?; exact: eqxx. Qed.
+Elpi derive.eqbOK.register_axiomx sigT is_sigT is_sigT_inhab sigT_eqb sigT_eqb_correct sigT_eqb_refl.
+HB.instance Definition _ : hasDecEq sigT := Equality.copy sigT _.
+
 Record program := { 
     (*depth : nat;*) 
     rules : index; 
     modes : mode_ctx; 
     sig   : sigT
   }.
-
 derive program.
 HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eqb_OK.
 

@@ -29,13 +29,13 @@ Section s.
       inversion H; clear H; try congruence; subst.
       - by rewrite succes_is_solved in HA.
       - move: H0; rewrite HA => -[?]; subst.
-        by rewrite !(IH _ _ _ H1).
+        by rewrite !(IH _ _ _ X).
       - by rewrite failed_expand in HA.
       - by rewrite failed_expand in HA.
     + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
       - by rewrite succes_is_solved in HA.
-      - move: H0; rewrite HA => -[?]; subst; by rewrite !(IH _ _ _ H1)//.
+      - move: H0; rewrite HA => -[?]; subst; by rewrite !(IH _ _ _ X)//.
       - by rewrite failed_expand in HA.
       - by rewrite failed_expand in HA.
     + move=> s1 s2 A B r n1 fA nB rB IH s3 C n2 H.
@@ -436,7 +436,7 @@ Section s.
           by rewrite (expand_not_failed _ H0).
         apply: run_step => //=.
           rewrite H0 is_dead_dead//.
-        have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) H1 .
+        have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) X0 .
         by rewrite /get_dead is_dead_dead dead2 if_same.
       - apply: run_fail => /=.
           rewrite dB//.
@@ -444,12 +444,12 @@ Section s.
           by rewrite (expand_not_failed _ H0).
         apply: run_step => //=.
           rewrite H0 is_dead_dead//.
-        have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) H1 .
+        have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) X0 .
         by rewrite /get_dead is_dead_dead dead2 if_same.
       - apply: run_fail => /=.
           rewrite dB//.
           rewrite dB nB H1//.
-        have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) H2.
+        have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) X0.
         by rewrite /get_dead is_dead_dead dead2 if_same.
       - rewrite -/(dead (Or B sX X)).
         by apply: run_dead; rewrite /=dB// nB H1.
