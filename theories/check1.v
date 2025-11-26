@@ -809,21 +809,28 @@ Section compat_type.
 End compat_type.
 
 Section checker.
-
-  Fixpoint is_det_sig (sig:S) : bool :=
+  Fixpoint get_sig_hd (sig:S) :=
     match sig with
-    | b (d Func) => true
-    | b (d Pred) => false
-    | b Exp => false
-    | arr _ _ s => is_det_sig s
+    | b V => V
+    | arr _ _ s => get_sig_hd s
     end.
 
-  Fixpoint get_tm_hd_sig (sP : sigT) (sV : sigV) (tm: Tm) : option S :=
+  Definition is_det_sig (sig:S) : bool :=
+    get_sig_hd sig == (d Func).
+
+  Fixpoint get_tm_hd (tm: Tm) : (Kd + (Kp + V)) :=
     match tm with
-    | Tm_Kd _ => (Some (b Exp))
-    | Tm_Kp k => (lookup k sP) (*TODO: sP should be complete*)
-    | Tm_V v => lookup v sV
-    | Tm_Comb h _ => get_tm_hd_sig sP sV h
+    | Tm_Kd K => inl K
+    | Tm_Kp K => inr (inl K) (*TODO: sP should be complete*)
+    | Tm_V V => inr (inr V)
+    | Tm_Comb h _ => get_tm_hd h
+    end.
+
+  Definition get_tm_hd_sig (sP : sigT) (sV : sigV) (tm: Tm) : option S :=
+    match get_tm_hd tm with
+    | inl K => Some (b Exp)
+    | inr (inl K) => lookup K sP
+    | inr (inr K) => lookup K sV
     end.
 
   Definition get_callable_hd_sig (sP: sigT) sV (t: Callable) : option S :=
@@ -951,7 +958,12 @@ Section checker.
   Definition check_callable sP sV (c: Callable) d : typecheck (D * sigV)%type :=
     match check_tm sP sV (Callable2Tm c)  with
     | ty_err => ty_err
-    | ty_ok None => ty_ok (Pred, sV)
+    | ty_ok None =>
+      if get_callable_hd_sig sP sV c is Some s then
+        let s := weak s in
+        map_ty (fun sV' => ty_ok (Pred, sV')) (assume_call sP sV c s)
+      else
+       ty_ok (Pred, sV)
     | ty_ok (Some ((b Exp | arr _ _ _), _)) => ty_err (*NOTE: callable have type prop!*)
     | ty_ok (Some ((b(d x)), b1)) =>
       if b1 then 
@@ -1022,12 +1034,11 @@ Lemma check_callable_pred {sP sV c d1 d2 s}:
   check_callable sP sV c d1 = ty_ok (d2, s) ->
     maxD d2 d1 = d2.
 Proof.
+  simpl in *.
   rewrite/check_callable.
-  case: check_tm => //= -[[[|] []]|[<-]]//.
-  move=> d [|[<-]]//.
-  case gc: get_callable_hd_sig => [S|]; last first.
-    move=> [<-]//.
-  case ac: assume_call => //=[sV'][??]; subst.
+  case: check_tm => //=-[[[[|d [|[<-]]]|]]|]//.
+  all: case gc: get_callable_hd_sig => [S|]; [|move=>[<-//]];
+  case ac: assume_call => //=[sV'][??]; subst => //=.
   rewrite -maxD_assoc maxD_refl maxD_comm//.
 Qed.
 
@@ -1295,7 +1306,9 @@ Section func2.
   Proof.
     rewrite/check_callable.
     case: check_tm => //=-[[sA bA]|]; last first.
-      by move=> [<-<-]; exists Pred.
+      case g: get_callable_hd_sig => //=[S|]; last first .
+        by move=> [<-<-]; exists Pred.
+      case X: assume_call => //=[S1][<-<-]; repeat eexists => //.
     case: sA => //-[]//d.
     case: bA; last first.
       by move=> [<-<-]; exists Pred.
@@ -1413,7 +1426,9 @@ Section valid_sig_preservation.
     simpl in *.
     rewrite/check_callable/=.
     case C: check_tm => //=[[[[[//|D]|//] B]|]]; last first.
-      by move=> H[<-<-]; repeat split => //.
+      case G: get_callable_hd_sig => [S0|]; [|by move=> H[<-<-]; repeat split => //].
+      case ac: assume_call => //=[sv2] H [??]; subst.
+      rewrite (assume_call_valid_sig H ac)//.
     case: B C => C; last first.
       by move=> H[<-<-]; rewrite H; repeat split => //.
     case gc: get_callable_hd_sig => [S|]; last first.
@@ -1703,14 +1718,13 @@ Section less_precise.
   Proof.
     simpl in *.
     rewrite/check_callable/=.
-    case C: check_tm => //=[[[[[//|D]|//] B]|]]; last first.
-      move=> H[<-<-]; repeat split => //.
-      apply: less_precise_refl H.
+    case C: check_tm => //=[[[[[//|D]|//] B]|]] V; last first.
+      case G: get_callable_hd_sig => [S|]; [|move=> [<-<-]; repeat split; rewrite less_precise_refl//].
+      case A: assume_call => //=[S1][<-<-]; rewrite (assume_call_less_precise V A)//.
     case: B C => C; last first.
-      move=> H[<-<-]; repeat split => //; apply: less_precise_refl H.
+      move=> [<-<-]; repeat split => //; apply: less_precise_refl V.
     case gc: get_callable_hd_sig => [S|]; last first.
-      move=> H[<-<-]; repeat split => //; apply: less_precise_refl H.
-    move=> V.
+      move=> [<-<-]; repeat split => //; apply: less_precise_refl V.
     case ac: assume_call => //=[sv2][??]; subst.
     by rewrite -maxD_assoc maxD_refl; repeat split;
     rewrite (assume_call_less_precise V ac).
@@ -1948,41 +1962,6 @@ Section more_precise.
     by rewrite lookup_remove_diff.
   Qed.
 
-  (* Lemma key_absent_more_precise {k l l1}:
-    key_absent k.1 l -> more_precise l (k::l1) = more_precise l l1.
-  Proof.
-    rewrite /key_absent.
-    elim: l k l1 => /=[|[k v] xs IH]// [k1 v1] ys /=.
-      move=> _ /andP[].
-    case: eqP => H; subst => //.
-    case L: lookup => //.
-    case: eqP; [congruence|] => _ _.
-    case L1: lookup => //=[S]; rewrite IH//=.
-    rewrite L//.
-  Qed. *)
-
-  (* Lemma more_precise_add_None {v sv1 S}:
-    valid_sig sv1 ->
-      more_precise sv1 (add v (weak S) sv1).
-  Proof.
-    elim: sv1 v S => //=-[k v] l IH k' v' /= /andP[c vl].
-    case:eqP => //= H1 H2.
-    rewrite eqxx incl_refl//=.
-    rewrite key_absent_more_precise//=.
-    by apply: IH.
-  Qed. *)
-
-  (* Lemma more_precise_add_None_left {k v A C}:
-    lookup k A = None ->
-      more_precise (add k v A) C -> more_precise A C.
-  Proof.
-    elim: A k v C => //=[[k v] xs] IH k' v' /= C.
-    case:eqP => //= H1 H2.
-    case X: lookup => //=[v''] /andP[H3 H4].
-    rewrite H3/=.
-    by apply: IH H2 H4.
-  Qed. *)
-
   Lemma more_precise_refl {s}: 
     valid_sig s -> more_precise s s.
   Proof.
@@ -1990,44 +1969,6 @@ Section more_precise.
     rewrite eqxx//=incl_refl//=.
     rewrite key_absent_remove//IH//.
   Qed.
-
-  (* Lemma more_precise_add_Some {v sv1 S S'}:
-    valid_sig sv1 ->
-    lookup v sv1 = Some S -> incl S S' = ty_ok true ->
-      more_precise sv1 (add v S' sv1).
-  Proof.
-    elim: sv1 v S S' => //=-[k v] l IH k' S S' /= /andP[c vl].
-    case:eqP => //= H; subst.
-      move=> [?]; subst => H.
-      rewrite eqxx/= H/= key_absent_more_precise//.
-      rewrite more_precise_refl//.
-    move=> H1 H2.
-    rewrite eqxx incl_refl/=.
-    rewrite key_absent_more_precise//.
-      by apply: IH; eauto.
-  Qed. *)
-
-  (* Lemma more_precise_add_Some_left {k v m A A' C}:
-    lookup k A = Some A' -> max v A' = ty_ok m ->
-      more_precise (add k m A) C -> more_precise A C.
-  Proof.
-    elim: A A' C k v m => //=[[k v] xs] IH A' C k' v' m + H.
-    case: eqP => //= H1; subst.
-      move=> [?]; subst.
-      case X: lookup => //=[C'] /andP[H1 H2].
-      rewrite H2 andbT.
-      move: H1; case I: incl => //=[[]]//= _.
-      rewrite max_comm in H.
-      have H1 := max_incl H.
-      rewrite not_incl_incl in H1.
-      rewrite (incl_trans H1 I)//.
-    move=> L.
-    case X: lookup => //=[C'] /andP[H2 H3].
-    rewrite H2.
-    apply: IH L H H3.
-  Qed. *)
-
-
 
   Lemma merge_more_precise0 {B C D}:
     merge_sig B C = ty_ok D ->
@@ -2091,7 +2032,8 @@ Section more_precise.
   Proof.
   Admitted.
 
-  Lemma more_precise_add_None {v sv1 S}:
+  (* THIS IS CLEARLY FALSE *)
+  (* Lemma more_precise_add_None {v sv1 S}:
     valid_sig sv1 ->
     lookup v sv1 = None ->
       more_precise (add v S sv1) sv1.
@@ -2106,7 +2048,7 @@ Section more_precise.
     rewrite eqxx incl_refl//=.
     rewrite key_absent_remove/key_absent?L//.
     by apply: IH.
-  Admitted.
+  Admitted. *)
 
   Definition more_precise_opt (more_pre less_pre:(option (S * bool))) :=
     match less_pre with
@@ -2267,7 +2209,6 @@ Section more_precise.
     by apply: IH; eauto.
   Qed.
 
-
   Lemma assume_tm_more_precise {sP sv1 svA c S}:
     valid_sig sv1 -> assume_tm sP sv1 c S = ty_ok svA -> more_precise svA sv1.
   Proof.
@@ -2277,7 +2218,9 @@ Section more_precise.
     - move=> v sv1 svA S sv1V.
       case L: lookup => [S'|]; last first.
         move=> [<-]/={svA}.
-        by apply: more_precise_add_None.
+        (* should be ok under the condition that all var in c in both sv1 and svA *)
+        (* by apply: more_precise_add_None. *)
+        admit.
       case M: min => //=[S''][<-].
       apply: more_precise_add_Some; eauto.
       rewrite min_comm in M.
@@ -2289,7 +2232,7 @@ Section more_precise.
       have V' := assume_tm_valid_sig V al.
       have {}Hr := Hr _ _ _ V' ar.
       by apply: more_precise_trans Hr Hl.
-  Qed.
+  Admitted.
 
   Lemma assume_call_more_precise {sP sv1 svA c S}:
     valid_sig sv1 ->
@@ -2309,6 +2252,59 @@ Section more_precise.
       by apply: more_precise_trans H2 IH.
   Qed.
 
+  Lemma more_precise_get_callable_hd {sP s1 s2 c S}:
+    valid_sig s2 ->
+    more_precise s1 s2 ->
+      get_callable_hd_sig sP s2 c = Some S ->
+        match get_callable_hd_sig sP s1 c with
+        | None => S == weak S
+        | Some S' => incl S' S = ty_ok true
+        end.
+  Proof.
+    move=> V M.
+    have:= more_precise_valid_sig V M.
+    rewrite /get_callable_hd_sig/get_tm_hd_sig.
+    case G: get_tm_hd => [E|[P | Var]].
+    - move=> _ [<-]//.
+    - move=> H ->; rewrite incl_refl//.
+    - clear - M s2 V; elim: s1 s2 S Var M V => //=  [|[k v] A IH] B S Var + VB.
+        elim: B {VB} => //= => [[k v] A IH]/= /andP[/eqP H1 H2] _.
+        case: eqP.
+          move=> _ [] <-; rewrite -H1//.
+        move=> H LA.
+        by apply: IH; auto.
+      case LB: lookup => //=[vB] /andP[/eqP I MP].
+      rewrite/key_absent; case LA: lookup => //= VA.
+      case: eqP => H; subst.
+        rewrite LB => -[]<-//.
+      move=> LB1.
+      have {}IH := IH _ _ _ MP (valid_sig_remove VB) VA.
+      apply: IH.
+      rewrite lookup_remove_diff//.
+  Qed.
+
+  Lemma more_precise_get_callable_hd_None {sP s1 s2 c}:
+    valid_sig s2 ->
+    more_precise s1 s2 ->
+      get_callable_hd_sig sP s2 c = None ->
+        get_callable_hd_sig sP s1 c = None.
+  Proof.
+    move=> V M.
+    have:= more_precise_valid_sig V M.
+    rewrite /get_callable_hd_sig/get_tm_hd_sig.
+    case G: get_tm_hd => [E|[P | Var]]//.
+    clear - M s2 V.
+    elim: s1 s2 Var M V => /=[|[k v] A IH] B Var + VB//.
+    case LB: lookup => //=[vB] /andP[/eqP I MP].
+    rewrite/key_absent; case LA: lookup => //= VA.
+    case: eqP => H; subst.
+      congruence.
+    move=> LB1.
+    apply: IH _ _ MP (valid_sig_remove VB) VA _.
+    rewrite lookup_remove_diff//.
+  Qed.
+
+
   Lemma more_precise_check_callable {sP s1 s2 c d0 d' dc sA}:
     check_callable sP s2 c d0 = ty_ok (dc, sA) -> minD d' d0 = d' ->
     more_precise s1 s2 -> valid_sig s2 ->
@@ -2322,23 +2318,52 @@ Section more_precise.
     have [r[H4 H5]] := more_precise_check_tm C H2 H3.
     rewrite H4.
     case: m C H5 => //=; last first.
-      move=> H5 ? [??]; subst.
-      repeat eexists; auto.
+      move=> H5 ?; subst.
+      case G: get_callable_hd_sig => [S|]//=.
+        have V: valid_sig s2 by admit.
+        case A: assume_call => [S1|]//=[??]; subst.
+        case G1: get_callable_hd_sig => [S1|]/=; last first.
+          repeat eexists; auto.
+          apply: more_precise_trans (H2) _.
+            admit. (*valid_sig*)
+          have:= more_precise_get_callable_hd _ H2 G.
+          rewrite G1.
+          admit. (*should be ok: we add in sA weak to variables in s2*)
+        have:= more_precise_get_callable_hd V H2 G.
+        rewrite G1 => HH.
+        rewrite (incl_weak HH).
+        admit. (*
+          should be ok: from A, we have: more_precise s2 sA,
+          from A we have that `assume_call sP s1 c (weak S1)` is ty_ok K,
+          with more_precise...
+        *)
+      move=> [??]; subst.
+      rewrite (more_precise_get_callable_hd_None _ _ G)//.
+      by repeat eexists; auto.
     move=> [S B] H; case: r H4 => //=; last first.
-      move=> H4 H5 H6.
-      repeat eexists; auto.
-        case: S H5 H6 H => //=-[]//[]//; case: B => //= _; last first.
-          by move=>[??]; subst; auto.
-        case G: get_callable_hd_sig => //=[S|]; last first.
-          by move=> [??]; subst; auto.
-        by case X: assume_call => //=[m][??]//; subst.
-      case: S H5 H6 H => //= -[]//= []//= _.
+      case: S H => //=-[]//=[]//= H H4 _.
       destruct B => //=; last first.
-        by move=>[]??; subst; auto.
+        move=> [??]; subst.
+        case G: get_callable_hd_sig => //=[S1|]; last first.
+          repeat eexists => //.
+        admit. (*should be ok*)
       case G: get_callable_hd_sig => //=[S|]; last first.
-        by move=> [??]; subst; auto.
-      case X: assume_call => //=[m][??]//=; subst. 
-      move=> H.
+        rewrite (more_precise_get_callable_hd_None _ _ G)//.
+        move=> [??]; subst.
+        by repeat eexists; auto.
+      case X: assume_call => //=[m][??]//=; subst.
+      have:= more_precise_get_callable_hd H3 H2 G.
+      case G1: get_callable_hd_sig => //=[S1|]; last first.
+        move=>/eqP H5.
+        repeat eexists; auto.
+        (* 
+          assume_call with S gives sA which such that
+          Hnew : more_precise s2 sA, we conclude the proof using 
+          more_precise_trans H2 Hnew
+        *)
+        admit. (*admit*) 
+      move=> I.
+      rewrite (incl_weak I)/=.
       admit.
     case: S H => //= -[]//= D H4 [S1 B1] H5 [+ H6].
     case: S1 H5 H6 => //=[|[]]//= []//= D' H5 H6.
@@ -2351,15 +2376,30 @@ Section more_precise.
       move=> [??]; subst.
       case G: get_callable_hd_sig => //=[S|]; last first.
         by repeat eexists; auto.
-      admit.
+      admit. (*this is hard?*)
     case G: get_callable_hd_sig => //=[S|]; last first.
+      rewrite (more_precise_get_callable_hd_None H3 H2 G).
       move=> [??]; subst.
-      case G1: get_callable_hd_sig => //=[S1|]; last first.
-        repeat eexists; auto.
-      admit.
+      repeat eexists; auto.
     case A: assume_call => //= [S1][??]; subst.
+    have:= more_precise_get_callable_hd H3 H2 G.
     case G1: get_callable_hd_sig => //=[S1|]; last first.
+      move=> /eqP Hs.
+      move: G G1; rewrite/get_callable_hd_sig/get_tm_hd_sig.
+      case THD: get_tm_hd => //=[[P|V]]//.
+        move=> ->//.
+      move=> Ls2 Ls1.
+      (* from Ls1 and Ls2, we have that the head is the variable B,
+        it means that D should be pred and also D'*)
+      have ?: D = Pred by admit.
+      subst.
+      repeat eexists; simpl => //.
+      apply: more_precise_trans H2 _.
+        admit. (*valid_sig*)
+      rewrite Hs in A.
+      (* should be true by A *)
       admit.
+    move=> H.
     admit.
   Admitted.
 
@@ -2422,6 +2462,7 @@ Section more_precise.
       rewrite M1/=; repeat eexists; eauto.
       rewrite minD_comm; destruct dB0, dB, dB0', dB' => //.
   Qed.
+  Print Assumptions more_precise_tc_tree_aux.
 End more_precise.
 
 
@@ -2444,10 +2485,18 @@ Proof.
     apply: tc_tree_aux_valid_sig V dt.
   rewrite/check_callable.
   case X: check_tm => //[[[d b]|]]//=; last first.
-    move=> [??]; subst => /=; rewrite maxD_comm/=.
-    move=> /IH/= -/(_ V); case dtA: tc_tree_aux => //=[[[b|]]]//=.
-    rewrite merge_refl//=.
-    apply: tc_tree_aux_valid_sig V dtA.
+    case G: get_callable_hd_sig => [S|]//=; last first.
+      move=> [??]; subst => /=; rewrite maxD_comm/=.
+      move=> /IH/= -/(_ V); case dtA: tc_tree_aux => //=[[[b|]]]//=.
+      rewrite merge_refl//=.
+      apply: tc_tree_aux_valid_sig V dtA.
+    case Ass: assume_call => //=[V'][??]; subst => /=.
+    have H1 := assume_call_valid_sig V Ass.
+    move=> /IH -/(_ H1).
+    rewrite maxD_comm/=.
+    case dt: tc_tree_aux => //=[[[]S1]]//= _.
+    rewrite merge_refl//.
+    by apply: tc_tree_aux_valid_sig dt.
   case: d X => //-[]//=d.
   case Y: get_callable_hd_sig => //[s|].
     case: b => //=.
@@ -2536,10 +2585,13 @@ Section same_ty.
         exists D2, check_callable sP sV A d2 = ty_ok (D2, S) /\ minD D2 D1 = D2.
   Proof.
     rewrite/check_callable/=.
-    case X: check_tm => [[[[[|bb]|] []]|]|]//=; [|by move=> [??] H; subst; repeat eexists..].
-    case Y: get_callable_hd_sig => [s2|]//=; [|move=> [?]H; subst; repeat eexists].
-    case Z: assume_call => //=[S1][??] H; subst; repeat eexists.
-    destruct bb => //=.
+    case X: check_tm => [[[[[|bb]|] []]|]|]//=.
+    - case G: get_callable_hd_sig => [s2|]; [|move=> [??]H; subst; repeat eexists].
+      case Z: assume_call => //=[S1][??] H; subst; repeat eexists.
+      destruct bb => //=.
+    - move=> [??] H; subst; repeat eexists.
+    - case G: get_callable_hd_sig => [s2|]; [|move=> [??]H; subst; repeat eexists].
+      case Z: assume_call => //=[S1][??] H; subst; repeat eexists.
   Qed.
 
   Lemma same_ty_tc_tree_aux1 {sP sV A d1 D1 S} d2:
