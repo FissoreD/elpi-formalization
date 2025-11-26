@@ -839,6 +839,15 @@ Section checker.
   Definition callable_is_det (sP: sigT) sV (t : Callable) :=
     odflt false (omap is_det_sig (get_callable_hd_sig sP sV t)).
 
+  Fixpoint RCallable2Callable rc := 
+    match rc with
+    | RCallable_Comb h bo => Callable_Comb (RCallable2Callable h) bo
+    | RCallable_Kp k => Callable_Kp (k)
+    end.
+
+  Definition RCallable_sig (sP: sigT) (t:RCallable) :=
+    get_tm_hd_sig sP [::] (Callable2Tm (RCallable2Callable t)).
+
   Definition arr_tl t := match t with
     | arr _ _ r => ty_ok r
     | _ => ty_err
@@ -980,23 +989,11 @@ Section checker.
     end. 
 
   (* takes a list of atoms and returns if they typecheck, their determinacy, the updated sigV *)
-  Fixpoint check_atoms sP sV l s :=
+  Fixpoint check_atoms sP (sV:sigV) l (s:D) : typecheck (D * sigV)%type :=
     match l with
     | [::] => ty_ok (s, sV)
     | x :: xs => 
       map_ty (fun '(s', sV') => check_atoms sP sV' xs s') (check_atom sP sV x s)
-    end.
-
-  Fixpoint RCallable2Callable rc := 
-    match rc with
-    | RCallable_Comb h bo => Callable_Comb (RCallable2Callable h) bo
-    | RCallable_Kp k => Callable_Kp (k)
-    end.
-
-  Fixpoint RCallable_sig (sP: sigT) (t:RCallable) :=
-    match t with
-    | RCallable_Comb h _ => RCallable_sig sP h
-    | RCallable_Kp k => (lookup k sP) (*TODO: sP should be complete*)
     end.
 
   Definition empty_ctx : sigV := [::].

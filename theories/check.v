@@ -28,61 +28,84 @@ Definition typ_func (A: typecheck (_ * sigV)%type) := match A with ty_ok (Func, 
 
 Lemma all_det_nfa_big_and {sP sV l r} p: 
   valid_sig sV ->
-  typ_func (check_atoms sP sV l r)-> 
-    typ_func (tc_tree_aux sP sV (big_and p l) r).
+  (check_atoms sP sV l r) = tc_tree_aux sP sV (big_and p l) r.
 Proof.
   elim: l sV r => //=.
   move=> A As IH sV r V.
-  case X: check_atom => /=[[dA sVA]|]//=.
-  case YY : A X => //=[|c].
-    move=> [??]; subst => //=.
-    move=> {}/IH H.
-    have {H}:= H V.
-    case dt: tc_tree_aux V => //=[[[b|]]]//= V _.
-    rewrite merge_refl//=.
-    apply: tc_tree_aux_valid_sig V dt.
-  rewrite/check_callable.
-  case X: check_tm => //[[[d b]|]]//=; last first.
-    case G: get_callable_hd_sig => [S|]//=; last first.
-      move=> [??]; subst => /=; rewrite maxD_comm/=.
-      move=> /IH/= -/(_ V); case dtA: tc_tree_aux => //=[[[b|]]]//=.
-      rewrite merge_refl//=.
-      apply: tc_tree_aux_valid_sig V dtA.
-    case Ass: assume_call => //=[V'][??]; subst => /=.
-    have H1 := assume_call_valid_sig V Ass.
-    move=> /IH -/(_ H1).
-    rewrite maxD_comm/=.
-    case dt: tc_tree_aux => //=[[[]S1]]//= _.
-    rewrite merge_refl//.
-    by apply: tc_tree_aux_valid_sig dt.
-  case: d X => //-[]//=d.
-  case Y: get_callable_hd_sig => //[s|].
-    case: b => //=.
-      case X: assume_call => //=[ts] H [??]; subst.
-      have H1 := assume_call_valid_sig V X.
-      move=> /IH -/(_ H1).
-      rewrite maxD_comm maxD_assoc maxD_refl.
-      case dt: tc_tree_aux => //=[[[]S]]//= _.
-      rewrite merge_refl//=.
-      apply: tc_tree_aux_valid_sig H1 dt.
-    move=> H [??]; subst => /IH -/(_ V).
-    rewrite maxD_comm/=.
-    case dt: tc_tree_aux => //[[[]b]]//=.
-    rewrite merge_refl//=.
-    apply: tc_tree_aux_valid_sig V dt.
-  case: b => //=.
-    move=> H [??]; subst.
-    move=> /IH-/(_ V).
-    rewrite maxD_comm/=.
-    case dt: tc_tree_aux => //[[[]S]]//= _.
-    rewrite merge_refl//=.
-    apply: tc_tree_aux_valid_sig V dt.
-  move=> H [??]; subst => /IH -/(_ V).
-  rewrite maxD_comm/=.
-  case dt: tc_tree_aux => //[[[]S]]//= _.
-  rewrite merge_refl//=.
-  apply: tc_tree_aux_valid_sig V dt.
+  case: A => //=.
+    rewrite -IH//; case C: check_atoms => //=[[??]]; rewrite maxD_refl//merge_refl//.
+    rewrite IH// in C.
+    apply: tc_tree_aux_valid_sig V C.
+  move=> C.
+  case X: check_callable => //=[[D S]].
+  have [H V'] := check_callable_valid_sig V X.
+  rewrite maxD_comm H.
+  rewrite -IH//=; case C1: check_atoms => //=[[D1 S1]].
+  rewrite maxD_refl merge_refl//.
+  rewrite IH// in C1.
+  by apply: (tc_tree_aux_valid_sig _ C1).
 Qed.
+
+(* given a ty_ok term, then back_chaining return a type_checkable tree *)
+Lemma ty_ok_backchain {sP sV2 b u pr t s r}:
+  sigma2ctx sP s = Some sV2 ->
+  check_program sP ->
+  check_tm sP sV2 (Callable2Tm t) = ty_ok b ->
+    F u pr t s = r ->
+      all (fun (r:(Sigma * R)) => 
+        is_ty_ok (check_atoms sP sV2 (premises r.2) Func) ||
+        is_ty_ok (check_atoms sP sV2 (premises r.2) Pred)
+        ) r.
+Proof.
+  move=> + CKPR +<-{r}.
+  rewrite/F/=.
+  elim: t s sV2 b => //.
+  - move=> /= k s A b H1 _ {b}.
+    case L: lookup => [m|]//=.
+    have:= CKPR pr.
+    case: pr L => //= rules modes _ L {}CKPR.
+    clear -CKPR H1.
+    elim: rules CKPR k m s A H1 => //=r rs IH /andP[+ H].
+    case: r => [hd bo]/=.
+    case C: check_rule => //=[[]]//= _ k m s A H1.
+    case HH: lang.H => //=[s1|]; [|by auto].
+    move: C; rewrite/check_rule.
+    rewrite /RCallable_sig.
+    case HDS: get_tm_hd_sig => //=[hds].
+    case AssHd: assume_hd => //=[Shd].
+    case CAT: check_atoms => //=[[DAT SAT]]/=.
+    case: ifP => //= H2.
+    rewrite (IH H k m _ _ H1) andbT.
+    move=> H3 {IH}.
+    admit.
+  - move=> k s A b H1 _ {b}.
+    case T: tm2RC => //=[R].
+    case L: lookup => [m|]//=.
+    have:= CKPR pr.
+    case: pr L => //= rules modes _ L {}CKPR.
+    clear -CKPR H1.
+    elim: rules CKPR R m s A H1 => //=r rs IH /andP[+ H].
+    case: r => [hd bo]/=.
+    case C: check_rule => //=[[]]//= _ k m s A H1.
+    case HH: lang.H => //=[s1|]; [|by auto].
+    move: C; rewrite/check_rule.
+    rewrite /RCallable_sig.
+    case HDS: get_tm_hd_sig => //=[hds].
+    case AssHd: assume_hd => //=[Shd].
+    case CAT: check_atoms => //=[[DAT SAT]]/=.
+    case: ifP => //= H2.
+    rewrite (IH H k m _ _ H1) andbT.
+    move=> H3 {IH}.
+    admit.
+  - move=> c IH t s A b H/=.
+    case C: (check_tm _ _ (Callable2Tm _)) => //=[[[[|m tl tr] D]|]]//; last first.
+      move=> [?]; subst.
+      case T1: tm2RC => //=[V].
+      (* V has a rigid head *)
+      case L: lookup => //=[M].
+      (*  *)
+
+Abort.
 
 Lemma expand_det_tree {u sP sV sVx sV' A r s ign d} : 
   check_program sP ->
