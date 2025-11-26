@@ -1809,24 +1809,23 @@ Section less_precise.
 End less_precise. *)
 
 Section more_precise.
-  
+  Print Module Option. Open Scope fset_scope.
+    Print alt_spec.
   (* tells if big is more precise then smal; *)
   (* e.g. big has more mapping then small, and/or the mappings have less holes *)
-  Fixpoint more_precise (small big: sigV) :=
-    match small with
-    | [::] => all (fun x => x.2 == weak x.2) big
-    | (k,v_small)::xs => 
-      match lookup k big with
-      | None => false
-      | Some v_big => 
-        ((incl v_small v_big) == ty_ok true) && 
-        more_precise xs (remove k big)
-      end
-    end.
+  Definition more_precise (small big: sigV) : bool :=
+    (domf small `<=` domf big) &&
+    [forall x : domf big, 
+      if boolP (val x \in domf small) is AltTrue xS then
+      incl (small.[xS]) big.[valP x] == ty_ok true
+      else (big.[valP x] == weak big.[valP x])].
 
+  
+(* 
   Lemma more_precise_key_absent {k s l}:
     more_precise l (remove k s) -> key_absent k l.
   Proof.
+
     rewrite/key_absent.
     elim: l k s => //= -[k v] xs IH k' ys.
     case x: lookup => //=[S] /andP[/eqP H1 +].
@@ -1837,17 +1836,7 @@ Section more_precise.
     rewrite remove_comm//.
     move=> /IH.
     case L: lookup => //=.
-  Qed.
-
-  Lemma more_precise_valid_sig {A B}:
-    valid_sig B -> more_precise A B -> valid_sig A.
-  Proof.
-    elim: A B => /=[|[k v] A IH] B VB//.
-    case L : lookup => /=[vB|]//.
-    move=> /andP[/eqP I M].
-    rewrite (IH _ (valid_sig_remove VB) M) andbT.
-    apply: more_precise_key_absent M.
-  Qed.
+  Qed. *)
 
   Lemma more_precise_remove2 {A B} k:
     valid_sig B ->
