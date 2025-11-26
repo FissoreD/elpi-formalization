@@ -24,6 +24,66 @@ Proof.
   rewrite incl_refl//.
 Qed.
 
+Definition typ_func (A: typecheck (_ * sigV)%type) := match A with ty_ok (Func, _) => true | _ => false end.
+
+Lemma all_det_nfa_big_and {sP sV l r} p: 
+  valid_sig sV ->
+  typ_func (check_atoms sP sV l r)-> 
+    typ_func (tc_tree_aux sP sV (big_and p l) r).
+Proof.
+  elim: l sV r => //=.
+  move=> A As IH sV r V.
+  case X: check_atom => /=[[dA sVA]|]//=.
+  case YY : A X => //=[|c].
+    move=> [??]; subst => //=.
+    move=> {}/IH H.
+    have {H}:= H V.
+    case dt: tc_tree_aux V => //=[[[b|]]]//= V _.
+    rewrite merge_refl//=.
+    apply: tc_tree_aux_valid_sig V dt.
+  rewrite/check_callable.
+  case X: check_tm => //[[[d b]|]]//=; last first.
+    case G: get_callable_hd_sig => [S|]//=; last first.
+      move=> [??]; subst => /=; rewrite maxD_comm/=.
+      move=> /IH/= -/(_ V); case dtA: tc_tree_aux => //=[[[b|]]]//=.
+      rewrite merge_refl//=.
+      apply: tc_tree_aux_valid_sig V dtA.
+    case Ass: assume_call => //=[V'][??]; subst => /=.
+    have H1 := assume_call_valid_sig V Ass.
+    move=> /IH -/(_ H1).
+    rewrite maxD_comm/=.
+    case dt: tc_tree_aux => //=[[[]S1]]//= _.
+    rewrite merge_refl//.
+    by apply: tc_tree_aux_valid_sig dt.
+  case: d X => //-[]//=d.
+  case Y: get_callable_hd_sig => //[s|].
+    case: b => //=.
+      case X: assume_call => //=[ts] H [??]; subst.
+      have H1 := assume_call_valid_sig V X.
+      move=> /IH -/(_ H1).
+      rewrite maxD_comm maxD_assoc maxD_refl.
+      case dt: tc_tree_aux => //=[[[]S]]//= _.
+      rewrite merge_refl//=.
+      apply: tc_tree_aux_valid_sig H1 dt.
+    move=> H [??]; subst => /IH -/(_ V).
+    rewrite maxD_comm/=.
+    case dt: tc_tree_aux => //[[[]b]]//=.
+    rewrite merge_refl//=.
+    apply: tc_tree_aux_valid_sig V dt.
+  case: b => //=.
+    move=> H [??]; subst.
+    move=> /IH-/(_ V).
+    rewrite maxD_comm/=.
+    case dt: tc_tree_aux => //[[[]S]]//= _.
+    rewrite merge_refl//=.
+    apply: tc_tree_aux_valid_sig V dt.
+  move=> H [??]; subst => /IH -/(_ V).
+  rewrite maxD_comm/=.
+  case dt: tc_tree_aux => //[[[]S]]//= _.
+  rewrite merge_refl//=.
+  apply: tc_tree_aux_valid_sig V dt.
+Qed.
+
 Lemma expand_det_tree {u sP sV sVx sV' A r s ign d} : 
   check_program sP ->
     sigma2ctx sP s = Some sVx ->
@@ -79,7 +139,7 @@ Proof.
         move=> H.
         have : exists T d0, get_callable_hd_sig sP sV1 t = Some T /\ 
           get_sig_hd T = d d0 /\ minD d0 d1 = d0.
-          admit.
+          admit. (*TODO: THIS IS INTERESTING TO PROVE*)
         move=> [S[d0 [H3 [H4 H5]]]].
         rewrite H3/=.
         case ASS: assume_call => //=[SEND] [??]; subst.
