@@ -5,6 +5,8 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
 Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
 
 Lemma TODO: False. Admitted.
 Ltac TODO := exfalso; apply TODO.
@@ -1327,7 +1329,7 @@ Proof. by rewrite in_fsetE => /andP[E F]; rewrite E F; apply: Both (E) _ (F) _ =
         by rewrite in_fsetE kA kB.
       move/fsubsetP: C => /(_ k kAB) /imfsetP[/= [k' k'D] /= k'P ?]; subst k'.
       rewrite -(bool_irrelevance kAB k'D) in k'P.
-      case: (max_in_Some kAB k'P) => x /(_ kA) /(_ kB).
+      case: (max_in_Some k'P) => x /(_ kA) /(_ kB).
       rewrite fnd_in weak_fst_if_not_in_sndP !in_fnd // [odflt _ _]/=.
       by move->.
     - rewrite merge_sig1_defaultL //.
@@ -1809,8 +1811,7 @@ Section less_precise.
 End less_precise. *)
 
 Section more_precise.
-  Print Module Option. Open Scope fset_scope.
-    Print alt_spec.
+    Open Scope fset_scope.
   (* tells if big is more precise then smal; *)
   (* e.g. big has more mapping then small, and/or the mappings have less holes *)
   Definition more_precise (small big: sigV) : bool :=
@@ -1820,48 +1821,91 @@ Section more_precise.
       incl (small.[xS]) big.[valP x] == ty_ok true
       else (big.[valP x] == weak big.[valP x])].
 
-  
-(* 
   Lemma more_precise_key_absent {k s l}:
     more_precise l (remove k s) -> key_absent k l.
   Proof.
-
-    rewrite/key_absent.
-    elim: l k s => //= -[k v] xs IH k' ys.
-    case x: lookup => //=[S] /andP[/eqP H1 +].
-    case:eqP => //= H3; subst.
-      by rewrite lookup_remove_None in x.
-    (* move=> /IH. *)
-    rewrite lookup_remove_diff// in x; [|congruence].
-    rewrite remove_comm//.
-    move=> /IH.
-    case L: lookup => //=.
-  Qed. *)
-
-  Lemma more_precise_remove2 {A B} k:
-    valid_sig B ->
-    more_precise A B -> more_precise (remove k A) (remove k B).
-  Proof.
-    elim: A B k => //=[|[k v] A IH] B k1 VB.
-      elim: B k1 {VB} => /=[|[k v] A IH]//= k1 /andP[/eqP H1 H2].
-      case: eqP => //=H; subst.
-        by apply: IH.
-      rewrite -H1 eqxx/=.
-      apply: IH H2.
-    case LB: lookup => //=[vB] /andP[/eqP H1 H2].
-    case: eqP => //= H; subst.
-      rewrite -(@remove2 _ _ _ B).
-      apply: IH (valid_sig_remove VB) H2.
-    rewrite lookup_remove_diff// LB H1/=.
-    rewrite remove_comm.
-    apply: IH (valid_sig_remove VB) H2.
+    by case/andP=> /fsubsetP/(_ k) H _; apply/negP=> /H; rewrite mem_remfF.
   Qed.
 
-  Lemma more_precise_removel {k A B v}:
-    valid_sig B ->
+  Lemma more_precise_remove2 {A B} k:
+    more_precise A B -> more_precise (remove k A) (remove k B).
+  Proof.
+    case/andP=> [sAB inclAB]; apply/andP; split.
+      by rewrite !domf_rem; apply: fsetSD sAB.
+    apply/forallP=> -[v vP].
+    move: {-}(vP); rewrite [val _]/= {1}(domf_rem B) => E.
+    case: {-}_ / boolP=>[vAk|nvAk]. 
+      move: {-}(vAk); rewrite {1}(domf_rem A) => F.
+      rewrite fnd_in fnd_restrict F.
+      rewrite [X in incl _ X]fnd_in fnd_restrict E.
+      have vA := fsubsetP (fsubsetDl _ _) v F.
+      rewrite in_fnd ?(fsubsetP sAB) // [odflt _ _]/=.
+      have vB := fsubsetP sAB v vA.
+      rewrite (in_fnd vB) [odflt _ _]/=.
+      move/forallP: inclAB => /(_ (Sub v vB)).
+      case: {-}_ / boolP => [xA ixAxB|/= nxA].
+        rewrite /= in xA ixAxB.
+        rewrite (bool_irrelevance vA xA).
+        move: (valP _) ixAxB => /= vB'.
+        by rewrite (bool_irrelevance vB' vB).
+      by rewrite vA in nxA.
+    rewrite domf_rem in nvAk.
+    have vB := fsubsetP (fsubsetDl _ _)  v E.
+    move/forallP: inclAB => /(_ (Sub v vB)).
+    rewrite [val _]/=.
+    case: {-}_ / boolP => [vA|nvA].
+      have abs: v = k by move: nvAk; rewrite !in_fsetE vA andbT negbK => /eqP.
+      by exfalso; move: {-}(E); rewrite abs; rewrite !in_fsetE eqxx.
+    move: (valP _); rewrite [val _]/= => X; rewrite (bool_irrelevance X vB) {X} => Be.
+    rewrite fnd_in fnd_restrict E.
+    by rewrite in_fnd /=.
+  Qed.
+
+  Lemma more_precise_removel k (A B : sigV) v:
     key_absent k A -> lookup k B = Some (weak v) ->
     more_precise A (remove k B) = more_precise A B.
   Proof.
+    move=> nkA kB; rewrite /more_precise.
+    rewrite {1}domf_rem fsubsetD1 nkA andbT; congr (_ && _).
+    apply/forallP/forallP; move=> H [x xP]; rewrite [val _]/=.
+      case: {-}_ / boolP => [xA|nxA].
+        case: (boolP (x \in domf B `\ k)) => [xBk|nxBk].
+        have xBk' : x \in domf B.[~k] by rewrite domf_rem.
+        move: (H (Sub x xBk')); rewrite [val _]/=.
+        case: {-}_ / boolP => [xA'|]; last by rewrite xA.
+        rewrite (bool_irrelevance xA' xA).
+    rewrite [X in incl _ X]fnd_in fnd_restrict xBk in_fnd /=.
+    by move: (valP _) => /= X; rewrite (bool_irrelevance X xP).
+    have E : x = k by move: nxBk; rewrite !in_fsetE xP andbT negbK => /eqP.
+    by move: nkA; rewrite -E xA.
+    case: (x =P k) => [E|E].
+      move: kB; rewrite -E.
+      move: (valP _) => /= xP'; rewrite in_fnd (bool_irrelevance xP xP') => /Some_inj ->.
+      by rewrite weak2.
+    have xBk: x \in domf B.[~ k].
+      by rewrite domf_rem !in_fsetE xP andbT; apply/eqP.
+    move: (H (Sub x xBk)); rewrite [val _]/=.
+      case: {-}_ / boolP => [xA|_]; first by rewrite xA in nxA.
+      move: (valP _); rewrite [val _]/= => xBk'.
+      move: (valP _); rewrite [val _]/= => xB'.
+      rewrite fnd_in fnd_restrict -[in X in if X then _ else _](domf_rem B [fset k]) xBk. 
+      by rewrite in_fnd /=.
+  move: (valP _); rewrite [val _]/= => xBk.
+  case: {-}_ / boolP => [xA|nxA].
+    case: (x =P k) => [E|E].
+      admit.
+    have xB : x \in domf B.
+      by move: xP; rewrite !in_fsetE !inE -domf_rem xBk andbT.
+  move: (H (Sub x xB)); rewrite [val _]/=.
+  case: {-}_ / boolP => [xA'|nxA].
+    rewrite [B.[~ k] [` xBk]]fnd_in fnd_restrict -[in X in if X then _ else _](domf_rem B [fset k]) xBk.
+    rewrite in_fnd /=.
+    by move: (valP _); rewrite [val _]/= => xB'; rewrite (bool_irrelevance xB' xB) (bool_irrelevance xA' xA).
+    by rewrite xA in nxA.
+
+    admit.
+        move: {-}xBk; rewrite !inE !in_fsetE /=.
+    Search (_ `\` _) (_ `<=` _).
     rewrite/key_absent; case L: lookup => // + _.
     elim: A k B v L => //=[|[k v] A IH] k1 B/= v1 + VB.
       move=> _ KB.
