@@ -26,14 +26,26 @@ Inductive mode := i |o.
 Inductive S :=  b of B | arr of mode & S & S.
 Notation "x '--i-->' y" := (arr i x y) (at level 3).
 Notation "x '--o-->' y" := (arr o x y) (at level 3).
-derive D.
-HB.instance Definition _ := hasDecEq.Build D D_eqb_OK.
-derive B.
-HB.instance Definition _ := hasDecEq.Build B B_eqb_OK.
-derive mode.
-HB.instance Definition _ := hasDecEq.Build mode mode_eqb_OK.
-derive S.
-HB.instance Definition _ := hasDecEq.Build S S_eqb_OK.
+
+Definition D2o D : 'I_2 := match D with Func => @Ordinal 2 0 isT | Pred => @Ordinal 2 1 isT end.
+Definition o2D (i : 'I_2) : option D := match val i with 0 => Some Func | 1 => Some Pred | _ => None end.
+Lemma D2oK : pcancel D2o o2D. Proof. by case. Qed.
+HB.instance Definition _ := Finite.copy D (pcan_type D2oK).
+
+Definition B2o B : GenTree.tree D := match B with Exp => GenTree.Node 0 [::] | d D => GenTree.Leaf D end.
+Definition o2B (i :  GenTree.tree D) : option B := match i with GenTree.Node 0 [::] => Some Exp | GenTree.Leaf x => Some (d x) | _ => None end.
+Lemma B2oK : pcancel B2o o2B. Proof. by case. Qed.
+HB.instance Definition _ := Countable.copy B (pcan_type B2oK).
+
+Definition mode2o mode : 'I_2 := match mode with i => @Ordinal 2 0 isT | o => @Ordinal 2 1 isT end.
+Definition o2mode (x : 'I_2) : option mode := match val x with 0 => Some i | 1 => Some o | _ => None end.
+Lemma mode2oK : pcancel mode2o o2mode. Proof. by case. Qed.
+HB.instance Definition _ := Finite.copy mode (pcan_type mode2oK).
+
+Fixpoint S2o S : GenTree.tree (B + mode) := match S with b x => GenTree.Leaf (inl x) | arr m x y => GenTree.Node 0 [:: GenTree.Leaf (inr m); S2o x; S2o y] end.
+Fixpoint o2S (i :  GenTree.tree (B + mode)) : option S := match i with GenTree.Leaf (inl x) => Some (b x) | GenTree.Node 0 [:: GenTree.Leaf (inr m); x; y] => obind (fun x => obind (fun y => Some (arr m x y)) (o2S y) ) (o2S x)  | _ => None end.
+Lemma S2oK : pcancel S2o o2S. Proof. by elim=> //= ?? -> ? ->. Qed.
+HB.instance Definition _ := Countable.copy S (pcan_type S2oK).
 
 Goal b Exp == b Exp. by []. Qed.
 
