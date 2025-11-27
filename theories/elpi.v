@@ -763,7 +763,7 @@ Proof.
   - move=> p s s1 a b bs gl r t H H1 IH xs2 s2 H2.
     apply: IH.
     inversion H2; subst; move: H9; rewrite H => //-[??]; subst.
-    apply: H10.
+    assumption.
   - move=> p1 s s1 s2 t gl a al r H H1 IH xs2 s3 H2.
     apply: IH.
     inversion H2; subst => //.
