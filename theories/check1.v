@@ -1827,38 +1827,53 @@ Section more_precise.
     by case/andP=> /fsubsetP/(_ k) H _; apply/negP=> /H; rewrite mem_remfF.
   Qed.
 
+  Lemma more_precise_sub A B : more_precise A B -> domf A `<=` domf B.
+  Proof. by case/andP. Qed.
+
+  Lemma in_more_precise A B k (kA : k \in domf A) :
+    more_precise A B -> incl A.[kA] (odflt A.[kA] B.[? k]) = ty_ok true.
+  Proof.
+    move=> mp; rewrite in_fnd ?(fsubsetP (more_precise_sub mp) k kA) //= => kB.
+    case/andP: mp => _ /forallP/(_ (Sub k kB)); rewrite [val _]/=.
+    case: {-}_ / boolP => [kA'|nkA]; last by rewrite kA in nkA.
+    move: (valP _); rewrite /= (bool_irrelevance kA kA') => kB'.
+    by rewrite (bool_irrelevance kB kB') => /eqP.
+  Qed.
+
+  Lemma not_more_precise A B k (kB : k \in domf B) :
+   k \notin A ->  more_precise A B -> B.[kB] = weak B.[kB].
+  Proof.
+    move=> nkA /andP[] _ /forallP/(_ (Sub k kB)).
+   rewrite [val _]/=; case: {-}_ / boolP => [kA|nkA']; first by rewrite kA in nkA.
+   by move: (valP _) => /= kB' /eqP; rewrite (bool_irrelevance kB kB').
+  Qed.
+
+  Lemma in_fnd_rem1 {K : choiceType} V x k (A : {fmap K -> V}) (xA : x \in domf A) (xAk : x \in domf A.[~ k]) :
+    A.[~ k] [` xAk] = A.[xA].
+  Proof.
+    by rewrite fnd_in fnd_restrict -[in if _ then _ else _]domf_rem xAk in_fnd [odflt _ _]/=.
+  Qed.
+
   Lemma more_precise_remove2 {A B} k:
     more_precise A B -> more_precise (remove k A) (remove k B).
   Proof.
-    case/andP=> [sAB inclAB]; apply/andP; split.
-      by rewrite !domf_rem; apply: fsetSD sAB.
-    apply/forallP=> -[v vP].
-    move: {-}(vP); rewrite [val _]/= {1}(domf_rem B) => E.
-    case: {-}_ / boolP=>[vAk|nvAk]. 
-      move: {-}(vAk); rewrite {1}(domf_rem A) => F.
-      rewrite fnd_in fnd_restrict F.
-      rewrite [X in incl _ X]fnd_in fnd_restrict E.
-      have vA := fsubsetP (fsubsetDl _ _) v F.
-      rewrite in_fnd ?(fsubsetP sAB) // [odflt _ _]/=.
-      have vB := fsubsetP sAB v vA.
-      rewrite (in_fnd vB) [odflt _ _]/=.
-      move/forallP: inclAB => /(_ (Sub v vB)).
-      case: {-}_ / boolP => [xA ixAxB|/= nxA].
-        rewrite /= in xA ixAxB.
-        rewrite (bool_irrelevance vA xA).
-        move: (valP _) ixAxB => /= vB'.
-        by rewrite (bool_irrelevance vB' vB).
-      by rewrite vA in nxA.
-    rewrite domf_rem in nvAk.
-    have vB := fsubsetP (fsubsetDl _ _)  v E.
-    move/forallP: inclAB => /(_ (Sub v vB)).
-    rewrite [val _]/=.
-    case: {-}_ / boolP => [vA|nvA].
-      have abs: v = k by move: nvAk; rewrite !in_fsetE vA andbT negbK => /eqP.
-      by exfalso; move: {-}(E); rewrite abs; rewrite !in_fsetE eqxx.
-    move: (valP _); rewrite [val _]/= => X; rewrite (bool_irrelevance X vB) {X} => Be.
-    rewrite fnd_in fnd_restrict E.
-    by rewrite in_fnd /=.
+    move=> mp; rewrite /more_precise ![in X in X && _]domf_rem. 
+    rewrite fsetSD ?more_precise_sub // andTb; apply/forallP=> -[x xBk].
+    rewrite [val _]/=; case: {-}_ / boolP => [xAk|nxAk].
+      move: (valP _); rewrite [val _]/= => xBk'; rewrite (bool_irrelevance xBk' xBk) {xBk'}.
+      have xA : x \in domf A by move: xAk; rewrite !(inE,in_fsetE) /=; case/and3P.
+      have xB : x \in domf B by rewrite (fsubsetP (more_precise_sub mp)).
+      have := in_more_precise xA mp; rewrite in_fnd [odflt _ _]/= => H.
+      by rewrite !in_fnd_rem1 H.
+    move: (valP _); rewrite [val _]/= => xBk'; rewrite (bool_irrelevance xBk' xBk) {xBk'}.
+    have xB : x \in domf B by move: xBk; rewrite !(inE,in_fsetE) /=; case/and3P.
+    have nxA : x \notin domf A.
+      have nxk : x != k.
+        case: (x =P k) => // abs; rewrite abs !(inE,in_fsetE) eqxx in xBk.
+        by case/and3P: xBk.
+      by move: nxAk; rewrite !(inE,in_fsetE) /= !negb_and nxk /=; case/orP.
+    have := not_more_precise xB nxA mp.
+    by rewrite in_fnd_rem1 => /eqP.
   Qed.
 
   Lemma more_precise_removel k (A B : sigV) v:
