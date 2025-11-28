@@ -856,34 +856,32 @@ Section checker.
 
   (* takes a tm and returns its signature + if it is well-called
      the tm has no signature if its head is a variable with no assignment in sV *)
-  Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm) : ((S * bool)%type) :=
+  Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm) : S * bool :=
     match tm with
     | Tm_Kd k => ((b Exp, true))
     | Tm_Kp k => odflt any (omap (fun x => (x, true)) (lookup k sP))
     | Tm_V v => odflt any (omap (fun x => (x, true)) (lookup v sV))
     | Tm_Comb l r => 
-      let checkl := check_tm sP sV l in
-      let checkr := check_tm sP sV r in
-        (fun '(s1, b1) => 
-        match s1 return (S * bool)%type with
-          | arr i tl tr => 
-            match checkr with
-            (* | ty_err => ty_err *)
-              (* TODO: should return a sV' where I deduce the types in l to be the weak from sV *)
-            | (s2, b2) =>
-              odflt any (omap (fun bi => 
-                if b1 && b2 && bi then (tr, true) else (weak tr, false)
-              ) (incl s2 tl))
+        let checkl := check_tm sP sV l in
+        match checkl with
+        | (arr i tl tr, b1) => 
+          let checkr := check_tm sP sV r in
+          match checkr with
+          | (s2, b2) =>
+            match incl s2 tl with
+            | ty_ok true => if b1 && b2 then (tr, true) else (weak tr, false)
+            | ty_ok false | ty_err => (weak tr, false)
             end
-          | arr o tl tr => if b1 then 
-              match checkl with
-              (* | (ty_err) => checkl *)
-              | (arr _ _ r, b1) => (r, b1)
-              | (_, _) => any
-              end else (weak tr, false)
-          | _ => any
-          end)
-       checkl
+          end
+        | (arr o tl tr, b1) => (tr, b1)
+        | _ => any
+        end
+    end.
+
+  Definition squash_to_D S :=
+    match S with
+    | (b _, _) as X => X
+    | (_, gc) => any
     end.
 
   (* takes a tm and a signature and updates variable signatures
@@ -1972,11 +1970,17 @@ Section more_precise.
       end
   end.
 
-  (*Lemma more_precise_check_tm {sP c ctx1 ctx2 s1 s2 b1 b2}:
+  (* Lemma more_precise_check_callable {sP c ctx1 ctx2 s1 s2 b1 b2}:
+    check_callable sP ctx2 c = (s2,b2) ->
+    more_precise ctx1 ctx2 -> valid_sig ctx2 ->
+    (check_callable sP ctx1 c) = (s1,b1) ->
+      (incl s1 s2). *)
+
+  Lemma more_precise_check_tm {sP c ctx1 ctx2 s1 s2 b1 b2}:
     check_tm sP ctx2 c = (s2,b2) ->
     more_precise ctx1 ctx2 -> valid_sig ctx2 ->
     (check_tm sP ctx1 c) = (s1,b1) ->
-      (incl s1 s2) || ((s1,b1) == any).
+      (incl s1 s2 == ty_ok true) || ((s1,b1) == any).
   Proof.
     elim: c ctx1 ctx2 s1 s2 b1 b2 => //=.
     - move=> k ctx1 ctx2 s1 s2 b1 b2.
@@ -2010,7 +2014,19 @@ Section more_precise.
           move=> b2 + [??]; subst.
           by rewrite orbT.
         move=> [] sll slr; case: sl1 => [[]|]//[]//sll1 slr1.
-          case: sll1 => //=; [|move=> m sx sy ++<-; rewrite eqxx orbT//].
+          
+
+          case: sll1 => //=; last first.
+            move=> m src tgt + + [??]; subst.
+            case E: (incl sr sll); last first.
+              move=> +[??]; subst.
+              have inclR a b c d : incl (a --i--> b) (c --i--> d) = ty_ok true -> incl b d = ty_ok true.
+                by rewrite /incl /=; case: incl_aux; case: incl_aux => //= -[] [].
+              move=> /inclR. move/incl_weak ->.
+              Search incl weak. 
+            rewrite {1}/incl/=.
+          
+          [|move=> m sx sy ++<-; rewrite eqxx orbT//].
           move=> [|d]//=; [move=> ++<-; rewrite eqxx orbT//|].
           rewrite andbF/=.
           move=> ++ [??]; subst.
@@ -2346,8 +2362,9 @@ Section more_precise.
         admit. (*valid*)
       move=> H [??] M MP V; subst.
       case: S1 C1; last first.
-
-        move=> m s3 s4 H1; repeat eexists.
+        move=> m s3 s4 H1.
+        
+        ; repeat eexists.
 
         admit. (*should be false: not arr in conclusion*)
       move=> [|d1] H1.
