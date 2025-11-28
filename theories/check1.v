@@ -2116,7 +2116,7 @@ Section more_precise.
       rewrite /merge_sig/merge_sig1; case: ifP => //= test [hD].
       move: {-}(xD); rewrite -{1}hD in_fsetE /weak_fst_if_not_in_snd /=.
 
-      case: {-}_ / boolP => [xB| /negPf /[dup] -> _ /= xC].
+      case: {-}_ / boolP => [xB| /negPf nxB /= xC].
         have [xC _|nxC] := boolP (x \in domf C).
           have [v [i1 [i2 /[!in_fnd] -[Dx]]]]:= merge_lookup (in_fnd xB) (in_fnd xC) mBCD.
           by rewrite Dx // i1.
@@ -2125,37 +2125,42 @@ Section more_precise.
         have := merge_sig1_defaultL xW nxC; rewrite hD.
         rewrite weak_fst_if_not_in_sndP in_fnd not_fnd // in_fnd /= => -[->] _.
         by rewrite (bool_irrelevance xW xB) weak_incl.
-      have [xB|nxB] := boolP (x \in domf B).
-        have [s [i1 [i2]]]:= merge_lookup (in_fnd xB) (in_fnd xC) mBCD.
-        rewrite in_fnd => -[].
-        admit.
-    move/fmapP: hD => /(_ x).
-    by rewrite merge_sig1_defaultR // !in_fnd /= => -[<-]; rewrite weak2.
-  Admitted.
+      move: xC; rewrite nxB => /= xC; move/negbT in nxB.
+      move/fmapP: hD => /(_ x).
+      by rewrite merge_sig1_defaultR // !in_fnd /= => -[<-]; rewrite weak2.
+  Qed.
 
   Lemma more_precise_merge1 {A B}:
-    valid_sig B ->
     more_precise A B -> 
     exists C, merge_sig A B = ty_ok C.
   Proof.
-    rewrite merge_comm.
-    rewrite/merge_sig.
-    elim: A B => //=.
-    - by repeat eexists.
-    - move=> [k v] A IH B VB; case LC: lookup => [vB|]//= /andP[/eqP H1 H2].
-      rewrite /= weak_fst_if_not_in_sndP/= eqxx LC.
-      have:= @compat_type_max v vB.
-      rewrite (incl_compat_type H1).
-      case M: max => //=[m] _.
-      rewrite (@add_weak_fst_if_not_in_snd _ _ _ _ v)/=?eqxx//.
-  Abort.
+    move=> mp; rewrite merge_comm.
+    rewrite/merge_sig/merge_sig1; case: ifP; last first.
+      move/fsubsetP=> [x] => /= xAB; apply/imfsetP => /=.
+      exists (Sub x xAB); rewrite //= inE /max_in; case: fsetILR=> /= xA UxA xB UxB.
+      rewrite ffunE /= !valPE in_fnd /=.
+      by have := in_more_precise xB mp; rewrite in_fnd /= incl_not_incl => /not_incl_max->.
+    move/fsubsetP=> sAB.
+    eexists; congr(ty_ok _).
+  Qed.
 
   Lemma more_precise_merge {A B C D}:
-    valid_sig B -> valid_sig C ->
     more_precise A B -> merge_sig B C = ty_ok D -> 
     exists E, merge_sig A C = ty_ok E /\ more_precise E D.
   Proof.
-    rewrite merge_comm (@merge_comm A).
+    rewrite merge_comm => mp mCD.
+    have mpCD := merge_more_precise0 mCD.
+    
+    Search merge_sig.
+    rewrite/merge_sig/merge_sig1; case: ifP; last first.
+      move/fsubsetP=> [x] => /= xAC; apply/imfsetP => /=.
+      exists (Sub x xAC); rewrite //= inE /max_in; case: fsetILR=> /= xA UxA xC UxC.
+      rewrite ffunE /= !valPE in_fnd /=.
+      have := in_more_precise xA mp.
+      
+      rewrite in_fnd /=. incl_not_incl => /not_incl_max->.
+
+    have := more_precise_merge1 mp.
     elim: A B C D => //=[|[k v] A IH] B C D VB VC.
       move=> H1 H2.
       rewrite/merge_sig weak_fst_if_not_in_snd_0s/=.
