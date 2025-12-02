@@ -1974,6 +1974,7 @@ Section more_precise.
     apply: IH (valid_sig_remove VC) MA _.
     by apply: more_precise_remove2.
   Qed.
+  Print Assumptions more_precise_trans.
   
   (* Lemma lookup_more_precise2 {k l1 l2}:
     lookup k l2 = None ->
@@ -2303,14 +2304,14 @@ Section more_precise.
     (apply: Hr; auto; apply: assume_tm_valid_sig; auto); auto.
   Admitted. (*OK*)
 
-  Lemma assume_tm_more_precise {sP sv1 svA c S}:
-    valid_sig sv1 -> assume_tm sP sv1 c S = svA -> more_precise svA sv1.
+  Lemma assume_tm_more_precise {sP ctx0 ctx1 c S}:
+    valid_sig ctx0 -> assume_tm sP ctx0 c S = ctx1 -> more_precise ctx1 ctx0.
   Proof.
-    move=> +<-{svA}.
-    elim: c sv1 S => //=.
-    - move=> _ sv1 _; apply: more_precise_refl.
-    - move=> _ sv1 _; apply: more_precise_refl.
-    - move=> v sv1 svA S.
+    move=> +<-{ctx1}.
+    elim: c ctx0 S => //=.
+    - move=> _ ctx0 _; apply: more_precise_refl.
+    - move=> _ ctx0 _; apply: more_precise_refl.
+    - move=> v ctx0 S V.
       case L: lookup => [S'|]; last first.
         by apply: more_precise_add_None.
       case M: min => //=[S''|]; subst.
@@ -2318,9 +2319,9 @@ Section more_precise.
         rewrite min_comm in M.
         apply: min_incl M.
       admit.
-    - move=> l Hl r Hr sv1 [_/more_precise_refl//|].
+    - move=> l Hl r Hr ctx0 [_/more_precise_refl//|].
       move=> [ls rs|ls rh]/= V; auto.
-      have:= Hl sv1 ls V.
+      have:= Hl ctx0 ls V.
   Admitted.
 
   Lemma assume_call_more_precise {sP sv1 svA c S}:
