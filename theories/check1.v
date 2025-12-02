@@ -282,16 +282,6 @@ Section min_max.
   Definition incl A B := min A B == A.
   Definition not_incl A B := max A B == A.
 
-  (* Lemma xx A B: incl1 A B = incl A B
-  with yy A B: not_incl1 A B = not_incl A B.
-  Proof.
-    all:rewrite/incl/not_incl/incl1/not_incl1/min/max/= in xx, yy *.
-    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]; rewrite/= ?eqxx//-?xx-?yy;
-      repeat case: eqP => //=; try congruence.
-    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]; rewrite/= ?eqxx//-?xx-?yy;
-      repeat case: eqP => //=; try congruence.
-  Qed. *)
-
   Lemma incl_refl {r}: incl r r.
   Proof. rewrite/incl min_refl//. Qed.
   
@@ -454,7 +444,7 @@ Section min_max.
 
   Lemma weak2 {A}: weak (weak A) = weak A
   with strong2 {A}: strong (strong A) = strong A.
-  Proof. all: case: A; [clear|] => /=-[]//= S1 S2; rewrite?weak2?strong2//. Qed.
+  Proof. all: case: A => -[]//=??; rewrite?weak2?strong2//. Qed.
 
   (* Lemma incl_weak {A B C}: incl A B = ty_ok C -> weak A = weak B
   with not_incl_strong {A B C}: not_incl A B = ty_ok C -> strong A = strong B.
@@ -477,12 +467,8 @@ Section min_max.
   Lemma weak_strong {A B}: weak A = weak B -> strong A = strong B
   with strong_weak {A B}: strong A = strong B -> weak A = weak B.
   Proof.
-    - case: A => [[|[]]|[] l1 r1]; case: B => [[]|[]l2 r2]//= [].
-      - move=> /strong_weak -> /weak_strong->//.
-      - move=> /weak_strong -> /weak_strong->//.
-    - case: A => [[|[]]|[] l1 r1]; case: B => [[]|[]l2 r2]//= [].
-      - move=> /weak_strong -> /strong_weak->//.
-      - move=> /strong_weak -> /strong_weak->//.
+    - case: A => [[|[]]|[] l1 r1]; case: B => [[]|[]l2 r2]//= [H1 H2]; f_equal; auto.
+    - case: A => [[|[]]|[] l1 r1]; case: B => [[]|[]l2 r2]//= [H1 H2]; f_equal; auto.
   Qed.
 
 End min_max.
@@ -677,8 +663,6 @@ Proof. move=> /is_dead_is_ko; exact: is_ko_full_ko_state. Qed.
 
 Section merge.
 
-  STOP.
-
   Open Scope fset_scope.
 
 
@@ -701,7 +685,6 @@ Proof.
   by case: AB.
 Qed.
 
-  Coercion is_ty_ok_true x : Prop := x = ty_ok true.
 
   Inductive fsetI_spec {T : choiceType} k (A B : {fset T}) : bool -> bool -> Type :=
   | Both: forall ka : k \in A, all_equal_to ka -> forall kb : k \in B, all_equal_to kb -> fsetI_spec true true.
@@ -710,13 +693,13 @@ Lemma fsetILR  {T : choiceType} {x} {A B : {fset T}} :
   x \in A -> x \in B -> fsetI_spec x A B (x \in A) (x \in B).
 Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irrelevance. Qed.
 
-  Definition same_skel {f g : sigV} k (kf : k \in domf f) (kg : k \in domf g) : bool :=
-   match fsetILR kf kg with Both xf _ xg _ => compat_type f.[xf] g.[xg] end.
+  (* Definition same_skel {f g : sigV} k (kf : k \in domf f) (kg : k \in domf g) : bool :=
+   match fsetILR kf kg with Both xf _ xg _ => compat_type f.[xf] g.[xg] end. *)
 
   Definition merge_sig1_default (f g: sigV) : sigV :=
    [fmap k : domf f `|` domf g =>
           match fsetUP (domfU2 (valP k)) with
-            | InBoth kf _ kg _ => match max f.[kf] g.[kg] with ty_ok x => x | _ =>  f.[kf] end
+            | InBoth kf _ kg _ => max f.[kf] g.[kg]
             | InLeft kf _ _  => f.[kf]
             | InRight _ kg _ => weak g.[kg]
           end].
