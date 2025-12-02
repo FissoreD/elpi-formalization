@@ -262,6 +262,19 @@ Section min_max.
   Definition min := min_aux minD maxD.
   Definition max := min_aux maxD minD.
 
+  Definition incl1 A B := min A B == A.
+  Definition not_incl1 A B := max A B == A.
+
+  Lemma xx A B: incl1 A B = incl A B
+  with yy A B: not_incl1 A B = not_incl A B.
+  Proof.
+    all:rewrite/incl/not_incl/incl1/not_incl1/min/max/= in xx, yy *.
+    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]; rewrite/= ?eqxx//-?xx-?yy;
+      repeat case: eqP => //=; try congruence.
+    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]; rewrite/= ?eqxx//-?xx-?yy;
+      repeat case: eqP => //=; try congruence.
+  Qed.
+
   Lemma incl_refl {r}: incl r r
   with not_incl_refl {r}: not_incl r r.
   Proof.
