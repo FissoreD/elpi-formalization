@@ -257,81 +257,17 @@ Section min_max.
     end.
 
   (* e.g incl Func Pred = true, first arg is smaller then first *)
-  Definition incl := incl_aux minD maxD.
-  Definition not_incl := incl_aux maxD minD.
+  (* Definition incl := incl_aux minD maxD.
+  Definition not_incl := incl_aux maxD minD. *)
   Definition min := min_aux minD maxD.
   Definition max := min_aux maxD minD.
 
-  Definition incl1 A B := min A B == A.
-  Definition not_incl1 A B := max A B == A.
-
-  Lemma xx A B: incl1 A B = incl A B
-  with yy A B: not_incl1 A B = not_incl A B.
+  Lemma min_refl {A}: min A A = A
+  with max_refl {A}: max A A = A.
   Proof.
-    all:rewrite/incl/not_incl/incl1/not_incl1/min/max/= in xx, yy *.
-    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]; rewrite/= ?eqxx//-?xx-?yy;
-      repeat case: eqP => //=; try congruence.
-    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]; rewrite/= ?eqxx//-?xx-?yy;
-      repeat case: eqP => //=; try congruence.
-  Qed.
-
-  Lemma incl_refl {r}: incl r r
-  with not_incl_refl {r}: not_incl r r.
-  Proof.
-    all: rewrite/incl/not_incl in incl_refl not_incl_refl *.
-    - case: r => /=.
-      - move=> [//=|][]/=//.
-      - move=> []*; rewrite !incl_refl// not_incl_refl//.
-    - case: r => /=.
-      - move=> [//=|][]/=//.
-      - move=> []*; rewrite !not_incl_refl//incl_refl//.
-  Qed.
-
-  Lemma incl_trans {A B C}:
-    incl A B -> incl B C -> incl A C
-  with not_incl_trans {A B C}:
-    not_incl A B -> not_incl B C -> not_incl A C.
-  Proof.
-    all: rewrite/incl/not_incl in incl_trans not_incl_trans *.
-    - case: A => //=.
-      - move=> []//; case: B => [[]|[] bl br]; case: C => [[]|[] cl cr] //=[][]//.
-        by case.
-      - move=> []//= al ar; case: B => [[]|[] bl br]; case: C => [[]|[] cl cr] //=; try (by repeat case); move=> /andP[iabl iabr] /andP[ibcl ibcr]; apply/andP; split.
-        - by apply: not_incl_trans iabl ibcl.
-        - by apply: incl_trans iabr ibcr.
-        - by apply: incl_trans iabl ibcl.
-        - by apply: incl_trans iabr ibcr.
-    - case: A => //=.
-      - move=> []//; case: B => [[]|[] bl br]; case: C => [[]|[] cl cr] //=; by repeat case.
-      - move=> []//= al ar; case: B => [[]|[] bl br]; case: C => [[]|[] cl cr] //=; try (by repeat case); move=> /andP[iabl iabr] /andP[ibcl ibcr]; apply/andP; split.
-        - by apply: incl_trans iabl ibcl.
-        - by apply: not_incl_trans iabr ibcr.
-        - by apply: not_incl_trans iabl ibcl.
-        - by apply: not_incl_trans iabr ibcr.
-  Qed.
-
-  Lemma min_incl {S1 S2 S3}:
-    min S1 S2 = S3 -> (incl S3 S1)
-  with max_incl {S1 S2 S3}:
-    max S1 S2 = S3 -> (not_incl S3 S1).
-  Proof.
-    all: rewrite/min/max/incl/not_incl in min_incl max_incl *.
-  - move<-; case d1: S1 => [[|[]]|[] bl br]; case d2: S2 => [[|[]]|[] cl cr] //=; apply/andP; split.
-    all: try by [ apply (max_incl _ _ _ erefl) | apply (min_incl _ _ _ erefl) | apply: incl_refl | apply: not_incl_refl ].
-  - move<-; case d1: S1 => [[|[]]|[] bl br]; case d2: S2 => [[|[]]|[] cl cr] //=; apply/andP; split.
-    all: try by [ apply (max_incl _ _ _ erefl) | apply (min_incl _ _ _ erefl) | apply: not_incl_refl | apply: incl_refl ].
-  Qed.
-
-  Lemma incl_min {S1 S2}:
-    (incl S1 S2) -> min S1 S2 = S1
-  with not_incl_max {S1 S2}:
-    (not_incl S1 S2) -> max S1 S2 = S1.
-  Proof.
-    all: rewrite/min/max/incl/not_incl in not_incl_max incl_min *.
-    - case d1: S1 => [[|[]]|[] bl br]; case d2: S2 => [[|[]]|[] cl cr] //= /andP[ibcl ibcr]; congr(arr _ _ _);
-      try by [ apply: incl_min | apply: not_incl_max ].
-    - case d1: S1 => [[|[]]|[] bl br]; case d2: S2 => [[|[]]|[] cl cr] //= /andP[ibcl ibcr]; congr(arr _ _ _);
-      try by [ apply: incl_min | apply: not_incl_max ].
+    all: rewrite/min/max in min_refl max_refl *.
+    - by case d1: A => [[|[]]|[] bl br] //=; congr (arr _ _ _).
+    - by case d1: A => [[|[]]|[] bl br] //=; congr (arr _ _ _).
   Qed.
 
   Lemma min_comm {A B}: min A B = min B A
@@ -340,22 +276,6 @@ Section min_max.
     all: rewrite/min/max in min_comm max_comm *.
     - by case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; congr(arr _ _ _).
     - by case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; congr(arr _ _ _).
-  Qed.
-
-  Lemma not_incl_incl {A B}: not_incl A B = incl B A
-  with incl_not_incl {A B}: incl A B = not_incl B A .
-  Proof.
-    all: rewrite/not_incl/incl in not_incl_incl incl_not_incl *.
-    - by case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; congr(_ && _).
-    - by case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; congr(_ && _).
-  Qed.
-
-  Lemma min_refl {A}: min A A = A
-  with max_refl {A}: max A A = A.
-  Proof.
-    all: rewrite/min/max in min_refl max_refl *.
-    - by case d1: A => [[|[]]|[] bl br] //=; congr (arr _ _ _).
-    - by case d1: A => [[|[]]|[] bl br] //=; congr (arr _ _ _).
   Qed.
 
   Lemma min_assoc {A B C}: min A (min B C) = min (min A B) C
@@ -375,6 +295,44 @@ Section min_max.
     - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]//=; f_equal; auto; try by [apply min_refl | apply: max_refl].
     - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]//=; f_equal; auto; try by [apply min_refl | apply: max_refl].
   Qed.
+
+  Definition incl A B := min A B == A.
+  Definition not_incl A B := max A B == A.
+
+  (* Lemma xx A B: incl1 A B = incl A B
+  with yy A B: not_incl1 A B = not_incl A B.
+  Proof.
+    all:rewrite/incl/not_incl/incl1/not_incl1/min/max/= in xx, yy *.
+    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]; rewrite/= ?eqxx//-?xx-?yy;
+      repeat case: eqP => //=; try congruence.
+    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]; rewrite/= ?eqxx//-?xx-?yy;
+      repeat case: eqP => //=; try congruence.
+  Qed. *)
+
+  Lemma incl_refl {r}: incl r r.
+  Proof. rewrite/incl min_refl//. Qed.
+  
+  Lemma incl_trans {A B C}: incl A B -> incl B C -> incl A C.
+  Proof.
+    rewrite/incl.
+    move=> /eqP<-/eqP<-.
+    rewrite -!min_assoc min_refl//.
+  Qed.
+
+  Lemma min_incl {S1 S2 S3}: min S1 S2 = S3 -> (incl S3 S1).
+  Proof. move=> <-; rewrite /incl min_comm min_assoc min_refl//. Qed.
+
+  Lemma incl_min {S1 S2}: (incl S1 S2) -> min S1 S2 = S1.
+  Proof. rewrite/incl => /eqP//. Qed.
+
+  Lemma not_incl_incl {A B}: not_incl A B = incl B A.
+  Proof. 
+    rewrite/not_incl/incl; do 2 case:eqP => //=.
+      move=> + H; rewrite-H.
+      rewrite max_comm min_assorb//.
+    move=> <-; rewrite min_comm max_assorb//.
+  Qed.
+
   
   Fixpoint strong s :=
     match s with
@@ -402,63 +360,67 @@ Section min_max.
   End test.
 
   Lemma max2_incl {A B C D}:
-    max A B = C -> not_incl D A -> not_incl D B -> not_incl D C
-  with min2_incl {A B C D}:
+    max A B = C -> not_incl D A -> not_incl D B -> not_incl D C.
+  Proof.
+    rewrite/not_incl.
+    move=> <- /eqP <- /eqP<-.
+    rewrite -2!max_assoc (@max_comm B) -max_assoc max_refl.
+    rewrite (@max_assoc A) max_refl -max_assoc//.
+  Qed.
+
+  Lemma min2_incl {A B C D}:
     min A B = C -> incl D A -> incl D B -> incl D C.
   Proof.
-    all:rewrite/max/incl/min/not_incl/= in max2_incl, min2_incl *.
-    - move<-; case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; case d3: D => [[|[]]|[] dl dr] //= /andP[idbl idbr] /andP[idcl idcr]; apply/andP; split;
-      by [ apply: max2_incl | apply: min2_incl ].
-    - move<-; case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; case d3: D => [[|[]]|[] dl dr] //= /andP[idbl idbr] /andP[idcl idcr]; apply/andP; split;
-      by [ apply: max2_incl | apply: min2_incl ].
+    rewrite/incl.
+    move=> <- /eqP <- /eqP<-.
+    rewrite -2!min_assoc (@min_comm B) -min_assoc min_refl.
+    rewrite (@min_assoc A) min_refl -min_assoc//.
   Qed.
 
   Lemma max2_incl1 {A B C D}:
-    max A B = C -> not_incl A D -> not_incl B D -> not_incl C D
-  with min2_incl1 {A B C D}:
-    min A B = C -> incl A D -> incl B D -> incl C D.
+    max A B = C -> not_incl A D -> not_incl B D -> not_incl C D.
   Proof.
-    all:rewrite/max/incl/min/not_incl/= in max2_incl1, min2_incl1 *.
-    - move<-; case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; case d3: D => [[|[]]|[] dl dr] //= /andP[idbl idbr] /andP[idcl idcr]; apply/andP; split;
-      by [ apply: max2_incl1 | apply: min2_incl1 ].
-    - move<-; case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; case d3: D => [[|[]]|[] dl dr] //= /andP[idbl idbr] /andP[idcl idcr]; apply/andP; split;
-      by [ apply: max2_incl1 | apply: min2_incl1 ].
+    rewrite/not_incl.
+    move=> <- /eqP <- /eqP<-.
+    rewrite -!max_assoc max_refl//.
   Qed.
 
-  Lemma incl_inv {A B}: incl A B -> A = B \/ (incl B A) = false
-  with not_incl_inv {A B}: not_incl A B -> A = B \/  (not_incl B A) = false.
+  Lemma min2_incl1 {A B C D}:
+    min A B = C -> incl A D -> incl B D -> incl C D.
   Proof.
-    all:rewrite/incl/not_incl/= in incl_inv, not_incl_inv *.
-    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] /=; (try by [left|right]) => /andP[].
-      move=> {}/not_incl_inv [?|->] {}/incl_inv [?|->]; subst; rewrite ?andbF; auto.
-      move=> /incl_inv [?|->] {}/incl_inv [?|->]; subst; rewrite ?andbF; auto.
-    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] /=; (try by [left|right]) => /andP[].
-      move=> {}/incl_inv [?|->] {}/not_incl_inv [?|->]; subst; rewrite ?andbF; auto.
-      move=> /not_incl_inv [?|->] {}/not_incl_inv [?|->]; subst; rewrite ?andbF; auto.
+    rewrite/incl.
+    move=> <- /eqP <- /eqP<-.
+    rewrite -!min_assoc min_refl//.
+  Qed.
+
+  Lemma incl_inv {A B}: incl A B -> A = B \/ (incl B A) = false.
+  Proof.
+    rewrite/incl => /eqP<-.
+    rewrite (@min_comm B) -min_assoc min_refl.
+    case:eqP; auto.
+  Qed.
+
+  Lemma not_incl_inv {A B}: not_incl A B -> A = B \/  (not_incl B A) = false.
+  Proof.
+    rewrite/not_incl => /eqP<-.
+    rewrite (@max_comm B) -max_assoc max_refl.
+    case:eqP; auto.
   Qed.
 
   Lemma min_strong {A}: min A (strong A) = (strong A)
   with max_weak {A}: max A (weak A) = (weak A).
   Proof.
     all: rewrite/min/max in min_strong max_weak *.
-    - case: A => /=.
-      - move=> []//[]//.
-      - move=> [] s1 s2; rewrite !min_strong ?max_weak//=.
-    - case: A => /=.
-      - move=> []//[]//.
-      - move=> [] s1 s2; rewrite ?min_strong !max_weak//=.
+    - case: A => /=[[|[]]|[]s1 s2]//; rewrite ?min_strong ?max_weak//=.
+    - case: A => /=[[|[]]|[]s1 s2]//; rewrite ?min_strong ?max_weak//=.
   Qed.
 
-  Lemma min_weak {A}: min (weak A) A = A
-  with max_strong {A}: max (strong A) A = A.
+  Lemma min_weak {A}: min A (weak A) = A
+  with max_strong {A}: max A (strong A) = A.
   Proof.
     all: rewrite/min/max in min_weak max_strong *.
-    - case: A => /=.
-      - move=> []//[]//.
-      - move=> [] s1 s2; rewrite /=?min_weak ?max_strong//=.
-    - case: A => /=.
-      - move=> []//[]//.
-      - move=> [] s1 s2; rewrite /=?min_weak ?max_strong//=.
+    - case: A => /=[[|[]]|[]s1 s2]//; rewrite /=?min_weak ?max_strong//=.
+    - case: A => /=[[|[]]|[]s1 s2]//; rewrite /=?min_weak ?max_strong//=.
   Qed.
 
   (* Lemma min_strong1 {A B}: min B (strong A) = (strong A)
@@ -502,15 +464,10 @@ Section min_max.
   Qed. *)
 
   Lemma weak_incl {A}: incl A (weak A).
-  Proof.
-    rewrite incl_not_incl.
-    apply: max_incl max_weak.
-  Qed.
+  Proof. apply/eqP; apply: min_weak. Qed.
 
   Lemma strong_incl {A}: incl (strong A) A.
-  Proof.
-    apply: min_incl min_strong.
-  Qed.
+  Proof. apply: min_incl min_strong. Qed.
 
   Lemma weak2 {A}: weak (weak A) = weak A
   with strong2 {A}: strong (strong A) = strong A.
@@ -537,16 +494,12 @@ Section min_max.
   Lemma weak_strong {A B}: weak A = weak B -> strong A = strong B
   with strong_weak {A B}: strong A = strong B -> weak A = weak B.
   Proof.
-    - case: A.
-      - move=> [|d]/=; case: B => [[]|[]]//.
-      - move=> [] S1 S2; case: B => //= [[]|]//= -[]//= S3 S4 []H1 H2.
-          rewrite (weak_strong _ _ H2) (strong_weak _ _ H1)//. 
-        rewrite (weak_strong _ _ H2) (weak_strong _ _ H1)//.
-    - case: A.
-      - move=> [|d]/=; case: B => [[]|[]]//.
-      - move=> [] S1 S2; case: B => //= [[]|]//= -[]//= S3 S4 []H1 H2.
-          rewrite (strong_weak _ _ H2) (weak_strong _ _ H1)//. 
-        rewrite (strong_weak _ _ H2) (strong_weak _ _ H1)//.
+    - case: A => [[|[]]|[] l1 r1]; case: B => [[]|[]l2 r2]//= [].
+      - move=> /strong_weak -> /weak_strong->//.
+      - move=> /weak_strong -> /weak_strong->//.
+    - case: A => [[|[]]|[] l1 r1]; case: B => [[]|[]l2 r2]//= [].
+      - move=> /weak_strong -> /strong_weak->//.
+      - move=> /strong_weak -> /strong_weak->//.
   Qed.
 
 End min_max.
