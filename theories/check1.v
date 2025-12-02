@@ -357,6 +357,24 @@ Section min_max.
     - by case d1: A => [[|[]]|[] bl br] //=; congr (arr _ _ _).
     - by case d1: A => [[|[]]|[] bl br] //=; congr (arr _ _ _).
   Qed.
+
+  Lemma min_assoc {A B C}: min A (min B C) = min (min A B) C
+  with max_assoc {A B C}: max A (max B C) = max (max A B) C.
+  Proof.
+    all: rewrite/max/min in min_assoc max_assoc *.
+    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr];
+      case d3: C => [[|[]]|[] dl dr]//=; f_equal; auto.
+    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr];
+      case d3: C => [[|[]]|[] dl dr]//=; f_equal; auto.
+  Qed.
+
+  Lemma min_assorb {A B}: min A (max A B) = A
+  with max_assorb {A B}: max A (min A B) = A.
+  Proof.
+    all: rewrite/max/min in min_assorb max_assorb *.
+    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]//=; f_equal; auto; try by [apply min_refl | apply: max_refl].
+    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]//=; f_equal; auto; try by [apply min_refl | apply: max_refl].
+  Qed.
   
   Fixpoint strong s :=
     match s with
