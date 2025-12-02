@@ -11,35 +11,9 @@ Import Prenex Implicits.
 Lemma TODO: False. Admitted.
 Ltac TODO := exfalso; apply TODO.
 
-Section tc.
-  Variable A : eqType.
-  Inductive typecheck :=
-    | ty_ok : A -> typecheck
-    | ty_err.
-
-  Definition eqb_tc (A B: typecheck) :=
-    match A, B with
-    | ty_ok A, ty_ok B => A == B
-    | ty_err, ty_err => true
-    | _, _ => false
-    end.
-
-  Lemma eqb_tcP: Equality.axiom eqb_tc.
-  Proof.
-    move=> /= [x|][y|]//=; try by constructor.
-    case:eqP => H; constructor; congruence.
-  Qed.
-
-  HB.instance Definition _ := hasDecEq.Build typecheck eqb_tcP.
-
-  Check (erefl : ty_err == ty_err).
-
-  Definition is_ty_ok (t:typecheck) := match t with ty_ok _ => true | _ => false end.
-End tc.
-
-
-Arguments ty_err {_}.
-Arguments ty_ok {_}.
+Notation typecheck := option.
+Notation ty_ok:= Some.
+Notation ty_err := None.
 
 Definition map_ty {A B:eqType} (F: A -> typecheck B) (ob1: typecheck A) : (typecheck B) :=
   match ob1 with
@@ -246,32 +220,50 @@ Section min_max.
   Lemma minD_assoc {x y z}: minD x (minD y z) = minD (minD x y) z.
   Proof. case: x => //=; case: y => //=; case: z => //. Qed.
 
-  Fixpoint incl_aux f1 f2 s1 s2 : typecheck _:=
+  Definition negD x := match x with Pred => Func | Func => Pred end.
+
+  Fixpoint incl_aux minD maxD s1 s2 : bool :=
+    let is_min : bool := minD Pred Func == Func in
     match s1, s2 with
-    | b Exp, b Exp => ty_ok true
-    | b(d D1), b(d D2) => ty_ok (f1 D1 D2 == D1)
-    | arr i l1 r1, arr i l2 r2 => map_ty_bool (incl_aux f2 f1 l1 l2) (incl_aux f1 f2 r1 r2)
-    | arr o l1 r1, arr o l2 r2 => map_ty_bool (incl_aux f1 f2 l1 l2) (incl_aux f1 f2 r1 r2)
-    | _, _ => ty_err
+    | b Exp, b Exp => true
+    | b(d D1), b(d D2) => (minD D1 D2 == D1)
+    | arr i l1 r1, arr i l2 r2 =>  (incl_aux maxD minD l1 l2) && (incl_aux minD maxD r1 r2)
+    | arr o l1 r1, arr o l2 r2 =>  (incl_aux minD maxD l1 l2) && (incl_aux minD maxD r1 r2)
+    | b (d X), arr _ _ _ => if is_min then X == Func else X == Pred
+    | arr _ _ _, b (d X) => if is_min then X == Pred else X == Func
+    | b Exp, arr _ _ _ => is_min
+    | arr _ _ _, b Exp => ~~is_min
+    | arr i _ _, arr o _ _ => ~~is_min
+    | arr o _ _, arr i _ _ =>  is_min
+    | b (d X), b Exp => if is_min then X == Func else X == Pred
+    | b Exp, b (d X) => if is_min then X == Pred else X == Func
     end.
 
-  Fixpoint min_max f1 f2 s1 s2 : typecheck _ :=
+  Fixpoint min_aux minD maxD s1 s2 : S :=
+    let is_min : bool := minD Pred Func == Func in
     match s1, s2 with
-    | b Exp, b Exp => ty_ok (b Exp)
-    | b(d D1), b(d D2) => ty_ok (b(d(f1 D1 D2)))
-    | arr i l1 r1, arr i l2 r2 => map_ty_s i (min_max f2 f1 l1 l2) (min_max f1 f2 r1 r2)
-    | arr o l1 r1, arr o l2 r2 => map_ty_s o (min_max f1 f2 l1 l2) (min_max f1 f2 r1 r2)
-    | _, _ => ty_err
+    | b Exp, b Exp => b Exp
+    | b(d D1), b(d D2) => b (d (minD D1 D2))
+    | arr i l1 r1, arr i l2 r2 => arr i (min_aux maxD minD l1 l2) (min_aux minD maxD r1 r2)
+    | arr o l1 r1, arr o l2 r2 => arr o (min_aux minD maxD l1 l2) (min_aux minD maxD r1 r2)
+    | b (d X), arr _ _ _ => if is_min then if X == Func then s1 else s2 else if X == Pred then s1 else s2
+    | arr _ _ _, b (d X) => if is_min then if X == Pred then s1 else s2 else if X == Func then s1 else s2
+    | b Exp, arr _ _ _ => if is_min then s1 else s2
+    | arr _ _ _, b Exp => if ~~is_min then s1 else s2
+    | arr i _ _, arr o _ _ => if ~~is_min then s1 else s2
+    | arr o _ _, arr i _ _ =>  if is_min then s1 else s2
+    | b (d X), b Exp => if is_min then if X == Func then s1 else s2 else if X == Pred then s1 else s2
+    | b Exp, b (d X) => if is_min then if X == Pred then s1 else s2 else if X == Func then s1 else s2
     end.
 
   (* e.g incl Func Pred = true, first arg is smaller then first *)
   Definition incl := incl_aux minD maxD.
   Definition not_incl := incl_aux maxD minD.
-  Definition min := min_max minD maxD.
-  Definition max := min_max maxD minD.
+  Definition min := min_aux minD maxD.
+  Definition max := min_aux maxD minD.
 
-  Lemma incl_refl {r}: incl r r = ty_ok true
-  with not_incl_refl {r}: not_incl r r = ty_ok true.
+  Lemma incl_refl {r}: incl r r
+  with not_incl_refl {r}: not_incl r r.
   Proof.
     all: rewrite/incl/not_incl in incl_refl not_incl_refl *.
     - case: r => /=.
@@ -283,149 +275,74 @@ Section min_max.
   Qed.
 
   Lemma incl_trans {A B C}:
-    incl A B = ty_ok true -> incl B C = ty_ok true -> incl A C = ty_ok true
+    incl A B -> incl B C -> incl A C
   with not_incl_trans {A B C}:
-    not_incl A B = ty_ok true -> not_incl B C = ty_ok true -> not_incl A C = ty_ok true.
+    not_incl A B -> not_incl B C -> not_incl A C.
   Proof.
     all: rewrite/incl/not_incl in incl_trans not_incl_trans *.
     - case: A => //=.
-      - move=> []//=; case: B => //=.
-        - by move=> []//.
-        - move=> []//=d2 d3;case: eqP => //= H _.
-          case: C => //=-[]//= d. 
-          case: eqP =>// H1 _.
-          rewrite -H -H1.
-          by destruct d, d2, d3 => //.
-      - move=> []//= Sl Sr; case: B => //= -[]//= Sl1 Sr1 H; case: C => //=-[]//Sl2 Sr2.
-        - move: H.
-          case X: incl_aux => //[[]]//=; case Y: incl_aux => //[[]]//= _.
-          case Z: incl_aux => //[[]]//=; case W: incl_aux => //[[]]//= _.
-          by rewrite (incl_trans _ _ _ Y W) (not_incl_trans _ _ _ X Z).
-        - move: H.
-          case X: incl_aux => //[[]]//=; case Y: incl_aux => //[[]]//= _.
-          case Z: incl_aux => //[[]]//=; case W: incl_aux => //[[]]//= _.
-          by rewrite (incl_trans _ _ _ Y W) (incl_trans _ _ _ X Z).
+      - move=> []//; case: B => [[]|[] bl br]; case: C => [[]|[] cl cr] //=[][]//.
+        by case.
+      - move=> []//= al ar; case: B => [[]|[] bl br]; case: C => [[]|[] cl cr] //=; try (by repeat case); move=> /andP[iabl iabr] /andP[ibcl ibcr]; apply/andP; split.
+        - by apply: not_incl_trans iabl ibcl.
+        - by apply: incl_trans iabr ibcr.
+        - by apply: incl_trans iabl ibcl.
+        - by apply: incl_trans iabr ibcr.
     - case: A => //=.
-      - move=> []//=; case: B => //=.
-        - by move=> []//.
-        - move=> []//=d2 d3;case: eqP => //= H _.
-          case: C => //=-[]//= d. 
-          case: eqP =>// H1 _.
-          rewrite -H -H1.
-          by destruct d, d2, d3 => //.
-      - move=> []//= Sl Sr; case: B => //= -[]//= Sl1 Sr1 H; case: C => //=-[]//Sl2 Sr2.
-        - move: H.
-          case X: incl_aux => //[[]]//=; case Y: incl_aux => //[[]]//= _.
-          case Z: incl_aux => //[[]]//=; case W: incl_aux => //[[]]//= _.
-          by rewrite (not_incl_trans _ _ _ Y W) (incl_trans _ _ _ X Z).
-        - move: H.
-          case X: incl_aux => //[[]]//=; case Y: incl_aux => //[[]]//= _.
-          case Z: incl_aux => //[[]]//=; case W: incl_aux => //[[]]//= _.
-          by rewrite (not_incl_trans _ _ _ Y W) (not_incl_trans _ _ _ X Z).
+      - move=> []//; case: B => [[]|[] bl br]; case: C => [[]|[] cl cr] //=; by repeat case.
+      - move=> []//= al ar; case: B => [[]|[] bl br]; case: C => [[]|[] cl cr] //=; try (by repeat case); move=> /andP[iabl iabr] /andP[ibcl ibcr]; apply/andP; split.
+        - by apply: incl_trans iabl ibcl.
+        - by apply: not_incl_trans iabr ibcr.
+        - by apply: not_incl_trans iabl ibcl.
+        - by apply: not_incl_trans iabr ibcr.
   Qed.
 
   Lemma min_incl {S1 S2 S3}:
-    min S1 S2 = ty_ok S3 -> (incl S3 S1 = ty_ok true)
+    min S1 S2 = S3 -> (incl S3 S1)
   with max_incl {S1 S2 S3}:
-    max S1 S2 = ty_ok S3 -> (not_incl S3 S1 = ty_ok true).
+    max S1 S2 = S3 -> (not_incl S3 S1).
   Proof.
     all: rewrite/min/max/incl/not_incl in min_incl max_incl *.
-    - case: S1 => //=[].
-      - move=> []//; case: S2 => //.
-        - by move=> []//=[?]; subst.
-        - move=> []//= d1 d2[<-].
-          by destruct d1, d2 => //=.
-      - move=> []; case: S2 => //= -[]//= s1 s2 s3 s4;
-        case X: min_max => //=[S1]; case Y: min_max => //=[S2][?]/=; subst.
-        - have /=-> := min_incl _ _ _ Y.
-          by have /=-> := max_incl _ _ _ X.
-        - have /=-> := min_incl _ _ _ Y.
-          by have /=-> := min_incl _ _ _ X.
-    - case: S1 => //=[].
-      - move=> []//; case: S2 => //.
-        - by move=> []//=[?]; subst.
-        - move=> []//= d1 d2[<-].
-          destruct d1, d2 => //=.
-      - move=> []; case: S2 => //= -[]//= s1 s2 s3 s4;
-        case X: min_max => //=[S1]; case Y: min_max => //=[S2][?]; subst.
-        - have /=-> := max_incl _ _ _ Y.
-          by have /=-> := min_incl _ _ _ X.
-        - have /=-> := max_incl _ _ _ Y.
-          by have /=-> := max_incl _ _ _ X.
+  - move<-; case d1: S1 => [[|[]]|[] bl br]; case d2: S2 => [[|[]]|[] cl cr] //=; apply/andP; split.
+    all: try by [ apply (max_incl _ _ _ erefl) | apply (min_incl _ _ _ erefl) | apply: incl_refl | apply: not_incl_refl ].
+  - move<-; case d1: S1 => [[|[]]|[] bl br]; case d2: S2 => [[|[]]|[] cl cr] //=; apply/andP; split.
+    all: try by [ apply (max_incl _ _ _ erefl) | apply (min_incl _ _ _ erefl) | apply: not_incl_refl | apply: incl_refl ].
   Qed.
 
   Lemma incl_min {S1 S2}:
-    (incl S1 S2 = ty_ok true) -> min S1 S2 = ty_ok S1
+    (incl S1 S2) -> min S1 S2 = S1
   with not_incl_max {S1 S2}:
-    (not_incl S1 S2 = ty_ok true) -> max S1 S2 = ty_ok S1.
+    (not_incl S1 S2) -> max S1 S2 = S1.
   Proof.
     all: rewrite/min/max/incl/not_incl in not_incl_max incl_min *.
-    - case: S1 => //=[].
-      - clear; move=> []//; case: S2 => //-[]//=[][]//.
-      - move=> []; case: S2 => //= -[]//= s1 s2 s3 s4.
-        - case I1: incl_aux => //[[]]; case I2: incl_aux => //[[]].
-          - rewrite (not_incl_max _ _ I1) (incl_min _ _ I2)//=.
-          - rewrite (not_incl_max _ _ I1)//=.
-        - case I1: incl_aux => //[[]]; case I2: incl_aux => //[[]].
-          - rewrite (incl_min _ _ I1) (incl_min _ _ I2)//=.
-          - rewrite (incl_min _ _ I1)//=.
-    - case: S1 => //=[].
-      - clear; move=> []//; case: S2 => //-[]//=[][]//.
-      - move=> []; case: S2 => //= -[]//= s1 s2 s3 s4.
-        - case I1: incl_aux => //[[]]; case I2: incl_aux => //[[]].
-          - rewrite (incl_min _ _ I1) (not_incl_max _ _ I2)//=.
-          - rewrite (incl_min _ _ I1)//=.
-        - case I1: incl_aux => //[[]]; case I2: incl_aux => //[[]].
-          - rewrite (not_incl_max _ _ I1) (not_incl_max _ _ I2)//=.
-          - rewrite (not_incl_max _ _ I1)//=.
+    - case d1: S1 => [[|[]]|[] bl br]; case d2: S2 => [[|[]]|[] cl cr] //= /andP[ibcl ibcr]; congr(arr _ _ _);
+      try by [ apply: incl_min | apply: not_incl_max ].
+    - case d1: S1 => [[|[]]|[] bl br]; case d2: S2 => [[|[]]|[] cl cr] //= /andP[ibcl ibcr]; congr(arr _ _ _);
+      try by [ apply: incl_min | apply: not_incl_max ].
   Qed.
 
   Lemma min_comm {A B}: min A B = min B A
   with max_comm {A B}: max A B = max B A.
   Proof.
     all: rewrite/min/max in min_comm max_comm *.
-    - case: A => /=.
-      - by move=> []; case: B => /=//-[]// [][]//.
-      - move=> []; case: B => /=-[]// ????.
-          rewrite max_comm//=min_comm//.
-        by rewrite min_comm; f_equal; auto.
-    - case: A => /=.
-      - by move=> []; case: B => /=//-[]// [][]//.
-      - move=> []; case: B => /=-[]// ????.
-          rewrite max_comm//=min_comm//.
-        by rewrite max_comm; f_equal; auto.
+    - by case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; congr(arr _ _ _).
+    - by case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; congr(arr _ _ _).
   Qed.
 
   Lemma not_incl_incl {A B}: not_incl A B = incl B A
   with incl_not_incl {A B}: incl A B = not_incl B A .
   Proof.
     all: rewrite/not_incl/incl in not_incl_incl incl_not_incl *.
-    - case: A => /=.
-      - move=> []/=.
-        - case: B => /=[[]|[]]//.
-        - move=> []; case: B => //=-[]//=[]//.
-      - move=> []??; case: B => //=-[]//??; rewrite not_incl_incl.
-        - rewrite incl_not_incl//.
-        - rewrite not_incl_incl//.
-    - case: A => /=.
-      - move=> []/=.
-        - case: B => /=[[]|[]]//.
-        - move=> []; case: B => //=-[]//=[]//.
-      - move=> []??; case: B => //=-[]//??; rewrite incl_not_incl.
-        - rewrite not_incl_incl//.
-        - rewrite incl_not_incl//.
+    - by case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; congr(_ && _).
+    - by case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; congr(_ && _).
   Qed.
 
-  Lemma min_refl {A}: min A A = ty_ok A
-  with max_refl {A}: max A A = ty_ok A.
+  Lemma min_refl {A}: min A A = A
+  with max_refl {A}: max A A = A.
   Proof.
     all: rewrite/min/max in min_refl max_refl *.
-    - case: A => /=.
-      - move=> []//= ?; rewrite minD_refl//.
-      - move=> [] ??; rewrite ?max_refl !min_refl//=.
-    - case: A => /=.
-      - move=> []//= ?; rewrite maxD_refl//.
-      - move=> [] ??; rewrite ?min_refl//= !max_refl//.
+    - by case d1: A => [[|[]]|[] bl br] //=; congr (arr _ _ _).
+    - by case d1: A => [[|[]]|[] bl br] //=; congr (arr _ _ _).
   Qed.
   
   Fixpoint strong s :=
@@ -448,159 +365,49 @@ Section min_max.
       (arr i (arr i (b Exp) (arr o (b Exp) (b(d Func)))) (arr i (b Exp) (arr o (b Exp) (b(d Func))))).
     Definition WMap := 
       (arr i (arr i (b Exp) (arr o (b Exp) (b(d Func)))) (arr i (b Exp) (arr o (b Exp) (b(d Pred))))).
-    Goal incl SMap WMap = ty_ok true. Proof. move=>//=. Qed.
-    Goal  (incl WMap SMap) = ty_ok false. Proof. move=>//=. Qed.
+    Goal incl SMap WMap. Proof. move=>//=. Qed.
+    Goal  (incl WMap SMap) = false. Proof. move=>//=. Qed.
     Goal (weak SMap) == WMap. Proof. move=> //=. Qed.
   End test.
 
   Lemma max2_incl {A B C D}:
-    max A B = ty_ok C -> not_incl D A = ty_ok true -> not_incl D B = ty_ok true -> not_incl D C = ty_ok true
+    max A B = C -> not_incl D A -> not_incl D B -> not_incl D C
   with min2_incl {A B C D}:
-    min A B = ty_ok C -> incl D A = ty_ok true -> incl D B = ty_ok true -> incl D C = ty_ok true.
+    min A B = C -> incl D A -> incl D B -> incl D C.
   Proof.
     all:rewrite/max/incl/min/not_incl/= in max2_incl, min2_incl *.
-    - case: A => //=[].
-      - move=> []//=; case: B => //=.
-        - move=> []//= [<-]{C}; case: D => //=.
-        - move=> []//= d1 d2 [<-{C}]; case: D => //=-[]//=d3.
-          destruct d2, d3, d1 => //=.
-      - move=> []//=s1 s2; case: B => //= -[]//= S1 S2; case: D => //= -[]//= S3 S4/=.
-        - case M1: min_max => //=[S5].
-          case M2: min_max => //=[S6] [<-]{C}.
-          case I1: incl_aux => //= [b1].
-          case I2: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          case I3: incl_aux => //= [b1].
-          case I4: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          rewrite (max2_incl _ _ _ _ _ I2 I4)//.
-          rewrite (min2_incl _ _ _ _ _ I1 I3)//.
-        - case M1: min_max => //=[S5].
-          case M2: min_max => //=[S6] [<-]{C}.
-          case I1: incl_aux => //= [b1].
-          case I2: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          case I3: incl_aux => //= [b1].
-          case I4: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          rewrite (max2_incl _ _ _ _ _ I2 I4)//.
-          rewrite (max2_incl _ _ _ _ _ I1 I3)//.
-    - case: A => //=[].
-      - move=> []//=; case: B => //=.
-        - move=> []//= [<-]{C}; case: D => //=.
-        - move=> []//= d1 d2 [<-{C}]; case: D => //=-[]//=d3.
-          destruct d2, d3, d1 => //=.
-      - move=> []//=s1 s2; case: B => //= -[]//= S1 S2; case: D => //= -[]//= S3 S4/=.
-        - case M1: min_max => //=[S5].
-          case M2: min_max => //=[S6] [<-]{C}.
-          case I1: incl_aux => //= [b1].
-          case I2: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          case I3: incl_aux => //= [b1].
-          case I4: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          rewrite (min2_incl _ _ _ _ _ I2 I4)//.
-          rewrite (max2_incl _ _ _ _ _ I1 I3)//.
-        - case M1: min_max => //=[S5].
-          case M2: min_max => //=[S6] [<-]{C}.
-          case I1: incl_aux => //= [b1].
-          case I2: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          case I3: incl_aux => //= [b1].
-          case I4: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          rewrite (min2_incl _ _ _ _ _ I2 I4)//.
-          rewrite (min2_incl _ _ _ _ _ I1 I3)//.
+    - move<-; case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; case d3: D => [[|[]]|[] dl dr] //= /andP[idbl idbr] /andP[idcl idcr]; apply/andP; split;
+      by [ apply: max2_incl | apply: min2_incl ].
+    - move<-; case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; case d3: D => [[|[]]|[] dl dr] //= /andP[idbl idbr] /andP[idcl idcr]; apply/andP; split;
+      by [ apply: max2_incl | apply: min2_incl ].
   Qed.
 
   Lemma max2_incl1 {A B C D}:
-    max A B = ty_ok C -> not_incl A D = ty_ok true -> not_incl B D = ty_ok true -> not_incl C D = ty_ok true
+    max A B = C -> not_incl A D -> not_incl B D -> not_incl C D
   with min2_incl1 {A B C D}:
-    min A B = ty_ok C -> incl A D = ty_ok true -> incl B D = ty_ok true -> incl C D = ty_ok true.
+    min A B = C -> incl A D -> incl B D -> incl C D.
   Proof.
     all:rewrite/max/incl/min/not_incl/= in max2_incl1, min2_incl1 *.
-    - case: A => //=[].
-      - move=> []//=; case: B => //=.
-        - move=> []//= [<-]{C}; case: D => //=.
-        - move=> []//= d1 d2 [<-{C}]; case: D => //=-[]//=d3.
-          destruct d2, d3, d1 => //=.
-      - move=> []//=s1 s2; case: B => //= -[]//= S1 S2; case: D => //= -[]//= S3 S4/=.
-        - case M1: min_max => //=[S5].
-          case M2: min_max => //=[S6] [<-]{C}.
-          case I1: incl_aux => //= [b1].
-          case I2: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          case I3: incl_aux => //= [b1].
-          case I4: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          rewrite (max2_incl1 _ _ _ _ _ I2 I4)//.
-          rewrite (min2_incl1 _ _ _ _ _ I1 I3)//.
-        - case M1: min_max => //=[S5].
-          case M2: min_max => //=[S6] [<-]{C}.
-          case I1: incl_aux => //= [b1].
-          case I2: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          case I3: incl_aux => //= [b1].
-          case I4: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          rewrite (max2_incl1 _ _ _ _ _ I2 I4)//.
-          rewrite (max2_incl1 _ _ _ _ _ I1 I3)//.
-    - case: A => //=[].
-      - move=> []//=; case: B => //=.
-        - move=> []//= [<-]{C}; case: D => //=.
-        - move=> []//= d1 d2 [<-{C}]; case: D => //=-[]//=d3.
-          destruct d2, d3, d1 => //=.
-      - move=> []//=s1 s2; case: B => //= -[]//= S1 S2; case: D => //= -[]//= S3 S4/=.
-        - case M1: min_max => //=[S5].
-          case M2: min_max => //=[S6] [<-]{C}.
-          case I1: incl_aux => //= [b1].
-          case I2: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          case I3: incl_aux => //= [b1].
-          case I4: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          rewrite (min2_incl1 _ _ _ _ _ I2 I4)//.
-          rewrite (max2_incl1 _ _ _ _ _ I1 I3)//.
-        - case M1: min_max => //=[S5].
-          case M2: min_max => //=[S6] [<-]{C}.
-          case I1: incl_aux => //= [b1].
-          case I2: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          case I3: incl_aux => //= [b1].
-          case I4: incl_aux => //= [b2]; destruct b1, b2 => //= _.
-          rewrite (min2_incl1 _ _ _ _ _ I2 I4)//.
-          rewrite (min2_incl1 _ _ _ _ _ I1 I3)//.
+    - move<-; case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; case d3: D => [[|[]]|[] dl dr] //= /andP[idbl idbr] /andP[idcl idcr]; apply/andP; split;
+      by [ apply: max2_incl1 | apply: min2_incl1 ].
+    - move<-; case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; case d3: D => [[|[]]|[] dl dr] //= /andP[idbl idbr] /andP[idcl idcr]; apply/andP; split;
+      by [ apply: max2_incl1 | apply: min2_incl1 ].
   Qed.
 
-  Lemma incl_inv {A B}: incl A B = ty_ok true -> A = B \/ (incl B A) = ty_ok false
-  with not_incl_inv {A B}: not_incl A B = ty_ok true -> A = B \/  (not_incl B A) = ty_ok false.
+  Lemma incl_inv {A B}: incl A B -> A = B \/ (incl B A) = false
+  with not_incl_inv {A B}: not_incl A B -> A = B \/  (not_incl B A) = false.
   Proof.
     all:rewrite/incl/not_incl/= in incl_inv, not_incl_inv *.
-    - case: A => /=[].
-      - clear; move=> [|d]//=; case: B => //-[]//=; [by left|] => -[]//=; auto;
-        case: d => //=; auto.
-      - move=> []s1 s2; case: B => //= -[]//=s3 s4.
-        - case I1:  incl_aux => //=[[]]; case I2:  incl_aux => //=[[]] => //= _.
-          have {not_incl_inv}[H1|H1] := not_incl_inv _ _ I1; subst.
-            have {incl_inv}[H2|H2]:= incl_inv _ _ I2; subst; auto.
-            rewrite ?I1 ?H2; auto.
-          have {incl_inv}[H2|H2]:= incl_inv _ _ I2; subst; auto.
-            rewrite H1 -/incl incl_refl; auto.
-          rewrite H1 H2; auto.
-        - case I1:  incl_aux => //=[[]]; case I2:  incl_aux => //=[[]] => //= _.
-          have [H1|H1] := incl_inv _ _ I1; subst.
-            have {incl_inv}[H2|H2]:= incl_inv _ _ I2; subst; auto.
-            rewrite ?I1 ?H2; auto.
-          have {incl_inv}[H2|H2]:= incl_inv _ _ I2; subst; auto.
-            rewrite H1 -/incl incl_refl; auto.
-          rewrite H1 H2; auto.
-    - case: A => /=[].
-      - clear; move=> [|d]//=; case: B => //-[]//=; [by left|] => -[]//=; auto;
-        case: d => //=; auto.
-      - move=> []s1 s2; case: B => //= -[]//=s3 s4.
-        - case I1:  incl_aux => //=[[]]; case I2:  incl_aux => //=[[]] => //= _.
-          have {incl_inv}[H1|H1] := incl_inv _ _ I1; subst.
-            have {not_incl_inv}[H2|H2]:= not_incl_inv _ _ I2; subst; auto.
-            rewrite ?I1 ?H2; auto.
-          have {not_incl_inv}[H2|H2]:= not_incl_inv _ _ I2; subst; auto.
-            rewrite H1 -/not_incl not_incl_refl; auto.
-          rewrite H1 H2; auto.
-        - case I1:  incl_aux => //=[[]]; case I2:  incl_aux => //=[[]] => //= _.
-          have [H1|H1] := not_incl_inv _ _ I1; subst.
-            have {not_incl_inv}[H2|H2]:= not_incl_inv _ _ I2; subst; auto.
-            rewrite ?I1 ?H2; auto.
-          have {not_incl_inv}[H2|H2]:= not_incl_inv _ _ I2; subst; auto.
-            rewrite H1 -/not_incl not_incl_refl; auto.
-          rewrite H1 H2; auto.
+    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] /=; (try by [left|right]) => /andP[].
+      move=> {}/not_incl_inv [?|->] {}/incl_inv [?|->]; subst; rewrite ?andbF; auto.
+      move=> /incl_inv [?|->] {}/incl_inv [?|->]; subst; rewrite ?andbF; auto.
+    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] /=; (try by [left|right]) => /andP[].
+      move=> {}/incl_inv [?|->] {}/not_incl_inv [?|->]; subst; rewrite ?andbF; auto.
+      move=> /not_incl_inv [?|->] {}/not_incl_inv [?|->]; subst; rewrite ?andbF; auto.
   Qed.
 
-  Lemma min_strong {A}: min A (strong A) = ty_ok (strong A)
-  with max_weak {A}: max A (weak A) = ty_ok (weak A).
+  Lemma min_strong {A}: min A (strong A) = (strong A)
+  with max_weak {A}: max A (weak A) = (weak A).
   Proof.
     all: rewrite/min/max in min_strong max_weak *.
     - case: A => /=.
@@ -611,8 +418,8 @@ Section min_max.
       - move=> [] s1 s2; rewrite ?min_strong !max_weak//=.
   Qed.
 
-  Lemma min_weak {A}: min (weak A) A = ty_ok A
-  with max_strong {A}: max (strong A) A = ty_ok A.
+  Lemma min_weak {A}: min (weak A) A = A
+  with max_strong {A}: max (strong A) A = A.
   Proof.
     all: rewrite/min/max in min_weak max_strong *.
     - case: A => /=.
@@ -623,10 +430,14 @@ Section min_max.
       - move=> [] s1 s2; rewrite /=?min_weak ?max_strong//=.
   Qed.
 
-  Lemma min_strong1 {A B C}: min B (strong A) = ty_ok C -> C = (strong A)
-  with max_weak1 {A B C}: max B (weak A) = ty_ok C -> C = weak A.
+  (* Lemma min_strong1 {A B}: min B (strong A) = (strong A)
+  with max_weak1 {A B}: max B (weak A) = weak A.
   Proof.
     all: rewrite/min/max in min_strong1 max_weak1 *.
+    case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=.
+
+
+    move<-.
     - case: A => /=.
       - move=> []//; case: B => //=-[|[]]//=; congruence.
       - move=> [] s1 s2; case: B => //=[[]|]//[]//= S1 S2;
@@ -657,15 +468,15 @@ Section min_max.
         case M1: min_max => /=[m|]//; case M2: min_max => [m2|]//= [<-]/=.
           rewrite (max_strong1 _ _ _ M2) (min_weak1 _ _ _ M1)//.
         rewrite (max_strong1 _ _ _ M2) (max_strong1 _ _ _ M1)//.
-  Qed.
+  Qed. *)
 
-  Lemma weak_incl {A}: incl A (weak A) = ty_ok true.
+  Lemma weak_incl {A}: incl A (weak A).
   Proof.
     rewrite incl_not_incl.
     apply: max_incl max_weak.
   Qed.
 
-  Lemma strong_incl {A}: incl (strong A) A = ty_ok true.
+  Lemma strong_incl {A}: incl (strong A) A.
   Proof.
     apply: min_incl min_strong.
   Qed.
@@ -674,7 +485,7 @@ Section min_max.
   with strong2 {A}: strong (strong A) = strong A.
   Proof. all: case: A; [clear|] => /=-[]//= S1 S2; rewrite?weak2?strong2//. Qed.
 
-  Lemma incl_weak {A B C}: incl A B = ty_ok C -> weak A = weak B
+  (* Lemma incl_weak {A B C}: incl A B = ty_ok C -> weak A = weak B
   with not_incl_strong {A B C}: not_incl A B = ty_ok C -> strong A = strong B.
   Proof.
     all: rewrite/min/max in incl_weak not_incl_strong *.
@@ -690,7 +501,7 @@ Section min_max.
         case M1: incl_aux => /=[m|]//; case M2: incl_aux => [m2|]//=.
           rewrite (not_incl_strong _ _ _ M2) (incl_weak _ _ _ M1)//.
         rewrite (not_incl_strong _ _ _ M2) (not_incl_strong _ _ _ M1)//.
-  Qed.
+  Qed. *)
 
   Lemma weak_strong {A B}: weak A = weak B -> strong A = strong B
   with strong_weak {A B}: strong A = strong B -> weak A = weak B.
@@ -708,7 +519,7 @@ Section min_max.
   Qed.
 
 End min_max.
-
+(* 
 Section compat_type.
   Definition compat_type t1 t2:= is_ty_ok (incl t1 t2).
   Definition compat_type_alt t1 t2:= is_ty_ok (not_incl t1 t2).
@@ -817,7 +628,7 @@ Section compat_type.
         rewrite ?compat_type_min !compat_type_max//; f_equal.
         apply: compat_type_compat_type_alt.
   Qed.
-End compat_type.
+End compat_type. *)
 
 Section checker.
 
@@ -847,116 +658,77 @@ Section checker.
     | arr _ _ r => ty_ok r
     | _ => ty_err
     end.
-
+  Definition anyT:= (b (d Pred), true).
   (* takes a tm and returns its signature + if it is well-called
      the tm has no signature if its head is a variable with no assignment in sV *)
-  Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm) : typecheck (option (S * bool)) :=
+  Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm) : S * bool :=
     match tm with
-    | Tm_Kd k => ty_ok (Some (b Exp, true))
-    | Tm_Kp k => ty_ok (omap (fun x => (x, true)) (lookup k sP)) (*TODO: sP should be complete*)
-    | Tm_V v => ty_ok (omap (fun x => (x, true)) (lookup v sV))
+    | Tm_Kd k => ((b Exp, true))
+    | Tm_Kp k => odflt anyT (omap (fun x => (x, true)) (lookup k sP))
+    | Tm_V v => odflt anyT (omap (fun x => (x, true)) (lookup v sV))
     | Tm_Comb l r => 
-      let checkl := check_tm sP sV l in
-      let checkr := check_tm sP sV r in
-      map_ty_opt (
-        fun '(s1, b1) => 
-        match s1 with
-          | arr i tl tr => 
-            match checkr with
-            | ty_err => ty_err
-              (* TODO: should return a sV' where I deduce the types in l to be the weak from sV *)
-            | ty_ok None => 
-                if tl == weak tl then ty_ok (Some (tr, true))
-                else ty_ok (Some (weak tr, false))
-            | ty_ok (Some (s2, b2)) =>
-              map_ty (fun bi => 
-                ty_ok (Some (if b1 && b2 && bi then (tr, true) else (weak tr, false)))
-              ) (incl s2 tl)
-              end
-          | arr o tl tr => if b1 then 
-              match checkl with
-              | (ty_err | ty_ok None) => checkl
-              | ty_ok (Some ((arr _ _ r), b1)) => ty_ok (Some (r, b1))
-              | ty_ok (Some (_, _)) => ty_err
-              end else ty_ok (Some (weak tr, false))
-          | _ => ty_err
-          end
-      ) checkl
+        let checkl := check_tm sP sV l in
+        match checkl with
+        | (arr i tl tr, b1) => 
+            let (cr, br) := check_tm sP sV r in
+            if incl cr tl && b1 && br then (tr, true)
+            else (weak tr, false)
+        | (arr o tl tr, b1) => (tr, b1)
+        | _ => anyT
+        end
     end.
 
   (* takes a tm and a signature and updates variable signatures
      updates are performed only on toplevel variables or variables in input positions *)
-  Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : Tm) (s : S): typecheck sigV :=
+  Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : Tm) (s : S): sigV :=
     match tm with
-    | Tm_Kd _ | Tm_Kp _ => ty_ok sV (*TODO: should I raise ty_err if mismatch between s and type(tm)? *)
+    | Tm_Kd _ | Tm_Kp _ => sV (*TODO: should I raise ty_err if mismatch between s and type(tm)? *)
     | Tm_V v =>
-      if lookup v sV is Some s' then map_ty (fun s'' => ty_ok (add v s'' sV)) (min s s')
-      else ty_ok (add v s sV)
+      if lookup v sV is Some s' then add v (min s s') sV else (add v s sV)
     | Tm_Comb l r =>
       match s with
-      | arr i tl tr =>
-        map_ty (fun sP' => assume_tm sP sP' r tr) (assume_tm sP sV l tl)
-      | arr o tl tr => assume_tm sP sV l tl
-      | _ => ty_err
+      | arr i tl tr => assume_tm sP (assume_tm sP sV l tl) r tr
+      | arr o tl tr => assume_tm sP sV r tr
+      | _ => sV
       end
     end.
 
   (* assumes the output tm and then it goes on inputs *)
-  Fixpoint assume_call (sP:sigT) (sV:sigV) (c : Callable) (s : S): typecheck sigV :=
-    match c with
-    | Callable_Kp _ => ty_ok sV (*TODO: should I raise ty_err if mismatch between s and type(c)? *)
-    | Callable_V v => ty_ok sV
-    | Callable_Comb l r =>
-      match s with
-      | arr i tl tr => assume_call sP sV l tl
-      | arr o tl tr => 
-        map_ty (fun sV' => assume_tm sP sV' r tr) (assume_call sP sV l tl)
-      | _ => ty_err
-      end
-    end.
+  Definition assume_call (sP:sigT) (sV:sigV) (c : Callable) (s : S): sigV :=
+    assume_tm sP sV (Callable2Tm c) s.
 
   (* assumes variables in input positions *)
-  Fixpoint assume_hd (sP:sigT) (sV:sigV) (s : S) (tm:Tm) : typecheck sigV :=
+  Fixpoint assume_hd (sP:sigT) (sV:sigV) (s : S) (tm:Tm) : sigV :=
     match tm with
-    | Tm_Kd _ => ty_ok sV
-    | Tm_Kp _ => ty_ok sV
+    | Tm_Kd _ => sV
+    | Tm_Kp _ => sV
     | Tm_V v =>
-      if lookup v sV is Some s' then
-        map_ty (fun s'' => ty_ok (add v s'' sV)) (min s s')
-      else 
-        ty_ok (add v s sV)
+      if lookup v sV is Some s' then add v (min s s') sV else add v s sV
     | Tm_Comb l r => 
       match s with
-      | arr i tl tr => 
-        map_ty (fun sV' => assume_hd sP sV' tr r) (assume_hd sP sV tl l)
-      | arr o tl _ => (assume_hd sP sV tl l)
-      | _ => ty_err
+      | arr i tl tr => assume_hd sP (assume_hd sP sV tl l) tr r
+      | arr o _ tr => assume_hd sP sV tr r
+      | _ => sV
       end
     end.
 
   (* verifies variables in outputs positions *)
-  Fixpoint check_hd (sP:sigT) (sV:sigV) (s : S) (tm:Tm) : typecheck bool :=
+  Fixpoint check_hd (sP:sigT) (sV:sigV) (s : S) (tm:Tm) : bool :=
     match tm with
     | Tm_Kd _ => incl (b Exp) s
-    | Tm_Kp k => odflt (ty_ok false) (omap (fun x => incl x s) (lookup k sP)) (*TODO: sP should be complete*)
-    | Tm_V v => 
-      if lookup v sV is Some s' then incl s' s
-      else ty_ok false
+    | Tm_Kp k => if lookup k sP is Some x then incl x s else false 
+    | Tm_V v =>  if lookup v sV is Some x then incl x s else false
     | Tm_Comb l r => 
       match s with
-      | arr i tl _ => (check_hd sP sV tl l)
+      | arr i tl _ => (check_hd sP sV tl l) 
       | arr o tl tr => 
-        match  (check_tm sP sV r) with
-        | ty_err => ty_err
-        | ty_ok None => ty_ok false
-        | ty_ok (Some (t, b1)) => 
-          map_ty 
-            (fun b2 => map_ty (fun bi => ty_ok (bi && b1 && b2)) (incl t s))
-          (check_hd sP sV tl l) 
-        end 
-      | _ => ty_err
+        let: (t, b1) := check_tm sP sV r in
+        check_hd sP sV tl l && b1 && (incl t tl)
+      | _ => false
       end
     end.
+
+    STOP, fare unzip del termine
 
   (* checks inputs and assumes outputs of a callable *)
   Definition check_callable sP sV (c: Callable) d : typecheck (D * sigV)%type :=
