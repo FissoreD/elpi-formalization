@@ -222,23 +222,6 @@ Section min_max.
 
   Definition negD x := match x with Pred => Func | Func => Pred end.
 
-  Fixpoint incl_aux minD maxD s1 s2 : bool :=
-    let is_min : bool := minD Pred Func == Func in
-    match s1, s2 with
-    | b Exp, b Exp => true
-    | b(d D1), b(d D2) => (minD D1 D2 == D1)
-    | arr i l1 r1, arr i l2 r2 =>  (incl_aux maxD minD l1 l2) && (incl_aux minD maxD r1 r2)
-    | arr o l1 r1, arr o l2 r2 =>  (incl_aux minD maxD l1 l2) && (incl_aux minD maxD r1 r2)
-    | b (d X), arr _ _ _ => if is_min then X == Func else X == Pred
-    | arr _ _ _, b (d X) => if is_min then X == Pred else X == Func
-    | b Exp, arr _ _ _ => is_min
-    | arr _ _ _, b Exp => ~~is_min
-    | arr i _ _, arr o _ _ => ~~is_min
-    | arr o _ _, arr i _ _ =>  is_min
-    | b (d X), b Exp => if is_min then X == Func else X == Pred
-    | b Exp, b (d X) => if is_min then X == Pred else X == Func
-    end.
-
   Fixpoint min_aux minD maxD s1 s2 : S :=
     let is_min : bool := minD Pred Func == Func in
     match s1, s2 with
@@ -552,11 +535,11 @@ Section checker.
         end
     end.
 
-  (* takes a tm and a signature and updates variable signatures
+    (* takes a tm and a signature and updates variable signatures
      updates are performed only on toplevel variables or variables in input positions *)
   Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : Tm) (s : S): sigV :=
     match tm with
-    | Tm_Kd _ | Tm_Kp _ => sV (*TODO: should I raise ty_err if mismatch between s and type(tm)? *)
+    | Tm_Kd _ | Tm_Kp _ => sV
     | Tm_V v =>
       if lookup v sV is Some s' then add v (min s s') sV else (add v s sV)
     | Tm_Comb l r =>
