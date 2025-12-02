@@ -229,14 +229,14 @@ Section min_max.
     | b(d D1), b(d D2) => b (d (minD D1 D2))
     | arr i l1 r1, arr i l2 r2 => arr i (min_aux maxD minD l1 l2) (min_aux minD maxD r1 r2)
     | arr o l1 r1, arr o l2 r2 => arr o (min_aux minD maxD l1 l2) (min_aux minD maxD r1 r2)
-    | b (d X), arr _ _ _ => if is_min then if X == Func then s1 else s2 else if X == Pred then s1 else s2
-    | arr _ _ _, b (d X) => if is_min then if X == Pred then s1 else s2 else if X == Func then s1 else s2
-    | b Exp, arr _ _ _ => if is_min then s1 else s2
-    | arr _ _ _, b Exp => if ~~is_min then s1 else s2
-    | arr i _ _, arr o _ _ => if ~~is_min then s1 else s2
-    | arr o _ _, arr i _ _ =>  if is_min then s1 else s2
-    | b (d X), b Exp => if is_min then if X == Func then s1 else s2 else if X == Pred then s1 else s2
-    | b Exp, b (d X) => if is_min then if X == Pred then s1 else s2 else if X == Func then s1 else s2
+  
+    | b (d X), arr _ _ _ | b (d X), b Exp => 
+        if is_min then if X == Func then s1 else s2 else if X == Pred then s1 else s2
+    | arr _ _ _, b (d X) | b Exp, b (d X) => 
+        if is_min then if X == Pred then s1 else s2 else if X == Func then s1 else s2
+
+    | b Exp, arr _ _ _ | arr o _ _, arr i _ _ =>  if is_min then s1 else s2
+    | arr _ _ _, b Exp | arr i _ _, arr o _ _ => if ~~is_min then s1 else s2
     end.
 
   (* e.g incl Func Pred = true, first arg is smaller then first *)
