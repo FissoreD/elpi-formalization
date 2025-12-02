@@ -2168,12 +2168,15 @@ Section more_precise.
     more_precise A B -> 
     exists C, merge_sig A B = ty_ok C.
   Proof.
-    move=> mp; rewrite merge_comm.
-    rewrite/merge_sig/merge_sig1; case: ifP; last first.
+    move=> mp; rewrite merge_comm /merge_sig/merge_sig1.
+    case: ifP; last first.
       by rewrite (all_compat_type_comm (more_precise_all_compat_type mp)).
     move/forallP=> sAB.
     eexists; congr(ty_ok _).
   Qed.
+
+  Lemma compat_type_weak2 a b : compat_type a b -> weak a = weak b.
+  Proof. by rewrite /compat_type; case E: incl => // s; rewrite (incl_weak E). Qed.
 
   Lemma more_precise_merge {A B C D}:
     more_precise A B -> merge_sig B C = ty_ok D -> 
@@ -2181,6 +2184,8 @@ Section more_precise.
   Proof.
     rewrite merge_comm => mp mCD.
     have mpCD := merge_more_precise0 mCD.
+    have mpBD : more_precise B D.
+      by move: mCD; rewrite merge_comm => /merge_more_precise0.
     rewrite/merge_sig/merge_sig1; case: ifP; last first.
       move/forallP=> [[x xAB]].
       have /andP[xAC xC] : (x \in domf (weak_fst_if_not_in_snd A C)) && (x \in C).
@@ -2196,15 +2201,45 @@ Section more_precise.
     have [E merge_AB] := more_precise_merge1 mp.
     have [F merge_CD] := more_precise_merge1 mpCD.
     move=> compat_AC.
-
-
-
     exists (merge_sig1_default (weak_fst_if_not_in_snd A C) C); split=>//.
-    rewrite /more_precise (fsubset_trans _ (more_precise_sub mpCD)); last first.
-      apply/fsubsetP=>x; rewrite in_fsetE.
-
-   
-    TODO.
+    apply/andP; split.
+      apply/fsubsetP=>k /[!in_fsetE] /orP=> -[kA|?]; last by apply: (fsubsetP (more_precise_sub mpCD)).
+      have kB: k \in domf B := fsubsetP (more_precise_sub mp) k kA.
+      by have := fsubsetP (more_precise_sub mpBD) k kB.
+    apply/forallP=> -[x xD]; rewrite [val _]/= valPE; case: {-}_ / boolP => [xAC|]; last first.
+      rewrite in_fsetE negb_or /= => /andP[nxA nxC].
+      have := compat_type_merge_lookup x mCD.
+      rewrite in_fnd not_fnd //.
+      by case: fndP => //= xB [<-]; rewrite weak2.
+      have [xAw | nxAw] := boolP (x \in domf (weak_fst_if_not_in_snd A C));
+      have [xC | nxC] := boolP (x \in domf C).
+        have xA : x \in domf A := xAw.
+        have := merge_sig1_defaultLR xAw xC; rewrite in_fnd fun_if_Some => /Some_inj ->.
+        rewrite fnd_in weak_fst_if_not_in_sndP (in_fnd xC) (in_fnd xA) [odflt _ _]/=.
+        have xB : x \in domf B := fsubsetP (more_precise_sub mp) x xA.
+        have [s [icd [ibd /[!in_fnd xD] -[?]]]] := merge_lookup (in_fnd xC) (in_fnd xB) mCD; subst.
+        have iab : incl A.[xA] B.[xB].
+          by have [_ [/[!in_fnd xB]/Some_inj <- iab]] := lookup_more_precise (in_fnd xA) mp.
+        case X : max => [s|]; last by apply/eqP; apply: incl_trans iab ibd.
+        have iad := incl_trans iab ibd.
+        by apply/eqP; move: X iad icd; rewrite !incl_not_incl; apply: max2_incl.
+      - have := merge_sig1_defaultL xAw nxC; rewrite !in_fnd => /Some_inj->.
+        rewrite fnd_in weak_fst_if_not_in_sndP not_fnd // in_fnd /=.
+        have xA : x \in domf A := xAw.
+        have xB : x \in domf B := fsubsetP (more_precise_sub mp) x xA.
+        have := compat_type_merge_lookup x mCD; rewrite in_fnd not_fnd // in_fnd => /Some_inj <-.
+        have [_ [/[!in_fnd xB]/Some_inj <- iab]] := lookup_more_precise (in_fnd xA) mp.
+        by rewrite (bool_irrelevance xAw xA) (incl_weak iab) incl_refl.
+      - have nxA : x \notin domf A := nxAw.
+        have := merge_sig1_defaultR nxAw xC; rewrite !in_fnd => /Some_inj->.
+        have := compat_type_merge_lookup x mCD; rewrite in_fnd in_fnd //=.
+        have [xB | nxB] := fndP.
+          rewrite (not_more_precise xB nxA mp) => /max_weak1 ->.
+          have /compat_type_weak2 -> := merge_sig_compat_type xC xB mCD.
+          by rewrite incl_refl.
+        by move->; rewrite incl_refl.
+      - have nxA : x \notin domf A := nxAw.
+        by move: {-}xAC; rewrite in_fsetE (negPf nxC) (negPf nxAw).
   Qed.
 
   Lemma more_precise_merge2 {A1 B1 A2 B2 C2}:
