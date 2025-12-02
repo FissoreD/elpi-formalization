@@ -239,9 +239,6 @@ Section min_max.
     | arr _ _ _, b Exp | arr i _ _, arr o _ _ => if ~~is_min then s1 else s2
     end.
 
-  (* e.g incl Func Pred = true, first arg is smaller then first *)
-  (* Definition incl := incl_aux minD maxD.
-  Definition not_incl := incl_aux maxD minD. *)
   Definition min := min_aux minD maxD.
   Definition max := min_aux maxD minD.
 
@@ -306,32 +303,6 @@ Section min_max.
     move=> <-; rewrite min_comm max_assorb//.
   Qed.
 
-  
-  Fixpoint strong s :=
-    match s with
-    | b Exp => b Exp
-    | b(d _) => b(d Func)
-    | arr i l r => arr i (weak l) (strong r)
-    | arr o l r => arr o (strong l) (strong r)
-    end
-  with weak s :=
-    match s with
-    | b Exp => b Exp
-    | b(d _) => b(d Pred) 
-    | arr i l r => arr i (strong l) (weak r)
-    | arr o l r => arr o (weak l) (weak r)
-    end.
-
-  Section test.
-    Definition SMap := 
-      (arr i (arr i (b Exp) (arr o (b Exp) (b(d Func)))) (arr i (b Exp) (arr o (b Exp) (b(d Func))))).
-    Definition WMap := 
-      (arr i (arr i (b Exp) (arr o (b Exp) (b(d Func)))) (arr i (b Exp) (arr o (b Exp) (b(d Pred))))).
-    Goal incl SMap WMap. Proof. move=>//=. Qed.
-    Goal  (incl WMap SMap) = false. Proof. move=>//=. Qed.
-    Goal (weak SMap) == WMap. Proof. move=> //=. Qed.
-  End test.
-
   Lemma max2_incl {A B C D}:
     max A B = C -> not_incl D A -> not_incl D B -> not_incl D C.
   Proof.
@@ -380,6 +351,31 @@ Section min_max.
     case:eqP; auto.
   Qed.
 
+  Fixpoint strong s :=
+    match s with
+    | b Exp => b Exp
+    | b(d _) => b(d Func)
+    | arr i l r => arr i (weak l) (strong r)
+    | arr o l r => arr o (strong l) (strong r)
+    end
+  with weak s :=
+    match s with
+    | b Exp => b Exp
+    | b(d _) => b(d Pred) 
+    | arr i l r => arr i (strong l) (weak r)
+    | arr o l r => arr o (weak l) (weak r)
+    end.
+
+  Section test.
+    Definition SMap := 
+      (arr i (arr i (b Exp) (arr o (b Exp) (b(d Func)))) (arr i (b Exp) (arr o (b Exp) (b(d Func))))).
+    Definition WMap := 
+      (arr i (arr i (b Exp) (arr o (b Exp) (b(d Func)))) (arr i (b Exp) (arr o (b Exp) (b(d Pred))))).
+    Goal incl SMap WMap. Proof. move=>//=. Qed.
+    Goal  (incl WMap SMap) = false. Proof. move=>//=. Qed.
+    Goal (weak SMap) == WMap. Proof. move=> //=. Qed.
+  End test.
+
   Lemma min_strong {A}: min A (strong A) = (strong A)
   with max_weak {A}: max A (weak A) = (weak A).
   Proof.
@@ -396,45 +392,11 @@ Section min_max.
     - case: A => /=[[|[]]|[]s1 s2]//; rewrite /=?min_weak ?max_strong//=.
   Qed.
 
-  (* Lemma min_strong1 {A B}: min B (strong A) = (strong A)
-  with max_weak1 {A B}: max B (weak A) = weak A.
-  Proof.
-    all: rewrite/min/max in min_strong1 max_weak1 *.
-    case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=.
+  Lemma func_is_min {A}: incl (b (d Func)) A.
+  Proof. rewrite/incl/=; case: A => //=[[]]//. Qed.
 
-
-    move<-.
-    - case: A => /=.
-      - move=> []//; case: B => //=-[|[]]//=; congruence.
-      - move=> [] s1 s2; case: B => //=[[]|]//[]//= S1 S2;
-        case M1: min_max => /=[m|]//; case M2: min_max => [m2|]//= [<-]/=.
-          rewrite (min_strong1 _ _ _ M2) (max_weak1 _ _ _ M1)//.
-        rewrite (min_strong1 _ _ _ M2) (min_strong1 _ _ _ M1)//.
-    - case: A => /=.
-      - move=> []//; case: B => //=-[|[]]//=; congruence.
-      - move=> [] s1 s2; case: B => //=[[]|]//[]//= S1 S2;
-        case M1: min_max => /=[m|]//; case M2: min_max => [m2|]//= [<-]/=.
-          rewrite (max_weak1 _ _ _ M2) (min_strong1 _ _ _ M1)//.
-        rewrite (max_weak1 _ _ _ M2) (max_weak1 _ _ _ M1)//.
-  Qed.
-
-  Lemma min_weak1 {A B C}: min B (weak A) = ty_ok C -> C = B
-  with max_strong1 {A B C}: max B (strong A) = ty_ok C -> C = B.
-  Proof.
-    all: rewrite/min/max in min_weak1 max_strong1 *.
-    - case: A => /=.
-      - move=> []//; case: B => //=-[|[]]//=; congruence.
-      - move=> [] s1 s2; case: B => //=[[]|]//[]//= S1 S2;
-        case M1: min_max => /=[m|]//; case M2: min_max => [m2|]//= [<-]/=.
-          rewrite (min_weak1 _ _ _ M2) (max_strong1 _ _ _ M1)//.
-        rewrite (min_weak1 _ _ _ M2) (min_weak1 _ _ _ M1)//.
-    - case: A => /=.
-      - move=> []//; case: B => //=-[|[]]//=; congruence.
-      - move=> [] s1 s2; case: B => //=[[]|]//[]//= S1 S2;
-        case M1: min_max => /=[m|]//; case M2: min_max => [m2|]//= [<-]/=.
-          rewrite (max_strong1 _ _ _ M2) (min_weak1 _ _ _ M1)//.
-        rewrite (max_strong1 _ _ _ M2) (max_strong1 _ _ _ M1)//.
-  Qed. *)
+  Lemma pred_is_max {A}: incl A (b (d Pred)).
+  Proof. rewrite/incl/=; case: A => //=[[|[]]|[]]//. Qed.
 
   Lemma weak_incl {A}: incl A (weak A).
   Proof. apply/eqP; apply: min_weak. Qed.
@@ -445,24 +407,6 @@ Section min_max.
   Lemma weak2 {A}: weak (weak A) = weak A
   with strong2 {A}: strong (strong A) = strong A.
   Proof. all: case: A => -[]//=??; rewrite?weak2?strong2//. Qed.
-
-  (* Lemma incl_weak {A B C}: incl A B = ty_ok C -> weak A = weak B
-  with not_incl_strong {A B C}: not_incl A B = ty_ok C -> strong A = strong B.
-  Proof.
-    all: rewrite/min/max in incl_weak not_incl_strong *.
-    - case: A => /=.
-      - move=> []//; case: B => //=-[|[]]//=; congruence.
-      - move=> [] s1 s2; case: B => //= -[]//= S1 S2; rewrite /incl/=;
-        case M1: incl_aux => /=[m|]//; case M2: incl_aux => [m2|]//=.
-          rewrite (incl_weak _ _ _ M2) (not_incl_strong _ _ _ M1)//.
-        rewrite (incl_weak _ _ _ M2) (incl_weak _ _ _ M1)//.
-    - case: A => /=.
-      - move=> []//; case: B => //=-[|[]]//=; congruence.
-      - move=> [] s1 s2; case: B => //= -[]//= S1 S2; rewrite /not_incl/=;
-        case M1: incl_aux => /=[m|]//; case M2: incl_aux => [m2|]//=.
-          rewrite (not_incl_strong _ _ _ M2) (incl_weak _ _ _ M1)//.
-        rewrite (not_incl_strong _ _ _ M2) (not_incl_strong _ _ _ M1)//.
-  Qed. *)
 
   Lemma weak_strong {A B}: weak A = weak B -> strong A = strong B
   with strong_weak {A B}: strong A = strong B -> weak A = weak B.
@@ -502,6 +446,7 @@ Section checker.
     | _ => ty_err
     end.
   Definition anyT:= (b (d Pred), true).
+
   (* takes a tm and returns its signature + if it is well-called
      the tm has no signature if its head is a variable with no assignment in sV *)
   Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm) : S * bool :=
@@ -576,8 +521,6 @@ Section checker.
         else check_hd sP sV tl l
       else false
     end.
-
-    (* STOP, fare unzip del termine *)
 
   (* checks inputs and assumes outputs of a callable *)
   Definition check_callable sP sV (c: Callable) d : typecheck (D * sigV)%type :=
@@ -665,15 +608,39 @@ Section merge.
 
   Open Scope fset_scope.
 
+  Lemma valPE {K : choiceType} V x (H : {fmap K -> V}) (xH : x \in domf H) : [` (valP [`xH]) ] = [` xH].
+  Proof.
+    by move: (valP _); rewrite [val _]/= => xH'; rewrite (bool_irrelevance xH' xH).
+  Qed.
+
+  Lemma fnd_in {T : choiceType} V (f : {fmap T -> V}) (k : T) (kA : k \in domf f) :
+    f.[kA] = odflt f.[kA] f.[? k].
+  Proof. by rewrite in_fnd. Qed.
+
+  Lemma fun_if_Some (T : eqType) p (d : T) : (if p is ty_ok x then Some x else Some d) = Some (if p is ty_ok x then x else d).
+  Proof. by case: p. Qed.
+
+  Lemma in_fst (T:choiceType) (f g : {fset T}) (x : f `&` g) : val x \in f.
+  Proof. by case: x => /= x; rewrite in_fsetE; case/andP. Defined.
+  Lemma in_snd (T:choiceType) (f g : {fset T}) (x : f `&` g) : val x \in g.
+  Proof. by case: x => /= x; rewrite in_fsetE; case/andP. Defined.
+  Lemma fst_snd_in (T:choiceType) (F G : {fset T}) x (xF : x \in F) (xG : x \in G) : x \in F `&` G.
+  Proof. by rewrite in_fsetE xF xG. Qed.
+
+  Lemma fstE (T:choiceType) (F G : {fset T}) x (xF : x \in F) (xG : x \in G) : in_fst (Sub x (fst_snd_in xF xG)) = xF.
+  Proof. by apply: bool_irrelevance. Qed.
+  Lemma sndE (T:choiceType) (F G : {fset T}) x (xF : x \in F) (xG : x \in G) : in_snd (Sub x (fst_snd_in xF xG)) = xG.
+  Proof. by apply: bool_irrelevance. Qed.
+
+  Lemma domfU2 x {A B : sigV} : x \in domf A `|` domf B -> (x \in domf A) + (x \in domf B).
+  Proof. rewrite in_fsetU; case: (x \in domf A); [left|right] => //. Qed.
+
+
 
   Inductive merge_dom_spec {T : choiceType} k (A B : {fset T}) : bool -> bool -> Type :=
   | InBoth : forall ka : k \in A, all_equal_to ka -> forall kb : k \in B, all_equal_to kb -> merge_dom_spec true true
   | InLeft : forall ka : k \in A, all_equal_to ka -> k \notin B -> merge_dom_spec true false
   | InRight : k \notin A -> forall kb : k \in B, all_equal_to kb -> merge_dom_spec false true.
-
-Search domf (_ + _)%type.
-Lemma domfU2 x {A B : sigV} : x \in domf A `|` domf B -> (x \in domf A) + (x \in domf B).
-Proof. rewrite in_fsetU; case: (x \in domf A); [left|right] => //. Qed.
   
 Lemma fsetUP {T : choiceType} {x} {A B : {fset T}} :
   (x \in A) + (x \in B) -> merge_dom_spec x A B (x \in A) (x \in B).
@@ -739,13 +706,6 @@ Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irr
     by case: max.
   Qed.
 
-  Lemma fnd_in {T : choiceType} V (f : {fmap T -> V}) (k : T) (kA : k \in domf f) :
-    f.[kA] = odflt f.[kA] f.[? k].
-  Proof. by rewrite in_fnd. Qed.
-
-  Lemma fun_if_Some (T : eqType) p (d : T) : (if p is ty_ok x then Some x else Some d) = Some (if p is ty_ok x then x else d).
-  Proof. by case: p. Qed.
-
   Lemma same_skel_dflt x A B (xA : x \in A) (xmdB : x \in domf (merge_sig1_default A B)) :
     compat_type A.[xA] (merge_sig1_default A B).[xmdB].
   Proof.
@@ -756,18 +716,6 @@ Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irr
       by apply: incl_compat_type; rewrite incl_not_incl (max_incl F).
     by move=> /Some_inj ->; rewrite compat_type_refl.
   Qed.
-
-  Lemma in_fst (T:choiceType) (f g : {fset T}) (x : f `&` g) : val x \in f.
-  Proof. by case: x => /= x; rewrite in_fsetE; case/andP. Defined.
-  Lemma in_snd (T:choiceType) (f g : {fset T}) (x : f `&` g) : val x \in g.
-  Proof. by case: x => /= x; rewrite in_fsetE; case/andP. Defined.
-  Lemma fst_snd_in (T:choiceType) (F G : {fset T}) x (xF : x \in F) (xG : x \in G) : x \in F `&` G.
-  Proof. by rewrite in_fsetE xF xG. Qed.
-
-  Lemma fstE (T:choiceType) (F G : {fset T}) x (xF : x \in F) (xG : x \in G) : in_fst (Sub x (fst_snd_in xF xG)) = xF.
-  Proof. by apply: bool_irrelevance. Qed.
-  Lemma sndE (T:choiceType) (F G : {fset T}) x (xF : x \in F) (xG : x \in G) : in_snd (Sub x (fst_snd_in xF xG)) = xG.
-  Proof. by apply: bool_irrelevance. Qed.
 
   Definition merge_sig1 (f g: sigV) : typecheck sigV :=
     if [forall xFG : domf f `&` domf g, compat_type f.[in_fst xFG] g.[in_snd xFG]]
@@ -906,11 +854,6 @@ Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irr
     by exists (weak v) ; split => //; exact weak_incl.
   Qed.
 
-    Lemma valPE {K : choiceType} V x (H : {fmap K -> V}) (xH : x \in domf H) : [` (valP [`xH]) ] = [` xH].
-  Proof.
-    by move: (valP _); rewrite [val _]/= => xH'; rewrite (bool_irrelevance xH' xH).
-  Qed.
-
   Lemma all_compat_type_comm A B : 
    [forall xFG : domf (weak_fst_if_not_in_snd A B) `&` domf B, compat_type (weak_fst_if_not_in_snd A B).[in_fst xFG] B.[in_snd xFG] ] ->
    [forall xFG : domf (weak_fst_if_not_in_snd B A) `&` domf A, compat_type (weak_fst_if_not_in_snd B A).[in_fst xFG] A.[in_snd xFG] ].
@@ -923,20 +866,6 @@ Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irr
    move: H1; rewrite fnd_in !weak_fst_if_not_in_sndP /= !ffunE /= !valPE !in_fnd /=.
    by rewrite compat_type_comm.
   Qed.
-(* 
-  Lemma max_in_Some {A B : sigV} {k} (kAB : k \in domf A `&` domf B) :
-    compat_type A.[in_fst kAB] B.[in_snd kAB] ->
-    exists x, forall (kA : k \in domf A) (kB : k \in domf B),
-      [/\ incl A.[kA] x = ty_ok true , incl B.[kB] x = ty_ok true & max A.[kA] B.[kB] = ty_ok x].
-  Proof.
-    have := kAB; rewrite in_fsetE => /andP[kA kB].
-    rewrite /same_skel => E.
-    case: fsetILR => /= kA' UkA' kB' UkB' in E.
-    case def_s: max => [s|//] in E *.
-    exists s=> *; rewrite UkA' UkB'.
-    rewrite !incl_not_incl !(max_incl def_s); split => //.
-    by move: def_s; rewrite max_comm => /max_incl.
-  Qed. *)
 
   Lemma merge_comm {A B}: merge_sig A B = merge_sig B A.
   Proof.
@@ -988,14 +917,6 @@ Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irr
     by exists x; split.
   Qed.
 
-  (* Lemma add_weak_fst_if_not_in_snd {k1 m A B} v:
-    lookup k1 A = Some v ->
-    (add k1 m (weak_fst_if_not_in_snd B A)) =
-      (weak_fst_if_not_in_snd (add k1 m B) A).
-  Proof.
-    TODO.
-  Qed. *)
-
   Lemma compat_type_merge_lookup {A B C} k:
     merge_sig A B = ty_ok C ->
       match lookup k C with
@@ -1013,18 +934,6 @@ Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irr
   Proof.
 
   Admitted.
-
-  (* Lemma merge_sig_add_compat {k vB' v A B B'}:
-    merge_sig A B = ty_ok B' ->
-      lookup k B' = Some vB' -> compat_type v vB' ->
-        exists C vC, merge_sig (add k v A) B = ty_ok C /\ 
-          lookup k C = Some vC /\ 
-          match lookup k B with
-          | None => vC = weak v
-          | Some v' => max v' v = ty_ok vC
-          end .
-  Proof.  
-  Abort. *)
 
 End merge.
 (* a free alternative can be reached without encountering a cutr following SLD 
@@ -1141,301 +1050,6 @@ Section func2.
       repeat eexists; rewrite minD_refl//.
   Qed.
 End func2.
-(* 
-Section less_precise.
-  
-  (* tells if small is less precise then big *)
-  (* e.g. big has more mapping then small, and/or the mappings have less holes *)
-  Fixpoint less_precise (small big: sigV) :=
-    match small with
-    | [::] => true
-    | (k,v_small)::xs => 
-      match lookup k big with
-      | None => false
-      | Some v_big => 
-        ((incl v_big v_small) == ty_ok true) && 
-        less_precise xs big
-      end
-    end.
-
-  Lemma lookup_less_precise {k l1 l2 r}:
-    lookup k l1 = Some r ->
-      less_precise l1 l2 ->
-        exists r', lookup k l2 = Some r' /\ incl r' r = ty_ok true.
-  Proof.
-    elim: l1 k l2 r => //= -[k v] sV IH k' sV' r.
-    case:eqP => //=H; subst.
-      move=> [<-]{r}.
-      case L: lookup => //=[S].
-      case H1: incl => //=[[]]//= H2.
-      exists S; repeat split; auto.
-    move=> H1; case H2: lookup => //[r'].
-    case H3: incl => //=[[]]//= H4.
-    have [r''[H5 H6]] := IH _ _ _ H1 H4.
-    exists r''; split => //.
-  Qed.
-
-  Lemma less_precise_remove2 {k s l}:
-    less_precise l (remove k s) -> less_precise l s.
-  Proof.
-    elim: l k s => //= -[k v] xs IH k' ys.
-    case kk': (k' == k); move /eqP: kk' => K; subst.
-      by rewrite lookup_remove_None.
-    rewrite (lookup_remove_diff)//.
-    case L1: lookup => //=[S] /andP[-> H2]/=.
-    (* rewrite remove_comm in H2. *)
-    apply: IH H2.
-  Qed.
-
-  Lemma less_precise_remove1 {k s l}:
-    less_precise l s -> less_precise (remove k l) s.
-  Proof.
-    elim: l k s => //= -[k v] xs IH k' ys/=.
-    case L1: lookup => //=[S] /andP[H1 H2].
-    case eqP => //= H; subst.
-      apply: IH H2.
-    rewrite L1 H1/=.
-    apply: IH H2.
-  Qed.
-
-  Lemma less_precise_remove_both {k s l}:
-    less_precise l s -> less_precise (remove k l) (remove k s).
-  Proof.
-    elim: l k s => //= -[k v] xs IH k' ys/=.
-    case L1: lookup => //=[S] /andP[H1 H2].
-    case eqP => //= H; subst.
-      apply: IH H2.
-    by rewrite lookup_remove_diff//=L1 H1/= IH.
-  Qed.
-
-  Lemma key_absent_less_precise {k l l1}:
-    key_absent k.1 l -> less_precise l (k::l1) = less_precise l l1.
-  Proof.
-    rewrite /key_absent.
-    elim: l k l1 => /=[|[k v] xs IH]// [k1 v1] ys /=.
-    case: eqP => H; subst => //.
-    case L: lookup => //.
-    case: eqP; [congruence|] => _ _.
-    case L1: lookup => //=[S]; rewrite IH//=.
-    rewrite L//.
-  Qed.
-
-  Lemma less_precise_add_None {v sv1 S}:
-    valid_sig sv1 ->
-    lookup v sv1 = None ->
-      less_precise sv1 (add v S sv1).
-  Proof.
-    elim: sv1 v S => //=-[k v] l IH k' v' /= /andP[c vl].
-    case:eqP => //= H1 H2.
-    rewrite eqxx incl_refl//=.
-    rewrite key_absent_less_precise//=.
-    by apply: IH.
-  Qed.
-
-  Lemma less_precise_add_None_left {k v A C}:
-    lookup k A = None ->
-      less_precise (add k v A) C -> less_precise A C.
-  Proof.
-    elim: A k v C => //=[[k v] xs] IH k' v' /= C.
-    case:eqP => //= H1 H2.
-    case X: lookup => //=[v''] /andP[H3 H4].
-    rewrite H3/=.
-    by apply: IH H2 H4.
-  Qed.
-
-  Lemma less_precise_remove_count {k s l}:
-    less_precise l (remove k s) -> key_absent k l.
-  Proof.
-    rewrite/key_absent.
-    elim: l k s => //= -[k v] xs IH k' ys.
-    case x: lookup => //=[S] /andP[H1 H2].
-    case:eqP => //= H3; subst.
-      by rewrite lookup_remove_None in x.
-    apply: IH H2.
-  Qed.
-
-  Lemma less_precise_refl {s}: 
-    valid_sig s -> less_precise s s.
-  Proof.
-    elim: s => //=[[k v] l] IH/=/andP[H1 H2].
-    by rewrite eqxx//=incl_refl//= key_absent_less_precise//IH.
-  Qed.
-
-  Lemma less_precise_add_Some {v sv1 S S'}:
-    valid_sig sv1 ->
-    lookup v sv1 = Some S -> incl S' S = ty_ok true ->
-      less_precise sv1 (add v S' sv1).
-  Proof.
-    elim: sv1 v S S' => //=-[k v] l IH k' S S' /= /andP[c vl].
-    case:eqP => //= H; subst.
-      move=> [?]; subst => H.
-      rewrite eqxx/= H/= key_absent_less_precise//.
-      rewrite less_precise_refl//.
-    move=> H1 H2.
-    rewrite eqxx incl_refl/=.
-    rewrite key_absent_less_precise//.
-      by apply: IH; eauto.
-  Qed.
-
-  Lemma less_precise_add_Some_left {k v m A A' C}:
-    lookup k A = Some A' -> min v A' = ty_ok m ->
-      less_precise (add k m A) C -> less_precise A C.
-  Proof.
-    elim: A A' C k v m => //=[[k v] xs] IH A' C k' v' m + H.
-    case: eqP => //= H1; subst.
-      move=> [?]; subst.
-      case X: lookup => //=[C'] /andP[H1 H2].
-      rewrite H2 andbT.
-      move: H1; case I: incl => //=[[]]//= _.
-      rewrite min_comm in H.
-      have H1 := min_incl H.
-      rewrite (incl_trans I H1)//.
-    move=> L.
-    case X: lookup => //=[C'] /andP[H2 H3].
-    rewrite H2.
-    apply: IH L H H3.
-  Qed.
-
-  Lemma less_precise_trans {A B C}:
-    less_precise A B -> less_precise B C -> less_precise A C.
-  Proof.
-    elim: A B C => //=.
-    move=> [v s] l IH []//= -[v' s'] l' z.
-    case:eqP => H; subst.
-      case H1 : incl => //= [[]]//=H2.
-      case L: lookup => //=[s0].
-      case H3 : incl => //= [[]]//=H4.
-      rewrite (incl_trans H3 H1)/=.
-      apply: IH H2 _.
-      rewrite /=L H4 H3//=.
-    case L: lookup => //=[s0].
-    case H1 : incl => //= [[]]//=.
-    case L1: lookup => //=[s1].
-    case H3 : incl => //= [[]]//= H4 H5.
-    have/=[s3[+ H7]] := lookup_less_precise L H5.
-    move=> H8; rewrite H8 (incl_trans H7 H1)/=.
-    apply: IH H4 _.
-    rewrite/= L1 H3 H5//.
-  Qed.
-
-  Lemma merge_less_precise {A B C D}:
-    valid_sig A -> valid_sig B -> valid_sig C ->
-    less_precise A B -> less_precise A C ->
-    merge_sig B C = ty_ok D -> less_precise A D.
-  Proof.
-    elim: A B C D => //= [[k v] xs] IH B C D.
-    case L1: lookup => //=[kB].
-    case L2: lookup => //=[kC].
-    move=> /andP[H1 H2] VB VC /andP[H3 H4] /andP[H5 H6] H.
-    have {}IH := IH _ _ _ H2 VB VC H4 H6 H.
-    rewrite IH.
-    have /=[kd [H7 H8]] := merge_lookup VB VC L1 L2 H.
-    rewrite H8/=andbT.
-    move: H3 H5; rewrite !incl_not_incl.
-    case I1: not_incl => //=[[]]//=.
-    case I2: not_incl => //=[[]]//= _ _.
-    by have -> := max2_incl H7 I1 I2.
-  Qed.
-
-  Lemma assume_tm_less_precise {sP sv1 svA c S}:
-    valid_sig sv1 -> assume_tm sP sv1 c S = ty_ok svA -> less_precise sv1 svA.
-  Proof.
-    elim: c sv1 svA S => //=.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
-    - move=> v sv1 svA S sv1V.
-      case L: lookup => [S'|]; last first.
-        move=> [<-]/={svA}.
-        by apply: less_precise_add_None.
-      case M: min => //=[S''][<-].
-      apply: less_precise_add_Some; eauto.
-      rewrite min_comm in M.
-      apply: min_incl M.
-    - move=> l Hl r Hr sv1 sv2 [//|[s1 s2|s1 _]] V; last first.
-        by apply: Hl.
-      case al: assume_tm => //[sv1']/= ar.
-      have {}Hl := Hl _ _ _ V al.
-      have V' := assume_tm_valid_sig V al.
-      have {}Hr := Hr _ _ _ V' ar.
-      apply: less_precise_trans Hl Hr.
-  Qed.
-
-  Lemma assume_call_less_precise {sP sv1 svA c S}:
-    valid_sig sv1 ->
-    assume_call sP sv1 c S = ty_ok svA -> 
-      less_precise sv1 svA.
-  Proof.
-    elim: c sv1 svA S => //=.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: less_precise_refl H.
-    - move=> c IH t sv1 sv2 []//= m sl s3.
-      case: m; [apply: IH|].
-      case ac: assume_call => //=[sv1'] V.
-      have {}IH := IH _ _ _ V ac.
-      move=> H1.
-      have V' := assume_call_valid_sig V ac.
-      have H2 := assume_tm_less_precise V' H1.
-      apply: less_precise_trans IH H2.
-  Qed.
-
-  Lemma check_callable_less_precise {sP sv1 svA c d ign}:
-    valid_sig sv1 ->
-    check_callable sP sv1 c ign = ty_ok (d, svA) ->
-    (maxD d ign = d /\ less_precise sv1 svA)%type2.
-  Proof.
-    simpl in *.
-    rewrite/check_callable/=.
-    case C: check_tm => //=[[[[[//|D]|//] B]|]]; last first.
-      move=> H[<-<-]; repeat split => //.
-      apply: less_precise_refl H.
-    case: B C => C; last first.
-      move=> H[<-<-]; repeat split => //; apply: less_precise_refl H.
-    case gc: get_callable_hd_sig => [S|]; last first.
-      move=> H[<-<-]; repeat split => //; apply: less_precise_refl H.
-    move=> V.
-    case ac: assume_call => //=[sv2][??]; subst.
-    by rewrite -maxD_assoc maxD_refl; repeat split;
-    rewrite (assume_call_less_precise V ac).
-  Qed.
-
-  (* sv1 represents input assumptions, they can only be refined to better signatures in the tree *)
-  Lemma tc_tree_aux_less_precise {sP sv1 svA A d ign}:
-    valid_sig sv1 ->
-    tc_tree_aux sP sv1 A ign = ty_ok (d, svA) ->
-    less_precise sv1 svA.
-  Proof.
-    simpl in *.
-    elim: A sv1 svA d ign => //=; try by move=> ???? H [??]; subst; rewrite less_precise_refl.
-    - move=> _ c sv1 sVA d ign V.
-      case cc: check_callable => //=[[D S]][??]; subst.
-      by rewrite (check_callable_less_precise V cc).
-    - move=> A HA s B HB sv1 sv2 d ign V.
-      case:ifP => dA.
-        by apply: HB.
-      case dtA: (tc_tree_aux _ _ A) => /=[[DA sVA]|]//=.
-      case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=.
-      case M: merge_sig => //=[S] [??]; subst.
-      have {}HA := HA _ _ _ _ V dtA.
-      have {}HB := HB _ _ _ _ V dtB.
-      have VA := tc_tree_aux_valid_sig V dtA.
-      have VB := tc_tree_aux_valid_sig V dtB.
-      by apply: merge_less_precise HA HB M; auto.
-    - move=> A HA B0 HB0 B HB sv1 sv2 d ign V.
-      case dtA: (tc_tree_aux _ _ A) => /=[[DA sVA]|]//=; rewrite?if_same//.
-      case dtB0: (tc_tree_aux _ _ B0) => /=[[DB0 sVB0]|]//=; rewrite?if_same//.
-      case dtB: (tc_tree_aux _ _ B) => /=[[DB sVB]|]//=. 
-      case X: merge_sig => //=[m][??]; subst.
-      have V' := tc_tree_aux_valid_sig V dtA.
-      have {}HA := HA _ _ _ _ V dtA.
-      have {}HB0 := HB0 _ _ _ _ V' dtB0.
-      have {}HB := HB _ _ _ _ V' dtB.
-      have VB0 := tc_tree_aux_valid_sig V' dtB0.
-      have VB := tc_tree_aux_valid_sig V' dtB.
-      apply: less_precise_trans HA _.
-      by apply: merge_less_precise HB HB0 X.
-  Qed.
-
-End less_precise. *)
 
 Section more_precise.
     Open Scope fset_scope.
