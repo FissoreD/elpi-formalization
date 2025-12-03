@@ -522,9 +522,10 @@ Section checker.
     | Tm_Kd _ | Tm_Kp _ => sV
     | Tm_V v => add v (min s (odflt s (lookup v sV))) sV
     | Tm_Comb l r =>
+      let s := new_sig s in
       if s is arr m tl tr then
-        if m == i then  assume_tm sP (assume_tm sP sV l (new_sig tl)) r (new_sig tr)
-        else assume_tm sP sV l (new_sig tl)
+        if m == i then  assume_tm sP (assume_tm sP sV l tl) r tr
+        else assume_tm sP sV l tl
       else sV
     end.
 
@@ -539,11 +540,12 @@ Section checker.
     | Tm_Kp k => if lookup k sP is Some x then incl x s else false 
     | Tm_V v =>  if lookup v sV is Some x then incl x s else false
     | Tm_Comb l r => 
+      let s:= new_sig s in
       if s is arr m tl tr then
         if m == o then 
           let: (t, b1) := check_tm sP sV r in
-          check_hd sP sV (new_sig tl) l && b1 && (incl t tr)
-        else check_hd sP sV (new_sig tl) l
+          check_hd sP sV tl l && b1 && (incl t tr)
+        else check_hd sP sV tl l
       else false
     end.
 
@@ -594,7 +596,6 @@ Section checker.
     match RCallable_sig sP head with
     | None => false
     | Some hd_sig => 
-        let hd_sig := new_sig hd_sig in
         let is_det_head := is_det_sig hd_sig in
         let tm_head := (Callable2Tm (RCallable2Callable head)) in
         let ass_hd := assume_tm sP sV tm_head hd_sig in
