@@ -827,9 +827,9 @@ Fixpoint tc_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : (D * sigV)%type :=
       if is_ko A then tc_tree_aux sP sV B dd
       else if is_ko B then tc_tree_aux sP sV A dd
       else
-      let: (dA, sA)  := tc_tree_aux sP sV A dd in
-      let: (dB, sB) := tc_tree_aux sP sV B dd in
-      (if has_cut A then maxD dA dB else Pred, merge_sig sA sB)
+        let: (dA, sA)  := tc_tree_aux sP sV A dd in
+        let: (dB, sB) := tc_tree_aux sP sV B dd in
+        (if has_cut A then maxD dA dB else Pred, merge_sig sA sB)
   end.
 
 Section func2.
@@ -906,14 +906,26 @@ Section more_precise.
     Open Scope fset_scope.
   (* tells if big is more precise then smal; *)
   (* e.g. big has more mapping then small, and/or the mappings have less holes *)
-  Definition more_precise (small big: sigV) : bool :=
-    (domf small `<=` domf big) &&
-    [forall x : domf big, 
-      if boolP (val x \in domf small) is AltTrue xS then
-      incl (small.[xS]) big.[valP x] == ty_ok true
-      else (big.[valP x] == weak big.[valP x])].
+  Definition more_precise (new old: sigV) : bool :=
+    (domf old `<=` domf new) &&
+    [forall x : domf old, incl (odflt (b(d Func)) new.[? val x]) (old.[valP x])].
 
-  Lemma more_precise_key_absent {k s l}:
+  Lemma more_precise_refl A : more_precise A A.
+  Proof.
+    rewrite /more_precise fsubset_refl; apply/forallP=> -[x xA] /=.
+    by rewrite valPE in_fnd /= incl_refl.
+  Qed.
+
+  Lemma more_precise_trans : transitive more_precise.
+  Proof.
+    rewrite /more_precise => B A C /andP[sBA /forallP/= iBA] /andP[sCB /forallP/= iCB].
+    rewrite (fsubset_trans sCB sBA); apply/forallP=> /= -[x xC]; rewrite valPE/=.
+    have xB := fsubsetP sCB x xC; have xA := fsubsetP sBA x xB.
+    have := iCB (Sub x xC); have := iBA (Sub x xB); rewrite !valPE/= !in_fnd/=.
+    by apply: incl_trans.
+  Qed.
+
+  (* Lemma more_precise_key_absent {k s l}:
     more_precise l (remove k s) -> key_absent k l.
   Proof.
     by case/andP=> /fsubsetP/(_ k) H _; apply/negP=> /H; rewrite mem_remfF.
@@ -989,22 +1001,23 @@ Section more_precise.
     case: {-}_ / boolP => [xA|nxA].
       by have /eqP := in_more_precise xA mp; rewrite in_fnd_rem1 in_fnd.
     by have /eqP := not_more_precise xB nxA mp; rewrite in_fnd_rem1.
-  Qed.
+  Qed. *)
 
-  Lemma lookup_more_precise {k} {A B : sigV} {r}:
-    lookup k A = Some r ->
-      more_precise A B ->
-        exists r', lookup k B = Some r' /\ incl r r' = ty_ok true.
+  Lemma more_precise_sub A B : more_precise A B -> domf B `<=` domf A.
+  Proof. by case/andP. Qed.
+
+  Lemma in_more_precise {k} {B A : sigV}:
+    more_precise B A -> forall kA : k \in domf A,
+        exists kB : k \in domf B, incl B.[kB] A.[kA].
   Proof.
-   case/fndSomeP => kA Ak mp; have kB := fsubsetP (more_precise_sub mp) _ kA.
-   have := in_more_precise kA mp; rewrite in_fnd => ?.
-   by exists B.[kB]; rewrite -Ak; split.
+    move=> /andP[sAB /forallP/= H] kA; exists (fsubsetP sAB k kA).
+    by have:= H (Sub k kA); rewrite (in_fnd (fsubsetP sAB k kA)) /= valPE.
   Qed.
 
   Lemma fndNoneP {K : choiceType} (V : eqType) (A : {fmap K -> V}) x : A.[? x] = None -> x \notin domf A.
   Proof. by move/eqP; apply: contraL => ?; rewrite in_fnd. Qed.
 
-  Lemma lookup_more_precise_None k {A B : sigV}:
+  (* Lemma lookup_more_precise_None k {A B : sigV}:
     lookup k A = None ->
       more_precise A B ->
         match lookup k B with
@@ -1017,8 +1030,8 @@ Section more_precise.
       by have := not_more_precise kB nkA mp; rewrite in_fnd.
     by rewrite not_fnd.
   Qed.
-
-        Lemma incl_weak_not_incl_strong x y :
+ *)
+        (* Lemma incl_weak_not_incl_strong x y :
           (incl (weak x) y = ty_ok true -> y = weak y) /\
           (not_incl (strong x) y = ty_ok true -> y = strong y).
         Proof.
@@ -1049,148 +1062,24 @@ Section more_precise.
           case: b1 in H1 *; case: b2 in H2 * => //= _.
           case: (IHx x') H1 => _ /[apply] <-.
           by case: (IHy y') H2 => _ /[apply] <-.
-        Qed.
+        Qed. 
 
       Lemma incl_weakP x y : incl (weak x) y = ty_ok true -> y = weak y.
       Proof. by case: (incl_weak_not_incl_strong x y). Qed.
 
       Lemma notincl_stringP x y : not_incl (strong x) y = ty_ok true -> y = strong y.
       Proof. by case: (incl_weak_not_incl_strong x y). Qed.
+*)
 
-  Lemma more_precise_trans {A B C}:
-    more_precise A B -> more_precise B C -> more_precise A C.
+  Lemma merge_more_precise0 {A B}: more_precise A (merge_sig A B).
   Proof.
-    move=> mpAB mpBC; have sAC := fsubset_trans (more_precise_sub mpAB) (more_precise_sub mpBC).
-    apply/andP; split => //; apply/forallP=> -[k kC]; rewrite [val _]/= valPE.
-    case: {-}_ / boolP => [kA|nkA].
-      have kB := fsubsetP (more_precise_sub mpAB) k kA.
-      apply/eqP; have := in_more_precise kB mpBC; have := in_more_precise kA mpAB.
-      by rewrite !in_fnd ![odflt _ _]/=; exact: incl_trans.
-    have [kB|nkB] := boolP (k \in domf B).
-       apply/eqP.
-       have := in_more_precise kB mpBC; rewrite in_fnd /= .
-       have -> := not_more_precise kB nkA mpAB.
-       by exact: incl_weakP.
-    by rewrite {1}(not_more_precise kC nkB mpBC).
-  Qed.
+    apply/andP; split.
+      rewrite /merge_sig/=.
 
-  Lemma all_weak_all {L} x (xL : x \in domf (weak_all L)) : (weak_all L).[xL] = weak L.[xL].
-  Proof.
-    by rewrite /weak_all ffunE valPE.
-  Qed.
+      STOP maybe: more_precise (A + all_weaken (B \ A)) (merge_sig A B).
 
 
-  Lemma lookup_more_precise1 {k} {A B : sigV} {r}:
-    lookup k B = Some r ->
-      more_precise A B ->
-        match lookup k A with
-        | Some r' => incl r' r = ty_ok true
-        | None => r = weak r
-        end.
-  Proof.
-    case/fndSomeP=> kB Bk mp.
-    have [kA|nkA] := boolP (k \in domf A); [ rewrite in_fnd | rewrite not_fnd // ].
-      by have := in_more_precise kA mp; rewrite in_fnd /= Bk.
-    by have := not_more_precise kB nkA mp; rewrite Bk.
-  Qed.
-  
-  Lemma lookup_more_precise2 {k} {A B : sigV}:
-    lookup k B = None ->
-      more_precise A B ->
-        lookup k A = None.
-  Proof.
-    move/fndNoneP=> nkB /more_precise_sub sAB; rewrite not_fnd //.
-    by apply: contra nkB; apply: fsubsetP.
-  Qed.
-
-  (* Lemma key_absent_more_precise {k l l1}:
-    key_absent k.1 l -> more_precise l (k::l1) = more_precise l l1.
-  Proof.
-    rewrite /key_absent.
-    elim: l k l1 => /=[|[k v] xs IH]// [k1 v1] ys /=.
-      move=> _ /andP[].
-    case: eqP => H; subst => //.
-    case L: lookup => //.
-    case: eqP; [congruence|] => _ _.
-    case L1: lookup => //=[S]; rewrite IH//=.
-    rewrite L//.
-  Qed. *)
-
-  (* Lemma more_precise_add_None {v sv1 S}:
-    valid_sig sv1 ->
-      more_precise sv1 (add v (weak S) sv1).
-  Proof.
-    elim: sv1 v S => //=-[k v] l IH k' v' /= /andP[c vl].
-    case:eqP => //= H1 H2.
-    rewrite eqxx incl_refl//=.
-    rewrite key_absent_more_precise//=.
-    by apply: IH.
-  Qed. *)
-
-  (* Lemma more_precise_add_None_left {k v A C}:
-    lookup k A = None ->
-      more_precise (add k v A) C -> more_precise A C.
-  Proof.
-    elim: A k v C => //=[[k v] xs] IH k' v' /= C.
-    case:eqP => //= H1 H2.
-    case X: lookup => //=[v''] /andP[H3 H4].
-    rewrite H3/=.
-    by apply: IH H2 H4.
-  Qed. *)
-
-  Lemma more_precise_refl {s}: 
-    more_precise s s.
-  Proof.
-    apply/andP; split; first by apply: fsubset_refl.
-    apply/forallP=> -[x xs]; rewrite [val _]/=.
-    case: {-}_ / boolP => [xs'|nxs].
-      by rewrite valPE (bool_irrelevance xs xs') incl_refl.
-    by exfalso; move: nxs; rewrite xs.
-  Qed.
-
-  (* Lemma more_precise_add_Some {v sv1 S S'}:
-    valid_sig sv1 ->
-    lookup v sv1 = Some S -> incl S S' = ty_ok true ->
-      more_precise sv1 (add v S' sv1).
-  Proof.
-    elim: sv1 v S S' => //=-[k v] l IH k' S S' /= /andP[c vl].
-    case:eqP => //= H; subst.
-      move=> [?]; subst => H.
-      rewrite eqxx/= H/= key_absent_more_precise//.
-      rewrite more_precise_refl//.
-    move=> H1 H2.
-    rewrite eqxx incl_refl/=.
-    rewrite key_absent_more_precise//.
-      by apply: IH; eauto.
-  Qed. *)
-
-  (* Lemma more_precise_add_Some_left {k v m A A' C}:
-    lookup k A = Some A' -> max v A' = ty_ok m ->
-      more_precise (add k m A) C -> more_precise A C.
-  Proof.
-    elim: A A' C k v m => //=[[k v] xs] IH A' C k' v' m + H.
-    case: eqP => //= H1; subst.
-      move=> [?]; subst.
-      case X: lookup => //=[C'] /andP[H1 H2].
-      rewrite H2 andbT.
-      move: H1; case I: incl => //=[[]]//= _.
-      rewrite max_comm in H.
-      have H1 := max_incl H.
-      rewrite not_incl_incl in H1.
-      rewrite (incl_trans H1 I)//.
-    move=> L.
-    case X: lookup => //=[C'] /andP[H2 H3].
-    rewrite H2.
-    apply: IH L H H3.
-  Qed. *)
-
-  Lemma merge_more_precise0 {B C D}:
-    merge_sig B C = ty_ok D ->
-      more_precise B D.
-  Proof.
-    move=> mBCD; apply/andP; split.
-      apply/fsubsetP=> x xB.
-      move: mBCD; rewrite /merge_sig/merge_sig1; case: ifP => // test [<-].
+      move: mBCD; rewrite /merge_sig. /merge_sig1; case: ifP => // test [<-].
       by rewrite in_fsetE /weak_fst_if_not_in_snd /= xB.
     apply/forallP=> -[x xD]; rewrite [val _]/= valPE.
     move: (mBCD); rewrite /merge_sig/merge_sig1; case: ifP => //= test [hD].
