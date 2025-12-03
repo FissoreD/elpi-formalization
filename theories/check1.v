@@ -276,7 +276,7 @@ Section min_max.
     - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]//=; f_equal; auto; try by [apply min_refl | apply: max_refl].
   Qed.
 
-  Definition incl A B := min A B == A.
+  Definition incl A B := (min A B == A).
   Definition not_incl A B := max A B == A.
 
   Lemma incl_refl {r}: incl r r.
@@ -446,7 +446,8 @@ Section checker.
   Definition get_callable_hd_sig (sP: sigT) sV (t: Callable) : option S :=
     get_tm_hd_sig sP sV (Callable2Tm t).
 
-  Definition anyT:= (b (d Pred), true).
+  Definition any_pos := (b (d Pred), true).
+  Definition any_neg := (b (d Func), true).
 
   Fixpoint get_last (s: S) : option (S * mode * S) :=
     match s with
@@ -476,17 +477,18 @@ Section checker.
     let tm_ag := cnt_tm_ag tm in
     rev (keep_sig tm_ag s).
 
+  Definition odflt1 {T} (ab : T * bool) x := match x with (Some x, b1) => (x,b1) | (None,_) => ab end.
 
   (* takes a tm and returns its signature + if it is well-called
      the tm has no signature if its head is a variable with no assignment in sV *)
-  Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm) : S * bool :=
+  Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm)  : S * bool :=
     match tm with
     | Tm_Kd k => (b Exp, true)
-    | Tm_Kp k => (odflt (b(d Pred)) (lookup k sP), true)
-    | Tm_V v => (odflt (b(d Pred)) (lookup v sV), true)
+    | Tm_Kp k => odflt1 (b(d Pred),false) (lookup k sP, true)
+    | Tm_V v =>  odflt1 (b(d Pred),false) (lookup v sV, true)
     | Tm_Comb l r => 
         (* before we check the LHS and then we go right *)
-        let (sl, b1) := check_tm sP sV l in
+        let (sl, b1) := check_tm sP sV l  in
         (* if the type of l is not an arrow, we return anyT *)
         if sl is arr m tl tr then
           if m == i then
@@ -494,7 +496,7 @@ Section checker.
             if incl cr tl && b1 && br then (tr, true)
             else (weak tr, false)
           else (tr, b1)
-        else anyT
+        else (b(d Pred),false)
     end.
 
     (* takes a tm and a signature and updates variable signatures
@@ -538,7 +540,7 @@ Section checker.
 
   (* checks inputs and assumes outputs of a callable *)
   Definition check_callable sP sV (c: Callable) d : D * sigV :=
-    match check_tm sP sV (Callable2Tm c)  with
+    match check_tm sP sV (Callable2Tm c) with
     | ((b Exp | arr _ _ _), _) => (Pred, sV)
     | (b(d x), b1) =>
       if b1 then 
@@ -895,11 +897,26 @@ Section func2.
         rewrite H4/= H6.
         repeat eexists.
         by destruct d3, dB0, d4 => //.
-      destruct dA => //.
-      rewrite dtB0/=dtB/=.
-      repeat eexists; rewrite minD_refl//.
-  Qed.
+     destruct dA => //.
+     rewrite dtB0/=dtB/=.
+     repeat eexists; rewrite minD_refl//.
+ Qed.
 End func2.
+
+
+Fixpoint compat_type x y :=
+  match x, y with
+  | b Exp, b Exp => true
+  | b (d _), b (d _) => true
+  | arr i a xb, arr i a' b' => compat_type a a' && compat_type xb b'
+  | arr o a xb, arr o a' b' => compat_type a a' && compat_type xb b'
+  | _, _ => false
+  end.
+
+  Axiom compat_type_refl : forall x, compat_type x x.
+  Axiom compat_type_trans : transitive compat_type.
+  Axiom compat_type_comm : forall x y, compat_type x y = compat_type y x.
+  Axiom compat_type_weak : forall x y, (compat_type (weak x) y = compat_type x y) * (compat_type y (weak x) = compat_type y x).
 
 Section more_precise.
     Open Scope fset_scope.
@@ -907,344 +924,79 @@ Section more_precise.
   (* e.g. big has more mapping then small, and/or the mappings have less holes *)
   Definition more_precise (new old: sigV) : bool :=
     (domf old `<=` domf new) &&
-    [forall x : domf old, incl (odflt (b(d Func)) new.[? val x]) (old.[valP x])].
+        [forall x : domf new,
+          let oldv := odflt new.[valP x] old.[? val x] in
+          let newv := new.[valP x] in
+          compat_type oldv newv && incl newv oldv].
 
   Lemma more_precise_refl A : more_precise A A.
   Proof.
-    rewrite /more_precise fsubset_refl; apply/forallP=> -[x xA] /=.
-    by rewrite valPE in_fnd /= incl_refl.
+    rewrite /more_precise fsubset_refl.
+    by apply/forallP=> -[x xA] /=; rewrite valPE in_fnd /= incl_refl compat_type_refl.
   Qed.
 
   Lemma more_precise_trans : transitive more_precise.
   Proof.
     rewrite /more_precise => B A C /andP[sBA /forallP/= iBA] /andP[sCB /forallP/= iCB].
-    rewrite (fsubset_trans sCB sBA); apply/forallP=> /= -[x xC]; rewrite valPE/=.
-    have xB := fsubsetP sCB x xC; have xA := fsubsetP sBA x xB.
-    have := iCB (Sub x xC); have := iBA (Sub x xB); rewrite !valPE/= !in_fnd/=.
-    by apply: incl_trans.
+    rewrite (fsubset_trans sCB sBA); apply/forallP=> /= -[x xA]; rewrite valPE/=.
+    case: (fndP C) => [xC|nxC/=].
+      have xB := fsubsetP sCB x xC.
+      have := iCB (Sub x xB); have := iBA (Sub x xA); rewrite !valPE/= !in_fnd/=.
+      by case/andP=> ??; case/andP=>??; rewrite (@incl_trans _ B.[xB]) // (@compat_type_trans B.[xB]).
+    by rewrite compat_type_refl incl_refl.
   Qed.
-
-  (* Lemma more_precise_key_absent {k s l}:
-    more_precise l (remove k s) -> key_absent k l.
-  Proof.
-    by case/andP=> /fsubsetP/(_ k) H _; apply/negP=> /H; rewrite mem_remfF.
-  Qed.
-
-  Lemma more_precise_sub A B : more_precise A B -> domf A `<=` domf B.
-  Proof. by case/andP. Qed.
-
-  Lemma in_fnd_rem1 {K : choiceType} V x k (A : {fmap K -> V}) (xA : x \in domf A) (xAk : x \in domf A.[~ k]) :
-    A.[~ k] [` xAk] = A.[xA].
-  Proof.
-    by rewrite fnd_in fnd_restrict -[in if _ then _ else _]domf_rem xAk in_fnd [odflt _ _]/=.
-  Qed.
-
-
-  
-  Lemma in_more_precise A B k (kA : k \in domf A) :
-    more_precise A B -> incl A.[kA] (odflt A.[kA] B.[? k]) = ty_ok true.
-  Proof.
-    move=> mp; rewrite in_fnd ?(fsubsetP (more_precise_sub mp) k kA) //= => kB.
-    case/andP: mp => _ /forallP/(_ (Sub k kB)); rewrite [val _]/=.
-    case: {-}_ / boolP => [kA'|nkA]; last by rewrite kA in nkA.
-    by rewrite valPE (bool_irrelevance kA' kA) => /eqP.
-  Qed.
-
-  Lemma not_more_precise A B k (kB : k \in domf B) :
-   k \notin A ->  more_precise A B -> B.[kB] = weak B.[kB].
-  Proof.
-    move=> nkA /andP[] _ /forallP/(_ (Sub k kB)).
-   rewrite [val _]/=; case: {-}_ / boolP => [kA|nkA']; first by rewrite kA in nkA.
-   by rewrite valPE => /eqP.
-  Qed.
-
-  Lemma more_precise_remove2 {A B} k:
-    more_precise A B -> more_precise (remove k A) (remove k B).
-  Proof.
-    move=> mp; rewrite /more_precise ![in X in X && _]domf_rem. 
-    rewrite fsetSD ?more_precise_sub // andTb; apply/forallP=> -[x xBk].
-    rewrite [val _]/=; case: {-}_ / boolP => [xAk|nxAk]; rewrite valPE.
-      have xA : x \in domf A by move: xAk; rewrite !(inE,in_fsetE) /=; case/and3P.
-      have xB : x \in domf B by rewrite (fsubsetP (more_precise_sub mp)).
-      have := in_more_precise xA mp; rewrite in_fnd [odflt _ _]/= => H.
-      by rewrite !in_fnd_rem1 H.
-    have xB : x \in domf B by move: xBk; rewrite !(inE,in_fsetE) /=; case/and3P.
-    have nxA : x \notin domf A.
-      have nxk : x != k.
-        case: (x =P k) => // abs; rewrite abs !(inE,in_fsetE) eqxx in xBk.
-        by case/and3P: xBk.
-      by move: nxAk; rewrite !(inE,in_fsetE) /= !negb_and nxk /=; case/orP.
-    have := not_more_precise xB nxA mp.
-    by rewrite in_fnd_rem1 => /eqP.
-  Qed.
-
-  Lemma more_precise_removel k (A B : sigV) v:
-    key_absent k A -> lookup k B = Some (weak v) ->
-    more_precise A (remove k B) = more_precise A B.
-  Proof.
-    move=> nkA kB; apply/idP/idP=> mp.
-      move: (more_precise_sub mp); rewrite /more_precise {1}domf_rem fsubsetD1 nkA andbT => ->.
-      apply/forallP => -[x xB]; rewrite [val _]/= valPE.
-      case: {-}_ / boolP => [xA|nxA].
-        have xBk : x \in domf B.[~ k].
-          by rewrite !(in_fsetE,inE) /= xB andbT /=; apply: contra nkA => /eqP <-.
-        by have /eqP := in_more_precise xA mp; rewrite in_fnd in_fnd_rem1.
-      have [/eqP xk|nxk] := boolP (x == k).
-        by move: kB; rewrite -xk in_fnd => /Some_inj ->; rewrite weak2.
-      have xBk : x \in domf B.[~ k].
-        by rewrite !(in_fsetE,inE) /= xB andbT /=.
-      by have := not_more_precise xBk nxA mp; rewrite in_fnd_rem1 => /eqP.
-    rewrite /more_precise {1}domf_rem fsubsetD1 nkA andbT (more_precise_sub mp).
-    apply/forallP => -[x xBk]; rewrite [val _]/= valPE.
-    have xB : x \in domf B by move: xBk; rewrite !(in_fsetE,inE) /=; case/and3P.
-    case: {-}_ / boolP => [xA|nxA].
-      by have /eqP := in_more_precise xA mp; rewrite in_fnd_rem1 in_fnd.
-    by have /eqP := not_more_precise xB nxA mp; rewrite in_fnd_rem1.
-  Qed. *)
 
   Lemma more_precise_sub A B : more_precise A B -> domf B `<=` domf A.
   Proof. by case/andP. Qed.
+
+  Lemma more_precise_same_type {B A : sigV} x:
+    more_precise B A -> forall kA : x \in A, forall kB : x \in B, compat_type A.[kA] B.[kB].
+  Proof.
+    case/andP=> sAB + xA xB => /forallP/(_ (Sub x xB)) /andP[/=+ _].
+    by rewrite valPE in_fnd/=.
+  Qed.
 
   Lemma in_more_precise {k} {B A : sigV}:
     more_precise B A -> forall kA : k \in domf A,
         exists kB : k \in domf B, incl B.[kB] A.[kA].
   Proof.
     move=> /andP[sAB /forallP/= H] kA; exists (fsubsetP sAB k kA).
-    by have:= H (Sub k kA); rewrite (in_fnd (fsubsetP sAB k kA)) /= valPE.
+    by have /andP[] := H (Sub k (fsubsetP sAB k kA)); rewrite (in_fnd kA) /= valPE.
   Qed.
+
+  Lemma in2_more_precise {k} {B A : sigV}:
+    more_precise B A -> forall kA : k \in domf A,
+        forall kB : k \in domf B, incl B.[kB] A.[kA].
+  Proof.
+    move=> /in_more_precise H kA kB'; have [kB ?] := H k kA.
+    by rewrite (bool_irrelevance kB' kB).
+  Qed.
+
 
   Lemma fndNoneP {K : choiceType} (V : eqType) (A : {fmap K -> V}) x : A.[? x] = None -> x \notin domf A.
   Proof. by move/eqP; apply: contraL => ?; rewrite in_fnd. Qed.
 
-  (* Lemma lookup_more_precise_None k {A B : sigV}:
-    lookup k A = None ->
-      more_precise A B ->
-        match lookup k B with
-        | None => true
-        | Some r' => r' = weak r'
-        end.
-  Proof.
-    move=> /fndNoneP nkA mp.
-    have [kB|nkB] := boolP (k \in domf B).
-      by have := not_more_precise kB nkA mp; rewrite in_fnd.
-    by rewrite not_fnd.
-  Qed.
- *)
-        (* Lemma incl_weak_not_incl_strong x y :
-          (incl (weak x) y = ty_ok true -> y = weak y) /\
-          (not_incl (strong x) y = ty_ok true -> y = strong y).
-        Proof.
-        elim: x y => //= [[|d] [[|[]]| m x y]|[|] x IHx y IHy [[|[]]| [|] x' y']] //=.
-        split.
-          rewrite /incl/not_incl/= in IHx IHy *.
-          case H1: incl_aux => [b1|] //=.
-          case H2: incl_aux => [b2|] //=.
-          case: b1 in H1 *; case: b2 in H2 * => // _.
-          case: (IHx x') H1 => _ /[apply] <-.
-          by case: (IHy y') H2 => + _ => /[apply] <-.
-          rewrite /incl/not_incl/= in IHx IHy *.
-          case H1: incl_aux => [b1|] //=.
-          case H2: incl_aux => [b2|] //=.
-          case: b1 in H1 *; case: b2 in H2 * => // _.
-          case: (IHx x') H1 => + _ => /[apply] <-.
-          by case: (IHy y') H2 => _ /[apply] <-.
-        split.
-          rewrite /incl/not_incl/= in IHx IHy *.
-          case H1: incl_aux => [b1|] //=.
-          case H2: incl_aux => [b2|] //=.
-          case: b1 in H1 *; case: b2 in H2 * => //= _.
-          case: (IHx x') H1 => + _ => /[apply] <-.
-          by case: (IHy y') H2 => + _ => /[apply] <-.
-          rewrite /incl/not_incl/= in IHx IHy *.
-          case H1: incl_aux => [b1|] //=.
-          case H2: incl_aux => [b2|] //=.
-          case: b1 in H1 *; case: b2 in H2 * => //= _.
-          case: (IHx x') H1 => _ /[apply] <-.
-          by case: (IHy y') H2 => _ /[apply] <-.
-        Qed. 
-
-      Lemma incl_weakP x y : incl (weak x) y = ty_ok true -> y = weak y.
-      Proof. by case: (incl_weak_not_incl_strong x y). Qed.
-
-      Lemma notincl_stringP x y : not_incl (strong x) y = ty_ok true -> y = strong y.
-      Proof. by case: (incl_weak_not_incl_strong x y). Qed.
-*)
-
-  (* Lemma merge_more_precise0 {A B}: more_precise A (merge_sig A B).
-  Proof.
-    apply/andP; split.
-      rewrite /merge_sig/=.
-
-      STOP maybe: more_precise (A + all_weaken (B \ A)) (merge_sig A B).
-
-
-      move: mBCD; rewrite /merge_sig. /merge_sig1; case: ifP => // test [<-].
-      by rewrite in_fsetE /weak_fst_if_not_in_snd /= xB.
-    apply/forallP=> -[x xD]; rewrite [val _]/= valPE.
-    move: (mBCD); rewrite /merge_sig/merge_sig1; case: ifP => //= test [hD].
-    move: {-}(xD); rewrite -{1}hD in_fsetE /weak_fst_if_not_in_snd /=.
-    case: {-}_ / boolP => [xB| /negPf nxB /= xC].
-      have [xC _|nxC] := boolP (x \in domf C).
-        have [v [i1 [i2 /[!in_fnd] -[Dx]]]]:= merge_lookup (in_fnd xB) (in_fnd xC) mBCD.
-        by rewrite Dx // i1.
-      have xW : x \in domf (weak_fst_if_not_in_snd B C) := xB.
-      have := merge_sig1_defaultL xW nxC; rewrite hD.
-      rewrite weak_fst_if_not_in_sndP in_fnd not_fnd // in_fnd /= => -[->] _.
-      by rewrite (bool_irrelevance xW xB) weak_incl.
-    move: xC; rewrite nxB => /= xC; move/negbT in nxB.
-    move/fmapP: hD => /(_ x).
-    by rewrite merge_sig1_defaultR // !in_fnd /= => -[<-]; rewrite weak2.
-  Qed.
-
-  Lemma merge_sig_compat_type (A B E : sigV) (x :V) (xA : x \in domf A) (xB : x \in domf B) :
-    merge_sig A B = ty_ok E -> compat_type A.[xA] B.[xB].
-  Proof.
-    have xAB : x \in domf (weak_fst_if_not_in_snd A B) := xA.
-    have xABB : x \in domf (weak_fst_if_not_in_snd A B) `&` domf B by rewrite in_fsetE xAB xB.
-    rewrite/merge_sig/merge_sig1; case: ifP => // /forallP /(_ (Sub x xABB)).
-    rewrite (bool_irrelevance (in_fst (Sub _ _)) xA).
-    rewrite (bool_irrelevance (in_snd (Sub _ _)) xB).
-    by rewrite fnd_in weak_fst_if_not_in_sndP [val _]/= (in_fnd xA) (in_fnd xB) [odflt _ _]/=.
-  Qed.
-
-  Lemma merge_sig_def (A B E : sigV) (x :V) (xA : x \in domf A) (xB : x \in domf B) :
-    merge_sig A B = ty_ok E -> merge_sig1_default (weak_fst_if_not_in_snd A B) B = E.
-  Proof.
-    have xAB : x \in domf (weak_fst_if_not_in_snd A B) := xA.
-    have xABB : x \in domf (weak_fst_if_not_in_snd A B) `&` domf B by rewrite in_fsetE xAB xB.
-    by rewrite/merge_sig/merge_sig1; case: ifP => // /forallP /(_ (Sub x xABB)) _ [].
-  Qed.
   
-  Lemma more_precise_all_compat_type A B: more_precise A B -> 
-    [forall xFG : domf (weak_fst_if_not_in_snd A B) `&` domf B,  compat_type (weak_fst_if_not_in_snd A B).[in_fst xFG] B.[in_snd xFG]].
-  Proof.
-      move=> mp; apply/forallP=> [[x xABB]].
-      have /andP[xAB xB] : (x \in domf (weak_fst_if_not_in_snd A B)) && (x \in B).
-        by rewrite in_fsetE in xABB.
-      have xA : x \in domf A := xAB.
-      rewrite fnd_in weak_fst_if_not_in_sndP [val _]/= (in_fnd xA) (in_fnd xB) [odflt _ _]/=.
-      have := in_more_precise xA mp; rewrite in_fnd [odflt _ _]/= => /incl_compat_type.
-      by rewrite (bool_irrelevance (in_snd (Sub _ _)) xB).
-  Qed.
-
-  Lemma more_precise_merge1 {A B}:
-    more_precise A B -> 
-    exists C, merge_sig A B = ty_ok C.
-  Proof.
-    move=> mp; rewrite merge_comm /merge_sig/merge_sig1.
-    case: ifP; last first.
-      by rewrite (all_compat_type_comm (more_precise_all_compat_type mp)).
-    move/forallP=> sAB.
-    eexists; congr(ty_ok _).
-  Qed.
-
-  Lemma compat_type_weak2 a b : compat_type a b -> weak a = weak b.
-  Proof. by rewrite /compat_type; case E: incl => // s; rewrite (incl_weak E). Qed.
-
-  Lemma more_precise_merge {A B C D}:
-    more_precise A B -> merge_sig B C = ty_ok D -> 
-    exists E, merge_sig A C = ty_ok E /\ more_precise E D.
-  Proof.
-    rewrite merge_comm => mp mCD.
-    have mpCD := merge_more_precise0 mCD.
-    have mpBD : more_precise B D.
-      by move: mCD; rewrite merge_comm => /merge_more_precise0.
-    rewrite/merge_sig/merge_sig1; case: ifP; last first.
-      move/forallP=> [[x xAB]].
-      have /andP[xAC xC] : (x \in domf (weak_fst_if_not_in_snd A C)) && (x \in C).
-        by rewrite in_fsetE in xAB.
-      have xA : x \in domf A := xAC.
-      rewrite (bool_irrelevance (in_fst (Sub _ _)) xAC).
-      rewrite (bool_irrelevance (in_snd (Sub _ _)) xC).
-      rewrite fnd_in weak_fst_if_not_in_sndP [val _]/= (in_fnd xC) (in_fnd xA) [odflt _ _]/=. 
-      have xB := fsubsetP (more_precise_sub mp) x xA.
-      have := merge_sig_compat_type xC xB mCD; rewrite compat_type_comm => comp_BC.
-      have [E /(merge_sig_compat_type xA xB) comp_AB] := more_precise_merge1 mp.
-      by rewrite -(compat_type_trans comp_AB).
-    have [E merge_AB] := more_precise_merge1 mp.
-    have [F merge_CD] := more_precise_merge1 mpCD.
-    move=> compat_AC.
-    exists (merge_sig1_default (weak_fst_if_not_in_snd A C) C); split=>//.
-    apply/andP; split.
-      apply/fsubsetP=>k /[!in_fsetE] /orP=> -[kA|?]; last by apply: (fsubsetP (more_precise_sub mpCD)).
-      have kB: k \in domf B := fsubsetP (more_precise_sub mp) k kA.
-      by have := fsubsetP (more_precise_sub mpBD) k kB.
-    apply/forallP=> -[x xD]; rewrite [val _]/= valPE; case: {-}_ / boolP => [xAC|]; last first.
-      rewrite in_fsetE negb_or /= => /andP[nxA nxC].
-      have := compat_type_merge_lookup x mCD.
-      rewrite in_fnd not_fnd //.
-      by case: fndP => //= xB [<-]; rewrite weak2.
-      have [xAw | nxAw] := boolP (x \in domf (weak_fst_if_not_in_snd A C));
-      have [xC | nxC] := boolP (x \in domf C).
-        have xA : x \in domf A := xAw.
-        have := merge_sig1_defaultLR xAw xC; rewrite in_fnd fun_if_Some => /Some_inj ->.
-        rewrite fnd_in weak_fst_if_not_in_sndP (in_fnd xC) (in_fnd xA) [odflt _ _]/=.
-        have xB : x \in domf B := fsubsetP (more_precise_sub mp) x xA.
-        have [s [icd [ibd /[!in_fnd xD] -[?]]]] := merge_lookup (in_fnd xC) (in_fnd xB) mCD; subst.
-        have iab : incl A.[xA] B.[xB].
-          by have [_ [/[!in_fnd xB]/Some_inj <- iab]] := lookup_more_precise (in_fnd xA) mp.
-        case X : max => [s|]; last by apply/eqP; apply: incl_trans iab ibd.
-        have iad := incl_trans iab ibd.
-        by apply/eqP; move: X iad icd; rewrite !incl_not_incl; apply: max2_incl.
-      - have := merge_sig1_defaultL xAw nxC; rewrite !in_fnd => /Some_inj->.
-        rewrite fnd_in weak_fst_if_not_in_sndP not_fnd // in_fnd /=.
-        have xA : x \in domf A := xAw.
-        have xB : x \in domf B := fsubsetP (more_precise_sub mp) x xA.
-        have := compat_type_merge_lookup x mCD; rewrite in_fnd not_fnd // in_fnd => /Some_inj <-.
-        have [_ [/[!in_fnd xB]/Some_inj <- iab]] := lookup_more_precise (in_fnd xA) mp.
-        by rewrite (bool_irrelevance xAw xA) (incl_weak iab) incl_refl.
-      - have nxA : x \notin domf A := nxAw.
-        have := merge_sig1_defaultR nxAw xC; rewrite !in_fnd => /Some_inj->.
-        have := compat_type_merge_lookup x mCD; rewrite in_fnd in_fnd //=.
-        have [xB | nxB] := fndP.
-          rewrite (not_more_precise xB nxA mp) => /max_weak1 ->.
-          have /compat_type_weak2 -> := merge_sig_compat_type xC xB mCD.
-          by rewrite incl_refl.
-        by move->; rewrite incl_refl.
-      - have nxA : x \notin domf A := nxAw.
-        by move: {-}xAC; rewrite in_fsetE (negPf nxC) (negPf nxAw).
-  Qed.
-
-  Lemma more_precise_merge2 {A1 B1 A2 B2 C2}:
-    valid_sig A2 -> valid_sig B2 ->
-    more_precise A1 A2 -> more_precise B1 B2 -> merge_sig A2 B2 = ty_ok C2 -> 
-    exists C1, merge_sig A1 B1 = ty_ok C1 /\ more_precise C1 C2.
-  Proof.
-  Admitted.
-
-  Lemma more_precise_add_None {v sv1 S}:
-    valid_sig sv1 ->
-    lookup v sv1 = None ->
-      more_precise (add v S sv1) sv1.
-  Proof.
-    elim: sv1 v S => //=[|[k v] l IH] k' v' /=.
-      (* TODO: IMPORTANT THIS IS TRUE ONLY IF WE CHANGE THE DEF OF MORE PRECISE *)
-      (* NOTE: IF WE CHANGE THE DEFINITION, WE LOOSE THE TRANSITIVITY *)
-      admit.
-    move=>/andP; rewrite/key_absent => -[].
-    case L: lookup => []//= _ vl.
-    case:eqP => //= H1 H2.
-    rewrite eqxx incl_refl//=.
-    rewrite key_absent_remove/key_absent?L//.
-    by apply: IH.
-  Admitted. *)
-
   Lemma set2_more_precise old new S1 S2 v:
     more_precise new old ->
-      incl S1 S2 ->
+      incl S1 S2 -> compat_type S2 S1 ->
         more_precise new.[v <- S1] old.[v <- S2].
   Proof.
-    move=> /[dup] /more_precise_sub son MP I.
-    rewrite/more_precise !{1}dom_setf fsetUS.
-    apply/forallP => -[k kP].
-    rewrite valPE/=. ffunE.
+    move=> /[dup] /more_precise_sub son MP I C.
+    rewrite/more_precise !{1}dom_setf fsetUS //.
+    apply/forallP => -[k kvN]; rewrite [val _]/= valPE.
+    case: (fndP (old.[v <- S2])) => [kvO|nkvO].
+      rewrite [odflt _ _]/= !ffunE/=; case: eqP => [/[!C]|] // /eqP H.
+      have kN : k \in domf new by move: kvN H; rewrite !in_fsetE; case: eqP => //=.
+      have kO : k \in domf old by move: kvO H; rewrite !in_fsetE; case: eqP => //=.
+      by rewrite !in_fnd/= (in2_more_precise MP) andbT (more_precise_same_type MP).
+    rewrite [odflt _ _]/= !ffunE/=; case: eqP => //; first by rewrite compat_type_refl incl_refl.
+    by case: fndP => /= *; rewrite compat_type_refl incl_refl.
+  Qed.
 
-
-
-  Lemma more_precise_assume_tm {new old sP tm d}:
+  (* Lemma more_precise_assume_tm {new old sP tm d}:
     more_precise new old ->
-    more_precise (assume_tm sP new tm d)
-      (assume_tm sP old tm d).
+    more_precise (assume_tm sP new tm d) (assume_tm sP old tm d).
   Proof.
     elim: tm new old d => //=.
     - move=> _ new old []//.
@@ -1252,17 +1004,21 @@ Section more_precise.
     - move=> v new old [|[[] s] _]// H.
       case: (fndP old) => [/[dup] vold_ vold|nvold]/=.
         have [vnew I] := in_more_precise H vold.
-        rewrite in_fnd/=.
-        rewrite/more_precise/=.
-        rewrite vnew.
-        rewrite in_fnd. *)
-      
-      
-  Admitted. (*OK*)
+        have ? := more_precise_same_type H vold vnew.
+        rewrite in_fnd/= set2_more_precise //.
+          rewrite /incl min_assoc (@min_comm s) -(@min_assoc _ s s) min_refl.
+          by rewrite -min_assoc (@min_comm s) min_assoc (eqP I).
+      rewrite min_refl; case: (fndP new) => [xN|nxN]/=.
+        rewrite set2_more_precise //.
+        by rewrite /incl min_comm min_assoc min_refl.
+      by rewrite set2_more_precise // min_refl incl_refl.
+    - move=> l IHl r IHr N O [|[[] s] xs] //; last first.
+        by exact: IHl.
+      move=> MP; apply/IHr/IHl/MP.
+  Qed. *)
 
 
-
-  Lemma assume_tm_more_precise sP old c S:
+  (* Lemma assume_tm_more_precise sP old c S:
     more_precise (assume_tm sP old c S) old.
   Proof.
     elim: c old S => //=.
@@ -1286,20 +1042,87 @@ Section more_precise.
       apply: more_precise_trans.
       apply: more_precise_assume_tm.
       apply: Hl.
-  Qed.
+  Qed. *)
 
   Definition more_precise_opt '(smore, bmore) '(sless, bless) :=
     (bmore || ~~bless) && incl smore sless.
 
-  Lemma more_precise_check_tm {sP ctx1 ctx0 c}:
-      more_precise ctx1 ctx0 ->
-        more_precise_opt (check_tm sP ctx1 c) (check_tm sP ctx0 c).
+  Fixpoint closed_in (sV : sigV) t : bool :=
+    match t with
+    | Tm_Kd _ => true
+    | Tm_Kp _ => true
+    | Tm_V v => v \in domf sV
+    | Tm_Comb l r => closed_in sV l && closed_in sV r
+    end.
+
+
+  Lemma more_precise_compat_check_tm {sP new old c}:
+      closed_in old c ->
+      more_precise new old ->
+      compat_type
+        (check_tm sP new c).1
+        (check_tm sP old c).1.
+  move=> clo mp.
+  elim: c clo => //=.
+    - move=> k _; case: fndP => *; exact: compat_type_refl.
+    - move=> v kO; case: fndP => [kN|nkN].
+      - by rewrite in_fnd compat_type_comm /= (more_precise_same_type mp kO kN).
+      - by rewrite (fsubsetP (more_precise_sub mp) v kO) in nkN.
+    - move=> f + a + /andP[cf ca] => /(_ cf) + /(_ ca) {cf ca}.
+      case: check_tm => [sa []];
+      case: check_tm => [sa' []];
+      case: check_tm => [sf' []] => //; case: sa => [[]|[]s t]; case: sa' => [[]|[]s' t']//= /andP[??]//=;
+      case: check_tm => [sf []] => //=; case E: incl => //=; case F: incl => //= ?; rewrite !compat_type_weak //.
+  Qed.
+
+  stop
+
+  Lemma more_precise_check_tm {sP new old c}:
+      closed_in old c ->
+      more_precise new old ->
+        more_precise_opt (check_tm sP new c) (check_tm sP old c).
   Proof.
-    simpl in *.
-    elim: c r2 s1 s2 => //=.
-    - move=> k [s2 b2] c0 c1. r1 s1 s2 [<-]{r1} H1 H2; repeat eexists.
-      case: lookup => //=?; rewrite incl_refl//.
-    - move=> k r1 s1 s2 [<-]{r1} H1 H2; repeat eexists.
+    elim: c b new old => //=.
+    - move=> k b N O MP; case: fndP => *; exact: incl_refl.
+    - move=> v b N O MP.
+      case: (fndP O) => [vO|nvO/=].
+        by have [vN i] := in_more_precise MP vO; rewrite in_fnd/=.
+      case: fndP => //= *; apply: pred_is_max.
+    - move=> f IHf a IHa pol N O MP.
+      move: (IHf pol _ _ MP) => {IHf};
+      move: (IHa (negb pol) _ _ MP).
+      case x1: check_tm => [sa []];
+      case x2: check_tm => [sa' []];
+      case x3: check_tm => [sf' []];
+      case x4: check_tm => [sf []].
+      { case: sf => [D|M SRC TGT] in x4 *; case: sf' => [D'|M' SRC' TGT'] in x3 *.
+        - by rewrite /=incl_refl//=.
+        - case: M' => // in x3 *; move=> ??; case: incl => //=.
+          rewrite (more_precise_same_type MP).
+          all: try apply: pred_is_max.
+          case: M => // in x4 *.
+          apply: pred_is_max.
+
+          Search incl Pred.
+      case d1: check_tm => [[bl|[] srcl tgtl] []];
+      case d2: check_tm => [[br|[] srcr tgtr] []] ; rewrite ?eqxx?andbT//; try by rewrite /=incl_refl//=.
+      - move=> /=. case: bl {d1} => //= [|[]] //.
+        case xx : (incl sr' srcr) => //=.
+
+        (*
+        exfalso.
+          case: f => [p|d|v|f' a'] in d1 d2 * .
+          - move: d1 d2 => /=; case: fndP => //; congruence.
+          - move: d1 d2 => /=; congruence.
+          - have vN : v \in domf N by move: d1 => /=; case: fndP; congruence.
+            have vO : v \in domf O by move: d2 => /=; case: fndP; congruence.
+
+
+        case: bl => [|[]] // in d1 *.
+      - by [].
+      - simpl.
+    
+    k r1 s1 s2 [<-]{r1} H1 H2; repeat eexists.
     - move=> v r1 s1 s2 [<-]{r1} H1 H2; repeat eexists.
       case L: lookup => //=[v1|].
         have [r' [H3 H4]] := lookup_more_precise L H1.
