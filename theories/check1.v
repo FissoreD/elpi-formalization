@@ -834,79 +834,70 @@ Fixpoint tc_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : (D * sigV)%type :=
 
 Section func2.
   Lemma check_callable_func2 {sP sV A s ign d1}:
-    check_callable sP sV A ign = ty_ok (d1, s) ->
-      exists d2, minD d2 d1 = d2 /\ check_callable sP sV A Func = ty_ok (d2, s).
+    check_callable sP sV A ign = (d1, s) ->
+      exists d2, minD d2 d1 = d2 /\ check_callable sP sV A Func = (d2, s).
   Proof.
     rewrite/check_callable.
-    case: check_tm => //=-[[sA bA]|]; last first.
-      by move=> [<-<-]; exists Pred.
-    case: sA => //-[]//d.
+    case: check_tm => //=[sA bA].
+    case: sA => //; last first.
+      by move=> _ _ _ [<-<-]; repeat eexists.
+    move=> [].
+      by move=> [<-<-]; repeat eexists.
+    move=> d.
     case: bA; last first.
       by move=> [<-<-]; exists Pred.
     case: get_callable_hd_sig; last first.
       by move=> [<-<-]; exists Pred.
-    move=> X.
-    case: assume_call => //= s' [<-<-].
-    case: ign; rewrite maxD_comm/=; last first.
-      rewrite maxD_comm/=; exists d.
-      rewrite minD_comm/=; case: d => //.
-    exists d; case: d => //.
+    move=> X [<-<-].
+    repeat eexists; destruct d => //.
   Qed.
 
   Lemma tc_tree_aux_func2 {sP sV A s ign d1}:
-    tc_tree_aux sP sV A ign = ty_ok (d1, s) ->
-      exists d2, minD d2 d1 = d2 /\ tc_tree_aux sP sV A Func = ty_ok (d2, s).
+    tc_tree_aux sP sV A ign = (d1, s) ->
+      exists d2, minD d2 d1 = d2 /\ tc_tree_aux sP sV A Func = (d2, s).
   Proof.
     elim: A d1 sV s ign => //=.
     - move=> d1 sV s ign [??]; subst; exists Func => //.
     - move=> d1 sV s ign [??]; subst; exists Func => //.
     - move=> d1 sV s ign [??]; subst; exists Func => //.
     - move=> _ c d1 sV1 sV2 ign.
-      case Z: check_callable => //=[[DA SVA]][??]; subst.
+      case Z: check_callable => //=[DA SVA][??]; subst.
       have H2:= check_callable_pred Z; subst => //.
       rewrite -H2 maxD_comm -maxD_assoc maxD_refl.
       have [d2[H3 H4]]:= check_callable_func2 Z.
       rewrite H4/=.
-      case: d2 H3 H4 => //=.
-      - by exists Func.
-      - case: DA H2 Z => //= _ _ _ _.
-        by exists Pred.
+      repeat eexists.
+      by destruct d2, DA, ign.
     - by move=> d1 sV s _ [<-<-]; exists Func.
     - move=> A HA s B HB d1 sV1 sV2 ign.
       case:ifP => DA.
         apply: HB.
-      case dtA: (tc_tree_aux _ _ A) => //= [[dA sVA]]/=.
-      case dtB: (tc_tree_aux _ _ B) => //= [[dB sVB]]/=.
-      case M: merge_sig => //=[S].
-      move=>[??]; subst.
+      case dtA: (tc_tree_aux _ _ A) => //= [dA sVA]/=.
+      case dtB: (tc_tree_aux _ _ B) => //= [dB sVB]/=.
       have [d2[H1 H2]]:= HA _ _ _ _ dtA.
       have [d3[H3 H4]]:= HB _ _ _ _ dtB.
-      rewrite H2 H4/=.
-      rewrite -H1 -H3 M/=.
+      case: ifP => [kB|nkB][??]; subst; rewrite H2.
+        by repeat eexists.
+      rewrite H4.
       repeat eexists.
-      rewrite H1 H3.
       case: ifP => //=.
       by destruct d2, d3, dA, dB => //=.
     - move=> A HA B0 HB0 B HB d1 sV sV' ign.
-      case dtA: (tc_tree_aux _ _ A) => //= [[dA sVA]].
-      case dtB0: (tc_tree_aux _ _ B0) => //= [[dB0 sVB0]].
-      case dtB: (tc_tree_aux _ _ B) => //= [[dB sVB]].
-      case X: merge_sig => //=[S] [??]; subst.
+      case dtA: (tc_tree_aux _ _ A) => //= [dA sVA].
+      case dtB0: (tc_tree_aux _ _ B0) => //= [dB0 sVB0].
+      case dtB: (tc_tree_aux _ _ B) => //= [dB sVB].
       have {HA}[d2[H1 H2]] := HA _ _ _ _ dtA.
       rewrite H2/=.
       have {HB0}[d3[H3 H4]] := HB0 _ _ _ _ dtB0.
       have {HB}[d4[H5 H6]] := HB _ _ _ _ dtB.
+      case: ifP => [kA|nkA][??]; subst.
+        by repeat eexists.
       destruct d2.
-        rewrite H4/=.
-          destruct dB; rewrite H6/=.
-          rewrite maxD_comm/=.
-          rewrite -H3 X.
-          exists (maxD (minD d3 dB0) d4); repeat split.
-          by destruct d3, dB0, d4 => //.
-        rewrite X/=.
-        by repeat eexists; rewrite (@maxD_comm dB0)/= minD_comm//=.
+        rewrite H4/= H6.
+        repeat eexists.
+        by destruct d3, dB0, d4 => //.
       destruct dA => //.
-      rewrite dtB0/=dtB/= X/=.
+      rewrite dtB0/=dtB/=.
       repeat eexists; rewrite minD_refl//.
   Qed.
 End func2.
