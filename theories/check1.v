@@ -810,27 +810,26 @@ End merge.
   "((A, A') ; B) , C" is OK if B is dead already (cutr by predecessor of A for example)
 
 *)
-Fixpoint tc_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : D * sigV :=
+Fixpoint tc_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : (D * sigV)%type :=
   match A with
   | CutS => (Func, sV)
   | CallS _ a => 
-    let: (dd', sV') := check_callable sP sV a dd in
-    (maxD dd dd', sV')
+    let (dd', sV') := (check_callable sP sV a dd) in  (maxD dd dd', sV')
   | Bot | OK | Dead => (dd, sV)
   | And A B0 B =>
+    if is_ko A then (dd, sV)
+    else
     let: (D, T) := tc_tree_aux sP sV A dd in
-    let: (ddB, sB) := tc_tree_aux sP T B D in
-    let: (ddB0, sB0) := tc_tree_aux sP T B0 D in
+    let (ddB, sB) := tc_tree_aux sP T B D in
+    let (ddB0, sB0) := tc_tree_aux sP T B0 D in
     (maxD ddB0 ddB, merge_sig sB sB0)
   | Or A _ B =>
       if is_ko A then tc_tree_aux sP sV B dd
+      else if is_ko B then tc_tree_aux sP sV A dd
       else
-      let tA := tc_tree_aux sP sV A dd in
-      let tcB := tc_tree_aux sP sV B dd in
-      map_ty (fun '(dA, sA) =>
-        map_ty (fun '(dB, sB) =>
-          map_ty' (fun x => 
-          (if has_cut A then maxD dA dB else Pred, x)) (merge_sig sA sB)) tcB) tA
+      let: (dA, sA)  := tc_tree_aux sP sV A dd in
+      let: (dB, sB) := tc_tree_aux sP sV B dd in
+      (if has_cut A then maxD dA dB else Pred, merge_sig sA sB)
   end.
 
 Section func2.
