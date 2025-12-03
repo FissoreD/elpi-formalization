@@ -618,6 +618,7 @@ Proof. move=> H; rewrite/full_ko //is_ko_next_alt//. Qed.
 Lemma is_dead_full_ko_state {A}: is_dead A -> full_ko A.
 Proof. move=> /is_dead_is_ko; exact: is_ko_full_ko_state. Qed.
 
+Global Ltac foo := match goal with H1 : Datatypes.is_true (?x \in domf ?A), H2 : Datatypes.is_true (?x \notin domf ?A) |- _ => by rewrite H1 in H2 end.
 Section merge.
 
   Open Scope fset_scope.
@@ -724,8 +725,6 @@ Section merge.
     - by move: kAA_ kA; rewrite /= in_fsetE=> /orP[->|->].
     by move: kAA; rewrite /= in_fsetE kA.
   Qed.
-
-  Ltac foo := match goal with H1 : Datatypes.is_true (?x \in domf ?A), H2 : Datatypes.is_true (?x \notin domf ?A) |- _ => by rewrite H1 in H2 end.
 
   Lemma merge_comm {A B}: merge_sig A B = merge_sig B A.
   Proof.
@@ -1071,7 +1070,7 @@ Section more_precise.
       Proof. by case: (incl_weak_not_incl_strong x y). Qed.
 *)
 
-  Lemma merge_more_precise0 {A B}: more_precise A (merge_sig A B).
+  (* Lemma merge_more_precise0 {A B}: more_precise A (merge_sig A B).
   Proof.
     apply/andP; split.
       rewrite /merge_sig/=.
@@ -1228,28 +1227,77 @@ Section more_precise.
     rewrite eqxx incl_refl//=.
     rewrite key_absent_remove/key_absent?L//.
     by apply: IH.
-  Admitted.
+  Admitted. *)
 
-  Definition more_precise_opt (more_pre less_pre:(option (S * bool))) :=
-    match less_pre with
-    | None => more_pre = None
-    | Some (sless,bless) => 
-      match more_pre with
-      | None => sless = weak sless
-      | Some (smore,bmore) => (bmore || ~~bless) /\ incl smore sless = ty_ok true
-      end
-  end.
+  Lemma set2_more_precise old new S1 S2 v:
+    more_precise new old ->
+      incl S1 S2 ->
+        more_precise new.[v <- S1] old.[v <- S2].
+  Proof.
+    move=> /[dup] /more_precise_sub son MP I.
+    rewrite/more_precise !{1}dom_setf fsetUS.
+    apply/forallP => -[k kP].
+    rewrite valPE/=. ffunE.
 
-  Lemma more_precise_check_tm {sP s1 s2 r2 c}:
-    check_tm sP s2 c = ty_ok r2 ->
-    more_precise s1 s2 -> valid_sig s2 ->
-      exists r1,
-        (check_tm sP s1 c) = ty_ok r1 /\
-          more_precise_opt r1 r2.
+
+
+  Lemma more_precise_assume_tm {new old sP tm d}:
+    more_precise new old ->
+    more_precise (assume_tm sP new tm d)
+      (assume_tm sP old tm d).
+  Proof.
+    elim: tm new old d => //=.
+    - move=> _ new old []//.
+    - move=> _ new old []//.
+    - move=> v new old [|[[] s] _]// H.
+      case: (fndP old) => [/[dup] vold_ vold|nvold]/=.
+        have [vnew I] := in_more_precise H vold.
+        rewrite in_fnd/=.
+        rewrite/more_precise/=.
+        rewrite vnew.
+        rewrite in_fnd. *)
+      
+      
+  Admitted. (*OK*)
+
+
+
+  Lemma assume_tm_more_precise sP old c S:
+    more_precise (assume_tm sP old c S) old.
+  Proof.
+    elim: c old S => //=.
+    - move=> _ old [] *; rewrite more_precise_refl//.
+    - move=> _ old [] *; rewrite more_precise_refl//.
+    - move=> v old [|[[] S] _]; rewrite ?more_precise_refl//.
+      rewrite/more_precise {1}dom_setf fsubsetUr.
+      apply/forallP => -[k kold]/=.
+      rewrite valPE.
+      case: fndP => [/[dup] vold_ vold|nvold]/=.
+        have kvold : k  \in v |` domf old by rewrite in_fsetE kold orbT//.
+        rewrite in_fnd/= ffunE/=.
+        case: eqP => H; subst.
+          by rewrite/incl -min_assoc !(bool_irrelevance vold kold) min_refl eqxx.
+        by rewrite in_fnd/= incl_refl//.
+      have kvold : k  \in v |` domf old by rewrite in_fsetE kold orbT//.
+      rewrite in_fnd/= ffunE/= in_fnd/= min_refl.
+      by case: eqP => H; subst; rewrite ?incl_refl//; foo.
+    - move=> l Hl r Hr old [|[[] s] xs]; auto; rewrite?more_precise_refl//.
+      have:= Hr old (sigtm r s).
+      apply: more_precise_trans.
+      apply: more_precise_assume_tm.
+      apply: Hl.
+  Qed.
+
+  Definition more_precise_opt '(smore, bmore) '(sless, bless) :=
+    (bmore || ~~bless) && incl smore sless.
+
+  Lemma more_precise_check_tm {sP ctx1 ctx0 c}:
+      more_precise ctx1 ctx0 ->
+        more_precise_opt (check_tm sP ctx1 c) (check_tm sP ctx0 c).
   Proof.
     simpl in *.
     elim: c r2 s1 s2 => //=.
-    - move=> k r1 s1 s2 [<-]{r1} H1 H2; repeat eexists.
+    - move=> k [s2 b2] c0 c1. r1 s1 s2 [<-]{r1} H1 H2; repeat eexists.
       case: lookup => //=?; rewrite incl_refl//.
     - move=> k r1 s1 s2 [<-]{r1} H1 H2; repeat eexists.
     - move=> v r1 s1 s2 [<-]{r1} H1 H2; repeat eexists.
@@ -1387,30 +1435,6 @@ Section more_precise.
     rewrite eqxx incl_refl/=.
     rewrite key_absent_remove//.
     by apply: IH; eauto.
-  Qed.
-
-
-  Lemma assume_tm_more_precise {sP sv1 svA c S}:
-    valid_sig sv1 -> assume_tm sP sv1 c S = ty_ok svA -> more_precise svA sv1.
-  Proof.
-    elim: c sv1 svA S => //=.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: more_precise_refl H.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: more_precise_refl H.
-    - move=> v sv1 svA S sv1V.
-      case L: lookup => [S'|]; last first.
-        move=> [<-]/={svA}.
-        by apply: more_precise_add_None.
-      case M: min => //=[S''][<-].
-      apply: more_precise_add_Some; eauto.
-      rewrite min_comm in M.
-      apply: min_incl M.
-    - move=> l Hl r Hr sv1 sv2 [//|[s1 s2|s1 _]] V; last first.
-        by apply: Hl.
-      case al: assume_tm => //[sv1']/= ar.
-      have {}Hl := Hl _ _ _ V al.
-      have V' := assume_tm_valid_sig V al.
-      have {}Hr := Hr _ _ _ V' ar.
-      by apply: more_precise_trans Hr Hl.
   Qed.
 
   Lemma assume_call_more_precise {sP sv1 svA c S}:
