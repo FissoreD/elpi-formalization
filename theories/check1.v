@@ -448,24 +448,6 @@ Section checker.
 
   Definition anyT:= (b (d Pred), true).
 
-  (* takes a tm and returns its signature + if it is well-called
-     the tm has no signature if its head is a variable with no assignment in sV *)
-  Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm) : S * bool :=
-    match tm with
-    | Tm_Kd k => (b Exp, true)
-    | Tm_Kp k => (odflt (b(d Pred)) (lookup k sP), true)
-    | Tm_V v => (odflt (b(d Pred)) (lookup v sV), true)
-    | Tm_Comb l r => 
-        let (sl, b1) := check_tm sP sV l in
-        if sl is arr m tl tr then
-          if m == i then
-            let (cr, br) := check_tm sP sV r in
-            if incl cr tl && b1 && br then (tr, true)
-            else (weak tr, false)
-          else (tr, b1)
-        else anyT
-    end.
-
   Fixpoint get_last (s: S) : option (S * mode * S) :=
     match s with
     | arr m l r => 
@@ -495,6 +477,27 @@ Section checker.
     rev (keep_sig tm_ag s).
 
 
+  (* takes a tm and returns its signature + if it is well-called
+     the tm has no signature if its head is a variable with no assignment in sV *)
+  Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm) : S * bool :=
+    match tm with
+    | Tm_Kd k => (b Exp, true)
+    | Tm_Kp k => (odflt (b(d Pred)) (lookup k sP), true)
+    | Tm_V v => (odflt (b(d Pred)) (lookup v sV), true)
+    | Tm_Comb l r => 
+        (* before we check the LHS and then we go right *)
+        let (sl, b1) := check_tm sP sV l in
+        (* if the type of l is not an arrow, we return anyT *)
+        if sl is arr m tl tr then
+        (* TODO: here tl and tr are wrong wrt l and r, due to parenthesing of comb and arr *)
+          if m == i then
+            let (cr, br) := check_tm sP sV r in
+            if incl cr tl && b1 && br then (tr, true)
+            else (weak tr, false)
+          else (tr, b1)
+        else anyT
+    end.
+
     (* takes a tm and a signature and updates variable signatures
      updates are performed only on variables in input positions *)
   Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : Tm) (s : seq (mode * S)): sigV :=
@@ -504,6 +507,7 @@ Section checker.
     | Tm_V _, (o, _) :: _ => sV 
     | Tm_V v, (i, s) :: _ => add v (min s (odflt s (lookup v sV))) sV
     | (Tm_Comb L R), (i, s) :: sx =>
+      (* before we assume in the LHS and then we go right  *)
       let sV' := assume_tm sP sV L sx in
       assume_tm sP sV' R (sigtm R s)
     | (Tm_Comb L R), (o, _) :: sx => assume_tm sP sV L sx
@@ -528,8 +532,9 @@ Section checker.
     | Tm_Kp k, (o, s) :: _ => if lookup k sP is Some x then incl x s else false 
     | Tm_V v, (o, s) :: _ =>  if lookup v sV is Some x then incl x s else false
     | Tm_Comb l r, (o, tr) :: xs =>
-        let: (t, b1) := check_tm sP sV r in
-        check_hd sP sV l xs && b1 && (incl t tr)
+        (* getting the type of r and if it is well_called *)
+        let: (tr', b1) := check_tm sP sV r in
+        check_hd sP sV l xs && b1 && (incl tr' tr)
     end.
 
   (* checks inputs and assumes outputs of a callable *)
