@@ -11,7 +11,7 @@ Import Prenex Implicits.
 Lemma TODO: False. Admitted.
 Ltac TODO := exfalso; apply TODO.
 
-Notation typecheck := option.
+(* Notation typecheck := option.
 Notation ty_ok:= Some.
 Notation ty_err := None.
 
@@ -37,7 +37,7 @@ Definition tydflt {T:eqType} dflt (t:typecheck T) :=
 Definition map_ty_s m (ob1:typecheck S) ob2 : typecheck S :=
   map_ty (fun x => map_ty (fun y => ty_ok (arr m x y)) ob2) ob1.
 
-
+ *)
 Lemma tm2RC_kp {t1 k} : 
   tm2RC t1 = Some (RCallable_Kp k) -> t1 = Tm_Kp k.
 Proof.
@@ -58,14 +58,14 @@ Proof.
   - move=> h b k; case X: tm2RC => //.
 Qed.
 
-Definition ty2bool t:= match t with ty_ok b1 => b1 | _ => false end.
-
+(* Definition ty2bool t:= match t with ty_ok b1 => b1 | _ => false end. *)
+(* 
 Definition map_ty_opt {A B: eqType} (f: A -> typecheck (option B)) t :=
   match t with
   | ty_ok (Some e) => (f e)
   | ty_err => ty_err
   | ty_ok None => ty_ok (@None B)
-  end.
+  end. *)
 
 Section has_cut.
   (* tells if A has a superficial cut *)
@@ -489,7 +489,6 @@ Section checker.
         let (sl, b1) := check_tm sP sV l in
         (* if the type of l is not an arrow, we return anyT *)
         if sl is arr m tl tr then
-        (* TODO: here tl and tr are wrong wrt l and r, due to parenthesing of comb and arr *)
           if m == i then
             let (cr, br) := check_tm sP sV r in
             if incl cr tl && b1 && br then (tr, true)
@@ -538,29 +537,30 @@ Section checker.
     end.
 
   (* checks inputs and assumes outputs of a callable *)
-  Definition check_callable sP sV (c: Callable) d : typecheck (D * sigV)%type :=
+  Definition check_callable sP sV (c: Callable) d : D * sigV :=
     match check_tm sP sV (Callable2Tm c)  with
-    | ((b Exp | arr _ _ _), _) => ty_err (*NOTE: callable have type prop!*)
+    | ((b Exp | arr _ _ _), _) => (Pred, sV)
     | (b(d x), b1) =>
-      Some (if b1 then 
+      if b1 then 
         if get_callable_hd_sig sP sV c is Some s then
          (maxD x d, (assume_call sP sV c s))
         else (Pred, sV)
-      else (Pred, sV))
+      else (Pred, sV)
     end.
 
-  Definition check_atom sP sV (a: A) (s:D) : typecheck (D * sigV)%type :=
+  Definition check_atom sP sV (a: A) (s:D) : D * sigV :=
     match a with
-    | ACut => ty_ok (Func, sV)
+    | ACut => (Func, sV)
     | ACall t => check_callable sP sV t s
     end. 
 
   (* takes a list of atoms and returns if they typecheck, their determinacy, the updated sigV *)
   Fixpoint check_atoms sP sV l s :=
     match l with
-    | [::] => ty_ok (s, sV)
+    | [::] => (s, sV)
     | x :: xs => 
-      map_ty (fun '(s', sV') => check_atoms sP sV' xs s') (check_atom sP sV x s)
+      let: (s', sV') := check_atom sP sV x s in
+      check_atoms sP sV' xs s'
     end.
 
   Fixpoint RCallable2Callable rc := 
@@ -587,10 +587,9 @@ Section checker.
         let is_det_head := is_det_sig hd_sig in
         let tm_head := (Callable2Tm (RCallable2Callable head)) in
         let ass_hd := assume_tm sP sV tm_head (sigtm tm_head hd_sig) in
-        if check_atoms sP ass_hd prems Func is Some (b1, sV'') then
-          if is_det_head && (b1 == Pred) then false
-          else check_hd sP sV'' tm_head (sigtm tm_head hd_sig)
-        else false
+        let: (b1, sV'') := check_atoms sP ass_hd prems Func in
+        if is_det_head && (b1 == Pred) then false
+        else check_hd sP sV'' tm_head (sigtm tm_head hd_sig)
     end.
 
   Definition check_rules sP sV rules :=
@@ -601,11 +600,12 @@ Section checker.
 End checker.
 
 Lemma check_callable_pred {sP sV c d1 d2 s}:
-  check_callable sP sV c d1 = ty_ok (d2, s) ->
+  check_callable sP sV c d1 = (d2, s) ->
     maxD d2 d1 = d2.
 Proof.
   rewrite/check_callable.
-  case: check_tm => //=-[]//[|d [|[<-]]]//.
+  case: check_tm => //= -[]; last by move=> _ _ _ _ [<-].
+  move=> [|d [|[<-]]] //; first by move=> _ [<-].
   case gc: get_callable_hd_sig => [S|][<-]//.
   rewrite -maxD_assoc maxD_refl//.
 Qed.
@@ -631,7 +631,7 @@ Section merge.
     f.[kA] = odflt f.[kA] f.[? k].
   Proof. by rewrite in_fnd. Qed.
 
-  Lemma fun_if_Some (T : eqType) p (d : T) : (if p is ty_ok x then Some x else Some d) = Some (if p is ty_ok x then x else d).
+  Lemma fun_if_Some (T : eqType) p (d : T) : (if p is Some x then Some x else Some d) = Some (if p is Some x then x else d).
   Proof. by case: p. Qed.
 
   Lemma in_fst (T:choiceType) (f g : {fset T}) (x : f `&` g) : val x \in f.
@@ -649,203 +649,99 @@ Section merge.
   Lemma domfU2 x {A B : sigV} : x \in domf A `|` domf B -> (x \in domf A) + (x \in domf B).
   Proof. rewrite in_fsetU; case: (x \in domf A); [left|right] => //. Qed.
 
-
-
   Inductive merge_dom_spec {T : choiceType} k (A B : {fset T}) : bool -> bool -> Type :=
   | InBoth : forall ka : k \in A, all_equal_to ka -> forall kb : k \in B, all_equal_to kb -> merge_dom_spec true true
   | InLeft : forall ka : k \in A, all_equal_to ka -> k \notin B -> merge_dom_spec true false
   | InRight : k \notin A -> forall kb : k \in B, all_equal_to kb -> merge_dom_spec false true.
   
-Lemma fsetUP {T : choiceType} {x} {A B : {fset T}} :
-  (x \in A) + (x \in B) -> merge_dom_spec x A B (x \in A) (x \in B).
-Proof.
-  case E: (x \in A); case F: (x \in B) => // AB.
-  by apply: InBoth (E) _ (F) _ => ?; apply: bool_irrelevance.
-  by apply: InLeft (E) _ _; rewrite ?F // => ?; apply: bool_irrelevance.
-  by apply: InRight _ (F) _; rewrite ?E // => ?; apply: bool_irrelevance.
-  by case: AB.
-Qed.
-
+  Lemma fsetUP {T : choiceType} {x} {A B : {fset T}} :
+    (x \in A) + (x \in B) -> merge_dom_spec x A B (x \in A) (x \in B).
+  Proof.
+    case E: (x \in A); case F: (x \in B) => // AB.
+    by apply: InBoth (E) _ (F) _ => ?; apply: bool_irrelevance.
+    by apply: InLeft (E) _ _; rewrite ?F // => ?; apply: bool_irrelevance.
+    by apply: InRight _ (F) _; rewrite ?E // => ?; apply: bool_irrelevance.
+    by case: AB.
+  Qed.
 
   Inductive fsetI_spec {T : choiceType} k (A B : {fset T}) : bool -> bool -> Type :=
   | Both: forall ka : k \in A, all_equal_to ka -> forall kb : k \in B, all_equal_to kb -> fsetI_spec true true.
 
-Lemma fsetILR  {T : choiceType} {x} {A B : {fset T}} :
-  x \in A -> x \in B -> fsetI_spec x A B (x \in A) (x \in B).
-Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irrelevance. Qed.
+  Lemma fsetILR  {T : choiceType} {x} {A B : {fset T}} :
+    x \in A -> x \in B -> fsetI_spec x A B (x \in A) (x \in B).
+  Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irrelevance. Qed.
 
   (* Definition same_skel {f g : sigV} k (kf : k \in domf f) (kg : k \in domf g) : bool :=
    match fsetILR kf kg with Both xf _ xg _ => compat_type f.[xf] g.[xg] end. *)
 
-  Definition merge_sig1_default (f g: sigV) : sigV :=
+  Definition merge_sig (f g: sigV) : sigV :=
    [fmap k : domf f `|` domf g =>
           match fsetUP (domfU2 (valP k)) with
             | InBoth kf _ kg _ => max f.[kf] g.[kg]
-            | InLeft kf _ _  => f.[kf]
-            | InRight _ kg _ => weak g.[kg]
+            | InLeft kf _ _    => weak f.[kf]
+            | InRight _ kg _   => weak g.[kg]
           end].
 
-  Lemma merge_sig1_defaultL k f g :
+  Lemma merge_sigL k f g :
       k \in domf f -> k \notin domf g ->
-      (merge_sig1_default f g).[? k] = f.[? k].
+      (merge_sig f g).[? k] = omap weak f.[? k].
   Proof.
     move=> /[dup] kf kf_ nkg.
-    have H : k \in domf (merge_sig1_default f g).
-      by rewrite in_fsetE kf.
-    rewrite /merge_sig1_default (in_fnd H) (in_fnd kf) /= ffunE.
+    have H : k \in domf (merge_sig f g) by rewrite in_fsetE kf.
+    rewrite /merge_sig (in_fnd H) (in_fnd kf) /= ffunE.
     by case: fsetUP => [//|/=? -> ?|//] in kf_ nkg *.
   Qed.
 
-  Lemma merge_sig1_defaultR k f g :
+  Lemma merge_sigR k f g :
       k \notin domf f -> k \in domf g ->
-      (merge_sig1_default f g).[? k] = omap weak g.[? k].
+      (merge_sig f g).[? k] = omap weak g.[? k].
   Proof.
     move=> nkf /[dup] kg_ kg.
-    have H : k \in domf (merge_sig1_default f g).
+    have H : k \in domf (merge_sig f g).
       by rewrite in_fsetE kg orbC.
-    rewrite /merge_sig1_default (in_fnd H) (in_fnd kg) /= ffunE.
+    rewrite /merge_sig (in_fnd H) (in_fnd kg) /= ffunE.
     by case: fsetUP => [//|//|/= ?? ->] in nkf kg_ *.
   Qed.
 
-  Lemma merge_sig1_defaultLR k f g :
+  Lemma merge_sigLR k f g :
       forall kf :k \in domf f, forall kg : k \in domf g,
-      (merge_sig1_default f g).[? k] =
-      match max f.[kf] g.[kg] with ty_ok x => Some x | _ => Some f.[kf] end.
+      (merge_sig f g).[? k] = Some (max f.[kf] g.[kg]).
   Proof.
     move=> /[dup] kf_ kf /[dup] kg_ kg.
-    have H : k \in domf (merge_sig1_default f g).
-      by rewrite in_fsetE kf kg.
-    rewrite /merge_sig1_default (in_fnd H) /= ffunE.
+    have H : k \in domf (merge_sig f g) by rewrite in_fsetE kf kg.
+    rewrite /merge_sig (in_fnd H) /= ffunE.
     case: fsetUP => [/=kf' -> kg' -> |//|//] in kf_ kg_ *.
     by case: max.
   Qed.
-
-  Lemma same_skel_dflt x A B (xA : x \in A) (xmdB : x \in domf (merge_sig1_default A B)) :
-    compat_type A.[xA] (merge_sig1_default A B).[xmdB].
-  Proof.
-    case: (fsetILR xA xmdB) => {}xA -> {}xAB ->.
-    have [xB|nxB] := boolP (x \in B); [ have := merge_sig1_defaultLR xA xB | have := merge_sig1_defaultL xA nxB ]; rewrite !in_fnd.
-      rewrite fun_if_Some => /Some_inj ->.
-      case F: (max _ _) => [s'|]; last by rewrite compat_type_refl.
-      by apply: incl_compat_type; rewrite incl_not_incl (max_incl F).
-    by move=> /Some_inj ->; rewrite compat_type_refl.
-  Qed.
-
-  Definition merge_sig1 (f g: sigV) : typecheck sigV :=
-    if [forall xFG : domf f `&` domf g, compat_type f.[in_fst xFG] g.[in_snd xFG]]
-    then ty_ok (merge_sig1_default f g) else ty_err.
-
-  Definition weak_all (s:sigV) := [fmap x : domf s => weak s.[valP x]].
-
-  Definition weak_fst_if_not_in_snd (s1 s2: sigV) : sigV :=  
-      [fmap x : domf s1 => if s2.[? val x] then s1.[valP x] else weak s1.[valP x]].
-
-
-  (* Definition update (s:sigV) '((k, v): (V * _)) : typecheck (sigV) :=
-    match lookup k s with
-    | None => ty_ok (add k (weak v) s)
-    | Some e => 
-        map_ty' (fun m => add k m s) (max v e)
-    end.
-
-  Fixpoint merge_sig1 (s1 s2: sigV) : typecheck (sigV) :=
-    match s2 with
-    | [::] => ty_ok s1
-    | x::xs => map_ty (fun (s1':sigV) => merge_sig1 s1' xs) (update s1 x)
-    end. *)
-
  
-  Lemma lookup_weak_all {k A}:
-    lookup k (weak_all A) = omap weak (lookup k A).
-  Proof.
-    case: fndP => /= HwA; case: (fndP A) => /= HA //.
-    by rewrite ffunE /=; congr (Some (weak A.[_])); apply bool_irrelevance. 
-    by rewrite HwA in HA.
-    by rewrite HA in HwA.
-  Qed.
-
-  Lemma weak_fst_if_not_in_snd_0s {L}:
-    weak_fst_if_not_in_snd L [fmap] = weak_all L.
+  Lemma merge_refl {A}: merge_sig A A = A.
   Proof. 
-    apply/fmapP => k; rewrite lookup_weak_all.
-    case: fndP => /= HwA.
-       by rewrite ffunE in_fnd /= not_fnd //=; congr (Some (weak L.[_])); apply bool_irrelevance. 
-    by rewrite not_fnd. 
+    apply/fmapP=> k; case: fndP => /[dup] kAA_ kAA; case: fndP => kA //.
+      congr (Some _); rewrite /merge_sig ffunE.
+      case: fsetUP => /= [_ -> {}kA ->|//|]; first by rewrite max_refl.
+        by move=> ? _; rewrite kA.
+      by rewrite {1}kA.
+    - by move: kAA_ kA; rewrite /= in_fsetE=> /orP[->|->].
+    by move: kAA; rewrite /= in_fsetE kA.
   Qed.
 
-  Definition merge_sig s1 s2 :=
-    let s1' := weak_fst_if_not_in_snd s1 s2 in
-    merge_sig1 s1' s2.
+  Ltac foo := match goal with H1 : Datatypes.is_true (?x \in domf ?A), H2 : Datatypes.is_true (?x \notin domf ?A) |- _ => by rewrite H1 in H2 end.
 
-  Lemma weak_fst_if_not_in_sndP {k A B}:
-    lookup k (weak_fst_if_not_in_snd A B) =
-      match lookup k B with
-      | Some v => lookup k A
-      | None => omap weak (lookup k A)
-      end.
+  Lemma merge_comm {A B}: merge_sig A B = merge_sig B A.
   Proof.
-    rewrite /weak_fst_if_not_in_snd. case: fndP => /= kA; case: (fndP B) => kB; rewrite ?[in omap _ _]/= ?ffunE.
-      by rewrite !in_fnd /=; congr (Some _.[_]); apply bool_irrelevance.
-      by rewrite not_fnd // in_fnd /=; congr (Some (weak _.[_])); apply bool_irrelevance.
-      by rewrite not_fnd.
-      by rewrite not_fnd.
+    rewrite /merge_sig.
+    apply/fmapP=> k.
+    case: fndP => /= [/[dup] kAB_ kAB|nkAB].
+      have kBA : k \in domf B `|` domf A by rewrite fsetUC.
+      rewrite in_fnd /= !ffunE /=; congr (Some _).
+      case: fsetUP => [kA UkA kB UkB|kA UkA nkB|nkA kB UkB];
+      case: fsetUP => [kB' _ kA' _|kB' _ nkA'|nkB' kA' _]; rewrite ?UkA ?UkB; try by [foo|].
+      by exact max_comm.
+    have nkBA : k \notin domf B `|` domf A by rewrite fsetUC.
+    by rewrite not_fnd.
   Qed.
 
-
-  Lemma weak_fst_if_not_in_snd_cons_key_absent {k v} {xs ys:sigV}:
-    lookup k xs = None ->
-      weak_fst_if_not_in_snd xs ys.[k <- v] = weak_fst_if_not_in_snd xs ys.
-  Proof.
-    move=> Hk; apply/fmapP=> k'.
-    rewrite !weak_fst_if_not_in_sndP fnd_set; case: eqP => [->|].
-      by rewrite Hk; case: fnd.
-    by case: fnd.
-  Qed.
-
-  Lemma weak_fst_if_not_in_snd_refl {L1}: weak_fst_if_not_in_snd L1 L1 = L1.
-  Proof.
-    by apply/fmapP=> k; rewrite weak_fst_if_not_in_sndP; case: fnd.
-  Qed.
-
-  Lemma merge_sig1_default_refl {A}: 
-    merge_sig1_default A A = A.
-  Proof. 
-    apply/fmapP=> k; case: fndP => /[dup] kAA_ kAA; case: fndP => /[dup] kA_ kA //.
-      congr (Some _); rewrite /merge_sig1_default ffunE.
-      case: fsetUP => [?->?->|//|/= abs ?->] in kA_ *; first by rewrite max_refl.
-      by rewrite kA in abs.
-    by move: kAA_ kA; rewrite /= in_fsetE=> /orP[->|->].
-    by move: kA_ kAA; rewrite /= in_fsetE => ->.
-  Qed.
-
-  Lemma merge_refl {A}: 
-    merge_sig A A = ty_ok A.
-  Proof. 
-    apply/eqP; rewrite /merge_sig weak_fst_if_not_in_snd_refl/merge_sig1 merge_sig1_default_refl.
-    case: ifP => //= /negbT; apply: contraR => _; apply/forallP => -[k kAA].
-    by rewrite (bool_irrelevance (in_fst _) (in_snd _)) compat_type_refl.
-  Qed.
-
-  Lemma weak_all_add {k v C}:
-    weak_all (add k v C) = add k (weak v) (weak_all C).
-  Proof.
-    apply/fmapP=> k'; rewrite fnd_set; case: eqP => [->|].
-      rewrite /weak_all; case: fndP => /= [?|].
-        rewrite ffunE; congr (Some (weak _)).
-        by rewrite ffunE /= eqxx.
-      by rewrite !in_fsetE /= eqxx.
-    move/eqP=> H.
-    case: fndP => [kf|nkf].
-      have Hk': k' \in domf C.
-        by move: kf; rewrite !in_fsetE /= (negPf H).
-      rewrite !ffunE (negPf H) in_fnd //.
-      by rewrite in_fnd /= ffunE; congr (Some (weak _.[_])); apply: bool_irrelevance.
-    rewrite not_fnd //; apply: contra nkf => k'C.
-    by rewrite !in_fsetE /= (negPf H) /=.
-  Qed.
-
-  
-  Lemma merge_add {xs k v C D}:
+  (* Lemma merge_add {xs k v C D}:
     merge_sig (add k v C) xs = ty_ok D ->
       exists x, lookup k D = Some x /\ incl v x = ty_ok true.
   Proof.
@@ -868,49 +764,6 @@ Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irr
     by exists (weak v) ; split => //; exact weak_incl.
   Qed.
 
-  Lemma all_compat_type_comm A B : 
-   [forall xFG : domf (weak_fst_if_not_in_snd A B) `&` domf B, compat_type (weak_fst_if_not_in_snd A B).[in_fst xFG] B.[in_snd xFG] ] ->
-   [forall xFG : domf (weak_fst_if_not_in_snd B A) `&` domf A, compat_type (weak_fst_if_not_in_snd B A).[in_fst xFG] A.[in_snd xFG] ].
-   move/forallP=> H; apply/forallP=> -[k] /[dup] H1.
-   do [ rewrite {1}in_fsetE; case/andP=>[kBA kA] ] in H1 *.
-   have kAB : k  \in domf (weak_fst_if_not_in_snd A B) := kA.
-   have kB : k  \in domf B := kBA.
-   have := H (Sub k (fst_snd_in kAB kBA)); rewrite fstE sndE => H1 w.
-   rewrite (bool_irrelevance w (fst_snd_in kBA kA)) fstE sndE {w}.
-   move: H1; rewrite fnd_in !weak_fst_if_not_in_sndP /= !ffunE /= !valPE !in_fnd /=.
-   by rewrite compat_type_comm.
-  Qed.
-
-  Lemma merge_comm {A B}: merge_sig A B = merge_sig B A.
-  Proof.
-    rewrite /merge_sig /merge_sig1.
-    case: ifP => [C|nC]; case: ifP => [D|nD] //; last 2 first.
-      by move/all_compat_type_comm: C; rewrite nD.
-      by move/all_compat_type_comm: D; rewrite nC.
-    congr (ty_ok _).
-    apply/fmapP=> k.
-    have [kA|nkA] := boolP (k \in domf A); have [kB|nkB] := boolP (k \in domf B).
-      rewrite merge_sig1_defaultLR.
-      rewrite merge_sig1_defaultLR.
-      rewrite fnd_in weak_fst_if_not_in_sndP !in_fnd // [odflt _ _]/= max_comm.
-      symmetry.
-      rewrite fnd_in weak_fst_if_not_in_sndP !in_fnd // [odflt _ _]/= max_comm.
-      have kAB : k \in domf (weak_fst_if_not_in_snd A B) `&` domf B.
-        by rewrite in_fsetE kA kB.
-      case E: max => //.
-      move/forallP: C => /(_ (Sub k kAB)).
-      rewrite (bool_irrelevance (in_fst (Sub _ _)) kA).
-      rewrite (bool_irrelevance (in_snd (Sub _ _)) kB).
-      rewrite -compat_type_max.
-      by rewrite fnd_in weak_fst_if_not_in_sndP /= ffunE in_fnd /= valPE in_fnd /= E.
-    - rewrite merge_sig1_defaultL //.
-      rewrite merge_sig1_defaultR //.
-      by rewrite weak_fst_if_not_in_sndP not_fnd.
-    - rewrite merge_sig1_defaultR //.
-      rewrite merge_sig1_defaultL //.
-      by rewrite weak_fst_if_not_in_sndP in_fnd /= not_fnd.
-    by rewrite !not_fnd // inE in_fsetE negb_or nkA nkB.
-  Qed.
 
 
   Lemma merge_lookup  {k kB kC} {B C D : sigV}:
@@ -947,7 +800,7 @@ Proof. by move=> E F; rewrite E F; apply: Both (E) _ (F) _ => ?; apply: bool_irr
       end.
   Proof.
 
-  Admitted.
+  Admitted. *)
 
 End merge.
 (* a free alternative can be reached without encountering a cutr following SLD 
@@ -957,26 +810,20 @@ End merge.
   "((A, A') ; B) , C" is OK if B is dead already (cutr by predecessor of A for example)
 
 *)
-Fixpoint tc_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : typecheck (D * sigV)%type :=
+Fixpoint tc_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : D * sigV :=
   match A with
-  | CutS => ty_ok (Func, sV)
+  | CutS => (Func, sV)
   | CallS _ a => 
-    map_ty (fun '(dd', sV') =>  ty_ok (maxD dd dd', sV')) (check_callable sP sV a dd)
-  | Bot | OK | Dead => ty_ok (dd, sV)
+    let: (dd', sV') := check_callable sP sV a dd in
+    (maxD dd dd', sV')
+  | Bot | OK | Dead => (dd, sV)
   | And A B0 B =>
-    match tc_tree_aux sP sV A dd with
-    | ty_err => ty_err
-    | ty_ok (D, T) =>
-      let tcB := tc_tree_aux sP T B D in
-      let tcB0 := tc_tree_aux sP T B0 D in
-      map_ty (fun '(ddB0, sB0) =>
-          map_ty (fun '(ddB, sB) =>
-            map_ty' (fun x => 
-            (maxD ddB0 ddB, x)) (merge_sig sB sB0)) tcB) tcB0
-    end
+    let: (D, T) := tc_tree_aux sP sV A dd in
+    let: (ddB, sB) := tc_tree_aux sP T B D in
+    let: (ddB0, sB0) := tc_tree_aux sP T B0 D in
+    (maxD ddB0 ddB, merge_sig sB sB0)
   | Or A _ B =>
-      if is_ko A then
-        tc_tree_aux sP sV B dd
+      if is_ko A then tc_tree_aux sP sV B dd
       else
       let tA := tc_tree_aux sP sV A dd in
       let tcB := tc_tree_aux sP sV B dd in
