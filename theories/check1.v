@@ -474,79 +474,62 @@ Section checker.
     | _ => None
     end.
 
-  (* change the parenthesis of arrows: from A -> (B -> C) to (A -> B) -> C *)
-  Fixpoint rev_sig (s: S) : S :=
-    match s with
-    | arr m l (arr m1 l1 r1) => arr m1 (arr m l l1) (rev_sig r1)
-    | _ => s
+  Fixpoint cnt_tm_ag t := 
+    match t with
+    | Tm_Comb L _ => 1 + cnt_tm_ag L
+    | _ => 0
     end.
 
-  (* rotate the signature given a signature head hd:
-     rot_sig S (A -> B) = (S -> A) *)
-  Fixpoint rot_sig hd (s:S) : S :=
-    match s with
-    | arr m l (arr m1 l1 r1) => 
-      arr m hd (arr m1 l (rot_sig l1 r1))
-    | _ => hd
+  Fixpoint keep_sig n s :=
+    match n with
+    | 0 => [::]
+    | n.+1 => 
+      match s with
+      | arr m l r => (m, l) :: keep_sig n r
+      | _ => [::]
+      end
     end.
 
-  Definition new_sig s :=
-    let sig_tl := get_sig_hd s in
-    let s' := rot_sig (b sig_tl) s in
-    rev_sig s'.
+  Definition sigtm tm s :=
+    let tm_ag := cnt_tm_ag tm in
+    rev (keep_sig tm_ag s).
 
-  (* (f A) B        func i-> (func o-> pred)  *)
-  (* A è input func
-     B è output func
-     f è pred
-
-     Se faccio rev della signatura ottengo
-     `(pred i-> func) o-> func`
-  *)
-  Section test.
-    Goal 
-      let s := arr i (b (d Func)) (arr o (b (d Func)) (b (d Pred))) in
-      let s_rev := arr o (arr i (b (d Pred)) (b (d Func))) (b (d Func))  in
-      get_sig_hd s = (d Pred) /\
-      rot_sig (b (get_sig_hd s)) s = arr i (b (d Pred)) (arr o (b (d Func)) (b (d Func))) /\
-      new_sig s = s_rev.
-    Proof.
-      move=> //=.
-    Qed.
-  End test.
 
     (* takes a tm and a signature and updates variable signatures
      updates are performed only on variables in input positions *)
-  Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : Tm) (s : S): sigV :=
-    match tm with
-    | Tm_Kd _ | Tm_Kp _ => sV
-    | Tm_V v => add v (min s (odflt s (lookup v sV))) sV
-    | Tm_Comb l r =>
-      let s := new_sig s in
-      if s is arr m tl tr then
-        if m == i then  assume_tm sP (assume_tm sP sV l tl) r tr
-        else assume_tm sP sV l tl
-      else sV
+  Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : Tm) (s : seq (mode * S)): sigV :=
+    match tm, s with
+    | _, [::] => sV
+    | (Tm_Kd _ | Tm_Kp _), _ => sV 
+    | Tm_V _, (o, _) :: _ => sV 
+    | Tm_V v, (i, s) :: _ => add v (min s (odflt s (lookup v sV))) sV
+    | (Tm_Comb L R), (i, s) :: sx =>
+      let sV' := assume_tm sP sV L sx in
+      assume_tm sP sV' R (sigtm R s)
+    | (Tm_Comb L R), (o, _) :: sx => assume_tm sP sV L sx
     end.
 
   (* assumes the output tm and then it goes on inputs *)
   Definition assume_call (sP:sigT) (sV:sigV) (c : Callable) (s : S): sigV :=
-    assume_tm sP sV (Callable2Tm c) s.
+    let tm := (Callable2Tm c) in
+    assume_tm sP sV tm (sigtm tm s).
 
   (* verifies variables in outputs positions *)
-  Fixpoint check_hd (sP:sigT) (sV:sigV) (s : S) (tm:Tm) : bool :=
-    match tm with
-    | Tm_Kd _ => incl (b Exp) s
-    | Tm_Kp k => if lookup k sP is Some x then incl x s else false 
-    | Tm_V v =>  if lookup v sV is Some x then incl x s else false
-    | Tm_Comb l r => 
-      let s:= new_sig s in
-      if s is arr m tl tr then
-        if m == o then 
-          let: (t, b1) := check_tm sP sV r in
-          check_hd sP sV tl l && b1 && (incl t tr)
-        else check_hd sP sV tl l
-      else false
+  Fixpoint check_hd (sP:sigT) (sV:sigV) (tm:Tm) (s : seq (mode * S)) : bool :=
+    match tm, s with
+    | _, [::] => true
+
+    (* SKIP INPUT *)
+    | (Tm_Kp _ | Tm_Kd _ | Tm_V _), (i, _) :: _ => true
+    | Tm_Comb l r, (i, tr) :: xs => check_hd sP sV l xs
+
+    (* TEST OUTPUT *)
+    | Tm_Kd _, (o, s) :: _ => incl (b Exp) s
+    | Tm_Kp k, (o, s) :: _ => if lookup k sP is Some x then incl x s else false 
+    | Tm_V v, (o, s) :: _ =>  if lookup v sV is Some x then incl x s else false
+    | Tm_Comb l r, (o, tr) :: xs =>
+        let: (t, b1) := check_tm sP sV r in
+        check_hd sP sV l xs && b1 && (incl t tr)
     end.
 
   (* checks inputs and assumes outputs of a callable *)
@@ -584,7 +567,7 @@ Section checker.
   Fixpoint RCallable_sig (sP: sigT) (t:RCallable) :=
     match t with
     | RCallable_Comb h _ => RCallable_sig sP h
-    | RCallable_Kp k => (lookup k sP) (*TODO: sP should be complete*)
+    | RCallable_Kp k => (lookup k sP)
     end.
 
   Definition empty_ctx : sigV := [fmap].
@@ -598,10 +581,10 @@ Section checker.
     | Some hd_sig => 
         let is_det_head := is_det_sig hd_sig in
         let tm_head := (Callable2Tm (RCallable2Callable head)) in
-        let ass_hd := assume_tm sP sV tm_head hd_sig in
+        let ass_hd := assume_tm sP sV tm_head (sigtm tm_head hd_sig) in
         if check_atoms sP ass_hd prems Func is Some (b1, sV'') then
           if is_det_head && (b1 == Pred) then false
-          else check_hd sP sV'' hd_sig tm_head
+          else check_hd sP sV'' tm_head (sigtm tm_head hd_sig)
         else false
     end.
 
