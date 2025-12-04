@@ -1038,9 +1038,48 @@ Section more_precise.
   by move=> H; elim: t => //= [v /(fsubsetP H)|f IHf a IHa /andP[/IHf-> /IHa->//]].
 Qed.
 
+  Definition more_preciseL (L1 L2: seq (mode * S)) :=
+    (size L1 == size L2) && all2 (fun x y => (x.1 == y.1) 
+      && compat_type x.2 y.2 && ((x.1 == o) || incl x.2 y.2)) L1 L2.
+
+  Lemma more_precise_cons m s xs m1 s1 xs1:
+    more_preciseL ((m, s) :: xs) ((m1, s1) :: xs1) =
+      [&& m == m1, (m == o) || incl s s1, compat_type s s1 & more_preciseL xs xs1].
+  Proof.
+    rewrite /more_preciseL/= eqSS.
+    repeat case: eqP; rewrite ?andbF//=; case: incl; rewrite ?andbF//=andbT//.
+  Qed.
+
+  Lemma all2_cat_rev {T1 T2} (P : T1 -> T2 -> bool) A B C D:
+    size A = size C -> size B = size D ->
+    all2 P (catrev A B) (catrev C D) = all2 P A C && all2 P B D.
+  Proof.
+    elim: A C B D => [|x xs IH] [|y ys]//= B D [H1] H2.
+    rewrite IH//=; last by rewrite H2.
+    rewrite (andbC _ (all2 _ xs _)) andbA//.
+  Qed.
+
+  Lemma all2_rev {T1 T2} (P : T1 -> T2 -> bool) A B:
+    size A = size B -> all2 P (rev A) (rev B) = all2 P A B.
+  Proof. move=> H; by rewrite /rev all2_cat_rev//= andbT. Qed.
+
+  (* Lemma more_preciseL_sigtm a {s s1}:
+    compat_type s s1 ->
+    incl s s1 -> more_preciseL (sigtm a s) (sigtm a s1).
+  Proof.
+    rewrite/more_preciseL/sigtm => C I.
+    generalize (count_tm_ag a) => {a} n.
+    have P : forall n s s1, compat_type s s1 -> size ((keep_sig n s)) = size ((keep_sig n s1)).
+      elim => //= {}n {}IH [[|[]]|[] l r] [[|[]]|[] l1 r1]//= /andP[_ /IH ->]//.
+    rewrite !size_rev all2_rev (P _ _ _ C)// eqxx/=.
+    elim: n s s1 C I => //=n IH [[|[]]|[] l r] [[|[]]|[] l1 r1]//=/andP[C1 C2];
+    rewrite incl_arr/= C1 => /andP[IL IR]/=; rewrite ?IL/= IH//.
+  Qed. *)
+
   Lemma more_precise_assume_tm {new old sP tm d}:
     closed_in old tm ->
     more_precise new old ->
+    (* more_preciseL d1 d2 -> *)
     more_precise (assume_tm sP new tm d) (assume_tm sP old tm d).
   Proof.
     elim: tm new old d.
@@ -1075,17 +1114,14 @@ Qed.
       apply/forallP => -[k kold]/=.
       rewrite !ffunE/=.
       case: eqP => [?|nkv]; subst.
-        rewrite in_fnd/=.
-      rewrite /incl -min_assoc min_refl eqxx.
-      rewrite min_comm compat_type_minR//.
-      have kO : k \in domf old.
-        
-        admit.
+        rewrite in_fnd/= {1}min_comm compat_type_minR//.
+        rewrite /incl -min_assoc min_refl eqxx andbT//.
+      have kO : k \in domf old by move: kold; case: fndP => //= /fset1UP []//.
       by rewrite in_fnd/= compat_type_refl/=.
     - move=> f Hf a Ha O [|[[] s] xs] /andP[cf ca]; auto; rewrite?more_precise_refl//.
       apply: more_precise_trans (Ha _ _ _) (Hf _ _ _) => //.
       by apply: closed_in_sub (fsubset_assume _ _ _ _) _.
-  Admitted. 
+  Qed. 
 
   Definition more_precise_opt '(smore, bmore) '(sless, bless) :=
     (bmore || ~~bless) && incl smore sless.
@@ -1225,6 +1261,8 @@ Qed.
             destruct dn, d', dO, dt => //=.
           rewrite/assume_call.
           have H := more_precise_assume_tm co MP.
+          apply: H.
+          TODO: HERE.
           admit.
         - move=> [? []]//.
         - move=> _ [??]; subst; by repeat eexists.
