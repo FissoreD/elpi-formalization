@@ -1181,6 +1181,15 @@ Lemma incl_weakr s t : incl s t -> incl s (weak t). Admitted.
       case X: get_tm_hd => //=.
   Qed.
 
+  Lemma closed_in_mp {A B t}: 
+    closed_in B t -> more_precise A B ->  closed_in A t.
+  Proof.
+    move=> + MP.
+    elim: t => //=.
+    - by move=> v vB; have [] := in_more_precise MP vB.
+    - by move=> f Hf a Ha /andP[]/Hf -> /Ha->.
+  Qed.
+
   Lemma more_precise_check_callable {sP N O t dt d' dt' O'}:
     closed_in O (Callable2Tm t) ->
     check_callable sP O t dt = (dt', O') -> minD d' dt = d' ->
@@ -1213,9 +1222,9 @@ Lemma incl_weakr s t : incl s t -> incl s (weak t). Admitted.
       destruct bn; last by repeat eexists.
       case sN: get_tm_hd_sig => [v|]; repeat eexists; auto.
         by rewrite minD_comm.
-      apply: more_precise_trans MP.
+      apply: more_precise_trans (MP).
       apply: assume_tm_more_precise.
-      admit.
+      by apply: closed_in_mp; eauto.
     - by destruct mn, mo => //= /andP[C1 C2]; rewrite incl_arr/= => /andP[I1 I2] [??]; subst;
       repeat eexists; auto.
   Admitted.
