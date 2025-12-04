@@ -415,6 +415,18 @@ Section min_max.
     - case: A => [[|[]]|[] l1 r1]; case: B => [[]|[]l2 r2]//= [H1 H2]; f_equal; auto.
   Qed.
 
+  Lemma min_arr s t s' t' m : min (arr m s' t') (arr m s t)  = arr m (if m == i then max s' s else min s' s) (min t' t). by case: m. Qed.
+  Lemma incl_arr s t s' t' m :
+    incl (arr m s' t') (arr m s t) = (if m == i then incl s s' else incl s' s) && incl t' t.
+  Proof.
+    rewrite /incl min_arr; case: m => /=; symmetry; (repeat case: eqP); try by [|congruence].
+    - by move=> + E F; rewrite E -F min_comm max_assorb.
+    - by move=> [] <- ??; rewrite max_comm min_assorb.
+  Qed.
+Lemma incl_weak2 s t : incl s t -> incl (weak s) (weak t). Admitted.
+Lemma incl_weakr s t : incl s t -> incl s (weak t). Admitted.
+
+
 End min_max.
 
 Section checker.
@@ -457,9 +469,9 @@ Section checker.
     | _ => None
     end.
 
-  Fixpoint cnt_tm_ag t := 
+  Fixpoint count_tm_ag t := 
     match t with
-    | Tm_Comb L _ => 1 + cnt_tm_ag L
+    | Tm_Comb L _ => 1 + count_tm_ag L
     | _ => 0
     end.
 
@@ -474,7 +486,7 @@ Section checker.
     end.
 
   Definition sigtm tm s :=
-    let tm_ag := cnt_tm_ag tm in
+    let tm_ag := count_tm_ag tm in
     rev (keep_sig tm_ag s).
 
   Definition odflt1 {T} (ab : T * bool) x := match x with (Some x, b1) => (x,b1) | (None,_) => ab end.
@@ -513,7 +525,12 @@ Section checker.
   Axiom compat_type_trans2 : forall a b c, compat_type a b -> compat_type a c = compat_type b c.
   Axiom compat_type_comm : forall x y, compat_type x y = compat_type y x.
   Axiom compat_type_weak : forall x y, (compat_type (weak x) y = compat_type x y) * (compat_type y (weak x) = compat_type y x).
+  (* Axiom compat_type_min : forall A B C, compat_type A B -> compat_type C (min A B) = compat_type C A. *)
 
+  Axiom compat_type_min: forall A B C, compat_type B C -> compat_type (min A B) (min A C).
+  
+  Lemma compat_type_minR A B: compat_type A B -> compat_type A (min A B).
+  Proof. rewrite -{2}(@min_refl A); apply: compat_type_min. Qed.
 
     (* takes a tm and a signature and updates variable signatures
      updates are performed only on variables in input positions *)
@@ -1090,16 +1107,6 @@ Qed.
       case: check_tm => [sf' []] => //; case: sa => [[]|[]s t]; case: sa' => [[]|[]s' t']//= /andP[??]//=;
       case: check_tm => [sf []] => //=; case E: incl => //=; case F: incl => //= ?; rewrite !compat_type_weak //.
   Qed.
-  Lemma min_arr s t s' t' m : min (arr m s' t') (arr m s t)  = arr m (if m == i then max s' s else min s' s) (min t' t). by case: m. Qed.
-  Lemma incl_arr s t s' t' m :
-    incl (arr m s' t') (arr m s t) = (if m == i then incl s s' else incl s' s) && incl t' t.
-  Proof.
-    rewrite /incl min_arr; case: m => /=; symmetry; (repeat case: eqP); try by [|congruence].
-    - by move=> + E F; rewrite E -F min_comm max_assorb.
-    - by move=> [] <- ??; rewrite max_comm min_assorb.
-  Qed.
-Lemma incl_weak2 s t : incl s t -> incl (weak s) (weak t). Admitted.
-Lemma incl_weakr s t : incl s t -> incl s (weak t). Admitted.
 
   Lemma more_precise_check_tm sP {new old c}:
       closed_in old c ->
