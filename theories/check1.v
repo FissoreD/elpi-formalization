@@ -1055,12 +1055,12 @@ Qed.
         rewrite set2_more_precise //.
           rewrite /incl min_assoc (@min_comm s) -(@min_assoc _ s s) min_refl.
           by rewrite -min_assoc (@min_comm s) min_assoc (eqP I).
-        admit.  (* compat min *)
+        by apply: compat_type_min.
       by rewrite (compat_type_trans2 _ con) => ->.
     - move=> f IHf a IHa N O [|[[] s] xs] /= /andP[cf ca] //=; last by exact: IHf.
       move=> MP; apply/IHa/IHf/MP => //=.
       by apply: closed_in_sub (fsubset_assume _ _ _ _) _.
-  Admitted.
+  Qed.
 
 
   Lemma assume_tm_more_precise sP old tm S:
@@ -1076,8 +1076,11 @@ Qed.
       rewrite !ffunE/=.
       case: eqP => [?|nkv]; subst.
         rewrite in_fnd/=.
+      rewrite /incl -min_assoc min_refl eqxx.
+      rewrite min_comm compat_type_minR//.
+      have kO : k \in domf old.
+        
         admit.
-      have kO : k \in domf old. admit.
       by rewrite in_fnd/= compat_type_refl/=.
     - move=> f Hf a Ha O [|[[] s] xs] /andP[cf ca]; auto; rewrite?more_precise_refl//.
       apply: more_precise_trans (Ha _ _ _) (Hf _ _ _) => //.
