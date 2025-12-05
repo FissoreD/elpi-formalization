@@ -497,17 +497,54 @@ Section compat_type.
     | _, _ => false
     end.
 
-  Axiom compat_type_refl : forall x, compat_type x x.
-  Axiom compat_type_trans : transitive compat_type.
-  Axiom compat_type_trans2 : forall a b c, compat_type a b -> compat_type a c = compat_type b c.
-  Axiom compat_type_comm : forall x y, compat_type x y = compat_type y x.
-  Axiom compat_type_weak : forall x y, (compat_type (weak x) y = compat_type x y) * (compat_type y (weak x) = compat_type y x).
-  (* Axiom compat_type_min : forall A B C, compat_type A B -> compat_type C (min A B) = compat_type C A. *)
+  Lemma compat_type_refl x: compat_type x x.
+  Proof. elim: x => [[|[]]//|[]//= _ -> _ ->]//. Qed.
 
-  Axiom compat_type_min: forall A B C, compat_type B C -> compat_type (min A B) (min A C).
+  Lemma compat_type_trans2 a b c: 
+    compat_type a b -> compat_type a c = compat_type b c.
+  Proof.
+    elim: a b c => [[|[]] [[|[]]|]//|];
+    move=> []/=f IHf a IHa [[|[]]//|[]f1 a1]//[[|[]]//|[]]//=;
+    move=> f2 a2 /andP[/IHf {}IHf /IHa {}IHa]; f_equal; auto.
+  Qed.
+
+  Lemma compat_type_trans : transitive compat_type.
+  Proof. move=> B A C /compat_type_trans2 ->//. Qed.
+
+  Lemma compat_type_comm x y: compat_type x y = compat_type y x.
+  Proof. by elim: x y => [[|[]][[|[]]|[]]//|] [] f Hf a Ha [[|[]]|[] f1 a1]//=; f_equal. Qed.
+
+  Lemma compat_type_weakL x y: 
+    (compat_type (weak x) y = compat_type x y)
+  with compat_type_strongL x y: 
+    (compat_type (strong x) y = compat_type x y).
+  Proof.
+    by case: x => [[|[]]|[] f a]/=; case: y => [[|[]]|[] f1 a1]//=; f_equal; auto.
+    by case: x => [[|[]]|[] f a]/=; case: y => [[|[]]|[] f1 a1]//=; f_equal; auto.
+  Qed.
+
+  Lemma compat_type_weak x y: 
+    (compat_type (weak x) y = compat_type x y) * (compat_type y (weak x) = compat_type y x).
+  Proof. rewrite (compat_type_comm _ (weak _)) (compat_type_comm y) compat_type_weakL//. Qed.
+
+  Lemma compat_type_min A B C D:
+    compat_type A B -> compat_type B C -> compat_type C D -> compat_type (min A B) (min C D)
+  with compat_type_max A B C D:
+    compat_type A B -> compat_type B C -> compat_type C D -> compat_type (max A B) (max C D).
+  Proof.
+    all: rewrite/max/min in compat_type_min compat_type_max *.
+    - by case Z: B => [[|[]]|[] f a]; case Y: C => [[|[]]|[] f1 a1]//=;
+      case W: A => [[|[]]|[] f2 a2]; case K: D => [[|[]]|[] f3 a3] //=;
+      move=> /andP[H1 H2] /andP[H3 H4] /andP[H5 H6]; apply/andP; auto.
+    - by case Z: B => [[|[]]|[] f a]; case Y: C => [[|[]]|[] f1 a1]//=;
+      case W: A => [[|[]]|[] f2 a2]; case K: D => [[|[]]|[] f3 a3] //=;
+      move=> /andP[H1 H2] /andP[H3 H4] /andP[H5 H6]; apply/andP; auto.
+  Qed.
   
+  Hint Resolve compat_type_refl.
+
   Lemma compat_type_minR A B: compat_type A B -> compat_type A (min A B).
-  Proof. rewrite -{2}(@min_refl A); apply: compat_type_min. Qed.
+  Proof. rewrite -{2}(@min_refl A); apply: compat_type_min => //. Qed.
 
   Lemma compat_type_minL A B: compat_type A B -> compat_type (min A B) A.
   Proof. rewrite (compat_type_comm _ A); apply compat_type_minR. Qed.
@@ -1169,11 +1206,14 @@ Section more_precise.
       have [vnew I] := in_more_precise H vO.
       have con := more_precise_same_type H vO vnew.
       rewrite in_fnd/=; case: ifP.
-        move=> /(compat_type_trans con) ->.
+        move=> /(compat_type_trans con) /[dup] H1 ->.
         rewrite set2_more_precise //.
           rewrite /incl min_assoc (@min_comm s) -(@min_assoc _ s s) min_refl.
           by rewrite -min_assoc (@min_comm s) min_assoc (eqP I).
-        by apply: compat_type_min.
+        rewrite compat_type_comm in H1.
+        apply: compat_type_min => //.
+          by rewrite compat_type_comm.
+        apply: compat_type_trans H1 con.
       by rewrite (compat_type_trans2 _ con) => ->.
     - move=> f IHf a IHa N O [|[[] s] xs] /= /andP[cf ca] //=; case: ifP => //= _; last by exact: IHf.
       move=> MP; apply/IHa/IHf/MP => //=.
