@@ -486,6 +486,7 @@ Section min_max.
   Lemma incl_weakr s t : incl s t -> incl s (weak t).
   Proof. move=> /eqP <-; apply/eqP/min_weakr. Qed.
 End min_max.
+Hint Resolve incl_refl : core.
 
 Section compat_type.
   Fixpoint compat_type x y :=
@@ -541,7 +542,7 @@ Section compat_type.
       move=> /andP[H1 H2] /andP[H3 H4] /andP[H5 H6]; apply/andP; auto.
   Qed.
   
-  Hint Resolve compat_type_refl.
+  Hint Resolve compat_type_refl : core.
 
   Lemma compat_type_minR A B: compat_type A B -> compat_type A (min A B).
   Proof. rewrite -{2}(@min_refl A); apply: compat_type_min => //. Qed.
@@ -567,6 +568,7 @@ Section compat_type.
   Qed.
 
 End compat_type.
+Hint Resolve compat_type_refl : core.
 
 
 Section checker.
@@ -1086,9 +1088,7 @@ Section more_precise.
     by case: fndP => /= *; rewrite compat_type_refl incl_refl.
   Qed.
 
-  Hint Resolve compat_type_refl.
-  Hint Resolve incl_refl.
-  Hint Resolve more_precise_refl.
+  Hint Resolve more_precise_refl : core.
 
   Fixpoint closed_in (sV : sigV) t : bool :=
     match t with
@@ -1511,7 +1511,7 @@ Section more_precise.
       by apply: more_precise_merge2.
   Qed.
 End more_precise.
-
+Hint Resolve more_precise_refl : core.
 
 Definition typ_func (A: (_ * sigV)%type) := match A with (Func, _) => true | _ => false end.
 
@@ -1753,7 +1753,7 @@ Section next_alt.
           (tc_tree_aux sP O B ign) = (d', N) /\ more_precise N O'.
   Proof.
     elim: A B O O' d ign b => //=.
-    - move=> B s1 s2 d ign [] _ //[<-<-][<-]; repeat eexists; rewrite ?minD_refl//more_precise_refl//.
+    - move=> B s1 s2 d ign [] _ //[<-<-][<-]; repeat eexists; rewrite ?minD_refl//.
     - move=> p c B s1 s2 d1 d2 _ cl. 
       case C: check_callable => [D S] [<-<-][<-]/=; rewrite C; repeat eexists.
         by rewrite minD_refl.
