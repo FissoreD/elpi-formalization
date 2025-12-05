@@ -465,6 +465,8 @@ Section min_max.
   Qed.
 
   Lemma min_arr s t s' t' m : min (arr m s' t') (arr m s t)  = arr m (if m == i then max s' s else min s' s) (min t' t). by case: m. Qed.
+  Lemma max_arr s t s' t' m : max (arr m s' t') (arr m s t)  = arr m (if m == i then min s' s else max s' s) (max t' t). by case: m. Qed.
+
   Lemma incl_arr s t s' t' m :
     incl (arr m s' t') (arr m s t) = (if m == i then incl s s' else incl s' s) && incl t' t.
   Proof.
@@ -485,6 +487,20 @@ Section min_max.
   
   Lemma incl_weakr s t : incl s t -> incl s (weak t).
   Proof. move=> /eqP <-; apply/eqP/min_weakr. Qed.
+
+  Lemma incl2_max A B C: incl A C -> incl B C -> incl (max A B) C
+  with incl2_min A B C: incl C A -> incl C B -> incl C (min A B).
+  Proof.
+    case: A => [[|[]]|[] f a]; case: B => [[|[]]|[] f1 a1]; 
+    case: C => [[|[]]|[] f2 a2]//=; rewrite ?pred_is_max//=?max_arr/=?incl_arr//=; cycle 1;
+    [|move=> /andP[H1 H2] /andP[H3 H4]; apply/andP; split; auto..];
+    rewrite/incl/min/=//.
+    case: A => [[|[]]|[] f a]; case: B => [[|[]]|[] f1 a1]//=;
+    case: C => [[|[]]|[] f2 a2]/=; rewrite?min_arr?incl_arr//=;
+    move=> /andP[H1 H2] /andP[H3 H4]; apply/andP; split; auto.
+  Qed.
+
+
 End min_max.
 Hint Resolve incl_refl : core.
 
@@ -1144,6 +1160,25 @@ Section more_precise.
   Proof.
     move=> /andP[sAB /forallP/= H] kA; exists (fsubsetP sAB k kA).
     by have /andP[] := H (Sub k (fsubsetP sAB k kA)); rewrite (in_fnd kA) /= valPE.
+  Qed.
+
+  Lemma in_more_compat_type {k} {B A : sigV}:
+    more_precise B A -> forall kA : k \in domf A,
+        exists kB : k \in domf B, compat_type A.[kA] B.[kB].
+  Proof.
+    move=> /andP[sAB /forallP/= H] kA; exists (fsubsetP sAB k kA).
+    by have /andP[] := H (Sub k (fsubsetP sAB k kA)); rewrite (in_fnd kA) /= valPE.
+  Qed.
+
+  Lemma in_more_compat_type_more_precise {k} {B A : sigV}:
+    more_precise B A -> forall kA : k \in domf A,
+        exists kB : k \in domf B, compat_type A.[kA] B.[kB] /\ incl B.[kB] A.[kA].
+  Proof.
+    move=> MP kA.
+    have [kB CP] := in_more_compat_type MP kA.
+    have [kB' +] := in_more_precise MP kA.
+    rewrite (bool_irrelevance kB' kB) => I.
+    by exists kB; split.
   Qed.
 
   Lemma in2_more_precise {k} {B A : sigV}:
