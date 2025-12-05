@@ -8,9 +8,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Lemma TODO: False. Admitted.
-Ltac TODO := exfalso; apply TODO.
-
 (* Notation typecheck := option.
 Notation ty_ok:= Some.
 Notation ty_err := None.
@@ -423,11 +420,62 @@ Section min_max.
     - by move=> + E F; rewrite E -F min_comm max_assorb.
     - by move=> [] <- ??; rewrite max_comm min_assorb.
   Qed.
-Lemma incl_weak2 s t : incl s t -> incl (weak s) (weak t). Admitted.
-Lemma incl_weakr s t : incl s t -> incl s (weak t). Admitted.
 
-
+  Lemma min_weakr s t : min (min s t) (weak t) = min s t
+  with max_strongr s t : max (max s t) (strong t) = max s t.
+  Proof.
+    all: rewrite/min/max in min_weakr max_strongr *.
+    - case: s => [[|[]]|[] f1 a1]; case: t => [[|[]]|[] f2 a2]//=; f_equal; auto;
+      try by [apply max_strong|apply: min_weak].
+    - case: s => [[|[]]|[] f1 a1]; case: t => [[|[]]|[] f2 a2]//=; f_equal; auto;
+      try by [apply max_strong|apply: min_weak].
+  Qed.
+  
+  Lemma incl_weakr s t : incl s t -> incl s (weak t).
+  Proof. move=> /eqP <-; apply/eqP/min_weakr. Qed.
 End min_max.
+
+Section compat_type.
+  Fixpoint compat_type x y :=
+    match x, y with
+    | b Exp, b Exp => true
+    | b (d _), b (d _) => true
+    | arr i a xb, arr i a' b' => compat_type a a' && compat_type xb b'
+    | arr o a xb, arr o a' b' => compat_type a a' && compat_type xb b'
+    | _, _ => false
+    end.
+
+  Axiom compat_type_refl : forall x, compat_type x x.
+  Axiom compat_type_trans : transitive compat_type.
+  Axiom compat_type_trans2 : forall a b c, compat_type a b -> compat_type a c = compat_type b c.
+  Axiom compat_type_comm : forall x y, compat_type x y = compat_type y x.
+  Axiom compat_type_weak : forall x y, (compat_type (weak x) y = compat_type x y) * (compat_type y (weak x) = compat_type y x).
+  (* Axiom compat_type_min : forall A B C, compat_type A B -> compat_type C (min A B) = compat_type C A. *)
+
+  Axiom compat_type_min: forall A B C, compat_type B C -> compat_type (min A B) (min A C).
+  
+  Lemma compat_type_minR A B: compat_type A B -> compat_type A (min A B).
+  Proof. rewrite -{2}(@min_refl A); apply: compat_type_min. Qed.
+
+  Lemma incl_weak2 s t : incl s t -> incl (weak s) (weak t)
+  with not_incl_strong s t : not_incl s t -> not_incl (strong s) (strong t).
+  Proof.
+    case: s => [[|[]]|[] f1 a1]; case: t => [[|[]]|[] f2 a2]//=; 
+    rewrite?pred_is_max//?incl_arr/=.
+    - admit. (*IMPOSSIBLE*)
+  Abort.
+
+  Lemma comp_weak s t : compat_type s t -> (weak s) = (weak t)
+  with comp_strong s t : compat_type s t -> (strong s) = (strong t).
+  Proof.
+    by case: s => [[|[]]|[] f1 a1]; case: t => [[|[]]|[] f2 a2]//= => /andP[+/comp_weak ->];
+      [move=> /comp_strong|move=> /comp_weak] => ->.
+    by case: s => [[|[]]|[] f1 a1]; case: t => [[|[]]|[] f2 a2]//= => /andP[+/comp_strong ->];
+      [move=> /comp_weak|move=> /comp_strong] => ->.
+  Qed.
+
+End compat_type.
+
 
 Section checker.
 
@@ -510,28 +558,7 @@ Section checker.
           else (tr, b1)
         else (b(d Pred),false)
     end.
-
-    Fixpoint compat_type x y :=
-  match x, y with
-  | b Exp, b Exp => true
-  | b (d _), b (d _) => true
-  | arr i a xb, arr i a' b' => compat_type a a' && compat_type xb b'
-  | arr o a xb, arr o a' b' => compat_type a a' && compat_type xb b'
-  | _, _ => false
-  end.
-
-  Axiom compat_type_refl : forall x, compat_type x x.
-  Axiom compat_type_trans : transitive compat_type.
-  Axiom compat_type_trans2 : forall a b c, compat_type a b -> compat_type a c = compat_type b c.
-  Axiom compat_type_comm : forall x y, compat_type x y = compat_type y x.
-  Axiom compat_type_weak : forall x y, (compat_type (weak x) y = compat_type x y) * (compat_type y (weak x) = compat_type y x).
-  (* Axiom compat_type_min : forall A B C, compat_type A B -> compat_type C (min A B) = compat_type C A. *)
-
-  Axiom compat_type_min: forall A B C, compat_type B C -> compat_type (min A B) (min A C).
-  
-  Lemma compat_type_minR A B: compat_type A B -> compat_type A (min A B).
-  Proof. rewrite -{2}(@min_refl A); apply: compat_type_min. Qed.
-
+    
     (* takes a tm and a signature and updates variable signatures
      updates are performed only on variables in input positions *)
   Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : Tm) (s : seq (mode * S)): sigV :=
@@ -1163,15 +1190,13 @@ Qed.
       case x2: check_tm => [sa' []];
       case : check_tm => [sf' []];
       case : check_tm => [sf []] => //=; case: sf => [[]|[]s t] ; case: sf' => [[]|[]s' t']//=;
-      rewrite ?andbT ?andbF ?incl_arr /= => cas /andP[++] /andP[] //; try by move=>*; rewrite incl_weak2.
-      - move=> c1 c2 iss' it't isa'. 
+      rewrite ?andbT ?andbF ?incl_arr /= => cas /andP[c1 c2] /andP[] //; try by move=>*; rewrite (comp_weak c2).
+      - move=> iss' it't isa'. 
         case E: (incl sa' s) => [].
           have -> := incl_trans (incl_trans isa' E) iss'.
           by apply: it't.
-        by case: ifP => ? /=; rewrite ?incl_weak2 ?incl_weakr.
-      - by case: ifP => * /=; rewrite ?incl_weak2 ?incl_weakr.
-      - by case: ifP => * /=; rewrite ?incl_weak2 ?incl_weakr.
-      - by case: ifP => * /=; rewrite ?incl_weak2 ?incl_weakr.
+        by case: ifP => ?/=; rewrite ?(comp_weak c2)//?incl_weakr.
+      all: by case: ifP => * /=; rewrite ?(comp_weak c2)//incl_weakr//.
   Qed.
 
   (* Lemma more_precise_add_Some {v sv1 S S'}:
