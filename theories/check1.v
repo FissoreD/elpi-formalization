@@ -4,6 +4,19 @@ From det Require Import tree tree_prop.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
+Lemma all2_cat_rev {T1 T2} (P : T1 -> T2 -> bool) A B C D:
+  size A = size C -> size B = size D ->
+  all2 P (catrev A B) (catrev C D) = all2 P A C && all2 P B D.
+Proof.
+  elim: A C B D => [|x xs IH] [|y ys]//= B D [H1] H2.
+  rewrite IH//=; last by rewrite H2.
+  rewrite (andbC _ (all2 _ xs _)) andbA//.
+Qed.
+
+Lemma all2_rev {T1 T2} (P : T1 -> T2 -> bool) A B:
+  size A = size B -> all2 P (rev A) (rev B) = all2 P A B.
+Proof. move=> H; by rewrite /rev all2_cat_rev//= andbT. Qed.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
@@ -457,12 +470,15 @@ Section compat_type.
   Lemma compat_type_minR A B: compat_type A B -> compat_type A (min A B).
   Proof. rewrite -{2}(@min_refl A); apply: compat_type_min. Qed.
 
+  Lemma compat_type_minL A B: compat_type A B -> compat_type (min A B) A.
+  Proof. rewrite (compat_type_comm _ A); apply compat_type_minR. Qed.
+
   Lemma incl_weak2 s t : incl s t -> incl (weak s) (weak t)
   with not_incl_strong s t : not_incl s t -> not_incl (strong s) (strong t).
   Proof.
     case: s => [[|[]]|[] f1 a1]; case: t => [[|[]]|[] f2 a2]//=; 
     rewrite?pred_is_max//?incl_arr/=.
-    - admit. (*IMPOSSIBLE*)
+    (*IMPOSSIBLE*)
   Abort.
 
   Lemma comp_weak s t : compat_type s t -> (weak s) = (weak t)
@@ -567,8 +583,11 @@ Section checker.
     | (Tm_Kd _ | Tm_Kp _), _ => sV 
     | Tm_V _, (o, _) :: _ => sV 
     | Tm_V v, (i, s) :: _ =>
-        let oldv := odflt s sV.[? v] in
-        if compat_type oldv s then add v (min s oldv) sV else sV
+        match sV.[? v] with
+        | None => sV
+        | Some oldv =>
+          if compat_type oldv s then add v (min s oldv) sV else sV
+        end
     | (Tm_Comb L R), (i, s) :: sx =>
       (* before we assume in the LHS and then we go right  *)
       let sV' := assume_tm sP sV L sx in
@@ -804,67 +823,6 @@ Section merge.
     by rewrite not_fnd.
   Qed.
 
-  (* Lemma merge_add {xs k v C D}:
-    merge_sig (add k v C) xs = ty_ok D ->
-      exists x, lookup k D = Some x /\ incl v x = ty_ok true.
-  Proof.
-    rewrite/merge_sig/merge_sig1; case: ifP => // Hd [<-].
-    have := (@weak_fst_if_not_in_sndP k C.[k <- v] xs).
-    have k_wbm: k \in domf (weak_fst_if_not_in_snd C.[k <- v] xs).
-      by rewrite !in_fsetE eqxx.
-    have [k_xs|nk_xs] := boolP (k \in xs).
-      have k_both : k  \in domf (weak_fst_if_not_in_snd C.[k <- v] xs) `|` domf xs.
-        by rewrite in_fsetE k_xs k_wbm.
-      rewrite fnd_set eqxx 2!in_fnd // => /Some_inj def_v.
-      rewrite merge_sig1_defaultLR def_v.
-      have kwxs : k \in domf (weak_fst_if_not_in_snd C.[k <- v] xs) `&` domf xs.
-        by rewrite in_fsetE k_xs k_wbm.
-      move/forallP: Hd => /(_ (Sub k (fst_snd_in k_wbm k_xs))); rewrite fstE sndE.
-      rewrite -compat_type_max def_v; case E: max => [s|] //=; exists s;split => //.
-      by rewrite incl_not_incl -(max_incl E).
-    rewrite !fnd_set eqxx (not_fnd nk_xs) in_fnd // => /Some_inj E.
-    rewrite merge_sig1_defaultL // in_fnd // E.
-    by exists (weak v) ; split => //; exact weak_incl.
-  Qed.
-
-
-
-  Lemma merge_lookup  {k kB kC} {B C D : sigV}:
-    lookup k B = Some kB ->
-    lookup k C = Some kC ->
-    merge_sig B C = ty_ok D ->
-    exists kD, incl kB kD  /\ incl kC kD  /\ lookup k D = Some kD.
-    (* TODO : kD is the max *)
-  Proof.
-    move=> Bk Ck /= /[dup].
-    have {1}<- : B.[k <- kB] = B.
-      by apply/fmapP=> k'; rewrite fnd_set; case: eqP => // e; subst; rewrite Bk.
-    move=> /merge_add [x [Dk I]].
-    have <- : C.[k <- kC] = C.
-      by apply/fmapP=> k'; rewrite fnd_set; case: eqP => // e; subst; rewrite Ck.
-    rewrite merge_comm=> /merge_add [y [Dk' I']].
-    rewrite Dk' in Dk; case: Dk => ?; subst.
-    by exists x; split.
-  Qed.
-
-  Lemma compat_type_merge_lookup {A B C} k:
-    merge_sig A B = ty_ok C ->
-      match lookup k C with
-      | None => lookup k A = None /\ lookup k B = None
-      | Some vC => 
-        match lookup k A with
-        | None => omap weak (lookup k B) = Some vC
-        | Some vA => 
-          match lookup k B with
-          | None => weak vA = vC
-          | Some vB => max vA vB = ty_ok vC
-          end
-        end
-      end.
-  Proof.
-
-  Admitted. *)
-
 End merge.
 (* a free alternative can be reached without encountering a cutr following SLD 
 
@@ -1056,8 +1014,8 @@ Section more_precise.
 
   Lemma fsubset_assume sP O t s : domf O `<=` domf (assume_tm sP O t s).
   Proof.
-    elim: t s O => //= [?|?|?|f IHf a IHa] [|[[]??]] O //=. 
-      case: ifP => //; rewrite fsubsetUr//.
+    elim: t s O => //= [?|?|?|f IHf a IHa] [|[[]??]] O //=.
+      case: fndP => // H; case: ifP => //=; rewrite fsubsetUr//.
     by apply: fsubset_trans _ (IHa _ _).
   Qed.
 
@@ -1077,31 +1035,63 @@ Qed.
     repeat case: eqP; rewrite ?andbF//=; case: incl; rewrite ?andbF//=andbT//.
   Qed.
 
-  Lemma all2_cat_rev {T1 T2} (P : T1 -> T2 -> bool) A B C D:
-    size A = size C -> size B = size D ->
-    all2 P (catrev A B) (catrev C D) = all2 P A C && all2 P B D.
-  Proof.
-    elim: A C B D => [|x xs IH] [|y ys]//= B D [H1] H2.
-    rewrite IH//=; last by rewrite H2.
-    rewrite (andbC _ (all2 _ xs _)) andbA//.
-  Qed.
-
-  Lemma all2_rev {T1 T2} (P : T1 -> T2 -> bool) A B:
-    size A = size B -> all2 P (rev A) (rev B) = all2 P A B.
-  Proof. move=> H; by rewrite /rev all2_cat_rev//= andbT. Qed.
-
-  (* Lemma more_preciseL_sigtm a {s s1}:
+  Lemma more_preciseL_sigtm a {s s1}:
     compat_type s s1 ->
-    incl s s1 -> more_preciseL (sigtm a s) (sigtm a s1).
+    incl s1 s -> more_preciseL (sigtm a s) (sigtm a s1).
   Proof.
-    rewrite/more_preciseL/sigtm => C I.
-    generalize (count_tm_ag a) => {a} n.
     have P : forall n s s1, compat_type s s1 -> size ((keep_sig n s)) = size ((keep_sig n s1)).
       elim => //= {}n {}IH [[|[]]|[] l r] [[|[]]|[] l1 r1]//= /andP[_ /IH ->]//.
+
+    rewrite/more_preciseL/sigtm => C I.
+    generalize (count_tm_ag a) => {a} n.
     rewrite !size_rev all2_rev (P _ _ _ C)// eqxx/=.
     elim: n s s1 C I => //=n IH [[|[]]|[] l r] [[|[]]|[] l1 r1]//=/andP[C1 C2];
     rewrite incl_arr/= C1 => /andP[IL IR]/=; rewrite ?IL/= IH//.
-  Qed. *)
+  Qed.
+
+  Lemma more_precise_assume_tm {new old sP tm d1 d2}:
+    closed_in old tm ->
+    more_precise new old ->
+    more_preciseL d1 d2 ->
+    more_precise (assume_tm sP new tm d1) (assume_tm sP old tm d2).
+  Proof.
+    elim: tm new old d1 d2.
+    - move=> k new old [|[[] s] xs] [|[[] s1]xs1]//.
+    - move=> k new old [|[[] s] xs] [|[[] s1]xs1]//.
+    - move=> v new old [|[[] s] xs] [|[[]s1]xs1]//=;
+      rewrite more_precise_cons//=.
+      move=> vO MP /and3P[I C MPL].
+      rewrite (in_fnd vO).
+      have [vnew I2] := in_more_precise MP vO.
+      have con := more_precise_same_type MP vO vnew.
+      rewrite in_fnd/=; case: ifP => C1.
+        rewrite (compat_type_trans con (compat_type_trans C1 C)).
+        rewrite set2_more_precise //.
+          rewrite /incl min_assoc (@min_comm s) -(@min_assoc _ s s1) (eqP I).
+          by rewrite -min_assoc (@min_comm s) min_assoc (eqP I2).
+        apply: compat_type_trans.
+          rewrite compat_type_comm; apply: compat_type_minR.
+          rewrite compat_type_comm.
+          apply: compat_type_trans con (compat_type_trans C1 C).
+        rewrite compat_type_comm.
+        apply: compat_type_trans C.
+        rewrite compat_type_comm.
+        apply: compat_type_minR.
+        by rewrite compat_type_comm.
+      rewrite (compat_type_trans2 _ con).
+      rewrite compat_type_comm.
+      rewrite compat_type_comm in C.
+      rewrite compat_type_comm in C1.
+      by rewrite (compat_type_trans2 _ C)C1.
+    - move=> f IHf a IHa N O [|[[] s] xs] [|[[] s1]xs1]//= /= /andP[cf ca] MP; rewrite more_precise_cons//=; last first.
+        move=> /andP[C1 MPL]; by apply: IHf.
+      move=> /and3P[I1 C MPL].
+      apply/IHa.
+        by apply: closed_in_sub (fsubset_assume _ _ _ _) _.
+        by apply: IHf.
+      apply: more_preciseL_sigtm C _.
+  Abort.
+
 
   Lemma more_precise_assume_tm {new old sP tm d}:
     closed_in old tm ->
@@ -1278,26 +1268,26 @@ Qed.
     move=> + /andP[HB].
     case: sn Cn => [[|dn]|mn fn an] Cn; case: so Co => [[|dO]|mo fo ao] Co//=; try by destruct mn.
     - by move=> _ _ [<-]{dt'}<-{O'}; repeat eexists.
-    - case: bo HB Co; [case: bn Cn => //Cn|] => // _ Co _ I.
-        have:= closed_in_MP_get_callable_hd_sig sP co MP.
-        case sN: get_tm_hd_sig => //= [vN|]; case sO: get_tm_hd_sig => [vO|]//=.
-        - move=> [_ [[<-] I1]] [??]; subst.
-          repeat eexists.
-            destruct dn, d', dO, dt => //=.
-          rewrite/assume_call.
-          have H := more_precise_assume_tm co MP.
-          apply: H.
-          TODO: HERE.
-          admit.
-        - move=> [? []]//.
-        - move=> _ [??]; subst; by repeat eexists.
-      move=> [??]; subst.
-      destruct bn; last by repeat eexists.
-      case sN: get_tm_hd_sig => [v|]; repeat eexists; auto.
-        by rewrite minD_comm.
-      apply: more_precise_trans (MP).
-      apply: assume_tm_more_precise.
-      by apply: closed_in_mp; eauto.
+    - case: bo HB Co; [case: bn Cn => //Cn|] => // _ Co _ I; last first.
+        move=> [??]; subst.
+        destruct bn; last by repeat eexists.
+        case sN: get_tm_hd_sig => [v|]; repeat eexists; auto; first by rewrite minD_comm.
+        apply: more_precise_trans (MP).
+        apply: assume_tm_more_precise.
+        by apply: closed_in_mp; eauto.
+      have:= closed_in_MP_get_callable_hd_sig sP co MP.
+      rewrite/get_tm_hd_sig.
+      case X: get_tm_hd => [D|[P|V]].
+        move=> [_ [[<-]]] _ [ M1] <-{O'}.
+        repeat eexists; first by destruct dO, dt, dn, d'.
+        by apply: more_precise_assume_tm.
+      - case: fndP => [kf [_ [[<-]]] _ [<-<-]| nkf _ [<-<-]]; repeat eexists; auto.
+          by destruct dO, dt, dn, d'.
+        by apply: more_precise_assume_tm.
+      case: (fndP O) => [vO|nvO] + [<-<-]; last by case: fndP => [?[?[]]|]//; repeat eexists.
+      case: fndP => //= vN [_ [[<-]]] I1; repeat eexists; first by destruct dO, dt, dn, d'.
+      admit.
+      (* TODO *)
     - by destruct mn, mo => //= /andP[C1 C2]; rewrite incl_arr/= => /andP[I1 I2] [??]; subst;
       repeat eexists; auto.
   Admitted.
