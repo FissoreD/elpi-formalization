@@ -574,6 +574,8 @@ Section checker.
           else (tr, b1)
         else (b(d Pred),false)
     end.
+
+  Definition flex_head T := if get_tm_hd T is inr (inr _) then true else false.
     
     (* takes a tm and a signature and updates variable signatures
      updates are performed only on variables in input positions *)
@@ -588,11 +590,15 @@ Section checker.
         | Some oldv =>
           if compat_type oldv s then add v (min s oldv) sV else sV
         end
-    | (Tm_Comb L R), (i, s) :: sx =>
-      (* before we assume in the LHS and then we go right  *)
-      let sV' := assume_tm sP sV L sx in
-      assume_tm sP sV' R (sigtm R s)
-    | (Tm_Comb L R), (o, _) :: sx => assume_tm sP sV L sx
+    | (Tm_Comb L R), (m, s) :: sx =>
+      (* we ignore flex_head terms *)
+      if flex_head L then sV
+      else
+        if m == i then
+          (* before we assume in the LHS and then we go right  *)
+          let sV' := assume_tm sP sV L sx in
+          assume_tm sP sV' R (sigtm R s)
+      else assume_tm sP sV L sx
     end.
 
   (* assumes the output tm and then it goes on inputs *)
@@ -1022,9 +1028,9 @@ Section more_precise.
 
   Lemma fsubset_assume sP O t s : domf O `<=` domf (assume_tm sP O t s).
   Proof.
-    elim: t s O => //= [?|?|?|f IHf a IHa] [|[[]??]] O //=.
+    elim: t s O => //= [?|?|?|f IHf a IHa] [|[[]??]] O //=; [|case: ifP..] => //.
       case: fndP => // H; case: ifP => //=; rewrite fsubsetUr//.
-    by apply: fsubset_trans _ (IHa _ _).
+    move=> _; by apply: fsubset_trans _ (IHa _ _).
   Qed.
 
   Lemma closed_in_sub A B t : domf A `<=` domf B -> closed_in A t -> closed_in B t.
@@ -1096,20 +1102,20 @@ Section more_precise.
       rewrite compat_type_comm in C.
       rewrite compat_type_comm in C1.
       by rewrite (compat_type_trans2 _ C)C1.
-    - move=> f IHf a IHa N O [|[[] s] xs] [|[[] s1]xs1]//= /= /andP[cf ca] MP; rewrite more_precise_cons//=; last first.
+    - move=> f IHf a IHa N O [|[[] s] xs] [|[[] s1]xs1]//= /= /andP[cf ca] MP; rewrite more_precise_cons//=;
+      case:ifP => //= _; last first.
         move=> /andP[C1 MPL]; by apply: IHf.
       move=> /and3P[I1 C MPL].
-      apply/IHa.
+      (* apply/IHa.
         by apply: closed_in_sub (fsubset_assume _ _ _ _) _.
         by apply: IHf.
-      apply: more_preciseL_sigtm C _.
+      apply: more_preciseL_sigtm C _. *)
   Abort.
 
 
   Lemma more_precise_assume_tm {new old sP tm d}:
     closed_in old tm ->
     more_precise new old ->
-    (* more_preciseL d1 d2 -> *)
     more_precise (assume_tm sP new tm d) (assume_tm sP old tm d).
   Proof.
     elim: tm new old d.
@@ -1126,7 +1132,7 @@ Section more_precise.
           by rewrite -min_assoc (@min_comm s) min_assoc (eqP I).
         by apply: compat_type_min.
       by rewrite (compat_type_trans2 _ con) => ->.
-    - move=> f IHf a IHa N O [|[[] s] xs] /= /andP[cf ca] //=; last by exact: IHf.
+    - move=> f IHf a IHa N O [|[[] s] xs] /= /andP[cf ca] //=; case: ifP => //= _; last by exact: IHf.
       move=> MP; apply/IHa/IHf/MP => //=.
       by apply: closed_in_sub (fsubset_assume _ _ _ _) _.
   Qed.
@@ -1148,14 +1154,14 @@ Section more_precise.
         rewrite /incl -min_assoc min_refl eqxx andbT//.
       have kO : k \in domf old by move: kold; case: fndP => //= /fset1UP []//.
       by rewrite in_fnd/= compat_type_refl/=.
-    - move=> f Hf a Ha O [|[[] s] xs] /andP[cf ca]; auto; rewrite?more_precise_refl//.
+    - move=> f Hf a Ha O [|[[] s] xs] /andP[cf ca]; auto; rewrite?more_precise_refl//;
+      case:ifP => //= _; auto.
       apply: more_precise_trans (Ha _ _ _) (Hf _ _ _) => //.
       by apply: closed_in_sub (fsubset_assume _ _ _ _) _.
   Qed. 
 
   Definition more_precise_opt '(smore, bmore) '(sless, bless) :=
     (bmore || ~~bless) && incl smore sless.
-
 
     (* Definition tc : closed_in A t -> expant t = t' -> exists B, A <= B /\ all x \in B \ A, B[x] = weak B[x] /\ closed_in t'. *)
 
@@ -1165,8 +1171,9 @@ Section more_precise.
       compat_type
         (check_tm sP new c).1
         (check_tm sP old c).1.
-  move=> clo mp.
-  elim: c clo => //=.
+  Proof.
+    move=> clo mp.
+    elim: c clo => //=.
     - move=> v kO; case: fndP => [kN|nkN].
       - by rewrite in_fnd compat_type_comm /= (more_precise_same_type mp kO kN).
       - by rewrite (fsubsetP (more_precise_sub mp) v kO) in nkN.
@@ -1202,39 +1209,6 @@ Section more_precise.
       all: by case: ifP => * /=; rewrite ?(comp_weak c2)//incl_weakr//.
   Qed.
 
-  (* Lemma more_precise_add_Some {v sv1 S S'}:
-    valid_sig sv1 ->
-    lookup v sv1 = Some S -> incl S' S = ty_ok true ->
-      more_precise (add v S' sv1) sv1.
-  Proof.
-    elim: sv1 v S S' => //=-[k v] l IH k' S S' /= /andP[c vl].
-    case:eqP => //= H; subst.
-      move=> [?]; subst => H.
-      rewrite eqxx/= H/= key_absent_remove// more_precise_refl//.
-    move=> H1 H2.
-    rewrite eqxx incl_refl/=.
-    rewrite key_absent_remove//.
-    by apply: IH; eauto.
-  Qed. *)
-
-  (* Lemma assume_call_more_precise {sP sv1 svA c S}:
-    valid_sig sv1 ->
-    assume_call sP sv1 c S = ty_ok svA -> 
-      more_precise svA sv1.
-  Proof.
-    elim: c sv1 svA S => //=.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: more_precise_refl H.
-    - move=> _ sv1 sv2 _ H [<-]; repeat split => //; apply: more_precise_refl H.
-    - move=> c IH t sv1 sv2 []//= m sl s3.
-      case: m; [apply: IH|].
-      case ac: assume_call => //=[sv1'] V.
-      have {}IH := IH _ _ _ V ac.
-      move=> H1.
-      have V' := assume_call_valid_sig V ac.
-      have H2 := assume_tm_more_precise V' H1.
-      by apply: more_precise_trans H2 IH.
-  Qed. *)
-
   Lemma closed_in_MP_get_callable_hd_sig sP {N O t}: 
     closed_in O t ->
       more_precise N O -> 
@@ -1262,6 +1236,15 @@ Section more_precise.
     elim: t => //=.
     - by move=> v vB; have [] := in_more_precise MP vB.
     - by move=> f Hf a Ha /andP[]/Hf -> /Ha->.
+  Qed.
+
+  Lemma assume_tm_flex_head {sP f d a N} V :
+    get_tm_hd (Callable2Tm f) = inr (inr V) ->
+      assume_call sP N (Callable_Comb f a) d = N.
+  Proof.
+    rewrite/assume_call/=.
+    rewrite/flex_head => ->.
+    case: sigtm => //= [[[]]]//.
   Qed.
 
   Lemma more_precise_check_callable {sP N O t dt d' dt' O'}:
@@ -1299,12 +1282,11 @@ Section more_precise.
         by apply: more_precise_assume_tm.
       case: (fndP O) => [vO|nvO] + [<-<-]; last by case: fndP => [?[?[]]|]//; repeat eexists.
       case: fndP => //= vN [_ [[<-]]] I1; repeat eexists; first by destruct dO, dt, dn, d'.
-
-      admit.
-      (* TODO *)
+      case: t X {Cn Co co} => //= c t H.
+      rewrite !(assume_tm_flex_head H)//.
     - by destruct mn, mo => //= /andP[C1 C2]; rewrite incl_arr/= => /andP[I1 I2] [??]; subst;
       repeat eexists; auto.
-  Admitted.
+  Qed.
 
   Lemma more_precise_tc_tree_aux {sP A N O d0 dA sA d'}:
       tc_tree_aux sP O A d0 = (dA, sA) ->
