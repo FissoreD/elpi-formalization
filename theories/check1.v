@@ -1490,18 +1490,20 @@ Section more_precise.
     rewrite/more_precise; apply/andP; split; first rewrite merge_sig_domf.
       by apply: fsubsetU; rewrite !more_precise_sub//.
     apply/forallP => k.
-    apply/andP; split.
-      case: (fndP C) => //=kf.
-      have [kB' I1] := in_more_precise MBC kf.
-      have [kA' I2] := in_more_precise MAC kf.
-      rewrite !ffunE; case: fsetUP => //= [kA eA kB eB|_ _ /negP nB|/negP nA]//.
-      admit.
-    case: (fndP C) => //=kf.
+    case: (fndP C) => //=kf; last by apply/andP.
     have [kB' I1] := in_more_precise MBC kf.
     have [kA' I2] := in_more_precise MAC kf.
+    have [kA'' C2] := in_more_compat_type MAC kf.
+    have [kB'' C1] := in_more_compat_type MBC kf.
     rewrite !ffunE; case: fsetUP => //= [kA eA kB eB|_ _ /negP nB|/negP nA]//.
-    admit.
-  Admitted.
+    rewrite !eA in I2 C2.
+    rewrite !eB in I1 C1.
+    rewrite -{1}(@max_refl C.[kf]).
+    rewrite compat_type_max//=; last first.
+      rewrite compat_type_comm in C2.
+      by rewrite (compat_type_trans2 _ C2).
+    apply: incl2_max => //.
+  Qed.
 
   Lemma more_precise_merge2 {A B C D}:
     more_precise A C -> more_precise B D ->
