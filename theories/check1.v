@@ -1632,6 +1632,32 @@ Section next_alt.
       rewrite is_dead_failed//= is_dead_next_alt//.
   Qed.
 
+  Lemma closed_in_dead {ctx A}: closed_inT ctx (dead A).
+  Proof. by elim: A => //= [L -> _  _ ->| _ -> _ -> _ ->]. Qed.
+
+
+  Lemma closed_in_next_alt {b A B ctx}:
+    closed_inT ctx A -> next_alt b A = Some B -> closed_inT ctx B.
+  Proof.
+    elim: A B ctx b => //=.
+    - move=> B ctx []// _ [<-]//.
+    - move=> p c B ctx _ + [<-]//.
+    - move=> B ctx []// _ [<-]//.
+    - move=> A HA s B HB R ctx b /andP[cA cB].
+      case nA: next_alt => [v|]; first (move => [<-]/=; by rewrite (HA _ _ _ _ nA)).
+      case nB: next_alt => [v|//][<-]/=; rewrite (HB _ _ _ _ nB)//.
+      case: ifP; rewrite?cA//closed_in_dead//.
+    - move=> A HA B0 HB0 B HB R ctx b /and3P[cA cB0 cB].
+      case: ifP => fA.
+        case nA: next_alt => [v|//].
+        case nB0: next_alt => [v1|//][<-]/=.
+        by rewrite cB0 (HA _ _ _ _ nA)// (HB0 _ _ _ _ nB0).
+      case: ifP => sA; last (by move=> [<-]/=; rewrite cA cB0).
+      case nB: next_alt => [v|]; first by (move=> [<-]; rewrite/=cA cB0; apply: HB nB).
+      case nA: next_alt => [v|]//; case nB0: next_alt => [v'|]//[<-]/=.
+      by rewrite cB0 (HA _ _ _ _ nA)//; apply: HB0 nB0.
+  Qed.
+
   Lemma failed_det_tree_next_alt {sP A O O' d ign B} b:
     closed_inT O A ->
     tc_tree_aux sP O A ign = (d, O') ->
@@ -1703,7 +1729,7 @@ Section next_alt.
       move=> [dA' [sA' [M1 -> MP]]].
       have {HB0}[dx[sx[n[Hx Hy]]]]:= HB0 _ _ _ _ _ _ cB0' dtB0 nB0.
       have cB0'' : closed_inT sVA B0'.
-        admit.
+        by apply: closed_in_next_alt nB0.
       have [dA''[sA''[H1' -> H3']]] := more_precise_tc_tree_aux cB0'' Hx m K.
       repeat eexists; first by destruct dA', dA'', DB0, DB, dx => //.
       (* apply: more_precise_merge2 MP. *)
@@ -1734,7 +1760,7 @@ Section next_alt.
       have:= more_precise_tc_tree_aux1 cA dtA.
       by move=> /more_precise_sub.
     have cB0'' : closed_inT sVA B0'.
-      admit.
+      by apply: closed_in_next_alt nB0.
     have /=[dA'[sA'[H1 -> H3]]] := more_precise_tc_tree_aux cB0' dtB0 m K.
     have {HB0}[dx[sx[n[Hx Hy]]]] := HB0 _ _ _ _ _ _ cB0' dtB0 nB0.
     have /=[dA''[sA''[H1' -> H3']]] := more_precise_tc_tree_aux cB0'' Hx m K.
