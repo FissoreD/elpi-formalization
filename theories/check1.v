@@ -811,6 +811,10 @@ Section merge.
             | InRight _ kg _   => weak g.[kg]
           end].
 
+  Lemma merge_sig_domf A B: domf (merge_sig A B) = domf A `|` domf B.
+  Proof. apply/fsetP => //=. Qed.
+  
+
   Lemma merge_sigL k f g :
       k \in domf f -> k \notin domf g ->
       (merge_sig f g).[? k] = omap weak f.[? k].
@@ -1277,6 +1281,15 @@ Section more_precise.
     - by move=> f Hf a Ha /andP[]/Hf -> /Ha->.
   Qed.
 
+  Lemma closedT_in_mp {A B t}: 
+    closed_inT B t -> more_precise A B ->  closed_inT A t.
+  Proof.
+    move=> + MP.
+    by elim: t => //= [_ c /closed_in_mp -> | 
+                       L HL _ R HR /andP[/HL->/HR->]|
+                       ? H1? H2? H3 /and3P[/H1 ->/H2->/H3->]].
+  Qed.
+
   Lemma assume_tm_flex_head {sP f d a N} V :
     get_tm_hd (Callable2Tm f) = inr (inr V) ->
       assume_call sP N (Callable_Comb f a) d = N.
@@ -1343,12 +1356,31 @@ Section more_precise.
       more_precise (merge_sig A B) C.
   Proof.
     move=> MAC MBC.
-    rewrite/more_precise.
+    rewrite/more_precise; apply/andP; split; first rewrite merge_sig_domf.
+      by apply: fsubsetU; rewrite !more_precise_sub//.
+    apply/forallP => k.
+    apply/andP; split.
+      case: (fndP C) => //=kf.
+      have [kB' I1] := in_more_precise MBC kf.
+      have [kA' I2] := in_more_precise MAC kf.
+      rewrite !ffunE; case: fsetUP => //= [kA eA kB eB|_ _ /negP nB|/negP nA]//.
+      admit.
+    case: (fndP C) => //=kf.
+    have [kB' I1] := in_more_precise MBC kf.
+    have [kA' I2] := in_more_precise MAC kf.
+    rewrite !ffunE; case: fsetUP => //= [kA eA kB eB|_ _ /negP nB|/negP nA]//.
+    admit.
   Admitted.
 
   Lemma more_precise_merge2 {A B C D}:
     more_precise A C -> more_precise B D ->
       more_precise (merge_sig A B) (merge_sig C D).
+  Proof.
+    move=> MAC MBD.
+    rewrite/more_precise; apply/andP; split; first rewrite merge_sig_domf.
+      by rewrite !fsubUset; apply/andP; split; apply: fsubsetU;
+      rewrite ?(more_precise_sub MAC) ?(more_precise_sub MBD)// orbT.
+    apply/forallP => k.
   Admitted.
 
   Lemma more_precise_tc_tree_aux1 {O N T sP d0 dA}:
@@ -1512,7 +1544,7 @@ Section same_ty.
         exists D2, check_callable sP sV A d2 = (D2, S) /\ minD D2 D1 = D2.
   Proof.
     rewrite/check_callable/=.
-    case X: check_tm => /=[[[|dd]|][]]; try by move=> [<-<-]; repeat eexists.
+    case X: check_tm => /=[[[|dd]|][]]; cycle 2; [| by move=> [<-<-]; repeat eexists..].
     case Y: get_callable_hd_sig => [s2|]//=; [|move=> [?]H; subst; repeat eexists].
     case Z: assume_call => //=[S1][??] H; subst; repeat eexists.
     by destruct d2, dd, d1.
@@ -1564,23 +1596,38 @@ Section same_ty.
 End same_ty.
 
 Lemma is_ko_tc_tree_aux {sP sV A d}:
-  is_ko A -> exists d', tc_tree_aux sP sV A d = (d', sV).
+  is_ko A -> tc_tree_aux sP sV A d = (d, sV).
 Proof.
   elim: A sV d=> //=; try by eexists.
   - move=> A HA s B HB sV d /andP[->]/=; apply: HB.
-  - move=> A HA B0 HB0 B HB sV d->; repeat eexists.
+  - by move=> A HA B0 HB0 B HB sV d->.
 Qed.
 
 Lemma is_dead_tc_tree_aux {sP sV A d}:
-  exists d', tc_tree_aux sP sV (dead A) d = (d', sV).
+  tc_tree_aux sP sV (dead A) d = (d, sV).
 Proof.
   apply: is_ko_tc_tree_aux.
   apply: is_dead_is_ko is_dead_dead.
 Qed.
 
 Lemma cutr_tc_tree_aux {sP sV A d}:
-  exists d', tc_tree_aux sP sV (cutr A) d = (d', sV).
+  tc_tree_aux sP sV (cutr A) d = (d, sV).
 Proof. apply: is_ko_tc_tree_aux is_ko_cutr. Qed.
+
+Lemma cutl_tc_tree_aux {sP sV A d}:
+  success A ->
+  tc_tree_aux sP sV (cutl A) d =(d, sV).
+Proof.
+  elim: A sV d => //=.
+  - move=> A HA s B HB d V; case: ifP => [dA sB|dA sA]/=.
+      by rewrite is_dead_is_ko//=; apply: HB.
+    rewrite success_is_ko?success_cut//is_ko_cutr//=.
+    by apply: HA.
+  - move=>A HA B0 HB0 B HB d V /andP[sA sB].
+    rewrite sA/= success_is_ko?success_cut//=HA//=.
+    rewrite HB//=cutr_tc_tree_aux//=merge_refl//=maxD_refl//.
+Qed.
+
 
 Section next_alt.
   Lemma success_det_tree_next_alt {sP A sV1 sV2 ign}:
@@ -1705,7 +1752,13 @@ Section next_alt.
       rewrite (is_dead_is_ko is_dead_dead)//=.
       rewrite (next_alt_none_has_cut nA).
       rewrite dtB'; repeat eexists; first by destruct d'.
-      admit.
+      have MP:= more_precise_tc_tree_aux1 cA dtA.
+      have MP1:= more_precise_tc_tree_aux1 cB dtB.
+      have {}cA := closedT_in_mp cA MP.
+      have {}cB := closedT_in_mp cB MP.
+      (* we are in a OR and the LHS has no next_alt, i.e. sVA should
+         not be put inside merge_sig? *)
+      admit. (*HARD?*)
     move=> A HA B0 HB0 B HB C s1 s2 d1 d2 b /and3P[cA cB0 cB].
     case:ifP => kA.
       move=> [<-<-]; rewrite is_ko_failed//=is_ko_next_alt//=.
@@ -1732,7 +1785,15 @@ Section next_alt.
         by apply: closed_in_next_alt nB0.
       have [dA''[sA''[H1' -> H3']]] := more_precise_tc_tree_aux cB0'' Hx m K.
       repeat eexists; first by destruct dA', dA'', DB0, DB, dx => //.
+      have cB' : closed_inT sVA B.
+        apply: closed_inT_sub cB.
+        have:= more_precise_tc_tree_aux1 cA dtA.
+        by move=> /more_precise_sub.
+      have MP2:= more_precise_tc_tree_aux1 cB' dtB.
       (* apply: more_precise_merge2 MP. *)
+      (* TODO: it is true if sVB is not considered?
+         we have A /\ B and A is failed: in next_alt, the variables
+         in B are ignored: this is the case in a valid_state *)
       admit.
     case: ifP => sA; last first.
       move=> [<-]{C}/=; rewrite dtA/= dtB0 dtB/=kA.
@@ -1765,38 +1826,27 @@ Section next_alt.
     have {HB0}[dx[sx[n[Hx Hy]]]] := HB0 _ _ _ _ _ _ cB0' dtB0 nB0.
     have /=[dA''[sA''[H1' -> H3']]] := more_precise_tc_tree_aux cB0'' Hx m K.
     rewrite (next_alt_is_ko nA); repeat eexists; first by destruct DB0, DB, dA', dA'', dx.
-    admit.
+    (* apply: more_precise_merge2 MP. *)
+    (* TODO: we have A /\ B, A is success, and B has no alternatives,
+       
+    *)
+    admit. 
   Admitted.
 
 End next_alt.
 
-(* INVARIANT: all variables are deref  *)
-(* TODO: here should be restore *)
-(* Fixpoint sigma2ctx (sP:sigT) (s: Sigma) : option sigV :=
-  match s with
-  | [::] => Some [::]
-  | (k,v)::xs => 
-    match sigma2ctx sP xs with
-    | None => None
-    | Some S =>
-        match check_tm sP empty_ctx v with
-        | ty_err => None
-        | ty_ok None => Some S
-        | ty_ok (Some (v, b1)) => Some (add k (if b1 then v else weak v) S)
-        end
-      end
-  end.
+Definition sigS := (ctx V Tm).
 
-Lemma sigma2ctx_valid {sP s S}:
-  sigma2ctx sP s = Some S -> valid_sig S.
+Definition sigma2ctx (sP:sigT) (s: sigS) : sigV :=
+  [fmap k : domf s =>
+    let (S, b1) := check_tm sP empty_ctx s.[valP k] in
+      if b1 then S else weak S].
+
+Lemma sigma2ctx_empty sP:
+  sigma2ctx sP empty = empty_ctx.
 Proof.
-  elim: s S => [[]|]//[k v] xs IH S/=.
-  case X: sigma2ctx => //=[S'].
-  have {}IH := IH _ X.
-  case C: check_tm => //=[[[k' v']|]]//=; try congruence.
-  move=> []?; subst.
-  by apply: valid_sig_add.
-Qed. *)
+  move=> //.
+Admitted.
 
 Lemma check_rules_select {sP sV u l rc m s rules}:
   check_rules sP sV rules ->
