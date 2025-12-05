@@ -1026,7 +1026,7 @@ Section closed_in.
     | CutS | Dead | Bot | OK => true
     | CallS _ t => closed_in sV (Callable2Tm t)
     | And A B0 B => [&& closed_inT sV A, closed_inT sV B0 & closed_inT sV B]
-    | Or A _ B => closed_inT sV A && closed_inT sV B
+    | Or A _ B => (is_ko A || closed_inT sV A) && closed_inT sV B
     end.
 
   Lemma fsubset_assume sP O t s : domf O `<=` domf (assume_tm sP O t s).
@@ -1042,11 +1042,12 @@ Section closed_in.
 
   Lemma closed_inT_sub A B t : domf A `<=` domf B -> closed_inT A t -> closed_inT B t.
   Proof.
-    move=> H; elim: t => //= [_ c /closed_in_sub ->//| l Hl _ r Hr /andP[/Hl -> /Hr ->]//| a Ha b0 Hb0 b Hb /and3P[/Ha -> /Hb0 -> /Hb ->]]//.
+    move=> H; elim: t => //= [_ c /closed_in_sub ->//| l Hl _ r Hr /andP[+/Hr->]//| a Ha b0 Hb0 b Hb /and3P[/Ha -> /Hb0 -> /Hb ->]]//.
+    by move=> /orP[->|/Hl->]//; rewrite orbT.
   Qed.
 
   Lemma closed_in_dead {ctx A}: closed_inT ctx (dead A).
-  Proof. by elim: A => //= [L -> _  _ ->| _ -> _ -> _ ->]. Qed.
+  Proof. by elim: A => //= [L H _  _ ->| _ -> _ -> _ ->]; rewrite //is_dead_is_ko// is_dead_dead. Qed.
 
   Lemma closed_in_next_alt {b A B ctx}:
     closed_inT ctx A -> next_alt b A = Some B -> closed_inT ctx B.
@@ -1055,10 +1056,12 @@ Section closed_in.
     - move=> B ctx []// _ [<-]//.
     - move=> p c B ctx _ + [<-]//.
     - move=> B ctx []// _ [<-]//.
-    - move=> A HA s B HB R ctx b /andP[cA cB].
-      case nA: next_alt => [v|]; first (move => [<-]/=; by rewrite (HA _ _ _ _ nA)).
+    - move=> A HA s B HB R ctx b /andP[/orP[kA|cA] cB].
+        rewrite is_ko_next_alt//=; case nB: next_alt => [v|//][<-]/=.
+        case: ifP; rewrite (HB _ _ _ cB nB) ?kA// is_dead_is_ko//is_dead_dead//.
+      case nA: next_alt => [v|]; first (move => [<-]/=; rewrite (HA _ _ _ _ nA)//orbT//).
       case nB: next_alt => [v|//][<-]/=; rewrite (HB _ _ _ _ nB)//.
-      case: ifP; rewrite?cA//closed_in_dead//.
+      by case: ifP; rewrite?cA?orbT//closed_in_dead//orbT.
     - move=> A HA B0 HB0 B HB R ctx b /and3P[cA cB0 cB].
       case: ifP => fA.
         case nA: next_alt => [v|//].
@@ -1071,15 +1074,15 @@ Section closed_in.
   Qed.
 
   Lemma closed_inT_cutr O A: closed_inT O (cutr A).
-  Proof. elim: A => //=[L -> s R ->|_ -> _ -> _ ->]//. Qed.
+  Proof. by elim: A => //=[L -> s R ->|_ -> _ -> _ ->]//; rewrite is_ko_cutr. Qed.
 
   Lemma closed_inT_cutl O A: success A -> closed_inT O (cutl A).
   Proof.
     elim: A => //=[L HL s R HR|].
-      case:ifP => D S/=; rewrite ?closed_inT_cutr?HL//HR//.
-      admit.
+      case:ifP => D S/=; first by rewrite is_dead_is_ko//=HR//.
+      rewrite closed_inT_cutr HL//orbT//.
     move=> A HA B0 HB0 B HB /andP[/[dup] sA -> sB/=]; rewrite HA//closed_inT_cutr//=; auto. 
-  Admitted.
+  Qed.
 
   Lemma closed_inT_step_CB {O u s A B}:
     closed_inT O A -> step u s A = CutBrothers B -> closed_inT O B.
@@ -1377,9 +1380,10 @@ Section more_precise.
     closed_inT B t -> more_precise A B ->  closed_inT A t.
   Proof.
     move=> + MP.
-    by elim: t => //= [_ c /closed_in_mp -> | 
-                       L HL _ R HR /andP[/HL->/HR->]|
-                       ? H1? H2? H3 /and3P[/H1 ->/H2->/H3->]].
+    elim: t => //= [_ c /closed_in_mp -> | 
+                       L HL _ R HR /andP[+/HR->]|
+                       ? H1? H2? H3 /and3P[/H1 ->/H2->/H3->]]//.
+    by move=> /orP[->|]///HL->; rewrite orbT.
   Qed.
 
   Lemma assume_tm_flex_head {sP f d a N} V :
@@ -1487,8 +1491,8 @@ Section more_precise.
       case Ck: check_callable => [D S][_ <-].
       by apply: more_precise_check_callable1 Ck.
     - move=> O N _ _ _ [_ <-]//.
-    - move=> A HA _ B HB O N d0 d1 /andP[CA CB].
-      case:ifP => kA; first by apply: HB.
+    - move=> A HA _ B HB O N d0 d1 /andP[+CB].
+      case:ifP => kA CA; first by apply: HB.
       case:ifP => kB; first by apply: HA.
       case dtA: tc_tree_aux => [DA SA].
       case dtB: tc_tree_aux => [DB SB].
@@ -1527,19 +1531,16 @@ Section more_precise.
       rewrite Cn; repeat eexists; auto.
       by destruct d', d'', d0, dc.
     - by move=> O N d0 dA sA d' _ [<-<-] M MP; repeat eexists.
-    - move=> A HA s B HB O N d0 dA sA d' /andP[CA CB] + M MP.
-      case: ifP => DA.
-        by move=> H; apply: HB; eauto.
-      case: ifP => DB.
-        by move=> H; apply: HA; eauto.
+    - move=> A HA s B HB O N d0 dA sA d' /andP[+ CB] + M MP.
+      case: ifP => DA CA; first by move=> H; apply: HB; eauto.
+      case: ifP => DB; first by move=> H; apply: HA; eauto.
       case dtA: (tc_tree_aux _ _ A) => //=[dAO OA].
       case dtB: (tc_tree_aux _ _ B) => //=[dBO OB].
       move=> [<-<-]{dA sA}.
       have {HA}[dA''[sA'[H3 H4 H5]]] := HA _ _ _ _ _ _ CA dtA M MP.
       have {HB}[dB''[sB'[H6 H7 H8]]]:= HB _ _ _ _ _ _  CB dtB M MP.
       rewrite H4 H7/=.
-      repeat eexists.
-        case:ifP => //; destruct dAO, dBO, dA'',dB'' => //=.
+      repeat eexists; first by case:ifP; destruct dAO, dBO, dA'',dB''.
       by apply: more_precise_merge2.
     - move=> A HA B0 HB0 B HB O N d0 dA sA d' /and3P[CA CB0 CB] + M MP.
       case:ifP => kA; first by move=> [<-<-]; repeat eexists.
@@ -1785,14 +1786,15 @@ Section next_alt.
         by rewrite minD_refl.
       by rewrite more_precise_refl.
     - move=> B s1 s2 d1 d2 _ _ [??][?]; subst; (repeat eexists); rewrite ?more_precise_refl//=.
-    - move=> A HA s B HB s1 s2 C d1 d2 b /andP[cA cB].
+    - move=> A HA s B HB s1 s2 C d1 d2 b /andP[+ cB].
       case dA: (is_dead A).
+        move=> _.
         rewrite is_dead_is_ko//=.
         rewrite is_dead_next_alt//= => dtB.
         case nB: next_alt => //=[B'][<-]{s1}/=.
         rewrite is_dead_is_ko//.
         by apply: HB; eauto.
-      case: ifP => kA.
+      case: ifP => kA cA.
         rewrite (is_ko_next_alt _ kA)/=.
         case nB: next_alt => [v|]//= + [<-]/=.
         rewrite (is_dead_is_ko is_dead_dead).
