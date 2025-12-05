@@ -1011,6 +1011,91 @@ Section func2.
  Qed.
 End func2.
 
+Section closed_in.
+  Open Scope fset_scope.
+  Fixpoint closed_in (sV : sigV) t : bool :=
+    match t with
+    | Tm_Kd _ => true
+    | Tm_Kp _ => true
+    | Tm_V v => v \in domf sV
+    | Tm_Comb l r => closed_in sV l && closed_in sV r
+    end.
+
+  Fixpoint closed_inT (sV : sigV) (t: tree) : bool :=
+    match t with
+    | CutS | Dead | Bot | OK => true
+    | CallS _ t => closed_in sV (Callable2Tm t)
+    | And A B0 B => [&& closed_inT sV A, closed_inT sV B0 & closed_inT sV B]
+    | Or A _ B => closed_inT sV A && closed_inT sV B
+    end.
+
+  Lemma fsubset_assume sP O t s : domf O `<=` domf (assume_tm sP O t s).
+  Proof.
+    elim: t s O => //= [?|?|?|f IHf a IHa] [|[[]??]] O //=; [|case: ifP..] => //.
+      case: fndP => // H; case: ifP => //=; rewrite fsubsetUr//.
+    move=> _; by apply: fsubset_trans _ (IHa _ _).
+  Qed.
+
+  Lemma closed_in_sub A B t : domf A `<=` domf B -> closed_in A t -> closed_in B t.
+    by move=> H; elim: t => //= [v /(fsubsetP H)|f IHf a IHa /andP[/IHf-> /IHa->//]].
+  Qed.
+
+  Lemma closed_inT_sub A B t : domf A `<=` domf B -> closed_inT A t -> closed_inT B t.
+  Proof.
+    move=> H; elim: t => //= [_ c /closed_in_sub ->//| l Hl _ r Hr /andP[/Hl -> /Hr ->]//| a Ha b0 Hb0 b Hb /and3P[/Ha -> /Hb0 -> /Hb ->]]//.
+  Qed.
+
+  Lemma closed_in_dead {ctx A}: closed_inT ctx (dead A).
+  Proof. by elim: A => //= [L -> _  _ ->| _ -> _ -> _ ->]. Qed.
+
+  Lemma closed_in_next_alt {b A B ctx}:
+    closed_inT ctx A -> next_alt b A = Some B -> closed_inT ctx B.
+  Proof.
+    elim: A B ctx b => //=.
+    - move=> B ctx []// _ [<-]//.
+    - move=> p c B ctx _ + [<-]//.
+    - move=> B ctx []// _ [<-]//.
+    - move=> A HA s B HB R ctx b /andP[cA cB].
+      case nA: next_alt => [v|]; first (move => [<-]/=; by rewrite (HA _ _ _ _ nA)).
+      case nB: next_alt => [v|//][<-]/=; rewrite (HB _ _ _ _ nB)//.
+      case: ifP; rewrite?cA//closed_in_dead//.
+    - move=> A HA B0 HB0 B HB R ctx b /and3P[cA cB0 cB].
+      case: ifP => fA.
+        case nA: next_alt => [v|//].
+        case nB0: next_alt => [v1|//][<-]/=.
+        by rewrite cB0 (HA _ _ _ _ nA)// (HB0 _ _ _ _ nB0).
+      case: ifP => sA; last (by move=> [<-]/=; rewrite cA cB0).
+      case nB: next_alt => [v|]; first by (move=> [<-]; rewrite/=cA cB0; apply: HB nB).
+      case nA: next_alt => [v|]//; case nB0: next_alt => [v'|]//[<-]/=.
+      by rewrite cB0 (HA _ _ _ _ nA)//; apply: HB0 nB0.
+  Qed.
+
+  Lemma closed_inT_cutr O A: closed_inT O (cutr A).
+  Proof. elim: A => //=[L -> s R ->|_ -> _ -> _ ->]//. Qed.
+
+  Lemma closed_inT_cutl O A: success A -> closed_inT O (cutl A).
+  Proof.
+    elim: A => //=[L HL s R HR|].
+      case:ifP => D S/=; rewrite ?closed_inT_cutr?HL//HR//.
+      admit.
+    move=> A HA B0 HB0 B HB /andP[/[dup] sA -> sB/=]; rewrite HA//closed_inT_cutr//=; auto. 
+  Admitted.
+
+  Lemma closed_inT_step_CB {O u s A B}:
+    closed_inT O A -> step u s A = CutBrothers B -> closed_inT O B.
+  Proof.
+    elim: A B s => //= [B _ _[<-]//|???????|]; first by case: ifP; case: step => //=.
+    move=> A HA B0 HB0 B HB C s /and3P[CA CB0 CB].
+    case S: step =>// [A' |A']; first (move=> [<-]/=; rewrite (HA _ _ CA S) CB0//).
+    have [? sA]:= expand_solved_same _ S; subst A'.
+    case S1: step => //[B'][<-]/=.
+    rewrite closed_inT_cutr (HB _ _ _ S1)//closed_inT_cutl//.
+  Qed.
+
+  (* Definition tc : closed_in A t -> expant t = t' -> exists B, A <= B /\ all x \in B \ A, B[x] = weak B[x] /\ closed_in t'. *)
+
+End closed_in.
+
 
 Section more_precise.
     Open Scope fset_scope.
@@ -1089,38 +1174,6 @@ Section more_precise.
   Qed.
 
   Hint Resolve more_precise_refl : core.
-
-  Fixpoint closed_in (sV : sigV) t : bool :=
-    match t with
-    | Tm_Kd _ => true
-    | Tm_Kp _ => true
-    | Tm_V v => v \in domf sV
-    | Tm_Comb l r => closed_in sV l && closed_in sV r
-    end.
-
-  Fixpoint closed_inT (sV : sigV) (t: tree) : bool :=
-    match t with
-    | CutS | Dead | Bot | OK => true
-    | CallS _ t => closed_in sV (Callable2Tm t)
-    | And A B0 B => [&& closed_inT sV A, closed_inT sV B0 & closed_inT sV B]
-    | Or A _ B => closed_inT sV A && closed_inT sV B
-    end.
-
-  Lemma fsubset_assume sP O t s : domf O `<=` domf (assume_tm sP O t s).
-  Proof.
-    elim: t s O => //= [?|?|?|f IHf a IHa] [|[[]??]] O //=; [|case: ifP..] => //.
-      case: fndP => // H; case: ifP => //=; rewrite fsubsetUr//.
-    move=> _; by apply: fsubset_trans _ (IHa _ _).
-  Qed.
-
-  Lemma closed_in_sub A B t : domf A `<=` domf B -> closed_in A t -> closed_in B t.
-    by move=> H; elim: t => //= [v /(fsubsetP H)|f IHf a IHa /andP[/IHf-> /IHa->//]].
-  Qed.
-
-  Lemma closed_inT_sub A B t : domf A `<=` domf B -> closed_inT A t -> closed_inT B t.
-  Proof.
-    move=> H; elim: t => //= [_ c /closed_in_sub ->//| l Hl _ r Hr /andP[/Hl -> /Hr ->]//| a Ha b0 Hb0 b Hb /and3P[/Ha -> /Hb0 -> /Hb ->]]//.
-  Qed.
 
   Definition more_preciseL (L1 L2: seq (mode * S)) :=
     (size L1 == size L2) && all2 (fun x y => (x.1 == y.1) 
@@ -1246,7 +1299,6 @@ Section more_precise.
   Definition more_precise_opt '(smore, bmore) '(sless, bless) :=
     (bmore || ~~bless) && incl smore sless.
 
-    (* Definition tc : closed_in A t -> expant t = t' -> exists B, A <= B /\ all x \in B \ A, B[x] = weak B[x] /\ closed_in t'. *)
 
   Lemma more_precise_compat_check_tm sP new old c:
       closed_in old c ->
@@ -1717,32 +1769,6 @@ Section next_alt.
         rewrite is_dead_failed//= is_dead_next_alt//.
       have dA' := @is_dead_dead A.
       rewrite is_dead_failed//= is_dead_next_alt//.
-  Qed.
-
-  Lemma closed_in_dead {ctx A}: closed_inT ctx (dead A).
-  Proof. by elim: A => //= [L -> _  _ ->| _ -> _ -> _ ->]. Qed.
-
-
-  Lemma closed_in_next_alt {b A B ctx}:
-    closed_inT ctx A -> next_alt b A = Some B -> closed_inT ctx B.
-  Proof.
-    elim: A B ctx b => //=.
-    - move=> B ctx []// _ [<-]//.
-    - move=> p c B ctx _ + [<-]//.
-    - move=> B ctx []// _ [<-]//.
-    - move=> A HA s B HB R ctx b /andP[cA cB].
-      case nA: next_alt => [v|]; first (move => [<-]/=; by rewrite (HA _ _ _ _ nA)).
-      case nB: next_alt => [v|//][<-]/=; rewrite (HB _ _ _ _ nB)//.
-      case: ifP; rewrite?cA//closed_in_dead//.
-    - move=> A HA B0 HB0 B HB R ctx b /and3P[cA cB0 cB].
-      case: ifP => fA.
-        case nA: next_alt => [v|//].
-        case nB0: next_alt => [v1|//][<-]/=.
-        by rewrite cB0 (HA _ _ _ _ nA)// (HB0 _ _ _ _ nB0).
-      case: ifP => sA; last (by move=> [<-]/=; rewrite cA cB0).
-      case nB: next_alt => [v|]; first by (move=> [<-]; rewrite/=cA cB0; apply: HB nB).
-      case nA: next_alt => [v|]//; case nB0: next_alt => [v'|]//[<-]/=.
-      by rewrite cB0 (HA _ _ _ _ nA)//; apply: HB0 nB0.
   Qed.
 
   Lemma failed_det_tree_next_alt {sP A O O' d ign B} b:
