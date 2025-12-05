@@ -1012,6 +1012,14 @@ Section more_precise.
     | Tm_Comb l r => closed_in sV l && closed_in sV r
     end.
 
+  Fixpoint closed_inT (sV : sigV) (t: tree) : bool :=
+    match t with
+    | CutS | Dead | Bot | OK => true
+    | CallS _ t => closed_in sV (Callable2Tm t)
+    | And A B0 B => [&& closed_inT sV A, closed_inT sV B0 & closed_inT sV B]
+    | Or A _ B => closed_inT sV A && closed_inT sV B
+    end.
+
   Lemma fsubset_assume sP O t s : domf O `<=` domf (assume_tm sP O t s).
   Proof.
     elim: t s O => //= [?|?|?|f IHf a IHa] [|[[]??]] O //=.
@@ -1020,8 +1028,13 @@ Section more_precise.
   Qed.
 
   Lemma closed_in_sub A B t : domf A `<=` domf B -> closed_in A t -> closed_in B t.
-  by move=> H; elim: t => //= [v /(fsubsetP H)|f IHf a IHa /andP[/IHf-> /IHa->//]].
-Qed.
+    by move=> H; elim: t => //= [v /(fsubsetP H)|f IHf a IHa /andP[/IHf-> /IHa->//]].
+  Qed.
+
+  Lemma closed_inT_sub A B t : domf A `<=` domf B -> closed_inT A t -> closed_inT B t.
+  Proof.
+    move=> H; elim: t => //= [_ c /closed_in_sub ->//| l Hl _ r Hr /andP[/Hl -> /Hr ->]//| a Ha b0 Hb0 b Hb /and3P[/Ha -> /Hb0 -> /Hb ->]]//.
+  Qed.
 
   Definition more_preciseL (L1 L2: seq (mode * S)) :=
     (size L1 == size L2) && all2 (fun x y => (x.1 == y.1) 
@@ -1286,6 +1299,7 @@ Qed.
         by apply: more_precise_assume_tm.
       case: (fndP O) => [vO|nvO] + [<-<-]; last by case: fndP => [?[?[]]|]//; repeat eexists.
       case: fndP => //= vN [_ [[<-]]] I1; repeat eexists; first by destruct dO, dt, dn, d'.
+
       admit.
       (* TODO *)
     - by destruct mn, mo => //= /andP[C1 C2]; rewrite incl_arr/= => /andP[I1 I2] [??]; subst;
