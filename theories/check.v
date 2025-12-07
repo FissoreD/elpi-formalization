@@ -316,7 +316,7 @@ Proof.
     have /= [S' [d [<- H]]]:= expand_det_tree ckP H1 dtA eA; subst.
     by apply: IH H.
   - move=> s1 s2 A B r n fA nA _ IH sV sV' H1 H2.
-    have cA: closed_inT sV A by admit.
+    have cA: closed_in sV by admit.
     have := failed_det_tree_next_alt cA H2 nA.
     move => -[[]// [s [? [X _]]]]//.
     by apply: IH X.
