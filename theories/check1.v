@@ -1505,45 +1505,46 @@ Section more_precise.
     case: sigtm => //= [[[]]]//.
   Qed.
 
-  Lemma more_precise_check_callable {sP N O t dt d' dt' O'}:
+  Lemma more_precise_check_callable sP N O t dO dN dN' dO' O' N':
     closed_in O ->
-    check_callable sP O t dt = (dt', O') -> minD d' dt = d' ->
+    check_callable sP O t dO = (dO', O') -> 
+    check_callable sP N t dN = (dN', N') ->
     more_precise N O ->
-      exists dt'' N', [/\ minD dt'' dt' = dt'',
-                          check_callable sP N t d' = (dt'', N') &
-                          more_precise N' O'].
+    more_precise N' O' /\ (minD dO dN = dN ->minD dO' dN' = dN').
   Proof.
     rewrite/check_callable/=.
-    move=> co + M MP.
-    have:= more_precise_check_tm sP (Callable2Tm t) co MP.
-    have:= more_precise_compat_check_tm sP (Callable2Tm t) co MP.
+    move=> CO ++ MP.
+    have:= more_precise_check_tm sP (Callable2Tm t) CO MP.
+    have:= more_precise_compat_check_tm sP (Callable2Tm t) CO MP.
     case Cn: check_tm => [sn bn]; case Co: check_tm => [so bo]/=.
     rewrite/get_callable_hd_sig/=.
     move=> + /andP[HB].
-    case: sn Cn => [[|dn]|mn fn an] Cn; case: so Co => [[|dO]|mo fo ao] Co//=; try by destruct mn.
-    - by move=> _ _ [<-]{dt'}<-{O'}; repeat eexists.
+    case: sn Cn => [[|dn]|mn fn an] Cn; case: so Co => [[|doo]|mo fo ao] Co//=; try by destruct mn.
+    - by move=> _ _[<-<-][<-<-]; auto.
     - case: bo HB Co; [case: bn Cn => //Cn|] => // _ Co _ I; last first.
         move=> [??]; subst.
-        destruct bn; last by repeat eexists.
-        case sN: get_tm_hd_sig => [v|]; repeat eexists; auto; first by rewrite minD_comm.
+        destruct bn; last by move=> [<-<-]; auto.
+        case sN: get_tm_hd_sig => [v|][<-<-]; last by auto.
+        split; last by [].
         apply: more_precise_trans (MP).
         apply: assume_tm_more_precise.
         by apply: closed_in_mp; eauto.
-      have:= closed_in_MP_get_callable_hd_sig sP (Callable2Tm t) co MP.
+      have:= closed_in_MP_get_callable_hd_sig sP (Callable2Tm t) CO MP.
       rewrite/get_tm_hd_sig.
       case X: get_tm_hd => [D|[P|V]].
-        move=> [_ [[<-]]] _ [ M1] <-{O'}.
-        repeat eexists; first by destruct dO, dt, dn, d'.
-        by apply: more_precise_assume_tm.
-      - case: fndP => [kf [_ [[<-]]] _ [<-<-]| nkf _ [<-<-]]; repeat eexists; auto.
-          by destruct dO, dt, dn, d'.
-        by apply: more_precise_assume_tm.
-      case: (fndP O) => [vO|nvO] + [<-<-]; last by case: fndP => [?[?[]]|]//; repeat eexists.
-      case: fndP => //= vN [_ [[<-]]] I1; repeat eexists; first by destruct dO, dt, dn, d'.
-      case: t X {Cn Co co} => //= c t H.
-      rewrite !(assume_tm_flex_head H)//.
-    - by destruct mn, mo => //= /andP[C1 C2]; rewrite incl_arr/= => /andP[I1 I2] [??]; subst;
-      repeat eexists; auto.
+        move=> [_ [[<-]]] _ [<-<-][<-<-].
+        split; first by apply: more_precise_assume_tm.
+        move=> <-; destruct dn, doo, dO => //.
+      - case: fndP => [kf [_ [[<-]]] _ [<-<-]| nkf _ [<-<-]][<-<-]; last by [].
+        split; first by apply: more_precise_assume_tm.
+        move=> <-; destruct dn, doo, dO => //.
+      rewrite (in_fnd (CO V)) (in_fnd (closed_in_mp CO MP V)).
+      move=> [vO[[?]] H [<-<-]][<-<-]; subst.
+      split => //=; last by move=> <-; destruct doo, dn, dO.
+      destruct t => //=.
+      simpl in X.
+      rewrite !(assume_tm_flex_head X)//=.
+    - destruct mn, mo => //= /andP[C1 C2]; rewrite incl_arr/= => /andP[I1 I2] [??][??]; subst; auto.
   Qed.
 
   Lemma more_precise_check_callable1 {O N T sP d0 dA}:
@@ -1707,60 +1708,58 @@ Section more_precise.
       by apply: more_precise_mergeL; apply: more_precise_trans HA.
   Qed.
 
-  Lemma more_precise_tc_tree_aux {sP A N O d0 dA sA d'}:
+  Lemma more_precise_tc_tree_aux {sP A N O dO dO' O' dN dN' N'}:
     closed_in O ->
-      tc_tree_aux sP O A d0 = (dA, sA) ->
-        minD d' d0 = d' ->
+      tc_tree_aux sP O A dO = (dO', O') ->
+      tc_tree_aux sP N A dN = (dN', N') -> 
         more_precise N O ->
-          exists dA' sA', [/\ minD dA' dA = dA', tc_tree_aux sP N A d' = (dA', sA')
-            & more_precise sA' sA].
+        more_precise N' O' /\ (minD dO dN = dN -> minD dO' dN' = dN').
   Proof.
-    elim: A O N d0 dA sA d' => //=.
-    - by move=> O N d0 dA sA d' _ [<-<-]; repeat eexists.
-    - by move=> O N d0 dA sA d' _ [<-<-]; repeat eexists.
-    - by move=> O N d0 dA sA d' _ [<-<-]; repeat eexists.
-    - move=> _ c O N d0 dA sA d' + + M MP.
-      case Co: check_callable => //= [dc sc] CO [??]; subst.
-      have:= more_precise_check_callable CO Co M MP.
-      move=> [d''[N'[M1 Cn MP1]]].
-      rewrite Cn; repeat eexists; auto.
-      by destruct d', d'', d0, dc.
-    - by move=> O N d0 dA sA d' _ [<-<-] M MP; repeat eexists.
-    - move=> A HA s B HB O N d0 dA sA d' co + M MP.
+    elim: A O N dO dO' O' dN dN' N' => //=.
+    - by move=> O N dO dO' O' dN dN' N' _ [<-<-][<-<-].
+    - by move=> O N dO dO' O' dN dN' N' _ [<-<-][<-<-].
+    - by move=> O N dO dO' O' dN dN' N' _ [<-<-][<-<-].
+    - move=> _ c O N dO dO' O' dN dN' N' CO.
+      case CkO: check_callable => [dOx Ox][<-<-].
+      case CkN: check_callable => [dNx Nx][<-<-] MP.
+      have:= more_precise_check_callable CO CkO CkN MP.
+      move=> [->] H; split => //; destruct dO, dN, dOx, dNx => //=.
+    - by move=> O N dO dO' O' dN dN' N' _ [<-<-][<-<-].
+    - move=> A HA s B HB O N dO dO' O' dN dN' N' CO.
       case: ifP => DA; first by move=> H; apply: HB; eauto.
       case: ifP => DB; first by move=> H; apply: HA; eauto.
       case dtA: (tc_tree_aux _ _ A) => //=[dAO OA].
       case dtB: (tc_tree_aux _ _ B) => //=[dBO OB].
-      move=> [<-<-]{dA sA}.
-      have {HA}[dA''[sA'[H3 H4 H5]]] := HA _ _ _ _ _ _ co dtA M MP.
-      have {HB}[dB''[sB'[H6 H7 H8]]]:= HB _ _ _ _ _ _  co dtB M MP.
-      rewrite H4 H7/=.
-      repeat eexists; first by case:ifP; destruct dAO, dBO, dA'',dB''.
-      have MOA:= more_precise_tc_tree_aux1 co dtA.
-      have MOB:= more_precise_tc_tree_aux1 co dtB.
-      by apply: more_precise_merge2; eauto.
-    - move=> A HA B0 HB0 B HB O N d0 dA sA d' co + M MP.
-      case:ifP => kA; first by move=> [<-<-]; repeat eexists.
-      case dtA: (tc_tree_aux _ _ A) => [dA' svA].
-      case dtB0: (tc_tree_aux _ _ B0) => [dB0 sVB0].
-      case dtB: (tc_tree_aux _ _ B) => [dB sVB].
-      move=> [<-<-] {dA sA}. 
-      (* case M: merge_sig => //=[m][??]; subst => H1 H2. *)
-      have {HA}[dA''[sA'[H3 -> H5]]] := HA _ _ _ _ _ _ co dtA M MP.
-      have CB0' : closed_in svA.
-        apply: closed_in_sub (co).
-        have:= more_precise_tc_tree_aux1 co dtA.
+      case dtAN: (tc_tree_aux _ _ A) => //=[dAN OAN].
+      case dtBN: (tc_tree_aux _ _ B) => //=[dBN OBN] ++ MP.
+      have  [{}HA HA'] := HA _ _ _ _ _ _ _ _ CO dtA dtAN MP.
+      have  [{}HB HB'] := HB _ _ _ _ _ _ _ _ CO dtB dtBN MP.
+      have H : more_precise (merge_sig OAN OBN) (merge_sig OA OB).
+        have MOA:= more_precise_tc_tree_aux1 CO dtA.
+        have MOB:= more_precise_tc_tree_aux1 CO dtB.
+        by apply: more_precise_merge2; eauto.
+      case: ifP => _ [<-<-][<-<-]; split => //.
+      destruct dO, dN, dAO, dBO, dAN => //=.
+    - move=> A HA B0 HB0 B HB O N dO dO' O' dN dN' N' CO.
+      case:ifP => kA; first by move=> [<-<-][<-<-].
+      case dtA: (tc_tree_aux _ _ A) => [dAO svAO].
+      case dtB0: (tc_tree_aux _ _ B0) => [dB0O sVB0O].
+      case dtB: (tc_tree_aux _ _ B) => [dBO sVBO].
+      case dtAN: (tc_tree_aux _ _ A) => [dAN svAN].
+      case dtB0N: (tc_tree_aux _ _ B0) => [dB0N sVB0N].
+      case dtBN: (tc_tree_aux _ _ B) => [dBN sVBN].
+      move=> [<-<-][<-<-] MP.
+      have  [{}HA HA'] := HA _ _ _ _ _ _ _ _ CO dtA dtAN MP.
+      have CB0' : closed_in svAO.
+        apply: closed_in_sub (CO).
+        have:= more_precise_tc_tree_aux1 CO dtA.
         by move=> /more_precise_sub.
-      have {HB0}[dB0'[sB0'[H6 -> H8]]] := HB0 _ _ _ _ _  _ CB0' dtB0 H3 H5.
-      have {HB}[dB'[sB'[H9 -> H11]]] := HB _ _ _ _ _ _ CB0' dtB H3 H5.
-      repeat eexists; first by destruct dB0, dB, dB0', dB'.
-      have MOA:= more_precise_tc_tree_aux1 co dtA.
-      Search more_precise closed_in.
-      have C1 := closed_in_mp co MOA.
-      have MOB:= more_precise_tc_tree_aux1 C1 dtB.
-      have MOB0:= more_precise_tc_tree_aux1 C1 dtB0.
-      by apply: more_precise_merge2; eauto.
+      have [{}HB HB'] := HB _ _ _ _ _ _ _ _ CB0' dtB dtBN HA.
+      have [{}HB0 HB0'] := HB0 _ _ _ _ _ _ _ _ CB0' dtB0 dtB0N HA.
+      split; first by apply: more_precise_merge2 (more_precise_tc_tree_aux1 _ dtB) (more_precise_tc_tree_aux1 _ dtB0) _ _.
+      destruct dO, dN, dAO, dBO, dAN, dB0O, dB0N, dBN; auto.
   Qed.
+
 End more_precise.
 Hint Resolve more_precise_refl : core.
 
@@ -1827,6 +1826,15 @@ Section same_ty.
       have {HB}/= := HB dA dA' sA'.
       case dtB: tc_tree_aux => //=[a b]; case dtB': tc_tree_aux => /=[c d]//=; repeat case: ifP.
       congruence.
+  Qed.
+
+  Lemma same_ty_tc_tree_aux2 sP sV A d1 d2 ign X ign1 Y:
+    (tc_tree_aux sP sV A d1) = (ign,X) ->
+      (tc_tree_aux sP sV A d2) = (ign1, Y) -> X = Y.
+  Proof.
+    move=> H1 H2.
+    have:= same_ty_tc_tree_aux sP sV A d1 d2.
+    by rewrite H1 H2.
   Qed.
 
   Lemma same_ty_subst_check_callable1 {sP sV A d1 D1 S} d2:
@@ -1921,6 +1929,53 @@ Qed.
 
 
 Section next_alt.
+
+  Lemma titi sP B O N:
+    tc_tree_aux sP O B Pred = (Func, N) -> success B = false.
+  Proof.
+    elim: B O N => //=.
+    - move=> A HA _ B HB O N; case: ifP => [kA|nkA].
+        by move=> /HB ->; rewrite is_ko_success// if_same.
+      case: ifP => //=[kB|nkB].
+        by move=> /HA ->; rewrite is_ko_success// if_same.
+      case tA: tc_tree_aux => [DA SA].
+      case tB: tc_tree_aux => [DB SB'].
+      case: ifP => hc []//; destruct DA, DB => // _ H; subst.
+      by rewrite (HA _ _ tA) (HB _ _ tB) if_same.
+    - move=> A HA B0 HB0 B HB O N.
+      case: ifP => [kA|nkA]//.
+      case tA: tc_tree_aux => [DA SA].
+      case tB: tc_tree_aux => [[] SB]; case tB0: tc_tree_aux => [[] SB0]//=.
+      move=> [?]; subst.
+      destruct DA; last by rewrite (HB _ _ tB) andbF.
+      by rewrite (HA _ _ tA).
+  Qed.
+
+  Lemma success_det_tree_next_alt {sP A sV1 sV2 ign}:
+    success A -> (tc_tree_aux sP sV1 A ign) = (Func, sV2) ->
+      (sV1 = sV2)%type2.
+  Proof.
+    elim: A sV1 sV2 ign => //=; try by move=>*; congruence.
+    - move=> A HA s B HB sV1 sV2 ign.
+      case: ifP => [dA sB|ndA sA].
+        rewrite is_dead_is_ko//=.
+        by apply: HB.
+      rewrite success_is_ko//success_has_cut//=.
+      case:ifP => kB.
+        by apply: HA.
+      do 2 case: tc_tree_aux => //.
+    - move=> A HA B0 HB0 B HB sV1 sV2 ign /andP[sA sB].
+      rewrite success_is_ko//=.
+      case dtA: tc_tree_aux => [DA SA].
+      case dtB: tc_tree_aux => [[] SB]//;
+      case dtB0: tc_tree_aux => [[] SB0]//=.
+      move=> [<-]{sV2}.
+      have ? := HB _ _ _ sB dtB; subst.
+      destruct DA; last by (have:= titi dtB; rewrite sB).
+      have ? := HA _ _ _ sA dtA; subst.
+  Abort.
+
+
   Lemma success_det_tree_next_alt {sP A sV1 sV2 ign}:
     success A -> (tc_tree_aux sP sV1 A ign) = (Func, sV2) ->
       (ign = Func /\ next_alt false (build_na A (next_alt true A)) = None)%type2.
@@ -1974,7 +2029,7 @@ Section next_alt.
     closed_in O ->
     tc_tree_aux sP O A ign = (d, O') ->
       next_alt b A = Some B ->
-        exists d' N, minD d' d = d' /\ 
+        exists d' N, minD d d' = d' /\ 
           (tc_tree_aux sP O B ign) = (d', N) /\ more_precise N O'.
   Proof.
     elim: A B O O' d ign b => //=.
@@ -2020,7 +2075,7 @@ Section next_alt.
       move => -[d'[S [m [dtB' L]]]] [<-<-].
       rewrite (is_dead_is_ko is_dead_dead)//=.
       rewrite (next_alt_none_has_cut nA).
-      rewrite dtB'; repeat eexists; first by destruct d'.
+      rewrite dtB'; repeat eexists.
       have MP:= more_precise_tc_tree_aux1 co dtA.
       have MP1:= more_precise_tc_tree_aux1 co dtB.
       have {}cA := closed_in_mp co MP1.
@@ -2044,17 +2099,18 @@ Section next_alt.
         apply: closed_in_sub (co).
         have:= more_precise_tc_tree_aux1 co dtA.
         by move=> /more_precise_sub.
-      have /= := more_precise_tc_tree_aux cB0' dtB0 m K.
-      move=> [dA' [sA' [M1 -> MP]]].
       have {HB0}[dx[sx[n[Hx Hy]]]]:= HB0 _ _ _ _ _ _ cB0' dtB0 nB0.
-      have [dA''[sA''[H1' -> H3']]] := more_precise_tc_tree_aux cB0' Hx m K.
-      repeat eexists; first by destruct dA', dA'', DB0, DB, dx => //.
+      case dtB0': tc_tree_aux => [DB0' S'].
+      have /= [MP] := more_precise_tc_tree_aux cB0' Hx dtB0' K.
+      move=> /(_ m) M1.
+      case dtB': tc_tree_aux => [DB' S''].
+      have /= [H3'] := more_precise_tc_tree_aux cB0' dtB0 dtB' K.
+      move=> /(_ m) H1'.
+      repeat eexists; first by destruct DB', DB0', DB0, DB, dx => //.
       have MP2:= more_precise_tc_tree_aux1 cB0' dtB.
       have MP3:= more_precise_tc_tree_aux1 cB0' dtB0.
-      apply: more_precise_trans.
-        apply: more_precise_mergeL MP.
-        by apply: more_precise_trans H3' _.
-      by apply: more_precise_mergeR MP2 _ (more_precise_refl _).
+      apply: more_precise_mergeR cB0' _ _ _; auto.
+      by apply: more_precise_mergeL (more_precise_trans MP _) H3'.
     case: ifP => sA; last first.
       move=> [<-]{C}/=; rewrite dtA/= dtB0 dtB/=kA.
       by repeat eexists; rewrite ?minD_refl//more_precise_refl.
@@ -2081,16 +2137,18 @@ Section next_alt.
       apply: closed_in_sub (co).
       have:= more_precise_tc_tree_aux1 co dtA.
       by move=> /more_precise_sub.
-    have /=[dA'[sA'[H1 -> H3]]] := more_precise_tc_tree_aux cB0' dtB0 m K.
+    case dtB0': tc_tree_aux => [dA' sA'].
     have {HB0}[dx[sx[n[Hx Hy]]]] := HB0 _ _ _ _ _ _ cB0' dtB0 nB0.
-    have /=[dA''[sA''[H1' -> H3']]] := more_precise_tc_tree_aux cB0' Hx m K.
+    have [H3] := more_precise_tc_tree_aux cB0' Hx dtB0' K.
+    move=> /(_ m) H1.
+    case dtB0'': tc_tree_aux => [dA'' sA''].
+    have [H3'] := more_precise_tc_tree_aux cB0' dtB0 dtB0'' K.
+    move=> /(_ m) H1'.
     rewrite (next_alt_is_ko nA); repeat eexists; first by destruct DB0, DB, dA', dA'', dx.
-    apply: more_precise_trans.
-      apply: more_precise_mergeL H3.
-      by apply: more_precise_trans H3' _.
     have MP2:= more_precise_tc_tree_aux1 cB0' dtB.
     have MP3:= more_precise_tc_tree_aux1 cB0' dtB0.
-    by apply: more_precise_mergeR MP2 _ (more_precise_refl _).
+    apply: more_precise_mergeR cB0' _ _ _; auto.
+    by apply: more_precise_mergeL (more_precise_trans H3 _) H3'.
   Qed.
 
 End next_alt.
