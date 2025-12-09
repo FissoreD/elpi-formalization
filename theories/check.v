@@ -27,14 +27,6 @@ Proof.
   move=> MP.
 Admitted.
 
-Lemma sigP_next_alt {sP sV A B s}:
-  closed_in sV ->
-    sigP sP (get_substS s A) sV ->
-        next_alt false A = Some B -> 
-           sigP sP (get_substS s B) sV.
-Admitted.
-
-
 Lemma expand_sigP {u sP sV A r s} : 
   closed_in sV ->
     sigP sP s sV ->
