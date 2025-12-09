@@ -234,7 +234,7 @@ Section RunP.
       rewrite HB//.
   Qed. 
 
-  Lemma expand_not_failed {s1 A r}:
+  Lemma step_not_failed {s1 A r}:
     step u s1 A = r -> ~ (is_fail r) -> failed A = false.
   Proof.
     move=><-; clear r.
@@ -249,6 +249,14 @@ Section RunP.
       rewrite (expand_solved_same X)/=.
       have:= HB (get_substS s1 C).
       case Y: step => //= ->//=; rewrite andbF//.
+  Qed.
+
+  Lemma step_is_ko {s1 A r}:
+    step u s1 A = r -> ~ (is_fail r) -> is_ko A = false.
+  Proof.
+    move=> H1 H2.
+    apply: failed_is_ko.
+    apply: step_not_failed H1 H2.
   Qed.
 
   Lemma expand_not_failed_Expanded {s1 A B}:

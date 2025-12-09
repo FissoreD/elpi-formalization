@@ -190,7 +190,7 @@ Section s.
         by rewrite /= dX HA//.
       have {}IH:= IH sIgn (dead X) (is_dead_is_ko is_dead_dead).
       rewrite is_dead_dead dead2 if_same in IH.
-      have fA := expand_not_failed _ HA notF.
+      have fA := step_not_failed _ HA notF.
       apply: run_fail.
         rewrite/=dX is_ko_failed//.
         by rewrite /= dX is_ko_next_alt// next_alt_not_failed//=failed_dead.
@@ -205,7 +205,7 @@ Section s.
         by rewrite /= dX HA//.
       have {}IH:= IH sIgn (dead X) (is_dead_is_ko is_dead_dead).
       rewrite is_dead_dead dead2 if_same in IH.
-      have fA := expand_not_failed _ HA notF.
+      have fA := step_not_failed _ HA notF.
       apply: run_fail.
         rewrite/=dX is_ko_failed//.
         by rewrite /= dX is_ko_next_alt// next_alt_not_failed//=failed_dead.
@@ -433,7 +433,7 @@ Section s.
       - apply: run_fail => /=.
           rewrite dB//.
           rewrite dB nB next_alt_not_failed//=.
-          by rewrite (expand_not_failed _ H0).
+          by rewrite (step_not_failed _ H0).
         apply: run_step => //=.
           rewrite H0 is_dead_dead//.
         have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) X0 .
@@ -441,7 +441,7 @@ Section s.
       - apply: run_fail => /=.
           rewrite dB//.
           rewrite dB nB next_alt_not_failed//=.
-          by rewrite (expand_not_failed _ H0).
+          by rewrite (step_not_failed _ H0).
         apply: run_step => //=.
           rewrite H0 is_dead_dead//.
         have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) X0 .

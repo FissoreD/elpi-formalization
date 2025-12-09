@@ -1073,6 +1073,7 @@ Section func2.
       split => //.
       destruct dA, dA1, d0, d2, dB0, dB, dB01, dB1 => //=; congruence.
  Qed.
+
 End func2.
 
 (* Section closed_in.
@@ -1878,6 +1879,49 @@ Section next_alt.
       have MP := more_precise_tc_tree_aux1 C dtB0.
       by apply: more_precise_merge.
   Qed.
+
+  (* Lemma expand_CB_same_ctx sP sV D1 D2 {u s A B} DA DB CA CB:
+    (* we have a superficial cut *)
+    closed_in sV ->
+    step u s A = CutBrothers B -> 
+      (tc_tree_aux sP sV A D1) = (DA, CA) ->
+        (tc_tree_aux sP sV B D2) = (DB, CB) ->
+          CA = CB.
+  Proof.
+    elim: A s B sV D1 D2 DA DB CA CB => //=.
+    - move=> _ []//=; congruence.
+    - move=> A HA s B HB s1 C sV D DA DB CA CB.
+      case: ifP => //=dA; case: step => //.
+    - move=> A HA B0 _ B HB s C sV D1 D2 DA DB CA CB Cl.
+      case E: step => //=[A'|A'].
+        move=> [?]; subst => /=.
+        rewrite (step_is_ko _ E)// (expand_CB_is_ko E).
+        case tcA: tc_tree_aux => [DA' CA'].
+        case tcA': (tc_tree_aux _ _ A') => [DA'' CA''].
+        have ? := HA _ _ _ _ _ _ _ _ _ Cl E tcA tcA'; subst.
+        case tcB: tc_tree_aux => [DB' CB'].
+        case tcB': (tc_tree_aux _ _ B) => [DB'' CB''].
+        case tcB0: tc_tree_aux => [DB0' CB0'].
+        case tcB0': (tc_tree_aux _ _ B0) => [DB0'' CB0''].
+        move=> [??][??]; subst.
+        have [<- _] := tc_tree_aux_func2 tcB tcB'.
+        by have [<- _] := tc_tree_aux_func2 tcB0 tcB0'.
+      have [? sA] := expand_solved_same _ E; subst A'.
+      case X: step => //=[B'][<-]{C}/=.
+      rewrite success_is_ko//.
+      case tcA: tc_tree_aux => [DA' CA'].
+      have ? := success_det_tree_same_ctx Cl sA tcA; subst.
+      rewrite -success_cut in sA.
+      rewrite success_is_ko//.
+      case tcA': (tc_tree_aux _ _ (cutl A)) => [DA'' CA''].
+      have ? := success_det_tree_same_ctx Cl sA tcA'; subst.
+      case tcB: tc_tree_aux => [DB' CB'].
+      case tcB': (tc_tree_aux _ _ B') => [DB'' CB''].
+      have ? := HB _ _ _ _ _ _ _ _ _ Cl X tcB tcB'; subst.
+      case tcB0: tc_tree_aux => [DB0' CB0'].
+      rewrite cutr_tc_tree_aux.
+      move => [??][??]; subst. 
+  Qed. *)
 
 
   Lemma success_det_tree_next_alt {sP A sV1 sV2 ign}:

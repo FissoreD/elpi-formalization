@@ -344,7 +344,7 @@ Section NurProp.
 
   Lemma expand_t2l_cons {s A r}:
     valid_tree A -> step u s A = r -> ~ (is_fail r) -> t2l_cons A.
-  Proof. case: r => //[B|B|B]vA H/=; try (move=> _; apply: failed_t2l vA (expand_not_failed _ H notF)). Qed.
+  Proof. case: r => //[B|B|B]vA H/=; try (move=> _; apply: failed_t2l vA (step_not_failed _ H notF)). Qed.
 
   Lemma bbOr_next_alt_none {s1 B l}:
     bbOr B -> next_alt false B = None -> t2l B s1 l = nilC.
@@ -644,7 +644,7 @@ Section NurProp.
     - move=> A HA s B HB C s1;  case: ifP => dA; case: step => //.
     - move=> A HA B0 _ B HB C s1 /and3P[vA].
       case e: step => //[A'|A'].
-        rewrite (expand_not_solved_not_success _ e)//=(expand_not_failed _ e)//=.
+        rewrite (expand_not_solved_not_success _ e)//=(step_not_failed _ e)//=.
         move=>/eqP-> bB [<-]/=; rewrite (get_substS_base_and bB)// if_same.
         rewrite !(HA _ _ vA e)//.
       have [? sA] := expand_solved_same _ e; subst.
@@ -684,7 +684,7 @@ Section NurProp.
       by case: ifP => [dA vB|dA/andP[vA bB]]; case eB: step => //[s1' B'][??]; subst.
     - move=> A HA B0 _ B HB sA s1 C l1/=/and3P[vA].
       case eA: step => //[A'|A'].
-        rewrite (expand_not_solved_not_success _ eA notF)/=(expand_not_failed _ eA notF).
+        rewrite (expand_not_solved_not_success _ eA notF)/=(step_not_failed _ eA notF).
         move=>/eqP->bB [<-]/=.
         have [y  H1] /=:= base_and_t2l bB.
         have {HA}[x [tl [H3 [H4 H5]]]] := HA sA _ _ l1 vA eA.
@@ -768,10 +768,10 @@ Section NurProp.
       case: ifP => //[dA fB|dA fA]; case e: step => //.
     - move=> A HA B0 _ B HB C s1 /and3P[vA].
       case e: step => //[A'|A'].
-        rewrite (expand_not_solved_not_success _ e)//(expand_not_failed _ e)//=.
+        rewrite (expand_not_solved_not_success _ e)//(step_not_failed _ e)//=.
         move=>/eqP->bB [<-]/=.
         rewrite (base_and_failed bB) andbF.
-        rewrite (HA _ _ vA e)//(expand_not_failed e)//.
+        rewrite (HA _ _ vA e)//(step_not_failed e)//.
       have [? sA] := expand_solved_same _ e; subst.
       rewrite sA success_failed//=.
       case e1: step => //[B'] vB bB0 [<-]/=.
@@ -899,9 +899,9 @@ Section NurProp.
         rewrite make_lB01_empty2.
         move=>[??]; subst.
         case e: step => [A'|A'|A'|A']/=.
-        - have []:= s2l_empty_hd_success vA (expand_not_failed _ e notF) Hx.
+        - have []:= s2l_empty_hd_success vA (step_not_failed _ e notF) Hx.
           rewrite (expand_not_solved_not_success _ e)//.
-        - have []:= s2l_empty_hd_success vA (expand_not_failed _ e notF) Hx.
+        - have []:= s2l_empty_hd_success vA (step_not_failed _ e notF) Hx.
           rewrite (expand_not_solved_not_success _ e)//.
         - rewrite -(expand_failure_t2l_same e).
           have {Hx} := f_equal size Hx.
@@ -940,7 +940,7 @@ Section NurProp.
       case eA: step => //[A'|A']/=[?]; subst;
       rewrite add_ca_deep_cat?size_cat//=; set SB:= t2l _ _ nilC;
       rewrite (step_not_dead _ dA eA).
-        have FA := expand_not_failed _ eA notF.
+        have FA := step_not_failed _ eA notF.
         have [s4 [y[ys YY]]]:= failed_t2l vA FA s0 SB.
         rewrite YY/=; case: y YY => //-[]//ca tl1 YY [????]; subst.
         have [H {}HA] := HA _ _ _ _ _ _ _ vA eA YY; rewrite !H.
@@ -953,7 +953,7 @@ Section NurProp.
       by rewrite (expand_cb_same_subst1 _ eA)//.
     - move=> /= A HA B0 _ B HB s1 C s4 ca x tl l1 /and3P[vA].
       case eA: step => //[A'|A']/=.
-        rewrite (expand_not_solved_not_success _ eA notF)/=(expand_not_failed _ eA notF).
+        rewrite (expand_not_solved_not_success _ eA notF)/=(step_not_failed _ eA notF).
         move=>/eqP->bB[<-]/=.
         case SA : t2l => //[[s5 w] ws].
         have [hd SB] := base_and_t2l bB.
@@ -964,7 +964,7 @@ Section NurProp.
         case: w SA => //=.
           rewrite cat0s => HH?; subst.
           exfalso.
-          apply: s2l_empty_hdF vA (expand_not_solved_not_success _ eA notF) (expand_not_failed _ eA notF) HH.
+          apply: s2l_empty_hdF vA (expand_not_solved_not_success _ eA notF) (step_not_failed _ eA notF) HH.
         move=> []//=ca' gs SA []??; subst.
         have [H1 H2] := HA _ _ _ _ _ _ _ vA eA SA.
         rewrite !H1/=.
@@ -991,7 +991,7 @@ Section NurProp.
         by rewrite !H2//.
       set SA:= add_deep _ _ _.
       rewrite !make_lB01_empty2.
-      have [s[y[ys]]] := failed_t2l vB (expand_not_failed _ eB notF) (get_substS s1 A') (make_lB0 SA hd ++ l1).
+      have [s[y[ys]]] := failed_t2l vB (step_not_failed _ eB notF) (get_substS s1 A') (make_lB0 SA hd ++ l1).
       move=>H4; rewrite H4/=.
       move=>[???]; subst.
       have [[H5 H5'] H6] := HB _ _ _ _ _ _ _ vB eB H4; subst.
@@ -1056,7 +1056,7 @@ Section NurProp.
       rewrite (valid_tree_is_dead (valid_tree_expand _ vA e)); last first.
         have [w[ws []+[]]]:= s2l_CutBrothers s1 SB vA e.
         move=>->//.
-      have [s5 [y[ys sA]]]:= failed_t2l vA (expand_not_failed _ e notF) s1 SB.
+      have [s5 [y[ys sA]]]:= failed_t2l vA (step_not_failed _ e notF) s1 SB.
       rewrite sA/=; case: y sA => //-[]//p1 t1 g1 sA [?????]; subst.
       have := HA _ _ _ _ _ _ _ _ vA e sA.
       move=> []?; subst.
@@ -1076,7 +1076,7 @@ Section NurProp.
       apply: empty_ca_atoms1.
     - move=> A HA B0 _ B HB C s1 s3 l p t gs xs /and3P[vA].
       case e: step => //[A'|A'].
-        have /=fA := expand_not_failed _ e notF.
+        have /=fA := step_not_failed _ e notF.
         rewrite (expand_not_solved_not_success _ e)//fA/=.
         move=>/eqP->bB [<-]/=; subst.
         have [s5 [y[ys sA]]]:= failed_t2l vA fA s1 l.
@@ -1087,7 +1087,7 @@ Section NurProp.
         move=> [?] + ?; subst.
         case: y sA => [|[p1 t1|] tl]//=sA.
           exfalso.
-          apply: s2l_empty_hdF vA (expand_not_solved_not_success _ e notF) (expand_not_failed _ e notF) sA.
+          apply: s2l_empty_hdF vA (expand_not_solved_not_success _ e notF) (step_not_failed _ e notF) sA.
         move=> [???]; subst.
         have := HA _ _ _ _ _ _ _ _ vA e sA.
         move=> []?; subst.
@@ -1113,7 +1113,7 @@ Section NurProp.
         by apply: HB vB e1.
       set X := make_lB0 _ _.
       set Y := get_substS _ _.
-      have [s[y[ys sB]]]:= failed_t2l vB (expand_not_failed _ e1 notF) Y (X++l).
+      have [s[y[ys sB]]]:= failed_t2l vB (step_not_failed _ e1 notF) Y (X++l).
       rewrite sB cat_cons=> -[???] ; subst.
       have := HB _ _ _ _ _ _ _ _ vB e1 sB.
       rewrite-/Y.
