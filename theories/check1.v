@@ -1017,72 +1017,61 @@ Fixpoint tc_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : (D * sigV)%type :=
   end.
 
 Section func2.
-  Lemma check_callable_func2 {sP sV A s ign d1}:
-    check_callable sP sV A ign = (d1, s) ->
-      exists d2, minD d2 d1 = d2 /\ check_callable sP sV A Func = (d2, s).
+  Lemma check_callable_func2 {sP sV A s1 s2 d0 d1 d2 d3}:
+    check_callable sP sV A d0 = (d1, s1) ->
+      check_callable sP sV A d2 = (d3, s2) ->
+        s1 = s2 /\ minD d1 d3 = if minD d0 d2 == d0 then d1 else d3.
   Proof.
     rewrite/check_callable.
     case: check_tm => //=[sA bA].
-    case: sA => //; last first.
-      by move=> _ _ _ [<-<-]; repeat eexists.
-    move=> [].
-      by move=> [<-<-]; repeat eexists.
+    case: sA => //; last by move=> _ _ _ [<-<-][<-<-]; rewrite if_same.
+    move=> []; first by move=> [<-<-][<-<-]; rewrite if_same.
     move=> d.
-    case: bA; last first.
-      by move=> [<-<-]; exists Pred.
-    case: get_callable_hd_sig; last first.
-      by move=> [<-<-]; exists Pred.
-    move=> X [<-<-].
-    repeat eexists; destruct d => //.
+    case: bA; last by move=> [<-<-][<-<-]; rewrite if_same.
+    case: get_callable_hd_sig; last by move=> [<-<-][<-<-]; rewrite if_same.
+    move=> X [<-<-][<-].
+    by destruct d0, d, d2.
   Qed.
 
-  Lemma tc_tree_aux_func2 {sP sV A s ign d1}:
-    tc_tree_aux sP sV A ign = (d1, s) ->
-      exists d2, minD d2 d1 = d2 /\ tc_tree_aux sP sV A Func = (d2, s).
+  Lemma tc_tree_aux_func2 {sP sV A s1 s2 d0 d1 d2 d3}:
+    tc_tree_aux sP sV A d0 = (d1, s1) ->
+      tc_tree_aux sP sV A d2 = (d3, s2) ->
+        s1 = s2 /\ minD d1 d3 = if minD d0 d2 == d0 then d1 else d3.
   Proof.
-    elim: A d1 sV s ign => //=.
-    - move=> d1 sV s ign [??]; subst; exists Func => //.
-    - move=> d1 sV s ign [??]; subst; exists Func => //.
-    - move=> d1 sV s ign [??]; subst; exists Func => //.
-    - move=> _ c d1 sV1 sV2 ign.
-      case Z: check_callable => //=[DA SVA][??]; subst.
-      have H2:= check_callable_pred Z; subst => //.
-      rewrite -H2 maxD_comm -maxD_assoc maxD_refl.
-      have [d2[H3 H4]]:= check_callable_func2 Z.
-      rewrite H4/=.
-      repeat eexists.
-      by destruct d2, DA, ign.
-    - by move=> d1 sV s _ [<-<-]; exists Func.
-    - move=> A HA s B HB d1 sV1 sV2 ign.
-      case:ifP => DA.
-        apply: HB.
+    elim: A s1 s2 d0 d1 d2 d3 sV => //=.
+    - by move=> s1 s2 d0 d1 d2 d3 sV [<-<-][<-<-]; destruct d0, d2.
+    - by move=> s1 s2 d0 d1 d2 d3 sV [<-<-][<-<-]; destruct d0, d2.
+    - by move=> s1 s2 d0 d1 d2 d3 sV [<-<-][<-<-]; destruct d0, d2.
+    - move=> _ c s1 s2 d0 d1 d2 d3 sV.
+      case CkA: check_callable => //=[X Y] [??]; subst.
+      case CkB: check_callable => //=[Z W] [??]; subst.
+      have [? H]:=check_callable_func2 CkA CkB; subst.
+      by destruct X, Z, d0, d2.
+    - by move=> s1 s2 d0 d1 d2 d3 sV [<-<-][<-<-]; destruct d0, d2.
+    - move=> A HA s B HB s1 s2 d0 d1 d2 d3 sV.
+      case:ifP => DA; first by apply: HB.
       case dtA: (tc_tree_aux _ _ A) => //= [dA sVA]/=.
       case dtB: (tc_tree_aux _ _ B) => //= [dB sVB]/=.
-      have [d2[H1 H2]]:= HA _ _ _ _ dtA.
-      have [d3[H3 H4]]:= HB _ _ _ _ dtB.
-      case: ifP => [kB|nkB][??]; subst; rewrite H2.
-        by repeat eexists.
-      rewrite H4.
-      repeat eexists.
-      case: ifP => //=.
-      by destruct d2, d3, dA, dB => //=.
-    - move=> A HA B0 HB0 B HB d1 sV sV' ign.
+      case dtA1: (tc_tree_aux _ _ A) => //= [dA1 sVA1]/=.
+      case dtB1: (tc_tree_aux _ _ B) => //= [dB1 sVB1]/=.
+      have [? H1] := HA _ _ _ _ _ _ _ dtA dtA1.
+      have [? H2] := HB _ _ _ _ _ _ _ dtB dtB1; subst.
+      case: ifP => [kB|nKB] [??][??]; subst; split => //.
+      case: ifP; rewrite?if_same//.
+      by destruct dA, dB, dA1, dB1, d0, d2.
+    - move=> A HA B0 HB0 B HB s1 s2 d0 d1 d2 d3 sV.
       case dtA: (tc_tree_aux _ _ A) => //= [dA sVA].
       case dtB0: (tc_tree_aux _ _ B0) => //= [dB0 sVB0].
       case dtB: (tc_tree_aux _ _ B) => //= [dB sVB].
-      have {HA}[d2[H1 H2]] := HA _ _ _ _ dtA.
-      rewrite H2/=.
-      have {HB0}[d3[H3 H4]] := HB0 _ _ _ _ dtB0.
-      have {HB}[d4[H5 H6]] := HB _ _ _ _ dtB.
-      case: ifP => [kA|nkA][??]; subst.
-        by repeat eexists.
-      destruct d2.
-        rewrite H4/= H6.
-        repeat eexists.
-        by destruct d3, dB0, d4 => //.
-     destruct dA => //.
-     rewrite dtB0/=dtB/=.
-     repeat eexists; rewrite minD_refl//.
+      case dtA1: (tc_tree_aux _ _ A) => //= [dA1 sVA1].
+      case dtB01: (tc_tree_aux _ _ B0) => //= [dB01 sVB01].
+      case dtB1: (tc_tree_aux _ _ B) => //= [dB1 sVB1].
+      have [? {}HA] := HA _ _ _ _ _ _ _ dtA dtA1; subst.
+      have [? {}HB] := HB _ _ _ _ _ _ _ dtB dtB1; subst.
+      have [? {}HB0] := HB0 _ _ _ _ _ _ _ dtB0 dtB01; subst.
+      case: ifP => [kA|nkA][??][??]; subst; first by destruct d1, d3.
+      split => //.
+      destruct dA, dA1, d0, d2, dB0, dB, dB01, dB1 => //=; congruence.
  Qed.
 End func2.
 
@@ -1279,6 +1268,31 @@ Section more_precise.
     more_precise B A -> forall kA : k \in domf A,
         forall kB : k \in domf B, compat_type A.[kA] B.[kB].
   Proof. by move=> MP kA kB; rewrite (in2_more_compat_type_more_precise MP kA kB). Qed.
+
+  Lemma closed_in_mp {A B}: 
+    closed_in B -> more_precise A B ->  closed_in A.
+  Proof.
+    move=> + MP.
+    have:= more_precise_sub MP.
+    apply: closed_in_sub.
+  Qed.
+
+  Lemma more_precise_merge N O:
+    closed_in O -> more_precise N O -> merge_sig O N = O.
+  Proof.
+    move=> CO MP.
+    apply/fmapP => k.
+    have kO := CO k.
+    have kM : k \in domf (merge_sig O N) by rewrite merge_sig_domf; apply/finmap.fsetUP; rewrite kO; left.
+    rewrite !in_fnd/= ffunE; f_equal.
+    have [kN I] :=in_more_precise MP kO.
+    have CN := closed_in_mp CO MP.
+    have H1 : (fsval (A:=domf O `|` domf N)).[kM] \in domf O by [].
+    have H2: (fsval (A:=domf O `|` domf N)).[kM] \in domf N by [].
+    case: fsetUP => [kA eA kB eB|??/negP//|/negP//].
+    rewrite (bool_irrelevance kA kO) (bool_irrelevance kB kN).
+    by rewrite -(eqP I) min_comm max_assorb.
+  Qed.
 
   Lemma fndNoneP {K : choiceType} (V : eqType) (A : {fmap K -> V}) x : A.[? x] = None -> x \notin domf A.
   Proof. by move/eqP; apply: contraL => ?; rewrite in_fnd. Qed.
@@ -1486,14 +1500,6 @@ Section more_precise.
       have:= in_more_precise MP (vO v).
       move=> [vN H]; rewrite !in_fnd.
       by repeat eexists.
-  Qed.
-
-  Lemma closed_in_mp {A B}: 
-    closed_in B -> more_precise A B ->  closed_in A.
-  Proof.
-    move=> + MP.
-    have:= more_precise_sub MP.
-    apply: closed_in_sub.
   Qed.
 
   Lemma assume_tm_flex_head {sP f d a N} V :
@@ -1790,110 +1796,6 @@ Qed.
   deref empty c = c.
 Proof. elim: c => //= t IH tm H; rewrite IH//. Qed. *)
 
-Section same_ty.
-
-  Lemma same_ty_subst_check_callable sP sV c D1 D2:
-    snd (check_callable sP sV c D1) = snd (check_callable sP sV c D2).
-  Proof.
-    rewrite/check_callable/=.
-    case X: check_tm =>  [[[|d]|] []]//.
-    case Y: get_callable_hd_sig => [s2|]//=.
-  Qed.
-
-  Lemma same_ty_tc_tree_aux sP sV A d1 d2:
-    snd (tc_tree_aux sP sV A d1) = snd (tc_tree_aux sP sV A d2).
-  Proof.
-    elim: A d1 d2 sV => //=.
-    - move=> _ c d1 d2 sV.
-      have:= same_ty_subst_check_callable sP sV c d1 d2.
-      by do 2 case: check_callable.
-    - move=> A HA s B HB d1 d2 sV.
-      repeat case:ifP; auto.
-      move=> kB kA.
-      have {HA} := HA d1 d2 sV.
-      case X: tc_tree_aux => //=[x y]; case Y: tc_tree_aux => [z w]//=?; subst.
-      have {HB} := HB d1 d2 sV.
-      by case Z: tc_tree_aux => //=[a b]; case T: tc_tree_aux => [c d]//=?; subst.
-    - move=> A HA B0 HB0 B HB d1 d2 sV.
-      case: ifP; auto.
-      move=> kA.
-      have {HA} := HA d1 d2 sV.
-      case: (tc_tree_aux _ _ A) => [dA sA];
-      case: (tc_tree_aux _ _ A) => [dA' sA']/=->.
-      have {HB0}/= := HB0 dA dA' sA'.
-      case dtB0: (tc_tree_aux _ _ B0) => [x y]; 
-      case dtB0': (tc_tree_aux _ _ B0) => [z w]/=->.
-      have {HB}/= := HB dA dA' sA'.
-      case dtB: tc_tree_aux => //=[a b]; case dtB': tc_tree_aux => /=[c d]//=; repeat case: ifP.
-      congruence.
-  Qed.
-
-  Lemma same_ty_tc_tree_aux2 sP sV A d1 d2 ign X ign1 Y:
-    (tc_tree_aux sP sV A d1) = (ign,X) ->
-      (tc_tree_aux sP sV A d2) = (ign1, Y) -> X = Y.
-  Proof.
-    move=> H1 H2.
-    have:= same_ty_tc_tree_aux sP sV A d1 d2.
-    by rewrite H1 H2.
-  Qed.
-
-  Lemma same_ty_subst_check_callable1 {sP sV A d1 D1 S} d2:
-    check_callable sP sV A d1 = (D1, S) ->
-      minD d2 d1 = d2 ->
-        exists D2, check_callable sP sV A d2 = (D2, S) /\ minD D2 D1 = D2.
-  Proof.
-    rewrite/check_callable/=.
-    case X: check_tm => /=[[[|dd]|][]]; cycle 2; [| by move=> [<-<-]; repeat eexists..].
-    case Y: get_callable_hd_sig => [s2|]//=; [|move=> [?]H; subst; repeat eexists].
-    case Z: assume_call => //=[S1][??] H; subst; repeat eexists.
-    by destruct d2, dd, d1.
-  Qed.
-
-  Lemma same_ty_tc_tree_aux1 {sP sV A d1 D1 S} d2:
-    tc_tree_aux sP sV A d1 = (D1, S) ->
-      minD d2 d1 = d2 ->
-        exists D2, tc_tree_aux sP sV A d2 = (D2, S) /\ minD D2 D1 = D2.
-  Proof.
-    elim: A sV d1 d2 D1 S => //=.
-    - move=> sV d1 d2 D1 S [??] <-; subst; repeat eexists.
-      rewrite -minD_assoc minD_refl//.
-    - move=> sV d1 d2 D1 S [??] <-; subst; repeat eexists.
-      rewrite -minD_assoc minD_refl//.
-    - move=> sV d1 d2 D1 S [??] <-; subst; repeat eexists.
-      rewrite -minD_assoc minD_refl//.
-    - move=> _ c d1 d2 sV D1 S.
-      case C: check_callable => //=[D V] [??] H; subst.
-      have [D2[H1 H2]] := same_ty_subst_check_callable1 C H.
-      rewrite H1; repeat eexists.
-      destruct D2, D, sV, d2 => //=.
-    - move=> sV d1 d2 D1 S [?] <-; subst; repeat eexists.
-    - move=> A HA s B HB d1 d2 sV D1 S.
-      case:ifP => dA; first by apply: HB.
-      case:ifP => dB; first by apply: HA.
-      case X: tc_tree_aux => //=[x y]; case Y: tc_tree_aux => [z w]//=.
-      move=> + M.
-      (* case M: merge_sig => //=[m][<-]{D1}? H; subst. *)
-      have [D3 [dtA Hx]] := HA _ _ _ _ _ X M.
-      have [D4 [dtB Hy]] := HB _ _ _ _ _ Y M.
-      rewrite dtA dtB/=.
-      case:ifP => _ [<-<-]; repeat eexists.
-      destruct D4, D3, z, x => //=.
-    - move=> A HA B0 HB0 B HB d1 d2 sV D1 S.
-      case:ifP => kA.
-        move=> [<-<-]<-; repeat eexists; by rewrite -minD_assoc minD_refl.
-      case dtA: (tc_tree_aux _ _ A) => [dA sA].
-      case dtB0: (tc_tree_aux _ _ B0) => [x y].
-      case dtB: (tc_tree_aux _ _ B) => /=[z w].
-      move=> [<-<-] M.
-      have [D3[dtA' Hx]] := HA _ _ _ _ _ dtA M.
-      have [D4[dtB0' Hy]] := HB0 _ _ _ _ _ dtB0 Hx.
-      have [D5[dtB' Hz]] := HB _ _ _ _ _ dtB Hx.
-      rewrite dtA' dtB0' dtB'; repeat eexists.
-      destruct D4, D5, x, z => //.
-  Qed.
-
-End same_ty.
-
 Lemma is_ko_tc_tree_aux {sP sV A d}:
   is_ko A -> tc_tree_aux sP sV A d = (d, sV).
 Proof.
@@ -1951,29 +1853,31 @@ Section next_alt.
       by rewrite (HA _ _ tA).
   Qed.
 
-  Lemma success_det_tree_next_alt {sP A sV1 sV2 ign}:
-    success A -> (tc_tree_aux sP sV1 A ign) = (Func, sV2) ->
-      (sV1 = sV2)%type2.
+  Lemma success_det_tree_same_ctx {sP A sV1 sV2 d0 d1}:
+    closed_in sV1 -> success A -> (tc_tree_aux sP sV1 A d0) = (d1, sV2) ->
+      (sV2 = sV1)%type2.
   Proof.
-    elim: A sV1 sV2 ign => //=; try by move=>*; congruence.
-    - move=> A HA s B HB sV1 sV2 ign.
-      case: ifP => [dA sB|ndA sA].
-        rewrite is_dead_is_ko//=.
-        by apply: HB.
+    elim: A sV1 sV2 d0 d1 => //=; try by move=>*; congruence.
+    - move=> A HA s B HB sV1 sV2 d0 d1 C.
+      case: ifP => [dA sB|ndA sA]; first by rewrite is_dead_is_ko//=; by apply: HB.
       rewrite success_is_ko//success_has_cut//=.
-      case:ifP => kB.
-        by apply: HA.
-      do 2 case: tc_tree_aux => //.
-    - move=> A HA B0 HB0 B HB sV1 sV2 ign /andP[sA sB].
+      case:ifP => kB; first by apply: HA.
+      case TC1: tc_tree_aux => [D1 S1].
+      case TC2: tc_tree_aux => [D2 S2] [??]; subst.
+      have ? := HA _ _ _ _ C sA TC1; subst.
+      have MP := more_precise_tc_tree_aux1 C TC2.
+      by apply: more_precise_merge.
+    - move=> A HA B0 HB0 B HB sV1 sV2 d0 d1 C /andP[sA sB].
       rewrite success_is_ko//=.
       case dtA: tc_tree_aux => [DA SA].
-      case dtB: tc_tree_aux => [[] SB]//;
-      case dtB0: tc_tree_aux => [[] SB0]//=.
-      move=> [<-]{sV2}.
-      have ? := HB _ _ _ sB dtB; subst.
-      destruct DA; last by (have:= titi dtB; rewrite sB).
-      have ? := HA _ _ _ sA dtA; subst.
-  Abort.
+      case dtB: tc_tree_aux => [DB SB].
+      case dtB0: tc_tree_aux => [DB0 SB0].
+      move=> [??]; subst.
+      have ? := HA _ _ _ _ C sA dtA; subst.
+      have ? := HB _ _ _ _ C sB dtB; subst.
+      have MP := more_precise_tc_tree_aux1 C dtB0.
+      by apply: more_precise_merge.
+  Qed.
 
 
   Lemma success_det_tree_next_alt {sP A sV1 sV2 ign}:
