@@ -43,6 +43,15 @@ Lemma expand_sigP {u sP sV A r s} :
 Proof.
 Admitted.
 
+Definition all_weak (sV:sigV):= [forall k : domf sV, sV.[valP k] == weak (sV.[valP k]) ].
+
+Lemma all_weak_sigP_empty {sV sP}:
+  all_weak sV -> sigP sP empty sV.
+Proof.
+  move=> /forallP/= H.
+  apply/forallP => /= k.
+  by case: fndP => //=.
+Qed.
 
 Lemma expand_det_tree {u sP sV sV' A r s ign d} : 
   check_program sP -> closed_in sV ->
@@ -351,16 +360,6 @@ Proof.
 Qed.
 
 Definition det_tree sP sV A := typ_func (tc_tree_aux sP sV A Func).
-
-Definition all_weak (sV:sigV):= [forall k : domf sV, sV.[valP k] == weak (sV.[valP k]) ].
-
-Lemma all_weak_sigP_empty {sV sP}:
-  all_weak sV -> sigP sP empty sV.
-Proof.
-  move=> /forallP/= H.
-  apply/forallP => /= k.
-  by case: fndP => //=.
-Qed.
 
 Lemma main {sP p t sV}:
   check_program sP -> 
