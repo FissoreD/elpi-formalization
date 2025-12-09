@@ -9,30 +9,7 @@ From det Require Import finmap.
 Require Import FunInd.
 Functional Scheme expand_ind := Induction for step Sort Prop.
 
-(* Definition sV_expand (S:sigV) Sexp:=
-  forall k, 
-    match lookup k Sexp with
-    | None => True
-    | Some Se =>
-      if lookup k S is Some S then incl Se S = ty_ok true
-      else forall (S':sigV), S' <> Sexp -> lookup k S' = None
-    end.
-
-Lemma sV_expand_refl {A}: sV_expand A A.
-Proof.
-  move=> //k.
-  case lookup => //= s.
-  rewrite incl_refl//.
-Qed. *)
-
 Open Scope fset_scope.
-
-(* Definition sigP (sP:sigT) (s: sigS) (sV: sigV) :=
-  [forall k : domf s,
-    let (S, b1) := check_tm sP empty_ctx s.[valP k] in
-    let SS := if b1 then S else weak S in
-    let SV := odflt SS (sV.[?val k]) in 
-    compat_type SS SV && incl SS SV]. *)
 
 Definition sigP (sP:sigT) (s: sigS) (sV: sigV) :=
   [forall k : domf sV,
@@ -44,29 +21,6 @@ Definition sigP (sP:sigT) (s: sigS) (sV: sigV) :=
     else
     SV == weak SV].
 
-(* Lemma sigP_MP {sP s N O}:
-  closed_in O -> sigP sP s N -> more_precise N O -> sigP sP s O.
-Proof.
-Print val.
-  move=> CO SP MP.
-  apply /forallP => /= H/=.
-  have:= forallP SP H.
-  case: H => /= k ks.
-  have kO := CO k.
-  have kN := closed_in_mp CO MP k.
-  rewrite (in_fnd kO)/= (in_fnd kN)/=.
-  have [CON INO] := in2_more_compat_type_more_precise MP kO kN.
-  case X: check_tm => [S []] /andP[CSN ISN]; apply/andP; split.
-  - apply: compat_type_trans CSN _; by rewrite compat_type_comm.
-  - apply: incl_trans ISN INO.
-  - apply: compat_type_trans CSN _; by rewrite compat_type_comm.
-  - apply: incl_trans ISN INO.
-Qed. *)
-
-
-(* Axiom step_sigP: forall u sP s sV A,
-  sigP sP s sV -> sigP sP (get_substS s (get_tree (step u s A))) sV. *)
-
 Lemma expand_det_tree {u sP sV sV' A r s ign d} : 
   check_program sP -> closed_in sV ->
     sigP sP (get_substS s A) sV ->
@@ -75,10 +29,7 @@ Lemma expand_det_tree {u sP sV sV' A r s ign d} :
         step u s A = r -> 
           exists S d', [/\ minD d d' = d',
             more_precise S sV'
-            (* sigP sP (get_substS s (get_tree r)) S  *)
-            (* true *)
             &
-          (* sV_expand sV' S /\ *)
             tc_tree_aux sP sV (get_tree r) d = (d', S)].
 Proof.
   move=> CkP.
