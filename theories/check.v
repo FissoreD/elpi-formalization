@@ -21,6 +21,29 @@ Definition sigP (sP:sigT) (s: sigS) (sV: sigV) :=
     else
     SV == weak SV].
 
+Lemma sigP_more_precise sP s N O:
+  closed_in O -> more_precise N O -> sigP sP s N -> sigP sP s O.
+Proof.
+  move=> MP.
+Admitted.
+
+Lemma sigP_next_alt {sP sV A B s}:
+  closed_in sV ->
+    sigP sP (get_substS s A) sV ->
+        next_alt false A = Some B -> 
+           sigP sP (get_substS s B) sV.
+Admitted.
+
+
+Lemma expand_sigP {u sP sV A r s} : 
+  closed_in sV ->
+    sigP sP (get_substS s A) sV ->
+        step u s A = r -> 
+           sigP sP (get_substS s (get_tree r)) sV.
+Proof.
+Admitted.
+
+
 Lemma expand_det_tree {u sP sV sV' A r s ign d} : 
   check_program sP -> closed_in sV ->
     sigP sP (get_substS s A) sV ->
@@ -237,7 +260,6 @@ Proof.
     case dtB: (tc_tree_aux _ _ B) => /=[DB sVB]//=.
     move=> SP [??]; subst.
     have ? := success_det_tree_same_ctx H sA dtA; subst.
-    (* have:= HL _ _ _ _ _ H _ dtA eA. *)
     case eB: step => //=[B'|B'|B'|B']; rewrite success_is_ko//?success_cut//;
     case dtA': tc_tree_aux => [DA2 sVA'];
     case dtB': tc_tree_aux => [DB2 sVB'];
@@ -280,13 +302,12 @@ Proof.
 Admitted.
 
 Definition is_det s A := forall u s' B n,
-  runb u s A s' B n -> next_alt false B = None.
+  runb u s A (Some s') B n -> next_alt false B = None.
 
 Lemma run_is_det {sP sV sV' s A}: 
   check_program sP -> 
   closed_in sV ->
     sigP sP (get_substS s A) sV ->
-    (* sigma2ctx sP s = sV -> *)
     tc_tree_aux sP sV A Func = (Func, sV') ->
      forall u s' B n,
       runb u s A (Some s') B n -> next_alt false B = None /\ 
@@ -298,36 +319,61 @@ Proof.
   elim: H s' Hs' sV sV'; clear -ckP => //=.
   - move=> s1 s2 A B sA <-{s2} <-{B} s' [<-]{s'} sV sV' H1 SP H2.
     have /=-> := success_det_tree_next_alt sA H2.
-    split => //=.
-    admit.
-  - move=> s1 s2 r A B n eA _ IH s' ? sV sV' H1 SP dtA; subst.
-    apply: IH erefl _ _ H1 _ _ .
-    admit.
-    admit.
-  - move=> s1 s2 r A B n eA _ IH s' ? sV sV' H1 SP dtA; subst.
-    (* apply: IH erefl _ _ _ _ _. *)
-    admit.
+    by have ? := success_det_tree_same_ctx H1 sA H2; subst.
+  - move=> s1 s2 r A B n eA R IH s' ? sV sV' H1 SP dtA; subst.
+    have [S[d'[/=m MP /=tcB]]] := expand_det_tree ckP H1 SP dtA eA; subst.
+    have [-> H] := IH _ erefl _ _ H1 (expand_sigP H1 SP eA) tcB.
+    split => //.
+    apply: sigP_more_precise (closed_in_mp H1 (more_precise_tc_tree_aux1 H1 dtA)) MP H.
+  - move=> s1 s2 r A B n eA R IH s' ? sV sV' H1 SP dtA; subst.
+    have [S[d'[/=m MP /=tcB]]] := expand_det_tree ckP H1 SP dtA eA; subst.
+    have [-> H] := IH _ erefl _ _ H1 (expand_sigP H1 SP eA) tcB.
+    split => //.
+    apply: sigP_more_precise (closed_in_mp H1 (more_precise_tc_tree_aux1 H1 dtA)) MP H.
   - move=> s1 s2 A B r n fA nA _ IH s ? sV sV' C SP TC; subst.
     have := failed_det_tree_next_alt C TC nA.
-    move => [[]// [N [? [X _]]]]//.
-    have:= IH _ erefl _ _ C _ X.
-    admit.
-Admitted.
+    move => [[]// [N [? [X MP]]]]//.
+    have [-> H]:= IH _ erefl _ _ C (sigP_next_alt C SP nA) X.
+    split => //=.
+    apply: sigP_more_precise (closed_in_mp C (more_precise_tc_tree_aux1 C TC)) MP H.
+Qed.
+
+Lemma run_is_detP1 {sP sV sV' s A}: 
+  check_program sP -> 
+  closed_in sV ->
+    sigP sP (get_substS s A) sV ->
+    tc_tree_aux sP sV A Func = (Func, sV') ->
+     forall u s' B n,
+      runb u s A (Some s') B n -> next_alt false B = None.
+Proof.
+  move=> CkP C S TC u s' B n R.
+  by have [] := run_is_det CkP C S TC _ _ _ _ R.
+Qed.
 
 Definition det_tree sP sV A := typ_func (tc_tree_aux sP sV A Func).
 
+Definition all_weak (sV:sigV):= [forall k : domf sV, sV.[valP k] == weak (sV.[valP k]) ].
+
+Lemma all_weak_sigP_empty {sV sP}:
+  all_weak sV -> sigP sP empty sV.
+Proof.
+  move=> /forallP/= H.
+  apply/forallP => /= k.
+  by case: fndP => //=.
+Qed.
+
 Lemma main {sP p t sV}:
   check_program sP -> 
-    closed_in sV ->
+    closed_in sV ->  all_weak sV ->
       det_tree sP sV (CallS p t) -> 
         is_det empty ((CallS p t)).
 Proof.
   rewrite /det_tree/is_det.
-  move=> /= CP CV.
+  move=> /= CP CV F.
   case C: check_callable => [[] S]//= _.
   move=> u s' B n H.
-  apply: run_is_det H; eauto.
-  by rewrite/=C.
+  apply: run_is_detP1 CP CV _ _  _ _ _ _ H; last rewrite/=C//.
+  by apply: all_weak_sigP_empty.
 Qed.
 
 Print Assumptions  main.
@@ -341,22 +387,19 @@ Module elpi.
 
   Lemma elpi_is_det {sP p c ign sV}: 
     check_program sP -> 
-    closed_in sV ->
+    closed_in sV -> all_weak sV ->
       check_callable sP sV c Func = (Func, ign) -> 
       is_det ((call p c):::nilC).
   Proof.
-    move=> CkP CV C u s' a'.
+    move=> CkP CV F C u s' a'.
     move=> /elpi_to_tree /(_ _ (CallS p c))/=.
     move=> /(_ _ isT erefl) [t1'[n [H3]]].
     have /= := run_is_det CkP CV.
     move => /(_ _ _ (CallS p c))/=.
-    rewrite C => /(_ _ _ erefl).
-    rewrite /check.is_det/=.
-    move=> /(_ _ _ _ _ _ H3).
-    have:= valid_tree_run _ _ H3 => /(_ isT).
+    rewrite C => /(_ _ empty (all_weak_sigP_empty F) erefl _ _ _ _ H3).
     move=> [].
-      move=> ->.
-      rewrite t2l_dead//is_dead_dead//.
+    have:= valid_tree_run _ _ H3 => /(_ isT).
+    move=> []; first by move=> ->; rewrite t2l_dead//is_dead_dead//.
     move=> vt1' H.
     have ft1':= next_alt_None_failed H.
     have:= failed_next_alt_none_t2l vt1' ft1' H.
