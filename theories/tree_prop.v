@@ -630,5 +630,64 @@ Section RunP.
     next_alt false (big_and p r) = Some (big_and p r).
   Proof. elim: r p => //=x xs IH p; case: x => //=. Qed.
 
+  Lemma is_ko_runb {s A}: is_ko A -> runb u s A None (dead A) 0.
+  Proof.
+    elim: A s => //=.
+    - by move=> s _; apply: run_dead => //=.
+    - move=> s _; apply: run_dead => //=.
+    - move=> A HA s B HB s2 /andP[kA kB].
+      have {}HA := HA s2 kA.
+      have {}HB := HB s2 kB.
+      apply: run_dead; rewrite/=.
+        by rewrite !is_ko_failed//if_same.
+      by rewrite !is_ko_next_alt// !if_same.
+    - move=> A HA B0 HB0 B HB s kA.
+      have {HB}HA := HA s kA.
+      apply: run_dead => /=.
+        by rewrite is_ko_failed.
+      by rewrite (is_ko_next_alt _ kA)// is_ko_failed//=if_same.
+  Qed.
 
+  Lemma runb_success1 {A} s: 
+    success A -> runb u s A (Some (get_substS s A)) (build_na A (next_alt true A)) 0.
+  Proof.
+    move=> sA.
+    by apply: run_done.
+  Qed.
+
+  Lemma runb_success {A s1 s2 r n}: 
+    success A -> runb u s1 A s2 r n -> (s2 = Some (get_substS s1 A) /\ r = build_na A (next_alt true A) /\ n = 0)%type2.
+  Proof.
+    move=> sA H; have:= succes_is_solved s1 sA.
+    by inversion H; clear H; try congruence; subst; rewrite succes_is_solved//; rewrite failed_success in sA.
+  Qed.
+
+  Lemma run_consistent {s A s1 B s2 C n1 n2}:
+    runb u s A s1 B n1 -> runb u s A s2 C n2 -> ((s2 = s1) /\ (C = B) /\ (n2 = n1))%type2.
+  Proof.
+    move=> H; elim: H s2 C n2; clear.
+    + move=> s1 _ A _ sA <-<- s3 C n2 H; subst.
+      by apply: runb_success sA H.
+    + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
+      inversion H; clear H; try congruence; subst.
+      - by rewrite succes_is_solved in HA.
+      - move: H0; rewrite HA => -[?]; subst.
+        by rewrite !(IH _ _ _ X).
+      - by rewrite failed_expand in HA.
+      - by rewrite failed_expand in HA.
+    + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
+      inversion H; clear H; try congruence; subst.
+      - by rewrite succes_is_solved in HA.
+      - move: H0; rewrite HA => -[?]; subst; by rewrite !(IH _ _ _ X)//.
+      - by rewrite failed_expand in HA.
+      - by rewrite failed_expand in HA.
+    + move=> s1 s2 A B r n1 fA nB rB IH s3 C n2 H.
+      inversion H; clear H; try congruence; subst; try by rewrite failed_expand in H0.
+        by rewrite success_failed in fA.
+      move: H1; rewrite nB => -[?]; subst.
+      by apply: IH.
+    + move=> s1 A fA nA s2 C n2 H.
+      inversion H; subst; try congruence; try rewrite //failed_expand// in H0.
+      by rewrite success_failed in fA.
+  Qed.
 End RunP.

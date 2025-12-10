@@ -5,66 +5,6 @@ From det Require Import zify_ssreflect.
 Section s.
   Variable u : Unif.
 
-  Lemma runb_success1 {A} s: 
-    success A -> runb u s A (Some (get_substS s A)) (build_na A (next_alt true A)) 0.
-  Proof.
-    move=> sA.
-    by apply: run_done.
-  Qed.
-
-  Lemma runb_success {A s1 s2 r n}: 
-    success A -> runb u s1 A s2 r n -> (s2 = Some (get_substS s1 A) /\ r = build_na A (next_alt true A) /\ n = 0)%type2.
-  Proof.
-    move=> sA H; have:= succes_is_solved u s1 sA.
-    by inversion H; clear H; try congruence; subst; rewrite succes_is_solved//; rewrite failed_success in sA.
-  Qed.
-
-  Lemma run_consistent {s A s1 B s2 C n1 n2}:
-    runb u s A s1 B n1 -> runb u s A s2 C n2 -> ((s2 = s1) /\ (C = B) /\ (n2 = n1))%type2.
-  Proof.
-    move=> H; elim: H s2 C n2; clear.
-    + move=> s1 _ A _ sA <-<- s3 C n2 H; subst.
-      by apply: runb_success sA H.
-    + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
-      inversion H; clear H; try congruence; subst.
-      - by rewrite succes_is_solved in HA.
-      - move: H0; rewrite HA => -[?]; subst.
-        by rewrite !(IH _ _ _ X).
-      - by rewrite failed_expand in HA.
-      - by rewrite failed_expand in HA.
-    + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
-      inversion H; clear H; try congruence; subst.
-      - by rewrite succes_is_solved in HA.
-      - move: H0; rewrite HA => -[?]; subst; by rewrite !(IH _ _ _ X)//.
-      - by rewrite failed_expand in HA.
-      - by rewrite failed_expand in HA.
-    + move=> s1 s2 A B r n1 fA nB rB IH s3 C n2 H.
-      inversion H; clear H; try congruence; subst; try by rewrite failed_expand in H0.
-        by rewrite success_failed in fA.
-      move: H1; rewrite nB => -[?]; subst.
-      by apply: IH.
-    + move=> s1 A fA nA s2 C n2 H.
-      inversion H; subst; try congruence; try rewrite //failed_expand// in H0.
-      by rewrite success_failed in fA.
-  Qed.
-
-  Lemma is_ko_runb {s A}: is_ko A -> runb u s A None (dead A) 0.
-  Proof.
-    elim: A s => //=.
-    - by move=> s _; apply: run_dead => //=.
-    - move=> s _; apply: run_dead => //=.
-    - move=> A HA s B HB s2 /andP[kA kB].
-      have {}HA := HA s2 kA.
-      have {}HB := HB s2 kB.
-      apply: run_dead; rewrite/=.
-        by rewrite !is_ko_failed//if_same.
-      by rewrite !is_ko_next_alt// !if_same.
-    - move=> A HA B0 HB0 B HB s kA.
-      have {HB}HA := HA s kA.
-      apply: run_dead => /=.
-        by rewrite is_ko_failed.
-      by rewrite (is_ko_next_alt _ kA)// is_ko_failed//=if_same.
-  Qed.
 
   Lemma runb_or0 {s1 A s B s2 r b}:
     runb u s1 (Or A s B) s2 r b -> b = 0.
@@ -564,10 +504,10 @@ Section s.
             apply: run_cut X H1.
           by rewrite next_alt_cutr/= cutr2 if_same dead_cutr.
         rewrite (step_not_dead _ dA1 X) => -[Hz [H1 H2]].
-        by have [] := run_consistent H2 (is_ko_runb is_ko_cutr).
+        by have [] := run_consistent _ H2 (is_ko_runb _ is_ko_cutr).
       move=> [H1[H2[H3 H4]]]; subst.
       move: H2; case:eqP => H; subst.
-        move=>[n2]/(run_consistent (is_ko_runb is_ko_cutr)) [?[??]]; subst.
+        move=>[n2]/(run_consistent _ (is_ko_runb _ is_ko_cutr)) [?[??]]; subst.
         rewrite dead2 dead_cutr.
         repeat eexists; eauto.
           apply: run_cut X H1.
@@ -841,13 +781,13 @@ Section s.
       have [[??]sC]:= expand_solved_same _ X; subst.
       have sC' := sC.
         rewrite -success_cut in sC'.
-      have {IH} [?[??]] := run_consistent _ IH (runb_success1 _ _ sC'); subst.
+      have {IH} [?[??]] := run_consistent _ _ IH (runb_success1 _ _ sC'); subst.
       rewrite ges_subst_cutl in H2.
       case: H2 => H2.
         by repeat eexists; left; apply: run_cut Y H2.
       move: H2 => [sm H2].
       case sD: (success (cutl D)).
-        have [?[??]] := run_consistent _ H2 (runb_success1 _ _ sD); subst.
+        have [?[??]] := run_consistent _ _ H2 (runb_success1 _ _ sD); subst.
         repeat eexists; right.
         rewrite success_cut in sD.
         rewrite ges_subst_cutl.
@@ -866,7 +806,7 @@ Section s.
       do 3 eexists; split.
         apply: run_done X erefl.
       have [[??]sC]:= expand_solved_same _ X; subst.
-      have {IH} [?[??]] := run_consistent _ IH (runb_success1 _ _ sC); subst.
+      have {IH} [?[??]] := run_consistent _ _ IH (runb_success1 _ _ sC); subst.
       case: H2 => H2.
         repeat eexists; left; apply: run_step Y H2.
       by repeat eexists; eauto.
