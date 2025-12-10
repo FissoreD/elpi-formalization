@@ -251,7 +251,7 @@ Lemma check_callable_main {u sP O N D s pr t d0 d1 dB N' sr1 r1 rs}:
     check_callable sP O t d0 = (D, N) ->
       F u pr t s = (sr1, r1) :: rs ->
         tc_tree_aux sP O (big_or_aux pr (premises r1) rs) d1 = (dB, N') ->
-          (minD (maxD d0 D) d1 = d1 -> minD (maxD d0 D) dB = dB) /\
+          (minD (maxD d0 D) d1 = d1 -> minD (maxD d0 D) (maxD d1 dB) = (maxD d1 dB)) /\
           more_precise N' N
     .
 Proof.
@@ -279,23 +279,53 @@ Proof.
 
 Admitted.
 
+(* Lemma step_Exp_det sP B N sVA':
+  (* check_program sP -> closed_in O -> mutual_exclusion ->
+    sigP sP s O -> *)
+      tc_tree_aux sP sVA' B Pred = (Func, N) ->
+        has_cut B.
+Proof.
+  elim: B N sVA' => //=.
+  - by move=> ????; case: check_callable.
+  - move=> A HA s B HB N sVA'; case: ifP => //=kA.
+      move=> /HB.
+      apply: HB. *)
+
+
+
 Lemma step_Exp_det u sP O s B B' N N' sVA' P:
   check_program sP -> closed_in O -> mutual_exclusion ->
   sigP sP s O ->
-  tc_tree_aux sP sVA' B Pred = (Func, N) ->
     step u s B = Expanded B' ->
+  tc_tree_aux sP sVA' B Pred = (Func, N) ->
        tc_tree_aux sP sVA' B' Pred = (P, N') ->
         P = Func.
+Proof.
+  (* move=> CkP + ME.
+  elim: B O s B' N N' sVA' P => //=.
+  - move=> p c O s B N N' sVA' P CO SP [<-]{B}.
+    case C: check_callable => []//.
+  - move=> A HA s B HB O s1 B1 N N' sVA' P CO SP.
+    case:(ifP (is_dead _)) => dA.
+      rewrite is_dead_is_ko//=.
+      case E: step => [B'|B'|B'|B']//= [<-]{B1}/=; rewrite is_dead_is_ko//=.
+        apply: HB E; [apply: CO|].
+        admit.
+      
+      apply: HB .
+      apply: HB E.
+      case *)
 Admitted.
+Search tc_tree_aux has_cut.
 
 
 Lemma expand_det_tree {u sP O N A r s d0 d1 dA dB N'} : 
   check_program sP -> closed_in O -> mutual_exclusion ->
     sigP sP s O ->
+      step u s A = r -> 
       tc_tree_aux sP O A d0 = (dA, N) ->
-        step u s A = r -> 
-          will_succeed (get_tree r) ->
             tc_tree_aux sP O (get_tree r) d1 = (dB, N') ->
+        will_succeed (get_tree r) ->
           [/\ (minD dA d1 = d1 -> minD dA dB = dB) & more_precise N' N].
 Proof.
   rewrite/will_succeed.
@@ -303,91 +333,105 @@ Proof.
   move: O N N' r dA dB d0 d1.
   pattern u, s, A, (step u s A).
   apply: expand_ind; clear -CkP ME.
-  - by move=> s []//= _ O N N' r dA dB d0 d1 C SP [??] ?; subst=>/=; repeat eexists.
-  - by move=> s []//= _ O N N' r dA dB d0 d1 C SP [??] <-/= _ [??]; subst=>/=; repeat eexists.
-  - by move=> s []//= _ O N N' r dA dB d0 d1 C SP [??] ?; subst=>/=; repeat eexists; rewrite ?minD_refl//.
+  - by move=> s []//= _ O N N' r dA dB d0 d1 C SP <- [??] [??]; subst=>/=; repeat eexists.
+  - by move=> s []//= _ O N N' r dA dB d0 d1 C SP <- [??] [??]; subst=>/=; repeat eexists.
+  - by move=> s []//= _ O N N' r dA dB d0 d1 C SP <- [??] [??]; subst=>/=; repeat eexists.
   - (*here the checker comes into the game*)
-    move=> /=s A pr t HA O N N' _ dA dB d0 d1 C SP + <-/=.
+    move=> /=s A pr t HA O N N' _ dA dB d0 d1 C SP <-/=.
     {
       case CC: check_callable => [D B] [??]; subst.
       rewrite/big_or/=.
-      case X: F => [|[sr1 r1] rs]//= _.
-      by apply: check_callable_main X.
+      case X: F => [|[sr1 r1] rs]//= + _.
+      case T: tc_tree_aux => [D1 S1] [??]; subst.
+      by apply: check_callable_main X T.
     }
-  - move=> s []//= _ O N N' r dA dB d0 d1 C SP [??] <-/= _ [??] ; subst=>/=; repeat eexists => //=.
-  - move=> s INIT A sB B HINIT deadA IH O N N' r dA dB d0 d1 CO /=.
-    rewrite is_dead_is_ko//=?deadA => SP.
-    move=> tcA <-/=.
+  - move=> s []//= _ O N N' r dA dB d0 d1 C SP <- [??][??]; subst=>/=; repeat eexists => //=.
+  - move=> /= s INIT A sB B HINIT deadA IH O N N' r dA dB d0 d1 CO + <-/=.
+    rewrite (is_dead_is_ko deadA) //=?deadA => SP.
+    case tcB: tc_tree_aux => [D S] [??]; subst.
     rewrite get_tree_Or /= is_dead_is_ko//= ?dA.
-    apply: IH; eauto.
-    admit.
-  - move=> s INIT A sB B HINIT deadA IH A' eA O N N' r dA dB d0 d1 CO/= ++ <-/={r}.
+    case tcB': tc_tree_aux => [D1 S1] [??] kO; subst.
+    have HH : sigP sP sB O by admit.
+    subst.
+    have [m MP] := IH _ _ _ _ _ _ _ _ CO HH erefl tcB tcB' kO.
+    split; last by [].
+    destruct d0, D, d1 => //.
+  - move=> s INIT A sB B HINIT deadA IH A' eA O N N' r dA dB d0 d1 CO + <-/=.
     rewrite ?(step_not_dead _ deadA eA) ?deadA => SP.
     case: ifP => kA; first by rewrite is_ko_step in eA.
-    case: ifP => kB.
-      move=> dtA.
-      rewrite andbT => /[dup] kA' -> tcA'.
-      by have:= IH _ _ _ _ _ _ _ _ CO SP dtA eA kA' tcA'.
     have fA:= step_not_failed _ eA notF.
-    case dtA: (tc_tree_aux _ _ A) => /=[DA' sVA]//=.
+    case dtA: (tc_tree_aux _ _ A) => /=[DA sVA]//=.
     case dtB: (tc_tree_aux _ _ B) => /=[DB sVB]//=.
     rewrite (expand_Exp_has_cut eA).
+    case: ifP => kB.
+      move=> [??]; subst.
+      move: dtB; rewrite !(is_ko_tc_tree_aux kB) => -[??]; subst.
+      rewrite andbT => /=+kA'; rewrite kA'.
+      case dtA': tc_tree_aux => [DA' sVA'][??]; subst.
+      have [m H] := IH _ _ _ _ _ _ _ _ CO SP eA dtA dtA' kA'.
+      split; last by [].
+      by destruct DB, DA, d1 => //.
     case kA' : (is_ko A').
       rewrite failed_has_cut?is_ko_failed//=.
-      move=> [??] _ dtB'; subst.
+      move=> [??]; subst.
+      case dtB': (tc_tree_aux _ _ B) => /=[DB' sVB']//=[??]; subst.
       repeat eexists.
       have ? := more_precise_tc_tree_aux1 CO dtB.
       have [? _] := tc_tree_aux_func2 dtB dtB'; subst.
       have ? := more_precise_tc_tree_aux1 CO dtA.
       by apply: more_precise_mergeR.
-    move=> [??] _; subst.
+    move=> [??] + _; subst.
     case dtA2: (tc_tree_aux _ _ A') => [DA2 sVA2].
     case dtB1: (tc_tree_aux _ _ B) => [DB2 sVB2].
     move=> [??]; subst.
-    have /=[H1 MP] := IH _ _ _ _ _ _ _ _ CO SP dtA eA kA' dtA2.
-    have /=[? ] := tc_tree_aux_func2 dtB dtB1; subst.
+    have /=[H1 MP] := IH _ _ _ _ _ _ _ _ CO SP eA dtA dtA2 kA'.
+    have /=[? H] := tc_tree_aux_func2 dtB dtB1; subst.
     split.
       case: ifP => cA/=; last by [].
-      destruct DA', DB => //=?; subst.
-      have {H1}/=? := H1 erefl; subst.
-      destruct d0 => //=; congruence.
+      by destruct DA, DB, d1, DA2, DB2, d0 => //; try congruence.
     by apply: more_precise_merge2 (CO) _ _ MP (more_precise_refl _);
     apply: more_precise_tc_tree_aux1; eauto.
-  - move=> s INIT A sB B HINIT deadA IH A' eA O N N' r dA dB d0 d1 CO/= ++ <-{r}/=.
+  - move=> s INIT A sB B HINIT deadA IH A' eA O N N' r dA dB d0 d1 CO + <-/=.
     rewrite ?deadA/= ?(step_not_dead _ deadA eA) => SP.
     case: ifP => kA; first by rewrite is_ko_step in eA.
     have kA' := (expand_CB_is_ko eA).
     rewrite kA' is_ko_cutr.
-    case: ifP => kB.
-      move=> dtA /= _ tcA'.
-      by apply: IH eA _ _; eauto.
     have fA:= step_not_failed _ eA notF.
-    case dtA: (tc_tree_aux _ _ A) => /=[DA' sVA]//=.
+    case dtA: (tc_tree_aux _ _ A) => /=[DA sVA]//=.
+    case dtA': (tc_tree_aux _ _ A') => [DA' sVA'] + [??] _; subst.
+    case: ifP => kB.
+      move=> [??]; subst.
+      have /=[H1 MP] := IH _ _ _ _ _ _ _ _ CO SP eA dtA dtA' kA'.
+      split; last by [].
+      by destruct d0, DA, d1 => //.
     case dtB: (tc_tree_aux _ _ B) => /=[DB sVB]//=.
-    move=> [??]; subst => /= _ dtA'.
-    have /=[H MP] := IH _ _ _ _ _ _ _ _ CO SP dtA eA kA' dtA'.
-    split.
-      case:ifP => cA/=; last by [].
-      by destruct DA', DB, d1, dB.
+    have /=[H MP] := IH _ _ _ _ _ _ _ _ CO SP eA dtA dtA' kA'.
+    case:ifP => //cA[??]; subst.
+      split; first by by destruct d0, DA, DB, d1 => //=.
+      rewrite merge_comm.
+      apply: more_precise_mergeR (CO) _ _ MP;
+      apply: more_precise_tc_tree_aux1; eauto.
+    split => //.
     rewrite merge_comm.
-    by apply: more_precise_mergeR (CO) _ _ MP;
-    apply: more_precise_tc_tree_aux1; eauto.
-  - move=> s INIT A sB B HINIT deadA IH A' eA O N N' r dA dB d0 d1 CO/= ++ <-{r}/=.
+    apply: more_precise_mergeR (CO) _ _ MP;
+    apply: more_precise_tc_tree_aux1; eauto.    
+  - move=> s INIT A sB B HINIT deadA IH A' eA O N N' r dA dB d0 d1 CO + <-/=.
     rewrite ?deadA/= ?(step_not_dead _ deadA eA) => SP.
     have [? fA] := expand_failed_same _ eA; subst A'.
-    case: ifP => kA.
-      move=> dtB /= kB tcB.
-      have [? M] := tc_tree_aux_func2 dtB tcB; subst.
-      split => //=; destruct d1, dA, dB, d0 => //=; congruence.
-    case: ifP => kB; first by move=> dtA1 _; apply: IH eA _; eauto.
     case dtA1: (tc_tree_aux _ _ A) => /=[DA1 sVA1]//=.
     case dtA2: (tc_tree_aux _ _ A) => /=[DA2 sVA2]//=.
     have [? HA] := tc_tree_aux_func2 dtA1 dtA2; subst.
     case dtB1: (tc_tree_aux _ _ B) => /=[DB1 sVB1]//=.
     case dtB2: (tc_tree_aux _ _ B) => /=[DB2 sVB2]//=.
+    case: ifP => kA.
+      move=> [??][??]/= kB; subst.
+      have [? M] := tc_tree_aux_func2 dtB1 dtB2; subst.
+      split; last by []; destruct d0, DB1, d1, DB2 => //=; congruence.
+    case: ifP => kB [??][??] _; subst.
+      split; last by []; destruct d0, DA1, d1, DA2 => //=; congruence.
     have [? HB] := tc_tree_aux_func2 dtB1 dtB2; subst.
     by rewrite failed_has_cut//= => -[??] _ [??]; subst.
-  - move=> s INIT A sB B HINIT deadA IH A' eA O N N' r dA dB d0 d1 CO/= ++ <-{r}/=.
+  - move=> s INIT A sB B HINIT deadA IH A' eA O N N' r dA dB d0 d1 CO + <-/=.
     rewrite ?deadA/= ?(step_not_dead _ deadA eA) => SP.
     have [? sA]:= expand_solved_same _ eA; subst A'.
     rewrite success_is_ko//=.
@@ -396,71 +440,76 @@ Proof.
     case dtA': (tc_tree_aux _ _ A) => /=[DA2 sVA2]//=.
     have [? HA] := tc_tree_aux_func2 dtA dtA'; subst.
     case dtB: (tc_tree_aux _ _ B) => /=[DB1 sVB1]//=.
-    case dtB': (tc_tree_aux _ _ B) => /=[DB2 sVB2]//= + _.
+    case dtB': (tc_tree_aux _ _ B) => /=[DB2 sVB2]//= ++ _.
     have [? HB] := tc_tree_aux_func2 dtB dtB'; subst.
-    have /=[H MP] := IH _ _ _ _ _ _ _ _ CO SP dtA eA (success_is_ko sA) dtA'.
-    by case:ifP => kB [??][??]; subst; repeat split.
-  - move=> s INIT A B0 B HINIT IH A' eA O N N' r dA dB d0 d1 CO/= ++ <-{r}/=.
+    have /=[H MP] := IH _ _ _ _ _ _ _ _ CO SP eA dtA dtA' (success_is_ko sA).
+    case:ifP => kB [??] [??]; subst; split => //=.
+    by destruct d0, DA1, d1 => //.
+  - move=> s INIT A B0 B HINIT IH A' eA O N N' r dA dB d0 d1 CO + <-/=.
     have fA:= step_not_failed _ eA notF.
     have sA:= expand_not_solved_not_success _ eA notF.
     rewrite failed_is_ko//=?sA => SP.
     case dtA: (tc_tree_aux _ _ A) => /=[DA1 sVA1]//=.
     case dtB0: (tc_tree_aux _ _ B0) => /=[DB01 sVB01]//=.
-    case dtB: (tc_tree_aux _ _ B) => /=[DB1 sVB1]//=[??] kA'; subst.
+    case dtB: (tc_tree_aux _ _ B) => /=[DB1 sVB1]//=[??] + kA'; subst.
     rewrite kA'.
     case dtA': (tc_tree_aux _ _ A') => /=[DA1' sVA1']//=.
     case dtB' : tc_tree_aux => [ddB sB].
     case dtB0' : tc_tree_aux => [ddB0 sB0].
-    have {IH}[H MP] := IH _ _ _ _ _ _ _ _ CO SP dtA eA kA' dtA'.
+    have {IH}[H MP] := IH _ _ _ _ _ _ _ _ CO SP eA dtA dtA' kA'.
     have MP0 := (more_precise_tc_tree_aux1 CO dtA).
     have CA: closed_in sVA1 by apply: closed_in_mp (CO) MP0.
     have [MP1 H1] := more_precise_tc_tree_aux CA dtB dtB' MP.
     have [MP2 H2] := more_precise_tc_tree_aux CA dtB0 dtB0' MP.
-    (case: ifP => sA'; first (case nA': next_alt => [v|])) => -[??]; subst; split.
-      destruct DB01, DB1 => //=?; subst.
-      rewrite minD_comm in H.
-      have {}H := H erefl.
-      rewrite -(H1 H) -(H2 H)//.
-    apply: more_precise_merge2 => //; apply: more_precise_trans MP0;
-    apply: more_precise_tc_tree_aux1; eauto.
-      destruct DB01, DB1, dB, DA1 => //=?; subst; auto.
-        rewrite merge_comm.
-      apply: more_precise_mergeR (CA) _ _ MP1;
+    case:ifP => //= sA'; first (case nA': next_alt => [v|]); [|move=> [??]; subst..].
+    - case: ifP => kB [??]; subst.
+      - move: dtB; rewrite is_ko_tc_tree_aux// => -[??]; subst.
+        split; first by destruct DB01, DB1 => //=?; subst; auto.
+        apply: more_precise_mergeR (CA) _ _ MP2 => //.
+        apply: more_precise_tc_tree_aux1; eauto.
+      - split; first by destruct DB01, DB1, d1, ddB0, ddB, DA1, d0 => //=; auto.
+        apply: more_precise_merge2 => //; apply: more_precise_trans MP0;
+        apply: more_precise_tc_tree_aux1; eauto.
+    - split; first by destruct DB01, DB1, d1, ddB0, DA1, d0 => //=; auto.
+      rewrite merge_comm.
+      apply: more_precise_mergeR (CA) _ _ MP1 => //;
       apply: more_precise_tc_tree_aux1; eauto.
-    destruct DB01, DB1, DA1, d1, ddB0, ddB => //=?; subst; auto.
-    apply: more_precise_merge2 => //; apply: more_precise_trans MP0;
-    apply: more_precise_tc_tree_aux1; eauto.
-  - move=> s INIT A B0 B HINIT IH A' eA O N N' r dA dB d0 d1 CO/= ++ <-{r}/=.
+    - split; first by destruct DB01, DB1, d1, ddB0, DA1, d0 => //=; auto.
+      apply: more_precise_merge2 => //; apply: more_precise_trans MP0;
+      apply: more_precise_tc_tree_aux1; eauto.
+  - move=> s INIT A B0 B HINIT IH A' eA O N N' r dA dB d0 d1 CO + <-/=.
     have fA:= step_not_failed _ eA notF.
     have sA:= expand_not_solved_not_success _ eA notF.
     rewrite failed_is_ko//=?sA => SP.
     case dtA: (tc_tree_aux _ _ A) => /=[DA1 sVA1]//=.
     case dtB0: (tc_tree_aux _ _ B0) => /=[DB01 sVB01]//=.
-    case dtB: (tc_tree_aux _ _ B) => /=[DB1 sVB1]//=[??] kA'; subst.
-    rewrite kA'.
+    case dtB: (tc_tree_aux _ _ B) => /=[DB1 sVB1]//=[??] + kA'; subst.
     case dtA': (tc_tree_aux _ _ A') => /=[DA1' sVA1']//=.
     case dtB' : tc_tree_aux => [ddB sB].
     case dtB0' : tc_tree_aux => [ddB0 sB0].
-    have {IH}[H MP] := IH _ _ _ _ _ _ _ _ CO SP dtA eA kA' dtA'.
+    have {IH}[H MP] := IH _ _ _ _ _ _ _ _ CO SP eA dtA dtA' kA'.
     have MP0 := (more_precise_tc_tree_aux1 CO dtA).
     have CA: closed_in sVA1 by apply: closed_in_mp (CO) MP0.
     have [MP1 H1] := more_precise_tc_tree_aux CA dtB dtB' MP.
     have [MP2 H2] := more_precise_tc_tree_aux CA dtB0 dtB0' MP.
-    (case: ifP => sA'; first (case nA': next_alt => [v|])) => -[??]; subst; split.
-      destruct DB01, DB1 => //=?; subst.
-      rewrite minD_comm in H.
-      have {}H := H erefl.
-      rewrite -(H1 H) -(H2 H)//.
-    apply: more_precise_merge2 => //; apply: more_precise_trans MP0;
-    apply: more_precise_tc_tree_aux1; eauto.
-      destruct DB01, DB1, dB, DA1 => //=?; subst; auto.
-        rewrite merge_comm.
-      apply: more_precise_mergeR (CA) _ _ MP1;
+    rewrite kA'.
+    (case: ifP => sA'; first (case nA': next_alt => [v|])); [|move=> [??]; subst..].
+    - case: ifP => kB [??]; subst.
+      - move: dtB; rewrite is_ko_tc_tree_aux// => -[??]; subst.
+        split; first by destruct DB01, DB1 => //=?; subst; auto.
+        apply: more_precise_mergeR (CA) _ _ MP2 => //.
+        apply: more_precise_tc_tree_aux1; eauto.
+      - split; first by destruct DB01, DB1, d1, ddB0, ddB, DA1, d0 => //=; auto.
+        apply: more_precise_merge2 => //; apply: more_precise_trans MP0;
+        apply: more_precise_tc_tree_aux1; eauto.
+    - split; first by destruct DB01, DB1, d1, ddB0, DA1, d0 => //=; auto.
+      rewrite merge_comm.
+      apply: more_precise_mergeR (CA) _ _ MP1 => //;
       apply: more_precise_tc_tree_aux1; eauto.
-    destruct DB01, DB1, DA1, d1, ddB0, ddB => //=?; subst; auto.
-    apply: more_precise_merge2 => //; apply: more_precise_trans MP0;
-    apply: more_precise_tc_tree_aux1; eauto.
-  - move=> s INIT A B0 B HINIT IH A' eA O N N' r dA dB d0 d1 CO/= ++ <-{r}/=.
+    - split; first by destruct DB01, DB1, d1, ddB0, DA1, d0 => //=; auto.
+      apply: more_precise_merge2 => //; apply: more_precise_trans MP0;
+      apply: more_precise_tc_tree_aux1; eauto.
+  - move=> s INIT A B0 B HINIT IH A' eA  O N N' r dA dB d0 d1 CO + <-/=.
     have [? fA]:= expand_failed_same _ eA; subst A'.
     rewrite ?failed_success//= => SP.
     case:ifP => kA.
@@ -470,8 +519,8 @@ Proof.
     case dtB: (tc_tree_aux _ _ B) => /=[DB sVB]//=[??]; subst.
     case dtA': (tc_tree_aux _ _ A) => /=[DA1 sVA1].
     case dtB': (tc_tree_aux _ _ B) => /=[DB1 sVB1].
-    case dtB0': (tc_tree_aux _ _ B0) => /=[DB01 sVB01] _ [??]; subst.
-    have {IH}[H MP] := IH _ _ _ _ _ _ _ _ CO SP dtA eA kA dtA'.
+    case dtB0': (tc_tree_aux _ _ B0) => /=[DB01 sVB01] [??] _; subst.
+    have {IH}[H MP] := IH _ _ _ _ _ _ _ _ CO SP eA dtA dtA' kA.
     have MP0 := (more_precise_tc_tree_aux1 CO dtA).
     have CA: closed_in sVA by apply: closed_in_mp (CO) MP0.
     have [MP1 H1] := more_precise_tc_tree_aux CA dtB dtB' MP.
@@ -483,7 +532,7 @@ Proof.
       rewrite -(H1 H) -(H2 H)//.
     apply: more_precise_merge2 => //; apply: more_precise_trans MP0;
     apply: more_precise_tc_tree_aux1; eauto.
-  - move=> s INIT A B0 B HINIT HL A' eA HR O N N' r dA dB d0 d1 CO/= ++ <-{r}/=.
+  - move=> s INIT A B0 B HINIT HL A' eA HR  O N N' r dA dB d0 d1 CO + <-/=.
     have [? sA] := expand_solved_same _ eA; subst A'.
     rewrite success_is_ko//=.
     rewrite ?sA.
@@ -492,18 +541,18 @@ Proof.
     case dtB: (tc_tree_aux _ _ B) => /=[DB sVB]//=.
     move=> SP.
     have ? := success_det_tree_same_ctx CO sA dtA; subst sVA.
-    case eB: step => //=[B'|B'|B'|B']; rewrite success_is_ko//?success_cut//;
+    case eB: step => //=[B'|B'|B'|B'];
     case dtA': tc_tree_aux => [DA2 sVA'];
     case dtB': tc_tree_aux => [DB2 sVB'];
-    case dtB0': tc_tree_aux => [DB02 sVB0']; cycle 1; rewrite sA?nA;
+    case dtB0': tc_tree_aux => [DB02 sVB0'] ++ kA; rewrite kA?success_cut ?sA ?(step_is_ko _ eB notF); cycle 1;
     [|(have [? m]:= tc_tree_aux_func2 dtA dtA'); subst..].
-    - rewrite next_alt_cutl => /= + _ [??]; subst.
+    - rewrite next_alt_cutl => /= + [??]; subst.
       move: (dtA') (dtB0'); rewrite cutl_tc_tree_aux//=cutr_tc_tree_aux.
       move=> [??][??]; subst sVB0' DB02 sVA' DA2.
       have /= SP1 := expand_sigP CO SP eA.
-      have /=[H MP] := HR _ _ _ _ _ _ _ _ CO SP1 dtB eB (expand_CB_is_ko eB) dtB'.
+      have /=[H MP] := HR _ _ _ _ _ _ _ _ CO SP1 eB dtB dtB' (expand_CB_is_ko eB).
       case nA: next_alt => [v|][??]; subst; last by [].
-      split; first by destruct DB0, DB => //=?; subst.
+      split; first by destruct DB, DB0 => //=; auto.
       have MP2 := more_precise_tc_tree_aux1 CO dtB'.
       rewrite merge_comm.
       apply: more_precise_mergeR (CO) _ _ MP;
@@ -511,17 +560,21 @@ Proof.
     - have [? fB] := expand_failed_same _ eB; subst B'.
       have [? m1] := tc_tree_aux_func2 dtB dtB'; subst.
       have [? m2] := tc_tree_aux_func2 dtB0 dtB0'; subst.
-      case nA: next_alt => [v|][??] _ [??]; subst.
+      case nA: next_alt => [v|]; last first.
+        move=> [??] [??]; subst.
         repeat eexists; last by [].
-        destruct DB0, DB => //=?; subst.
-        by destruct DB02, DB2, DA', DA2, d0 => //=; congruence.
-      repeat eexists; last by [].
-      destruct dA, dB, d1 => //=?; subst.
-      destruct DA', DA2, d0; simpl in *; try congruence.
+        destruct dA, dB, d1 => //=?; subst.
+        destruct DA', DA2, d0; simpl in *; try congruence.
+      case: ifP => kB[??][??]; subst; split => //=.
+        destruct dA, dB, d1 => //=?; subst.
+        destruct DA', DA2, d0; simpl in *; try congruence.
+      destruct DB0, DB => //=?; subst.
+      by destruct DB02, DB2, DA', DA2, d0 => //=; congruence.
     - have [? sB] := expand_solved_same _ eB; subst B'.
       have [? m1] := tc_tree_aux_func2 dtB dtB'; subst sVB'.
       have [? m2] := tc_tree_aux_func2 dtB0 dtB0'; subst sVB0'.
-      case nA: next_alt => [v|][??] _ [??]; subst.
+      rewrite (step_is_ko _ eB notF).
+      case nA: next_alt => [v|][??][??]; subst.
         repeat eexists; last by [].
         destruct DB0, DB => //=?; subst.
         by destruct DB02, DB2, DA', DA2, d0 => //=; congruence.
@@ -530,32 +583,34 @@ Proof.
       destruct DA', DA2, d0; simpl in *; try congruence.
     - have [? m2]:= tc_tree_aux_func2 dtB0 dtB0'; subst sVB0'.
       have eA' := succes_is_solved u (get_substS s A) sA.
-      have/=[H MP] := HL _ _ _ _ _ _ _ _ CO SP dtA eA (success_is_ko sA) dtA'.
-      case kB': (is_ko B').
-        move: dtB'.
-        rewrite is_ko_tc_tree_aux// => -[??]; subst DB2 sVB'.
-        case nA: next_alt => [v|][??] _ [??]; subst.
-        (* split. *)
-          (* TODO: here *)
-          (* destruct DB0, DB => //=?; subst.
-          simpl in *; destruct DA2, DB02, DA', d0 => //=; auto; try congruence.
-            by have:= step_Exp_det CkP CO ME SP1 dtB eB dtB'.
-          by have:= step_Exp_det CkP CO ME SP1 dtB eB dtB'. *)
-
+      have/=[H MP] := HL _ _ _ _ _ _ _ _ CO SP eA dtA dtA' (success_is_ko sA).
+      case nA: next_alt => [v|][??]; subst; last first.
+        move=> [??]; subst.
+        case kB': (is_ko B').
+          move: dtB'; rewrite is_ko_tc_tree_aux//= => -[??]; subst.
+          split.
+            destruct dA, d1, dB, DA' => //=; simpl in *.
+            admit.
+          admit.
+        have /= SP1 := expand_sigP CO SP eA.
+        have {HR}/= [H1 MP2] := HR _ _ _ _ _ _ _ _ CO SP1 eB dtB dtB' kB'.
+        split; last by [].
+        destruct dA, d1, dB, d0, DA2, DA' => //=; simpl in *.
+          by have:= step_Exp_det CkP CO ME SP1 eB dtB dtB'.
+        by have:= step_Exp_det CkP CO ME SP1 eB dtB dtB'.
+      case: ifP => //= kB'[??]; subst.
+        move: dtB'; rewrite is_ko_tc_tree_aux//= => -[??]; subst.
+        split.
           admit.
         admit.
       have /= SP1 := expand_sigP CO SP eA.
-      have {HR}/= [H1 MP2] := HR _ _ _ _ _ _ _ _ CO SP1 dtB eB kB' dtB'.
-      case nA: next_alt => [v|][??] _ [??]; subst.
-        split.
-          destruct DB0, DB => //=?; subst.
-          simpl in *; destruct DA2, DB2, DB02, DA', d0 => //=; auto; try congruence.
-            by have:= step_Exp_det CkP CO ME SP1 dtB eB dtB'.
-          by have:= step_Exp_det CkP CO ME SP1 dtB eB dtB'.
+      have {HR}/= [H1 MP2] := HR _ _ _ _ _ _ _ _ CO SP1 eB dtB dtB' kB'.
+      split; last first.
         by apply: more_precise_merge2 (CO) (more_precise_tc_tree_aux1 _ _) (more_precise_tc_tree_aux1 _ _) _ (more_precise_refl _); eauto.
-      split; last by [].
-      destruct dA, d1, DA2, dB, DA' => //= _; simpl in *.
-      by have:= step_Exp_det CkP CO ME SP1 dtB eB dtB'.
+      destruct DB0, DB => //=?; subst.
+      simpl in *; destruct DA2, DB2, DB02, DA', d0 => //=; auto; try congruence.
+        by have:= step_Exp_det CkP CO ME SP1 eB dtB dtB'.
+      by have:= step_Exp_det CkP CO ME SP1 eB dtB dtB'.
 Admitted.
 
 Definition is_det s A := forall u s' B n,
@@ -582,7 +637,7 @@ Proof.
   - move=> s1 s2 r A B n eA R IH s' ? sV sV' H1 SP dtA; subst.
     suffices WS : will_succeed B.
       case TC: (tc_tree_aux sP sV B Func) => [X Y].
-      have/= [+ MP] := expand_det_tree ckP H1 ME SP dtA eA WS TC; subst.
+      have/= [+ MP] := expand_det_tree ckP H1 ME SP eA dtA TC WS; subst.
       move=> /(_ erefl) ?; subst.
       have [Hx Hy] := IH _ erefl _ _ H1 SP TC.
       split => //.
@@ -593,7 +648,7 @@ Proof.
   - move=> s1 s2 r A B n eA R IH s' ? sV sV' H1 SP dtA; subst.
     suffices WS : will_succeed B.
       case TC: (tc_tree_aux sP sV B Func) => [X Y].
-      have/= [+ MP] := expand_det_tree ckP H1 ME SP dtA eA WS TC; subst.
+      have/= [+ MP] := expand_det_tree ckP H1 ME SP eA dtA TC WS; subst.
       move=> /(_ erefl) ?; subst.
       have [Hx Hy] := IH _ erefl _ _ H1 SP TC.
       split => //.
