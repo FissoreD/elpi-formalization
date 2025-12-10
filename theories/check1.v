@@ -1010,7 +1010,10 @@ Fixpoint tc_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : (D * sigV)%type :=
       match next_alt true A with
       | None => (ddB, sB)
       (* TODO: maybe change use _ into merge sig and max? *)
-      | Some _ => (maxD ddB0 ddB, merge_sig sB sB0)
+      | Some v => 
+        (* let: (Dx, Tx) := tc_tree_aux sP sV v dd in
+        let (ddB0, sB0) := tc_tree_aux sP Tx B0 Dx in *)
+        (maxD ddB0 ddB, merge_sig sB sB0)
       end
       else
       (maxD ddB0 ddB, merge_sig sB sB0)
