@@ -9,6 +9,10 @@ From det Require Import finmap.
 Require Import FunInd.
 Functional Scheme expand_ind := Induction for step Sort Prop.
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
+
 Open Scope fset_scope.
 
 Ltac foo tcA IH := by move=> [<-<-]; case tcA: tc_tree_aux => [BA BI];
@@ -55,6 +59,47 @@ Lemma expand_sigP {u sP sV A r s} :
 Proof.
 Admitted.
 
+Axiom deref_rigid: forall {s t rc p},
+  tm2RC (deref s (Callable2Tm t)) = Some rc ->
+    get_tm_hd (Callable2Tm (t)) = inr (inl p) ->
+      get_tm_hd (Callable2Tm (RCallable2Callable rc)) = inr (inl p).
+
+Lemma get_sig_hd_strong a1:
+  b (get_sig_hd (strong a1)) = strong (b (get_sig_hd a1))
+with get_sig_hd_weak a1:
+  b (get_sig_hd (weak a1)) = weak (b (get_sig_hd a1)).
+Proof. all: case: a1 => [[|[]]|[]]//=. Qed.
+
+Lemma check_tm_func sP O t b1 s:
+  check_tm sP O t = (s, b1) ->
+    match get_tm_hd_sig sP O t with
+    | None => true
+    | Some X => incl (b (get_sig_hd X)) (b(get_sig_hd s))
+    end.
+Proof.
+  rewrite /get_tm_hd_sig.
+  elim: t s b1 => //=.
+  - move=> k s b1; case: fndP => [kf [<-] _| ]//.
+  - move=> _ s _ [<- _]//.
+  - move=> v s b1; case: fndP => [kf[<-]|]//.
+  - move=> f Hf a Ha s b1.
+    case cf: check_tm => [[|[]/= f1 a1] B]; cycle 2.
+    - move=> [??]; subst; apply: Hf cf.
+    - move=> [??]; subst; have:= Hf _ _ cf.
+      case: get_tm_hd => [|[P|V]]//=; case: fndP => //= k; rewrite pred_is_max//.
+    have:= Hf _ _ cf; case: get_tm_hd => [D|[P|V]]/=;
+    case X: check_tm => [S1 B1]; [|case: fndP => //= kf..];
+    (case: ifP; [congruence|]) => _ H [<-] _; rewrite get_sig_hd_weak;
+    by apply: incl_weakr.
+Qed.
+
+Definition mutual_exclusion :=
+  forall pr S sP O u t s, (get_tm_hd_sig sP O (Callable2Tm t)) = Some S ->
+    get_sig_hd S = d Func ->
+     F u pr t s = [::] \/ (forall PREF LAST, F u pr t s = rcons PREF LAST ->
+        forall s1 x, (s1, x) \in PREF ->
+          seq.head ACut x.(premises) = ACut).
+
 Definition all_weak (sV:sigV):= [forall k : domf sV, sV.[valP k] == weak (sV.[valP k]) ].
 
 Lemma all_weak_sigP_empty {sV sP}:
@@ -67,46 +112,135 @@ Qed.
 
 Definition will_succeed B := is_ko B = false.
 
-Lemma check_callable_main {u sP O N D s pr t d0 d1 dB N' sr1 r1 rs}:
+Lemma data_is_pred_exp t D sP O S b1:
+  get_tm_hd t = inl D ->
+    check_tm sP O t = (S, b1) ->
+      S = b (d Pred) \/ S = b (Exp).
+Proof.
+  elim: t S b1 D => //=; [right; congruence|].
+  move=> f Hf a Ha S b1 D gf.
+  case C: check_tm => [[|m f1 a1] B1]; [left; congruence|].
+  case: m C => //=; move=> /Hf-/(_ _ gf)[]//.
+Qed.
+
+Definition get_sig_hd_ X :=
+(odflt Pred (omap (fun x => match get_sig_hd x with Exp => Pred | d X => X end) X)).
+
+Definition get_sig_hd_1 sP O t:=
+  get_sig_hd_ (get_tm_hd_sig sP O (Callable2Tm t)).
+
+Lemma get_tm_hd_RCF hd e:
+  get_tm_hd (Callable2Tm (RCallable2Callable hd)) = inl e -> False.
+Proof. elim: hd e => //=. Qed.
+
+(* Lemma sig_hd_exp S:
+  get_sig_hd S = Exp -> S = b Exp.
+Proof.
+  elim: S => //=[|[] f Hf a Ha ]; [congruence|..]. *)
+
+Lemma xx sP t O u pr s S D1 N1 sV (s1:Sigma) (r1:R):
   closed_in O ->
+  sigP sP s O ->
+  mutual_exclusion ->
   check_program sP ->
-  check_callable sP O t d0 = (D, N) ->
-  F u pr t s = (sr1, r1) :: rs ->
-      tc_tree_aux sP O (big_or_aux pr (premises r1) rs) d1 = (dB, N') ->
-      (minD (maxD d0 D) d1 = d1 -> minD (maxD d0 D) dB = dB) /\
-      more_precise N' N
+    check_tm sP O (Callable2Tm t) = (S, true) ->
+      let sig_hd := get_sig_hd_1 sP O t in
+      (s1, r1) \in F u pr t s -> 
+        check_atoms sP sV r1.(premises) Func = (D1, N1) ->
+          minD D1 sig_hd = D1.
+Proof.
+  move=> CO SP ME /(_ pr) /allP/= ckP.
+  rewrite/F.
+  case TM: tm2RC => //=[rc].
+  rewrite /get_rcallable_hd.
+  case tm_hd : get_tm_hd => [//|[p|//]].
+  case: fndP => //= ppr ckt inS.
+  have:= select_in_rules u rc (get_modes_rev rc (sig pr).[ppr]) (rules pr) s.
+  move=> /allP/=.
+  move=> /(_ _ inS) /ckP/=; rewrite /check_rule/RCallable_sig.
+  case: r1 inS => /= hd pm inS.
+  rewrite/get_tm_hd_sig/=.
+  case X: get_tm_hd => //=[e|[ps|v]]; [by have:= get_tm_hd_RCF X|case:fndP => //..].
+  move=> pP.
+  case ckA: check_atoms => [D B].
+  rewrite/is_det_sig.
+  case: ifP => //= H4 CHD.
+  rewrite/get_sig_hd_1 /get_tm_hd_sig.
+  move: H4.
+  have ?: ps = p.
+    (*the head has the same head as the call: X + inS + tm_hd*)
+    move: X inS tm_hd.
+    admit.
+  subst ps. 
+  case shd: get_sig_hd => [|[]]//=.
+  - move: ckA.
+    move: shd.
+    admit.
+  - destruct D; [move=> _|by []].
+    case thd : get_tm_hd => [d1|[p1|v1]].
+    - admit.
+    - move: tm_hd; rewrite (deref_rigid TM thd) => -[?]; subst p1.
+      rewrite (in_fnd pP)/get_sig_hd_/=shd.
+      rewrite !(@minD_comm _ Func)/=.
+      admit. (*should be true using ckA*)
+    - rewrite (in_fnd (CO _))/get_sig_hd_/=.
+      admit.
+  - move=> _.
+    case thd : get_tm_hd => [d1|[p1|v1]].
+    - admit.
+    - move: tm_hd; rewrite (deref_rigid TM thd) => -[?]; subst p1.
+      rewrite (in_fnd pP)/get_sig_hd_/=shd.
+      rewrite !(@minD_comm _ Pred)//=.
+    - rewrite (in_fnd (CO _))/get_sig_hd_/=.
+      admit.
+Admitted.
+
+Lemma sigtm_rev_Exp t: sigtm_rev t (b Exp) = [::].
+Proof. case: t => //=. Qed.
+
+Lemma assume_tm_nil sP O t: assume_tm sP O t [::] = O.
+Proof. case: t => //=. Qed.
+
+Ltac foo1 tc := subst; rewrite maxD_comm; split => //; by apply: more_precise_tc_tree_aux1 tc.
+
+Lemma check_callable_main {u sP O N D s pr t d0 d1 dB N' sr1 r1 rs}:
+  sigP sP s O ->
+  closed_in O ->
+    mutual_exclusion ->
+    check_program sP ->
+    check_callable sP O t d0 = (D, N) ->
+      F u pr t s = (sr1, r1) :: rs ->
+        tc_tree_aux sP O (big_or_aux pr (premises r1) rs) d1 = (dB, N') ->
+          (minD (maxD d0 D) d1 = d1 -> minD (maxD d0 D) dB = dB) /\
+          more_precise N' N
     .
 Proof.
-  (* rewrite/F.
-  case X: tm2RC => //=[R].
-  case: fndP => //= k + CkP.
-  have:= CkP pr.
-  case: pr k => /= rules modes sig k.
-  rewrite/check_rules.
-  move=> /allP /=.
-  move=> /(_ r1).
-  Set Printing All. 
-  Search all reflect.
-  move=> /forallP.
+  move=> SP CO ME CP + F tc.
+  rewrite/check_callable.
+  case X: check_tm => [S []]; last by case: S X => [[|[]]| m f a] _ [??]; foo1 tc.
+  case: S X => [|m f a _ [??]]; last by foo1 tc.
+  move=> [_ [??]|]; first by foo1 tc.
+  move=> d CT; rewrite/get_callable_hd_sig/get_tm_hd_sig.
+  case thd: get_tm_hd => /=[data|p].
+    have []// := data_is_pred_exp thd CT.
+    destruct d => //= _ [??]; subst.
+    rewrite maxD_comm/=; repeat split.
+    apply: more_precise_trans (more_precise_tc_tree_aux1 CO tc) _.
+    rewrite/assume_call sigtm_rev_Exp assume_tm_nil//.
+  case: p thd => [p|v]; (case: fndP; last by move=> _ _ [??]; foo1 tc).
+  - (*predicate case*)
+    move=> pP tmHD [??]; subst.
+    split.
+      destruct d0, d, d1, dB => //=; exfalso.
+      admit.
+    
+    apply: more_precise_trans (more_precise_tc_tree_aux1 CO tc) _.
 
-  elim: rules sr1 r1 rs => //= x xs IH sr1 r1 rs CO ckP ckC.
-  case H: H => [s1|]//=; last first.
-    case: rs.
-    elim: rs
-    rewrite/big_or_aux.
-    move=> H1.
-    move=> /IH.
-    move=> [???]; subst; last first.
-    move=> /IH.
 
-  destruct pr.
-  rewrite/select.
-
-  elim: xs => //=.*)
 Admitted.
 
 Lemma expand_det_tree {u sP O N A r s d0 d1 dA dB N'} : 
-  check_program sP -> closed_in O ->
+  check_program sP -> closed_in O -> mutual_exclusion ->
     sigP sP s O ->
       tc_tree_aux sP O A d0 = (dA, N) ->
         step u s A = r -> 
@@ -115,10 +249,10 @@ Lemma expand_det_tree {u sP O N A r s d0 d1 dA dB N'} :
           [/\ (minD dA d1 = d1 -> minD dA dB = dB) & more_precise N' N].
 Proof.
   rewrite/will_succeed.
-  move=> CkP.
+  move=> CkP + ME.
   move: O N N' r dA dB d0 d1.
   pattern u, s, A, (step u s A).
-  apply: expand_ind; clear -CkP.
+  apply: expand_ind; clear -CkP ME.
   - by move=> s []//= _ O N N' r dA dB d0 d1 C SP [??] ?; subst=>/=; repeat eexists.
   - by move=> s []//= _ O N N' r dA dB d0 d1 C SP [??] <-/= _ [??]; subst=>/=; repeat eexists.
   - by move=> s []//= _ O N N' r dA dB d0 d1 C SP [??] ?; subst=>/=; repeat eexists; rewrite ?minD_refl//.
@@ -414,7 +548,7 @@ Definition is_det s A := forall u s' B n,
   runb u s A (Some s') B n -> next_alt false B = None.
 
 Lemma run_is_det {sP sV sV' s A}: 
-  check_program sP -> 
+  check_program sP -> mutual_exclusion ->
   closed_in sV ->
     sigP sP s sV ->
     tc_tree_aux sP sV A Func = (Func, sV') ->
@@ -423,9 +557,9 @@ Lemma run_is_det {sP sV sV' s A}:
         sigP sP s' sV'.
 Proof.
   rewrite/is_det.
-  move=> ckP +++ u s' B n H.
+  move=> ckP ME +++ u s' B n H.
   remember (Some s') as ss eqn:Hs'.
-  elim: H s' Hs' sV sV'; clear -ckP => //=.
+  elim: H s' Hs' sV sV'; clear -ckP ME => //=.
   - move=> s1 s2 A B sA <-{s2} <-{B} s' [<-]{s'} sV sV' H1 SP H2.
     have /=-> := success_det_tree_next_alt sA H2.
     have ? := success_det_tree_same_ctx H1 sA H2; subst.
@@ -434,7 +568,7 @@ Proof.
   - move=> s1 s2 r A B n eA R IH s' ? sV sV' H1 SP dtA; subst.
     suffices WS : will_succeed B.
       case TC: (tc_tree_aux sP sV B Func) => [X Y].
-      have/= [+ MP] := expand_det_tree ckP H1 SP dtA eA WS TC; subst.
+      have/= [+ MP] := expand_det_tree ckP H1 ME SP dtA eA WS TC; subst.
       move=> /(_ erefl) ?; subst.
       have [Hx Hy] := IH _ erefl _ _ H1 SP TC.
       split => //.
@@ -446,7 +580,7 @@ Proof.
   - move=> s1 s2 r A B n eA R IH s' ? sV sV' H1 SP dtA; subst.
     suffices WS : will_succeed B.
       case TC: (tc_tree_aux sP sV B Func) => [X Y].
-      have/= [+ MP] := expand_det_tree ckP H1 SP dtA eA WS TC; subst.
+      have/= [+ MP] := expand_det_tree ckP H1 ME SP dtA eA WS TC; subst.
       move=> /(_ erefl) ?; subst.
       have [Hx Hy] := IH _ erefl _ _ H1 SP TC.
       split => //.
@@ -464,31 +598,31 @@ Proof.
 Qed.
 
 Lemma run_is_detP1 {sP sV sV' s A}: 
-  check_program sP -> 
+  check_program sP -> mutual_exclusion ->
   closed_in sV ->
     sigP sP s sV ->
     tc_tree_aux sP sV A Func = (Func, sV') ->
      forall u s' B n,
       runb u s A (Some s') B n -> next_alt false B = None.
 Proof.
-  move=> CkP C S TC u s' B n R.
-  by have [] := run_is_det CkP C S TC _ _ _ _ R.
+  move=> CkP ME C S TC u s' B n R.
+  by have [] := run_is_det CkP ME C S TC R.
 Qed.
 
 Definition typ_func (A: (_ * sigV)%type) := match A with (Func, _) => true | _ => false end.
 Definition det_tree sP sV A := typ_func (tc_tree_aux sP sV A Func).
 
 Lemma main {sP p t sV}:
-  check_program sP -> 
+  check_program sP -> mutual_exclusion ->
     closed_in sV ->  all_weak sV ->
       det_tree sP sV (CallS p t) -> 
         is_det empty ((CallS p t)).
 Proof.
   rewrite /det_tree/is_det.
-  move=> /= CP CV F.
+  move=> /= CP ME CV F.
   case C: check_callable => [[] S]//= _.
   move=> u s' B n H.
-  apply: run_is_detP1 CP CV _ _  _ _ _ _ H; last rewrite/=C//.
+  apply: run_is_detP1 H; eauto; last rewrite/=C//.
   by apply: all_weak_sigP_empty.
 Qed.
 
@@ -502,15 +636,15 @@ Module elpi.
     nur u empty g nilC s' a' -> a' = nilC.
 
   Lemma elpi_is_det {sP p c ign sV}: 
-    check_program sP -> 
+    check_program sP -> mutual_exclusion ->
     closed_in sV -> all_weak sV ->
       check_callable sP sV c Func = (Func, ign) -> 
       is_det ((call p c):::nilC).
   Proof.
-    move=> CkP CV F C u s' a'.
+    move=> CkP ME CV F C u s' a'.
     move=> /elpi_to_tree /(_ _ (CallS p c))/=.
     move=> /(_ _ isT erefl) [t1'[n [H3]]].
-    have /= := run_is_det CkP CV.
+    have /= := run_is_det CkP ME CV.
     move => /(_ _ _ (CallS p c))/=.
     rewrite C => /(_ _ empty (all_weak_sigP_empty F) erefl _ _ _ _ H3).
     move=> [].

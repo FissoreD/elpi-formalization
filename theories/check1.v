@@ -657,14 +657,6 @@ Section checker.
   Definition is_det_sig (sig:S) : bool :=
     get_sig_hd sig == (d Func).
 
-  Fixpoint get_tm_hd (tm: Tm) : (Kd + (Kp + V)) :=
-    match tm with
-    | Tm_Kd K => inl K
-    | Tm_Kp K => inr (inl K) (*TODO: sP should be complete*)
-    | Tm_V V => inr (inr V)
-    | Tm_Comb h _ => get_tm_hd h
-    end.
-
   Definition get_tm_hd_sig (sP : sigT) (sV : sigV) (tm: Tm) : option S :=
     match get_tm_hd tm with
     | inl K => Some (b Exp)
@@ -785,17 +777,11 @@ Section checker.
       check_atoms sP sV' xs s'
     end.
 
-  Fixpoint RCallable_sig (sP: sigT) (t:RCallable) :=
-    match t with
-    | RCallable_Comb h _ => RCallable_sig sP h
-    | RCallable_Kp k => (lookup k sP)
-    end.
+  Definition RCallable_sig (sP: sigT) (t:RCallable) :=
+    get_tm_hd_sig sP [fmap] (Callable2Tm(RCallable2Callable t)).
 
   Definition empty_ctx : sigV := [fmap].
   
-  (* The rules passes the check if:
-     - it is implementing a function or a relation, the body is function, the outputs are ok
-  *)
   Definition check_rule sP sV head prems :=
     match RCallable_sig sP head with
     | None => false
@@ -804,6 +790,7 @@ Section checker.
         let tm_head := (Callable2Tm (RCallable2Callable head)) in
         let ass_hd := assume_tm sP sV tm_head (sigtm_rev tm_head hd_sig) in
         let: (b1, sV'') := check_atoms sP ass_hd prems Func in
+        (* we reject functional rules with non-deterministic body *)
         if is_det_head && (b1 == Pred) then false
         else check_hd sP sV'' tm_head (sigtm_rev tm_head hd_sig)
     end.

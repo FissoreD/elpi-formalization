@@ -188,12 +188,30 @@ Record Unif := {
   matching : Tm -> Tm -> Sigma -> option Sigma;
 }.  
 
-  Fixpoint get_rcallable_hd r :=
-    match r with
-    | RCallable_Kp k => k
-    | RCallable_Comb t _ => get_rcallable_hd t
+Fixpoint get_tm_hd (tm: Tm) : (Kd + (Kp + V)) :=
+    match tm with
+    | Tm_Kd K => inl K
+    | Tm_Kp K => inr (inl K) (*TODO: sP should be complete*)
+    | Tm_V V => inr (inr V)
+    | Tm_Comb h _ => get_tm_hd h
     end.
 
+Fixpoint Callable2Tm (c : Callable) : Tm :=
+  match c with
+  | Callable_Kp p => Tm_Kp p
+  | Callable_V v => Tm_V v
+  | Callable_Comb h t => Tm_Comb (Callable2Tm h) t
+  end.
+
+Fixpoint RCallable2Callable rc := 
+  match rc with
+  | RCallable_Comb h bo => Callable_Comb (RCallable2Callable h) bo
+  | RCallable_Kp k => Callable_Kp (k)
+  end.
+
+Definition get_rcallable_hd r :=
+  get_tm_hd (Callable2Tm (RCallable2Callable r)).
+    
 Fixpoint H u (ml : list mode) (q : RCallable) (h: RCallable) s : option Sigma :=
   match ml,q,h with
   | [::], RCallable_Kp c, RCallable_Kp c1 => if c == c1 then Some s else None
@@ -228,13 +246,6 @@ Fixpoint tm2RC (t : Tm) : option RCallable :=
   | Tm_Comb t1 t2 => omap (fun x => RCallable_Comb x t2) (tm2RC t1)
   end.
 
-Fixpoint Callable2Tm (c : Callable) : Tm :=
-  match c with
-  | Callable_Kp p => Tm_Kp p
-  | Callable_V v => Tm_V v
-  | Callable_Comb h t => Tm_Comb (Callable2Tm h) t
-  end.
-
 Fixpoint count_tm_ag t := 
     match t with
     | Tm_Comb L _ => 1 + count_tm_ag L
@@ -257,12 +268,6 @@ Definition sigtm tm s :=
   
 Definition sigtm_rev tm s := rev (sigtm tm s).
 
-Fixpoint RCallable2Callable rc := 
-  match rc with
-  | RCallable_Comb h bo => Callable_Comb (RCallable2Callable h) bo
-  | RCallable_Kp k => Callable_Kp (k)
-  end.
-
 Definition get_modes_rev tm sig :=
   map fst (sigtm_rev (Callable2Tm (RCallable2Callable tm)) sig).
 
@@ -271,11 +276,13 @@ Definition F u pr (query:Callable) s : seq (Sigma * R) :=
   match tm2RC (deref s (Callable2Tm query)) with
   | None => [::] (*this is a call with flex head, in elpi it is an error! *)
   | Some query =>
-    match pr.(sig).[? (get_rcallable_hd query)] with 
-      | None => [::]
-      | Some sig => 
-        let modes := get_modes_rev query sig in
-        select u query modes rules s
+    match (get_rcallable_hd query) with
+    | inr (inl kp) => 
+      match pr.(sig).[? kp] with 
+        | Some sig => select u query (get_modes_rev query sig) rules s
+        | None => [::]
+        end
+      | _ => [::]
       end
   end.
 
