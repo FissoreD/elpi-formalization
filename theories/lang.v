@@ -275,3 +275,11 @@ Definition F u pr (query:Callable) s : seq (Sigma * R) :=
         select u query modes rules s
       end
   end.
+
+Lemma select_in_rules u R modes rules s:
+  all (fun x => x.2 \in rules) (select u R modes rules s).
+Proof.
+  elim: rules => //= x xs /allP IH.
+  by case H => /=[_|]; rewrite?mem_head; apply/allP => -[s1 r1] /IH/=;
+  rewrite in_cons => ->; rewrite orbT.
+Qed.
