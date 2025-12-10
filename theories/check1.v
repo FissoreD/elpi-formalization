@@ -686,26 +686,6 @@ Section checker.
     | _ => None
     end.
 
-  Fixpoint count_tm_ag t := 
-    match t with
-    | Tm_Comb L _ => 1 + count_tm_ag L
-    | _ => 0
-    end.
-
-  Fixpoint keep_sig n s :=
-    match n with
-    | 0 => [::]
-    | n.+1 => 
-      match s with
-      | arr m l r => (m, l) :: keep_sig n r
-      | _ => [::]
-      end
-    end.
-
-  Definition sigtm tm s :=
-    let tm_ag := count_tm_ag tm in
-    rev (keep_sig tm_ag s).
-
   Definition odflt1 {T} (ab : T * bool) x := match x with (Some x, b1) => (x,b1) | (None,_) => ab end.
 
   (* takes a tm and returns its signature + if it is well-called
@@ -750,14 +730,14 @@ Section checker.
         if m == i then
           (* before we assume in the LHS and then we go right  *)
           let sV' := assume_tm sP sV L sx in
-          assume_tm sP sV' R (sigtm R s)
+          assume_tm sP sV' R (sigtm_rev R s)
       else assume_tm sP sV L sx
     end.
 
   (* assumes the output tm and then it goes on inputs *)
   Definition assume_call (sP:sigT) (sV:sigV) (c : Callable) (s : S): sigV :=
     let tm := (Callable2Tm c) in
-    assume_tm sP sV tm (sigtm tm s).
+    assume_tm sP sV tm (sigtm_rev tm s).
 
   (* verifies variables in outputs positions *)
   Fixpoint check_hd (sP:sigT) (sV:sigV) (tm:Tm) (s : seq (mode * S)) : bool :=
@@ -805,12 +785,6 @@ Section checker.
       check_atoms sP sV' xs s'
     end.
 
-  Fixpoint RCallable2Callable rc := 
-    match rc with
-    | RCallable_Comb h bo => Callable_Comb (RCallable2Callable h) bo
-    | RCallable_Kp k => Callable_Kp (k)
-    end.
-
   Fixpoint RCallable_sig (sP: sigT) (t:RCallable) :=
     match t with
     | RCallable_Comb h _ => RCallable_sig sP h
@@ -828,10 +802,10 @@ Section checker.
     | Some hd_sig => 
         let is_det_head := is_det_sig hd_sig in
         let tm_head := (Callable2Tm (RCallable2Callable head)) in
-        let ass_hd := assume_tm sP sV tm_head (sigtm tm_head hd_sig) in
+        let ass_hd := assume_tm sP sV tm_head (sigtm_rev tm_head hd_sig) in
         let: (b1, sV'') := check_atoms sP ass_hd prems Func in
         if is_det_head && (b1 == Pred) then false
-        else check_hd sP sV'' tm_head (sigtm tm_head hd_sig)
+        else check_hd sP sV'' tm_head (sigtm_rev tm_head hd_sig)
     end.
 
   Definition check_rules sP sV rules :=
@@ -1281,12 +1255,11 @@ Section more_precise.
 
   Lemma more_preciseL_sigtm a {s s1}:
     compat_type s s1 ->
-    incl s1 s -> more_preciseL (sigtm a s) (sigtm a s1).
+    incl s1 s -> more_preciseL (sigtm_rev a s) (sigtm_rev a s1).
   Proof.
     have P : forall n s s1, compat_type s s1 -> size ((keep_sig n s)) = size ((keep_sig n s1)).
       elim => //= {}n {}IH [[|[]]|[] l r] [[|[]]|[] l1 r1]//= /andP[_ /IH ->]//.
-
-    rewrite/more_preciseL/sigtm => C I.
+    rewrite/more_preciseL/sigtm_rev/sigtm => C I.
     generalize (count_tm_ag a) => {a} n.
     rewrite !size_rev all2_rev (P _ _ _ C)// eqxx/=.
     elim: n s s1 C I => //=n IH [[|[]]|[] l r] [[|[]]|[] l1 r1]//=/andP[C1 C2];
@@ -1459,7 +1432,7 @@ Section more_precise.
   Proof.
     rewrite/assume_call/=.
     rewrite/flex_head => ->.
-    case: sigtm => //= [[[]]]//.
+    case: sigtm_rev => //= [[[]]]//.
   Qed.
 
   Lemma more_precise_check_callable sP N O t dO dN dN' dO' O' N':

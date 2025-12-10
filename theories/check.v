@@ -65,12 +65,17 @@ Proof.
   by case: fndP => //=.
 Qed.
 
-Definition will_succeed B := 
-    (* Texists s dt n, runb u s1 B (Some s) dt n. *)
-    is_ko B = false.
+Definition will_succeed B := is_ko B = false.
 
+Lemma select_in_rules u R modes rules s:
+  all (fun x => x.2 \in rules) (select u R modes rules s).
+Proof.
+  elim: rules => //= x xs /allP IH.
+  by case H => /=[_|]; rewrite?mem_head; apply/allP => -[s1 r1] /IH/=;
+  rewrite in_cons => ->; rewrite orbT.
+Qed.
 
-(* Lemma check_callable_main {u sP O N D s pr t d0 d1 dB N' sr1 r1 rs}:
+Lemma check_callable_main {u sP O N D s pr t d0 d1 dB N' sr1 r1 rs}:
   closed_in O ->
   check_program sP ->
   check_callable sP O t d0 = (D, N) ->
@@ -80,10 +85,18 @@ Definition will_succeed B :=
       more_precise N' N
     .
 Proof.
-  rewrite/F.
+  (* rewrite/F.
   case X: tm2RC => //=[R].
-  case: fndP => //= k.
+  case: fndP => //= k + CkP.
+  have:= CkP pr.
   case: pr k => /= rules modes sig k.
+  rewrite/check_rules.
+  move=> /allP /=.
+  move=> /(_ r1).
+  Set Printing All. 
+  Search all reflect.
+  move=> /forallP.
+
   elim: rules sr1 r1 rs => //= x xs IH sr1 r1 rs CO ckP ckC.
   case H: H => [s1|]//=; last first.
     case: rs.
@@ -97,8 +110,8 @@ Proof.
   destruct pr.
   rewrite/select.
 
-  elim: xs => //=. *)
-
+  elim: xs => //=.*)
+Admitted.
 
 Lemma expand_det_tree {u sP O N A r s d0 d1 dA dB N'} : 
   check_program sP -> closed_in O ->
@@ -123,9 +136,7 @@ Proof.
       case CC: check_callable => [D B] [??]; subst.
       rewrite/big_or/=.
       case X: F => [|[sr1 r1] rs]//= _.
-
-
-      admit.
+      by apply: check_callable_main X.
     }
   - move=> s []//= _ O N N' r dA dB d0 d1 C SP [??] <-/= _ [??] ; subst=>/=; repeat eexists => //=.
   - move=> s INIT A sB B HINIT deadA IH O N N' r dA dB d0 d1 CO /=.

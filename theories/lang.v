@@ -175,7 +175,6 @@ HB.instance Definition _ : hasDecEq sigT := Equality.copy sigT _.
 Record program := { 
     (*depth : nat;*) 
     rules : index; 
-    modes : mode_ctx; 
     sig   : sigT
   }.
 derive program.
@@ -236,13 +235,43 @@ Fixpoint Callable2Tm (c : Callable) : Tm :=
   | Callable_Comb h t => Tm_Comb (Callable2Tm h) t
   end.
 
+Fixpoint count_tm_ag t := 
+    match t with
+    | Tm_Comb L _ => 1 + count_tm_ag L
+    | _ => 0
+    end.
+
+Fixpoint keep_sig n s :=
+  match n with
+  | 0 => [::]
+  | n.+1 => 
+    match s with
+    | arr m l r => (m, l) :: keep_sig n r
+    | _ => [::]
+    end
+  end.
+
+Definition sigtm tm s :=
+  let tm_ag := count_tm_ag tm in
+  (keep_sig tm_ag s).
+  
+Definition sigtm_rev tm s := rev (sigtm tm s).
+
+Fixpoint RCallable2Callable rc := 
+  match rc with
+  | RCallable_Comb h bo => Callable_Comb (RCallable2Callable h) bo
+  | RCallable_Kp k => Callable_Kp (k)
+  end.
+
 Definition F u pr (query:Callable) s : seq (Sigma * R) :=
   let rules := pr.(rules) in
   match tm2RC (deref s (Callable2Tm query)) with
   | None => [::] (*this is a call with flex head, in elpi it is an error! *)
   | Some query =>
-    match lookup (get_rcallable_hd query) pr.(modes) with 
+    match pr.(sig).[? (get_rcallable_hd query)] with 
       | None => [::]
-      | Some modes => select u query modes rules s
+      | Some sig => 
+        let modes := map fst (sigtm (Callable2Tm (RCallable2Callable query)) sig) in
+        select u query modes rules s
       end
   end.
