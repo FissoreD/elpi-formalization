@@ -263,6 +263,9 @@ Fixpoint RCallable2Callable rc :=
   | RCallable_Kp k => Callable_Kp (k)
   end.
 
+Definition get_modes_rev tm sig :=
+  map fst (sigtm_rev (Callable2Tm (RCallable2Callable tm)) sig).
+
 Definition F u pr (query:Callable) s : seq (Sigma * R) :=
   let rules := pr.(rules) in
   match tm2RC (deref s (Callable2Tm query)) with
@@ -271,7 +274,7 @@ Definition F u pr (query:Callable) s : seq (Sigma * R) :=
     match pr.(sig).[? (get_rcallable_hd query)] with 
       | None => [::]
       | Some sig => 
-        let modes := map fst (sigtm (Callable2Tm (RCallable2Callable query)) sig) in
+        let modes := get_modes_rev query sig in
         select u query modes rules s
       end
   end.
