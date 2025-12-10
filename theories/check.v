@@ -11,6 +11,26 @@ Functional Scheme expand_ind := Induction for step Sort Prop.
 
 Open Scope fset_scope.
 
+Ltac foo tcA IH := by move=> [<-<-]; case tcA: tc_tree_aux => [BA BI];
+  (try rewrite maxD_comm in tcA); rewrite IH tcA maxD_refl merge_refl.
+
+Lemma all_det_nfa_big_and {sP sV l r} p: 
+  (check_atoms sP sV l r) = tc_tree_aux sP sV (big_and p l) r.
+Proof.
+  elim: l sV r => //=.
+  move=> A As IH sV r.
+  case X: check_atom => [dA sVA].
+  case YY : A X => //=[|c]; first by foo tcA IH.
+  rewrite/check_callable.
+  case X: check_tm => //[d b]//=.
+  case: d X => /=[[|d]|m f a] C; cycle 1; [|foo tcA IH..].
+  destruct b; last by foo tcA IH.
+  case CH: get_callable_hd_sig => [v|]; last by foo tcA IH.
+  rewrite (@maxD_comm r) -maxD_assoc maxD_refl.
+  case dt: tc_tree_aux => [[]][??]; subst; rewrite merge_refl;
+  by rewrite IH dt maxD_refl.
+Qed.
+
 Definition sigP (sP:sigT) (s: sigS) (sV: sigV) :=
   [forall k : domf sV,
     let SV := sV.[valP k] in
@@ -452,6 +472,7 @@ Proof.
   by have [] := run_is_det CkP C S TC _ _ _ _ R.
 Qed.
 
+Definition typ_func (A: (_ * sigV)%type) := match A with (Func, _) => true | _ => false end.
 Definition det_tree sP sV A := typ_func (tc_tree_aux sP sV A Func).
 
 Lemma main {sP p t sV}:

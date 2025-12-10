@@ -1748,28 +1748,6 @@ Section more_precise.
 End more_precise.
 Hint Resolve more_precise_refl : core.
 
-Definition typ_func (A: (_ * sigV)%type) := match A with (Func, _) => true | _ => false end.
-
-Lemma all_det_nfa_big_and {sP sV l r} p: 
-  typ_func (check_atoms sP sV l r)-> 
-    typ_func (tc_tree_aux sP sV (big_and p l) r).
-Proof.
-  elim: l sV r => //=.
-  move=> A As IH sV r.
-  case X: check_atom => [dA sVA].
-  case YY : A X => //=[|c].
-    by move=> [<-<-] {}/IH; case dt: tc_tree_aux => [[]]//.
-  rewrite/check_callable.
-  case X: check_tm => //[d b]//=.
-  case: d X => /=[[|d]|m f a] C; cycle 1; 
-  [|by rewrite maxD_comm; move=> [<-<-] /IH; case dt: tc_tree_aux => [[]]..].
-  destruct b; last by rewrite maxD_comm; move=> [<-<-] /IH; case dt: tc_tree_aux => [[]].
-  case CH: get_callable_hd_sig => [v|]; last by by rewrite maxD_comm; move=> [<-<-] /IH; case dt: tc_tree_aux => [[]].
-  move=> [<-<-].
-  move=> /IH.
-  rewrite maxD_comm maxD_assoc maxD_refl.
-  by case: tc_tree_aux => -[].
-Qed.
 
 (* Lemma deterf_empty c: 
   deref empty c = c.
