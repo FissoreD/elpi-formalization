@@ -45,10 +45,18 @@ Definition sigP (sP:sigT) (s: sigS) (sV: sigV) :=
     else
     SV == weak SV].
 
-Lemma sigP_more_precise sP s N O:
-  closed_in O -> more_precise N O -> sigP sP s N -> sigP sP s O.
+Lemma eq_incl x y : (incl x y && incl y x) = (x == y).
 Proof.
-  move=> CI MP /forallP H; apply/forallP=> -[k kO].
+  apply/andP/eqP => [[]|-> //].
+    elim: x y => [[|[]]|[] s_ IHs t IHt] [[|[]]|[] s' t']; try by [rewrite /incl/min /=].
+    by rewrite !incl_arr /= => /andP[? /IHt HT] /andP[/IHs HS ?]; rewrite -HS // -HT.
+  by rewrite !incl_arr/= => /andP[? /IHt HT] /andP[/IHs HS ?]; rewrite -HS // -HT.
+Qed.
+
+Lemma sigP_more_precise sP s N O:
+  more_precise N O -> sigP sP s N -> sigP sP s O.
+Proof.
+  move=> MP /forallP H; apply/forallP=> -[k kO].
   have kN := fsubsetP (more_precise_sub MP) k kO.
   have /={H} := H (Sub k kN).
   have [kS|bkS] := fndP.
@@ -57,14 +65,9 @@ Proof.
       by rewrite (incl_trans isk) // in2_more_precise.
     move=> /andP[comp_sk isk]; rewrite (compat_type_trans comp_sk) 1?compat_type_comm ?more_precise_same_type //.
     by rewrite (incl_trans isk) // in2_more_precise.
-  rewrite ?valPE/= => /eqP def_N; have := in2_more_precise MP kO kN.
-  rewrite def_N. have /comp_weak EQ := more_precise_same_type MP kO kN.
-  (* TODO: externalize *)
-  have xxx x y : incl x y -> incl y x -> x = y.
-    elim: x y => [[|[]]|[] s_ IHs t IHt] [[|[]]|[] s' t']; try by [rewrite /incl/min /=].
-      by rewrite !incl_arr /= => /andP[? /IHt HT] /andP[/IHs HS ?]; rewrite -HS // -HT.
-    by rewrite !incl_arr/= => /andP[? /IHt HT] /andP[/IHs HS ?]; rewrite -HS // -HT.
-  move=> XX; apply/eqP/xxx; [ by apply: weak_incl | by rewrite EQ ].
+  rewrite ?valPE/= => /eqP def_N; have ino := in2_more_precise MP kO kN.
+  have /comp_weak wON := more_precise_same_type MP kO kN.
+  by rewrite -eq_incl weak_incl wON -def_N ino.
 Qed.
 
 Lemma expand_sigP {u sP sV A r s} : 
@@ -588,8 +591,7 @@ Proof.
       move=> /(_ erefl) ?; subst.
       have [Hx Hy] := IH _ erefl _ _ H1 SP TC.
       split => //.
-      apply: sigP_more_precise MP Hy.
-      apply: closed_in_mp H1 (more_precise_tc_tree_aux1 H1 dtA).
+      by apply: sigP_more_precise MP Hy.
     rewrite/will_succeed.
     case KB: is_ko => //.
     by have [] := run_consistent _ R (is_ko_runb _ KB).
@@ -600,8 +602,7 @@ Proof.
       move=> /(_ erefl) ?; subst.
       have [Hx Hy] := IH _ erefl _ _ H1 SP TC.
       split => //.
-      apply: sigP_more_precise MP Hy.
-      apply: closed_in_mp H1 (more_precise_tc_tree_aux1 H1 dtA).
+      by apply: sigP_more_precise MP Hy.
     rewrite/will_succeed.
     case KB: is_ko => //.
     by have [] := run_consistent _ R (is_ko_runb _ KB).
@@ -610,7 +611,7 @@ Proof.
     move => [[]// [N [? [X MP]]]]//.
     have [-> H]:= IH _ erefl _ _ C SP X.
     split => //=.
-    apply: sigP_more_precise (closed_in_mp C (more_precise_tc_tree_aux1 C TC)) MP H.
+    by apply: sigP_more_precise MP H.
 Qed.
 
 Lemma run_is_detP1 {sP sV sV' s A}: 
