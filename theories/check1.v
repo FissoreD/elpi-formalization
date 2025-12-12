@@ -3,6 +3,8 @@ From det Require Import finmap ctx lang.
 From det Require Import tree tree_prop.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
+From det Require Import tree_valid_cut.
+
 
 Lemma all2_cat_rev {T1 T2} (P : T1 -> T2 -> bool) A B C D:
   size A = size C -> size B = size D ->
@@ -77,135 +79,137 @@ Definition map_ty_opt {A B: eqType} (f: A -> typecheck (option B)) t :=
   | ty_ok None => ty_ok (@None B)
   end. *)
 
-Section has_cut.
-  (* tells if A has a superficial cut *)
-  Fixpoint has_cut A :=
-    match A with
-    | CutS => true
-    | OK | CallS _ _ | Bot | Dead => false
-    | And A _ B => 
-      (* here, B0 is useless. B0 is used if A is failed while backtracking,
-         but B0 is resumed inside or and its cut have no effect outside the
-         And A B0 B tree
-      *)
-      (* ((failed A == false) && (has_cut A || has_cut B)) *)
-      has_cut A (*TODO: should be more permessive*)
-    | Or _ _ _ => false
-    end.
 
-  Lemma has_cut_success {A}:
+Section has_cut.
+
+  Lemma success_has_cut {A}:
+    valid_tree A -> success A -> has_cut A = false.
+  Proof.
+    elim: A => //.
+    move=> A HA B0 HB0 B HB/= + /andP[sA sB].
+    rewrite sA/= => /and3P[vA vB bB0].
+    rewrite HA//HB//=success_is_ko//!andbF//.
+  Qed.
+
+
+  (* Lemma has_cut_success {A}:
     has_cut A -> success A = false.
   Proof.
     elim: A => //.
-    move=> A HA B0 HB0 B HB/= /HA ->//.
-     (* /andP[_].
-    move=>/orP[].
-      by move=>/HA->.
-    by move=>/HB->; rewrite andbF. *)
-  Qed.
+    move=> A HA B0 HB0 B HB/= /orP[/HA->|]//.
+    move=>/andP[_ /HB]->; rewrite andbF//.
+  Qed. *)
 
-  Lemma success_has_cut {A}:
-    success A -> has_cut A = false.
+
+  (*Lemma failed_has_cut {A}:
+    valid_tree A -> failed A -> has_cut A = false.
   Proof.
     elim: A => //.
-    move=> A HA B0 HB0 B HB/=/andP[sA sB].
-    rewrite HA// HB// andbF//.
-  Qed.
-
-  Lemma failed_has_cut {A}:
-    failed A -> has_cut A = false.
-  Proof.
-    elim: A => //.
-    move=> A HA B0 HB0 B HB/=/orP[fA|/andP[sA fB]]; auto.
+    move=> A HA B0 HB0 B HB/=+/orP[fA|/andP[sA fB]]; auto.
+      rewrite failed_success//=fA/= => /and3P[vA /eqP -> bB].
+      rewrite HA//=.
+      rewrite HA//=. (failed_next_alt).
     rewrite success_has_cut//.
       (* rewrite fA//.
     rewrite success_failed//= success_has_cut//= HB//. *)
-  Qed.
+  Qed. *)
 
-  Lemma next_alt_none_has_cut {A b}:
-    next_alt b A = None -> has_cut A = false.
-  Proof. 
-    case: b; last first.
-      move=> /next_alt_None_failed; exact failed_has_cut.
-    case fA: (failed A).
-      rewrite failed_has_cut//.
-    case s: (success A) => //=.
-      rewrite success_has_cut//.
-    rewrite next_alt_not_success//.
-  Qed.
-
-  Lemma is_dead_has_cut {A}: is_dead A -> has_cut A = false.
-  Proof. move=> /is_dead_failed/failed_has_cut//. Qed.
-
-  Lemma has_cut_cutr {A}: has_cut (cutr A) = false.
-  Proof. apply: failed_has_cut; rewrite is_ko_failed//is_ko_cutr//. Qed.
-
-  Lemma has_cut_next_alt_None {A b}: 
+  (*Lemma next_alt_none_has_cut {A b}:
+    valid_tree A ->
     next_alt b A = None -> has_cut A = false.
   Proof.
     elim: A b => //=.
-    move=> A HA B0 HB0 B HB b.
-    case:ifP => fA//.
-      rewrite failed_has_cut//.
-    case:ifP => sA//.
-    rewrite success_has_cut//.
-  Qed.
+    move=> A HA B0 HB0 B HB b /and4P[vA].
+    case:ifP => /=[sA vB bB|nsA/eqP->].
+      rewrite success_failed//=.
+      case nB: next_alt => //=.
+      rewrite (HB b)//=orbF => /negPf->/=.
+      case nA: next_alt => [v|]; last first.
+        by rewrite (HA true)//=; rewrite !orbF.
+      rewrite !orbF.
+      
+    move=> vA.
+    case s: (success A) => //=.
+      rewrite success_has_cut//.
+    case fA: (failed A); last first.
+      rewrite next_alt_not_success//.
+    case: b; last first.
+      move=> /next_alt_None_failed; exact failed_has_cut.
+    rewrite failed_has_cut//.
+  Qed. *)
 
-  Lemma has_cut_next_alt {A b}: 
+  (* Lemma is_dead_has_cut {A}: is_dead A -> has_cut A = false.
+  Proof. move=> /is_dead_failed/failed_has_cut//. Qed. *)
+
+  (* Lemma has_cut_cutr {A}: has_cut (cutr A) = false.
+  Proof. apply: failed_has_cut; rewrite is_ko_failed//is_ko_cutr//. Qed. *)
+
+  (* Lemma has_cut_next_alt {A b}: 
     has_cut A -> next_alt b A = Some A.
   Proof.
     elim: A b => //.
     move=> A HA B0 HB0 B HB b/=.
+    move=> /orP[cA|/andP[/eqP nA cB]].
+      rewrite HA//=; case: ifP => fA.
     case: ifP => fA.
       rewrite failed_has_cut//.
     case: ifP => sA//.
     rewrite success_has_cut//=.
-  Qed.
+  Qed. *)
 
-  Lemma has_cutF_next_alt {A B b}:
-    next_alt b A = Some B -> has_cut A = has_cut B.
-  Proof.
-    elim: A B b => //=.
-    - move=> B []// [<-]//.
-    - move=> _ _ _ _ [<-]//.
-    - move=> _ _ [<-]//.
-    - move=> A HA s B HB C b.
-      case next_alt => [A'[<-]|]//=.
-      case next_alt => [B'[<-]|]//=.
-    - move=> A HA B0 HB0 B HB C b.
-      case: ifP => fA.
-        case nA: next_alt => //=[A'].
-        case nB0: next_alt => //=[B0'][<-]{C}/=.
-        by apply: HA; eauto.
-      case:ifP => sA.
-        case nB: next_alt => [B'|].
-          by move=>[<-]//=.
-        case nA: next_alt => //=[A'].
-        case nB0: next_alt => //=[B0'][<-]{C}/=.
-        by apply: HA; eauto.
-      move=> [<-]//.
-  Qed.
 
-  Lemma expand_Exp_has_cut {u s A B}:
+  Lemma expand_Exp_keep_cut {u s A B}:
     (* we have a superficial cut, it cannot be eaten, otherwise we should have
       CutBrothers *)
-    step u s A = Expanded B -> has_cut A = has_cut B.
+    valid_tree A -> step u s A = Expanded B -> has_cut A -> has_cut B.
   Proof.
     elim: A s B => //=.
-    - move=> p c s B [<-]/=; rewrite/big_or; case: F => [|[]]//.
-    - move=> A HA s B HB s1 C.
+    (* - move=> p c s B [<-]/=; rewrite/big_or; case: F => [|[]]//. *)
+    (* - move=> A HA s B HB s1 C.
       case: ifP => //=dA.
         rewrite/mkOr/=; case X: step => //=[B'|B'][<-{C}]//.
-      case X: step => //=[A'|A'][<-{C}]//=.
-    - move=> A HA B0 _ B HB s C.
+      case X: step => //=[A'|A'][<-{C}]//=. *)
+    - move=> A HA B0 _ B HB s C /and4P[vA H1 H2 H3].
       case E: step => //=[A'|A'].
         move=> [?]; subst => /=.
-        apply: HA E.
+        move=> /or3P[/(HA _ _ vA E)->|/andP[+->]|->]; rewrite ?orbT//.
+        rewrite next_alt_not_success//?(step_not_failed _ E)//.
+        rewrite (expand_not_solved_not_success _ E)//.
+      move: H1 H2.
       have [? sA] := expand_solved_same _ E; subst A'.
-      rewrite success_has_cut//=.
+      rewrite sA success_has_cut//= => vB bB0.
       case X: step => //=[B'][<-]{C}/=.
-      rewrite success_has_cut//=.
+      move=> /orP[/andP[-> /(HB _ _ vB X)->]|/andP[->]]; rewrite ?orbT//.
+      by rewrite (step_is_ko _ X)//= => /(HB _ _ vB X) ->; rewrite !orbT.
   Qed.
+
+  (* Lemma expand_Exp_keep_cut1 {u s A B}:
+    (* we have a superficial cut, it cannot be eaten, otherwise we should have
+      CutBrothers *)
+    valid_tree A -> step u s A = Expanded B -> has_cut A = has_cut B.
+  Proof.
+    elim: A s B => //=.
+    - move=> p c s B _ [<-]/=; rewrite/big_or; case: F => [|[]]//.
+    - move=> A HA s B HB s1 C.
+      case: ifP => //=[dA vB|dA /andP[vA bB]].
+        rewrite/mkOr/=; case X: step => //=[B'|B'][<-{C}]//.
+      case X: step => //=[A'|A'][<-{C}]//=.
+    - move=> A HA B0 _ B HB s C /and4P[vA].
+      case E: step => //=[A'|A'].
+        rewrite (expand_not_solved_not_success _ E)//=.
+        rewrite ?(step_not_failed _ E)//.
+        move=> /eqP -> {B0}bB CC [<-]{C}/=.
+        rewrite (HA _ _ _ E)//; do 3 f_equal.
+        Search next_alt success true.
+        move=> [?]; subst => /=.
+        move=> /or3P[/(HA _ _ vA E)->|/andP[+->]|->]; rewrite ?orbT//.
+      move: H1 H2.
+      have [? sA] := expand_solved_same _ E; subst A'.
+      rewrite sA success_has_cut//= => vB bB0.
+      case X: step => //=[B'][<-]{C}/=.
+      move=> /orP[/andP[-> /(HB _ _ vB X)->]|/andP[->]]; rewrite ?orbT//.
+      by rewrite (step_is_ko _ X)//= => /(HB _ _ vB X) ->; rewrite !orbT.
+  Qed. *)
 
   Lemma expand_CB_is_ko {u s A B}:
     (* we have a superficial cut *)
@@ -991,7 +995,7 @@ Fixpoint tc_tree_aux (sP:sigT) (sV : sigV) A (dd:D) : (D * sigV)%type :=
         (if has_cut A then (maxD dd (maxD dA dB)) else Pred, merge_sig sA sB)
   end.
 
-  Lemma tc_tree_aux_has_cut sP B N sVA':
+Lemma tc_tree_aux_has_cut sP B N sVA':
   tc_tree_aux sP sVA' B Pred = (Func, N) ->
     has_cut B.
 Proof.
@@ -1007,19 +1011,12 @@ Proof.
     case tcA: tc_tree_aux => [DA SA].
     case tcB: tc_tree_aux => [DB SB].
     case tcB': tc_tree_aux => [DB' SB'].
-    destruct DA; first by (move=> *; apply: HA tcA).
-    case:ifP => //= => sA.
-      case nA: next_alt => [v|]; last first.
-        move=> [??]; subst.
-        admit.
-      case:ifP => kB [??]; subst.
-        admit.
-      destruct DB', DB => //=.
-      admit.
-    move=> [??]; subst.
-    destruct DB', DB => //=.
-    admit.
-Abort.
+    destruct DA; first by (move=> *; rewrite (HA _ _ tcA)).
+    case:ifP => //= => sA; last by (destruct DB', DB; rewrite //(HB _ _ tcB) (HB0 _ _ tcB') !orbT).
+    case nA: next_alt => [v|]; last by (destruct DB; rewrite //(HB _ _ tcB) !orbT).
+    case:ifP => kB [??]; subst; first by rewrite (HB0 _ _ tcB') orbT.
+    by destruct DB', DB => //=; rewrite (HB _ _ tcB) (HB0 _ _ tcB') orbT.
+Qed.
 
 (* Section closed_in.
   Open Scope fset_scope.
@@ -1764,33 +1761,7 @@ Section more_precise.
 End more_precise.
 Hint Resolve more_precise_refl : core.
 
-
-(* Lemma deterf_empty c: 
-  deref empty c = c.
-Proof. elim: c => //= t IH tm H; rewrite IH//. Qed. *)
-
 Section next_alt.
-
-  (* Lemma titi sP B O N:
-    tc_tree_aux sP O B Pred = (Func, N) -> success B = false.
-  Proof.
-    elim: B O N => //=.
-    - move=> A HA _ B HB O N; case: ifP => [kA|nkA].
-        by move=> /HB ->; rewrite is_ko_success// if_same.
-      case: ifP => //=[kB|nkB].
-        by move=> /HA ->; rewrite is_ko_success// if_same.
-      case tA: tc_tree_aux => [DA SA].
-      case tB: tc_tree_aux => [DB SB'].
-      case: ifP => hc []//; destruct DA, DB => // _ H; subst.
-      by rewrite (HA _ _ tA) (HB _ _ tB) if_same.
-    - move=> A HA B0 HB0 B HB O N.
-      case: ifP => [kA|nkA]//.
-      case tA: tc_tree_aux => [DA SA].
-      case tB: tc_tree_aux => [[] SB]; case tB0: tc_tree_aux => [[] SB0]//=.
-      move=> [?]; subst.
-      destruct DA; last by rewrite (HB _ _ tB) andbF.
-      by rewrite (HA _ _ tA).
-  Qed. *)
 
   Lemma success_det_tree_same_ctx {sP A sV1 sV2 d0 d1}:
     closed_in sV1 -> success A -> (tc_tree_aux sP sV1 A d0) = (d1, sV2) ->
@@ -1803,7 +1774,7 @@ Section next_alt.
       have {}HA := HA _ _ _ _ C _ TCA.
       have {}HB := HB _ _ _ _ C _ TCB.
       case: ifP => [dA sB|ndA sA]; first by rewrite is_dead_is_ko =>//= -[??]; subst; auto.
-      rewrite success_is_ko//success_has_cut//=.
+      rewrite success_is_ko//.
       case:ifP => kB [??]; subst; first by auto.
       rewrite HA//.
       have MP := more_precise_tc_tree_aux1 C TCB.
@@ -1874,7 +1845,6 @@ Section next_alt.
       have [? {}HA] := HA _ _ _ _ _ _ _ dtA dtA1; subst.
       have [? {}HB] := HB _ _ _ _ _ _ _ dtB dtB1; subst.
       have [? {}HB0] := HB0 _ _ _ _ _ _ _ dtB0 dtB01; subst.
-
       case: ifP => [kA|nkA]; first by move=> [??][??]; subst; destruct d1, d3.
       case: ifP => sA; last first.
         move=> [??][??]; subst.
@@ -1887,90 +1857,46 @@ Section next_alt.
       destruct dA, dA1, d0, d2, dB0, dB, dB01, dB1 => //=; congruence.
   Qed.
 
-  (* Lemma expand_CB_same_ctx sP sV D1 D2 {u s A B} DA DB CA CB:
-    (* we have a superficial cut *)
-    closed_in sV ->
-    step u s A = CutBrothers B -> 
-      (tc_tree_aux sP sV A D1) = (DA, CA) ->
-        (tc_tree_aux sP sV B D2) = (DB, CB) ->
-          CA = CB.
-  Proof.
-    elim: A s B sV D1 D2 DA DB CA CB => //=.
-    - move=> _ []//=; congruence.
-    - move=> A HA s B HB s1 C sV D DA DB CA CB.
-      case: ifP => //=dA; case: step => //.
-    - move=> A HA B0 _ B HB s C sV D1 D2 DA DB CA CB Cl.
-      case E: step => //=[A'|A'].
-        move=> [?]; subst => /=.
-        rewrite (step_is_ko _ E)// (expand_CB_is_ko E).
-        case tcA: tc_tree_aux => [DA' CA'].
-        case tcA': (tc_tree_aux _ _ A') => [DA'' CA''].
-        have ? := HA _ _ _ _ _ _ _ _ _ Cl E tcA tcA'; subst.
-        case tcB: tc_tree_aux => [DB' CB'].
-        case tcB': (tc_tree_aux _ _ B) => [DB'' CB''].
-        case tcB0: tc_tree_aux => [DB0' CB0'].
-        case tcB0': (tc_tree_aux _ _ B0) => [DB0'' CB0''].
-        move=> [??][??]; subst.
-        have [<- _] := tc_tree_aux_func2 tcB tcB'.
-        by have [<- _] := tc_tree_aux_func2 tcB0 tcB0'.
-      have [? sA] := expand_solved_same _ E; subst A'.
-      case X: step => //=[B'][<-]{C}/=.
-      rewrite success_is_ko//.
-      case tcA: tc_tree_aux => [DA' CA'].
-      have ? := success_det_tree_same_ctx Cl sA tcA; subst.
-      rewrite -success_cut in sA.
-      rewrite success_is_ko//.
-      case tcA': (tc_tree_aux _ _ (cutl A)) => [DA'' CA''].
-      have ? := success_det_tree_same_ctx Cl sA tcA'; subst.
-      case tcB: tc_tree_aux => [DB' CB'].
-      case tcB': (tc_tree_aux _ _ B') => [DB'' CB''].
-      have ? := HB _ _ _ _ _ _ _ _ _ Cl X tcB tcB'; subst.
-      case tcB0: tc_tree_aux => [DB0' CB0'].
-      rewrite cutr_tc_tree_aux.
-      move => [??][??]; subst. 
-  Qed. *)
-
   Lemma success_det_tree_next_alt {sP A sV1 sV2 ign}:
-    success A -> (tc_tree_aux sP sV1 A ign) = (Func, sV2) ->
+    valid_tree A -> success A -> (tc_tree_aux sP sV1 A ign) = (Func, sV2) ->
       (ign = Func /\ next_alt false (build_na A (next_alt true A)) = None)%type2.
   Proof.
     elim: A sV1 sV2 ign => //=.
-    - move=> sV1 sV2 ign _ [<-]//.
+    - move=> sV1 sV2 ign _ _ [<-]//.
     - move=> A HA s B HB sV1 sV2 ign.
       case dtA: (tc_tree_aux _ _ A) => //=[dA svA].
       case dtB: (tc_tree_aux _ _ B) => //=[dB sVB].
-      case: ifP => [DA sB|DA sA].
+      case: ifP => [DA vB sB|DA /andP[vA bB] sA].
         rewrite is_dead_is_ko//=.
         rewrite (is_dead_next_alt _ DA)//= => -[??]; subst.
         destruct ign, dB => //.
-        have [H1 H2] := HB _ _ _ sB dtB.
+        have [H1 H2] := HB _ _ _ vB sB dtB.
         repeat split; subst.
         move: H2; case nB: (next_alt _ B) => //=[B'|].
           rewrite (is_dead_next_alt _ DA) DA => ->//.
         rewrite ?is_dead_next_alt ?is_dead_dead//.
-      rewrite success_is_ko//=.
-      rewrite success_has_cut//.
-      case:ifP => kB [??]//; subst.
+      rewrite success_is_ko//=success_has_cut//.
+      case:ifP => kB//; subst => -[??]; subst.
       rewrite (is_ko_next_alt _ kB).
       destruct ign, dA => //.
-      have [_ ] := HA _ _ _ sA dtA.
+      have [_ ] := HA _ _ _ vA sA dtA.
       case NA : (next_alt _ A) => //=[v|]; rewrite if_same/=; last first.
         rewrite !(is_dead_next_alt _ is_dead_dead)//.
       rewrite (is_ko_next_alt _ kB)/=.
       by move=> ->.
-    - move=> A HA B0 HB0 B HB sV1 sV2 ign /andP[sA sB].
+    - move=> A HA B0 HB0 B HB sV1 sV2 ign /and4P[vA +++] /andP[sA sB].
+      rewrite sA/= => vB bB0 CC.
       have fA := success_failed _ sA.
       have fB := success_failed _ sB.
-      rewrite fA/= sA/=.
-      case dA: (tc_tree_aux _ _ A) => //=[DA sVA].
-      case dB0: (tc_tree_aux _ _ B0) => //=[DB0 sVB0].
-      case dB: (tc_tree_aux _ _ B) => //=[DB sVB].
-      rewrite (success_is_ko sA).
+      rewrite fA/= success_is_ko//=.
+      case dA: (tc_tree_aux _ _ A) => [DA sVA].
+      case dB0: (tc_tree_aux _ _ B0) => [DB0 sVB0].
+      case dB: (tc_tree_aux _ _ B) => [DB sVB].
       rewrite success_is_ko//.
       case nA: next_alt.
         destruct DB0, DB => //=-[?]; subst.
-        have {HB} [?]:= HB _ _ _ sB dB; subst.
-        have {HA} [?]:= HA _ _ _ sA dA; subst.
+        have {HB} [?]:= HB _ _ _ vB sB dB; subst.
+        have {HA} [?]:= HA _ _ _ vA sA dA; subst.
         case nB: (next_alt _ B) => [B'|]/=.
           by rewrite sA fA (next_alt_not_failed (next_alt_failed nB))//.
         rewrite nA/= => nA'.
@@ -1981,8 +1907,8 @@ Section next_alt.
           rewrite is_dead_failed//= is_dead_next_alt//?is_dead_dead//.
         rewrite is_dead_next_alt//.
       move=> [??]; subst.
-      have {HB} [?]:= HB _ _ _ sB dB; subst.
-      have {HA} [?]:= HA _ _ _ sA dA; subst.
+      have {HB} [?]:= HB _ _ _ vB sB dB; subst.
+      have {HA} [?]:= HA _ _ _ vA sA dA; subst.
       rewrite nA => /= _.
       case nB: (next_alt _ B) => [B'|]/=/[dup]nB'.
         rewrite sA fA nA => ->//.
@@ -1991,31 +1917,32 @@ Section next_alt.
   Qed.
 
   Lemma failed_det_tree_next_alt {sP A O O' d ign B} b:
+    valid_tree A ->
     closed_in O ->
     tc_tree_aux sP O A ign = (d, O') ->
       next_alt b A = Some B ->
-        exists d' N, minD d d' = d' /\ 
-          (tc_tree_aux sP O B ign) = (d', N) /\ more_precise N O'.
+        exists d' N, [/\ minD d d' = d',
+          (tc_tree_aux sP O B ign) = (d', N) & more_precise N O'].
   Proof.
     elim: A B O O' d ign b => //=.
-    - move=> B s1 s2 d ign [] _ //[<-<-][<-]; repeat eexists; rewrite ?minD_refl//.
-    - move=> p c B s1 s2 d1 d2 _ cl. 
+    - move=> B s1 s2 d ign [] _ _ //[<-<-][<-]; repeat eexists; rewrite ?minD_refl//.
+    - move=> p c B s1 s2 d1 d2 _ _ cl. 
       case C: check_callable => [D S] [<-<-][<-]/=; rewrite C; repeat eexists.
         by rewrite minD_refl.
       by rewrite more_precise_refl.
-    - move=> B s1 s2 d1 d2 _ _ [??][?]; subst; (repeat eexists); rewrite ?more_precise_refl//=.
-    - move=> A HA s B HB s1 s2 C d1 d2 b co.
+    - move=> B s1 s2 d1 d2 _ _ _ [??][?]; subst; (repeat eexists); rewrite ?more_precise_refl//=.
+    - move=> A HA s B HB s1 s2 C d1 d2 b + co.
       case dtA: (tc_tree_aux _ _ A) => /=[DA sVA]//=.
       case dtB: (tc_tree_aux _ _ B) => /=[DB sVB]//=.
-      have {}HA := HA _ _ _ _ _ _ co dtA.
-      have {}HB := HB _ _ _ _ _ _ co dtB.
-      case dA: (is_dead A).
+      have {}HA := HA _ _ _ _ _ _ _ co dtA.
+      have {}HB := HB _ _ _ _ _ _ _ co dtB.
+      case:ifP => [dA vB|ndA /andP[vA bB]].
         rewrite is_dead_is_ko//= => -[??]; subst.
         rewrite is_dead_next_alt//=.
         case nB: next_alt => //=[B'][<-]{s1}/=.
         rewrite is_dead_is_ko//.
         case dtB': (tc_tree_aux _ _ B') => /=[DB' sVB']//=.
-        have [d' [N [H1 [H2 H3]]]] := HB _ _ nB.
+        have [d' [N [H1 H2 H3]]] := HB _ _ vB nB.
         have [? H] := tc_tree_aux_func2 dtB' H2; subst.
         repeat eexists; last by [].
         destruct d2, DB, DB', d' => //=; congruence.
@@ -2023,7 +1950,7 @@ Section next_alt.
         rewrite (is_ko_next_alt _ kA)/=.
         case nB: next_alt => [v|]//= [??][<-]/=; subst.
         rewrite (is_dead_is_ko is_dead_dead).
-        have [d' [N [H1 [H2 H3]]]]:= HB _ _ nB.
+        have [d' [N [H1 H2 H3]]]:= HB _ _ (bbOr_valid bB) nB.
         rewrite H2; repeat eexists; last by [].
         by destruct d2 => //=.
       case: ifP => kB.
@@ -2031,163 +1958,125 @@ Section next_alt.
         rewrite (is_ko_next_alt _ kB).
         case nA: next_alt => [v|]//= [<-]/=.
         rewrite (next_alt_is_ko nA)/=kB.
-        have [d' [N [H1 [H2 H3]]]]:= HA _ _ nA.
+        have [d' [N [H1 H2 H3]]]:= HA _ _ vA nA.
         rewrite H2; repeat eexists; last by [].
         by destruct d2 => //.
       case nA: next_alt => [A'|]//=.
         move=> +[<-]/=.
-        rewrite (next_alt_is_ko nA)/=kB; rewrite dtB (has_cutF_next_alt nA).
-        have:= HA _ _ nA.
-        move=>[d'[S [m [tcA' L]]]]/=.
+        rewrite (next_alt_is_ko nA)/=kB; rewrite dtB.
+        have:= HA _ _ vA nA.
+        move=>[d'[S [m tcA' L]]]/=.
         rewrite tcA'/=.
         have MP1 :=(more_precise_tc_tree_aux1 co dtA).
         have C1 := closed_in_mp co MP1.
         have MP2 := (more_precise_tc_tree_aux1 co dtB). 
         have C2 := closed_in_mp co MP2.
-        case: ifP => _[<-<-]; repeat eexists; auto; first (by destruct d2, d', DA, DB);
-        by apply:  more_precise_merge2 MP2 L (more_precise_refl _).
+        case:ifP => cA[<-<-]; repeat eexists;
+        [|by apply:  more_precise_merge2 MP2 L (more_precise_refl _)..].
+        destruct d2, DA, DB, d' => //=.
+        by rewrite (next_alt_keep_cut _ nA).
       case nB: next_alt => [B'|]//= + [<-]/=.
-      have {HB}:= HB _ _ nB.
-      move => -[d'[S [m [dtB' L]]]] [<-<-].
+      have {HB}:= HB _ _ (bbOr_valid bB) nB.
+      move => -[d'[S [m dtB' L]]] [<-<-].
       rewrite (is_dead_is_ko is_dead_dead)//=.
-      rewrite (next_alt_none_has_cut nA).
-      rewrite dtB'; repeat eexists.
-      have MP:= more_precise_tc_tree_aux1 co dtA.
-      have MP1:= more_precise_tc_tree_aux1 co dtB.
-      have {}cA := closed_in_mp co MP1.
-      by apply: more_precise_mergeR co MP MP1 _.
-    move=> A HA B0 HB0 B HB C s1 s2 d1 d2 b co.
-    case:ifP => kA.
-      move=> [<-<-]; rewrite is_ko_failed//=is_ko_next_alt//=.
-    case dtA: (tc_tree_aux _ _ A) => /=[DA sVA]//=.
-    case dtB0: (tc_tree_aux _ _ B0) => /=[DB0 sVB0]//=.
-    case dtB: (tc_tree_aux _ _ B) => /=[DB sVB]//=.
-    case: ifP => sA; last first.
-      move=> [<-<-].
-      case:ifP => fA; last first.
-        move=> [?]; subst => /=.
-        rewrite kA sA dtA dtB0 dtB; repeat eexists; last by [].
-        destruct DB0, DB => //=.
-      case nA: next_alt => //=[A'].
-      case nB0: next_alt => //=[B0'][<-]{C}/=.
-      rewrite (next_alt_is_ko nA).
-      have {HA} := HA _ _ _ _ _ _ co dtA nA.
-      move=>[d'[S [m [tcA' K]]]]/=.
-      rewrite tcA'/=.
-      have MP1 := more_precise_tc_tree_aux1 co dtA.
-      have cB0' : closed_in sVA.
-        apply: closed_in_sub (co).
-        have:= more_precise_tc_tree_aux1 co dtA.
-        by move=> /more_precise_sub.
-      have {HB0}[dx[sx[n[Hx Hy]]]]:= HB0 _ _ _ _ _ _ cB0' dtB0 nB0.
-      case dtB0': tc_tree_aux => [DB0' S'].
-      have /= [MP] := more_precise_tc_tree_aux cB0' Hx dtB0' K.
-      move=> /(_ m) M1.
-      case dtB': tc_tree_aux => [DB' S''].
-      have /= [H3'] := more_precise_tc_tree_aux cB0' dtB0 dtB' K.
-      move=> /(_ m) H1'.
-      case: ifP => sA'; last first.
-        repeat eexists; first by destruct DB', DB0', DB0, DB, dx => //.
-        have MP2:= more_precise_tc_tree_aux1 cB0' dtB.
-        have MP3:= more_precise_tc_tree_aux1 cB0' dtB0.
-        apply: more_precise_mergeR cB0' _ _ _; auto.
-        by apply: more_precise_mergeL (more_precise_trans MP _) H3'.
-      case nA' : next_alt => [v|]; last first.
-        repeat eexists; first by destruct DB', DB0', DB0, DB, dx => //.
-        have MP2:= more_precise_tc_tree_aux1 cB0' dtB.
-        have MP3:= more_precise_tc_tree_aux1 cB0' dtB0.
-        apply: more_precise_mergeR cB0' _ _ _; auto.
-        by apply: more_precise_trans MP _.
-      case:ifP => kB0'; repeat eexists.
-      - move: dtB0' Hx; rewrite !is_ko_tc_tree_aux// => -[??][??]; subst.
-        repeat eexists; first by destruct DB0, DB => //=.
-      - by apply: more_precise_mergeR (cB0') _ _ H3';
+      rewrite dtB'; repeat eexists; last first.
+        have MP:= more_precise_tc_tree_aux1 co dtA.
+        have MP1:= more_precise_tc_tree_aux1 co dtB.
+        have {}cA := closed_in_mp co MP1.
+        by apply: more_precise_mergeR co MP MP1 _.
+      case:ifP => //=.
+      destruct d2, DA, DB => //=.
+    move=> A HA B0 HB0 B HB C O O' d1 d2 b /and4P[vA +++] CO.
+    case dtA: (tc_tree_aux _ _ A) => /=[DA SA]//=.
+    case dtB: (tc_tree_aux _ _ B) => /=[DB SB]//=.
+    case dtB0: (tc_tree_aux _ _ B0) => /=[DB0 SB0]//=.
+    have MPOA := more_precise_tc_tree_aux1 CO dtA.
+    have CA:= closed_in_mp CO MPOA.
+    have {}HA := HA _ _ _ _ _ _ vA CO dtA.
+    have {}HB := HB _ _ _ _ _ _ _ CA dtB.
+    have {}HB0 := HB0 _ _ _ _ _ _ _ CA dtB0.
+    case:ifP => /=[sA vB bB0 CC| sA/eqP?]; subst.
+      rewrite success_is_ko//success_failed//.
+      case nA: next_alt => [A'|]//=.
+      have {HA}[d'[N [mA tcA' MP1]]] := HA _ _ nA.
+      case: ifP => kB [??]; subst.
+        rewrite is_ko_next_alt//=.
+        case nB0: next_alt => //=[B0'][<-]{C}/=.
+        have [dA [NA [mB0 tcB0' MP2]]] := HB0 _ _ (bbAnd_valid bB0) nB0.
+        rewrite (next_alt_is_ko nA) (next_alt_is_ko nB0) tcA'.
+        case dtB0': (tc_tree_aux _ _ B0) => /=[DB0' SB0'].
+        case dtB0'': (tc_tree_aux _ _ B0') => /=[DB0'' SB0''].
+        have [MP3 M]:= more_precise_tc_tree_aux CA tcB0' dtB0'' MP1.
+        have [MP4 M1] := more_precise_tc_tree_aux CA dtB0 dtB0' MP1.
+        case:ifP => sA'; last first.
+          repeat eexists; first by destruct d1, d', DB0', dA => //=; auto.
+          by apply: more_precise_mergeL (more_precise_trans MP3 MP2) MP4.
+        case nA': next_alt => [v'|]; repeat eexists.
+        - by destruct d1, d', DB0', dA => //=; auto.
+        - by apply: more_precise_mergeL (more_precise_trans MP3 MP2) MP4.
+        - by destruct d1, d', DA, dA => //=; auto. 
+        - by apply: more_precise_trans MP3 _.
+      case nB: next_alt => [B'|].
+        move=> [<-]/=; case: ifP => kA; first by rewrite is_ko_next_alt in nA.
+        have [d1[N1 [M2 TC MP2]]] := HB _ _ vB nB.
+        rewrite dtA/= dtB0 sA nA (next_alt_is_ko nB) TC.
+        repeat eexists; first by destruct DB0, DB => //.
+        by apply: more_precise_merge2 (CA) _ _ MP2 (more_precise_refl _);
         apply: more_precise_tc_tree_aux1; eauto.
-      - by destruct DB0, DB, DB0', DB', dx => //=.
-      have MP2:= more_precise_tc_tree_aux1 cB0' dtB.
-      have MP3:= more_precise_tc_tree_aux1 cB0' dtB0.
-      apply: more_precise_mergeR (cB0') _ _ (more_precise_mergeL (more_precise_trans MP Hy) H3');
-      apply: more_precise_tc_tree_aux1; eauto.
-    rewrite success_failed//=.
-    have cB0' : closed_in sVA.
-      apply: closed_in_sub (co).
-      have:= more_precise_tc_tree_aux1 co dtA.
-      by move=> /more_precise_sub.
-    case nA : next_alt => [v|]; last first.
-      move=> [??]; subst.
-      case nB: next_alt => [B'|]//[?]; subst => /=.
-      rewrite (next_alt_is_ko nB) sA success_is_ko//= dtA dtB0 nA.
-      have := HB _ _ _ _ _ _ cB0' dtB nB.
-      move=>[d'[S [m [tcA' K]]]]/=.
-      rewrite tcA'/=.
+      case nB0: next_alt => //=[B0'][<-]{C}/=.
+      have {HB0}[dA [NA [mB0 tcB0' MP2]]] := HB0 _ _ (bbAnd_valid bB0) nB0.
+      rewrite (next_alt_is_ko nA) (next_alt_is_ko nB0) tcA'.
+      case dtB0': (tc_tree_aux _ _ B0) => /=[DB0' SB0'].
+      case dtB0'': (tc_tree_aux _ _ B0') => /=[DB0'' SB0''].
+      have [MP3 M]:= more_precise_tc_tree_aux CA tcB0' dtB0'' MP1.
+      have [MP4 M1] := more_precise_tc_tree_aux CA dtB0 dtB0' MP1.
+      case:ifP => sA'; last first.
+        repeat eexists; first by destruct DB0, DB, d', DB0', dA => //=; auto.
+        move: (more_precise_trans MP3 MP2) MP4.
+        move=> H1 H2.
+        apply: more_precise_mergeR (CA) _ _ (more_precise_mergeL H1 H2);
+        apply: more_precise_tc_tree_aux1; eauto.
+      case nA': next_alt => [v'|]; repeat eexists.
+      - by destruct DB0', dA, DB0, DB => //=; auto.
+      - move: (more_precise_trans MP3 MP2) MP4 => H1 H2.
+        apply: more_precise_mergeR (CA) _ _ (more_precise_mergeL H1 H2);
+        apply: more_precise_tc_tree_aux1; eauto.
+      - by destruct d', DA, dA, DB0, DB => //=; auto. 
+      - by apply: more_precise_mergeR (CA) _ _ (more_precise_trans MP3 MP2);
+        apply: more_precise_tc_tree_aux1; eauto.
+      move=> [??]/=; subst.
+      case nB: next_alt => [B'|]; last by [].
+      have [d3[N2 [M2 TC MP2]]] := HB _ _ vB nB.
+      move=> [<-]{C}/=; rewrite success_is_ko//=dtA sA nA dtB0 TC.
       by repeat eexists.
-    case: ifP => kB.
-      rewrite is_ko_next_alt// => -[??]; subst.
-      case nB0: next_alt => [v1|]; last by [].
-      move=> [?]; subst => /=.
-      rewrite (next_alt_is_ko nA) (next_alt_is_ko nB0).
-      have {HA} := HA _ _ _ _ _ _ co dtA nA.
-      move=>[d'[S [m [tcA' K]]]]/=.
-      have MP1 := more_precise_tc_tree_aux1 co dtA.
-      have CSVA := closed_in_mp co MP1.
-      have {HB0}[dx[sx[n[Hx Hy]]]] := HB0 _ _ _ _ _ _ CSVA dtB0 nB0.
-      rewrite tcA'.
-      case tc1: tc_tree_aux => [BA BI].
-      case tc2: tc_tree_aux => [CA CI].
-      have [MP2 m1] := more_precise_tc_tree_aux CSVA Hx tc1 K.
-      have [MP3 m2] := more_precise_tc_tree_aux CSVA dtB0 tc2 K.
-      case: ifP => sV; last first.
-        repeat eexists.
-          by destruct d1, CA, BA, dx => //=; auto.
-        apply: more_precise_trans Hy.
-        apply: more_precise_mergeL; first by [].
-        admit.
-      case nA': next_alt; (repeat eexists; first by destruct d1, CA, BA, dx => //=; auto).
-      - apply: more_precise_mergeL; auto.
-        admit.
-      - admit.
-    move=> [??]; subst.
-    case nB: next_alt => [B'|].
-      move=> [?]; subst => /=.
-      rewrite (next_alt_is_ko nB).
-      rewrite success_is_ko//= dtA dtB0 sA nA.
-      have := HB _ _ _ _ _ _ cB0' dtB nB.
-      move=>[d'[S [m [tcA' K]]]]/=.
-      rewrite tcA'/=.
-      repeat eexists.
-        by destruct DB0, DB => //=.
-      by apply: more_precise_merge2 (cB0') _ _ K (more_precise_refl _);
+    case: ifP => /=[fA bB|fA bB] CC.
+      case nA: next_alt => [A'|]; last by [].
+      case nB: next_alt => [B'|]; last by [].
+      move=> + [<-]{C}/=.
+      have {HA} [d'[S [m tcA' K]]] := HA _ _ nA.
+      (* have {HB}[dA [NA [mB tcB' MP2]]] := HB _ _ (bbAnd_valid bB) nB. *)
+      case: ifP => kA[??]; subst ; first by rewrite is_ko_next_alt in nA.
+      rewrite (next_alt_is_ko nA)/= tcA'.
+      move /orP: bB nB => []bB; last by rewrite next_alt_aux_base_and_ko.
+      rewrite next_alt_aux_base_and// => -[?]; subst B'.
+      case tcB': tc_tree_aux => [DB' SB'].
+      have [MP1 M] := more_precise_tc_tree_aux CA dtB tcB' K.
+      rewrite maxD_refl merge_refl if_same.
+      have -> : match next_alt true A' with
+            | Some _ | _ => (DB', SB')
+            end = (DB', SB') by case next_alt.
+      rewrite if_same.
+      repeat eexists; first by destruct DB0, DB, DB' => //=; auto.
+      rewrite merge_comm.
+      by apply: more_precise_mergeR (CA) _ _ MP1;
       apply: more_precise_tc_tree_aux1; eauto.
-    case nB0: next_alt => //=[B0'][<-]{C}/=.
-    have:= HA _ _ _ _ _ _ co dtA nA.
-    move=>[d'[S [m [tcA' K]]]]/=.
-    rewrite tcA'/=.
-    case dtB0': tc_tree_aux => [dA' sA'].
-    have {HB0}[dx[sx[n[Hx Hy]]]] := HB0 _ _ _ _ _ _ cB0' dtB0 nB0.
-    have [H3] := more_precise_tc_tree_aux cB0' Hx dtB0' K.
-    move=> /(_ m) H1.
-    case dtB0'': tc_tree_aux => [dA'' sA''].
-    have [H3'] := more_precise_tc_tree_aux cB0' dtB0 dtB0'' K.
-    move=> /(_ m) H1'.
-    rewrite (next_alt_is_ko nA)  (next_alt_is_ko nB0).
-    case: ifP => SA'; last first.
-      repeat eexists.
-        by destruct DB0, DB, dA'', dA', dx => //=.
-      apply: more_precise_mergeR (cB0') _ _ _; last first.
-        by apply: more_precise_mergeL; auto; apply: more_precise_trans Hy.
-      by apply: more_precise_tc_tree_aux1 dtB0.
-      by apply: more_precise_tc_tree_aux1 dtB.
-    case nA': next_alt => //=; repeat eexists.
-    - by destruct DB0, DB, dA'', dA', dx => //=.
-    - apply: more_precise_mergeR (cB0') _ _ _; last first.
-      by apply: more_precise_mergeL; auto; apply: more_precise_trans Hy.
-      by apply: more_precise_tc_tree_aux1 dtB0.
-      by apply: more_precise_tc_tree_aux1 dtB.
-    - destruct DB0, DB, dA', dx => //=.
-    - apply: more_precise_mergeR (cB0') _ _ (more_precise_trans H3 Hy);
-      apply: more_precise_tc_tree_aux1; eauto.
-  Admitted.
-
+    move=> + [<-]/=; rewrite failed_is_ko//=; move=> -[??]; subst.
+    rewrite dtA/=sA dtB.
+    repeat eexists; first by destruct DB0, DB.
+    rewrite merge_refl merge_comm.
+    apply: more_precise_mergeR (CA) _ _ (more_precise_refl _);
+    apply: more_precise_tc_tree_aux1; eauto.
+  Qed.
 End next_alt.
 
 Definition sigS := (ctx V Tm).
@@ -2200,8 +2089,9 @@ Definition sigma2ctx (sP:sigT) (s: sigS) : sigV :=
 Lemma sigma2ctx_empty sP:
   sigma2ctx sP empty = empty_ctx.
 Proof.
-  move=> //.
-Admitted.
+  apply/ fmapP => /=v.
+  repeat case: fndP => //.
+Qed.
 
 Lemma check_rules_select {sP sV u l rc m s rules}:
   check_rules sP sV rules ->
