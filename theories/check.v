@@ -298,16 +298,16 @@ Proof.
 Lemma step_Exp_det u sP O s B B' N N' sVA' P:
   check_program sP -> closed_in O -> mutual_exclusion -> valid_tree B ->
   sigP sP s O ->
-    step u s B = Expanded B' ->
-  tc_tree_aux sP sVA' B Pred = (Func, N) ->
-       tc_tree_aux sP sVA' B' Pred = (P, N') ->
-        P = Func.
+    step u s B = Expanded B' -> is_ko B' = false ->
+      tc_tree_aux sP sVA' B Pred = (Func, N) ->
+        tc_tree_aux sP sVA' B' Pred = (P, N') ->
+          P = Func /\ more_precise N' N.
 Proof.
   move=> CkP + ME.
   elim: B O s B' N N' sVA' P => //=.
   - move=> p c O s B N N' sVA' P CO _ SP [<-]{B}.
     case C: check_callable => []//.
-  - move=> A HA s B HB O s1 C N N' sVA' P CO + SP.
+  - move=> A HA s B HB O s1 C N N' sVA' P CO + SP + kC.
     case:(ifP (is_dead _)) => [dA vB|dA /andP[vA bB]].
       by rewrite is_dead_is_ko//=; case dtB: tc_tree_aux.
     case: ifP=> kA; first by rewrite is_ko_step//=.
@@ -320,15 +320,19 @@ Proof.
     case eA: step => [A'|A'|A'|A'].
     - have fA:= step_not_failed _ eA notF.
       have sA:= expand_not_solved_not_success _ eA notF.
-      rewrite sA fA/= => /eqP ->{B0 HB0} bB _ [<-]{C}.
+      rewrite sA fA/= => /eqP ->{B0 HB0} bB _ [<-]{C}/= kA'.
+      rewrite kA'.
       case tcA: tc_tree_aux => [DA SA].
       case tcB: tc_tree_aux => [DB SB][??]; subst => /=.
       destruct DB => //=.
-      have {} HA:= HA _ _ _ _ _ _ _ CO vA SP eA.
-      case:ifP => //=kA'.
+      have {} HA:= HA _ _ _ _ _ _ _ CO vA SP eA kA'.
+      case tcA': tc_tree_aux => [DA' SA'].
+      case tcB': tc_tree_aux => [DB' SB'][??]; subst => /=.
+      rewrite maxD_refl !merge_refl.
+      have {} HA:= HA _ _ _ _ _ tcA'.
+      destruct DA .
+      
 Admitted.
-Search tc_tree_aux has_cut.
-
 
 Lemma expand_det_tree {u sP O N A r s d0 d1 dA dB N'} : 
   check_program sP -> closed_in O -> mutual_exclusion ->
@@ -398,8 +402,7 @@ Proof.
       case: ifP => //= cA.
       rewrite (step_keep_cut eA)//cA.
       destruct d0, DA, DB => //=?; subst.
-      destruct DA', DB' => //=; try congruence.
-      admit.
+      by destruct DA', DB' => //=; try congruence; auto.
     - have fA:= step_not_failed _ eA notF.
       (* case: ifP => kA; first by rewrite is_ko_step in eA. *)
       have kA' := (expand_CB_is_ko eA).
@@ -519,20 +522,30 @@ Proof.
         have eA' := succes_is_solved u (get_substS s A) sA.
         have /= SP1 := expand_sigP CO SP eA.
         have /= {}HB := HB _ _ _ _ _ _ _ _ _ CO vB SP1 eB dtB dtB'.
-        case kB': (is_ko B').
-          move: dtB'; rewrite is_ko_tc_tree_aux//= => -[??]; subst.
-          split.
-            destruct DB0, DB, d1, DB0', DB', DA, d0 => //=; try congruence.
-              admit.
+        case kB': (is_ko B'); last first.
+          have [{}HB MP]:= HB kB'.
+          split; last first.
+            by apply: more_precise_merge2 (CO) (more_precise_tc_tree_aux1 _ _) (more_precise_tc_tree_aux1 _ _) _ (more_precise_refl _); eauto.
+          destruct DB0, DB => //=?; subst.
+          destruct DB0', DB', d0, DA', DA => //=; auto; try congruence.
+            by have [] := step_Exp_det CkP CO ME vB SP1 eB kB' dtB dtB'.
+          by have []:= step_Exp_det CkP CO ME vB SP1 eB kB' dtB dtB'.
+        move: dtB'; rewrite is_ko_tc_tree_aux//= => -[??]; subst.
+        (* example here:
+           A := ((OK \/ BLI) /\B0 ((Bot \/ f X) /\ !)) con B0 = (g X /\ !)
+           si unfolda in `(OK /\ (Bot \/ f X) /\ !)) \/ (BLI /\ (g X /\ !))` con il cut che è superficiale
+           simao nel caso in cui `f X` non ha regole da usare, quindi
+           lo stato diventerebbe `(OK /\ (Bot \/ Bot) /\ !)) \/ (BLI /\ (g X /\ !))`
+        *)
+        split.
+          destruct DB0, DB, d1, DB0', DB', DA, d0 => //=; try congruence.
+            rewrite dtA in dtA'.
+            simpl in *.
+            clear HA HB0 dtA' m m2.
+            move: dtB dtB0.
             admit.
           admit.
-        have [{}HB MP]:= HB kB'.
-        split; last first.
-          by apply: more_precise_merge2 (CO) (more_precise_tc_tree_aux1 _ _) (more_precise_tc_tree_aux1 _ _) _ (more_precise_refl _); eauto.
-        destruct DB0, DB => //=?; subst.
-        destruct DB0', DB', d0, DA', DA => //=; auto; try congruence.
-          by have:= step_Exp_det CkP CO ME vB SP1 eB dtB dtB'.
-        by have:= step_Exp_det CkP CO ME vB SP1 eB dtB dtB'.
+        admit.
 Admitted.
 
 Definition is_det s A := forall u s' B n,

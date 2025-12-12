@@ -15,14 +15,7 @@ Section valid_tree.
     match A with
     | CutS => true
     | OK | CallS _ _ | Bot | Dead => false
-    | And A B0 B => 
-      [||has_cut A | (has_cut B0 && has_cut B)]
-      (* here, B0 is useless. B0 is used if A is failed while backtracking,
-         but B0 is resumed inside or and its cut have no effect outside the
-         And A B0 B tree
-      *)
-      (* ((failed A == false) && (has_cut A || has_cut B)) *)
-      (* has_cut A TODO: should be more permessive *)
+    | And A B0 B => [||has_cut A | (has_cut B0 && has_cut B)]
     | Or _ _ _ => false
     end.
   
