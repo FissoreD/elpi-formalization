@@ -16,8 +16,7 @@ Section valid_tree.
     | CutS => true
     | OK | CallS _ _ | Bot | Dead => false
     | And A B0 B => 
-      [||has_cut A, ((next_alt true A == None) && has_cut B) |
-      (has_cut B0 && (is_ko B || has_cut B))]
+      [||has_cut A | (has_cut B0 && has_cut B)]
       (* here, B0 is useless. B0 is used if A is failed while backtracking,
          but B0 is resumed inside or and its cut have no effect outside the
          And A B0 B tree
@@ -69,6 +68,12 @@ Section valid_tree.
   Definition bbOr B := base_or_aux B || base_or_aux_ko B. 
   Definition bbAnd B := base_and B||base_and_ko B. 
 
+  Definition check_cut B B0:=  
+    (if has_cut B then is_ko B0 || has_cut B0 else has_cut B0 == false).
+
+  Lemma check_cut_refl A: check_cut A A.
+  Proof. rewrite/check_cut; case: ifP => ->; rewrite ?orbT//. Qed.
+
   Fixpoint valid_tree s :=
     match s with
     | CutS | CallS _ _ | OK | Bot => true
@@ -81,8 +86,16 @@ Section valid_tree.
         if success A then valid_tree B 
         else (B0 == B),
         (if success A || failed A then bbAnd B0 else base_and B0)
-        & (~~ has_cut B0 || has_cut B)]
+        & check_cut B B0]
     end.
+
+  Lemma success_has_cut {A}:
+    success A -> has_cut A = false.
+  Proof.
+    elim: A => //.
+    move=> A HA B0 HB0 B HB/= /andP[sA sB].
+    by rewrite HA//HB//=andbF.
+  Qed.
 
   Goal forall x r, (valid_tree (And CutS x r)) -> is_ko r = false.
   Proof.
@@ -107,8 +120,8 @@ Section valid_tree.
   Proof.
     elim A => //; clear => A HA B +; rewrite /base_or_aux //=; case: A HA => //=.
       move=> p a _ + A + /andP [] /eqP H ; rewrite H; subst.
-      move=> _ H H1; rewrite H1//eqxx//orNb//.
-    move=> _ H _ _ /andP[/eqP<-] H1; rewrite H1//eqxx//orNb//.
+      by by move=> _ H H1; rewrite H1//eqxx//check_cut_refl.
+    by move=> _ H _ _ /andP[/eqP<-] H1; rewrite H1//eqxx//check_cut_refl.
   Qed.
 
   Lemma valid_tree_big_and {pr l} : valid_tree (big_and pr l).
@@ -120,7 +133,7 @@ Section valid_tree.
       apply: base_and_valid.
     elim: A=> //.
     move=> []// _ B0 HB0 B HB/=/and3P[H/eqP->]bB.
-    by rewrite eqxx /bbAnd bB orbT//orNb.
+    by rewrite eqxx /bbAnd bB orbT//check_cut_refl.
   Qed.
 
   Lemma big_or_aux_not_bot {pr l rs}: big_or_aux pr l rs != Bot.
@@ -148,7 +161,7 @@ Section valid_tree.
   Proof.
     elim: B => //.
     move=> []// HA B0 _ B HB/= /and3P[bB0 /eqP <-] H.
-    by rewrite eqxx /bbAnd H orbT orNb.
+    by rewrite eqxx /bbAnd H orbT check_cut_refl.
   Qed.
 
   Lemma base_and_base_or_aux {A}: base_and A -> base_or_aux A.
@@ -164,12 +177,12 @@ Section valid_tree.
     elim B => //; clear.
     + move=> A HA s B HB/=/andP[bA bB].
       rewrite HA ?base_and_base_or_aux// /bbOr bB HB// if_same//base_and_is_and//orbT//.
-    + move=> s; case: s => //[p t|] Ha B0 HB0 B HB /=/andP[/eqP->]bB; rewrite eqxx bB//orNb//.
+    + by move=> s; case: s => //[p t|] Ha B0 HB0 B HB /=/andP[/eqP->]bB; rewrite eqxx bB//check_cut_refl.
     elim: B => //.
     + move=> A HA s B HB /= /andP [bA bB].
       rewrite HB//HA?base_and_ko_base_or_aux_ko// /bbOr bB orbT if_same//base_and_ko_is_and//orbT//.
     + move=> [] // HA B0 _ B HB /= /and3P[] bB0 /eqP <-.
-      rewrite /bbAnd bB0 eqxx // orbT//orNb//.
+      by rewrite /bbAnd bB0 eqxx // orbT//check_cut_refl.
   Qed.
 
   Lemma base_and_base_and_ko_cut {B} : base_and B -> base_and_ko (cutr B).
@@ -245,10 +258,13 @@ Section valid_tree.
   Qed.
 
   Lemma has_cut_cutr A: has_cut (cutr A) = false.
-  Proof. elim: A => //=A -> B0 -> B ->; rewrite is_ko_cutr andbF//=. Qed.
+  Proof. elim: A => //=A -> B0 -> B ->//=. Qed.
+
+  Lemma check_cut_cutrR A B: check_cut A (cutr B).
+  Proof. by rewrite/check_cut is_ko_cutr has_cut_cutr if_same. Qed.
 
   Lemma has_cut_dead A: has_cut (dead A) = false.
-  Proof. elim: A => //=A -> B0 -> B ->; rewrite is_dead_is_ko // andbF//=. Qed.
+  Proof. by elim: A => //=A -> B0 -> B ->. Qed.
 
   Lemma valid_tree_cutr {A}: valid_tree A -> valid_tree (cutr A).
   Proof.
@@ -257,9 +273,9 @@ Section valid_tree.
       rewrite is_dead_cutr.
       case: ifP => [dA vA|dA/andP[vA bB]]//; auto.
       by rewrite bbOr_cutr//HA//.
-    - move=> A HA B0 HB0 B HB/=/and4P[vA ++ C]; rewrite has_cut_cutr/=.
+    - move=> A HA B0 HB0 B HB/=/and4P[vA ++ C]; rewrite check_cut_cutrR/=.
       case: ifP => /=[sA vB bB| sA /eqP -> bB].
-        rewrite?has_cut_cutr//=HA//HB//. 
+      rewrite?has_cut_cutr//=HA//HB//. 
         (* ?bbOr_valid// iscuc. *)
       (* rewrite HA//HB//bbAnd_cutr// success_cutr failed_cutr/=andbT. *)
   Abort.
@@ -273,33 +289,32 @@ Section valid_tree.
       rewrite is_dead_cutl dA HA// bbOr_cutr//.
     move=> A HA B0 HB0 B HB /= /andP[sA sB] /and4P[vA ++ C].
     rewrite sA/= => vB bB.
-    by rewrite success_cut sA HA//HB//=bbAnd_cutr// has_cut_cutr.
+    by rewrite success_cut sA HA//HB//=bbAnd_cutr// check_cut_cutrR.
   Qed.
 
   Lemma base_and_bbAnd {A}: base_and A -> bbAnd A.
   Proof. rewrite/bbAnd=>->//. Qed.
 
   Lemma step_keep_cut s A r:
-    has_cut A -> step u s A = r -> ~~(is_cutbrothers r) -> has_cut (get_tree r).
+    step u s A = r -> ~~(is_cutbrothers r) -> has_cut (get_tree r) = has_cut A.
   Proof.
-    move=> +<-{r}; elim: A s => //=.
-    move=> A HA B0 HB0 B HB s H.
+    move=> <-{r}; elim: A s => //=.
+    - by move=> p c s; rewrite/big_or; case: F => [|[]]//.
+    - move=> A HA s B HB smid.
+      case: ifP => deadA; first by rewrite get_tree_Or/=.
+      by case eA: step => //=. 
+    move=> A HA B0 HB0 B HB s.
     move: (HA s).
-    case eA: step => [A'|A'|A'|A']//= /(_ _ isT) {}HA.
-    - move: H => /or3P[/HA ->//|/andP[/eqP /next_alt_alt_None_sf[sA|fA]]|->];
-      rewrite ?orbT//; rewrite ?(succes_is_solved _ _ sA) ?(failed_expand _ fA)// in eA.
-    - by have [? fA] := expand_failed_same _ eA; subst A'.
-    - move: (HB (get_substS s A')).
-      have [? sA] := expand_solved_same _ eA; subst A'.
-      case eB: step => [B'|B'|B'|B']//= /(_ _ isT) {}HB _.
-      - move: H => /or3P[->//|/andP[->/HB->]|/andP[->]]; rewrite?orbT//.
-        rewrite (step_is_ko _ eB)//==>/HB->; rewrite !orbT//.
-      - move: H => /or3P[->//|/andP[->/HB->]|/andP[->]]; rewrite?orbT//.
-        move=> /orP[KB|/HB->]; rewrite ?orbT//.
-        by move: eB; rewrite is_ko_step// => -[?]; subst; rewrite KB; rewrite !orbT.
-      - move: H => /or3P[->//|/andP[->/HB->]|/andP[->]]; rewrite?orbT//.
-        rewrite (step_is_ko _ eB)//==>/HB->; rewrite !orbT//.
+    case eA: step => [A'|A'|A'|A']//= /(_ isT) {}HA; cycle-1; [|by rewrite HA..].
+    move: (HB (get_substS s A')).
+    have [? sA] := expand_solved_same _ eA; subst A'.
+    by case eB: step => [B'|B'|B'|B']//= /(_ isT) {}HB _; rewrite HB//.
   Qed.
+
+  Lemma check_cut_step A B0 s r:
+    step u s A = r -> ~~(is_cutbrothers r) -> check_cut (get_tree r) B0 = check_cut A B0.
+  Proof. by move=> eA H; rewrite/check_cut (step_keep_cut eA)//. Qed.
+
 
   Lemma valid_tree_expand {s A r}:
     valid_tree A -> step u s A = r -> valid_tree (get_tree r).
@@ -316,15 +331,13 @@ Section valid_tree.
       case: ifP => [sA vB /= bB0 | sA /eqP->]/=.
         rewrite succes_is_solved//=.
         have {HB} := HB (get_substS s1 A) vB.
-        case X: step => //[C|C|C|C]/=vC; rewrite ?sA ?vA ?vC ?CC/=?bB0/=;
-        try move/orP: CC => [->|]///step_keep_cut/(_ X)->//=; rewrite?orbT//.
-        rewrite success_cut sA/= valid_tree_cut// has_cut_cutr//=.
-        rewrite bbAnd_cutr//.
+        case X: step => //[C|C|C|C]/=vC; cycle 1; [|by rewrite sA vA vC /=bB0/=(check_cut_step _ X)..].
+        by rewrite success_cut sA/= valid_tree_cut//vC bbAnd_cutr//check_cut_cutrR.
       case: ifP => [fA bB|fA bB].
-        rewrite failed_expand//=vA sA eqxx bB/=fA//orNb//.
+        by rewrite failed_expand//= vA sA eqxx bB/=fA// check_cut_refl.
       have:= HA s1 vA.
       case X: step => //[A'|A'|A'|A']/=vA'; last first;
-       [|by rewrite //vA' base_and_valid///bbAnd bB eqxx !if_same//orNb//..].
+       [|by rewrite //vA' base_and_valid///bbAnd bB eqxx !if_same//check_cut_refl..].
       have [? sA']:= expand_solved_same _ X; subst.
       congruence.
   Qed.
@@ -403,32 +416,40 @@ Section valid_tree.
   Qed.
 
   Lemma next_alt_keep_cut {A B b}:
-    valid_tree A -> next_alt b A = Some B -> has_cut A -> has_cut B.
+    valid_tree A -> next_alt b A = Some B -> has_cut B = has_cut A.
   Proof.
     elim: A B b => //=.
     - move=> B []// _ [<-]//.
+    - move=> _ _ _ _ _ [<-]//.
+    - move=> []//.
+    - move=> A HA s B HB C b.
+      case: ifP => [dA vB|dA /andP[vA bB]].
+        rewrite is_dead_next_alt//.
+        case nB: next_alt => [v|]; last (by []); by move=> [<-]/=.
+      case nA: next_alt => [A'|]; first by move=>[<-]/=.
+      case nB: next_alt => [B'|//][<-]//.
     - move=> A HA B0 HB0 B HB C b /and4P[vA].
       case: ifP => [sA vB /=bB CC|sA /eqP->{B0 HB0}]/=.
         rewrite success_failed//=.
-        case nB: next_alt => [v|]//=.
-          move=> [?]; subst => /=.
-          have {}HB:= HB _ _ vB nB.
-          move => /or3P[->|/andP[->/HB->]|/andP[->]/orP[|/HB->]]//=;rewrite?orbT//.
-          by move=> H; rewrite is_ko_next_alt in nB.
+        case nB: next_alt => [B'|]; first by move=> [<-]/=; rewrite (HB _ _ vB nB).
         case nA: next_alt => //=[A'].
         case nB0: next_alt => //=[B0'][<-]{C}/=.
         have {}HA:= HA _ _ vA nA.
         have {}HB0:= HB0 _ _ (bbAnd_valid bB) nB0.
-        by move=> /orP[/HA->//|/andP[/[dup] H ->] _]; rewrite HB0// !orbT.
-      case:ifP => [fA bB|fA bB CC [<-]]//=.
-      rewrite orNb => _.
+        rewrite HA HB0.
+        do 2 f_equal.
+        move:CC; rewrite /check_cut.
+        case: has_cut => [/orP[kB|->]|/eqP->//]//.
+        by rewrite is_ko_next_alt in nB0.
+      case:ifP => [fA bB|fA bB CC [<-]]//= _.
       case nA: next_alt => //=[A'].
       case nB: next_alt => //=[B'][<-]{C}/=.
-      have {}HA:= HA _ _ vA nA.
-      have {}HB:= HB _ _ (bbAnd_valid bB) nB.
-      move=> /or3P[/HA->//||/andP[/[dup] /HB->->]]; rewrite ?orbT//.
-      rewrite next_alt_false_true//nA//.
+      by rewrite (HA _ _ vA nA) (HB _ _ (bbAnd_valid bB) nB).
   Qed.
+
+  Lemma next_alt_check_cut {A B b B0}:
+    valid_tree A -> next_alt b A = Some B -> check_cut B B0 = check_cut A B0.
+  Proof. move=> vA nA; rewrite /check_cut (next_alt_keep_cut vA nA)//. Qed.
 
   Lemma valid_tree_next_alt {A B b}: 
     valid_tree A -> next_alt b A = Some (B) 
@@ -450,14 +471,13 @@ Section valid_tree.
       case: ifP => /=[sA vB bB0|sA /eqP?]; subst.
         rewrite success_failed//.
         case X: next_alt => [D|].
-          move=>[<-]/=; rewrite vA sA/= (HB _ _ vB X)//bB0/=;
-          move/orP: CC=> [->|]//.
-          by move=> /(next_alt_keep_cut vB X)->; rewrite orbT.
+          move=>[<-]/=; rewrite vA sA/= (HB _ _ vB X)//bB0/=.
+          by rewrite (next_alt_check_cut vB X).
         case Y: next_alt => //=[A'].
         move: bB0 => /orPT[]/[dup]bB; last first.
           move=> /(next_alt_aux_base_and_ko false) -> //.
         move=> /next_alt_aux_base_and->[<-]/=.
-        by rewrite (base_and_valid bB) eqxx /bbAnd bB/= (HA _ _ vA Y) !if_same//orNb//.
+        by rewrite (base_and_valid bB) eqxx /bbAnd bB/= (HA _ _ vA Y) !if_same// check_cut_refl.
       case: ifP => fA bB; last first.
         move=> [<-]/=; rewrite vA sA eqxx /bbAnd bB if_same//.
       case X: next_alt => [D|]//.
