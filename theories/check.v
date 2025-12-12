@@ -35,15 +35,30 @@ Proof.
   by rewrite IH dt maxD_refl.
 Qed.
 
+Definition good_assignment sP SV vk :=
+  let (S, b1) := check_tm sP empty_ctx vk in
+  let SS := if b1 then S else weak S in
+  compat_type SS SV && incl SS SV.
+
+Lemma incl_good_assignment sP s s' v :
+  incl s s' ->
+  compat_type s s' ->
+  good_assignment sP s v ->
+  good_assignment sP s' v.
+move=> i c; rewrite /good_assignment; case E: check_tm => [sk []]; rewrite ?valPE/=.
+  move=> /andP[comp_sk isk]; rewrite (compat_type_trans comp_sk)  //.
+  by rewrite (incl_trans isk) // in2_more_precise.
+ move=> /andP[comp_sk isk]; rewrite (compat_type_trans comp_sk)  //.
+  by rewrite (incl_trans isk) // in2_more_precise.
+Qed.
+
+
+
 Definition sigP (sP:sigT) (s: sigS) (sV: sigV) :=
   [forall k : domf sV,
     let SV := sV.[valP k] in
-    if s.[?val k] is Some vk then
-      let (S, b1) := check_tm sP empty_ctx vk in
-      let SS := if b1 then S else weak S in
-      compat_type SS SV && incl SS SV
-    else
-    SV == weak SV].
+    if s.[?val k] is Some vk then good_assignment sP SV vk
+    else SV == weak SV].
 
 Lemma eq_incl x y : (incl x y && incl y x) = (x == y).
 Proof.
@@ -60,11 +75,8 @@ Proof.
   have kN := fsubsetP (more_precise_sub MP) k kO.
   have /={H} := H (Sub k kN).
   have [kS|bkS] := fndP.
-    case E: check_tm => [sk []]; rewrite ?valPE/=.
-      move=> /andP[comp_sk isk]; rewrite (compat_type_trans comp_sk) 1?compat_type_comm ?more_precise_same_type //.
-      by rewrite (incl_trans isk) // in2_more_precise.
-    move=> /andP[comp_sk isk]; rewrite (compat_type_trans comp_sk) 1?compat_type_comm ?more_precise_same_type //.
-    by rewrite (incl_trans isk) // in2_more_precise.
+    rewrite !valPE/=; apply: incl_good_assignment (in2_more_precise MP _ _) _.
+    by rewrite compat_type_comm more_precise_same_type.
   rewrite ?valPE/= => /eqP def_N; have ino := in2_more_precise MP kO kN.
   have /comp_weak wON := more_precise_same_type MP kO kN.
   by rewrite -eq_incl weak_incl wON -def_N ino.
@@ -76,6 +88,15 @@ Lemma expand_sigP {u sP sV A r s} :
         step u s A = r -> 
            sigP sP (get_substS s (get_tree r)) sV.
 Proof.
+  move=> ++ <-.
+  elim: A u sP sV s => //.
+  - move=> p c u sP sV s clo /forallP/(_ (Sub (_:V) _))  H; apply/forallP=> -[k kV].
+    move: (H k kV); rewrite valPE/= {H}.
+    have [kS|nkS] := fndP.
+      admit. (* more instantiated, interesting branch *)
+    have [kS'|nkS'] := fndP.
+      admit. (* assigned, interesting branch *)
+    by []. (* untouched *)
 Admitted.
 
 Axiom deref_rigid: forall {s t rc p},
