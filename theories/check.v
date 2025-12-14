@@ -76,14 +76,6 @@ Definition sigP (sP:sigT) (s: sigS) (sV: sigV) :=
     if s.[?val k] is Some vk then good_assignment sP SV vk
     else SV == weak SV].
 
-Lemma eq_incl x y : (incl x y && incl y x) = (x == y).
-Proof.
-  apply/andP/eqP => [[]|-> //].
-    elim: x y => [[|[]]|[] s_ IHs t IHt] [[|[]]|[] s' t']; try by [rewrite /incl/min /=].
-    by rewrite !incl_arr /= => /andP[? /IHt HT] /andP[/IHs HS ?]; rewrite -HS // -HT.
-  by rewrite !incl_arr/= => /andP[? /IHt HT] /andP[/IHs HS ?]; rewrite -HS // -HT.
-Qed.
-
 Lemma sigP_more_precise sP s N O:
   more_precise N O -> sigP sP s N -> sigP sP s O.
 Proof.
@@ -582,8 +574,7 @@ Proof.
     move=> /(_ erefl) ?; subst.
     have [Hx Hy] := IH _ erefl _ _ H1 (valid_tree_expand vA eA) SP TC.
     split => //.
-    apply: sigP_more_precise MP Hy.
-    apply: closed_in_mp H1 (more_precise_tc_tree_aux1 H1 dtA).
+    by apply: sigP_more_precise MP Hy.
   - move=> s1 s2 r A B n eA R IH s' ? sV sV' H1 vA SP dtA; subst.
     have WS : will_succeed B.
       rewrite/will_succeed; case KB: is_ko => //.
@@ -593,14 +584,13 @@ Proof.
     move=> /(_ erefl) ?; subst.
     have [Hx Hy] := IH _ erefl _ _ H1 (valid_tree_expand vA eA) SP TC.
     split => //.
-    apply: sigP_more_precise MP Hy.
-    apply: closed_in_mp H1 (more_precise_tc_tree_aux1 H1 dtA).
+    by apply: sigP_more_precise MP Hy.
   - move=> s1 s2 A B r n fA nA _ IH s ? sV sV' C vA SP TC; subst.
     have := failed_det_tree_next_alt vA C TC nA.
     move => [[]// [N [? X MP]]]//.
     have [{}IH INV] := IH _ erefl _ _ C (valid_tree_next_alt vA nA) SP X.
     split; first by [].
-    apply: sigP_more_precise (closed_in_mp C (more_precise_tc_tree_aux1 C TC)) MP INV.
+    by apply: sigP_more_precise MP INV.
 Qed.
 
 Lemma run_is_detP1 {sP sV sV' s A}: 

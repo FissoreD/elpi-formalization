@@ -494,6 +494,11 @@ Section min_max.
     - rewrite/max/={3}/incl/=/min/=//.
   Qed.
 
+  Lemma eq_incl x y : (incl x y && incl y x) = (x == y).
+  Proof.
+    apply/andP/eqP => [[]|-> //]; rewrite?incl_refl//.
+    by move=> /eqP<-/eqP<-; rewrite min_assoc min_refl (@min_comm x) min_assoc min_refl.
+  Qed.
 End min_max.
 Hint Resolve incl_refl : core.
 Hint Resolve minD_refl : core.
