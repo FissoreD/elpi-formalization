@@ -82,6 +82,7 @@ Qed.
 
 
 Definition sigP (sP:sigT) (s: sigS) (sV: sigV) :=
+  (* (domf s `<=` domf sV) && *)
   [forall k : domf sV,
     let SV := sV.[valP k] in
     if s.[?val k] is Some vk then good_assignment sP SV vk
@@ -101,11 +102,15 @@ Proof.
   by rewrite -eq_incl weak_incl wON -def_N ino.
 Qed.
 
-Lemma expand_sigP {u sP sV A r s} : 
-  closed_in sV ->
+(* Lemma next_alt_sigP {u sP sV A r s d} ... *)
+Lemma expand_sigP {u sP sV A r s d} : (* rename step *)
+  closed_in A sV ->
     sigP sP s sV ->
         step u s A = r -> 
-           sigP sP (get_substS s (get_tree r)) sV.
+        let A' := get_tree r in
+        let s' := get_substS s A' in
+        let (_,sV') := tc_tree_aux sP sV A' d in
+           sigP sP s' sV'.
 Proof.
   move=> ++ <-.
   elim: A u sP sV s => //.

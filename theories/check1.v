@@ -828,8 +828,8 @@ Section merge.
    [fmap k : domf f `|` domf g =>
           match fsetUP (domfU2 (valP k)) with
             | InBoth kf _ kg _ => max f.[kf] g.[kg]
-            | InLeft kf _ _    => weak f.[kf]
-            | InRight _ kg _   => weak g.[kg]
+            | InLeft kf _ _    => (*weak*) f.[kf]
+            | InRight _ kg _   => (*weak*) g.[kg]
           end].
 
   Lemma merge_sig_domf A B: domf (merge_sig A B) = domf A `|` domf B.
@@ -1020,7 +1020,7 @@ Proof.
     by rewrite (HB _ _ vB tcB') orbT.
 Qed. *)
 
-(* Section closed_in.
+Section closed_in.
   Open Scope fset_scope.
 
   Fixpoint closed_in (sV : sigV) t : bool :=
@@ -1105,11 +1105,22 @@ Qed. *)
     rewrite closed_inT_cutr (HB _ _ _ S1)//closed_inT_cutl//.
   Qed.
 
+  (* Lemma tc_closed_in sP sV A : closed_in A sV -> closed_in (tc_tree_aux sP sV A).2 A.
+Lemma tc_closed_in_step u sP sV A : closed_in A sV ->
+  let xx := tc_tree_aux sP sV (get_tree (step u s A)) in
+  closed_in xx.2 A.
+Lemma tc_closed_in_next_alt sP sV A b : closed_in A sV ->
+  let xx := tc_tree_aux sP sV (odflt A (next_alt b A)) in
+  closed_in xx.2 A.
+ *)
+
+
+
   (* Definition tc : closed_in A t -> expant t = t' -> exists B, A <= B /\ all x \in B \ A, B[x] = weak B[x] /\ closed_in t'. *)
 
-End closed_in. *)
+End closed_in.
 
-Section closed_in.
+(* Section closed_in.
   Open Scope fset_scope.
 
   Definition closed_in (sV : sigV) :=
@@ -1126,7 +1137,7 @@ Section closed_in.
     move=> + + x => + /(_ x); case: fsubsetP => //= /(_ x)//.
   Qed.
 
-End closed_in.
+End closed_in. *)
 
 
 Section more_precise.
@@ -1213,8 +1224,8 @@ Section more_precise.
         forall kB : k \in domf B, compat_type A.[kA] B.[kB].
   Proof. by move=> MP kA kB; rewrite (in2_more_compat_type_more_precise MP kA kB). Qed.
 
-  Lemma closed_in_mp {A B}: 
-    closed_in B -> more_precise A B ->  closed_in A.
+  Lemma closed_in_mp {t A B}: 
+    closed_in B t -> more_precise A B ->  closed_in A t.
   Proof.
     move=> + MP.
     have:= more_precise_sub MP.
@@ -1222,7 +1233,7 @@ Section more_precise.
   Qed.
 
   Lemma more_precise_merge N O:
-    closed_in O -> more_precise N O -> merge_sig O N = O.
+    domf N == domf O -> more_precise N O -> merge_sig O N = O.
   Proof.
     move=> CO MP.
     apply/fmapP => k.
