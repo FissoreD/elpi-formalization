@@ -181,11 +181,6 @@ Lemma get_tm_hd_RCF hd e:
   get_tm_hd (Callable2Tm (RCallable2Callable hd)) = inl e -> False.
 Proof. elim: hd e => //=. Qed.
 
-(* Lemma sig_hd_exp S:
-  get_sig_hd S = Exp -> S = b Exp.
-Proof.
-  elim: S => //=[|[] f Hf a Ha ]; [congruence|..]. *)
-
 Lemma xx sP t O u pr s S D1 N1 sV (s1:Sigma) (r1:R):
   closed_in O ->
   sigP sP s O ->
