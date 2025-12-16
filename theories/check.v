@@ -811,8 +811,8 @@ Lemma run_is_det {sP sV sV' s A}:
     sigP sP s sV ->
     tc_tree_aux sP sV A Func = (Func, sV') ->
      forall u s' B n,
-      runb u s A (Some s') B n -> next_alt false B = None /\ 
-        sigP sP s' sV'.
+      runb u s A (Some s') B n ->
+        next_alt false B = None /\ sigP sP s' sV'.
 Proof.
   rewrite/is_det.
   move=> ckP ME ++++ u s' B n H.

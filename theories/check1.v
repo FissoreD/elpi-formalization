@@ -1334,6 +1334,8 @@ Section more_precise.
       by apply: more_precise_mergeL; apply: more_precise_trans HA.
   Qed.
 
+Definition sigS := (ctx V Tm).
+
   Section closed_in.
     Open Scope fset_scope.
 
@@ -1352,6 +1354,112 @@ Section more_precise.
       | And A B0 B => [&& closed_inT sV A, closed_inT sV B0 & closed_inT sV B]
       | Or A _ B => closed_inT sV A && closed_inT sV B
       end.
+
+    Definition extends (O N : sigV) :=
+      (domf O `<=` domf N) &&
+      [forall x : domf N, let sx := N.[valP x] in
+         if val x \in domf O then Some sx == O.[? val x]
+         else sx == weak sx].
+
+    Lemma extends_refl N : extends N N.
+    Proof.
+      rewrite /extends fsubset_refl; apply/forallP=> -[x xP]/=.
+      by rewrite valPE/= xP in_fnd eqxx.
+    Qed.
+
+    Lemma extends_trans : transitive extends.
+    Proof.
+      rewrite /extends => M N O => /andP[sNM /forallP H1] /andP[sMO /forallP H2].
+      rewrite (fsubset_trans sNM sMO); apply/forallP=> -[x xO]/=.
+      have /= {H2} := H2 (Sub x xO).
+      case: ifP => [xM | /negbT nxM ].
+        rewrite valPE/= in_fnd.
+        have [xN | nxN] := fndP.
+          have /= /[!xN]/eqP := H1 (Sub x xM).
+          by rewrite in_fnd valPE/= => <-.
+        have /= /[!(negPf nxN)] := H1 (Sub x xM).
+        rewrite valPE/= => /eqP E.
+        by rewrite E => /eqP[->]; rewrite weak2.
+      have nxN : x \notin domf N.
+        by apply: contra nxM; apply: fsubsetP.
+      by rewrite valPE/= (negPf nxN).
+    Qed.
+ 
+
+    Axiom saturate_sigP : forall O A u s r,
+      closed_inT O A ->
+      step u s A = r ->
+      let A' := get_tree r in
+      { N : sigV | closed_inT N A' /\ extends O N }.
+
+    Lemma xxx sP p c O O' N N' d0 dO dO': closed_inT O (CallS p c) ->
+extends O O' ->
+check_callable sP O c d0 = (dO, N) ->
+check_callable sP O' c d0 = (dO', N') ->
+dO = dO' /\ extends N N'.
+  Admitted.
+
+Lemma extend_sub A B : extends A B -> domf A `<=`domf  B. by case/andP. Qed.
+Lemma extendsP O N : extends O N -> forall x (h : x \in domf N), let sx := N.[h] in
+         if x \in domf O then Some sx = O.[? x]
+         else sx = weak sx.
+Admitted.
+
+  Lemma extends_merge_sig A B C D :
+     extends A B ->
+     extends C D ->
+     extends (merge_sig A C) (merge_sig B D).
+  move=> eAB eCD; have sAB := extend_sub eAB; have sCD := extend_sub eCD.
+  rewrite /extends !{1}merge_sig_domf fsetUSS //; apply/forallP=> -[x xBD].
+  rewrite valPE [val _]/=.
+  have [xAC | nxAC ] := fndP.
+    have [xA|nxA] := boolP (x \in domf A).
+      have xB := fsubsetP sAB x xA.
+      have [xC|nxC] := boolP (x \in domf C).
+        have xD := fsubsetP sCD x xC.
+        rewrite (fnd_in xBD) (fnd_in xAC) !merge_sigLR ![odflt _ _]/=.
+        have := extendsP eAB xB. rewrite xA in_fnd => /= -[->].
+
+        rewrite (fnd_in xAC) merge_sigLR [odflt _ _]/=.
+
+  Search merge_sig.
+
+    Lemma tc_tree_auxW sP A d d' d'' O O' N N' :
+    closed_inT O A ->
+    tc_tree_aux sP O A d = (d', N) ->
+    extends O O' ->
+    tc_tree_aux sP O' A d = (d'', N') -> d' = d'' /\ extends N N'.
+    Proof.
+      elim: A d d' d'' O O' N N' => //; try by move=> ???????? [??] H [??]; subst; split.
+      - move=> p c d0 d1 d2 O O' N N' cO tcO H tcO'.
+        move: tcO tcO' => /=; case E: check_callable => [dO sO]; case F: check_callable => [dO' sO'].
+        move=> [??] [??]; subst.
+        by have [-> ->] := xxx cO H E F.
+      - move=> A HA s B HB d d' d'' O O' N N' cAB tcO eOO' tcO'.
+        have cA : closed_inT O A by case/andP: cAB.
+        have cB : closed_inT O B by case/andP: cAB.
+        have {}HA := HA _ _ _ _ _ _ _ cA _ eOO'.
+        have {}HB := HB _ _ _ _ _ _ _ cB _ eOO'.
+        move: tcO tcO'; simpl.
+        have [|] := boolP (is_ko A); have [|] := boolP (is_ko B).
+        - by move=> /= ?? [<- <-] [<- <-]; split.
+        - move=> /= ??; case E: tc_tree_aux => [??]; case F: tc_tree_aux => [??].
+          by have [-> ? [??] [??]] := HB _ _ _ _ _ E F; subst.
+        - move=> /= ??; case E: tc_tree_aux => [??]; case F: tc_tree_aux => [??].
+          by have [-> ? [??] [??]] := HA _ _ _ _ _ E F; subst.
+        - simpl => ??/=.
+          case E: tc_tree_aux => [??]; case F: tc_tree_aux => [??].
+          case G: tc_tree_aux => [??]; case H: tc_tree_aux => [??].
+          have [-> ?] := HA _ _ _ _ _ E G.
+          have [-> ?] := HB _ _ _ _ _ F H.
+          case: ifP => cutA [??] [??]; subst.
+
+          rewrite 2![tc_tree_aux _ _ _ _]surjective_pairing.
+          [<- <-] [<- <-]; split.
+
+        have tcOA : tc_tree_aux sP O A d = (d', N).
+        move: cO H dO E dO' F.
+
 
     Lemma fsubset_assume sP O t s : domf O `<=` domf (assume_tm sP O t s).
     Proof.
@@ -1449,11 +1557,13 @@ Section more_precise.
       by rewrite closed_inT_cutr (HB _ _ _ S1)//closed_inT_cutl.
     Qed.
 
-    Lemma closed_inT_step {O u s A}:
-      closed_inT O A -> closed_inT O (get_tree (step u s A)).
+    (* Lemma closed_inT_step {O u s A}:
+      closed_inT O A -> {N | closed_inT N (get_tree (step u s A)) }.
     Proof.
-      elim: A s => //=.
+      elim: A s => //; try by exists O.
       - move=> p c s Cc.
+        have [N [???]] := @saturate_sigP O _ u s _ Cc erefl.
+        by exists N.
         rewrite/big_or.
         case:F => //=[[s1 r1]rs]/=.
         case X: closed_inT => //=.
@@ -1470,19 +1580,20 @@ Section more_precise.
         have:= HB (get_substS s A) CB.
         case eB: step => [B'|B'|B'|B']//=->; cycle 1; [|by rewrite CA CB0..].
         rewrite closed_inT_cutr closed_inT_cutl//.
-    Admitted.
+    Admitted. *)
 
-    Lemma tc_closed_in_step u sP O N A s d r D: 
+    (* Lemma tc_closed_in_step u sP O N A s d r D: 
       closed_inT O A ->
       (step u s A) = r ->
       tc_tree_aux sP O (get_tree r) d = (D, N) ->
       closed_inT N (get_tree r).
     Proof.
-      move=> CO <- H.
+      move=> CO eA H.
+      have [N' [???]] := saturate_sigP CO eA.
       apply: closed_inT_step.
       apply: closed_inT_mp CO _.
       apply: more_precise_tc_tree_aux1 H.
-    Qed.
+    Qed. *)
 
     Lemma tc_closed_in_next_alt sP O N A B b d D: 
       closed_inT O A ->
@@ -2252,7 +2363,6 @@ Section next_alt.
   Admitted.
 End next_alt.
 
-Definition sigS := (ctx V Tm).
 
 Definition sigma2ctx (sP:sigT) (s: sigS) : sigV :=
   [fmap k : domf s =>
