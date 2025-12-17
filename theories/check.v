@@ -164,7 +164,6 @@ Definition mutual_exclusion :=
         forall s1 x, (s1, x) \in PREF ->
           seq.head ACut x.(premises) = ACut).
 
-Definition all_weak (sV:sigV):= [forall k : domf sV, sV.[valP k] == weak (sV.[valP k]) ].
 
 Lemma all_weak_sigP_empty {sV sP}:
   all_weak sV -> sigP sP empty sV.
@@ -196,63 +195,6 @@ Definition get_sig_hd_1 sP O t:=
 Lemma get_tm_hd_RCF hd e:
   get_tm_hd (Callable2Tm (RCallable2Callable hd)) = inl e -> False.
 Proof. elim: hd e => //=. Qed.
-
-(* Lemma xx sP t O u pr s S D1 N1 sV (s1:Sigma) (r1:R):
-  closed_in O ->
-  sigP sP s O ->
-  mutual_exclusion ->
-  check_program sP ->
-    check_tm sP O (Callable2Tm t) = (S, true) ->
-      let sig_hd := get_sig_hd_1 sP O t in
-      (s1, r1) \in F u pr t s -> 
-        check_atoms sP sV r1.(premises) Func = (D1, N1) ->
-          minD D1 sig_hd = D1.
-Proof.
-  move=> CO SP ME /(_ pr) /allP/= ckP.
-  rewrite/F.
-  case TM: tm2RC => //=[rc].
-  rewrite /get_rcallable_hd.
-  case tm_hd : get_tm_hd => [//|[p|//]].
-  case: fndP => //= ppr ckt inS.
-  have:= select_in_rules u rc (get_modes_rev rc (sig pr).[ppr]) (rules pr) s.
-  move=> /allP/=.
-  move=> /(_ _ inS) /ckP/=; rewrite /check_rule/RCallable_sig.
-  case: r1 inS => /= hd pm inS.
-  rewrite/get_tm_hd_sig/=.
-  case X: get_tm_hd => //=[e|[ps|v]]; [by have:= get_tm_hd_RCF X|case:fndP => //..].
-  move=> pP.
-  case ckA: check_atoms => [D B].
-  rewrite/is_det_sig.
-  case: ifP => //= H4 CHD.
-  rewrite/get_sig_hd_1 /get_tm_hd_sig.
-  move: H4.
-  have ?: ps = p.
-    (*the head has the same head as the call: X + inS + tm_hd*)
-    move: X inS tm_hd.
-    admit.
-  subst ps. 
-  case shd: get_sig_hd => [|[]]//=.
-  - move: ckA.
-    move: shd.
-    admit.
-  - destruct D; [move=> _|by []].
-    case thd : get_tm_hd => [d1|[p1|v1]].
-    - admit.
-    - move: tm_hd; rewrite (deref_rigid TM thd) => -[?]; subst p1.
-      rewrite (in_fnd pP)/get_sig_hd_/=shd.
-      rewrite !(@minD_comm _ Func)/=.
-      admit. (*should be true using ckA*)
-    - rewrite (in_fnd (CO _))/get_sig_hd_/=.
-      admit.
-  - move=> _.
-    case thd : get_tm_hd => [d1|[p1|v1]].
-    - admit.
-    - move: tm_hd; rewrite (deref_rigid TM thd) => -[?]; subst p1.
-      rewrite (in_fnd pP)/get_sig_hd_/=shd.
-      rewrite !(@minD_comm _ Pred)//=.
-    - rewrite (in_fnd (CO _))/get_sig_hd_/=.
-      admit.
-Admitted. *)
 
 Lemma sigtm_rev_Exp t: sigtm_rev t (b Exp) = [::].
 Proof. case: t => //=. Qed.
