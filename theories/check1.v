@@ -1908,6 +1908,19 @@ Section more_precise.
     by rewrite fnd_rem nxO in_fnd/=.
   Qed.
 
+  Lemma extends_mp {A B}:
+    extends A B -> more_precise B A.
+  Proof.
+    move=>/extendsP /=[X [H1 AW]]; subst.
+    rewrite /more_precise {1}domf_cat fsubsetUr.
+    apply/forallP => -[k kV]; rewrite !valPE [val _]/=.
+    have:= kV; rewrite {1}domf_cat in_fsetU.
+    case:fndP => [kA _|nkA kX].
+      by rewrite (fnd_in kV) lookup_cat kA (in_fnd kA)/= compat_type_refl incl_refl.
+    rewrite orbF in kX.
+    by rewrite (fnd_in kV) lookup_cat nkA (in_fnd kX)/= compat_type_refl incl_refl.
+  Qed.
+
 
   Lemma tc_tree_auxW sP A d d' d'' O O' N N' :
     closed_inT O A ->
