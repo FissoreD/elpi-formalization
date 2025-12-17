@@ -1422,67 +1422,99 @@ Section more_precise.
 
     Lemma change_only_in_tm_ck_tm_ {sP T O1 O2}:
       closed_in O1 T ->
-      check_tm sP O1 T = check_tm sP (O2+O1) T.
+      check_tm sP (O2+O1) T = check_tm sP O1 T.
     Proof.
+      move=> tmp; symmetry; move: tmp.
       rewrite/closed_in.
       elim: T => //.
         move=> v; rewrite all_vars_subset_point [check_tm _ _ _]/= => vO1.
-        have H : v \in domf O2 `\` domf O1 `|` domf O1 by rewrite in_fsetU vO1 orbT.
-        rewrite /=!in_fnd ffunE/=.
-        case: fsetULVR; last by move=> H1; rewrite (bool_irrelevance vO1 H1).
-        move=> H1.
-        Search (_ `\` _) (_ \in _).
-        admit.
+        by rewrite in_fnd /check_tm lookup_cat vO1 /= in_fnd.
       move=> f Hf a Ha.
       rewrite [all_vars_subset _ _]/= all_vars_OR => /andP[/Hf {}Hf /Ha{}Ha].
       rewrite/=Hf Ha//.
     Qed.
+ 
+    Lemma get_tm_hd_in T v : get_tm_hd T = inr (inr v) -> v \in all_vars T.
+    elim: T => //=.
+      by move=> ? [->]; rewrite in_fset1.
+    by move=> f Hf ?? /= /Hf; rewrite in_fsetU => ->.
+  Qed.
 
+  Lemma assume_term_cat O1 O2 sP T s :
+    closed_in O1 T ->
+    assume_tm sP (O2 + O1) T s = O2 + assume_tm sP O1 T s.
+  Proof.
+    elim: T O1 O2 s => [???[]|???[]|v O1 O2 [|[[] s] xs]|] //.
+      rewrite /assume_tm lookup_cat closed_in_var => CI.
+      rewrite CI (in_fnd CI) /=.
+      by case: ifP => //; rewrite catf_setr.
+    move=> f Hf a Ha O1 O2 [|[m s] xs] //=; rewrite closed_in_comb =>  /andP[cF cA].
+    rewrite Hf // Ha ?closed_in_assume_tm //.
+    by repeat case: ifP => //.
+  Qed.
 
-    Lemma change_only_in_tm_ck_callable_ {sP T O1 O2 d0 d1 d2 N1 N2}:
+    Lemma check_callable_cat {sP T O1 O2 d0 d1 d2 N1 N2}:
       closed_in O1 (Callable2Tm T) ->
-      domf O1 `<=` domf O2 ->
+      (* domf O1 `<=` domf O2 -> *)
       check_callable sP O1 T d0 = (d1, N1) ->
-      check_callable sP O2 T d0 = (d2, N2) ->
-      ((d1 = d2) * 
-      ([forall k : domf N2, 
-        (val k \notin all_vars (Callable2Tm T)) || (Some N2.[valP k] == N1.[?val k])])).
+      check_callable sP (O2+O1) T d0 = (d2, N2) ->
+      ((d1 = d2) * (N2 = O2+N1)).
     Proof.
-      rewrite/check_callable/change_only_in_tm => C D.
-      case C1: check_tm => [S1 B1].
-      case C2: check_tm => [S2 B2].
-        move=> 
-      [|by move=> [_ <-]..].
-      (* case: b CT; last by move=> _ [_ <-]. *)
-      (* case GC: get_callable_hd_sig => [v|] H1 [_ <-]//. *)
-      (* by apply: change_only_in_tm_assume_tm. *)
-    Admitted.
+      rewrite/check_callable/change_only_in_tm => C.
+      rewrite change_only_in_tm_ck_tm_ //.
+      case: check_tm => -[[|d]|[] ? ?] [|]; only 1,2,4-8: by move=> [<- <-] [<- <-].
+      rewrite /get_callable_hd_sig/get_tm_hd_sig.
+      have [[k|v] H] := get_tm_hd_callable T; rewrite H.
+        have [kP|nkP] := fndP; move=> [<- <-] [<- <-]; split => //.
+        by rewrite [assume_call _ _ _ _]assume_term_cat.
+      have vP := forallP C (Sub v (get_tm_hd_in H)).
+      rewrite in_fnd /= lookup_cat vP /= in_fnd.
+      move=> [<- <-] [<- <-]; split => //.
+      by rewrite [assume_call _ _ _ _]assume_term_cat.
+    Qed.
+     
 
+    Lemma merge_sig_cat O2 SA SB :
+      domf SA = domf SB ->
+      merge_sig (O2 + SA) (O2 + SB) = O2 + merge_sig SA SB.
+  Admitted.
 
-    Lemma tc_tree_aux__ {sP T O1 O2 d0 d1 d2 N1 N2}:
+  Lemma close_in_dom A B : domf A = domf B ->
+    closed_in A t = closed_in B t.
+
+    Lemma tc_tree_aux_cat {sP T O1 O2 d0 d1 d2 N1 N2}:
       closed_inT O1 T ->
-      domf O1 `<=` domf O2 ->
       tc_tree_aux sP O1 T d0 = (d1, N1) ->
-      tc_tree_aux sP O2 T d0 = (d2, N2) ->
-      ((d1 = d2) * 
-      ([forall k : domf N2, 
-        (val k \notin all_varsT T) || (Some N2.[valP k] == N1.[?val k])])).
+      tc_tree_aux sP (O2 + O1) T d0 = (d2, N2) ->
+      ((d1 = d2) * (N2 = O2 + N1)).
     Proof.
-      elim: T O1 O2 d0 d1 d2 N1 N2 => //=; try by move=> O1 O2 d0 d1 d2 N1 N2 _ H [<- _][<- _]; split => //; apply/forallP => //.
-      - move=> p c O1 O2 d0 d1 d2 N1 N2 CL dOO.
-        case C1: check_callable => [D1 S1][<-<-].
-        case C2: check_callable => [D2 S2][<-<-].
-        have [-> /forallP/=H] := change_only_in_tm_ck_callable_ CL dOO C1 C2.
-        split=> //=.
-        apply/forallP => /= -[k kP]; rewrite valPE/=.
-        by have:= H (Sub k kP) => /=; rewrite valPE.
-      - move=> A HA s B HB O1 O2 d0 d1 d2 N1 N2 /closed_inT_orP[cA cB] dOO.
+      elim: T O1 O2 d0 d1 d2 N1 N2 => //; only 1,2,3,5: by move=> O1 O2 d0 d1 d2 N1 N2 _ [<- <-][<- <-]; split => //.
+      - move=> /= > C; case C1: check_callable; case C2: check_callable.
+        by have [-> -> [<- <-] [<- <-]]:= check_callable_cat C C1 C2.
+      - move=> A HA s B HB O1 O2 d0 d1 d2 N1 N2 /closed_inT_orP[cA cB] /=.
         case dtB: tc_tree_aux => [DB SB].
         case dtA: tc_tree_aux => [DA SA].
         case dtB': tc_tree_aux => [DB' SB'].
         case dtA': tc_tree_aux => [DA' SA'].
-        have [? /forallP/={}HA] := HA _ _ _ _ _ _ _ cA dOO dtA dtA'; subst.
-        have [? /forallP/={}HB] := HB _ _ _ _ _ _ _ cB dOO dtB dtB'; subst.
+        have [??] := HA _ _ _ _ _ _ _ cA dtA dtA'; subst.
+        have [??] := HB _ _ _ _ _ _ _ cB dtB dtB'; subst.
+        case kA: is_ko; case kB: is_ko => //= -[<-<-] [<-<-] //.
+        split=> //; rewrite merge_sig_cat //.
+        have /andP[/eqP dOA _] := change_only_in_tree_tc_tree_aux dtA.
+        have /andP[/eqP dOB _] := change_only_in_tree_tc_tree_aux dtB.
+        by congruence.
+      move=> A HA B0 HB0 B HB O1 O2 d0 d1 d2 N1 N2 /closed_inT_andP[cA cB0 CB] /=.
+      case dtA: tc_tree_aux => [DA SA].
+      case dtB0: tc_tree_aux => [DB0 SB0].
+      case dtB: tc_tree_aux => [DB SB].
+      case dtA': tc_tree_aux => [DA' SA'].
+      case dtB0': tc_tree_aux => [DB0' SB0'].
+      case dtB': tc_tree_aux => [DB' SB'].
+      have [??] := HA _ _ _ _ _ _ _ cA dtA dtA'; subst.
+      have  := HB _ _ _ _ _ _ _ _ dtB dtB'; subst.
+
+
+
         have /andP[/eqP dOA /forallP/= H1]:= change_only_in_tree_tc_tree_aux dtA.
         have /andP[/eqP dOA' /forallP/= H2]:= change_only_in_tree_tc_tree_aux dtA'.
         have /andP[/eqP dOB /forallP/= H3]:= change_only_in_tree_tc_tree_aux dtB.
