@@ -1,6 +1,25 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From det Require Import tree tree_prop.
+From det Require Import finmap.
+
+Open Scope fset_scope.
+
+Fixpoint vars_tree t : {fset V} :=
+  match t with
+  | CutS | Dead | Bot | OK => fset0
+  | CallS _ t => vars_tm (Callable2Tm t)
+  | And A B0 B => vars_tree A `|` vars_tree B0 `|` vars_tree B
+  | Or A _ B => vars_tree A `|` vars_tree B
+  end.
+
+(* Fixpoint disj_rules r :=
+  match r with
+  | [::] => true
+  | x :: xs =>  *)
+  
+
+Definition disj_tree T1 T2 := [disjoint (vars_tree T1) & (vars_tree T2)].
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -34,7 +53,9 @@ Section valid_tree.
 
   Fixpoint base_or_aux s :=
     match s with
-    | Or l _ r => base_and l && (base_or_aux r) (* todo: should also say something about the substitution and the program? *)
+    | Or l _ r => 
+      (* [&& disj_tree l r, base_and l & (base_or_aux r)] todo: should also say something about the substitution and the program? *)
+      [&& base_and l & (base_or_aux r)] (* todo: should also say something about the substitution and the program? *)
     | t => base_and t
     end.
 
@@ -71,7 +92,8 @@ Section valid_tree.
     match s with
     | CutS | CallS _ _ | OK | Bot => true
     | Dead => false
-    | Or A _ B => 
+    | Or A _ B =>
+      (*disj_tree A B &&*)
       if is_dead A then valid_tree B
       else valid_tree A && (bbOr B)
     | And A B0 B => 

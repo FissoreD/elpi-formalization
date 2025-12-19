@@ -271,6 +271,22 @@ Definition sigtm_rev tm s := rev (sigtm tm s).
 Definition get_modes_rev tm sig :=
   map fst (sigtm_rev (Callable2Tm (RCallable2Callable tm)) sig).
 
+Open Scope fset_scope.
+
+Fixpoint vars_tm t : {fset V} :=
+  match t with
+  | Tm_Kd _ => fset0
+  | Tm_Kp _ => fset0
+  | Tm_V v => fset1 v
+  | Tm_Comb l r => vars_tm l `|` vars_tm r
+  end.
+
+Definition vars_atom A : {fset V} :=
+  match A with ACut => fset0 | ACall c => vars_tm (Callable2Tm c) end.
+
+Definition vars_prem r : {fset V} :=
+  foldl (fun a e => a `|` vars_atom e) fset0 r.(premises).
+
 Definition F u pr (query:Callable) s : seq (Sigma * R) :=
   let rules := pr.(rules) in
   match tm2RC (deref s (Callable2Tm query)) with

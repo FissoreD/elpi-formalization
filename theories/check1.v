@@ -1042,27 +1042,11 @@ Qed.
 Section closed_in.
   Open Scope fset_scope.
 
-  Fixpoint all_vars t : {fset V} :=
-    match t with
-    | Tm_Kd _ => fset0
-    | Tm_Kp _ => fset0
-    | Tm_V v => fset1 v
-    | Tm_Comb l r => all_vars l `|` all_vars r
-    end.
-
-  Lemma get_tm_hd_in T v : get_tm_hd T = inr (inr v) -> v \in all_vars T.
+  Lemma get_tm_hd_in T v : get_tm_hd T = inr (inr v) -> v \in vars_tm T.
     elim: T => //=.
       by move=> ? [->]; rewrite in_fset1.
     by move=> f Hf ?? /= /Hf; rewrite in_fsetU => ->.
   Qed.
-
-  Fixpoint all_varsT t : {fset V} :=
-    match t with
-    | CutS | Dead | Bot | OK => fset0
-    | CallS _ t => all_vars (Callable2Tm t)
-    | And A B0 B => all_varsT A `|` all_varsT B0 `|` all_varsT B
-    | Or A _ B => all_varsT A `|` all_varsT B
-    end.
 
   Definition all_vars_subset (sV: sigV) (vars:{fset V}) :=
     [forall x : vars, val x \in sV ].
@@ -1070,11 +1054,11 @@ Section closed_in.
   Definition all_vars_subset_strict (sV: sigV) (vars:{fset V}) :=
     (vars == domf sV) && all_vars_subset sV vars.
 
-  Definition closed_inS (sV: sigV) t := all_vars_subset sV (all_vars t).
-  Definition closed_inTS (sV: sigV) t := all_vars_subset sV (all_varsT t).
+  Definition closed_inS (sV: sigV) t := all_vars_subset sV (vars_tm t).
+  Definition closed_inTS (sV: sigV) t := all_vars_subset sV (vars_tree t).
 
-  Definition closed_in (sV: sigV) t := all_vars_subset sV (all_vars t).
-  Definition closed_inT (sV: sigV) t := all_vars_subset sV (all_varsT t).
+  Definition closed_in (sV: sigV) t := all_vars_subset sV (vars_tm t).
+  Definition closed_inT (sV: sigV) t := all_vars_subset sV (vars_tree t).
 
   Lemma all_vars_subset_point O v:
     all_vars_subset O [fset v] = (v \in domf O).
@@ -1090,7 +1074,7 @@ Section closed_in.
   Lemma closed_in_var O v : closed_in O (Tm_V v) = (v \in domf O).
   Proof. apply: all_vars_subset_point. Qed.
 
-  Lemma all_vars_comb f a: all_vars (Tm_Comb f a) = all_vars f `|` all_vars a.
+  Lemma all_vars_comb f a: vars_tm (Tm_Comb f a) = vars_tm f `|` vars_tm a.
   Proof. by []. Qed.
 
   Lemma all_vars_OR O f a: all_vars_subset O (f `|` a) =
@@ -1128,7 +1112,7 @@ Section closed_in.
     apply: H1 (Sub k kB).
   Qed.
 
-  Lemma closed_inT_all_vars_sub A B ctx : all_varsT A `<=` all_varsT B -> closed_inT ctx B -> closed_inT ctx A.
+  Lemma closed_inT_all_vars_sub A B ctx : vars_tree A `<=` vars_tree B -> closed_inT ctx B -> closed_inT ctx A.
   Proof. by apply: all_vars_subset_sub. Qed.
 
   Lemma closed_in_merge_sigL {t A B}: 
@@ -1159,7 +1143,7 @@ Section closed_in.
     case C: (closed_inT _ (Or _ _ _)); constructor; move: C; last (move=> /negP; apply: contra_not);
     rewrite/closed_inT.
       move=> /forallP/= H; split;apply/forallP => /= -[/=] k kP;
-      (have kP': k \in all_varsT A `|` all_varsT B by ((apply/finmap.fsetUP; auto)));
+      (have kP': k \in vars_tree A `|` vars_tree B by ((apply/finmap.fsetUP; auto)));
       by have:= H (Sub k kP').
     move=> [/forallP/= HA /forallP/= HB].
     apply/forallP => /= -[/=k]; move=>/finmap.fsetUP[|] H.
@@ -1172,7 +1156,7 @@ Section closed_in.
     case C: (closed_inT _ (And _ _ _)); constructor; move: C; last (move=> /negP; apply: contra_not);
     rewrite/closed_inT.
       move=> /forallP/= H; split;apply/forallP => /= -[/=] k kP;
-      (have kP': k \in all_varsT A `|` all_varsT B0 `|` all_varsT B by repeat ((apply/finmap.fsetUP; auto); left));
+      (have kP': k \in vars_tree A `|` vars_tree B0 `|` vars_tree B by repeat ((apply/finmap.fsetUP; auto); left));
       by have:= H (Sub k kP').
     move=> [/forallP/= HA /forallP/= HB0 /forallP/= HB].
     apply/forallP => /= -[/=k]; move=>/finmap.fsetUP[/finmap.fsetUP[]|] H.
@@ -1181,9 +1165,9 @@ Section closed_in.
     apply: HB (Sub k H).
   Qed.
 
-  Lemma all_varsT_dead A : all_varsT (dead A) = fset0.
+  Lemma all_varsT_dead A : vars_tree (dead A) = fset0.
   Proof. by elim: A => //=[_ -> _ _ ->|_ -> _ -> _ ->]; rewrite !fsetUid. Qed.
-  Lemma all_varsT_cutr A : all_varsT (cutr A) = fset0.
+  Lemma all_varsT_cutr A : vars_tree (cutr A) = fset0.
   Proof. by elim: A => //=[_ -> _ _ ->|_ -> _ -> _ ->]; rewrite !fsetUid. Qed.
 
   Lemma closed_in_dead {ctx A}: closed_inT ctx (dead A).
@@ -1259,7 +1243,7 @@ Section closed_in.
 
   Lemma all_vars_next_alt b A B:
     next_alt b A = Some B ->
-    all_varsT B `<=` all_varsT A.
+    vars_tree B `<=` vars_tree A.
   Proof.
     elim: A b B => //=.
     - move=> []//[]//.
@@ -1292,7 +1276,7 @@ Section closed_in.
     apply: HB0 nB0.
   Qed.
 
-  Lemma all_vars_cutl_sub A : all_varsT (cutl A) `<=` all_varsT A.
+  Lemma all_vars_cutl_sub A : vars_tree (cutl A) `<=` vars_tree A.
   Proof.
     elim: A => //=.
       move=> A HA s B HB; case: ifP => _ /=; apply: fsetUSS => //.
@@ -1304,7 +1288,7 @@ Section closed_in.
 
   Lemma all_vars_CB_sub u s A B:
     step u s A = CutBrothers B ->
-    all_varsT B `<=` all_varsT A.
+    vars_tree B `<=` vars_tree A.
   Proof.
     elim: A s B => //[? []//||].
       move=> A HA s B HB s1 B0/=; case: ifP; case: step => //.
@@ -1363,10 +1347,10 @@ Section change_only_in.
     ].
 
   Definition change_only_in_tm (N O: sigV) t :=
-    change_only_in N O (all_vars t).
+    change_only_in N O (vars_tm t).
 
   Definition change_only_in_tree (N O: sigV) t :=
-    change_only_in N O (all_varsT t).
+    change_only_in N O (vars_tree t).
 
   Lemma change_only_in_vars_same_domain O N t:
     change_only_in N O t -> domf O = domf N.
