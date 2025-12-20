@@ -6,6 +6,10 @@ From det Require Import finmap ctx.
 Declare Scope type2_scope.
 Delimit Scope type2_scope with type2.
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
+
 Notation "a /\ b" := (a%type2 * b%type2)%type : type2_scope.
 
 Notation "'Texists' x .. y , p" := (Specif.sigT (fun x => .. (Specif.sigT (fun y => p%type2)) ..))
@@ -102,7 +106,7 @@ derive A.
 HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
 
 Notation R := (@R_ A).
-HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK _ _ A_eqb_OK).
+HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK A_eqb_OK).
 
 Elpi Command derive.eqbOK.register_axiomx.
 Elpi Accumulate Db derive.eqb.db.
@@ -211,32 +215,6 @@ Fixpoint RCallable2Callable rc :=
 
 Definition get_rcallable_hd r :=
   get_tm_hd (Callable2Tm (RCallable2Callable r)).
-    
-Fixpoint H u (ml : list mode) (q : RCallable) (h: RCallable) s : option Sigma :=
-  match ml,q,h with
-  | [::], RCallable_Kp c, RCallable_Kp c1 => if c == c1 then Some s else None
-  | [:: i & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(matching) a1 a2) (H u ml q h s)
-  | [:: o & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(unify) a1 a2) (H u ml q h s)
-  | _, _, _ => None
-  end.
-
-(* TODO: deref is too easy? Yes if sigma is a mapping from vars to lambdas in a future version *)
-Fixpoint deref (s: Sigma) (tm:Tm) :=
-  match tm with
-  | Tm_V V => Option.default tm (lookup V s)
-  | Tm_Kp _ | Tm_Kd _ => tm
-  | Tm_Comb h ag => Tm_Comb (deref s h) ag
-  end.
-
-Fixpoint select u (query : RCallable) (modes:list mode) (rules: list R) sigma : seq (Sigma * R) :=
-  match rules with
-  | [::] => [::]
-  | rule :: rules =>
-    match H u modes query rule.(head) sigma with
-    | None => select u query modes rules sigma
-    | Some sigma' => (sigma', rule) :: select u query modes rules sigma
-    end
-  end.
 
 Fixpoint tm2RC (t : Tm) : option RCallable :=
   match t with
@@ -284,11 +262,56 @@ Fixpoint vars_tm t : {fset V} :=
 Definition vars_atom A : {fset V} :=
   match A with ACut => fset0 | ACall c => vars_tm (Callable2Tm c) end.
 
-Definition vars_prem r : {fset V} :=
-  foldl (fun a e => a `|` vars_atom e) fset0 r.(premises).
+Definition varsU (l: seq {fset V}) :=
+  foldr (fun a e => a `|` e) fset0 l.
+
+Definition varsU_rprem r : {fset V} := varsU (map vars_atom r.(premises)).
+Definition varsU_rhead (r: R) : {fset V} := vars_tm (Callable2Tm (RCallable2Callable r.(head))).
+Definition varsU_rule r : {fset V} := varsU_rhead r `|` varsU_rprem r.
+
+Axiom fresh_rule : {fset V} -> R -> R.
+
+Fixpoint fresh_rules vars rules :=
+  match rules with
+  | [::] => [::]
+  | x :: xs => 
+    let R' := fresh_rule vars x in
+    let vars' := vars `|` varsU_rule R' in
+    R' :: fresh_rules vars' xs
+  end.
+
+Axiom codom_vars : Sigma -> {fset V}.
+
+Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
+
+(* TODO: deref is too easy? Yes if sigma is a mapping from vars to lambdas in a future version *)
+Fixpoint deref (s: Sigma) (tm:Tm) :=
+  match tm with
+  | Tm_V V => Option.default tm (lookup V s)
+  | Tm_Kp _ | Tm_Kd _ => tm
+  | Tm_Comb h ag => Tm_Comb (deref s h) ag
+  end.
+
+Fixpoint H u (ml : list mode) (q : RCallable) (h: RCallable) s : option Sigma :=
+  match ml,q,h with
+  | [::], RCallable_Kp c, RCallable_Kp c1 => if c == c1 then Some s else None
+  | [:: i & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(matching) a1 a2) (H u ml q h s)
+  | [:: o & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(unify) a1 a2) (H u ml q h s)
+  | _, _, _ => None
+  end.
+
+Fixpoint select u (query : RCallable) (modes:list mode) (rules: list R) sigma : seq (Sigma * R) :=
+  match rules with
+  | [::] => [::]
+  | rule :: rules =>
+    match H u modes query rule.(head) sigma with
+    | None => select u query modes rules sigma
+    | Some sigma' => (sigma', rule) :: select u query modes rules sigma
+    end
+  end.
 
 Definition F u pr (query:Callable) s : seq (Sigma * R) :=
-  let rules := pr.(rules) in
+  let rules := fresh_rules (vars_sigma s) (pr.(rules)) in
   match tm2RC (deref s (Callable2Tm query)) with
   | None => [::] (*this is a call with flex head, in elpi it is an error! *)
   | Some query =>
@@ -302,10 +325,81 @@ Definition F u pr (query:Callable) s : seq (Sigma * R) :=
       end
   end.
 
-Lemma select_in_rules u R modes rules s:
+Fixpoint varsD (l: seq {fset V}) :=
+  match l with
+  | [::] => true
+  | x :: xs => ((x `&` varsU xs) == fset0) && varsD xs
+  end.
+
+Lemma select_fresh_aux u c m rules s fs:
+  varsD [seq varsU_rule x.2 | x <- select u c m (fresh_rules (vars_sigma s `|` fs) rules) s].
+Proof.
+  elim: rules s fs => //= x xs IH s fs.
+  rewrite -fsetUA.
+  case X: H => [S|]//=.
+  rewrite IH andbT.
+Admitted.
+
+Lemma select_fresh u c m rules s:
+  varsD [seq varsU_rule x.2 | x <- select u c m (fresh_rules (vars_sigma s) rules) s].
+Proof.
+  have:= select_fresh_aux u c m rules s fset0.
+  by rewrite fsetU0.
+Qed.
+
+Lemma backchain_fresh u pr query s :
+  varsD (map (fun x => varsU_rule x.2) (F u pr query s)).
+Proof.
+  rewrite/F.
+  case: tm2RC => // r.
+  case: get_rcallable_hd => //=.
+  move=> -[]// kp.
+  case: fndP => // kP.
+  apply: select_fresh.
+Qed.
+
+Lemma varsD_rule_prem_aux {T:Type} r (rs: seq (T * _)):  
+  varsU_rprem r
+    `&` varsU [seq varsU_rhead x.2 `|` varsU_rprem x.2 | x <- rs] ==
+    fset0 ->
+    varsU_rprem r `&` varsU [seq varsU_rprem x.2 | x <- rs] == fset0.
+Proof.
+  elim: rs r => //=[[s r] rs] IH r1.
+  rewrite !fsetIUr !fsetU_eq0 => /=/andP[/andP[H1 H2]] H3.
+  by rewrite IH//=H2.
+Qed.
+
+Lemma varsD_rule_prem {T:Type} (r:seq (T * _)):
+  varsD (map (fun x => varsU_rule x.2) r) ->
+  varsD (map (fun x => varsU_rprem x.2) r).
+Proof.
+  elim: r => //=[[s r] rs] IH /andP[+ H2]; rewrite IH//andbT.
+  rewrite/varsU_rule/= fsetIUl fsetU_eq0 => /andP[].
+  move=> H3 H4.
+  by rewrite varsD_rule_prem_aux//.
+Qed.
+
+Lemma backchain_fresh_prem u pr query s :
+  varsD (map (fun x => varsU_rprem x.2) (F u pr query s)).
+Proof.
+  rewrite/F.
+  case: tm2RC => // r.
+  case: get_rcallable_hd => //=.
+  move=> -[]// kp.
+  case: fndP => // kP.
+  apply: varsD_rule_prem.
+  apply: select_fresh.
+Qed.
+
+Lemma backchain_fresh_premE u pr query s l :
+  (F u pr query s) = l ->
+  varsD (map (fun x => varsU_rprem x.2) l).
+Proof. by move=> <-; apply/backchain_fresh_prem. Qed.
+
+(* Lemma select_in_rules u R modes rules s:
   all (fun x => x.2 \in rules) (select u R modes rules s).
 Proof.
   elim: rules => //= x xs /allP IH.
   by case H => /=[_|]; rewrite?mem_head; apply/allP => -[s1 r1] /IH/=;
   rewrite in_cons => ->; rewrite orbT.
-Qed.
+Qed. *)

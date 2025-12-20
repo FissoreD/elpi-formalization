@@ -790,13 +790,13 @@ Lemma get_tm_hd_callable t:
   exists R, get_tm_hd (Callable2Tm t) = inr R.
 Proof. elim: t => //=-[]; repeat eexists. Qed.
 
-Definition full_ko A:= (next_alt false A == None).
+(* Definition full_ko A:= (next_alt false A == None).
 
 Lemma is_ko_full_ko_state {A}: is_ko A -> full_ko A.
 Proof. move=> H; rewrite/full_ko //is_ko_next_alt//. Qed.
 
 Lemma is_dead_full_ko_state {A}: is_dead A -> full_ko A.
-Proof. move=> /is_dead_is_ko; exact: is_ko_full_ko_state. Qed.
+Proof. move=> /is_dead_is_ko; exact: is_ko_full_ko_state. Qed. *)
 
 Global Ltac foo := match goal with H1 : Datatypes.is_true (?x \in domf ?A), H2 : Datatypes.is_true (?x \notin domf ?A) |- _ => by rewrite H1 in H2 end.
 Section merge.
@@ -2495,7 +2495,7 @@ Section next_alt.
     - move=> A HA s B HB sV1 sV2 ign.
       case dtA: (tc_tree_aux _ _ A) => //=[dA svA].
       case dtB: (tc_tree_aux _ _ B) => //=[dB sVB].
-      case: ifP => [DA vB sB|DA /andP[vA bB] sA].
+      case: ifP => [DA /andP[dAB vB] sB|DA /and3P[dAB vA bB] sA].
         rewrite is_dead_is_ko//=success_is_ko// => -[??]; subst.
         rewrite (is_dead_next_alt _ DA)//=.
         destruct ign, dB => //.
@@ -2558,7 +2558,7 @@ Section next_alt.
       case dtB: (tc_tree_aux _ _ B) => /=[DB sVB]//=.
       have {}HA := HA _ _ _ _ _ _ _ cA dtA.
       have {}HB := HB _ _ _ _ _ _ _ cB dtB.
-      case:ifP => [dA vB|ndA /andP[vA bB]].
+      case:ifP => [dA /andP[dAB vB]|ndA /and3P[dAB vA bB]].
         rewrite is_dead_is_ko//=.
         case:ifP => kB[??]; subst.
           rewrite is_dead_next_alt//=.
