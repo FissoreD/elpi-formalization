@@ -644,7 +644,7 @@ Section NurProp.
     - move=> A HA s B HB C s1;  case: ifP => dA; case: step => //.
     - move=> A HA B0 _ B HB C s1 /and3P[vA].
       case e: step => //[A'|A'].
-        rewrite (expand_not_solved_not_success _ e)//=(step_not_failed _ e)//=.
+        rewrite (step_not_solved _ e)//=(step_not_failed _ e)//=.
         move=>/eqP-> bB [<-]/=; rewrite (get_substS_base_and bB)// if_same.
         rewrite !(HA _ _ vA e)//.
       have [? sA] := expand_solved_same _ e; subst.
@@ -684,7 +684,7 @@ Section NurProp.
       by case: ifP => [dA vB|dA/andP[vA bB]]; case eB: step => //[s1' B'][??]; subst.
     - move=> A HA B0 _ B HB sA s1 C l1/=/and3P[vA].
       case eA: step => //[A'|A'].
-        rewrite (expand_not_solved_not_success _ eA notF)/=(step_not_failed _ eA notF).
+        rewrite (step_not_solved _ eA notF)/=(step_not_failed _ eA notF).
         move=>/eqP->bB [<-]/=.
         have [y  H1] /=:= base_and_t2l bB.
         have {HA}[x [tl [H3 [H4 H5]]]] := HA sA _ _ l1 vA eA.
@@ -768,7 +768,7 @@ Section NurProp.
       case: ifP => //[dA fB|dA fA]; case e: step => //.
     - move=> A HA B0 _ B HB C s1 /and3P[vA].
       case e: step => //[A'|A'].
-        rewrite (expand_not_solved_not_success _ e)//(step_not_failed _ e)//=.
+        rewrite (step_not_solved _ e)//(step_not_failed _ e)//=.
         move=>/eqP->bB [<-]/=.
         rewrite (base_and_failed bB) andbF.
         rewrite (HA _ _ vA e)//(step_not_failed e)//.
@@ -900,9 +900,9 @@ Section NurProp.
         move=>[??]; subst.
         case e: step => [A'|A'|A'|A']/=.
         - have []:= s2l_empty_hd_success vA (step_not_failed _ e notF) Hx.
-          rewrite (expand_not_solved_not_success _ e)//.
+          rewrite (step_not_solved _ e)//.
         - have []:= s2l_empty_hd_success vA (step_not_failed _ e notF) Hx.
-          rewrite (expand_not_solved_not_success _ e)//.
+          rewrite (step_not_solved _ e)//.
         - rewrite -(expand_failure_t2l_same e).
           have {Hx} := f_equal size Hx.
           move=>/(_ _ IsList_alts).
@@ -953,7 +953,7 @@ Section NurProp.
       by rewrite (expand_cb_same_subst1 _ eA)//.
     - move=> /= A HA B0 _ B HB s1 C s4 ca x tl l1 /and3P[vA].
       case eA: step => //[A'|A']/=.
-        rewrite (expand_not_solved_not_success _ eA notF)/=(step_not_failed _ eA notF).
+        rewrite (step_not_solved _ eA notF)/=(step_not_failed _ eA notF).
         move=>/eqP->bB[<-]/=.
         case SA : t2l => //[[s5 w] ws].
         have [hd SB] := base_and_t2l bB.
@@ -964,7 +964,7 @@ Section NurProp.
         case: w SA => //=.
           rewrite cat0s => HH?; subst.
           exfalso.
-          apply: s2l_empty_hdF vA (expand_not_solved_not_success _ eA notF) (step_not_failed _ eA notF) HH.
+          apply: s2l_empty_hdF vA (step_not_solved _ eA notF) (step_not_failed _ eA notF) HH.
         move=> []//=ca' gs SA []??; subst.
         have [H1 H2] := HA _ _ _ _ _ _ _ vA eA SA.
         rewrite !H1/=.
@@ -1077,7 +1077,7 @@ Section NurProp.
     - move=> A HA B0 _ B HB C s1 s3 l p t gs xs /and3P[vA].
       case e: step => //[A'|A'].
         have /=fA := step_not_failed _ e notF.
-        rewrite (expand_not_solved_not_success _ e)//fA/=.
+        rewrite (step_not_solved _ e)//fA/=.
         move=>/eqP->bB [<-]/=; subst.
         have [s5 [y[ys sA]]]:= failed_t2l vA fA s1 l.
         have [hd H]:= base_and_t2l bB.
@@ -1087,7 +1087,7 @@ Section NurProp.
         move=> [?] + ?; subst.
         case: y sA => [|[p1 t1|] tl]//=sA.
           exfalso.
-          apply: s2l_empty_hdF vA (expand_not_solved_not_success _ e notF) (step_not_failed _ e notF) sA.
+          apply: s2l_empty_hdF vA (step_not_solved _ e notF) (step_not_failed _ e notF) sA.
         move=> [???]; subst.
         have := HA _ _ _ _ _ _ _ _ vA e sA.
         move=> []?; subst.

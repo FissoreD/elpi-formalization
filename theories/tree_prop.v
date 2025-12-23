@@ -212,7 +212,7 @@ Section RunP.
       rewrite !next_alt_cutr success_cutr failed_cutr //.
   Qed.
 
-  Lemma expand_not_solved_not_success {s1 A r}:
+  Lemma step_not_solved {s1 A r}:
     step u s1 A = r -> ~ (is_solved r) -> success A = false.
   Proof.
     case: r=> //[s|s|]/=; case X: success => //; try by rewrite // (succes_is_solved s1 X).
@@ -245,7 +245,7 @@ Section RunP.
       by have:= HA s1; case X: step.
     - move=> A HA B0 _ B HB s1/=.
       have:= HA s1.
-      case X: step => //= [||C] ->; try by rewrite?(expand_not_solved_not_success X)//.
+      case X: step => //= [||C] ->; try by rewrite?(step_not_solved X)//.
       rewrite (expand_solved_same X)/=.
       have:= HB (get_substS s1 C).
       case Y: step => //= ->//=; rewrite andbF//.

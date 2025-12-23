@@ -5,6 +5,17 @@ From det Require Import finmap.
 
 Open Scope fset_scope.
 
+(* Fixpoint disj_rules r :=
+  match r with
+  | [::] => true
+  | x :: xs =>  *)
+
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
+
+Hint Resolve is_dead_dead : core.
+
 Fixpoint vars_tree t : {fset V} :=
   match t with
   | CutS | Dead | Bot | OK => fset0
@@ -13,23 +24,16 @@ Fixpoint vars_tree t : {fset V} :=
   | Or A _ B => vars_tree A `|` vars_tree B
   end.
 
-(* Fixpoint disj_rules r :=
-  match r with
-  | [::] => true
-  | x :: xs =>  *)
-  
-
 Definition disj_tree T1 T2 := (vars_tree T1) `&` (vars_tree T2) == fset0.
 
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
-
-Hint Resolve is_dead_dead : core.
 
 Section valid_tree.
   Variable u : Unif.
 
+  (* We do not consider Bot and Dead as Cut,
+     since we want to define a valid state where if in a state like
+     A /\_R B, B has a cut, then R should either have a cut or be ko
+  *)
   Fixpoint has_cut A :=
     match A with
     | CutS => true
@@ -55,7 +59,7 @@ Section valid_tree.
     match s with
     | Or l _ r => 
       (*todo: should also say something about the substitution and the program? *)
-      [&& disj_tree l r, base_and l & (base_or_aux r)] 
+      [&& (*disj_tree l r,*) base_and l & (base_or_aux r)] 
       (* [&& base_and l & (base_or_aux r)] todo: should also say something about the substitution and the program? *)
     | t => base_and t
     end.
@@ -105,7 +109,7 @@ Section valid_tree.
     | CutS | CallS _ _ | OK | Bot => true
     | Dead => false
     | Or A _ B =>
-      disj_tree A B &&
+      (* disj_tree A B && *)
       if is_dead A then valid_tree B
       else valid_tree A && (bbOr B)
     | And A B0 B => 
@@ -192,9 +196,9 @@ Section valid_tree.
       rewrite !fsetIUr !fsetU_eq0.
       move=> /andP[H1 H2] /andP[H4 H5].
       rewrite base_and_big_and/= IH//=.
-      rewrite/disj_tree.
+      (* rewrite/disj_tree.
       rewrite vars_big_and vars_big_or_aux.
-      by rewrite !fsetIUr !fsetU_eq0 H1 H2.
+      by rewrite !fsetIUr !fsetU_eq0 H1 H2. *)
   Qed.
 
   Definition is_base s := match s with 
@@ -294,8 +298,8 @@ Section valid_tree.
   Proof. 
     move=> /orP [].
     elim B => //; clear.
-    + move=> A HA s B HB/=/and3P[dAB bA bB].
-      rewrite HA ?base_and_base_or_aux// /bbOr bB HB//dAB if_same//base_and_is_and//orbT//.
+    + move=> A HA s B HB/=/andP[bA bB].
+      rewrite HA ?base_and_base_or_aux// /bbOr bB HB// if_same//.
     + by move=> s; case: s => //[p t|] Ha B0 HB0 B HB /=/andP[/eqP->]bB; rewrite eqxx bB//check_cut_refl.
     elim: B => //.
     + move=> A HA s B HB /= /andP [bA bB].
@@ -325,7 +329,7 @@ Section valid_tree.
   Lemma base_or_base_or_ko_cutr {B}: base_or_aux B -> base_or_aux_ko (cutr B).
   Proof.
     elim: B => //.
-    + move=> A IHA s B IHB /= /and3P[dAB] /base_and_base_and_ko_cutr -> /IHB ->//.
+    + move=> A IHA s B IHB /= /andP[] /base_and_base_and_ko_cutr -> /IHB ->//.
     + move=> a; case: a => //=[_ _|] _ B HB C HC /andP [] /eqP /[subst1] hC;
       rewrite base_and_base_and_ko_cutr//eqxx//.
   Qed.
@@ -407,7 +411,7 @@ Section valid_tree.
   Proof.
     elim: A => //.
       move=> A HA s B HB => /=.
-      case: ifP => //[dA sB /andP[dAB vB]| dA sA /and3P[dAB vA bB]]/=;
+      case: ifP => //[dA sB vB| dA sA /andP[vA bB]]/=;
       rewrite !(dA, HB, HA,is_dead_cutl,bbOr_cutr,disj_tree_cutlR,disj_tree_cutrR)//.
     move=> A HA B0 HB0 B HB /= /andP[sA sB] /and4P[vA ++ C].
     rewrite sA/= => vB bB.
@@ -448,6 +452,7 @@ Section valid_tree.
       apply/disj_tree_Or; split; first by apply:disj_tree_baseL.
       move: H.
       rewrite/disj_tree vars_big_or_aux/=.
+      move=> /=.
       move=> H.
       (* move:H; rewrite/ditreq   *)
 
@@ -525,11 +530,6 @@ Section valid_tree.
     - move=> A B0 B; case: step => // A'; case: step => //.
   Qed.
 
-
-  (* Lemma disj_tree_callS_big_or p s c:
-    disj_tree (CallS p c) (big_or u p s c).
-  Admitted. *)
-
   (* Lemma resetR_base_and s B0 B C:
     base_and B0 -> 
     (*valid_tree B ->*) resetR B0 B -> step u s B = C -> resetR B0 (get_tree C).
@@ -581,9 +581,9 @@ Section valid_tree.
     elim: A s => //; try by move=> s r // *; subst.
     + by move=> ? ? ?? *;subst => //=; rewrite valid_tree_big_or.
     + move=> A IHA s B IHB s1/=.
-      case:ifP => //[dA /andP[dAB vB]|dA/and3P[dAB vA bB]].
+      case:ifP => //[dA vB|dA/andP[vA bB]].
         rewrite get_tree_Or/=dA IHB//.
-        rewrite disj_tree_commE (disj_tree_step erefl)//disj_tree_commE//.
+        (* rewrite disj_tree_commE (disj_tree_step erefl)//disj_tree_commE//. *)
       have /= := IHA s1 vA.
       case X: step => //=[A'|A'|A'|A'] H; 
       rewrite !(step_not_dead _ dA X, H,bB,bbOr_cutr,disj_tree_cutrR,disj_tree_step X)//=.
@@ -620,7 +620,7 @@ Section valid_tree.
   Lemma base_or_failed {A}: base_or_aux A -> failed A = false.
   Proof. 
     elim: A=> //=.
-    - move=> A HA s B HB /and3P[dA bA bB]; case: ifP => _; auto.
+    - move=> A HA s B HB /andP[bA bB]; case: ifP => _; auto.
       by apply: base_and_failed.
     - move=> []//=.
   Qed.
@@ -660,7 +660,7 @@ Section valid_tree.
   Lemma next_alt_aux_base_or_none {A}: base_or_aux A -> next_alt false A = None -> A = Bot.
   Proof. 
     elim: A => //. 
-    - move=> A HA s B HB /= /and3P[dAB bA bB].
+    - move=> A HA s B HB /= /andP[bA bB].
       rewrite base_and_dead//next_alt_aux_base_and//.
     - move=>A; case: A => //[p a|] _ B0 HB0 B HB/andP[/eqP->bB]/=;
       rewrite next_alt_aux_base_and//. 
@@ -779,13 +779,13 @@ Section valid_tree.
     + move=> p c B _ _ [<-]//.
     + move=> B _ _ [<-]//.
     + move=> A HA s B HB  C b/=.
-      case: ifP => [dA /andP[dAB vB]|dA /and3P[dAB vA bB]].
+      case: ifP => [dA vB|dA /andP[vA bB]].
         rewrite is_dead_next_alt//.
         case X: next_alt => //[D] [<-]/=.
         by rewrite dA (HB _ _ vB X)// (disj_tree_next_altR _ X).
       case X: next_alt => [D|].
-        by move=>[<-]/=; rewrite bbOr_valid// bB (HA _ _ vA X) if_same (disj_tree_next_alt dAB X).
-      by case Y: next_alt => [D|]//[<-]/=; rewrite is_dead_dead disj_tree_deadL (HB _ _ _ Y)//bbOr_valid.
+        by move=>[<-]/=; rewrite bbOr_valid// bB (HA _ _ vA X) if_same.
+      by case Y: next_alt => [D|]//[<-]/=; rewrite is_dead_dead (HB _ _ _ Y)//bbOr_valid.
     + move=> A HA B0 HB0 B HB  C b /=/and4P[vA ++ CC].
       case: ifP => /=[sA vB  bB0|sA /eqP?]; subst.
         rewrite success_failed//.

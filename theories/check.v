@@ -31,13 +31,13 @@ Notation "B <= A" := (min A B == B). *)
 Ltac foo tcA IH := by move=> [<-<-]; case tcA: tc_tree_aux => [BA BI];
   (try rewrite maxD_comm in tcA); rewrite IH tcA maxD_refl merge_refl.
 
-Lemma all_det_nfa_big_and {sP sV l r} p: 
+(* Lemma all_det_nfa_big_and {sP sV l r} p: 
   (check_atoms sP sV l r) = tc_tree_aux sP sV (big_and p l) r.
 Proof.
   elim: l sV r => //=.
   move=> A As IH sV r.
   case X: check_atom => [dA sVA].
-  rewrite is_ko_big_and.
+  case: A X => //=[|c]; rewrite is_ko_big_and.
   case YY : A X => //=[|c]; first by foo tcA IH.
   rewrite/check_callable.
   case X: check_tm => //[d b]//=.
@@ -47,7 +47,7 @@ Proof.
   rewrite (@maxD_comm r) -maxD_assoc maxD_refl.
   case dt: tc_tree_aux => [[]][??]; subst; rewrite merge_refl;
   by rewrite IH dt maxD_refl.
-Qed.
+Qed. *)
 
 Definition good_assignment sP SV vk :=
   let (S, b1) := check_tm sP empty_ctx vk in
@@ -482,7 +482,7 @@ Proof.
         admit. 
 Admitted. *)
 
-Lemma step_Exp_Pred_Func u sP A r s O N O' N' dB: 
+(*Lemma step_Exp_Pred_Func u sP A r s O N O' N' dB: 
   check_program sP -> mutual_exclusion ->
     closed_inT O A -> valid_tree A ->
       step u s A = Expanded r -> more_precise O' N ->
@@ -552,18 +552,19 @@ Proof.
     apply: HB (cB) (vB) (eB) _ (tB) (tB').
     admit.
 Admitted.
+*)
 
 
-
-Lemma step_min_max {u sP A r s O N O' N' d0 d1 dA dB} : 
+Lemma step_min_max {u sP A r s O N N' d0 d1 dA dB} : 
   check_program sP -> mutual_exclusion ->
     closed_inT O A -> sigP sP s O -> valid_tree A ->
-      step u s A = r -> more_precise O' N ->
+      step u s A = r -> 
+      (* more_precise O' N -> *)
       tc_tree_aux sP O  A            d0 = (dA, N) ->
-      tc_tree_aux sP O' (get_tree r) d1 = (dB, N') ->
+      tc_tree_aux sP O (get_tree r) d1 = (dB, N') ->
             (minD dA d1 = d1 -> minD dA dB = dB).
 Proof.
-  rewrite/will_succeed.
+  (*rewrite/will_succeed.
   move=> CkP ME.
   (* move: O N N' r dA dB d0 d1. *)
   elim: A r s O N O' N' d0 d1 dA dB => //=; only 1, 2, 4: 
@@ -781,8 +782,8 @@ Proof.
         move=> _.
         destruct DB0'; [|by congruence] => /=.
         destruct DB' => //.
-        by have := step_Exp_Pred_Func CkP CAB ME vB SP1 eB dtB dtB'.
-Admitted. *)
+        by have := step_Exp_Pred_Func CkP CAB ME vB SP1 eB dtB dtB'.*)
+Admitted.
 
 Definition is_det s A := forall u s' B n,
   runb u s A (Some s') B n -> next_alt false B = None.
@@ -811,15 +812,20 @@ Proof.
       rewrite/will_succeed; case KB: is_ko => //.
       by have [] := run_consistent _ R (is_ko_runb _ KB).
     case TC: (tc_tree_aux sP sV B Func) => [X Y].
-    destruct X.
+    have /=? := step_min_max ckP ME H1 SP vA eA dtA TC erefl; subst.
     have [->] := IH _ erefl _ _ (closed_inT_step_CB H1 eA) (valid_tree_expand vA eA) SP TC.
-    have MP := step_mp ckP ME _ _ _ _ eA dtA TC WS.
-    have ? := step_min_max ckP H1 ME vA SP eA dtA TC erefl; subst.
-    destruct X => //=.
-    have cB := closed_inT_step_CB H1 eA.
-    have [Hx Hy] := IH _ erefl _ _ cB (valid_tree_expand vA eA) SP TC.
+    move=> H.
     split => //.
-    by apply: sigP_more_precise MP Hy.
+    apply: sigP_more_precise H.
+    (* destruct X. *)
+    (* have [->] := IH _ erefl _ _ (closed_inT_step_CB H1 eA) (valid_tree_expand vA eA) SP TC. *)
+    (* have MP := step_mp ckP ME _ _ _ _ eA dtA TC WS. *)
+    (* have ? := step_min_max ckP H1 ME vA SP eA dtA TC erefl; subst. *)
+    (* destruct X => //=. *)
+    (* have cB := closed_inT_step_CB H1 eA. *)
+    (* have [Hx Hy] := IH _ erefl _ _ cB (valid_tree_expand vA eA) SP TC. *)
+    (* split => //. *)
+    (* by apply: sigP_more_precise MP Hy. *)
   - move=> s1 s2 r A B n eA R IH s' ? sV sV' H1 vA SP dtA; subst.
     have WS : will_succeed B.
       rewrite/will_succeed; case KB: is_ko => //.

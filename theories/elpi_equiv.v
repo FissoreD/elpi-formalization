@@ -39,7 +39,7 @@ Section NurEqiv.
       case: x H => [|g gs].
         fNilG => H.
         have [] := s2l_empty_hd_success vA (step_not_failed _ eA notF) H.
-        rewrite (expand_not_solved_not_success _ eA notF)//.
+        rewrite (step_not_solved _ eA notF)//.
       fConsG g gs.
       case: g => [p c|ca] H.
         have:= s2l_Expanded_call _ vA eA H.

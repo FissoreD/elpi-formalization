@@ -270,19 +270,20 @@ Definition varsU_rhead (r: R) : {fset V} := vars_tm (Callable2Tm (RCallable2Call
 Definition varsU_rule r : {fset V} := varsU_rhead r `|` varsU_rprem r.
 
 Axiom fresh_rule : {fset V} -> R -> R.
+Axiom codom_vars : Sigma -> {fset V}.
+Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
 
-Fixpoint fresh_rules vars rules :=
+Fixpoint fresh_rules_help vars rules :=
   match rules with
   | [::] => [::]
   | x :: xs => 
     let R' := fresh_rule vars x in
     let vars' := vars `|` varsU_rule R' in
-    R' :: fresh_rules vars' xs
+    R' :: fresh_rules_help vars' xs
   end.
 
-Axiom codom_vars : Sigma -> {fset V}.
+Definition fresh_rules sigma rules := fresh_rules_help (vars_sigma sigma) rules.
 
-Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
 
 (* TODO: deref is too easy? Yes if sigma is a mapping from vars to lambdas in a future version *)
 Fixpoint deref (s: Sigma) (tm:Tm) :=
@@ -310,8 +311,12 @@ Fixpoint select u (query : RCallable) (modes:list mode) (rules: list R) sigma : 
     end
   end.
 
+(* all_vars takes the set of used variables,
+   when we "fresh the program" we need to takes variables
+   outside this set
+*)
 Definition F u pr (query:Callable) s : seq (Sigma * R) :=
-  let rules := fresh_rules (vars_sigma s) (pr.(rules)) in
+  let rules := fresh_rules s (pr.(rules)) in
   match tm2RC (deref s (Callable2Tm query)) with
   | None => [::] (*this is a call with flex head, in elpi it is an error! *)
   | Some query =>
@@ -332,16 +337,17 @@ Fixpoint varsD (l: seq {fset V}) :=
   end.
 
 Lemma select_fresh_aux u c m rules s fs:
-  varsD [seq varsU_rule x.2 | x <- select u c m (fresh_rules (vars_sigma s `|` fs) rules) s].
+  varsD [seq varsU_rule x.2 | x <- select u c m (fresh_rules_help (vars_sigma s `|` fs) rules) s].
 Proof.
-  elim: rules s fs => //= x xs IH s fs.
-  rewrite -fsetUA.
+  elim: rules s => //= x xs IH s.
+  (* rewrite -fsetUA. *)
   case X: H => [S|]//=.
-  rewrite IH andbT.
+  (* rewrite IH andbT. 
+  set sel := select _ _ _ _ _. *)
 Admitted.
 
 Lemma select_fresh u c m rules s:
-  varsD [seq varsU_rule x.2 | x <- select u c m (fresh_rules (vars_sigma s) rules) s].
+  varsD [seq varsU_rule x.2 | x <- select u c m (fresh_rules_help (vars_sigma s) rules) s].
 Proof.
   have:= select_fresh_aux u c m rules s fset0.
   by rewrite fsetU0.
