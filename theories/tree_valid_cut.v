@@ -634,6 +634,8 @@ Section valid_tree.
     - by move=> A HA _ B HB /andP[]/base_and_ko_is_ko->/HB->.
     - move=> []//.
   Qed.
+  Lemma base_or_aux_is_ko {A}: base_or_aux A -> is_ko A = false.
+  Proof. move=> /base_or_failed/failed_is_ko//. Qed.
 
   Lemma base_or_aux_is_dead {A}: base_or_aux_ko A -> is_dead A = false.
   Proof. elim: A => //.

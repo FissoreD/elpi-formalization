@@ -270,7 +270,10 @@ Definition varsU_rhead (r: R) : {fset V} := vars_tm (Callable2Tm (RCallable2Call
 Definition varsU_rule r : {fset V} := varsU_rhead r `|` varsU_rprem r.
 
 Axiom fresh_rule : {fset V} -> R -> R.
-Axiom codom_vars : Sigma -> {fset V}.
+Definition codom_vars (s:Sigma) := 
+  varsU (map vars_tm (codom s)).
+
+
 Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
 
 Fixpoint fresh_rules_help vars rules :=
