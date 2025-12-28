@@ -216,12 +216,16 @@ Fixpoint RCallable2Callable rc :=
 Definition get_rcallable_hd r :=
   get_tm_hd (Callable2Tm (RCallable2Callable r)).
 
-Fixpoint tm2RC (t : Tm) : option RCallable :=
+Fixpoint tm2RC (t : Tm) : option (RCallable * Kp) :=
   match t with
   | Tm_Kd _ => None
   | Tm_V _ => None
-  | Tm_Kp p => Some (RCallable_Kp p)
-  | Tm_Comb t1 t2 => omap (fun x => RCallable_Comb x t2) (tm2RC t1)
+  | Tm_Kp p => Some (RCallable_Kp p, p)
+  | Tm_Comb t1 t2 => 
+    match tm2RC t1 with
+    | None => None
+    | Some (x, p) => Some (RCallable_Comb x t2, p)
+    end
   end.
 
 Fixpoint count_tm_ag t := 
@@ -322,14 +326,10 @@ Definition F u pr (query:Callable) s : seq (Sigma * R) :=
   let rules := fresh_rules s (pr.(rules)) in
   match tm2RC (deref s (Callable2Tm query)) with
   | None => [::] (*this is a call with flex head, in elpi it is an error! *)
-  | Some query =>
-    match (get_rcallable_hd query) with
-    | inr (inl kp) => 
-      match pr.(sig).[? kp] with 
-        | Some sig => select u query (get_modes_rev query sig) rules s
-        | None => [::]
-        end
-      | _ => [::]
+  | Some (query, kp) =>
+    match pr.(sig).[? kp] with 
+      | Some sig => select u query (get_modes_rev query sig) rules s
+      | None => [::]
       end
   end.
 
@@ -360,9 +360,7 @@ Lemma backchain_fresh u pr query s :
   varsD (map (fun x => varsU_rule x.2) (F u pr query s)).
 Proof.
   rewrite/F.
-  case: tm2RC => // r.
-  case: get_rcallable_hd => //=.
-  move=> -[]// kp.
+  case: tm2RC => // [[r kp]].
   case: fndP => // kP.
   apply: select_fresh.
 Qed.
@@ -392,9 +390,7 @@ Lemma backchain_fresh_prem u pr query s :
   varsD (map (fun x => varsU_rprem x.2) (F u pr query s)).
 Proof.
   rewrite/F.
-  case: tm2RC => // r.
-  case: get_rcallable_hd => //=.
-  move=> -[]// kp.
+  case: tm2RC => // [[r p]].
   case: fndP => // kP.
   apply: varsD_rule_prem.
   apply: select_fresh.
@@ -405,10 +401,26 @@ Lemma backchain_fresh_premE u pr query s l :
   varsD (map (fun x => varsU_rprem x.2) l).
 Proof. by move=> <-; apply/backchain_fresh_prem. Qed.
 
-(* Lemma select_in_rules u R modes rules s:
-  all (fun x => x.2 \in rules) (select u R modes rules s).
+Lemma select_in_rules u R modes rules s r:
+  (select u R modes rules s) = r ->
+    all (fun x => x.2 \in rules) r.
 Proof.
-  elim: rules => //= x xs /allP IH.
-  by case H => /=[_|]; rewrite?mem_head; apply/allP => -[s1 r1] /IH/=;
-  rewrite in_cons => ->; rewrite orbT.
-Qed. *)
+  move=> <-{r}.
+  apply/allP => /= x rs.
+  elim: rules modes rs => //= r rs IH m.
+  rewrite in_cons.
+  case: H => [s'|/IH->]; last by rewrite orbT.
+  rewrite in_cons; case: eqP => /=; first by move=> ->; rewrite eqxx.
+  by move=> _ /IH->; rewrite orbT.
+Qed.
+
+Lemma F_in u pr query s r:
+  F u pr query s = r ->
+    all (fun x => x.2 \in fresh_rules s pr.(rules)) r.
+Proof.
+  move=> <-{r}.
+  rewrite/F/=.
+  case: tm2RC => //=[[r p]].
+  case: fndP => //= kP.
+  by apply: select_in_rules.
+Qed.
