@@ -28,25 +28,38 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Lemma tm2RC_kp {t1 k} : 
-  tm2RC t1 = Some (RCallable_Kp k) -> t1 = Tm_Kp k.
-Proof.
-  case: t1 k => //=.
-  - move=> k1 k2 []; congruence.
-  - move=> h b k; case X: tm2RC => //.
-Qed.
+Axiom H_same_hd: forall u m c hd s s1, 
+  H u m c hd s = Some s1 ->
+    get_tm_hd (Callable2Tm (RCallable2Callable c)) =
+      get_tm_hd (Callable2Tm (RCallable2Callable hd)).
 
-Lemma deref_kp {s1 t k}:
-  tm2RC (deref s1 t) = Some (RCallable_Kp k) ->
-    (t = Tm_Kp k) \/ (exists v, t = Tm_V v /\ lookup v s1 = Some (Tm_Kp k)).
-Proof.
-  case: t k => //=.
-  - move=> k1 k2 []; left; congruence.
-  - move=> v k; case x: (lookup _ _) => [t1|]//=.
-    move=>/tm2RC_kp?; subst.
-    right; by eexists.
-  - move=> h b k; case X: tm2RC => //.
-Qed.
+Axiom deref_rigid: forall s t t',
+  deref s t = t' ->
+    get_tm_hd t' = 
+      match get_tm_hd t with
+      | inl K => inl K
+      | inr (inl P) => inr (inl P)
+      | inr (inr V) => 
+        if s.[? V] is Some t then get_tm_hd t
+        else inr (inr V)
+      end.
+
+(* Axiom check_rule_fresh: forall sP V R, check_rule sP R = check_rule sP (fresh_rule V R). *)
+Axiom check_rule_fresh: forall V R, (fresh_rules V R) = R.
+
+Axiom unify_id: forall u A sX, lang.unify u A A sX = Some sX.
+Axiom match_unif: forall u A B s r, 
+  lang.matching u A B s = Some r -> lang.unify u A B s <> None.
+
+Axiom unif_comb: forall u f a f1 a1 sx,
+  lang.unify u (Tm_Comb f a) (Tm_Comb f1 a1) sx =
+  if lang.unify u f f1 sx is Some sx then lang.unify u a a1 sx
+  else None.
+
+Axiom yyy: forall s c v' (kv : v' \in domf s),
+  get_tm_hd (Callable2Tm c) = inr (inr v') ->
+  deref s s.[kv] = deref s (Callable2Tm c).
+
 
 Lemma expand_CB_is_ko {u s A B}:
   (* we have a superficial cut *)
@@ -345,6 +358,10 @@ Section min_max.
   
   Lemma incl_weakr s t : incl s t -> incl s (weak t).
   Proof. move=> /eqP <-; apply/eqP/min_weakr. Qed.
+
+  Lemma incl_weakl t: incl (weak t) t -> weak t = t.
+  Proof. by move=> /eqP; rewrite min_comm min_weak. Qed.
+
 
   Lemma min_abb a b: min (min a b) b = min a b.
   Proof. rewrite -min_assoc min_refl//. Qed.
@@ -675,11 +692,22 @@ Section checker.
     get_tm_hd_sig sP [fmap] (Callable2Tm(RCallable2Callable t)).
 
   Definition empty_ctx : sigV := [fmap].
+  Definition all_weak (sV:sigV):= [forall k : domf sV, sV.[valP k] == weak (sV.[valP k]) ].
+  Definition all_vars_subset {K:choiceType} {V: Type} (sV: {fmap K -> V}) (vars:{fset K}) :=
+    [forall x : vars, val x \in sV ].
 
-  Axiom tc_rule : R -> sigV.
-  Axiom tc_ruleP: forall R S,
-    tc_rule R = S -> forall k, k \in (varsU_rule R) ->
-      k \in domf S.
+  Definition tc_atoms ty (s:seq A) :=
+    [&& all_weak ty &                               (*all sig in ty are weak*)
+      all_vars_subset ty (varsU (map vars_atom s))  (*all variables in the tree are in ty*)
+    ].
+
+  Definition tc_rule ty (s:R) :=
+    [&& all_weak ty &                               (*all sig in ty are weak*)
+      all_vars_subset ty (varsU_rule s)  (*all variables in the tree are in ty*)
+    ].
+
+  Axiom tc_ruleF : R -> sigV.
+  Axiom tc_ruleP: forall R S, tc_ruleF R = S -> tc_rule S R.
   
   Definition check_rule sP r :=
     let head := r.(head) in
@@ -689,7 +717,7 @@ Section checker.
     | Some hd_sig => 
         let is_det_head := is_det_sig hd_sig in
         let tm_head := (Callable2Tm (RCallable2Callable head)) in
-        let sV := tc_rule {|head:=head; premises:=prems|} in
+        let sV := tc_ruleF {|head:=head; premises:=prems|} in
         let ass_hd := assume_tm sP sV tm_head (sigtm_rev tm_head hd_sig) in
         let: (b1, sV'') := check_atoms sP ass_hd prems Func in
         (* we reject functional rules with non-deterministic body *)
@@ -884,8 +912,6 @@ Definition all_compat_type f g :=
 
 Definition weak_all (s:sigV) : sigV := [fmap x : domf s => weak s.[valP x]].
 
-Definition all_weak (sV:sigV):= [forall k : domf sV, sV.[valP k] == weak (sV.[valP k]) ].
-
 (* a free alternative can be reached without encountering a cutr following SLD 
 
   "((A, !, A') ; B) , C" is OK since B is not free
@@ -956,9 +982,6 @@ Fixpoint tc_tree_aux (sP:sigT) A (te:sigV) (sVD1:(D * sigV)): (D * sigV) :=
         (func, merge_sig dA.2 dB.2)
   end.
 
-Definition all_vars_subset {K:choiceType} {V: Type} (sV: {fmap K -> V}) (vars:{fset K}) :=
-  [forall x : vars, val x \in sV ].
-
 Definition closed_inT (sV: sigV) t := all_vars_subset sV (vars_tree t).
 
 Definition compat_subst (sP:sigT) (N:sigV) (s:Sigma) :=
@@ -982,11 +1005,6 @@ Definition tc sP ty T :=
 Definition tc_call ty T :=
   [&& all_weak ty &                 (*all sig in ty are weak*)
     all_vars_subset ty (vars_tm (Callable2Tm T))  (*all variables in the tree are in ty*)
-  ].
-
-Definition tc_atoms ty (s:seq A) :=
-  [&& all_weak ty &                               (*all sig in ty are weak*)
-    all_vars_subset ty (varsU (map vars_atom s))  (*all variables in the tree are in ty*)
   ].
 
 Definition compat_sig (N O:sigV) :=
@@ -2212,14 +2230,6 @@ Proof.
   rewrite is_ko_big_and is_ko_big_or_aux//=all_det_nfa_big_and/=has_cut_has IH//.
 Qed.
 
-(* Axiom check_rule_fresh: forall sP V R, check_rule sP R = check_rule sP (fresh_rule V R). *)
-Axiom check_rule_fresh: forall V R, (fresh_rules V R) = R.
-
-(* Axiom select_ax:
-  select u S m P s = L ->
-    forall s r, (s, r) \in L ->
-      check_callable sP sV (RCallable2Callable r)  *)
-
 Lemma tc_callPE sP tyO p c:
   tc sP tyO (CallS p c) = tc_call tyO c.
 Proof. by rewrite/tc /tc_call/compat_sig_subst andbT. Qed.
@@ -2227,18 +2237,6 @@ Proof. by rewrite/tc /tc_call/compat_sig_subst andbT. Qed.
 Lemma tc_callP sP tyO p c:
   tc sP tyO (CallS p c) -> tc_call tyO c.
 Proof. by rewrite/tc /tc_call/compat_sig_subst andbT. Qed.
-
-Print Unif.
-
-Axiom unify_id: forall u A sX, lang.unify u A A sX = Some sX.
-Axiom match_unif: forall u A B s r, 
-  lang.matching u A B s = Some r -> lang.unify u A B s <> None.
-
-Axiom unif_comb: forall u f a f1 a1 sx,
-  lang.unify u (Tm_Comb f a) (Tm_Comb f1 a1) sx =
-  if lang.unify u f f1 sx is Some sx then lang.unify u a a1 sx
-  else None
-.
 
 Lemma H_xx u m q r s sx:
   H u m q r s = Some sx ->
@@ -2267,19 +2265,10 @@ Proof.
   apply: H_xx X.
 Qed.
 
-(* Axiom titi: forall u S PP hd s s1 c,
-  H u (get_modes_rev S PP) S hd s = Some s1 ->
-  check_tm sP (tyO + O) (Callable2Tm c) = (b (d Func), true) ->
-  check_tm sP (tyO + O) (deref s (Callable2Tm (RCallable2Callable c))) = (b (d Func), true). *)
-
-Axiom H_same_hd: forall u m c hd s s1, 
-  H u m c hd s = Some s1 ->
-    get_tm_hd (Callable2Tm (RCallable2Callable c)) =
-      get_tm_hd (Callable2Tm (RCallable2Callable hd)).
-
 Lemma tm2RC_get_tm_hd t c' p:
   tm2RC t = Some (c', p) ->
-    get_tm_hd (Callable2Tm (RCallable2Callable c')) = inr (inl p).
+    ((get_tm_hd t = inr (inl p)) *
+    (get_tm_hd (Callable2Tm (RCallable2Callable c')) = inr (inl p))).
 Proof.
   elim: t c' p => //=.
     move=> k c' p [<-<-]//.
@@ -2288,6 +2277,42 @@ Proof.
   apply: Hf t.
 Qed.
 
+Lemma tm2RC_deref s c c' p:
+  tm2RC (deref s (Callable2Tm c)) = Some (c', p) ->
+    match get_tm_hd (Callable2Tm c) with
+    | inl K => False
+    | inr (inl P) => P = p
+    | inr (inr V) => 
+      if s.[? V] is Some t then get_tm_hd (deref s t) = inr (inl p)
+      else False
+    end.
+Proof.
+  elim: c c' p => //=; first by congruence.
+    move=> v c' p; case: fndP => //= vs H.
+    remember (deref _ _) as df eqn:H1.
+    have {}H1 := esym H1.
+    rewrite (deref_rigid H1).
+    have {}H := tm2RC_get_tm_hd H.
+    by rewrite H.
+  move=> f Hf t c' p.
+  remember (deref _ _) as df eqn:H.
+  have {}H := esym H.
+  case X: tm2RC => //=[[RC P]][??]; subst.
+  by apply: Hf X.
+Qed.
+
+Lemma get_sig_hd_weak A: get_sig_hd (weak A) <> d Func .
+Proof. elim: A => //=[[]|]//=[]//. Qed.
+
+Lemma incl_get_sig_hd A B:
+  compat_type A B ->
+  incl A B -> get_sig_hd B = d Func -> get_sig_hd A = d Func.
+Proof.
+  elim: A B => //=.
+    move=> [//|[|//] [[//|[|]]|]]//[[]|]//=.
+  move=> [] f _ a Ha []//=[]//f' a' /andP[_ C] /[!incl_arr]/andP[_ I];
+  by apply: Ha.
+Qed.
 
 Lemma check_tm_F u sP prog c tyO O s L X:
   check_program sP prog ->
@@ -2315,20 +2340,50 @@ Proof.
   rewrite in_cons; case: eqP; last by eauto.
   move=> [??] _; subst; clear IH.
   case: x cx H => /= head prems + H tc_prems compat.
+  have XXX := tm2RC_get_tm_hd trc.
   rewrite/check_rule/=.
   rewrite/RCallable_sig/get_tm_hd_sig/=.
-  rewrite -(H_same_hd H) (tm2RC_get_tm_hd trc).
+  rewrite -(H_same_hd H) XXX.
   case: fndP => //= psP.
   case ca: check_atoms => //=[D' S'].
   case: ifP => //=.
   rewrite /is_det_sig.
   have [c_sig_hd[H7 H8]] := get_callable_hd_sig_is_func_ex ckc erefl.
-  case: eqP => H9; last first.
-    exfalso.
-    admit.
-  destruct D' => //= _ _. (*TODO: last _ is useful to check post-conditions*)
+  have: get_sig_hd sP.[psP] = d Func.
+    have:= tm2RC_deref trc.
+    case Y: get_tm_hd => //[[p'|v]].
+      move=> ?; subst.
+      by move: H7; rewrite/get_tm_hd_sig Y in_fnd => -[?]; subst.
+    case: fndP => //=kv.
+    move: H7; rewrite/get_tm_hd_sig Y.
+    case: fndP => // vtyO []; rewrite (fnd_in vtyO) lookup_cat.
+    move=> ?; subst.
+    move: H8.
+    case: (fndP O) => vO; last first.
+      have:= (vtyO); rewrite {1}domf_cat {1}in_fsetU (negPf vO) orbF.
+      move=> vx; rewrite in_fnd/=.
+      have  := forallP (andP tcC).1 (Sub v vx); rewrite valPE => /eqP ->.
+      by move=> /get_sig_hd_weak.
+    move=> /=.
+    have:= forallP SP (Sub v vO).
+    rewrite in_fnd valPE/=/good_assignment.
+    case C: check_tm => //=[S []]; last first.
+      move=> /andP[]/comp_weak.
+      by rewrite weak2 => -> /incl_weakl<- /get_sig_hd_weak.
+    move=> /andP[H1 H2] H3 H4.
+    have H5 := incl_get_sig_hd H1 H2 H3.
+    have [W[]] := get_callable_hd_sig_is_func_ex C H5.
+    rewrite /get_tm_hd_sig.
+    case T: get_tm_hd => [R|[p'|R]]/=; first by move=> [<-].
+      case: fndP => //rP[<-] <-.
+      have:= @deref_rigid s s.[kv] _ erefl.
+      by rewrite H4 T => [[?]]; subst; rewrite (bool_irrelevance rP psP).
+    case: fndP => // rO [<-].
+    have  := forallP (andP tcC).1 (Sub R rO); rewrite valPE => /eqP ->.
+    by move=> /get_sig_hd_weak.
+  move=> H1; rewrite H1.
+  destruct D' => //= _.
   admit.
-  
 Admitted.
 
 Lemma mem_tail (A:eqType) x y (tl: seq A):
@@ -2470,7 +2525,7 @@ Proof.
     case kA: is_ko.
       rewrite is_ko_success//=is_ko_failed//=is_ko_step//=kA.
       by move=> /eqP -> bB /tc_andP[tNA tNB _] [?][<-].
-    case: ifP => /=[sA vB bB0|sA /eqP->].
+    case: ifP => /=[sA vB bB0|sA /eqP->{B0 HB0 ckB0 cK tOBO}].
       rewrite succes_is_solved//.
       case:ifP => kB0.
         rewrite !tc_tree_aux_catR get_tree_And; case: ifP.
@@ -2537,15 +2592,13 @@ Proof.
     all: case tA: (tc_tree_aux _ A) => [DA SA];
          case tA': (tc_tree_aux _ A') => [DA' SA'];
          case tB: (tc_tree_aux _ B) => [DB SB];
-         case tB': (tc_tree_aux _ B) => [DB' SB'];
-         case tB2: (tc_tree_aux _ B) => [DB2 SB2].
+         case tB': (tc_tree_aux _ B) => [DB' SB'].
     all: move=> [??]; subst.
-      destruct DA.
-        have ? := HA _ _ _ _ _ _ ckA vA eA tOA tNA DR CS SP tA tA'; subst.
+      case: ifP => sA'.
+         case tB2: (tc_tree_aux _ B) => [DB2 SB2][??]; subst.
+         
       admit.
     admit.
-    (* - destruct DA. *)
-        (* have ? := HA _ _ _ _ _ _ vA eA tOA tNA SP tA tA'; subst. *)
 Admitted.
 
 Lemma good_assignment_cat sP X tE s1 N:
@@ -2610,6 +2663,70 @@ Axiom saturate_sigP : forall sP O A u s r,
   tc sP O A ->
   step u s A = r ->
   { X : sigV | let N := X + O in complete_sig X O && tc sP N (get_tree r) }.
+
+Lemma success_det_tree_next_alt sP tyO A d0 s0 N:
+  tc sP tyO A ->
+  valid_tree A -> success A -> tc_tree_aux sP A tyO (d0,s0) = (Func, N) ->
+    (d0 = Func /\ next_alt false (build_na A (next_alt true A)) = None)%type2.
+Proof.
+  elim: A d0 s0 N => //=; first by split; congruence.
+  - move=> A HA s B HB d0 s0 N /tc_orP[tA tB cS].
+    case kA: is_ko => /=.
+      rewrite (is_ko_next_alt _ kA)//= (is_ko_success kA).
+      case: ifP => [dA vB sB|//].
+      rewrite success_is_ko// => H.
+      have[?]:= HB _ _ _ tB vB sB H; subst.
+      case nB: (next_alt _ B) => //=[B'|] nB'; rewrite is_dead_next_alt//= if_same;
+      last by rewrite is_dead_next_alt.
+      by rewrite nB'.
+    rewrite (contraFF is_dead_is_ko kA).
+    move=> /andP[vA bB] sA.
+    move /orP: bB => []bB; last first.
+      have kB := base_or_aux_ko_is_ko bB.
+      rewrite kB (is_ko_next_alt _ kB).
+      move=> /(HA _ _ _ tA vA sA) [?]; subst.
+      case nA: (next_alt _ A) => [A'|]/= nA'; last rewrite !is_dead_next_alt//=.
+      rewrite nA' is_ko_next_alt//.
+    have kB := base_or_aux_is_ko bB.
+    by rewrite kB success_has_cut//=.
+  - move=> A HA B0 HB0 B HB d0 s0 N /tc_andP[tA tB0 tB] /and4P[vA ++ Ck] /andP[sA sB].
+    rewrite sA success_is_ko//= success_failed//= => vB /orP[]bB; last first.
+      have kB := base_and_ko_is_ko bB.
+      rewrite kB !(is_ko_next_alt _ kB)// => H.
+      have[?]:= HB _ _ _ tB vB sB H; subst.
+      case nB: (next_alt _ B) => [B'|]//=; last first.
+        move=> _.
+        by case nA: (next_alt _ A) => [A'|]/=; rewrite is_dead_failed//is_dead_next_alt//.
+      rewrite success_failed//sA => nB'.
+      by rewrite nB' (is_ko_next_alt _ kB)//; case: next_alt.
+    have kB := base_and_is_ko bB.
+    rewrite kB.
+    case tOA: (tc_tree_aux _ A) => //=[DA SA].
+    case tOB: (tc_tree_aux _ B) => //=[DB SB].
+    case tOB0: (tc_tree_aux _ B0) => //=[DB0 SB0].
+    destruct DB, DB0 => //-[?]; subst.
+    rewrite (next_alt_aux_base_and bB).
+    have [? {HB}] := HB _ _ _ tB vB sB tOB; subst.
+    case nB: (next_alt _ B) => [B'|]//= nB'.
+      rewrite nB' (next_alt_aux_base_and bB).
+      rewrite success_failed//sA.
+      destruct DA.
+        have [? {HA}] := HA _ _ _ tA vA sA tOA; subst.
+        case nA: (next_alt _ A) => [A'|]//= nA'.
+        (* A is success, nA should return None since tOA is from Func to Func *)
+        admit.
+      admit.
+    destruct DA.
+      have [? {HA}] := HA _ _ _ tA vA sA tOA; subst.
+      case nA: (next_alt _ A) => [A'|]//= nA'; last first.
+        by rewrite is_dead_next_alt// is_dead_failed//.
+      by rewrite (next_alt_aux_base_and bB) (next_alt_None_failed nA') nA'.
+    case nA: (next_alt _ A) => [A'|]//=; last first.
+      rewrite is_dead_failed//is_dead_next_alt//.
+    rewrite (next_alt_aux_base_and bB) if_same (next_alt_failed nA).
+    admit.
+Admitted.
+
 
 Lemma run_is_det sP sV sV' s A tE: 
   check_program_tree sP A -> 
