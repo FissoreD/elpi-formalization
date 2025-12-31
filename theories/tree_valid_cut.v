@@ -314,7 +314,7 @@ Section valid_tree.
     case: A => //=[_ _|] _ HB HC /andP [] /eqP <-bB; rewrite HB//eqxx//.
   Qed.
 
-  Lemma base_and_ko_base_and_ko_cutr {B} : base_and_ko B -> base_and_ko (cutr B).
+  Lemma base_and_ko_base_and_ko_cutr {B} : base_and_ko B -> (cutr B) = B.
   Proof. 
     elim: B => // -[]//_ A HA B HB/=/and3P[bA/eqP->bB].
     rewrite HB//eqxx//.
@@ -334,13 +334,13 @@ Section valid_tree.
       rewrite base_and_base_and_ko_cutr//eqxx//.
   Qed.
 
-  Lemma base_or_ko_cutr {B}: base_or_aux_ko B -> base_or_aux_ko (cutr B).
+  Lemma base_or_ko_cutr {B}: base_or_aux_ko B -> (cutr B) = B.
   Proof.
     elim: B => //.
       move=> A HA s B HB /= /andP[bA bB].
-      rewrite HB//base_and_ko_base_and_ko_cutr//.
+      by rewrite HB//=base_and_ko_base_and_ko_cutr.
     move=> [] //= _ B0 _ B HB /and3P[] bB0 /eqP<- _.
-    rewrite base_and_ko_base_and_ko_cutr//eqxx//.
+    by rewrite base_and_ko_base_and_ko_cutr//.
   Qed.
 
   (* Lemma valid_tree_compose_and {A2 B2 B02}: 
@@ -360,7 +360,7 @@ Section valid_tree.
     base_and_ko B0-> base_and_ko (cutl B0).
   Proof.
     elim: B0; move=> //=[]//= _ _ _ B HB /and3P[_ /eqP->].
-    move=> /base_and_ko_base_and_ko_cutr->; rewrite eqxx//.
+    by move=> H; rewrite base_and_ko_base_and_ko_cutr//H eqxx.
   Qed.
 
   Lemma bbAnd_cutl{B0}:
@@ -370,14 +370,15 @@ Section valid_tree.
   Lemma bbOr_cutr {B}: bbOr B -> bbOr (cutr B).
   Proof.
     rewrite/bbOr.
-    move=>/orP[/base_or_base_or_ko_cutr|/base_or_ko_cutr]->; rewrite orbT//.
+    move=> /orP[|]H; last by rewrite base_or_ko_cutr// H orbT.
+    by rewrite base_or_base_or_ko_cutr//orbT.
   Qed.
 
   Lemma bbAnd_cutr {A}: bbAnd A -> bbAnd (cutr A).
   Proof.
     rewrite /bbAnd => /orP[].
       move=>/base_and_base_and_ko_cut-->; apply orbT.
-    move=> /base_and_ko_base_and_ko_cutr->; apply orbT.
+    move=> /[dup]/base_and_ko_base_and_ko_cutr->->; apply orbT.
   Qed.
 
   Lemma has_cut_cutr A: has_cut (cutr A) = false.
