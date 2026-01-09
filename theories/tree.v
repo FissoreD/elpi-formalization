@@ -492,7 +492,7 @@ Section main.
 
 
   Inductive runb : Sigma -> tree -> option Sigma -> tree -> nat -> Type :=
-    | run_done {s1 s2 A B}         : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> runb s1 A (Some s2) B 0
+    | run_done {s1 s2 A B}        : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> runb s1 A (Some s2) B 0
     | run_cut  {s1 s2 r A B n}    : step s1 A = CutBrothers B -> runb s1 B s2 r n -> runb s1 A s2 r n.+1
     | run_step {s1 s2 r A B n}    : step s1 A = Expanded    B -> runb s1 B s2 r n -> runb s1 A s2 r n
     | run_fail   {s1 s2 A B r n}     : 
