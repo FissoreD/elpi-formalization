@@ -1025,6 +1025,39 @@ Qed.
 Definition closed_in (sV: sigV) t := all_vars_subset sV (vars_tm t).
 Definition closed_inT (sV: sigV) t := all_vars_subset sV (vars_tree t).
 
+Definition good_assignment sP tE SV vk :=
+  let (S, b1) := check_tm sP tE vk in
+  let SS := if b1 then S else weak S in
+  compat_type SS SV && incl SS SV.
+
+Module TestGA.
+  Definition tm := Tm_Comb (Tm_V (IV 0)) (Tm_Kd (IKd 3)).
+  Definition s : sigV := [fmap].[IV 0 <- b(d Pred)].
+  Goal good_assignment [fmap] s (b (d Pred)) tm.
+  Proof. 
+    rewrite/good_assignment/tm/check_tm/s.
+    rewrite in_fnd//.
+      rewrite in_fset1U//.
+    move=> H;rewrite/odflt1 getf_set//=.
+  Qed.
+
+
+End TestGA.
+
+Module Test.
+
+Lemma incl_good_assignment sP te s s' v :
+  incl s s' ->
+  compat_type s s' ->
+  good_assignment sP te s v ->
+  good_assignment sP te s' v.
+move=> i c; rewrite /good_assignment; case E: check_tm => [sk []]; rewrite ?valPE/=.
+  move=> /andP[comp_sk isk]; rewrite (compat_type_trans comp_sk)  //.
+  by rewrite (incl_trans isk) // in2_more_precise.
+ move=> /andP[comp_sk isk]; rewrite (compat_type_trans comp_sk)  //.
+  by rewrite (incl_trans isk) // in2_more_precise.
+Qed.
+
 Definition compat_subst (sP:sigT) (N:sigV) (s:Sigma) :=
   all_vars_subset N (vars_sigma s) &&
   [forall x: domf s, if N.[?val x] is Some T then (compat_type (check_tm sP N s.[valP x]).1 T) else false].
@@ -1154,23 +1187,6 @@ Section andP.
     by rewrite andbT; apply/tc_andP.
   Qed. *)
 End andP.
-
-Definition good_assignment sP tE SV vk :=
-  let (S, b1) := check_tm sP tE vk in
-  let SS := if b1 then S else weak S in
-  compat_type SS SV && incl SS SV.
-
-Lemma incl_good_assignment sP te s s' v :
-  incl s s' ->
-  compat_type s s' ->
-  good_assignment sP te s v ->
-  good_assignment sP te s' v.
-move=> i c; rewrite /good_assignment; case E: check_tm => [sk []]; rewrite ?valPE/=.
-  move=> /andP[comp_sk isk]; rewrite (compat_type_trans comp_sk)  //.
-  by rewrite (incl_trans isk) // in2_more_precise.
- move=> /andP[comp_sk isk]; rewrite (compat_type_trans comp_sk)  //.
-  by rewrite (incl_trans isk) // in2_more_precise.
-Qed.
 
 Definition sigP (sP:sigT) ty (s: Sigma) (sV: sigV) :=
   (* (domf s `<=` domf sV) && *)
@@ -3179,41 +3195,195 @@ Proof.
   by apply/more_precise_trans/Hf/xs/Ha.
 Qed.
 
-Fixpoint inclL L1 L2 :=
-  match L1, L2 with
-  | [::], _ => true
-  | (o, S1) :: L1, ((i|o), S2) :: L2 => incl S1 S2 && inclL L1 L2
-  | _, _ => false
-  end.
+Module inclL.
 
-Lemma sigma_rev_help A B T:
-  compat_type A B ->
-  incl A B ->
-  inclL (sigtm_rev T A) (sigtm_rev T B).
-Proof.
-  elim: A B T.
-    move=> [|d1] [[|d2]|[]]//; by case.
-  move=> [] l Hl r Hr [[]|[]]//sl sr []//=f a /andP[cl cr] /[!incl_arr]/=/andP[il ir].
-Admitted.
-    (* have:= Hl _ _ cl il. *)
+  Fixpoint inclL L1 L2 :=
+    match L1, L2 with
+    | [::], _ => true
+    | (o, S1) :: L1, (o, S2) :: L2 => incl S1 S2 && inclL L1 L2
+    | (i, S1) :: L1, (i, S2) :: L2 => incl S2 S1 && inclL L1 L2
+    | _, _ => false
+    end.
 
-Lemma assume_tm_mp_incl sP X tyO N O T A B:
+  Fixpoint compat_typeL {T: eqType} (L1: seq (T * _)) L2 :=
+    match L1 with
+    | [::] => L2 == [::]
+    | (m1, S1) :: L1 => 
+      if L2 is (m2, S2) :: L2 then [&& m1 == m2, compat_type S1 S2 & compat_typeL L1 L2]
+      else false
+    end.
+
+  Lemma inclL_refl L: inclL L L.
+  Proof. by elim: L => //=[[[]]] ?? ->//; rewrite andbT. Qed.
+
+  Hint Resolve inclL_refl : core.
+
+  Lemma sigma_rev_help_aux A B T Q1 Q2:
+    compat_type A B ->
+    incl A B ->
+    inclL Q1 Q2 ->
+    compat_typeL Q1 Q2 ->
+    inclL (catrev (sigtm T A) Q1) (catrev (sigtm T B) Q2) /\ 
+    compat_typeL (catrev (sigtm T A) Q1) (catrev (sigtm T B) Q2).
+  Proof.
+    rewrite/sigtm.
+    elim: T Q1 Q2 A B => //=.
+      (* move=> ??? [[|?]|[]??]//=[[|?]|[]??]//=. [|[??]?][|[??]?]//=. *)
+    move=> f Hf a Ha Q1 Q2 [[|d]|[] tl tr] [[|d1]|[] tl1 tr1]//=;
+    by move=> /andP[CL CR] /[!incl_arr]/= /andP[IL IR] IQ H;
+    apply/Hf/and3P => //; apply/andP=>//.
+  Qed.
+
+  (*Lemma sigma_rev_help_auxR A B T Q1 Q2:
+    inclL Q1 Q2 ->
+    compat_typeL Q1 Q2 ->
+    inclL (catrev (sigtm T A) Q1) (catrev (sigtm T B) Q2) ->
+    compat_typeL (catrev (sigtm T A) Q1) (catrev (sigtm T B) Q2) ->
+    compat_type A B /\ incl A B.
+  Proof.
+    rewrite/sigtm.
+    elim: T Q1 Q2 A B => //=.
+      move=> k q1 q2 [].
+        move=> [].
+          move=> []/=.
+        move=> [].
+       move=> ???[[|?]|[]??]//=[[|?]|[]??]//=. [|[??]?][|[??]?]//=.
+    move=> f Hf a Ha Q1 Q2 [[|d]|[] tl tr] [[|d1]|[] tl1 tr1]//=;
+    by move=> /andP[CL CR] /[!incl_arr]/= /andP[IL IR] IQ H;
+    apply/Hf/and3P => //; apply/andP=>//.
+  Qed. *)
+
+  Lemma sigma_rev_help A B T:
+    compat_type A B ->
+    incl A B ->
+    inclL (sigtm_rev T A) (sigtm_rev T B) /\
+    compat_typeL (sigtm_rev T A) (sigtm_rev T B) .
+  Proof. by move=> *; apply: sigma_rev_help_aux. Qed.
+
+  (* 
+    assume_tm (f X) ()
+         vs
+    assume_tm (f X)
+  *)
+
+
+  Lemma assume_tm_mp_incl sP N O T A B:
+    more_precise N O ->
+    closed_in O T ->
+    compat_typeL A B ->
+    inclL A B ->
+    more_precise (assume_tm sP N T A)
+      (assume_tm sP O T B).
+  Proof.
+    elim: T A B O N => //; only 1,2:
+    by move=> ?[|x xs][|y ys]//=*; rewrite more_precise_cat//more_precise_cat2.
+      move=> v A B O N /[dup] MP /and3P[cno ino iO] /[!closed_in_var] vO.
+      case: A => [|[mx x] xs]; case: B => [|[my y] ys]//=.
+      destruct mx, my => //= /andP[CH CT] /andP[IH IT].
+      case: (fndP O) => kO.
+        have vN := fsubsetP cno _ kO.
+        rewrite (in_fnd vN)/=.
+        have: compat_type N.[vN] x = compat_type O.[kO] y.
+          admit.
+        move=> /[dup] HE ->.
+        case: ifP => //= C.
+        admit.
+      case: fndP => //= kN.
+      case: ifP => //=.
+      admit.
+    move=> f Hf a Ha A B O N  /[dup] MP /and3P[cno ino iO] /[!closed_in_comb]/andP[cf ca] .
+    case: A => [|[mx x] xs]; case: B => [|[my y] ys]//=.
+    destruct mx, my => //= /andP[CH CT] /andP[IH IT]; last first.
+      by case: ifP => fH; last by apply: Hf.
+    case: ifP => fH; first by [].
+    apply: Ha.
+      apply: Hf => //.
+      by apply:closed_in_assume_tm.
+      
+    
+      admit.
+    
+    
+  Abort. 
+
+  Lemma assume_tm_mp_incl sP X tyO N O T A B:
+    more_precise N O ->
+    all_weak tyO ->
+    closed_in tyO T ->
+    compat_sig N tyO ->
+    compat_type A B ->
+    incl A B ->
+    more_precise (assume_tm sP (X + (tyO + N)) T (sigtm_rev T A))
+      (assume_tm sP (tyO + O) T (sigtm_rev T B)).
+  Proof.
+    move=> MP W C CS CT I.
+    (* have [??] := inclL.sigma_rev_help T CT I.
+    apply: inclL.assume_tm_mp_incl => //.
+      apply/more_precise_cat/more_precise_cat2 => //.
+    by apply: closed_in_cat. *)
+  Abort.
+
+End inclL.
+
+Lemma assume_tm_mp_same sP N O T M:
   more_precise N O ->
-  all_weak tyO ->
-  closed_in tyO T ->
-  compat_sig N tyO ->
-  compat_type A B ->
-  incl A B ->
-  more_precise (assume_tm sP (X + (tyO + N)) T (sigtm_rev T A))
-    (assume_tm sP (tyO + O) T (sigtm_rev T B)).
+  closed_in N T ->
+  more_precise (assume_tm sP N T M)
+    (assume_tm sP O T M).
 Proof.
-  elim: T A B O N => //=; only 1,2,3:
-    by move=> *; rewrite more_precise_cat//more_precise_cat2//.
-  move=> f Hf a Ha A B O N MP wO /[!closed_in_comb] /andP[cf ca] CS.
-  (* move=> X  *)
-Admitted.
+  elim: T M O N => //; only 1,2: by move=> k [|??].
+    move=> v L O N /[dup]MP /and3P[D C I] /[!closed_in_var] vN/=.
+    case: L => [|[[] x]xs]//.
+    rewrite in_fnd/=.
+    case: fndP => // vO.
+      have:= forallP C (Sub v vO); rewrite valPE in_fnd/= => H.
+      rewrite (compat_type_trans2 _ H).
+      case: ifP => //= H1; apply/and3P; split.
+        by rewrite/more_precise/=fsetUSS//=.
+        apply/forallP => -[k kP]; rewrite valPE/= ffunE/=.
+        case: eqP => H2; subst.
+          rewrite in_fnd/=; first by rewrite in_fset1U eqxx.
+          move=> vvN; rewrite ffunE/= eqxx.
+          apply: compat_type_min => //.
+          rewrite compat_type_comm.
+          by apply: compat_type_trans H1.
+        rewrite in_fnd.
+          by move: kP; rewrite/= in_fsetU in_fset1; case: eqP => //.
+        move=> kO/=; rewrite in_fnd/=.
+          by rewrite in_fsetU (fsubsetP D _ kO) orbT.
+        move=> kN; rewrite ffunE/=; case: eqP => // _.
+        rewrite in_fnd.
+          by move: kN; rewrite in_fsetU in_fset1; case: eqP.
+        move=> {}kN/=.
+        by have:= forallP C (Sub k kO); rewrite valPE in_fnd/=.
+      apply/forallP => -[k kO]/=; rewrite !ffunE !valPE/=.
+      case: eqP => H2; subst.
+        rewrite in_fnd/=; first by rewrite in_fset1U eqxx.
+        move=> vvN; rewrite ffunE/= eqxx.
+        apply: incl2_min => //.
+        by have:= forallP I (Sub v vO); rewrite valPE in_fnd.
+      rewrite in_fnd.
+        by move: kO; rewrite/= in_fsetU in_fset1; case: eqP => //.
+      move=> {}kO/=; rewrite in_fnd/=.
+        by rewrite in_fsetU (fsubsetP D _ kO) orbT.
+      move=> kN; rewrite ffunE/=; case: eqP => // _.
+      rewrite in_fnd.
+        by move: kN; rewrite in_fsetU in_fset1; case: eqP.
+      move=> {}kN/=.
+      by have:= forallP I (Sub k kO); rewrite valPE in_fnd.
+    case: ifP => //.
+    move=> H.
+    apply: more_precise_trans MP.
+    apply: more_precise_set_min => //.
+  move=> f Hf a Ha [|[m s] xs]// O N MP /[!closed_in_comb]/andP[cf ca]/=.
+  case: ifP => // _.
+  case: m => //=; auto.
+  apply: Ha; auto.
+  by apply: closed_in_assume_tm.
+Qed.
 
-Lemma assume_call_mp_incl sP X tyO N O1 T A B:
+
+(* Lemma assume_call_mp_incl sP X tyO N O1 T A B:
   more_precise N O1 ->
   tc_call tyO T ->
   compat_sig N tyO ->
@@ -3225,9 +3395,32 @@ Proof.
   rewrite/assume_call.
   move=> + /andP[].
   apply: assume_tm_mp_incl.
+Qed. *)
+
+Lemma flex_head_comb A B:
+  flex_head (Tm_Comb A B) = flex_head A.
+Proof. rewrite/flex_head//=. Qed.
+
+Lemma assume_flex_head sP sV T M:
+  flex_head T -> 
+    assume_tm sP sV T M = 
+      match T, M with
+      | Tm_V v, (i, s) :: _ =>
+        match sV.[? v] with
+        | None => sV
+        | Some oldv =>
+          if compat_type oldv s then add v (min s oldv) sV else sV
+        end
+      | _, _ => sV
+      end.
+Proof.
+  elim: T M sV => //=.
+  move=> f Hf a Ha [|[]]//=.
+  by move=> > /[!flex_head_comb] ->.
 Qed.
 
 Lemma check_callable_mp {sP T X tyO O1 N d0 d1 dA dB N1 N2}:
+  complete_sig X tyO ->
   let tyN := X + tyO in
   tc_call tyO T ->
 
@@ -3239,7 +3432,7 @@ Lemma check_callable_mp {sP T X tyO O1 N d0 d1 dA dB N1 N2}:
   check_callable sP (tyN + N) T dA = (dB, N2) ->
   ((d0 = dA -> minD d1 dB = dB) * (more_precise N2 N1)).
 Proof.
-  rewrite/check_callable => C DR CS /[dup] MP /and3P[DR1 C1 I1].
+  rewrite/check_callable => CM C DR CS /[dup] MP /and3P[DR1 C1 I1].
   have HH : more_precise (X + (tyO + N)) (tyO + O1).
     by rewrite more_precise_cat// more_precise_cat2//((andP C).1, compat_sig_cat1 CS).
   have CC : closed_in (tyO + N) (Callable2Tm T).
@@ -3268,12 +3461,13 @@ Proof.
     case: (fndP N) => /= kN; first by move=> + [<-<-]; split; auto.
     have /=vO := forallP (andP C).2 (Sub v (get_tm_hd_in TH)).
     by rewrite vO (in_fnd vO)/= => + [<-<-]; split; auto.
-  have H: forall xxx, more_precise (assume_call sP (X + (tyO + N)) T xxx)
-    (assume_call sP (tyO + O1) T xxx) by
-    move=> ?; apply: assume_call_mp_incl; rewrite//(compat_sig_cat1 CS).
   case TH: get_tm_hd => [k|[p|v]].
-    by move=> + [<-<-][<-<-]; split => //<-; destruct D2, D1 => //.
-  - by case: fndP => pP O [<-<-][<-<-]; split => // <-; destruct D1, D2.
+    move=> + [<-<-][<-<-]; split => //; first by move=> <-; destruct D2, D1 => //.
+    apply: assume_tm_mp_same HH _.
+    by rewrite catfA closed_in_cat// tc_cat_comm// closed_in_cat// (andP C).2.
+  - case: fndP => pP O [<-<-][<-<-]; split => //; first by move=> <-; destruct D1, D2.
+    apply: assume_tm_mp_same HH _.
+    by rewrite catfA closed_in_cat// tc_cat_comm// closed_in_cat// (andP C).2.
   rewrite catfA !lookup_cat -catfA.
   have /=vO := forallP (andP C).2 (Sub v (get_tm_hd_in TH)).
   rewrite vO (in_fnd vO)/=.
@@ -3281,17 +3475,13 @@ Proof.
     have kN := fsubsetP DR1 _ kO.
     rewrite kN in_fnd/= => + [<-<-][<-<-]; split; auto.
       destruct D1, D2 => //->//.
-      apply: assume_call_mp_incl => //.
-      by have:= forallP C1 (Sub v kO); rewrite valPE in_fnd/= compat_type_comm.
-    by have:= forallP I1 (Sub v kO); rewrite valPE in_fnd.
+    rewrite /assume_call assume_flex_head /flex_head ?TH//; destruct T => //=;
+    case: O1.[kO] => //=???; case ?: sigtm_rev => //=[[[] ?]?]; rewrite /flex_head;
+    simpl in TH; rewrite TH//=.
   case: fndP => kN/= I [<-<-][<-<-]/=; split; auto; only 1, 3: by destruct D1, D2 => //=<-.
-  have:= forallP (andP C).1 (Sub v vO); rewrite valPE => /eqP ->.
-  have vXO : v \in domf (X + tyO) by rewrite domf_cat in_fsetU vO orbT.
-  have:= forallP CS (Sub v vXO); rewrite valPE in_fnd.
-  rewrite (fnd_in vXO) lookup_cat vO (in_fnd vO)/= => H1.
-  apply: assume_call_mp_incl => //.
-    by rewrite compat_type_weak compat_type_comm.
-  by rewrite (comp_weak H1) incl_weakr//.
+  all: rewrite /assume_call assume_flex_head /flex_head ?TH//; destruct T => //=;
+  case: tyO.[vO] => //=???; case ?: sigtm_rev => //=[[[] ?]?]; rewrite /flex_head;
+  simpl in TH; rewrite TH//=.
 Qed.
 
 
@@ -3315,7 +3505,7 @@ Proof.
     case c1: check_callable => [D1 S1].
     case c2: check_callable => [D2 S2].
     mv_sbst_catfA.
-    have:= check_callable_mp tO _ _ _ c1 c2.
+    have:= check_callable_mp _ tO _ _ _ c1 c2.
     move=> []//.
       by rewrite domf_cat.
     split; last first.
