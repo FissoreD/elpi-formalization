@@ -1671,6 +1671,17 @@ Proof.
   by have:= forallP C (Sub x xZ); rewrite valPE/= in_fnd.
 Qed.
 
+Lemma compat_sig_catB X Y Z:
+  compat_sig X Z ->
+  compat_sig Y Z -> compat_sig (X + Y) Z.
+Proof.
+  move=> D C; apply/forallP => -[x xZ]; rewrite valPE lookup_cat/=.
+  have:= forallP D (Sub x xZ).
+  have:= forallP C (Sub x xZ).
+  rewrite valPE/=.
+  by case: fndP => //= xY.
+Qed.
+
 Lemma compat_sig_cat1 X Y Z:
   compat_sig Z (X + Y) -> compat_sig Z Y.
 Proof.
@@ -3493,7 +3504,6 @@ Proof.
       rewrite -catfA more_precise_cat// more_precise_cat2//=?(andP tO).1//.
       have H := check_callable_compat_sig c2.
       apply: compat_sig_all.
-    move: a.
     destruct d1, dA => //= /(_ erefl) <-//.
   - move=> A HA s B HB O O1 N N1 d1 d2 dA dB /tc_orP[tOA tOB tOs]/tc_orP[tNA tNB tNs].
     move=> DR1 CS1 DR2 CS2/= + MP.
@@ -3830,7 +3840,13 @@ Proof.
     case tB: tc_tree_aux => [DB SB]/=.
     case: ifP => kB [??]; subst; first by apply: HA tA.
     apply: more_precise_mergeR.
-      apply: compat_sig_all.
+      have H:= tc_tree_aux_compat_sig (compat_sig_sigma2ctx tOs) tOB tB.
+      apply: compat_sig_catB; rewrite compat_sig_comm//.
+      apply: compat_sig_trans H _.
+        by rewrite get_ctxS_domf => //.
+        by rewrite (tc_tree_aux_eq _ _ tB)// sigma2ctx_sub.
+      rewrite compat_sig_comm.
+      by apply: compat_sig_get_ctxS.
     by apply: HA tA.
   move=> A HA B0 HB0 B HB O N DA SA d0 /and4P[vA ++ _] /tc_andP[tOA tOB0 tOB] /andP[sA sB].
   move=> ++ MP wO DR CS.
@@ -3845,6 +3861,7 @@ Proof.
   case tB0: tc_tree_aux => [DB0 SB0]/= [??]; subst.
   rewrite merge_comm.
   apply: more_precise_mergeR.
+    (* rewrite compat_sig_catB => //. *)
     apply: compat_sig_all.
   apply: HB tB => //=.
     by apply: more_precise_get_ctxS.
@@ -3913,6 +3930,17 @@ Proof.
     move=> H1 MP1; split.
       by destruct DB, DB0 => //.
     apply: more_precise_mergeR MP1.
+      have C1 := tc_tree_aux_compat_sig CS1 tOA tA.
+      have C2 := tc_tree_aux_compat_sig C1 tOB0 tB0.
+      (* have CH: compat_sig (get_ctxS sP tyO N A) (X + tyO).
+        rewrite compat_sig_comm.
+        apply: compat_sig_trans.
+          (compat_sig_get_ctxS _ _) _ => //.
+        admit.
+      have C3 := tc_tree_aux_compat_sig CH tNB tB'.
+      apply: compat_sig_trans C3 _.
+        rewrite (tc_tree_aux_eq ) *)
+      (* admit. *)
     by apply: compat_sig_all.
   move=> /eqP ->{B0 HB0 tOB0 cC}/=.
   case: ifP => fA bB; first by rewrite failed_expand//.
@@ -3929,7 +3957,7 @@ Proof.
     by rewrite (tc_tree_aux_eq _ _ tA)//.
     by apply: tc_tree_aux_compat_sig tA.
     by apply/tc_tree_aux_sub/tA'/tNA; rewrite domf_cat//.
-    by apply: compat_sig_all.
+    by apply: tc_tree_aux_compat_sig tA'.
     by apply/base_and_valid.
   move=> MB MPB.
   case: ifP => sA'; last first.
@@ -3941,7 +3969,7 @@ Proof.
   mv_sbst_catfA.
   have [] := tc_tree_aux_cat_mp_same_te tNB _ _ _ _ tB' tB2.
     by rewrite domf_cat fsubUset fsubset_refl get_ctxS_domf//domf_cat.
-    by apply: compat_sig_all.
+    by apply: compat_sig_catB (compat_sig_refl _) (compat_sig_get_ctxS _ _).
     by apply: base_and_valid.
     apply: get_ctxS_step_succ tA' => //.
       by apply:valid_tree_expand eA.
@@ -4081,6 +4109,13 @@ Proof.
     case tB: (tc_tree_aux _ B) => [DB SB]/=.
     split; last first.
       apply: more_precise_mergeR => //.
+      have C1 := tc_tree_aux_compat_sig (compat_sig_sigma2ctx tOs) tOB tB.
+      have C2 := tc_tree_aux_compat_sig CS2 tNA tA'.
+      apply: compat_sig_trans C2 _.
+        by rewrite (tc_tree_aux_eq (sigma2ctx_sub _) tOB tB)// domf_cat fsubsetU// fsubset_refl orbT.
+        by rewrite (tc_tree_aux_eq _ _ tA')// domf_cat.
+      rewrite compat_sig_catB //compat_sig_comm//.
+      (*disjoint_compat_sig: use C1 + CM*)
       by apply: compat_sig_all.
     case: ifP => _; last by [].
     move: MINA; destruct dA; rewrite// !(@minD_comm _ Func)/=.
@@ -4177,7 +4212,7 @@ Proof.
   mv_sbst_catfA.
   have [] := tc_tree_aux_cat_mp_same_te tNB _ _ _ _ tB' tB2.
     by rewrite domf_cat fsubUset fsubset_refl get_ctxS_domf//domf_cat.
-    by apply: compat_sig_all.
+    by apply: compat_sig_catB (compat_sig_refl _) (compat_sig_get_ctxS _ _).
     by apply: base_and_valid.
     apply: get_ctxS_step_succ tA' => //.
       by apply:valid_tree_expand eA.
