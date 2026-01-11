@@ -1236,6 +1236,10 @@ Proof.
   rewrite/=Hf Ha//.
 Qed.
 
+Lemma k_in_vars_sigma (k:V) (s:Sigma) (kP : k \in domf s):
+  k \in vars_sigma s.
+Proof. by rewrite/vars_sigma in_fsetU kP. Qed.
+
 Lemma vars_tm_vars_sigma (x: V) (k:V) (s:Sigma) (kP : k \in domf s):
   x \in vars_tm s.[kP] -> x \in vars_sigma s.
 Proof.
@@ -2956,6 +2960,7 @@ Proof.
     have:= forallP cAC (Sub x xC); rewrite valPE in_fnd/= => cCA.
     have:= forallP cBD (Sub x xD); rewrite valPE in_fnd/= => cCB.
     apply: compat_type_max => //.
+
     admit. (*compat type*)
   apply/forallP => -[x xCD]; rewrite valPE [val _]/=.
   have xC: x \in domf C by move: xCD; rewrite merge_sig_domf in_fsetI => /andP[].
@@ -2977,14 +2982,6 @@ Proof.
   move=> [[->->]| H]//.
   by rewrite (H N O).
 Qed.
-
-(* Fixpoint is_ko A :=
-  match A with
-  | Dead | Bot => true
-  | OK | CutS | CallS  _ _ => false
-  | And A B0 B => is_ko A
-  | Or A s B => is_ko A && is_ko B
-  end. *)
 
 Lemma isSomeP {T:Type} A (B:T): A = Some B -> isSome A.
 Proof. by move ->. Qed.
@@ -3228,30 +3225,10 @@ Module inclL.
   Proof.
     rewrite/sigtm.
     elim: T Q1 Q2 A B => //=.
-      (* move=> ??? [[|?]|[]??]//=[[|?]|[]??]//=. [|[??]?][|[??]?]//=. *)
     move=> f Hf a Ha Q1 Q2 [[|d]|[] tl tr] [[|d1]|[] tl1 tr1]//=;
     by move=> /andP[CL CR] /[!incl_arr]/= /andP[IL IR] IQ H;
     apply/Hf/and3P => //; apply/andP=>//.
   Qed.
-
-  (*Lemma sigma_rev_help_auxR A B T Q1 Q2:
-    inclL Q1 Q2 ->
-    compat_typeL Q1 Q2 ->
-    inclL (catrev (sigtm T A) Q1) (catrev (sigtm T B) Q2) ->
-    compat_typeL (catrev (sigtm T A) Q1) (catrev (sigtm T B) Q2) ->
-    compat_type A B /\ incl A B.
-  Proof.
-    rewrite/sigtm.
-    elim: T Q1 Q2 A B => //=.
-      move=> k q1 q2 [].
-        move=> [].
-          move=> []/=.
-        move=> [].
-       move=> ???[[|?]|[]??]//=[[|?]|[]??]//=. [|[??]?][|[??]?]//=.
-    move=> f Hf a Ha Q1 Q2 [[|d]|[] tl tr] [[|d1]|[] tl1 tr1]//=;
-    by move=> /andP[CL CR] /[!incl_arr]/= /andP[IL IR] IQ H;
-    apply/Hf/and3P => //; apply/andP=>//.
-  Qed. *)
 
   Lemma sigma_rev_help A B T:
     compat_type A B ->
@@ -3259,13 +3236,6 @@ Module inclL.
     inclL (sigtm_rev T A) (sigtm_rev T B) /\
     compat_typeL (sigtm_rev T A) (sigtm_rev T B) .
   Proof. by move=> *; apply: sigma_rev_help_aux. Qed.
-
-  (* 
-    assume_tm (f X) ()
-         vs
-    assume_tm (f X)
-  *)
-
 
   Lemma assume_tm_mp_incl sP N O T A B:
     more_precise N O ->
@@ -3284,7 +3254,7 @@ Module inclL.
         have vN := fsubsetP cno _ kO.
         rewrite (in_fnd vN)/=.
         have: compat_type N.[vN] x = compat_type O.[kO] y.
-          admit.
+          (* admit.
         move=> /[dup] HE ->.
         case: ifP => //= C.
         admit.
@@ -3301,7 +3271,7 @@ Module inclL.
       by apply:closed_in_assume_tm.
       
     
-      admit.
+      admit. *)
     
     
   Abort. 
@@ -3717,48 +3687,6 @@ Proof.
   by apply: compat_sig_subst_cat.
 Qed.
 
-Lemma more_precise_get_ctxS_tc_tree_aux sP tyO A D O:
-  valid_tree A ->
-  compat_sig O tyO ->
-  tc sP tyO A -> domf O `<=` domf tyO -> failed A = false ->
-  success A = false -> (* success (get_tree (step u s A)) -> *)
-    (tc_tree_aux sP A tyO (D, get_ctxS sP tyO O A)).2 =
-    (tc_tree_aux sP A tyO (D, O)).2.
-Proof.
-  elim: A D O => //=.
-   move=> A HA s B HB D O + CS /tc_orP[tOA tOB cOs] DR.
-    have {}HA := HA _ _ _ CS tOA DR.
-    have {}HB := HB _ _ _ _ tOB _.
-    case: ifP => [dA vB fB sB|dA /andP[vA bB] fA sA].
-      rewrite is_dead_is_ko//= failed_is_ko//.
-    rewrite failed_is_ko//=.
-    by rewrite HA//; case: ifP.
-  move=> A HA B0 HB0 B HB D O /and4P[vA ++ _] CS /tc_andP[tOA tOB0 tOB] DR.
-  case: ifP => /=[sA vB bB|sA /eqP ->]; last first.
-    rewrite orbF => + fA; rewrite fA => bB _.
-    rewrite failed_is_ko//base_and_is_ko//.
-    case tA: (tc_tree_aux _ A) => [DA SA].
-    case tA': (tc_tree_aux _ A) => [DA' SA'].
-    have:= HA D O vA CS tOA DR; rewrite fA tA tA' sA => /(_ erefl erefl) /=?; subst.
-    admit. (*this is ok*)
-  rewrite success_failed//= success_is_ko// => fB.
-  move=> SB.
-  case: ifP => kB0.
-    have:= get_ctxS_cat2 sP tyO (get_ctxS sP tyO (get_ctxS sP tyO O A) B) O A.
-    by move=> [[->->]|/(_ _ O)->]//; auto.
-  case tA: (tc_tree_aux _ A) => [DA SA].
-  case tA': (tc_tree_aux _ A) => [DA' SA'].
-  (* case tB: (tc_tree_aux _ B) => [DB SB].
-  case tB': (tc_tree_aux _ B) => [DB' SB'].
-  case tB0: (tc_tree_aux _ B0) => [DB0 SB0].
-  case tB0': (tc_tree_aux _ B0) => [DB0' SB0'].
-  have {HA}:= HA D O vA CS tOA DR; rewrite success_failed// tA' -/X/=.
-  move=> /(_ erefl)/=.
-  case Z: tc_tree_aux => [DZ SZ]?; subst.
-  simpl in *. *)
-  
-Abort.
-
 Lemma cut_brothers_is_kox u s A B:
   step u s A = CutBrothers B -> is_kox A B.
 Proof.
@@ -3981,6 +3909,25 @@ Proof.
   by apply: more_precise_mergeL.
 Qed.
 
+Lemma good_assignment_cat sP X tE s1 N:
+    closed_in tE N ->
+    good_assignment sP (X + tE) s1 N = good_assignment sP tE s1 N.
+Proof. by move=> cE; rewrite/good_assignment change_only_in_tm_ck_tm_. Qed.
+
+Lemma sigP_cat sP X tE s1 N:
+  compat_subst sP tE s1 ->
+    sigP sP tE s1 N ->
+    sigP sP (X + tE) s1 N.
+Proof.
+  move=> /andP [CS _] H; apply/forallP => -[k kN]; rewrite valPE/=.
+  have:= forallP H (Sub k kN); rewrite valPE/=.
+  case: fndP => // ks1.
+  rewrite good_assignment_cat//.
+  apply/forallP => -[x xP]/=.
+  by have:= forallP CS (Sub x (vars_tm_vars_sigma xP)).
+Qed.
+
+
 Lemma tc_tree_aux_step_exp u sP tyO X A B s1 O1 O2 N1 N2 d0 d1 dA dB:
   mutual_exclusion ->
   check_program_tree sP A ->
@@ -4034,7 +3981,7 @@ Proof.
         move=> [].
           by apply: sigma2ctx_sub.
           by apply: compat_sig_sigma2ctx.
-          admit. (*domf*)
+          by rewrite 2!domf_cat !fsubUset fsubsetUr {1}fsubsetUl fsubsetU// sigma2ctx_sub//orbT.
           by apply: compat_sig_all.
           by apply: more_precise_cat.
           (* sigP lacking lemma *)
@@ -4045,7 +3992,7 @@ Proof.
       move=> [].
         by apply: sigma2ctx_sub.
         by apply: compat_sig_sigma2ctx.
-          admit. (*domf*)
+          by rewrite fsubsetU// sigma2ctx_sub//orbT.
         by rewrite compat_sig_catR// (sigma2ctx_sub,compat_sig_sigma2ctx)//.
         by [].
       by destruct d0, dA => //=.
@@ -4217,41 +4164,6 @@ Proof.
     by apply: compat_sig_catR => //.
 Admitted.
 
-Lemma good_assignment_cat sP X tE s1 N:
-    closed_in tE N ->
-    good_assignment sP (X + tE) s1 N = good_assignment sP tE s1 N.
-Proof. by move=> cE; rewrite/good_assignment change_only_in_tm_ck_tm_. Qed.
-
-Lemma sigP_cat sP X tE s1 N:
-    sigP sP tE s1 N ->
-    sigP sP (X + tE) s1 N.
-Proof.
-  move=> H; apply/forallP => -[k kN]; rewrite valPE/=.
-  have:= forallP H (Sub k kN); rewrite valPE/=.
-  case: fndP => // ks1.
-  rewrite good_assignment_cat//.
-  have {H}:= forallP H (Sub k kN); rewrite valPE/= in_fnd.
-  rewrite /good_assignment/=.
-Admitted.
-
-Lemma sigP_catR sP tE s1 N:
-    compat_sig N tE ->
-    all_weak tE ->
-    sigP sP tE s1 N ->
-    sigP sP tE s1 (tE + N).
-Proof.
-  move=> H1 H2 H3; apply/forallP => -[k kEN]; rewrite valPE [val _]/=.
-  rewrite (fnd_in kEN) lookup_cat.
-  case: (fndP N k) => kN.
-    by have:= forallP H3 (Sub k kN); rewrite valPE.
-  have:= kEN; rewrite {1}domf_cat in_fsetU (negPf kN).
-  case: fndP => kE//= _.
-  have /eqP {}H2 := forallP H2 (Sub k kE); rewrite valPE in H2.
-  case: fndP => ks//; last by apply/eqP.
-  rewrite/good_assignment; case C: check_tm => [S B].
-  admit.
-Admitted.
-
 Lemma tc_weak {sP N T} (g: tc sP N T) : all_weak N. 
 Proof. by move/and3P: g => []. Qed.
 
@@ -4293,6 +4205,29 @@ Proof.
     by rewrite check_program_cutr check_program_cutl.
 Qed.
 
+Lemma sigP_catR sP tE s1 N:
+    compat_sig N tE ->
+    all_weak tE ->
+    sigP sP tE s1 N ->
+    sigP sP tE s1 (tE + N).
+Proof.
+  move=> H1 H2 H3; apply/forallP => -[k kEN]; rewrite valPE [val _]/=.
+  rewrite (fnd_in kEN) lookup_cat.
+  case: (fndP N k) => kN.
+    by have:= forallP H3 (Sub k kN); rewrite valPE.
+  have:= kEN; rewrite {1}domf_cat in_fsetU (negPf kN).
+  case: fndP => kE//= _.
+  have /eqP {}H2 := forallP H2 (Sub k kE); rewrite valPE in H2.
+  case: fndP => ks//; last by apply/eqP.
+  rewrite/good_assignment; case C: check_tm => [S B].
+  rewrite H2.
+  suffices: compat_type S (weak tE.[kE]) && incl S (weak tE.[kE]).
+    case: ifP => // _; rewrite !compat_type_weak => /andP[/[dup] /comp_weak->->] _.
+    by apply: incl_refl.
+  have:= forallP H3.
+  
+Admitted.
+
 Axiom saturate_sigP : forall sP O A u s r,
   tc sP O A ->
   step u s A = r ->
@@ -4305,27 +4240,28 @@ Lemma run_is_det sP sV sV' s A tE:
     domf sV `<=` domf tE ->
     compat_sig sV tE ->
     sigP sP tE s sV ->
+    compat_subst sP tE s ->
     tc_tree_aux sP A tE (Func, sV) = (Func, sV') ->
      forall u s' B n,
       runb u s A (Some s') B n ->
         next_alt false B = None /\ sigP sP tE s' sV'.
 Proof.
-  move=> + ME ++++++ u s' B n H.
+  move=> + ME +++++++ u s' B n H.
   remember (Some s') as ss eqn:Hs'.
   elim: H s' Hs' sV sV' tE; clear - ME => //=.
-  - move=> s1 s2 A B sA <-{s2} <-{B} s' [<-]{s'} sV sV' tE ckA tOA vA DR CS SP tA.
+  - move=> s1 s2 A B sA <-{s2} <-{B} s' [<-]{s'} sV sV' tE ckA tOA vA DR CS SP CSS tA.
     rewrite !(success_det_tree_next_alt tOA vA sA tA)/=is_dead_next_alt//.
     split; auto.
     apply: sigP_catR => //=.
       by apply: compat_sig_get_ctxS.
       by have /and3P[]:= tOA.
     by apply: sigP_success.
-  - move=> s1 s2 r A B n eA R IH s' ? sV sV' O ckP tOA vA DR CS SP dtA; subst.
+  - move=> s1 s2 r A B n eA R IH s' ? sV sV' O ckP tOA vA DR CS SP CSS dtA; subst.
     have [N /= /andP[CM tNB]] := saturate_sigP tOA eA.
     case dtB: (tc_tree_aux sP B (N + O) (Func, sV)) => [X Y].
     have /= ? := tc_tree_aux_step ME ckP CM vA eA tOA tNB DR CS SP dtA dtB erefl; subst.
-    have := IH _ erefl _ _ _ (check_program_tree_step ckP eA) tNB (valid_tree_expand vA eA) _ _ (sigP_cat _ SP) dtB.
-    move=> [].
+    have := IH _ erefl _ _ _ (check_program_tree_step ckP eA) tNB (valid_tree_expand vA eA) _ _ (sigP_cat _ _ SP) _ dtB.
+    move=> []//.
       by rewrite domf_cat fsubsetU// DR orbT.
       apply/forallP => -[k kNO]; rewrite valPE [val _]/=.
       case: fndP => // ksV.
@@ -4333,6 +4269,7 @@ Proof.
       have kO:= fsubsetP DR k ksV.
       rewrite kO (in_fnd kO)/=.
       by have:= forallP CS (Sub k kO); rewrite valPE/= in_fnd//.
+      by rewrite compat_subst_cat//.
     move=> -> H; split; auto.
     admit.
   - move=> s1 s2 r A B n eA R IH s' ? sV sV' Rx cA vA SP dtA; subst.
@@ -4360,13 +4297,14 @@ Lemma run_is_detP1 sP sV sV' s A tE:
   tc sP tE A -> valid_tree A ->
     domf sV `<=` domf tE ->
     compat_sig sV tE ->
+    compat_subst sP tE s ->
     sigP sP tE s sV ->
     tc_tree_aux sP A tE (Func, sV) = (Func, sV') ->
      forall u s' B n,
       runb u s A (Some s') B n ->
         next_alt false B = None.
 Proof.
-  by move=> *; apply: proj1 (run_is_det _ _ _ _ _ _ _ _ _); eauto.
+  by move=> *; apply: proj1 (run_is_det _ _ _ _ _ _ _ _ _ _); eassumption.
 Qed.
 
 Definition typ_func (A: (_ * sigV)%type) := match A with (Func, _) => true | _ => false end.
@@ -4386,6 +4324,16 @@ Proof.
   by have:= H (Sub k ks).
 Qed.
 
+Lemma varsU_empty: codom empty = [::].
+Proof. apply/eqP; by rewrite -size_eq0 size_map enum_fset0. Qed.
+
+Lemma vars_sigma_empty V: V \in vars_sigma empty -> False.
+Proof. by rewrite/vars_sigma in_fsetU /codom_vars in_fset0 varsU_empty//=. Qed.
+
+Lemma compat_subst_empty sP sV:
+  compat_subst sP sV empty.
+Proof. apply/andP; split; apply/forallP => -[V]//=/vars_sigma_empty//. Qed.
+
 Lemma main sP p t sV:
   tc_call sV t ->
   check_program sP p -> mutual_exclusion ->
@@ -4396,8 +4344,9 @@ Proof.
   move=> /= tcc ckp ME ckc.
   move=> u s' B n H.
   rewrite -(tc_callPE sP _ p) in tcc.
-  apply: run_is_detP1 ME (tcc) isT (fsubset_refl _) (compat_sig_refl _) _ _ _  _ _ _ H.
+  apply: run_is_detP1 ME (tcc) isT (fsubset_refl _) (compat_sig_refl _) _ _ _  _ _ _ _ H.
     by apply: ckp.
+    by apply: compat_subst_empty.
     apply: all_weak_sigP_empty (andP tcc).1.
   by rewrite/= catf_refl (ckc sV).
 Qed.
