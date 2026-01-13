@@ -61,19 +61,19 @@ Axiom unif_comb: forall u f a f1 a1 sx,
   if lang.unify u f f1 sx is Some sx then lang.unify u a a1 sx
   else None.
 
-Lemma H_xx u m q r s sx:
+Axiom H_xx: forall u m q r s sx,
   H u m q r s = Some sx ->
   lang.unify u (Callable2Tm (RCallable2Callable q))
     (Callable2Tm (RCallable2Callable r)) sx <>
   None.
-Proof.
+(* Proof.
   elim: m q r s sx => //=.
     move=> []//k[]//= ???; case: eqP => // ?[?]; subst.
     rewrite unify_id//.
   move=> [] ms IH []//= r t []//= r1 t1 s sx; rewrite unif_comb.
     case A: H => [s1|]//= H.
     have:= IH _ _ _ _ A.
-Admitted.
+Abort. *)
 
 Lemma expand_CB_is_ko {u s A B}:
   (* we have a superficial cut *)
@@ -710,9 +710,12 @@ Section checker.
   Definition all_vars_subset {K:choiceType} {V: Type} (sV: {fmap K -> V}) (vars:{fset K}) :=
     [forall x : vars, val x \in domf sV ].
 
+  Definition closed_in_atoms (ty:sigV) (s:seq A) :=
+    all_vars_subset ty (varsU (map vars_atom s)).
+
   Definition tc_atoms ty (s:seq A) :=
-    [&& all_weak ty &                               (*all sig in ty are weak*)
-      all_vars_subset ty (varsU (map vars_atom s))  (*all variables in the tree are in ty*)
+    [&& all_weak ty &       (*all sig in ty are weak*)
+      closed_in_atoms ty s  (*all variables in the tree are in ty*)
     ].
 
   Definition tc_rule ty (s:R) :=
@@ -1239,6 +1242,12 @@ Proof.
   apply: H (Sub k kU).
 Qed.
 
+Lemma all_vars_ORP {K: choiceType} {V : Type} (O: {fmap K -> V}) f a: all_vars_subset O (f `|` a) ->
+  all_vars_subset O f /\ all_vars_subset O a.
+Proof.
+  by rewrite all_vars_OR => /andP.
+Qed.
+
 Lemma change_only_in_tm_ck_tm_ {sP T O1 O2}:
   closed_in O1 T ->
   check_tm sP (O2+O1) T = check_tm sP O1 T.
@@ -1500,13 +1509,47 @@ Proof.
   by move=> H1; apply/fset1UP; auto.
 Qed.
 
+Lemma domf_set_in {K: countType} {V: eqType} (k:K) (v:V) O:
+  k \in domf O -> domf O.[k <- v] = domf O.
+Proof.
+  move=> H.
+  apply/fsetP => [x].
+  rewrite in_fset1U.
+  case: eqP => //?; subst.
+  by rewrite H orbT.
+Qed.
+
+Lemma assume_tm_dom sP O A M: domf (assume_tm sP O A M) = domf O.
+Proof.
+  elim: A O M => /=[_ O []//|_ O []//|v O [|[[] S _]]//|].
+    by case: fndP => // kO; case: ifP => //; rewrite domf_set_in//.
+  by move=> f Hf a Ha O [//|[[] S l]]; case: ifP => //=fH; rewrite Ha.
+Qed.
+
+Lemma all_vars_subset_sub (A B: sigV) X:
+  domf A `<=` domf B ->
+  all_vars_subset A X -> all_vars_subset B X.
+Proof.
+  move=> D H.
+  apply/forallP => K.
+  have:= forallP H K.
+  by apply: fsubsetP.
+Qed.
+
+Lemma all_vars_subset_domf (A B: sigV) X:
+  domf A = domf B ->
+  all_vars_subset A X = all_vars_subset B X.
+Proof.
+  move=> D; apply/forallP; case:ifP; rewrite D.
+    by move=> /forallP.
+  by apply: contraFnot => H; apply/forallP.
+Qed.
+
 Lemma closed_in_assume_tm sP f a xs O:
   closed_in O a -> closed_in (assume_tm sP O f xs) a.
 Proof.
-  elim: f a xs O => //=[_ _ []//|_ _ []//|v t [|[[] S] _]//|].
-    move=> O cO; case: fndP => //=vO; case: ifP => // _.
-    by rewrite closed_in_set.
-  move=> f Hf a Ha t [|[[] S] xs]//= O CO; case:ifP => //=fh; auto.
+  rewrite /closed_in => H.
+  by rewrite (@all_vars_subset_domf _ O)//assume_tm_dom.
 Qed.
 
 Lemma assume_term_cat O1 O2 sP T s :
@@ -1799,16 +1842,6 @@ Proof.
   by case: ifP => _; auto.
 Qed.
 
-Lemma domf_set_in {K: countType} {V: eqType} (k:K) (v:V) O:
-  k \in domf O -> domf O.[k <- v] = domf O.
-Proof.
-  move=> H.
-  apply/fsetP => [x].
-  rewrite in_fset1U.
-  case: eqP => //?; subst.
-  by rewrite H orbT.
-Qed.
-
 Lemma closed_in_tmE O f a:
   closed_in O (Tm_Comb f a) = closed_in O f && closed_in O a.
 Proof.
@@ -1940,7 +1973,7 @@ Proof.
     have [{}HA ?] := HA _ _ _ tA vA sA tOA; subst.
     rewrite !HA/=; split => //=.
     set X := _ + _.
-    admit.
+    admit. (*TODO: this is a BUG*)
 Admitted.
 
 Lemma tc_tree_aux_eq sP tyO B d0 s0 d1 s1:
@@ -2066,13 +2099,6 @@ Proof.
   have/=:= forallP cAB (Sub k kB); rewrite valPE.
   rewrite !in_fnd/=.
   apply: incl_trans.
-Qed.
-
-Lemma assume_tm_dom sP O A M: domf (assume_tm sP O A M) = domf O.
-Proof.
-  elim: A O M => /=[_ O []//|_ O []//|v O [|[[] S _]]//|].
-    by case: fndP => // kO; case: ifP => //; rewrite domf_set_in//.
-  by move=> f Hf a Ha O [//|[[] S l]]; case: ifP => //=fH; rewrite Ha.
 Qed.
 
 Lemma compat_sig_assume_tm sP O A M: compat_sig (assume_tm sP O A M) O.
@@ -2707,6 +2733,311 @@ Proof.
   by apply: Ha.
 Qed.
 
+Lemma check_tm_mp sP T O N D1 S1 D2 S2:
+  closed_in O T ->
+  more_precise N O ->
+  check_tm sP O T = (S1, D1) ->
+  check_tm sP N T = (S2, D2) ->
+  [/\ compat_type S1 S2, incl S2 S1 & (D2 || ~~D1)].
+Proof.
+  move=> + /and3P[D C I].
+  elim: T S1 D1 S2 D2 => //.
+    by move=> >/=; case: fndP => //= kP _ [<-<-][<-<-]//.
+    by move=> >/= //= _ [<-<-][<-<-]//.
+    rewrite/check_tm => v s1 d1 s2 d2 /[!closed_in_var] vO.
+    rewrite /=in_fnd.
+    have kN := fsubsetP D _ vO.
+    have:= forallP I (Sub v vO); rewrite valPE/= in_fnd//=.
+    have:= forallP C (Sub v vO); rewrite valPE/= in_fnd//=.
+    by move=> C1 I1 [<-<-][<-<-]//.
+  move=> f Hf a Ha S1 D1 S2 D2 /[!closed_in_comb]/andP[cf ca]/=.
+  case cfo: check_tm => [dfo bfo].
+  case cao: check_tm => [dao bao].
+  case cfn: check_tm => [dfn bfn].
+  case can: check_tm => [dan ban].
+  have [+ + BA] := Ha _ _ _ _ ca cao can.
+  have [+ + BF] := Hf _ _ _ _ cf cfo cfn.
+  case: dfo {cfo} => [[]|mo fo ao].
+    by case: dfn {cfn} => [[]|[]]//= _ _  ++ [<-<-][<-<-]//.
+    by case: dfn {cfn} => [[]|[]]//= d1 d2 ++++ [<-<-][<-<-]//.
+  case: dfn {cfn} => [[|x]|]//=; only 1,2: by case mo.
+  move=> mn fn an; case: mo; case: mn => //= /andP[C1 C2]/[!incl_arr]/= /andP[i1 i2] C3 I3; last by mv_sbst_catfA.
+  case: ifP; last first.
+    move=> H [<-<-].
+    case: ifP => H1 [<-<-]; rewrite (compat_type_weak_eq C2)//.
+    by rewrite compat_type_weak incl_weakr.
+  move=> /andP[/andP[I1 ++]][<-<-].
+  destruct bfo, bao, ban, bfn => //= _ _; rewrite !andbT.
+  suffices: incl dan fn by move=> ->[<-<-].
+  by apply: incl_trans I3 (incl_trans I1 _).
+Qed.
+
+Lemma more_precise_cat X Y Z:
+  more_precise Y Z ->
+  more_precise (X + Y) Z.
+Proof.
+  move=> /and3P[D C I]; apply/and3P; split.
+    by rewrite domf_cat fsubsetU// D orbT.
+    by apply/compat_sig_cat.
+  apply/forallP => -[x xZ]; rewrite valPE lookup_cat/=.
+  have xY:= fsubsetP D x xZ.
+  rewrite xY/= in_fnd/=.
+  by have:= forallP I (Sub x xZ); rewrite valPE/= in_fnd.
+Qed.
+
+Lemma compat_sig_cat2 X Y Z:
+  domf Z `<=` domf Y -> 
+  compat_sig X Y -> compat_sig Y Z -> 
+  compat_sig (X + Y) (X + Z).
+Proof.
+  move=> dzy cxy cyz.
+  apply/forallP => -[x xXZ]; rewrite valPE.
+  rewrite (fnd_in xXZ) !lookup_cat.
+  have:= xXZ; rewrite {1}domf_cat in_fsetU [val _]/=.
+  case: (fndP Z) => xZ _.
+    have xY := fsubsetP dzy x xZ.
+    have:= forallP cyz (Sub x xZ); rewrite valPE/=.
+    by rewrite in_fnd//= xY//=.
+  rewrite in_fnd/=.
+    by move: xXZ; rewrite domf_cat in_fsetU (negPf xZ) orbF.
+  move=> xX.
+  case: fndP => //= xY.
+  have:= forallP cxy (Sub x xY); rewrite valPE/=.
+  by rewrite in_fnd compat_type_comm.
+Qed.
+
+Lemma more_precise_cat2 X Y Z:
+  all_weak X ->
+  compat_sig Y X ->
+  more_precise Y Z ->
+  more_precise (X + Y) (X + Z).
+Proof.
+  move=> wx cxy /and3P[dzy cyz iyz]; apply/and3P; split.
+    by rewrite !domf_cat fsetUS.
+    by apply: compat_sig_cat2 => //; rewrite compat_sig_comm.
+  apply/forallP => -[x xXZ]; rewrite valPE (fnd_in xXZ) !lookup_cat [val _]/=.
+  have:= xXZ; rewrite {1}domf_cat in_fsetU.
+  case: (fndP Z) => xZ.
+    have xY := fsubsetP dzy x xZ.
+    have:= forallP iyz (Sub x xZ); rewrite valPE/=.
+    by rewrite xY in_fnd/=.
+  rewrite orbF => xX.
+  rewrite in_fnd/=.
+  case: fndP => //= xY.
+  have:= forallP wx (Sub x xX); rewrite valPE => /eqP => ->.
+  have:= forallP cxy (Sub x xX); rewrite valPE/= in_fnd => //=.
+  by move=> /comp_weak ->; rewrite incl_weakr.
+Qed.
+
+Lemma more_precise_trans: transitive more_precise.
+Proof.
+  move=> B A C /and3P[dBA cAB iAB] /and3P[dCB cBC iBC].
+  apply/and3P; split.
+    apply: fsubset_trans dCB dBA.
+    apply: compat_sig_trans dCB dBA cAB cBC.
+  by apply: incl_sig_trans iAB iBC.
+Qed.
+
+Lemma incl_sig_refl: reflexive incl_sig.
+Proof. by move=> X; apply/forallP => -[x xX]; rewrite valPE/= in_fnd. Qed.
+
+Hint Resolve incl_sig_refl : core. 
+(* Lemma sigma2ctx_sub *)
+
+Lemma more_precise_refl: reflexive more_precise.
+Proof. move=> x; apply/and3P; split => //. Qed.
+Hint Resolve more_precise_refl : core. 
+
+Lemma more_precise_set_min v sV b (kV : v \in domf sV):
+  compat_type sV.[kV] b ->
+  more_precise sV.[v <- min b sV.[kV]] sV.
+Proof.
+  move=> H.
+  rewrite/more_precise domf_set_in// fsubset_refl/= min_comm incl_sig_set//.
+  by rewrite compat_sig_set // compat_type_minR//.
+Qed.
+
+Lemma assume_tm_mp sP sV t L:
+  more_precise (assume_tm sP sV t L) sV.
+Proof.
+  elim: t L sV => //=; only 1-3: move=> v [|[[] b] _]//.
+    move=> sV; case: fndP => // kV.
+    case: ifP => //= H.
+    by apply: more_precise_set_min.
+  move=> f Hf a Ha [//|[[] s xs]] sV; case: ifP => //fh.
+  by apply/more_precise_trans/Hf/xs/Ha.
+Qed.
+
+Lemma assume_tm_mp_same sP N O T M:
+  more_precise N O ->
+  closed_in N T ->
+  more_precise (assume_tm sP N T M)
+    (assume_tm sP O T M).
+Proof.
+  elim: T M O N => //; only 1,2: by move=> k [|??].
+    move=> v L O N /[dup]MP /and3P[D C I] /[!closed_in_var] vN/=.
+    case: L => [|[[] x]xs]//.
+    rewrite in_fnd/=.
+    case: fndP => // vO.
+      have:= forallP C (Sub v vO); rewrite valPE in_fnd/= => H.
+      rewrite (compat_type_trans2 _ H).
+      case: ifP => //= H1; apply/and3P; split.
+        by rewrite/more_precise/=fsetUSS//=.
+        apply/forallP => -[k kP]; rewrite valPE/= ffunE/=.
+        case: eqP => H2; subst.
+          rewrite in_fnd/=; first by rewrite in_fset1U eqxx.
+          move=> vvN; rewrite ffunE/= eqxx.
+          apply: compat_type_min => //.
+          rewrite compat_type_comm.
+          by apply: compat_type_trans H1.
+        rewrite in_fnd.
+          by move: kP; rewrite/= in_fsetU in_fset1; case: eqP => //.
+        move=> kO/=; rewrite in_fnd/=.
+          by rewrite in_fsetU (fsubsetP D _ kO) orbT.
+        move=> kN; rewrite ffunE/=; case: eqP => // _.
+        rewrite in_fnd.
+          by move: kN; rewrite in_fsetU in_fset1; case: eqP.
+        move=> {}kN/=.
+        by have:= forallP C (Sub k kO); rewrite valPE in_fnd/=.
+      apply/forallP => -[k kO]/=; rewrite !ffunE !valPE/=.
+      case: eqP => H2; subst.
+        rewrite in_fnd/=; first by rewrite in_fset1U eqxx.
+        move=> vvN; rewrite ffunE/= eqxx.
+        apply: incl2_min => //.
+        by have:= forallP I (Sub v vO); rewrite valPE in_fnd.
+      rewrite in_fnd.
+        by move: kO; rewrite/= in_fsetU in_fset1; case: eqP => //.
+      move=> {}kO/=; rewrite in_fnd/=.
+        by rewrite in_fsetU (fsubsetP D _ kO) orbT.
+      move=> kN; rewrite ffunE/=; case: eqP => // _.
+      rewrite in_fnd.
+        by move: kN; rewrite in_fsetU in_fset1; case: eqP.
+      move=> {}kN/=.
+      by have:= forallP I (Sub k kO); rewrite valPE in_fnd.
+    case: ifP => //.
+    move=> H.
+    apply: more_precise_trans MP.
+    apply: more_precise_set_min => //.
+  move=> f Hf a Ha [|[m s] xs]// O N MP /[!closed_in_comb]/andP[cf ca]/=.
+  case: ifP => // _.
+  case: m => //=; auto.
+  apply: Ha; auto.
+  by apply: closed_in_assume_tm.
+Qed.
+
+Lemma flex_head_comb A B:
+  flex_head (Tm_Comb A B) = flex_head A.
+Proof. rewrite/flex_head//=. Qed.
+
+Lemma assume_flex_head sP sV T M:
+  flex_head T -> 
+    assume_tm sP sV T M = 
+      match T, M with
+      | Tm_V v, (i, s) :: _ =>
+        match sV.[? v] with
+        | None => sV
+        | Some oldv =>
+          if compat_type oldv s then add v (min s oldv) sV else sV
+        end
+      | _, _ => sV
+      end.
+Proof.
+  elim: T M sV => //=.
+  move=> f Hf a Ha [|[]]//=.
+  by move=> > /[!flex_head_comb] ->.
+Qed.
+
+Lemma closed_in_mp A B T:
+  domf A `<=` domf B -> closed_in A T -> closed_in B T.
+Proof.
+  move=> D C; apply/forallP => H/=.
+  by have:= forallP C H; apply: fsubsetP.
+Qed.
+
+Lemma check_callable_mp {sP T O1 N d0 d1 dA dB N1 N2}:  
+  closed_in O1 (Callable2Tm T) ->
+  more_precise N O1 ->
+  check_callable sP O1 T d0 = (d1, N1) ->
+  check_callable sP N T dA = (dB, N2) ->
+  ((minD d0 dA = dA -> minD d1 dB = dB) * (more_precise N2 N1)).
+Proof.
+  rewrite/check_callable => C /[dup] MP /and3P[Dr Cr Ir].
+  rewrite /get_callable_hd_sig/get_tm_hd_sig.
+  case c1: check_tm => [S1 B1].
+  case c2: check_tm => [S2 B2].
+  have {c1 c2}[] := check_tm_mp C MP c1 c2.
+  case: S1 => [[]|]; last by case: S2 => [[]|[]]//=; destruct m => //= s1 s2 ???[<-<-][<-<-]//.
+    by case: S2 => [[]|[]]// _ _ + [<-<-][<-<-]//.
+  case: S2 => [[]|[]]// D1 D2 _.
+  destruct B2; last first.
+    by destruct B1 => //= ++ [<-<-][<-<-]//.
+  destruct B1 => + _; last first.
+    have XX:forall xxx, more_precise (assume_call sP N T xxx) O1 by
+      move=> *; apply/more_precise_trans/MP/assume_tm_mp.
+    move=> + [<-<-].
+    by case TH: get_tm_hd => [k|[p|v]]; (try case: fndP => H) => + [<-<-]//.
+  case TH: get_tm_hd => [k|[p|v]].
+    move=> + [<-<-][<-<-]; split.
+      by move=> <-; destruct D2, d0, D1 => //=.
+    by apply: assume_tm_mp_same MP (closed_in_mp _ C).
+  - case: fndP => pP O [<-<-][<-<-]; split => //.
+      by move=> <-; destruct D2, d0, D1 => //=.
+    by apply: assume_tm_mp_same MP (closed_in_mp _ C).
+  have /=vO := forallP C (Sub v (get_tm_hd_in TH)).
+  rewrite 2!in_fnd; first by apply: fsubsetP Dr _ vO.
+  move=> vN + [<-<-][<-<-].
+  split; first by move=> <-; destruct d0, D2, D1 => //=.
+  rewrite /assume_call assume_flex_head /flex_head ?TH//; destruct T => //=.
+  case: O1.[vO] => //=???; case ?: sigtm_rev => //=[[[] ?]?]; rewrite /flex_head;
+  simpl in TH; rewrite TH//=.
+Qed.
+
+Lemma all_vars_subset_mp A B prems:
+  more_precise A B ->
+  closed_in_atoms B prems ->
+  closed_in_atoms A prems.
+Proof.
+  move=> /[dup] MP /and3P[D C I] H.
+  apply/forallP => X.
+  by have:= forallP H X; apply: fsubsetP.
+Qed.
+
+Lemma check_callable_mp1 sP O c d0 d1 N:
+  closed_in O (Callable2Tm c) ->
+  check_callable sP O c d0 = (d1, N) ->
+    more_precise N O.
+Proof.
+  rewrite/check_callable.
+  case CT: check_tm => [[[|d]|m l r] []] C; only 1,2,4-6: by move=> [_<-].
+  case H: get_callable_hd_sig => [hd|] [_<-]; last by [].
+  apply: assume_tm_mp.
+Qed.
+
+Lemma check_atoms_mp sP prems A B d0 d1 dA dB S1 S2:
+  closed_in_atoms A prems ->
+  more_precise B A ->
+    check_atoms sP A prems d0 = (dA, S1) ->
+      check_atoms sP B prems d1 = (dB, S2) ->
+        (minD d0 d1 = d1 -> minD dA dB = dB) /\ more_precise S2 S1.
+Proof.
+  rewrite/closed_in_atoms.
+  elim: prems A B d0 d1 dA dB S1 S2 => [|x xs IH] A B d0 d1 dA dB S1 S2 CA MP/=.
+    by move=> [<-<-][<-<-]//.
+  rewrite/check_atom.
+  case: x CA => [|c]/=/all_vars_ORP [CL CR].
+    by move=> H1 H2; have [->] := IH _ _ _ _ _ _ _ _ CR MP H1 H2.
+  case cA: check_callable => [DA SA].
+  case cB: check_callable => [DB SB].
+  move=> H1 H2.
+  have [H3 H4] := check_callable_mp CL MP cA cB.
+  have []// := IH _ _ _ _ _ _ _ _ _ _ H1 H2.
+    apply: all_vars_subset_mp CR.
+    by apply: check_callable_mp1 cA.
+  move=> /(_ (H3 _)) {H3}.
+  by destruct dA, dB, d0 => //=.
+Qed.
+
+
 Lemma check_tm_F u sP prog c tyO O s L X:
   check_program sP prog ->
   let tyN := X + tyO in
@@ -2776,6 +3107,31 @@ Proof.
     by move=> /get_sig_hd_weak.
   move=> H1; rewrite H1.
   destruct D' => //= _.
+  suffices: more_precise (X + tyO + sigma2ctx sP (X + tyO) s1) 
+    (assume_tm sP (tc_ruleF {| head := head; premises := prems |})
+       (Callable2Tm (RCallable2Callable head))
+       (sigtm_rev (Callable2Tm (RCallable2Callable head)) sP.[psP])).
+    set P := assume_tm _ _ _ _.
+    set Q := X + _ + _.
+    rewrite -/P in ca.
+    move=> Hx IGN.
+    move: Hx ca.
+    move=> Z W.
+    case C: check_atoms => [L R].
+    have /= := check_atoms_mp _ Z W C.
+    move=> [| /(_ erefl) <-]; last by repeat eexists.
+    rewrite/P.
+    case LL: tc_ruleF.
+    have /andP [_] := tc_ruleP LL.
+    rewrite /varsU_rule => /all_vars_ORP [_ Hy].
+    apply: all_vars_subset_sub Hy.
+    by rewrite assume_tm_dom/=.
+  (* TODO: 
+    from ckc, we know we are in a good call,
+    i.e. s1 is more precise than the assume of the head.
+    assume is by definition the least substitution such that
+    we have a good call
+  *)
   admit.
 Admitted.
 
@@ -2790,7 +3146,7 @@ Proof. elim: A => //=-[|c]//= l ->//. Qed.
 Lemma tc_big_and_tc_atomsE sP sV A p:
   tc sP sV (big_and p A) = tc_atoms sV A.
 Proof.
-  rewrite/tc/tc_atoms compat_sig_subst_big_and andbT; f_equal.
+  rewrite/tc/tc_atoms compat_sig_subst_big_and andbT/closed_in_atoms; f_equal.
   rewrite/closed_inT; f_equal.
   by elim: A => //= -[|?] xs ->//=; rewrite -fsetUA fsetUid//.
 Qed.
@@ -2798,72 +3154,6 @@ Qed.
 Lemma tc_big_and_tc_atoms sP sV A p:
   tc sP sV (big_and p A) -> tc_atoms sV A.
 Proof. by rewrite tc_big_and_tc_atomsE. Qed.
-
-Lemma more_precise_cat X Y Z:
-  more_precise Y Z ->
-  more_precise (X + Y) Z.
-Proof.
-  move=> /and3P[D C I]; apply/and3P; split.
-    by rewrite domf_cat fsubsetU// D orbT.
-    by apply/compat_sig_cat.
-  apply/forallP => -[x xZ]; rewrite valPE lookup_cat/=.
-  have xY:= fsubsetP D x xZ.
-  rewrite xY/= in_fnd/=.
-  by have:= forallP I (Sub x xZ); rewrite valPE/= in_fnd.
-Qed.
-
-Lemma compat_sig_cat2 X Y Z:
-  domf Z `<=` domf Y -> 
-  compat_sig X Y -> compat_sig Y Z -> 
-  compat_sig (X + Y) (X + Z).
-Proof.
-  move=> dzy cxy cyz.
-  apply/forallP => -[x xXZ]; rewrite valPE.
-  rewrite (fnd_in xXZ) !lookup_cat.
-  have:= xXZ; rewrite {1}domf_cat in_fsetU [val _]/=.
-  case: (fndP Z) => xZ _.
-    have xY := fsubsetP dzy x xZ.
-    have:= forallP cyz (Sub x xZ); rewrite valPE/=.
-    by rewrite in_fnd//= xY//=.
-  rewrite in_fnd/=.
-    by move: xXZ; rewrite domf_cat in_fsetU (negPf xZ) orbF.
-  move=> xX.
-  case: fndP => //= xY.
-  have:= forallP cxy (Sub x xY); rewrite valPE/=.
-  by rewrite in_fnd compat_type_comm.
-Qed.
-
-Lemma more_precise_cat2 X Y Z:
-  all_weak X ->
-  compat_sig Y X ->
-  more_precise Y Z ->
-  more_precise (X + Y) (X + Z).
-Proof.
-  move=> wx cxy /and3P[dzy cyz iyz]; apply/and3P; split.
-    by rewrite !domf_cat fsetUS.
-    by apply: compat_sig_cat2 => //; rewrite compat_sig_comm.
-  apply/forallP => -[x xXZ]; rewrite valPE (fnd_in xXZ) !lookup_cat [val _]/=.
-  have:= xXZ; rewrite {1}domf_cat in_fsetU.
-  case: (fndP Z) => xZ.
-    have xY := fsubsetP dzy x xZ.
-    have:= forallP iyz (Sub x xZ); rewrite valPE/=.
-    by rewrite xY in_fnd/=.
-  rewrite orbF => xX.
-  rewrite in_fnd/=.
-  case: fndP => //= xY.
-  have:= forallP wx (Sub x xX); rewrite valPE => /eqP => ->.
-  have:= forallP cxy (Sub x xX); rewrite valPE/= in_fnd => //=.
-  by move=> /comp_weak ->; rewrite incl_weakr.
-Qed.
-
-Lemma more_precise_trans: transitive more_precise.
-Proof.
-  move=> B A C /and3P[dBA cAB iAB] /and3P[dCB cBC iBC].
-  apply/and3P; split.
-    apply: fsubset_trans dCB dBA.
-    apply: compat_sig_trans dCB dBA cAB cBC.
-  by apply: incl_sig_trans iAB iBC.
-Qed.
 
 Lemma more_precise_mergeL A B C:
   more_precise A B -> more_precise B C -> more_precise (merge_sig A B) C.
@@ -2993,11 +3283,10 @@ Proof.
         have:= tc_tree_aux_compat_sig (compat_sig_sigma2ctx tOs) tNB t2.
         apply: compat_sig_cat1.
       apply: more_precise_trans H _.
-      (* apply: more_precise_trans H1 _. *)
       apply/and3P; split.
         by rewrite !domf_cat !fsubsetU//= DR1 orbT.
         rewrite !compat_sig_catB//.
-          admit. (*compat_sig_disjoint*)
+          admit. (*TODO: this is easy: compat_sig_disjoint*)
           rewrite compat_sig_comm//.
         apply/forallP => -[x xO1]; rewrite valPE [val _]/=.
         move /forallP: SP => /(_ (Sub x xO1)); rewrite valPE/=.
@@ -3026,7 +3315,7 @@ Proof.
     case chd: get_callable_hd_sig => [hd|][_<-]; last by [].
     rewrite (tc_tree_aux_te_cat t2) -catfA more_precise_cat//.
     (* since t1 is well called, due to t1, then ... *)
-    admit.
+    admit. (*TODO: this seems hard*)
   rewrite more_precise_cat2//.
     by rewrite all_weak_cat//((andP CM).1,(andP tO).1).
     by rewrite compat_sig_sigma2ctx.
@@ -3034,7 +3323,6 @@ Proof.
   rewrite (tc_tree_aux_te_cat t2).
   admit. (*due to bc, all signatures in r::rs, are more precise then s1, therefore S2 is more_precise then s1 *)
 Admitted.
-
 
 Fixpoint check_program_tree sP T :=
   let rec := check_program_tree sP in
@@ -3072,15 +3360,6 @@ Proof.
   have [? sA] := expand_solved_same _ X; subst.
   by rewrite get_tree_And sA.
 Qed.
-
-Lemma incl_sig_refl: reflexive incl_sig.
-Proof. by move=> X; apply/forallP => -[x xX]; rewrite valPE/= in_fnd. Qed.
-
-Hint Resolve incl_sig_refl : core. 
-(* Lemma sigma2ctx_sub *)
-Lemma more_precise_refl: reflexive more_precise.
-Proof. move=> x; apply/and3P; split => //. Qed.
-Hint Resolve more_precise_refl : core. 
 
 Lemma more_precise_mergeR A B C:
   compat_sig A C ->
@@ -3282,73 +3561,6 @@ Proof.
   by apply: incl_sig_cat21.
 Qed.
 
-
-Lemma check_tm_mp sP T tyO O N D1 S1 D2 S2:
-  closed_in tyO T ->
-  all_weak tyO ->
-  compat_sig N tyO ->
-  more_precise N O ->
-  check_tm sP (tyO + O) T = (S1, D1) ->
-  check_tm sP (tyO + N) T = (S2, D2) ->
-  [/\ compat_type S1 S2, incl S2 S1 & (D2 || ~~D1)].
-Proof.
-  move=> + wO CS /and3P[D C I].
-  elim: T S1 D1 S2 D2 => //.
-    by move=> >/=; case: fndP => //= kP _ [<-<-][<-<-]//.
-    by move=> >/= //= _ [<-<-][<-<-]//.
-    rewrite/check_tm => v s1 d1 s2 d2 /[!closed_in_var] vO.
-    rewrite !lookup_cat.
-    case: (fndP O) => kO.
-      have kN := fsubsetP D _ kO.
-      rewrite kN (in_fnd kN)/= => -[<-<-][<-<-].
-      have:= forallP I (Sub v kO); rewrite valPE/= in_fnd//=; auto.
-      by have:= forallP C (Sub v kO); rewrite valPE/= in_fnd//=; auto.
-    rewrite/= in_fnd; case: fndP => kN/=; mv_sbst_catfA; last by [].
-    have /eqP := forallP wO (Sub v vO); rewrite valPE => ->.
-    have:= forallP CS (Sub v vO); rewrite in_fnd/=valPE.
-    by move=> /comp_weak ->; rewrite incl_weakr//compat_type_weakL.
-  move=> f Hf a Ha S1 D1 S2 D2 /[!closed_in_comb]/andP[cf ca]/=.
-  case cfo: check_tm => [dfo bfo].
-  case cao: check_tm => [dao bao].
-  case cfn: check_tm => [dfn bfn].
-  case can: check_tm => [dan ban].
-  have [+ + BA] := Ha _ _ _ _ ca cao can.
-  have [+ + BF] := Hf _ _ _ _ cf cfo cfn.
-  case: dfo {cfo} => [[]|mo fo ao].
-    by case: dfn {cfn} => [[]|[]]//= _ _  ++ [<-<-][<-<-]//.
-    by case: dfn {cfn} => [[]|[]]//= d1 d2 ++++ [<-<-][<-<-]//.
-  case: dfn {cfn} => [[|x]|]//=; only 1,2: by case mo.
-  move=> mn fn an; case: mo; case: mn => //= /andP[C1 C2]/[!incl_arr]/= /andP[i1 i2] C3 I3; last by mv_sbst_catfA.
-  case: ifP; last first.
-    move=> H [<-<-].
-    case: ifP => H1 [<-<-]; rewrite (compat_type_weak_eq C2)//.
-    by rewrite compat_type_weak incl_weakr.
-  move=> /andP[/andP[I1 ++]][<-<-].
-  destruct bfo, bao, ban, bfn => //= _ _; rewrite !andbT.
-  suffices: incl dan fn by move=> ->[<-<-].
-  by apply: incl_trans I3 (incl_trans I1 _).
-Qed.
-
-Lemma more_precise_set_min v sV b (kV : v \in domf sV):
-  compat_type sV.[kV] b ->
-  more_precise sV.[v <- min b sV.[kV]] sV.
-Proof.
-  move=> H.
-  rewrite/more_precise domf_set_in// fsubset_refl/= min_comm incl_sig_set//.
-  by rewrite compat_sig_set // compat_type_minR//.
-Qed.
-
-Lemma assume_tm_mp sP sV t L:
-  more_precise (assume_tm sP sV t L) sV.
-Proof.
-  elim: t L sV => //=; only 1-3: move=> v [|[[] b] _]//.
-    move=> sV; case: fndP => // kV.
-    case: ifP => //= H.
-    by apply: more_precise_set_min.
-  move=> f Hf a Ha [//|[[] s xs]] sV; case: ifP => //fh.
-  by apply/more_precise_trans/Hf/xs/Ha.
-Qed.
-
 Module inclL.
 
   Fixpoint inclL L1 L2 :=
@@ -3452,63 +3664,6 @@ Module inclL.
 
 End inclL.
 
-Lemma assume_tm_mp_same sP N O T M:
-  more_precise N O ->
-  closed_in N T ->
-  more_precise (assume_tm sP N T M)
-    (assume_tm sP O T M).
-Proof.
-  elim: T M O N => //; only 1,2: by move=> k [|??].
-    move=> v L O N /[dup]MP /and3P[D C I] /[!closed_in_var] vN/=.
-    case: L => [|[[] x]xs]//.
-    rewrite in_fnd/=.
-    case: fndP => // vO.
-      have:= forallP C (Sub v vO); rewrite valPE in_fnd/= => H.
-      rewrite (compat_type_trans2 _ H).
-      case: ifP => //= H1; apply/and3P; split.
-        by rewrite/more_precise/=fsetUSS//=.
-        apply/forallP => -[k kP]; rewrite valPE/= ffunE/=.
-        case: eqP => H2; subst.
-          rewrite in_fnd/=; first by rewrite in_fset1U eqxx.
-          move=> vvN; rewrite ffunE/= eqxx.
-          apply: compat_type_min => //.
-          rewrite compat_type_comm.
-          by apply: compat_type_trans H1.
-        rewrite in_fnd.
-          by move: kP; rewrite/= in_fsetU in_fset1; case: eqP => //.
-        move=> kO/=; rewrite in_fnd/=.
-          by rewrite in_fsetU (fsubsetP D _ kO) orbT.
-        move=> kN; rewrite ffunE/=; case: eqP => // _.
-        rewrite in_fnd.
-          by move: kN; rewrite in_fsetU in_fset1; case: eqP.
-        move=> {}kN/=.
-        by have:= forallP C (Sub k kO); rewrite valPE in_fnd/=.
-      apply/forallP => -[k kO]/=; rewrite !ffunE !valPE/=.
-      case: eqP => H2; subst.
-        rewrite in_fnd/=; first by rewrite in_fset1U eqxx.
-        move=> vvN; rewrite ffunE/= eqxx.
-        apply: incl2_min => //.
-        by have:= forallP I (Sub v vO); rewrite valPE in_fnd.
-      rewrite in_fnd.
-        by move: kO; rewrite/= in_fsetU in_fset1; case: eqP => //.
-      move=> {}kO/=; rewrite in_fnd/=.
-        by rewrite in_fsetU (fsubsetP D _ kO) orbT.
-      move=> kN; rewrite ffunE/=; case: eqP => // _.
-      rewrite in_fnd.
-        by move: kN; rewrite in_fsetU in_fset1; case: eqP.
-      move=> {}kN/=.
-      by have:= forallP I (Sub k kO); rewrite valPE in_fnd.
-    case: ifP => //.
-    move=> H.
-    apply: more_precise_trans MP.
-    apply: more_precise_set_min => //.
-  move=> f Hf a Ha [|[m s] xs]// O N MP /[!closed_in_comb]/andP[cf ca]/=.
-  case: ifP => // _.
-  case: m => //=; auto.
-  apply: Ha; auto.
-  by apply: closed_in_assume_tm.
-Qed.
-
 
 (* Lemma assume_call_mp_incl sP X tyO N O1 T A B:
   more_precise N O1 ->
@@ -3523,94 +3678,6 @@ Proof.
   move=> + /andP[].
   apply: assume_tm_mp_incl.
 Qed. *)
-
-Lemma flex_head_comb A B:
-  flex_head (Tm_Comb A B) = flex_head A.
-Proof. rewrite/flex_head//=. Qed.
-
-Lemma assume_flex_head sP sV T M:
-  flex_head T -> 
-    assume_tm sP sV T M = 
-      match T, M with
-      | Tm_V v, (i, s) :: _ =>
-        match sV.[? v] with
-        | None => sV
-        | Some oldv =>
-          if compat_type oldv s then add v (min s oldv) sV else sV
-        end
-      | _, _ => sV
-      end.
-Proof.
-  elim: T M sV => //=.
-  move=> f Hf a Ha [|[]]//=.
-  by move=> > /[!flex_head_comb] ->.
-Qed.
-
-Lemma check_callable_mp {sP T X tyO O1 N d0 d1 dA dB N1 N2}:
-  complete_sig X tyO ->
-  let tyN := X + tyO in
-  tc_call tyO T ->
-
-  domf N `<=` domf tyN ->
-  compat_sig N tyN ->
-
-  more_precise N O1 ->
-  check_callable sP (tyO + O1) T d0 = (d1, N1) ->
-  check_callable sP (tyN + N) T dA = (dB, N2) ->
-  ((d0 = dA -> minD d1 dB = dB) * (more_precise N2 N1)).
-Proof.
-  rewrite/check_callable => CM C DR CS /[dup] MP /and3P[DR1 C1 I1].
-  have HH : more_precise (X + (tyO + N)) (tyO + O1).
-    by rewrite more_precise_cat// more_precise_cat2//((andP C).1, compat_sig_cat1 CS).
-  have CC : closed_in (tyO + N) (Callable2Tm T).
-    by rewrite closed_in_cat//  (andP C).2.
-  have CX: compat_sig N tyO.
-    by apply: compat_sig_cat1 CS.
-  rewrite -catfA .
-  rewrite (change_only_in_tm_ck_tm_ CC) //.
-  rewrite /get_callable_hd_sig/get_tm_hd_sig.
-  case c1: check_tm => [S1 B1].
-  case c2: check_tm => [S2 B2].
-  have {c1 c2}[] := check_tm_mp (andP C).2 (andP C).1 CX MP c1 c2.
-  case: S1 => [[]|]; last by case: S2 => [[]|[]]//=; destruct m => //= s1 s2 ???[<-<-][<-<-]//.
-    by case: S2 => [[]|[]]// _ _ + [<-<-][<-<-]//.
-  case: S2 => [[]|[]]// D1 D2 _.
-  destruct B2; last first.
-    by destruct B1 => //= ++ [<-<-][<-<-]//.
-  destruct B1 => + _; last first.
-    have XX:forall xxx, more_precise (assume_call sP (X + (tyO + N)) T xxx)
-    (tyO + O1) by move=> *; apply/more_precise_trans/HH/assume_tm_mp.
-    move=> + [<-<-].
-    case TH: get_tm_hd => [k|[p|v]].
-      by move=> + [<-<-]; auto.
-    - case: fndP => kP H [<-<-]/=; auto.
-    rewrite catfA !lookup_cat -catfA.
-    case: (fndP N) => /= kN; first by move=> + [<-<-]; split; auto.
-    have /=vO := forallP (andP C).2 (Sub v (get_tm_hd_in TH)).
-    by rewrite vO (in_fnd vO)/= => + [<-<-]; split; auto.
-  case TH: get_tm_hd => [k|[p|v]].
-    move=> + [<-<-][<-<-]; split => //; first by move=> <-; destruct D2, D1 => //.
-    apply: assume_tm_mp_same HH _.
-    by rewrite catfA closed_in_cat// tc_cat_comm// closed_in_cat// (andP C).2.
-  - case: fndP => pP O [<-<-][<-<-]; split => //; first by move=> <-; destruct D1, D2.
-    apply: assume_tm_mp_same HH _.
-    by rewrite catfA closed_in_cat// tc_cat_comm// closed_in_cat// (andP C).2.
-  rewrite catfA !lookup_cat -catfA.
-  have /=vO := forallP (andP C).2 (Sub v (get_tm_hd_in TH)).
-  rewrite vO (in_fnd vO)/=.
-  case: fndP => kO/=.
-    have kN := fsubsetP DR1 _ kO.
-    rewrite kN in_fnd/= => + [<-<-][<-<-]; split; auto.
-      destruct D1, D2 => //->//.
-    rewrite /assume_call assume_flex_head /flex_head ?TH//; destruct T => //=;
-    case: O1.[kO] => //=???; case ?: sigtm_rev => //=[[[] ?]?]; rewrite /flex_head;
-    simpl in TH; rewrite TH//=.
-  case: fndP => kN/= I [<-<-][<-<-]/=; split; auto; only 1, 3: by destruct D1, D2 => //=<-.
-  all: rewrite /assume_call assume_flex_head /flex_head ?TH//; destruct T => //=;
-  case: tyO.[vO] => //=???; case ?: sigtm_rev => //=[[[] ?]?]; rewrite /flex_head;
-  simpl in TH; rewrite TH//=.
-Qed.
-
 
 (* TODO: here *)
 Lemma tc_tree_aux_cat_mp sP tyO X A O O1 N N1 d1 d2 dA dB:
@@ -3637,14 +3704,17 @@ Proof.
     case c1: check_callable => [D1 S1].
     case c2: check_callable => [D2 S2].
     mv_sbst_catfA.
-    have:= check_callable_mp _ tO _ _ _ c1 c2.
-    move=> []//.
-      by rewrite domf_cat.
-    split; last first.
+    have ? : more_precise (X + tyO + N) (tyO + O).
       rewrite -catfA more_precise_cat// more_precise_cat2//=?(andP tO).1//.
       have H := check_callable_compat_sig c2.
-      apply: compat_sig_all.
-    destruct d1, dA => //= /(_ erefl) <-//.
+      by apply: compat_sig_all.
+    have:= check_callable_mp _ _ c1 c2.
+    move=> []//.
+      by have [] := andP tO => _ /closed_in_cat ->.
+    move=> H1 H2; split; first by destruct d1, dA.
+    rewrite -catfA more_precise_cat// more_precise_cat2//=?(andP tO).1//.
+    have H := check_callable_compat_sig c2.
+    by apply: compat_sig_all.
   - move=> A HA s B HB O O1 N N1 d1 d2 dA dB /tc_orP[tOA tOB tOs]/tc_orP[tNA tNB tNs].
     move=> DR1 CS1 DR2 CS2/= + MP.
     rewrite sigma2ctx_cat//.
@@ -4725,8 +4795,14 @@ Proof.
   - move=> s1 s2 r A B n eA R IH s' ? sV sV' O ckP tOA vA DR CS SP CSS dtA; subst.
     have [N /= /andP[CM tNB]] := saturate_sigP tOA eA.
     case dtB: (tc_tree_aux sP B (N + O) (Func, sV)) => [X Y].
-    have KAB := cut_brothers_is_kox eA.
-    have /= ? := tc_tree_aux_step ME ckP CM vA eA KAB tOA tNB DR CS SP dtA dtB erefl; subst.
+    (* have KAB := cut_brothers_is_kox eA. *)
+    (* have /= ? := tc_tree_aux_step ME ckP CM vA eA KAB tOA tNB DR CS SP dtA dtB erefl; subst. *)
+    have[] := tc_tree_aux_step_cb' CM vA eA tOA tNB DR CS _ _ _ dtA dtB.
+      by rewrite domf_cat fsubsetU// DR orbT.
+      by rewrite compat_sig_catR//.
+      by apply: more_precise_refl.
+    move=> /(_ erefl)/=?; subst.
+    move=> /and3P[D C I].
     have := IH _ erefl _ _ _ (check_program_tree_step ckP eA) tNB (valid_tree_expand vA eA) _ _ (sigP_cat _ _ SP) _ dtB.
     move=> []//.
       by rewrite domf_cat fsubsetU// DR orbT.
@@ -4737,14 +4813,39 @@ Proof.
       rewrite kO (in_fnd kO)/=.
       by have:= forallP CS (Sub k kO); rewrite valPE/= in_fnd//.
       by rewrite compat_subst_cat//.
-    move=> -> H; split; auto.
+    move=> -> H1; split; auto.
+    apply/forallP => -[x xV]; rewrite valPE/=.
+    have xY := fsubsetP D _ xV.
+    move: H1 => /forallP /(_ (Sub x xY)); rewrite valPE/=.
+    case: fndP => xs'; last first.
+      move=> /eqP H.
+      admit. (*TODO: this is simple: use C and comp_weak*)
+    rewrite/good_assignment.
+    (* TODO: this is False with the current def of good_assigment *)
+    (* I cannot safely check_tm s'.[xs'] with O as te.
+       this is because there could be some vars in the term that are
+       not in O.
+       I this we should change the definition by adding a type_check_tm
+       and then call check_tm (new_te + ...) s'
+    *)
     admit.
   - move=> s1 s2 r A B n eA R IH s' ? sV sV' O ckP tOA vA DR CS SP CSS dtA; subst.
     have [N /= /andP[CM tNB]] := saturate_sigP tOA eA.
     case dtB: (tc_tree_aux sP B (N + O) (Func, sV)) => [X Y].
     case KAB: (is_kox A B).
     (* have KAB := cut_brothers_is_kox eA. *)
-      have /= ? := tc_tree_aux_step ME ckP CM vA eA KAB tOA tNB DR CS SP dtA dtB erefl; subst.
+      have [] := tc_tree_aux_step_exp1 ME ckP CM vA eA KAB tOA tNB DR CS _ _ _ _ dtA dtB; subst.
+        by rewrite domf_cat fsubsetU//DR orbT.
+        apply/forallP => -[k kNO]; rewrite valPE [val _]/=.
+          case: fndP => // ksV.
+          rewrite fnd_in lookup_cat.
+          have kO:= fsubsetP DR k ksV.
+          rewrite kO (in_fnd kO)/=.
+          by have:= forallP CS (Sub k kO); rewrite valPE/= in_fnd//.
+          by rewrite more_precise_refl.
+          by [].
+      move=> /(_ erefl)/= ?; subst.
+      move=> /and3P[D C I].
       have := IH _ erefl _ _ _ (check_program_tree_step ckP eA) tNB (valid_tree_expand vA eA) _ _ (sigP_cat _ _ SP) _ dtB.
       move=> []//.
         by rewrite domf_cat fsubsetU// DR orbT.
@@ -4755,12 +4856,43 @@ Proof.
         rewrite kO (in_fnd kO)/=.
         by have:= forallP CS (Sub k kO); rewrite valPE/= in_fnd//.
         by rewrite compat_subst_cat//.
-      move=> -> H; split; auto.
+      move=> -> H1; split; auto.
+      apply/forallP => -[x xV]; rewrite valPE/=.
+      have xY := fsubsetP D _ xV.
+      move: H1 => /forallP /(_ (Sub x xY)); rewrite valPE/=.
+      case: fndP => xs'; last first.
+        move=> /eqP H.
+        admit. (*TODO: this is simple: use C and comp_weak*)
+      rewrite/good_assignment.
+      (* TODO: this is False with the current def of good_assigment *)
+      (* I cannot safely check_tm s'.[xs'] with O as te.
+        this is because there could be some vars in the term that are
+        not in O.
+        I this we should change the definition by adding a type_check_tm
+        and then call check_tm (new_te + ...) s'
+      *)
       admit.
-    (* sappiamo che next_alt false B = Some C usando R +  *)
-    (* f X ---> KO *)
+    (* TODO: here we know we have a failing call in the tree.
+       this call will be represented by a KO and therefore, we
+       will backtrack *)
+    (* we cannot use the IH due to X which is not known to be a Func *)
+    (* i cannot use neither tc_tree_aux_step_exp1 since I dont have is_kox *)
+    (* without is_kox I don't have the invariant about more_preciseness  *)
+    (* in particular it is not true that *)
+    (*  tc_tree_aux sP A tyO (d0, O1) = (d1, N1) ->
+        tc_tree_aux sP B tyN (dA, O2) = (dB, N2) ->
+        more_precise N2 N1.
+
+        if A = f X and B = ko (no impl for f X)
+        then N1 has some mapping for X whereas N2 has not
+
+        having more_precise is helpful for the induction when we
+        go through the And constructor: when I tc_tree_aux B in And A B0 B
+        I pass (as context for B) the result of tc_tree_aux for A
+      *)
     admit.
   - move=> s1 s2 A B r n fA nA RB IH s ? sV sV' tE ckP tOA vA DR CS SP CSS dtA; subst.
+    
     admit.
 
     (* have := failed_det_tree_next_alt vA C TC nA.
