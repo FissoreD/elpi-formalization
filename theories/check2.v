@@ -4764,6 +4764,30 @@ Proof.
   
 Admitted.
 
+Lemma is_kox_false_exp u s1 A B:
+  step u s1 A = Expanded B ->
+    is_kox A B = false ->
+      failed B.
+Proof. 
+  elim: A B s1 => //=.
+    move=> p c B s1[<-]; rewrite/big_or; case: F => //[[]]/=???.
+    by rewrite is_ko_big_or_aux.
+  - move=> A HA sm B HB C s.
+    case: ifP => dA.
+      case eB: step => //[B'|B'][<-]/=; rewrite dA; first by apply: HB eB.
+      by rewrite (cut_brothers_is_kox eB).
+    case eA: step => //[A'|A'][<-]/=; rewrite (step_not_dead _ dA eA).
+      by apply: HA eA.
+    by rewrite (cut_brothers_is_kox eA).
+  move=> A HA B0 HB0 B HB C s.
+  case eA: step => //[A'|A'].
+    move=> [<-]/=; rewrite (step_not_solved _ eA)//.
+    by move=> /(HA _ s)->//.
+  have [? sA]:= expand_solved_same _ eA; subst A'.
+  case eB: step => //[B'][<-]/=; rewrite sA.
+  by move=> /(HB _ _ eB) ->; rewrite orbT.
+Qed.
+
 Axiom saturate_sigP : forall sP O A u s r,
   tc sP O A ->
   step u s A = r ->
@@ -4872,6 +4896,12 @@ Proof.
         and then call check_tm (new_te + ...) s'
       *)
       admit.
+    have fB:= is_kox_false_exp eA KAB.
+    inversion R; subst; clear R.
+      by rewrite success_failed in fB.
+      by rewrite failed_expand in H.
+      by rewrite failed_expand in H.
+    rename B0 into B'.
     (* TODO: here we know we have a failing call in the tree.
        this call will be represented by a KO and therefore, we
        will backtrack *)
