@@ -241,7 +241,7 @@ Section valid_tree.
       case:ifP => //[dA vB|dA/andP[vA bB]].
         rewrite get_tree_Or/=dA IHB//.
       have /= := IHA s1 vA.
-      case X: step => //= H; rewrite (step_not_dead _ dA X) H//bbOr_cutr//.
+      case X: step => //= H; rewrite (step_not_dead dA X) H//bbOr_cutr//.
     + move=> A HA B0 B HB s1 /=/andP[vA].
       case: ifP => [sA vB /= | sA]/=.
         rewrite succes_is_solved//=.
@@ -251,7 +251,7 @@ Section valid_tree.
       move=> /eqP -> {B HB}.
       have:= HA s1 vA.
       case X: step => //[A'|A'|A'|A']/=vA'; only 1-3: by rewrite vA' valid_tree_big_and eqxx !if_same.
-      have [? sA']:= expand_solved_same _ X; subst.
+      have [? sA']:= expand_solved_same X; subst.
       congruence.
   Qed.
 

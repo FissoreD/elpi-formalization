@@ -2,6 +2,10 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import lang tree.
 From det Require Import zify_ssreflect.
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
+
 Section RunP.
   Variable u: Unif.
 
@@ -588,4 +592,34 @@ Section RunP.
       inversion H; subst; try congruence; try rewrite //failed_expand// in H0.
       by rewrite success_failed in fA.
   Qed.
+
+  Lemma step_or s1 A s B:
+  get_tree (match step u s1 A with
+  | Expanded A0 => Expanded (Or A0 s B)
+  | CutBrothers A0 => Expanded (Or A0 s (cutr B))
+  | Failure A0 => Failure (Or A0 s B)
+  | Success A0 => Success (Or A0 s B)
+  end) = 
+    let stepA :=  step u s1 A in 
+    if is_cutbrothers stepA then (Or (get_tree stepA) s (cutr B))
+    else (Or (get_tree stepA) s B).
+  Proof. case X: step => //=. Qed.
+
+
+  Lemma step_and s1 A B0 B:
+    get_tree (match step u s1 A with
+    | Expanded A0 => Expanded (And A0 B0 B)
+    | CutBrothers A0 => CutBrothers (And A0 B0 B)
+    | Failure A0 => Failure (And A0 B0 B)
+    | Success A0 => mkAnd A0 B0 (step u (get_substS s1 A0) B)
+    end) = 
+      let stepA :=  step u s1 A in 
+      if success A then get_tree (mkAnd A B0 (step u (get_substS s1 A) B))
+      else And (get_tree stepA) B0 B.
+  Proof.
+    case X: step => //=[A'|A'|A'|A']; only 1, 2, 3: by rewrite (step_not_solved X).
+    have [? sA] := expand_solved_same X; subst.
+    by rewrite get_tree_And sA.
+  Qed.
+
 End RunP.

@@ -424,3 +424,51 @@ Proof.
   case: fndP => //= kP.
   by apply: select_in_rules.
 Qed.
+
+
+Axiom deref_rigid: forall s t t',
+  deref s t = t' ->
+    get_tm_hd t' = 
+      match get_tm_hd t with
+      | inl K => inl K
+      | inr (inl P) => inr (inl P)
+      | inr (inr V) => 
+        if s.[? V] is Some t then get_tm_hd t
+        else inr (inr V)
+      end.
+
+Lemma tm2RC_get_tm_hd t c' p:
+  tm2RC t = Some (c', p) ->
+    ((get_tm_hd t = inr (inl p)) *
+    (get_tm_hd (Callable2Tm (RCallable2Callable c')) = inr (inl p))).
+Proof.
+  elim: t c' p => //=.
+    move=> k c' p [<-<-]//.
+  move=> f Hf a _ c' p.
+  case t: tm2RC => //=[[]][<-<-].
+  apply: Hf t.
+Qed.
+
+Lemma tm2RC_deref s c c' p:
+  tm2RC (deref s (Callable2Tm c)) = Some (c', p) ->
+    match get_tm_hd (Callable2Tm c) with
+    | inl K => False
+    | inr (inl P) => P = p
+    | inr (inr V) => 
+      if s.[? V] is Some t then get_tm_hd (deref s t) = inr (inl p)
+      else False
+    end.
+Proof.
+  elim: c c' p => //=; first by congruence.
+    move=> v c' p; case: fndP => //= vs H.
+    remember (deref _ _) as df eqn:H1.
+    have {}H1 := esym H1.
+    rewrite (deref_rigid H1).
+    have {}H := tm2RC_get_tm_hd H.
+    by rewrite H.
+  move=> f Hf t c' p.
+  remember (deref _ _) as df eqn:H.
+  have {}H := esym H.
+  case X: tm2RC => //=[[RC P]][??]; subst.
+  by apply: Hf X.
+Qed.

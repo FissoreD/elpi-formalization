@@ -32,14 +32,14 @@ Section NurEqiv.
       rewrite H5//.
     + move=> s1 s2 r A B n eA rB IH s4 ? sIgn vA; subst. 
       have /=vB:= (valid_tree_expand _ vA eA). 
-      have fA := step_not_failed _ eA notF.
+      have fA := step_not_failed eA notF.
       have [s[x[xs +]]] := [elaborate failed_t2l vA fA s1 nilC].
       move=> H; rewrite H; repeat eexists.
       have [[sy y][ys /=[+ {}IH]]]:= IH _ erefl sIgn vB.
       case: x H => [|g gs].
         fNilG => H.
-        have [] := s2l_empty_hd_success vA (step_not_failed _ eA notF) H.
-        rewrite (step_not_solved _ eA notF)//.
+        have [] := s2l_empty_hd_success vA (step_not_failed eA notF) H.
+        rewrite (step_not_solved eA notF)//.
       fConsG g gs.
       case: g => [p c|ca] H.
         have:= s2l_Expanded_call _ vA eA H.
