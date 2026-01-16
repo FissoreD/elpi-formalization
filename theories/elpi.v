@@ -771,3 +771,6 @@ Proof.
 Qed.
 
 End Nur. 
+
+
+(* STILE: LIPICS - ITP *)

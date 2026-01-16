@@ -455,7 +455,7 @@ Section NurValidState.
       move=> /(_ _ IsList_alts _ IsList_alts)//.
       case: eqP => // _.
       move=>/andP[->]; rewrite bbOr_empty_ca///bbOr bB//.
-    - move=> A; case: A => //[p a|] _ _ _ B HB rs s0/=/andP[/eqP->] bB;
+    - move=> A; case: A => //[p a|] rs l B HB rs' s0/= /andP[/eqP<-] bB;
       have [h H]:= base_and_t2l bB;
       have H1:=base_and_empty_ca bB H.
         rewrite H/= (empty_caG_valid _ H1)//.
@@ -506,37 +506,29 @@ Section NurValidState.
       apply: push_bt_out => //.
       apply: bbOr_valid_caA bB _ => //.
       rewrite cats0//.
-    - move=> A HA B0 _ B HB l s0/= /and3P[vA]++.
+    - move=> A HA B0 B HB l s0/= /andP[vA].
       have:= HA l s0 vA => {}HA.
-      case:ifP => /=[sA vB bB0|sA /eqP?]; subst.
+      case:ifP => /=[sA vB|sA /eqP?]; subst.
         move: HA.
         have SA:= success_t2l empty vA sA; rewrite SA/=.
-        move: bB0 => /orP[]bB; last first.
-          rewrite (base_and_ko_t2l bB)//=.
-          rewrite !make_lB01_empty2 behead_cons => H1.
-          apply: HB vB.
-        have [hd H]:= base_and_t2l bB.
-        have /= Hhd:= base_and_empty_ca bB H.
-        rewrite H/=behead_cons => H1.
-        rewrite make_lB01_empty2.
+        rewrite make_lB01_empty2 behead_cons => H1.
         set M := make_lB0 _ _.
         rewrite valid_ca_split.
         rewrite drop_size_cat//{4 5}/M.
-        rewrite valid_ca_make_lB0_empty_ca?Hhd//.
+        have? := empty_caG_r2l.
+        rewrite valid_ca_make_lB0_empty_ca//.
         apply/andP; split; last first.
-          apply: valid_ca_add_deep_make_lB0 Hhd H1.
+          by apply: valid_ca_add_deep_make_lB0 _ H1.
         rewrite/M.
         apply: push_bt_out => //.
           rewrite valid_ca_make_lB0_empty_ca?Hhd//.
           apply: valid_ca_add_deep_make_lB0; rewrite//Hhd//.
         apply: HB vB.
       case lA: t2l => [|[s x] xs]//=.
-      move=> bB; have {bB}: bbAnd B by move: bB; case:ifP => //; rewrite /bbAnd => _ -> //.
-      move=>/orP[]bB; last first.
-        rewrite !(base_and_ko_t2l bB)//=.
-      have [hd H]:= base_and_t2l bB.
-      have /=H2 := base_and_empty_ca bB H.
-      rewrite H/=H/= behead_cons.
+      rewrite !s2l_big_and//=.
+      rewrite behead_cons.
+      set hd := r2l B0.1 B0.2.
+      have? := empty_caG_r2l B0.1 B0.2.
       rewrite -/(valid_caA (make_lB0 (add_deep l hd xs) hd) (make_lB0 (add_deep l hd xs) hd) l).
       rewrite valid_ca_make_lB0_empty_ca?H2//.
       move:HA; rewrite lA/= behead_cons =>/= /andP[{}HA HA1].

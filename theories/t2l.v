@@ -42,6 +42,14 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
 
 Definition kill (A: goals) := map (apply_cut (fun x => nilC)) A.
 
+(* reset-point to list *)
+Fixpoint r2l pr a : goals :=
+  match a with
+  | [::] => no_goals
+  | x::xs => more_goals ((a2g pr x)) (r2l pr xs)
+  end.
+
+
   (* bt is the backtracking list for the cut-alternatives
     this list is important since in this tree:
           or   
@@ -66,17 +74,18 @@ match A with
   let lA := t2l A s lB in
   add_ca_deep bt (lA ++ lB)
 | And A B0 B =>
-  let lB0 := t2l B0 s bt in
+  let hd := r2l B0.1 B0.2 in
   let lA   := t2l A s bt in
+  let sB0 := s in
   if lA is more_alt (slA, x) xs then 
     (* lA is split into the current goal x and the future alternatives xs *)
     (* in a valid tree lB0 has length 0 or 1 (it is a (potentially killed) base and) *)
-    match lB0 with
-    | no_alt => 
+    (* match lB0 with *)
+    (* | no_alt =>  *)
       (* the reset point is empty: it kill all the alternatives in the cut-to *)
-      let lB   := t2l B slA bt in
-      make_lB01 lB (kill x)
-    | more_alt (sB0,hd) no_alt =>
+      (* let lB   := t2l B slA bt in *)
+      (* make_lB01 lB (kill x) *)
+    (* | more_alt (sB0,hd) no_alt => *)
       (* the reset point exists, it has to be added to all cut-to alternatives *)
       let xz := add_deepG bt hd x in
       let xs := add_deep bt hd xs in 
@@ -86,8 +95,6 @@ match A with
       let lB   := t2l B slA (xs ++ bt) in
       (* lB are alternatives, each of them have x has head *)
       (make_lB01 lB xz) ++ xs
-    | _ => nilC (*unreachable in a valid_tree*)
-    end
   else nilC
 end.
 
@@ -106,14 +113,14 @@ Section test.
   Variable p : program.
   Variable sx : Sigma.
   Variable p1 : program.
-  Definition g := (And (Or OK s1 CutS) CutS OK).
+  (* Definition g p := (And (Or OK s1 CutS) p OK). *)
 
-  Goal forall s3 l,
-    t2l (And (Or OK s1 CutS) CutS Bot) s3 l = 
-      t2l (And (Or Dead s1 CutS) CutS CutS) s3 l.
+  Goal forall s3 l p,
+    t2l (And (Or OK s1 CutS) (p, [:: ACut]) Bot) s3 l = 
+      t2l (And (Or Dead s1 CutS) (p, [:: ACut]) CutS) s3 l.
   Proof.
-    move=>s3 l/=.
+    move=>s3 l/= [] r s.
     rewrite /=!cat0s ?cat0s.
-    rewrite subnn take0 drop0//.
+    rewrite subnn/= take0 drop0//.
   Qed.
 End test.

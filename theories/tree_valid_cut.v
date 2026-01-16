@@ -5,24 +5,9 @@ From det Require Import finmap.
 
 Open Scope fset_scope.
 
-(* Fixpoint disj_rules r :=
-  match r with
-  | [::] => true
-  | x :: xs =>  *)
-
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
-
-Hint Resolve is_dead_dead : core.
-
-Fixpoint vars_tree t : {fset V} :=
-  match t with
-  | CutS | Dead | Bot | OK => fset0
-  | CallS _ t => vars_tm (Callable2Tm t)
-  | And A B0 B => vars_tree A `|` vars_tree B0 `|` vars_tree B
-  | Or A _ B => vars_tree A `|` vars_tree B
-  end.
 
 Definition disj_tree T1 T2 := (vars_tree T1) `&` (vars_tree T2) == fset0.
 
@@ -38,7 +23,7 @@ Section valid_tree.
     match A with
     | CutS => true
     | OK | CallS _ _ | Bot | Dead => false
-    | And A B0 B => [||has_cut A | (has_cut B0 && has_cut B)]
+    | And A B0 B => [||has_cut A | (has (fun x => x == ACut) B0.2 && has_cut B)]
     | Or _ _ _ => false
     end.
   

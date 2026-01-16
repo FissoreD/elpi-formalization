@@ -25,7 +25,8 @@ Definition tester l r :=
 
 Goal forall B B0 p,
 let f x := (CallS p x) in
-  tester (And (Or OK empty (f B)) (f B0) Bot) 
+let g x := (p, [::ACall x]) in
+  tester (And (Or OK empty (f B)) (g B0) Bot) 
     ((empty, (call p B) ::: ((call p B0) ::: nilC)) ::: nilC).
 Proof.
   by move=> //.
@@ -34,8 +35,9 @@ Qed.
 Goal forall A B D0 D p,
   (* (((! \/ A) \/ B)) /\ (D) *)
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   tester 
-    (And (Or ((Or (CutS) empty (f A))) empty (f B)) (f D0) (f D)) 
+    (And (Or ((Or (CutS) empty (f A))) empty (f B)) (g D0) (f D)) 
     (of_alt [:: 
       [::cut (of_alt [:: [:: call p B; call p D0]]); call p D];
       [:: call p A; call p D0]; 
@@ -48,9 +50,10 @@ Qed.
 
 Goal forall B C D E F p,
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   (* (A \/_{empty} B) /\_C ((! \/_{empty} D) /\_{E} F) *)
   tester 
-    (And (Or OK empty (f B)) (f C) (And (Or (CutS) empty (f D)) (f E) (f F)))
+    (And (Or OK empty (f B)) (g C) (And (Or (CutS) empty (f D)) (g E) (f F)))
     (of_alt [:: 
       [:: cut (of_alt [:: [:: call p B; call p C]]); call p F];
       [:: call p D; call p E]; 
@@ -60,8 +63,8 @@ Proof.
   rewrite //.
 Qed.
 
-
-Goal forall A B C p,
+(* THIS CAN NO MORE EXISTS: reset is never Bot *)
+(* Goal forall A B C p,
   let f x := (CallS p x) in
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   tester 
@@ -72,13 +75,14 @@ Goal forall A B C p,
 Proof.
   move=> A B C p/=.
   rewrite/t2l//.
-Qed.
+Qed. *)
 
 Goal forall A B C0 C p,
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   tester 
-    (And (Or ((Or (CutS) empty (f A))) empty (f B)) (f C0) (Or (CutS) empty (f C)))
+    (And (Or ((Or (CutS) empty (f A))) empty (f B)) (g C0) (Or (CutS) empty (f C)))
     (of_alt[:: 
       [::cut (of_alt [:: [:: call p B; call p C0]]); cut (of_alt [::[:: call p A; call p C0]; [:: call p B; call p C0]])];
       [::cut (of_alt [:: [:: call p B; call p C0]]); call p C];
@@ -95,7 +99,8 @@ Qed.
 Goal forall A B0 p,
     (* (OK \/ A) /\_B0 OK *)
   let f x := (CallS p x) in
-  tester (And (Or OK empty (f A)) (f B0) OK) (of_alt [::[::]; [::call p A; call p B0]]).
+  let g x := (p, [::ACall x]) in
+  tester (And (Or OK empty (f A)) (g B0) OK) (of_alt [::[::]; [::call p A; call p B0]]).
 Proof.
   move=> A B0 p.
   rewrite/t2l//=.
@@ -104,7 +109,8 @@ Qed.
 Goal forall A B0 p,
   (* (Bot \/ B) /\_b0 B0  *)
   let f x := (CallS p x) in
-  tester (And (Or Bot empty (f A)) (f B0) (f B0))
+  let g x := (p, [::ACall x]) in
+  tester (And (Or Bot empty (f A)) (g B0) (f B0))
   (of_alt [::[::call p A; call p B0]]).
 Proof.
   move=> A B0 p.
@@ -113,9 +119,10 @@ Qed.
 
 Goal forall p x y z w a, 
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   tester (
     And 
-      (Or (f x) empty (f y)) (f a) 
+      (Or (f x) empty (f y)) (g a) 
       (Or (f z) empty (f w))) 
     (of_alt [:: [:: call p x; call p z];
     [:: call p x; call p w];
@@ -127,9 +134,10 @@ Qed.
 
 Goal forall p z w a, 
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   tester (
     And 
-      (Or OK empty Bot) (f a) 
+      (Or OK empty Bot) (g a) 
       (Or (f z) empty (f w))) 
     (of_alt [:: [:: call p z]; [:: call p w]]).
 Proof.
@@ -141,9 +149,10 @@ Qed.
 (* THIS IS IMPORTANT *)
 Goal forall p a b c d, 
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   tester (
     And 
-      (Or Bot empty (f a)) (f b) 
+      (Or Bot empty (f a)) (g b) 
       (Or (f c) empty (f d))) 
     (* [:: [:: call a; call b] ]. *)
     (of_alt [:: [:: call p a; call p c]; [::call p a; call p d] ]).
@@ -163,7 +172,7 @@ Proof.
   move=>p a b; rewrite/t2l/=.
   by []. Qed.
 
-Goal forall A1 A2 s  C0 B p,
+(* Goal forall A1 A2 s  C0 B p,
   let f x := (CallS p x) in
   tester (And (Or (f A1) s (f A2)) (Bot) (And Bot (f C0) (f B))) nilC
   .
@@ -171,9 +180,9 @@ Proof.
   move=> A1 A2 s  C0 B p.
   rewrite/t2l.
   by [].
-Qed.
+Qed. *)
 
-Goal forall A B C p,
+(* Goal forall A B C p,
   let f x := (CallS p x) in
   tester (And (Or (f A) empty (f B)) (Bot) (f C))
   (of_alt[:: [:: call p A; call p C]]).
@@ -181,11 +190,12 @@ Proof.
   move=> s A B C p.
   rewrite/t2l/=.
   by [].
-Qed.
+Qed. *)
 
 Goal forall A1 A2 B0 C0 B p,
   let f x := (CallS p x) in
-  tester (And (Or (f A1) empty (f A2)) (f B0) (And Bot (f C0) (f B)))
+  let g x := (p, [::ACall x]) in
+  tester (And (Or (f A1) empty (f A2)) (g B0) (And Bot (g C0) (f B)))
   (of_alt [:: [:: call p A2 ; call p B0 ]]).
 Proof.
   move=> * /=.
@@ -193,9 +203,10 @@ Proof.
 Qed.
 
 Goal forall b0 p a b c, 
+  let g x := (p, [::ACall x]) in
   tester (
     Or 
-      (Or (And (CallS p c) (CallS p b0) (CutS)) empty (CallS p a)) empty
+      (Or (And (CallS p c) (g b0) (CutS)) empty (CallS p a)) empty
       (CallS p b))
   (of_alt[:: [:: call p c; cut (of_alt[:: [:: call p b]])]; [:: call p a]; [:: call p b]]).
 Proof.
@@ -206,8 +217,9 @@ Qed.
 
 Goal forall B C Res p,
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   (* (OK \/ B) /\ (! \/ C) -> [cut_[B,Reset]; C; (B, Reset)] *)
-  tester (And (Or OK empty (f B)) (f Res) (Or (CutS) empty (f C))) 
+  tester (And (Or OK empty (f B)) (g Res) (Or (CutS) empty (f C))) 
     (of_alt[::[::cut (of_alt[::[:: call p B; call p Res]])]; [::call p C]; [:: call p B; call p Res]]).
 Proof.
   move=> B C Res p.
@@ -217,8 +229,9 @@ Qed.
 
 Goal forall B C Res Reempty p,
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   (* (OK \/ B) /\ (! /\ C) -> [cut_[]; C; (B, Reset)] *)
-  tester (And (Or OK empty (f B)) (f Res) (And (CutS) (f Reempty) (f C))) 
+  tester (And (Or OK empty (f B)) (g Res) (And (CutS) (g Reempty) (f C))) 
     (of_alt[::[::cut nilC; call p C]; [:: call p B; call p Res]]).
 Proof.
   move=> B C Res Reempty p/=.
@@ -228,8 +241,9 @@ Qed.
 
 Goal forall A B C C0 p,
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   (* (A /\ ((! \/ B) \/ C) *)
-  tester (And (f A) (f C0) (Or (Or (CutS) empty (f B)) empty (f C))) 
+  tester (And (f A) (g C0) (Or (Or (CutS) empty (f B)) empty (f C))) 
   (of_alt [:: 
     [:: call p A; cut (of_alt[:: [:: call p C]])]; 
     [:: call p A; call p B]; 
@@ -242,9 +256,10 @@ Qed.
 
 Goal forall A B C D E p,
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   (* (A \/_{empty} B) /\_C ((! \/_{empty} D) \/_{empty} E) *)
   tester 
-    (And (Or (f A) empty (f B)) (f C) (Or (Or (CutS) empty (f D)) empty (f E))) 
+    (And (Or (f A) empty (f B)) (g C) (Or (Or (CutS) empty (f D)) empty (f E))) 
     (of_alt[:: 
     [:: call p A; cut (of_alt [:: [:: call p E]; [:: call p B; call p C]])];
     [:: call p A; call p D]; [:: call p A; call p E];
@@ -265,9 +280,10 @@ Qed.
 *)
 Goal forall B C D E p,
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   (* (OK \/_{empty} B) /\_C ((! \/_{empty} D) /\_{E} !) *)
   tester 
-    (And (Or OK empty (f B)) (f C) (And (Or (CutS) empty (f D)) (f E) (CutS))) 
+    (And (Or OK empty (f B)) (g C) (And (Or (CutS) empty (f D)) (g E) (CutS))) 
     (of_alt [:: 
       [:: cut (of_alt[:: [:: call p B; call p C]]); cut nilC ];
       [:: call p D; call p E]; 
@@ -299,7 +315,7 @@ Goal forall A B C p,
   let f x := (CallS p x) in
   (* ((! \/ ! \/ A) \/ B) \/ C *)
   tester 
-    (Or (Or (Or (And (CutS) OK OK) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C)) 
+    (Or (Or (Or (And (CutS) (p, [::]) OK) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C)) 
     (of_alt[:: 
       [::cut (of_alt[:: [:: call p B]; [::call p C]])];
       [::cut (of_alt[:: [:: call p B]; [::call p C]])];
@@ -315,9 +331,10 @@ Qed.
 
 Goal forall A B C D0 D p,
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   (* (((! \/ ! \/ A) \/ B) \/ C) /\ D*)
   tester
-    (And (Or (Or (Or (CutS) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C)) (f D0) (f D))
+    (And (Or (Or (Or (CutS) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C)) (g D0) (f D))
     (of_alt[:: 
       [::cut (of_alt [:: [:: call p B; call p D0]; [::call p C; call p D0]]); call p D];
       [::cut (of_alt [:: [:: call p B; call p D0]; [::call p C; call p D0]]); call p D0];
@@ -332,9 +349,10 @@ Qed.
 
 Goal forall X A B C D0 D p,
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   (* ((X \/ ((! \/ ! \/ A) \/ B) \/ C)) /\ D*)
   tester 
-    (And (Or (f X) empty (Or (Or (Or (CutS) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C))) (f D0) (f D))
+    (And (Or (f X) empty (Or (Or (Or (CutS) empty ((Or (CutS) empty (f A)))) empty (f B)) empty (f C))) (g D0) (f D))
     (of_alt[:: 
       [:: call p X; call p D];
       [::cut (of_alt[:: [:: call p B; call p D0]; [::call p C; call p D0]]); call p D0];
@@ -350,9 +368,10 @@ Qed.
 
 Goal forall B0 A B C D p,
   let f x := (CallS p x) in
+  let g x := (p, [::ACall x]) in
   (* (((A /\ (! \/ B)) \/ C \/ D)) *)
   tester 
-    (Or (Or (f C) empty (And (f A) (f B0) (Or (CutS) empty (f B)))) empty (f D))
+    (Or (Or (f C) empty (And (f A) (g B0) (Or (CutS) empty (f B)))) empty (f D))
     (of_alt[:: 
       [:: call p C]; 
       [:: call p A; cut (of_alt[:: [:: call p D]])]; 
