@@ -914,18 +914,18 @@ Fixpoint tc_tree_aux (sP:sigT) A (te:sigV) (sVD1:(D * sigV)): (D * sigV) :=
   match A with
   | CutS => (Func, te + sV1)
   | Bot | Dead => (Func, te + sV1)
-  | CallS _ a => 
-    let (dCall, sV') := (check_callable sP (te + sV1) a d0) in  (maxD d0 dCall, te + sV')
+  | CallS _ a => check_callable sP (te + sV1) a d0
   | OK => (d0, te + sV1)
   | And A B0 B =>
     if is_ko A then (Func, te + sV1)
     else 
     if success A then
-        let: (DA, T) := tc_tree_aux sP A te sVD1 in
+        let: (DA, TA) := tc_tree_aux sP A te sVD1 in
         let: (DB, TB) := tc_tree_aux sP B te (DA, get_ctxS sP te sV1 A) in
         if (next_alt (success A) A == None) then (DB, TB)
         else
-          let: (D, T) := check_atoms sP T B0.2 DA in
+          (* TODO: here should not pass TA but TA where success is ignored *)
+          let: (D, T) := check_atoms sP TA B0.2 DA in
           (maxD DB D, merge_sig T TB)
     else
       let: (D, T) := tc_tree_aux sP A te sVD1 in
@@ -1149,16 +1149,22 @@ Proof.
   by apply: IH H; rewrite (closed_in_atoms_sub _ cxs)//Y.
 Qed.
 
-Lemma check_atom_te_cat sP L V V' D D':
-  check_atom sP V L D = (D', V') ->
-    V' = V + V'.
+Lemma check_callable_te_cat sP c V V' D D': 
+  check_callable sP V c D = (D', V') -> V' = V + V'.
 Proof.
-  case: L => [|c]/=; first by move=> [_<-]; rewrite catf_refl.
   rewrite/check_callable; case: check_tm => [[[|d]|???]][]; only 1,2,4-6: by move=> [_<-]; rewrite catf_refl.
   case g: get_callable_hd_sig => [A'|][_ <-]; last by rewrite catf_refl.
   apply/fmapP => k; rewrite lookup_cat.
   case: fndP => //=.
   by rewrite assume_call_domf => H; rewrite not_fnd.
+Qed.
+
+Lemma check_atom_te_cat sP L V V' D D':
+  check_atom sP V L D = (D', V') ->
+    V' = V + V'.
+Proof.
+  case: L => [|c]/=; first by move=> [_<-]; rewrite catf_refl.
+  by apply: check_callable_te_cat.
 Qed.
 
 Lemma check_atoms_te_cat sP L V V' D D':
@@ -1176,7 +1182,7 @@ Lemma tc_tree_aux_te_cat sP A tE D S D' S1:
     S1 = tE + S1.
 Proof.
   elim: A D S D' S1 => //=; only 1-3,5: by move=> ???? [_ <-]; rewrite catfA catf_refl.
-    by move=> _ >; case: check_callable => > [_ <-]; rewrite catfA catf_refl.
+    by move=> _ >; case C: check_callable => > [_ <-]; rewrite (check_callable_te_cat C) !catfA catf_refl.
   - move=> A HA s B HB D S D' S'.
     case kA: is_ko => /=.
       case kB: is_ko.
@@ -1973,9 +1979,8 @@ Proof.
   elim: B d0 s0 d1 s1 => //=; only 1-3,5:
     by move=> d0 s0 d1 s1 H1 H2 [_ <-] /[!domf_cat]; apply/fsetUidPl.
   - move=> p c d0 s0 d1 s1 H1 H2; case C: check_callable => [d2 s2][??]; subst.
-    rewrite domf_cat; apply/fsetUidPl.
-    rewrite (check_callable_domf C).
-    by rewrite fsubset_catL_id.
+    rewrite (check_callable_domf C) domf_cat.
+    by apply/fsetUidPl.
   - move=> A HA s B HB d0 s0 d1 s1 H1 /tc_orP[tOA tOB tOs].
     case kA: is_ko => /=.
       case kB: is_ko => /=.
@@ -2129,7 +2134,6 @@ Proof.
   - move=> p c d0 s0 d1 s1 H1 H2; case C: check_callable => [d2 s2][??]; subst.
     have:= check_callable_compat_sig C.
     move=> H.
-    rewrite compat_sig_catL_id//.
     apply/forallP => -[k kO]; rewrite valPE/=.
     have kC : k \in domf (tyO + s0) by rewrite domf_cat in_fsetU kO.
     have:= forallP H (Sub k kC); rewrite valPE [val _]/=.
@@ -2269,7 +2273,7 @@ Proof.
   case: l sV => //=-[|c]//=xs sV D B.
     rewrite [check_atoms _ _ _ _]surjective_pairing//.
   case C: check_callable => /=[d0 s0].
-  rewrite !(xxx C) [check_atoms _ _ _ _]surjective_pairing//.
+  by rewrite [check_atoms _ _ _ _]surjective_pairing//.
 Qed.
 
 Definition all_but_last_has_cut (L: seq (seq A)) :=
@@ -3257,10 +3261,6 @@ Proof.
     have:= check_callable_mp _ _ c1 c2.
     move=> []//.
       by have [] := andP tO => _ /closed_in_cat ->.
-    move=> H1 H2; split; first by destruct d1, dA.
-    rewrite -catfA more_precise_cat// more_precise_cat2//=?(andP tO).1//.
-    have H := check_callable_compat_sig c2.
-    by apply: compat_sig_all.
   - move=> A HA s B HB O O1 N N1 d1 d2 dA dB /tc_orP[tOA tOB tOs]/tc_orP[tNA tNB tNs].
     move=> DR1 CS1 DR2 CS2/= + MP.
     rewrite sigma2ctx_cat//.
@@ -3828,17 +3828,14 @@ Proof.
     case c1: check_callable => [D S].
     move=> kA cc tOr DR1 CS1 DR2 CS2 MP SP [??] tA; subst.
     split.
-      destruct d0 => //=?; subst.
-      destruct D => //=.
+      move=> H.
+      destruct d1 => //=.
       have:= check_callable_big_or _ _ _ _ _ _ _ _ _ _ _ _ c1 tA.
       move=> /= ->//.
       by apply/eqP.
-    have:= check_callable_big_or_mp ME CkP CM (eqP kA) cc tOr SP DR1 CS1 DR2 CS2 MP c1 tA.
-    move=> H.
-    rewrite (tc_tree_aux_te_cat tA) -catfA more_precise_cat//more_precise_cat2//.
-      by apply: (andP cc).1.
-    have:= tc_tree_aux_compat_sig CS2 tOr tA.
-    by apply: compat_sig_cat1.
+      have [??] := xxx c1.
+      by destruct d0 => //.
+    by have:= check_callable_big_or_mp ME CkP CM (eqP kA) cc tOr SP DR1 CS1 DR2 CS2 MP c1 tA.
   - move=> A HA s B HB C s1 O1 O2 N1 N2 d0 d1 dA dB /andP[ckA ckB].
     move=> +++ /tc_orP[tOA tOB tOs] + DR1 CS1 DR2 CS2 MP SP.
     case: ifP => [deadA vB|deadA /andP[vA bB]].
@@ -4048,14 +4045,8 @@ Proof.
     case c1: check_callable => [D S].
     move=> kA cc tOr DR1 CS1 DR2 CS2 MP SP [??] tA; subst.
     split.
-      destruct d0 => //=.
       by apply: check_callable_big_or c1 tA; rewrite//; apply/eqP.
-    have:= check_callable_big_or_mp ME CkP CM (eqP kA) cc tOr SP DR1 CS1 DR2 CS2 MP c1 tA.
-    move=> H.
-    rewrite (tc_tree_aux_te_cat tA) -catfA more_precise_cat//more_precise_cat2//.
-      by apply: (andP cc).1.
-    have:= tc_tree_aux_compat_sig CS2 tOr tA.
-    by apply: compat_sig_cat1.
+    by have:= check_callable_big_or_mp ME CkP CM (eqP kA) cc tOr SP DR1 CS1 DR2 CS2 MP c1 tA.
   - move=> A HA s B HB C s1 O1 O2 N1 N2 d0 d1 dA dB /andP[ckA ckB].
     move=> +++ /tc_orP[tOA tOB tOs] + DR1 CS1 DR2 CS2 MP SP.
     case: ifP => [deadA vB|deadA /andP[vA bB]].
@@ -4254,46 +4245,168 @@ Proof.
   by apply: more_precise_mergeL.
 Qed.
 
-(* Lemma tc_tree_aux_step u sP tyO X A r s1 O N1 N2 d0 d1 dA dB:
+Lemma is_kox_false_exp u s1 A B:
+  step u s1 A = Expanded B ->
+    is_kox A B = false ->
+      failed B.
+Proof. 
+  elim: A B s1 => //=.
+    move=> p c B s1[<-]; rewrite/big_or; case: F => //[[]]/=???.
+    by rewrite is_ko_big_or_aux.
+  - move=> A HA sm B HB C s.
+    case: ifP => dA.
+      case eB: step => //[B'|B'][<-]/=; rewrite dA; first by apply: HB eB.
+      by rewrite (cut_brothers_is_kox eB).
+    case eA: step => //[A'|A'][<-]/=; rewrite (step_not_dead dA eA).
+      by apply: HA eA.
+    by rewrite (cut_brothers_is_kox eA).
+  move=> A HA B0 B HB C s.
+  case eA: step => //[A'|A'].
+    move=> [<-]/=; rewrite (step_not_solved eA)//.
+    by move=> /(HA _ s)->//.
+  have [? sA]:= expand_solved_same eA; subst A'.
+  case eB: step => //[B'][<-]/=; rewrite sA.
+  by move=> /(HB _ _ eB) ->; rewrite orbT.
+Qed.
+
+Lemma tc_tree_aux_step_exp_ll u sP tyO X A B s1 O1 O2 N1 N2 d0 d1 dA dB:
   mutual_exclusion ->
   check_program_tree sP A ->
   complete_sig X tyO ->
   let tyN := X + tyO in
 
-
   valid_tree A ->
-  step u s1 A = r ->
-  is_kox A (get_tree r) ->
+  step u s1 A = Expanded B ->
+  is_kox A B = false ->
 
-   tc sP tyO A ->
-   tc sP tyN (get_tree r) ->
+  tc sP tyO A ->
+  tc sP tyN B ->
 
-  domf O `<=` domf tyO ->
-  compat_sig O tyO ->
+  domf O1 `<=` domf tyO ->
+  compat_sig O1 tyO ->
 
-  sigP sP tyO s1 O ->
+  domf O2 `<=` domf tyN ->
+  compat_sig O2 tyN ->
+  
+  more_precise O2 O1 ->
 
-  tc_tree_aux sP A tyO (d0, O) = (d1, N1) ->
-  tc_tree_aux sP (get_tree r) tyN (dA, O) = (dB, N2) ->
-  minD d1 dA = dA -> minD d1 dB = dB.
+  sigP sP tyO s1 O1 ->
+
+  tc_tree_aux sP A tyO (d0, O1) = (d1, N1) ->
+  tc_tree_aux sP B tyN (dA, O2) = (dB, N2) ->
+  (minD d0 dA = dA -> minD d1 dB = dB).
 Proof.
-  move=> ME CkP CM/= vA ++ tOA + DR CS SP tA.
-  case S: step => [A'|A'|A'|A'] <- {r}/=KOX tNA tA'; last first.
-  - have [? sA] := expand_solved_same _ S; subst A'.
-    have [] := tc_tree_aux_cat_min CM tOA tNA DR CS vA tA tA'.
-    destruct d1, dA => //.
-    by rewrite minD_comm => /(_ erefl)//.
-  - have [? sA] := expand_failed_same _ S; subst A'.
-    have [] := tc_tree_aux_cat_min CM tOA tNA DR CS vA tA tA'.
-    destruct d1, dA => //.
-    by rewrite minD_comm => /(_ erefl)//.
-  - have [] := tc_tree_aux_step_cb' CM vA S tOA tNA DR _ _ _ _ tA tA' => //.
-      by rewrite domf_cat fsubsetU//DR orbT.
-    by apply: compat_sig_catR => //.
-  - have [] := tc_tree_aux_step_exp ME CkP CM vA S _ tOA tNA DR CS _ _ _ _ tA tA' => //.
-      by rewrite domf_cat fsubsetU//DR orbT.
-    by apply: compat_sig_catR => //.
-Qed. *)
+  move=> ME + CM H.
+  rewrite/H {H}; rewrite domf_cat.
+  elim: A B s1 O1 O2 N1 N2 d0 d1 dA dB => //=.
+    move=> p c B s1 O1 O2 N1 N2 d0 d1 dA dB CkP _ [<-]{B}/=.
+    case c1: check_callable => [D S].
+    rewrite/big_or; case F: F => [|[]]//=; last by rewrite is_ko_big_or_aux.
+    move=> _ ????????; mv_sbst_catfA.
+    by rewrite (@minD_comm _ Func).
+  - move=> A HA s B HB C s1 O1 O2 N1 N2 d0 d1 dA dB /andP[ckA ckB].
+    move=> +++ /tc_orP[tOA tOB tOs] + DR1 CS1 DR2 CS2 MP SP.
+    case: ifP => [deadA vB|deadA /andP[vA bB]].
+      rewrite/mkOr => eB.
+      have: exists B', C = Or A s B' /\ (step u s B = Expanded B' \/ step u s B = CutBrothers B').
+        by move: eB; case: step => // ?[<-]; repeat eexists => //; auto.
+      move=> [B' [->{C} {}eB]]/=.
+      rewrite is_dead_is_ko//=.
+      case: ifP => kB; first by rewrite (is_ko_step _ kB) in eB; destruct eB.
+      case: eB => eB; last by rewrite (cut_brothers_is_kox eB).
+      move=> kBB' /tc_orP[tNA tNB tNs].
+      case: ifP => kB'; mv_sbst_catfA.
+        by destruct d0 => //=; rewrite (@minD_comm _ Func).
+      destruct d0, dA => //= _.
+      case tB: tc_tree_aux => [DB SB].
+      rewrite sigma2ctx_cat//.
+      case tB': tc_tree_aux => [DB' SB']/=.
+      have:= HB _ _ _ _ _ _ _ _ _ _ ckB vB eB kBB' tOB tNB _ _ _ _ _ _ tB tB'.
+      move=> ->//.
+      by apply: sigma2ctx_sub.
+      by apply: compat_sig_sigma2ctx.
+      by rewrite fsubsetU// sigma2ctx_sub// orbT.
+      by rewrite compat_sig_catR//(sigma2ctx_sub,compat_sig_sigma2ctx)//.
+      by apply: sigP_id.
+    move=> eA kAA'.
+    have: exists A', C = Or A' s B /\ step u s1 A = Expanded A'.
+      move: eA kAA'; case eA: step => //=[A'|A'][<-]//=; first by repeat eexists.
+      by rewrite (cut_brothers_is_kox eA).
+    move=> [A'[? {}eA]]; subst.
+    move=> /tc_orP[tNA tNB tNs].
+    rewrite (step_is_ko eA)//=.
+    rewrite sigma2ctx_cat// (step_keep_cut eA)//.
+    case tA: tc_tree_aux => [DA SA].
+    case tA': (tc_tree_aux _ A') => [DA' SA']/=.
+    have {}HA := HA _ _ _ _ _ _ _ _ _ _ ckA vA eA kAA' tOA tNA DR1 CS1 DR2 CS2 MP SP tA tA'.
+    case: ifP => kB; rewrite (andbT,andbF).
+      case kA': is_ko; mv_sbst_catfA; first by rewrite (@minD_comm _ Func).
+      by destruct d0 => //=/[dup]/HA; destruct DA => //=<-<-.
+    case: ifP => cA [??]; subst; last by [].
+    destruct d0, DA => //=.
+    case tB': (tc_tree_aux _ B) => [DB' SB']/=.
+    case tB: (tc_tree_aux _ B) => [DB SB].
+    have := tc_tree_aux_cat_mp _ _ _ _ _ _ _ _ _ tB tB'.
+    move=> []//.
+      by apply: sigma2ctx_sub.
+      by apply: compat_sig_sigma2ctx.
+      by rewrite domf_cat fsubsetU// sigma2ctx_sub//orbT.
+      by rewrite compat_sig_catR//(sigma2ctx_sub,compat_sig_sigma2ctx)//.
+      by apply: bbOr_valid.
+    destruct dA; last by [].
+    move=> /(_ erefl) H1 H2.
+    case: ifP => kA' [??] _; subst; first by [].
+    by destruct DB, DB', DA' => //=; auto.
+  move=> A HA B0 B HB C s1 O1 O2 N1 N2 d0 d1 dA dB /and3P[ckA ckB0 ckB].
+  move=> +++ /tc_andP[tOA tOB0 tOB] + DR1 CS1 DR2 CS2 MP SP.
+  move=> /andP[vA].
+  case: ifP => /=[sA vB|sA /eqP?]; subst.
+    rewrite succes_is_solved// success_is_ko//.
+    case eB: step => //[B'][<-{C}]/= kBB' /tc_andP[tNA tNB0 tNB].
+    rewrite sA (success_is_ko sA) (get_ctxS_tcE _ tOA tNA).
+    case tA: (tc_tree_aux _ A) => [DA SA].
+    case tA': (tc_tree_aux _ A) => [DA' SA']/=.
+    have [] := tc_tree_aux_cat_mp _ _ _ _ _ _ _ _ _ tA tA' => //.
+      by rewrite domf_cat.
+    move=> MINA MPA.
+    case tB: (tc_tree_aux _ B) => [DB SB].
+    case tB': (tc_tree_aux _ B') => [DB' SB']/=.
+    have {}HB : minD DA DA' = DA' -> minD DB DB' = DB'.
+      apply: HB ckB vB eB kBB' tOB tNB _ _ _ _ _ _ tB tB'.
+      by apply: get_ctxS_domf.
+      by apply: compat_sig_get_ctxS.
+      by rewrite -(get_ctxS_tcE _ tOA tNA) -domf_cat get_ctxS_domf// domf_cat.
+      by rewrite -(get_ctxS_tcE _ tOA tNA) compat_sig_get_ctxS.
+      by rewrite more_precise_get_ctxS//.
+      by apply: sigP_success.
+    have {}HB := HB (MINA _).
+    case: eqP => nA; first by mv_sbst_catfA.
+    case tB0: (check_atoms) => [DB0 SB0].
+    case tB0': (check_atoms) => [DB0' SB0']/=.
+    have [] := check_atoms_mp _ MPA tB0 tB0'.
+      have [_ H] := andP tOB0.
+      rewrite (tc_tree_aux_te_cat tA).
+      by apply: closed_in_atoms_cat.
+    move=> /(_ (MINA _)) MINB0 MPB0.
+    mv_sbst_catfA.
+    by destruct DB, DB0 => //=/[dup]/MINB0<-/HB<-.
+  case eA: step => //[A'|A']; last by rewrite !(expand_solved_same eA) in sA.
+  move=> [<-]{C}/= kAA' /tc_andP[tNA tNB0 tNB].
+  case tA: (tc_tree_aux _ A) => [DA SA].
+  case tA': (tc_tree_aux _ A') => [DA' SA']/=.
+  have {}HA := HA _ _ _ _ _ _ _ _ _ _ ckA vA eA kAA' tOA tNA DR1 CS1 DR2 CS2 MP SP tA tA'.
+  rewrite all_det_nfa_big_and.
+  case tB: (check_atoms) => [DB SB]/=.
+  case tB': (check_atoms _  SA') => [DB' SB']/=.
+  rewrite (step_is_ko eA)//=.
+  case: ifP => kA'; first by mv_sbst_catfA; rewrite (@minD_comm _ Func).
+  move=> ++ Hx.
+  have {}HA:= HA Hx.
+  destruct d1 => //= -[??]; subst.
+  have: DB' = Func by admit.
+  move=> ?; subst.
+  by rewrite (failed_success _ (is_kox_false_exp eA _)); congruence.
+Admitted.
 
 Lemma tc_weak {sP N T} (g: tc sP N T) : all_weak N. 
 Proof. by move/and3P: g => []. Qed.
@@ -4359,30 +4472,6 @@ Proof.
   have:= forallP H3.
   
 Admitted.
-
-Lemma is_kox_false_exp u s1 A B:
-  step u s1 A = Expanded B ->
-    is_kox A B = false ->
-      failed B.
-Proof. 
-  elim: A B s1 => //=.
-    move=> p c B s1[<-]; rewrite/big_or; case: F => //[[]]/=???.
-    by rewrite is_ko_big_or_aux.
-  - move=> A HA sm B HB C s.
-    case: ifP => dA.
-      case eB: step => //[B'|B'][<-]/=; rewrite dA; first by apply: HB eB.
-      by rewrite (cut_brothers_is_kox eB).
-    case eA: step => //[A'|A'][<-]/=; rewrite (step_not_dead dA eA).
-      by apply: HA eA.
-    by rewrite (cut_brothers_is_kox eA).
-  move=> A HA B0 B HB C s.
-  case eA: step => //[A'|A'].
-    move=> [<-]/=; rewrite (step_not_solved eA)//.
-    by move=> /(HA _ s)->//.
-  have [? sA]:= expand_solved_same eA; subst A'.
-  case eB: step => //[B'][<-]/=; rewrite sA.
-  by move=> /(HB _ _ eB) ->; rewrite orbT.
-Qed.
 
 Axiom saturate_sigP : forall sP O A u s r,
   tc sP O A ->
@@ -4498,6 +4587,8 @@ Proof.
       by rewrite success_failed in fB.
       by rewrite failed_expand in H.
       by rewrite failed_expand in H.
+    have:= tc_tree_aux_step_exp_ll ME ckP CM vA eA KAB tOA tNB DR CS _ _ _ _ dtA dtB.
+
     rename B0 into B'.
     (* TODO: here we know we have a failing call in the tree.
        this call will be represented by a KO and therefore, we
