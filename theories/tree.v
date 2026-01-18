@@ -187,37 +187,12 @@ Section tree_op.
   Lemma dead_cutr {a}: dead (cutr a) = dead a.
   Proof. elim: a => //= [A HA s B HB|A HA B0 B HB]; rewrite HA// HB//. Qed.
 
-  (* Lemma dead_cutl {a}: dead (cutl a) = dead a.
-  Proof. 
-    elim: a => //= [A HA s B HB|A HA B0 B HB].
-      by rewrite fun_if/=HA HB dead_cutr if_same.
-    rewrite fun_if/= HA !dead_cutr. if_same//.
-  Qed. *)
-
   (* IS_DEAD + IS_KO + FAILED + SUCCESS with cutr, cutl, dead *)
   Lemma is_dead_dead {A}: is_dead (dead A).
   Proof. elim: A => // A HA s B HB/=; rewrite HA//. Qed.
 
   Lemma is_ko_cutr {B}: is_ko (cutr B).
   Proof. elim: B => // A HA s B HB/=; rewrite HA HB//. Qed.
-
-  (* Lemma cutlr {A}: cutl (cutr A) = cutr A.
-  Proof.
-    elim: A => //.
-    - move=> A HA s B HB/=.
-      rewrite HA HB cutr2 if_same//.
-    - move=> A HA B0 B HB/=.
-      rewrite !cutr2 is_ko_success//is_ko_cutr//.
-  Qed. *)
-
-  (* Lemma cutrl {A}: cutr (cutl A) = cutr A.
-  Proof.
-    elim: A => //.
-    - move=> A HA s B HB/=.
-      rewrite fun_if/= HA HB cutr2 if_same//.
-    - move=> A HA B0 B HB/=.
-      rewrite fun_if/= HA HB !cutr2 if_same//.
-  Qed. *)
 
   Lemma is_dead_cutr {A}: is_dead (cutr A) = is_dead A.
   Proof. elim: A => //A HA s B HB/=; rewrite HA HB//. Qed.
@@ -244,18 +219,6 @@ Section tree_op.
       rewrite fun_if/= HA HC !success_cutr/=.
       case: ifP => //=->//.
   Qed.
-
-  (* Lemma cutl2 {a}: cutl (cutl a) = cutl a.
-  Proof.
-    elim: a => //=.
-    + move=> A HA s B HB.
-      rewrite (fun_if cutl)/= HA HB cutrl cutlr cutr2 if_same.
-      case: ifP => //->//.
-    + move=> A HA B0 B HB.
-      case: ifP => //= sA.
-        by rewrite success_cut sA HA HB.
-      rewrite success_cutr !cutr2//.
-  Qed. *)
 
   Lemma is_ko_cutl {B}: is_ko B -> is_ko (cutl B).
   Proof. 

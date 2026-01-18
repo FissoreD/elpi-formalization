@@ -3,28 +3,7 @@ From det Require Import lang.
 From det Require Import tree tree_prop.
 From det Require Import finmap ctx lang.
 
-(* Lemma tm2RC_kp {t1 k} : 
-  tm2RC t1 = Some (RCallable_Kp k) -> t1 = Tm_Kp k.
-Proof.
-  case: t1 k => //=.
-  - move=> k1 k2 []; congruence.
-  - move=> h b k; case X: tm2RC => //.
-Qed. *)
-
-(* Lemma deref_kp {s1 t k}:
-  tm2RC (deref s1 t) = Some (RCallable_Kp k) ->
-    (t = Tm_Kp k) \/ (exists v, t = Tm_V v /\ sigma s1 v = Some (Tm_Kp k)).
-Proof.
-  case: t k => //=.
-  - move=> k1 k2 []; left; congruence.
-  - move=> v k; case x: sigma => [t1|]//=.
-    move=>/tm2RC_kp?; subst.
-    right; by eexists.
-  - move=> h b k; case X: tm2RC => //.
-Qed. *)
-
 Section checker.
-  (* Definition sigV := V -> option S. *)
 
   Fixpoint is_det_sig (sig:S) : bool :=
     match sig with
@@ -59,14 +38,12 @@ Section checker.
     end. 
 
   (* There is cut and after the cut there are only call to Det preds *)
-
   Fixpoint check_atoms (sP :sigT) (s: seq A) :=
     match s with
     | [::] => false
     | ACut :: xs => all (check_atom sP) xs || check_atoms sP xs
     | ACall _ :: xs => check_atoms sP xs
     end.
-
 
   Definition check_rule sP head prems :=
     (rcallable_is_det sP head == false) || 
@@ -75,6 +52,7 @@ Section checker.
   Definition check_rules sP rules :=
     all (fun x => check_rule sP x.(head) x.(premises)) rules.
 
+  (* TODO: put pr in argument intead of a forall *)
   Definition check_program sP := 
     forall pr, check_rules sP (rules pr).
 End checker.
@@ -114,7 +92,8 @@ Section check.
     | x :: xs => (check_atom sP x || has_cut_seq xs) && det_tree_seq sP xs
     end.
 
-  (* a tree is deterministic if it call deterministic atoms. 
+  (** DOC:
+    a tree is deterministic if it calls deterministic atoms. 
     delicate cases are And and Or subtrees.
 
     "((A, !, A') ; B) , C" is OK due to the cut in LHS of Or
