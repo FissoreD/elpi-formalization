@@ -4009,7 +4009,7 @@ Proof.
     by destruct d1 => //=.
   rewrite merge_comm.
   by apply: more_precise_mergeL.
-Admitted.
+Qed.
 
 (* TODO: this proof is a consequence of the previous + the fact
   that step = Expanded and is-kox cannot improve the determinacy in tc_tree_aux 
