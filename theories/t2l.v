@@ -78,14 +78,6 @@ match A with
   let lA   := t2l A s bt in
   let sB0 := s in
   if lA is more_alt (slA, x) xs then 
-    (* lA is split into the current goal x and the future alternatives xs *)
-    (* in a valid tree lB0 has length 0 or 1 (it is a (potentially killed) base and) *)
-    (* match lB0 with *)
-    (* | no_alt =>  *)
-      (* the reset point is empty: it kill all the alternatives in the cut-to *)
-      (* let lB   := t2l B slA bt in *)
-      (* make_lB01 lB (kill x) *)
-    (* | more_alt (sB0,hd) no_alt => *)
       (* the reset point exists, it has to be added to all cut-to alternatives *)
       let xz := add_deepG bt hd x in
       let xs := add_deep bt hd xs in 
