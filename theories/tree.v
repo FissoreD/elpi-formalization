@@ -308,8 +308,8 @@ Section main.
   Fixpoint step s A : (step_tag * tree) :=
     match A with
     (* meta *)
-    | OK => (Success, OK)
-    | Bot | Dead => (Failure, A)
+    | OK             => (Success, OK)
+    | Bot | Dead     => (Failure, A)
     
     (* lang *)
     | TA _ cut       => (CutBrothers, OK)
@@ -318,17 +318,17 @@ Section main.
     (* recursive cases *)
     | Or A sB B =>
         if is_dead A then 
-          let r := (step sB B) in
-          (if is_cb r.1 then Expanded else r.1, Or A sB r.2)
+          let rB := (step sB B) in
+          (if is_cb rB.1 then Expanded else rB.1, Or A sB rB.2)
         else
-        let SA := step s A in
-        (if is_cb SA.1 then Expanded else SA.1 , Or SA.2 sB (if is_cb SA.1 then cutr B else B))
+        let rA := step s A in
+        (if is_cb rA.1 then Expanded else rA.1, Or rA.2 sB (if is_cb rA.1 then cutr B else B))
     | And A B0 B =>
-        let SA := step s A in
-        if SA.1 == Success then 
-          let r := (step (get_substS s SA.2) B) in
-          (r.1, And (if is_cb r.1 then cutl A else A) B0 r.2)
-        else (SA.1, And SA.2 B0 B)
+        let rA := step s A in
+        if is_sc rA.1 then 
+          let rB := (step (get_substS s rA.2) B) in
+          (rB.1, And (if is_cb rB.1 then cutl A else A) B0 rB.2)
+        else (rA.1, And rA.2 B0 B)
     end.
 
   (* Next_alt takes a tree "T" returns a new tree "T'" representing the next

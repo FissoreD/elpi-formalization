@@ -24,5 +24,6 @@ theories/elpi_equiv.v
 theories/elpi_valid_state.v
 
 # theories/tree_valid_cut.v
+theories/check_fo.v
 theories/check2.v
 # theories/check.v

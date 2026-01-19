@@ -3527,7 +3527,7 @@ Proof.
       rewrite (fun_if success) success_cut sA if_same/=.
       by rewrite HB//; case: ifP; rewrite// get_ctxS_cutl.
     rewrite 2!fun_if/= [success _]fun_if success_cut sA if_same/=.
-    case: eqP => //= H /andP[sA' sB].
+    case: ifP => //= H /andP[sA' sB].
     by rewrite get_ctxS_base_and (if_same, base_and_big_and)// HA//.
 Qed.
 
