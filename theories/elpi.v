@@ -225,8 +225,8 @@ Global Notation "(( x ))" := (consC x nilC)
   : SE.
 
 Inductive G := 
-  | call : program -> Callable -> G
-  | cut : alts -> G
+  | callE : program -> Callable -> G
+  | cutE : alts -> G
 with alts :=
   | no_alt
   | more_alt : (Sigma * goals) -> alts -> alts
@@ -248,8 +248,8 @@ with eqbGs t1 t2 :=
   end
 with eqbG t1 t2 :=
   match t1, t2 with
-  | call p1 t1, call p2 t2 => (p1 == p2) && (t1 == t2)
-  | cut ca1, cut ca2 => eqbA ca1 ca2
+  | callE p1 t1, callE p2 t2 => (p1 == p2) && (t1 == t2)
+  | cutE ca1, cutE ca2 => eqbA ca1 ca2
   | _, _ => false
   end.
 
@@ -691,22 +691,18 @@ Qed.
 
 Definition if_cut F g :=
   match g with
-  | cut a => F a
+  | cutE a => F a
   | _ => true
   end.
 
 Definition apply_cut F g :=
   match g with
-  | cut a => cut (F a) 
+  | cutE a => cutE (F a) 
   | _ => g
   end.
 
 
-Definition add_ca alts a :=
-  match a with
-  | cut a1 => cut (a1 ++ alts)
-  | call pr t => call pr t
-  end.
+Definition add_ca alts := apply_cut (fun x => x ++ alts).
 
 Definition save_goals (a: alts) (gs b:goals) := map (add_ca a) b ++ gs.
 
@@ -714,14 +710,14 @@ Definition save_alts (a : alts) (gs: goals) (bs : alts) :=
   map (fun '((s,x): Sigma * goals) => (s, save_goals a gs x)) bs.
 
 Definition empty_ca_G g :=
-  match g with call _ _ | cut no_alt => true | _ => false end.
+  match g with callE _ _ | cutE no_alt => true | _ => false end.
 Definition empty_caG goals := all empty_ca_G goals.
 Definition empty_ca alts := all (fun x => empty_caG (snd x)) alts.
 
 Definition a2g p A :=
   match A with
-  | ACut => cut nilC
-  | ACall t => call p t
+  | cut => cutE nilC
+  | call t => callE p t
   end.
 
 Fixpoint a2gs p (b: seq A) := 
@@ -745,13 +741,13 @@ Variable u : Unif.
 
 Inductive nur : Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
 | StopE s a : nur s nilC a s a
-| CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s ((cut ca) ::: gl) a s1 r
+| CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s ((cutE ca) ::: gl) a s1 r
 | CallE p s s1 a b bs gl r t : 
   F u p t s = [:: b & bs ] -> 
     nur b.1 (save_goals a gl (a2gs1 p b)) (save_alts a gl ((aa2gs p) bs) ++ a) s1 r -> 
-      nur s ((call p t) ::: gl) a s1 r
+      nur s ((callE p t) ::: gl) a s1 r
 | FailE p s s1 s2 t gl a al r : 
-  F u p t s = [::] -> nur s1 a al s2 r -> nur s ((call p t) ::: gl) ((s1, a) ::: al) s2 r.
+  F u p t s = [::] -> nur s1 a al s2 r -> nur s ((callE p t) ::: gl) ((s1, a) ::: al) s2 r.
 
 Lemma nur_consistent {s G x xs1 xs2 s1 s2} :
   nur s G x s1 xs1 -> nur s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.

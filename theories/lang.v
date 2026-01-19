@@ -100,8 +100,7 @@ Record R_ {A} := mkR { head : RCallable; premises : list A }.
 Arguments mkR {_} _ _.
 derive R_.
 Inductive A :=
-  | ACut
-  | ACall : Callable -> A.
+  | cut | call : Callable -> A.
 derive A.
 HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
 
@@ -264,7 +263,7 @@ Fixpoint vars_tm t : {fset V} :=
   end.
 
 Definition vars_atom A : {fset V} :=
-  match A with ACut => fset0 | ACall c => vars_tm (Callable2Tm c) end.
+  match A with cut => fset0 | call c => vars_tm (Callable2Tm c) end.
 
 Definition varsU (l: seq {fset V}) :=
   foldr (fun a e => a `|` e) fset0 l.

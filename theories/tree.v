@@ -5,11 +5,10 @@ From det Require Export lang.
 
 
 Inductive tree :=
-  | Bot : tree
-  | OK : tree
-  | Dead : tree
-  | CallS : program  -> Callable -> tree
-  | CutS : tree
+  | Bot
+  | OK
+  | Dead
+  | TA : program  -> A -> tree
   | Or  : tree -> Sigma -> tree -> tree  (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
   | And : tree -> (program * seq A) -> tree -> tree  (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
   (* | PiImpl : V -> R_ A -> A -> A. *)
@@ -40,7 +39,7 @@ Section tree_op.
   Fixpoint dead A :=
     match A with
     | Dead => Dead
-    | OK | Bot | CutS | CallS _ _ => Dead
+    | OK | Bot | TA _ _ => Dead
     | And A B0 B => And (dead A) B0 B
     | Or A s B => Or (dead A) s (dead B)
     end.
@@ -48,7 +47,7 @@ Section tree_op.
   Fixpoint is_dead A :=
     match A with
     | Dead => true
-    | OK | Bot | CutS | CallS  _ _ => false
+    | OK | Bot | TA _ _ => false
     (* Note: "is_dead A || (success A && dead B)" is wrong
       A counter example is: "(OK \/ p) /\ Dead"
       In this case, a valid alternative is "p /\ B0"
@@ -60,7 +59,7 @@ Section tree_op.
   Fixpoint is_ko A :=
     match A with
     | Dead | Bot => true
-    | OK | CutS | CallS  _ _ => false
+    | OK | TA _ _ => false
     | And A B0 B => is_ko A
     | Or A s B => is_ko A && is_ko B
     end.
@@ -68,7 +67,7 @@ Section tree_op.
   Fixpoint success (A : tree) : bool :=
     match A with
     | OK => true
-    | CutS | CallS _ _ | Bot | Dead => false
+    | TA _ _ | Bot | Dead => false
     | And A _ B => success A && success B
     (* We need to keep the if condition to reflect the behavior of step:
       For example, an interesting proprety of step is:
@@ -88,7 +87,7 @@ Section tree_op.
         tree into a "Failure Bot" (it does not introduce a Dead tree).
     *)
     | Bot | Dead => true
-    | CutS | CallS _ _ | OK => false
+    | TA _ _ | OK => false
     | And A _ B => failed A || (success A && failed B)
     (* We keep the if condition to have the right behavior in next_alt *)
     | Or A _ B => if is_dead A then failed B else failed A
@@ -97,7 +96,7 @@ Section tree_op.
 
   Fixpoint cutr A :=
     match A with
-    | CutS | CallS _ _| Bot => Bot
+    | TA _ _| Bot => Bot
     | OK => Bot
     | Dead => Dead
     | And A B0 B => And (cutr A) B0 B
@@ -107,7 +106,7 @@ Section tree_op.
   (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
     match A with
-    | CutS | CallS _ _ | Bot => Bot
+    | TA _ _ | Bot => Bot
     | Dead | OK => A
     | And A B0 B =>
       if success A then And (cutl A) B0 (cutl B)
@@ -290,16 +289,10 @@ Proof. by case: B. Qed.
 Lemma get_tree_Or A s B : get_tree (mkOr A s B) = Or A s (get_tree B).
 Proof. by case: B. Qed.
 
-Definition A2CallCut pr (A:A) : tree :=
-  match A with
-  | ACut => CutS
-  | ACall tm => CallS pr tm
-  end.
-
 Fixpoint big_and pr (a : list A) : tree :=
   match a with
   | [::] => OK
-  | x :: xs => And (A2CallCut pr x) (pr, xs) (big_and pr xs)
+  | x :: xs => And (TA pr x) (pr, xs) (big_and pr xs)
   end.
 
 Fixpoint big_or_aux pr (r : list A) (l : seq (Sigma * R)) : tree :=
@@ -327,7 +320,7 @@ Section main.
 
   Fixpoint get_substS s A :=
     match A with
-    | CutS | CallS _ _ | Bot | OK | Dead => s
+    | TA _ _ | Bot | OK | Dead => s
     | Or A s1 B => if is_dead A then get_substS s1 B else get_substS s A
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
@@ -340,8 +333,8 @@ Section main.
     | Dead => Failure Dead
     
     (* lang *)
-    | CutS       => CutBrothers OK
-    | CallS pr t => Expanded (big_or pr s t)
+    | TA _ cut       => CutBrothers OK
+    | TA pr (call t) => Expanded (big_or pr s t)
 
     (* recursive cases *)
     | Or A sB B =>
@@ -371,7 +364,7 @@ Section main.
     match A with
     | Bot | Dead => None
     | OK => if b then None else Some OK
-    | CutS | CallS _ _ => Some A
+    | TA _ _ => Some A
     | And A (pr, B0) B =>
       let build_B0 A := Some (And A (pr, B0) (big_and pr B0)) in
       let reset := obind build_B0 (next_alt (success A) A) in

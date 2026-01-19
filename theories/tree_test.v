@@ -3,7 +3,7 @@ From det Require Import finmap ctx lang tree tree_prop.
 
 (* Notation "X &&& Y" := (And X _ Y) (at level 3).
 Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).
-Notation "` X" := ((ACall X)) (at level 3). *)
+Notation "` X" := ((call X)) (at level 3). *)
 
 Definition prop := b (d Pred).
 Definition build_arr m := arr m prop prop.
@@ -48,7 +48,7 @@ Section Test1.
       mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 2))) [::] ;
       mkR (RCallable_Comb (RCallable_Kp r) (Tm_Kd (IKd 2))) [::] ;
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1)))
-        [:: ACall (Callable_Comb (Callable_Kp p) v_X) ; ACall (Callable_Comb (Callable_Kp r) v_X) ] 
+        [:: call (Callable_Comb (Callable_Kp p) v_X) ; call (Callable_Comb (Callable_Kp r) v_X) ] 
     ].
 
   Goal unify unif v_X (Tm_Kd (IKd 1)) empty = Some s1.
@@ -78,7 +78,7 @@ Section Test5.
 
   Definition p_test1 : program := build_progr [:: 
       mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 0))) 
-        [::ACall (Callable_Comb (Callable_Kp q) v_X); ACut] ;
+        [::call (Callable_Comb (Callable_Kp q) v_X); cut] ;
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1))) [::] ;
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
     ].
@@ -103,7 +103,7 @@ Section Test6.
   Definition p_test2 : program := build_progr [:: 
       mkR ((RCallable_Kp pred_true)) [::];
       mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 0))) 
-        [::ACall (Callable_Comb (Callable_Kp q) v_X);ACall ((Callable_Kp pred_true)); ACut] ;
+        [::call (Callable_Comb (Callable_Kp q) v_X);call ((Callable_Kp pred_true)); cut] ;
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1))) [::] ;
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
   ].
@@ -123,6 +123,7 @@ Section Test6.
   Qed. *)
 End Test6.
 
+Definition CutS := TA (build_progr [::]) cut.
 
 Section Test2.
   Goal step unif empty (Or OK empty OK) = Success (Or OK empty OK) . by []. Qed.

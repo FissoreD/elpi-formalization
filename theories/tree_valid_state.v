@@ -7,7 +7,7 @@ Section valid_tree.
   
   Fixpoint base_and s :=
     match s with
-    | And (CallS _ _ | CutS) r r1 => (big_and r.1 r.2 == r1) && base_and r1 (* should also say something about the program *)
+    | And (TA _ _) r r1 => (big_and r.1 r.2 == r1) && base_and r1 (* should also say something about the program *)
     | OK => true
     | _ => false
     end.
@@ -50,7 +50,7 @@ Section valid_tree.
 
   Fixpoint valid_tree s :=
     match s with
-    | CutS | CallS _ _ | OK | Bot => true
+    | TA _ _ | OK | Bot => true
     | Dead => false
     | Or A _ B => 
       if is_dead A then valid_tree B
@@ -63,8 +63,8 @@ Section valid_tree.
           B == B'
     end.
 
-  Goal forall x r, (valid_tree (And CutS x r)) -> is_ko r = false.
-  Proof. move=> x r/= /eqP->; rewrite is_ko_big_and//. Qed.
+  Goal forall x r pr, (valid_tree (And (TA pr cut) x r)) -> is_ko r = false.
+  Proof. move=> x r/= _ /eqP->; rewrite is_ko_big_and//. Qed.
 
   Lemma is_dead_valid_tree {A} : is_dead A -> valid_tree A = false.
   Proof.
@@ -79,7 +79,7 @@ Section valid_tree.
   Proof. apply: contraPF => /is_dead_valid_tree->//. Qed.
 
   Lemma base_and_valid {A} : base_and A -> valid_tree A.
-  Proof. by elim: A => //=T _; case: T => //[p c|] [pr1 l] B HB /andP[/eqP<-]//=. Qed.
+  Proof. by elim: A => //=-[]//= _ _ _ +++ /andP[/eqP->]. Qed.
 
   Lemma valid_tree_big_and {pr l} : valid_tree (big_and pr l).
   Proof. apply: base_and_valid base_and_big_and. Qed.
@@ -98,8 +98,7 @@ Section valid_tree.
     rewrite/bbOr.
     case: base_or_aux_ko; rewrite ?orbT//orbF.
     elim: l s => //=; clear.
-    + move=> []//a l; rewrite /base_or_aux //= base_and_big_and eqxx//.
-      case: a => //.
+    + by case => //= _ l; rewrite eqxx base_and_big_and.
     + by move=> [s r] rs IH r1 /=; rewrite IH base_and_big_and.
   Qed.
 
@@ -133,7 +132,7 @@ Section valid_tree.
     elim B => //; clear.
     + move=> A HA s B HB/=/andP[bA bB].
       by rewrite base_and_is_dead///bbOr bB HA//base_and_base_or_aux.
-    + by move=> s; case: s => //[p t|] Ha B0 B HB /=/andP[/eqP->]bB//.
+    + by case => //= _ _ _ +++ /andP[/eqP->].
     elim: B => //.
     + move=> A HA s B HB /= /andP [bA bB].
       by rewrite HB//HA?base_and_ko_base_or_aux_ko// /bbOr bB orbT if_same.
@@ -236,7 +235,7 @@ Section valid_tree.
   Proof.
     move=>+<-; clear r.
     elim: A s => //; try by move=> s r // *; subst.
-    + by move=> ? ? ?? *;subst => //=; rewrite valid_tree_big_or.
+    + by move=> /= p []//=>; rewrite valid_tree_big_or.
     + move=> A IHA s B IHB s1/=.
       case:ifP => //[dA vB|dA/andP[vA bB]].
         rewrite get_tree_Or/=dA IHB//.
@@ -315,7 +314,7 @@ Section valid_tree.
     elim: A => //. 
     - move=> A HA s B HB /= /andP[bA bB].
       rewrite base_and_dead//next_alt_aux_base_and//.
-    - move=>A; case: A => //[p a|] _ [pr l] B HB/= /andP[/eqP <- bB]//=.
+    - move=>A; case: A => //= p a _ [pr l] B HB/= /andP[/eqP <- bB]//=.
   Qed.
 
   Lemma valid_tree_next_alt {A B b}: 
@@ -325,7 +324,6 @@ Section valid_tree.
     elim: A  B b => //=.
     + move=> B b _; case: ifP => // _ [<-]//.
     + move=> p c B _ _ [<-]//.
-    + move=> B _ _ [<-]//.
     + move=> A HA s B HB  C b/=.
       case: ifP => //[dA vB|dA /andP[vA bB]].
         case X: next_alt => //[D] [<-]/=.

@@ -63,6 +63,7 @@ Section RunP.
   Proof.
     elim: A s1 B => //.
     + move=> /= ?? [] <-//.
+    + move=> p []//.
     + move=> A HA s B HB s1 C/=.
       case: ifP => dA/=.
         case X: step =>//-[?];subst => /=.
@@ -83,7 +84,7 @@ Section RunP.
   Proof.
     move=> + <-.
     elim: A s; clear; try by move=> //=.
-    - move=> p t s/= _; apply dead_big_or.
+    - move=> p [] // t s/= _; apply dead_big_or.
     + move=> A HA s B HB s1 => //=.
       case: ifP => dA/=.
         rewrite get_tree_Or/=dA; apply: HB.
@@ -106,6 +107,7 @@ Section RunP.
     elim: A s1 B => //.
     + move=> s1 B[<-]//.
     + move=> s1 B[<-]//.
+    + move=> p []//.
     + move=> A HA s B HB s1 C/=.
       case: ifP => dA/=.
         case X: step =>//-[?];subst => /=.
@@ -269,7 +271,6 @@ Section RunP.
     elim: A D b => //=.
     - move=> D []//[<-]//.
     - move=>/= p c d _ []// <-//.
-    - move=> D _ [<-]//.
     - move=> A HA s B HB C b/=.
       case: ifP => dA.
         case X: next_alt => //[D][<-]/=; rewrite dA/=.

@@ -64,19 +64,6 @@ Section NurEqiv.
   Qed.
   Print Assumptions tree_to_elpi.
 
-
-Lemma s2l_add_ca {A s bt1 xs}:
-  t2l A s bt1 = add_ca_deep bt1 xs ->
-    forall bt2, t2l A s bt2 = add_ca_deep bt2 xs.
-Proof.
-  elim: A s bt1 xs => //=.
-  - by move=> _ bt1 []//=[]//.
-  - by move=> s bt1 []//=[]//a[]//[]//[]//.
-  - by move=> s bt []//[]/=a []//=[]//[]//.
-  - by move=> p c s bt []//[]// a []//= []//= p1 c1 []//[]//[]//.
-  - move=> s bt []//[]// s1 []// []//= [|[]]//=[]//[|[]]//; case: bt => //=.
-Abort.
-
 Section clean_ca.
   Fixpoint clean_ca (bt:alts) (ats: alts) : alts :=
     match ats with
@@ -90,8 +77,8 @@ Section clean_ca.
     end
   with clean_ca_G bt g :=
     match g with
-    | call pr t => call pr t 
-    | cut ca => cut ((take (size ca - size bt) (clean_ca bt ca)))
+    | callE pr t => callE pr t 
+    | cutE ca => cutE ((take (size ca - size bt) (clean_ca bt ca)))
     end.
 
   Lemma clean_ca_size {bt L}: size (clean_ca bt L) = size L
@@ -330,6 +317,7 @@ Section clean_ca.
     valid_tree A -> clean_ca bt (t2l A s (x ++ bt)) = t2l A s (clean_ca bt x).
   Proof.
     elim: A s x bt => //=.
+    - by move=> p [].
     - move=> A HA s B HB s1 x bt.
       set X:= (t2l _ _ _ ++ _).
       by rewrite clean_ca_add_ca.
@@ -383,8 +371,8 @@ Section next_cut.
       else
       let '(b1, A') := next_cut A in
       (b1, And A' B0 B)
-    | CutS => (true, OK)
-    | OK | CallS _ _ | Dead | Bot => (false, A)
+    | TA _ cut => (true, OK)
+    | OK | TA _ (call _) | Dead | Bot => (false, A)
     end.
 
   Lemma next_cut_success {A B}: success A -> next_cut A = B -> success B.2.
@@ -407,6 +395,7 @@ Section next_cut.
   Proof.
     move=> ++ <-; clear B.
     elim: A => //=.
+    - by move=> p [].
     - move=> A HA s B HB.
       case: ifP => [dA fB vB|dA fA /andP[vA bB]].
         by rewrite is_dead_is_ko//=dA HB.
@@ -438,6 +427,7 @@ Section next_cut.
       next_cut A = (false, A).
   Proof.
     elim: A s bt s1 xs => //=.
+    - by move=> p [].
     - move=> A HA s B HB s1 bt s2 xs.
       case: ifP => [dA vB fB|dA /andP[vA bB] fA].
         rewrite t2l_dead// is_dead_is_ko//=.
@@ -466,14 +456,14 @@ Section next_cut.
 
   Lemma next_cut_s2l {A B s bt s1 ca gl a}:
     failed A = false -> valid_tree A ->
-      clean_ca bt (t2l A s bt) = (s1, (cut ca) ::: gl) ::: a ->
+      clean_ca bt (t2l A s bt) = (s1, (cutE ca) ::: gl) ::: a ->
       next_cut A = B ->
         clean_ca bt (t2l B.2 s bt) = (s1, gl) ::: ca /\
         if B.1 then step u s A = CutBrothers B.2
         else step u s A = Expanded B.2.
   Proof.
     elim: A B s bt s1 ca gl a => //=.
-    - by move=> [b B] s bt s1 c gl a _ _ [????][??]; subst.
+    - by move=> p []// [b B] s bt s1 c gl a _ _ [????][??]; subst.
     - move=> A HA s B HB [b C] s1 bt s2 c gl a.
       case: ifP => [dA fB vB|dA fA /andP[vA bB]].
         rewrite t2l_dead => //=.
@@ -599,8 +589,8 @@ End next_cut.
 Section next_callS.
   Fixpoint next_callS u s A := 
     match A with
-    | OK | Dead | Bot | CutS => A
-    | CallS pr t => (big_or u pr s t)
+    | OK | Dead | Bot | TA _ cut => A
+    | TA pr (call t) => (big_or u pr s t)
     | Or A sx B => if is_dead A then Or A sx (next_callS u s B) else Or (next_callS u s A) sx B
     | And A B0 B =>
       if success A then And A B0 (next_callS u s B) else And (next_callS u s A) B0 B
@@ -609,7 +599,7 @@ Section next_callS.
   Lemma is_dead_next_callS {s A}: is_dead (next_callS u s A) = is_dead A.
   Proof.
     elim: A => //=.
-    - move=> p c; rewrite/big_or; case: F => [|[]]//.
+    - move=> p []// c; rewrite/big_or; case: F => [|[]]//.
     - move=> A HA s1 B HB; case: ifP => dA/=.
         rewrite dA HB//.
       by rewrite HA dA.
@@ -621,7 +611,7 @@ Section next_callS.
   Proof.
     move=> ++ <-; clear B.
     elim: A s => //=.
-    - by move=> p c s _ _; rewrite valid_tree_big_or.
+    - by move=> p []// c s _ _; rewrite valid_tree_big_or.
     - move=> A HA s1 B HB s2.
       case: ifP => [dA vB fB|dA /andP[vA bB] fA]/=.
         by rewrite dA HB.
@@ -636,10 +626,10 @@ Section next_callS.
 
   Lemma failed_next_callS {s A sx bt sz p t gl a}:
     valid_tree A -> failed A = false ->
-      t2l A sx bt = (sz, (call p t) ::: gl) ::: a -> failed (next_callS u s A).
+      t2l A sx bt = (sz, (callE p t) ::: gl) ::: a -> failed (next_callS u s A).
   Proof.
     elim: A sx bt gl a => //=.
-    - move=> *; rewrite failed_big_or//.
+    - move=> ?[]// *; rewrite failed_big_or//.
     - move=> A HA s1 B HB sx bt gl a; case: ifP => [dA vB fB|dA /andP[vA bB] fA].
         rewrite t2l_dead//.
         case X: t2l => [|[sg [|[p' c'|?] rs]]gs]//[?????]; subst.
@@ -672,13 +662,13 @@ Section next_callS.
 
   Lemma next_callS_s2l {A s3 s1 bt p t gl a}:
     failed A = false -> valid_tree A ->
-      clean_ca bt (t2l A s3 bt) = (s1, (call p t) ::: gl) ::: a ->
+      clean_ca bt (t2l A s3 bt) = (s1, (callE p t) ::: gl) ::: a ->
         clean_ca bt (t2l (next_callS u s1 A) s3 bt) = 
           (save_alts a gl (aa2gs p (F u p t s1)) ++ a) /\
         step u s3 A = Expanded (next_callS u s1 A).
   Proof.
     elim: A s3 bt s1 p t gl a => //=.
-    - move=> p c s3 bt s1 p1 c1 gl a _ _ [?????]; subst.
+    - move=> p []// c s3 bt s1 p1 c1 gl a _ _ [?????]; subst.
       rewrite cats0; split => //.
       rewrite what_I_want?valid_tree_big_or///big_or.
       case B: F => [|[sx x]xs]//=.

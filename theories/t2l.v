@@ -17,8 +17,8 @@ with add_ca_deep_goals bt gl :=
   end
 with add_ca_deep_g bt g :=
   match g with
-  | call pr t => call pr t 
-  | cut ca => cut ((add_ca_deep bt ca) ++ bt)
+  | callE pr t => callE pr t 
+  | cutE ca => cutE ((add_ca_deep bt ca) ++ bt)
   end.
 
 Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
@@ -33,11 +33,11 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
   end
   with add_deep_G bt l A :=
   match A with
-  | cut ca => 
+  | cutE ca => 
     let s := size ca - size bt in
     let xx := (add_deep bt l (ca)) in
-    cut (make_lB0 (take s xx) l ++ drop s ca)
-  | call pr t => call pr t 
+    cutE (make_lB0 (take s xx) l ++ drop s ca)
+  | callE pr t => callE pr t 
   end.
 
 Definition kill (A: goals) := map (apply_cut (fun x => nilC)) A.
@@ -67,8 +67,8 @@ match A with
 | OK => (s, nilC) ::: nilC
 | Bot => nilC
 | Dead => nilC
-| CutS => (s, ((cut nilC) ::: nilC)) ::: nilC
-| CallS pr t => (s, ((call pr t) ::: nilC)) ::: nilC
+| TA _ cut => (s, ((cutE nilC) ::: nilC)) ::: nilC
+| TA pr (call t) => (s, ((callE pr t) ::: nilC)) ::: nilC
 | Or A s1 B => 
   let lB := t2l B s1 nilC in
   let lA := t2l A s lB in
@@ -116,8 +116,8 @@ Section test.
   (* Definition g p := (And (Or OK s1 CutS) p OK). *)
 
   Goal forall s3 l p,
-    t2l (And (Or OK s1 CutS) (p, [:: ACut]) Bot) s3 l = 
-      t2l (And (Or Dead s1 CutS) (p, [:: ACut]) CutS) s3 l.
+    t2l (And (Or OK s1 (TA p cut)) (p, [:: cut]) Bot) s3 l = 
+      t2l (And (Or Dead s1 (TA p cut)) (p, [:: cut]) (TA p cut)) s3 l.
   Proof.
     move=>s3 l/= [] r s.
     rewrite /=!cat0s ?cat0s.

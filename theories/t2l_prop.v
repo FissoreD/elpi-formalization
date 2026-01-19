@@ -124,10 +124,8 @@ Section NurProp.
     Proof.
       elim: A => //=.
       - by eexists.
-      - move=> s; case: s => //=[p a|] _ B0 B HB/andP[/eqP ? bB]; subst; have [hd H]/= := HB bB.
-          by eexists => l s/=; rewrite H//= !cat0s?H//.
-        eexists => l s/=; rewrite H//= !cat0s?H//.
-        rewrite sub0n drop0// H//.
+      - move=> []//= p a _ B0 B HB /andP[/eqP ? bB]; subst; have [hd {}HB]/= := HB bB.
+        by case: a => //=; repeat eexists => l s; rewrite make_lB0_empty1/=cat0s HB//!cats0//.
     Qed.
 
     Lemma s2l_big_and p1 r1 s l: 
@@ -144,13 +142,10 @@ Section NurProp.
     Proof.
       elim: A B => //=.
         move=> B _ /(_ nilC empty) [<-]//.
-      move=> a; case: a => //=[p a|] _ B0 B HB /=C /andP[? bB]; subst.
-        have [hd H]:= base_and_t2l bB.
-        move: HB => /(_ _ bB) -/(_ _ H) H1 /(_ nilC empty).
-        rewrite H//=/empty_caG => -[?]; subst; rewrite/empty_caG all_cat//.
+      move=> []//= p a _ B0 B HB /=C /andP[/eqP? bB]; subst.
       have [hd H]:= base_and_t2l bB.
       move: HB => /(_ _ bB) -/(_ _ H) H1 /(_ nilC empty).
-      rewrite H//=/empty_caG => -[?]; subst; rewrite/empty_caG all_cat//.
+      by case: a => [|c]/=; rewrite make_lB0_empty1/= cats0 H => -[<-]//=.
     Qed.
 
     Lemma bbAnd_t2l {A}:
@@ -184,13 +179,10 @@ Section NurProp.
       have [hd H]:= base_and_t2l H1.
       rewrite H all_cons.
       rewrite (base_and_empty_ca H1 H)//.
-    - move=> A; case: A => //=[p a|] _ B0 B HB s1 /andP[/eqP? bB]; subst.
-        have [hd H]:= base_and_t2l bB.
-        rewrite H/=/all//=/empty_caG/all/=.
-        have:= (base_and_empty_ca bB H); rewrite /empty_caG/all/= => H1; rewrite H1//.
+    - move=> []//= p a _ B0 B HB s1 /andP[/eqP? bB]; subst.
       have [hd H]:= base_and_t2l bB.
-      rewrite H/=/all//=/empty_caG/all/=.
-      have:= (base_and_empty_ca bB H); rewrite /empty_caG/all/= => H1; rewrite H1//.
+      have:=  (base_and_empty_ca bB H).
+      by case: a => [|c]/=; rewrite H /all/=/empty_caG/all/= andbT.
   Qed.
 
   Lemma empty_caG_add_deepG l hd xs:
@@ -210,7 +202,7 @@ Section NurProp.
     - move=> B bt _ [<-]//.
     - move=> A HA s' B HB C bt /andP[H1 H2].
       rewrite base_and_dead// next_alt_aux_base_and// => -[<-]//=.
-    - move=> A; case: A => //=[p c|] _ [p1 l] B HB C bt /andP[/eqP? bB][<-]; subst => //.
+    - move=> []//p a _ [p1 l] B HB C bt /andP[/eqP? bB][<-]; subst => //.
   Qed.
 
   Lemma success_t2l {A s m} s1:
@@ -260,6 +252,7 @@ Section NurProp.
       size (t2l A s1 l1) = size (t2l A s2 l2).
     Proof.
       elim: A s1 l1 s2 l2 => //=.
+      - by move=> ? [].
       - move=> A HA s B HB s1 l1 s2 l2; rewrite !size_add_ca_deep!size_cat.
         by f_equal; auto.
       - move=> A HA B0 B HB /=s1 l1 s2 l2.
@@ -293,6 +286,7 @@ Section NurProp.
     valid_tree A -> failed A = false -> t2l_cons A.
   Proof.
     elim: A => //=; try by do 3 eexists.
+    - by move=> ? []; repeat eexists.
     - move=> A HA s B HB/=++s1 l.
       case: ifP => [dA vB fB|dA /andP[vA bB] fA]/=.
         rewrite (t2l_dead dA)/=.
@@ -331,7 +325,7 @@ Section NurProp.
       move=>/orP[]/andP[bA bB].
         rewrite base_and_dead// next_alt_aux_base_and//.
       rewrite base_and_ko_t2l// base_or_aux_ko_t2l//.
-    - move=> A; case: A => //=[p a|] _ [p' l'] B HB s s1 l//=.
+    - move=> []//=p a _ [p' l'] B HB s s1 l//=.
   Qed.
 
   Lemma expand_failure_next_alt_none_empty {A s1 s3 E l b}:
@@ -341,6 +335,7 @@ Section NurProp.
           t2l A s3 l = nilC.
   Proof.
     elim: A s1 s3 E l b => //.
+    - by move=> p [].
     - move=> A HA s B HB/=s1 s2 E l b.
       case: ifP => //[dA vB|dA/andP[vA bB]].
         case eB: step => //[B'][<-]/=.
@@ -379,9 +374,8 @@ Section NurProp.
       step u s A = Failure B ->
           t2l A s1 l = t2l B s1 l.
   Proof.
-    elim: A s s1 B l => //.
-    - move=> /= ???? [<-]//.
-    - move=> /= ???? [<-]//.
+    elim: A s s1 B l; only 1-3: by move => >/=//[<-].
+    - move=> p []//.
     - move=> A HA s B HB /= s1 s2 C l.
       case: ifP => dA.
         case eB: step => // [B'] [<-]/=.
@@ -408,7 +402,7 @@ Section NurProp.
       rewrite base_and_dead//.
       rewrite (next_alt_aux_base_and bA)//.
       move=>[<-]//=; subst; rewrite base_and_dead//.
-    - move=> A; case: A => //[p a|] _ [p' l'] B HB s2 C l/=/andP[? bB][<-]//.
+    - move=> []// p a _ [p' l'] B HB s2 C l/=/andP[? bB][<-]//.
   Qed.
 
   Lemma add_ca_deep_map_empty ca X:
@@ -578,7 +572,7 @@ Section NurProp.
     valid_tree A -> step u s1 A = CutBrothers B -> ((get_substS s1 A = get_substS s1 B)).
   Proof.
     elim: A B s1 => //=.
-    - move=> B s1 _ [<-]//.
+    - move=> p []// B s1 _ [<-]//.
     - move=> A HA s B HB C s1;  case: ifP => dA; case: step => //.
     - move=> A HA B0 B HB C s1 /andP[vA].
       case e: step => //[A'|A'].
@@ -608,13 +602,13 @@ Section NurProp.
   Lemma s2l_CutBrothers {s1 A B} sA l1:
     valid_tree A -> step u s1 A = CutBrothers B -> 
       Texists x tl, 
-        ((t2l A sA l1 = (get_substS sA A, (cut nilC) ::: x) ::: tl) /\
+        ((t2l A sA l1 = (get_substS sA A, (cutE nilC) ::: x) ::: tl) /\
           (forall l sB, (t2l B sB l = (get_substS sB B, x) ::: nilC)) /\ 
             (empty_caG x)).
   Proof.
     move=>/=.
     elim: A sA s1 B l1 => //.
-    - move=> //=?????[<-]/=; by do 2 eexists.
+    - move=> p []//=?????[<-]/=; by do 2 eexists.
     - move=> A HA s B HB sA s1 C l1 /=.
       by case: ifP => [dA vB|dA/andP[vA bB]]; case eB: step => //[s1' B'][??]; subst.
     - move=> A HA B0 B HB sA s1 C l1/=/andP[vA].
@@ -648,6 +642,7 @@ Section NurProp.
     success A = false -> failed A = false -> t2l A s bt = (s2, nilC) ::: xs -> False.
   Proof.
     elim: A s bt s2 xs => //=.
+    - by move=> p [].
     - move=> A HA s B HB s1 bt s2 x.
       case: ifP => [dA vB sB fB|dA /andP[vA bB] sA fA].
         rewrite t2l_dead//=.
@@ -677,7 +672,7 @@ Section NurProp.
     step u s1 A = CutBrothers B -> failed B = false.
   Proof.
     elim: A B s1 => //=.
-    - move=> B _ _ [<-]//.
+    - by move=> p []// ???[<-].
     - move=> A HA s B HB C s1.
       case: ifP => //[dA fB|dA fA]; case e: step => //.
     - move=> A HA B0 B HB C s1 /andP[vA].
@@ -699,6 +694,7 @@ Section NurProp.
   Proof.
     elim: A s bt s2 xs => //=.
     - by move=> s1 _ s2 xs _ _ [<-].
+    - by move=> ? [].
     - move=> A HA s B HB s1 bt s2 x.
       case: ifP => [dA vB fB|dA /andP[vA bB] fA]/=.
         rewrite (t2l_dead dA)//=.
@@ -727,11 +723,12 @@ Section NurProp.
 
   Lemma xxx {A l ca tl alts r} {s1 s2} l1:
     valid_tree A ->
-    t2l A s1 l = ((s2, ((cut ca) ::: tl)) ::: alts) ->
+    t2l A s1 l = ((s2, ((cutE ca) ::: tl)) ::: alts) ->
       step u s1 A = r -> size(t2l (get_tree r) s1 l1) <> 0.
   Proof.
     move=>++<-; clear r.
     elim: A l l1 ca tl alts s1 s2 => //=.
+    - by move=> ?[].
     - move=> A HA s0 B HB l l1 ca tl alts s1 s2.
       case: ifP => //[dA vB|dA/andP[vA bB]].
         rewrite (t2l_dead dA)/=.
@@ -756,7 +753,7 @@ Section NurProp.
         by rewrite SA//.
       move=> {}HB.
       move=>[???]; subst.
-      move: SA; fConsG (cut ca') gs; fConsA (s2, (cut ca') ::: gs) tl' => SA.
+      move: SA; fConsG (cutE ca') gs; fConsA (s2, (cutE ca') ::: gs) tl' => SA.
       have:= HA _ SB _ _ _ _ _ vA SA.
       case e: step => [A'|A'|A'|A']/=; 
       rewrite size_add_ca_deep size_cat -/SB ?SB'; case X: size => //[n].
@@ -820,11 +817,12 @@ Section NurProp.
 
   Lemma s2l_Expanded_cut {A B s0 s3 ca x tl l1}:
     valid_tree A -> step u s0 A = Expanded B ->
-      t2l A s0 l1 = (s3, ((cut ca) ::: x)) ::: tl ->
+      t2l A s0 l1 = (s3, ((cutE ca) ::: x)) ::: tl ->
       ((get_substS s0 A = get_substS s0 B) * (failed B = false) * 
         ( (t2l B s0 l1 ++ l1 = (s3, x) ::: ca))%type )%type.
   Proof.
     elim: A s0 B s3 ca x tl l1 => //.
+    - by move=> p [].
     - move=> A HA s B HB s0 C s3 c1 x tl l1 /=.
       case: ifP => //=[dA vB|dA /andP[vA bB]].
         rewrite !(t2l_dead dA)/=.
@@ -924,7 +922,7 @@ Section NurProp.
   Lemma s2l_Expanded_call {s s3 A B l p t gs xs}:
     valid_tree A ->
     step u s A = Expanded B -> 
-    t2l A s l = (s3, (call p t) ::: gs) ::: xs ->
+    t2l A s l = (s3, (callE p t) ::: gs) ::: xs ->
     ((s3 = (get_substS s A)) * ((if F u p t (get_substS s A) is w :: ws then
       (failed B * (t2l B s l = (w.1, save_goals (xs++l) gs (a2gs1 p w)) ::: 
         ((save_alts (xs++l) gs (aa2gs p ws)) ++ xs)))%type
@@ -933,7 +931,7 @@ Section NurProp.
       .
   Proof.
     elim: A B s s3 l p t gs xs => //=.
-    - move=> p t C s1 s3 l p1 t1 gs xs ? [?][??]???; subst.
+    - move=> p []// t C s1 s3 l p1 t1 gs xs ? [?][??]???; subst.
       rewrite failed_big_or/big_or; case: F => [|[s4 r1] rs]/=; auto.
       rewrite !cats0 !cat0s !(s2l_big_or empty)/=cat0s make_lB0_empty2; auto.
     - move=> A HA s B HB C s1 s3 l p t gs xs.

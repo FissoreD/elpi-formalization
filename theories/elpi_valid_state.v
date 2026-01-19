@@ -23,8 +23,8 @@ Section NurValidState.
   Fixpoint valid_caG (gs:goals) (a:alts) (bt:alts) {struct gs} :=
     match gs with
     | no_goals => true
-    | more_goals (call _ _) xs => valid_caG xs a bt
-    | more_goals (cut ca) xs =>
+    | more_goals (callE _ _) xs => valid_caG xs a bt
+    | more_goals (cutE ca) xs =>
       if suffix bt ca then
         suffix ca (a ++ bt) &&
         let n := size ca - size bt in
@@ -60,7 +60,7 @@ Section NurValidState.
   Proof. rewrite//. Qed.
 
 
-  Goal forall s r1 r2 z, valid_ca ((s, (cut r1) ::: ((cut r2) ::: nilC)) ::: z ++ r1) -> suffix r2 r1.
+  Goal forall s r1 r2 z, valid_ca ((s, (cutE r1) ::: ((cutE r2) ::: nilC)) ::: z ++ r1) -> suffix r2 r1.
   Proof.
     move=> s r1 r2 z/=.
     rewrite/valid_ca/=/valid_caA/= !suffix0s -!andbA.
@@ -441,6 +441,9 @@ Section NurValidState.
   Proof. move=>/base_or_aux_ko_t2l-><-//. Qed.
 
 
+  Lemma empty_caG_cat A B: empty_caG (A ++ B) = empty_caG A && empty_caG B.
+  Proof. by rewrite/empty_caG all_cat. Qed.
+
   Lemma base_or_aux_valid_caA A s0 r rs:
     base_or_aux A -> t2l A s0 nilC = r -> valid_caA r rs nilC.
   Proof.
@@ -455,15 +458,10 @@ Section NurValidState.
       move=> /(_ _ IsList_alts _ IsList_alts)//.
       case: eqP => // _.
       move=>/andP[->]; rewrite bbOr_empty_ca///bbOr bB//.
-    - move=> A; case: A => //[p a|] rs l B HB rs' s0/= /andP[/eqP<-] bB;
+    - move=> A; case: A => //p a rs l B HB rs' s0/= /andP[/eqP<-] bB;
       have [h H]:= base_and_t2l bB;
       have H1:=base_and_empty_ca bB H.
-        rewrite H/= (empty_caG_valid _ H1)//.
-        case: eqP => //= _; move: H1.
-        rewrite /empty_caG all_cat/= make_lB0_empty1 => ->//.
-      rewrite H/= cats0 size_nil take0 suffix0s/= (empty_caG_valid _ H1)//.
-      case: eqP => // _; move: H1.
-      rewrite /empty_caG cats0 make_lB0_empty1 all_cat/= => ->//.
+      by case: a rs => //=[|c] _; rewrite make_lB0_empty1 !cats0/=H/= (empty_caG_valid _ H1) ?suffix0s empty_caG_cat H1/= if_same.
   Qed.
 
   Lemma bbOr_valid_caA A s0 r rs:
@@ -486,7 +484,7 @@ Section NurValidState.
   Proof.
     move=> <-; clear r.
     elim: A l s0 => //=.
-    - move=> l s0 _.
+    - move=> p [] // l s0 _ /=.
       rewrite suffix0s suffixs0/=.
       case: eqBP => //->//.
     - move=> A HA s B HB l s0/=.
