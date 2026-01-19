@@ -74,9 +74,8 @@ match A with
   let lA := t2l A s lB in
   add_ca_deep bt (lA ++ lB)
 | And A B0 B =>
-  let hd := r2l B0.1 B0.2 in
-  let lA   := t2l A s bt in
-  let sB0 := s in
+  let hd  := r2l B0.1 B0.2 in
+  let lA  := t2l A s bt in
   if lA is more_alt (slA, x) xs then 
       (* the reset point exists, it has to be added to all cut-to alternatives *)
       let xz := add_deepG bt hd x in
