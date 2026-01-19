@@ -127,11 +127,11 @@ Lemma expanded_a2t u ign1 L:
 Proof. case: L => [|[s g]gs]/=; constructor => //. Qed.
 
 Lemma run_a2t_ign {u s2 D b2 sIgn1 L} sIgn2:
-  runb u sIgn1 (a2t_ L) s2 D b2 ->
-    Texists b2, runb u sIgn2 (a2t_ L) s2 D b2.
+  run u sIgn1 (a2t_ L) s2 D b2 ->
+    Texists b2, run u sIgn2 (a2t_ L) s2 D b2.
 Proof.
   case: L => //=.
-    move=> /is_ko_runb -/(_ isT)//.
+    move=> /is_ko_run -/(_ isT)//.
   move=> [s g]gs.
   set X:= (Or _ empty _); generalize X; clear X => X H.
   apply: run_or_is_ko_left_ign_subst _ H => //.
@@ -139,9 +139,9 @@ Qed.
 
 Lemma run_success_add_ca_deep {u s s1 B D bt bt1 res b}:
   success B ->
-    runb u s1 (a2t_ (state_to_list B s bt)) res D b ->
+    run u s1 (a2t_ (state_to_list B s bt)) res D b ->
     Texists D0 b0,
-      runb u s1 (a2t_ (add_ca_deep bt1 (state_to_list B s bt))) res D0 b0 .
+      run u s1 (a2t_ (add_ca_deep bt1 (state_to_list B s bt))) res D0 b0 .
 Proof.
   elim: B s s1 D bt bt1 res b => //=.
   - move=> s s1 D _ _ res b _.
@@ -154,7 +154,7 @@ Admitted.
 
 Lemma run_a2t_success {C} u s1 bt:
   success C ->
-  Texists D b2, runb u s1 (a2t_ (state_to_list C s1 bt)) (get_substS s1 C) D b2.
+  Texists D b2, run u s1 (a2t_ (state_to_list C s1 bt)) (get_substS s1 C) D b2.
 Proof.
   elim: C s1 bt => //=.
   - move=> s1 _; do 2 eexists.
@@ -175,11 +175,11 @@ Proof.
   - move=> A HA B0 _ B HB.
 Admitted.
 
-Lemma runb_a2t_expandedb {u s A s' B b bt}:
+Lemma run_a2t_expandedb {u s A s' B b bt}:
   valid_state A ->
   expandedb u s A (Done s' B) b ->
     Texists C b2,
-    runb u s (a2t_ (state_to_list A s bt)) s' C b2.
+    run u s (a2t_ (state_to_list A s bt)) s' C b2.
 Proof.
   remember (Done _ _) as d eqn:Hd => +H.
   elim: H s' B Hd; clear => //=.
@@ -215,16 +215,16 @@ Admitted.
 Inductive equiv_run : state -> state -> Prop :=
   | equiv_run_fail u s A B : dead_run u s A -> dead_run u s B -> equiv_run A B
   | equiv_run_success u s1 s2 A B A' B' b1 b2 :
-    runb u s1 A s2 (Some A') b1 -> runb u s1 B s2 (Some B') b2 -> equiv_run A' B' -> equiv_run A B.
+    run u s1 A s2 (Some A') b1 -> run u s1 B s2 (Some B') b2 -> equiv_run A' B' -> equiv_run A B.
 
 Lemma xx u s1 s2 A B b1: 
   valid_state A ->
-  runb u s1 A s2 B b1 -> 
-    Texists C b2, runb u s1 (a2t_ (state_to_list A s1 nilC)) s2 C b2. (*/\ equiv_run B C*)
+  run u s1 A s2 B b1 -> 
+    Texists C b2, run u s1 (a2t_ (state_to_list A s1 nilC)) s2 C b2. (*/\ equiv_run B C*)
 Proof.
   move=> +H; elim: H; clear.
   - move=> s s' A B C b HA HB vA.
-    apply: runb_a2t_expandedb vA HA.
+    apply: run_a2t_expandedb vA HA.
   - move=> s1 s2 A B C r b1 b2 b3 HA HB HC IH ? vA; subst.
     have /= vB := valid_state_expanded _ vA HA.
     have vC := valid_state_next_alt vB HB.
@@ -236,8 +236,8 @@ Admitted.
 
 Lemma zz u s1 s2 A B b1 bt: 
   valid_state A ->
-  runb u s1 A s2 B b1 -> 
-    Texists C b2, runb u s1 (a2t_ (state_to_list A s1 bt)) s2 C b2. (*/\ equiv_run B C*)
+  run u s1 A s2 B b1 -> 
+    Texists C b2, run u s1 (a2t_ (state_to_list A s1 bt)) s2 C b2. (*/\ equiv_run B C*)
 Proof.
   elim: A B s1 s2 b1 bt => //=.
   - by repeat eexists; eauto.
@@ -298,7 +298,7 @@ Proof.
   (* OLD PROOF *)
   (* move=> +H; elim: H; clear.
   - move=> s s' A B C b HA HB vA.
-    apply: runb_a2t_expandedb vA HA.
+    apply: run_a2t_expandedb vA HA.
   - move=> s1 s2 A B C r b1 b2 b3 HA HB HC IH ? vA; subst.
     have /= vB := valid_state_expanded _ vA HA.
     have vC := valid_state_next_alt vB HB.

@@ -375,18 +375,18 @@ Section main.
   Definition build_s (s:Sigma) (oA: option tree) := Option.map (fun _ => s)  oA.
 
 
-  Inductive runb : Sigma -> tree -> option Sigma -> tree -> bool -> Type :=
-    | run_done {s1 s2 A B}        : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> runb s1 A (Some s2) B false
-    | run_cut  {s1 s2 r A B n}    : step s1 A = (CutBrothers, B) -> runb s1 B s2 r n -> runb s1 A s2 r true
-    | run_step {s1 s2 r A B n}    : step s1 A = (Expanded,    B) -> runb s1 B s2 r n -> runb s1 A s2 r n
+  Inductive run : Sigma -> tree -> option Sigma -> tree -> bool -> Type :=
+    | run_done {s1 s2 A B}        : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> run s1 A (Some s2) B false
+    | run_cut  {s1 s2 r A B n}    : step s1 A = (CutBrothers, B) -> run s1 B s2 r n -> run s1 A s2 r true
+    | run_step {s1 s2 r A B n}    : step s1 A = (Expanded,    B) -> run s1 B s2 r n -> run s1 A s2 r n
     | run_fail   {s1 s2 A B r n}     : 
           failed A -> next_alt false A = Some B ->
-              runb s1 B s2 r n -> runb s1 A s2 r n
+              run s1 B s2 r n -> run s1 A s2 r n
     | run_dead {s1 A} : 
           failed A -> next_alt false A = None ->
-              runb s1 A None (dead A) false.
+              run s1 A None (dead A) false.
 
-  Definition dead_run s1 A : Type := forall B n, runb s1 A None B n.
+  Definition dead_run s1 A : Type := forall B n, run s1 A None B n.
 End main.
 
 Hint Resolve is_dead_dead : core.

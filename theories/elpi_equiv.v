@@ -9,7 +9,7 @@ Section NurEqiv.
 
   Lemma tree_to_elpi A s B s1 b sIgn:
     valid_tree A ->
-      runb u s A (Some s1) B b -> 
+      run u s A (Some s1) B b -> 
         Texists x xs,
           t2l A s nilC = x ::: xs /\
           nur u x.1 x.2 xs s1 (t2l B sIgn nilC).
@@ -826,7 +826,7 @@ Lemma elpi_to_tree {s1 s2} {alts alts_left : alts} {andg : goals}  :
   valid_tree t ->
   (t2l t s nilC) = ((s1,andg) ::: alts) -> 
   Texists t1 n,
-    runb u s t (Some s2) t1 n /\ t2l t1 s nilC = alts_left.
+    run u s t (Some s2) t1 n /\ t2l t1 s nilC = alts_left.
 Proof.
   elim; clear.
   - move=> s a s1 A vA /= H.

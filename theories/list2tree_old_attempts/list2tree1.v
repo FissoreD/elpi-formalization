@@ -345,7 +345,7 @@ end
 
 
 Definition l2tP {u s xs a s' a'} : elpi_annot u s xs a s' a' ->
-  Texists b n, runb u s (la2t ((n,s,xs):::a)) s' (la2t a') b.
+  Texists b n, run u s (la2t ((n,s,xs):::a)) s' (la2t a') b.
 Admitted.
 
 Lemma init_valid  u s g a s1 a1 (H : elpi u s g a s1 a1) :
@@ -353,7 +353,7 @@ Lemma init_valid  u s g a s1 a1 (H : elpi u s g a s1 a1) :
 Admitted.
 
 Lemma final p u s c s1 a1 (H : elpi u s ((call p c):::nilC) nilC s1 a1) :
-  runb u s (CallS p c) s1 (la2t (annotate_left_alts H)) 0.
+  run u s (CallS p c) s1 (la2t (annotate_left_alts H)) 0.
 Proof.
   have H' := l2l'P H.
   have [b [n H1]] := l2tP H'.

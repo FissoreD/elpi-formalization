@@ -499,9 +499,9 @@ Section check.
   Qed.
 
   Definition is_det A := forall b s s' B,
-    runb u s A s' B b -> is_dead B.
+    run u s A s' B b -> is_dead B.
 
-  Lemma runb_next_alt {sP A}: 
+  Lemma run_next_alt {sP A}: 
     check_program sP -> 
       det_tree sP A -> is_det A.
   Proof.
@@ -524,7 +524,7 @@ Section check.
       is_det (TA p (call t)).
   Proof.
     move=> H1 fA HA.
-    apply: runb_next_alt H1 _ HA.
+    apply: run_next_alt H1 _ HA.
     apply: fA.
   Qed.
 

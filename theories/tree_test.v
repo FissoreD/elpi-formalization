@@ -59,7 +59,7 @@ Section Test1.
     move=> //.
   Qed.
 
-  (* Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) (Some s2) r false.
+  (* Goal Texists r, run unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) (Some s2) r false.
   Proof.
     eexists.
     apply: run_step => //.
@@ -83,7 +83,7 @@ Section Test5.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
     ].
 
-  (* Goal Texists r, runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false)))) (Some s1) r false /\ is_dead r.
+  (* Goal Texists r, run unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false)))) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
     apply: run_step => //.
@@ -108,7 +108,7 @@ Section Test6.
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
   ].
 
-  (* Goal Texists r, runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false)))) ) (Some s1) r false /\ is_dead r.
+  (* Goal Texists r, run unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false)))) ) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
     apply: run_step => //.
@@ -128,20 +128,20 @@ Definition CutS := TA (build_progr [::]) cut.
 Section Test2.
   Goal step unif empty (Or OK empty OK) = (Success, Or OK empty OK). by []. Qed.
 
-  Goal runb unif empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) false.
+  Goal run unif empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) false.
     apply: run_step => //=.
     apply: run_done => //.
   Qed.
 
   Goal forall r, 
-    runb unif empty (Or (CutS) empty r) (Some empty) (dead (Or (CutS) empty r)) false.
+    run unif empty (Or (CutS) empty r) (Some empty) (dead (Or (CutS) empty r)) false.
     move=> r.
     apply: run_step => //.
     apply: run_done => //=.
     rewrite next_alt_cutr /= dead_cutr//.
   Qed.
 
-  Goal runb unif empty (Or OK empty (Or OK empty OK)) (Some empty) ((Or Dead empty (((Or OK empty OK))))) false.
+  Goal run unif empty (Or OK empty (Or OK empty OK)) (Some empty) ((Or Dead empty (((Or OK empty OK))))) false.
   Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)

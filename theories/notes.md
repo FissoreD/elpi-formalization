@@ -146,14 +146,14 @@ three functions and four inductives to animate a program. Specifically:
   whether, during the resolution of the query, there is a superficial cut (i.e.,
   a cut whose effect should be visible outside the current tree).
 
-- **runb**: This inductive represents the interpreter of our language. It
+- **run**: This inductive represents the interpreter of our language. It
   iterates over **expandedb** until reaching a success. If **expandedb** results
   in a failure, it backtracks and continues calling **expandedb**.
 
 - **next_alt**: Backtracking is enabled by the `next_alt` procedure. It takes a
   tree and erases (i.e., replaces with `Dead`) the internal nodes representing
   a previous failure. It also returns the substitution for launching the new
-  tree within **runb**. `next_alt` is implemented with knowledge of how
+  tree within **run**. `next_alt` is implemented with knowledge of how
   `step` works, choosing which atoms to keep or erase based on their status
   (e.g., `is_dead` or `failed`).
    > Note 1: The function can be significantly simplified under the assumption
@@ -190,7 +190,7 @@ three functions and four inductives to animate a program. Specifically:
    > \lor_{X=2} \top) \land_{r X} \bot)$ is returned after calling
    > `clean_success`.
 
-- **clean_success**: This function is used by **runb**. If the interpretation
+- **clean_success**: This function is used by **run**. If the interpretation
   of a tree succeeds, the returned tree is cleaned of its successful path.
 
 ### Useful lemmas
@@ -216,14 +216,14 @@ The more interesting and used are:
 
 ## Tests: run_test.v
 
-This file contains tests for the execution of **runb** in a custom environment
+This file contains tests for the execution of **run** in a custom environment
 where a Unif module is defined for simple term unification. The file is expected
 to pass all tests without issues.
 
 ## Properties of run: run_prop.v
 
 In `run_prop`, we tree properties of the interpreter, proving that `expandedb`
-and `runb` are consistent, i.e., they always produce the same outputs given the
+and `run` are consistent, i.e., they always produce the same outputs given the
 same inputs (`expanded_consistent` and `run_consistent`).
 
 The `same_structure` postulate asserts that the structure of a tree is
@@ -453,7 +453,7 @@ The function takes a tree and a list of alternatives (`bt` for backtrack
 points), which are used to construct the "cut-to" in `Or` nodes. Initially,
 `bt` is an empty list.
 
-The `OK` and `Top` nodes represent future success in `runb`, so they are
+The `OK` and `Top` nodes represent future success in `run`, so they are
 collapsed into `[::[::]]`, corresponding to success in the list semantics.
 Similarly, `Dead` and `Bot` represent future failures and are translated into
 an empty list.
@@ -612,12 +612,12 @@ The primary lemma we aim to prove is as follows:
 Lemma runElpi A :
   forall s B s1 b,
     valid_tree A ->
-    runb s A s1 B b ->
+    run s A s1 B b ->
       exists x xs, tree_to_list A [::] = x :: xs /\
         nur s x xs s1 (tree_to_list B [::]).
 ```
 
-The proof proceeds by induction on `runb`, addressing the cases of success and
+The proof proceeds by induction on `run`, addressing the cases of success and
 backtracking separately. These cases are handled using auxiliary lemmas.
 
 # WIP:
