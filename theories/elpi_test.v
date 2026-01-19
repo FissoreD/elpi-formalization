@@ -403,9 +403,8 @@ Goal forall l p,
   let s := ((Or (Or Dead empty (TA p cut)) empty OK)) in
   let bt := of_alt([::] :: l) in
   t2l s empty (of_alt l) = of_alt[:: [:: cutE bt]; [::]] /\ 
-    t2l (odflt Bot (next_alt true (get_tree (step u empty s)))) empty (of_alt l) ++ (of_alt l) = bt.
+    t2l (odflt Bot (next_alt true (step u empty s).2)) empty (of_alt l) ++ (of_alt l) = bt.
 Proof.
-  simpl get_tree.
   move=>//=.
 Qed.
 

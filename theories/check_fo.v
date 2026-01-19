@@ -262,7 +262,7 @@ Section check.
   Qed.
 
   Lemma step_has_cut_help {A s}: 
-    has_cut A -> has_cut (get_tree (step u s A)) \/ is_cutbrothers (step u s A).
+    has_cut A -> has_cut (get_tree (step u s A)) \/ is_cb (step u s A).
   Proof.
     elim: A s; try by move=> /=; auto.
     - move=> A HA s1 B HB s /=/andP[kA kB].
@@ -282,7 +282,7 @@ Section check.
   Qed.
 
   Lemma step_keep_cut {A s}: 
-    has_cut A -> is_cutbrothers (step u s A) = false -> 
+    has_cut A -> is_cb (step u s A) = false -> 
       has_cut (get_tree (step u s A)).
   Proof. move/step_has_cut_help => /(_ s)[]//->//. Qed.
 

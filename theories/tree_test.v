@@ -126,7 +126,7 @@ End Test6.
 Definition CutS := TA (build_progr [::]) cut.
 
 Section Test2.
-  Goal step unif empty (Or OK empty OK) = Success (Or OK empty OK) . by []. Qed.
+  Goal step unif empty (Or OK empty OK) = (Success, Or OK empty OK). by []. Qed.
 
   Goal runb unif empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) 0.
     apply: run_step => //=.
@@ -145,7 +145,7 @@ Section Test2.
   Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
-  Goal step unif empty (Or (Or Dead empty (CutS)) empty OK) = Expanded (Or (Or Dead empty OK) empty OK) .
+  Goal step unif empty (Or (Or Dead empty (CutS)) empty OK) = (Expanded, (Or (Or Dead empty OK) empty OK)).
   Proof.
     move=>//=.
   Qed.

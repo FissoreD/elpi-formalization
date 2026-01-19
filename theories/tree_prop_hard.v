@@ -666,7 +666,7 @@ Section s.
       apply: run_done => //.
       rewrite nB1//.
     - move=> s1 s3 r A B n + _ IH A1 B01 B1 ? A2 B02 B2 ?; subst => /= + sA1 nA1.
-      rewrite succes_is_solved//=.
+      rewrite succes_step//=.
       case eA1: step => //[B1'][?]; subst.
       have {IH} := IH _ _ _ erefl _ _ _ erefl.
       rewrite next_alt_cutl success_cut => /(_ sA1 erefl).
@@ -676,7 +676,7 @@ Section s.
       repeat split.
       apply: run_cut eA1 rB1'.
     - move=> s1 s3 r A B n + _ IH A1 B01 B1 ? A2 B02 B2 ?; subst => /= + sA1 nA1.
-      rewrite succes_is_solved//=.
+      rewrite succes_step//=.
       case eA1: step => //[B1'][?]; subst.
       have {IH} := IH _ _ _ erefl _ _ _ erefl.
       move => /(_ sA1 nA1).
@@ -765,9 +765,9 @@ Section s.
     - move=> s1 s2 r A B /step_solved_same [[??]+] ? C D E ?; subst => /=.
       move=> /andP[sC sE].
       repeat eexists.
-        apply: run_done (succes_is_solved _ _ sC) erefl.
+        apply: run_done (succes_step _ _ sC) erefl.
       rewrite sC; left; apply: run_done erefl.
-      apply: succes_is_solved sE.
+      apply: succes_step sE.
     - move=> s1 s2 s3 r A B n + rB IH C D E ?; subst => /=.
       case X: step => //[s1' C'|s1' C'].
         move=> [??]; subst.
@@ -832,7 +832,7 @@ Section s.
       have [sm[r1[b1 [{}IH [b2[r2 H2]]]]]]:= IH _ _ _ erefl.
       do 3 eexists; split.
         apply: run_done erefl.
-        apply: succes_is_solved sD.
+        apply: succes_step sD.
       case: H2 => H2; repeat eexists.
         right; eexists; apply: next_alt_runb Y _.
         eauto.

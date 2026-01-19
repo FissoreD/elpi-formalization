@@ -140,15 +140,15 @@ three functions and four inductives to animate a program. Specifically:
   execution of a query will eventually succeed or fail (both cases refer to
   outputs without backtracking).
 
-- **stepedb**: This inductive iterates over the `step` function until it
-  reaches either a **Failure** or a **Success**. The last argument of `stepedb`
+- **expandedb**: This inductive iterates over the `step` function until it
+  reaches either a **Failure** or a **Success**. The last argument of `expandedb`
   is a bool indicating
   whether, during the resolution of the query, there is a superficial cut (i.e.,
   a cut whose effect should be visible outside the current tree).
 
 - **runb**: This inductive represents the interpreter of our language. It
-  iterates over **stepedb** until reaching a success. If **stepedb** results
-  in a failure, it backtracks and continues calling **stepedb**.
+  iterates over **expandedb** until reaching a success. If **expandedb** results
+  in a failure, it backtracks and continues calling **expandedb**.
 
 - **next_alt**: Backtracking is enabled by the `next_alt` procedure. It takes a
   tree and erases (i.e., replaces with `Dead`) the internal nodes representing
@@ -222,74 +222,74 @@ to pass all tests without issues.
 
 ## Properties of run: run_prop.v
 
-In `run_prop`, we tree properties of the interpreter, proving that `stepedb`
+In `run_prop`, we tree properties of the interpreter, proving that `expandedb`
 and `runb` are consistent, i.e., they always produce the same outputs given the
-same inputs (`steped_consistent` and `run_consistent`).
+same inputs (`expanded_consistent` and `run_consistent`).
 
 The `same_structure` postulate asserts that the structure of a tree is
-preserved by `step` and `stepedb`, i.e., they maintain the structure of
+preserved by `step` and `expandedb`, i.e., they maintain the structure of
 `And` and `Or` nodes.
 
-We prove `steped_and_complete`:
+We prove `expanded_and_complete`:
 ```
-stepedb s (And A B0 B) (Done s' C) b ->
+expandedb s (And A B0 B) (Done s' C) b ->
   exists s'' A' B' b1 b2, 
-    stepedb s A (Done s'' A') b1 /\ 
-      stepedb s'' B (Done s' B') b2 /\ 
+    expandedb s A (Done s'' A') b1 /\ 
+      expandedb s'' B (Done s' B') b2 /\ 
         b = b1 || b2`.
 ```
 
-We prove `steped_and_correct`:
+We prove `expanded_and_correct`:
 ```
-stepedb s0 A (Done s1 B) -> 
-  stepedb s1 C (Done s2 D) b ->
-    stepedb s0 (And A B0 C) 
+expandedb s0 A (Done s1 B) -> 
+  expandedb s1 C (Done s2 D) b ->
+    expandedb s0 (And A B0 C) 
       (Done s2 (And (if b then cutl B else B) (if b then cutl B0 else B0) D)).
 ```
 
-We prove `steped_and_fail`:
+We prove `expanded_and_fail`:
 ```
-stepedb s (And A B0 B) (Failed C) ->
-  (exists C', stepedb s A (Failed C')) \/ 
-    (exists s' A' B', stepedb s A (Done s' A') /\ stepedb s' B (Failed B')).
+expandedb s (And A B0 B) (Failed C) ->
+  (exists C', expandedb s A (Failed C')) \/ 
+    (exists s' A' B', expandedb s A (Done s' A') /\ expandedb s' B (Failed B')).
 ```
 > TODO: Refine this proof to specify that C is `And A' B0' B'` and eliminate
 > the existential quantifiers `C', A', B'`.
 
-We prove `steped_and_fail_left`:
+We prove `expanded_and_fail_left`:
 ```
-stepedb s A (Failed FA) ->
-  forall B, stepedb s (And A B0 B) (Failed (And FA B0 B)).
+expandedb s A (Failed FA) ->
+  forall B, expandedb s (And A B0 B) (Failed (And FA B0 B)).
 ```
 
 We prooe `run_and_fail_both`:
 ```
 run_and_fail_both:
-  stepedb s A (Done s' SA) -> stepedb s' B (Failed FB) b ->
-      stepedb s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)).
+  expandedb s A (Done s' SA) -> expandedb s' B (Failed FB) b ->
+      expandedb s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)).
 ```
 
-We prove `steped_or_correct_left`:
+We prove `expanded_or_correct_left`:
 ```
-stepedb s A (Done s' A') b ->
+expandedb s A (Done s' A') b ->
   forall s2 B,
-    stepedb s (Or A s2 B) (Done s' (Or A' s2 (if b then cutr B else B))).
+    expandedb s (Or A s2 B) (Done s' (Or A' s2 (if b then cutr B else B))).
 ```
 
-We prove `steped_or_complete_done`:
+We prove `expanded_or_complete_done`:
 ```
-stepedb s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
+expandedb s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
   (is_dead A = false /\ 
-    exists b, stepedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
-      (is_dead A /\ A = A' /\ stepedb s B (Done s' B')).
+    exists b, expandedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
+      (is_dead A /\ A = A' /\ expandedb s B (Done s' B')).
 ```
 
-We prove `steped_or_correct_left_fail`:
+We prove `expanded_or_correct_left_fail`:
 ```
 is_dead A = false ->
-  stepedb s A (Failed A') b ->
+  expandedb s A (Failed A') b ->
     forall s2 B, 
-      stepedb s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))).
+      expandedb s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))).
 ```
 
 ## Determinacy checking: check.v
@@ -349,7 +349,7 @@ We prove the following properties:
 - `bbAnd_valid`: `bbAnd B -> valid_tree B.`
 - `bbOr_valid`: `bbOr B -> valid_tree B.`
 - `valid_tree_step`: `valid_tree A -> step s A = r -> valid_tree (get_tree r).`
-- `valid_tree_steped`: `valid_tree A -> stepedb s1 A r -> valid_tree (get_tree_exp r).`
+- `valid_tree_expanded`: `valid_tree A -> expandedb s1 A r -> valid_tree (get_tree_exp r).`
 - `valid_tree_next_alt`: `valid_tree A -> next_alt s1 A = Some (s2, B) -> valid_tree B.`
 - `valid_tree_clean_success`: `valid_tree A -> valid_tree (clean_success A).`
 - `valid_tree_run`: `valid_tree A -> run s1 A s2 B -> valid_tree B.`  
@@ -597,7 +597,7 @@ When verifying suffixes, the boolean is removed from the lists using the
 
 In the rest of the file, we prove several properties relating a tree `A` and
 a tree `B` that are connected through calls to `next_alt`, `step`,
-`stepedb`, and similar functions.
+`expandedb`, and similar functions.
 
 ## Tree to list tests: elpi_test.v
 

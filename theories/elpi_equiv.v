@@ -459,8 +459,8 @@ Section next_cut.
       clean_ca bt (t2l A s bt) = (s1, (cutE ca) ::: gl) ::: a ->
       next_cut A = B ->
         clean_ca bt (t2l B.2 s bt) = (s1, gl) ::: ca /\
-        if B.1 then step u s A = CutBrothers B.2
-        else step u s A = Expanded B.2.
+        if B.1 then step u s A = (CutBrothers, B.2)
+        else step u s A = (Expanded, B.2).
   Proof.
     elim: A B s bt s1 ca gl a => //=.
     - by move=> p []// [b B] s bt s1 c gl a _ _ [????][??]; subst.
@@ -498,20 +498,6 @@ Section next_cut.
       case: ifP => //=[sA fB vB|sA _ /eqP-> {B HB}]; subst => /=.
         case Y: next_cut => [b' B']/=.
         rewrite (success_t2l empty)//=.
-        (* move/orPT: bB => []bB; last first.
-          rewrite base_and_ko_t2l//= make_lB01_empty2 => H [??]; subst => /=.
-          have /=[{}HB H1] := HB _ _ _ _ _ _ _ fB vB H Y.
-          rewrite succes_is_solved//.
-          case: b Y H1 => //= Y H1; rewrite H1; repeat split.
-            have vcl := valid_tree_cut sA vA.
-            rewrite -success_cut in sA. 
-            rewrite (success_t2l empty)//=.
-            have vB0 := base_and_ko_valid bB.
-            rewrite t2l_cutr_empty//=.
-            by rewrite make_lB01_empty2 ges_subst_cutl//-success_cut//.
-          rewrite (success_t2l empty)//=.
-          by rewrite base_and_ko_t2l//=  make_lB01_empty2 HB.
-        have [h H]:= base_and_t2l bB. *)
         rewrite make_lB01_empty2/=.
         rewrite clean_ca_cat.
         set ml:= make_lB0 _ _.
@@ -521,7 +507,7 @@ Section next_cut.
         have:= HB _ (get_substS s A) (ml ++ bt) _ _ _ _ fB vB _ Y.
         move=> /(_ _ IsList_alts).
         rewrite H1/= => /(_ _ _ _ _ erefl) [{}HB H2].
-        rewrite succes_is_solved//=.
+        rewrite succes_step//=.
         case: b Y H2 => Y H2; rewrite H2; repeat split.
           have vcl := valid_tree_cut sA vA.
           have scA := sA.
@@ -665,7 +651,7 @@ Section next_callS.
       clean_ca bt (t2l A s3 bt) = (s1, (callE p t) ::: gl) ::: a ->
         clean_ca bt (t2l (next_callS u s1 A) s3 bt) = 
           (save_alts a gl (aa2gs p (F u p t s1)) ++ a) /\
-        step u s3 A = Expanded (next_callS u s1 A).
+        step u s3 A = (Expanded, (next_callS u s1 A)).
   Proof.
     elim: A s3 bt s1 p t gl a => //=.
     - move=> p []// c s3 bt s1 p1 c1 gl a _ _ [?????]; subst.
@@ -705,7 +691,7 @@ Section next_callS.
         (* move/orPT: bB => []bB; last first.
           rewrite base_and_ko_t2l//= make_lB01_empty2 => H.
           have /={HA HB}[HB H1] := HB _ _ _ _ _ _ _ fB vB H.
-          rewrite succes_is_solved//H1/= make_lB01_empty2 HB//.
+          rewrite succes_step//H1/= make_lB01_empty2 HB//.
         have [h H]:= base_and_t2l bB. *)
         rewrite make_lB01_empty2/=.
         rewrite clean_ca_cat.
@@ -716,7 +702,7 @@ Section next_callS.
         have /={HA HB} := HB (get_substS s1 A) (ml ++ bt) _ _ _ _ _ fB vB _.
         move=> /(_ _ IsList_alts).
         rewrite H1/= =>  // /(_ _ _ _ _ _ erefl) [{}HB H2].
-        rewrite succes_is_solved//=.
+        rewrite succes_step//=.
         rewrite H2 make_lB01_empty2; repeat split.
         have [?] := s2l_Expanded_call _ vB H2 H1; subst.
         case X: F => [|[sz z]zs].

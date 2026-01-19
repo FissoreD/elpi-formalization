@@ -408,7 +408,7 @@ Section valid_tree.
   Proof. rewrite/bbAnd=>->//. Qed.
 
   Lemma step_keep_cut s A r:
-    step u s A = r -> ~~(is_cutbrothers r) -> has_cut (get_tree r) = has_cut A.
+    step u s A = r -> ~~(is_cb r) -> has_cut (get_tree r) = has_cut A.
   Proof.
     move=> <-{r}; elim: A s => //=.
     - by move=> p c s; rewrite/big_or; case: F => [|[]]//.
@@ -424,7 +424,7 @@ Section valid_tree.
   Qed.
 
   Lemma check_cut_step A B0 s r:
-    step u s A = r -> ~~(is_cutbrothers r) -> check_cut (get_tree r) B0 = check_cut A B0.
+    step u s A = r -> ~~(is_cb r) -> check_cut (get_tree r) B0 = check_cut A B0.
   Proof. by move=> eA H; rewrite/check_cut (step_keep_cut eA)//. Qed.
 
   Lemma disj_tree_step s X B l: 
@@ -575,7 +575,7 @@ Section valid_tree.
       rewrite !(step_not_dead _ dA X, H,bB,bbOr_cutr,disj_tree_cutrR,disj_tree_step X)//=.
     + move=> A HA B0 _ B HB s1 /=/and4P[vA ++ CC].
       case: ifP => [sA vB /= bB0 | sA /eqP->]/=.
-        rewrite succes_is_solved//=.
+        rewrite succes_step//=.
         have {HB} := HB (get_substS s1 A) vB.
         case X: step => //[C|C|C|C]/=vC; cycle 1; [|by rewrite sA vA vC /=bB0/=(check_cut_step _ X isT) CC..].
         rewrite success_cut sA/= valid_tree_cut//vC bbAnd_cutr//check_cut_cutrR//.

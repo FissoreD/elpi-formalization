@@ -14,7 +14,7 @@ Section RunP.
   (* EXPAND PROPERTIES                                                *)
   (********************************************************************)
 
-  Lemma is_ko_step {A s1}: is_ko A -> step u s1 A = Failure A.
+  Lemma is_ko_step {A s1}: is_ko A -> step u s1 A = (Failure, A).
   Proof.
     elim: A s1 => //.
     - move=> A HA s B HB s1 /=.
@@ -36,18 +36,18 @@ Section RunP.
   Qed. 
 
   Lemma is_dead_step {s A}: 
-    is_dead A -> step u s A = Failure A.
+    is_dead A -> step u s A = (Failure, A).
   Proof. move=>/is_dead_is_ko/is_ko_step//. Qed.
 
-  (* Lemma is_ko_steped s {A}: 
+  (* Lemma is_ko_expanded s {A}: 
     is_ko A -> dead_run s A (Failed A) 0.
-  Proof. move=> dA; apply: steped_fail (is_ko_step _) => //. Qed.
+  Proof. move=> dA; apply: expanded_fail (is_ko_step _) => //. Qed.
 
-  Lemma is_dead_steped s {A}: 
-    is_dead A -> stepedb s A (Failed A) 0.
-  Proof. move=>/is_dead_is_ko/is_ko_steped//. Qed. *)
+  Lemma is_dead_expanded s {A}: 
+    is_dead A -> expandedb s A (Failed A) 0.
+  Proof. move=>/is_dead_is_ko/is_ko_expanded//. Qed. *)
 
-  Lemma succes_is_solved s {A}: success A -> step u s A = Success A.
+  Lemma succes_step s {A}: success A -> step u s A = (Success, A).
   Proof.
     elim: A s => //; try by do 2 eexists.
     + move=> A HA s1 B HB s /=.
@@ -59,70 +59,53 @@ Section RunP.
   Qed.
 
   Lemma step_solved_same {s1 A B}: 
-    step u s1 A = Success B -> (((A = B)) * (success B))%type.
+    step u s1 A = (Success, B) -> ((B = A) * (success A))%type.
   Proof.
     elim: A s1 B => //.
     + move=> /= ?? [] <-//.
     + move=> p []//.
     + move=> A HA s B HB s1 C/=.
-      case: ifP => dA/=.
-        case X: step =>//-[?];subst => /=.
-        rewrite dA !(HB _ _ X)//.
-      case X: step => //=-[?]; subst => /=.
-      have {}HA := HA _ _ X.
-      rewrite success_is_dead !HA//.
+      case: ifP => dA/=[+?]; subst.
+        by case X: step =>//=[[]]// _; rewrite !(HB _ _ X).
+      by case X: step => //=[[] A']//= _; rewrite !(HA _ _ X).
     + move=> A HA B0 B HB s1 C /=.
-      case X: step => // [A'].
-      case Y: step => //=[B'][?]; subst.
-      have {}HA := HA _ _ X.
-      have {}HB := HB _ _ Y.
-      rewrite /= !HA !HB//.
+      case X: step => [[] A']//=.
+      case Y: step => [[] B']//[?]; subst.
+      by rewrite !(HA _ _ X) !(HB _ _ Y).
   Qed.
 
   Lemma step_not_dead {s A r}: 
-    is_dead A = false -> step u s A = r -> is_dead (get_tree r) = false.
+    is_dead A = false -> step u s A = r -> is_dead r.2 = false.
   Proof.
     move=> + <-.
     elim: A s; clear; try by move=> //=.
     - move=> p [] // t s/= _; apply dead_big_or.
     + move=> A HA s B HB s1 => //=.
-      case: ifP => dA/=.
-        rewrite get_tree_Or/=dA; apply: HB.
-      move=> _.
-      have:= HA s1 dA.
-      case X: step => //=->//.
+      by case: ifP => dA/= H; rewrite ?dA (HA, HB).
     + move=> A HA B0 B HB s1 //= dA.
       have:= HA s1 dA.
-      case X: step => [|||A']//=dA'.
-      rewrite get_tree_And/= fun_if dA'.
-      case Y: step => //[C]/=.
-      have [?]:= step_solved_same X; subst.
-      rewrite -success_cut.
-      apply: success_is_dead.
+      case X: step => [[]A']//= dA'.
+      by rewrite fun_if is_dead_cutl dA if_same.
   Qed.
 
   Lemma step_failed_same {s1 A B}: 
-    step u s1 A = Failure B -> ((A = B) * failed B)%type.
+    step u s1 A = (Failure, B) -> ((B = A) * failed A)%type.
   Proof.
     elim: A s1 B => //.
     + move=> s1 B[<-]//.
     + move=> s1 B[<-]//.
     + move=> p []//.
     + move=> A HA s B HB s1 C/=.
-      case: ifP => dA/=.
-        case X: step =>//-[?];subst => /=.
-        rewrite !(HB _ _ X)//dA//.
-      case X: step => //=-[?]; subst => /=.
-      rewrite !(HA _ _ X)// (step_not_dead dA X)//.
+      by case: ifP => dA/=[+<-]{C}/=; case S: step => [[] s']//= _; [rewrite !(HB _ _ S)|rewrite !(HA _ _ S)].
     + move=> A HA B0 B HB s1 C /=.
-      case X: step => // [A'|A'].
-        move=> [<-]; rewrite /= !(HA _ _ X)//.
-      case Y: step => //=[B'][<-].
-      rewrite (step_solved_same X)//=!(HB _ _ Y)(step_solved_same X) orbT//.
+      case X: step => // [[] A']//= [].
+        by move=> <-; rewrite !(HA _ _ X).
+      case Y: step => //=[[] B']//= _ <-.
+      by rewrite !(HB _ _ Y) (step_solved_same X) orbT.
   Qed.
 
-  (* Lemma steped_Done_success {s1 A s2 B b1}: 
-    stepedb s1 A (Done s2 B) b1 -> success B.
+  (* Lemma expanded_Done_success {s1 A s2 B b1}: 
+    expandedb s1 A (Done s2 B) b1 -> success B.
   Proof.
     remember (Done _ _) as d eqn:Hd => H.
     elim: H s2 B Hd => //; clear.
@@ -203,13 +186,11 @@ Section RunP.
   Qed.
 
   Lemma step_not_solved {s1 A r}:
-    step u s1 A = r -> ~ (is_solved r) -> success A = false.
-  Proof.
-    case: r=> //[s|s|]/=; case X: success => //; try by rewrite // (succes_is_solved s1 X).
-  Qed.
+    step u s1 A = r -> ~ (is_sc r.1) -> success A = false.
+  Proof. case: r => -[]//=b; case X: success; by rewrite // (succes_step s1 X). Qed.
 
   Lemma failed_step {s1 A}:
-    failed A -> step u s1 A = Failure A.
+    failed A -> step u s1 A = (Failure, A).
   Proof.
     elim: A s1; clear => //; try by move=> ? [] //.
     + move=> A HA s1 B HB s2/=.
@@ -220,25 +201,25 @@ Section RunP.
       case X: failed => /=.
         move=>_; rewrite HA => //.
       move=>/andP[sA fB].
-      rewrite succes_is_solved//.
+      rewrite succes_step//.
       rewrite HB//.
   Qed. 
 
   Lemma step_not_failed {s1 A r}:
-    step u s1 A = r -> ~ (is_fail r) -> failed A = false.
+    step u s1 A = r -> ~ (is_fl r.1) -> failed A = false.
   Proof.
     move=><-; clear r.
     elim: A s1; try by move=> // s1 <-//=.
     - move=> A HA s B HB s1/=.
       case: ifP => dA.
-        by have:= HB s; case X: step.
-      by have:= HA s1; case X: step.
+        by have:= HB s; case X: step => [[]].
+      by have:= HA s1; case X: step => [[]].
     - move=> A HA B0 B HB s1/=.
       have:= HA s1.
-      case X: step => //= [||C] ->; try by rewrite?(step_not_solved X)//.
-      rewrite (step_solved_same X)/=.
-      have:= HB (get_substS s1 C).
-      case Y: step => //= ->//=; rewrite andbF//.
+      case X: step => //=[[]C]//=; only 1,2: by move=> H/H->; rewrite (step_not_solved X).
+      move=> /(_ notF)->//=.
+      have [? ->]:= (step_solved_same X); subst.
+      by apply: HB (get_substS s1 A).
   Qed.
 
   Lemma is_ko_big_and p r: is_ko (big_and p r) = false.
@@ -248,18 +229,8 @@ Section RunP.
   Proof. by elim: A r => //=[|[s r] rs IH] r1/=; rewrite is_ko_big_and//. Qed.
 
   Lemma step_is_ko {s1 A r}:
-    step u s1 A = r -> ~ (is_fail r) -> is_ko A = false.
-  Proof.
-    move=> H1 H2.
-    apply: failed_is_ko.
-    apply: step_not_failed H1 H2.
-  Qed.
-
-  Lemma step_not_failed_Expanded {s1 A B}:
-    (* This is wrong: if A is a call and there is no impl, then B = Bot which is failed *)
-    step u s1 A = Expanded B -> failed B = false.
-  Proof.
-  Abort.
+    step u s1 A = r -> ~ (is_fl r.1) -> is_ko A = false.
+  Proof. by move=>*; apply/failed_is_ko/step_not_failed; eassumption. Qed.
 
   (********************************************************************)
   (* NEXT_ALT OP PROPERTIES                                           *)
@@ -384,21 +355,21 @@ Section RunP.
     Qed.
 
     Lemma step_same_structure {s A r}: 
-      step u s A = r -> same_structure A (get_tree r).
+      step u s A = r -> same_structure A r.2.
     Proof.
       move=><-{r}.
       elim: A s => //.
         move=> A HA s B HB s1; subst => /=.
         case: ifP => dA.
           move: (HB s).
-          case eB: step => //=[B'|B'|B'|B']; rewrite eqxx same_structure_id//.
+          case eB: step => //=[[]B']; rewrite eqxx same_structure_id//.
         move: (HA s1).
-        case eA: step => //=[A'|A'|A'|A'] ->; rewrite eqxx ?same_structure_cutr//same_structure_id//.
+        case eA: step => //=[[]A'] ->; rewrite eqxx ?same_structure_cutr//same_structure_id//.
       move=> A HA B0 B HB s1; subst => /=.
       have:= (HA s1).
-      case eA: step => //=[A'|A'|A'|A'] {}HA; only 1-3: by rewrite HA same_structure_id eqxx.
+      case eA: step => //=[[]A'] {}HA/=; only 1-3: by rewrite HA !same_structure_id eqxx.
       have := (HB (get_substS s1 A')).
-      case eB: step => //=[B'|B'|B'|B'] H; rewrite ?same_structure_cut// ?same_structure_cutr// ?same_structure_id// ?HA// eqxx//.
+      case eB: step => //=[[]B'] H; rewrite ?same_structure_cut// ?same_structure_cutr// ?same_structure_id// ?HA// eqxx//.
     Qed.
 
     Definition same_structure_sup A B :=
@@ -561,8 +532,8 @@ Section RunP.
   Lemma runb_success {A s1 s2 r n}: 
     success A -> runb u s1 A s2 r n -> (s2 = Some (get_substS s1 A) /\ r = build_na A (next_alt true A) /\ n = 0)%type2.
   Proof.
-    move=> sA H; have:= succes_is_solved s1 sA.
-    by inversion H; clear H; try congruence; subst; rewrite succes_is_solved//; rewrite failed_success in sA.
+    move=> sA H; have:= succes_step s1 sA.
+    by inversion H; clear H; try congruence; subst; rewrite succes_step//; rewrite failed_success in sA.
   Qed.
 
   Lemma run_consistent {s A s1 B s2 C n1 n2}:
@@ -573,14 +544,14 @@ Section RunP.
       by apply: runb_success sA H.
     + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
-      - by rewrite succes_is_solved in HA.
+      - by rewrite succes_step in HA.
       - move: H0; rewrite HA => -[?]; subst.
         by rewrite !(IH _ _ _ X).
       - by rewrite failed_step in HA.
       - by rewrite failed_step in HA.
     + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
-      - by rewrite succes_is_solved in HA.
+      - by rewrite succes_step in HA.
       - move: H0; rewrite HA => -[?]; subst; by rewrite !(IH _ _ _ X)//.
       - by rewrite failed_step in HA.
       - by rewrite failed_step in HA.
@@ -594,7 +565,8 @@ Section RunP.
       by rewrite success_failed in fA.
   Qed.
 
-  Lemma step_or s1 A s B:
+  (* TODO: remove these two following lemmas *)
+  (* Lemma step_or s1 A s B:
   get_tree (match step u s1 A with
   | Expanded A0 => Expanded (Or A0 s B)
   | CutBrothers A0 => Expanded (Or A0 s (cutr B))
@@ -602,12 +574,12 @@ Section RunP.
   | Success A0 => Success (Or A0 s B)
   end) = 
     let stepA :=  step u s1 A in 
-    if is_cutbrothers stepA then (Or (get_tree stepA) s (cutr B))
+    if is_cb stepA then (Or (get_tree stepA) s (cutr B))
     else (Or (get_tree stepA) s B).
-  Proof. case X: step => //=. Qed.
+  Proof. case X: step => //=. Qed. *)
 
 
-  Lemma step_and s1 A B0 B:
+  (* Lemma step_and s1 A B0 B:
     get_tree (match step u s1 A with
     | Expanded A0 => Expanded (And A0 B0 B)
     | CutBrothers A0 => CutBrothers (And A0 B0 B)
@@ -618,9 +590,9 @@ Section RunP.
       if success A then get_tree (mkAnd A B0 (step u (get_substS s1 A) B))
       else And (get_tree stepA) B0 B.
   Proof.
-    case X: step => //=[A'|A'|A'|A']; only 1, 2, 3: by rewrite (step_not_solved X).
+    case X: step => //=[[]A']; only 1, 2, 3: by rewrite (step_not_solved X).
     have [? sA] := step_solved_same X; subst.
     by rewrite get_tree_And sA.
-  Qed.
+  Qed. *)
 
 End RunP.

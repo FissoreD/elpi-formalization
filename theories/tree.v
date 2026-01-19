@@ -16,19 +16,13 @@ Inductive tree :=
 derive tree.
 HB.instance Definition _ := hasDecEq.Build tree tree_eqb_OK.
 
-Inductive step_res :=
-  | Expanded    of tree
-  | CutBrothers of tree
-  | Failure     of tree
-  | Success      of tree.
-derive step_res.
-HB.instance Definition _ := hasDecEq.Build step_res step_res_eqb_OK.
+Inductive step_tag := Expanded | CutBrothers| Failure | Success.
+derive step_tag.
+HB.instance Definition _ := hasDecEq.Build step_tag step_tag_eqb_OK.
 
-Definition get_tree r := match r with | Failure A | Success A | CutBrothers A | Expanded A => A end.
-Definition is_steped X := match X with Expanded _ => true | _ => false end.
-Definition is_fail A := match A with Failure _ => true | _ => false end.
-Definition is_cutbrothers X := match X with CutBrothers _ => true | _ => false end.
-Definition is_solved X := match X with Success _ => true | _ => false end.
+Definition is_fl := eq_op Failure.
+Definition is_cb := eq_op CutBrothers.
+Definition is_sc := eq_op Success.
 
 Section tree_op.
 
@@ -267,27 +261,13 @@ Section tree_op.
 
 End tree_op.
 
-Definition mkOr A sB r :=
-  match r with
-  | Failure B       => Failure     (Or A sB B)
-  | Expanded B    => Expanded  (Or A sB B)
-  | CutBrothers B => Expanded  (Or A sB B)
-  | Success B      => Success    (Or A sB B)
-  end.
+Definition step_res := (step_tag * tree)%type.
 
-Definition mkAnd A B0 r :=
-  match r with
-  | Failure B       => Failure       (And A B0 B)
-  | Expanded B    => Expanded    (And A B0 B)
-  | CutBrothers B => CutBrothers (And (cutl A) B0 B)
-  | Success B      => Success      (And A B0 B)
-  end.
-
-Lemma get_tree_And A B0 B : get_tree (mkAnd A B0 B) = And (if is_cutbrothers B then cutl A else A) B0 (get_tree B).
+(*Lemma get_tree_And A B0 B : get_tree (mkAnd A B0 B) = And (if is_cb B then cutl A else A) B0 (get_tree B).
 Proof. by case: B. Qed.
 
 Lemma get_tree_Or A s B : get_tree (mkOr A s B) = Or A s (get_tree B).
-Proof. by case: B. Qed.
+Proof. by case: B. Qed. *)
 
 Fixpoint big_and pr (a : list A) : tree :=
   match a with
@@ -325,34 +305,30 @@ Section main.
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
 
-  Fixpoint step s A : step_res :=
+  Fixpoint step s A : (step_tag * tree) :=
     match A with
     (* meta *)
-    | OK => Success OK
-    | Bot => Failure Bot
-    | Dead => Failure Dead
+    | OK => (Success, OK)
+    | Bot | Dead => (Failure, A)
     
     (* lang *)
-    | TA _ cut       => CutBrothers OK
-    | TA pr (call t) => Expanded (big_or pr s t)
+    | TA _ cut       => (CutBrothers, OK)
+    | TA pr (call t) => (Expanded, (big_or pr s t))
 
     (* recursive cases *)
     | Or A sB B =>
-        if is_dead A then mkOr A sB (step sB B)
+        if is_dead A then 
+          let r := (step sB B) in
+          (if is_cb r.1 then Expanded else r.1, Or A sB r.2)
         else
-        match step s A with
-        | Success A    => Success      (Or A sB B)
-        | Expanded A    => Expanded  (Or A sB B)
-        | CutBrothers A => Expanded (Or A sB (cutr B))
-        | Failure A     => Failure       (Or A sB B)
-        end
+        let SA := step s A in
+        (if is_cb SA.1 then Expanded else SA.1 , Or SA.2 sB (if is_cb SA.1 then cutr B else B))
     | And A B0 B =>
-        match step s A with
-        | Success A     => mkAnd    A B0  (step (get_substS s A) B)
-        | Expanded A    => Expanded     (And A B0 B)
-        | CutBrothers A => CutBrothers (And A B0 B)
-        | Failure A       => Failure        (And A B0 B)
-        end
+        let SA := step s A in
+        if SA.1 == Success then 
+          let r := (step (get_substS s SA.2) B) in
+          (r.1, And (if is_cb r.1 then cutl A else A) B0 r.2)
+        else (SA.1, And SA.2 B0 B)
     end.
 
   (* Next_alt takes a tree "T" returns a new tree "T'" representing the next
@@ -401,8 +377,8 @@ Section main.
 
   Inductive runb : Sigma -> tree -> option Sigma -> tree -> nat -> Type :=
     | run_done {s1 s2 A B}        : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> runb s1 A (Some s2) B 0
-    | run_cut  {s1 s2 r A B n}    : step s1 A = CutBrothers B -> runb s1 B s2 r n -> runb s1 A s2 r n.+1
-    | run_step {s1 s2 r A B n}    : step s1 A = Expanded    B -> runb s1 B s2 r n -> runb s1 A s2 r n
+    | run_cut  {s1 s2 r A B n}    : step s1 A = (CutBrothers, B) -> runb s1 B s2 r n -> runb s1 A s2 r n.+1
+    | run_step {s1 s2 r A B n}    : step s1 A = (Expanded,    B) -> runb s1 B s2 r n -> runb s1 A s2 r n
     | run_fail   {s1 s2 A B r n}     : 
           failed A -> next_alt false A = Some B ->
               runb s1 B s2 r n -> runb s1 A s2 r n
