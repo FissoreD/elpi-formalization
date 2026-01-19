@@ -9,8 +9,8 @@ Definition prop := b (d Pred).
 Definition build_arr m := arr m prop prop.
 
 Definition build_progr l := {|
-    (* modes := [fmap].[IKp 0 <- [::o]].[IKp 1 <- [::o]].[IKp 2 <- [::o]].[IKp 200 <-  [::]]; *)
-    sig := [fmap].[IKp 0 <- build_arr o].[IKp 1 <- build_arr o].[IKp 2 <- build_arr o].[IKp 200 <- prop];
+    (* modes := [fmap].[IKp false <- [::o]].[IKp 1 <- [::o]].[IKp 2 <- [::o]].[IKp 200 <-  [::]]; *)
+    sig := [fmap].[IKp false <- build_arr o].[IKp 1 <- build_arr o].[IKp 2 <- build_arr o].[IKp 200 <- prop];
     rules := l;
 |}.
 
@@ -30,16 +30,16 @@ Definition unif : Unif := {|
 
 Definition r := (IKp 2).
 Definition p := (IKp 1).
-Definition q := (IKp 0).
+Definition q := (IKp false).
 
-Definition v_X := Tm_V (IV 0).
+Definition v_X := Tm_V (IV false).
 Definition pred_q x  := Tm_Comb (Tm_Kp p) x.
 Definition pred_p x  := Tm_Comb (Tm_Kp q) x.
 Definition pred_r x  := Tm_Comb (Tm_Kp r) x.
 Definition pred_fail := Tm_Kp (IKp 100).
 
-Definition s1 : Sigma := [fmap].[IV 0 <- Tm_Kd (IKd 1)].
-Definition s2 : Sigma := [fmap].[IV 0 <- Tm_Kd (IKd 2)].
+Definition s1 : Sigma := [fmap].[IV false <- Tm_Kd (IKd 1)].
+Definition s2 : Sigma := [fmap].[IV false <- Tm_Kd (IKd 2)].
 
 Section Test1.
 
@@ -59,7 +59,7 @@ Section Test1.
     move=> //.
   Qed.
 
-  (* Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) (Some s2) r 0.
+  (* Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) (Some s2) r false.
   Proof.
     eexists.
     apply: run_step => //.
@@ -77,13 +77,13 @@ End Test1.
 Section Test5.
 
   Definition p_test1 : program := build_progr [:: 
-      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 0))) 
+      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd false))) 
         [::call (Callable_Comb (Callable_Kp q) v_X); cut] ;
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1))) [::] ;
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
     ].
 
-  (* Goal Texists r, runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) (Some s1) r 0 /\ is_dead r.
+  (* Goal Texists r, runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false)))) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
     apply: run_step => //.
@@ -102,13 +102,13 @@ Section Test6.
 
   Definition p_test2 : program := build_progr [:: 
       mkR ((RCallable_Kp pred_true)) [::];
-      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 0))) 
+      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd false))) 
         [::call (Callable_Comb (Callable_Kp q) v_X);call ((Callable_Kp pred_true)); cut] ;
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1))) [::] ;
       mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
   ].
 
-  (* Goal Texists r, runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) (Some s1) r 0 /\ is_dead r.
+  (* Goal Texists r, runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false)))) ) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
     apply: run_step => //.
@@ -128,20 +128,20 @@ Definition CutS := TA (build_progr [::]) cut.
 Section Test2.
   Goal step unif empty (Or OK empty OK) = (Success, Or OK empty OK). by []. Qed.
 
-  Goal runb unif empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) 0.
+  Goal runb unif empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) false.
     apply: run_step => //=.
     apply: run_done => //.
   Qed.
 
   Goal forall r, 
-    runb unif empty (Or (CutS) empty r) (Some empty) (dead (Or (CutS) empty r)) 0.
+    runb unif empty (Or (CutS) empty r) (Some empty) (dead (Or (CutS) empty r)) false.
     move=> r.
     apply: run_step => //.
     apply: run_done => //=.
     rewrite next_alt_cutr /= dead_cutr//.
   Qed.
 
-  Goal runb unif empty (Or OK empty (Or OK empty OK)) (Some empty) ((Or Dead empty (((Or OK empty OK))))) 0.
+  Goal runb unif empty (Or OK empty (Or OK empty OK)) (Some empty) ((Or Dead empty (((Or OK empty OK))))) false.
   Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)

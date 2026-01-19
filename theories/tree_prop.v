@@ -437,7 +437,7 @@ Section RunP.
     Qed.
 
     Lemma run_dead1 {s1 B s2 r n}:  
-      is_dead B -> runb u s1 B s2 r n -> (s2 = None /\ r = dead B /\ n = 0)%type2.
+      is_dead B -> runb u s1 B s2 r n -> (s2 = None /\ r = dead B /\ n = false)%type2.
     Proof.
       move=> dB H; inversion H; clear H; subst;
         try rewrite // is_dead_step//is_dead_dead in H0.
@@ -446,7 +446,7 @@ Section RunP.
     Qed.
 
     Lemma run_dead2 {s1 B s2 r n}:  
-      runb u s1 (dead B) s2 r n -> (s2 = None /\ r = dead B /\ n = 0)%type2.
+      runb u s1 (dead B) s2 r n -> (s2 = None /\ r = dead B /\ n = false)%type2.
     Proof. move=> /(run_dead1 is_dead_dead)//; rewrite dead2//. Qed.
 
   End same_structure.
@@ -504,7 +504,7 @@ Section RunP.
     next_alt false (big_and p r) = Some (big_and p r).
   Proof. elim: r p => //=x xs IH p; case: x => //=. Qed.
 
-  Lemma is_ko_runb {s A}: is_ko A -> runb u s A None (dead A) 0.
+  Lemma is_ko_runb {s A}: is_ko A -> runb u s A None (dead A) false.
   Proof.
     elim: A s => //=.
     - by move=> s _; apply: run_dead => //=.
@@ -523,14 +523,14 @@ Section RunP.
   Qed.
 
   Lemma runb_success1 {A} s: 
-    success A -> runb u s A (Some (get_substS s A)) (build_na A (next_alt true A)) 0.
+    success A -> runb u s A (Some (get_substS s A)) (build_na A (next_alt true A)) false.
   Proof.
     move=> sA.
     by apply: run_done.
   Qed.
 
   Lemma runb_success {A s1 s2 r n}: 
-    success A -> runb u s1 A s2 r n -> (s2 = Some (get_substS s1 A) /\ r = build_na A (next_alt true A) /\ n = 0)%type2.
+    success A -> runb u s1 A s2 r n -> (s2 = Some (get_substS s1 A) /\ r = build_na A (next_alt true A) /\ n = false)%type2.
   Proof.
     move=> sA H; have:= succes_step s1 sA.
     by inversion H; clear H; try congruence; subst; rewrite succes_step//; rewrite failed_success in sA.
