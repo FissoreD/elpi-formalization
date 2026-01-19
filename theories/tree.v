@@ -16,16 +16,16 @@ Inductive tree :=
 derive tree.
 HB.instance Definition _ := hasDecEq.Build tree tree_eqb_OK.
 
-Inductive expand_res :=
+Inductive step_res :=
   | Expanded    of tree
   | CutBrothers of tree
   | Failure     of tree
   | Success      of tree.
-derive expand_res.
-HB.instance Definition _ := hasDecEq.Build expand_res expand_res_eqb_OK.
+derive step_res.
+HB.instance Definition _ := hasDecEq.Build step_res step_res_eqb_OK.
 
 Definition get_tree r := match r with | Failure A | Success A | CutBrothers A | Expanded A => A end.
-Definition is_expanded X := match X with Expanded _ => true | _ => false end.
+Definition is_steped X := match X with Expanded _ => true | _ => false end.
 Definition is_fail A := match A with Failure _ => true | _ => false end.
 Definition is_cutbrothers X := match X with CutBrothers _ => true | _ => false end.
 Definition is_solved X := match X with Success _ => true | _ => false end.
@@ -325,7 +325,7 @@ Section main.
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
 
-  Fixpoint step s A : expand_res :=
+  Fixpoint step s A : step_res :=
     match A with
     (* meta *)
     | OK => Success OK

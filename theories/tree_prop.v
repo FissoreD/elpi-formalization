@@ -41,10 +41,10 @@ Section RunP.
 
   (* Lemma is_ko_steped s {A}: 
     is_ko A -> dead_run s A (Failed A) 0.
-  Proof. move=> dA; apply: expanded_fail (is_ko_step _) => //. Qed.
+  Proof. move=> dA; apply: steped_fail (is_ko_step _) => //. Qed.
 
   Lemma is_dead_steped s {A}: 
-    is_dead A -> expandedb s A (Failed A) 0.
+    is_dead A -> stepedb s A (Failed A) 0.
   Proof. move=>/is_dead_is_ko/is_ko_steped//. Qed. *)
 
   Lemma succes_is_solved s {A}: success A -> step u s A = Success A.
@@ -58,7 +58,7 @@ Section RunP.
       rewrite HA//HB//.
   Qed.
 
-  Lemma expand_solved_same {s1 A B}: 
+  Lemma step_solved_same {s1 A B}: 
     step u s1 A = Success B -> (((A = B)) * (success B))%type.
   Proof.
     elim: A s1 B => //.
@@ -96,12 +96,12 @@ Section RunP.
       case X: step => [|||A']//=dA'.
       rewrite get_tree_And/= fun_if dA'.
       case Y: step => //[C]/=.
-      have [?]:= expand_solved_same X; subst.
+      have [?]:= step_solved_same X; subst.
       rewrite -success_cut.
       apply: success_is_dead.
   Qed.
 
-  Lemma expand_failed_same {s1 A B}: 
+  Lemma step_failed_same {s1 A B}: 
     step u s1 A = Failure B -> ((A = B) * failed B)%type.
   Proof.
     elim: A s1 B => //.
@@ -118,15 +118,15 @@ Section RunP.
       case X: step => // [A'|A'].
         move=> [<-]; rewrite /= !(HA _ _ X)//.
       case Y: step => //=[B'][<-].
-      rewrite (expand_solved_same X)//=!(HB _ _ Y)(expand_solved_same X) orbT//.
+      rewrite (step_solved_same X)//=!(HB _ _ Y)(step_solved_same X) orbT//.
   Qed.
 
-  (* Lemma expanded_Done_success {s1 A s2 B b1}: 
-    expandedb s1 A (Done s2 B) b1 -> success B.
+  (* Lemma steped_Done_success {s1 A s2 B b1}: 
+    stepedb s1 A (Done s2 B) b1 -> success B.
   Proof.
     remember (Done _ _) as d eqn:Hd => H.
     elim: H s2 B Hd => //; clear.
-    move=> s s' A B /expand_solved_same H ??; rewrite !H => -[_<-]; rewrite H//.
+    move=> s s' A B /step_solved_same H ??; rewrite !H => -[_<-]; rewrite H//.
   Qed. *)
 
   Lemma is_ko_next_alt {A} b: is_ko A -> next_alt b A = None.
@@ -208,7 +208,7 @@ Section RunP.
     case: r=> //[s|s|]/=; case X: success => //; try by rewrite // (succes_is_solved s1 X).
   Qed.
 
-  Lemma failed_expand {s1 A}:
+  Lemma failed_step {s1 A}:
     failed A -> step u s1 A = Failure A.
   Proof.
     elim: A s1; clear => //; try by move=> ? [] //.
@@ -236,7 +236,7 @@ Section RunP.
     - move=> A HA B0 B HB s1/=.
       have:= HA s1.
       case X: step => //= [||C] ->; try by rewrite?(step_not_solved X)//.
-      rewrite (expand_solved_same X)/=.
+      rewrite (step_solved_same X)/=.
       have:= HB (get_substS s1 C).
       case Y: step => //= ->//=; rewrite andbF//.
   Qed.
@@ -255,7 +255,7 @@ Section RunP.
     apply: step_not_failed H1 H2.
   Qed.
 
-  Lemma expand_not_failed_Expanded {s1 A B}:
+  Lemma step_not_failed_Expanded {s1 A B}:
     (* This is wrong: if A is a call and there is no impl, then B = Bot which is failed *)
     step u s1 A = Expanded B -> failed B = false.
   Proof.
@@ -383,7 +383,7 @@ Section RunP.
       by move=> A HA B0 B HB; rewrite HA eqxx same_structure_id.
     Qed.
 
-    Lemma expand_same_structure {s A r}: 
+    Lemma step_same_structure {s A r}: 
       step u s A = r -> same_structure A (get_tree r).
     Proof.
       move=><-{r}.
@@ -455,9 +455,9 @@ Section RunP.
           move=> /next_alt_same_structure//.
         move=> _.
         apply: same_structure_sup_dead.
-      - move=> s1 s2 r A B n /expand_same_structure/= + _.
+      - move=> s1 s2 r A B n /step_same_structure/= + _.
         apply: same_structure_sup2_trans.
-      - move=> s1 s2 r A B n /expand_same_structure/= + _.
+      - move=> s1 s2 r A B n /step_same_structure/= + _.
         apply: same_structure_sup2_trans.
       - move=> s1 s2 A B oB r n.
           move=> /next_alt_same_structure + _.
@@ -576,21 +576,21 @@ Section RunP.
       - by rewrite succes_is_solved in HA.
       - move: H0; rewrite HA => -[?]; subst.
         by rewrite !(IH _ _ _ X).
-      - by rewrite failed_expand in HA.
-      - by rewrite failed_expand in HA.
+      - by rewrite failed_step in HA.
+      - by rewrite failed_step in HA.
     + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
       - by rewrite succes_is_solved in HA.
       - move: H0; rewrite HA => -[?]; subst; by rewrite !(IH _ _ _ X)//.
-      - by rewrite failed_expand in HA.
-      - by rewrite failed_expand in HA.
+      - by rewrite failed_step in HA.
+      - by rewrite failed_step in HA.
     + move=> s1 s2 A B r n1 fA nB rB IH s3 C n2 H.
-      inversion H; clear H; try congruence; subst; try by rewrite failed_expand in H0.
+      inversion H; clear H; try congruence; subst; try by rewrite failed_step in H0.
         by rewrite success_failed in fA.
       move: H1; rewrite nB => -[?]; subst.
       by apply: IH.
     + move=> s1 A fA nA s2 C n2 H.
-      inversion H; subst; try congruence; try rewrite //failed_expand// in H0.
+      inversion H; subst; try congruence; try rewrite //failed_step// in H0.
       by rewrite success_failed in fA.
   Qed.
 
@@ -619,7 +619,7 @@ Section RunP.
       else And (get_tree stepA) B0 B.
   Proof.
     case X: step => //=[A'|A'|A'|A']; only 1, 2, 3: by rewrite (step_not_solved X).
-    have [? sA] := expand_solved_same X; subst.
+    have [? sA] := step_solved_same X; subst.
     by rewrite get_tree_And sA.
   Qed.
 

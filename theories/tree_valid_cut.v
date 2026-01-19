@@ -419,7 +419,7 @@ Section valid_tree.
     move: (HA s).
     case eA: step => [A'|A'|A'|A']//= /(_ isT) {}HA; cycle-1; [|by rewrite HA..].
     move: (HB (get_substS s A')).
-    have [? sA] := expand_solved_same _ eA; subst A'.
+    have [? sA] := step_solved_same _ eA; subst A'.
     by case eB: step => [B'|B'|B'|B']//= /(_ isT) {}HB _; rewrite HB//.
   Qed.
 
@@ -534,7 +534,7 @@ Section valid_tree.
       case eA: step => //=[A'|A'|A'|A'];
       only 1, 2, 3: (move=> {}HA; case: eqP => //?; subst; (try by have:= step_Exp_CutF eA); rewrite disj_tree_baseL//=).
       move=>{}HA.
-      have [? sA]:= expand_solved_same _ eA; subst.
+      have [? sA]:= step_solved_same _ eA; subst.
       have:= HB (get_substS s A') _ bR H1; case eB: step => //=[B'|B'|B'|B']->;
       rewrite disj_tree_baseL//=; case: eqP; auto.
       destruct A' => //=; case: ifP => //.
@@ -546,7 +546,7 @@ Section valid_tree.
     case eA: step => //=[A'|A'|A'|A'];
     only 1, 2, 3: (move=> {}HA; case: eqP => //?; subst; (try by have:= step_Exp_CallF eA); rewrite HR (disj_tree_stepR eA)//).
     move=> {}HA.
-    have [? sA]:= expand_solved_same _ eA; subst.
+    have [? sA]:= step_solved_same _ eA; subst.
     have:= HB (get_substS s A') _ bR HR; case eB: step => //=[B'|B'|B'|B']->;
     case: eqP; auto; rewrite?H1//.
       by destruct A' => //=; case: ifP => //.
@@ -560,7 +560,7 @@ Section valid_tree.
     apply: resetR_base_and.
   Qed. *)
 
-  Lemma valid_tree_expand {s A r}:
+  Lemma valid_tree_step {s A r}:
     valid_tree A -> step u s A = r -> valid_tree (get_tree r).
   Proof.
     move=>+<-; clear r.
@@ -580,11 +580,11 @@ Section valid_tree.
         case X: step => //[C|C|C|C]/=vC; cycle 1; [|by rewrite sA vA vC /=bB0/=(check_cut_step _ X isT) CC..].
         rewrite success_cut sA/= valid_tree_cut//vC bbAnd_cutr//check_cut_cutrR//.
       case: ifP => [fA bB|fA bB].
-        by rewrite failed_expand//= vA sA eqxx bB/=fA// check_cut_refl.
+        by rewrite failed_step//= vA sA eqxx bB/=fA// check_cut_refl.
       have:= HA s1 vA.
       case X: step => //[A'|A'|A'|A']/=vA'; last first;
        [|by rewrite //vA' base_and_valid///bbAnd bB eqxx !if_same//check_cut_refl// if_same..].
-      have [? sA']:= expand_solved_same _ X; subst.
+      have [? sA']:= step_solved_same _ X; subst.
       congruence.
   Qed.
 
@@ -803,9 +803,9 @@ Section valid_tree.
         by rewrite (valid_tree_next_alt vA X); auto.
       by rewrite dead2; auto.
     + move=> s1 s2 r A B n eA rB IH vA; subst.
-      apply: IH (valid_tree_expand vA eA).
+      apply: IH (valid_tree_step vA eA).
     + move=> s1 s2 r A B n eA rB IH vA; subst.
-      apply: IH (valid_tree_expand vA eA).
+      apply: IH (valid_tree_step vA eA).
     + move=> s1 s2 A B r n fA + rB + vA; subst.
       move=> /(valid_tree_next_alt vA) vB /(_ vB)//.
     + by move => *; rewrite dead2; auto.

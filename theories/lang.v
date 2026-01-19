@@ -139,7 +139,7 @@ Elpi Accumulate lp:{{
 }}.
 Elpi Export derive.eqbOK.register_axiomx.
 
-Definition Sigma := (ctx V Tm).
+Definition Sigma := {fmap V -> Tm}.
 Definition empty : Sigma := empty.
 
 Definition is_Sigma (x : Sigma) := unit.

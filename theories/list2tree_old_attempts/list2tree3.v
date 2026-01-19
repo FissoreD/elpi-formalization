@@ -118,12 +118,12 @@ Proof.
   - move=> /=. *)
   
 
-Lemma expand_a2t {u ign1 L}: 
-  expand u ign1 (a2t_ L) = Failure (a2t_ L).
+Lemma step_a2t {u ign1 L}: 
+  step u ign1 (a2t_ L) = Failure (a2t_ L).
 Proof. case: L => //=-[]//. Qed.
 
-Lemma expanded_a2t u ign1 L:
-  expandedb u ign1 (a2t_ L) (Failed (a2t_ L)) false.
+Lemma steped_a2t u ign1 L:
+  stepedb u ign1 (a2t_ L) (Failed (a2t_ L)) false.
 Proof. case: L => [|[s g]gs]/=; constructor => //. Qed.
 
 Lemma run_a2t_ign {u s2 D b2 sIgn1 L} sIgn2:
@@ -159,11 +159,11 @@ Proof.
   elim: C s1 bt => //=.
   - move=> s1 _; do 2 eexists.
     apply: run_backtrack => //.
-    - apply: expanded_fail => //.
+    - apply: steped_fail => //.
     - move=> //=.
     - apply: run_done => //.
-    - apply: expanded_step => //.
-      apply: expanded_done => //.
+    - apply: steped_step => //.
+      apply: steped_done => //.
   - move=> A HA s B HB s1 bt.
     case: ifP => [dA sB | dA sA].
     - rewrite state_to_list_dead//cat0s.
@@ -175,19 +175,19 @@ Proof.
   - move=> A HA B0 _ B HB.
 Admitted.
 
-Lemma runb_a2t_expandedb {u s A s' B b bt}:
+Lemma runb_a2t_stepedb {u s A s' B b bt}:
   valid_state A ->
-  expandedb u s A (Done s' B) b ->
+  stepedb u s A (Done s' B) b ->
     Texists C b2,
     runb u s (a2t_ (state_to_list A s bt)) s' C b2.
 Proof.
   remember (Done _ _) as d eqn:Hd => +H.
   elim: H s' B Hd; clear => //=.
   - move=> s1 s2 A B HA s3 C [??]vA; subst.
-    have [[??] sC]:= expand_solved_same _ HA; subst.
+    have [[??] sC]:= step_solved_same _ HA; subst.
     apply: run_a2t_success sC.
   - move=> s1 s2 r A B b HA HB IH s3 C ? vA; subst.
-    have /=vB := valid_state_expand _ vA HA.
+    have /=vB := valid_state_step _ vA HA.
     have {IH} := IH _ _ erefl vB.
     have [x[tl[H1 [H2 H3]]]]:= s2l_CutBrothers _ s1 bt vA HA.
     rewrite H1 H2/=.
@@ -198,17 +198,17 @@ Proof.
     move: H8 => //[?]; subst.
     move: H0 => /=; rewrite andbF; case: ifP => //dx.
     case X: next_alt => //[x'][?]; subst.
-    have [H5 H6]:= expand_cb_same_subst1 _ vA HA; subst.
+    have [H5 H6]:= step_cb_same_subst1 _ vA HA; subst.
     have:= run_dead_left1 _ _ H4 => /= /(_ isT) [b1[r' [Hx Hy]]].
     do 2 eexists.
     apply: run_backtrack => //.
-    - apply: expanded_fail => //.
+    - apply: steped_fail => //.
     - rewrite //.
     - apply: run_dead_left2 is_dead_dead _.
       apply: run_or_correct_left.
       admit.
   - move=> s1 s2 r A B b HA HB IH s3 C ? vA; subst.
-    have [D[b2 {}IH]]:= IH _ _ erefl (valid_state_expand _ vA HA).
+    have [D[b2 {}IH]]:= IH _ _ erefl (valid_state_step _ vA HA).
     admit.
 Admitted.
 
@@ -224,9 +224,9 @@ Lemma xx u s1 s2 A B b1:
 Proof.
   move=> +H; elim: H; clear.
   - move=> s s' A B C b HA HB vA.
-    apply: runb_a2t_expandedb vA HA.
+    apply: runb_a2t_stepedb vA HA.
   - move=> s1 s2 A B C r b1 b2 b3 HA HB HC IH ? vA; subst.
-    have /= vB := valid_state_expanded _ vA HA.
+    have /= vB := valid_state_steped _ vA HA.
     have vC := valid_state_next_alt vB HB.
     have [r'[bx {}IH]]:= IH vC.
     repeat eexists.
@@ -247,11 +247,11 @@ Proof.
       case: H6 => ??; subst.
       repeat eexists.
       apply: run_backtrack erefl.
-        apply: expanded_fail => //.
+        apply: steped_fail => //.
         move=> //.
       apply : run_done erefl.
-      apply: expanded_step => //=.
-      apply: expanded_done => //=.
+      apply: steped_step => //=.
+      apply: steped_done => //=.
     inversion H0 => //.
   - move=> B s1 s2 b1 bt _ H.
     inversion H; subst; last first.
@@ -264,22 +264,22 @@ Proof.
     case: H7 => ??; subst.
     repeat eexists.
     apply: run_backtrack erefl.
-      apply: expanded_fail => //.
+      apply: steped_fail => //.
       move=>//.
     apply: run_done => //.
-    apply: expanded_step => //.
-    apply: expanded_done => //.
+    apply: steped_step => //.
+    apply: steped_done => //.
   - move=> p c r s1 s2 b bt _ H.
     repeat eexists.
     apply: run_backtrack erefl.
-      apply: expanded_fail => //.
+      apply: steped_fail => //.
       by [].
     apply: run_dead_left2 => //.
     apply: run_or_ko_right1 => //.
     admit. (*OK by applying an aux lemma on And*)
   - move=> B s1 s2 b1 _ H; repeat eexists.
     apply: run_backtrack.
-      apply: expanded_fail => //.
+      apply: steped_fail => //.
       move=> //.
       apply: run_dead_left2 is_dead_dead _.
       apply: run_or_ko_right1 => //.
@@ -298,9 +298,9 @@ Proof.
   (* OLD PROOF *)
   (* move=> +H; elim: H; clear.
   - move=> s s' A B C b HA HB vA.
-    apply: runb_a2t_expandedb vA HA.
+    apply: runb_a2t_stepedb vA HA.
   - move=> s1 s2 A B C r b1 b2 b3 HA HB HC IH ? vA; subst.
-    have /= vB := valid_state_expanded _ vA HA.
+    have /= vB := valid_state_steped _ vA HA.
     have vC := valid_state_next_alt vB HB.
     have [r'[bx {}IH]]:= IH vC.
     repeat eexists.

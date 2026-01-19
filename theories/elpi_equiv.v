@@ -22,8 +22,8 @@ Section NurEqiv.
       repeat eexists.
       apply: StopE.
     + move=> s1 s2 r A B n eA rB IH s4 ? sIgn vA; subst.
-      have {IH} /= [[sy y]/=[ys [+ H4]]]:= IH _ erefl sIgn (valid_tree_expand _ vA eA).
-      have H5 := expand_cb_same_subst1 _ vA eA; subst.
+      have {IH} /= [[sy y]/=[ys [+ H4]]]:= IH _ erefl sIgn (valid_tree_step _ vA eA).
+      have H5 := step_cb_same_subst1 _ vA eA; subst.
       have [x[tl[H1 H2]]] := [elaborate s2l_CutBrothers _ s1 nilC vA eA].
       rewrite H1 H2 => -[???]; subst.
       repeat eexists.
@@ -31,7 +31,7 @@ Section NurEqiv.
       apply CutE.
       rewrite H5//.
     + move=> s1 s2 r A B n eA rB IH s4 ? sIgn vA; subst. 
-      have /=vB:= (valid_tree_expand _ vA eA). 
+      have /=vB:= (valid_tree_step _ vA eA). 
       have fA := step_not_failed eA notF.
       have [s[x[xs +]]] := [elaborate failed_t2l vA fA s1 nilC].
       move=> H; rewrite H; repeat eexists.
@@ -535,7 +535,7 @@ Section next_cut.
           have [x[tl]]:= s2l_CutBrothers _ (get_substS s A) (ml++bt) vB H2.
           rewrite H1 => -[][????] [Hz Hw]; subst.
           rewrite Hz//=.
-          have HH := expand_cb_same_subst1 _ vB H2.
+          have HH := step_cb_same_subst1 _ vB H2.
           rewrite clean_ca_goals_empty//= take_nil HH.
           by rewrite next_alt_cutl/= t2l_dead// is_dead_dead.
         rewrite (success_t2l empty)//=.
@@ -567,7 +567,7 @@ Section next_cut.
         have [x[tl]]:= s2l_CutBrothers _ s bt vA H3.
         rewrite H => -[][]???? [H4 H5]; subst.
         rewrite H4/= s2l_big_and make_lB0_empty1 cats0 sub0n take0.
-        by rewrite (expand_cb_same_subst1 _ vA H3).
+        by rewrite (step_cb_same_subst1 _ vA H3).
       have [[Hx fA']] := s2l_Expanded_cut _ vA H3 H; subst.
       move=> Hz.
       move: {HA} H2; case X: t2l => //[[sy y]ys][?]; subst.

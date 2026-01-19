@@ -83,9 +83,9 @@ Inductive tree :=
 The evolution of a tree is achieved through small-step semantics. We define
 three functions and four inductives to animate a program. Specifically:
 
-- **expand_res**:
+- **step_res**:
     ```coq
-    Inductive expand_res :=
+    Inductive step_res :=
     | Expanded    of Sigma & tree
     | CutBrothers of Sigma & tree
     | Failure     of tree
@@ -94,8 +94,8 @@ three functions and four inductives to animate a program. Specifically:
   This inductive indicates whether a tree evolution succeeds, fails, resolves
   a cut, or processes a non-cut query. It is used by the small-step semantics.
 
-- **expand**: This function is the core of the interpreter. It takes a tree
-  and a substitution, expanding the current tree. If the tree is a meta-level
+- **step**: This function is the core of the interpreter. It takes a tree
+  and a substitution, steping the current tree. If the tree is a meta-level
   tree, it returns either a success with the input substitution and tree or a
   failure with the current tree. If the tree is a concrete base case, it
   returns either `Expanded` or `CutBrother`.
@@ -121,17 +121,17 @@ three functions and four inductives to animate a program. Specifically:
   be explained in the `next_alt` procedure.
 
   The expansion for the `Or` tree checks if the left-hand side is dead (i.e.,
-  the tree has been fully explored with failure). If so, it expands the right-
+  the tree has been fully explored with failure). If so, it steps the right-
   hand side of the `Or` with the substitution written in it. Otherwise, it
   explores the left-hand side. Note that within an `Or` node, a **CutBrother**
-  is never returned as `expand_res`. This is because cuts cannot escape an `Or`
+  is never returned as `step_res`. This is because cuts cannot escape an `Or`
   in our language; they are compartmentalized within `And`. If the expansion of
   the left-hand side returns a cut, the right-hand side is **hard-cut** away.
   Hard-cutting replaces all nodes (including reset points in the `And`) with
   the `Bot` tree.
 
-  The expansion for the `And` node first expands the left-hand side. If it
-  resolves successfully, it then expands the right-hand side. If the left-hand
+  The expansion for the `And` node first steps the left-hand side. If it
+  resolves successfully, it then steps the right-hand side. If the left-hand
   side succeeds and the right-hand side turns into a **CutBrother**, the left-
   hand side is **soft-cut** away. Soft-cutting replaces all non-meta-level
   atoms with `Bot`.
@@ -140,21 +140,21 @@ three functions and four inductives to animate a program. Specifically:
   execution of a query will eventually succeed or fail (both cases refer to
   outputs without backtracking).
 
-- **expandedb**: This inductive iterates over the `expand` function until it
-  reaches either a **Failure** or a **Success**. The last argument of `expandedb`
+- **stepedb**: This inductive iterates over the `step` function until it
+  reaches either a **Failure** or a **Success**. The last argument of `stepedb`
   is a bool indicating
   whether, during the resolution of the query, there is a superficial cut (i.e.,
   a cut whose effect should be visible outside the current tree).
 
 - **runb**: This inductive represents the interpreter of our language. It
-  iterates over **expandedb** until reaching a success. If **expandedb** results
-  in a failure, it backtracks and continues calling **expandedb**.
+  iterates over **stepedb** until reaching a success. If **stepedb** results
+  in a failure, it backtracks and continues calling **stepedb**.
 
 - **next_alt**: Backtracking is enabled by the `next_alt` procedure. It takes a
   tree and erases (i.e., replaces with `Dead`) the internal nodes representing
   a previous failure. It also returns the substitution for launching the new
   tree within **runb**. `next_alt` is implemented with knowledge of how
-  `expand` works, choosing which atoms to keep or erase based on their status
+  `step` works, choosing which atoms to keep or erase based on their status
   (e.g., `is_dead` or `failed`).
    > Note 1: The function can be significantly simplified under the assumption
    > that the input tree is valid. However, since we want our interpreter to
@@ -201,11 +201,11 @@ The more interesting and used are:
 - the small lemmas in the section `tree_op` relating the success, failed,
   is_dead, cutr and cutl functions. (The is_ko definition is no longer useful,
   it should be cleaned up in a future version)
-- `expand_solved_same : expand s1 A = Success s2 B -> ((s1 = s2) * (A = B))%type.`
-- `expand_solved_success : expand s1 A = Success s2 B -> (success A * success B)%type.` (*which can only return the first projection, due to the previous lemma*)
-- `expand_not_dead : is_dead A = false -> expand s A = r -> is_dead (get_tree r) = false`
-- `expand_failure_failed : expand s1 A = Failure B -> (failed A * failed B)%type.`
--  `failed_expand : failed A -> expand s1 A = Failure A.`
+- `step_solved_same : step s1 A = Success s2 B -> ((s1 = s2) * (A = B))%type.`
+- `step_solved_success : step s1 A = Success s2 B -> (success A * success B)%type.` (*which can only return the first projection, due to the previous lemma*)
+- `step_not_dead : is_dead A = false -> step s A = r -> is_dead (get_tree r) = false`
+- `step_failure_failed : step s1 A = Failure B -> (failed A * failed B)%type.`
+-  `failed_step : failed A -> step s1 A = Failure A.`
 -  `next_alt_none : next_alt s1 A = None -> forall s2, next_alt s2 A = None.`
 - `next_alt_some : next_alt s1 A = Some (s2, B) -> (forall s3, exists s4, next_alt s3 A = Some (s4, B)).`
 
@@ -222,74 +222,74 @@ to pass all tests without issues.
 
 ## Properties of run: run_prop.v
 
-In `run_prop`, we tree properties of the interpreter, proving that `expandedb`
+In `run_prop`, we tree properties of the interpreter, proving that `stepedb`
 and `runb` are consistent, i.e., they always produce the same outputs given the
-same inputs (`expanded_consistent` and `run_consistent`).
+same inputs (`steped_consistent` and `run_consistent`).
 
 The `same_structure` postulate asserts that the structure of a tree is
-preserved by `expand` and `expandedb`, i.e., they maintain the structure of
+preserved by `step` and `stepedb`, i.e., they maintain the structure of
 `And` and `Or` nodes.
 
-We prove `expanded_and_complete`:
+We prove `steped_and_complete`:
 ```
-expandedb s (And A B0 B) (Done s' C) b ->
+stepedb s (And A B0 B) (Done s' C) b ->
   exists s'' A' B' b1 b2, 
-    expandedb s A (Done s'' A') b1 /\ 
-      expandedb s'' B (Done s' B') b2 /\ 
+    stepedb s A (Done s'' A') b1 /\ 
+      stepedb s'' B (Done s' B') b2 /\ 
         b = b1 || b2`.
 ```
 
-We prove `expanded_and_correct`:
+We prove `steped_and_correct`:
 ```
-expandedb s0 A (Done s1 B) -> 
-  expandedb s1 C (Done s2 D) b ->
-    expandedb s0 (And A B0 C) 
+stepedb s0 A (Done s1 B) -> 
+  stepedb s1 C (Done s2 D) b ->
+    stepedb s0 (And A B0 C) 
       (Done s2 (And (if b then cutl B else B) (if b then cutl B0 else B0) D)).
 ```
 
-We prove `expanded_and_fail`:
+We prove `steped_and_fail`:
 ```
-expandedb s (And A B0 B) (Failed C) ->
-  (exists C', expandedb s A (Failed C')) \/ 
-    (exists s' A' B', expandedb s A (Done s' A') /\ expandedb s' B (Failed B')).
+stepedb s (And A B0 B) (Failed C) ->
+  (exists C', stepedb s A (Failed C')) \/ 
+    (exists s' A' B', stepedb s A (Done s' A') /\ stepedb s' B (Failed B')).
 ```
 > TODO: Refine this proof to specify that C is `And A' B0' B'` and eliminate
 > the existential quantifiers `C', A', B'`.
 
-We prove `expanded_and_fail_left`:
+We prove `steped_and_fail_left`:
 ```
-expandedb s A (Failed FA) ->
-  forall B, expandedb s (And A B0 B) (Failed (And FA B0 B)).
+stepedb s A (Failed FA) ->
+  forall B, stepedb s (And A B0 B) (Failed (And FA B0 B)).
 ```
 
 We prooe `run_and_fail_both`:
 ```
 run_and_fail_both:
-  expandedb s A (Done s' SA) -> expandedb s' B (Failed FB) b ->
-      expandedb s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)).
+  stepedb s A (Done s' SA) -> stepedb s' B (Failed FB) b ->
+      stepedb s (And A B0 B) (Failed (And (if b then cutl SA else SA) (if b then cutl B0 else B0) FB)).
 ```
 
-We prove `expanded_or_correct_left`:
+We prove `steped_or_correct_left`:
 ```
-expandedb s A (Done s' A') b ->
+stepedb s A (Done s' A') b ->
   forall s2 B,
-    expandedb s (Or A s2 B) (Done s' (Or A' s2 (if b then cutr B else B))).
+    stepedb s (Or A s2 B) (Done s' (Or A' s2 (if b then cutr B else B))).
 ```
 
-We prove `expanded_or_complete_done`:
+We prove `steped_or_complete_done`:
 ```
-expandedb s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
+stepedb s (Or A s2 B) (Done s' (Or A' s2 B')) b ->
   (is_dead A = false /\ 
-    exists b, expandedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
-      (is_dead A /\ A = A' /\ expandedb s B (Done s' B')).
+    exists b, stepedb s A (Done s' A') b /\ B' = if b then cutr B else B) \/ 
+      (is_dead A /\ A = A' /\ stepedb s B (Done s' B')).
 ```
 
-We prove `expanded_or_correct_left_fail`:
+We prove `steped_or_correct_left_fail`:
 ```
 is_dead A = false ->
-  expandedb s A (Failed A') b ->
+  stepedb s A (Failed A') b ->
     forall s2 B, 
-      expandedb s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))).
+      stepedb s (Or A s2 B) (Failed (Or A' s2 (if b then cutr B else B))).
 ```
 
 ## Determinacy checking: check.v
@@ -348,8 +348,8 @@ We prove the following properties:
 
 - `bbAnd_valid`: `bbAnd B -> valid_tree B.`
 - `bbOr_valid`: `bbOr B -> valid_tree B.`
-- `valid_tree_expand`: `valid_tree A -> expand s A = r -> valid_tree (get_tree r).`
-- `valid_tree_expanded`: `valid_tree A -> expandedb s1 A r -> valid_tree (get_tree_exp r).`
+- `valid_tree_step`: `valid_tree A -> step s A = r -> valid_tree (get_tree r).`
+- `valid_tree_steped`: `valid_tree A -> stepedb s1 A r -> valid_tree (get_tree_exp r).`
 - `valid_tree_next_alt`: `valid_tree A -> next_alt s1 A = Some (s2, B) -> valid_tree B.`
 - `valid_tree_clean_success`: `valid_tree A -> valid_tree (clean_success A).`
 - `valid_tree_run`: `valid_tree A -> run s1 A s2 B -> valid_tree B.`  
@@ -596,8 +596,8 @@ When verifying suffixes, the boolean is removed from the lists using the
 `G2Gs` function.
 
 In the rest of the file, we prove several properties relating a tree `A` and
-a tree `B` that are connected through calls to `next_alt`, `expand`,
-`expandedb`, and similar functions.
+a tree `B` that are connected through calls to `next_alt`, `step`,
+`stepedb`, and similar functions.
 
 ## Tree to list tests: elpi_test.v
 

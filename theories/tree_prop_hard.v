@@ -623,7 +623,7 @@ Section s.
         move=> fB s.
         have {}HB := HB fB (get_substS s A).
         inversion HB; clear HB; subst => //.
-        - rewrite failed_expand// in H.
+        - rewrite failed_step// in H.
         - rewrite next_alt_cutl_failed// in H0.
         - rewrite dead_cutl -/(dead (And A B0 B)) -/(cutl (And A B0 B)) -dead_cutl.
           replace (And _ _ _) with (cutl (And A B0 B)).
@@ -634,7 +634,7 @@ Section s.
       have:= (HA _ s).
       rewrite failed_success_cut success_cut sA/=.
       move=> /(_ isT) {}HA; inversion HA; clear HA; subst.
-      - rewrite failed_expand//failed_success_cut success_cut sA// in H.
+      - rewrite failed_step//failed_success_cut success_cut sA// in H.
       - rewrite next_alt_cutl_failed// in H0.
       - rewrite dead_cutl -/(dead (And A B0 B)) -/(cutl (And A B0 B)) -dead_cutl.
         replace (And _ _ _) with (cutl (And A B0 B)); last first.
@@ -762,7 +762,7 @@ Section s.
   Proof.
     remember (And _ _ _) as a eqn:Ha => H.
     elim: H A B0 B Ha; clear.
-    - move=> s1 s2 r A B /expand_solved_same [[??]+] ? C D E ?; subst => /=.
+    - move=> s1 s2 r A B /step_solved_same [[??]+] ? C D E ?; subst => /=.
       move=> /andP[sC sE].
       repeat eexists.
         apply: run_done (succes_is_solved _ _ sC) erefl.
@@ -778,7 +778,7 @@ Section s.
       have [sm[r1[b1 [{}IH [b2[r2 H2]]]]]]:= IH _ _ _ erefl.
       do 3 eexists; split.
         apply: run_done X erefl.
-      have [[??]sC]:= expand_solved_same _ X; subst.
+      have [[??]sC]:= step_solved_same _ X; subst.
       have sC' := sC.
         rewrite -success_cut in sC'.
       have {IH} [?[??]] := run_consistent _ _ IH (runb_success1 _ _ sC'); subst.
@@ -805,19 +805,19 @@ Section s.
       have [sm[r1[b1 [{}IH [b2[r2 H2]]]]]]:= IH _ _ _ erefl.
       do 3 eexists; split.
         apply: run_done X erefl.
-      have [[??]sC]:= expand_solved_same _ X; subst.
+      have [[??]sC]:= step_solved_same _ X; subst.
       have {IH} [?[??]] := run_consistent _ _ IH (runb_success1 _ _ sC); subst.
       case: H2 => H2.
         repeat eexists; left; apply: run_step Y H2.
       by repeat eexists; eauto.
-    - move=> s1 s2 A B C r n /expand_failed_same [? +] + rC IH D E F ?; subst.
+    - move=> s1 s2 A B C r n /step_failed_same [? +] + rC IH D E F ?; subst.
       move=> /= /orPT[fD|/andP[sD fF]].
         rewrite fD; case: ifP => //dD.
         case W: next_alt => //=[D'].
         case X: next_alt => //=[E'][?]; subst.
         have [sm[r1[b1 [{}IH [b2[r2 H2]]]]]]:= IH _ _ _ erefl.
         do 3 eexists; split.
-          apply: run_fail (failed_expand _ fD) W IH.
+          apply: run_fail (failed_step _ fD) W IH.
         case: H2 => H2; repeat eexists; eauto.
         right; eexists; apply: next_alt_runb X H2.
       rewrite success_failed// success_is_dead//sD.
