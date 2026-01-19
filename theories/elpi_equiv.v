@@ -7,16 +7,16 @@ From det Require Import zify_ssreflect.
 Section NurEqiv.
   Variable (u : Unif).
 
-  Lemma tree_to_elpi A s B s1 b sIgn:
+  Lemma tree_to_elpi A s1 B s2 b s0:
     valid_tree A ->
-      run u s A (Some s1) B b -> 
+      run u s1 A (Some s2) B b -> 
         Texists x xs,
-          t2l A s nilC = x ::: xs /\
-          nur u x.1 x.2 xs s1 (t2l B sIgn nilC).
+          t2l A s1 nilC = x ::: xs /\
+          nur u x.1 x.2 xs s2 (t2l B s0 nilC).
   Proof.
     move=> +H.
     remember (Some _) as r eqn:Hr.
-    elim: H s1 Hr sIgn; clear => //.
+    elim: H s2 Hr s0; clear => //.
     + move=> s1 _ A _ sA <-<- _ [<-] sIgn vA; subst.
       rewrite (success_t2l sIgn)//.
       repeat eexists.
@@ -821,12 +821,10 @@ Proof.
     by rewrite s2l_big_and//.
 Qed.
 
-Lemma elpi_to_tree {s1 s2} {alts alts_left : alts} {andg : goals}  : 
-  nur u s1 andg alts s2 alts_left -> forall s t,
-  valid_tree t ->
-  (t2l t s nilC) = ((s1,andg) ::: alts) -> 
-  Texists t1 n,
-    run u s t (Some s2) t1 n /\ t2l t1 s nilC = alts_left.
+Lemma elpi_to_tree s1 s2 a na g  : 
+  nur u s1 g a s2 na -> 
+  forall s0 t, valid_tree t -> (t2l t s0 nilC) = ((s1,g) ::: a) -> 
+  Texists t1 n, run u s0 t (Some s2) t1 n /\ t2l t1 s0 nilC = na.
 Proof.
   elim; clear.
   - move=> s a s1 A vA /= H.
