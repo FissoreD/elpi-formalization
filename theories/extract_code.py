@@ -1,7 +1,9 @@
-import sys, re
+import os, sys, re
 
 OPEN_COMMENT = "(*"
 END_COMMENT = "*)"
+OUT_DIR = "tex_code"
+EXTENTION = "v"
 
 def get_file_cnt(lines):
     res = []
@@ -13,6 +15,9 @@ def get_file_cnt(lines):
         return res
 
 def print_tex(lines, fout, raw = False):
+    if not os.path.exists(OUT_DIR):
+        os.makedirs(OUT_DIR)
+    fout = f"{OUT_DIR}/{fout}"
     with open(fout, "w") as f:
         if not raw:
             f.write("\\begin{elpicode}\n")
@@ -34,7 +39,7 @@ def print_tex(lines, fout, raw = False):
             f.write("\\end{elpicode}\n")
 
 def mk_fname(fname):
-    return fname.split("/")[-1][:-4] + "tex"
+    return fname.split("/")[-1][:-(len(EXTENTION))] + "tex"
 
 def get_snippets(lines):
     snips = {}
@@ -44,7 +49,6 @@ def get_snippets(lines):
     for l in lines:
         m = re.match(rf"^{re.escape(OPEN_COMMENT)}ENDSNIP",l)
         if not (m is None):
-            print ("WOW")
             snips[name] = curgrp
             ingrp = False
             curgrp = []
