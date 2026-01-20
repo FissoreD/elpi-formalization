@@ -1,6 +1,7 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import tree elpi.
 
+(*BEGIN*)
 Definition make_lB0 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, x ++ lB0)) xs.
 
 Definition make_lB01 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, lB0 ++ x)) xs.
@@ -62,6 +63,7 @@ Fixpoint r2l a : goals :=
     the "great^n uncles" on the right of a cut ARE alternatives
   *)
 
+(*SNIP: t2l*)
 Fixpoint t2l (A: tree) s (bt : alts) : alts :=
 match A with
 | OK => (s, nilC) ::: nilC
@@ -88,6 +90,7 @@ match A with
       (make_lB01 lB xz) ++ xs
   else nilC
 end.
+(*ENDSNIP*)
 
 Global Notation "-nilCG" :=
   (@nilC _ _ IsList_goals)
@@ -115,3 +118,4 @@ Section test.
     rewrite subnn/= take0 drop0//.
   Qed.
 End test.
+(*END*)
