@@ -2024,26 +2024,6 @@ Proof.
   by destruct d0 => //=; subst.
 Qed. *)
 
-Lemma big_and_base_and A:
-  base_and A -> exists l, big_and l = A.
-Proof.
-  case: A => //=; first by exists [::].
-  move=> []//= A l t /andP[/eqP? H1]; subst.
-  by exists (A :: l).
-Qed.
-
-Lemma all_det_nfa_base_and {b sP sV l r}: 
-  tc_tree_aux b sP (big_and l) sV r = (if b && (l == [::]) then None else Some (check_atoms sP (sV+r.2) l r.1)).
-Proof.
-  case: r => /=D R; case: ifP.
-    by move=> /andP[] H /eqP->/=; destruct b.
-  case: l sV => //=; first by destruct b.
-  move=> -[|c]//=xs sV.
-    rewrite [check_atoms _ _ _ _]surjective_pairing//.
-  case C: check_callable => /=[d0 s0].
-  by rewrite [check_atoms _ _ _ _]surjective_pairing//.
-Qed.
-
 Lemma all_det_nfa_big_and {b sP sV l r}: 
   tc_tree_aux b sP (big_and l) sV r = (if b && (l == [::]) then None else Some (check_atoms sP (sV+r.2) l r.1)).
 Proof.
@@ -3555,7 +3535,7 @@ Proof.
 Qed. *)
 
 Lemma get_ctxS_base_and sP tE sV A:
-  base_and A -> get_ctxS sP tE sV A = sV.
+  get_ctxS sP tE sV (big_and A) = sV.
 Proof. case: A sV => //= -[]//. Qed.
 
 Lemma success_false_step u s A r sP tE sV:

@@ -419,7 +419,7 @@ Section NurValidState.
   (********************************************************************)
   (* VALID STATE RELATIONS                                            *)
   (********************************************************************)
-  Lemma base_and_valid_caA A s r l rs bt:
+  (* Lemma base_and_valid_caA A s r l rs bt:
     base_and A ->
       t2l A s l = r -> valid_caA r rs bt.
   Proof.
@@ -429,50 +429,54 @@ Section NurValidState.
     have /=H1:= base_and_empty_ca H H2.
     rewrite H2/=andbT empty_caG_valid//H1//.
     case: ifP => //.
-  Qed.
+  Qed. *)
 
-  Lemma base_and_ko_valid_caA A s r l rs bt:
+  (* Lemma base_and_ko_valid_caA A s r l rs bt:
     base_and_ko A ->
       t2l A s l = r -> valid_caA r rs bt.
-  Proof. move=>/base_and_ko_t2l-><-//. Qed.
+  Proof. move=>/base_and_ko_t2l-><-//. Qed. *)
 
-  Lemma base_or_aux_ko_valid_caA A s r l rs bt:
+  (* Lemma base_or_aux_ko_valid_caA A s r l rs bt:
     base_or_aux_ko A ->
       t2l A s l = r -> valid_caA r rs bt.
-  Proof. move=>/base_or_aux_ko_t2l-><-//. Qed.
+  Proof. move=>/base_or_aux_ko_t2l-><-//. Qed. *)
 
+  Lemma valid_caG_a2gs x l:
+    valid_caG (a2gs x) l nilC.
+  Proof. by elim: x l => //-[]//= l H l0; rewrite suffix0s H. Qed.
 
   Lemma empty_caG_cat A B: empty_caG (A ++ B) = empty_caG A && empty_caG B.
   Proof. by rewrite/empty_caG all_cat. Qed.
 
-  Lemma base_or_aux_valid_caA A s0 r rs:
-    base_or_aux A -> t2l A s0 nilC = r -> valid_caA r rs nilC.
+  Lemma empty_ca_big_or_aux r rs s0:
+    empty_ca (t2l (big_or_aux r rs) s0 nilC).
   Proof.
-    move=>+<-; clear r.
-    elim: A rs s0 => //=.
-    - move=> rs; case: ifP => //.
-    - move=> A HA s B HB rs s0 /=/andP[bA bB].
-      rewrite add_ca_deep_empty1.
-      have [hd H]:= base_and_t2l bA.
-      rewrite H/=fold_valid_caA HB//=.
-      have/=:= base_and_valid_caA _ _ _ _ (rs) nilC bA (H nilC empty).
-      move=> /(_ _ IsList_alts _ IsList_alts)//.
-      case: eqP => // _.
-      move=>/andP[->]; rewrite bbOr_empty_ca///bbOr bB//.
-    - move=> A; case: A => // a rs l B HB rs' s0/= /andP[/eqP<-] bB;
-      have [h H]:= base_and_t2l bB;
-      have H1:=base_and_empty_ca bB H.
-      by case: a rs => //=[|c] _; rewrite make_lB0_empty1 !cats0/=H/= (empty_caG_valid _ H1) ?suffix0s empty_caG_cat H1/= if_same.
+    rewrite/empty_ca/=.
+    elim: rs r s0 => [|[s0 r0] rs IH] x s1//=; rewrite t2l_big_and.
+      by rewrite /empty_ca/all/= empty_ca_atoms.
+    rewrite cat_cons/= all_cons cat0s add_ca_deep_empty1 IH.
+    by rewrite add_ca_deepG_empty1/= empty_ca_atoms.
   Qed.
 
-  Lemma bbOr_valid_caA A s0 r rs:
-    bbOr A ->
+  Lemma valid_caA_big_or_aux x xs s0 rs:
+    valid_caA (t2l (big_or_aux x xs) s0 nilC) rs nilC.
+  Proof.
+    elim: xs x s0 rs => //= [|[s0 r0] rs IH] x s1 l.
+      by rewrite t2l_big_and//= empty_ca_atoms valid_caG_a2gs if_same.
+    rewrite /= add_ca_deep_empty1 t2l_big_and.
+    rewrite cat_cons/= empty_ca_atoms cat0s valid_caG_a2gs/=.
+    by rewrite fold_valid_caA IH empty_ca_big_or_aux if_same.
+  Qed.
+
+  (* Lemma bbOr_valid_caA A s0 r rs:
+    B.bbOr A ->
       t2l A s0 nilC = r -> valid_caA r rs nilC.
   Proof.
+    move=> /spec_bbOr [x[xs []]]<-<-; last by rewrite t2l_cutr.
     rewrite/bbOr=>/orP[].
-      apply: base_or_aux_valid_caA.
+      apply: valid_caA_big_or_aux.
     move=>/base_or_aux_ko_valid_caA H/H -/(_ rs nilC)//.
-  Qed.
+  Qed. *)
 
 
   (********************************************************************)
@@ -502,9 +506,11 @@ Section NurValidState.
       rewrite HB//?bbOr_valid//andbT.
       have:= HA (t2l B s nilC) s0 vA.
       set sB := t2l B _ => HH.
-      apply: push_bt_out => //.
-      apply: bbOr_valid_caA bB _ => //.
-      rewrite cats0//.
+      apply: push_bt_out => //; last by rewrite cats0//.
+      rewrite/sB.
+      move /spec_bbOr: bB => [r[rs[]?]]; subst.
+        apply: valid_caA_big_or_aux.
+      by rewrite t2l_cutr.
     - move=> A HA B0 B HB l s0/= /andP[vA].
       have:= HA l s0 vA => {}HA.
       case:ifP => /=[sA vB|sA /eqP?]; subst.
@@ -524,7 +530,7 @@ Section NurValidState.
           apply: valid_ca_add_deep_make_lB0; rewrite//Hhd//.
         apply: HB vB.
       case lA: t2l => [|[s x] xs]//=.
-      rewrite !s2l_big_and//=.
+      rewrite !t2l_big_and//=.
       rewrite behead_cons.
       set hd := r2l B0.
       have? := empty_caG_r2l B0.

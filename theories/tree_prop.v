@@ -27,8 +27,14 @@ Section RunP.
       rewrite HA//.
   Qed.
 
+  Lemma failed_big_and t: failed (big_and t) = false.
+  Proof. case: t => [|[]]//. Qed.
+
   Lemma is_dead_big_and r: is_dead (big_and r) = false.
-  Proof. elim: r => //=-[]//. Qed.
+  Proof. apply/contraFF/failed_big_and/r/is_dead_failed. Qed.
+
+  Lemma is_ko_big_and r: is_ko (big_and r) = false.
+  Proof. apply/contraFF/failed_big_and/r/is_ko_failed. Qed.
 
   Lemma is_dead_big_or r rs: is_dead (big_or_aux r rs) = false.
   Proof. 
@@ -224,9 +230,6 @@ Section RunP.
       by apply: HB (get_substS s1 A).
   Qed.
 
-  Lemma is_ko_big_and r: is_ko (big_and r) = false.
-  Proof. elim: r => //=-[]//. Qed.
-
   Lemma is_ko_big_or_aux r A: is_ko (big_or_aux r A) = false.
   Proof. by elim: A r => //=[|[s r] rs IH] r1/=; rewrite is_ko_big_and//. Qed.
 
@@ -263,9 +266,6 @@ Section RunP.
       rewrite !(HA _ _ X)//.
     by move=> [<-]/=; rewrite (contraFF is_dead_failed)//.
   Qed.
-
-  Lemma failed_big_and t: failed (big_and t) = false.
-  Proof. case: t => [|[]]//. Qed.
 
   Lemma next_alt_failed {b A r}: next_alt b A = r -> failed (odflt OK r) = false.
   Proof.
@@ -505,6 +505,17 @@ Section RunP.
   Lemma next_alt_big_and r:
     next_alt false (big_and r) = Some (big_and r).
   Proof. elim: r => //=x xs IH p; case: x => //=. Qed.
+
+  Lemma next_alt_big_or_aux r rs:
+    next_alt false (big_or_aux r rs) = Some (big_or_aux r rs).
+  Proof.
+    elim: rs r => //= [|[sr r] rs IH] r0/=;
+    by rewrite ?is_dead_big_and next_alt_big_and//.
+  Qed.
+
+  Lemma get_substS_big_and A s1:
+    get_substS s1 (big_and A) = s1.
+  Proof. elim: A => //. Qed.
 
   Lemma is_ko_run u p s A: is_ko A -> run u p s A None (dead A) false.
   Proof.
