@@ -153,10 +153,12 @@ Proof.
   by rewrite !(B.bbOr_cutr,B.bbOr_big_or_aux) in X.
 Qed.
 
+(*BEGIN*)
 Section valid_tree.
   Variable u : Unif.
   Variable p : program.
 
+(*SNIP: valid_tree*)
   Fixpoint valid_tree s :=
     match s with
     | TA _ | OK | Bot => true
@@ -169,6 +171,7 @@ Section valid_tree.
         if success A then valid_tree B 
         else B == big_and B0
     end.
+(*ENDSNIP: valid_tree*)
 
   Goal forall x r , (valid_tree (And (TA cut) x r)) -> is_ko r = false.
   Proof. move=> x r/= /eqP->; rewrite is_ko_big_and//. Qed.
@@ -299,5 +302,6 @@ Section valid_tree.
       move=> /(valid_tree_next_alt vA) vB /(_ vB)//.
     + by move => *; rewrite dead2; auto.
   Qed.
+(*END*)
 
 End valid_tree.
