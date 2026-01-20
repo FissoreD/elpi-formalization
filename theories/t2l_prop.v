@@ -634,7 +634,7 @@ Section NurProp.
     - move=> A HA B0 B HB l l1 ca tl alts s1 s2/andP[vA].
       case: ifP => //=[sA vB|sA/eqP-> {B HB}].
         rewrite (success_t2l empty)//.
-        rewrite succes_step//=.
+        rewrite success_step//=.
         set SA := t2l (odflt _ _) _ _.
         case: ifP => //.
           case eB: step => [[]B']// _.

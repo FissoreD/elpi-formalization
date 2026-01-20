@@ -55,7 +55,7 @@ Section RunP.
     is_dead A -> expandedb s A (Failed A) 0.
   Proof. move=>/is_dead_is_ko/is_ko_expanded//. Qed. *)
 
-  Lemma succes_step u p s A: success A -> step u p s A = (Success, A).
+  Lemma success_step u p s A: success A -> step u p s A = (Success, A).
   Proof.
     elim: A s => //; try by do 2 eexists.
     + move=> A HA s1 B HB s /=.
@@ -195,7 +195,7 @@ Section RunP.
 
   Lemma step_not_solved u p  s1 A r:
     step u p s1 A = r -> ~ (is_sc r.1) -> success A = false.
-  Proof. case: r => -[]//=b; case X: success; by rewrite // (succes_step _ _ s1 X). Qed.
+  Proof. case: r => -[]//=b; case X: success; by rewrite // (success_step _ _ s1 X). Qed.
 
   Lemma failed_step u p s1 A:
     failed A -> step u p s1 A = (Failure, A).
@@ -209,7 +209,7 @@ Section RunP.
       case X: failed => /=.
         move=>_; rewrite HA => //.
       move=>/andP[sA fB].
-      rewrite succes_step//.
+      rewrite success_step//.
       rewrite HB//.
   Qed. 
 
@@ -545,8 +545,8 @@ Section RunP.
   Lemma run_success u p A s1 s2 r n: 
     success A -> run u p s1 A s2 r n -> (s2 = Some (get_substS s1 A) /\ r = build_na A (next_alt true A) /\ n = false)%type2.
   Proof.
-    move=> sA H; have:= succes_step u p s1 sA.
-    by inversion H; clear H; try congruence; subst; rewrite succes_step//; rewrite failed_success in sA.
+    move=> sA H; have:= success_step u p s1 sA.
+    by inversion H; clear H; try congruence; subst; rewrite success_step//; rewrite failed_success in sA.
   Qed.
 
   Lemma run_consistent u p s A s1 B s2 C n1 n2:
@@ -557,14 +557,14 @@ Section RunP.
       by apply: run_success sA H.
     + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
-      - by rewrite succes_step in HA.
+      - by rewrite success_step in HA.
       - move: H0; rewrite HA => -[?]; subst.
         by rewrite !(IH _ _ _ X).
       - by rewrite failed_step in HA.
       - by rewrite failed_step in HA.
     + move=> s1 s2 r A B n1 HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
-      - by rewrite succes_step in HA.
+      - by rewrite success_step in HA.
       - move: H0; rewrite HA => -[?]; subst; by rewrite !(IH _ _ _ X)//.
       - by rewrite failed_step in HA.
       - by rewrite failed_step in HA.

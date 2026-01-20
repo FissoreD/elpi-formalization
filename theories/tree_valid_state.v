@@ -248,7 +248,7 @@ Section valid_tree.
       case X: step => [[]A']//=->; rewrite (step_not_dead dA X)//B.bbOr_cutr//.
     + move=> A HA B0 B HB s1 /=/andP[vA].
       case: ifP => [sA vB /= | sA]/=.
-        rewrite succes_step//=.
+        rewrite success_step//=.
         have {HB} := HB (get_substS s1 A) vB.
         case X: step => //[[]C]/=vC; try by rewrite sA vA vC.
         rewrite success_cut sA/= vC valid_tree_cut//.

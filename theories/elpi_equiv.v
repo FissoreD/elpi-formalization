@@ -508,7 +508,7 @@ Section next_cut.
         have:= HB _ (get_substS s A) (ml ++ bt) _ _ _ _ fB vB _ Y.
         move=> /(_ _ IsList_alts).
         rewrite H1/= => /(_ _ _ _ _ erefl) [{}HB H2].
-        rewrite succes_step//=.
+        rewrite success_step//=.
         case: b Y H2 => Y H2; rewrite H2; repeat split.
           have vcl := valid_tree_cut sA vA.
           have scA := sA.
@@ -692,7 +692,7 @@ Section next_callS.
         (* move/orPT: bB => []bB; last first.
           rewrite base_and_ko_t2l//= make_lB01_empty2 => H.
           have /={HA HB}[HB H1] := HB _ _ _ _ _ _ _ fB vB H.
-          rewrite succes_step//H1/= make_lB01_empty2 HB//.
+          rewrite success_step//H1/= make_lB01_empty2 HB//.
         have [h H]:= base_and_t2l bB. *)
         rewrite make_lB01_empty2/=.
         rewrite clean_ca_cat.
@@ -703,7 +703,7 @@ Section next_callS.
         have /={HA HB} := HB (get_substS s1 A) (ml ++ bt) _ _ _ _ fB vB _.
         move=> /(_ _ IsList_alts).
         rewrite H1/= =>  // /(_ _ _ _ _ erefl) [{}HB H2].
-        rewrite succes_step//=.
+        rewrite success_step//=.
         rewrite H2 make_lB01_empty2; repeat split.
         have [?] := s2l_Expanded_call _ _ vB H2 H1; subst.
         case X: F => [|[sz z]zs].

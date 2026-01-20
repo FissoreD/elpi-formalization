@@ -339,7 +339,7 @@ Section check.
         move=>kA; rewrite is_ko_step//=kA//.
       case sA: success =>/and3P[H1 H2 H3]/=.
         have scA: success (cutl A) by rewrite success_cut.
-        rewrite succes_step//=.
+        rewrite success_step//=.
         rewrite [is_ko _]fun_if [success _]fun_if scA sA if_same.
         rewrite !success_is_ko//= !if_same/=.
         rewrite HB//=.
