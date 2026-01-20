@@ -3,20 +3,24 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Export lang.
 
-
+(*BEGIN*)
+(*SNIP: tree_def*)
 Inductive tree :=
-  | Bot
-  | OK
-  | Dead
+  | Bot | OK | Dead
   | TA : program  -> A -> tree
-  | Or  : tree -> Sigma -> tree -> tree  (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
-  | And : tree -> (program * seq A) -> tree -> tree  (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
+  (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
+  | Or  : tree -> Sigma -> tree -> tree 
+  (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
+  | And : tree -> (program * seq A) -> tree -> tree.
+(*ENDSNIP: tree_def*)
   (* | PiImpl : V -> R_ A -> A -> A. *)
-  .
+
 derive tree.
 HB.instance Definition _ := hasDecEq.Build tree tree_eqb_OK.
 
+(*SNIP: step_tag*)
 Inductive step_tag := Expanded | CutBrothers| Failure | Success.
+(*ENDSNIP: step_tag*)
 derive step_tag.
 HB.instance Definition _ := hasDecEq.Build step_tag step_tag_eqb_OK.
 
@@ -305,6 +309,7 @@ Section main.
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
 
+(*SNIP: step*)
   Fixpoint step s A : (step_tag * tree) :=
     match A with
     (* meta *)
@@ -330,12 +335,14 @@ Section main.
           (rB.1, And (if is_cb rB.1 then cutl A else A) B0 rB.2)
         else (rA.1, And rA.2 B0 B)
     end.
+(*ENDSNIP: step*)
 
   (* Next_alt takes a tree "T" returns a new tree "T'" representing the next
      alternative wrt "T", if no new alternative exists, None is returned.
      Next_alt takes a boolean b to know if a successful path should be erased in
      "T".
   *)
+(*SNIP: next_alt*)
   Fixpoint next_alt b (A : tree) : option (tree) :=
     match A with
     | Bot | Dead => None
@@ -358,6 +365,7 @@ Section main.
         | Some nA => Some (Or nA sB B)
       end
   end.
+(*ENDSNIP: next_alt*)
 
   Goal forall r, next_alt false (And (Or OK empty OK) r Bot) = Some (And (Or Dead empty OK) r (big_and r.1 r.2)).
   Proof. move=> [] //=. Qed.
@@ -390,3 +398,4 @@ Section main.
 End main.
 
 Hint Resolve is_dead_dead : core.
+(*END*)
