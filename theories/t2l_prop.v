@@ -149,19 +149,6 @@ Section NurProp.
       by case: a => [|c]/=; rewrite make_lB0_empty1/= cats0 H => -[<-]//=.
     Qed.
 
-    Lemma bbAnd_t2l {A}:
-      bbAnd A -> 
-        ((forall l s, t2l A s l = nilC) + 
-          Texists hd, (forall l s, 
-            t2l A s l = (s, hd) ::: nilC) /\ empty_caG hd).
-    Proof.
-      rewrite/bbAnd =>/orPT[]; last first.
-        move=>/base_and_ko_t2l; auto.
-      move=>/[dup]H/base_and_t2l; auto.
-      move=>[hd H1]; right; exists hd.
-      have /= := (base_and_empty_ca H H1).
-      move=> ->; auto.
-    Qed.
   End t2l_base.
 
   Lemma add_ca_deep_cat l SA SB:

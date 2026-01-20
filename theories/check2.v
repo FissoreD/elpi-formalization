@@ -3558,13 +3558,6 @@ Lemma get_ctxS_base_and sP tE sV A:
   base_and A -> get_ctxS sP tE sV A = sV.
 Proof. case: A sV => //= -[]//. Qed.
 
-Lemma get_ctxS_bbAnd sP tE sV A:
-  bbAnd A -> get_ctxS sP tE sV A = sV.
-Proof.
-  move=> /orP[]; first by apply:get_ctxS_base_and.
-  case: A sV => //=-[]//.
-Qed.
-
 Lemma success_false_step u s A r sP tE sV:
   valid_tree A ->
   step u s A = r ->

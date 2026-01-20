@@ -4,6 +4,7 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
 
+(*BEGIN*)
 Section aux.
   Lemma ltn_leq_trans m n p :
     m < n -> n <= p -> m < p.
@@ -224,6 +225,7 @@ Global Notation "(( x ))" := (consC x nilC)
   (at level 3, no associativity,only printing)
   : SE.
 
+(*SNIP: elpi_def*)
 Inductive G := 
   | callE : Callable -> G
   | cutE : alts -> G
@@ -233,6 +235,7 @@ with alts :=
 with goals :=
   | no_goals
   | more_goals : G -> goals -> goals .
+(*ENDSNIP: elpi_def*)
 
 Fixpoint eqbA t1 t2 :=
   match t1, t2 with
@@ -766,3 +769,4 @@ Proof.
 Qed.
 
 End Nur. 
+(*END*)
