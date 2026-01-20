@@ -3,15 +3,19 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Export lang.
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
+
 (*BEGIN*)
 (*SNIP: tree_def*)
 Inductive tree :=
   | Bot | OK | Dead
-  | TA : program  -> A -> tree
+  | TA : A -> tree
   (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
   | Or  : tree -> Sigma -> tree -> tree 
   (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
-  | And : tree -> (program * seq A) -> tree -> tree.
+  | And : tree -> seq A -> tree -> tree.
 (*ENDSNIP: tree_def*)
   (* | PiImpl : V -> R_ A -> A -> A. *)
 
@@ -37,7 +41,7 @@ Section tree_op.
   Fixpoint dead A :=
     match A with
     | Dead => Dead
-    | OK | Bot | TA _ _ => Dead
+    | OK | Bot | TA _ => Dead
     | And A B0 B => And (dead A) B0 B
     | Or A s B => Or (dead A) s (dead B)
     end.
@@ -45,7 +49,7 @@ Section tree_op.
   Fixpoint is_dead A :=
     match A with
     | Dead => true
-    | OK | Bot | TA _ _ => false
+    | OK | Bot | TA _ => false
     (* Note: "is_dead A || (success A && dead B)" is wrong
       A counter example is: "(OK \/ p) /\ Dead"
       In this case, a valid alternative is "p /\ B0"
@@ -57,7 +61,7 @@ Section tree_op.
   Fixpoint is_ko A :=
     match A with
     | Dead | Bot => true
-    | OK | TA _ _ => false
+    | OK | TA _ => false
     | And A B0 B => is_ko A
     | Or A s B => is_ko A && is_ko B
     end.
@@ -65,7 +69,7 @@ Section tree_op.
   Fixpoint success (A : tree) : bool :=
     match A with
     | OK => true
-    | TA _ _ | Bot | Dead => false
+    | TA _ | Bot | Dead => false
     | And A _ B => success A && success B
     (* We need to keep the if condition to reflect the behavior of step:
       For example, an interesting proprety of step is:
@@ -85,7 +89,7 @@ Section tree_op.
         tree into a "Failure Bot" (it does not introduce a Dead tree).
     *)
     | Bot | Dead => true
-    | TA _ _ | OK => false
+    | TA _ | OK => false
     | And A _ B => failed A || (success A && failed B)
     (* We keep the if condition to have the right behavior in next_alt *)
     | Or A _ B => if is_dead A then failed B else failed A
@@ -94,7 +98,7 @@ Section tree_op.
 
   Fixpoint cutr A :=
     match A with
-    | TA _ _| Bot => Bot
+    | TA _| Bot => Bot
     | OK => Bot
     | Dead => Dead
     | And A B0 B => And (cutr A) B0 B
@@ -104,7 +108,7 @@ Section tree_op.
   (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
     match A with
-    | TA _ _ | Bot => Bot
+    | TA _ | Bot => Bot
     | Dead | OK => A
     | And A B0 B =>
       if success A then And (cutl A) B0 (cutl B)
@@ -273,19 +277,19 @@ Proof. by case: B. Qed.
 Lemma get_tree_Or A s B : get_tree (mkOr A s B) = Or A s (get_tree B).
 Proof. by case: B. Qed. *)
 
-Fixpoint big_and pr (a : list A) : tree :=
+Fixpoint big_and (a : list A) : tree :=
   match a with
   | [::] => OK
-  | x :: xs => And (TA pr x) (pr, xs) (big_and pr xs)
+  | x :: xs => And (TA x) xs (big_and xs)
   end.
 
-Fixpoint big_or_aux pr (r : list A) (l : seq (Sigma * R)) : tree :=
+Fixpoint big_or_aux (r : list A) (l : seq (Sigma * R)) : tree :=
   match l with 
-  | [::] => big_and pr r
-  | (s,r1) :: xs => Or (big_and pr r) s (big_or_aux pr r1.(premises) xs)
+  | [::] => big_and r
+  | (s,r1) :: xs => Or (big_and r) s (big_or_aux r1.(premises) xs)
   end.
 
-Lemma big_and_dead {p l}: is_dead (big_and p l) = false.
+Lemma big_and_dead l: is_dead (big_and l) = false.
 Proof. elim l => //-[]//. Qed.
 
 
@@ -294,7 +298,7 @@ Section main.
 
   Definition big_or pr s t :=
     let l := F u pr t s in
-    if l is (s,r) :: xs then (Or Bot s (big_or_aux pr r.(premises) xs))
+    if l is (s,r) :: xs then (Or Bot s (big_or_aux r.(premises) xs))
     else Bot.
 
   Lemma dead_big_or p s t: is_dead (big_or p s t) = false.
@@ -304,21 +308,22 @@ Section main.
 
   Fixpoint get_substS s A :=
     match A with
-    | TA _ _ | Bot | OK | Dead => s
+    | TA _ | Bot | OK | Dead => s
     | Or A s1 B => if is_dead A then get_substS s1 B else get_substS s A
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
 
 (*SNIP: step*)
-  Fixpoint step s A : (step_tag * tree) :=
+  Fixpoint step pr s A : (step_tag * tree) :=
+    let step := step pr in
     match A with
     (* meta *)
     | OK             => (Success, OK)
     | Bot | Dead     => (Failure, A)
     
     (* lang *)
-    | TA _ cut       => (CutBrothers, OK)
-    | TA pr (call t) => (Expanded, (big_or pr s t))
+    | TA cut       => (CutBrothers, OK)
+    | TA (call t) => (Expanded, (big_or pr s t))
 
     (* recursive cases *)
     | Or A sB B =>
@@ -347,17 +352,17 @@ Section main.
     match A with
     | Bot | Dead => None
     | OK => if b then None else Some OK
-    | TA _ _ => Some A
-    | And A (pr, B0) B =>
-      let build_B0 A := Some (And A (pr, B0) (big_and pr B0)) in
+    | TA _ => Some A
+    | And A B0 B =>
+      let build_B0 A := Some (And A B0 (big_and B0)) in
       let reset := obind build_B0 (next_alt (success A) A) in
       if success A then
         match next_alt b B with
         | None => reset
-        | Some B => Some (And A (pr, B0) B)
+        | Some B => Some (And A B0 B)
         end
       else if failed A then reset 
-      else Some (And A (pr, B0) B)
+      else Some (And A B0 B)
     | Or A sB B =>
       if is_dead A then omap (fun x => (Or A sB x)) (next_alt b B)
       else match next_alt b A with
@@ -367,13 +372,13 @@ Section main.
   end.
 (*ENDSNIP: next_alt*)
 
-  Goal forall r, next_alt false (And (Or OK empty OK) r Bot) = Some (And (Or Dead empty OK) r (big_and r.1 r.2)).
+  Goal forall r, next_alt false (And (Or OK empty OK) r Bot) = Some (And (Or Dead empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, next_alt false (And (Or OK empty OK) r Bot) = Some (And (Or Dead empty OK) r (big_and r.1 r.2)).
+  Goal forall r, next_alt false (And (Or OK empty OK) r Bot) = Some (And (Or Dead empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, next_alt true (And (Or OK empty OK) r OK) = Some (And (Or Dead empty OK) r (big_and r.1 r.2)).
+  Goal forall r, next_alt true (And (Or OK empty OK) r OK) = Some (And (Or Dead empty OK) r (big_and r)).
   Proof. move=> []//=. Qed.
 
   Goal (next_alt false (Or Bot empty OK)) = Some (Or Dead empty OK). move=> //=. Qed.
@@ -383,18 +388,18 @@ Section main.
   Definition build_s (s:Sigma) (oA: option tree) := Option.map (fun _ => s)  oA.
 
 
-  Inductive run : Sigma -> tree -> option Sigma -> tree -> bool -> Type :=
-    | run_done {s1 s2 A B}        : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> run s1 A (Some s2) B false
-    | run_cut  {s1 s2 r A B n}    : step s1 A = (CutBrothers, B) -> run s1 B s2 r n -> run s1 A s2 r true
-    | run_step {s1 s2 r A B n}    : step s1 A = (Expanded,    B) -> run s1 B s2 r n -> run s1 A s2 r n
-    | run_fail   {s1 s2 A B r n}     : 
+  Inductive run (p : program): Sigma -> tree -> option Sigma -> tree -> bool -> Type :=
+    | run_done s1 s2 A B        : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> run s1 A (Some s2) B false
+    | run_cut  s1 s2 r A B n    : step p s1 A = (CutBrothers, B) -> run s1 B s2 r n -> run s1 A s2 r true
+    | run_step s1 s2 r A B n    : step p s1 A = (Expanded,    B) -> run s1 B s2 r n -> run s1 A s2 r n
+    | run_fail s1 s2 A B r n     : 
           failed A -> next_alt false A = Some B ->
               run s1 B s2 r n -> run s1 A s2 r n
-    | run_dead {s1 A} : 
+    | run_dead s1 A : 
           failed A -> next_alt false A = None ->
               run s1 A None (dead A) false.
 
-  Definition dead_run s1 A : Type := forall B n, run s1 A None B n.
+  Definition dead_run p s1 A : Type := forall B n, run p s1 A None B n.
 End main.
 
 Hint Resolve is_dead_dead : core.

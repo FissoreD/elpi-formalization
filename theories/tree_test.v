@@ -123,29 +123,31 @@ Section Test6.
   Qed. *)
 End Test6.
 
-Definition CutS := TA (build_progr [::]) cut.
+Definition emptyp := (build_progr [::]).
+
+Definition CutS := TA cut.
 
 Section Test2.
-  Goal step unif empty (Or OK empty OK) = (Success, Or OK empty OK). by []. Qed.
+  Goal step unif emptyp empty (Or OK empty OK) = (Success, Or OK empty OK). by []. Qed.
 
-  Goal run unif empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) false.
+  Goal run unif emptyp empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) false.
     apply: run_step => //=.
     apply: run_done => //.
   Qed.
 
   Goal forall r, 
-    run unif empty (Or (CutS) empty r) (Some empty) (dead (Or (CutS) empty r)) false.
+    run unif emptyp empty (Or (CutS) empty r) (Some empty) (dead (Or (CutS) empty r)) false.
     move=> r.
     apply: run_step => //.
     apply: run_done => //=.
     rewrite next_alt_cutr /= dead_cutr//.
   Qed.
 
-  Goal run unif empty (Or OK empty (Or OK empty OK)) (Some empty) ((Or Dead empty (((Or OK empty OK))))) false.
+  Goal run unif emptyp empty (Or OK empty (Or OK empty OK)) (Some empty) ((Or Dead empty (((Or OK empty OK))))) false.
   Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
-  Goal step unif empty (Or (Or Dead empty (CutS)) empty OK) = (Expanded, (Or (Or Dead empty OK) empty OK)).
+  Goal step unif emptyp empty (Or (Or Dead empty (CutS)) empty OK) = (Expanded, (Or (Or Dead empty OK) empty OK)).
   Proof.
     move=>//=.
   Qed.

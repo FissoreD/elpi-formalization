@@ -7,14 +7,16 @@ Unset Strict Implicit.
 Import Prenex Implicits.
 
 Section RunP.
-  Variable u: Unif.
-
+  (* Variable u: Unif.
+  Variable p : program.
+  Notation step := (step u p).
+  Notation run := (run u p). *)
 
   (********************************************************************)
   (* EXPAND PROPERTIES                                                *)
   (********************************************************************)
 
-  Lemma is_ko_step {A s1}: is_ko A -> step u s1 A = (Failure, A).
+  Lemma is_ko_step u p A s1: is_ko A -> step u p  s1 A = (Failure, A).
   Proof.
     elim: A s1 => //.
     - move=> A HA s B HB s1 /=.
@@ -25,18 +27,18 @@ Section RunP.
       rewrite HA//.
   Qed.
 
-  Lemma is_dead_big_and {p r}: is_dead (big_and p r) = false.
-  Proof. elim: r p => //=-[]//. Qed.
+  Lemma is_dead_big_and r: is_dead (big_and r) = false.
+  Proof. elim: r => //=-[]//. Qed.
 
-  Lemma is_dead_big_or {p r rs}: is_dead (big_or_aux p r rs) = false.
+  Lemma is_dead_big_or r rs: is_dead (big_or_aux r rs) = false.
   Proof. 
-    elim: rs r p => //=.
+    elim: rs r => //=.
     - move=> *; apply: is_dead_big_and.
-    - move=> [s r] l/= H rs p; rewrite H andbF//.
+    - move=> [s r] l/= H rs; rewrite H andbF//.
   Qed. 
 
-  Lemma is_dead_step {s A}: 
-    is_dead A -> step u s A = (Failure, A).
+  Lemma is_dead_step u p s A: 
+    is_dead A -> step u p  s A = (Failure, A).
   Proof. move=>/is_dead_is_ko/is_ko_step//. Qed.
 
   (* Lemma is_ko_expanded s {A}: 
@@ -47,7 +49,7 @@ Section RunP.
     is_dead A -> expandedb s A (Failed A) 0.
   Proof. move=>/is_dead_is_ko/is_ko_expanded//. Qed. *)
 
-  Lemma succes_step s {A}: success A -> step u s A = (Success, A).
+  Lemma succes_step u p s A: success A -> step u p s A = (Success, A).
   Proof.
     elim: A s => //; try by do 2 eexists.
     + move=> A HA s1 B HB s /=.
@@ -58,12 +60,12 @@ Section RunP.
       rewrite HA//HB//.
   Qed.
 
-  Lemma step_solved_same {s1 A B}: 
-    step u s1 A = (Success, B) -> ((B = A) * (success A))%type.
+  Lemma step_solved_same u p {s1 A B}: 
+    step u p s1 A = (Success, B) -> ((B = A) * (success A))%type.
   Proof.
     elim: A s1 B => //.
     + move=> /= ?? [] <-//.
-    + move=> p []//.
+    + move=> []//.
     + move=> A HA s B HB s1 C/=.
       case: ifP => dA/=[+?]; subst.
         by case X: step =>//=[[]]// _; rewrite !(HB _ _ X).
@@ -74,12 +76,12 @@ Section RunP.
       by rewrite !(HA _ _ X) !(HB _ _ Y).
   Qed.
 
-  Lemma step_not_dead {s A r}: 
-    is_dead A = false -> step u s A = r -> is_dead r.2 = false.
+  Lemma step_not_dead u p s A r: 
+    is_dead A = false -> step u p  s A = r -> is_dead r.2 = false.
   Proof.
     move=> + <-.
     elim: A s; clear; try by move=> //=.
-    - move=> p [] // t s/= _; apply dead_big_or.
+    - move=> [] // t s/= _; apply dead_big_or.
     + move=> A HA s B HB s1 => //=.
       by case: ifP => dA/= H; rewrite ?dA (HA, HB).
     + move=> A HA B0 B HB s1 //= dA.
@@ -88,13 +90,13 @@ Section RunP.
       by rewrite fun_if is_dead_cutl dA if_same.
   Qed.
 
-  Lemma step_failed_same {s1 A B}: 
-    step u s1 A = (Failure, B) -> ((B = A) * failed A)%type.
+  Lemma step_failed_same u p s1 A B:
+    step u p s1 A = (Failure, B) -> ((B = A) * failed A)%type.
   Proof.
     elim: A s1 B => //.
     + move=> s1 B[<-]//.
     + move=> s1 B[<-]//.
-    + move=> p []//.
+    + move=> []//.
     + move=> A HA s B HB s1 C/=.
       by case: ifP => dA/=[+<-]{C}/=; case S: step => [[] s']//= _; [rewrite !(HB _ _ S)|rewrite !(HA _ _ S)].
     + move=> A HA B0 B HB s1 C /=.
@@ -117,7 +119,7 @@ Section RunP.
     elim: A b => //.
       move=> A HA s1 B HB b /= /andP[kA kB].
       rewrite HA//!HB// !if_same//.
-    move=> A HA [pr l] B HB /= b kA.
+    move=> A HA l B HB /= b kA.
     by rewrite is_ko_success//HA//is_ko_failed.
   Qed.
 
@@ -127,9 +129,9 @@ Section RunP.
     elim: A => //=.
     - move=> A + s1 B +/=.
       by case: ifP => //=dA; do 2 case: next_alt => //.
-    - move=> A + [p l] B +.
+    - move=> A + l B +.
       case sA: success.
-        rewrite (success_failed _ sA)/=.
+        rewrite (success_failed sA)/=.
         by case: (next_alt _ B) => //=; auto.
       by case: ifP.
   Qed.
@@ -149,7 +151,7 @@ Section RunP.
       case: ifP => [dA sB|dA sA]/=.
         rewrite dA HB// is_dead_next_alt//.
       rewrite is_dead_cutl dA HA// next_alt_cutr//.
-    - move=> A HA [p l] B HB /andP[sA sB].
+    - move=> A HA l B HB /andP[sA sB].
       rewrite sA/= success_cut sA HA// HB//.
   Qed.
 
@@ -161,7 +163,7 @@ Section RunP.
       case: ifP => dA /=; rewrite?is_dead_cutl dA => Hf.
         rewrite HB// is_dead_next_alt//.
       rewrite HA// next_alt_cutr//.
-    - move=> A HA [p l] B HB b.
+    - move=> A HA l B HB b.
       case: ifP => sA/=.
         rewrite failed_success_cut success_cut sA/=.
         move=> fB.
@@ -180,17 +182,17 @@ Section RunP.
     - move=> A HA s B HB; case: ifP => /= dA.
         rewrite dA HB//is_dead_next_alt//.
       rewrite is_dead_cutl dA HA next_alt_cutr//.
-    - move=> A HA [pr l] B HB; case: ifP => //sA/=.
+    - move=> A HA l B HB; case: ifP => //sA/=.
         by rewrite success_cut sA HB HA //.
       by rewrite success_cutr next_alt_cutr//failed_cutr.
   Qed.
 
-  Lemma step_not_solved {s1 A r}:
-    step u s1 A = r -> ~ (is_sc r.1) -> success A = false.
-  Proof. case: r => -[]//=b; case X: success; by rewrite // (succes_step s1 X). Qed.
+  Lemma step_not_solved u p  s1 A r:
+    step u p s1 A = r -> ~ (is_sc r.1) -> success A = false.
+  Proof. case: r => -[]//=b; case X: success; by rewrite // (succes_step _ _ s1 X). Qed.
 
-  Lemma failed_step {s1 A}:
-    failed A -> step u s1 A = (Failure, A).
+  Lemma failed_step u p s1 A:
+    failed A -> step u p s1 A = (Failure, A).
   Proof.
     elim: A s1; clear => //; try by move=> ? [] //.
     + move=> A HA s1 B HB s2/=.
@@ -205,8 +207,8 @@ Section RunP.
       rewrite HB//.
   Qed. 
 
-  Lemma step_not_failed {s1 A r}:
-    step u s1 A = r -> ~ (is_fl r.1) -> failed A = false.
+  Lemma step_not_failed u p s1 A r:
+    step u p s1 A = r -> ~ (is_fl r.1) -> failed A = false.
   Proof.
     move=><-; clear r.
     elim: A s1; try by move=> // s1 <-//=.
@@ -222,14 +224,14 @@ Section RunP.
       by apply: HB (get_substS s1 A).
   Qed.
 
-  Lemma is_ko_big_and p r: is_ko (big_and p r) = false.
+  Lemma is_ko_big_and r: is_ko (big_and r) = false.
   Proof. elim: r => //=-[]//. Qed.
 
-  Lemma is_ko_big_or_aux p r A: is_ko (big_or_aux p r A) = false.
+  Lemma is_ko_big_or_aux r A: is_ko (big_or_aux r A) = false.
   Proof. by elim: A r => //=[|[s r] rs IH] r1/=; rewrite is_ko_big_and//. Qed.
 
-  Lemma step_is_ko {s1 A r}:
-    step u s1 A = r -> ~ (is_fl r.1) -> is_ko A = false.
+  Lemma step_is_ko u p s1 A r:
+    step u p s1 A = r -> ~ (is_fl r.1) -> is_ko A = false.
   Proof. by move=>*; apply/failed_is_ko/step_not_failed; eassumption. Qed.
 
   (********************************************************************)
@@ -241,7 +243,7 @@ Section RunP.
   Proof.
     elim: A D b => //=.
     - move=> D []//[<-]//.
-    - move=>/= p c d _ []// <-//.
+    - move=>/= c d _ []// <-//.
     - move=> A HA s B HB C b/=.
       case: ifP => dA.
         case X: next_alt => //[D][<-]/=; rewrite dA/=.
@@ -250,7 +252,7 @@ Section RunP.
         by move=>[<-]; split => //=; rewrite ((HA _ _ X))//.
       case Y: next_alt => //[D] [<-]/=.
       by rewrite is_dead_dead ((HB _ _ Y))//.
-    move=> A HA [p l] B HB C b /=.
+    move=> A HA l B HB C b /=.
     case sA: success.
       case X: next_alt => //[B'|].
         by move=> [<-]/=;rewrite success_is_dead//.
@@ -262,7 +264,7 @@ Section RunP.
     by move=> [<-]/=; rewrite (contraFF is_dead_failed)//.
   Qed.
 
-  Lemma failed_big_and p t: failed (big_and p t) = false.
+  Lemma failed_big_and t: failed (big_and t) = false.
   Proof. case: t => [|[]]//. Qed.
 
   Lemma next_alt_failed {b A r}: next_alt b A = r -> failed (odflt OK r) = false.
@@ -275,7 +277,7 @@ Section RunP.
       have:= HA b; case X: next_alt => //=[A'|].
         rewrite (next_alt_dead X)//.
       by have {HB} := HB false; case: next_alt; rewrite//=is_dead_dead//.
-    - move=> A HA [p l] B HB b.
+    - move=> A HA l B HB b.
       case sA: success.
         have:= HB b; case: next_alt => //=.
           by move=> ? ->; rewrite sA success_failed.
@@ -290,7 +292,7 @@ Section RunP.
     by move=> /failed_is_ko.
   Qed.
 
-  Lemma failed_big_or p s t: failed (big_or u p s t).
+  Lemma failed_big_or u p s t: failed (big_or u p s t).
   Proof. rewrite/big_or; case: F => //-[]//. Qed.
 
   Section same_structure.
@@ -354,8 +356,8 @@ Section RunP.
       by move=> A HA B0 B HB; rewrite HA eqxx same_structure_id.
     Qed.
 
-    Lemma step_same_structure {s A r}: 
-      step u s A = r -> same_structure A r.2.
+    Lemma step_same_structure u p s A r: 
+      step u p s A = r -> same_structure A r.2.
     Proof.
       move=><-{r}.
       elim: A s => //.
@@ -398,7 +400,7 @@ Section RunP.
           case: next_alt => //[?][<-]//.
         case next_alt => //[?[<-]|]//.
         case: next_alt => //?[<-]//.
-      - move=> ?[??]?; case sA: success => //.
+      - move=> ???; case sA: success => //.
           case: next_alt => //.
             move=> ?[<-]//.
           by case nA: next_alt => //=-[<-].
@@ -417,8 +419,8 @@ Section RunP.
       same_structure_sup A (dead A).
     Proof. case: A => //=. Qed.
 
-    Lemma run_same_structure {s A s1 r n}:
-      run u s A s1 r n -> same_structure_sup A r.
+    Lemma run_same_structure u p s A s1 r n:
+      run u p s A s1 r n -> same_structure_sup A r.
     Proof.
       elim; clear => //.
       - move=> s1 s2 A B sA _ <-/=.
@@ -436,8 +438,8 @@ Section RunP.
       - move=> *; apply: same_structure_sup_dead.
     Qed.
 
-    Lemma run_dead1 {s1 B s2 r n}:  
-      is_dead B -> run u s1 B s2 r n -> (s2 = None /\ r = dead B /\ n = false)%type2.
+    Lemma run_dead1 u p s1 B s2 r n:  
+      is_dead B -> run u p s1 B s2 r n -> (s2 = None /\ r = dead B /\ n = false)%type2.
     Proof.
       move=> dB H; inversion H; clear H; subst;
         try rewrite // is_dead_step//is_dead_dead in H0.
@@ -445,8 +447,8 @@ Section RunP.
       rewrite is_dead_next_alt// in H1.
     Qed.
 
-    Lemma run_dead2 {s1 B s2 r n}:  
-      run u s1 (dead B) s2 r n -> (s2 = None /\ r = dead B /\ n = false)%type2.
+    Lemma run_dead2 u p s1 B s2 r n:  
+      run u p s1 (dead B) s2 r n -> (s2 = None /\ r = dead B /\ n = false)%type2.
     Proof. move=> /(run_dead1 is_dead_dead)//; rewrite dead2//. Qed.
 
   End same_structure.
@@ -464,7 +466,7 @@ Section RunP.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB; case: ifP => dA fB; by rewrite (HA,HB).
-    - move=> A HA [p l] B HB.
+    - move=> A HA l B HB.
       case fA: failed => //.
       case sA: success => //= fB; rewrite (HA, HB)//=.
   Qed.
@@ -475,7 +477,7 @@ Section RunP.
   Proof.
     elim: A => //=.
     - by move=> A HA s B HB; case: ifP => dA fB sB; rewrite (HA, HB).
-    - move=> A HA [p l] B HB.
+    - move=> A HA l B HB.
       case fA: failed => //=.
       case sA: success => //= fB sV.
       rewrite HB//.
@@ -496,15 +498,15 @@ Section RunP.
     elim: A b => //=.
     - move=> A HA s B HB b.
       by case: ifP => [dA sB|dA sA]; rewrite (HA,HB)//.
-    - move=> A HA [p l] B HB b.
+    - move=> A HA l B HB b.
       by case sA: success => //=sB; rewrite HB//.
   Qed.
 
-  Lemma next_alt_big_and {p r}:
-    next_alt false (big_and p r) = Some (big_and p r).
-  Proof. elim: r p => //=x xs IH p; case: x => //=. Qed.
+  Lemma next_alt_big_and r:
+    next_alt false (big_and r) = Some (big_and r).
+  Proof. elim: r => //=x xs IH p; case: x => //=. Qed.
 
-  Lemma is_ko_run {s A}: is_ko A -> run u s A None (dead A) false.
+  Lemma is_ko_run u p s A: is_ko A -> run u p s A None (dead A) false.
   Proof.
     elim: A s => //=.
     - by move=> s _; apply: run_dead => //=.
@@ -515,29 +517,29 @@ Section RunP.
       apply: run_dead; rewrite/=.
         by rewrite !is_ko_failed//if_same.
       by rewrite !is_ko_next_alt// !if_same.
-    - move=> A HA [p l] B HB s kA.
+    - move=> A HA l B HB s kA.
       have {HB}HA := HA s kA.
       apply: run_dead => /=.
         by rewrite is_ko_failed.
       by rewrite is_ko_success//=is_ko_failed//is_ko_next_alt//.
   Qed.
 
-  Lemma run_success1 {A} s: 
-    success A -> run u s A (Some (get_substS s A)) (build_na A (next_alt true A)) false.
+  Lemma run_success1 u p A s: 
+    success A -> run u p s A (Some (get_substS s A)) (build_na A (next_alt true A)) false.
   Proof.
     move=> sA.
     by apply: run_done.
   Qed.
 
-  Lemma run_success {A s1 s2 r n}: 
-    success A -> run u s1 A s2 r n -> (s2 = Some (get_substS s1 A) /\ r = build_na A (next_alt true A) /\ n = false)%type2.
+  Lemma run_success u p A s1 s2 r n: 
+    success A -> run u p s1 A s2 r n -> (s2 = Some (get_substS s1 A) /\ r = build_na A (next_alt true A) /\ n = false)%type2.
   Proof.
-    move=> sA H; have:= succes_step s1 sA.
+    move=> sA H; have:= succes_step u p s1 sA.
     by inversion H; clear H; try congruence; subst; rewrite succes_step//; rewrite failed_success in sA.
   Qed.
 
-  Lemma run_consistent {s A s1 B s2 C n1 n2}:
-    run u s A s1 B n1 -> run u s A s2 C n2 -> ((s2 = s1) /\ (C = B) /\ (n2 = n1))%type2.
+  Lemma run_consistent u p s A s1 B s2 C n1 n2:
+    run u p s A s1 B n1 -> run u p s A s2 C n2 -> ((s2 = s1) /\ (C = B) /\ (n2 = n1))%type2.
   Proof.
     move=> H; elim: H s2 C n2; clear.
     + move=> s1 _ A _ sA <-<- s3 C n2 H; subst.

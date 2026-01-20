@@ -56,12 +56,12 @@ Axiom H_xx: forall u m q r s sx,
     (Callable2Tm (RCallable2Callable r)) sx <>
   None.
 
-Lemma step_CB_is_ko {u s A B}:
+Lemma step_CB_is_ko {u p s A B}:
   (* we have a superficial cut *)
-  step u s A = (CutBrothers, B) -> is_ko B = false.
+  step u p s A = (CutBrothers, B) -> is_ko B = false.
 Proof.
   elim: A s B => //=.
-  - move=> p []// _ []//.
+  - move=> []// _ []//.
   - move=> A HA s B HB s1 C.
     case: ifP => //=dA; case: step => [[]]//.
   - move=> A HA B0 B HB s C.
@@ -866,7 +866,7 @@ Qed.
 
 Fixpoint get_ctxS sP te (s:sigV) A :=
   match A with
-  | TA _ _ | Bot | OK | Dead => s
+  | TA _ | Bot | OK | Dead => s
   | Or A s1 B => if is_dead A then get_ctxS sP te (sigma2ctx sP te s1) B else get_ctxS sP te s A
   | And A _ B => if success A then get_ctxS sP te (get_ctxS sP te s A) B else (get_ctxS sP te s A)
   end.
@@ -892,9 +892,9 @@ Definition weak_all (s:sigV) : sigV := [fmap x : domf s => weak s.[valP x]].
 
   Fixpoint has_cut A :=
     match A with
-    | TA _ cut => true
-    | OK | TA _ (call _) | Bot | Dead => false
-    | And A B0 B => [||has_cut A | (has (fun x => cut == x) B0.2 && has_cut B)]
+    | TA cut => true
+    | OK | TA (call _) | Bot | Dead => false
+    | And A B0 B => [||has_cut A | (has (fun x => cut == x) B0 && has_cut B)]
     | Or _ _ _ => false
     end.
 
@@ -926,23 +926,23 @@ Notation "A '+o' B" :=
 Fixpoint tc_tree_aux ign_success (sP:sigT) A (te:sigV) (sVD1:(D * sigV)): option (D * sigV) :=
   let (d0, sV1) := sVD1 in
   match A with
-  | TA _ cut => Some (Func, (te + sV1))
+  | TA cut => Some (Func, (te + sV1))
   | Bot | Dead => None
-  | TA _ (call a) => Some (check_callable sP (te + sV1) a d0)
+  | TA (call a) => Some (check_callable sP (te + sV1) a d0)
   | OK => if ign_success then None else Some (d0, te + sV1)
   | And A B0 B =>
     let: rA := tc_tree_aux (success A) sP A te sVD1 in
     if success A then
         let: rB := tc_tree_aux ign_success sP B te (Func, get_ctxS sP te sV1 A) in
         if rA is Some SA then
-          let: rB0 := check_atoms sP SA.2 B0.2 SA.1 in
+          let: rB0 := check_atoms sP SA.2 B0 Pred in
           Some 
             (if rB is Some SB then (maxD rB0.1 SB.1, merge_sig rB0.2 SB.2)
             else rB0)
         else rB
     else
     if rA is Some SA then
-      Some (check_atoms sP SA.2 B0.2 SA.1)
+      Some (check_atoms sP SA.2 B0 SA.1)
     else None
   | Or A s B =>
       let mk_res b := if b is Some r then Some (maxD d0 r.1, r.2) else None in
@@ -975,7 +975,6 @@ Proof.
   elim: A b d0 s0 => //=.
     by move=> []//.
     move=> A HA s B HB b d0 s0.
-    (* case: ifP => [deadA vB|deadA/andP[vA bB]]. *)
     case: ifP => dA.
       have:= HB b d0 (sigma2ctx sP tyO s).
       by destruct tc_tree_aux, next_alt.
@@ -983,39 +982,18 @@ Proof.
     case tA: tc_tree_aux; case nA: next_alt => //=; auto.
     have:= HB false d0 (sigma2ctx sP tyO s).
     by case: tc_tree_aux; case: next_alt => //.
-  move=> A HA [p l] B HB b d0 s0.
-  have:= HA (success A) d0 s0.
-  case: tc_tree_aux; case: next_alt => //=; auto.
-    repeat move=> *; .
-    move=> A' S'/=.
+  move=> A HA l B HB b d0 s0.
+  case tA: tc_tree_aux => [[DA SA]|]; last first.
+    case: ifP => //= sA.
+    case tB: tc_tree_aux => [[DB SB]|]//= _.
     have:= HB b Func (get_ctxS sP tyO s0 A).
-    by case: tc_tree_aux; case: next_alt => //=*; repeat case: ifP.
-  have:= HB b Func (get_ctxS sP tyO s0 A).
-  case:ifP => //=.
-    case: tc_tree_aux; case: next_alt => //=*; repeat case: ifP => //=.
-
-  
-  
-  
-  
-
-    
-    destruct
-    have:= 
-
-    
-
-
-    
-    
-
-
-
-(* Lemma tc_tree_aux_false_Some sP A tE D N X Y:
-  tc_tree_aux false sP A tE (D, N) = (X, Y) -> Y.
-Proof.
-  elim: A D N X Y => //=. *)
-
+    rewrite tB; case: next_alt; auto.
+  have:= HA (success A) d0 s0.
+  rewrite tA => /(_ isT).
+  case nA: next_alt => //=[A'].
+  case sA: success; last by case: ifP.
+  by case nB: next_alt.
+Qed.
 
 Lemma success_has_cut {A}:
   success A -> has_cut A = false.
@@ -1068,9 +1046,9 @@ Proof.
 
 Fixpoint vars_tree t : {fset V} :=
   match t with
-  | TA _ cut | Dead | Bot | OK => fset0
-  | TA _ (call t) => vars_tm (Callable2Tm t)
-  | And A B0 B => vars_tree A `|` vars_atoms B0.2 `|` vars_tree B
+  | TA cut | Dead | Bot | OK => fset0
+  | TA (call t) => vars_tm (Callable2Tm t)
+  | And A B0 B => vars_tree A `|` vars_atoms B0 `|` vars_tree B
   | Or A _ B => vars_tree A `|` vars_tree B
   end.
 
@@ -1295,17 +1273,21 @@ Proof.
   by rewrite (check_atom_te_cat CA) !catfA catf_refl.
 Qed.
 
+Lemma cutr_tc_tree_aux sP R A d b:
+  tc_tree_aux b sP (cutr A) R d = None.
+Proof. apply: is_ko_tc_tree_aux is_ko_cutr. Qed.
+
+
 Lemma tc_tree_aux_cutl sP tyO A d0 O:
   success A -> 
     tc_tree_aux true sP (cutl A) tyO (d0, O) = None.
 Proof.
   elim: A d0 O => //=.
     move=> A HA s B HB d0 O; case: ifP => dA succ/=.
-      by rewrite is_dead_is_ko//= HB//.
-    by rewrite is_ko_cutr success_is_ko (HA, success_cut).
+      by rewrite dA/= HB.
+    by rewrite is_dead_cutl dA HA// cutr_tc_tree_aux.
   move=> A HA B0 B HB d0 O /andP[sA sB].
-  rewrite sA/= success_cut sA//=.
-  rewrite HA//= HB//=.
+  by rewrite sA/= success_cut sA//= HA// HB.
 Qed.
 
 Lemma tc_tree_aux_te_cat sP A tE D S D' S1 b:
@@ -1314,21 +1296,21 @@ Lemma tc_tree_aux_te_cat sP A tE D S D' S1 b:
 Proof.
   elim: A b D S D' S1 => //=.
     by move=> []//=> [_<-]; rewrite catfA catf_refl.
-    move=> _ [|c]//= _ D S D' S' []; first by move=> _<-; rewrite catfA catf_refl.
+    move=> [|c]//= _ D S D' S' []; first by move=> _<-; rewrite catfA catf_refl.
     by case C: check_callable => [DA SA][_<-]; rewrite (check_callable_te_cat C) !catfA catf_refl.
   - move=> A HA s B HB b D S D' S'.
-    case kA: is_ko => /=.
+    case: ifP => dA.
       case TB: tc_tree_aux => [[DB SB]|]//=[_<-].
       by apply: HB TB.
-    case kB: is_ko.
-      case TB: tc_tree_aux => [[DB SB]|]//=[_<-].
-      by apply: HA TB.
     case TA: tc_tree_aux => [[DA SA]|]//=.
+      case TB: tc_tree_aux => [[DB SB]|]//=[_<-].
+      apply/fmapP => x; rewrite lookup_cat.
+      case: fndP => //.
+      rewrite merge_sig_domf in_fsetI/=(HA _ _ _ _ _ TA)(HB _ _ _ _ _ TB) !domf_cat !in_fsetU.
+      case: fndP => //=.
+      apply: HA TA.
     case TB: tc_tree_aux => [[DB SB]|]//=[_<-].
-    apply/fmapP => x; rewrite lookup_cat.
-    case: fndP => //.
-    rewrite merge_sig_domf in_fsetI/=(HA _ _ _ _ _ TA)(HB _ _ _ _ _ TB) !domf_cat !in_fsetU.
-    case: fndP => //=.
+    apply: HB TB.
   - move=> A HA B0 B HB b D S D' S'.
     case tA: tc_tree_aux => [[DA SA]|]; last first.
       by case: ifP => //= _; apply: HB.
@@ -1369,7 +1351,7 @@ Fixpoint compat_sig_subst sP N T :=
   match T with
   | Or A s B => [&& compat_subst sP N s, rec A & rec B]
   | And A B0 B => [&& rec A & rec B] (*no subst in B0*)
-  | Bot | OK | Dead | TA _ _ => true
+  | Bot | OK | Dead | TA _ => true
   end.
 
 Definition tc sP ty T :=
@@ -1457,16 +1439,16 @@ Qed.
 
 Section andP.
 
-  Lemma closed_inT_andP ctx A B0 B: reflect [/\ closed_inT ctx A, closed_in_atoms ctx B0.2 & closed_inT ctx B] (closed_inT ctx (And A B0 B)) .
+  Lemma closed_inT_andP ctx A B0 B: reflect [/\ closed_inT ctx A, closed_in_atoms ctx B0 & closed_inT ctx B] (closed_inT ctx (And A B0 B)) .
   Proof.
     case C: (closed_inT _ (And _ _ _)); constructor; move: C; last (move=> /negP; apply: contra_not);
     rewrite/closed_inT.
       move=> /forallP/= H; split; [apply/forallP => -[]|apply/allP|apply/forallP => -[]];
       move=> /= k kP; only 1, 3:
-        by (have kP': k \in vars_tree A `|` vars_atoms B0.2  `|` vars_tree B by repeat ((apply/finmap.fsetUP; auto); left));
+        by (have kP': k \in vars_tree A `|` vars_atoms B0  `|` vars_tree B by repeat ((apply/finmap.fsetUP; auto); left));
         have:= H (Sub k kP').
       apply/forallP => -[x xP].
-      have kP': x \in vars_tree A `|` vars_atoms B0.2  `|` vars_tree B.
+      have kP': x \in vars_tree A `|` vars_atoms B0  `|` vars_tree B.
         by rewrite !in_fsetU (vars_atom_vars_atoms xP kP) orbT.
       by have:= H (Sub x kP').
     move=> [/forallP/= HA /allP/= HB0 /forallP/= HB].
@@ -1485,7 +1467,7 @@ Section andP.
   Qed.
 
   Lemma tc_andP sP N A B0 B:
-    tc sP N (And A B0 B) <-> [/\ tc sP N A, tc_atoms N B0.2 & tc sP N B].
+    tc sP N (And A B0 B) <-> [/\ tc sP N A, tc_atoms N B0 & tc sP N B].
   Proof.
     rewrite/tc/tc_atoms; split.
       by move=> /and3P[->]/closed_inT_andP[->->->] /compat_sig_subst_andP[->->].
@@ -1603,10 +1585,6 @@ Proof.
   apply: is_dead_is_ko is_dead_dead.
 Qed.
 
-Lemma cutr_tc_tree_aux sP R A d b:
-  tc_tree_aux b sP (cutr A) R d = None.
-Proof. apply: is_ko_tc_tree_aux is_ko_cutr. Qed.
-
 Lemma get_ctxS_cutl sP tE A s: success A -> get_ctxS sP tE s (cutl A) = get_ctxS sP tE s A.
 Proof.
   elim: A s => //=.
@@ -1682,7 +1660,7 @@ Lemma tc_tree_aux_catRx sP A d R K s b:
 Proof.
   elim: A d R s b => //=.
   - by move=> d R s []// H; rewrite !catfA (disjoint_cat_comm H) catf_refl1.
-  - by move=> p [|c]// d R s b H; rewrite !catfA (disjoint_cat_comm H) catf_refl1.
+  - by move=> [|c]// d R s b H; rewrite !catfA (disjoint_cat_comm H) catf_refl1.
   - move=> A HA sm B HB d R s b H; by rewrite HA//.
   move=> A HA B0 B HB d R s b H.
   rewrite HA//.
@@ -2046,27 +2024,75 @@ Proof.
   by destruct d0 => //=; subst.
 Qed. *)
 
+Lemma big_and_base_and A:
+  base_and A -> exists l, big_and l = A.
+Proof.
+  case: A => //=; first by exists [::].
+  move=> []//= A l t /andP[/eqP? H1]; subst.
+  by exists (A :: l).
+Qed.
+
+Lemma all_det_nfa_base_and {b sP sV l r}: 
+  tc_tree_aux b sP (big_and l) sV r = (if b && (l == [::]) then None else Some (check_atoms sP (sV+r.2) l r.1)).
+Proof.
+  case: r => /=D R; case: ifP.
+    by move=> /andP[] H /eqP->/=; destruct b.
+  case: l sV => //=; first by destruct b.
+  move=> -[|c]//=xs sV.
+    rewrite [check_atoms _ _ _ _]surjective_pairing//.
+  case C: check_callable => /=[d0 s0].
+  by rewrite [check_atoms _ _ _ _]surjective_pairing//.
+Qed.
+
+Lemma all_det_nfa_big_and {b sP sV l r}: 
+  tc_tree_aux b sP (big_and l) sV r = (if b && (l == [::]) then None else Some (check_atoms sP (sV+r.2) l r.1)).
+Proof.
+  case: r => /=D R; case: ifP.
+    by move=> /andP[] H /eqP->/=; destruct b.
+  case: l sV => //=; first by destruct b.
+  move=> -[|c]//=xs sV.
+    rewrite [check_atoms _ _ _ _]surjective_pairing//.
+  case C: check_callable => /=[d0 s0].
+  by rewrite [check_atoms _ _ _ _]surjective_pairing//.
+Qed.
+
 Lemma success_det_tree_next_alt sP b tyO A d0 s0 N:
   tc sP tyO A ->
-  valid_tree A -> success A -> tc_tree_aux b sP A tyO (d0,s0) = (Func, N) ->
-    (((next_alt true A) = None) * (N = if b then None else Some (tyO + get_ctxS sP tyO s0 A))).
+  valid_tree A -> success A -> tc_tree_aux b sP A tyO (d0,s0) = Some (Func, N) ->
+    (((next_alt true A) = None) * (N = (tyO + get_ctxS sP tyO s0 A))).
 Proof.
   elim: A b d0 s0 N => //=.
-    by move=> []??????[]//.
+    by move=> []//??????[].
   - move=> A HA s B HB b d0 s0 N /tc_orP[tOA tOB cS].
-    case kA: is_ko => /=.
-      rewrite (is_ko_next_alt _ kA)//= (is_ko_success kA).
-      case: ifP => [dA vB sB|//].
-      case tB: tc_tree_aux => [D S].
-      rewrite success_is_ko//=.
-      destruct S => -[].
-        destruct d0, D => //= _<-.
-        have {}HB := HB _ _ _ _ tOB vB sB tB; subst.
-        by rewrite !HB.
-      
-      move=> <-; destruct b => //=.
+    case: ifP => [dA vB sB|dA /andP[vA bB] sA].
+      case tB: tc_tree_aux => [[D S]|]//=; destruct d0, D => //.
+      move=> [<-{N}].
       have {}HB := HB _ _ _ _ tOB vB sB tB; subst.
-    rewrite (contraFF is_dead_is_ko kA).
+      by rewrite !HB//.
+    rewrite success_has_cut//=.
+    case tA: tc_tree_aux => [[DA SA]|]/= H.
+      have [??] : DA = Func /\ d0 = Func; subst.
+        by move: H; case: tc_tree_aux => [[Dx Sx]|]; destruct d0, DA.
+      move: H; rewrite !(HA _ _ _ _ tOA vA sA tA)//=.
+      case tB: tc_tree_aux => [[DB SB]|]//[<-{N}].
+      move/orP: bB => []bB;last first.
+        have kB := base_or_aux_ko_is_ko bB.
+        by rewrite is_ko_next_alt//=.
+      case nB: next_alt => [B'|]//=; exfalso.
+      move: bB tB nB; clear.
+      case: B => //=.
+        move=> A sx B/andP[bA bB]; rewrite base_and_is_dead//=.
+        have [l H] := big_and_base_and bA; subst.
+        rewrite all_det_nfa_big_and//=.
+        by case: tc_tree_aux => //.
+      by move=> []//=[]//.
+    move: H.
+    case tB: tc_tree_aux => [[DB SB]|]//=[??]; subst.
+    destruct d0, DB => //=.
+    
+      case: B => //=.
+      
+
     move=> /andP[vA bB] sA.
     move /orP: bB => []bB; last first.
       have kB := base_or_aux_ko_is_ko bB.
@@ -2399,18 +2425,6 @@ Proof.
   case: ifP; first by rewrite catfA catf_refl -maxD_assoc maxD_refl.
   case: m => //=.
   by rewrite -Hf Ha -maxD_assoc maxD_refl.
-Qed.
-
-Lemma all_det_nfa_big_and {b sP sV l r} p: 
-  tc_tree_aux b sP (big_and p l) sV r = (if b && (l == [::]) then (r.1, None) else ssnd (check_atoms sP (sV+r.2) l r.1)).
-Proof.
-  case: r => /=D R; case: ifP.
-    by move=> /andP[] H /eqP->/=; destruct b.
-  case: l sV => //=; first by destruct b.
-  move=> -[|c]//=xs sV.
-    rewrite [check_atoms _ _ _ _]surjective_pairing//.
-  case C: check_callable => /=[d0 s0].
-  by rewrite [check_atoms _ _ _ _]surjective_pairing//.
 Qed.
 
 Definition all_but_last_has_cut (L: seq (seq A)) :=
@@ -3199,8 +3213,8 @@ Proof. by move ->. Qed.
 
 Fixpoint is_kox A B :=
   match A with
-  | TA _ (call _) => is_ko B == false
-  | TA _ (cut) => (A == B) || (B == OK)
+  | TA (call _) => is_ko B == false
+  | TA (cut) => (A == B) || (B == OK)
   | (Bot | Dead | OK) => A == B
   | Or L1 _ R1 =>  
       match B with 

@@ -1,13 +1,17 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From det Require Import tree tree_prop.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
 
 Section valid_tree.
   Variable u : Unif.
+  Variable p : program.
   
   Fixpoint base_and s :=
     match s with
-    | And (TA _ _) r r1 => (big_and r.1 r.2 == r1) && base_and r1 (* should also say something about the program *)
+    | And (TA _) r r1 => (big_and r == r1) && base_and r1 (* should also say something about the program *)
     | OK => true
     | _ => false
     end.
@@ -15,7 +19,7 @@ Section valid_tree.
   Lemma base_and_dead {A}: base_and A -> is_dead A = false.
   Proof. case: A => // -[]//=. Qed.
 
-  Lemma base_and_big_and {pr A}: base_and (big_and pr A).
+  Lemma base_and_big_and A: base_and (big_and A).
   Proof. by elim: A => // -[|t] l /= ->; rewrite eq_refl. Qed.
 
   Fixpoint base_or_aux s :=
@@ -27,7 +31,7 @@ Section valid_tree.
   Definition base_and_ko s :=
     match s with
     | And Bot r r1 =>
-      [&& (big_and r.1 r.2 == r1) & base_and r1] (* should also say something about the program *)
+      [&& (big_and r == r1) & base_and r1] (* should also say something about the program *)
     | Bot => true
     | _ => false
     end.
@@ -50,7 +54,7 @@ Section valid_tree.
 
   Fixpoint valid_tree s :=
     match s with
-    | TA _ _ | OK | Bot => true
+    | TA _ | OK | Bot => true
     | Dead => false
     | Or A _ B => 
       if is_dead A then valid_tree B
@@ -58,11 +62,11 @@ Section valid_tree.
     | And A B0 B => 
       valid_tree A &&
         if success A then valid_tree B 
-        else B == big_and B0.1 B0.2
+        else B == big_and B0
     end.
 
-  Goal forall x r pr, (valid_tree (And (TA pr cut) x r)) -> is_ko r = false.
-  Proof. move=> x r/= _ /eqP->; rewrite is_ko_big_and//. Qed.
+  Goal forall x r , (valid_tree (And (TA cut) x r)) -> is_ko r = false.
+  Proof. move=> x r/= /eqP->; rewrite is_ko_big_and//. Qed.
 
   Lemma is_dead_valid_tree {A} : is_dead A -> valid_tree A = false.
   Proof.
@@ -77,10 +81,10 @@ Section valid_tree.
   Proof. apply: contraPF => /is_dead_valid_tree->//. Qed.
 
   Lemma base_and_valid {A} : base_and A -> valid_tree A.
-  Proof. by elim: A => //=-[]//= _ _ _ +++ /andP[/eqP->]. Qed.
+  Proof. by elim: A => //=-[]//= _ _ +++ /andP[/eqP->]. Qed.
 
-  Lemma valid_tree_big_and {pr l} : valid_tree (big_and pr l).
-  Proof. apply: base_and_valid base_and_big_and. Qed.
+  Lemma valid_tree_big_and l : valid_tree (big_and l).
+  Proof. apply: base_and_valid (base_and_big_and _). Qed.
 
   Lemma base_and_ko_valid {B}: base_and_ko B -> valid_tree B.
   Proof. elim: B => //; move=> []// HA B0 B HB/= /andP[/eqP<-]//. Qed.
@@ -88,10 +92,7 @@ Section valid_tree.
   Lemma bbAnd_valid {A} : bbAnd A -> valid_tree A.
   Proof. by move=>/orP[/base_and_valid|/base_and_ko_valid]. Qed.
 
-  Lemma big_or_aux_not_bot {pr l rs}: big_or_aux pr l rs != Bot.
-  Proof. case: rs => [|[] xs]//=; case: l => //. Qed.
-
-  Lemma bbOr_big_or_aux {pr s l}: bbOr (big_or_aux pr s l).
+  Lemma bbOr_big_or_aux s l: bbOr (big_or_aux s l).
   Proof.
     rewrite/bbOr.
     case: base_or_aux_ko; rewrite ?orbT//orbF.
@@ -130,7 +131,7 @@ Section valid_tree.
     elim B => //; clear.
     + move=> A HA s B HB/=/andP[bA bB].
       by rewrite base_and_is_dead///bbOr bB HA//base_and_base_or_aux.
-    + by case => //= _ _ _ +++ /andP[/eqP->].
+    + by case => //= _ _ +++ /andP[/eqP->].
     elim: B => //.
     + move=> A HA s B HB /= /andP [bA bB].
       by rewrite HB//HA?base_and_ko_base_or_aux_ko// /bbOr bB orbT if_same.
@@ -228,12 +229,12 @@ Section valid_tree.
   Lemma base_and_bbAnd {A}: base_and A -> bbAnd A.
   Proof. rewrite/bbAnd=>->//. Qed.
 
-  Lemma valid_tree_step {s A r}:
-    valid_tree A -> step u s A = r -> valid_tree r.2.
+  Lemma valid_tree_step s A r:
+    valid_tree A -> step u p s A = r -> valid_tree r.2.
   Proof.
     move=>+<-; clear r.
     elim: A s => //; try by move=> s r // *; subst.
-    + by move=> /= p []//=>; rewrite valid_tree_big_or.
+    + by move=> /= []//=>; rewrite valid_tree_big_or.
     + move=> A IHA s B IHB s1/=.
       case:ifP => //[dA vB|dA/andP[vA bB]]/=.
         by rewrite IHB//dA.
@@ -252,7 +253,7 @@ Section valid_tree.
       congruence.
   Qed.
 
-  Lemma valid_tree_big_or_aux {pr s l} : valid_tree (big_or_aux pr s l).
+  Lemma valid_tree_big_or_aux s l : valid_tree (big_or_aux s l).
   Proof.
     elim: l s => [|[]] //=.
     + move=> s; rewrite valid_tree_big_and // full_expanded_big_and.
@@ -321,7 +322,7 @@ Section valid_tree.
   Proof.
     elim: A  B b => //=.
     + move=> B b _; case: ifP => // _ [<-]//.
-    + move=> p c B _ _ [<-]//.
+    + move=> c B _ _ [<-]//.
     + move=> A HA s B HB  C b/=.
       case: ifP => //[dA vB|dA /andP[vA bB]].
         case X: next_alt => //[D] [<-]/=.
@@ -329,7 +330,7 @@ Section valid_tree.
       case X: next_alt => [D|].
         move=>[<-]/=; rewrite bbOr_valid// bB (HA _ _ vA X) if_same//.
       case Y: next_alt => [D|]//[<-]/=; rewrite is_dead_dead (HB _ _ _ Y)//bbOr_valid//.
-    + move=> A HA [pr l] B HB  C b /= /andP[vA].
+    + move=> A HA l B HB  C b /= /andP[vA].
       case: ifP => /=[sA vB|sA]; subst.
         case X: next_alt => [D|].
           move=>[<-]/=; rewrite vA sA/= (HB _ _ vB X)//.
@@ -343,7 +344,7 @@ Section valid_tree.
     Qed.
 
   Lemma valid_tree_run {s1 A s2 B b}:
-    valid_tree A -> run u s1 A s2 B b -> (B = dead B) + valid_tree B.
+    valid_tree A -> run u p s1 A s2 B b -> (B = dead B) + valid_tree B.
   Proof.
     move=> + H; elim: H; clear => //=.
     + move=> s1 s2 A B sA _ <- vA.

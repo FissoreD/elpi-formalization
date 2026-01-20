@@ -8,6 +8,7 @@ Arguments suffixP1 {_ _ _ _ _}.
 
 Section NurValidState.
   Variable u : Unif.
+  Variable p : program.
 
 
   (* Given a list, 
@@ -23,7 +24,7 @@ Section NurValidState.
   Fixpoint valid_caG (gs:goals) (a:alts) (bt:alts) {struct gs} :=
     match gs with
     | no_goals => true
-    | more_goals (callE _ _) xs => valid_caG xs a bt
+    | more_goals (callE _) xs => valid_caG xs a bt
     | more_goals (cutE ca) xs =>
       if suffix bt ca then
         suffix ca (a ++ bt) &&
@@ -84,7 +85,7 @@ Section NurValidState.
       case: ifP => // _.
       apply: empty_ca_valid H2.
     }
-    case: g => //=-[p t|[]] gs//=.
+    case: g => //=-[t|[]] gs//=.
       rewrite /all/=.
       apply: empty_caG_valid.
     rewrite /all/=.
@@ -105,7 +106,7 @@ Section NurValidState.
     case: l.
       rewrite /= drop_nil /empty_ca all_cat -andbA.
       case: y => //.
-    move=> p a; fConsA p a.
+    move=> p1 a; fConsA p1 a.
     rewrite cat_cons/=; case: eqP => // _.
     rewrite fold_valid_caA behead_cons drop_cons -andbA IH//.
   Qed.
@@ -137,7 +138,7 @@ Section NurValidState.
   .
   Proof.
     {
-      case: r => // p a Hbt; fConsA p a.
+      case: r => // p1 a Hbt; fConsA p1 a.
       case: s => //.
         fNilA.
         move=> /=; case: bt Hbt => // x xs.
@@ -152,7 +153,7 @@ Section NurValidState.
       apply: push_bt_out => //.
     }
     case g => //=.
-    move=>[_ _|ca] gs.
+    move=>[_|ca] gs.
       apply: push_bt_outG.
     case: ifP => //=; last first.
       move=> _ Hbt /andP[/eqP->] H; rewrite H suffixs0 eqxx.
@@ -225,7 +226,7 @@ Section NurValidState.
       case: eqP => //?; subst.
       rewrite/empty_caG/=all_cat H andbT.
       f_equal.
-      elim: gs {H1} => // -[s3 p] a; fConsA (s3,p) a => /=.
+      elim: gs {H1} => // -[s3 p1] a; fConsA (s3,p1) a => /=.
       rewrite /empty_ca/=!all_cons/=.
       move=><-.
       rewrite /empty_caG all_cat H andbT//.
@@ -233,7 +234,7 @@ Section NurValidState.
     case: x => //=.
       rewrite cat0s empty_caG_valid//.
     move=>[]/=.
-      move=> _ _ x; apply:valid_caG_cat_empty_ca H.
+      move=> _ x; apply:valid_caG_cat_empty_ca H.
     move=> x xs.
     rewrite valid_caG_cat_empty_ca//.
     rewrite /empty_caG all_cat H andbT//.
@@ -304,7 +305,7 @@ Section NurValidState.
     move=>/=.
     case: x => // g gs Hhd suff.
     change (more_goals g gs) with (g:::gs).
-    case: g => //=[_ _|ca].
+    case: g => //=[ _|ca].
       move=> H1 H2.
       apply: valid_caG_aux_add_deep_make_lB0 => //.
     case: ifP => //=; last first.
@@ -395,7 +396,7 @@ Section NurValidState.
       rewrite valid_caG_add_ca_deepG//=.
       apply: valid_ca_add_ca_deep => //.
     }
-    case: x => //=-[p t| ca]/= gs.
+    case: x => //=-[t| ca]/= gs.
       apply: valid_caG_add_ca_deepG.
     rewrite suffix0s.
     rewrite size_nil subn0 take_size cats0.
@@ -458,7 +459,7 @@ Section NurValidState.
       move=> /(_ _ IsList_alts _ IsList_alts)//.
       case: eqP => // _.
       move=>/andP[->]; rewrite bbOr_empty_ca///bbOr bB//.
-    - move=> A; case: A => //p a rs l B HB rs' s0/= /andP[/eqP<-] bB;
+    - move=> A; case: A => // a rs l B HB rs' s0/= /andP[/eqP<-] bB;
       have [h H]:= base_and_t2l bB;
       have H1:=base_and_empty_ca bB H.
       by case: a rs => //=[|c] _; rewrite make_lB0_empty1 !cats0/=H/= (empty_caG_valid _ H1) ?suffix0s empty_caG_cat H1/= if_same.
@@ -484,7 +485,7 @@ Section NurValidState.
   Proof.
     move=> <-; clear r.
     elim: A l s0 => //=.
-    - move=> p [] // l s0 _ /=.
+    - move=> [] // l s0 _ /=.
       rewrite suffix0s suffixs0/=.
       case: eqBP => //->//.
     - move=> A HA s B HB l s0/=.
@@ -525,8 +526,8 @@ Section NurValidState.
       case lA: t2l => [|[s x] xs]//=.
       rewrite !s2l_big_and//=.
       rewrite behead_cons.
-      set hd := r2l B0.1 B0.2.
-      have? := empty_caG_r2l B0.1 B0.2.
+      set hd := r2l B0.
+      have? := empty_caG_r2l B0.
       rewrite -/(valid_caA (make_lB0 (add_deep l hd xs) hd) (make_lB0 (add_deep l hd xs) hd) l).
       rewrite valid_ca_make_lB0_empty_ca?H2//.
       move:HA; rewrite lA/= behead_cons =>/= /andP[{}HA HA1].

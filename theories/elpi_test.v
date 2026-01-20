@@ -11,7 +11,7 @@ Fixpoint of_goals l :=
   match l with
     | [::] => no_goals
     | cutE l :: xs => more_goals (cutE l) (of_goals xs)
-    | (callE _ _ as hd) :: xs => more_goals hd (of_goals xs)
+    | (callE _ as hd) :: xs => more_goals hd (of_goals xs)
   end.
 
 Fixpoint of_alt l :=
@@ -23,52 +23,52 @@ Fixpoint of_alt l :=
 Definition tester l r :=
   t2l l empty nilC = r.
 
-Goal forall B B0 p,
-let f x := (TA p (call x)) in
-let g x := (p, [::call x]) in
+Goal forall B B0,
+let f x := (TA (call x)) in
+let g x := ([::call x]) in
   tester (And (Or OK empty (f B)) (g B0) Bot) 
-    ((empty, (callE p B) ::: ((callE p B0) ::: nilC)) ::: nilC).
+    ((empty, (callE B) ::: ((callE B0) ::: nilC)) ::: nilC).
 Proof.
   by move=> //.
 Qed.
 
-Goal forall A B D0 D p,
+Goal forall A B D0 D,
   (* (((! \/ A) \/ B)) /\ (D) *)
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   tester 
-    (And (Or ((Or (TA p cut) empty (f A))) empty (f B)) (g D0) (f D)) 
+    (And (Or ((Or (TA cut) empty (f A))) empty (f B)) (g D0) (f D)) 
     (of_alt [:: 
-      [::cutE (of_alt [:: [:: callE p B; callE p D0]]); callE p D];
-      [:: callE p A; callE p D0]; 
-      [:: callE p B; callE p D0]]).
+      [::cutE (of_alt [:: [:: callE B; callE D0]]); callE D];
+      [:: callE A; callE D0]; 
+      [:: callE B; callE D0]]).
 Proof.
   move=> A B D0 D p/=.
   move=>//=.
 Qed.
 
 
-Goal forall B C D E F p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall B C D E F,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   (* (A \/_{empty} B) /\_C ((! \/_{empty} D) /\_{E} F) *)
   tester 
-    (And (Or OK empty (f B)) (g C) (And (Or (TA p cut) empty (f D)) (g E) (f F)))
+    (And (Or OK empty (f B)) (g C) (And (Or (TA cut) empty (f D)) (g E) (f F)))
     (of_alt [:: 
-      [:: cutE (of_alt [:: [:: callE p B; callE p C]]); callE p F];
-      [:: callE p D; callE p E]; 
-      [:: callE p B; callE p C]]).
+      [:: cutE (of_alt [:: [:: callE B; callE C]]); callE F];
+      [:: callE D; callE E]; 
+      [:: callE B; callE C]]).
 Proof.
   move=> B C D E F p/=.
   rewrite //.
 Qed.
 
 (* THIS CAN NO MORE EXISTS: reset is never Bot *)
-(* Goal forall A B C p,
-  let f x := (TA p (call x)) in
+(* Goal forall A B C,
+  let f x := (TA (call x)) in
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   tester 
-    (And (Or ((Or (TA p cut) empty (f A))) empty (f B)) Bot (Or (TA p cut) empty (f C))) 
+    (And (Or ((Or (TA cut) empty (f A))) empty (f B)) Bot (Or (TA cut) empty (f C))) 
     (of_alt [:: 
       [::cut nilC ; cut nilC ];
       [::cut nilC ; call p C]]).
@@ -77,17 +77,17 @@ Proof.
   rewrite/t2l//.
 Qed. *)
 
-Goal forall A B C0 C p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall A B C0 C,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   tester 
-    (And (Or ((Or (TA p cut) empty (f A))) empty (f B)) (g C0) (Or (TA p cut) empty (f C)))
+    (And (Or ((Or (TA cut) empty (f A))) empty (f B)) (g C0) (Or (TA cut) empty (f C)))
     (of_alt[:: 
-      [::cutE (of_alt [:: [:: callE p B; callE p C0]]); cutE (of_alt [::[:: callE p A; callE p C0]; [:: callE p B; callE p C0]])];
-      [::cutE (of_alt [:: [:: callE p B; callE p C0]]); callE p C];
-      [:: callE p A; callE p C0]; 
-      [:: callE p B; callE p C0]]).
+      [::cutE (of_alt [:: [:: callE B; callE C0]]); cutE (of_alt [::[:: callE A; callE C0]; [:: callE B; callE C0]])];
+      [::cutE (of_alt [:: [:: callE B; callE C0]]); callE C];
+      [:: callE A; callE C0]; 
+      [:: callE B; callE C0]]).
 Proof.
   move=> A B C0 C p/=.
   rewrite/t2l/=.
@@ -96,50 +96,50 @@ Qed.
 
 
 
-Goal forall A B0 p,
+Goal forall A B0,
     (* (OK \/ A) /\_B0 OK *)
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
-  tester (And (Or OK empty (f A)) (g B0) OK) (of_alt [::[::]; [::callE p A; callE p B0]]).
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
+  tester (And (Or OK empty (f A)) (g B0) OK) (of_alt [::[::]; [::callE A; callE B0]]).
 Proof.
   move=> A B0 p.
   rewrite/t2l//=.
 Qed.
 
-Goal forall A B0 p,
+Goal forall A B0,
   (* (Bot \/ B) /\_b0 B0  *)
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   tester (And (Or Bot empty (f A)) (g B0) (f B0))
-  (of_alt [::[::callE p A; callE p B0]]).
+  (of_alt [::[::callE A; callE B0]]).
 Proof.
   move=> A B0 p.
   rewrite/t2l//=.
 Qed.
 
-Goal forall p x y z w a, 
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall x y z w a, 
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   tester (
     And 
       (Or (f x) empty (f y)) (g a) 
       (Or (f z) empty (f w))) 
-    (of_alt [:: [:: callE p x; callE p z];
-    [:: callE p x; callE p w];
-    [:: callE p y; callE p a]]).
+    (of_alt [:: [:: callE x; callE z];
+    [:: callE x; callE w];
+    [:: callE y; callE a]]).
 Proof.
   move=>/=.
   by [].
 Qed.
 
-Goal forall p z w a, 
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall z w a, 
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   tester (
     And 
       (Or OK empty Bot) (g a) 
       (Or (f z) empty (f w))) 
-    (of_alt [:: [:: callE p z]; [:: callE p w]]).
+    (of_alt [:: [:: callE z]; [:: callE w]]).
 Proof.
   move=>p z w a.
   rewrite/t2l/=.
@@ -147,33 +147,33 @@ Proof.
 Qed.
 
 (* THIS IS IMPORTANT *)
-Goal forall p a b c d, 
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall a b c d, 
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   tester (
     And 
       (Or Bot empty (f a)) (g b) 
       (Or (f c) empty (f d))) 
     (* [:: [:: callE a; call b] ]. *)
-    (of_alt [:: [:: callE p a; callE p c]; [::callE p a; callE p d] ]).
+    (of_alt [:: [:: callE a; callE c]; [::callE a; callE d] ]).
 Proof.
-  move=> p a b c d /=.
+  move=> a b c d /=.
   by [].
 Qed.
 
-Goal forall p a b, 
+Goal forall a b, 
 (* (! \/ a) \/ b *)
   tester (
     Or 
-      (Or (TA p cut) empty (TA p (call a))) empty
-      (TA p (call b)))
-  (of_alt [:: [:: cutE (of_alt[:: [:: callE p b]])]; [:: callE p a]; [:: callE p b]]).
+      (Or (TA cut) empty (TA (call a))) empty
+      (TA (call b)))
+  (of_alt [:: [:: cutE (of_alt[:: [:: callE b]])]; [:: callE a]; [:: callE b]]).
 Proof.
-  move=>p a b; rewrite/t2l/=.
+  move=> a b; rewrite/t2l/=.
   by []. Qed.
 
-(* Goal forall A1 A2 s  C0 B p,
-  let f x := (TA p (call x)) in
+(* Goal forall A1 A2 s  C0 B,
+  let f x := (TA (call x)) in
   tester (And (Or (f A1) s (f A2)) (Bot) (And Bot (f C0) (f B))) nilC
   .
 Proof.
@@ -182,88 +182,88 @@ Proof.
   by [].
 Qed. *)
 
-(* Goal forall A B C p,
-  let f x := (TA p (call x)) in
+(* Goal forall A B C,
+  let f x := (TA (call x)) in
   tester (And (Or (f A) empty (f B)) (Bot) (f C))
-  (of_alt[:: [:: callE p A; call p C]]).
+  (of_alt[:: [:: callE A; call p C]]).
 Proof.
   move=> s A B C p.
   rewrite/t2l/=.
   by [].
 Qed. *)
 
-Goal forall A1 A2 B0 C0 B p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall A1 A2 B0 C0 B,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   tester (And (Or (f A1) empty (f A2)) (g B0) (And Bot (g C0) (f B)))
-  (of_alt [:: [:: callE p A2 ; callE p B0 ]]).
+  (of_alt [:: [:: callE A2 ; callE B0 ]]).
 Proof.
   move=> * /=.
   by [].
 Qed.
 
-Goal forall b0 p a b c, 
-  let g x := (p, [::call x]) in
+Goal forall b0 a b c, 
+  let g x := ([::call x]) in
   tester (
     Or 
-      (Or (And (TA p (call c)) (g b0) (TA p cut)) empty (TA p (call a))) empty
-      (TA p (call b)))
-  (of_alt[:: [:: callE p c; cutE (of_alt[:: [:: callE p b]])]; [:: callE p a]; [:: callE p b]]).
+      (Or (And (TA (call c)) (g b0) (TA cut)) empty (TA (call a))) empty
+      (TA (call b)))
+  (of_alt[:: [:: callE c; cutE (of_alt[:: [:: callE b]])]; [:: callE a]; [:: callE b]]).
 Proof.
   move=> b0 p a b c.
   rewrite/t2l/=.
   rewrite//=.
 Qed.
 
-Goal forall B C Res p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall B C Res,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   (* (OK \/ B) /\ (! \/ C) -> [cut_[B,Reset]; C; (B, Reset)] *)
-  tester (And (Or OK empty (f B)) (g Res) (Or (TA p cut) empty (f C))) 
-    (of_alt[::[::cutE (of_alt[::[:: callE p B; callE p Res]])]; [::callE p C]; [:: callE p B; callE p Res]]).
+  tester (And (Or OK empty (f B)) (g Res) (Or (TA cut) empty (f C))) 
+    (of_alt[::[::cutE (of_alt[::[:: callE B; callE Res]])]; [::callE C]; [:: callE B; callE Res]]).
 Proof.
   move=> B C Res p.
   rewrite /t2l/=.
   move=>//.
 Qed.
 
-Goal forall B C Res Reempty p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall B C Res Reempty,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   (* (OK \/ B) /\ (! /\ C) -> [cut_[]; C; (B, Reset)] *)
-  tester (And (Or OK empty (f B)) (g Res) (And (TA p cut) (g Reempty) (f C))) 
-    (of_alt[::[::cutE nilC; callE p C]; [:: callE p B; callE p Res]]).
+  tester (And (Or OK empty (f B)) (g Res) (And (TA cut) (g Reempty) (f C))) 
+    (of_alt[::[::cutE nilC; callE C]; [:: callE B; callE Res]]).
 Proof.
   move=> B C Res Reempty p/=.
   rewrite/t2l/=.
   f_equal => //.
 Qed.
 
-Goal forall A B C C0 p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall A B C C0,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   (* (A /\ ((! \/ B) \/ C) *)
-  tester (And (f A) (g C0) (Or (Or (TA p cut) empty (f B)) empty (f C))) 
+  tester (And (f A) (g C0) (Or (Or (TA cut) empty (f B)) empty (f C))) 
   (of_alt [:: 
-    [:: callE p A; cutE (of_alt[:: [:: callE p C]])]; 
-    [:: callE p A; callE p B]; 
-    [:: callE p A; callE p C]]).
+    [:: callE A; cutE (of_alt[:: [:: callE C]])]; 
+    [:: callE A; callE B]; 
+    [:: callE A; callE C]]).
 Proof.
   move=> A B C C0 p.
   rewrite /t2l/=.
   repeat f_equal => //.
 Qed.
 
-Goal forall A B C D E p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall A B C D E,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   (* (A \/_{empty} B) /\_C ((! \/_{empty} D) \/_{empty} E) *)
   tester 
-    (And (Or (f A) empty (f B)) (g C) (Or (Or (TA p cut) empty (f D)) empty (f E))) 
+    (And (Or (f A) empty (f B)) (g C) (Or (Or (TA cut) empty (f D)) empty (f E))) 
     (of_alt[:: 
-    [:: callE p A; cutE (of_alt [:: [:: callE p E]; [:: callE p B; callE p C]])];
-    [:: callE p A; callE p D]; [:: callE p A; callE p E];
-    [:: callE p B; callE p C]])
+    [:: callE A; cutE (of_alt [:: [:: callE E]; [:: callE B; callE C]])];
+    [:: callE A; callE D]; [:: callE A; callE E];
+    [:: callE B; callE C]])
   .
 Proof.
   move=> empty A B C D E p/=.
@@ -278,50 +278,50 @@ Qed.
   The first rejects (D,E) as choice points
   The second rejects (B,C) which is an alternatives at higher level
 *)
-Goal forall B C D E p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall B C D E,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   (* (OK \/_{empty} B) /\_C ((! \/_{empty} D) /\_{E} !) *)
   tester 
-    (And (Or OK empty (f B)) (g C) (And (Or (TA p cut) empty (f D)) (g E) (TA p cut))) 
+    (And (Or OK empty (f B)) (g C) (And (Or (TA cut) empty (f D)) (g E) (TA cut))) 
     (of_alt [:: 
-      [:: cutE (of_alt[:: [:: callE p B; callE p C]]); cutE nilC ];
-      [:: callE p D; callE p E]; 
-      [:: callE p B; callE p C]]).
+      [:: cutE (of_alt[:: [:: callE B; callE C]]); cutE nilC ];
+      [:: callE D; callE E]; 
+      [:: callE B; callE C]]).
 Proof.
   move=> B C D E p/=.
   rewrite/t2l/=.
   move=>//.
 Qed.
 
-Goal forall A B C p,
-  let f x := (TA p (call x)) in
+Goal forall A B C,
+  let f x := (TA (call x)) in
   (* ((! \/ ! \/ A) \/ B) \/ C *)
   tester
-    (Or (Or (Or (TA p cut) empty ((Or (TA p cut) empty (f A)))) empty (f B)) empty (f C))
+    (Or (Or (Or (TA cut) empty ((Or (TA cut) empty (f A)))) empty (f B)) empty (f C))
     (of_alt[:: 
-      [::cutE (of_alt[:: [:: callE p B]; [::callE p C]])];
-      [::cutE (of_alt[:: [:: callE p B]; [::callE p C]])];
-      [:: callE p A]; 
-      [:: callE p B];
-      [:: callE p C] ]).
+      [::cutE (of_alt[:: [:: callE B]; [::callE C]])];
+      [::cutE (of_alt[:: [:: callE B]; [::callE C]])];
+      [:: callE A]; 
+      [:: callE B];
+      [:: callE C] ]).
 Proof.
   move=> A B C p/=.
   rewrite/t2l/=.
   move=>//=.
 Qed.
 
-Goal forall A B C p,
-  let f x := (TA p (call x)) in
+Goal forall A B C,
+  let f x := (TA (call x)) in
   (* ((! \/ ! \/ A) \/ B) \/ C *)
   tester 
-    (Or (Or (Or (And (TA p cut) (p, [::]) OK) empty ((Or (TA p cut) empty (f A)))) empty (f B)) empty (f C)) 
+    (Or (Or (Or (And (TA cut) ([::]) OK) empty ((Or (TA cut) empty (f A)))) empty (f B)) empty (f C)) 
     (of_alt[:: 
-      [::cutE (of_alt[:: [:: callE p B]; [::callE p C]])];
-      [::cutE (of_alt[:: [:: callE p B]; [::callE p C]])];
-      [:: callE p A]; 
-      [:: callE p B];
-      [:: callE p C] ]).
+      [::cutE (of_alt[:: [:: callE B]; [::callE C]])];
+      [::cutE (of_alt[:: [:: callE B]; [::callE C]])];
+      [:: callE A]; 
+      [:: callE B];
+      [:: callE C] ]).
 Proof.
   move=> A B C p/=.
   rewrite/t2l/=.
@@ -329,81 +329,81 @@ Proof.
 Qed.
 
 
-Goal forall A B C D0 D p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall A B C D0 D,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   (* (((! \/ ! \/ A) \/ B) \/ C) /\ D*)
   tester
-    (And (Or (Or (Or (TA p cut) empty ((Or (TA p cut) empty (f A)))) empty (f B)) empty (f C)) (g D0) (f D))
+    (And (Or (Or (Or (TA cut) empty ((Or (TA cut) empty (f A)))) empty (f B)) empty (f C)) (g D0) (f D))
     (of_alt[:: 
-      [::cutE (of_alt [:: [:: callE p B; callE p D0]; [::callE p C; callE p D0]]); callE p D];
-      [::cutE (of_alt [:: [:: callE p B; callE p D0]; [::callE p C; callE p D0]]); callE p D0];
-      [:: callE p A; callE p D0]; 
-      [:: callE p B; callE p D0];
-      [:: callE p C; callE p D0] ]).
+      [::cutE (of_alt [:: [:: callE B; callE D0]; [::callE C; callE D0]]); callE D];
+      [::cutE (of_alt [:: [:: callE B; callE D0]; [::callE C; callE D0]]); callE D0];
+      [:: callE A; callE D0]; 
+      [:: callE B; callE D0];
+      [:: callE C; callE D0] ]).
 Proof.
   move=> A B C D0 D p/=.
   rewrite/t2l/=.
   f_equal => //.
 Qed.
 
-Goal forall X A B C D0 D p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall X A B C D0 D,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   (* ((X \/ ((! \/ ! \/ A) \/ B) \/ C)) /\ D*)
   tester 
-    (And (Or (f X) empty (Or (Or (Or (TA p cut) empty ((Or (TA p cut) empty (f A)))) empty (f B)) empty (f C))) (g D0) (f D))
+    (And (Or (f X) empty (Or (Or (Or (TA cut) empty ((Or (TA cut) empty (f A)))) empty (f B)) empty (f C))) (g D0) (f D))
     (of_alt[:: 
-      [:: callE p X; callE p D];
-      [::cutE (of_alt[:: [:: callE p B; callE p D0]; [::callE p C; callE p D0]]); callE p D0];
-      [::cutE (of_alt[:: [:: callE p B; callE p D0]; [::callE p C; callE p D0]]); callE p D0];
-      [:: callE p A; callE p D0]; 
-      [:: callE p B; callE p D0];
-      [:: callE p C; callE p D0] ]).
+      [:: callE X; callE D];
+      [::cutE (of_alt[:: [:: callE B; callE D0]; [::callE C; callE D0]]); callE D0];
+      [::cutE (of_alt[:: [:: callE B; callE D0]; [::callE C; callE D0]]); callE D0];
+      [:: callE A; callE D0]; 
+      [:: callE B; callE D0];
+      [:: callE C; callE D0] ]).
 Proof.
   move=> X A B C D0 D p/=.
   rewrite/t2l/=.
   f_equal => //.
 Qed.
 
-Goal forall B0 A B C D p,
-  let f x := (TA p (call x)) in
-  let g x := (p, [::call x]) in
+Goal forall B0 A B C D,
+  let f x := (TA (call x)) in
+  let g x := ([::call x]) in
   (* (((A /\ (! \/ B)) \/ C \/ D)) *)
   tester 
-    (Or (Or (f C) empty (And (f A) (g B0) (Or (TA p cut) empty (f B)))) empty (f D))
+    (Or (Or (f C) empty (And (f A) (g B0) (Or (TA cut) empty (f B)))) empty (f D))
     (of_alt[:: 
-      [:: callE p C]; 
-      [:: callE p A; cutE (of_alt[:: [:: callE p D]])]; 
-      [:: callE p A; callE p B]; [:: callE p D]]).
+      [:: callE C]; 
+      [:: callE A; cutE (of_alt[:: [:: callE D]])]; 
+      [:: callE A; callE B]; [:: callE D]]).
 Proof.
   move=> B0 A B C D p/=.
   rewrite/t2l/=.
   rewrite//.
 Qed.
 
-Goal forall p A B C,
-  let f x := (TA p (call x)) in
+Goal forall A B C,
+  let f x := (TA (call x)) in
   (* (((! \/ A) \/ !) \/ B) \/ C *)
   tester 
-    (Or (Or (Or (Or (TA p cut) empty (f A)) empty (TA p cut)) empty (f B)) empty (f C))
+    (Or (Or (Or (Or (TA cut) empty (f A)) empty (TA cut)) empty (f B)) empty (f C))
     (of_alt[:: 
-      [::cutE (of_alt[::[::cutE (of_alt[::[::callE p B]; [::callE p C]])]; [::callE p B]; [::callE p C]])];
-      [::callE p A];
-      [::cutE (of_alt[::[::callE p B]; [::callE p C]])];
-      [::callE p B];
-      [::callE p C]
+      [::cutE (of_alt[::[::cutE (of_alt[::[::callE B]; [::callE C]])]; [::callE B]; [::callE C]])];
+      [::callE A];
+      [::cutE (of_alt[::[::callE B]; [::callE C]])];
+      [::callE B];
+      [::callE C]
     ]).
 Proof.
   move=> p A B C/=.
   rewrite/t2l/=.
   rewrite//.
 Qed.
-Goal forall l p,
-  let s := ((Or (Or Dead empty (TA p cut)) empty OK)) in
+Goal forall p l,
+  let s := ((Or (Or Dead empty (TA cut)) empty OK)) in
   let bt := of_alt([::] :: l) in
   t2l s empty (of_alt l) = of_alt[:: [:: cutE bt]; [::]] /\ 
-    t2l (odflt Bot (next_alt true (step u empty s).2)) empty (of_alt l) ++ (of_alt l) = bt.
+    t2l (odflt Bot (next_alt true (step u p empty s).2)) empty (of_alt l) ++ (of_alt l) = bt.
 Proof.
   move=>//=.
 Qed.

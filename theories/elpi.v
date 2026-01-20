@@ -225,7 +225,7 @@ Global Notation "(( x ))" := (consC x nilC)
   : SE.
 
 Inductive G := 
-  | callE : program -> Callable -> G
+  | callE : Callable -> G
   | cutE : alts -> G
 with alts :=
   | no_alt
@@ -248,7 +248,7 @@ with eqbGs t1 t2 :=
   end
 with eqbG t1 t2 :=
   match t1, t2 with
-  | callE p1 t1, callE p2 t2 => (p1 == p2) && (t1 == t2)
+  | callE t1, callE t2 => (t1 == t2)
   | cutE ca1, cutE ca2 => eqbA ca1 ca2
   | _, _ => false
   end.
@@ -262,7 +262,7 @@ Proof.
     move=> [s1 g] gs; rewrite eqxx eqb_reflA eqb_reflG//.
   }
   case: l => /=//.
-  move=> [p t|ca]/=gs; rewrite ?eqxx eqb_reflG//eqb_reflA//.
+  move=> [t|ca]/=gs; rewrite ?eqxx eqb_reflG//eqb_reflA//.
   case: l => //=p t; rewrite !eqxx//.
 Qed.
 
@@ -306,10 +306,8 @@ Proof.
       have:= eqbP_G y x; rewrite X; inversion 1; constructor.
       move=>[??]; subst; auto.
   }
-  case: l1 => [p t|ca].
-  - case X: eqbG; constructor; case: l2 X => //=??.
-      move=>/andP[/eqP->/eqP->//].
-    move=> +[??]; subst; rewrite !eqxx//.
+  case: l1 => [t|ca].
+  - case X: eqbG; constructor; case: l2 X => //=?/eqP; congruence.
   - case X: eqbG; constructor; case: l2 X => //=ca' H.
       have:= eqbPA ca ca'; rewrite H; inversion 1; subst => //.
     have:= eqbPA ca ca'; rewrite H; inversion 1; subst; congruence.
@@ -710,63 +708,61 @@ Definition save_alts (a : alts) (gs: goals) (bs : alts) :=
   map (fun '((s,x): Sigma * goals) => (s, save_goals a gs x)) bs.
 
 Definition empty_ca_G g :=
-  match g with callE _ _ | cutE no_alt => true | _ => false end.
+  match g with callE _ | cutE no_alt => true | _ => false end.
 Definition empty_caG goals := all empty_ca_G goals.
 Definition empty_ca alts := all (fun x => empty_caG (snd x)) alts.
 
-Definition a2g p A :=
+Definition a2g A :=
   match A with
   | cut => cutE nilC
-  | call t => callE p t
+  | call t => callE t
   end.
 
-Fixpoint a2gs p (b: seq A) := 
+Fixpoint a2gs (b: seq A) := 
   match b with
   | nil => nilC
-  | x::xs => (a2g p x) ::: (a2gs p xs)
+  | x::xs => (a2g x) ::: (a2gs xs)
   end.
 
-Fixpoint aa2gs p (b: (seq (Sigma * R))) := 
+Fixpoint aa2gs (b: (seq (Sigma * R))) := 
   match b with
   | nil => nilC
-  | x::xs => (x.1, a2gs p x.2.(premises)) ::: (aa2gs p xs)
+  | x::xs => (x.1, a2gs x.2.(premises)) ::: (aa2gs xs)
   end.
 
-Definition a2gs1 p (b : Sigma * R) :=
-  a2gs p b.2.(premises).
+Definition a2gs1 (b : Sigma * R) :=
+  a2gs b.2.(premises).
 
 Section Nur.
 
 Variable u : Unif.
+Variable p : program.
 
 Inductive nur : Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
 | StopE s a : nur s nilC a s a
 | CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s ((cutE ca) ::: gl) a s1 r
-| CallE p s s1 a b bs gl r t : 
+| CallE s s1 a b bs gl r t : 
   F u p t s = [:: b & bs ] -> 
-    nur b.1 (save_goals a gl (a2gs1 p b)) (save_alts a gl ((aa2gs p) bs) ++ a) s1 r -> 
-      nur s ((callE p t) ::: gl) a s1 r
-| FailE p s s1 s2 t gl a al r : 
-  F u p t s = [::] -> nur s1 a al s2 r -> nur s ((callE p t) ::: gl) ((s1, a) ::: al) s2 r.
+    nur b.1 (save_goals a gl (a2gs1 b)) (save_alts a gl (aa2gs bs) ++ a) s1 r -> 
+      nur s ((callE t) ::: gl) a s1 r
+| FailE s s1 s2 t gl a al r : 
+  F u p t s = [::] -> nur s1 a al s2 r -> nur s ((callE t) ::: gl) ((s1, a) ::: al) s2 r.
 
-Lemma nur_consistent {s G x xs1 xs2 s1 s2} :
+Lemma nur_consistent s G x xs1 xs2 s1 s2 :
   nur s G x s1 xs1 -> nur s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
 Proof.
   move=> H; elim: H xs2 s2 => //; clear.
   - inversion 1 => //.
-  - move=> p s a ca r gl H IH xs2.
+  - move=> s a ca r gl H IH xs2.
     by inversion 1; subst; auto.
-  - move=> p s s1 a b bs gl r t H H1 IH xs2 s2 H2.
+  - move=> s s1 a b bs gl r t H H1 IH xs2 s2 H2.
     apply: IH.
-    inversion H2; subst; move: H9; rewrite H => //-[??]; subst.
+    inversion H2; subst; move: H8; rewrite H => //-[??]; subst.
     assumption.
-  - move=> p1 s s1 s2 t gl a al r H H1 IH xs2 s3 H2.
+  - move=> s s1 s2 t gl a al r H H1 IH xs2 s3 H2.
     apply: IH.
     inversion H2; subst => //.
     congruence.
 Qed.
 
 End Nur. 
-
-
-(* STILE: LIPICS - ITP *)

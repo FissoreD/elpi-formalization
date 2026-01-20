@@ -17,7 +17,7 @@ with add_ca_deep_goals bt gl :=
   end
 with add_ca_deep_g bt g :=
   match g with
-  | callE pr t => callE pr t 
+  | callE t => callE t 
   | cutE ca => cutE ((add_ca_deep bt ca) ++ bt)
   end.
 
@@ -37,16 +37,16 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
     let s := size ca - size bt in
     let xx := (add_deep bt l (ca)) in
     cutE (make_lB0 (take s xx) l ++ drop s ca)
-  | callE pr t => callE pr t 
+  | callE t => callE t 
   end.
 
 Definition kill (A: goals) := map (apply_cut (fun x => nilC)) A.
 
 (* reset-point to list *)
-Fixpoint r2l pr a : goals :=
+Fixpoint r2l a : goals :=
   match a with
   | [::] => no_goals
-  | x::xs => more_goals ((a2g pr x)) (r2l pr xs)
+  | x::xs => more_goals ((a2g x)) (r2l xs)
   end.
 
 
@@ -67,14 +67,14 @@ match A with
 | OK => (s, nilC) ::: nilC
 | Bot => nilC
 | Dead => nilC
-| TA _ cut => (s, ((cutE nilC) ::: nilC)) ::: nilC
-| TA pr (call t) => (s, ((callE pr t) ::: nilC)) ::: nilC
+| TA cut => (s, ((cutE nilC) ::: nilC)) ::: nilC
+| TA (call t) => (s, ((callE t) ::: nilC)) ::: nilC
 | Or A s1 B => 
   let lB := t2l B s1 nilC in
   let lA := t2l A s lB in
   add_ca_deep bt (lA ++ lB)
 | And A B0 B =>
-  let hd  := r2l B0.1 B0.2 in
+  let hd  := r2l B0 in
   let lA  := t2l A s bt in
   if lA is more_alt (slA, x) xs then 
       (* the reset point exists, it has to be added to all cut-to alternatives *)
@@ -106,11 +106,11 @@ Section test.
   Variable p1 : program.
   (* Definition g p := (And (Or OK s1 CutS) p OK). *)
 
-  Goal forall s3 l p,
-    t2l (And (Or OK s1 (TA p cut)) (p, [:: cut]) Bot) s3 l = 
-      t2l (And (Or Dead s1 (TA p cut)) (p, [:: cut]) (TA p cut)) s3 l.
+  Goal forall s3 l, 
+    t2l (And (Or OK s1 (TA cut)) ([:: cut]) Bot) s3 l = 
+      t2l (And (Or Dead s1 (TA cut)) ([:: cut]) (TA cut)) s3 l.
   Proof.
-    move=>s3 l/= [] r s.
+    move=>s3 l/=.
     rewrite /=!cat0s ?cat0s.
     rewrite subnn/= take0 drop0//.
   Qed.

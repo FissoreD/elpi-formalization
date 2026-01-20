@@ -4,10 +4,11 @@ From det Require Import zify_ssreflect.
 
 Section s.
   Variable u : Unif.
+  Variable p : program.
 
 
   Lemma run_or0 {s1 A s B s2 r b}:
-    run u s1 (Or A s B) s2 r b -> b = false.
+    run u p s1 (Or A s B) s2 r b -> b = false.
   Proof.
     remember (Or _ _ _) as o eqn:Ho => H.
     elim: H A s B Ho; clear => //.
@@ -27,8 +28,8 @@ Section s.
 
   Lemma next_alt_run {A B C s s2 b1}:
     next_alt false A = B ->
-      run u s (build_na A B) s2 C b1 ->
-        run u s A s2 C b1.
+      run u p s (build_na A B) s2 C b1 ->
+        run u p s A s2 C b1.
   Proof.
     move=> <-{B}.
     case fA: (failed A).
@@ -42,8 +43,8 @@ Section s.
   Definition get_dead A B := if is_dead A && ~~(is_dead B) then A else dead A.
 
   Lemma run_ko_left1 {s1 s2 A B A' B' sx}:
-    is_ko A -> run u s1 (Or A s2 B) sx (Or A' s2 B') false ->
-      Texists b, run u s2 B sx B' b /\ 
+    is_ko A -> run u p s1 (Or A s2 B) sx (Or A' s2 B') false ->
+      Texists b, run u p s2 B sx B' b /\ 
         (A' = get_dead A B').
   Proof.
     rewrite/get_dead.
@@ -65,7 +66,7 @@ Section s.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
       by case: ifP => dC; case X: step => [[]]//.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
-      rewrite (is_ko_step _ kA1)//.
+      rewrite (is_ko_step _ _ _ kA1)//.
       case: ifP => dC//.
       case X: step => [[]D']//[?]; subst;
       have {IH} [b[H1 ?]] := IH _ _ _ _ _ erefl erefl kA1; subst; rewrite dC/=;
@@ -99,8 +100,8 @@ Section s.
   Qed.
 
   Lemma run_ko_left2 {s2 X B B' r b1} sIgn:
-    is_ko X -> run u s2 B r B' b1 ->
-    run u sIgn (Or X s2 B) r (Or (get_dead X B') s2 B') false.
+    is_ko X -> run u p s2 B r B' b1 ->
+    run u p sIgn (Or X s2 B) r (Or (get_dead X B') s2 B') false.
   Proof.
     rewrite/get_dead.
     move=> + HB; elim: HB sIgn X; clear.
@@ -166,8 +167,8 @@ Section s.
   Qed.
 
   Lemma run_or_ko_right1 {s2 X B B' SOL b1} sIgn:
-    is_ko X -> run u s2 B SOL B' b1 ->
-    run u s2 (Or B sIgn X) SOL (Or B' sIgn (if is_dead B' then dead X else if b1 == false then X else cutr X)) false.
+    is_ko X -> run u p s2 B SOL B' b1 ->
+    run u p s2 (Or B sIgn X) SOL (Or B' sIgn (if is_dead B' then dead X else if b1 == false then X else cutr X)) false.
   Proof.
     move=> + HB; elim: HB sIgn X; clear.
     + move=> s _ A _ sA <-<- sIgn X kX; subst => /=.
@@ -198,8 +199,8 @@ Section s.
   Qed.
 
   Lemma run_or_ko_right2 {s2 X X' A A' SOL sIgn}:
-    is_ko X -> run u s2 (Or A sIgn X) SOL (Or A' sIgn X') false ->
-      Texists b1, run u s2 A SOL A' b1 /\ X' = if is_dead A' then dead X else if b1 == false then X else cutr X.
+    is_ko X -> run u p s2 (Or A sIgn X) SOL (Or A' sIgn X') false ->
+      Texists b1, run u p s2 A SOL A' b1 /\ X' = if is_dead A' then dead X else if b1 == false then X else cutr X.
   Proof.
     remember (Or A _ _) as o1 eqn:Ho1.
     remember (Or A' _ _) as o2 eqn:Ho2 => + H.
@@ -220,7 +221,7 @@ Section s.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
       by case: ifP => dC; case X: step => [[]]//.
     - move=> s1 s2 r A B n + HB IH A1 A2 B1 B2 ?? kA1; subst => /=.
-      rewrite (is_ko_step _ kA1)//=.
+      rewrite (is_ko_step _ _ _ kA1)//=.
       case: ifP => dC//.
       case X: step => [[]D']//[?]; subst;
       have := IH _ _ _ _ erefl erefl.
@@ -258,7 +259,7 @@ Section s.
     else if is_dead A' then dead X else cutr X.
 
   Lemma run_none_dead_res {s A B cn} :
-    run u s A None B cn -> dead B = B.
+    run u p s A None B cn -> dead B = B.
   Proof.
     move=> H.
     remember None as n eqn:Hn.
@@ -266,20 +267,20 @@ Section s.
   Qed.
 
   Lemma run_or_correct_left {s1 A A' s2 b}:
-    run u s1 A s2 A' b ->
+    run u p s1 A s2 A' b ->
         if s2 is None then
           if b == false then (
-            forall sX X s3 X' n1, run u sX X s3 X' n1 ->
+            forall sX X s3 X' n1, run u p sX X s3 X' n1 ->
             if is_dead A then 
-              (run u s1 (Or A sX X) s3 (Or (get_dead A X') sX X') false)%type2
+              (run u p s1 (Or A sX X) s3 (Or (get_dead A X') sX X') false)%type2
             else
-            (run u s1 (Or A sX X) s3 (Or A' sX X') false))%type2
+            (run u p s1 (Or A sX X) s3 (Or A' sX X') false))%type2
           else
             (
               forall sX X,
-                run u s1 (Or A sX X) None (Or A' sX (dead X)) false
+                run u p s1 (Or A sX X) None (Or A' sX (dead X)) false
             )
-        else forall sX X, run u s1 (Or A sX X) s2 (Or A' sX (build_or_state b A' X)) false
+        else forall sX X, run u p s1 (Or A sX X) s2 (Or A' sX (build_or_state b A' X)) false
           .
   Proof.
     rewrite/build_or_state.
@@ -393,19 +394,19 @@ Section s.
   Qed.
 
   Lemma run_or_complete {s1 s2 A B s3 A' B'}:
-    run u s1 (Or A s2 B) s3 (Or A' s2 B') false ->
+    run u p s1 (Or A s2 B) s3 (Or A' s2 B') false ->
       (Texists n1,
         if s3 is Some s3 then
-          ((run u s1 A (Some s3) A' n1 /\ B' = build_or_state n1 A' B)%type2
+          ((run u p s1 A (Some s3) A' n1 /\ B' = build_or_state n1 A' B)%type2
           +
           (if is_dead A then 
               A' = get_dead A B' /\
-              run u s1 A None (dead A') false /\ run u s2 B (Some s3) B' n1
-           else (A' = dead A') /\ run u s1 A None A' false
-              /\ run u s2 B (Some s3) B' n1)%type2)%type
+              run u p s1 A None (dead A') false /\ run u p s2 B (Some s3) B' n1
+           else (A' = dead A') /\ run u p s1 A None A' false
+              /\ run u p s2 B (Some s3) B' n1)%type2)%type
         else
-          run u s1 A None A' n1 /\ (if n1 == false then Texists n2, 
-            run u s2 B None B' n2 else B' = dead B) /\ A' = dead A' 
+          run u p s1 A None A' n1 /\ (if n1 == false then Texists n2, 
+            run u p s2 B None B' n2 else B' = dead B) /\ A' = dead A' 
               /\ B' = dead B'
           ).
   Proof.
@@ -500,10 +501,10 @@ Section s.
             apply: run_cut X H1.
           by rewrite next_alt_cutr/= cutr2 if_same dead_cutr.
         rewrite (step_not_dead dA1 X) => -[Hz [H1 H2]].
-        by have [] := run_consistent H2 (is_ko_run _ is_ko_cutr).
+        by have [] := run_consistent H2 (is_ko_run _ _ _ is_ko_cutr).
       move=> [H1[H2[H3 H4]]]; subst.
       move: H2; case:eqP => H; subst.
-        move=>[n2]/(run_consistent (is_ko_run _ is_ko_cutr)) [?[??]]; subst.
+        move=>[n2]/(run_consistent (is_ko_run _ _ _ is_ko_cutr)) [?[??]]; subst.
         rewrite dead2 dead_cutr.
         repeat eexists; eauto.
           apply: run_cut X H1.
@@ -591,8 +592,8 @@ Section s.
   Qed.
 
   Lemma run_or_is_ko_left_ign_subst {A s B s2 D b2 sIgn1} sIgn2:
-    is_ko A -> run u sIgn1 (Or A s B) s2 D b2 ->
-      run u sIgn2 (Or A s B) s2 D false.
+    is_ko A -> run u p sIgn1 (Or A s B) s2 D b2 ->
+      run u p sIgn2 (Or A s B) s2 D false.
   Proof.
     move=> H1 H2.
     have:= run_same_structure H2.
@@ -602,7 +603,7 @@ Section s.
   Qed.
 
   Lemma failed_cutl_run A:
-    failed (cutl A) -> forall s, run u s (cutl A) None (dead A) false.
+    failed (cutl A) -> forall s, run u p s (cutl A) None (dead A) false.
   Proof.
     Search failed cutl.
     elim: A => //=; try by move=> *; apply: run_dead => //.
@@ -649,8 +650,8 @@ Section s.
 
   Lemma run_and_correct_successL {s0 sn A B0 B A' B0' B' b}:
     success A -> next_alt true A = None ->
-    run u s0 (And A B0 B) sn (And A' B0' B') b ->
-    (run u (get_substS s0 A) B sn B' b /\ 
+    run u p s0 (And A B0 B) sn (And A' B0' B') b ->
+    (run u p (get_substS s0 A) B sn B' b /\ 
       (B0' = B0) /\
       (A' = if is_dead B' then dead A else if b == false then A else cutl A)
     )%type2.
@@ -704,8 +705,8 @@ Section s.
       apply: run_dead fB1 X. *)
   Abort.
 
-  Lemma run_big_and_total {r p s}:
-      Texists r0 B n, run u s ((big_and p r)) r0 B n.
+  Lemma run_big_and_total {r s}:
+      Texists r0 B n, run u p s ((big_and r)) r0 B n.
   Proof.
     elim: r s => //=.
     - move=> s; repeat eexists; apply: run_done => //.
@@ -713,29 +714,29 @@ Section s.
       admit.
   Admitted.
 
-  Lemma run_big_or_total {sr r rs p c s}:
+  Lemma run_big_or_total {sr r rs c s}:
     F u p c s = (sr, r) :: rs -> 
-      Texists r0 B n, run u s (TA p (call c)) r0 B n.
+      Texists r0 B n, run u p s (TA (call c)) r0 B n.
   Proof.
-    elim: rs sr r p c s => //=.
-    - move=> sr r p c s H.
-      have [r0[B [n H1]]] := @run_big_and_total (premises r) p sr.
+    elim: rs sr r c s => //=.
+    - move=> sr r c s H.
+      have [r0[B [n H1]]] := @run_big_and_total (premises r) sr.
       repeat eexists.
       apply: run_step; rewrite /=/big_or?H//.
       apply: run_fail => //=.
         rewrite next_alt_big_and//.
       by apply: run_ko_left2; eauto.
-    - move=> [sx r] rs IH sr r' p c s H.
+    - move=> [sx r] rs IH sr r' c s H.
   Abort.
 
   Lemma run_is_total {s A}:
-    Texists r B n, run u s A r B n.
+    Texists r B n, run u p s A r B n.
   Proof.
     elim: A s.
     - repeat eexists; apply: run_dead => //.
     - repeat eexists; apply: run_done => //.
     - repeat eexists; apply: run_dead => //.
-    - move=> p c s.
+    - move=> c s.
       (* case F: (F u p c s) => [|[sr r] rs].
         repeat eexists.
         apply: run_step => //.
