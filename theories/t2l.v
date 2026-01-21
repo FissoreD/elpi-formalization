@@ -90,6 +90,15 @@ Global Notation "-nilCA" :=
   (at level 2, no associativity, only parsing)
   : SE. *)
 
+Lemma make_LB0_cons a (ax : alts) (gl : goals) :
+  make_lB0 [::a & ax] gl  = [:: (a.1, a.2 ++ gl) & make_lB0 ax gl].
+Proof. by rewrite /make_lB0 [map _ _]map_cons; case: a. Qed.
+
+Lemma make_LB01_cons a (ax : alts) (gl : goals) :
+  make_lB01 [::a & ax] gl  = [:: (a.1, gl ++ a.2) & make_lB01 ax gl].
+Proof. by rewrite /make_lB01 [map _ _]map_cons; case: a. Qed.
+
+
 Section test.
   Variable u : Unif.
   Variable s1 : Sigma.
@@ -104,7 +113,7 @@ Section test.
   Proof.
     move=>s3 l/=.
     rewrite /=!cat0s ?cat0s size_nil.
-    rewrite subnn. /= take0 drop0//.
+    by rewrite drop0 /= !make_LB0_cons !make_LB01_cons.
   Qed.
 End test.
 (*END*)
