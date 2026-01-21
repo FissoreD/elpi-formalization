@@ -544,10 +544,10 @@ Definition if_cut F (g : A * alts) :=
   | _ => true
   end.
 
-Definition apply_cut F (g : A * alts) :=
+Definition apply_cut F (g : A * alts) : A * alts :=
   match g with
-  | (lang.cut, a) => (lang.cut,F a) 
-  | _ => g
+  | (cut, a) => (cut,F a) 
+  | (call t,_) => (call t,F [::])
   end.
 
 

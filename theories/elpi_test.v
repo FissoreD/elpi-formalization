@@ -9,14 +9,13 @@ Variable u : Unif.
 
 Fixpoint of_goals l :=
   match l with
-    | [::] => no_goals
-    | cutE l :: xs => more_goals (cutE l) (of_goals xs)
-    | (callE _ as hd) :: xs => more_goals hd (of_goals xs)
+    | [::]%SEQ => [::]%G
+    | hd :: xs => [:: hd & of_goals xs]%G
   end.
 
 Fixpoint of_alt l :=
   match l with
-  | [::] => -nilCA
+  | [::]%SEQ => [::]%A
   | x :: xs => (empty, of_goals x) ::: (of_alt xs)
   end.
 
@@ -25,9 +24,9 @@ Definition tester l r :=
 
 Goal forall B B0,
 let f x := (TA (call x)) in
-let g x := ([::call x]) in
+let g x := ([:: (call x) ]%SEQ) in
   tester (And (Or OK empty (f B)) (g B0) Bot) 
-    ((empty, (callE B) ::: ((callE B0) ::: nilC)) ::: nilC).
+    ((empty, (call B,[::]) ::: ((call B0,[::]) ::: nilC)) ::: nilC).
 Proof.
   by move=> //.
 Qed.
@@ -35,11 +34,11 @@ Qed.
 Goal forall A B D0 D,
   (* (((! \/ A) \/ B)) /\ (D) *)
   let f x := (TA (call x)) in
-  let g x := ([::call x]) in
+  let g x := ([::call x]%SEQ) in
   tester 
     (And (Or ((Or (TA cut) empty (f A))) empty (f B)) (g D0) (f D)) 
     (of_alt [:: 
-      [::cutE (of_alt [:: [:: callE B; callE D0]]); callE D];
+      [:: (cut, of_alt [:: [:: callE B; callE D0]]); callE D];
       [:: callE A; callE D0]; 
       [:: callE B; callE D0]]).
 Proof.

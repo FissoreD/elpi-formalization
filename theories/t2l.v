@@ -6,6 +6,12 @@ Definition make_lB0 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, x ++ lB0)) 
 
 Definition make_lB01 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, lB0 ++ x)) xs.
 
+Definition add_ca_deep_g' (add_ca_deep : alts -> alts -> alts) bt x :=
+  match x with
+  | (call t,ca) => (call t,ca)
+  | (cut, ca) => (cut, add_ca_deep bt ca)
+  end.
+
 Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
   match ats with
   | [::] => [::]
@@ -14,9 +20,10 @@ Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
 with add_ca_deep_goals bt (gl : goals) : goals :=
   match gl with
   | [::]%G => [::]%G 
-  | [:: (call t,ca) & tl ]%G => [:: (call t,ca) & add_ca_deep_goals bt tl ]
-  | [:: (cut,   ca) & tl ]%G => [:: (cut, add_ca_deep bt ca) & add_ca_deep_goals bt tl]
+  | [:: g & tl ]%G => [:: add_ca_deep_g' add_ca_deep bt g & add_ca_deep_goals bt tl ]
   end.
+
+Notation add_ca_deep_g := (add_ca_deep_g' add_ca_deep).
 
 Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
   match A with
@@ -94,10 +101,15 @@ Lemma make_LB0_cons a (ax : alts) (gl : goals) :
   make_lB0 [::a & ax] gl  = [:: (a.1, a.2 ++ gl) & make_lB0 ax gl].
 Proof. by rewrite /make_lB0 [map _ _]map_cons; case: a. Qed.
 
+Lemma make_LB0_nil gl : make_lB0 [::] gl = [::]. by []. Qed.
+
 Lemma make_LB01_cons a (ax : alts) (gl : goals) :
   make_lB01 [::a & ax] gl  = [:: (a.1, gl ++ a.2) & make_lB01 ax gl].
 Proof. by rewrite /make_lB01 [map _ _]map_cons; case: a. Qed.
 
+Lemma make_LB01_nil gl : make_lB01 [::] gl = [::]. by []. Qed.
+
+Definition make_LBE := (make_LB0_cons,make_LB01_cons,make_LB0_nil,make_LB01_nil,cat_cons,cat0s).
 
 Section test.
   Variable u : Unif.

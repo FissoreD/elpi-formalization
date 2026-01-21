@@ -19,19 +19,23 @@ Section NurProp.
     - case: x => [|g gs]; [reflexivity|].
       by rewrite map_cons add_ca_deep_goals_map.
   Qed.
+  
+  Lemma add_ca_deep_g_inj {bt g1 g2}:
+    (forall bt a1 a2, add_ca_deep bt a1 = add_ca_deep bt a2 -> a1 = a2) ->
+    add_ca_deep_g bt g1 = add_ca_deep_g bt g2 -> g1 = g2.
+  move=> add_ca_deep_inj.
+  by case: g1; case: g2 => // -[|?] xs [|?] ys /= [] // => [/add_ca_deep_inj|] *; subst.
+Defined.
 
   Lemma add_ca_deep_inj {bt a1 a2}:  
     add_ca_deep bt a1 = add_ca_deep bt a2 -> a1 = a2
   with add_ca_deep_goals_inj {bt g1 g2}:
-    add_ca_deep_goals bt g1 = add_ca_deep_goals bt g2 -> g1 = g2
-  with add_ca_deep_g_inj {bt g1 g2}:
-    add_ca_deep_g bt g1 = add_ca_deep_g bt g2 -> g1 = g2.
+    add_ca_deep_goals bt g1 = add_ca_deep_goals bt g2 -> g1 = g2.
   Proof.
     - case: a1 => [|[]].
         case: a2 => [|[]]//.
       case: a2 => [|[]]//s1 x xs s2 y ys[?] /add_ca_deep_goals_inj ? /add_ca_deep_inj ?; by subst.
-    - case: g1; case: g2 => //= x xs y ys []/add_ca_deep_g_inj? /add_ca_deep_goals_inj?; by subst.
-    - by case: g1; case: g2 => //xs ys [] /append_sameR /add_ca_deep_inj->.
+    - case: g1; case: g2 => //= x xs y ys []/(add_ca_deep_g_inj add_ca_deep_inj) ? /add_ca_deep_goals_inj?; by subst.
   Qed.
 
   Lemma size_add_deep l hd tl:
@@ -70,13 +74,15 @@ Section NurProp.
       move=>//.
     move=> g gs; rewrite add_deepG_empty.
     f_equal.
-    case: g => //= ca.
+    case: g => //= ca b.
     rewrite make_lB0_empty2 add_deep_empty1 cat_take_drop//.
+    by case: ca.
   Qed.
 
   Lemma add_deep_cat bt hd l1 l2: add_deep bt hd (l1 ++ l2) = add_deep bt hd l1 ++ add_deep bt hd l2.
   Proof.
-    elim: l1 l2 bt hd => //= -[s g] gs IH l2 bt hd.
+    elim: l1 l2 bt hd; first by move=> *; rewrite !cat0s.
+    move=> [s g] gs IH l2 bt hd /=.
     rewrite IH cat_cons//.
   Qed.
   
@@ -94,10 +100,9 @@ Section NurProp.
     { case: l => //= -[s g] gs.
       rewrite add_ca_deepG_empty1 add_ca_deep_empty1//.
     }
-    case: l => /=.
-      move=>//.
-    move=> [t|ca] gs/=; rewrite ?add_ca_deepG_empty1//.
-    rewrite cats0 add_ca_deep_empty1//.
+    case: l => //=.
+    move=> [[|t] ca] gs /=; rewrite ?add_ca_deepG_empty1//.
+    rewrite add_ca_deep_empty1//.
   Qed.
 
   Section t2l_base.
@@ -119,8 +124,8 @@ Section NurProp.
     Lemma t2l_big_and r1 s l: 
       t2l (big_and r1) s l = (s, a2gs r1) ::: nilC.
     Proof. 
-      elim: r1 => //=-[|t] xs H//=; rewrite H/=.
-      - rewrite drop0 take0 make_lB0_empty1 !cat0s cats0.
+      elim: r1 => //= -[|t] xs H /=; rewrite ?cat0s H/=.
+      - rewrite drop0 make_lB0_empty1 ?cat0s cats0.
         rewrite/make_lB01/=map_cons cat_cons cat0s//.
       - rewrite make_lB0_empty1 cats0/make_lB01/= map_cons cat_cons cat0s//.
     Qed.
@@ -128,7 +133,7 @@ Section NurProp.
 
   Lemma add_ca_deep_cat l SA SB:
     add_ca_deep l (SA ++ SB) = add_ca_deep l SA ++ add_ca_deep l SB.
-  Proof. elim: SA => //= -[s x] xs IH; rewrite IH//. Qed.
+  Proof. elim: SA; first by rewrite /= !cat0s. move=> /= [s x] xs IH; rewrite IH//. Qed.
 
   Lemma empty_caG_add_deepG l hd xs:
     empty_caG xs -> (add_deepG l hd xs) = xs.
@@ -137,7 +142,7 @@ Section NurProp.
     elim: xs => //=x xs IH.
     rewrite all_cons => /andP[H1 H2].
     rewrite IH//.
-    case: x H1 => //=-[]//.
+    case: x H1 => //= -[|?] []//.
   Qed.
 
   Lemma base_or_aux_next_alt_t2l {X Y B s bt}: 
@@ -160,7 +165,7 @@ Section NurProp.
         have H := [elaborate HB nilC sb sb vB sB].
         rewrite H//=.
         case X: next_alt => //[B'|]/=.
-          by rewrite (t2l_dead dA)//.
+           by rewrite (t2l_dead dA)// cat0s.
         by rewrite !(t2l_dead is_dead_dead)//.
       have {HB}HA //=:= [elaborate HA (t2l B sb nilC) s s1 vA sA].
       rewrite HA//=; f_equal.
@@ -178,9 +183,10 @@ Section NurProp.
       rewrite !(t2l_dead is_dead_dead)/=.
       case W: next_alt => //=[A'|].
         rewrite make_lB01_empty2 cat_cons cat0s; f_equal.
-        case: t2l => //= -[s b] a.
-        rewrite t2l_big_and//.
-      by rewrite !(t2l_dead is_dead_dead)/=.
+        case: t2l => //= -[s b] a. 
+          by rewrite t2l_big_and !make_LBE /= cat_cons cat0s.
+       rewrite !(t2l_dead is_dead_dead)/= !make_LBE cats0.
+       by case: get_substS.
   Qed.
 
   Definition t2l_cons A :=
@@ -310,7 +316,7 @@ Section NurProp.
       rewrite map_cons add_ca_deep_goals_map_empty//.
       rewrite add_ca_deep_map_empty//.
     }
-    case: g => //=-[]//.
+    case: g => ? [] //=. -[] []//. rewrite cat0s /add_ca_deep.
   Qed.
 
   Lemma empty_ca_atoms  b: empty_caG (a2gs b).
