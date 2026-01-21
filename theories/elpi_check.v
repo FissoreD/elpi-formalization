@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import elpi elpi_equiv.
-From det Require Import tree t2l_prop tree_valid_state tree_prop.
+From det Require Import tree t2l_prop valid_tree tree_prop.
 From det Require Import check.
 
 Definition is_det g := forall u s s' a',

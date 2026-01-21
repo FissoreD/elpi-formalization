@@ -3,7 +3,7 @@ From det Require Import finmap ctx lang.
 From det Require Import tree tree_prop.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
-From det Require Import tree_valid_state.
+From det Require Import valid_tree.
 
 
 Set Implicit Arguments.
@@ -4822,7 +4822,7 @@ Print Assumptions  main.
 
 Module elpi.
   From det Require Import elpi elpi_equiv.
-  From det Require Import tree t2l_prop tree_valid_state tree_prop.
+  From det Require Import tree t2l_prop valid_tree tree_prop.
 
   Definition is_det g := forall u s' a',
     nur u empty g nilC s' a' -> a' = nilC.

@@ -11,7 +11,7 @@ theories/lang.v
 theories/tree.v
 theories/tree_test.v
 theories/tree_prop.v
-theories/tree_valid_state.v
+theories/valid_tree.v
 theories/tree_prop_hard.v
 
 theories/elpi.v

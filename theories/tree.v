@@ -323,7 +323,7 @@ Section main.
     
     (* lang *)
     | TA cut       => (CutBrothers, OK)
-    | TA (call t) => (Expanded, (backchain pr s t))
+    | TA (call t)  => (Expanded, backchain pr s t)
 
     (* recursive cases *)
     | Or A sB B =>
