@@ -24,7 +24,7 @@ Section NurProp.
     (forall bt a1 a2, add_ca_deep bt a1 = add_ca_deep bt a2 -> a1 = a2) ->
     add_ca_deep_g bt g1 = add_ca_deep_g bt g2 -> g1 = g2.
   move=> add_ca_deep_inj.
-  by case: g1; case: g2 => // -[|?] xs [|?] ys /= [] // => [/add_ca_deep_inj|] *; subst.
+   by case: g1; case: g2 => // -[|?] xs [|?] ys /= [] // => [|?] /add_ca_deep_inj *; subst.
 Defined.
 
   Lemma add_ca_deep_inj {bt a1 a2}:  
@@ -101,8 +101,7 @@ Defined.
       rewrite add_ca_deepG_empty1 add_ca_deep_empty1//.
     }
     case: l => //=.
-    move=> [[|t] ca] gs /=; rewrite ?add_ca_deepG_empty1//.
-    rewrite add_ca_deep_empty1//.
+    move=> [[|t] ca] gs /=; rewrite ?add_ca_deepG_empty1 ?add_ca_deep_empty1//.
   Qed.
 
   Section t2l_base.

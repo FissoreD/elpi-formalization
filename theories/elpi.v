@@ -546,8 +546,7 @@ Definition if_cut F (g : A * alts) :=
 
 Definition apply_cut F (g : A * alts) : A * alts :=
   match g with
-  | (cut, a) => (cut,F a) 
-  | (call t,_) => (call t,F [::])
+  | (a, ca) => (a,F ca) 
   end.
 
 

@@ -6,10 +6,9 @@ Definition make_lB0 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, x ++ lB0)) 
 
 Definition make_lB01 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, lB0 ++ x)) xs.
 
-Definition add_ca_deep_g' (add_ca_deep : alts -> alts -> alts) bt x :=
+Definition add_ca_deep_g' (add_ca_deep : alts -> alts -> alts) bt (x : A * alts) :=
   match x with
-  | (call t,ca) => (call t,ca)
-  | (cut, ca) => (cut, add_ca_deep bt ca)
+  | (a,ca) => (a,add_ca_deep bt ca)
   end.
 
 Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
