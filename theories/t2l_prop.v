@@ -413,16 +413,40 @@ Defined.
       by rewrite (HA _ _ _ _ vA fA X)//=.
   Qed.
 
+Lemma map_nil F : map F [::]%G = [::]%G. by []. Qed.
+
+Lemma save_goals_cons (a: alts) (gs :goals) b1 (bs : goals) :
+  save_goals a gs [:: b1 & bs]%G =
+  [:: add_ca a b1 & save_goals a gs bs]%G.
+  by rewrite /save_goals map_cons.
+Qed.
 
   Lemma add_deep_goalsP hd r ys l tl:
     empty_caG hd -> empty_caG r ->
       add_deepG l hd (save_goals (ys ++ l) tl r) ++ hd =
         save_goals (make_lB0 (add_deep l hd ys) hd ++ l)
-          (append_goals (add_deepG l hd tl) hd) r.
+          ( (add_deepG l hd tl) ++ hd) r.
   Proof.
-    elim: r hd ys l tl => //g gs IH hd ys l tl Hhd/=.
+    elim: r hd ys l tl.
+      by rewrite /save_goals =>>; rewrite !map_nil !cat0s.
+    move=> g gs IH hd ys l tl Hhd.
     rewrite/empty_caG all_cons => /andP[H1 H2].
-    rewrite /save_goals map_cons cat_cons.
+    rewrite !save_goals_cons -IH //.
+    case: g H1 => [[|?] [|//]] /= _.
+      rewrite !cat0s size_cat addnK drop_size_cat//add_deep_cat take_size_cat ?size_add_deep //. 
+    congr ([:: (_,_ ++ _ ++ _) & _]%G).
+    elim: ys {IH} => //= -[??] ? IH /=; rewrite make_LBE -IH /=.
+
+    FIXME, save_goals now also changes calls, not just cuts, maybe revert
+
+    Search add_deep.
+    Search make_lB0.
+      
+      /add_deepG. {1}/add_ca.
+    
+    !map_cons cat_cons.
+    have {}IH := IH _ _ _ _ Hhd H2.
+    rewrite IH.
     rewrite cat_cons; f_equal.
     case: g H1 => //=-[]//= _.
     f_equal; rewrite !cat0s size_cat addnK drop_size_cat//.
