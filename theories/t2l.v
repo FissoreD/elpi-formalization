@@ -8,7 +8,7 @@ Definition make_lB01 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, lB0 ++ x))
 
 Definition add_ca_deep_g' (add_ca_deep : alts -> alts -> alts) bt (x : A * alts) :=
   match x with
-  | (a,ca) => (a,add_ca_deep bt ca)
+  | (a,ca) => (a,add_ca_deep bt ca ++ bt)
   end.
 
 Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
@@ -123,7 +123,7 @@ Section test.
       t2l (And (Or Dead s1 (TA cut)) ([:: cut]) (TA cut)) s3 l.
   Proof.
     move=>s3 l/=.
-    rewrite /=!cat0s ?cat0s size_nil.
+    rewrite /=!cat0s ?cat0s subnn.
     by rewrite drop0 /= !make_LB0_cons !make_LB01_cons.
   Qed.
 End test.
