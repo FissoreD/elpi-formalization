@@ -8,47 +8,36 @@ Definition make_lB01 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, lB0 ++ x))
 
 Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
   match ats with
-  | no_alt => nilC
-  | more_alt (hd,xs) tl => (hd, add_ca_deep_goals bt xs) ::: (add_ca_deep bt tl)
+  | [::] => [::]
+  | [:: (hd,xs) & tl ] => [:: (hd, add_ca_deep_goals bt xs) & (add_ca_deep bt tl) ]
   end
-with add_ca_deep_goals bt gl :=
+with add_ca_deep_goals bt (gl : goals) : goals :=
   match gl with
-  | no_goals => nilC 
-  | more_goals hd tl => (add_ca_deep_g bt hd) ::: (add_ca_deep_goals bt tl)
-  end
-with add_ca_deep_g bt g :=
-  match g with
-  | callE t => callE t 
-  | cutE ca => cutE ((add_ca_deep bt ca) ++ bt)
+  | [::]%G => [::]%G 
+  | [:: (call t,ca) & tl ]%G => [:: (call t,ca) & add_ca_deep_goals bt tl ]
+  | [:: (cut,   ca) & tl ]%G => [:: (cut, add_ca_deep bt ca) & add_ca_deep_goals bt tl]
   end.
 
 Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
   match A with
-  | no_alt => nilC
-  | more_alt (s,hd) tl => (s,add_deepG bt l hd) ::: (add_deep bt l tl)
+  | [::] => [::]
+  | [:: (s,hd) & tl ] => [:: (s,add_deepG bt l hd) & add_deep bt l tl]
   end
-  with add_deepG (bt: alts) (l: goals) (A : goals) :=
+  with add_deepG (bt: alts) (l: goals) (A : goals) : goals :=
   match A with
-  | no_goals => nilC
-  | more_goals hd tl => (add_deep_G bt l hd) ::: (add_deepG bt l tl)
-  end
-  with add_deep_G bt l A :=
-  match A with
-  | cutE ca => 
-    let s := size ca - size bt in
-    let xx := (add_deep bt l (ca)) in
-    cutE (make_lB0 (take s xx) l ++ drop s ca)
-  | callE t => callE t 
+  | [::]%G => [::]%G 
+  | [:: (call t,ca) & tl ]%G => [:: (call t,ca) & add_deepG bt l tl]
+  | [:: (cut,   ca) & tl ]%G =>
+      let s := size ca - size bt in
+      let xx := (add_deep bt l (ca)) in
+      let ca := (make_lB0 (take s xx) l ++ drop s ca) in
+      [:: (cut, ca) & add_deepG bt l tl]
   end.
 
-Definition kill (A: goals) := map (apply_cut (fun x => nilC)) A.
+Definition kill (A: goals) := map (apply_cut (fun x => [::])) A.
 
 (* reset-point to list *)
-Fixpoint r2l a : goals :=
-  match a with
-  | [::] => no_goals
-  | x::xs => more_goals ((a2g x)) (r2l xs)
-  end.
+Definition r2l a : goals := seq2goals [seq a2g x | x <- a].
 
 
   (* bt is the backtracking list for the cut-alternatives
@@ -66,19 +55,19 @@ Fixpoint r2l a : goals :=
 (*SNIP: t2l*)
 Fixpoint t2l (A: tree) s (bt : alts) : alts :=
 match A with
-| OK => (s, nilC) ::: nilC
-| Bot => nilC
-| Dead => nilC
-| TA cut => (s, ((cutE nilC) ::: nilC)) ::: nilC
-| TA (call t) => (s, ((callE t) ::: nilC)) ::: nilC
+| OK          => [:: (s, [::]) ]
+| Bot         => [::]
+| Dead        => [::]
+| TA cut      => [:: (s, [:: (cut,[::]) ]) ]
+| TA (call t) => [:: (s, [:: (call t,[::]) ]) ]
 | Or A s1 B => 
-  let lB := t2l B s1 nilC in
-  let lA := t2l A s lB in
-  add_ca_deep bt (lA ++ lB)
+    let lB := t2l B s1 [::] in
+    let lA := t2l A s lB in
+    add_ca_deep bt (lA ++ lB)
 | And A B0 B =>
-  let hd  := r2l B0 in
-  let lA  := t2l A s bt in
-  if lA is more_alt (slA, x) xs then 
+    let hd  := r2l B0 in
+    let lA  := t2l A s bt in
+    if lA is [:: (slA, x) & xs] then 
       (* the reset point exists, it has to be added to all cut-to alternatives *)
       let xz := add_deepG bt hd x in
       let xs := add_deep bt hd xs in 
@@ -88,10 +77,10 @@ match A with
       let lB   := t2l B slA (xs ++ bt) in
       (* lB are alternatives, each of them have x has head *)
       (make_lB01 lB xz) ++ xs
-  else nilC
+    else [::]
 end.
 (*ENDSNIP*)
-
+(* 
 Global Notation "-nilCG" :=
   (@nilC _ _ IsList_goals)
   (at level 2, no associativity, only parsing)
@@ -99,7 +88,7 @@ Global Notation "-nilCG" :=
 Global Notation "-nilCA" :=
   (@nilC _ _ IsList_alts)
   (at level 2, no associativity, only parsing)
-  : SE.
+  : SE. *)
 
 Section test.
   Variable u : Unif.
@@ -114,8 +103,8 @@ Section test.
       t2l (And (Or Dead s1 (TA cut)) ([:: cut]) (TA cut)) s3 l.
   Proof.
     move=>s3 l/=.
-    rewrite /=!cat0s ?cat0s.
-    rewrite subnn/= take0 drop0//.
+    rewrite /=!cat0s ?cat0s size_nil.
+    rewrite subnn. /= take0 drop0//.
   Qed.
 End test.
 (*END*)
