@@ -530,6 +530,9 @@ Ltac fConsG x xs := change (more_goals x xs) with (consC x xs).
 Ltac fNilA := change no_alt with (@nilC _ _ IsList_alts).
 Ltac fNilG := change no_goals with nilC.
 
+Lemma seq2alts_cat : forall l1 l2,  seq2alts (l1 ++ l2) = (seq2alts l1 ++ seq2alts l2).
+Proof. by elim => //=[|x xs IH] l2; rewrite (cat0s, cat_cons)//IH. Qed.
+
 Lemma cat_right_same {l1 l2} (l3:alts): 
   l1 ++ l3 = l2 ++ l3 -> l1 = l2.
 Proof.

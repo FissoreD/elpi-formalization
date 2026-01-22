@@ -10,7 +10,7 @@ Variable u : Unif.
 Fixpoint of_goals l :=
   match l with
     | [::]%SEQ => [::]%G
-    | [:: hd & xs]%SEQ => [:: hd & of_goals xs]%G
+    | [:: hd & xs]%SEQ => [:: (hd, [::]) & of_goals xs]%G
   end.
 
 Fixpoint of_alt l :=
@@ -38,9 +38,9 @@ Goal forall A B D0 D,
   tester 
     (And (Or ((Or (TA cut) empty (f A))) empty (f B)) (g D0) (f D)) 
     (of_alt [:: 
-      [:: (cut, of_alt [:: [:: callE B; callE D0]]); callE D];
-      [:: callE A; callE D0]; 
-      [:: callE B; callE D0]]).
+      [:: (cut, of_alt [:: [:: (call B); (call D0)]]); (call D)];
+      [:: (call A); (call D0)]; 
+      [:: (call B); (call D0)]]).
 Proof.
   move=> A B D0 D p/=.
   move=>//=.
