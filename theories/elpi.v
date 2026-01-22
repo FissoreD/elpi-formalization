@@ -130,6 +130,13 @@ Section aux.
   Qed.
 
 
+  Lemma suffix_consL {T:eqType} (x:T) l1 l2:
+    seq.suffix l1 (x::l2) -> l1 = (x::l2)%SEQ \/ seq.suffix l1 l2.
+  Proof.
+    move=> /seq.suffixP[[]]/=; auto.
+    move=> a l [->->]; right.
+    by apply/seq.suffix_catr/seq.suffix_refl.
+  Qed.
 End aux.
 
 Class IsList (Th Tl : Type)  := {
@@ -176,6 +183,7 @@ Class IsList (Th Tl : Type)  := {
   size_suffix s1 s2: suffix s1 s2 -> size s1 <= size s2;
   suffix_catl: forall s1 s2 s3 s3', size s3 = size s3' ->
     suffix (appendC s1 s3) (appendC s2 s3') = (eqB s3 s3') && suffix s1 s2;
+  suffix_cons: forall x l1 l2, suffix l1 (consC x l2) -> l1 = consC x l2 \/ suffix l1 l2;
   all_cat p l1 l2: all p (appendC l1 l2) = all p l1 && all p l2;
   all_cons p x xs: all p (consC x xs) = p x && all p xs; 
   size_cons x xs: size (consC x xs) = (size xs).+1;
@@ -328,6 +336,7 @@ Section mkIsList.
     - by move->; rewrite ltnn subnn seq.take0 seq.cats0 altK.
     - by move->; rewrite ltnn subnn seq.drop0 altK.
     - by apply: seq.size_suffix.
+    - move=> /suffix_consL[]; auto ; rewrite -alts2seqs => /alts2seq_inj; auto.
     - by move=> /cat_cat_size H1 /cat_cat_size H2 /seq2alts_inj /H1 [/alts2seq_inj-> /alts2seq_inj->].
     - by move => /seq2alts_inj /cat_same_tl /alts2seq_inj.
     - by rewrite (fun_if seq2alts).
