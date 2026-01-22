@@ -803,8 +803,8 @@ Qed.
       (failed B * (t2l B s l = xs))%type)))%type
       .
   Proof.
-    elim: A B s s3 l t gs xs => //=.
-    - move=> []// t C s1 s3 l t1 gs xs ? [?][??]??; subst.
+    elim: A B s s3 l t gs xs ca => //=.
+    - move=> []// t C s1 s3 l t1 gs xs ?? [?][??]???; subst.
       rewrite failed_big_or/backchain; case: F => [|[s4 r1] rs]/=; auto.
       by rewrite !cats0 !cat0s !(s2l_big_or empty)/=cat0s make_lB0_empty2; auto.
     - move=> A HA s B HB C s1 s3 l t gs xs ca.
