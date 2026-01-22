@@ -19,7 +19,7 @@ Inductive tree :=
 (*ENDSNIP: tree_def*)
   (* | PiImpl : V -> R_ A -> A -> A. *)
 
-derive tree.
+#[only(eqbOK)] derive tree.
 HB.instance Definition _ := hasDecEq.Build tree tree_eqb_OK.
 
 (*SNIP: step_tag*)

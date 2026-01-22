@@ -42,7 +42,7 @@ Section NurEqiv.
         have [] := s2l_empty_hd_success vA (step_not_failed eA notF) H.
         rewrite (step_not_solved eA notF)//.
       fConsG g gs.
-      case: g => [c|ca] H.
+      case: g => [[|c] ca] H; last first.
         have:= s2l_Expanded_call _ _ vA eA H.
         move=> []?; subst.
         case X: F.
@@ -66,6 +66,13 @@ Section NurEqiv.
   Print Assumptions tree_to_elpi.
 
 Section clean_ca.
+
+  Definition clean_ca_G (clean_ca : alts -> alts -> alts) bt (g : A * alts) :=
+    match g with
+    | (a, ca) => (a, ((take (size ca - size bt) (clean_ca bt ca))))
+    end.
+
+
   Fixpoint clean_ca (bt:alts) (ats: alts) : alts :=
     match ats with
     | no_alt => nilC
@@ -74,12 +81,7 @@ Section clean_ca.
   with clean_ca_goals bt gl :=
     match gl with
     | no_goals => nilC 
-    | more_goals hd tl => (clean_ca_G bt hd) ::: (clean_ca_goals bt tl)
-    end
-  with clean_ca_G bt g :=
-    match g with
-    | callE t => callE t 
-    | cutE ca => cutE ((take (size ca - size bt) (clean_ca bt ca)))
+    | more_goals hd tl => (clean_ca_G clean_ca bt hd) ::: (clean_ca_goals bt tl)
     end.
 
   Lemma clean_ca_size {bt L}: size (clean_ca bt L) = size L
@@ -91,11 +93,15 @@ Section clean_ca.
 
   Lemma clean_ca_cat {bt L1 L2}:
     clean_ca bt (L1 ++ L2) = clean_ca bt (L1) ++ clean_ca bt L2.
-  Proof. by elim: L1 bt L2 => //= [[s g] gs] IH bt L2; rewrite IH cat_cons. Qed.
+  Proof. 
+  elim: L1 bt L2; first by move=>*; rewrite !cat0s.
+  by move=> [s g] gs IH bt L2; rewrite cat_cons /= IH cat_cons. Qed.
 
   Lemma clean_ca_goals_cat {bt L1 L2}:
     clean_ca_goals bt (L1 ++ L2) = clean_ca_goals bt (L1) ++ clean_ca_goals bt L2.
-  Proof. by elim: L1 bt L2 => //= g gs IH bt L2; rewrite IH cat_cons. Qed.
+  Proof.
+  elim: L1 bt L2; first by move=>*; rewrite !cat0s.
+  by move=> g gs IH bt L2; rewrite /= IH cat_cons. Qed.
 
   Lemma clean_ca_add_ca {pref bt1 L}:
     clean_ca bt1 (add_ca_deep (pref++bt1) L) = add_ca_deep (clean_ca bt1 pref) L
@@ -104,11 +110,11 @@ Section clean_ca.
   Proof.
     - case: L => /=//-[s x] xs//=; rewrite clean_ca_add_ca clean_ca_goals_add_ca_goal//.
     - case: L => /=//g gs; rewrite clean_ca_goals_add_ca_goal.
-      case: g => //=ca.
-      rewrite clean_ca_cat clean_ca_add_ca; repeat f_equal.
-      rewrite !size_cat addnA addnK clean_ca_cat catA take_size_cat//.
-      by rewrite size_cat !size_add_ca_deep clean_ca_size.
-      Guarded.
+      case: g => c al /=.
+        rewrite clean_ca_cat clean_ca_add_ca; repeat f_equal.
+        rewrite !size_cat addnA addnK.
+        rewrite clean_ca_cat catA take_size_cat//.
+        by rewrite size_cat !size_add_ca_deep clean_ca_size.
   Qed.
 
   Lemma clean_ca_add_ca1 {bt1 L}:
@@ -118,27 +124,26 @@ Section clean_ca.
   Proof.
     - case: L => /=//-[s x] xs//=; rewrite clean_ca_add_ca1 clean_ca_goals_add_ca_goal1//.
     - case: L => /=//g gs; rewrite clean_ca_goals_add_ca_goal1.
-      case: g => //=ca.
+      case: g => //=ca ?.
       rewrite size_cat addnK clean_ca_cat clean_ca_add_ca1 take_size_cat//.
       by rewrite size_add_ca_deep.
-      Guarded.
   Qed.
 
+  Lemma clean_ca_G_nil {L}: (forall L, clean_ca nilC L = L) -> clean_ca_G clean_ca nilC L = L.
+by move=> IH; case: L => a alts /=; rewrite IH subn0 take_size. Defined.
+
   Lemma clean_ca_nil {L}: clean_ca nilC L = L
-  with clean_ca_goals_nil {L}: clean_ca_goals nilC L = L
-  with clean_ca_G_nil {L}: clean_ca_G nilC L = L.
+  with clean_ca_goals_nil {L}: clean_ca_goals nilC L = L.
   Proof.
     - case: L => /=// [[sx x]xs]; rewrite clean_ca_goals_nil clean_ca_nil//.
-    - case: L => /=// g gs; rewrite clean_ca_goals_nil clean_ca_G_nil//.
-    - case: L => /=// ca.
-    rewrite clean_ca_nil subn0 take_size//.
+    - case: L => //= g gs. rewrite clean_ca_goals_nil clean_ca_G_nil//.
   Qed.
 
   Lemma clean_ca_goals_empty {bt A}:
     empty_caG A -> clean_ca_goals bt A = A.
   Proof.
     elim: A bt => //=g gs IH bt; rewrite/empty_caG all_cons => /andP[H1 H2].
-    rewrite IH//; case: g H1 => //-[]//.
+    rewrite IH//; case: g H1 => // a [|x xs]//.
   Qed.
 
   Lemma clean_ca_empty {bt A}:
@@ -160,22 +165,21 @@ Section clean_ca.
   Lemma take_add_deep {n bt hd L}:
     take n (add_deep bt hd L) = add_deep bt hd (take n L).
   Proof.
-    elim: L n => //=[|[s x] xs IH] n.
-      rewrite take_nil//.
+    elim: L n => //= -[s x] xs IH n.
     case: n => //= n; rewrite take_cons IH//.
   Qed.
 
   Lemma clean_ca_drop {n bt L}:
     clean_ca bt (drop n L) = drop n (clean_ca bt L).
-  Proof. elim: L n => //=[|[s g]gs IH] n/=; case: n => //. Qed.
+  Proof. by elim: L n => //= -[s g] gs IH n/=; case: n; rewrite // !drop0. Qed.
 
   Lemma clean_ca_take {n bt L}:
     clean_ca bt (take n L) = take n (clean_ca bt L).
-  Proof. elim: L n => //=[|[s g]gs IH] n/=; case: n => //n; rewrite !take_cons/=IH//. Qed.
+  Proof. elim: L n => //= -[s g] gs IH n/=; case: n => //n; rewrite !take_cons/=IH//. Qed.
 
   Lemma take_make_lb0 {n hd L}:
     take n (make_lB0 L hd) = make_lB0 (take n L) hd.
-  Proof. elim: L n => //=[|[s g]gs IH] []//=n; rewrite !take_cons IH//. Qed.
+  Proof. elim: L n => //= -[s g] gs IH []//=n; rewrite !take_cons IH//. Qed.
 
   Lemma clean_ca_add_deep {x bt hd L}:
     empty_caG hd ->
@@ -187,8 +191,8 @@ Section clean_ca.
       add_deepG (clean_ca bt x) hd (clean_ca_goals bt L).
   Proof.
     - move=> H; case: L => //=-[]s g a/=; rewrite clean_ca_add_deep //clean_ca_add_deep_gs//.
-    - move=> H; case: L => //=g gs; rewrite clean_ca_add_deep_gs//=; congr (_ ::: _).
-      case: g => //= ca; f_equal.
+    - move=> H; case: L => [|[a ca]] //= gs; rewrite clean_ca_add_deep_gs//=; congr (_ ::: _).
+      f_equal.
       rewrite !size_cat !size_map.
       rewrite !clean_ca_cat clean_ca_mk_lb0//.
       rewrite !take_add_deep.
@@ -248,13 +252,15 @@ Section clean_ca.
   Proof.
     - case: L => // -[]s g a.
       rewrite/empty_ca /= all_cons => /andP[H1 H2].
-      rewrite clean_ca_save_alts//clean_ca_save_goals//.
-    - case: hd => //=g gs; rewrite/empty_caG all_cons => /andP[H1 H2].
-      rewrite clean_ca_save_goals//.
-      case: g H1 => //= -[]// _.
-      rewrite !size_cat addnA addnK !clean_ca_cat catA take_size_cat; last first.
-        by rewrite size_cat !clean_ca_size.
-      rewrite/save_goals cat_cons; f_equal.
+      rewrite clean_ca_save_alts// clean_ca_save_goals //.
+    - case: hd => [|[a [|//]] gs] /=.
+        by rewrite /save_goals !cat0s.
+      rewrite/empty_caG all_cons => /andP[H1 H2].
+      rewrite clean_ca_save_goals// cat0s.
+      (* case: g H1 => //= -[]// _. *)
+      rewrite !size_cat addnK !clean_ca_cat take_size_cat; last first.
+        by rewrite !clean_ca_size.
+      by rewrite save_goals_cons /add_ca/= cat0s.
   Qed.
 
   Lemma clean_ca_goals_a2gs bt l:
@@ -311,6 +317,7 @@ Section clean_ca.
       have {HA} := HA s1 x bt _ vA sA Y.
       rewrite M N /= => -[???]; subst.
       have H := empty_caG_r2l.
+      rewrite seq2altsK.
       rewrite clean_ca_mk_lb0//clean_ca_add_deep//clean_ca_goals_a2gs//.
   Qed.
 
@@ -318,7 +325,6 @@ Section clean_ca.
     valid_tree A -> clean_ca bt (t2l A s (x ++ bt)) = t2l A s (clean_ca bt x).
   Proof.
     elim: A s x bt => //=.
-    - by move=> [].
     - move=> A HA s B HB s1 x bt.
       set X:= (t2l _ _ _ ++ _).
       by rewrite clean_ca_add_ca.
@@ -343,6 +349,7 @@ Section clean_ca.
       repeat f_equal.
         by rewrite clean_ca_add_deep_gs//.
         by apply: clean_ca_goals_a2gs.
+      rewrite seq2altsK.
       by rewrite clean_ca_mk_lb0// clean_ca_add_deep//.
   Qed.
 
@@ -351,7 +358,7 @@ Section clean_ca.
   Proof.
     move=> vA.
     have:= [elaborate @clean_ca_s2l s nilC bt _ vA].
-    move=> //.
+    by rewrite cat0s.
   Qed.
 End clean_ca.
 
@@ -428,7 +435,6 @@ Section next_cut.
       next_cut A = (false, A).
   Proof.
     elim: A s bt s1 xs => //=.
-    - by move=> [].
     - move=> A HA s B HB s1 bt s2 xs.
       case: ifP => [dA vB fB|dA /andP[vA bB] fA].
         rewrite t2l_dead// is_dead_is_ko//=.
@@ -451,13 +457,15 @@ Section next_cut.
         by rewrite (HB _ _ _ _ vB fB H1).
       have [sy[y[ys H]]] := failed_t2l vA fA s1 bt.
       rewrite H/= t2l_big_and.
-      case: y H => //=H[]; rewrite cat0s =>  [???]; subst.
-      by rewrite (HA _ _ _ _ vA fA H).
+      case: y H => [|g gss] H.
+        rewrite make_LB01_cons /= => -[???]; subst.
+        by rewrite (HA _ _ _ _ vA fA H).
+      by case: g {H} => a ca; rewrite make_LB01_cons make_LB01_nil //=.
   Qed.
 
   Lemma next_cut_s2l {A B s bt s1 ca gl a}:
     failed A = false -> valid_tree A ->
-      clean_ca bt (t2l A s bt) = (s1, (cutE ca) ::: gl) ::: a ->
+      clean_ca bt (t2l A s bt) = (s1, (cut, ca) ::: gl) ::: a ->
       next_cut A = B ->
         clean_ca bt (t2l B.2 s bt) = (s1, gl) ::: ca /\
         if B.1 then step u p s A = (CutBrothers, B.2)
@@ -469,17 +477,20 @@ Section next_cut.
       case: ifP => [dA fB vB|dA fA /andP[vA bB]].
         rewrite t2l_dead => //=.
         rewrite is_dead_is_ko//=.
-        case X: t2l => [|[sx [|[ c'|ca'] ys]] xs]//[????][??]; subst.
+        case X: t2l => [|[? [|]] xs]; rewrite cat0s //= => -[? H' ??[??]]; subst.
         case Y: next_cut => [b' B']/=.
-        rewrite t2l_dead//=.
-        rewrite -(@clean_ca_nil (t2l B s nilC)) in X.
-        have /=[{}HB H] := HB _ _ _ _ _ _ _ fB vB X Y.
-        rewrite clean_ca_nil in HB.
-        rewrite HB/= size_cat addnK clean_ca_cat take_size_cat//; last first.
-          by rewrite clean_ca_size//.
-        split => //; case: b' H Y => //->//.
+        rewrite t2l_dead//= cat0s.
+        rewrite -(@clean_ca_nil (t2l B s _)) in X.
+        case: xs => [[|c'] ca] in X H' *.
+          have /=[{}HB H] := HB _ _ _ _ _ _ _ fB vB X Y.
+          rewrite clean_ca_nil in HB.
+          rewrite HB/=.
+          move: H' => /= [<-]. rewrite size_cat addnK clean_ca_cat take_size_cat//; last first.
+            by rewrite clean_ca_size//.
+          by split => // ; case: b' H Y => //->//.
+        by simpl in H'.
       have [s'[x[xs H]]] := [elaborate failed_t2l vA fA s1 (t2l B s nilC)].
-      rewrite H/=; case: x H => //[[c'|ca']gs]// H [????]; subst.
+      rewrite H/=; case: x H => // -[[|c'] ca'] gs // H [????]; subst.
       rewrite failed_is_ko//; case X: next_cut => //[b' A'][??]; subst.
       have {HA HB} := HA _ s1 (t2l B s no_alt) _ _ _ _ fA vA _ X.
       rewrite H/= => /(_ _ _ _ _ erefl).
@@ -504,7 +515,7 @@ Section next_cut.
         set ml:= make_lB0 _ _.
         have [s2[x[xs H1]]] := [elaborate failed_t2l vB fB (get_substS s A) (ml ++ bt)].
         rewrite H1/=.
-        case: x H1 => //[[]]// ca' gs H1 [????][??]; subst.
+        case: x H1 => // -[[|] ca'] // gs H1 [????][??]; subst.
         have:= HB _ (get_substS s A) (ml ++ bt) _ _ _ _ fB vB _ Y.
         move=> /(_ _ IsList_alts).
         rewrite H1/= => /(_ _ _ _ _ erefl) [{}HB H2].
@@ -536,9 +547,8 @@ Section next_cut.
         move=> _.
         set XX:= clean_ca_goals _ _.
         rewrite !size_cat addnA addnK.
-        change (append_alts ys _) with (ys ++ (ml ++ bt)) => _.
-        rewrite catA !clean_ca_cat cat_cons take_size_cat//.
-        by rewrite size_cat !clean_ca_size.
+        change (ys ++ _) with (ys ++ (ml ++ bt)) => _.
+        by rewrite !clean_ca_cat cat_cons catA take_size_cat// size_cat !clean_ca_size .
       case Y: next_cut => [b' A']/= + [??]; subst => /=.
       (* case Z: (next_cut B) => [b'' B']. *)
       have [s2[x[xs H]]] := failed_t2l vA fA s bt.
@@ -547,9 +557,12 @@ Section next_cut.
       case: x H => //=.
         move=> H; exfalso.
         by apply: s2l_empty_hdF H.
-      move=> []//ca' gs H[????]; subst.
+      move=> []//? ca' gs H[????]; subst.
       have:= HA _ s bt _ _ _ _ fA vA _ Y.
       rewrite H/= => /(_ _ _ _ _ erefl) [H2 H3].
+
+stop
+
       case: b Y H3 => //= Y H3; rewrite H3; repeat split.
         have [x[tl]]:= s2l_CutBrothers _ _ s bt vA H3.
         rewrite H => -[][]???? [H4 H5]; subst.
