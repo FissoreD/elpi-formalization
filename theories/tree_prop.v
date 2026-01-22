@@ -36,7 +36,7 @@ Section RunP.
   Lemma is_ko_big_and r: is_ko (big_and r) = false.
   Proof. apply/contraFF/failed_big_and/r/is_ko_failed. Qed.
 
-  Lemma is_dead_big_or r rs: is_dead (big_or_aux r rs) = false.
+  Lemma is_dead_big_or r rs: is_dead (big_or r rs) = false.
   Proof. 
     elim: rs r => //=.
     - move=> *; apply: is_dead_big_and.
@@ -230,7 +230,7 @@ Section RunP.
       by apply: HB (get_substS s1 A).
   Qed.
 
-  Lemma is_ko_big_or_aux r A: is_ko (big_or_aux r A) = false.
+  Lemma is_ko_big_or r A: is_ko (big_or r A) = false.
   Proof. by elim: A r => //=[|[s r] rs IH] r1/=; rewrite is_ko_big_and//. Qed.
 
   Lemma step_is_ko u p s1 A r:
@@ -292,8 +292,8 @@ Section RunP.
     by move=> /failed_is_ko.
   Qed.
 
-  Lemma failed_big_or u p s t: failed (big_or u p s t).
-  Proof. rewrite/big_or; case: F => //-[]//. Qed.
+  Lemma failed_big_or u p s t: failed (backchain u p s t).
+  Proof. rewrite/backchain; case: F => //-[]//. Qed.
 
   Section same_structure.
 
@@ -506,8 +506,8 @@ Section RunP.
     next_alt false (big_and r) = Some (big_and r).
   Proof. elim: r => //=x xs IH p; case: x => //=. Qed.
 
-  Lemma next_alt_big_or_aux r rs:
-    next_alt false (big_or_aux r rs) = Some (big_or_aux r rs).
+  Lemma next_alt_big_or r rs:
+    next_alt false (big_or r rs) = Some (big_or r rs).
   Proof.
     elim: rs r => //= [|[sr r] rs IH] r0/=;
     by rewrite ?is_dead_big_and next_alt_big_and//.

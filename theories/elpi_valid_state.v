@@ -405,8 +405,8 @@ Section NurValidState.
   Lemma empty_caG_cat A B: empty_caG (A ++ B) = empty_caG A && empty_caG B.
   Proof. by rewrite/empty_caG all_cat. Qed.
 
-  Lemma empty_ca_big_or_aux r rs s0:
-    empty_ca (t2l (big_or_aux r rs) s0 nilC).
+  Lemma empty_ca_big_or r rs s0:
+    empty_ca (t2l (big_or r rs) s0 nilC).
   Proof.
     rewrite/empty_ca/=.
     elim: rs r s0 => [|[s0 r0] rs IH] x s1//=; rewrite t2l_big_and.
@@ -415,14 +415,14 @@ Section NurValidState.
     by rewrite add_ca_deepG_empty1/= empty_ca_atoms.
   Qed.
 
-  Lemma valid_caA_big_or_aux x xs s0 rs:
-    valid_caA (t2l (big_or_aux x xs) s0 nilC) rs nilC.
+  Lemma valid_caA_big_or x xs s0 rs:
+    valid_caA (t2l (big_or x xs) s0 nilC) rs nilC.
   Proof.
     elim: xs x s0 rs => //= [|[s0 r0] rs IH] x s1 l.
       by rewrite t2l_big_and//= empty_ca_atoms valid_caG_a2gs if_same.
     rewrite /= add_ca_deep_empty1 t2l_big_and.
     rewrite cat_cons/= empty_ca_atoms cat0s valid_caG_a2gs/=.
-    by rewrite fold_valid_caA IH empty_ca_big_or_aux if_same.
+    by rewrite fold_valid_caA IH empty_ca_big_or if_same.
   Qed.
 
   (********************************************************************)
@@ -455,7 +455,7 @@ Section NurValidState.
       apply: push_bt_out => //; last by rewrite cats0//.
       rewrite/sB.
       move /spec_bbOr: bB => [r[rs[]?]]; subst.
-        apply: valid_caA_big_or_aux.
+        apply: valid_caA_big_or.
       by rewrite t2l_cutr.
     - move=> A HA B0 B HB l s0/= /andP[vA].
       have:= HA l s0 vA => {}HA.

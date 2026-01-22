@@ -722,7 +722,7 @@ Section s.
     - move=> sr r c s H.
       have [r0[B [n H1]]] := @run_big_and_total (premises r) sr.
       repeat eexists.
-      apply: run_step; rewrite /=/big_or?H//.
+      apply: run_step; rewrite /=/backchain?H//.
       apply: run_fail => //=.
         rewrite next_alt_big_and//.
       by apply: run_ko_left2; eauto.
@@ -740,10 +740,10 @@ Section s.
       (* case F: (F u p c s) => [|[sr r] rs].
         repeat eexists.
         apply: run_step => //.
-        rewrite/big_or F; apply: run_dead => //.
+        rewrite/backchain F; apply: run_dead => //.
       repeat eexists.
       apply: run_step => //=.
-      rewrite/big_or; rewrite F.
+      rewrite/backchain; rewrite F.
       apply: run_fail => //=.
       admit. *)
     (* - repeat eexists; apply: run_cut => //; apply: run_done => //. *)

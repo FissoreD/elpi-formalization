@@ -225,9 +225,9 @@ Section check.
 
   Lemma is_det_no_free_alt {sP t s1}:
     check_rules sP p.(rules) -> tm_is_det sP t -> 
-      det_tree sP (big_or u p s1 t).
+      det_tree sP (backchain u p s1 t).
   Proof.
-    rewrite /big_or/F.
+    rewrite /backchain/F.
     case X: tm2RC => //=[[q qp]].
     case: p => rules sig1 /=.
     generalize {| rules := rules; sig := sig1 |} as pr => pr.

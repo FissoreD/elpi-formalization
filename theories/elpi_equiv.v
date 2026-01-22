@@ -587,7 +587,7 @@ Section next_callS.
   Fixpoint next_callS s A := 
     match A with
     | OK | Dead | Bot | TA cut => A
-    | TA (call t) => (big_or u p s t)
+    | TA (call t) => (backchain u p s t)
     | Or A sx B => if is_dead A then Or A sx (next_callS s B) else Or (next_callS s A) sx B
     | And A B0 B =>
       if success A then And A B0 (next_callS s B) else And (next_callS s A) B0 B
@@ -596,7 +596,7 @@ Section next_callS.
   Lemma is_dead_next_callS {s A}: is_dead (next_callS s A) = is_dead A.
   Proof.
     elim: A => //=.
-    - move=> []// c; rewrite/big_or; case: F => [|[]]//.
+    - move=> []// c; rewrite/backchain; case: F => [|[]]//.
     - move=> A HA s1 B HB; case: ifP => dA/=.
         rewrite dA HB//.
       by rewrite HA dA.
@@ -608,7 +608,7 @@ Section next_callS.
   Proof.
     move=> ++ <-; clear B.
     elim: A s => //=.
-    - by move=> []// c s _ _; rewrite valid_tree_big_or.
+    - by move=> []// c s _ _; rewrite valid_tree_backchain.
     - move=> A HA s1 B HB s2.
       case: ifP => [dA vB fB|dA /andP[vA bB] fA]/=.
         by rewrite dA HB.
@@ -666,7 +666,8 @@ Section next_callS.
     elim: A s3 bt s1 t gl a ign => //=.
     - move=> []// c s3 bt s1 c1 gl a ign _ _ [?????]; subst.
       rewrite cats0; split => //.
-      rewrite what_I_want?valid_tree_big_or///big_or.
+      rewrite what_I_want; last by rewrite valid_tree_backchain.
+      rewrite/backchain.
       case B: F => [|[sx x]xs]//=.
       rewrite add_ca_deep_empty1 cat0s.
       have:= @s2l_big_or sx sx (premises x) xs no_alt no_goals.
@@ -804,7 +805,7 @@ Proof.
     have vB := bbOr_valid bB.
     rewrite/SB => {SB}.
     move/spec_bbOr: bB => [r[rs []?]]; subst.
-      by rewrite next_alt_big_or_aux/= t2l_dead1//.
+      by rewrite next_alt_big_or/= t2l_dead1//.
     by rewrite next_alt_cutr//= t2l_cutr !t2l_dead1.
   - move=> A HA l B HB s1 bt /andP[vA].
     case:ifP => //= sA vB sB.

@@ -283,10 +283,10 @@ Fixpoint big_and (a : list A) : tree :=
   | x :: xs => And (TA x) xs (big_and xs)
   end.
 
-Fixpoint big_or_aux (r : list A) (l : seq (Sigma * R)) : tree :=
+Fixpoint big_or (r : list A) (l : seq (Sigma * R)) : tree :=
   match l with 
   | [::] => big_and r
-  | (s,r1) :: xs => Or (big_and r) s (big_or_aux r1.(premises) xs)
+  | (s,r1) :: xs => Or (big_and r) s (big_or r1.(premises) xs)
   end.
 
 Lemma big_and_dead l: is_dead (big_and l) = false.
@@ -296,14 +296,14 @@ Proof. elim l => //-[]//. Qed.
 Section main.
   Variable u: Unif.
 
-  Definition big_or pr s t :=
+  Definition backchain pr s t :=
     let l := F u pr t s in
-    if l is (s,r) :: xs then (Or Bot s (big_or_aux r.(premises) xs))
+    if l is (s,r) :: xs then (Or Bot s (big_or r.(premises) xs))
     else Bot.
 
-  Lemma dead_big_or p s t: is_dead (big_or p s t) = false.
+  Lemma dead_big_or p s t: is_dead (backchain p s t) = false.
   Proof.
-    rewrite /big_or; case F: F => // [[s1 r] xs] //.
+    rewrite /backchain; case F: F => // [[s1 r] xs] //.
   Qed.
 
   Fixpoint get_substS s A :=
@@ -323,7 +323,7 @@ Section main.
     
     (* lang *)
     | TA cut       => (CutBrothers, OK)
-    | TA (call t) => (Expanded, (big_or pr s t))
+    | TA (call t) => (Expanded, (backchain pr s t))
 
     (* recursive cases *)
     | Or A sB B =>

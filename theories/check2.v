@@ -2790,7 +2790,7 @@ Proof.
   move=> + <-{r}.
   elim: A s => //=.
   - move=> p[]// c s.
-    rewrite /big_or; case: F => //=[[s1 r1] rs]/=.
+    rewrite /backchain; case: F => //=[[s1 r1] rs]/=.
     generalize (premises r1) => l; clear.
     elim: rs l => //=; first by move=> l; apply: check_program_big_and.
     by move=> [s r] rs IH l/= H; rewrite IH//check_program_big_and//.
@@ -2860,7 +2860,7 @@ Lemma step_keep_cut u p s A r:
   step u p s A = r -> ~~(is_cb r.1) -> has_cut r.2 = has_cut A.
 Proof.
   move=> <-{r}; elim: A s => //=.
-  - by move=> []// c s; rewrite/big_or; case: F => [|[]]//.
+  - by move=> []// c s; rewrite/backchain; case: F => [|[]]//.
   - move=> A HA s B HB smid.
     case: ifP => deadA; first by [].
     by case eA: step => //=. 
@@ -2891,8 +2891,8 @@ Lemma is_kox_false_exp u p s1 A B:
       failed B.
 Proof. 
   elim: A B s1 => //=.
-    move=> []// c B s1[<-]; rewrite/big_or; case: F => //[[]]/=???.
-    by rewrite is_ko_big_or_aux.
+    move=> []// c B s1[<-]; rewrite/backchain; case: F => //[[]]/=???.
+    by rewrite is_ko_big_or.
   - move=> A HA sm B HB C s.
     case: ifP => dA.
       case eB: step => [[]B']//[<-]/=; rewrite dA; first by apply: HB eB.
@@ -2918,7 +2918,7 @@ Lemma success_false_step u p s A r sP tE sV:
   get_ctxS sP tE sV r.2 = get_ctxS sP tE sV A.
 Proof.
   move=> + <-{r}; elim: A s sV => //=.
-    move=> []// c s; rewrite/big_or; case: F => //[[]]//.
+    move=> []// c s; rewrite/backchain; case: F => //[[]]//.
   - move=> A HA sm B HB s sV.
     case: ifP => [dA vB sB| dA /andP[vA bB] sA]/=.
       rewrite dA => H.
@@ -3072,7 +3072,7 @@ Proof.
 Qed.
 
 Lemma tc_tree_aux_big_or_is_some sP tyO r rs X:
-  tc_tree_aux false sP (big_or_aux r rs) tyO X <> None.
+  tc_tree_aux false sP (big_or r rs) tyO X <> None.
 Proof.
   case: X.
   elim: rs r => [|[s0 r0] rs IH] l D S/=; rewrite tc_tree_aux_big_and//=.
@@ -3399,9 +3399,9 @@ Proof.
     by rewrite (check_atoms_domf tB0).
 Qed.
 
-Lemma big_or_aux_check_atoms sP sV r rs d0 X Y:
-  tc sP sV (big_or_aux r.2.(premises) rs) ->
-  tc_tree_aux false sP (big_or_aux r.2.(premises) rs) sV (d0,sigma2ctx sP sV r.1) = Some (X, Y) ->
+Lemma big_or_check_atoms sP sV r rs d0 X Y:
+  tc sP sV (big_or r.2.(premises) rs) ->
+  tc_tree_aux false sP (big_or r.2.(premises) rs) sV (d0,sigma2ctx sP sV r.1) = Some (X, Y) ->
   X = (check_atoms_fold_tl sP sV d0 (r :: rs)).
 Proof.
   case: r => [sx [hd bo]]/=; clear hd.
@@ -3420,7 +3420,7 @@ Lemma check_callable_big_or b u X tyO O1 O2 p c sP s1 N1 N2 dA dB d0 d1:
   mutual_exclusion ->
   check_program sP p ->
   complete_sig X tyO ->
-  let exp := big_or u p s1 c in
+  let exp := backchain u p s1 c in
   is_ko exp = false ->
 
   let tyN := X + tyO in
@@ -3447,15 +3447,15 @@ Proof.
       (move=> CP ko t1 t2 SP DR1 CS1 DR2 CS2 MP [<- _]//=).
   case SH: get_callable_hd_sig => [S|]//=; last by move=> ?????????? [<-]//.
   case: D CT => CT/=; last by move=> ?????????? [<-]//.
-  rewrite/big_or.
+  rewrite/backchain.
   move=> cP + /tc_callP tA + SP DC C DC2 C2 MP [??]; subst.
   case F: F => [|[sr r] rs]//=.
-  rewrite is_ko_big_or_aux => _ /tc_orP[_ tOA cS].
+  rewrite is_ko_big_or => _ /tc_orP[_ tOA cS].
   change r with (sr,r).2 in tOA.
   change r with (sr,r).2.
   case tB: tc_tree_aux => [[DA SA]|]//=[<-{d1}] _; destruct d0 => //=; subst.
   move=>?/=; subst.
-  have {tB}/=? := big_or_aux_check_atoms tOA tB; subst.
+  have {tB}/=? := big_or_check_atoms tOA tB; subst.
   have:= check_tm_F cP CM tA SP DC CT F.
   case: eqP => H; subst => /=.
     move=> /(_ _ _ (mem_head _ _) (tc_big_and_tc_atoms tOA) cS) [s] H.
@@ -3482,7 +3482,7 @@ Lemma check_callable_big_or_mp b u X tyO O1 O2 p c sP s1 N1 N2 dA dB d0 d1:
   mutual_exclusion ->
   check_program sP p ->
   complete_sig X tyO ->
-  let exp := big_or u p s1 c in
+  let exp := backchain u p s1 c in
   is_ko exp = false ->
 
   let tyN := X + tyO in
@@ -3504,8 +3504,8 @@ Lemma check_callable_big_or_mp b u X tyO O1 O2 p c sP s1 N1 N2 dA dB d0 d1:
 Proof.
   move=> /= ME + CM.
   rewrite /check_callable.
-  rewrite/big_or.
-  case F: F => [|[sr r] rs]//=; rewrite is_ko_big_or_aux.
+  rewrite/backchain.
+  case F: F => [|[sr r] rs]//=; rewrite is_ko_big_or.
   move=> CkP _ tO /tc_orP[tNA tNB tOs].
   move=> SP DR1 CS1 DR2 CS2 MP.
   case t1: check_tm => [DA SA].
@@ -4068,7 +4068,7 @@ Lemma rrr u p sP tyO A A' s1 d0 O1:
   tc_tree_aux false sP A' tyO (d0, O1) <> None.
 Proof.
   elim: A A' s1 d0 O1 => //=.
-    move=> []//=> _ [<-]; rewrite /big_or.
+    move=> []//=> _ [<-]; rewrite /backchain.
     case: F => //=[[s1 r1] rs]/= _.
     case tA: tc_tree_aux => //.
     by have:= tc_tree_aux_big_or_is_some tA.
@@ -4148,20 +4148,20 @@ Proof.
   - move=> p [|c]// b1 b2 s1 O1 O2 N1 N2 d0 d1 dA dB CkP _ t1 t2 D1 C1 D2 C2 MP SP [??]+Hb; subst.
       by move=> /= [??]; subst; destruct b2; rewrite//=-catfA more_precise_cat//more_precise_cat2//((andP t1).1, compat_sig_cat1 C2).
     case c1: check_callable => [D S].
-    rewrite/big_or.
+    rewrite/backchain.
     case F: F => //=[|[SY Y] YS].
       by move=> [<-<-]; rewrite (@minD_comm _ Func).
-    replace (Or _ _ _) with (big_or u p s1 c); last first.
-      by rewrite/big_or F.
+    replace (Or _ _ _) with (backchain u p s1 c); last first.
+      by rewrite/backchain F.
     move=> tA.
     split; last first.
       have:= check_callable_big_or_mp ME CkP CM _ t1 t2 SP D1 C1 D2 C2 MP c1 tA.
-      by rewrite/big_or F/= is_ko_big_or_aux; auto.
+      by rewrite/backchain F/= is_ko_big_or; auto.
     move=> H.
     destruct D => //=.
     have:= check_callable_big_or _ _ _ _ _ _ _ _ _ _ _ _ c1 tA.
     move=> /= <-//.
-    by rewrite/big_or F/= is_ko_big_or_aux.
+    by rewrite/backchain F/= is_ko_big_or.
     by have [??] := xxx c1; destruct d0 => //.
   - move=> A HA s B HB b1 b2 s1 O1 O2 N1 N2 d0 d1 dA dB /andP[ckA ckB].
     move=> + /tc_orP[tOA tOB tOs] + DR1 CS1 DR2 CS2 MP SP.

@@ -146,7 +146,7 @@ Defined.
   Qed.
 
   Lemma base_or_aux_next_alt_t2l {X Y B s bt}: 
-    next_alt false (big_or_aux X Y) = Some B -> t2l (big_or_aux X Y) s bt = t2l B s bt.
+    next_alt false (big_or X Y) = Some B -> t2l (big_or X Y) s bt = t2l B s bt.
   Proof.
     elim: Y X bt => //=.
     - by move=> X bt; rewrite next_alt_big_and => -[<-]//.
@@ -173,7 +173,7 @@ Defined.
       rewrite (t2l_dead is_dead_dead)/=.
       move/spec_bbOr : bB => [X[Y []?]]; subst; last first.
         by rewrite next_alt_cutr/= !is_ko_t2l//= !(is_ko_cutr, is_dead_is_ko)//.
-      rewrite next_alt_big_or_aux/= (t2l_dead is_dead_dead)//=.
+      rewrite next_alt_big_or/= (t2l_dead is_dead_dead)//=.
     - move=> A HA l B HB m s1 s2 /= /andP[vA +] /andP[sA sB].
       rewrite sA/= => vB.
       have {}HA := HA _ _ _ vA sA; repeat erewrite HA => /=.
@@ -280,7 +280,7 @@ Defined.
       case nA': next_alt => [[]|]//.
       have vB := bbOr_valid bB.
       move /spec_bbOr: bB => [r[rs []?]] _; subst.
-        rewrite next_alt_big_or_aux//.
+        rewrite next_alt_big_or//.
       rewrite next_alt_cutr//= t2l_cutr.
       by rewrite (HA _ _ _ _ _ vA eA nA')/=.
     - move=> A HA l' B HB s2 s3 C l b/=/andP[vA].
@@ -329,7 +329,7 @@ Defined.
 
   Lemma s2l_big_or k s {b bs ca gs}:
     (s, save_goals ca gs (a2gs b)) ::: (save_alts ca gs (aa2gs bs)) =
-    make_lB0 (t2l ((Or Bot s (big_or_aux b bs))) k ca) gs.
+    make_lB0 (t2l ((Or Bot s (big_or b bs))) k ca) gs.
   Proof. 
     move=>/=; clear k.
     rewrite cat0s.
@@ -361,7 +361,7 @@ Defined.
       case Y: next_alt => [[]|]//.
       move=> + l.
       move /spec_bbOr: bB => [r[rs []?]]; subst.
-        by rewrite next_alt_big_or_aux.
+        by rewrite next_alt_big_or.
       rewrite t2l_cutr (HA s2 b)//=.
     - move=> A HA l' B HB s2 b/=/andP[vA]+++l.
       case: ifP => /=[sA vB|sA].
@@ -390,7 +390,7 @@ Defined.
         move=>[?]/=; subst => /=.
         by rewrite (HA _ A' _ b)//.
       move/spec_bbOr : bB => [r[rs []?]]; subst.
-        by rewrite next_alt_big_or_aux => -[<-{C}]/=; rewrite t2l_dead1 (failed_next_alt_none_t2l vA fA X).
+        by rewrite next_alt_big_or => -[<-{C}]/=; rewrite t2l_dead1 (failed_next_alt_none_t2l vA fA X).
       by rewrite next_alt_cutr.
     - move=> A HA l' B HB s1 C l b /=/andP[vA].
       case: ifP => /=[sA vB |sA ].
@@ -803,10 +803,9 @@ Qed.
       (failed B * (t2l B s l = xs))%type)))%type
       .
   Proof.
-    elim: A B s s3 l t gs xs ca => //=.
-    - move=> []// t C s1 s3 l t1 gs xs ca ? [?][??]??; subst.
-      rewrite failed_big_or/big_or; case: F => [|[s4 r1] rs]/=; auto.
-      move=> ?; subst.
+    elim: A B s s3 l t gs xs => //=.
+    - move=> []// t C s1 s3 l t1 gs xs ? [?][??]??; subst.
+      rewrite failed_big_or/backchain; case: F => [|[s4 r1] rs]/=; auto.
       by rewrite !cats0 !cat0s !(s2l_big_or empty)/=cat0s make_lB0_empty2; auto.
     - move=> A HA s B HB C s1 s3 l t gs xs ca.
       case: ifP => //[dA vB|dA /andP[vA bB]].
