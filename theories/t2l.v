@@ -3,6 +3,10 @@ From det Require Import tree elpi.
 
 (*BEGIN*)
 Definition make_lB0 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, x ++ lB0)) xs.
+(* cat_right gl := (on_snd (cat ^~ gl)) 
+   map (cat_right l) (take s xx)
+   map (cat_left l) ...
+*)
 
 Definition make_lB01 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, lB0 ++ x)) xs.
 
@@ -19,7 +23,7 @@ Fixpoint add_ca_deep (bt:alts) (ats: alts) : alts :=
 with add_ca_deep_goals bt (gl : goals) : goals :=
   match gl with
   | [::]%G => [::]%G 
-  | [:: g & tl ]%G => [:: add_ca_deep_g' add_ca_deep bt g & add_ca_deep_goals bt tl ]
+  | [:: g & tl ]%G => [:: add_ca_deep_g' add_ca_deep bt g & add_ca_deep_goals bt tl ]%G
   end.
 
 Notation add_ca_deep_g := (add_ca_deep_g' add_ca_deep).
@@ -32,15 +36,14 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
   with add_deepG (bt: alts) (l: goals) (A : goals) : goals :=
   match A with
   | [::]%G => [::]%G 
-  | [:: (call t,ca) & tl ]%G => [:: (call t,ca) & add_deepG bt l tl]
-  | [:: (cut,   ca) & tl ]%G =>
+  | [:: (a, ca) & tl ]%G =>
       let s := size ca - size bt in
       let xx := (add_deep bt l (ca)) in
       let ca := (make_lB0 (take s xx) l ++ drop s ca) in
-      [:: (cut, ca) & add_deepG bt l tl]
+      [:: (a, ca) & add_deepG bt l tl]%G
   end.
 
-Definition kill (A: goals) := map (apply_cut (fun x => [::])) A.
+(* Definition kill (A: goals) := map (apply_cut (fun x => [::])) A. *)
 
 (* reset-point to list *)
 Definition r2l a : goals := seq2goals [seq a2g x | x <- a].
@@ -57,30 +60,27 @@ Definition r2l a : goals := seq2goals [seq a2g x | x <- a].
     the "siblings" on the right of a cut are NOT alternatives
     the "great^n uncles" on the right of a cut ARE alternatives
   *)
-
 (*SNIP: t2l*)
 Fixpoint t2l (A: tree) s (bt : alts) : alts :=
 match A with
-| OK          => [:: (s, [::]) ]
-| Bot         => [::]
-| Dead        => [::]
-| TA cut      => [:: (s, [:: (cut,[::]) ]) ]
-| TA (call t) => [:: (s, [:: (call t,[::]) ]) ]
-| Or A s1 B => 
+| OK           => [:: (s, [::]) ]
+| (Bot | Dead) => [::]
+| TA a         => [:: (s, [:: (a,[::]) ]) ]
+| Or A s1 B    =>
     let lB := t2l B s1 [::] in
     let lA := t2l A s lB in
     add_ca_deep bt (lA ++ lB)
-| And A B0 B =>
-    let hd  := r2l B0 in
+| And A B0 B   =>
+    let lB0 : goals := r2l B0 in
     let lA  := t2l A s bt in
     if lA is [:: (slA, x) & xs] then 
       (* the reset point exists, it has to be added to all cut-to alternatives *)
-      let xz := add_deepG bt hd x in
-      let xs := add_deep bt hd xs in 
-      (* each alt in xs must have hd has rightmost conjunct  *)
-      let xs := make_lB0 xs hd in
+      let xz := add_deepG bt lB0 x in
+      let xs := add_deep bt lB0 xs in 
+      (* each alt in xs must have lB0 has rightmost conjunct  *)
+      let xs := make_lB0 xs lB0 in
       (* xs are alternatives that should be added in the deep cuts in B *)
-      let lB   := t2l B slA (xs ++ bt) in
+      let lB := t2l B slA (xs ++ bt) in
       (* lB are alternatives, each of them have x has head *)
       (make_lB01 lB xz) ++ xs
     else [::]

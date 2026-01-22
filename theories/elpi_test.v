@@ -10,13 +10,13 @@ Variable u : Unif.
 Fixpoint of_goals l :=
   match l with
     | [::]%SEQ => [::]%G
-    | hd :: xs => [:: hd & of_goals xs]%G
+    | [:: hd & xs]%SEQ => [:: hd & of_goals xs]%G
   end.
 
 Fixpoint of_alt l :=
   match l with
   | [::]%SEQ => [::]%A
-  | x :: xs => (empty, of_goals x) ::: (of_alt xs)
+  | [:: x & xs]%SEQ => (empty, of_goals x) ::: (of_alt xs)
   end.
 
 Definition tester l r :=

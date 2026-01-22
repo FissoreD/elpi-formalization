@@ -132,7 +132,7 @@ Section aux.
 
 End aux.
 
-Class IsList {Th Tl : Type}  := {
+Class IsList (Th Tl : Type)  := {
   nilC : Tl;
   consC : Th -> Tl -> Tl;
   appendC : Tl -> Tl -> Tl;
@@ -197,9 +197,9 @@ Class IsList {Th Tl : Type}  := {
 }.
 Declare Scope SE.
 Global Infix "++" := appendC : SE.
-Open Scope SE.
+Global Open Scope SE.
 Arguments nilC : simpl never.
-Arguments consC : simpl never.
+Global Arguments consC {_ _ _}: simpl never.
 Arguments appendC: simpl never.
 Arguments eqB : simpl never.
 Arguments size : simpl never.
@@ -341,17 +341,28 @@ Arguments mkIsList {_ _ _ _}.
 
 Global Notation "x ::: xs" :=
   (consC x xs)
-  (at level 3, no associativity)
+  (at level 3, no associativity, only parsing)
   : SE.
 
+Global Notation "x :: xs" :=
+  (consC x xs)
+  (at level 60, no associativity, only parsing)
+  : SE.
+
+(* Notation "[ :: ]" := (@nilC _ _ _) (format "[ :: ]") : SE.
+Notation "[ :: x1 ]" := (@consC _ _ _ x1 (@nilC _ _ _)) (format "[ ::  x1 ]") : SE.
+Notation "[ :: x & s ]" := (@consC _ _ _ x s) (format "'[hv' [ :: '['  x ']' '/ ' &  s ] ']'", only parsing) : SE.
+Notation "[ :: x1 , x2 , .. , xn & s ]" := (@consC _ _ _ x1 (@consC _ _ _ x2 .. (@consC _ _ _ xn s) ..)) (format "'[hv' [ :: '['  x1 , '/'  x2 , '/'  .. , '/'  xn ']' '/ '  &  s ] ']'" ) : SE. *)
+
+(* 
 Global Notation "-[]" :=
-  (nilC)
+  (@nilC _ _ _)
   (at level 3, no associativity,only printing)
   : SE.
 
 Global Notation "(( x ))" := (consC x nilC)
   (at level 3, no associativity,only printing)
-  : SE.
+  : SE. *)
 
 (*SNIP: elpi_def*)
 Inductive alts :=
@@ -488,8 +499,8 @@ HB.instance Definition _ : hasDecEq alts := hasDecEq.Build alts alts_eqb_OK.
 
   Fixpoint seq2goals (l : seq (A * alts)) : goals :=
     match l with
-    | [::]%SEQ => [::]
-    | [:: x & xs]%SEQ => [:: x & seq2goals xs]
+    | [::]%SEQ => [::]%G
+    | [:: x & xs]%SEQ => [:: x & seq2goals xs]%G
     end.
 
   Fixpoint goals2seq (a : goals) : seq (A * alts) :=
@@ -498,7 +509,7 @@ HB.instance Definition _ : hasDecEq alts := hasDecEq.Build alts alts_eqb_OK.
     | [:: x & xs]%G => [:: x & goals2seq xs]%SEQ
     end.
   Lemma goals2seqs : forall x xs, goals2seq [:: x & xs ]%G = [:: x & goals2seq xs]%SEQ. by []. Qed.
-  Lemma goals2seq0 : goals2seq [::] = [::]%SEQ. by []. Qed.
+  Lemma goals2seq0 : goals2seq [::]%G = [::]%SEQ. by []. Qed.
   Lemma seq2goalss : forall x xs, seq2goals [:: x & xs ]%SEQ = [:: x & seq2goals xs]%G. by []. Qed.
   Lemma seq2goals0 : seq2goals [::]%SEQ = [::]%G. by []. Qed.
   Lemma goals2seqK : forall l, goals2seq (seq2goals l) = l.
@@ -546,7 +557,7 @@ Definition if_cut F (g : A * alts) :=
 
 Definition apply_cut F (g : A * alts) : A * alts :=
   match g with
-  | (a, ca) => (a,F ca) 
+  | (a, ca) => (a, F ca)
   end.
 
 
@@ -556,7 +567,7 @@ Definition save_goals (a: alts) (gs b:goals) := map (add_ca a) b ++ gs.
 
 Definition save_alts (a : alts) (gs: goals) (bs : alts) := 
   map (fun '((s,x): Sigma * goals) => (s, save_goals a gs x)) bs.
-
+Set Printing All. Check [::]%A.
 Definition empty_ca_G (g : A * alts) :=
   match g with (_,[::]) => true | _ => false end.
 Definition empty_caG goals := all empty_ca_G goals.
@@ -578,13 +589,13 @@ Variable p : program.
 
 Inductive nur : Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
 | StopE s a : nur s nilC a s a
-| CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s [:: (cut, ca) & gl] a s1 r
+| CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s [:: (cut, ca) & gl]%G a s1 r
 | CallE s s1 a b bs gl r t ca: 
   F u p t s = [:: b & bs ]%SEQ -> 
     nur b.1 (save_goals a gl (a2gs1 b)) (save_alts a gl (aa2gs bs) ++ a) s1 r -> 
-      nur s [:: (call t, ca) & gl] a s1 r
+      nur s [:: (call t, ca) & gl]%G a s1 r
 | FailE s s1 s2 t gl a al r ca : 
-  F u p t s = [::]%SEQ -> nur s1 a al s2 r -> nur s [:: (call t, ca) & gl] [:: (s1, a) & al] s2 r.
+  F u p t s = [::]%SEQ -> nur s1 a al s2 r -> nur s [:: (call t, ca) & gl]%G [:: (s1, a) & al] s2 r.
 
 Lemma nur_consistent s G x xs1 xs2 s1 s2 :
   nur s G x s1 xs1 -> nur s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
