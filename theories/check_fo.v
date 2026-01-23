@@ -214,6 +214,14 @@ Section check.
     by apply: IH H _ e; rewrite/tm_is_det X//.
   Qed.
 
+  Lemma check_rules_cons sP x xs : check_rules sP (x :: xs) = check_rule sP (head x) (premises x) && check_rules sP xs.
+  by []. Qed.
+
+  Lemma fresh_rules_cons fv r rs : fresh_rules fv (r :: rs) =
+    ((fresh_rule (fresh_rules fv rs).1 r).1, (fresh_rule (fresh_rules fv rs).1 r).2 :: (fresh_rules fv rs).2).
+  by simpl; rewrite !push.
+Qed.
+
   Lemma is_det_no_free_alt {sP t s1 fv}:
     check_rules sP p.(rules) -> tm_is_det sP t -> 
       det_tree sP (backchain u p fv s1 t).2.
@@ -223,15 +231,16 @@ Section check.
     case: p => rules sig1 /=.
     generalize {| rules := rules; sig := sig1 |} as pr => pr.
     case: fndP => //=; clear pr.
-    elim: rules s1 t q qp X => //=.
-    move=> [] hd bo rules IH s/= t q qp X qpP /andP[H1 H1'] H2.
+    elim: rules s1 t q qp X => //.
+    move=> [] hd bo rules IH s t q qp X qpP.
+    rewrite check_rules_cons [head _]/= [premises _]/= => /andP[H1 H1'] H2.
+    rewrite fresh_rules_cons/=.
     case H: H => /= [s2|]; last first.
-      rewrite fresh_rules_help_id.
-      have:= IH _ _ _ _ X qpP H1' H2.
-      by rewrite fresh_rules_id.
+
+    have:= IH _ _ _ _ X qpP H1' H2.
+    by [].
     clear IH.
     move: H.
-    rewrite fresh_rule_id fresh_rules_help_id.
     move: H1 => /orP[]; last first.
       move=> + _.
       elim: rules H1' bo => //=.
