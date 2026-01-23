@@ -60,18 +60,20 @@ Section tree_op.
     end.
   (*ENDSNIP: is_dead*)
 
+  (*SNIP: path_end*)
   Fixpoint path_end A :=
     match A with
     | Dead | OK | Bot | TA _ => A
+    | Or A _ B =>
+      if is_dead A then path_end B
+      else path_end A
     | And A B0 B => 
       match path_end A with
       | OK => path_end B
       | A => A
       end
-    | Or A _ B =>
-      if is_dead A then path_end B
-      else path_end A
     end.
+  (*ENDSNIP: path_end*)
 
   Fixpoint is_ko A :=
     match A with
@@ -80,9 +82,6 @@ Section tree_op.
     | And A B0 B => is_ko A
     | Or A s B => is_ko A && is_ko B
     end.
-
-  Definition success_path A := path_end A == OK.
-  Definition failed_path A := (path_end A == Bot) || (path_end A == Dead).
 
   Fixpoint success (A : tree) : bool :=
     match A with
@@ -113,25 +112,32 @@ Section tree_op.
     | Or A _ B => if is_dead A then failed B else failed A
     end.
 
-  Lemma successP A : success A = success_path A.
+  (*SNIP: succ_path*)
+  Definition successT A := path_end A == OK.
+  (*ENDSNIP: succ_path*)
+
+  (*SNIP: failed_path*)
+  Definition failedT A := (path_end A == Bot) || (path_end A == Dead).
+  (*ENDSNIP: failed_path*)
+
+  Lemma successP A : success A = successT A.
   Proof.
-    rewrite/success_path; elim: A => //=.
+    rewrite/successT; elim: A => //=.
       move=> A HA s B HB; rewrite HA HB fun_if.
       case: ifP => //.
     move=> A HA B0 B HB; rewrite HA HB.
     case: path_end => //.
   Qed.
 
-  Lemma failedP A : failed A = failed_path A.
+  Lemma failedP A : failed A = failedT A.
   Proof.
-    rewrite/failed_path; elim: A => //=.
+    rewrite/failedT; elim: A => //=.
       move=> A HA s B HB; rewrite HA HB fun_if.
       case: ifP => //.
     move=> A HA B0 B HB; rewrite HA HB.
-    rewrite successP /success_path.
+    rewrite successP /successT.
     case pA: path_end => //=.
   Qed.
-
 
   Fixpoint cutr A :=
     match A with
