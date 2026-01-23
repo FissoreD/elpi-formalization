@@ -42,7 +42,7 @@ Definition tester l r :=
 Goal forall B B0,
 let f x := (TA (call x)) in
 let g x := ([:: (call x) ]%SEQ) in
-  tester (And (Or OK empty (f B)) (g B0) Bot) 
+  tester (And (Or OK empty (f B)) (g B0) KO) 
     ((empty, (call B,[::]) ::: ((call B0,[::]) ::: nilC)) ::: nilC).
 Proof.
   by move=> //.
@@ -82,12 +82,12 @@ Proof.
 Qed.
 
 Definition g x := ([::call x]%SEQ).
-(* THIS CAN NO MORE EXISTS: reset is never Bot *)
+(* THIS CAN NO MORE EXISTS: reset is never KO *)
 (* Goal forall A B C,
   let f x := (TA (call x)) in
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   tester 
-    (And (Or ((Or (TA cut) empty (f A))) empty (f B)) Bot (Or (TA cut) empty (f C))) 
+    (And (Or ((Or (TA cut) empty (f A))) empty (f B)) KO (Or (TA cut) empty (f C))) 
     (of_alt [:: 
       [::cut nilC ; cut nilC ];
       [::cut nilC ; call p C]]%SEQ).
@@ -124,10 +124,10 @@ Proof.
 Qed.
 
 Goal forall A B0,
-  (* (Bot \/ B) /\_b0 B0  *)
+  (* (KO \/ B) /\_b0 B0  *)
   let f x := (TA (call x)) in
   let g x := ([::call x]%SEQ) in
-  tester (And (Or Bot empty (f A)) (g B0) (f B0))
+  tester (And (Or KO empty (f A)) (g B0) (f B0))
   (of_alt [::[::callN A; callN B0]]%SEQ).
 Proof.
   move=> A B0 p.
@@ -153,7 +153,7 @@ Goal forall z w a,
   let f x := (TA (call x)) in
   tester (
     And 
-      (Or OK empty Bot) (g a) 
+      (Or OK empty KO) (g a) 
       (Or (f z) empty (f w))) 
     (of_alt [:: [:: callN z]; [:: callN w]]%SEQ).
 Proof.
@@ -167,7 +167,7 @@ Goal forall a b c d,
   let f x := (TA (call x)) in
   tester (
     And 
-      (Or Bot empty (f a)) (g b) 
+      (Or KO empty (f a)) (g b) 
       (Or (f c) empty (f d))) 
     (* [:: [:: callN a; call b] ]. *)
     (of_alt [:: [:: callN a; callN c]; [::callN a; callN d] ]%SEQ).
@@ -189,7 +189,7 @@ Proof.
 
 (* Goal forall A1 A2 s  C0 B,
   let f x := (TA (call x)) in
-  tester (And (Or (f A1) s (f A2)) (Bot) (And Bot (f C0) (f B))) nilC
+  tester (And (Or (f A1) s (f A2)) (KO) (And KO (f C0) (f B))) nilC
   .
 Proof.
   move=> A1 A2 s  C0 B p.
@@ -199,7 +199,7 @@ Qed. *)
 
 (* Goal forall A B C,
   let f x := (TA (call x)) in
-  tester (And (Or (f A) empty (f B)) (Bot) (f C))
+  tester (And (Or (f A) empty (f B)) (KO) (f C))
   (of_alt[:: [:: callN A; call p C]]%SEQ).
 Proof.
   move=> s A B C p.
@@ -209,7 +209,7 @@ Qed. *)
 
 Goal forall A1 A2 B0 C0 B,
   let f x := (TA (call x)) in
-  tester (And (Or (f A1) empty (f A2)) (g B0) (And Bot (g C0) (f B)))
+  tester (And (Or (f A1) empty (f A2)) (g B0) (And KO (g C0) (f B)))
   (of_alt [:: [:: callN A2 ; callN B0 ]]%SEQ).
 Proof.
   move=> * /=.
@@ -406,7 +406,7 @@ Goal forall p l,
   let s := ((Or (Or Dead empty (TA cut)) empty OK)) in
   let bt := of_alt([::]%SEQ :: l) in
   t2l s empty (of_alt l) = of_alt[:: [:: (cut, bt)]; [::]]%SEQ /\ 
-    t2l (odflt Bot (next_alt true (step u p empty s).2)) empty (of_alt l) ++ (of_alt l) = bt.
+    t2l (odflt KO (next_alt true (step u p empty s).2)) empty (of_alt l) ++ (of_alt l) = bt.
 Proof.
   move=>//= _ l.
   rewrite cat_cons cat0s//.

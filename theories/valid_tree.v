@@ -27,16 +27,16 @@ Module B.
 
   Definition base_and_ko s :=
     match s with
-    | And Bot r r1 =>
+    | And KO r r1 =>
       [&& (big_and r == r1) & base_and r1]
-    | Bot => true
+    | KO => true
     | _ => false
     end.
 
   Definition base_or s := 
     match s with 
-    | Bot => true
-    | Or Bot _ t => base_or_aux t
+    | KO => true
+    | Or KO _ t => base_or_aux t
     | _ => false
     end.
 
@@ -161,7 +161,7 @@ Section valid_tree.
 (*SNIP: valid_tree*)
   Fixpoint valid_tree s :=
     match s with
-    | TA _ | OK | Bot => true
+    | TA _ | OK | KO => true
     | Dead => false
     | Or A _ B => 
       if is_dead A then valid_tree B

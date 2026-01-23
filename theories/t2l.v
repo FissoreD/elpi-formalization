@@ -64,7 +64,7 @@ Definition r2l a : goals := seq2goals [seq a2g x | x <- a].
 Fixpoint t2l (A: tree) s (bt : alts) : alts :=
 match A with
 | OK           => [:: (s, [::]) ]
-| (Bot | Dead) => [::]
+| (KO | Dead) => [::]
 | TA a         => [:: (s, [:: (a,[::]) ]) ]
 | Or A s1 B    =>
     let lB := t2l B s1 [::] in
@@ -119,7 +119,7 @@ Section test.
   (* Definition g p := (And (Or OK s1 CutS) p OK). *)
 
   Goal forall s3 l, 
-    t2l (And (Or OK s1 (TA cut)) ([:: cut]) Bot) s3 l = 
+    t2l (And (Or OK s1 (TA cut)) ([:: cut]) KO) s3 l = 
       t2l (And (Or Dead s1 (TA cut)) ([:: cut]) (TA cut)) s3 l.
   Proof.
     move=>s3 l/=.

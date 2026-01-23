@@ -9,7 +9,7 @@ Fixpoint a2t_ l :=
   match l with
   | no_alt => Bot
   | more_alt (s1, x) t =>
-    Or Bot s1 (Or (gs2t_ x) empty (a2t_ t))
+    Or KO s1 (Or (gs2t_ x) empty (a2t_ t))
   end
 with gs2t_ l :=
   match l with
@@ -72,28 +72,28 @@ Section s.
     move=>/=.
     set X:= And _ _ Top.
     set Y:= And _ _ X.
-    set Z:= Or _ _ Bot.
+    set Z:= Or _ _ KO.
     set W:= And _ _ Top.
     set T:= And _ _ W.
   Abort.
 
   Goal
   (* original (OK \/ A) /\_B OK *)
-  (* produces is : (Bot \/ Top) \/ AB *)
+  (* produces is : (KO \/ Top) \/ AB *)
   let f x := (CallS p x) in
   a2t_ (of_alt [::[::]; [::call p A; call p B]]) = 
-    Or Bot empty
+    Or KO empty
   (Or Top empty
-     (Or Bot empty
+     (Or KO empty
         (Or
            (And (CallS p A) (And (CallS p B) Top Top)
               (And (CallS p B) Top Top))
-           empty Bot))) .
+           empty KO))) .
   Proof.
     move=>/=.
     set X:= And _ _ Top.
     set Y:= And _ _ X.
-    set Z:= Or _ _ Bot.
+    set Z:= Or _ _ KO.
     move=>//.
   Qed.
 End s.

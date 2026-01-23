@@ -219,7 +219,7 @@ module Unif =
 
   let rec state_to_list a bt =
     match a with
-    | Bot -> []
+    | KO -> []
     | Dead -> []
     | Goal (pr, a0) ->
       (match a0 with

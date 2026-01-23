@@ -329,7 +329,7 @@ Defined.
 
   Lemma s2l_big_or k s {b bs ca gs}:
     (s, save_goals ca gs (a2gs b)) ::: (save_alts ca gs (aa2gs bs)) =
-    make_lB0 (t2l ((Or Bot s (big_or b bs))) k ca) gs.
+    make_lB0 (t2l ((Or KO s (big_or b bs))) k ca) gs.
   Proof. 
     move=>/=; clear k.
     rewrite cat0s.

@@ -8,11 +8,11 @@ From det Require Import zify_ssreflect.
   match l with
   | no_alt => Bot
   | more_alt x no_alt => 
-    let l := goals_to_state x.2 Bot in
-    Or Bot x.1 l
+    let l := goals_to_state x.2 KO in
+    Or KO x.1 l
   | more_alt x (more_alt y ys as t) => 
     let t := goals_to_state x.2 (list_to_state t) in
-    Or Bot x.1 t
+    Or KO x.1 t
   end
 with goals_to_state (l:goals) t: (state):=
   match l with

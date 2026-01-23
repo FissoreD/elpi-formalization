@@ -65,7 +65,7 @@ Section check.
     match A with
     | TA cut => true
     | TA (call _) => false
-    | Bot | Dead => true
+    | KO | Dead => true
     | OK => false
     | And A B0 B => has_cut A || (has_cut_seq B0 && has_cut B)
     | Or _ _ _ => is_ko A
@@ -105,7 +105,7 @@ Section check.
     match A with
     | TA cut => true
     | TA (call a) => tm_is_det sP a
-    | Bot | OK => true
+    | KO | OK => true
     | Dead => true
     | And A B0 B =>
       (is_ko A) || 

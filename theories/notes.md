@@ -61,7 +61,7 @@ We represent a tree in a tree-like structure using the `tree` inductive.
 ```coq
 Inductive tree :=
   (* concrete base cases *)
-  | Bot : tree (* the fail predicate *)
+  | KO : tree (* the fail predicate *)
   | Top : tree (* the true predicate *)
   | Goal : program -> A -> tree (* an atom to be run in a program *)
 
@@ -128,13 +128,13 @@ three functions and four inductives to animate a program. Specifically:
   in our language; they are compartmentalized within `And`. If the expansion of
   the left-hand side returns a cut, the right-hand side is **hard-cut** away.
   Hard-cutting replaces all nodes (including reset points in the `And`) with
-  the `Bot` tree.
+  the `KO` tree.
 
   The expansion for the `And` node first steps the left-hand side. If it
   resolves successfully, it then steps the right-hand side. If the left-hand
   side succeeds and the right-hand side turns into a **CutBrother**, the left-
   hand side is **soft-cut** away. Soft-cutting replaces all non-meta-level
-  atoms with `Bot`.
+  atoms with `KO`.
 
 - **exp_res**: This is essentially an enhanced boolean indicating whether the
   execution of a query will eventually succeed or fail (both cases refer to
@@ -325,7 +325,7 @@ The concept of a valid tree has been introduced to model the "real" Elpi
 interpreter. It defines the invariant of the `run` procedure, i.e., the
 structure of a tree preserved during goal interpretation.
 
-A valid tree includes `Goals`, `Top`, `Bot`, and `OK`. A `Dead` tree is
+A valid tree includes `Goals`, `Top`, `KO`, and `OK`. A `Dead` tree is
 invalid, since a `Dead` tree is meaningless.
 
 The tree `Or A s B` is valid if:
@@ -333,7 +333,7 @@ The tree `Or A s B` is valid if:
 - Otherwise, `A` is valid, and `B` remains untouched. `B` must be a basic `Or`
   tree or a `bbOr` tree, which is either a disjunction of conjunctions where
   each conjunction is a `Goal`, or a disjunction of conjunctions where each
-  conjunction is `Bot` (to account for superficial cuts in `A` that could
+  conjunction is `KO` (to account for superficial cuts in `A` that could
   invalidate `B`).
 
 The tree `And A B0 B` is valid if:
@@ -342,7 +342,7 @@ The tree `And A B0 B` is valid if:
   - Otherwise, `B` equals `B0`, as it has not been explored yet.
 
 Additionally, the reset point must be a basic `And` tree, or a `bbAnd` tree,
-which is a conjunction of `Goals` or a conjunction of `Bot`.
+which is a conjunction of `Goals` or a conjunction of `KO`.
 
 We prove the following properties:
 
@@ -429,7 +429,7 @@ Fixpoint tree_to_list_aux A bt :=
   match A with
   | OK => [::[::]]
   | Top => [::[::]]
-  | Bot => [::]
+  | KO => [::]
   | Dead => [::]
   | Goal _ Cut => [::[::cut' false [::]]]
   | Goal pr (Call t) => [::[::call' pr t]]
@@ -455,7 +455,7 @@ points), which are used to construct the "cut-to" in `Or` nodes. Initially,
 
 The `OK` and `Top` nodes represent future success in `run`, so they are
 collapsed into `[::[::]]`, corresponding to success in the list semantics.
-Similarly, `Dead` and `Bot` represent future failures and are translated into
+Similarly, `Dead` and `KO` represent future failures and are translated into
 an empty list.
 
 To distinguish superficial cuts from deep cuts (i.e., cuts whose effects are
@@ -521,7 +521,7 @@ Definition add_alt (x: alt') (xs lB0 lB:list alt') : list alt' :=
       | [::] => [::]
       end
   | [::] =>
-      (* If the reset point is nil, xs are killed (append Bot to all alternatives). *)
+      (* If the reset point is nil, xs are killed (append KO to all alternatives). *)
       [seq x ++ y | y <- lB]
   | _ => [::] (* Unreachable. *)
   end.

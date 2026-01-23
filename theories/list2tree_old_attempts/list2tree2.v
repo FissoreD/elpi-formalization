@@ -71,7 +71,7 @@ Section s.
     move=>/=.
     set X:= And Top _ _.
     set Y:= And X _ _.
-    set Z := Or Bot _ _.
+    set Z := Or KO _ _.
     set X1:= And Top _ _.
     set Y1:= And X1 _ _.
     set Z1 := Or Z _ _.
@@ -94,7 +94,7 @@ Section s.
     move=>/=.
     set X:= And Top _ _.
     set Y:= And X _ _.
-    set Z := Or Bot _ _.
+    set Z := Or KO _ _.
     set X1:= And Top _ _.
     set Y1:= And X1 _ _.
     set Z1 := Or Z _ _.
@@ -105,30 +105,30 @@ Section s.
 
   Goal
   (* original (OK \/ A) /\_B OK *)
-  (* produces is : (Bot \/ Top) \/ AB *)
+  (* produces is : (KO \/ Top) \/ AB *)
   let f x := (CallS p x) in
   a2t (of_alt [::[::]; [::call p A; call p B]]) = 
-    Or (Or Bot empty Top) empty
+    Or (Or KO empty Top) empty
     (And (And Top (CallS p A) (CallS p A)) (CallS p B) (CallS p B)).
   Proof.
     move=>/=.
     set X:= And Top _ _.
     set Y:= And X _ _.
-    set Z := Or Bot _ _.
+    set Z := Or KO _ _.
     move=>//.
   Qed.
 
   Goal
     let f x := (CallS p x) in
-    (*  original is (Bot \/ A) /\B (C \/ D) *)
-    (* produces is ((Bot \/ (AC)) \/ (AD)) *)
+    (*  original is (KO \/ A) /\B (C \/ D) *)
+    (* produces is ((KO \/ (AC)) \/ (AD)) *)
     exists x, a2t
       (of_alt [:: [:: call p A; call p C]; [::call p A; call p D] ]) = x.
   Proof.
     move=>/=.
     set X:= And Top _ _.
     set Y:= And X _ _.
-    set Z := Or Bot _ _.
+    set Z := Or KO _ _.
   Abort.
 End s.
 
@@ -136,7 +136,7 @@ Module remake.
 
   Fixpoint add_rotate s x xs :=
     match xs with
-    | Or Bot s1 r => Or (Or Bot s x) s1 r
+    | Or KO s1 r => Or (Or KO s x) s1 r
     | Or l s1 r => Or (add_rotate s x l) s1 r
     | _ => Dead (*TODO: should be unreachable?*)
     end.
@@ -144,7 +144,7 @@ Module remake.
   (* SBAGLIATO, vedi esempio XY *)
   Fixpoint add_and_leaf x t :=
     match t with
-    | Or Bot s1 r => Or Bot s1 (And x r r)
+    | Or KO s1 r => Or KO s1 (And x r r)
     | Or l s1 r => Or (add_and_leaf x l) s1 r
     | _ => Dead (*TODO: should be unreachable?*)
     end.
@@ -207,7 +207,7 @@ Module remake.
       move=>/=.
       set X:= And Top _ _.
       set Y:= And X _ _.
-      set Z := Or Bot _ _.
+      set Z := Or KO _ _.
       set X1:= And Top _ _.
       set Y1:= And X1 _ _.
       set Z1 := Or Z _ _.
@@ -230,7 +230,7 @@ Module remake.
       move=>/=.
       set X:= And Top _ _.
       set Y:= And X _ _.
-      set Z := Or Bot _ _.
+      set Z := Or KO _ _.
       set X1:= And Top _ _.
       set Y1:= And X1 _ _.
       set Z1 := Or Z _ _.
@@ -241,30 +241,30 @@ Module remake.
 
     Goal
     (* original (OK \/ A) /\_B OK *)
-    (* produces is : (Bot \/ Top) \/ AB *)
+    (* produces is : (KO \/ Top) \/ AB *)
     let f x := (CallS p x) in
     a2t (of_alt [::[::]; [::call p A; call p B]]) = 
-      Or (Or Bot empty Top) empty
+      Or (Or KO empty Top) empty
       (And (And Top (CallS p A) (CallS p A)) (CallS p B) (CallS p B)).
     Proof.
       move=>/=.
       set X:= And Top _ _.
       set Y:= And X _ _.
-      set Z := Or Bot _ _.
+      set Z := Or KO _ _.
       move=>//.
     Qed.
 
     Goal
       let f x := (CallS p x) in
-      (*  original is (Bot \/ A) /\B (C \/ D) *)
-      (* produces is ((Bot \/ (AC)) \/ (AD)) *)
+      (*  original is (KO \/ A) /\B (C \/ D) *)
+      (* produces is ((KO \/ (AC)) \/ (AD)) *)
       exists x, a2t
         (of_alt [:: [:: call p A; call p C]; [::call p A; call p D] ]) = x.
     Proof.
       move=>/=.
       set X:= And Top _ _.
       set Y:= And X _ _.
-      set Z := Or Bot _ _.
+      set Z := Or KO _ _.
     Abort.
     
   End s.

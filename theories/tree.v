@@ -10,7 +10,7 @@ Import Prenex Implicits.
 (*BEGIN*)
 (*SNIP: tree_def*)
 Inductive tree :=
-  | Bot | OK | Dead
+  | KO | OK | Dead
   | TA : A -> tree
   (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
   | Or  : tree -> Sigma -> tree -> tree 
@@ -41,7 +41,7 @@ Section tree_op.
   Fixpoint dead A :=
     match A with
     | Dead => Dead
-    | OK | Bot | TA _ => Dead
+    | OK | KO | TA _ => Dead
     | And A B0 B => And (dead A) B0 B
     | Or A s B => Or (dead A) s (dead B)
     end.
@@ -54,7 +54,7 @@ Section tree_op.
   Fixpoint is_dead A :=
     match A with
     | Dead => true
-    | OK | Bot | TA _ => false
+    | OK | KO | TA _ => false
     | And A B0 B => is_dead A
     | Or A s B => is_dead A && is_dead B
     end.
@@ -63,7 +63,7 @@ Section tree_op.
   (*SNIP: path_end*)
   Fixpoint path_end A :=
     match A with
-    | Dead | OK | Bot | TA _ => A
+    | Dead | OK | KO | TA _ => A
     | Or A _ B =>
       if is_dead A then path_end B
       else path_end A
@@ -77,7 +77,7 @@ Section tree_op.
 
   Fixpoint is_ko A :=
     match A with
-    | Dead | Bot => true
+    | Dead | KO => true
     | OK | TA _ => false
     | And A B0 B => is_ko A
     | Or A s B => is_ko A && is_ko B
@@ -86,14 +86,14 @@ Section tree_op.
   Fixpoint success (A : tree) : bool :=
     match A with
     | OK => true
-    | TA _ | Bot | Dead => false
+    | TA _ | KO | Dead => false
     | And A _ B => success A && success B
     (* We need to keep the if condition to reflect the behavior of step:
       For example, an interesting proprety of step is:
       - success A -> step A = Success B
       - if we replace following branch with:
           "success A || success B" (i.e. we remove the if), then
-          Bot \/ OK is success but step (Bot \/ OK) is not Success but
+          KO \/ OK is success but step (KO \/ OK) is not Success but
           rather Expanded
     *)
     | Or A _ B => if is_dead A  then success B else success A
@@ -101,11 +101,11 @@ Section tree_op.
 
   Fixpoint failed (A : tree) : bool :=
     match A with
-    (* Bot is considered as a failure, so that next_alt can put it
-        into Dead. This is because, we want step to transform a Bot
-        tree into a "Failure Bot" (it does not introduce a Dead tree).
+    (* KO is considered as a failure, so that next_alt can put it
+        into Dead. This is because, we want step to transform a KO
+        tree into a "Failure KO" (it does not introduce a Dead tree).
     *)
-    | Bot | Dead => true
+    | KO | Dead => true
     | TA _ | OK => false
     | And A _ B => failed A || (success A && failed B)
     (* We keep the if condition to have the right behavior in next_alt *)
@@ -117,7 +117,7 @@ Section tree_op.
   (*ENDSNIP: succ_path*)
 
   (*SNIP: failed_path*)
-  Definition failedT A := (path_end A == Bot) || (path_end A == Dead).
+  Definition failedT A := (path_end A == KO) || (path_end A == Dead).
   (*ENDSNIP: failed_path*)
 
   Lemma successP A : success A = successT A.
@@ -141,8 +141,8 @@ Section tree_op.
 
   Fixpoint cutr A :=
     match A with
-    | TA _| Bot => Bot
-    | OK => Bot
+    | TA _| KO => KO
+    | OK => KO
     | Dead => Dead
     | And A B0 B => And (cutr A) B0 B
     | Or A s B => Or (cutr A) s (cutr B)
@@ -151,7 +151,7 @@ Section tree_op.
   (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
     match A with
-    | TA _ | Bot => Bot
+    | TA _ | KO => KO
     | Dead | OK => A
     | And A B0 B =>
       if success A then And (cutl A) B0 (cutl B)
@@ -341,8 +341,8 @@ Section main.
 
   Definition backchain pr s t :=
     let l := F u pr t s in
-    if l is (s,r) :: xs then (Or Bot s (big_or r.(premises) xs))
-    else Bot.
+    if l is (s,r) :: xs then (Or KO s (big_or r.(premises) xs))
+    else KO.
 
   Lemma dead_big_or p s t: is_dead (backchain p s t) = false.
   Proof.
@@ -351,7 +351,7 @@ Section main.
 
   Fixpoint get_substS s A :=
     match A with
-    | TA _ | Bot | OK | Dead => s
+    | TA _ | KO | OK | Dead => s
     | Or A s1 B => if is_dead A then get_substS s1 B else get_substS s A
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
@@ -362,7 +362,7 @@ Section main.
     match A with
     (* meta *)
     | OK             => (Success, OK)
-    | Bot | Dead     => (Failure, A)
+    | KO | Dead     => (Failure, A)
     
     (* lang *)
     | TA cut       => (CutBrothers, OK)
@@ -393,7 +393,7 @@ Section main.
 (*SNIP: next_alt*)
   Fixpoint next_alt b (A : tree) : option (tree) :=
     match A with
-    | Bot | Dead => None
+    | KO | Dead => None
     | OK => if b then None else Some OK
     | TA _ => Some A
     | And A B0 B =>
@@ -415,16 +415,16 @@ Section main.
   end.
 (*ENDSNIP: next_alt*)
 
-  Goal forall r, next_alt false (And (Or OK empty OK) r Bot) = Some (And (Or Dead empty OK) r (big_and r)).
+  Goal forall r, next_alt false (And (Or OK empty OK) r KO) = Some (And (Or Dead empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, next_alt false (And (Or OK empty OK) r Bot) = Some (And (Or Dead empty OK) r (big_and r)).
+  Goal forall r, next_alt false (And (Or OK empty OK) r KO) = Some (And (Or Dead empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
   Goal forall r, next_alt true (And (Or OK empty OK) r OK) = Some (And (Or Dead empty OK) r (big_and r)).
   Proof. move=> []//=. Qed.
 
-  Goal (next_alt false (Or Bot empty OK)) = Some (Or Dead empty OK). move=> //=. Qed.
+  Goal (next_alt false (Or KO empty OK)) = Some (Or Dead empty OK). move=> //=. Qed.
 
   (* build next_alt tree *)
   Definition build_na A oA := odflt (dead A) oA.

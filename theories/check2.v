@@ -866,7 +866,7 @@ Qed.
 
 Fixpoint get_ctxS sP te (s:sigV) A :=
   match A with
-  | TA _ | Bot | OK | Dead => s
+  | TA _ | KO | OK | Dead => s
   | Or A s1 B => if is_dead A then get_ctxS sP te (sigma2ctx sP te s1) B else get_ctxS sP te s A
   | And A _ B => if success A then get_ctxS sP te (get_ctxS sP te s A) B else (get_ctxS sP te s A)
   end.
@@ -893,7 +893,7 @@ Definition weak_all (s:sigV) : sigV := [fmap x : domf s => weak s.[valP x]].
   Fixpoint has_cut A :=
     match A with
     | TA cut => true
-    | OK | TA (call _) | Bot | Dead => false
+    | OK | TA (call _) | KO | Dead => false
     | And A B0 B => [||has_cut A | (has (fun x => cut == x) B0 && has_cut B)]
     | Or _ _ _ => false
     end.
@@ -963,7 +963,7 @@ Proof.
 
 Fixpoint vars_tree t : {fset V} :=
   match t with
-  | TA cut | Dead | Bot | OK => fset0
+  | TA cut | Dead | KO | OK => fset0
   | TA (call t) => vars_tm (Callable2Tm t)
   | And A B0 B => vars_tree A `|` vars_atoms B0 `|` vars_tree B
   | Or A _ B => vars_tree A `|` vars_tree B
@@ -1211,7 +1211,7 @@ Fixpoint compat_sig_subst sP N T :=
   match T with
   | Or A s B => [&& compat_subst sP N s, rec A & rec B]
   | And A B0 B => [&& rec A & rec B] (*no subst in B0*)
-  | Bot | OK | Dead | TA _ => true
+  | KO | OK | Dead | TA _ => true
   end.
 
 Definition tc sP ty T :=
@@ -2559,7 +2559,7 @@ Definition more_preciseo H A B := (*H should be a min relation*)
 (* Fixpoint check_program_tree sP T :=
   let rec := check_program_tree sP in
   match T with
-  | Bot | Dead | OK => true
+  | KO | Dead | OK => true
   | TA p _ => check_program sP p (*TODO: add `&& mutual_exclusion sP + the arguments for static subst`*)
   | And A B0 B => [&& rec A, check_program sP B0.1 & rec B]
   | Or A _ B => rec A && rec B
@@ -2639,7 +2639,7 @@ Fixpoint is_kox A B :=
   match A with
   | TA (call _) => is_ko B == false
   | TA (cut) => (A == B) || (B == OK)
-  | (Bot | Dead | OK) => A == B
+  | (KO | Dead | OK) => A == B
   | Or L1 _ R1 =>  
       match B with 
       | Or L2 _ R2 => if is_dead L1 then is_kox R1 R2 else is_kox L1 L2
@@ -3016,7 +3016,7 @@ Fixpoint tc_tree_aux ign_success (sP:sigT) A (te:sigV) (sVD1:(D * sigV)): option
   let (d0, sV1) := sVD1 in
   match A with
   | TA cut => Some (Func, (te + sV1))
-  | Bot | Dead => None
+  | KO | Dead => None
   | TA (call a) => Some (check_callable sP (te + sV1) a d0)
   | OK => if ign_success then None else Some (d0, te + sV1)
   | And A B0 B =>

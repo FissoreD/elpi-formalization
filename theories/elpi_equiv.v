@@ -380,7 +380,7 @@ Section next_cut.
       let '(b1, A') := next_cut A in
       (b1, And A' B0 B)
     | TA cut => (true, OK)
-    | OK | TA (call _) | Dead | Bot => (false, A)
+    | OK | TA (call _) | Dead | KO => (false, A)
     end.
 
   Lemma next_cut_success {A B}: success A -> next_cut A = B -> success B.2.
@@ -586,7 +586,7 @@ End next_cut.
 Section next_callS.
   Fixpoint next_callS s A := 
     match A with
-    | OK | Dead | Bot | TA cut => A
+    | OK | Dead | KO | TA cut => A
     | TA (call t) => (backchain u p s t)
     | Or A sx B => if is_dead A then Or A sx (next_callS s B) else Or (next_callS s A) sx B
     | And A B0 B =>
