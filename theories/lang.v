@@ -291,6 +291,85 @@ Fixpoint fresh_tm fv t : {fset V} * Tm :=
   | Tm_Comb l r => let: (fv, l) := fresh_tm fv l in let: (fv, r) := fresh_tm fv r in (fv, Tm_Comb l r)
   end.
 
+Fixpoint same_a_equiv seen t1 t2 : (bool * {fmap V -> V}) :=
+  match t1, t2 with
+  | Tm_Kd t1, Tm_Kd t2 | Tm_Kp t1, Tm_Kp t2 => (t1 == t2, seen)
+  | Tm_V v1, Tm_V v2 => 
+    if seen.[?v1] is Some v2' then ((v2 == v2'), seen)
+    else (seen.[?v2] == None, seen.[v1 <- v2])
+  | Tm_Comb f1 a1, Tm_Comb f2 a2 => 
+    let: (b1, seen1) := same_a_equiv seen f1 f2 in
+    if b1 then
+      let: (b2, seen2) := same_a_equiv seen1 a1 a2 in
+      (b2, seen2)
+    else (false, seen)
+  | _, _ => (false, seen)
+  end.
+
+Definition fmap_id {T:choiceType} (D: {fmap T -> T}) := [forall x : domf D, val x == D.[valP x]].
+Definition fmap_comm {T:choiceType} (D1 D2: {fmap T -> T}) := 
+  [forall x : domf D1, 
+    if D2.[?val x] is Some x' then 
+      if D1.[?x'] is Some x'' then val x == x''
+      else false
+    else false].
+
+Lemma same_a_equiv_refl seen0 t b seen1: 
+  fmap_id seen0 ->
+  same_a_equiv seen0 t t = (b, seen1) -> b /\ fmap_id seen1.
+Proof.
+  elim: t seen0 b seen1 => //=.
+    move=> k seen0 b seen1 H [<-<-]//.
+    move=> k seen0 b seen1 H [<-<-]//.
+    move=> v seen0 b seen1 H; case: fndP => vP[<-<-].
+      have /= := forallP H (Sub v vP).
+      rewrite H valPE => ->; auto.
+    repeat eexists.
+    apply/forallP => /=-[k kP]/=; rewrite ffunE/=.
+    move: kP; rewrite in_fset1U => /orP[/eqP->|]; first by rewrite eqxx.
+    move=> ksP; case: ifP => ///eqP H2.
+    have:= forallP H (Sub k ksP).
+    rewrite valPE/= => /eqP Hx.
+    by rewrite in_fnd//=-Hx.
+  move=> f Hf a Ha seen0 b seenx H.
+  case ef: same_a_equiv => [b1 seen1].
+  have [+ H2] := Hf _ _ _ H ef.
+  destruct b1 => //= _.
+  case ea: same_a_equiv => [b2 seen2][<-<-].
+  by apply: Ha ea.
+Qed.
+
+(* Lemma same_a_equiv_comm seen0 t1 t2 b1 b2 s1 s2: 
+  fmap_id seen0 -> 
+  same_a_equiv seen0 t1 t2 = (b1, s1) ->
+  same_a_equiv seen0 t2 t1 = (b2, s2) ->
+  b1 = b2 /\ fmap_comm s1 s2.
+Proof.
+  elim: t1 seen0 t2 b1 b2
+  elim: t seen0 => //=.
+    move=> k
+  elim: t seen0 b seen1 => //=.
+    move=> k seen0 b seen1 H [<-<-]//.
+    move=> k seen0 b seen1 H [<-<-]//.
+    move=> v seen0 b seen1 H; case: fndP => vP[<-<-].
+      have /= := forallP H (Sub v vP).
+      rewrite H valPE => ->; auto.
+    repeat eexists.
+    apply/forallP => /=-[k kP]/=; rewrite ffunE/=.
+    move: kP; rewrite in_fset1U => /orP[/eqP->|]; first by rewrite eqxx.
+    move=> ksP; case: ifP => ///eqP H2.
+    have:= forallP H (Sub k ksP).
+    rewrite valPE/= => /eqP Hx.
+    by rewrite in_fnd//=-Hx.
+  move=> f Hf a Ha seen0 b seenx H.
+  case ef: same_a_equiv => [b1 seen1].
+  have [+ H2] := Hf _ _ _ H ef.
+  destruct b1 => //= _.
+  case ea: same_a_equiv => [b2 seen2][<-<-].
+  by apply: Ha ea.
+Qed. *)
+
+
 Fixpoint fresh_callable fv c :=
   match c with
   | Callable_Kp _ => (fv, c)

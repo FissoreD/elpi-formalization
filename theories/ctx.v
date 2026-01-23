@@ -144,5 +144,11 @@ Section Theory.
     by rewrite restrictf_comp domf_rem fsetDDl fsetUid fsetIid.
   Qed.
 
+  Lemma valPE x (H : {fmap K -> V}) (xH : x \in domf H) : [` (valP [`xH]) ] = [` xH].
+  Proof.
+    by move: (valP _); rewrite [val _]/= => xH'; rewrite (bool_irrelevance xH' xH).
+  Qed.
+  
+
 End Theory.
 

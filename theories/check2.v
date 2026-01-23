@@ -744,11 +744,6 @@ Section merge.
 
   Open Scope fset_scope.
 
-  Lemma valPE {K : choiceType} V x (H : {fmap K -> V}) (xH : x \in domf H) : [` (valP [`xH]) ] = [` xH].
-  Proof.
-    by move: (valP _); rewrite [val _]/= => xH'; rewrite (bool_irrelevance xH' xH).
-  Qed.
-
   Lemma fnd_in {T : choiceType} V (f : {fmap T -> V}) (k : T) (kA : k \in domf f) :
     f.[kA] = odflt f.[kA] f.[? k].
   Proof. by rewrite in_fnd. Qed.
