@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
-From det Require Export lang.
+From det Require Export finmap lang.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -339,14 +339,14 @@ Proof. elim l => //-[]//. Qed.
 Section main.
   Variable u: Unif.
 
-  Definition backchain pr s t :=
-    let l := F u pr t s in
-    if l is (s,r) :: xs then (Or KO s (big_or r.(premises) xs))
-    else KO.
+  Definition backchain pr fv s t :=
+    let: (fv, l) := F u pr fv t s in
+    (fv, if l is (s,r) :: xs then (Or KO s (big_or r.(premises) xs))
+         else KO).
 
-  Lemma dead_big_or p s t: is_dead (backchain p s t) = false.
+  Lemma dead_big_or p fv s t: is_dead (backchain p fv s t).2 = false.
   Proof.
-    rewrite /backchain; case F: F => // [[s1 r] xs] //.
+    by rewrite /backchain; case F: F => [fv' [//|[s1 r] xs]].
   Qed.
 
   Fixpoint get_substS s A :=
@@ -357,31 +357,33 @@ Section main.
     end.
 
 (*SNIP: step*)
-  Fixpoint step pr s A : (step_tag * tree) :=
+  Fixpoint step pr fv s A : ({fset V} * step_tag * tree) :=
     let step := step pr in
     match A with
     (* meta *)
-    | OK             => (Success, OK)
-    | KO | Dead     => (Failure, A)
+    | OK             => (fv, Success, OK)
+    | KO | Dead     => (fv, Failure, A)
     
     (* lang *)
-    | TA cut       => (CutBrothers, OK)
-    | TA (call t)  => (Expanded, backchain pr s t)
+    | TA cut       => (fv, CutBrothers, OK)
+    | TA (call t)  => 
+       let: (fv, t) := backchain pr fv s t in
+       (fv, Expanded, t)
 
     (* recursive cases *)
     | Or A sB B =>
         if is_dead A then 
-          let rB := (step sB B) in
-          (if is_cb rB.1 then Expanded else rB.1, Or A sB rB.2)
+          let: (fv, tB, rB) := (step fv sB B) in
+          (fv, if is_cb tB then Expanded else tB, Or A sB rB)
         else
-        let rA := step s A in
-        (if is_cb rA.1 then Expanded else rA.1, Or rA.2 sB (if is_cb rA.1 then cutr B else B))
+        let: (fv, tA, rA) := step fv s A in
+        (fv, if is_cb tA then Expanded else tA, Or rA sB (if is_cb tA then cutr B else B))
     | And A B0 B =>
-        let rA := step s A in
-        if is_sc rA.1 then 
-          let rB := (step (get_substS s rA.2) B) in
-          (rB.1, And (if is_cb rB.1 then cutl A else A) B0 rB.2)
-        else (rA.1, And rA.2 B0 B)
+        let: (fv, tA, rA) := step fv s A in
+        if is_sc tA then 
+          let: (fv, tB, rB) := (step fv (get_substS s rA) B) in
+          (fv, tB, And (if is_cb tB then cutl A else A) B0 rB)
+        else (fv, tA, And rA B0 B)
     end.
 (*ENDSNIP: step*)
 
@@ -431,18 +433,18 @@ Section main.
   Definition build_s (s:Sigma) (oA: option tree) := Option.map (fun _ => s)  oA.
 
 
-  Inductive run (p : program): Sigma -> tree -> option Sigma -> tree -> bool -> Type :=
-    | run_done s1 s2 A B        : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> run s1 A (Some s2) B false
-    | run_cut  s1 s2 r A B n    : step p s1 A = (CutBrothers, B) -> run s1 B s2 r n -> run s1 A s2 r true
-    | run_step s1 s2 r A B n    : step p s1 A = (Expanded,    B) -> run s1 B s2 r n -> run s1 A s2 r n
-    | run_fail s1 s2 A B r n     : 
+  Inductive run (p : program): {fset V} -> Sigma -> tree -> option Sigma -> tree -> bool -> Type :=
+    | run_done s1 s2 A B fv       : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> run fv s1 A (Some s2) B false
+    | run_cut  s1 s2 r A B n fv  : step p fv s1 A = (fv, CutBrothers, B) -> run fv s1 B s2 r n -> run fv s1 A s2 r true
+    | run_step s1 s2 r A B n fv fv'   : step p fv s1 A = (fv', Expanded,    B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r n
+    | run_fail s1 s2 A B r n fv    : 
           failed A -> next_alt false A = Some B ->
-              run s1 B s2 r n -> run s1 A s2 r n
-    | run_dead s1 A : 
+              run fv s1 B s2 r n -> run fv s1 A s2 r n
+    | run_dead s1 A fv : 
           failed A -> next_alt false A = None ->
-              run s1 A None (dead A) false.
+              run fv s1 A None (dead A) false.
 
-  Definition dead_run p s1 A : Type := forall B n, run p s1 A None B n.
+  Definition dead_run p fv s1 A : Type := forall B n, run p fv s1 A None B n.
 End main.
 
 Hint Resolve is_dead_dead : core.

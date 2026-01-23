@@ -579,8 +579,8 @@ Definition save_goals (a: alts) (gs b:goals) := map (add_ca a) b ++ gs.
 
 Definition save_alts (a : alts) (gs: goals) (bs : alts) := 
   map (fun '((s,x): Sigma * goals) => (s, save_goals a gs x)) bs.
-Set Printing All. Check [::]%A.
-Definition empty_ca_G (g : A * alts) :=
+
+  Definition empty_ca_G (g : A * alts) :=
   match g with (_,[::]) => true | _ => false end.
 Definition empty_caG goals := all empty_ca_G goals.
 Definition empty_ca alts := all (fun x => empty_caG (snd x)) alts.
@@ -599,28 +599,30 @@ Section Nur.
 Variable u : Unif.
 Variable p : program.
 
-Inductive nur : Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
-| StopE s a : nur s nilC a s a
-| CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s [:: (cut, ca) & gl]%G a s1 r
-| CallE s s1 a b bs gl r t ca: 
-  F u p t s = [:: b & bs ]%SEQ -> 
-    nur b.1 (save_goals a gl (a2gs1 b)) (save_alts a gl (aa2gs bs) ++ a) s1 r -> 
-      nur s [:: (call t, ca) & gl]%G a s1 r
-| FailE s s1 s2 t gl a al r ca : 
-  F u p t s = [::]%SEQ -> nur s1 a al s2 r -> nur s [:: (call t, ca) & gl]%G [:: (s1, a) & al] s2 r.
+From det Require Import finmap.
+Open Scope fset_scope.
+Inductive nur : {fset V} -> Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
+| StopE s a fv : nur fv s nilC a s a
+| CutE s s1 a ca r gl fv : nur fv s gl ca s1 r -> nur fv s [:: (cut, ca) & gl]%G a s1 r
+| CallE s s1 a b bs gl r t ca fv fv': 
+  F u p fv t s = (fv', [:: b & bs ]%SEQ) -> 
+    nur fv' b.1 (save_goals a gl (a2gs1 b)) (save_alts a gl (aa2gs bs) ++ a) s1 r -> 
+      nur fv s [:: (call t, ca) & gl]%G a s1 r
+| FailE s s1 s2 t gl a al r ca fv fv': 
+  F u p fv t s = (fv',[::]%SEQ) -> nur fv s1 a al s2 r -> nur fv s [:: (call t, ca) & gl]%G [:: (s1, a) & al] s2 r.
 
-Lemma nur_consistent s G x xs1 xs2 s1 s2 :
-  nur s G x s1 xs1 -> nur s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
+Lemma nur_consistent fv s G x xs1 xs2 s1 s2 :
+  nur fv s G x s1 xs1 -> nur fv s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
 Proof.
   move=> H; elim: H xs2 s2 => //; clear.
   - inversion 1 => //.
-  - move=> s a ca r gl H IH xs2.
+  - move=> s a ca r gl fv H IH xs2.
     by inversion 1; subst; auto.
-  - move=> s s1 a b bs gl r t ca H H1 IH xs2 s2 H2.
+  - move=> s s1 a b bs gl r t ca ?? H H1 IH xs2 s2 H2.
     apply: IH.
-    inversion H2; subst; move: H9; rewrite H => //-[??]; subst.
+    inversion H2; subst; move: H10; rewrite H => //-[???]; subst.
     assumption.
-  - move=> s s1 s2 t gl a al r ca H H1 IH xs2 s3 H2.
+  - move=> s s1 s2 t gl a al r ca ?? H H1 IH xs2 s3 H2.
     apply: IH.
     inversion H2; subst => //.
     congruence.

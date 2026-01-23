@@ -84,7 +84,7 @@ HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
 
 Inductive Callable := 
   | Callable_Kp   : Kp -> Callable
-  | Callable_V    : V -> Callable
+  | Callable_V    : V -> Callable (* TODO: REMOVE *)
   | Callable_Comb : Callable -> Tm -> Callable.
 derive Callable.
 HB.instance Definition _ := hasDecEq.Build Callable Callable_eqb_OK.
@@ -272,24 +272,84 @@ Definition varsU_rprem r : {fset V} := varsU (map vars_atom r.(premises)).
 Definition varsU_rhead (r: R) : {fset V} := vars_tm (Callable2Tm (RCallable2Callable r.(head))).
 Definition varsU_rule r : {fset V} := varsU_rhead r `|` varsU_rprem r.
 
-Axiom fresh_rule : {fset V} -> R -> R.
+Lemma freshV (fv : {fset V}) :  exists v : V, v \notin fv.
+Proof.
+exists (IV (\sum_(i <- fv) let: (IV n) := i in n ).+1)%N.
+case: in_fsetP => // -[[x] xP] /= [] /eq_leq.
+by rewrite (big_fsetD1 _ xP) /= -ltn_subRL subnn ltn0.
+Qed.
+
+Definition fresh  (fv : {fset V}) : V := xchoose (freshV fv).
+Definition freshP (fv : {fset V}) : (fresh fv) \in fv = false.
+Proof. by apply: negbTE (xchooseP (freshV fv)). Qed.
+
+Fixpoint fresh_tm fv t : {fset V} * Tm :=
+  match t with
+  | Tm_Kd _ => (fv, t)
+  | Tm_Kp _ => (fv, t)
+  | Tm_V v =>  let fv := fset1 v `|` fv in let v := fresh fv in (fset1 v `|` fv, Tm_V v)
+  | Tm_Comb l r => let: (fv, l) := fresh_tm fv l in let: (fv, r) := fresh_tm fv r in (fv, Tm_Comb l r)
+  end.
+
+Fixpoint fresh_callable fv c :=
+  match c with
+  | Callable_Kp _ => (fv, c)
+  | Callable_V _ => (fv, c)
+  | Callable_Comb h t =>
+      let: (fv, h) := fresh_callable fv h in
+      let: (fv, t) := fresh_tm fv t in
+      (fv, Callable_Comb h t)
+  end.
+
+Fixpoint fresh_rcallable fv c :=
+  match c with
+  | RCallable_Kp _ => (fv, c)
+  | RCallable_Comb h t =>
+      let: (fv, h) := fresh_rcallable fv h in
+      let: (fv, t) := fresh_tm fv t in
+      (fv, RCallable_Comb h t)
+  end.
+
+(* Lemma fresh_tmP fv t : vars_tm (fresh_tm fv t).2 `&` (vars_tm t `|` fv) = fset0.
+
+elim: t fv (fsubset_refl fv) => [?|?|v|l IHl r IHr] fv; rewrite /= ?fset0I //.
+  apply/fsetP=> x; rewrite !in_fsetE -(freshP (v |` fv)).
+  by case: eqP => [<- /[!in_fsetE]|_] //=; rewrite freshP.
+  case: fresh_tm (IHl fv) => [fv' l'] /= {}IHl.
+  case: fresh_tm (IHr fv')=> [fv'' r'] /= {}IHr.
+  do [ set A := vars_tm _; set B := vars_tm _ ] in IHl *.
+  do [ set A' := vars_tm _; set B' := vars_tm _ ] in IHr *.
+  rewrite /= -fsetUA fsetIUr.
+  rewrite [_ `&` (_ `|` _)]fsetIUl. IHr fsetU0.
+  rewrite {2}(fsetUC A). [(A' `|` _) `&` _]fsetIUl.
+Search fsetI fsetU.
+  rewrite -fsetIA.
+  fsetIUl .
+
+have := fsetP.
+
+
+Axiom fresh_rule : {fset V} -> R -> {fset V} * R. *)
+
+Definition fresh_atom fv a :=
+  match a with
+  | cut => (fv, cut)
+  | call t => let: (fv, t) := fresh_callable fv t in (fv, call t)
+  end.
+
+Definition fresh_rule fv r :=
+  let: (fv, head) := fresh_rcallable fv r.(head) in
+  let: (fv, premises) := foldr (fun x '(fv,xs) => let: (fv, x) := fresh_atom fv x in (fv,x::xs)) (fv,[::]) r.(premises) in
+  (fv, mkR head premises ).
+
 Definition codom_vars (s:Sigma) := 
   varsU (map vars_tm (codom s)).
 
 
 Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
 
-Fixpoint fresh_rules_help vars rules :=
-  match rules with
-  | [::] => [::]
-  | x :: xs => 
-    let R' := fresh_rule vars x in
-    let vars' := vars `|` varsU_rule R' in
-    R' :: fresh_rules_help vars' xs
-  end.
-
-Definition fresh_rules sigma rules := fresh_rules_help (vars_sigma sigma) rules.
-
+Definition fresh_rules fv rules :=
+  foldr (fun x '(fv,xs) => let: (fv, x) := fresh_rule fv x in (fv,x::xs)) (fv,[::]) rules.
 
 (* TODO: deref is too easy? Yes if sigma is a mapping from vars to lambdas in a future version *)
 Fixpoint deref (s: Sigma) (tm:Tm) :=
@@ -321,48 +381,22 @@ Fixpoint select u (query : RCallable) (modes:list mode) (rules: list R) sigma : 
    when we "fresh the program" we need to takes variables
    outside this set
 *)
-Definition F u pr (query:Callable) s : seq (Sigma * R) :=
-  let rules := fresh_rules s (pr.(rules)) in
-  match tm2RC (deref s (Callable2Tm query)) with
-  | None => [::] (*this is a call with flex head, in elpi it is an error! *)
-  | Some (query, kp) =>
-    match pr.(sig).[? kp] with 
-      | Some sig => select u query (get_modes_rev query sig) rules s
-      | None => [::]
-      end
-  end.
+Definition F u pr fv (query:Callable) s : {fset V} * seq (Sigma * R) :=
+  let: (fv, rules) := fresh_rules fv (pr.(rules)) in
+  (fv, match tm2RC (deref s (Callable2Tm query)) with
+      | None => [::] (*this is a call with flex head, in elpi it is an error! *)
+      | Some (query, kp) =>
+        match pr.(sig).[? kp] with 
+          | Some sig => select u query (get_modes_rev query sig) rules s
+          | None => [::]
+          end
+      end).
 
-Fixpoint varsD (l: seq {fset V}) :=
+(* Fixpoint varsD (l: seq {fset V}) :=
   match l with
   | [::] => true
   | x :: xs => ((x `&` varsU xs) == fset0) && varsD xs
   end.
-
-Lemma select_fresh_aux u c m rules s fs:
-  varsD [seq varsU_rule x.2 | x <- select u c m (fresh_rules_help (vars_sigma s `|` fs) rules) s].
-Proof.
-  elim: rules s => //= x xs IH s.
-  (* rewrite -fsetUA. *)
-  case X: H => [S|]//=.
-  (* rewrite IH andbT. 
-  set sel := select _ _ _ _ _. *)
-Admitted.
-
-Lemma select_fresh u c m rules s:
-  varsD [seq varsU_rule x.2 | x <- select u c m (fresh_rules_help (vars_sigma s) rules) s].
-Proof.
-  have:= select_fresh_aux u c m rules s fset0.
-  by rewrite fsetU0.
-Qed.
-
-Lemma backchain_fresh u pr query s :
-  varsD (map (fun x => varsU_rule x.2) (F u pr query s)).
-Proof.
-  rewrite/F.
-  case: tm2RC => // [[r kp]].
-  case: fndP => // kP.
-  apply: select_fresh.
-Qed.
 
 Lemma varsD_rule_prem_aux {T:Type} r (rs: seq (T * _)):  
   varsU_rprem r
@@ -383,9 +417,9 @@ Proof.
   rewrite/varsU_rule/= fsetIUl fsetU_eq0 => /andP[].
   move=> H3 H4.
   by rewrite varsD_rule_prem_aux//.
-Qed.
+Qed. *)
 
-Lemma backchain_fresh_prem u pr query s :
+(* Lemma backchain_fresh_prem u pr query s :
   varsD (map (fun x => varsU_rprem x.2) (F u pr query s)).
 Proof.
   rewrite/F.
@@ -398,7 +432,7 @@ Qed.
 Lemma backchain_fresh_premE u pr query s l :
   (F u pr query s) = l ->
   varsD (map (fun x => varsU_rprem x.2) l).
-Proof. by move=> <-; apply/backchain_fresh_prem. Qed.
+Proof. by move=> <-; apply/backchain_fresh_prem. Qed. *)
 
 Lemma select_in_rules u R modes rules s r:
   (select u R modes rules s) = r ->
@@ -413,19 +447,20 @@ Proof.
   by move=> _ /IH->; rewrite orbT.
 Qed.
 
-Lemma F_in u pr query s r:
-  F u pr query s = r ->
-    all (fun x => x.2 \in fresh_rules s pr.(rules)) r.
+Lemma F_in u pr fv query s r:
+  F u pr fv query s = r ->
+    all (fun x => x.2 \in (fresh_rules fv pr.(rules)).2) r.2.
 Proof.
   move=> <-{r}.
   rewrite/F/=.
+  case: fresh_rules => [fv' pr'].
   case: tm2RC => //=[[r p]].
   case: fndP => //= kP.
   by apply: select_in_rules.
 Qed.
 
 
-Axiom deref_rigid: forall s t t',
+(* Axiom deref_rigid: forall s t t',
   deref s t = t' ->
     get_tm_hd t' = 
       match get_tm_hd t with
@@ -434,7 +469,7 @@ Axiom deref_rigid: forall s t t',
       | inr (inr V) => 
         if s.[? V] is Some t then get_tm_hd t
         else inr (inr V)
-      end.
+      end. *)
 
 Lemma tm2RC_get_tm_hd t c' p:
   tm2RC t = Some (c', p) ->
@@ -448,7 +483,7 @@ Proof.
   apply: Hf t.
 Qed.
 
-Lemma tm2RC_deref s c c' p:
+(* Lemma tm2RC_deref s c c' p:
   tm2RC (deref s (Callable2Tm c)) = Some (c', p) ->
     match get_tm_hd (Callable2Tm c) with
     | inl K => False
@@ -470,4 +505,4 @@ Proof.
   have {}H := esym H.
   case X: tm2RC => //=[[RC P]][??]; subst.
   by apply: Hf X.
-Qed.
+Qed. *)

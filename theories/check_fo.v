@@ -214,20 +214,11 @@ Section check.
     by apply: IH H _ e; rewrite/tm_is_det X//.
   Qed.
 
-  Axiom fresh_rule_id: forall V R, fresh_rule V R = R.
-  Lemma fresh_rules_help_id V R: (fresh_rules_help V R) = R.
-  Proof. 
-    elim: R V => //= x xs IH V; rewrite fresh_rule_id/= IH//.
-  Qed.
-
-  Lemma fresh_rules_id V R: (fresh_rules V R) = R.
-  Proof. apply: fresh_rules_help_id. Qed.
-
-  Lemma is_det_no_free_alt {sP t s1}:
+  Lemma is_det_no_free_alt {sP t s1 fv}:
     check_rules sP p.(rules) -> tm_is_det sP t -> 
-      det_tree sP (backchain u p s1 t).
+      det_tree sP (backchain u p fv s1 t).2.
   Proof.
-    rewrite /backchain/F.
+    rewrite /backchain/F 2!push/=.
     case X: tm2RC => //=[[q qp]].
     case: p => rules sig1 /=.
     generalize {| rules := rules; sig := sig1 |} as pr => pr.
@@ -261,6 +252,8 @@ Section check.
     move=> /eqP H3 H4.
     have /= := tiki_taka X H2 H4; congruence.
   Qed.
+
+  xxxx
 
   Lemma has_cut_success {A}:
     has_cut A -> success A = false.
