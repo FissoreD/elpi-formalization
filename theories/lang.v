@@ -416,9 +416,12 @@ Definition fresh_atom fv a :=
   | call t => let: (fv, t) := fresh_callable fv t in (fv, call t)
   end.
 
+Definition fresh_atoms fv a :=
+  foldr (fun x '(fv,xs) => let: (fv, x) := fresh_atom fv x in (fv,x::xs)) (fv,[::]) a.
+
 Definition fresh_rule fv r :=
   let: (fv, head) := fresh_rcallable fv r.(head) in
-  let: (fv, premises) := foldr (fun x '(fv,xs) => let: (fv, x) := fresh_atom fv x in (fv,x::xs)) (fv,[::]) r.(premises) in
+  let: (fv, premises) := fresh_atoms fv r.(premises) in
   (fv, mkR head premises ).
 
 Definition codom_vars (s:Sigma) := 
