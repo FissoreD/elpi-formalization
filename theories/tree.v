@@ -435,7 +435,7 @@ Section main.
 
   Inductive run (p : program): {fset V} -> Sigma -> tree -> option Sigma -> tree -> bool -> Type :=
     | run_done s1 s2 A B fv       : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> run fv s1 A (Some s2) B false
-    | run_cut  s1 s2 r A B n fv  : step p fv s1 A = (fv, CutBrothers, B) -> run fv s1 B s2 r n -> run fv s1 A s2 r true
+    | run_cut  s1 s2 r A B n fv fv' : step p fv s1 A = (fv', CutBrothers, B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r true
     | run_step s1 s2 r A B n fv fv'   : step p fv s1 A = (fv', Expanded,    B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r n
     | run_fail s1 s2 A B r n fv    : 
           failed A -> next_alt false A = Some B ->
@@ -445,6 +445,15 @@ Section main.
               run fv s1 A None (dead A) false.
 
   Definition dead_run p fv s1 A : Type := forall B n, run p fv s1 A None B n.
+
+  Fixpoint vars_tree t : {fset V} :=
+  match t with
+  | TA cut | Dead | KO | OK => fset0
+  | TA (call t) => vars_tm (Callable2Tm t)
+  | And A B0 B => vars_tree A `|` vars_atoms B0 `|` vars_tree B
+  | Or A _ B => vars_tree A `|` vars_tree B
+  end.
+
 End main.
 
 Hint Resolve is_dead_dead : core.

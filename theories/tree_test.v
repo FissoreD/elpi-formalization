@@ -128,26 +128,26 @@ Definition emptyp := (build_progr [::]).
 Definition CutS := TA cut.
 
 Section Test2.
-  Goal step unif emptyp empty (Or OK empty OK) = (Success, Or OK empty OK). by []. Qed.
+  Goal step unif emptyp fset0 empty (Or OK empty OK) = (fset0, Success, Or OK empty OK). by []. Qed.
 
-  Goal run unif emptyp empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) false.
+  Goal run unif emptyp fset0 empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) false.
     apply: run_step => //=.
     apply: run_done => //.
   Qed.
 
   Goal forall r, 
-    run unif emptyp empty (Or (CutS) empty r) (Some empty) (dead (Or (CutS) empty r)) false.
+    run unif emptyp fset0 empty (Or (CutS) empty r) (Some empty) (dead (Or (CutS) empty r)) false.
     move=> r.
     apply: run_step => //.
     apply: run_done => //=.
     rewrite next_alt_cutr /= dead_cutr//.
   Qed.
 
-  Goal run unif emptyp empty (Or OK empty (Or OK empty OK)) (Some empty) ((Or Dead empty (((Or OK empty OK))))) false.
+  Goal run unif emptyp fset0 empty (Or OK empty (Or OK empty OK)) (Some empty) ((Or Dead empty (((Or OK empty OK))))) false.
   Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
-  Goal step unif emptyp empty (Or (Or Dead empty (CutS)) empty OK) = (Expanded, (Or (Or Dead empty OK) empty OK)).
+  Goal step unif emptyp fset0 empty (Or (Or Dead empty (CutS)) empty OK) = (fset0, Expanded, (Or (Or Dead empty OK) empty OK)).
   Proof.
     move=>//=.
   Qed.

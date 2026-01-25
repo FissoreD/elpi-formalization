@@ -679,8 +679,6 @@ Section checker.
   Definition all_vars_subset {K:choiceType} {V: Type} (sV: {fmap K -> V}) (vars:{fset K}) :=
     [forall x : vars, val x \in domf sV ].
 
-  Definition vars_atoms L := varsU (map vars_atom L).
-
   Definition closed_in_atom (ty:sigV) A :=
     all_vars_subset ty (vars_atom A).
 
@@ -955,14 +953,6 @@ Proof.
       
 
     move=>  *)
-
-Fixpoint vars_tree t : {fset V} :=
-  match t with
-  | TA cut | Dead | KO | OK => fset0
-  | TA (call t) => vars_tm (Callable2Tm t)
-  | And A B0 B => vars_tree A `|` vars_atoms B0 `|` vars_tree B
-  | Or A _ B => vars_tree A `|` vars_tree B
-  end.
 
 Definition closed_in (sV: sigV) t := all_vars_subset sV (vars_tm t).
 Definition closed_inT (sV: sigV) t := all_vars_subset sV (vars_tree t).

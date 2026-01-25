@@ -429,6 +429,7 @@ Definition codom_vars (s:Sigma) :=
 
 
 Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
+Definition vars_atoms L := varsU (map vars_atom L).
 
 Definition fresh_rules fv rules :=
   foldr (fun x '(fv,xs) => let: (fv, x) := fresh_rule fv x in (fv,x::xs)) (fv,[::]) rules.

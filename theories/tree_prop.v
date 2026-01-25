@@ -438,7 +438,7 @@ Section RunP.
           move=> /next_alt_same_structure//.
         move=> _.
         apply: same_structure_sup_dead.
-      - move=> s1 s2 r A B n ? /step_same_structure/= + _.
+      - move=> s1 s2 r A B n ?? /step_same_structure/= + _.
         apply: same_structure_sup2_trans.
       - move=> s1 s2 r A B n ?? /step_same_structure/= + _.
         apply: same_structure_sup2_trans.
@@ -565,10 +565,10 @@ Section RunP.
     move=> H; elim: H s2 C n2; clear.
     + move=> s1 _ A _ ? sA <-<- s3 C n2 H; subst.
       by apply: run_success sA H.
-    + move=> s1 s2 r A B n1 ? HA HB IH s4 r' n2 H.
+    + move=> s1 s2 r A B n1 ?? HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
       - by rewrite success_step in HA.
-      - move: H0; rewrite HA => -[?]; subst.
+      - move: H0; rewrite HA => -[??]; subst.
         by rewrite !(IH _ _ _ X).
       - by rewrite failed_step in HA.
       - by rewrite failed_step in HA.

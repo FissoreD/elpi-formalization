@@ -615,7 +615,7 @@ Qed.
     elim: H3 H2; clear -H1 => //.
     - move=> s1 s2 A B _ sA _ <- fA.
       by rewrite (build_na_is_dead fA sA) is_dead_dead.
-    - move=> s1 s2 r A B n sv eA rB IH fA.
+    - move=> s1 s2 r A B n sv sv' eA rB IH fA.
       by apply/IH/(step_no_free_alt H1 fA eA).
     - move=> s1 s2 r A B n sv sv' eA rB IH fA.
       by apply/IH/(step_no_free_alt H1 fA eA).

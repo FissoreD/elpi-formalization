@@ -609,7 +609,7 @@ Inductive nur : {fset V} -> Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
     nur fv' b.1 (save_goals a gl (a2gs1 b)) (save_alts a gl (aa2gs bs) ++ a) s1 r -> 
       nur fv s [:: (call t, ca) & gl]%G a s1 r
 | FailE s s1 s2 t gl a al r ca fv fv': 
-  F u p fv t s = (fv',[::]%SEQ) -> nur fv s1 a al s2 r -> nur fv s [:: (call t, ca) & gl]%G [:: (s1, a) & al] s2 r.
+  F u p fv t s = (fv',[::]%SEQ) -> nur fv' s1 a al s2 r -> nur fv s [:: (call t, ca) & gl]%G [:: (s1, a) & al] s2 r.
 
 Lemma nur_consistent fv s G x xs1 xs2 s1 s2 :
   nur fv s G x s1 xs1 -> nur fv s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
@@ -624,8 +624,7 @@ Proof.
     assumption.
   - move=> s s1 s2 t gl a al r ca ?? H H1 IH xs2 s3 H2.
     apply: IH.
-    inversion H2; subst => //.
-    congruence.
+    inversion H2; subst => //; congruence.
 Qed.
 
 End Nur. 

@@ -8,55 +8,69 @@ Section NurEqiv.
   Variable (u : Unif).
   Variable (p : program).
 
-  Lemma tree_to_elpi A s1 B s2 b s0:
+  (* Lemma run_fv_subset u p fv s0 g a sn an:
+
+    nur u p fv0 s0 g a sn an
+    nur u p fv1 s0 g a sn an. *)
+
+  Lemma tree_to_elpi fv A s1 B s2 b s0:
+    vars_tree A `<=` fv ->
     valid_tree A ->
-      run u p s1 A (Some s2) B b -> 
+      run u p fv s1 A (Some s2) B b -> 
         Texists x xs,
           t2l A s1 nilC = x ::: xs /\
-          nur u p x.1 x.2 xs s2 (t2l B s0 nilC).
+          nur u p fv x.1 x.2 xs s2 (t2l B s0 nilC).
   Proof.
-    move=> +H.
+    move=> ++H.
     remember (Some _) as r eqn:Hr.
     elim: H s2 Hr s0; clear => //.
-    + move=> s1 _ A _ sA <-<- _ [<-] sIgn vA; subst.
+    + move=> s1 _ A _ sA fv <-<- _ [<-] sIgn fvP vA; subst.
       rewrite (success_t2l sIgn)//.
       repeat eexists.
       apply: StopE.
-    + move=> s1 s2 r A B n eA rB IH s4 ? sIgn vA; subst.
-      have {IH} /= [[sy y]/=[ys [+ H4]]]:= IH _ erefl sIgn (valid_tree_step vA eA).
-      have H5 := step_cb_same_subst1 _ _ vA eA; subst.
-      have [x[tl[H1 H2]]] := [elaborate s2l_CutBrothers _ _ s1 nilC vA eA].
-      rewrite H1 H2 => -[???]; subst.
-      repeat eexists.
-      simpl in *.
-      apply CutE.
-      rewrite H5//.
-    + move=> s1 s2 r A B n eA rB IH s4 ? sIgn vA; subst. 
+    + move=> s1 s2 r A B n fv fv' eA rB IH s4 ? sIgn fvP vA; subst.
+      suffices fvP': vars_tree B `<=` fv'.
+        have {IH} /= [[sy y]/=[ys [+ H4]]]:= IH _ erefl sIgn fvP' (valid_tree_step vA eA).
+        have H5 := step_cb_same_subst1 vA eA; subst.
+        have [x[tl[H1 H2]]] := [elaborate s2l_CutBrothers s1 nilC vA eA].
+        rewrite H1 H2 => -[???]; subst.
+        repeat eexists.
+        simpl in *.
+        apply CutE.
+        rewrite H5//.
+        there.
+        admit.
+      admit.
+    + move=> s1 s2 r A B n fv fv' eA rB IH s4 ? sIgn fvP vA; subst. 
       have /=vB:= (valid_tree_step vA eA). 
       have fA := step_not_failed eA notF.
       have [s[x[xs +]]] := [elaborate failed_t2l vA fA s1 nilC].
       move=> H; rewrite H; repeat eexists.
-      have [[sy y][ys /=[+ {}IH]]]:= IH _ erefl sIgn vB.
-      case: x H => [|g gs].
-        fNilG => H.
-        have [] := s2l_empty_hd_success vA (step_not_failed eA notF) H.
-        rewrite (step_not_solved eA notF)//.
-      fConsG g gs.
-      case: g => [[|c] ca] H; last first.
-        have:= s2l_Expanded_call _ _ vA eA H.
-        move=> []?; subst.
-        case X: F.
+      suffices fvP': vars_tree B `<=` fv'.
+        have [[sy y][ys /=[+ {}IH]]]:= IH _ erefl sIgn fvP' vB.
+        case: x H => [|g gs].
+          fNilG => H.
+          have [] := s2l_empty_hd_success vA (step_not_failed eA notF) H.
+          rewrite (step_not_solved eA notF)//.
+        fConsG g gs.
+        case: g => [[|c] ca] H; last first.
+          have:= s2l_Expanded_call vA eA H.
+          move=> []?; subst.
+          case X: F => [fv2 [|z zs]].
+            move=> [].
+            move=> fB sB H1; subst.
+            rewrite H1.
+            apply: FailE X _.
+            admit.
           move=> [].
-          move=> fB sB H1; subst.
-          rewrite H1.
-          apply: FailE X IH.
-        move=> [].
-        move=> fB sB; rewrite sB => -[???]; subst.
-        rewrite cats0 in IH.
-        apply: CallE X IH.
-      have [[]H1 H2] := s2l_Expanded_cut _ _ vA eA H; subst.
-      rewrite cats0 => ->[???]; subst.
-      by apply: CutE.
+          move=> fB sB; rewrite sB => -[???]; subst.
+          rewrite cats0 in IH.
+          apply: CallE X _.
+          admit.
+        have [[]H1 H2] := s2l_Expanded_cut vA eA H; subst.
+        rewrite cats0 => ->[???]; subst.
+        apply: CutE.
+        admit.
     + move=> s1 s2 A B r n fA nA H IH s3 ? sIgn vA; subst.
       have vB := valid_tree_next_alt vA nA.
       have H1 := failed_next_alt_some_t2l _ vA fA nA.
