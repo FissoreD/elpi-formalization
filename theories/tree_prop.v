@@ -47,14 +47,6 @@ Section RunP.
     is_dead A -> step u p fv  s A = (fv, Failure, A).
   Proof. move=>/is_dead_is_ko/is_ko_step//. Qed.
 
-  (* Lemma is_ko_expanded s {A}: 
-    is_ko A -> dead_run s A (Failed A) 0.
-  Proof. move=> dA; apply: expanded_fail (is_ko_step _) => //. Qed.
-
-  Lemma is_dead_expanded s {A}: 
-    is_dead A -> expandedb s A (Failed A) 0.
-  Proof. move=>/is_dead_is_ko/is_ko_expanded//. Qed. *)
-
   Lemma success_step u p fv s A: success A -> step u p fv s A = (fv, Success, A).
   Proof.
     elim: A s => //; try by do 2 eexists.
@@ -69,7 +61,7 @@ Section RunP.
   Ltac case_step_tag X A := let fv := fresh "_fv" in case X : step => [[fv []] A].
   Tactic Notation "case_step_tag" ident(X) ident(A) := case_step_tag X A.
 
-  Lemma step_solved_same u p fv fv' {s1 A B}: 
+  Lemma step_success u p fv fv' {s1 A B}: 
     step u p fv s1 A = (fv', Success, B) -> ((fv = fv') * (B = A) * (success A))%type.
   Proof.
     elim: A fv fv' s1 B => //.
@@ -114,7 +106,7 @@ Section RunP.
       case_step_tag X A1 => //=.
         by move=> -[??]; subst; rewrite !(HA _ _ _ _ X).
       case_step_tag Y B1 => //= -[??]; subst.
-      rewrite !(step_solved_same X) in Y *.
+      rewrite !(step_success X) in Y *.
       by rewrite !(HB _ _ _ _ Y) orbT.
   Qed.
 
@@ -123,7 +115,7 @@ Section RunP.
   Proof.
     remember (Done _ _) as d eqn:Hd => H.
     elim: H s2 B Hd => //; clear.
-    move=> s s' A B /step_solved_same H ??; rewrite !H => -[_<-]; rewrite H//.
+    move=> s s' A B /step_success H ??; rewrite !H => -[_<-]; rewrite H//.
   Qed. *)
 
   Lemma is_ko_next_alt {A} b: is_ko A -> next_alt b A = None.
@@ -232,7 +224,7 @@ Section RunP.
       have:= HA s1.
       case_step_tag X A1 => //=; only 1,2: by move=> H/H->; rewrite (step_not_solved X).
       move=> /(_ notF)->//=.
-      have [[<- <-] ->]:= (step_solved_same X); subst.
+      have [[<- <-] ->]:= (step_success X); subst.
       by rewrite 2!push /= => /HB.
   Qed.
 
@@ -593,7 +585,7 @@ Section RunP.
     move=> A HA B0 B HB C fv fv' s.
     rewrite!push; case eA: step => [[?[]] A']//=.
       move=> [<- _]; by apply: HA eA.
-    have [[??] _] := step_solved_same eA; subst.
+    have [[??] _] := step_success eA; subst.
     case eB: step => [[?[]]]//=[<- _].
     by apply: HB eB.
   Qed.

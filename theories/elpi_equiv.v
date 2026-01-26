@@ -158,7 +158,7 @@ Section vars_tree.
         [apply: HB X | apply: HA X].
     move=> A HA B0 B HB C fv fv' r s; rewrite !push.
     case X: (step _ _ _ _ A) => [[fvx r'] A']/=; case: ifP.
-      destruct r' => //= _; have [[??] sA] := step_solved_same X; subst.
+      destruct r' => //= _; have [[??] sA] := step_success X; subst.
       move => [<- _ _].
       by case Y: step => [[]]; apply/HB/Y.
     by move=> _ [<- _ _]; apply/HA/X.
@@ -244,7 +244,7 @@ Section vars_tree.
     move=> A HA B0 B HB C fv fv' r s; rewrite 2!fsubUset -andbA !push.
     move=> /and3P[vA vB0 vB] vs.
     case eA: step => [[fvA rA] A']/=; case: ifP => H.
-      destruct rA => //=; have [[??] sA]:= step_solved_same eA; subst.
+      destruct rA => //=; have [[??] sA]:= step_success eA; subst.
       move=> [<- ??]; subst.
       case eB: step => [[fvB rB] B']/=.
       rewrite 2!fsubUset (HB _ _ _ _ _ _ _ eB)//=; last by apply: vars_sigma_get_subst.
@@ -299,7 +299,7 @@ Section vars_tree.
     move=> A HA B0 B HB C fv fv' s.
     rewrite!push; case eA: step => [[?[]] A']//=.
       by move=> [_ <-]/=; rewrite !fsetSU//; apply: HA eA.
-    have [[??] _] := step_solved_same eA; subst.
+    have [[??] _] := step_success eA; subst.
     case eB: step => [[?[]]]//=[_ <-]/=.
     rewrite !fsubUset fsubsetU//=.
       rewrite fsubsetU//=; first by rewrite fsubsetUr.

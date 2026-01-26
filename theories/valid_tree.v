@@ -257,7 +257,7 @@ Section valid_tree.
       move=> /eqP -> {B HB}.
       have:= HA s1 sv vA.
       case X: step => //[[sv' []]A']/=vA'; only 1-3: by rewrite eqxx vA' valid_tree_big_and if_same.
-      have [? sA']:= step_solved_same X; subst.
+      have [? sA']:= step_success X; subst.
       congruence.
   Qed.
 

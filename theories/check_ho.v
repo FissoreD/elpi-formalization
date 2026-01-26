@@ -68,7 +68,7 @@ Proof.
     case E: step => [[]A']//.
       move=> [?]; subst => /=.
       apply: HA E.
-    have [? sA] := step_solved_same E; subst A'.
+    have [? sA] := step_success E; subst A'.
     case X: step => [[]B']//[<-]{C}/=.
     rewrite -success_cut in sA.
     by apply: success_is_ko.
@@ -2656,7 +2656,7 @@ Proof.
   - move=> A HA B0 B HB s /= /andP[vA] + kA.
     have:= HA s vA kA.
     case eA: step => [[]A']//= {}HA; only 1-3: by rewrite (step_not_solved eA).
-    have [? sA]:= step_solved_same eA; subst.
+    have [? sA]:= step_success eA; subst.
     by rewrite sA fun_if !success_is_ko//=(if_same, success_cut)//.
 Qed.
 
@@ -2853,7 +2853,7 @@ Proof.
   move: (HA s).
   case eA: step => [[]A']//= /(_ isT) {}HA; cycle-1; [|by rewrite HA..].
   move: (HB (get_substS s A')).
-  have [? sA] := step_solved_same eA; subst A'.
+  have [? sA] := step_success eA; subst A'.
   by case eB: step => [[]B']//= /(_ isT) {}HB _; rewrite HB//.
 Qed.
 
@@ -2866,7 +2866,7 @@ Proof.
   case eA: step => [[]A']//.
     by move=> [<-]{C}; rewrite (HA A' s)// (step_not_solved eA).
   case eB: step => [[]B']//[<-].
-  have [? sA] := step_solved_same eA; subst A'.
+  have [? sA] := step_success eA; subst A'.
   by rewrite sA (HB _ _ eB).
 Qed.
 
@@ -2889,7 +2889,7 @@ Proof.
   case eA: step => [[]A']//.
     move=> [<-]/=; rewrite (step_not_solved eA)//.
     by move=> /(HA _ s)->//.
-  have [? sA]:= step_solved_same eA; subst A'.
+  have [? sA]:= step_success eA; subst A'.
   case eB: step => [[]B']//[<-]/=; rewrite sA.
   by move=> /(HB _ _ eB) ->; rewrite orbT.
 Qed.
@@ -2979,7 +2979,7 @@ Proof.
     case eB: step => [[]B']//= [?]; subst.
     rewrite /= success_cut sA get_ctxS_cutl//.
     by apply: HB eB.
-  case eA: step => [[]A']//; last by rewrite !(step_solved_same eA) in sA.
+  case eA: step => [[]A']//; last by rewrite !(step_success eA) in sA.
   move=> [<-{C}]/=.
   case: ifP => sA'; last by apply: HA eA.
   rewrite get_ctxS_base_and (HA _ _ s1)//.
@@ -3900,7 +3900,7 @@ Proof.
     by move=> A HA s B HB >/=; case: ifP; case: step => [[]]//.
   move=> A HA B0 B HB b C O s1 d0/=/andP[vA].
   case: ifP => /=[sA vB|sA /eqP]; subst; last first.
-    case eA: step => [[]A']//=; last by rewrite !(step_solved_same eA) in sA.
+    case eA: step => [[]A']//=; last by rewrite !(step_success eA) in sA.
     move=> ?[<-{C}]/=; subst.
     rewrite (step_CB_is_ko eA).
     case sA': success; rewrite !(get_ctxS_base_and _ _ _ base_and_big_and, HA _ _ _ _ _ _ eA)//.
@@ -3987,7 +3987,7 @@ Proof.
     rewrite (step_not_solved eA)//= => /eqP?[?+];subst.
     case tA: tc_tree_aux => [[DA' SA']|]//= _.
     by apply: HA eA tA.
-  have [? sA]:= step_solved_same eA; subst.
+  have [? sA]:= step_success eA; subst.
   rewrite sA// => vB [+?]; subst.
   case eB: step => [[]B']//= _.
   case: tc_tree_aux => //=.
@@ -4018,7 +4018,7 @@ Proof.
     rewrite (step_not_solved eA)//= => /eqP?[?+];subst.
     case tA: tc_tree_aux => [[DA' SA']|]//= _.
     by apply: HA eA tA.
-  have [? sA]:= step_solved_same eA; subst.
+  have [? sA]:= step_success eA; subst.
   rewrite sA// => vB [+?]; subst.
   case eB: step => [[]B']//= _.
   case: tc_tree_aux => //=.
@@ -4039,7 +4039,7 @@ Proof.
     rewrite tc_tree_aux_big_and/=.
     case sA: success; case tA: tc_tree_aux => [[DA SA]|]//= H.
     by apply: HA eA tA.
-  have [? sA]:= step_solved_same eA; subst.
+  have [? sA]:= step_success eA; subst.
   rewrite sA => vB[+?]; subst.
   case eB: step => [[]B']//= _.
   rewrite success_cut sA//= tc_tree_aux_cutl//= get_ctxS_cutl//.
@@ -4084,7 +4084,7 @@ Proof.
     rewrite tc_tree_aux_big_and/=.
     case sA: success; case tA: tc_tree_aux => [[DA' SA']|]//= _.
     by apply: HA eA _ tA.
-  have [? sA] := step_solved_same eA; subst.
+  have [? sA] := step_success eA; subst.
   case eB: step => [[]B']//=.
   rewrite sA => vB[<-{C}]/=kA; rewrite sA.
   case tA: tc_tree_aux => [[DA' SA']|]//=.
@@ -4381,16 +4381,16 @@ Proof.
     by rewrite compat_sig_comm compat_sig_catR//(tc_tree_aux_sub (get_ctxS_domf _ _) tOB tB).
   case kA': (is_ko (step u s1 A).2).
     have -> : is_sc (step u s1 A).1 = false.
-      by move: kA'; case eA: step => [[]A']//=; rewrite success_is_ko//=!(step_solved_same eA).
+      by move: kA'; case eA: step => [[]A']//=; rewrite success_is_ko//=!(step_success eA).
     by move=> ++ [<-<-]; rewrite (@minD_comm _ Func).
   rewrite sA in tA tA'.
   case tA2: (tc_tree_aux _ _ _.2) => [DA2 SA2] H.
   have {HA HB} := HA _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ tA tA2.
   move=> []//=.
-    by move: H; case eA: step => [[]A']//=/tc_andP[]//=; rewrite !(step_solved_same eA) in sA.
+    by move: H; case eA: step => [[]A']//=/tc_andP[]//=; rewrite !(step_success eA) in sA.
   move=> MINA2 MP2.
   case eA: step => [[]A']//=; last first.
-  - by rewrite !(step_solved_same eA) in sA.
+  - by rewrite !(step_success eA) in sA.
   - have [? fA]/= := step_failed_same eA; subst A'.
     move: H; rewrite eA/= => /tc_andP[tNA' tNB0 tNB].
     rewrite sA in tA tA' *.

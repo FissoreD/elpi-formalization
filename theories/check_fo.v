@@ -412,7 +412,7 @@ Qed.
         - by rewrite cC /=; left.
         - by rewrite cC /=; left.
         rewrite success_has_cut// in cC.
-        by rewrite !(step_solved_same eA).
+        by rewrite !(step_success eA).
       case/andP=> cB0 cB.
       case eA: step => [[sv'[]]C]/=; rewrite ?cB ?cB0 ?orbT; auto.
       move: (HB (get_substS s C) sv' cB).
@@ -470,7 +470,7 @@ Qed.
       rewrite [snd _]fun_if/=.
       case: ifP => /= H1 + H3; rewrite ?H2 H3 !orbT !andbT.
         move: H1; case eA: step => [[?[]]A']//=.
-        by rewrite (step_solved_same eA) in sA.
+        by rewrite (step_success eA) in sA.
       move=> /orP[|/HA->]; last by rewrite !orbT.
       by move=> /andP[->->]; rewrite !orbT.
   Qed.

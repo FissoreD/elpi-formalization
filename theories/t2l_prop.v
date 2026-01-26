@@ -296,7 +296,7 @@ Defined.
         rewrite fA failed_success//.
         case nA: next_alt => [D|]//= _.
         by rewrite (HA _ _ _ _ _ _ _ vA eA nA)//.
-      have [? sA]:= step_solved_same eA; subst.
+      have [? sA]:= step_success eA; subst.
       rewrite sA => vB.
       case eB: step => [[?[]] B']//[?<-]/=.
       rewrite success_failed//sA.
@@ -468,7 +468,7 @@ Qed.
         rewrite (step_not_solved e)//=.
         move=> /eqP->[?<-]/=; rewrite get_substS_big_and if_same.
         rewrite !(HA _ _ _ _ vA e)//.
-      have [[??] sA] := step_solved_same e; subst.
+      have [[??] sA] := step_success e; subst.
       rewrite sA/= => vB.
       case e1: step => [[?[]]B']//=[?<-]/=; rewrite success_cut sA ges_subst_cutl//; subst.
       rewrite !(HB _ _ _ _ vB e1)//.
@@ -512,7 +512,7 @@ Qed.
           rewrite get_substS_big_and if_same//.
         - rewrite !empty_caG_add_deepG///empty_caG all_cat.
           apply/andP; split => //; apply: empty_ca_atoms.
-      have [[??] sAx] := step_solved_same eA; subst.
+      have [[??] sAx] := step_success eA; subst.
       rewrite sAx/==> vB.
       case eB: step => //[[?[]]B']// [?<-]/=; subst.
       rewrite (success_t2l empty (valid_tree_step vA eA) sAx)/=.
@@ -572,7 +572,7 @@ Qed.
         rewrite (step_not_solved e)//.
         move=>/eqP->{B HB} [?<-]/=; subst.
         by rewrite (HA _ _ _ _ vA e)//= failed_big_and andbF.
-      have [? sA] := step_solved_same e; subst.
+      have [? sA] := step_success e; subst.
       rewrite sA.
       case e1: step => //[[?[]]B']// vB [?<-]/=; subst.
       move: sA; rewrite -success_cut.
@@ -692,12 +692,12 @@ Qed.
           move=>/(_ _ IsList_alts).
           rewrite (s2l_size s1 l1).
           by case: t2l => //=[[? x] xs]; rewrite //=t2l_big_and//.
-        - have [??]:= (step_solved_same e); congruence.
+        - have [??]:= (step_success e); congruence.
       move=> [a ca1] l2 SA []??; subst.
       have:= HA _ l1 _ _ _ _ _ fv vA SA.
       case e: step => [[?[]]A']//=;
       case: t2l => //[[s x] xs]; only 1-3: by rewrite t2l_big_and.
-      have [??]:= step_solved_same e; congruence.
+      have [??]:= step_success e; congruence.
   Qed.
 
   Lemma s2l_Expanded_cut fv fv' A B s0 s3 ca x tl l1:
@@ -768,7 +768,7 @@ Qed.
         rewrite -cat_cons //.
         rewrite t2l_big_and make_LB01_cons/= make_lB01_empty1 cat_cons.
         by rewrite [_ ++ make_lB0 _ _]cat_cons cat0s -cat_cons.
-      have [[??] sA]:= step_solved_same eA; subst.
+      have [[??] sA]:= step_success eA; subst.
       rewrite sA => /= vB.
       case eB: step => [[?[]]B']//=[?<-]//=; subst.
       rewrite (success_t2l empty vA)//=.
@@ -896,7 +896,7 @@ Qed.
         rewrite -!cat_cons; f_equal.
         rewrite add_deep_goalsP//?empty_ca_atoms//.
         by rewrite add_deep_altsP//?empty_ca_atoms1?empty_caG_r2l// H.
-      have [[??] sA] := step_solved_same e; subst.
+      have [[??] sA] := step_success e; subst.
       rewrite sA => vB.
       case e1: step => [[?[]]B']//[?<-]/=; subst.
       rewrite (success_failed sA)/=sA/=.

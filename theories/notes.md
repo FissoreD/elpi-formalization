@@ -201,7 +201,7 @@ The more interesting and used are:
 - the small lemmas in the section `tree_op` relating the success, failed,
   is_dead, cutr and cutl functions. (The is_ko definition is no longer useful,
   it should be cleaned up in a future version)
-- `step_solved_same : step s1 A = Success s2 B -> ((s1 = s2) * (A = B))%type.`
+- `step_success : step s1 A = Success s2 B -> ((s1 = s2) * (A = B))%type.`
 - `step_solved_success : step s1 A = Success s2 B -> (success A * success B)%type.` (*which can only return the first projection, due to the previous lemma*)
 - `step_not_dead : is_dead A = false -> step s A = r -> is_dead (get_tree r) = false`
 - `step_failure_failed : step s1 A = Failure B -> (failed A * failed B)%type.`

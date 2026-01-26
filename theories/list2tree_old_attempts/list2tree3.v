@@ -184,7 +184,7 @@ Proof.
   remember (Done _ _) as d eqn:Hd => +H.
   elim: H s' B Hd; clear => //=.
   - move=> s1 s2 A B HA s3 C [??]vA; subst.
-    have [[??] sC]:= step_solved_same _ HA; subst.
+    have [[??] sC]:= step_success _ HA; subst.
     apply: run_a2t_success sC.
   - move=> s1 s2 r A B b HA HB IH s3 C ? vA; subst.
     have /=vB := valid_state_step _ vA HA.

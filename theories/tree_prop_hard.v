@@ -10,7 +10,6 @@ Section s.
   Variable u : Unif.
   Variable p : program.
 
-
   Lemma run_or0 s1 sv A s B s2 r b:
     run u p sv s1 (Or A s B) s2 r b -> b = false.
   Proof.
@@ -272,7 +271,7 @@ Section s.
     run u p fv s1 A s2 A' b ->
         if s2 is None then
           if b == false then (
-            forall sX X s3 X' n1, run u p fv sX X s3 X' n1 ->
+            forall sX X s3 X' n1 fv', run u p fv' sX X s3 X' n1 ->
             if is_dead A then 
               (run u p fv s1 (Or A sX X) s3 (Or (get_dead A X') sX X') false)%type2
             else
@@ -325,19 +324,19 @@ Section s.
         by rewrite is_dead_step in HA.
       case:eqP => H; subst.
         move=> IH.
-        move=> sX X s3 X' n1 H.
+        move=> sX X s3 X' n1 fv2 H.
         rewrite/get_dead/=.
         case: ifP => dA.
           by rewrite is_dead_step in HA.
         apply: run_step.
           rewrite/= HA dA//.
-        have:= IH _ _ _ _ _ H; rewrite (step_not_dead dA HA).
+        by have:= IH _ _ _ _ _ _ H; rewrite (step_not_dead dA HA)//.
       move=> IH sX X.
       apply: run_step.
         rewrite/= HA; case: ifP => // dA.
         by rewrite is_dead_step in HA.
       by apply: IH.
-    + move=> s1 s2 A B r n fA nA _.
+    + move=> s1 s2 A B r n fv fA nA _.
       case: s2 => //[s2|] IH; auto.
         move=> sX X.
         apply: run_fail; rewrite /=?(next_alt_dead nA)//.
@@ -346,7 +345,7 @@ Section s.
       case:eqP => //Hn; subst.
         rewrite  !(next_alt_dead nA)//.
         move=> IH.
-        move=> sX X s3 X' n1 H.
+        move=> sX X s3 X' n1 fv2 H.
         apply: run_fail => /=.
           rewrite  !(next_alt_dead nA)//.
         rewrite !(next_alt_dead nA) nA//.
@@ -356,7 +355,7 @@ Section s.
         rewrite  !(next_alt_dead nA)//.
         rewrite  !(next_alt_dead nA) nA//.
       apply: IH.
-    + move=> s1 B fB nB/=sX X s3 X' n1 H.
+    + move=> s1 B fB fv nB/=sX X s3 X' n1 fv' H.
       rewrite /get_dead.
       case: ifP => dB.
         rewrite dB/=.
@@ -773,7 +772,7 @@ Section s.
   Proof.
     remember (And _ _ _) as a eqn:Ha => H.
     elim: H A B0 B Ha; clear.
-    - move=> s1 s2 r A B /step_solved_same [[??]+] ? C D E ?; subst => /=.
+    - move=> s1 s2 r A B /step_success [[??]+] ? C D E ?; subst => /=.
       move=> /andP[sC sE].
       repeat eexists.
         apply: run_done (success_step _ _ sC) erefl.
@@ -789,7 +788,7 @@ Section s.
       have [sm[r1[b1 [{}IH [b2[r2 H2]]]]]]:= IH _ _ _ erefl.
       do 3 eexists; split.
         apply: run_done X erefl.
-      have [[??]sC]:= step_solved_same _ X; subst.
+      have [[??]sC]:= step_success _ X; subst.
       have sC' := sC.
         rewrite -success_cut in sC'.
       have {IH} [?[??]] := run_consistent _ _ IH (run_success1 _ _ sC'); subst.
@@ -816,7 +815,7 @@ Section s.
       have [sm[r1[b1 [{}IH [b2[r2 H2]]]]]]:= IH _ _ _ erefl.
       do 3 eexists; split.
         apply: run_done X erefl.
-      have [[??]sC]:= step_solved_same _ X; subst.
+      have [[??]sC]:= step_success _ X; subst.
       have {IH} [?[??]] := run_consistent _ _ IH (run_success1 _ _ sC); subst.
       case: H2 => H2.
         repeat eexists; left; apply: run_step Y H2.
