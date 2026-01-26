@@ -98,33 +98,28 @@ Proof.
         have /= fA' := next_alt_failed nA.
         have /= vA' := (valid_tree_next_alt vA nA).
         rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
-        have /= vA'':= next_cut_valid fA' vA' erefl.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-        have [H1 H2] := next_cut_s2l p u fv fA' vA' H erefl.
-        rewrite clean_ca_nil/= in H1.
-        have vnA:= next_cut_valid fA' vA' erefl.
-        have /= [t1[n [{}IH H3]]] := IH _ _ vnA H1; subst.
-        move: H1 H2 vnA IH; case X: (next_cut _) => [b A2]/= H1 H2 vnA IH.
-        case: b X H2 => /= X H2.
+        case X: (step u p fv s A') => [[fv' r'] A''].
+        have:= next_cut_s2l fA' vA' H X => /=.
+        rewrite clean_ca_nil/= => -[H1 H2].
+        have /= [t1[n [{}IH H3]]] := IH _ _ (valid_tree_step vA' X) H1; subst.
+        move: H2; case: ifP => Hx [??]; subst.
           repeat eexists.
           apply: run_fail fA nA _.
-          apply: run_cut H2 IH.
+          apply: run_cut X IH.
         repeat eexists.
         apply: run_fail fA nA _.
-        apply: run_step H2 IH.
-      have /= vA'':= next_cut_valid fA vA erefl.
+        apply: run_step X IH.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-      have [H1 H2] := next_cut_s2l p u fv fA vA H erefl.
-      rewrite clean_ca_nil/= in H1.
-      have vnA:= next_cut_valid fA vA erefl.
-      have /= [t1[n [{}IH ?]]] := IH _ _ vnA H1.
-      subst.
-      move: H1 H2 vnA IH; case X: (next_cut _) => [b A2]/= H1 H2 vnA IH.
-      case: b X H2 => /= X H2.
+      case X: (step u p fv s A) => [[fv' r'] A'].
+      have:= next_cut_s2l fA vA H X => /=.
+      rewrite clean_ca_nil/= => -[H1 H2].
+      have /= [t1[n [{}IH H3]]] := IH _ _ (valid_tree_step vA X) H1; subst.
+      move: H2; case: ifP => Hx [??]; subst.
         repeat eexists.
-        apply: run_cut H2 IH.
+        by apply: run_cut IH.
       repeat eexists.
-      apply: run_step H2 IH.
+      by apply: run_step IH.
     }
   - move=> s1 s2 a [s0 r0]/= rs gl r t ca fv fv' B ELPI IH s3 A vA H.
     {
@@ -132,11 +127,10 @@ Proof.
       case fA: (failed A).
         case nA: (next_alt false A) => [A'|]; last first.
           by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
+        rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
+        rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
         have /= fA' := next_alt_failed nA.
         have /= vA' := (valid_tree_next_alt vA nA).
-        have /= vA'':= next_cut_valid fA' vA' erefl.
-        rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
-        rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
         have [He H1 H2] := next_callS_s2l p u fv fA' vA' H.
         rewrite B/= in He; subst.
         rewrite clean_ca_nil/= in H1.
@@ -146,7 +140,6 @@ Proof.
         repeat eexists.
         apply: run_fail fA nA _.
         apply: run_step H2 IH.
-      have /= vA'':= next_cut_valid fA vA erefl.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
       have [He H1 H2] := next_callS_s2l p u fv fA vA H.
       rewrite B/= in He; subst.
@@ -165,7 +158,6 @@ Proof.
           by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
         have /= fA' := next_alt_failed nA.
         have /= vA' := (valid_tree_next_alt vA nA).
-        have /= vA'':= next_cut_valid fA' vA' erefl.
         rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
         have [He H1 H2] := next_callS_s2l p u fv fA' vA' H.
@@ -177,7 +169,6 @@ Proof.
         repeat eexists.
         apply: run_fail fA nA _.
         apply: run_step H2 IH.
-      have /= vA'':= next_cut_valid fA vA erefl.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
       have [He H1 H2] := next_callS_s2l p u fv fA vA H.
       rewrite B/= in He; subst.
