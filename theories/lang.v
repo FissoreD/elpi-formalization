@@ -457,9 +457,9 @@ Fixpoint select u fv (query : RCallable) (modes:list mode) (rules: list R) sigma
   | rule :: rules =>
     match H u modes query rule.(head) sigma with
     | None => select u fv query modes rules sigma
-    | Some (sigma) => 
+    | Some (sigma1) => 
       let: (fv, rs) := select u fv query modes rules sigma in
-      (vars_sigma sigma `|` varsU_rule rule `|` fv, (sigma, rule) :: rs)
+      (vars_sigma sigma1 `|` varsU_rule rule `|` fv, (sigma1, rule) :: rs)
     end
   end.
 
@@ -468,7 +468,7 @@ Fixpoint select u fv (query : RCallable) (modes:list mode) (rules: list R) sigma
    outside this set
 *)
 Definition F u pr fv (query:Callable) s : {fset V} * seq (Sigma * R) :=
-  (match tm2RC (deref s (Callable2Tm query)) with
+  match tm2RC (deref s (Callable2Tm query)) with
       | None => (fv, [::]) (*this is a call with flex head, in elpi it is an error! *)
       | Some (query, kp) =>
         match pr.(sig).[? kp] with 
@@ -477,7 +477,7 @@ Definition F u pr fv (query:Callable) s : {fset V} * seq (Sigma * R) :=
             select u fv query (get_modes_rev query sig) rules s
           | None => (fv, [::])
           end
-      end).
+      end.
 
 (* Fixpoint varsD (l: seq {fset V}) :=
   match l with

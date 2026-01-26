@@ -315,8 +315,8 @@ Section s.
       have:= run_or_ko_right1 sX (@is_ko_cutr X) HB.
       rewrite cutr2 if_same dead_cutr.
       rewrite /= -(run_none_dead_res HB) is_dead_dead//.
-    + move=> s1 s3 r A B ?? n HA _.
-      case: s3 => //[s3|].
+    + move=> s1 s3 r A B n fv fv' HA HB.
+      case: s3 HB => //[s3|] H3.
         move=> + sX X.
         move=> /(_ sX X).
         apply: run_step => /=.
@@ -331,7 +331,7 @@ Section s.
           by rewrite is_dead_step in HA.
         apply: run_step.
           rewrite/= HA dA//.
-        by have:= IH _ _ _ _ _ H; rewrite (step_not_dead dA HA).
+        have:= IH _ _ _ _ _ H; rewrite (step_not_dead dA HA).
       move=> IH sX X.
       apply: run_step.
         rewrite/= HA; case: ifP => // dA.

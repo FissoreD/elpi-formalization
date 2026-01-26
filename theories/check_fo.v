@@ -330,30 +330,42 @@ Qed.
     by apply/IH/Fs.
   Qed.
 
+
+  Lemma select_same2 vx vy q m rs s:
+    (select u vx q m rs s).2 = (select u vy q m rs s).2.
+  Proof.
+    elim: rs vx vy q m s => //= r rs IH vx vy q m s.
+    case: H => //=?; rewrite !push//=; f_equal; auto.
+  Qed.
+
   Lemma is_det_no_free_alt {sP t s1 fv}:
     check_rules sP p.(rules) -> tm_is_det sP t -> 
       det_tree sP (backchain u p fv s1 t).2.
   Proof.
-    rewrite /backchain/F 2!push/=.
+    rewrite /backchain/F.
     case X: tm2RC => //=[[q qp]].
     case: p => rules sig1 /=.
-    generalize {| rules := rules; sig := sig1 |} as pr => pr.
-    case: fndP => //=; clear pr.
-    elim: rules s1 t q qp X => //.
-    move=> [] hd bo rules IH s t q qp X qpP.
-    rewrite check_rules_cons [head _]/= [premises _]/= => /andP[H1 H1'] H2.
-    rewrite fresh_rules_cons/=.
+    (* generalize {| rules := rules; sig := sig1 |} as pr => pr. *)
+    case: fndP => //= kP.
+    generalize (get_modes_rev q sig1.[kP]).
+    clear kP sig1 p => l.
+    rewrite !push/=.
+    generalize (fresh_rules fv rules).1.
+    elim: rules s1 t q qp X fv l => //.
+    move=> [] hd bo rules IH s t q qp X fv l/=f /andP[ck1 ck2] dett.
+    have {}IH := IH _ _ _ _ X _ _ _ ck2 dett.
+    rewrite !push/=.
     case H: H => /= [s2|]; last first.
-      have:= IH _ _ _ _ X qpP H1' H2.
-      by [].
-    have:= IH _ _ _ _ X qpP H1' H2.
-    have Hx := tiki_taka X H2 H.
+      by rewrite (select_same2 _ ((fresh_rules fv rules).1)).
+    have Hx := tiki_taka X dett H.
     rewrite head_fresh_rule/=rcallable_is_det_fresh in Hx.
-    move/orP: H1 => []; first by rewrite Hx.
+    move/orP: ck1 => []; first by rewrite Hx.
+    rewrite !push/=.
+    have {IH}:= IH fv l f.
     rewrite head_fresh_premises/=.
-    case S: select => [|[s0 r0] rs]/=; rewrite det_tree_big_and.
-      move => /cut_followed_by_det_nfa_and.
-      by move=> /det_tree_fresh ->.
+    case S: select => [fv' [|[r0 s0] rs]]/=; rewrite det_tree_big_and.
+      move => _ /cut_followed_by_det_nfa_and.
+      by move=> /det_tree_fresh->.
     move=> Ha Hb.
     have ? : check_atoms sP (fresh_atoms (fresh_rcallable (fresh_rules fv rules).1 hd).1 bo).2.
       case W: fresh_atoms.
