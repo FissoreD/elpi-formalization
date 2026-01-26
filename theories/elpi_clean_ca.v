@@ -1,8 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang tree tree_prop valid_tree elpi t2l t2l_prop tree_vars.
-From elpi.apps Require Import derive derive.std.
-From HB Require Import structures.
+From det Require Import tree tree_prop valid_tree elpi t2l t2l_prop.
 From det Require Import zify_ssreflect.
 
 Section clean_ca.

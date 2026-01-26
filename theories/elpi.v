@@ -2,7 +2,6 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
-From det Require Import zify_ssreflect.
 
 (*BEGIN*)
 Section aux.
@@ -358,21 +357,6 @@ Global Notation "x :: xs" :=
   (at level 60, no associativity, only parsing)
   : SE.
 
-(* Notation "[ :: ]" := (@nilC _ _ _) (format "[ :: ]") : SE.
-Notation "[ :: x1 ]" := (@consC _ _ _ x1 (@nilC _ _ _)) (format "[ ::  x1 ]") : SE.
-Notation "[ :: x & s ]" := (@consC _ _ _ x s) (format "'[hv' [ :: '['  x ']' '/ ' &  s ] ']'", only parsing) : SE.
-Notation "[ :: x1 , x2 , .. , xn & s ]" := (@consC _ _ _ x1 (@consC _ _ _ x2 .. (@consC _ _ _ xn s) ..)) (format "'[hv' [ :: '['  x1 , '/'  x2 , '/'  .. , '/'  xn ']' '/ '  &  s ] ']'" ) : SE. *)
-
-(* 
-Global Notation "-[]" :=
-  (@nilC _ _ _)
-  (at level 3, no associativity,only printing)
-  : SE.
-
-Global Notation "(( x ))" := (consC x nilC)
-  (at level 3, no associativity,only printing)
-  : SE. *)
-
 (*SNIP: elpi_def*)
 Inductive alts :=
   | no_alt
@@ -553,12 +537,14 @@ Proof.
     rewrite cat0s => H.
     have:= f_equal size H.
     move=> /(_ _ IsList_alts).
-    rewrite size_cons size_cat; lia.
+    rewrite size_cons size_cat.
+    by rewrite addnC -addnS => /addSn_false.
   move=> x xs IH [|y ys]//l3; fNilA.
     fConsA x xs => H.
     have:= f_equal size H.
     move=> /(_ _ IsList_alts).
-    rewrite cat_cons size_cons !size_cat size_nil; lia.
+    rewrite cat_cons size_cons !size_cat size_nil.
+    by rewrite addnC -addnS => /esym /addSn_false.
   move=>[<-]/IH->//.
 Qed.
 

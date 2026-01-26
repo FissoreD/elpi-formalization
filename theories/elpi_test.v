@@ -1,7 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import ctx lang tree tree_prop valid_tree elpi t2l.
-From elpi.apps Require Import derive derive.std.
-From HB Require Import structures.
+From det Require Import tree elpi t2l.
 
 Section Nur.
 

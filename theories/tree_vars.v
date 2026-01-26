@@ -159,17 +159,6 @@ Section vars_tree.
     by move=> _ [<- _ _]; apply/HA/X.
   Qed.
 
-  (* Lemma vars_tm_F_sub c c' fv fv' s:
-    vars_tm (Callable2Tm c) `|` vars_sigma s `<=` fv ->
-    F u p fv c s = (fv', c') ->
-    varsU (seq.map (fun x => vars_sigma x.1 `|` varsU_rule x.2) c') `<=` fv'.
-  Proof.
-    (*rewrite/F !push. => + [<-<-]; clear.
-    generalize (Callable2Tm c); clear c => t.
-    case X: tm2RC => [[t' thd]|]//.
-    case: fndP => //= xp. *)
-  Admitted. *)
-
   Lemma vars_tree_big_and r0:
     vars_tree (big_and r0) = vars_atoms r0.
   Proof. by elim: r0 => //= -[|c]//=l ->; rewrite/vars_atoms/= -fsetUA fsetUid//. Qed.

@@ -1,8 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import ctx lang tree tree_prop valid_tree elpi t2l.
-From elpi.apps Require Import derive derive.std.
-From HB Require Import structures.
+From det Require Import ctx tree tree_prop valid_tree elpi t2l.
 From det Require Import zify_ssreflect.
 
 Open Scope SE.
@@ -453,7 +451,6 @@ Qed.
   Qed.
 
   Lemma step_cb_same_subst1 fv fv' A B s1:
-  (* TODO: put this prop inside s2l_CutBrothers *)
     valid_tree A -> step u p fv s1 A = (fv', CutBrothers, B) -> ((get_substS s1 A = get_substS s1 B)).
   Proof.
     elim: A B s1 fv fv' => //=.

@@ -1,17 +1,12 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import finmap ctx lang tree tree_prop.
 
-(* Notation "X &&& Y" := (And X _ Y) (at level 3).
-Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).
-Notation "` X" := ((call X)) (at level 3). *)
-
 Definition prop := b (d Pred).
 Definition build_arr m := arr m prop prop.
 
 Definition build_progr l := {|
-    (* modes := [fmap].[IKp false <- [::o]].[IKp 1 <- [::o]].[IKp 2 <- [::o]].[IKp 200 <-  [::]]; *)
-    sig := [fmap].[IKp false <- build_arr o].[IKp 1 <- build_arr o].[IKp 2 <- build_arr o].[IKp 200 <- prop];
-    rules := l;
+  sig := [fmap].[IKp false <- build_arr o].[IKp 1 <- build_arr o].[IKp 2 <- build_arr o].[IKp 200 <- prop];
+  rules := l;
 |}.
 
 Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=

@@ -1,7 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import tree tree_prop.
-From det Require Import zify_ssreflect.
 
 Section s.
   Variable u : Unif.
