@@ -78,7 +78,7 @@ Module B.
       case bA: base_or_aux; constructor; last first.
         move=> [X[Y H]]; subst.
         by rewrite base_or_aux_big_or in bA.
-      pose head := RCallable_Kp (IKp 1).
+      pose head := Callable_Kp (IKp 1).
       elim: A bA => //=; first by exists [::],[::].
         move=> A _ s B HB /andP[/spec_base_and[L <-]] /HB [X [Y <-]].
         by eexists L, ((s, {|head := head; premises := X|}) :: Y) => //=.
@@ -115,7 +115,7 @@ Module B.
       case bA: base_or_aux_ko; constructor; last first.
         move=> [X[Y H]]; subst.
         by rewrite base_or_base_or_ko_cutr//base_or_aux_big_or in bA.
-      pose head := RCallable_Kp (IKp 1).
+      pose head := Callable_Kp (IKp 1).
       elim: A bA => //=; first by exists [::],[::].
         move=> A _ s B HB /andP[/spec_base_and_ko[X?]] /HB [Y[Z H]]; subst.
         by eexists X, ((s, {|head := head; premises := Y|}) :: Z) => //=.

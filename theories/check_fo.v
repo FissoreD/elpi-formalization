@@ -15,14 +15,13 @@ Section checker.
   Fixpoint getS_Callable (sP: sigT) (t: Callable) : option S :=
     match t with
     | Callable_Kp pn => sP.[? pn]
-    | Callable_V vn => None
     | Callable_Comb hd _ => getS_Callable sP hd
     end.
 
-  Fixpoint rcallable_is_det (sP: sigT) (t:RCallable) : bool :=
+  Fixpoint callable_is_det (sP: sigT) (t:Callable) : bool :=
     match t with
-    | RCallable_Comb h _ => rcallable_is_det sP h
-    | RCallable_Kp k => 
+    | Callable_Comb h _ => callable_is_det sP h
+    | Callable_Kp k => 
       if sP.[?k] is Some s then is_det_sig s
       else false
     end.
@@ -45,7 +44,7 @@ Section checker.
     end.
 
   Definition check_rule sP head prems :=
-    (rcallable_is_det sP head == false) || 
+    (callable_is_det sP head == false) || 
       check_atoms sP prems.
 
   Definition check_rules sP rules :=
@@ -186,7 +185,7 @@ Section check.
     t' = Some (q, pn) ->
     tm_is_det sP t ->
       H u modes q hd1 s = Some s3 ->
-        rcallable_is_det sP hd1.
+        callable_is_det sP hd1.
   Proof.
     move=>/=.
     elim: modes q pn hd1 t s s3 => //=.
@@ -198,8 +197,8 @@ Section check.
       by move=> [->->]/=; rewrite/tm_is_det/=; case: fndP.
     move=> m //ml IH q pn hd t s1 s2 H1 H2 H3.
     have {H3}: exists f1 a1 f2 a2,
-      q = RCallable_Comb f1 a1 /\
-      hd = RCallable_Comb f2 a2 /\
+      q = Callable_Comb f1 a1 /\
+      hd = Callable_Comb f2 a2 /\
       (obind (matching u a1 a2) (H u ml f1 f2 s1) = Some s2 \/
       obind (unify u a1 a2) (H u ml f1 f2 s1) = Some s2).
     by move: H3; destruct m, q, hd => //; repeat eexists; auto.
@@ -221,26 +220,26 @@ Section check.
 Qed.
 
   Lemma head_fresh_rule fv r:
-    head (fresh_rule fv r).2 = (fresh_rcallable fv r.(head)).2.
+    head (fresh_rule fv r).2 = (fresh_callable fv r.(head)).2.
   Proof.
     destruct r; rewrite/fresh_rule/= 1!push.
     case F: fresh_atoms => [fv' A']//=.
   Qed.
 
   Lemma head_fresh_premises fv r:
-    premises (fresh_rule fv r).2 = (fresh_atoms (fresh_rcallable fv r.(head)).1 r.(premises)).2.
+    premises (fresh_rule fv r).2 = (fresh_atoms (fresh_callable fv r.(head)).1 r.(premises)).2.
   Proof.
     destruct r; rewrite/fresh_rule/= 1!push.
-    generalize (fresh_rcallable fv head) => -[{}fv/=b].
+    generalize (fresh_callable fv head) => -[{}fv/=b].
     case FA: fresh_atoms => [b1 a']//=.
   Qed.
 
-  Lemma rcallable_is_det_fresh sP fv hd:
-    rcallable_is_det sP (fresh_rcallable fv hd).2 =
-      rcallable_is_det sP hd.
+  Lemma callable_is_det_fresh sP fv hd:
+    callable_is_det sP (fresh_callable fv hd).2 =
+      callable_is_det sP hd.
   Proof.
     elim: hd fv => //= a Ha t fv.
-    case F: fresh_rcallable => [fv' a']/=.
+    case F: fresh_callable => [fv' a']/=.
     case F': fresh_tm => [fv'' a'']/=.
     by rewrite -(Ha fv) F.
   Qed.
@@ -351,7 +350,7 @@ Qed.
     case H: H => /= [s2|]; last first.
       by rewrite (select_same2 _ ((fresh_rules fv rules).1)).
     have Hx := tiki_taka X dett H.
-    rewrite head_fresh_rule/=rcallable_is_det_fresh in Hx.
+    rewrite head_fresh_rule/=callable_is_det_fresh in Hx.
     move/orP: ck1 => []; first by rewrite Hx.
     rewrite !push/=.
     have {IH}:= IH fv l f.
@@ -360,7 +359,7 @@ Qed.
       move => _ /cut_followed_by_det_nfa_and.
       by move=> /det_tree_fresh->.
     move=> Ha Hb.
-    have ? : check_atoms sP (fresh_atoms (fresh_rcallable (fresh_rules fv rules).1 hd).1 bo).2.
+    have ? : check_atoms sP (fresh_atoms (fresh_callable (fresh_rules fv rules).1 hd).1 bo).2.
       case W: fresh_atoms.
       by apply/check_atoms_fresh/W.
     rewrite cut_followed_by_det_nfa_and//.
@@ -653,7 +652,7 @@ Qed.
       remember (rules p) as RS.
       apply: sub_all => r; clear.
       rewrite /check_rule.
-      case X: rcallable_is_det => //=.
+      case X: callable_is_det => //=.
       case: r X => //= hd []//= + l.
       elim: l => //=.
       move=> x xs IH []//=; last first.

@@ -39,10 +39,10 @@ Definition s2 : Sigma := [fmap].[IV false <- Tm_Kd (IKd 2)].
 Section Test1.
 
   Definition p_test : program := build_progr [:: 
-      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 1))) [::] ;
-      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 2))) [::] ;
-      mkR (RCallable_Comb (RCallable_Kp r) (Tm_Kd (IKd 2))) [::] ;
-      mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1)))
+      mkR (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 1))) [::] ;
+      mkR (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 2))) [::] ;
+      mkR (Callable_Comb (Callable_Kp r) (Tm_Kd (IKd 2))) [::] ;
+      mkR (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))
         [:: call (Callable_Comb (Callable_Kp p) v_X) ; call (Callable_Comb (Callable_Kp r) v_X) ] 
     ].
 
@@ -72,10 +72,10 @@ End Test1.
 Section Test5.
 
   Definition p_test1 : program := build_progr [:: 
-      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd false))) 
+      mkR (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false))) 
         [::call (Callable_Comb (Callable_Kp q) v_X); cut] ;
-      mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1))) [::] ;
-      mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
+      mkR (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1))) [::] ;
+      mkR (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 2))) [::] 
     ].
 
   (* Goal Texists r, run unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false)))) (Some s1) r false /\ is_dead r.
@@ -96,11 +96,11 @@ Section Test6.
   Definition pred_true := ((IKp 200)).
 
   Definition p_test2 : program := build_progr [:: 
-      mkR ((RCallable_Kp pred_true)) [::];
-      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd false))) 
+      mkR ((Callable_Kp pred_true)) [::];
+      mkR (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false))) 
         [::call (Callable_Comb (Callable_Kp q) v_X);call ((Callable_Kp pred_true)); cut] ;
-      mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1))) [::] ;
-      mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
+      mkR (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1))) [::] ;
+      mkR (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 2))) [::] 
   ].
 
   (* Goal Texists r, run unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false)))) ) (Some s1) r false /\ is_dead r.

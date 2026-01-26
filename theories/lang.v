@@ -81,19 +81,11 @@ HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
 
 Inductive Callable := 
   | Callable_Kp   : Kp -> Callable
-  | Callable_V    : V -> Callable (* TODO: REMOVE *)
   | Callable_Comb : Callable -> Tm -> Callable.
 derive Callable.
 HB.instance Definition _ := hasDecEq.Build Callable Callable_eqb_OK.
 
-(* Used for rules head *)
-Inductive RCallable := 
-  | RCallable_Kp   : Kp -> RCallable
-  | RCallable_Comb : RCallable -> Tm -> RCallable.
-derive RCallable.
-HB.instance Definition _ := hasDecEq.Build RCallable RCallable_eqb_OK.
-
-Record R_ {A} := mkR { head : RCallable; premises : list A }.
+Record R_ {A} := mkR { head : Callable; premises : list A }.
 Arguments mkR {_} _ _.
 derive R_.
 Inductive A :=
@@ -195,28 +187,18 @@ Fixpoint get_tm_hd (tm: Tm) : (Kd + (Kp + V)) :=
 Fixpoint Callable2Tm (c : Callable) : Tm :=
   match c with
   | Callable_Kp p => Tm_Kp p
-  | Callable_V v => Tm_V v
   | Callable_Comb h t => Tm_Comb (Callable2Tm h) t
   end.
 
-Fixpoint RCallable2Callable rc := 
-  match rc with
-  | RCallable_Comb h bo => Callable_Comb (RCallable2Callable h) bo
-  | RCallable_Kp k => Callable_Kp (k)
-  end.
-
-Definition get_rcallable_hd r :=
-  get_tm_hd (Callable2Tm (RCallable2Callable r)).
-
-Fixpoint tm2RC (t : Tm) : option (RCallable * Kp) :=
+Fixpoint tm2RC (t : Tm) : option (Callable * Kp) :=
   match t with
   | Tm_Kd _ => None
   | Tm_V _ => None
-  | Tm_Kp p => Some (RCallable_Kp p, p)
+  | Tm_Kp p => Some (Callable_Kp p, p)
   | Tm_Comb t1 t2 => 
     match tm2RC t1 with
     | None => None
-    | Some (x, p) => Some (RCallable_Comb x t2, p)
+    | Some (x, p) => Some (Callable_Comb x t2, p)
     end
   end.
 
@@ -243,7 +225,7 @@ Definition sigtm tm s :=
 Definition sigtm_rev tm s := rev (sigtm tm s).
 
 Definition get_modes_rev tm sig :=
-  map fst (sigtm_rev (Callable2Tm (RCallable2Callable tm)) sig).
+  map fst (sigtm_rev (Callable2Tm tm) sig).
 
 Open Scope fset_scope.
 
@@ -264,7 +246,7 @@ Definition varsU (l: seq {fset V}) :=
 Definition vars_atoms L := varsU (map vars_atom L).
 
 Definition varsU_rprem r : {fset V} := vars_atoms r.(premises).
-Definition varsU_rhead (r: R) : {fset V} := vars_tm (Callable2Tm (RCallable2Callable r.(head))).
+Definition varsU_rhead (r: R) : {fset V} := vars_tm (Callable2Tm r.(head)).
 Definition varsU_rule r : {fset V} := varsU_rhead r `|` varsU_rprem r.
 
 Lemma freshV (fv : {fset V}) :  exists v : V, v \notin fv.
@@ -368,20 +350,10 @@ Qed. *)
 Fixpoint fresh_callable fv c :=
   match c with
   | Callable_Kp _ => (fv, c)
-  | Callable_V _ => (fv, c)
   | Callable_Comb h t =>
       let: (fv, h) := fresh_callable fv h in
       let: (fv, t) := fresh_tm fv t in
       (fv, Callable_Comb h t)
-  end.
-
-Fixpoint fresh_rcallable fv c :=
-  match c with
-  | RCallable_Kp _ => (fv, c)
-  | RCallable_Comb h t =>
-      let: (fv, h) := fresh_rcallable fv h in
-      let: (fv, t) := fresh_tm fv t in
-      (fv, RCallable_Comb h t)
   end.
 
 (* Lemma fresh_tmP fv t : vars_tm (fresh_tm fv t).2 `&` (vars_tm t `|` fv) = fset0.
@@ -415,7 +387,7 @@ Definition fresh_atoms fv a :=
   foldr (fun x '(fv,xs) => let: (fv, x) := fresh_atom fv x in (fv,x::xs)) (fv,[::]) a.
 
 Definition fresh_rule fv r :=
-  let: (fv, head) := fresh_rcallable fv r.(head) in
+  let: (fv, head) := fresh_callable fv r.(head) in
   let: (fv, premises) := fresh_atoms fv r.(premises) in
   (fv, mkR head premises ).
 
@@ -436,15 +408,15 @@ Fixpoint deref (s: Sigma) (tm:Tm) :=
   | Tm_Comb h ag => Tm_Comb (deref s h) (deref s ag)
   end.
 
-Fixpoint H u (ml : list mode) (q : RCallable) (h: RCallable) s : option Sigma :=
+Fixpoint H u (ml : list mode) (q : Callable) (h: Callable) s : option Sigma :=
   match ml,q,h with
-  | [::], RCallable_Kp c, RCallable_Kp c1 => if c == c1 then Some s else None
-  | [:: i & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(matching) a1 a2) (H u ml q h s)
-  | [:: o & ml], (RCallable_Comb q a1), (RCallable_Comb h a2) => obind (u.(unify) a1 a2) (H u ml q h s)
+  | [::], Callable_Kp c, Callable_Kp c1 => if c == c1 then Some s else None
+  | [:: i & ml], (Callable_Comb q a1), (Callable_Comb h a2) => obind (u.(matching) a1 a2) (H u ml q h s)
+  | [:: o & ml], (Callable_Comb q a1), (Callable_Comb h a2) => obind (u.(unify) a1 a2) (H u ml q h s)
   | _, _, _ => None
   end.
 
-Fixpoint select u fv (query : RCallable) (modes:list mode) (rules: list R) sigma : ({fset V} * seq (Sigma * R)) :=
+Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma : ({fset V} * seq (Sigma * R)) :=
   match rules with
   | [::] => (fv, [::])
   | rule :: rules =>
@@ -560,7 +532,7 @@ Qed.
 Lemma tm2RC_get_tm_hd t c' p:
   tm2RC t = Some (c', p) ->
     ((get_tm_hd t = inr (inl p)) *
-    (get_tm_hd (Callable2Tm (RCallable2Callable c')) = inr (inl p))).
+    (get_tm_hd (Callable2Tm c') = inr (inl p))).
 Proof.
   elim: t c' p => //=.
     move=> k c' p [<-<-]//.

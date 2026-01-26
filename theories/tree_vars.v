@@ -21,21 +21,11 @@ Section vars_tree.
   Lemma fresh_callable_sub fv fv' r r':
     fresh_callable fv r = (fv', r') -> fv `<=` fv'.
   Proof.
-    elim: r r' fv fv'; only 1,2: by move=> > [<-].
+    elim: r r' fv fv'; only 1: by move=> > [<-].
     move=> f Hf a r' fv fv'; rewrite/=!push => -[<- _].
     case X: fresh_callable.
     case Y: fresh_tm.
     apply/fsubset_trans/fresh_tm_sub/Y/Hf/X.
-  Qed.
-
-  Lemma fresh_rcallable_sub fv fv' r r':
-    fresh_rcallable fv r = (fv', r') -> fv `<=` fv'.
-  Proof.
-    elim: r r' fv fv' => [|f IH] t r' fv fv'; first by move=> [<-].
-    rewrite/=!push => -[<- _].
-    case X: fresh_rcallable.
-    case Y: fresh_tm.
-    by apply/fsubset_trans/fresh_tm_sub/Y/IH/X.
   Qed.
 
   Lemma fresh_atom_sub fv fv' r r':
@@ -62,9 +52,9 @@ Section vars_tree.
     fresh_rule fv r = (fv', r') -> fv `<=` fv'.
   Proof.
     rewrite/fresh_rule !push => -[<- _].
-    case X: fresh_rcallable.
+    case X: fresh_callable.
     case Y: fresh_atoms.
-    by apply/fsubset_trans/fresh_atoms_sub/Y/fresh_rcallable_sub/X.
+    by apply/fsubset_trans/fresh_atoms_sub/Y/fresh_callable_sub/X.
   Qed.
 
   Lemma fresh_rules_sub rs rs' fv fv': 
