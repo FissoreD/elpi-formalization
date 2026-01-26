@@ -12,7 +12,7 @@ theories/tree.v
 theories/tree_test.v
 theories/tree_prop.v
 theories/valid_tree.v
-theories/tree_prop_hard.v
+# theories/tree_prop_hard.v
 
 theories/elpi.v
 theories/elpi_test.v
@@ -23,7 +23,5 @@ theories/t2l_prop.v
 theories/elpi_equiv.v
 theories/elpi_valid_state.v
 
-# theories/tree_valid_cut.v
 theories/check_fo.v
-theories/check2.v
-# theories/check.v
+# theories/check_ho.v
