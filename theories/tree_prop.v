@@ -588,34 +588,18 @@ Section RunP.
       by rewrite success_failed in fA.
   Qed.
 
-  (* TODO: remove these two following lemmas *)
-  (* Lemma step_or s1 A s B:
-  get_tree (match step u s1 A with
-  | Expanded A0 => Expanded (Or A0 s B)
-  | CutBrothers A0 => Expanded (Or A0 s (cutr B))
-  | Failure A0 => Failure (Or A0 s B)
-  | Success A0 => Success (Or A0 s B)
-  end) = 
-    let stepA :=  step u s1 A in 
-    if is_cb stepA then (Or (get_tree stepA) s (cutr B))
-    else (Or (get_tree stepA) s B).
-  Proof. case X: step => //=. Qed. *)
-
-
-  (* Lemma step_and s1 A B0 B:
-    get_tree (match step u s1 A with
-    | Expanded A0 => Expanded (And A0 B0 B)
-    | CutBrothers A0 => CutBrothers (And A0 B0 B)
-    | Failure A0 => Failure (And A0 B0 B)
-    | Success A0 => mkAnd A0 B0 (step u (get_substS s1 A0) B)
-    end) = 
-      let stepA :=  step u s1 A in 
-      if success A then get_tree (mkAnd A B0 (step u (get_substS s1 A) B))
-      else And (get_tree stepA) B0 B.
+  Lemma tree_fv_step_cut u p A B fv fv' s:
+    step u p fv s A = (fv', CutBrothers, B) -> fv' = fv.
   Proof.
-    case X: step => //=[[]A']; only 1, 2, 3: by rewrite (step_not_solved X).
-    have [? sA] := step_solved_same X; subst.
-    by rewrite get_tree_And sA.
-  Qed. *)
+    elim: A B fv fv' s => //=.
+      by move=> [|?]????; [congruence|rewrite push].
+      by move=> ??????>; rewrite !push; case: ifP => /=; case: step => [[?[]]]//.
+    move=> A HA B0 B HB C fv fv' s.
+    rewrite!push; case eA: step => [[?[]] A']//=.
+      move=> [<- _]; by apply: HA eA.
+    have [[??] _] := step_solved_same eA; subst.
+    case eB: step => [[?[]]]//=[<- _].
+    by apply: HB eB.
+  Qed.
 
 End RunP.

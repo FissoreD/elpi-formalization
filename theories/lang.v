@@ -268,7 +268,9 @@ Definition vars_atom A : {fset V} :=
 Definition varsU (l: seq {fset V}) :=
   foldr (fun a e => a `|` e) fset0 l.
 
-Definition varsU_rprem r : {fset V} := varsU (map vars_atom r.(premises)).
+Definition vars_atoms L := varsU (map vars_atom L).
+
+Definition varsU_rprem r : {fset V} := vars_atoms r.(premises).
 Definition varsU_rhead (r: R) : {fset V} := vars_tm (Callable2Tm (RCallable2Callable r.(head))).
 Definition varsU_rule r : {fset V} := varsU_rhead r `|` varsU_rprem r.
 
@@ -429,7 +431,6 @@ Definition codom_vars (s:Sigma) :=
 
 
 Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
-Definition vars_atoms L := varsU (map vars_atom L).
 
 Definition fresh_rules fv rules :=
   foldr (fun x '(fv,xs) => let: (fv, x) := fresh_rule fv x in (fv,x::xs)) (fv,[::]) rules.

@@ -4,9 +4,275 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
+
+Section vars_tree.
+  Variable (u : Unif).
+  Variable (p : program).
+
+  Lemma fresh_tm_sub fv fv' r r':
+    fresh_tm fv r = (fv', r') -> fv `<=` fv'.
+  Proof.
+    elim: r r' fv fv' => /=; only 1,2: by move=> > [<-].
+      by move=> v r' fv fv' [<- _]; rewrite fsubsetU// fsubsetU1 orbT.
+    move=> f Hf a Ha r' fv fv'; rewrite !push => -[<- _].
+    case t1: (fresh_tm fv) => [fv1 f'].
+    case t2: fresh_tm => [fv2 a'].
+    by apply/fsubset_trans/Ha/t2/Hf/t1.
+  Qed.
+
+  Lemma fresh_callable_sub fv fv' r r':
+    fresh_callable fv r = (fv', r') -> fv `<=` fv'.
+  Proof.
+    elim: r r' fv fv'; only 1,2: by move=> > [<-].
+    move=> f Hf a r' fv fv'; rewrite/=!push => -[<- _].
+    case X: fresh_callable.
+    case Y: fresh_tm.
+    apply/fsubset_trans/fresh_tm_sub/Y/Hf/X.
+  Qed.
+
+  Lemma fresh_rcallable_sub fv fv' r r':
+    fresh_rcallable fv r = (fv', r') -> fv `<=` fv'.
+  Proof.
+    elim: r r' fv fv' => [|f IH] t r' fv fv'; first by move=> [<-].
+    rewrite/=!push => -[<- _].
+    case X: fresh_rcallable.
+    case Y: fresh_tm.
+    by apply/fsubset_trans/fresh_tm_sub/Y/IH/X.
+  Qed.
+
+  Lemma fresh_atom_sub fv fv' r r':
+    fresh_atom fv r = (fv', r') -> fv `<=` fv'.
+  Proof.
+    destruct r => //=; first by move=> [<-].
+    rewrite push => -[<- _].
+    case X: fresh_callable.
+    by apply/fresh_callable_sub/X.
+  Qed.
+
+
+  Lemma fresh_atoms_sub fv fv' r r':
+    fresh_atoms fv r = (fv', r') -> fv `<=` fv'.
+  Proof.
+    elim: r r' fv fv' => [|x xs IH] r' fv fvx; first by move=> [<-].
+    rewrite/=!push => -[<- _].
+    case X: fresh_atoms => /=.
+    case Y: fresh_atom => /=.
+    by apply/fsubset_trans/fresh_atom_sub/Y/IH/X.
+  Qed.
+
+  Lemma fresh_rule_sub fv fv' r r':
+    fresh_rule fv r = (fv', r') -> fv `<=` fv'.
+  Proof.
+    rewrite/fresh_rule !push => -[<- _].
+    case X: fresh_rcallable.
+    case Y: fresh_atoms.
+    by apply/fsubset_trans/fresh_atoms_sub/Y/fresh_rcallable_sub/X.
+  Qed.
+
+  Lemma fresh_rules_sub rs rs' fv fv': 
+    fresh_rules fv rs = (fv', rs') -> fv `<=` fv'.
+  Proof.
+    elim: rs rs' fv fv' => [|x xs IH] rs' fv fvx; first by move=> [<-].
+    rewrite /=!push => -[<- _].
+    case X: fresh_rules => /=.
+    case Y: fresh_rule.
+    by apply/fsubset_trans/fresh_rule_sub/Y/IH/X.
+  Qed.
+
+  Lemma F_sub c rs fv fv' s:
+    F u p fv c s = (fv', rs) -> fv `<=` fv'.
+  Proof.
+    rewrite/F !push => -[<- _].
+    case X: fresh_rules.
+    by apply/fresh_rules_sub/X.
+  Qed.
+
+  Lemma bc_sub c c' fv fv' s:
+    backchain u p fv s c = (fv', c') ->
+    fv `<=` fv'.
+  Proof.
+    rewrite/backchain push => -[<- _].
+    case X: F => [fvx rs]/=.
+    apply/F_sub/X.
+  Qed.
+
+  Lemma vars_tree_cutr A: vars_tree (cutr A) `<=` vars_tree A.
+  Proof.
+    elim: A => //= A HA M B HB; last by rewrite !fsetSU//.
+    by rewrite !fsubUset !fsubsetU//(HA,HB) // orbT.
+  Qed.
+
+  Lemma vars_tree_dead A: vars_tree (dead A) `<=` vars_tree A.
+  Proof.
+    elim: A => //= A HA M B HB; last by rewrite !fsetSU//.
+    by rewrite !fsubUset !fsubsetU//(HA,HB) // orbT.
+  Qed.
+
+  Lemma vars_tree_cutl A: vars_tree (cutl A) `<=` vars_tree A.
+  Proof.
+    elim: A => //=; move=> A HA s B HB.
+      by case: ifP => dA/=; rewrite !fsubUset !fsubsetU// (HA,HB,fsubset_refl,vars_tree_cutr)//orbT.
+    case: ifP => sA /=; rewrite !fsubUset -andbA; apply/and3P; split.
+      by rewrite !fsubsetU//HA.
+      by rewrite !fsubsetU//= fsubset_refl orbT.
+      by rewrite fsubsetU//HB orbT.
+      by rewrite !fsubsetU//vars_tree_cutr.
+      by rewrite !fsubsetU//= fsubset_refl orbT.
+      by rewrite fsubsetU//vars_tree_cutr orbT.
+  Qed.
+
+  Lemma vars_tree_step_sub A B fv fv' s r:
+    step u p fv s A = (fv', r, B) -> fv `<=` fv'.
+  Proof.
+    elim: A B fv fv' r s => //=; only 1-3: by move=> > _ [<-]//.
+      move=> [|c] B fv fvx r s; first by move=> [<-].
+      rewrite push => -[<- _ _].
+      case X: backchain.
+      apply/bc_sub/X.
+    - move=> A HA s B HB C fv fv' r s0.
+      rewrite !push; case: ifP => dA [<- _ _]; case X: step => [[]]/=;
+        [apply: HB X | apply: HA X].
+    move=> A HA B0 B HB C fv fv' r s; rewrite !push.
+    case X: (step _ _ _ _ A) => [[fvx r'] A']/=; case: ifP.
+      destruct r' => //= _; have [[??] sA] := step_solved_same X; subst.
+      move => [<- _ _].
+      by case Y: step => [[]]; apply/HB/Y.
+    by move=> _ [<- _ _]; apply/HA/X.
+  Qed.
+
+  Lemma vars_tm_F_sub c c' fv fv' s:
+    vars_tm (Callable2Tm c) `<=` fv ->
+    F u p fv c s = (fv', c') ->
+    varsU (seq.map (fun x => varsU_rule x.2) c') `<=` fv'.
+  Proof.
+    rewrite/F !push => + [<-<-]; clear.
+    generalize (Callable2Tm c); clear c => t.
+    case X: tm2RC => [[t' thd]|]//.
+    case: fndP => //= xp.
+  Admitted.
+
+  Lemma vars_tree_big_and r0:
+    vars_tree (big_and r0) = vars_atoms r0.
+  Proof. by elim: r0 => //= -[|c]//=l ->; rewrite/vars_atoms/= -fsetUA fsetUid//. Qed.
+
+  Lemma vars_tree_big_or r0 rs:
+    vars_tree (big_or r0.2.(premises) rs) `<=` varsU (seq.map (fun x => varsU_rule x.2) (r0 :: rs)).
+  Proof.
+    elim: rs r0 => //=[|[s0 r0] rs IH] l/=; rewrite vars_tree_big_and ?fsetU0//.
+      by rewrite/varsU_rule/varsU_rprem fsubsetUr.
+    rewrite !fsubUset/=; apply/andP; split.
+      rewrite fsubsetU//; apply/orP; left.
+      by rewrite/varsU_rule; rewrite/varsU_rprem fsubsetUr.
+    rewrite fsubsetU//; apply/orP; right.
+    change r0 with (s0, r0).2.
+    apply: IH.
+  Qed.
+
+  Lemma vars_tm_bc_sub c c' fv fv' s:
+    vars_tm (Callable2Tm c) `<=` fv ->
+    backchain u p fv s c = (fv', c') ->
+    vars_tree c' `<=` fv'.
+  Proof.
+    rewrite/backchain !push => H [<-].
+    case X: F => [fvx [|[s0 r0] rs]]<-//=.
+    rewrite fset0U.
+    change r0 with (s0, r0).2.
+    apply/fsubset_trans.
+      apply: vars_tree_big_or.
+    by apply: vars_tm_F_sub X.
+  Qed.
+
+  Lemma vars_tree_step_sub_flow A B fv fv' s r:
+    vars_tree A `<=` fv ->
+    step u p fv s A = (fv', r, B) -> vars_tree B `<=` fv'.
+  Proof.
+    elim: A B fv fv' r s => //=; only 1-3: by move=> >? _ [<- _ <-].
+      move=> [|c] B fv fvx r s; first by move=> _ [<- _ <-].
+      move=> H; case X: backchain => [fv' c'][<-_<-].
+      by apply/vars_tm_bc_sub/X/H.
+    - move=> A HA sm B HB C fv fv' r s.
+      rewrite fsubUset !push => /andP[H1 H2].
+      case: ifP => dA [<- _ <-]/=; case st: step => [[v' r'] t']/=; rewrite fsubUset.
+        rewrite (HB _ _ _ _ _ H2 st) andbT.
+        by apply/fsubset_trans/vars_tree_step_sub/st.
+      rewrite (HA _ _ _ _ _ _ st)//=.
+      case: ifP => //= _; apply/fsubset_trans/vars_tree_step_sub/st => //.
+      by apply/fsubset_trans/H2/vars_tree_cutr.
+    move=> A HA B0 B HB C fv fv' r s; rewrite !fsubUset -andbA !push.
+    move=> /and3P[vA vB0 vB].
+    case eA: step => [[fvA rA] A']/=; case: ifP => H.
+      destruct rA => //=; have [[??] sA]:= step_solved_same eA; subst.
+      move=> [<- ??]; subst.
+      case eB: step => [[fvB rB] B']/=.
+      rewrite !fsubUset (HB _ _ _ _ _ _ eB)//=andbT.
+      apply/andP; split; apply/fsubset_trans/vars_tree_step_sub/eB => //.
+      by case: ifP => // _; apply/fsubset_trans/vA/vars_tree_cutl.
+    move=> [<-??]; subst => /=.
+    rewrite !fsubUset -andbA; apply/andP; split.
+      by apply/fsubset_trans/HA/eA/vA.
+    by apply/andP; split; apply/fsubset_trans/vars_tree_step_sub/eA.
+  Qed.
+
+  Lemma vars_tree_next_alt_sub_flow A B fv b:
+    vars_tree A `<=` fv ->
+    next_alt b A = Some B -> vars_tree B `<=` fv.
+  Proof.
+    clear.
+    elim: A B fv b => //=.
+      by move=> B fv []// _ [<-].
+      by move=> [|c] B fv _ H [<-]//.
+      move=> A HA s B HB C fv b; rewrite fsubUset => /andP[Ha Hb].
+      case: ifP => dA.
+        case nB: next_alt => [B'|]//=[<-]/=.
+        by rewrite fsubUset Ha (HB _ _ _ _ nB).
+      case nA: next_alt => [A'|].
+        by move=> [<-]/=; rewrite fsubUset (HA _ _ _ _ nA).
+      case nB: next_alt => [B'|]//[<-]/=.
+      rewrite fsubUset (HB _ _ _ _ nB)//= andbT.
+      by apply/fsubset_trans/Ha/vars_tree_dead.
+    move=> A HA M B HB C fv b; rewrite !fsubUset -andbA.
+    move=> /and3P [Ha Hm Hb].
+    case: ifP => sA.
+      case nB: next_alt => [B'|]//=.
+        by move=> [<-]/=; rewrite !fsubUset Ha Hm; apply/HB/nB.
+      case nA: next_alt => [A'|]//=[<-]/=.
+      rewrite !fsubUset (HA _ _ _ _ nA)//=.
+      by rewrite vars_tree_big_and Hm.
+    case: ifP => fA.
+      case nA: next_alt => [A'|]//= [<-]/=.
+      by rewrite !fsubUset (HA _ _ _ _ nA)//= vars_tree_big_and Hm.
+    move=> [<-]/=.
+    by rewrite !fsubUset Ha Hm Hb.
+  Qed.
+
+  Lemma vars_tree_step_cut A B fv fv' s:
+    step u p fv s A = (fv', CutBrothers, B) -> vars_tree B `<=` vars_tree A.
+  Proof.
+    elim: A B fv fv' s => //=.
+      by move=> [|?]????; [move=> [_ <-]|rewrite push].
+      by move=> ??????>; rewrite !push; case: ifP => /=; case: step => [[?[]]]//.
+    move=> A HA B0 B HB C fv fv' s.
+    rewrite!push; case eA: step => [[?[]] A']//=.
+      by move=> [_ <-]/=; rewrite !fsetSU//; apply: HA eA.
+    have [[??] _] := step_solved_same eA; subst.
+    case eB: step => [[?[]]]//=[_ <-]/=.
+    rewrite !fsubUset fsubsetU//=.
+      rewrite fsubsetU//=.
+        by rewrite fsubsetU//(HB _ _ _ _ eB) orbT.
+      by rewrite fsubsetU//=fsubset_refl orbT.
+    by rewrite fsubsetU//=vars_tree_cutl.
+  Qed.
+    
+
+End vars_tree.
+
 Section NurEqiv.
   Variable (u : Unif).
   Variable (p : program).
+  
 
   (* Lemma run_fv_subset u p fv s0 g a sn an:
 
@@ -29,52 +295,45 @@ Section NurEqiv.
       repeat eexists.
       apply: StopE.
     + move=> s1 s2 r A B n fv fv' eA rB IH s4 ? sIgn fvP vA; subst.
-      suffices fvP': vars_tree B `<=` fv'.
-        have {IH} /= [[sy y]/=[ys [+ H4]]]:= IH _ erefl sIgn fvP' (valid_tree_step vA eA).
-        have H5 := step_cb_same_subst1 vA eA; subst.
-        have [x[tl[H1 H2]]] := [elaborate s2l_CutBrothers s1 nilC vA eA].
-        rewrite H1 H2 => -[???]; subst.
-        repeat eexists.
-        simpl in *.
-        apply CutE.
-        rewrite H5//.
-        there.
-        admit.
-      admit.
+      have ?:= tree_fv_step_cut eA; subst.
+      have {}fvP: vars_tree B `<=` fv by apply: fsubset_trans (vars_tree_step_cut eA) fvP.
+      have {IH} /= [[sy y]/=[ys [+ H4]]]:= IH _ erefl sIgn fvP (valid_tree_step vA eA).
+      have H5 := step_cb_same_subst1 vA eA; subst.
+      have [x[tl[H1 H2]]] := [elaborate s2l_CutBrothers s1 nilC vA eA].
+      rewrite H1 H2 => -[???]; subst.
+      repeat eexists.
+      simpl in *.
+      apply CutE.
+      rewrite H5//.
     + move=> s1 s2 r A B n fv fv' eA rB IH s4 ? sIgn fvP vA; subst. 
       have /=vB:= (valid_tree_step vA eA). 
       have fA := step_not_failed eA notF.
       have [s[x[xs +]]] := [elaborate failed_t2l vA fA s1 nilC].
       move=> H; rewrite H; repeat eexists.
-      suffices fvP': vars_tree B `<=` fv'.
-        have [[sy y][ys /=[+ {}IH]]]:= IH _ erefl sIgn fvP' vB.
-        case: x H => [|g gs].
-          fNilG => H.
-          have [] := s2l_empty_hd_success vA (step_not_failed eA notF) H.
-          rewrite (step_not_solved eA notF)//.
-        fConsG g gs.
-        case: g => [[|c] ca] H; last first.
-          have:= s2l_Expanded_call vA eA H.
-          move=> []?; subst.
-          case X: F => [fv2 [|z zs]].
-            move=> [].
-            move=> fB sB H1; subst.
-            rewrite H1.
-            apply: FailE X _.
-            admit.
-          move=> [].
-          move=> fB sB; rewrite sB => -[???]; subst.
-          rewrite cats0 in IH.
-          apply: CallE X _.
-          admit.
-        have [[]H1 H2] := s2l_Expanded_cut vA eA H; subst.
-        rewrite cats0 => ->[???]; subst.
-        apply: CutE.
-        admit.
-    + move=> s1 s2 A B r n fA nA H IH s3 ? sIgn vA; subst.
+      have {}fvP : vars_tree B `<=` fv' by apply: vars_tree_step_sub_flow eA.
+      have [[sy y][ys /=[+ {}IH]]]:= IH _ erefl sIgn fvP vB.
+      case: x H => [|g gs].
+        fNilG => H.
+        have [] := s2l_empty_hd_success vA (step_not_failed eA notF) H.
+        rewrite (step_not_solved eA notF)//.
+      fConsG g gs.
+      case: g => [[|c] ca] H; last first.
+        have:= s2l_Expanded_call vA eA H.
+        move=> []?; subst.
+        case X: F => [fv2 rules][?]; subst.
+        case: rules X => [|r0 rs] X [fB Hx]; rewrite Hx; subst.
+          by move=> ->; apply: FailE X _.
+        move=> [???]; subst.
+        rewrite cats0 in IH.
+        by apply: CallE X _.
+      have [[[? SS] H1]] := s2l_Expanded_cut vA eA H; subst.
+      rewrite cats0 => ->[???]; subst.
+      by apply: CutE.
+    + move=> s1 s2 A B r n fv fA nA H IH s3 ? sIgn fvP vA; subst.
       have vB := valid_tree_next_alt vA nA.
       have H1 := failed_next_alt_some_t2l _ vA fA nA.
-      have {IH} /= [[sx x][xs [H2 H3]]] := IH _ erefl sIgn vB.
+      have {}fvP := vars_tree_next_alt_sub_flow fvP nA.
+      have {IH} /= [[sx x][xs [H2 H3]]] := IH _ erefl sIgn fvP vB.
       by rewrite H1; eauto.
   Qed.
   Print Assumptions tree_to_elpi.
@@ -477,13 +736,13 @@ Section next_cut.
       by case: g {H} => a ca; rewrite make_LB01_cons make_LB01_nil //=.
   Qed.
 
-  Lemma next_cut_s2l {A B s bt s1 ca gl a}:
+  Lemma next_cut_s2l fv A B s bt s1 ca gl a:
     failed A = false -> valid_tree A ->
       clean_ca bt (t2l A s bt) = (s1, (cut, ca) ::: gl) ::: a ->
       next_cut A = B ->
         clean_ca bt (t2l B.2 s bt) = (s1, gl) ::: ca /\
-        if B.1 then step u p s A = (CutBrothers, B.2)
-        else step u p s A = (Expanded, B.2).
+        if B.1 then step u p fv s A = (fv, CutBrothers, B.2)
+        else step u p fv s A = (fv, Expanded, B.2).
   Proof.
     elim: A B s bt s1 ca gl a => //=.
     - by move=> []// [b B] s bt s1 c gl a _ _ [????][??]; subst.
@@ -510,12 +769,12 @@ Section next_cut.
       rewrite H/= => /(_ _ _ _ _ erefl).
       fNilA.
       case: b' X => // X [+H1].
-        have [x[tl[H2 [H3 H4]]]]:= [elaborate s2l_CutBrothers _ _ s1 (t2l B s nilC) vA H1].
+        have [x[tl[H2 [H3 H4]]]]:= s2l_CutBrothers s1 (t2l B s nilC) vA H1.
         move: H;rewrite !H2 => -[????]; subst; rewrite sub0n take0.
         rewrite !H3/= => -[Hx]; rewrite Hx t2l_cutr//?bbOr_valid//.
         rewrite cat0s// subnn take0 add_ca_deep_empty2; repeat split.
-        rewrite H1//.
-      have [[Hx fA']] := s2l_Expanded_cut _ _ vA H1 H; subst.
+        by rewrite !push H1.
+      have [[[? Hx] fA']] := s2l_Expanded_cut vA H1 H; subst.
       move=> Hy; rewrite Hy/=size_cat addnK clean_ca_cat !clean_ca_add_ca1 take_size_cat ?size_add_ca_deep//.
       move=> Hz; repeat split.
       by rewrite H1.
@@ -544,16 +803,16 @@ Section next_cut.
           have vB':= next_cut_valid fB vB Y.
           rewrite !what_I_want// in HB *.
           rewrite ges_subst_cutl//.
-          have [x[tl]]:= s2l_CutBrothers _ _ (get_substS s A) (ml++bt) vB H2.
+          have [x[tl]]:= s2l_CutBrothers (get_substS s A) (ml++bt) vB H2.
           rewrite H1 => -[][????] [Hz Hw]; subst.
           rewrite Hz//=.
-          have HH := step_cb_same_subst1 _ _ vB H2.
+          have HH := step_cb_same_subst1 vB H2.
           rewrite clean_ca_goals_empty//= take_nil HH.
           by rewrite next_alt_cutl/= t2l_dead// is_dead_dead.
         rewrite (success_t2l empty)//=.
         (* rewrite H/=. *)
         rewrite -/ml make_lB01_empty2 clean_ca_cat.
-        have [[Hx fA']] := s2l_Expanded_cut _ _ vB H2 H1; subst.
+        have [[Hx fA']] := s2l_Expanded_cut vB H2 H1; subst.
         move => Hz.
         move: HB Hz.
         set X:= t2l _ _ _.
@@ -575,11 +834,11 @@ Section next_cut.
       have:= HA _ s bt _ _ _ _ fA vA _ Y.
       rewrite H/= => /(_ _ _ _ _ erefl) [H2 H3].
       case: b Y H3 => //= Y H3; rewrite H3; repeat split.
-        have [x[tl]]:= s2l_CutBrothers _ _ s bt vA H3.
+        have [x[tl]]:= s2l_CutBrothers s bt vA H3.
         rewrite H => -[][]???? [H4 H5]; subst.
         rewrite H4/= t2l_big_and make_lB0_empty1 cats0 sub0n take0.
-        by rewrite (step_cb_same_subst1 _ _ vA H3).
-      have [[Hx fA']] := s2l_Expanded_cut _ _ vA H3 H; subst.
+        by rewrite (step_cb_same_subst1 vA H3).
+      have [[Hx fA']] := s2l_Expanded_cut vA H3 H; subst.
       move=> Hz. 
       move: {HA} H2; case X: t2l => //[[sy y]ys][?]; subst.
       move: Hz; rewrite X => -[??]; subst.
@@ -598,27 +857,31 @@ Section next_cut.
 End next_cut.
 
 Section next_callS.
-  Fixpoint next_callS s A := 
+  Fixpoint next_callS fv s A := 
     match A with
-    | OK | Dead | KO | TA cut => A
-    | TA (call t) => (backchain u p s t)
-    | Or A sx B => if is_dead A then Or A sx (next_callS s B) else Or (next_callS s A) sx B
+    | OK | Dead | KO | TA cut => (fv, A)
+    | TA (call t) => (backchain u p fv s t)
+    | Or A sx B => if is_dead A then 
+        let X := (next_callS fv s B) in (X.1, Or A sx X.2) else 
+        let X := (next_callS fv s A) in (X.1, Or X.2 sx B)
     | And A B0 B =>
-      if success A then And A B0 (next_callS s B) else And (next_callS s A) B0 B
+      if success A then 
+        let X := (next_callS fv s B) in (X.1, And A B0 X.2) else
+        let X := (next_callS fv s A) in (X.1, And X.2 B0 B)
   end.
 
-  Lemma is_dead_next_callS {s A}: is_dead (next_callS s A) = is_dead A.
+  Lemma is_dead_next_callS s fv A: is_dead (next_callS fv s A).2 = is_dead A.
   Proof.
     elim: A => //=.
-    - move=> []// c; rewrite/backchain; case: F => [|[]]//.
+    - move=> []// c; rewrite/backchain; case: F => [? [|[]]]//.
     - move=> A HA s1 B HB; case: ifP => dA/=.
         rewrite dA HB//.
       by rewrite HA dA.
     - move=> A HA B0 B HB; case: ifP => sA//=.
   Qed.
 
-  Lemma next_callS_valid {s A B}: 
-    valid_tree A -> failed A = false -> next_callS s A = B -> valid_tree B.
+  Lemma next_callS_valid fv s A B: 
+    valid_tree A -> failed A = false -> next_callS s fv A = B -> valid_tree B.2.
   Proof.
     move=> ++ <-; clear B.
     elim: A s => //=.
@@ -635,9 +898,9 @@ Section next_callS.
       by rewrite HA//= eqxx valid_tree_big_and if_same.
   Qed.
 
-  Lemma failed_next_callS {s A sx bt sz t gl a ign}:
+  Lemma failed_next_callS fv s A sx bt sz t gl a ign:
     valid_tree A -> failed A = false ->
-      t2l A sx bt = (sz, ((call t), ign) :: gl) :: a -> failed (next_callS s A).
+      t2l A sx bt = (sz, ((call t), ign) :: gl) :: a -> failed (next_callS s fv A).2.
   Proof.
     elim: A sx bt gl a ign => //=.
     - move=> []// *; rewrite failed_big_or//.
@@ -670,19 +933,25 @@ Section next_callS.
       rewrite (HA _ _ _ _ _ _ _ H)//.
   Qed.
 
-  Lemma next_callS_s2l {A s3 s1 bt t gl a ign}:
+  Lemma next_callS_s2l fv A s3 s1 bt t gl a ign:
+    let X := (next_callS fv s1 A) in
+    let F := F u p fv t s1 in
     failed A = false -> valid_tree A ->
       clean_ca bt (t2l A s3 bt) = (s1, (call t, ign) :: gl) ::: a ->
-        clean_ca bt (t2l (next_callS s1 A) s3 bt) = 
-          (save_alts a gl (aa2gs (F u p t s1)) ++ a) /\
-        step u p s3 A = (Expanded, (next_callS s1 A)).
+        [/\ F.1 = X.1,
+        clean_ca bt (t2l X.2 s3 bt) = 
+          (save_alts a gl (aa2gs F.2) ++ a) &
+        step u p fv s3 A = 
+          (X.1, Expanded, X.2)].
   Proof.
     elim: A s3 bt s1 t gl a ign => //=.
     - move=> []// c s3 bt s1 c1 gl a ign _ _ [?????]; subst.
-      rewrite cats0; split => //.
+      rewrite push.
       rewrite what_I_want; last by rewrite valid_tree_backchain.
-      rewrite/backchain.
-      case B: F => [|[sx x]xs]//=.
+      rewrite cats0; split => //.
+        by rewrite/backchain push//.
+      rewrite/backchain !push.
+      case B: F => [? [|[sx x]xs]]//=.
       rewrite add_ca_deep_empty1 cat0s.
       have:= @s2l_big_or sx sx (premises x) xs no_alt no_goals.
       rewrite make_lB0_empty2/= add_ca_deep_empty1 cat0s.
@@ -692,18 +961,20 @@ Section next_callS.
         rewrite !(t2l_dead dA)//=cat0s.
         rewrite clean_ca_add_ca1 => X.
         rewrite -(@clean_ca_nil (t2l B s [::])) in X.
-        have [{}HB H]:= HB s no_alt _ _ _ _ _ fB vB X.
+        have [He {}HB H]:= HB s no_alt _ _ _ _ _ fB vB X.
         rewrite clean_ca_nil in HB.
         by rewrite HB/= clean_ca_add_ca1 H//= cat0s//.
       have [s'[x[xs H]]] := [elaborate failed_t2l vA fA s1 (t2l B s nilC)].
       rewrite H/=; case: x H => //-[[|g] ca] gs// H [?????]; subst.
       have {HA HB} := HA s1 (t2l B s no_alt) _ _ _ _ _ fA vA.
-      rewrite H/= => /(_ _ _ _ _ _ erefl) [+ H1].
+      rewrite H/= => /(_ _ _ _ _ _ erefl) [He + H1].
       fNilA.
       rewrite what_I_want ?(next_callS_valid _ _ erefl)//!clean_ca_add_ca1.
       rewrite H1 => Hz; repeat split.
-      have [?] := s2l_Expanded_call _ _ vA H1 H; subst.
-      case X: F => [|[sz z]zs].
+        by rewrite He.
+      have [?] := s2l_Expanded_call vA H1 H; subst.
+      move: He.
+      case X: F => [?[|[sz z]zs]] /= He [?]; subst.
         by move=> [Hm Hn]; rewrite Hn/=cat0s//.
       move=> [Hm Hn]; rewrite Hn/=.
       rewrite clean_ca_goals_add_ca_goal1.
@@ -725,11 +996,11 @@ Section next_callS.
         case: x H1 => [|[[|c']ca'] gs]// H1 [?????]; subst.
         have /={HA HB} := HB (get_substS s1 A) (ml ++ bt) _ _ _ _ _ fB vB _.
         move=> /(_ _ IsList_alts).
-        rewrite H1/= =>  // /(_ _ _ _ _ _ erefl) [{}HB H2].
+        rewrite H1/= =>  // /(_ _ _ _ _ _ erefl) [He {}HB H2].
         rewrite success_step//=.
-        rewrite H2 make_lB01_empty2; repeat split.
-        have [?] := s2l_Expanded_call _ _ vB H2 H1; subst.
-        case X: F => [|[sz z]zs].
+        rewrite H2 make_lB01_empty2; repeat split => //.
+        have [?] := s2l_Expanded_call vB H2 H1; subst.
+        case X: F => [?[|[sz z]zs]].
           move=> [Hm Hn].
           by rewrite Hn//clean_ca_cat//cat0s.
         move=> [Hm Hn]; rewrite Hn/=.
@@ -750,13 +1021,14 @@ Section next_callS.
         by apply: s2l_empty_hdF H.
       move=> [[|g] ign'] gs H [???]//; subst.
       have /={HA} := HA s1 bt _ _ _ _ _ fA vA _.
-      rewrite H/= => /(_ _ _ _ _ _ erefl) [+ H3].
+      rewrite H/= => /(_ _ _ _ _ _ erefl) [He + H3].
       rewrite what_I_want?(next_callS_valid _ _ erefl)// => H2.
-      rewrite H3; repeat split.
-      have [?] := s2l_Expanded_call _ _ vA H3 H; subst.
+      rewrite H3; repeat split => //.
+      have [?] := s2l_Expanded_call vA H3 H; subst.
+      rewrite push.
       have?:= empty_caG_r2l.
       rewrite seq2altsK.
-      case X: F => [|[sz z]zs].
+      case X: F => [?[|[sz z]zs]][?]; subst.
         move=> [Hm Hn]; subst.
         case W: t2l => //=[[sw w]ws].
         rewrite /make_lB0 map_cons !clean_ca_cat clean_ca_mk_lb0//=.
@@ -781,12 +1053,12 @@ Section next_callS.
       rewrite (clean_ca_goals_empty E).
       set T1 := clean_ca bt xs.
       set T2 := (clean_ca_goals bt gs).
-      have H1 := add_deep_goalsP _ (a2gs1 (sz, z)) T1 no_alt T2 E (empty_ca_atoms _).
+      have H1 := @add_deep_goalsP _ (a2gs1 (sz, z)) T1 no_alt T2 E (empty_ca_atoms _).
       rewrite !cats0 in H1.
       rewrite H1//.
       f_equal.
       rewrite add_deep_cat /make_lB0 map_cat; f_equal.
-      have:= add_deep_altsP hd (aa2gs zs) T1 no_alt T2 E (empty_ca_atoms1 _).
+      have:= @add_deep_altsP hd (aa2gs zs) T1 no_alt T2 E (empty_ca_atoms1 _).
       rewrite /=cats0/make_lB0 !cats0//.
   Qed.
 End next_callS.
@@ -844,13 +1116,13 @@ Proof.
     by rewrite t2l_big_and//= cat_cons cat0s.
 Qed.
 
-Lemma elpi_to_tree s1 s2 a na g  : 
-  nur u p s1 g a s2 na -> 
+Lemma elpi_to_tree fv s1 s2 a na g  : 
+  nur u p fv s1 g a s2 na -> 
   forall s0 t, valid_tree t -> (t2l t s0 nilC) = ((s1,g) ::: a) -> 
-  Texists t1 n, run u p s0 t (Some s2) t1 n /\ t2l t1 s0 nilC = na.
+  Texists t1 n, run u p fv s0 t (Some s2) t1 n /\ t2l t1 s0 nilC = na.
 Proof.
   elim; clear.
-  - move=> s a s1 A vA /= H.
+  - move=> s a fv s1 A vA /= H.
     case fA: (failed A).
       case nA: (next_alt false A) => [A'|]; last first.
         by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
@@ -868,7 +1140,7 @@ Proof.
       by apply: run_done.
     have:=@s2l_next_alt_tl _ s1 no_alt vA skA.
     by rewrite H => ->//; rewrite behead_cons.
-  - move=> s1 s2 a ca r gl ELPI IH s A vA H.
+  - move=> s1 s2 a ca r gl fv ELPI IH s A vA H.
     {
       (* CUT CASE *)
       case fA: (failed A).
@@ -879,7 +1151,7 @@ Proof.
         have /= vA'':= next_cut_valid fA' vA' erefl.
         rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-        have [H1 H2] := next_cut_s2l fA' vA' H erefl.
+        have [H1 H2] := next_cut_s2l fv fA' vA' H erefl.
         rewrite clean_ca_nil/= in H1.
         have vnA:= next_cut_valid fA' vA' erefl.
         have /= [t1[n [{}IH H3]]] := IH _ _ vnA H1; subst.
@@ -893,7 +1165,7 @@ Proof.
         apply: run_step H2 IH.
       have /= vA'':= next_cut_valid fA vA erefl.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-      have [H1 H2] := next_cut_s2l fA vA H erefl.
+      have [H1 H2] := next_cut_s2l fv fA vA H erefl.
       rewrite clean_ca_nil/= in H1.
       have vnA:= next_cut_valid fA vA erefl.
       have /= [t1[n [{}IH ?]]] := IH _ _ vnA H1.
@@ -905,7 +1177,7 @@ Proof.
       repeat eexists.
       apply: run_step H2 IH.
     }
-  - move=> s1 s2 a [s0 r0]/= rs gl r t ca B ELPI IH s3 A vA H.
+  - move=> s1 s2 a [s0 r0]/= rs gl r t ca fv fv' B ELPI IH s3 A vA H.
     {
       (* CALL SUCCESS CASE *)
       case fA: (failed A).
@@ -916,25 +1188,27 @@ Proof.
         have /= vA'':= next_cut_valid fA' vA' erefl.
         rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-        have [H1 H2] := next_callS_s2l fA' vA' H.
+        have [He H1 H2] := next_callS_s2l fv fA' vA' H.
+        rewrite B/= in He; subst.
         rewrite clean_ca_nil/= in H1.
         have vnA:= next_callS_valid vA' fA' erefl.
         rewrite B/= in H1.
-        have /= [t1[n [{}IH ?]]] := IH _ _ (vnA _) H1; subst.
+        have /= [t1[n [{}IH ?]]] := IH _ _ (vnA _ _) H1; subst.
         repeat eexists.
         apply: run_fail fA nA _.
         apply: run_step H2 IH.
       have /= vA'':= next_cut_valid fA vA erefl.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-      have [H1 H2] := next_callS_s2l fA vA H.
+      have [He H1 H2] := next_callS_s2l fv fA vA H.
+      rewrite B/= in He; subst.
       rewrite clean_ca_nil/= in H1.
       have vnA:= next_callS_valid vA fA erefl.
       rewrite B/= in H1.
-      have /= [t1[n [{}IH ?]]] := IH _ _ (vnA _) H1; subst.
+      have /= [t1[n [{}IH ?]]] := IH _ _ (vnA _ _) H1; subst.
       repeat eexists.
       apply: run_step H2 IH.
     }
-  - move=> s1 s2 s3 t gl a al r ca B ELPI IH s4 A vA H.
+  - move=> s1 s2 s3 t gl a al r ca fv fv' B ELPI IH s4 A vA H.
     {
       (* CALL FAIL CASE *)
       case fA: (failed A).
@@ -945,21 +1219,23 @@ Proof.
         have /= vA'':= next_cut_valid fA' vA' erefl.
         rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-        have [H1 H2] := next_callS_s2l fA' vA' H.
+        have [He H1 H2] := next_callS_s2l fv fA' vA' H.
+        rewrite B/= in He; subst.
         rewrite clean_ca_nil/= in H1.
         have vnA:= next_callS_valid vA' fA' erefl.
         rewrite B/= cat0s in H1.
-        have /= [t1[n [{}IH ?]]] := IH _ _ (vnA _) H1; subst.
+        have /= [t1[n [{}IH ?]]] := IH _ _ (vnA _ _) H1; subst.
         repeat eexists.
         apply: run_fail fA nA _.
         apply: run_step H2 IH.
       have /= vA'':= next_cut_valid fA vA erefl.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-      have [H1 H2] := next_callS_s2l fA vA H.
+      have [He H1 H2] := next_callS_s2l fv fA vA H.
+      rewrite B/= in He; subst.
       rewrite clean_ca_nil/= in H1.
       have vnA:= next_callS_valid vA fA erefl.
       rewrite B/= cat0s in H1.
-      have /= [t1[n [{}IH ?]]] := IH _ _ (vnA _) H1; subst.
+      have /= [t1[n [{}IH ?]]] := IH _ _ (vnA _ _) H1; subst.
       repeat eexists.
       apply: run_step H2 IH.
     }
