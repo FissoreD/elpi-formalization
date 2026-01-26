@@ -28,7 +28,7 @@ Section NurProp.
     add_ca_deep_g bt g1 = add_ca_deep_g bt g2 -> g1 = g2.
   move=> add_ca_deep_inj.
    by case: g1; case: g2 => // -[|?] xs [|?] ys /= [] // => [|?] /append_sameR /add_ca_deep_inj *; subst.
-Defined.
+  Defined.
 
   Lemma add_ca_deep_inj {bt a1 a2}:  
     add_ca_deep bt a1 = add_ca_deep bt a2 -> a1 = a2
@@ -415,12 +415,12 @@ Defined.
       by rewrite (HA _ _ _ _ vA fA X)//=.
   Qed.
 
-Lemma map_nil F : map F [::]%G = [::]%G. by []. Qed.
+  Lemma map_nil F : map F [::]%G = [::]%G. by []. Qed.
 
-Lemma save_goals_cons (a: alts) (gs :goals) b1 (bs : goals) :
-  save_goals a gs [:: b1 & bs]%G =
-  [:: add_ca a b1 & save_goals a gs bs]%G.
-  by rewrite /save_goals map_cons.
+  Lemma save_goals_cons (a: alts) (gs :goals) b1 (bs : goals) :
+    save_goals a gs [:: b1 & bs]%G =
+    [:: add_ca a b1 & save_goals a gs bs]%G.
+    by rewrite /save_goals map_cons.
 Qed.
 
   Lemma add_deep_goalsP hd r ys l tl:
@@ -962,7 +962,5 @@ Qed.
       rewrite Y/=.
       case S: t2l => //=[[sx x] xs].
       by rewrite t2l_big_and//= cat_cons cat0s.
-Qed.
-
-
+  Qed.
 End NurProp.

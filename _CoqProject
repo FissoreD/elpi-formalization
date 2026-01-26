@@ -18,7 +18,6 @@ theories/tree_prop_hard.v
 
 theories/elpi.v
 theories/elpi_clean_ca.v
-theories/elpi_next.v
 theories/elpi_test.v
 
 theories/t2l.v
