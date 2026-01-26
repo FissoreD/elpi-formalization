@@ -45,7 +45,7 @@ Section s.
 
   Lemma run_ko_left1 fv s1 s2 A B A' B' sx:
     is_ko A -> run u p fv s1 (Or A s2 B) sx (Or A' s2 B') false ->
-      Texists b, run u p fv s2 B sx B' b /\ 
+      exists b, run u p fv s2 B sx B' b /\ 
         (A' = get_dead A B').
   Proof.
     rewrite/get_dead.
@@ -201,7 +201,7 @@ Section s.
 
   Lemma run_or_ko_right2 fv s2 X X' A A' SOL sIgn:
     is_ko X -> run u p fv s2 (Or A sIgn X) SOL (Or A' sIgn X') false ->
-      Texists b1, run u p fv s2 A SOL A' b1 /\ X' = if is_dead A' then dead X else if b1 == false then X else cutr X.
+      exists b1, run u p fv s2 A SOL A' b1 /\ X' = if is_dead A' then dead X else if b1 == false then X else cutr X.
   Proof.
     remember (Or A _ _) as o1 eqn:Ho1.
     remember (Or A' _ _) as o2 eqn:Ho2 => + H.

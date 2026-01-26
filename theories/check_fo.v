@@ -599,7 +599,7 @@ Qed.
 
   Lemma step_next_alt_failed {sP sv sv' A B C s b}:
     check_program sP p ->
-      det_tree sP A -> step u p sv s A = (sv', Failure, B) ->
+      det_tree sP A -> step u p sv s A = (sv', Failed, B) ->
         next_alt b B = Some (C) -> det_tree sP C.
   Proof.
     move=> H1 H2 H3 H4.

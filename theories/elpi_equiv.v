@@ -324,7 +324,7 @@ Section NurEqiv.
     vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
     valid_tree A ->
       run u p fv s1 A (Some s2) B b -> 
-        Texists x xs,
+        exists x xs,
           t2l A s1 nilC = x ::: xs /\
           nur u p fv x.1 x.2 xs s2 (t2l B s0 nilC).
   Proof.
@@ -1157,7 +1157,7 @@ Qed.
 Lemma elpi_to_tree fv s1 s2 a na g  : 
   nur u p fv s1 g a s2 na -> 
   forall s0 t, valid_tree t -> (t2l t s0 nilC) = ((s1,g) ::: a) -> 
-  Texists t1 n, run u p fv s0 t (Some s2) t1 n /\ t2l t1 s0 nilC = na.
+  exists t1 n, run u p fv s0 t (Some s2) t1 n /\ t2l t1 s0 nilC = na.
 Proof.
   elim; clear.
   - move=> s a fv s1 A vA /= H.

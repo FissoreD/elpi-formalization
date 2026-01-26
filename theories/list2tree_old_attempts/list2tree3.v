@@ -119,7 +119,7 @@ Proof.
   
 
 Lemma step_a2t {u ign1 L}: 
-  step u ign1 (a2t_ L) = Failure (a2t_ L).
+  step u ign1 (a2t_ L) = Failed (a2t_ L).
 Proof. case: L => //=-[]//. Qed.
 
 Lemma expanded_a2t u ign1 L:

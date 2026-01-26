@@ -88,7 +88,7 @@ three functions and four inductives to animate a program. Specifically:
     Inductive step_res :=
     | Expanded    of Sigma & tree
     | CutBrothers of Sigma & tree
-    | Failure     of tree
+    | Failed     of tree
     | Success     of Sigma & tree.
     ```
   This inductive indicates whether a tree evolution succeeds, fails, resolves
@@ -141,7 +141,7 @@ three functions and four inductives to animate a program. Specifically:
   outputs without backtracking).
 
 - **expandedb**: This inductive iterates over the `step` function until it
-  reaches either a **Failure** or a **Success**. The last argument of `expandedb`
+  reaches either a **Failed** or a **Success**. The last argument of `expandedb`
   is a bool indicating
   whether, during the resolution of the query, there is a superficial cut (i.e.,
   a cut whose effect should be visible outside the current tree).
@@ -204,8 +204,8 @@ The more interesting and used are:
 - `step_success : step s1 A = Success s2 B -> ((s1 = s2) * (A = B))%type.`
 - `step_solved_success : step s1 A = Success s2 B -> (success A * success B)%type.` (*which can only return the first projection, due to the previous lemma*)
 - `step_not_dead : is_dead A = false -> step s A = r -> is_dead (get_tree r) = false`
-- `step_failure_failed : step s1 A = Failure B -> (failed A * failed B)%type.`
--  `failed_step : failed A -> step s1 A = Failure A.`
+- `step_failure_failed : step s1 A = Failed B -> (failed A * failed B)%type.`
+-  `failed_step : failed A -> step s1 A = Failed A.`
 -  `next_alt_none : next_alt s1 A = None -> forall s2, next_alt s2 A = None.`
 - `next_alt_some : next_alt s1 A = Some (s2, B) -> (forall s3, exists s4, next_alt s3 A = Some (s4, B)).`
 

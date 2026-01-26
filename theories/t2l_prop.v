@@ -267,7 +267,7 @@ Defined.
 
   Lemma step_failure_next_alt_none_empty A fv fv' s1 s3 E l b:
     valid_tree A ->
-      step u p fv s1 A = (fv', Failure, E) ->
+      step u p fv s1 A = (fv', Failed, E) ->
         next_alt b E = None ->
           t2l A s3 l = nilC.
   Proof.

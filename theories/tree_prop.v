@@ -16,7 +16,7 @@ Section RunP.
   (* EXPAND PROPERTIES                                                *)
   (********************************************************************)
 
-  Lemma is_ko_step u p fv A s1: is_ko A -> step u p fv  s1 A = (fv, Failure, A).
+  Lemma is_ko_step u p fv A s1: is_ko A -> step u p fv  s1 A = (fv, Failed, A).
   Proof.
     elim: A s1 => //.
     - move=> A HA s B HB s1 /=.
@@ -44,7 +44,7 @@ Section RunP.
   Qed. 
 
   Lemma is_dead_step u p fv s A: 
-    is_dead A -> step u p fv  s A = (fv, Failure, A).
+    is_dead A -> step u p fv  s A = (fv, Failed, A).
   Proof. move=>/is_dead_is_ko/is_ko_step//. Qed.
 
   Lemma success_step u p fv s A: success A -> step u p fv s A = (fv, Success, A).
@@ -94,7 +94,7 @@ Section RunP.
   Qed.
 
   Lemma step_failed u p fv fv' s1 A B:
-    step u p fv s1 A = (fv', Failure, B) -> ((fv = fv') * (B = A) * failed A)%type.
+    step u p fv s1 A = (fv', Failed, B) -> ((fv = fv') * (B = A) * failed A)%type.
   Proof.
     elim: A fv fv' s1 B => //.
     + move=> ?? s1 B[<-]//.
@@ -196,7 +196,7 @@ Section RunP.
   Proof. by case: r => -[?[]]//=b; case X: success; rewrite // (success_step _ _ _ s1 X). Qed.
 
   Lemma failed_step u p fv s1 A:
-    failed A -> step u p fv  s1 A = (fv, Failure, A).
+    failed A -> step u p fv  s1 A = (fv, Failed, A).
   Proof.
     elim: A s1; clear => //; try by move=> ? [] //.
     + move=> A HA s1 B HB s2/=.
@@ -541,14 +541,14 @@ Section RunP.
   Qed.
 
   Lemma run_success u p fv A s1 s2 r n: 
-    success A -> run u p fv s1 A s2 r n -> (s2 = Some (get_substS s1 A) /\ r = build_na A (next_alt true A) /\ n = false)%type2.
+    success A -> run u p fv s1 A s2 r n -> [/\ s2 = Some (get_substS s1 A), r = build_na A (next_alt true A) & n = false].
   Proof.
     move=> sA H; have:= success_step u p fv s1 sA.
     by inversion H; clear H; try congruence; subst; rewrite success_step//; rewrite failed_success in sA.
   Qed.
 
   Lemma run_consistent u p fv s A s1 B s2 C n1 n2:
-    run u p fv s A s1 B n1 -> run u p fv s A s2 C n2 -> ((s2 = s1) /\ (C = B) /\ (n2 = n1))%type2.
+    run u p fv s A s1 B n1 -> run u p fv s A s2 C n2 -> [/\ (s2 = s1), (C = B) & (n2 = n1)].
   Proof.
     move=> H; elim: H s2 C n2; clear.
     + move=> s1 _ A _ ? sA <-<- s3 C n2 H; subst.
@@ -557,13 +557,13 @@ Section RunP.
       inversion H; clear H; try congruence; subst.
       - by rewrite success_step in HA.
       - move: H0; rewrite HA => -[??]; subst.
-        by rewrite !(IH _ _ _ X).
+        by case: (IH _ _ _ H1); subst.
       - by rewrite failed_step in HA.
       - by rewrite failed_step in HA.
     + move=> s1 s2 r A B n1 ?? HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
       - by rewrite success_step in HA.
-      - move: H0; rewrite HA => -[??]; subst; by rewrite !(IH _ _ _  X)//.
+      - move: H0; rewrite HA => -[??]; subst; by case: (IH _ _ _  H1); subst.
       - by rewrite failed_step in HA.
       - by rewrite failed_step in HA.
     + move=> s1 s2 A B r n1 ? fA nB rB IH s3 C n2 H.

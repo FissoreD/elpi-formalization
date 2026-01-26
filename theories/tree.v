@@ -23,12 +23,12 @@ Inductive tree :=
 HB.instance Definition _ := hasDecEq.Build tree tree_eqb_OK.
 
 (*SNIP: step_tag*)
-Inductive step_tag := Expanded | CutBrothers| Failure | Success.
+Inductive step_tag := Expanded | CutBrothers | Failed | Success.
 (*ENDSNIP: step_tag*)
 derive step_tag.
 HB.instance Definition _ := hasDecEq.Build step_tag step_tag_eqb_OK.
 
-Definition is_fl := eq_op Failure.
+Definition is_fl := eq_op Failed.
 Definition is_cb := eq_op CutBrothers.
 Definition is_sc := eq_op Success.
 
@@ -103,7 +103,7 @@ Section tree_op.
     match A with
     (* KO is considered as a failure, so that next_alt can put it
         into Dead. This is because, we want step to transform a KO
-        tree into a "Failure KO" (it does not introduce a Dead tree).
+        tree into a "Failed KO" (it does not introduce a Dead tree).
     *)
     | KO | Dead => true
     | TA _ | OK => false
@@ -356,13 +356,17 @@ Section main.
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
 
-(*SNIP: step*)
-  Fixpoint step pr fv s A : ({fset V} * step_tag * tree) :=
+  Notation fv := {fset V}.
+
+(*SNIP: step_sig*)
+  Definition step : program -> fv -> Sigma -> tree -> (fv * step_tag * tree) := 
+(*ENDSNIP: step_sig*)
+    fix step pr fv s A : ({fset V} * step_tag * tree) :=
     let step := step pr in
     match A with
     (* meta *)
     | OK             => (fv, Success, OK)
-    | KO | Dead     => (fv, Failure, A)
+    | KO | Dead     => (fv, Failed, A)
     
     (* lang *)
     | TA cut       => (fv, CutBrothers, OK)
@@ -385,7 +389,6 @@ Section main.
           (fv, tB, And (if is_cb tB then cutl A else A) B0 rB)
         else (fv, tA, And rA B0 B)
     end.
-(*ENDSNIP: step*)
 
   (* Next_alt takes a tree "T" returns a new tree "T'" representing the next
      alternative wrt "T", if no new alternative exists, None is returned.
@@ -393,7 +396,9 @@ Section main.
      "T".
   *)
 (*SNIP: next_alt*)
-  Fixpoint next_alt b (A : tree) : option (tree) :=
+  Definition next_alt : bool -> tree -> option tree :=
+(*ENDSNIP: next_alt*)
+    fix next_alt b (A : tree) : option (tree) :=
     match A with
     | KO | Dead => None
     | OK => if b then None else Some OK
@@ -415,7 +420,6 @@ Section main.
         | Some nA => Some (Or nA sB B)
       end
   end.
-(*ENDSNIP: next_alt*)
 
   Goal forall r, next_alt false (And (Or OK empty OK) r KO) = Some (And (Or Dead empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
@@ -432,8 +436,9 @@ Section main.
   Definition build_na A oA := odflt (dead A) oA.
   Definition build_s (s:Sigma) (oA: option tree) := Option.map (fun _ => s)  oA.
 
-
-  Inductive run (p : program): {fset V} -> Sigma -> tree -> option Sigma -> tree -> bool -> Type :=
+(*SNIP: run_sig*)
+  Inductive run (p : program): {fset V} -> Sigma -> tree -> option Sigma -> tree -> bool -> Prop :=
+(*ENDSNIP: run_sig*)
     | run_done s1 s2 A B fv       : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> run fv s1 A (Some s2) B false
     | run_cut  s1 s2 r A B n fv fv' : step p fv s1 A = (fv', CutBrothers, B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r true
     | run_step s1 s2 r A B n fv fv'   : step p fv s1 A = (fv', Expanded,    B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r n
@@ -443,8 +448,6 @@ Section main.
     | run_dead s1 A fv : 
           failed A -> next_alt false A = None ->
               run fv s1 A None (dead A) false.
-
-  Definition dead_run p fv s1 A : Type := forall B n, run p fv s1 A None B n.
 
   Fixpoint vars_tree t : {fset V} :=
   match t with

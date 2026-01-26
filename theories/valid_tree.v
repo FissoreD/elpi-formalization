@@ -289,7 +289,7 @@ Section valid_tree.
     Qed.
 
   Lemma valid_tree_run s1 sv A s2 B b:
-    valid_tree A -> run u p sv s1 A s2 B b -> (B = dead B) + valid_tree B.
+    valid_tree A -> run u p sv s1 A s2 B b -> (B = dead B) \/ valid_tree B.
   Proof.
     move=> + H; elim: H; clear => //=.
     + move=> s1 s2 A B sv sA _ <- vA.
