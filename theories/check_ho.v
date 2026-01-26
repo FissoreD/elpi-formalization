@@ -4391,7 +4391,7 @@ Proof.
   move=> MINA2 MP2.
   case eA: step => [[]A']//=; last first.
   - by rewrite !(step_success eA) in sA.
-  - have [? fA]/= := step_failed_same eA; subst A'.
+  - have [? fA]/= := step_failed eA; subst A'.
     move: H; rewrite eA/= => /tc_andP[tNA' tNB0 tNB].
     rewrite sA in tA tA' *.
     rewrite eA/= in MINA2.

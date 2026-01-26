@@ -291,7 +291,7 @@ Defined.
     - move=> A HA l' B HB fv fv' s2 s3 C l b/=/andP[vA].
       rewrite !push.
       case eA: step => //[[? []]A']//.
-        have [[??] fA]:= step_failed_same eA; subst.
+        have [[??] fA]:= step_failed eA; subst.
         rewrite failed_success// => /eqP->[?<-]/=; subst.
         rewrite fA failed_success//.
         case nA: next_alt => [D|]//= _.
@@ -687,7 +687,7 @@ Qed.
           by rewrite (step_not_solved e)//.
         - have []:= s2l_empty_hd_success vA (step_not_failed e notF) H1.
           by rewrite (step_not_solved e)//.
-        - have [[??]?] := step_failed_same e; subst.
+        - have [[??]?] := step_failed e; subst.
           have {H1} := f_equal size H1.
           move=>/(_ _ IsList_alts).
           rewrite (s2l_size s1 l1).

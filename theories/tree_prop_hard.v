@@ -820,7 +820,7 @@ Section s.
       case: H2 => H2.
         repeat eexists; left; apply: run_step Y H2.
       by repeat eexists; eauto.
-    - move=> s1 s2 A B C r n /step_failed_same [? +] + rC IH D E F ?; subst.
+    - move=> s1 s2 A B C r n /step_failed [? +] + rC IH D E F ?; subst.
       move=> /= /orPT[fD|/andP[sD fF]].
         rewrite fD; case: ifP => //dD.
         case W: next_alt => //=[D'].

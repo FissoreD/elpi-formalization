@@ -93,7 +93,7 @@ Section RunP.
       by rewrite fun_if is_dead_cutl; case: ifP.
   Qed.
 
-  Lemma step_failed_same u p fv fv' s1 A B:
+  Lemma step_failed u p fv fv' s1 A B:
     step u p fv s1 A = (fv', Failure, B) -> ((fv = fv') * (B = A) * failed A)%type.
   Proof.
     elim: A fv fv' s1 B => //.
