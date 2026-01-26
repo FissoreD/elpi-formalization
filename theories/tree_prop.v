@@ -47,7 +47,9 @@ Section RunP.
     is_dead A -> step u p fv  s A = (fv, Failed, A).
   Proof. move=>/is_dead_is_ko/is_ko_step//. Qed.
 
+  (*SNIP: success_step*)
   Lemma success_step u p fv s A: success A -> step u p fv s A = (fv, Success, A).
+  (*ENDSNIP: success_step*)
   Proof.
     elim: A s => //; try by do 2 eexists.
     + move=> A HA s1 B HB s /=.
@@ -195,8 +197,9 @@ Section RunP.
     step u p fv s1 A = r -> ~ (is_sc r.1.2) -> success A = false.
   Proof. by case: r => -[?[]]//=b; case X: success; rewrite // (success_step _ _ _ s1 X). Qed.
 
-  Lemma failed_step u p fv s1 A:
-    failed A -> step u p fv  s1 A = (fv, Failed, A).
+  (*SNIP: failed_step*)
+  Lemma failed_step u p fv s1 A: failed A -> step u p fv  s1 A = (fv, Failed, A).
+  (*ENDSNIP: failed_step*)
   Proof.
     elim: A s1; clear => //; try by move=> ? [] //.
     + move=> A HA s1 B HB s2/=.
