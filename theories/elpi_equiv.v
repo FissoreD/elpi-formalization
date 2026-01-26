@@ -131,22 +131,16 @@ Proof.
         rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
         have /= fA' := next_alt_failed nA.
         have /= vA' := (valid_tree_next_alt vA nA).
-        have [He H1 H2] := next_callS_s2l p u fv fA' vA' H.
-        rewrite B/= in He; subst.
-        rewrite clean_ca_nil/= in H1.
-        have vnA:= next_callS_valid vA' fA' erefl.
-        rewrite B/= in H1.
-        have /= [t1[n [{}IH ?]]] := IH _ _ (vnA p u _ _) H1; subst.
+        have [] := next_callS_s2l p u fv fA' vA' H.
+        rewrite B/=clean_ca_nil => H1 H2.
+        have /= [t1[n [{}IH ?]]] := IH _ _ (valid_tree_step vA' erefl) H1; subst.
         repeat eexists.
         apply: run_fail fA nA _.
         apply: run_step H2 IH.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-      have [He H1 H2] := next_callS_s2l p u fv fA vA H.
-      rewrite B/= in He; subst.
-      rewrite clean_ca_nil/= in H1.
-      have vnA:= next_callS_valid vA fA erefl.
-      rewrite B/= in H1.
-      have /= [t1[n [{}IH ?]]] := IH _ _ (vnA p u _ _) H1; subst.
+      have [] := next_callS_s2l p u fv fA vA H.
+      rewrite B/= clean_ca_nil/= => H1 H2.
+      have /= [t1[n [{}IH ?]]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
       repeat eexists.
       apply: run_step H2 IH.
     }
@@ -160,22 +154,16 @@ Proof.
         have /= vA' := (valid_tree_next_alt vA nA).
         rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-        have [He H1 H2] := next_callS_s2l p u fv fA' vA' H.
-        rewrite B/= in He; subst.
-        rewrite clean_ca_nil/= in H1.
-        have vnA:= next_callS_valid vA' fA' erefl.
-        rewrite B/= cat0s in H1.
-        have /= [t1[n [{}IH ?]]] := IH _ _ (vnA p u _ _) H1; subst.
+        have [] := next_callS_s2l p u fv fA' vA' H.
+        rewrite B/= clean_ca_nil/= cat0s => H1 H2.
+        have /= [t1[n [{}IH ?]]] := IH _ _ (valid_tree_step vA' erefl) H1; subst.
         repeat eexists.
         apply: run_fail fA nA _.
         apply: run_step H2 IH.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-      have [He H1 H2] := next_callS_s2l p u fv fA vA H.
-      rewrite B/= in He; subst.
-      rewrite clean_ca_nil/= in H1.
-      have vnA:= next_callS_valid vA fA erefl.
-      rewrite B/= cat0s in H1.
-      have /= [t1[n [{}IH ?]]] := IH _ _ (vnA p u _ _) H1; subst.
+      have [] := next_callS_s2l p u fv fA vA H.
+      rewrite B/= clean_ca_nil/=cat0s => H1 H2.
+      have /= [t1[n [{}IH ?]]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
       repeat eexists.
       apply: run_step H2 IH.
     }
