@@ -88,18 +88,6 @@ Section vars_tree.
     by rewrite fsubsetU// (IH _ _ _ _ _ _ Y) orbT.
   Qed.
 
-  (* Lemma H_sub_rules m q t s s' fv fv':
-    H u fv m q t s = Some (fv', s') -> vars_sigma s' `|` vars_tm (RCallable2Callable (Callable2Tm t)) `<=` fv'.
-  Proof.
-    elim: m q t s s' fv fv' => //[|m ms IH] [k|f a]// [k'|f' a']//= s s' fv fv'/=.
-      by case: eqP => // _ [<-]; rewrite fsubsetUr.
-    case X: H => [[fv1 s1]|]//.
-    remember ((if _ then _ else _) _ _ _) as H eqn:Hp.
-    case: H Hp => //s2 Hp [<- _].
-    by rewrite fsubsetU// (IH _ _ _ _ _ _ X) orbT.
-  Qed. *)
-
-
   Lemma select_sub_rules r0 rn fv fv' q m s:
     select u fv q m r0 s = (fv', rn) ->
       varsU (seq.map (fun x => vars_sigma x.1 `|` varsU_rule x.2) rn) `<=` fv'.

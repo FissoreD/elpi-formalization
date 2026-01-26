@@ -34,7 +34,6 @@ Axiom H_same_hd: forall u m c hd s s1,
     get_tm_hd (Callable2Tm (RCallable2Callable c)) =
       get_tm_hd (Callable2Tm (RCallable2Callable hd)).
 
-(* Axiom check_rule_fresh: forall sP V R, check_rule sP R = check_rule sP (fresh_rule V R). *)
 Axiom check_rule_fresh: forall V R, (fresh_rules V R) = R.
 
 Axiom unify_id: forall u A sX, lang.unify u A A sX = Some sX.

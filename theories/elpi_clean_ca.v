@@ -196,7 +196,6 @@ Section clean_ca.
         by rewrite /save_goals !cat0s.
       rewrite/empty_caG all_cons => /andP[H1 H2].
       rewrite clean_ca_save_goals// cat0s.
-      (* case: g H1 => //= -[]// _. *)
       rewrite !size_cat addnK !clean_ca_cat take_size_cat; last first.
         by rewrite !clean_ca_size.
       by rewrite save_goals_cons /add_ca/= cat0s.

@@ -51,7 +51,6 @@ Section checker.
   Definition check_rules sP rules :=
     all (fun x => check_rule sP x.(head) x.(premises)) rules.
 
-  (* TODO: put pr in argument intead of a forall *)
   Definition check_program sP pr := 
     check_rules sP (rules pr).
 End checker.
@@ -340,7 +339,6 @@ Qed.
     rewrite /backchain/F.
     case X: tm2RC => //=[[q qp]].
     case: p => rules sig1 /=.
-    (* generalize {| rules := rules; sig := sig1 |} as pr => pr. *)
     case: fndP => //= kP.
     generalize (get_modes_rev q sig1.[kP]).
     clear kP sig1 p => l.

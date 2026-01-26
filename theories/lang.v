@@ -152,10 +152,6 @@ Definition mode_ctx := {fmap Kp -> (list mode)}.
 Definition sigT := {fmap Kp -> S}.
 Definition empty_sig : sigT := [fmap].
 
-(* 
-  The program knows about the signature of all predicates, therefore,
-  for each predicate we return a S (not an option S)
-*)
 Definition is_mode_ctx (x : mode_ctx) := unit.
 Lemma is_mode_ctx_inhab : forall x, is_mode_ctx x. Proof. exact (fun x => tt). Qed.
 Definition mode_ctx_eqb (x y : mode_ctx) := x == y.
@@ -191,7 +187,7 @@ Record Unif := {
 Fixpoint get_tm_hd (tm: Tm) : (Kd + (Kp + V)) :=
     match tm with
     | Tm_Kd K => inl K
-    | Tm_Kp K => inr (inl K) (*TODO: sP should be complete*)
+    | Tm_Kp K => inr (inl K)
     | Tm_V V => inr (inr V)
     | Tm_Comb h _ => get_tm_hd h
     end.

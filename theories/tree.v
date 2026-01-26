@@ -293,29 +293,9 @@ Section tree_op.
       rewrite failed_success//= failed_cutr//.
     rewrite sA success_cut sA HB// orbT//.
   Qed.
-
-  Lemma failed_cutl_is_ko {A}:
-    failed (cutl A) -> is_ko (cutl A).
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB; case: ifP => dA/=; rewrite?is_dead_cutl dA/=.
-        rewrite is_dead_is_ko//.
-      move=> /HA ->; rewrite is_ko_cutr//.
-    - move=> A HA B0 B HB; case:ifP => sA/=.
-        rewrite success_cut sA failed_success_cut success_cut sA/=.
-        move=> /HB.
-      (* THIS IS WRONG *)
-  Abort.
-
 End tree_op.
 
 Definition step_res := (step_tag * tree)%type.
-
-(*Lemma get_tree_And A B0 B : get_tree (mkAnd A B0 B) = And (if is_cb B then cutl A else A) B0 (get_tree B).
-Proof. by case: B. Qed.
-
-Lemma get_tree_Or A s B : get_tree (mkOr A s B) = Or A s (get_tree B).
-Proof. by case: B. Qed. *)
 
 Fixpoint big_and (a : list A) : tree :=
   match a with

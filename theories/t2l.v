@@ -43,8 +43,6 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
       [:: (a, ca) & add_deepG bt l tl]%G
   end.
 
-(* Definition kill (A: goals) := map (apply_cut (fun x => [::])) A. *)
-
 (* reset-point to list *)
 Definition r2l a : goals := seq2goals [seq a2g x | x <- a].
 
@@ -86,15 +84,6 @@ match A with
     else [::]
 end.
 (*ENDSNIP*)
-(* 
-Global Notation "-nilCG" :=
-  (@nilC _ _ IsList_goals)
-  (at level 2, no associativity, only parsing)
-  : SE.
-Global Notation "-nilCA" :=
-  (@nilC _ _ IsList_alts)
-  (at level 2, no associativity, only parsing)
-  : SE. *)
 
 Lemma make_LB0_cons a (ax : alts) (gl : goals) :
   make_lB0 [::a & ax] gl  = [:: (a.1, a.2 ++ gl) & make_lB0 ax gl].
@@ -116,7 +105,6 @@ Section test.
   Variable p : program.
   Variable sx : Sigma.
   Variable p1 : program.
-  (* Definition g p := (And (Or OK s1 CutS) p OK). *)
 
   Goal forall s3 l, 
     t2l (And (Or OK s1 (TA cut)) ([:: cut]) KO) s3 l = 
