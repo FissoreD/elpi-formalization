@@ -84,10 +84,6 @@ Section RunP.
       by rewrite !(HA _ _ _ _ X) !(HB _ _ _ _ Y).
   Qed.
 
-  Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a bx) = F t.1 t.2.
-  by case: t => /=.
-  Qed.
-
   Ltac push := rewrite !push.
 
   Lemma step_not_dead u p fv s A r: 

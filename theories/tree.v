@@ -450,8 +450,8 @@ Section main.
   match t with
   | TA cut | Dead | KO | OK => fset0
   | TA (call t) => vars_tm (Callable2Tm t)
-  | And A B0 B => vars_tree A `|` vars_atoms B0 `|` vars_tree B
-  | Or A _ B => vars_tree A `|` vars_tree B
+  | And A B0 B => vars_tree A `|` vars_tree B `|` vars_atoms B0
+  | Or A s B => vars_tree A `|` vars_tree B `|` vars_sigma s
   end.
 
 End main.

@@ -440,7 +440,7 @@ Fixpoint deref (s: Sigma) (tm:Tm) :=
   match tm with
   | Tm_V V => Option.default tm (lookup V s)
   | Tm_Kp _ | Tm_Kd _ => tm
-  | Tm_Comb h ag => Tm_Comb (deref s h) ag
+  | Tm_Comb h ag => Tm_Comb (deref s h) (deref s ag)
   end.
 
 Fixpoint H u (ml : list mode) (q : RCallable) (h: RCallable) s : option Sigma :=
@@ -451,13 +451,15 @@ Fixpoint H u (ml : list mode) (q : RCallable) (h: RCallable) s : option Sigma :=
   | _, _, _ => None
   end.
 
-Fixpoint select u (query : RCallable) (modes:list mode) (rules: list R) sigma : seq (Sigma * R) :=
+Fixpoint select u fv (query : RCallable) (modes:list mode) (rules: list R) sigma : ({fset V} * seq (Sigma * R)) :=
   match rules with
-  | [::] => [::]
+  | [::] => (fv, [::])
   | rule :: rules =>
     match H u modes query rule.(head) sigma with
-    | None => select u query modes rules sigma
-    | Some sigma' => (sigma', rule) :: select u query modes rules sigma
+    | None => select u fv query modes rules sigma
+    | Some (sigma) => 
+      let: (fv, rs) := select u fv query modes rules sigma in
+      (vars_sigma sigma `|` varsU_rule rule `|` fv, (sigma, rule) :: rs)
     end
   end.
 
@@ -466,13 +468,14 @@ Fixpoint select u (query : RCallable) (modes:list mode) (rules: list R) sigma : 
    outside this set
 *)
 Definition F u pr fv (query:Callable) s : {fset V} * seq (Sigma * R) :=
-  let: (fv, rules) := fresh_rules fv (pr.(rules)) in
-  (fv, match tm2RC (deref s (Callable2Tm query)) with
-      | None => [::] (*this is a call with flex head, in elpi it is an error! *)
+  (match tm2RC (deref s (Callable2Tm query)) with
+      | None => (fv, [::]) (*this is a call with flex head, in elpi it is an error! *)
       | Some (query, kp) =>
         match pr.(sig).[? kp] with 
-          | Some sig => select u query (get_modes_rev query sig) rules s
-          | None => [::]
+          | Some sig => 
+            let: (fv, rules) := fresh_rules fv (pr.(rules)) in
+            select u fv query (get_modes_rev query sig) rules s
+          | None => (fv, [::])
           end
       end).
 
@@ -518,15 +521,21 @@ Lemma backchain_fresh_premE u pr query s l :
   varsD (map (fun x => varsU_rprem x.2) l).
 Proof. by move=> <-; apply/backchain_fresh_prem. Qed. *)
 
-Lemma select_in_rules u R modes rules s r:
-  (select u R modes rules s) = r ->
-    all (fun x => x.2 \in rules) r.
+Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a bx) = F t.1 t.2.
+  by case: t => /=.
+Qed.
+
+
+Lemma select_in_rules u fv R modes rules s r:
+  (select u fv R modes rules s) = r ->
+    all (fun x => x.2 \in rules) r.2.
 Proof.
   move=> <-{r}.
   apply/allP => /= x rs.
-  elim: rules modes rs => //= r rs IH m.
+  elim: rules modes fv s rs => //= r rs IH m fv s.
   rewrite in_cons.
   case: H => [s'|/IH->]; last by rewrite orbT.
+  rewrite !push/=.
   rewrite in_cons; case: eqP => /=; first by move=> ->; rewrite eqxx.
   by move=> _ /IH->; rewrite orbT.
 Qed.
