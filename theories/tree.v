@@ -1,11 +1,8 @@
+From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Export finmap lang.
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
 
 (*BEGIN*)
 (*SNIP: tree_def*)

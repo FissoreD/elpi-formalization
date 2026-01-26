@@ -136,9 +136,7 @@ From mathcomp Require Import choice finset finfun fintype bigop.
 (*     fsinjectiveb f == boolean predicate of injectivity of f               *)
 (*****************************************************************************)
 
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
+From det Require Import prelude.
 
 Reserved Notation "A `=` B" (at level 70, no associativity).
 Reserved Notation "A `<>` B" (at level 70, no associativity).

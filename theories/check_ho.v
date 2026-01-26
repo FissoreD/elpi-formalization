@@ -1,14 +1,10 @@
+From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import finmap ctx lang.
 From det Require Import tree tree_prop.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import valid_tree.
-
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
 
 Lemma catf_refl {K:choiceType} {T:Type} (A:{fmap K -> T}):
   A + A = A.

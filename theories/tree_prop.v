@@ -1,10 +1,7 @@
+From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang tree.
 From det Require Import zify_ssreflect.
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
 
 Section RunP.
   (* Variable u: Unif.

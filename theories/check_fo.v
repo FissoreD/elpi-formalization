@@ -1,11 +1,8 @@
+From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From det Require Import tree tree_prop.
 From det Require Import finmap ctx lang.
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
 
 Section checker.
 

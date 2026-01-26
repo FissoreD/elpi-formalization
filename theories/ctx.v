@@ -1,8 +1,7 @@
+From det Require Import prelude.
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
 From det Require Import finmap.
-
-Set Implicit Arguments.
 
 (******* finite maps *********************************************************)
 (*                                                                           *)

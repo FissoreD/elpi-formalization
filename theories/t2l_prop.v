@@ -1,12 +1,9 @@
+From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import ctx lang tree tree_prop valid_tree elpi t2l.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import zify_ssreflect.
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
 
 Open Scope SE.
 
@@ -913,5 +910,59 @@ Qed.
       simpl in *.
       move=>[? [fB' Hz]]; rewrite Hz !catA//.
   Qed.
+
+  Lemma s2l_next_alt_tl {A s1 bt}:
+    valid_tree A ->
+    success A -> 
+      t2l (build_na A (next_alt true A)) s1 bt = behead (t2l A s1 bt).
+  Proof.
+    elim: A s1 bt => //=.
+    - move=> A HA s B HB s1 bt.
+      case:ifP => [dA vB sB|dA /andP[vA bB] sA].
+        rewrite (t2l_dead dA) cat0s.
+        have:= [elaborate HB s nilC vB sB].
+        case X: next_alt => [B'|]/=.
+          rewrite (t2l_dead dA) cat0s.
+          move=> ->; case: t2l => [|[]]//=???.
+          by rewrite !behead_cons.
+        move=> ->; rewrite (t2l_dead is_dead_dead).
+        by case: t2l => [|[]]//*; rewrite cat0s !behead_cons.
+      set SB:= t2l B s nilC.
+      have:= HA s1 SB vA sA.
+      case X: next_alt => //=[A'|].
+        move=> ->; rewrite !add_ca_deep_cat.
+        by rewrite (success_t2l empty)//= !behead_cons.
+      rewrite (t2l_dead is_dead_dead).
+      rewrite (success_t2l empty)//=.
+      rewrite behead_cons.
+      rewrite X/=(t2l_dead is_dead_dead)/=behead_cons.
+      have vB := bbOr_valid bB.
+      rewrite/SB => {SB}.
+      move/spec_bbOr: bB => [r[rs []?]]; subst.
+        by rewrite next_alt_big_or/= t2l_dead1//.
+      by rewrite next_alt_cutr//= t2l_cutr !t2l_dead1.
+    - move=> A HA l B HB s1 bt /andP[vA].
+      case:ifP => //= sA vB sB.
+      move=> /=.
+      case X: next_alt => [B'|]/=.
+        rewrite (success_t2l (get_substS s1 A) vA sA)//=.
+        rewrite (success_t2l (get_substS s1 A) vB sB)//=.
+        rewrite make_lB01_empty2 make_lB01_empty2.
+        by rewrite cat_cons behead_cons X/=.
+      rewrite (success_t2l s1 vA sA)//=.
+      rewrite (success_t2l (get_substS s1 A) vB sB)//=.
+      rewrite make_lB01_empty2.
+      rewrite cat_cons behead_cons X.
+      rewrite (t2l_dead is_dead_dead)//= cat0s.
+      case Y: next_alt => [A'|]/=; last first.
+        rewrite !(t2l_dead is_dead_dead)//=.
+      have:= HA s1 bt vA sA.
+      rewrite Y/= => ->.
+      rewrite (success_t2l empty)// behead_cons.
+      rewrite Y/=.
+      case S: t2l => //=[[sx x] xs].
+      by rewrite t2l_big_and//= cat_cons cat0s.
+Qed.
+
 
 End NurProp.

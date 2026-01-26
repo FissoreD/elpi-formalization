@@ -1,3 +1,4 @@
+From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
@@ -5,10 +6,6 @@ From det Require Import finmap ctx.
 
 Declare Scope type2_scope.
 Delimit Scope type2_scope with type2.
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
 
 Notation "a /\ b" := (a%type2 * b%type2)%type : type2_scope.
 
