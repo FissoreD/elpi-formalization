@@ -370,6 +370,7 @@ Section main.
      Next_alt takes a boolean b to know if a successful path should be erased in
      "T".
   *)
+  (*SNIP: next_alt_code *)
   (*SNIP: next_alt*)
   Definition next_alt : bool -> tree -> option tree :=
   (*ENDSNIP: next_alt*)
@@ -395,6 +396,7 @@ Section main.
         | Some nA => Some (Or nA sB B)
       end
   end.
+  (*ENDSNIP: next_alt_code *)
 
   Goal forall r, next_alt false (And (Or OK empty OK) r KO) = Some (And (Or Dead empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
