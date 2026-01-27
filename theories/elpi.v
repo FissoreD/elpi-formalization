@@ -201,6 +201,7 @@ Class IsList (Th Tl : Type)  := {
   take_min i j s: take (minn i j) s = take i (take j s);
   size_drop n0 s: size (drop n0 s) = size s - n0;
   take_oversize [n : nat] [s]: size s <= n -> take n s = s;
+  map_take n F L: take n (map F L) = map F (take n L)
 }.
 Declare Scope SE.
 Global Infix "++" := appendC : SE.
@@ -340,6 +341,7 @@ Section mkIsList.
     - by move => /seq2alts_inj /cat_same_tl /alts2seq_inj.
     - by rewrite (fun_if seq2alts).
     - by move=> /seq.take_oversize ->; rewrite altK.
+    - by rewrite seq.map_take//.
   Defined.
 
 End mkIsList.

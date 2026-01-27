@@ -227,11 +227,11 @@ Section NurValidState.
 
   Lemma valid_ca_make_lB0_empty_ca hd X tl bt:
     empty_caG hd ->
-      valid_caA (make_lB0 X hd) tl bt = valid_caA X tl bt
+      valid_caA (map (catr hd) X) tl bt = valid_caA X tl bt
   with valid_caG_cat_empty_ca hd x tl b:
       empty_caG hd -> valid_caG (x ++ hd) tl b = valid_caG x tl b.
   Proof.
-    all: rewrite/make_lB0/empty_caG in valid_ca_make_lB0_empty_ca valid_caG_cat_empty_ca* => H.
+    all: rewrite/empty_caG in valid_ca_make_lB0_empty_ca valid_caG_cat_empty_ca* => H.
     {
       case: X => //=-[s g] gs.
       have:= valid_ca_make_lB0_empty_ca _ gs; rewrite/valid_caA => H1.
@@ -257,14 +257,14 @@ Section NurValidState.
     let pref := take (size ca - size l) (add_deep l hd ca) in
     empty_caG hd -> suffix l ca -> valid_caA_aux true ca (take (size ca - size l) ca) l ->
       valid_caA_aux true (pref ++ l) 
-        (make_lB0 (pref) hd) l 
+        (map (catr hd) pref) l 
     with valid_caG_aux_add_deep_make_lB0 x xs G hd:
       let n := size xs - size G in
       empty_caG hd ->
       suffix G xs ->
       valid_caG x (take n xs) G ->
       valid_caA_aux true xs (take n xs) G ->
-      valid_caG (add_deepG G hd x) (make_lB0 (take n (add_deep G hd xs)) hd) G
+      valid_caG (add_deepG G hd x) (map (catr hd) (take n (add_deep G hd xs))) G
     .
   Proof.
     move=>/=.
@@ -285,7 +285,7 @@ Section NurValidState.
     rewrite !take_cons behead_cons/=.
     case: eqP => // _.
     move=> /andP[H4 H5].
-    rewrite seq2alts_cat !seq2altsK /make_lB0 map_cons behead_cons.
+    rewrite seq2alts_cat !seq2altsK map_cons behead_cons.
     have:= valid_caG_aux_add_deep_make_lB0 x _ _ _ Hhd H3.
     have:= valid_ca_aux_add_deep_make_lB0 _ _ _ Hhd H3.
     replace (size xs - size l) with n by lia.
@@ -295,7 +295,7 @@ Section NurValidState.
     case: x => // -[a ca] gs Hhd suff/=.
     case: ifP => //=; last first.
       move=> _ /andP[/eqbPA->] EGS H1.
-      rewrite take0 drop0 cats0 /make_lB0/=/map/=.
+      rewrite take0 drop0 cats0 /map/=.
       rewrite empty_caG_add_deepG//EGS suffix0s suffixs0.
       case: ifP => //.
       move=>/eqBP->.
@@ -320,8 +320,8 @@ Section NurValidState.
       move=> /suffixP1 => -[P?]; subst.
       rewrite add_deep_cat size_cat take_size_cat?size_cat?size_add_deep//.
       move=> _ _ _.
-      by rewrite /make_lB0 map_cat suffix_catr//= suffix_refl.
-    set X:= make_lB0 _ _.
+      by rewrite map_cat suffix_catr//= suffix_refl.
+    set X:= map _ _.
     rewrite size_cat addnK take_size_cat//.
     apply/andP; split.
       apply: valid_caG_aux_add_deep_make_lB0 => //.
@@ -336,7 +336,7 @@ Section NurValidState.
   Lemma valid_ca_add_deep_make_lB0 hd xs l: 
     empty_caG hd ->
     (valid_caA xs xs l) ->
-    (valid_caA (add_deep l hd xs) (make_lB0 (add_deep l hd xs) hd) l).
+    (valid_caA (add_deep l hd xs) (map (catr hd) (add_deep l hd xs)) l).
   Proof.
     rewrite valid_ca_valid_ca_aux//.
     move=> H1 H2.
@@ -353,7 +353,7 @@ Section NurValidState.
     empty_caG hd ->
     valid_caG x xs l ->
     valid_caA xs xs l ->
-    valid_caG (add_deepG l hd x) (make_lB0 (add_deep l hd xs) hd) l.
+    valid_caG (add_deepG l hd x) (map (catr hd) (add_deep l hd xs)) l.
   Proof.
     move=> H1 H2 H3.
     have /= := valid_caG_aux_add_deep_make_lB0 x (xs++l) l hd.
@@ -461,8 +461,8 @@ Section NurValidState.
       case:ifP => /=[sA vB|sA /eqP?]; subst.
         move: HA.
         have SA:= success_t2l empty vA sA; rewrite SA/=.
-        rewrite make_lB01_empty2 behead_cons => H1.
-        set M := make_lB0 _ _.
+        rewrite catl0 behead_cons => H1.
+        set M := map _ _.
         rewrite valid_ca_split.
         rewrite drop_size_cat//{4 5}/M.
         have? := empty_caG_r2l.
@@ -476,7 +476,7 @@ Section NurValidState.
         apply: HB vB.
       case lA: t2l => [|[s x] xs]//=.
       rewrite !t2l_big_and//=.
-      rewrite/make_lB01 map_cons cat_cons behead_cons.
+      rewrite map_cons cat_cons behead_cons.
       have? := empty_caG_r2l B0.
       rewrite valid_caG_cat_empty_ca//= cat0s seq2altsK.
       move: HA; rewrite lA => /=.

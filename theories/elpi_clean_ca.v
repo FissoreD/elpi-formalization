@@ -93,9 +93,8 @@ Section clean_ca.
   Qed.
 
   Lemma clean_ca_mk_lb0 {bt L g}:
-    empty_caG g -> clean_ca bt (make_lB0 L g) = make_lB0 (clean_ca bt L) g.
+    empty_caG g -> clean_ca bt (map (catr g) L) = map (catr g) (clean_ca bt L).
   Proof.
-    rewrite/make_lB0.
     elim: L g bt => // [[s1 g]gs] IH hd bt E/=.
     rewrite map_cons/= clean_ca_goals_cat.
     rewrite (clean_ca_goals_empty E)//=IH//.
@@ -116,9 +115,9 @@ Section clean_ca.
     clean_ca bt (take n L) = take n (clean_ca bt L).
   Proof. elim: L n => //= -[s g] gs IH n/=; case: n => //n; rewrite !take_cons/=IH//. Qed.
 
-  Lemma take_make_lb0 {n hd L}:
+  (* Lemma take_make_lb0 {n hd L}:
     take n (make_lB0 L hd) = make_lB0 (take n L) hd.
-  Proof. elim: L n => //= -[s g] gs IH []//=n; rewrite !take_cons IH//. Qed.
+  Proof. elim: L n => //= -[s g] gs IH []//=n; rewrite !take_cons IH//. Qed. *)
 
   Lemma clean_ca_add_deep {x bt hd L}:
     empty_caG hd ->
@@ -143,8 +142,8 @@ Section clean_ca.
       rewrite -take_add_deep.
       rewrite clean_ca_drop.
       rewrite !clean_ca_size.
-      rewrite !clean_ca_take  -!take_add_deep -!take_make_lb0.
-      set L1 := make_lB0 _ _.
+      rewrite !clean_ca_take  -!take_add_deep -!map_take.
+      set L1 := map _ _.
       set L2 := clean_ca _ _.
       rewrite subnDAC.
       set N := size ca - size bt.
@@ -228,11 +227,10 @@ Section clean_ca.
       rewrite sA/= => vB.
       case X: (next_alt _ B) => [B'|].
         move=> [<-]{C}/=.
-        rewrite !(success_t2l empty _ sA)//=.
-        rewrite !make_lB01_empty2.
+        rewrite !(success_t2l empty _ sA)//= !catl0.
         rewrite !clean_ca_cat.
-        set W := make_lB0 _ _.
-        set Z := make_lB0 _ _.
+        set W := map _ _.
+        set Z := map _ _.
         rewrite !catA.
         have: clean_ca bt W = Z; last first.
           move=> <-.
@@ -269,8 +267,7 @@ Section clean_ca.
     - move=> A HA B0 B HB s x bt /andP[vA].
       have H := empty_caG_r2l.
       case: ifP => /=[sA vB|sA /eqP-> {B HB}].
-        rewrite !(success_t2l empty _ sA)//=.
-        rewrite !make_lB01_empty2.
+        rewrite !(success_t2l empty _ sA)//=!catl0.
         rewrite clean_ca_cat.
         rewrite catA HB//= clean_ca_cat.
         rewrite !clean_ca_mk_lb0//.
@@ -285,8 +282,7 @@ Section clean_ca.
       move=> [???]; subst => _.
       rewrite !t2l_big_and/= cat_cons cat0s clean_ca_goals_cat.
       repeat f_equal.
-        by rewrite clean_ca_add_deep_gs//.
-        by apply: clean_ca_goals_a2gs.
+        by rewrite /catl/= clean_ca_add_deep_gs//clean_ca_goals_a2gs.
       rewrite seq2altsK.
       by rewrite clean_ca_mk_lb0// clean_ca_add_deep//.
   Qed.
@@ -357,10 +353,9 @@ Section clean_ca.
       case eB: step => [[fvb rb] B']/=.
       case fA: failed => //= ++ /andP[vA].
       case: (ifP (success A)) => //=[sA + fB vB|sA + _ /eqP?]; subst.
-        rewrite (success_t2l empty)//=.
-        rewrite make_lB01_empty2/=.
+        rewrite (success_t2l empty)//= catl0.
         rewrite clean_ca_cat.
-        set ml:= make_lB0 _ _.
+        set ml:= map _ _.
         have [s2[x[xs H1]]] := [elaborate failed_t2l vB fB (get_substS s A) (ml ++ bt)].
         rewrite H1/=.
         move: eA; rewrite success_step// => -[???]; subst => /=.
@@ -370,13 +365,13 @@ Section clean_ca.
         move=> /(_ (ml ++ bt)); rewrite H => /= /(_ _ _ _ _ erefl).
         case: ifP => cbr/=[].
           destruct r' => //= + [?]; subst.
-          rewrite t2l_cutl//= cat0s make_lB01_empty2 cats0.
+          rewrite t2l_cutl//= cat0s catl0 cats0.
           have [x[tl]]:= s2l_CutBrothers (get_substS s A') (ml++bt) vB eB.
           rewrite H => -[[????]][H1 H2]; subst.
           by rewrite !H1 take0/= => -[<-].
         move=> + [??]; subst.
         rewrite (success_t2l empty _ sA)//=.
-        rewrite -/ml make_lB01_empty2 clean_ca_cat.
+        rewrite -/ml catl0 clean_ca_cat.
         have [[[? Hx] fA']] := s2l_Expanded_cut vB eB H; subst.
         set X:= t2l _ _ _.
         case: X => //=-[s2 y]ys[??] ? [?]; subst.
@@ -433,7 +428,7 @@ Section clean_ca.
       case X: bc => [fv' [|[s0 r0] rs]]//=.
       rewrite cat0s cats0 add_ca_deep_empty1.
       have:= @s2l_big_or s1 s0 (premises r0) rs no_alt no_goals.
-      rewrite make_lB0_empty2/= add_ca_deep_empty1 cat0s => <-//.
+      rewrite catr0/= add_ca_deep_empty1 cat0s => <-//.
     - move=> A HA s B HB s1 bt s2 t gl a ign fv.
       rewrite !push.
       case: ifP => [dA fB vB|dA fA /andP[vA bB]]/=.
@@ -465,9 +460,9 @@ Section clean_ca.
       case: ifP => /=[sA fB vB |sA _ /eqP?]; subst.
         move: eA; rewrite success_step// => -[???]; subst => /=.
         rewrite (success_t2l empty)//=.
-        rewrite make_lB01_empty2/=.
+        rewrite catl0/=.
         rewrite clean_ca_cat.
-        set ml:= make_lB0 _ _.
+        set ml:= map _ _.
         have [s2'[x[xs H1]]] := [elaborate failed_t2l vB fB (get_substS s1 A') (ml ++ bt)].
         rewrite H1/=.
         case: x H1 => [|[[|c']ca'] gs]// H1 [?????]; subst.
@@ -476,7 +471,7 @@ Section clean_ca.
         rewrite H1/= =>  // /(_ _ _ _ _ _ erefl) [{}HB].
         rewrite eB => -[??]; subst => /=.
         rewrite (success_t2l empty)//=.
-        rewrite make_lB01_empty2; repeat split => //.
+        rewrite catl0; repeat split => //.
         have [?] := s2l_Expanded_call vB eB H1; subst.
         case X: bc => [?[|[sz z]zs]].
           move=> [Hm Hn].
@@ -506,7 +501,7 @@ Section clean_ca.
       case X: bc => [?[|[sz z]zs]][?]; subst.
         move=> [Hm Hn]; subst.
         case W: t2l => //=[[sw w]ws].
-        rewrite /make_lB0 map_cons !clean_ca_cat clean_ca_mk_lb0//=.
+        rewrite map_cons !clean_ca_cat clean_ca_mk_lb0//=.
         rewrite/save_alts/= cat0s t2l_big_and//= !cat_cons !cat0s.
         by rewrite clean_ca_mk_lb0//=.
       move=> [Hm Hn]; rewrite Hn/=.
@@ -532,9 +527,9 @@ Section clean_ca.
       rewrite !cats0 in H1.
       rewrite H1//.
       f_equal.
-      rewrite add_deep_cat /make_lB0 map_cat; f_equal.
+      rewrite add_deep_cat map_cat; f_equal.
       have:= @add_deep_altsP hd (aa2gs zs) T1 no_alt T2 E (empty_ca_atoms1 _).
-      rewrite /=cats0/make_lB0 !cats0//.
+      rewrite !cats0//.
   Qed.
 
 

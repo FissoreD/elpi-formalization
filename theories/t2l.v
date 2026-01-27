@@ -1,14 +1,17 @@
+From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import tree elpi.
 
-(*BEGIN*)
-Definition make_lB0 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, x ++ lB0)) xs.
-(* cat_right gl := (on_snd (cat ^~ gl)) 
-   map (cat_right l) (take s xx)
-   map (cat_left l) ...
-*)
 
-Definition make_lB01 (xs:alts) (lB0: goals) := map (fun '(s,x) => (s, lB0 ++ x)) xs.
+(*BEGIN*)
+Definition catr (suff: goals) (e: Sigma * goals) := (e.1, e.2 ++ suff).
+Definition catl (pref: goals) (e: Sigma * goals) := (e.1, pref ++ e.2).
+
+Lemma catl0 l: map (catl [::]) l = l.
+Proof. elim: l => //=[[s g]gs] H; rewrite map_cons/=H/catl cat0s//. Qed.
+
+Lemma catr0 l: map (catr [::]) l = l.
+Proof. elim: l => //=[[s g]gs] H; rewrite map_cons/=H/catr cats0//. Qed.
 
 Definition add_ca_deep_g' (add_ca_deep : alts -> alts -> alts) bt (x : A * alts) :=
   match x with
@@ -39,7 +42,7 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
   | [:: (a, ca) & tl ]%G =>
       let s := size ca - size bt in
       let xx := (add_deep bt l (ca)) in
-      let ca := (make_lB0 (take s xx) l ++ drop s ca) in
+      let ca := map (catr l) (take s xx) ++ drop s ca in
       [:: (a, ca) & add_deepG bt l tl]%G
   end.
 
@@ -76,28 +79,14 @@ match A with
       let xz := add_deepG bt lB0 x in
       let xs := add_deep bt lB0 xs in 
       (* each alt in xs must have lB0 has rightmost conjunct  *)
-      let xs := make_lB0 xs lB0 in
+      let xs := map (catr lB0) xs in
       (* xs are alternatives that should be added in the deep cuts in B *)
       let lB := t2l B slA (xs ++ bt) in
       (* lB are alternatives, each of them have x has head *)
-      (make_lB01 lB xz) ++ xs
+      (map (catl xz) lB) ++ xs
     else [::]
 end.
 (*ENDSNIP*)
-
-Lemma make_LB0_cons a (ax : alts) (gl : goals) :
-  make_lB0 [::a & ax] gl  = [:: (a.1, a.2 ++ gl) & make_lB0 ax gl].
-Proof. by rewrite /make_lB0 [map _ _]map_cons; case: a. Qed.
-
-Lemma make_LB0_nil gl : make_lB0 [::] gl = [::]. by []. Qed.
-
-Lemma make_LB01_cons a (ax : alts) (gl : goals) :
-  make_lB01 [::a & ax] gl  = [:: (a.1, gl ++ a.2) & make_lB01 ax gl].
-Proof. by rewrite /make_lB01 [map _ _]map_cons; case: a. Qed.
-
-Lemma make_LB01_nil gl : make_lB01 [::] gl = [::]. by []. Qed.
-
-Definition make_LBE := (make_LB0_cons,make_LB01_cons,make_LB0_nil,make_LB01_nil,cat_cons,cat0s).
 
 Section test.
   Variable u : Unif.
@@ -112,7 +101,7 @@ Section test.
   Proof.
     move=>s3 l/=.
     rewrite /=!cat0s ?cat0s subnn.
-    by rewrite drop0 /= !make_LB0_cons !make_LB01_cons.
+    by rewrite drop0 /=.
   Qed.
 End test.
 (*END*)
