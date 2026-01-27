@@ -223,7 +223,7 @@ Qed.
     head (fresh_rule fv r).2 = (fresh_callable fv r.(head)).2.
   Proof.
     destruct r; rewrite/fresh_rule/= 1!push.
-    case F: fresh_atoms => [fv' A']//=.
+    case bc: fresh_atoms => [fv' A']//=.
   Qed.
 
   Lemma head_fresh_premises fv r:
@@ -335,7 +335,7 @@ Qed.
     check_rules sP p.(rules) -> tm_is_det sP t -> 
       det_tree sP (backchain u p fv s1 t).2.
   Proof.
-    rewrite /backchain/F.
+    rewrite /backchain/bc.
     case X: tm2RC => //=[[q qp]].
     case: p => rules sig1 /=.
     case: fndP => //= kP.

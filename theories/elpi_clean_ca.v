@@ -416,7 +416,7 @@ Section clean_ca.
 
   Lemma next_callS_s2l fv A s3 s1 bt t gl a ign:
     let X := step u p fv s3 A in
-    let F := F u p fv t s1 in
+    let F := bc u p fv t s1 in
     failed A = false -> valid_tree A ->
       clean_ca bt (t2l A s3 bt) = (s1, (call t, ign) :: gl) ::: a ->
         [/\
@@ -430,7 +430,7 @@ Section clean_ca.
       rewrite push.
       rewrite what_I_want; last by rewrite valid_tree_backchain.
       rewrite/backchain !push/=.
-      case X: F => [fv' [|[s0 r0] rs]]//=.
+      case X: bc => [fv' [|[s0 r0] rs]]//=.
       rewrite cat0s cats0 add_ca_deep_empty1.
       have:= @s2l_big_or s1 s0 (premises r0) rs no_alt no_goals.
       rewrite make_lB0_empty2/= add_ca_deep_empty1 cat0s => <-//.
@@ -452,7 +452,7 @@ Section clean_ca.
       move=> Hz; repeat split.
       have [?] := s2l_Expanded_call vA H1 H; subst.
       move: Hz H1.
-      case X: F => [?[|[sz z]zs]] /= Hz H1 [?]; subst.
+      case X: bc => [?[|[sz z]zs]] /= Hz H1 [?]; subst.
         by move=> [Hm Hn]; rewrite Hn/=cat0s//.
       move=> [Hm Hn]; rewrite Hn/=.
       rewrite clean_ca_goals_add_ca_goal1.
@@ -478,7 +478,7 @@ Section clean_ca.
         rewrite (success_t2l empty)//=.
         rewrite make_lB01_empty2; repeat split => //.
         have [?] := s2l_Expanded_call vB eB H1; subst.
-        case X: F => [?[|[sz z]zs]].
+        case X: bc => [?[|[sz z]zs]].
           move=> [Hm Hn].
           by rewrite Hn//clean_ca_cat//cat0s.
         move=> [Hm Hn]; rewrite Hn/=.
@@ -503,7 +503,7 @@ Section clean_ca.
       have [?] := s2l_Expanded_call vA eA H; subst.
       rewrite push.
       have?:= empty_caG_r2l.
-      case X: F => [?[|[sz z]zs]][?]; subst.
+      case X: bc => [?[|[sz z]zs]][?]; subst.
         move=> [Hm Hn]; subst.
         case W: t2l => //=[[sw w]ws].
         rewrite /make_lB0 map_cons !clean_ca_cat clean_ca_mk_lb0//=.

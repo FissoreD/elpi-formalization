@@ -45,7 +45,7 @@ Section NurEqiv.
       case: g => [[|c] ca] H; last first.
         have:= s2l_Expanded_call vA eA H.
         move=> []?; subst.
-        case X: F => [fv2 rules][?]; subst.
+        case X: bc => [fv2 rules][?]; subst.
         case: rules X => [|r0 rs] X [fB Hx]; rewrite Hx; subst.
           by move=> ->; apply: FailE X _.
         move=> [???]; subst.

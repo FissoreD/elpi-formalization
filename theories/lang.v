@@ -441,7 +441,10 @@ Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma 
    when we "fresh the program" we need to takes variables
    outside this set
 *)
-Definition F u pr fv (query:Callable) s : {fset V} * seq (Sigma * R) :=
+(*SNIP: bc_type*)
+Definition bc : Unif -> program -> {fset V} -> Callable -> Sigma -> ({fset V} * seq (Sigma * R)) :=
+(*ENDSNIP: bc_type*)
+  fun u pr fv (query:Callable) s =>
   match tm2RC (deref s (Callable2Tm query)) with
       | None => (fv, [::]) (*this is a call with flex head, in elpi it is an error! *)
       | Some (query, kp) =>
@@ -514,12 +517,12 @@ Proof.
   by move=> _ /IH->; rewrite orbT.
 Qed.
 
-Lemma F_in u pr fv query s r:
-  F u pr fv query s = r ->
+Lemma bc_in u pr fv query s r:
+  bc u pr fv query s = r ->
     all (fun x => x.2 \in (fresh_rules fv pr.(rules)).2) r.2.
 Proof.
   move=> <-{r}.
-  rewrite/F/=.
+  rewrite/bc/=.
   case: fresh_rules => [fv' pr'].
   case: tm2RC => //=[[r p]].
   case: fndP => //= kP.

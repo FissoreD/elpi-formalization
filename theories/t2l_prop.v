@@ -807,7 +807,7 @@ Qed.
     step u p fv s A = (fv', Expanded, B) -> 
     t2l A s l = (s3, (call t, ca) :: gs) :: xs ->
     ((s3 = (get_substS s A)) * (
-      let (fv'', rs) := F u p fv t (get_substS s A) in
+      let (fv'', rs) := bc u p fv t (get_substS s A) in
       (fv'' = fv') *
       (if rs is (w :: ws)%SEQ then
       (failed B * (t2l B s l = (w.1, save_goals (xs++l) gs (a2gs1 w)) :: 
@@ -820,7 +820,7 @@ Qed.
     - move=> [|c]// fv fv' t C s1 s3 l t1 gs xs.
       rewrite push.
       move=> ?[??][?????]; subst.
-      rewrite failed_big_or/backchain; case: F => [fv2 [|[s4 r1] rs]]/=; auto.
+      rewrite failed_big_or/backchain; case: bc => [fv2 [|[s4 r1] rs]]/=; auto.
       by rewrite !cats0 !cat0s !(s2l_big_or empty)/=cat0s make_lB0_empty2; auto.
     - move=> A HA s B HB fv fv' C s1 s3 l t gs xs ca.
       rewrite !push.
@@ -834,7 +834,7 @@ Qed.
         move=> [?]; subst.
         move=> /=HB; split => //; move: HB.
         rewrite cats0.
-        case FF: F => [fvx [|[s5 r] rs]]; rewrite (t2l_dead dA)//=.
+        case FF: bc => [fvx [|[s5 r] rs]]; rewrite (t2l_dead dA)//=.
           move=> H; rewrite !H cat0s//.
         move=> H; rewrite !H. split => //. rewrite cat0s.
         rewrite -!cat_cons add_ca_deep_cat /=; f_equal.
@@ -849,7 +849,7 @@ Qed.
       rewrite sA/=; case: y sA => // -[[//|t1] ca3] g1 sA [?????]; subst.
       have := HA _ _ _ _ _ _ _ _ _ _ vA e sA.
       move=> []?; subst.
-      case FF: F => [fvf [|r rs]].
+      case FF: bc => [fvf [|r rs]].
         move=>H; subst; rewrite !H-/SB.
         by rewrite add_ca_deep_cat; auto.
       move=>[? [fA' H1]]; rewrite fA'; split; auto; split => //; subst.
@@ -877,7 +877,7 @@ Qed.
         move=> ? tl sA; rewrite cat_cons => -[??]; subst.
         have := HA _ _ _ _ _ _ _ _ _ _ vA e sA.
         move=> []?; subst.
-        case FF: F => [? [|r rs]].
+        case FF: bc => [? [|r rs]].
           move=> H1; rewrite !H1?H; split; auto.
           case: ys sA H1 => //=-[s6 y] ys sA H1.
           rewrite t2l_big_and /make_lB01 map_cons cat_cons cat0s// seq2altsK //.
@@ -902,7 +902,7 @@ Qed.
       have := HB _ _ _ _ _ _ _ _ _ _ vB e1 sB.
       rewrite-/Y.
       move=> []?; subst.
-      case FF: F => [? [|r rs]]; rewrite make_lB01_empty2.
+      case FF: bc => [? [|r rs]]; rewrite make_lB01_empty2.
         by move=> Hz; rewrite !Hz//.
       simpl in *.
       move=>[? [fB' Hz]]; rewrite Hz !catA//.

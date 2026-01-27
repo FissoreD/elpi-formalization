@@ -291,7 +291,7 @@ Section RunP.
   Qed.
 
   Lemma failed_big_or u p fv s t: failed (backchain u p fv s t).2.
-  Proof. rewrite/backchain; case: F => // ? -[|[]]//. Qed.
+  Proof. rewrite/backchain; case: bc => // ? -[|[]]//. Qed.
 
   Section same_structure.
 

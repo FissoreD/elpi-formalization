@@ -317,13 +317,13 @@ Section main.
   Variable u: Unif.
 
   Definition backchain pr fv s t :=
-    let: (fv, l) := F u pr fv t s in
+    let: (fv, l) := bc u pr fv t s in
     (fv, if l is (s,r) :: xs then (Or KO s (big_or r.(premises) xs))
          else KO).
 
   Lemma dead_big_or p fv s t: is_dead (backchain p fv s t).2 = false.
   Proof.
-    by rewrite /backchain; case F: F => [fv' [//|[s1 r] xs]].
+    by rewrite /backchain; case F: bc => [fv' [//|[s1 r] xs]].
   Qed.
 
   Fixpoint get_substS s A :=

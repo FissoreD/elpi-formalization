@@ -90,23 +90,23 @@ Section vars_tree.
   Qed.
 
 
-  Lemma F_sub c rs fv fv' s:
-    F u p fv c s = (fv', rs) -> fv `<=` fv'.
+  Lemma bc_sub c rs fv fv' s:
+    bc u p fv c s = (fv', rs) -> fv `<=` fv'.
   Proof.
-    rewrite/F.
+    rewrite/bc.
     case X: tm2RC => [[cd chd]|]; last by move=> [<-].
     case: fndP => cP; last by move=> [<-].
     case F: fresh_rules => [fvx rx] H.
     apply/fsubset_trans/select_sub/H/fresh_rules_sub/F.
   Qed.
 
-  Lemma bc_sub c c' fv fv' s:
+  Lemma backchain_sub c c' fv fv' s:
     backchain u p fv s c = (fv', c') ->
     fv `<=` fv'.
   Proof.
     rewrite/backchain push => -[<- _].
-    case X: F => [fvx rs]/=.
-    apply/F_sub/X.
+    case X: bc => [fvx rs]/=.
+    apply/bc_sub/X.
   Qed.
 
   Lemma vars_tree_cutr A: vars_tree (cutr A) `<=` vars_tree A.
@@ -125,7 +125,7 @@ Section vars_tree.
       move=> [|c] B fv fvx r s; first by move=> [<-].
       rewrite push => -[<- _ _].
       case X: backchain.
-      apply/bc_sub/X.
+      apply/backchain_sub/X.
     - move=> A HA s B HB C fv fv' r s0.
       rewrite !push; case: ifP => dA [<- _ _]; case X: step => [[]]/=;
         [apply: HB X | apply: HA X].
@@ -160,7 +160,7 @@ Section vars_tree.
     vars_tree c' `<=` fv' /\  vars_sigma s `<=` fv'.
   Proof.
     rewrite/backchain !push => H1 H2 [<-].
-    rewrite/F/=.
+    rewrite/bc/=.
     case X: tm2RC => [[cd hd]|]/=; last by move=> <-/=.
     case: fndP => /=hp; last by move=> <-.
     rewrite !push.

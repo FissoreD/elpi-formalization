@@ -209,7 +209,7 @@ Section valid_tree.
 
   Lemma valid_tree_backchain pr s sv t : valid_tree (backchain u pr sv s t).2.
   Proof.
-    rewrite/backchain; case: F => [sv' [|[s1 r1] rs]]//=.
+    rewrite/backchain; case: bc => [sv' [|[s1 r1] rs]]//=.
     apply: B.bbOr_big_or.
   Qed.
 
