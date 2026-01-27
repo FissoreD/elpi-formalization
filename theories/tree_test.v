@@ -5,7 +5,7 @@ Definition prop := b (d Pred).
 Definition build_arr m := arr m prop prop.
 
 Definition build_progr l := {|
-  sig := [fmap].[IKp false <- build_arr o].[IKp 1 <- build_arr o].[IKp 2 <- build_arr o].[IKp 200 <- prop];
+  sig := [fmap].[IP false <- build_arr o].[IP 1 <- build_arr o].[IP 2 <- build_arr o].[IP 200 <- prop];
   rules := l;
 |}.
 
@@ -23,30 +23,30 @@ Definition unif : Unif := {|
   matching := matchingF;
 |}.
 
-Definition r := (IKp 2).
-Definition p := (IKp 1).
-Definition q := (IKp false).
+Definition r := (IP 2).
+Definition p := (IP 1).
+Definition q := (IP false).
 
 Definition v_X := Tm_V (IV false).
-Definition pred_q x  := Tm_Comb (Tm_Kp p) x.
-Definition pred_p x  := Tm_Comb (Tm_Kp q) x.
-Definition pred_r x  := Tm_Comb (Tm_Kp r) x.
-Definition pred_fail := Tm_Kp (IKp 100).
+Definition pred_q x  := Tm_App (Tm_P p) x.
+Definition pred_p x  := Tm_App (Tm_P q) x.
+Definition pred_r x  := Tm_App (Tm_P r) x.
+Definition pred_fail := Tm_P (IP 100).
 
-Definition s1 : Sigma := [fmap].[IV false <- Tm_Kd (IKd 1)].
-Definition s2 : Sigma := [fmap].[IV false <- Tm_Kd (IKd 2)].
+Definition s1 : Sigma := [fmap].[IV false <- Tm_D (ID 1)].
+Definition s2 : Sigma := [fmap].[IV false <- Tm_D (ID 2)].
 
 Section Test1.
 
   Definition p_test : program := build_progr [:: 
-      mkR (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 1))) [::] ;
-      mkR (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 2))) [::] ;
-      mkR (Callable_Comb (Callable_Kp r) (Tm_Kd (IKd 2))) [::] ;
-      mkR (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))
-        [:: call (Callable_Comb (Callable_Kp p) v_X) ; call (Callable_Comb (Callable_Kp r) v_X) ] 
+      mkR (Callable_App (Callable_P p) (Tm_D (ID 1))) [::] ;
+      mkR (Callable_App (Callable_P p) (Tm_D (ID 2))) [::] ;
+      mkR (Callable_App (Callable_P r) (Tm_D (ID 2))) [::] ;
+      mkR (Callable_App (Callable_P q) (Tm_D (ID 1)))
+        [:: call (Callable_App (Callable_P p) v_X) ; call (Callable_App (Callable_P r) v_X) ] 
     ].
 
-  Goal unify unif v_X (Tm_Kd (IKd 1)) empty = Some s1.
+  Goal unify unif v_X (Tm_D (ID 1)) empty = Some s1.
   Proof.
     rewrite/unif.
     rewrite [unifyF]lock/=-lock.
@@ -54,7 +54,7 @@ Section Test1.
     move=> //.
   Qed.
 
-  (* Goal Texists r, run unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) (Some s2) r false.
+  (* Goal Texists r, run unif empty (CallS p_test (Callable_App (Callable_P q) (Tm_D (ID 1)))) (Some s2) r false.
   Proof.
     eexists.
     apply: run_step => //.
@@ -72,13 +72,13 @@ End Test1.
 Section Test5.
 
   Definition p_test1 : program := build_progr [:: 
-      mkR (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false))) 
-        [::call (Callable_Comb (Callable_Kp q) v_X); cut] ;
-      mkR (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1))) [::] ;
-      mkR (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 2))) [::] 
+      mkR (Callable_App (Callable_P p) (Tm_D (ID false))) 
+        [::call (Callable_App (Callable_P q) v_X); cut] ;
+      mkR (Callable_App (Callable_P q) (Tm_D (ID 1))) [::] ;
+      mkR (Callable_App (Callable_P q) (Tm_D (ID 2))) [::] 
     ].
 
-  (* Goal Texists r, run unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false)))) (Some s1) r false /\ is_dead r.
+  (* Goal Texists r, run unif empty (CallS p_test1 (Callable_App (Callable_P p) (Tm_D (ID false)))) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
     apply: run_step => //.
@@ -93,17 +93,17 @@ End Test5.
 
 Section Test6.
 
-  Definition pred_true := ((IKp 200)).
+  Definition pred_true := ((IP 200)).
 
   Definition p_test2 : program := build_progr [:: 
-      mkR ((Callable_Kp pred_true)) [::];
-      mkR (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false))) 
-        [::call (Callable_Comb (Callable_Kp q) v_X);call ((Callable_Kp pred_true)); cut] ;
-      mkR (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1))) [::] ;
-      mkR (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 2))) [::] 
+      mkR ((Callable_P pred_true)) [::];
+      mkR (Callable_App (Callable_P p) (Tm_D (ID false))) 
+        [::call (Callable_App (Callable_P q) v_X);call ((Callable_P pred_true)); cut] ;
+      mkR (Callable_App (Callable_P q) (Tm_D (ID 1))) [::] ;
+      mkR (Callable_App (Callable_P q) (Tm_D (ID 2))) [::] 
   ].
 
-  (* Goal Texists r, run unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd false)))) ) (Some s1) r false /\ is_dead r.
+  (* Goal Texists r, run unif empty ((CallS p_test2 (Callable_App (Callable_P p) (Tm_D (ID false)))) ) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
     apply: run_step => //.

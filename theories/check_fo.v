@@ -14,14 +14,14 @@ Section checker.
 
   Fixpoint getS_Callable (sP: sigT) (t: Callable) : option S :=
     match t with
-    | Callable_Kp pn => sP.[? pn]
-    | Callable_Comb hd _ => getS_Callable sP hd
+    | Callable_P pn => sP.[? pn]
+    | Callable_App hd _ => getS_Callable sP hd
     end.
 
   Fixpoint callable_is_det (sP: sigT) (t:Callable) : bool :=
     match t with
-    | Callable_Comb h _ => callable_is_det sP h
-    | Callable_Kp k => 
+    | Callable_App h _ => callable_is_det sP h
+    | Callable_P k => 
       if sP.[?k] is Some s then is_det_sig s
       else false
     end.
@@ -197,8 +197,8 @@ Section check.
       by move=> [->->]/=; rewrite/tm_is_det/=; case: fndP.
     move=> m //ml IH q pn hd t s1 s2 H1 H2 H3.
     have {H3}: exists f1 a1 f2 a2,
-      q = Callable_Comb f1 a1 /\
-      hd = Callable_Comb f2 a2 /\
+      q = Callable_App f1 a1 /\
+      hd = Callable_App f2 a2 /\
       (obind (matching u a1 a2) (H u ml f1 f2 s1) = Some s2 \/
       obind (unify u a1 a2) (H u ml f1 f2 s1) = Some s2).
     by move: H3; destruct m, q, hd => //; repeat eexists; auto.
@@ -245,7 +245,7 @@ Qed.
   Qed.
 
   Lemma tm_is_det_comb sP f a:
-    tm_is_det sP (Callable_Comb f a) = tm_is_det sP f.
+    tm_is_det sP (Callable_App f a) = tm_is_det sP f.
   Proof. by rewrite/tm_is_det/=. Qed.
   
   Lemma tm_is_det_fresh sP c c' sv sv':

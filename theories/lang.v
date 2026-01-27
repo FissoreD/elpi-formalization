@@ -21,20 +21,20 @@ Notation "[subst]" := ltac:(subst).
 Notation "[subst1]" := ltac:(move=> ?;subst).
 Notation "[subst2]" := ltac:(move=> ??;subst).
 
-Inductive D := Func | Pred.
-Inductive B := Exp | d of D.
-Inductive mode := i |o.
+Inductive Det := Func | Pred.
+Inductive B := Exp | d of Det.
+Inductive mode := i | o.
 Inductive S :=  b of B | arr of mode & S & S.
 Notation "x '--i-->' y" := (arr i x y) (at level 3).
 Notation "x '--o-->' y" := (arr o x y) (at level 3).
 
 Definition D2o D : 'I_2 := match D with Func => @Ordinal 2 0 isT | Pred => @Ordinal 2 1 isT end.
-Definition o2D (i : 'I_2) : option D := match val i with 0 => Some Func | 1 => Some Pred | _ => None end.
+Definition o2D (i : 'I_2) : option Det := match val i with 0 => Some Func | 1 => Some Pred | _ => None end.
 Lemma D2oK : pcancel D2o o2D. Proof. by case. Qed.
-HB.instance Definition _ := Finite.copy D (pcan_type D2oK).
+HB.instance Definition _ := Finite.copy Det (pcan_type D2oK).
 
-Definition B2o B : GenTree.tree D := match B with Exp => GenTree.Node 0 [::] | d D => GenTree.Leaf D end.
-Definition o2B (i :  GenTree.tree D) : option B := match i with GenTree.Node 0 [::] => Some Exp | GenTree.Leaf x => Some (d x) | _ => None end.
+Definition B2o B : GenTree.tree Det := match B with Exp => GenTree.Node 0 [::] | d D => GenTree.Leaf D end.
+Definition o2B (i :  GenTree.tree Det) : option B := match i with GenTree.Node 0 [::] => Some Exp | GenTree.Leaf x => Some (d x) | _ => None end.
 Lemma B2oK : pcancel B2o o2B. Proof. by case. Qed.
 HB.instance Definition _ := Countable.copy B (pcan_type B2oK).
 
@@ -50,20 +50,22 @@ HB.instance Definition _ := Countable.copy S (pcan_type S2oK).
 
 Goal b Exp == b Exp. by []. Qed.
 
-Inductive Kp := IKp : nat -> Kp.
-derive Kp.
-HB.instance Definition _ := hasDecEq.Build Kp Kp_eqb_OK.
-Definition Kp_of_nat x := IKp x.
-Definition nat_of_Kp x := match x with IKp x => x end.
+(* Leave the one line code for the extracted code *)
+(*SNIP: base_type*)
+Inductive P := IP of nat. Inductive D := ID of nat. Inductive V := IV of nat.
+(*ENDSNIP: base_type*)
+
+derive P.
+HB.instance Definition _ := hasDecEq.Build P P_eqb_OK.
+Definition Kp_of_nat x := IP x.
+Definition nat_of_Kp x := match x with IP x => x end.
 Lemma Kp_is_nat : cancel nat_of_Kp Kp_of_nat.
 Proof. by case. Qed.
-HB.instance Definition _ := Countable.copy Kp (can_type Kp_is_nat).
+HB.instance Definition _ := Countable.copy P (can_type Kp_is_nat).
 
-Inductive Kd := IKd : nat -> Kd.
-derive Kd.
-HB.instance Definition _ := hasDecEq.Build Kd Kd_eqb_OK.
+derive D.
+HB.instance Definition _ := hasDecEq.Build D D_eqb_OK.
 
-Inductive V := IV : nat -> V.
 derive V.
 HB.instance Definition _ := hasDecEq.Build V V_eqb_OK.
 Definition V_of_nat x := IV x.
@@ -71,17 +73,18 @@ Definition nat_of_V x := match x with IV x => x end.
 Lemma V_is_nat : cancel nat_of_V V_of_nat.
 Proof. by case. Qed.
 HB.instance Definition _ := Countable.copy V (can_type V_is_nat).
-(*SNIP: base_types*)
-Inductive Tm := 
-  | Tm_Kp    : Kp -> Tm
-  | Tm_Kd    : Kd -> Tm
-  | Tm_V     : V  -> Tm
-  | Tm_Comb  : Tm -> Tm -> Tm.
 
+(*SNIP: tm_type*)
+Inductive Tm := 
+  | Tm_P of P     | Tm_D    of D
+  | Tm_V of V     | Tm_App  of Tm & Tm.
+(*ENDSNIP: tm_type*)
+
+(*SNIP: call_type*)
 Inductive Callable := 
-  | Callable_Kp   : Kp -> Callable
-  | Callable_Comb : Callable -> Tm -> Callable.
-(*ENDSNIP: base_types*)
+  | Callable_P   of P
+  | Callable_App of Callable & Tm.
+(*ENDSNIP: call_type*)
 
 derive Tm.
 derive Callable.
@@ -145,8 +148,8 @@ Elpi derive.eqbOK.register_axiomx Sigma is_Sigma is_Sigma_inhab Sigma_eqb Sigma_
 HB.instance Definition _ : hasDecEq Sigma := Equality.copy Sigma _.
 
 Notation index := (list R).
-Definition mode_ctx := {fmap Kp -> (list mode)}.
-Definition sigT := {fmap Kp -> S}.
+Definition mode_ctx := {fmap P -> (list mode)}.
+Definition sigT := {fmap P -> S}.
 Definition empty_sig : sigT := [fmap].
 
 Definition is_mode_ctx (x : mode_ctx) := unit.
@@ -181,35 +184,35 @@ Record Unif := {
   matching : Tm -> Tm -> Sigma -> option Sigma;
 }.  
 
-Fixpoint get_tm_hd (tm: Tm) : (Kd + (Kp + V)) :=
+Fixpoint get_tm_hd (tm: Tm) : (D + (P + V)) :=
     match tm with
-    | Tm_Kd K => inl K
-    | Tm_Kp K => inr (inl K)
+    | Tm_D K => inl K
+    | Tm_P K => inr (inl K)
     | Tm_V V => inr (inr V)
-    | Tm_Comb h _ => get_tm_hd h
+    | Tm_App h _ => get_tm_hd h
     end.
 
 Fixpoint Callable2Tm (c : Callable) : Tm :=
   match c with
-  | Callable_Kp p => Tm_Kp p
-  | Callable_Comb h t => Tm_Comb (Callable2Tm h) t
+  | Callable_P p => Tm_P p
+  | Callable_App h t => Tm_App (Callable2Tm h) t
   end.
 
-Fixpoint tm2RC (t : Tm) : option (Callable * Kp) :=
+Fixpoint tm2RC (t : Tm) : option (Callable * P) :=
   match t with
-  | Tm_Kd _ => None
+  | Tm_D _ => None
   | Tm_V _ => None
-  | Tm_Kp p => Some (Callable_Kp p, p)
-  | Tm_Comb t1 t2 => 
+  | Tm_P p => Some (Callable_P p, p)
+  | Tm_App t1 t2 => 
     match tm2RC t1 with
     | None => None
-    | Some (x, p) => Some (Callable_Comb x t2, p)
+    | Some (x, p) => Some (Callable_App x t2, p)
     end
   end.
 
 Fixpoint count_tm_ag t := 
     match t with
-    | Tm_Comb L _ => 1 + count_tm_ag L
+    | Tm_App L _ => 1 + count_tm_ag L
     | _ => 0
     end.
 
@@ -236,10 +239,10 @@ Open Scope fset_scope.
 
 Fixpoint vars_tm t : {fset V} :=
   match t with
-  | Tm_Kd _ => fset0
-  | Tm_Kp _ => fset0
+  | Tm_D _ => fset0
+  | Tm_P _ => fset0
   | Tm_V v => fset1 v
-  | Tm_Comb l r => vars_tm l `|` vars_tm r
+  | Tm_App l r => vars_tm l `|` vars_tm r
   end.
 
 Definition vars_atom A : {fset V} :=
@@ -267,19 +270,19 @@ Proof. by apply: negbTE (xchooseP (freshV fv)). Qed.
 
 Fixpoint fresh_tm fv t : {fset V} * Tm :=
   match t with
-  | Tm_Kd _ => (fv, t)
-  | Tm_Kp _ => (fv, t)
+  | Tm_D _ => (fv, t)
+  | Tm_P _ => (fv, t)
   | Tm_V v =>  let fv := fset1 v `|` fv in let v := fresh fv in (fset1 v `|` fv, Tm_V v)
-  | Tm_Comb l r => let: (fv, l) := fresh_tm fv l in let: (fv, r) := fresh_tm fv r in (fv, Tm_Comb l r)
+  | Tm_App l r => let: (fv, l) := fresh_tm fv l in let: (fv, r) := fresh_tm fv r in (fv, Tm_App l r)
   end.
 
 Fixpoint same_a_equiv seen t1 t2 : (bool * {fmap V -> V}) :=
   match t1, t2 with
-  | Tm_Kd t1, Tm_Kd t2 | Tm_Kp t1, Tm_Kp t2 => (t1 == t2, seen)
+  | Tm_D t1, Tm_D t2 | Tm_P t1, Tm_P t2 => (t1 == t2, seen)
   | Tm_V v1, Tm_V v2 => 
     if seen.[?v1] is Some v2' then ((v2 == v2'), seen)
     else (seen.[?v2] == None, seen.[v1 <- v2])
-  | Tm_Comb f1 a1, Tm_Comb f2 a2 => 
+  | Tm_App f1 a1, Tm_App f2 a2 => 
     let: (b1, seen1) := same_a_equiv seen f1 f2 in
     if b1 then
       let: (b2, seen2) := same_a_equiv seen1 a1 a2 in
@@ -354,11 +357,11 @@ Qed. *)
 
 Fixpoint fresh_callable fv c :=
   match c with
-  | Callable_Kp _ => (fv, c)
-  | Callable_Comb h t =>
+  | Callable_P _ => (fv, c)
+  | Callable_App h t =>
       let: (fv, h) := fresh_callable fv h in
       let: (fv, t) := fresh_tm fv t in
-      (fv, Callable_Comb h t)
+      (fv, Callable_App h t)
   end.
 
 (* Lemma fresh_tmP fv t : vars_tm (fresh_tm fv t).2 `&` (vars_tm t `|` fv) = fset0.
@@ -409,15 +412,15 @@ Definition fresh_rules fv rules :=
 Fixpoint deref (s: Sigma) (tm:Tm) :=
   match tm with
   | Tm_V V => Option.default tm (lookup V s)
-  | Tm_Kp _ | Tm_Kd _ => tm
-  | Tm_Comb h ag => Tm_Comb (deref s h) (deref s ag)
+  | Tm_P _ | Tm_D _ => tm
+  | Tm_App h ag => Tm_App (deref s h) (deref s ag)
   end.
 
 Fixpoint H u (ml : list mode) (q : Callable) (h: Callable) s : option Sigma :=
   match ml,q,h with
-  | [::], Callable_Kp c, Callable_Kp c1 => if c == c1 then Some s else None
-  | [:: i & ml], (Callable_Comb q a1), (Callable_Comb h a2) => obind (u.(matching) a1 a2) (H u ml q h s)
-  | [:: o & ml], (Callable_Comb q a1), (Callable_Comb h a2) => obind (u.(unify) a1 a2) (H u ml q h s)
+  | [::], Callable_P c, Callable_P c1 => if c == c1 then Some s else None
+  | [:: i & ml], (Callable_App q a1), (Callable_App h a2) => obind (u.(matching) a1 a2) (H u ml q h s)
+  | [:: o & ml], (Callable_App q a1), (Callable_App h a2) => obind (u.(unify) a1 a2) (H u ml q h s)
   | _, _, _ => None
   end.
 

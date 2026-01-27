@@ -41,7 +41,7 @@ Axiom match_unif: forall u A B s r,
   lang.matching u A B s = Some r -> lang.unify u A B s <> None.
 
 Axiom unif_comb: forall u f a f1 a1 sx,
-  lang.unify u (Tm_Comb f a) (Tm_Comb f1 a1) sx =
+  lang.unify u (Tm_App f a) (Tm_App f1 a1) sx =
   if lang.unify u f f1 sx is Some sx then lang.unify u a a1 sx
   else None.
 
@@ -572,10 +572,10 @@ Section checker.
     *)
   Fixpoint check_tm (sP:sigT) (sV:sigV) (tm : Tm)  : S * bool :=
     match tm with
-    | Tm_Kd k => (b Exp, true)
-    | Tm_Kp k => odflt1 (b(d Pred),false) (lookup k sP, true)
+    | Tm_D k => (b Exp, true)
+    | Tm_P k => odflt1 (b(d Pred),false) (lookup k sP, true)
     | Tm_V v =>  odflt1 (b(d Pred),false) (lookup v sV, true)
-    | Tm_Comb l r => 
+    | Tm_App l r => 
         (* before we check the LHS and then we go right *)
         let (sl, b1) := check_tm sP sV l  in
         (* if the type of l is not an arrow, we return anyT *)
@@ -595,7 +595,7 @@ Section checker.
   Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : Tm) (s : seq (mode * S)): sigV :=
     match tm, s with
     | _, [::] => sV
-    | (Tm_Kd _ | Tm_Kp _), _ => sV 
+    | (Tm_D _ | Tm_P _), _ => sV 
     | Tm_V _, (o, _) :: _ => sV 
     | Tm_V v, (i, s) :: _ =>
         match sV.[? v] with
@@ -603,7 +603,7 @@ Section checker.
         | Some oldv =>
           if compat_type oldv s then add v (min s oldv) sV else sV
         end
-    | (Tm_Comb L R), (m, s) :: sx =>
+    | (Tm_App L R), (m, s) :: sx =>
       (* we ignore flex_head terms *)
       if flex_head L then sV
       else
@@ -625,14 +625,14 @@ Section checker.
     | _, [::] => true
 
     (* SKIP INPUT *)
-    | (Tm_Kp _ | Tm_Kd _ | Tm_V _), (i, _) :: _ => true
-    | Tm_Comb l r, (i, tr) :: xs => check_hd sP sV l xs
+    | (Tm_P _ | Tm_D _ | Tm_V _), (i, _) :: _ => true
+    | Tm_App l r, (i, tr) :: xs => check_hd sP sV l xs
 
     (* TEST OUTPUT *)
-    | Tm_Kd _, (o, s) :: _ => incl (b Exp) s
-    | Tm_Kp k, (o, s) :: _ => if lookup k sP is Some x then incl x s else false 
+    | Tm_D _, (o, s) :: _ => incl (b Exp) s
+    | Tm_P k, (o, s) :: _ => if lookup k sP is Some x then incl x s else false 
     | Tm_V v, (o, s) :: _ =>  if lookup v sV is Some x then incl x s else false
-    | Tm_Comb l r, (o, tr) :: xs =>
+    | Tm_App l r, (o, tr) :: xs =>
         (* getting the type of r and if it is well_called *)
         let: (tr', b1) := check_tm sP sV r in
         check_hd sP sV l xs && b1 && (incl tr' tr)
@@ -958,7 +958,7 @@ Definition good_assignment sP tE SV vk :=
   compat_type SS SV && incl SS SV.
 
 Module TestGA.
-  Definition tm := Tm_Comb (Tm_V (IV 0)) (Tm_Kd (IKd 3)).
+  Definition tm := Tm_App (Tm_V (IV 0)) (Tm_D (ID 3)).
   Definition s : sigV := [fmap].[IV 0 <- b(d Pred)].
   Goal good_assignment [fmap] s (b (d Pred)) tm.
   Proof. 
@@ -1004,7 +1004,7 @@ Proof.
   by rewrite all_vars_OR => /andP.
 Qed.
 
-Lemma closed_in_comb O f a: closed_in O (Tm_Comb f a) = closed_in O f && closed_in O a.
+Lemma closed_in_comb O f a: closed_in O (Tm_App f a) = closed_in O f && closed_in O a.
 Proof. apply: all_vars_OR. Qed.
 
 Lemma closed_in_set O a k v:
@@ -1026,7 +1026,7 @@ Proof.
 Qed.
 
 Lemma closed_in_tmE O f a:
-  closed_in O (Tm_Comb f a) = closed_in O f && closed_in O a.
+  closed_in O (Tm_App f a) = closed_in O f && closed_in O a.
 Proof.
   apply/forallP; case:ifP => /=.
     move=> /andP[cf ca] -[x]/=.
@@ -1040,7 +1040,7 @@ Proof.
 Qed.
 
 Lemma closed_in_tmP O f a:
-  closed_in O (Tm_Comb f a) <-> closed_in O f /\ closed_in O a.
+  closed_in O (Tm_App f a) <-> closed_in O f /\ closed_in O a.
 Proof.
   rewrite closed_in_tmE; split.
     by move=> /andP.
@@ -2245,7 +2245,7 @@ Proof.
 Qed.
 
 Lemma flex_head_comb A B:
-  flex_head (Tm_Comb A B) = flex_head A.
+  flex_head (Tm_App A B) = flex_head A.
 Proof. rewrite/flex_head//=. Qed.
 
 Lemma assume_flex_head sP sV T M:
