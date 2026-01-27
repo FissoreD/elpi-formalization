@@ -494,8 +494,8 @@ Qed.
 
   Lemma build_na_is_dead {sP A}:
     det_tree sP A -> success A ->
-      (build_na A (next_alt true A)) = dead A.
-  Proof. by move=> H2 H3; by rewrite (step_next_alt H2)//=. Qed.
+      next_alt true A = None.
+  Proof. move=> H2 H3; rewrite (step_next_alt H2)//=. Qed.
 
   Lemma has_cut_next_alt {A B b}: 
     has_cut A -> next_alt b A = Some B -> has_cut B.
@@ -548,11 +548,9 @@ Qed.
           have cD:= has_cut_next_alt cA X.
           by move=> /(_ _ erefl) fD[<-]/=; rewrite fD cD fB.
         move=> _.
-        have idA := @is_dead_dead A.
-          case Y: next_alt => //[D].
-          move=>[<-]/=.
-          rewrite no_alt_dead// has_cut_dead//.
-          apply: HB fB Y.
+        (* have idA := @is_dead_dead A. *)
+        case Y: next_alt => //=[D][<-]//=.
+        apply: HB fB Y.
       move=>/eqP->; rewrite (is_ko_next_alt _ is_ko_cutr).
       have:= HA _ b fA.
       case: next_alt; rewrite ?if_same// => D /(_ _ erefl) fD [<-]/=.
@@ -608,7 +606,7 @@ Qed.
   Qed.
 
   Definition is_det A := forall b s sv s' B,
-    run u p sv s A s' B b -> is_dead B.
+    run u p sv s A s' B b -> B = None.
 
   Lemma run_next_alt {sP A}: 
     check_program sP p -> 
@@ -618,7 +616,8 @@ Qed.
     move=> H1 H2 b s sv s' B H3.
     elim: H3 H2; clear -H1 => //.
     - move=> s1 s2 A B _ sA _ <- fA.
-      by rewrite (build_na_is_dead fA sA) is_dead_dead.
+      have:= build_na_is_dead fA sA.
+      case: next_alt => //=.
     - move=> s1 s2 r A B n sv sv' eA rB IH fA.
       by apply/IH/(step_no_free_alt H1 fA eA).
     - move=> s1 s2 r A B n sv sv' eA rB IH fA.

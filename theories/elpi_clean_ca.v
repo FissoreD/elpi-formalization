@@ -221,7 +221,7 @@ Section clean_ca.
         move=> [<-]/=.
         rewrite !clean_ca_add_ca//.
       case W: next_alt => //[B0'] [<-]/=.
-      rewrite t2l_dead?is_dead_dead//cat0s.
+      rewrite //cat0s.
       rewrite !clean_ca_add_ca//.
     - move=> A HA l B HB s1 x bt C /andP[vA] +/andP[sA sB].
       rewrite sA/= => vB.
@@ -239,9 +239,8 @@ Section clean_ca.
         have H := empty_caG_r2l.
         rewrite !clean_ca_mk_lb0//clean_ca_add_deep//.
         repeat f_equal.
-        case Y: next_alt => //=[A'|].
-          apply: HA => //.
-        rewrite !t2l_dead//is_dead_dead//.
+        case Y: next_alt => //=[A'].
+        apply: HA => //.
       case Y: next_alt => //[A'].
       move=> [<-]/=.
       have:= [elaborate @s2l_size A' s1 (x++bt) s1 (clean_ca bt x)].
@@ -271,10 +270,9 @@ Section clean_ca.
         rewrite clean_ca_cat.
         rewrite catA HB//= clean_ca_cat.
         rewrite !clean_ca_mk_lb0//.
-        case X: next_alt => //[A'|]/=.
-          rewrite !clean_ca_add_deep//=.
-          repeat f_equal; apply: clean_ca_s2l_next_alt X => //; apply: HA => //.
-        rewrite !(t2l_dead is_dead_dead)//.
+        case X: next_alt => //[A']/=.
+        rewrite !clean_ca_add_deep//=.
+        repeat f_equal; apply: clean_ca_s2l_next_alt X => //; apply: HA => //.
       have:= [elaborate @s2l_size A s (x++bt) s (clean_ca bt x)].
       have {HA}:= HA s x bt vA.
       case X: (t2l A _ (_ ++ _)) => [|[sy y]ys]; 

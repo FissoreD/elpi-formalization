@@ -272,7 +272,7 @@ Section valid_tree.
         rewrite dA (HB _ _ vB X)//.
       case X: next_alt => [D|].
         move=>[<-]/=; rewrite bB ; rewrite bbOr_valid// (HA _ _ vA X) if_same//.
-      case Y: next_alt => [D|]//[<-]/=; rewrite is_dead_dead (HB _ _ _ Y)//bbOr_valid//.
+      case Y: next_alt => [D|]//[<-]/=; rewrite (HB _ _ _ Y)//bbOr_valid//.
     + move=> A HA l B HB  C b /= /andP[vA].
       case: ifP => /=[sA vB|sA]; subst.
         case X: next_alt => [D|].
@@ -287,20 +287,19 @@ Section valid_tree.
     Qed.
 
   Lemma valid_tree_run s1 sv A s2 B b:
-    valid_tree A -> run u p sv s1 A s2 B b -> (B = dead B) \/ valid_tree B.
+    valid_tree A -> run u p sv s1 A s2 B b -> valid_tree (odflt A B).
   Proof.
     move=> + H; elim: H; clear => //=.
     + move=> s1 s2 A B sv sA _ <- vA.
-      case X: next_alt => [B'|]/=.
-        by rewrite (valid_tree_next_alt vA X); auto.
-      by rewrite dead2; auto.
-    + move=> s1 s2 r A B n sv sv' eA rB IH vA; subst.
+      case X: next_alt => [B'|]//=.
+      by rewrite (valid_tree_next_alt vA X); auto.
+    + move=> s1 s2 [r|]// A B n sv sv' eA rB IH vA; subst.
       apply: IH (valid_tree_step vA eA).
-    + move=> s1 s2 r A B n sv sv' eA rB IH vA; subst.
+    + move=> s1 s2 [r|] A B n sv sv' eA rB IH vA//; subst.
       apply: IH (valid_tree_step vA eA).
-    + move=> s1 s2 A B r n sv fA + rB + vA; subst.
+    + move=> s1 s2 A B [r|] n sv fA + rB + vA; subst.
       move=> /(valid_tree_next_alt vA) vB /(_ vB)//.
-    + by move => *; rewrite dead2; auto.
+    + move=> //.
   Qed.
 (*END*)
 

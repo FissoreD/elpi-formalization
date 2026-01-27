@@ -112,9 +112,6 @@ Section vars_tree.
   Lemma vars_tree_cutr A: vars_tree (cutr A) `<=` vars_tree A.
   Proof. by elim: A => //= A HA M B HB; rewrite !fsetSU//fsetUSS//. Qed.
 
-  Lemma vars_tree_dead A: vars_tree (dead A) `<=` vars_tree A.
-  Proof. by elim: A => //= A HA M B HB; rewrite !fsetSU//fsetUSS//. Qed.
-
   Lemma vars_tree_cutl A: vars_tree (cutl A) `<=` vars_tree A.
   Proof. by elim: A => //=; move=> A HA s B HB; case: ifP => dA/=; rewrite !fsetUSS//vars_tree_cutr. Qed.
 
@@ -235,8 +232,7 @@ Section vars_tree.
       case nA: next_alt => [A'|].
         by move=> [<-]/=; rewrite 2!fsubUset (HA _ _ _ _ nA)//Hb.
       case nB: next_alt => [B'|]//[<-]/=.
-      rewrite 2!fsubUset (HB _ _ _ _ nB)//= andbT Hs andbT.
-      by apply/fsubset_trans/Ha/vars_tree_dead.
+      by rewrite 2!fsubUset (HB _ _ _ _ nB)//= andbT Hs andbT.
     move=> A HA M B HB C fv b; rewrite !fsubUset -andbA.
     move=> /and3P [Ha Hb Hs].
     case: ifP => sA.

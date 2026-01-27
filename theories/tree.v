@@ -35,14 +35,6 @@ Section tree_op.
   (* STATE OP DEFINITIONS                                             *)
   (********************************************************************)
 
-  Fixpoint dead A :=
-    match A with
-    | Dead => Dead
-    | OK | KO | TA _ => Dead
-    | And A B0 B => And (dead A) B0 B
-    | Or A s B => Or (dead A) s (dead B)
-    end.
-
     (* Note: "is_dead A || (success A && dead B)" is wrong
       A counter example is: "(OK \/ p) /\ Dead"
       In this case, a valid alternative is "p /\ B0"
@@ -215,23 +207,9 @@ Section tree_op.
     move=>/is_dead_success; rewrite H//.
   Qed.
 
-  (* cutl + cutr + dead *)
-  Lemma dead2 {A}: dead (dead A) = dead A.
-  Proof. elim: A => //=[A HA s B HB|A HA B0 B HB]; rewrite HA//HB//. Qed.
-
   Lemma cutr2 {a}: cutr (cutr a) = cutr a.
   Proof. elim: a => //= [A HA s B HB|A HA B0 B HB]; rewrite HA//HB//. Qed.
   
-  Lemma cutr_dead {a}: cutr (dead a) = dead a.
-  Proof. elim: a => //= [A HA s B HB|A HA B0 B HB]; rewrite HA//HB//. Qed.
-
-  Lemma dead_cutr {a}: dead (cutr a) = dead a.
-  Proof. elim: a => //= [A HA s B HB|A HA B0 B HB]; rewrite HA// HB//. Qed.
-
-  (* IS_DEAD + IS_KO + FAILED + SUCCESS with cutr, cutl, dead *)
-  Lemma is_dead_dead {A}: is_dead (dead A).
-  Proof. elim: A => // A HA s B HB/=; rewrite HA//. Qed.
-
   Lemma is_ko_cutr {B}: is_ko (cutr B).
   Proof. elim: B => // A HA s B HB/=; rewrite HA HB//. Qed.
 
@@ -374,7 +352,7 @@ Section main.
   (*SNIP: next_alt*)
   Definition next_alt : bool -> tree -> option tree :=
   (*ENDSNIP: next_alt*)
-    fix next_alt b (A : tree) : option (tree) :=
+    fix next_alt b A :=
     match A with
     | KO | Dead => None
     | OK => if b then None else Some OK
@@ -392,7 +370,7 @@ Section main.
     | Or A sB B =>
       if is_dead A then omap (fun x => (Or A sB x)) (next_alt b B)
       else match next_alt b A with
-        | None => obind (fun x => Some (Or (dead A) sB x)) (next_alt false B)
+        | None => obind (fun x => Some (Or Dead sB x)) (next_alt false B)
         | Some nA => Some (Or nA sB B)
       end
   end.
@@ -410,14 +388,14 @@ Section main.
   Goal (next_alt false (Or KO empty OK)) = Some (Or Dead empty OK). move=> //=. Qed.
 
   (* build next_alt tree *)
-  Definition build_na A oA := odflt (dead A) oA.
+  (* Definition build_na A oA := odflt (dead A) oA. *)
   Definition build_s (s:Sigma) (oA: option tree) := Option.map (fun _ => s)  oA.
 
   (*SNIP: run_sig*)
   Inductive run (p : program): fvS -> Sigma -> tree -> 
-                    option Sigma -> tree -> bool -> Prop :=
+                    option Sigma -> option tree -> bool -> Prop :=
   (*ENDSNIP: run_sig*)
-    | run_done s1 s2 A B fv       : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> run fv s1 A (Some s2) B false
+    | run_done s1 s2 A B fv       : success A -> get_substS s1 A = s2 -> (next_alt true A) = B -> run fv s1 A (Some s2) B false
     | run_cut  s1 s2 r A B n fv fv' : step p fv s1 A = (fv', CutBrothers, B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r true
     | run_step s1 s2 r A B n fv fv'   : step p fv s1 A = (fv', Expanded,    B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r n
     | run_fail s1 s2 A B r n fv    : 
@@ -425,7 +403,7 @@ Section main.
               run fv s1 B s2 r n -> run fv s1 A s2 r n
     | run_dead s1 A fv : 
           failed A -> next_alt false A = None ->
-              run fv s1 A None (dead A) false.
+            run fv s1 A None None false.
 
   Fixpoint vars_tree t : fvS :=
   match t with
@@ -437,5 +415,5 @@ Section main.
 
 End main.
 
-Hint Resolve is_dead_dead : core.
+(* Hint Resolve is_dead_dead : core. *)
 (*END*)

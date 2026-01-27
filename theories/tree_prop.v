@@ -252,7 +252,7 @@ Section RunP.
       case X: next_alt => //= [D|].
         by move=>[<-]; split => //=; rewrite ((HA _ _ X))//.
       case Y: next_alt => //[D] [<-]/=.
-      by rewrite is_dead_dead ((HB _ _ Y))//.
+      by rewrite ((HB _ _ Y))//.
     move=> A HA l B HB C b /=.
     case sA: success.
       case X: next_alt => //[B'|].
@@ -347,12 +347,12 @@ Section RunP.
       by case: ifP => //=sA'; rewrite sB0 !(HA, same_structure_cutr, HB)//.
     Qed.
     
-    Lemma same_structure_dead {B}: same_structure B (dead B).
+    (* Lemma same_structure_dead {B}: same_structure B (dead B).
     Proof. 
       elim: B => //=.
         move=> A HA s B HB; rewrite eqxx HA HB//.
       by move=> A HA B0 B HB; rewrite HA eqxx same_structure_id.
-    Qed.
+    Qed. *)
 
     Lemma step_same_structure u p fv s A r: 
       step u p fv s A = r -> same_structure A r.2.
@@ -413,31 +413,33 @@ Section RunP.
       transitive same_structure_sup.
     Proof. move=> B A C; by destruct A, B => //; destruct C => //=; do 2 case: eqP => ?//; subst. Qed.
 
-    Lemma same_structure_sup_dead {A}:
+    (* Lemma same_structure_sup_dead {A}:
       same_structure_sup A (dead A).
-    Proof. case: A => //=. Qed.
+    Proof. case: A => //=. Qed. *)
 
     Lemma run_same_structure u p fv s A s1 r n:
-      run u p fv s A s1 r n -> same_structure_sup A r.
+      run u p fv s A s1 r n -> same_structure_sup A (odflt A r).
     Proof.
       elim; clear => //.
       - move=> s1 s2 A B ? sA _ <-/=.
         case X: next_alt => [B'|]/=; subst; move: X.
-          move=> /next_alt_same_structure//.
-        move=> _.
-        apply: same_structure_sup_dead.
+          by move=> /next_alt_same_structure//.
+        by rewrite same_structure_sup_refl.
       - move=> s1 s2 r A B n ?? /step_same_structure/= + _.
+        destruct r => //=; last by rewrite !same_structure_sup_refl.
         apply: same_structure_sup2_trans.
       - move=> s1 s2 r A B n ?? /step_same_structure/= + _.
+        destruct r => //=; last by rewrite !same_structure_sup_refl.
         apply: same_structure_sup2_trans.
       - move=> s1 s2 A B oB r n ?.
           move=> /next_alt_same_structure + _.
+          destruct oB => //=; last by rewrite !same_structure_sup_refl.
           apply: same_structure_sup_trans.
-      - move=> *; apply: same_structure_sup_dead.
+      - by move=> *; rewrite same_structure_sup_refl.
     Qed.
 
     Lemma run_dead1 u p fv s1 B s2 r n:  
-      is_dead B -> run u p fv s1 B s2 r n -> (s2 = None /\ r = dead B /\ n = false)%type2.
+      is_dead B -> run u p fv s1 B s2 r n -> (s2 = None /\ r = None /\ n = false)%type2.
     Proof.
       move=> dB H; inversion H; clear H; subst;
         try rewrite // is_dead_step//is_dead_dead in H0.
@@ -445,9 +447,9 @@ Section RunP.
       rewrite is_dead_next_alt// in H1.
     Qed.
 
-    Lemma run_dead2 u p fv  s1 B s2 r n:  
+    (* Lemma run_dead2 u p fv  s1 B s2 r n:  
       run u p fv s1 (dead B) s2 r n -> (s2 = None /\ r = dead B /\ n = false)%type2.
-    Proof. move=> /(run_dead1 is_dead_dead)//; rewrite dead2//. Qed.
+    Proof. move=> /(run_dead1 is_dead_dead)//; rewrite dead2//. Qed. *)
 
   End same_structure.
 
@@ -515,7 +517,7 @@ Section RunP.
     get_substS s1 (big_and A) = s1.
   Proof. elim: A => //. Qed.
 
-  Lemma is_ko_run u p fv s A: is_ko A -> run u p fv s A None (dead A) false.
+  Lemma is_ko_run u p fv s A: is_ko A -> run u p fv s A None None false.
   Proof.
     elim: A s => //=.
     - by move=> s _; apply: run_dead => //=.
@@ -534,14 +536,14 @@ Section RunP.
   Qed.
 
   Lemma run_success1 u p fv A s: 
-    success A -> run u p fv s A (Some (get_substS s A)) (build_na A (next_alt true A)) false.
+    success A -> run u p fv s A (Some (get_substS s A)) ((next_alt true A)) false.
   Proof.
     move=> sA.
     by apply: run_done.
   Qed.
 
   Lemma run_success u p fv A s1 s2 r n: 
-    success A -> run u p fv s1 A s2 r n -> [/\ s2 = Some (get_substS s1 A), r = build_na A (next_alt true A) & n = false].
+    success A -> run u p fv s1 A s2 r n -> [/\ s2 = Some (get_substS s1 A), r = (next_alt true A) & n = false].
   Proof.
     move=> sA H; have:= success_step u p fv s1 sA.
     by inversion H; clear H; try congruence; subst; rewrite success_step//; rewrite failed_success in sA.
