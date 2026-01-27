@@ -88,9 +88,13 @@ derive Callable.
 HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
 HB.instance Definition _ := hasDecEq.Build Callable Callable_eqb_OK.
 
+(*SNIP: atom_type*)
 Inductive A := cut | call : Callable -> A.
+(*ENDSNIP: atom_type*)
 
+(*SNIP: R_type*)
 Record R := mkR { head : Callable; premises : list A }.
+(*ENDSNIP: R_type*)
 
 derive A.
 derive R.
