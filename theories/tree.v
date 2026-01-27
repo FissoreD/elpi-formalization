@@ -412,7 +412,8 @@ Section main.
   Definition build_s (s:Sigma) (oA: option tree) := Option.map (fun _ => s)  oA.
 
 (*SNIP: run_sig*)
-  Inductive run (p : program): fvS -> Sigma -> tree -> option Sigma -> tree -> bool -> Prop :=
+  Inductive run (p : program): fvS -> Sigma -> tree -> 
+                    option Sigma -> tree -> bool -> Prop :=
 (*ENDSNIP: run_sig*)
     | run_done s1 s2 A B fv       : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> run fv s1 A (Some s2) B false
     | run_cut  s1 s2 r A B n fv fv' : step p fv s1 A = (fv', CutBrothers, B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r true

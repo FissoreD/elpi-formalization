@@ -446,7 +446,8 @@ Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma 
    outside this set
 *)
 (*SNIP: bc_type*)
-Definition bc : Unif -> program -> fvS -> Callable -> Sigma -> (fvS * seq (Sigma * R)) :=
+Definition bc : Unif -> program -> fvS -> Callable -> 
+                        Sigma -> (fvS * seq (Sigma * R)) :=
 (*ENDSNIP: bc_type*)
   fun u pr fv (query:Callable) s =>
   match tm2RC (deref s (Callable2Tm query)) with
