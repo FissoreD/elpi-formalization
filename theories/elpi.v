@@ -589,7 +589,7 @@ Variable p : program.
 
 From det Require Import finmap.
 Open Scope fset_scope.
-Inductive nur : {fset V} -> Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
+Inductive nur : fvS -> Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
 | StopE s a fv : nur fv s nilC a s a
 | CutE s s1 a ca r gl fv : nur fv s gl ca s1 r -> nur fv s [:: (cut, ca) & gl]%G a s1 r
 | CallE s s1 a b bs gl r t ca fv fv': 

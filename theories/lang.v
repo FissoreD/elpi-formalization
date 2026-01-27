@@ -150,7 +150,7 @@ Lemma Sigma_eqb_refl : forall x, eqb_refl_on Sigma_eqb x. Proof. by move=>?; exa
 Elpi derive.eqbOK.register_axiomx Sigma is_Sigma is_Sigma_inhab Sigma_eqb Sigma_eqb_correct Sigma_eqb_refl.
 HB.instance Definition _ : hasDecEq Sigma := Equality.copy Sigma _.
 
-Notation index := (list R).
+(* Notation index := (list R). *)
 Definition mode_ctx := {fmap P -> (list mode)}.
 Definition sigT := {fmap P -> S}.
 Definition empty_sig : sigT := [fmap].
@@ -163,6 +163,8 @@ Lemma mode_ctx_eqb_refl : forall x, eqb_refl_on mode_ctx_eqb x. Proof. by move=>
 Elpi derive.eqbOK.register_axiomx mode_ctx is_mode_ctx is_mode_ctx_inhab mode_ctx_eqb mode_ctx_eqb_correct mode_ctx_eqb_refl.
 HB.instance Definition _ : hasDecEq mode_ctx := Equality.copy mode_ctx _.
 
+Notation fvS := {fset V}.
+
 Definition is_sigT (x : sigT) := unit.
 Lemma is_sigT_inhab : forall x, is_sigT x. Proof. exact (fun x => tt). Qed.
 Definition sigT_eqb (x y : sigT) := x == y.
@@ -172,7 +174,7 @@ Elpi derive.eqbOK.register_axiomx sigT is_sigT is_sigT_inhab sigT_eqb sigT_eqb_c
 HB.instance Definition _ : hasDecEq sigT := Equality.copy sigT _.
 
 (*SNIP: program_type*)
-Record program := { rules : index; sig : sigT }.
+Record program := { rules : seq R; sig : sigT }.
 (*ENDSNIP: program_type*)
 derive program.
 HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eqb_OK.
@@ -180,10 +182,12 @@ HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eq
 Goal forall (p: program), exists p', p == p'.
 Proof. by move=>p; exists p; rewrite eqxx. Qed. 
 
+(*SNIP: unif_type*)
 Record Unif := {
   unify : Tm -> Tm -> Sigma -> option Sigma;
   matching : Tm -> Tm -> Sigma -> option Sigma;
 }.  
+(*ENDSNIP: unif_type*)
 
 Fixpoint get_tm_hd (tm: Tm) : (D + (P + V)) :=
     match tm with
@@ -238,7 +242,7 @@ Definition get_modes_rev tm sig :=
 
 Open Scope fset_scope.
 
-Fixpoint vars_tm t : {fset V} :=
+Fixpoint vars_tm t : fvS :=
   match t with
   | Tm_D _ => fset0
   | Tm_P _ => fset0
@@ -246,30 +250,30 @@ Fixpoint vars_tm t : {fset V} :=
   | Tm_App l r => vars_tm l `|` vars_tm r
   end.
 
-Definition vars_atom A : {fset V} :=
+Definition vars_atom A : fvS :=
   match A with cut => fset0 | call c => vars_tm (Callable2Tm c) end.
 
-Definition varsU (l: seq {fset V}) :=
+Definition varsU (l: seq fvS) :=
   foldr (fun a e => a `|` e) fset0 l.
 
 Definition vars_atoms L := varsU (map vars_atom L).
 
-Definition varsU_rprem r : {fset V} := vars_atoms r.(premises).
-Definition varsU_rhead (r: R) : {fset V} := vars_tm (Callable2Tm r.(head)).
-Definition varsU_rule r : {fset V} := varsU_rhead r `|` varsU_rprem r.
+Definition varsU_rprem r : fvS := vars_atoms r.(premises).
+Definition varsU_rhead (r: R) : fvS := vars_tm (Callable2Tm r.(head)).
+Definition varsU_rule r : fvS := varsU_rhead r `|` varsU_rprem r.
 
-Lemma freshV (fv : {fset V}) :  exists v : V, v \notin fv.
+Lemma freshV (fv : fvS) :  exists v : V, v \notin fv.
 Proof.
 exists (IV (\sum_(i <- fv) let: (IV n) := i in n ).+1)%N.
 case: in_fsetP => // -[[x] xP] /= [] /eq_leq.
 by rewrite (big_fsetD1 _ xP) /= -ltn_subRL subnn ltn0.
 Qed.
 
-Definition fresh  (fv : {fset V}) : V := xchoose (freshV fv).
-Definition freshP (fv : {fset V}) : (fresh fv) \in fv = false.
+Definition fresh  (fv : fvS) : V := xchoose (freshV fv).
+Definition freshP (fv : fvS) : (fresh fv) \in fv = false.
 Proof. by apply: negbTE (xchooseP (freshV fv)). Qed.
 
-Fixpoint fresh_tm fv t : {fset V} * Tm :=
+Fixpoint fresh_tm fv t : fvS * Tm :=
   match t with
   | Tm_D _ => (fv, t)
   | Tm_P _ => (fv, t)
@@ -384,7 +388,7 @@ Search fsetI fsetU.
 have := fsetP.
 
 
-Axiom fresh_rule : {fset V} -> R -> {fset V} * R. *)
+Axiom fresh_rule : fv -> R -> fv * R. *)
 
 Definition fresh_atom fv a :=
   match a with
@@ -425,7 +429,7 @@ Fixpoint H u (ml : list mode) (q : Callable) (h: Callable) s : option Sigma :=
   | _, _, _ => None
   end.
 
-Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma : ({fset V} * seq (Sigma * R)) :=
+Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma : (fvS * seq (Sigma * R)) :=
   match rules with
   | [::] => (fv, [::])
   | rule :: rules =>
@@ -442,7 +446,7 @@ Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma 
    outside this set
 *)
 (*SNIP: bc_type*)
-Definition bc : Unif -> program -> {fset V} -> Callable -> Sigma -> ({fset V} * seq (Sigma * R)) :=
+Definition bc : Unif -> program -> fvS -> Callable -> Sigma -> (fvS * seq (Sigma * R)) :=
 (*ENDSNIP: bc_type*)
   fun u pr fv (query:Callable) s =>
   match tm2RC (deref s (Callable2Tm query)) with
@@ -456,7 +460,7 @@ Definition bc : Unif -> program -> {fset V} -> Callable -> Sigma -> ({fset V} * 
           end
       end.
 
-(* Fixpoint varsD (l: seq {fset V}) :=
+(* Fixpoint varsD (l: seq fv) :=
   match l with
   | [::] => true
   | x :: xs => ((x `&` varsU xs) == fset0) && varsD xs
