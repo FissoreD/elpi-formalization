@@ -333,9 +333,9 @@ Section main.
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
 
-(*SNIP: step_sig*)
+  (*SNIP: step_sig*)
   Definition step : program -> fvS -> Sigma -> tree -> (fvS * step_tag * tree) := 
-(*ENDSNIP: step_sig*)
+  (*ENDSNIP: step_sig*)
     fix step pr fv s A :=
     let step := step pr in
     match A with
@@ -370,9 +370,9 @@ Section main.
      Next_alt takes a boolean b to know if a successful path should be erased in
      "T".
   *)
-(*SNIP: next_alt*)
+  (*SNIP: next_alt*)
   Definition next_alt : bool -> tree -> option tree :=
-(*ENDSNIP: next_alt*)
+  (*ENDSNIP: next_alt*)
     fix next_alt b (A : tree) : option (tree) :=
     match A with
     | KO | Dead => None
@@ -411,10 +411,10 @@ Section main.
   Definition build_na A oA := odflt (dead A) oA.
   Definition build_s (s:Sigma) (oA: option tree) := Option.map (fun _ => s)  oA.
 
-(*SNIP: run_sig*)
+  (*SNIP: run_sig*)
   Inductive run (p : program): fvS -> Sigma -> tree -> 
                     option Sigma -> tree -> bool -> Prop :=
-(*ENDSNIP: run_sig*)
+  (*ENDSNIP: run_sig*)
     | run_done s1 s2 A B fv       : success A -> get_substS s1 A = s2 -> build_na A (next_alt true A) = B -> run fv s1 A (Some s2) B false
     | run_cut  s1 s2 r A B n fv fv' : step p fv s1 A = (fv', CutBrothers, B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r true
     | run_step s1 s2 r A B n fv fv'   : step p fv s1 A = (fv', Expanded,    B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r n
