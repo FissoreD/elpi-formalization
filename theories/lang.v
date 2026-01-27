@@ -136,7 +136,10 @@ Elpi Accumulate lp:{{
 }}.
 Elpi Export derive.eqbOK.register_axiomx.
 
+(*SNIP: sigma_type*)
 Definition Sigma := {fmap V -> Tm}.
+(*ENDSNIP: sigma_type*)
+
 Definition empty : Sigma := empty.
 
 Definition is_Sigma (x : Sigma) := unit.
@@ -168,11 +171,9 @@ Lemma sigT_eqb_refl : forall x, eqb_refl_on sigT_eqb x. Proof. by move=>?; exact
 Elpi derive.eqbOK.register_axiomx sigT is_sigT is_sigT_inhab sigT_eqb sigT_eqb_correct sigT_eqb_refl.
 HB.instance Definition _ : hasDecEq sigT := Equality.copy sigT _.
 
-Record program := { 
-    (*depth : nat;*) 
-    rules : index; 
-    sig   : sigT
-  }.
+(*SNIP: program_type*)
+Record program := { rules : index; sig : sigT }.
+(*ENDSNIP: program_type*)
 derive program.
 HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eqb_OK.
 
