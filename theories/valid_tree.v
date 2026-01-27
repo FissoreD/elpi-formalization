@@ -11,8 +11,8 @@ Module B.
     | _ => false
     end.
 
-  Lemma base_and_dead {A}: base_and A -> is_dead A = false.
-  Proof. case: A => // -[]//=. Qed.
+  (* Lemma base_and_dead {A}: base_and A -> is_dead A = false.
+  Proof. case: A => // -[]//=. Qed. *)
 
   Lemma base_and_big_and A: base_and (big_and A).
   Proof. by elim: A => // -[|t] l /= ->; rewrite eq_refl. Qed.
@@ -162,7 +162,7 @@ Section valid_tree.
     | TA _ | OK | KO => true
     | Dead => false
     | Or A _ B => 
-      if is_dead A then valid_tree B
+      if A == Dead then valid_tree B
       else valid_tree A && (B.bbOr B)
     | And A B0 B => 
       valid_tree A &&
@@ -174,17 +174,10 @@ Section valid_tree.
   Goal forall x r , (valid_tree (And (TA cut) x r)) -> is_ko r = false.
   Proof. move=> x r/= /eqP->; rewrite is_ko_big_and//. Qed.
 
-  Lemma is_dead_valid_tree {A} : is_dead A -> valid_tree A = false.
+  Lemma valid_tree_is_dead {A} : valid_tree A -> A == Dead = false.
   Proof.
-    elim: A => //.
-      move=> A HA s B HB/=/andP[]dA dB.
-      rewrite HA// dA HB//andbF//.
-    move=> A HA Bo B HB/=dA.
-    rewrite HA// andbF//.
+    elim: A => //=.
   Qed.
-
-  Lemma valid_tree_is_dead {A} : valid_tree A -> is_dead A = false.
-  Proof. apply: contraPF => /is_dead_valid_tree->//. Qed.
 
   Lemma valid_tree_big_and l : valid_tree (big_and l).
   Proof. elim: l => //=. Qed.
@@ -195,8 +188,8 @@ Section valid_tree.
   Lemma valid_tree_big_or s l : valid_tree (big_or s l).
   Proof.
     elim: l s => [|[]] //=.
-    + move=> s; rewrite valid_tree_big_and//.
-    + by move=> _ b l H s; rewrite is_dead_big_and valid_tree_big_and B.bbOr_big_or.
+    + by move=> s; rewrite valid_tree_big_and//.
+    + by move=> _ b l H s; rewrite (big_and_deadE _) valid_tree_big_and B.bbOr_big_or.
   Qed.
 
   Lemma valid_tree_big_or_cutr s l : valid_tree (cutr (big_or s l)).
@@ -225,9 +218,8 @@ Section valid_tree.
   Proof.
     elim: A => //.
       move=> A HA s B HB => /=.
-      case: ifP => //[dA sB vB| dA sA /andP[vA bB]]/=.
-        rewrite dA HB//.
-      rewrite is_dead_cutl dA HA// B.bbOr_cutr//.
+      case: eqP => dA; subst => //= SA /andP[vA bB].
+      rewrite dead_cutl// HA// B.bbOr_cutr//.
     move=> A HA B0 B HB /= /andP[sA sB] /andP[vA].
     rewrite sA/= => vB.
     rewrite success_cut sA HA//HB//=.
@@ -241,7 +233,7 @@ Section valid_tree.
     + by move=> /= []//= >; rewrite push/= valid_tree_backchain.
     + move=> A IHA s B IHB s1 sv/=.
       rewrite!push/=.
-      case:ifP => //[dA vB|dA/andP[vA bB]]/=.
+      case:eqP => //[dA vB|dA/andP[vA bB]]/=; subst => //=.
         by rewrite IHB//dA.
       have /= := IHA s1 sv vA.
       case X: step => [[?[]]A']//=->; rewrite (step_not_dead dA X)//B.bbOr_cutr//.

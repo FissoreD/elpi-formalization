@@ -76,13 +76,6 @@ Section check.
     - by move=> A ->.
   Qed.
 
-  Lemma has_cut_dead {A}: is_dead A -> has_cut A.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB/andP[/is_dead_is_ko->/is_dead_is_ko->]//.
-    - move=> A HA B0 B HB dA; rewrite HA//.
-  Qed.
-
   Fixpoint det_tree_seq sP L :=
     match L with
     | [::] => true
@@ -120,12 +113,12 @@ Section check.
     + move=> A HA B0 B HB /=; rewrite is_ko_cutr//.
   Qed.
 
-  Lemma no_alt_dead {sP A}: is_dead A -> det_tree sP A.
+  (* Lemma no_alt_dead {sP A}: is_dead A -> det_tree sP A.
   Proof.
     elim: A => //.
     + move=> A HA s B HB /=/andP[dA]; rewrite HA// has_cut_dead//.
     + move=> A HA B0 B HB /=dA; rewrite is_dead_is_ko//.
-  Qed.
+  Qed. *)
 
   Lemma has_cut_cutl {A}: has_cut A -> has_cut (cutl A).
   Proof.
@@ -170,8 +163,8 @@ Section check.
   Proof.
     elim: A => //=.
       move=> A HA s B HB/=.
-      case: ifP => dA/= succ; rewrite !(HA,HB,cutr2,eqxx,no_alt_cut,if_same)//=.
-      rewrite no_alt_dead//has_cut_dead//.
+      case: eqP => ?/= succ; rewrite !(HA,HB,cutr2,eqxx,no_alt_cut,if_same)//=; subst.
+      rewrite//has_cut_dead//.
     move=> A HA B0 B HB /=/andP[sA sB].
     rewrite sA/= HB//HA//= !orbT/= .
     by rewrite success_cut sA next_alt_cutl orbT.
@@ -382,8 +375,8 @@ Qed.
     success A -> has_cut A = false.
   Proof.
     elim: A => //.
-    - move=> A HA s B HB/=; case: ifP => dA.
-        rewrite is_dead_is_ko//=; apply: success_is_ko.
+    - move=> A HA s B HB/=; case: eqP => dA; subst.
+        apply: success_is_ko.
       move=>/success_is_ko->//.
     - by move=> A HA B0 B HB/=/andP[]/HA->/HB->; rewrite andbF.
   Qed.
@@ -437,9 +430,8 @@ Qed.
         case X: step => [[?[]]]// -[]// + ->; rewrite ?nnB ?no_alt_cut //=; try by case: has_cut.
         by rewrite cutr2 eqxx if_same.
       move/eqP->.
-      case: ifP => [dA|].
-        rewrite /=cA no_alt_dead//=is_ko_step//=?is_ko_cutr//cutr2//.
-      have:= HA s1 fA => + dA.
+      case: eqP => dA; subst => //.
+      have:= HA s1 fA.
       case Y: step => [[?[]]]/=->; rewrite !cutr2 eqxx no_alt_cut if_same//.
     - move=> A HA l B HB s /=.
       move=>/orP[].
@@ -535,12 +527,11 @@ Qed.
     - move=> c B _ _ [<-]//.
     - move=> A HA s B HB C /= b.
       move=>/andP[fA].
-      case: (ifP (is_dead _)) => dA.
-        rewrite has_cut_dead//.
+      case dA: (eq_op A); subst.
+        destruct A => //=.
         move=> fB.
         have:= HB _ b fB.
-        case X: next_alt => //[D] /(_ _ erefl) fD[<-]/=.
-        rewrite no_alt_dead//?is_dead_dead//has_cut_dead// is_dead_dead//.
+        by case X: next_alt => //[D] /(_ _ erefl) fD[<-]/=.
       case: ifP => cA.
         move=> fB.
         have:= (HA _ b fA).
@@ -595,14 +586,6 @@ Qed.
     move=> H1 H2 H3 H4.
     have /= H5 := step_no_free_alt H1 H2 H3.
     by have:= no_free_alt_next_alt H5 H4.
-  Qed.
-
-  Lemma no_free_alt_dead {sP A}:
-    is_dead A -> det_tree sP A.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB /andP[dA dB]; by rewrite has_cut_dead//HA//HB.
-    - by move=> A HA B0 B HB dA; rewrite is_dead_is_ko//.
   Qed.
 
   Definition is_det A := forall b s sv s' B,
