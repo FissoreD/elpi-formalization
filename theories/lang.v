@@ -71,18 +71,21 @@ Definition nat_of_V x := match x with IV x => x end.
 Lemma V_is_nat : cancel nat_of_V V_of_nat.
 Proof. by case. Qed.
 HB.instance Definition _ := Countable.copy V (can_type V_is_nat).
+(*SNIP: base_types*)
 Inductive Tm := 
   | Tm_Kp    : Kp -> Tm
   | Tm_Kd    : Kd -> Tm
   | Tm_V     : V  -> Tm
   | Tm_Comb  : Tm -> Tm -> Tm.
-derive Tm.
-HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
 
 Inductive Callable := 
   | Callable_Kp   : Kp -> Callable
   | Callable_Comb : Callable -> Tm -> Callable.
+(*ENDSNIP: base_types*)
+
+derive Tm.
 derive Callable.
+HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
 HB.instance Definition _ := hasDecEq.Build Callable Callable_eqb_OK.
 
 Record R_ {A} := mkR { head : Callable; premises : list A }.
