@@ -393,17 +393,17 @@ Section main.
 
   (*SNIP: run_sig*)
   Inductive run (p : program): fvS -> Sigma -> tree -> 
-                    option Sigma -> option tree -> bool -> Prop :=
+                    option Sigma -> option tree -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig*)
-    | run_done s1 s2 A B fv       : success A -> get_substS s1 A = s2 -> (next_alt true A) = B -> run fv s1 A (Some s2) B false
-    | run_cut  s1 s2 r A B n fv fv' : step p fv s1 A = (fv', CutBrothers, B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r true
-    | run_step s1 s2 r A B n fv fv'   : step p fv s1 A = (fv', Expanded,    B) -> run fv' s1 B s2 r n -> run fv s1 A s2 r n
-    | run_fail s1 s2 A B r n fv    : 
+    | run_done s1 s2 A B fv       : success A -> get_substS s1 A = s2 -> (next_alt true A) = B -> run fv s1 A (Some s2) B false fv
+    | run_cut  s1 s2 r A B n fv0 fv1 fv2 : step p fv0 s1 A = (fv1, CutBrothers, B) -> run fv1 s1 B s2 r n fv2 -> run fv0 s1 A s2 r true fv2
+    | run_step s1 s2 r A B n fv0 fv1 fv2 : step p fv0 s1 A = (fv1, Expanded,    B) -> run fv1 s1 B s2 r n fv2 -> run fv0 s1 A s2 r n fv2
+    | run_fail s1 s2 A B r n fv0 fv1    : 
           failed A -> next_alt false A = Some B ->
-              run fv s1 B s2 r n -> run fv s1 A s2 r n
+              run fv0 s1 B s2 r n fv1 -> run fv0 s1 A s2 r n fv1
     | run_dead s1 A fv : 
           failed A -> next_alt false A = None ->
-            run fv s1 A None None false.
+            run fv s1 A None None false fv.
 
   Fixpoint vars_tree t : fvS :=
   match t with

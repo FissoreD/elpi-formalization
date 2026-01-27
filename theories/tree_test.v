@@ -125,20 +125,20 @@ Definition CutS := TA cut.
 Section Test2.
   Goal step unif emptyp fset0 empty (Or OK empty OK) = (fset0, Success, Or OK empty OK). by []. Qed.
 
-  Goal run unif emptyp fset0 empty (Or (CutS) empty OK) (Some empty) None false.
+  Goal run unif emptyp fset0 empty (Or (CutS) empty OK) (Some empty) None false fset0.
     apply: run_step => //=.
     apply: run_done => //.
   Qed.
 
   Goal forall r, 
-    run unif emptyp fset0 empty (Or (CutS) empty r) (Some empty) None false.
+    run unif emptyp fset0 empty (Or (CutS) empty r) (Some empty) None false fset0.
     move=> r.
     apply: run_step => //.
     apply: run_done => //=.
     rewrite next_alt_cutr//.
   Qed.
 
-  Goal run unif emptyp fset0 empty (Or OK empty (Or OK empty OK)) (Some empty) (Some (Or Dead empty (((Or OK empty OK))))) false.
+  Goal run unif emptyp fset0 empty (Or OK empty (Or OK empty OK)) (Some empty) (Some (Or Dead empty (((Or OK empty OK))))) false fset0.
   Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)

@@ -417,29 +417,29 @@ Section RunP.
       same_structure_sup A (dead A).
     Proof. case: A => //=. Qed. *)
 
-    Lemma run_same_structure u p fv s A s1 r n:
-      run u p fv s A s1 r n -> same_structure_sup A (odflt A r).
+    Lemma run_same_structure u p fv1 fv2 s A s1 r n:
+      run u p fv1 s A s1 r n fv2 -> same_structure_sup A (odflt A r).
     Proof.
       elim; clear => //.
       - move=> s1 s2 A B ? sA _ <-/=.
         case X: next_alt => [B'|]/=; subst; move: X.
           by move=> /next_alt_same_structure//.
         by rewrite same_structure_sup_refl.
-      - move=> s1 s2 r A B n ?? /step_same_structure/= + _.
+      - move=> s1 s2 r A B n ??? /step_same_structure/= + _.
         destruct r => //=; last by rewrite !same_structure_sup_refl.
         apply: same_structure_sup2_trans.
-      - move=> s1 s2 r A B n ?? /step_same_structure/= + _.
+      - move=> s1 s2 r A B n ??? /step_same_structure/= + _.
         destruct r => //=; last by rewrite !same_structure_sup_refl.
         apply: same_structure_sup2_trans.
-      - move=> s1 s2 A B oB r n ?.
+      - move=> s1 s2 A B oB r n ??.
           move=> /next_alt_same_structure + _.
           destruct oB => //=; last by rewrite !same_structure_sup_refl.
           apply: same_structure_sup_trans.
       - by move=> *; rewrite same_structure_sup_refl.
     Qed.
 
-    Lemma run_dead1 u p fv s1 B s2 r n:  
-      is_dead B -> run u p fv s1 B s2 r n -> (s2 = None /\ r = None /\ n = false)%type2.
+    Lemma run_dead1 u p fv0 s1 B s2 r n fv1:  
+      is_dead B -> run u p fv0 s1 B s2 r n fv1 -> (s2 = None /\ r = None /\ n = false)%type2.
     Proof.
       move=> dB H; inversion H; clear H; subst;
         try rewrite // is_dead_step//is_dead_dead in H0.
@@ -517,7 +517,7 @@ Section RunP.
     get_substS s1 (big_and A) = s1.
   Proof. elim: A => //. Qed.
 
-  Lemma is_ko_run u p fv s A: is_ko A -> run u p fv s A None None false.
+  Lemma is_ko_run u p fv s A: is_ko A -> run u p fv s A None None false fv.
   Proof.
     elim: A s => //=.
     - by move=> s _; apply: run_dead => //=.
@@ -536,39 +536,39 @@ Section RunP.
   Qed.
 
   Lemma run_success1 u p fv A s: 
-    success A -> run u p fv s A (Some (get_substS s A)) ((next_alt true A)) false.
+    success A -> run u p fv s A (Some (get_substS s A)) ((next_alt true A)) false fv.
   Proof.
     move=> sA.
     by apply: run_done.
   Qed.
 
-  Lemma run_success u p fv A s1 s2 r n: 
-    success A -> run u p fv s1 A s2 r n -> [/\ s2 = Some (get_substS s1 A), r = (next_alt true A) & n = false].
+  Lemma run_success u p fv A s1 s2 r n fv1: 
+    success A -> run u p fv s1 A s2 r n fv1 -> [/\ s2 = Some (get_substS s1 A), r = (next_alt true A), fv1 = fv & n = false].
   Proof.
     move=> sA H; have:= success_step u p fv s1 sA.
     by inversion H; clear H; try congruence; subst; rewrite success_step//; rewrite failed_success in sA.
   Qed.
 
-  Lemma run_consistent u p fv s A s1 B s2 C n1 n2:
-    run u p fv s A s1 B n1 -> run u p fv s A s2 C n2 -> [/\ (s2 = s1), (C = B) & (n2 = n1)].
+  Lemma run_consistent u p fv s A s1 B s2 C n1 n2 fv1 fv2:
+    run u p fv s A s1 B n1 fv1 -> run u p fv s A s2 C n2 fv2 -> [/\ (s2 = s1), (C = B), fv2 = fv1 & (n2 = n1)].
   Proof.
     move=> H; elim: H s2 C n2; clear.
     + move=> s1 _ A _ ? sA <-<- s3 C n2 H; subst.
       by apply: run_success sA H.
-    + move=> s1 s2 r A B n1 ?? HA HB IH s4 r' n2 H.
+    + move=> s1 s2 r A B n1 ??? HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
       - by rewrite success_step in HA.
       - move: H0; rewrite HA => -[??]; subst.
         by case: (IH _ _ _ H1); subst.
       - by rewrite failed_step in HA.
       - by rewrite failed_step in HA.
-    + move=> s1 s2 r A B n1 ?? HA HB IH s4 r' n2 H.
+    + move=> s1 s2 r A B n1 ??? HA HB IH s4 r' n2 H.
       inversion H; clear H; try congruence; subst.
       - by rewrite success_step in HA.
       - move: H0; rewrite HA => -[??]; subst; by case: (IH _ _ _  H1); subst.
       - by rewrite failed_step in HA.
       - by rewrite failed_step in HA.
-    + move=> s1 s2 A B r n1 ? fA nB rB IH s3 C n2 H.
+    + move=> s1 s2 A B r n1 ?? fA nB rB IH s3 C n2 H.
       inversion H; clear H; try congruence; subst; try by rewrite failed_step in H0.
         by rewrite success_failed in fA.
       move: H1; rewrite nB => -[?]; subst.

@@ -286,18 +286,18 @@ Section valid_tree.
       by move=> [<-]/=; rewrite (HA _ false)//= eqxx valid_tree_big_and !if_same.
     Qed.
 
-  Lemma valid_tree_run s1 sv A s2 B b:
-    valid_tree A -> run u p sv s1 A s2 B b -> valid_tree (odflt A B).
+  Lemma valid_tree_run s1 fv A s2 B b fv':
+    valid_tree A -> run u p fv s1 A s2 B b fv' -> valid_tree (odflt A B).
   Proof.
     move=> + H; elim: H; clear => //=.
-    + move=> s1 s2 A B sv sA _ <- vA.
+    + move=> s1 s2 A B fv sA _ <- vA.
       case X: next_alt => [B'|]//=.
       by rewrite (valid_tree_next_alt vA X); auto.
-    + move=> s1 s2 [r|]// A B n sv sv' eA rB IH vA; subst.
+    + move=> s1 s2 [r|]// A B n fv fv' ? eA rB IH vA; subst.
       apply: IH (valid_tree_step vA eA).
-    + move=> s1 s2 [r|] A B n sv sv' eA rB IH vA//; subst.
+    + move=> s1 s2 [r|] A B n fv fv' ? eA rB IH vA//; subst.
       apply: IH (valid_tree_step vA eA).
-    + move=> s1 s2 A B [r|] n sv fA + rB + vA; subst.
+    + move=> s1 s2 A B [r|] n fv fA ? + rB + vA; subst.
       move=> /(valid_tree_next_alt vA) vB /(_ vB)//.
     + move=> //.
   Qed.

@@ -605,24 +605,24 @@ Qed.
     - by move=> A HA B0 B HB dA; rewrite is_dead_is_ko//.
   Qed.
 
-  Definition is_det A := forall b s sv s' B,
-    run u p sv s A s' B b -> B = None.
+  Definition is_det A := forall b s sv s' B fv',
+    run u p sv s A s' B b fv' -> B = None.
 
   Lemma run_next_alt {sP A}: 
     check_program sP p -> 
       det_tree sP A -> is_det A.
   Proof.
     rewrite/is_det.
-    move=> H1 H2 b s sv s' B H3.
+    move=> H1 H2 b s sv s' B ? H3.
     elim: H3 H2; clear -H1 => //.
     - move=> s1 s2 A B _ sA _ <- fA.
       have:= build_na_is_dead fA sA.
       case: next_alt => //=.
-    - move=> s1 s2 r A B n sv sv' eA rB IH fA.
+    - move=> s1 s2 r A B n sv sv' ? eA rB IH fA.
       by apply/IH/(step_no_free_alt H1 fA eA).
-    - move=> s1 s2 r A B n sv sv' eA rB IH fA.
+    - move=> s1 s2 r A B n sv sv' ? eA rB IH fA.
       by apply/IH/(step_no_free_alt H1 fA eA).
-    - move=> s1 s2 A B r n sv fA nA H IH FA.
+    - move=> s1 s2 A B r n sv ? fA nA H IH FA.
       by apply/IH/no_free_alt_next_alt/nA.
   Qed.
 
