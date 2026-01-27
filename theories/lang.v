@@ -88,16 +88,14 @@ derive Callable.
 HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
 HB.instance Definition _ := hasDecEq.Build Callable Callable_eqb_OK.
 
-Record R_ {A} := mkR { head : Callable; premises : list A }.
-Arguments mkR {_} _ _.
-derive R_.
-Inductive A :=
-  | cut | call : Callable -> A.
-derive A.
-HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
+Inductive A := cut | call : Callable -> A.
 
-Notation R := (@R_ A).
-HB.instance Definition _ := hasDecEq.Build R (R__eqb_OK A_eqb_OK).
+Record R := mkR { head : Callable; premises : list A }.
+
+derive A.
+derive R.
+HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
+HB.instance Definition _ := hasDecEq.Build R (R_eqb_OK).
 
 Elpi Command derive.eqbOK.register_axiomx.
 Elpi Accumulate Db derive.eqb.db.
