@@ -101,9 +101,6 @@ Section NurProp.
       - move=> /HA->//.
     Qed.
 
-    (* Lemma t2l_dead {A l s}: is_dead A -> t2l A s l = nilC.
-    Proof. by move=>/is_dead_is_ko; apply: is_ko_t2l. Qed. *)
-
     Lemma t2l_cutr {A s l}: t2l (cutr A) s l = nilC.
     Proof. apply: is_ko_t2l is_ko_cutr. Qed.
 
@@ -788,7 +785,7 @@ Qed.
       case e: step => [[?[]]B']//=[?<-]/=; subst; last first.
         have [w[ws []+[]]]:= s2l_CutBrothers sm [::] vB e.
         by move=>->//.
-      case SB: t2l =>  [//|[s2 [//|[a3 ca3] gs2]] a2] /= [?????] ; subst.  (*[sx[|[]// t1 tl ys]]]//=[????]; subst.*)
+      case SB: t2l =>  [//|[s2 [//|[a3 ca3] gs2]] a2] /= [?????] ; subst.
       have {HB} := HB _ _ _ _ s3 _ t' gs2 a2 _ vB e SB; rewrite cat0s.
       case FF: bc => [fvx [|[s5 r] rs]]/=[?? fB' H]; subst => //.
       split => //=.

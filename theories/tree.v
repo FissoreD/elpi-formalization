@@ -57,19 +57,6 @@ Section tree_op.
   (* STATE OP DEFINITIONS                                             *)
   (********************************************************************)
 
-    (* Note: "is_dead A || (success A && dead B)" is wrong
-      A counter example is: "(OK \/ p) /\ Dead"
-      In this case, a valid alternative is "p /\ B0"
-    *)
-  (*SNIP: is_dead*)
-  (* Fixpoint is_dead A :=
-    match A with
-    | OK | KO | TA _ => false
-    | And A B0 B => is_dead A
-    | Or A s B => is_dead A && is_dead B
-    end. *)
-  (*ENDSNIP: is_dead*)
-
   (*SNIP: path_end*)
   Fixpoint path_end A :=
     match A with
@@ -103,8 +90,7 @@ Section tree_op.
       - success A -> step A = Success B
       - if we replace following branch with:
           "success A || success B" (i.e. we remove the if), then
-          KO \/ OK is success but step (KO \/ OK) is not Success but
-          rather Expanded
+          KO \/ OK is success while step (KO \/ OK) is not
     *)
     | Or A _ B => if A is Some A then success A else success B
     end.
@@ -146,12 +132,6 @@ Section tree_op.
   Qed.
 
   Definition cutr (A: tree) := KO.
-    (* match A with
-    | TA _| KO => KO
-    | OK => KO
-    | And A B0 B => And (cutr A) B0 B
-    | Or A s B => Or (omap cutr A) s (cutr B)
-    end. *)
 
   (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
@@ -172,10 +152,6 @@ Section tree_op.
   (* STATE OP PROPERTIES                                              *)
   (********************************************************************)
   
-  (* IS_DEAD + IS_KO + FAILED + SUCCESS *)
-  (* Lemma is_dead_is_ko {A}: is_dead A -> is_ko A.
-  Proof. elim: A => // A HA s B HB/=/andP[/HA->/HB]//. Qed. *)
-
   Lemma is_ko_failed {A}: is_ko A -> failed A.
   Proof.
     elim: A => //.
@@ -195,15 +171,6 @@ Section tree_op.
   Lemma is_ko_success {A}: is_ko A -> success A = false.
   Proof. move=>/is_ko_failed/failed_success//. Qed.
 
-  (* Lemma is_dead_failed {A} : is_dead A -> failed A.
-  Proof. move=>/is_dead_is_ko/is_ko_failed//. Qed. *)
-
-  (* Lemma is_dead_success {A}: is_dead A -> success A = false.
-  Proof. move=>/is_dead_is_ko/is_ko_success//. Qed. *)
-
-  (* Lemma failed_dead {A} : failed A = false -> is_dead A = false.
-  Proof. apply: contraFF is_dead_failed. Qed. *)
-
   Lemma success_failed A: success A -> failed A = false.
   Proof.
     move=>H; apply: contraFF _ erefl.
@@ -216,27 +183,11 @@ Section tree_op.
     move=>/is_ko_success; rewrite H//.
   Qed.
 
-  (* Lemma success_is_dead {A}: success A -> is_dead A = false.
-  Proof. 
-    move=>H; apply: contraFF _ erefl.
-    move=>/is_dead_success; rewrite H//.
-  Qed. *)
-
   Lemma cutr2 {a}: cutr (cutr a) = cutr a.
   Proof. by []. Qed.
   
   Lemma is_ko_cutr {B}: is_ko (cutr B).
   Proof. elim: B => // A HA s B HB/=; rewrite HA HB//. Qed.
-
-  (* Lemma is_dead_cutr {A}: is_dead (cutr A) = is_dead A.
-  Proof. elim: A => //A HA s B HB/=; rewrite HA HB//. Qed. *)
-
-  (* Lemma is_dead_cutl {A}: is_dead (cutl A) = is_dead A.
-  Proof. 
-    elim: A => //=.
-    - move=> A HA s B HB; rewrite fun_if/= HA HB is_dead_cutr if_same//.
-    - move=> A HA B0 B HB; rewrite fun_if/= HA is_dead_cutr// if_same//.
-  Qed. *)
 
   Lemma failed_cutr {A}: failed (cutr A).
   Proof. elim: A => //=A->// _ B ->; rewrite if_same//. Qed.
@@ -295,10 +246,6 @@ Fixpoint big_or (r : list A) (l : seq (Sigma * R)) : tree :=
   | (s,r1) :: xs => Or (Some (big_and r)) s (big_or r1.(premises) xs)
   end.
 
-(* Lemma big_and_dead l: is_dead (big_and l) = false.
-Proof. elim l => //-[]//. Qed. *)
-
-
 Section main.
   Variable u: Unif.
 
@@ -306,11 +253,6 @@ Section main.
     let: (fv, l) := bc u pr fv t s in
     (fv, if l is (s,r) :: xs then (Or (Some KO) s (big_or r.(premises) xs))
          else KO).
-
-  (* Lemma dead_big_or p fv s t: is_dead (backchain p fv s t).2 = false.
-  Proof.
-    by rewrite /backchain; case F: bc => [fv' [//|[s1 r] xs]].
-  Qed. *)
 
   Fixpoint get_substS s A :=
     match A with
@@ -397,10 +339,6 @@ Section main.
 
   Goal (next_alt false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
 
-  (* build next_alt tree *)
-  (* Definition build_na A oA := odflt (dead A) oA. *)
-  Definition build_s (s:Sigma) (oA: option tree) := Option.map (fun _ => s)  oA.
-
   (*SNIP: run_sig*)
   Inductive run (p : program): fvS -> Sigma -> tree -> 
                     option Sigma -> option tree -> bool -> fvS -> Prop :=
@@ -428,10 +366,11 @@ End main.
 
 Hint Resolve is_ko_cutr : core.
 
-Ltac elim_tree A := elim: A => [||t|A HA sm B HB|sm B HB|A HA B0 B HB] => //; auto.
 
 (* Ltac elim_tree T X := revert X; elim: T => [||t|A HA sm B HB|sm B HB|A HA B0 B HB]; intros X => //; auto.
 
 Tactic Notation "elim_tree" hyp(T) hyp_list(X) := elim_tree T X. *)
 
 (*END*)
+
+Ltac elim_tree A := elim: A => [||t|A HA sm B HB|sm B HB|A HA B0 B HB] => //; auto.

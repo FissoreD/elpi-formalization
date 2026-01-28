@@ -109,9 +109,6 @@ Section vars_tree.
     apply/bc_sub/X.
   Qed.
 
-  (* Lemma vars_tree_cutr A: vars_tree (cutr A) `<=` vars_tree A.
-  Proof. elim_tree A => /=; rewrite ?fsetSU//fsetUSS//. Qed. *)
-
   Lemma vars_tree_cutl A: vars_tree (cutl A) `<=` vars_tree A.
   Proof. elim_tree A => /=; last case: ifP => //=; rewrite !fsetUSS//vars_tree_cutr. Qed.
 

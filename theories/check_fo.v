@@ -72,13 +72,6 @@ Section check.
   Lemma has_cut_cut {B}: has_cut (cutr B).
   Proof. by []. Qed.
 
-  (* Lemma has_cut_dead {A}: is_dead A -> has_cut A.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB/andP[/is_dead_is_ko->/is_dead_is_ko->]//.
-    - move=> A HA B0 B HB dA; rewrite HA//.
-  Qed. *)
-
   Fixpoint det_tree_seq sP L :=
     match L with
     | [::] => true
@@ -112,13 +105,6 @@ Section check.
 
   Lemma no_alt_cut {sP A}: det_tree sP (cutr A).
   Proof. by []. Qed.
-
-  (* Lemma no_alt_dead {sP A}: is_dead A -> det_tree sP A.
-  Proof.
-    elim: A => //.
-    + move=> A HA s B HB /=/andP[dA]; rewrite HA// has_cut_dead//.
-    + move=> A HA B0 B HB /=dA; rewrite is_dead_is_ko//.
-  Qed. *)
 
   Lemma has_cut_cutl {A}: has_cut A -> has_cut (cutl A).
   Proof.
@@ -551,14 +537,6 @@ Qed.
     have /= H5 := step_no_free_alt H1 H2 H3.
     by have:= no_free_alt_next_alt H5 H4.
   Qed.
-
-  (* Lemma no_free_alt_dead {sP A}:
-    is_dead A -> det_tree sP A.
-  Proof.
-    elim: A => //=.
-    - move=> A HA s B HB /andP[dA dB]; by rewrite has_cut_dead//HA//HB.
-    - by move=> A HA B0 B HB dA; rewrite is_dead_is_ko//.
-  Qed. *)
 
   Definition is_det A := forall b s sv s' B fv',
     run u p sv s A s' B b fv' -> B = None.

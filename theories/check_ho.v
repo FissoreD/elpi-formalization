@@ -6,6 +6,84 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import valid_tree.
 
+
+
+(* Axiom deref_rigid: forall s t t',
+  deref s t = t' ->
+    get_tm_hd t' = 
+      match get_tm_hd t with
+      | inl K => inl K
+      | inr (inl P) => inr (inl P)
+      | inr (inr V) => 
+        if s.[? V] is Some t then get_tm_hd t
+        else inr (inr V)
+      end. *)
+(* Fixpoint varsD (l: seq fv) :=
+  match l with
+  | [::] => true
+  | x :: xs => ((x `&` varsU xs) == fset0) && varsD xs
+  end.
+
+Lemma varsD_rule_prem_aux {T:Type} r (rs: seq (T * _)):  
+  varsU_rprem r
+    `&` varsU [seq varsU_rhead x.2 `|` varsU_rprem x.2 | x <- rs] ==
+    fset0 ->
+    varsU_rprem r `&` varsU [seq varsU_rprem x.2 | x <- rs] == fset0.
+Proof.
+  elim: rs r => //=[[s r] rs] IH r1.
+  rewrite !fsetIUr !fsetU_eq0 => /=/andP[/andP[H1 H2]] H3.
+  by rewrite IH//=H2.
+Qed.
+
+Lemma varsD_rule_prem {T:Type} (r:seq (T * _)):
+  varsD (map (fun x => varsU_rule x.2) r) ->
+  varsD (map (fun x => varsU_rprem x.2) r).
+Proof.
+  elim: r => //=[[s r] rs] IH /andP[+ H2]; rewrite IH//andbT.
+  rewrite/varsU_rule/= fsetIUl fsetU_eq0 => /andP[].
+  move=> H3 H4.
+  by rewrite varsD_rule_prem_aux//.
+Qed. *)
+
+(* Lemma backchain_fresh_prem u pr query s :
+  varsD (map (fun x => varsU_rprem x.2) (F u pr query s)).
+Proof.
+  rewrite/F.
+  case: tm2RC => // [[r p]].
+  case: fndP => // kP.
+  apply: varsD_rule_prem.
+  apply: select_fresh.
+Qed.
+
+Lemma backchain_fresh_premE u pr query s l :
+  (F u pr query s) = l ->
+  varsD (map (fun x => varsU_rprem x.2) l).
+Proof. by move=> <-; apply/backchain_fresh_prem. Qed. *)
+
+(* Lemma tm2RC_deref s c c' p:
+  tm2RC (deref s (Callable2Tm c)) = Some (c', p) ->
+    match get_tm_hd (Callable2Tm c) with
+    | inl K => False
+    | inr (inl P) => P = p
+    | inr (inr V) => 
+      if s.[? V] is Some t then get_tm_hd (deref s t) = inr (inl p)
+      else False
+    end.
+Proof.
+  elim: c c' p => //=; first by congruence.
+    move=> v c' p; case: fndP => //= vs H.
+    remember (deref _ _) as df eqn:H1.
+    have {}H1 := esym H1.
+    rewrite (deref_rigid H1).
+    have {}H := tm2RC_get_tm_hd H.
+    by rewrite H.
+  move=> f Hf t c' p.
+  remember (deref _ _) as df eqn:H.
+  have {}H := esym H.
+  case X: tm2RC => //=[[RC P]][??]; subst.
+  by apply: Hf X.
+Qed. *)
+
 Lemma catf_refl {K:choiceType} {T:Type} (A:{fmap K -> T}):
   A + A = A.
 Proof. by apply/fmapP => k; rewrite fnd_cat if_same. Qed.

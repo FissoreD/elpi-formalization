@@ -115,10 +115,6 @@ Section clean_ca.
     clean_ca bt (take n L) = take n (clean_ca bt L).
   Proof. elim: L n => //= -[s g] gs IH n/=; case: n => //n; rewrite !take_cons/=IH//. Qed.
 
-  (* Lemma take_make_lb0 {n hd L}:
-    take n (make_lB0 L hd) = make_lB0 (take n L) hd.
-  Proof. elim: L n => //= -[s g] gs IH []//=n; rewrite !take_cons IH//. Qed. *)
-
   Lemma clean_ca_add_deep {x bt hd L}:
     empty_caG hd ->
     clean_ca bt (add_deep (x ++ bt) hd L) = 
@@ -483,7 +479,6 @@ Section clean_ca.
       split => //.
       rewrite seq2altsK seq2goals_cat !seq2goalsK.
       have [?] := s2l_Expanded_call vA eA H; subst.
-      (* rewrite push. *)
       have?:= empty_caG_r2l.
       case X: bc => [?[|[sz z]zs]]/= _ fA' Hn; rewrite Hn/=; subst.
         case W: t2l => //=[[sw w]ws].

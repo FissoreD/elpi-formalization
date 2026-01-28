@@ -11,9 +11,6 @@ Module B.
     | _ => false
     end.
 
-  (* Lemma base_and_dead {A}: base_and A -> is_dead A = false.
-  Proof. case: A => // -[]//=. Qed. *)
-
   Lemma base_and_big_and A: base_and (big_and A).
   Proof. by elim: A => // -[|t] l /= ->; rewrite eq_refl. Qed.
 
@@ -22,20 +19,6 @@ Module B.
     | Or (Some l) _ r => base_and l && (base_or_aux r)
     | t => base_and t
     end.
-
-  (* Definition base_and_ko s :=
-    match s with
-    | And KO r r1 =>
-      [&& (big_and r == r1) & base_and r1]
-    | KO => true
-    | _ => false
-    end. *)
-
-  (* Fixpoint base_or_aux_ko s := KO.
-    match s with
-    | Or l _ r => base_and_ko l && (base_or_aux_ko r)
-    | t => base_and_ko t
-    end. *)
 
   Definition bbOr B := base_or_aux B || (B == KO). 
 
@@ -76,54 +59,6 @@ Module B.
       by exists  (A::l), [::].
     Qed.
 
-    (* Lemma base_and_base_and_ko_cutr {B} : base_and B -> base_and_ko (cutr B).
-    Proof. 
-      by elim: B => // A; case: A => //[p c|] _ B0 B HB /=/andP[/eqP H1 H2]; rewrite HB// H1 eqxx.
-    Qed. *)
-    
-    (* Lemma spec_base_and_ko A:
-      reflect (exists X, cutr (big_and X) = A) (base_and_ko A).
-    Proof.
-      case bA: base_and_ko; constructor.
-        case: A bA => //=; first by exists [::].
-        by move=> []//= l t /andP[/eqP <-]; exists (cut :: l).
-      move=> [x ?]; subst.
-      by rewrite base_and_base_and_ko_cutr//base_and_big_and in bA.
-    Qed. *)
-
-    (* Lemma base_or_base_or_ko_cutr {B}: base_or_aux B -> base_or_aux_ko (cutr B).
-    Proof.
-      elim: B => //.
-      + move=> A IHA s B IHB /= /andP [] /base_and_base_and_ko_cutr -> /IHB ->//.
-      + move=> a; case: a => //=[_ _|] _ B C HC /andP [] /eqP /[subst1] hC;
-        rewrite base_and_base_and_ko_cutr//eqxx//.
-    Qed. *)
-
-    (* Lemma spec_base_or_aux_ko A:
-      reflect (exists X Y, cutr (big_or X Y) = A) (base_or_aux_ko A).
-    Proof.
-      case bA: base_or_aux_ko; constructor; last first.
-        move=> [X[Y H]]; subst.
-        by rewrite base_or_base_or_ko_cutr//base_or_aux_big_or in bA.
-      pose head := Callable_P (IP 1).
-      elim: A bA => //=; first by exists [::],[::].
-        move=> A _ s B HB /andP[/spec_base_and_ko[X?]] /HB [Y[Z H]]; subst.
-        by eexists X, ((s, {|head := head; premises := Y|}) :: Z) => //=.
-      move=> []//= _ l t H1 /andP[/eqP?]; subst.
-      by exists  (cut::l), [::].
-    Qed. *)
-
-    (* Lemma base_and_ko_base_and_ko_cutr {B} : base_and_ko B -> base_and_ko (cutr B).
-    Proof. by elim: B => // -[]// _ l B HB /=/andP[/eqP<- H]; rewrite cutr2 eqxx//. Qed. *)
-
-    (* Lemma base_or_ko_cutr {B}: base_or_aux_ko B -> base_or_aux_ko (cutr B).
-    Proof.
-      elim: B => //.
-        move=> A HA s B HB /= /andP[bA bB].
-        rewrite HB//base_and_ko_base_and_ko_cutr//.
-      by move=> [] //= _ B0 B HB /andP[/eqP H1 H2]; rewrite base_and_ko_base_and_ko_cutr// -H1 cutr2 eqxx.
-    Qed. *)
-
     Lemma bbOr_cutr {B}: bbOr (cutr B).
     Proof. by rewrite/bbOr orbT. Qed.
   End specs.  
@@ -161,18 +96,6 @@ Section valid_tree.
   Goal forall x r , (valid_tree (And (TA cut) x r)) -> is_ko r = false.
   Proof. move=> x r/= /eqP->; rewrite is_ko_big_and//. Qed.
 
-  (* Lemma is_dead_valid_tree {A} : is_dead A -> valid_tree A = false.
-  Proof.
-    elim: A => //.
-      move=> A HA s B HB/=/andP[]dA dB.
-      rewrite HA// dA HB//andbF//.
-    move=> A HA Bo B HB/=dA.
-    rewrite HA// andbF//.
-  Qed. *)
-
-  (* Lemma valid_tree_is_dead {A} : valid_tree A -> is_dead A = false.
-  Proof. apply: contraPF => /is_dead_valid_tree->//. Qed. *)
-
   Lemma valid_tree_big_and l : valid_tree (big_and l).
   Proof. elim: l => //=. Qed.
 
@@ -185,13 +108,6 @@ Section valid_tree.
     + move=> s; rewrite valid_tree_big_and//.
     + by move=> _ b l H s; rewrite valid_tree_big_and B.bbOr_big_or.
   Qed.
-
-  (* Lemma valid_tree_big_or_cutr s l : valid_tree (cutr (big_or s l)).
-  Proof.
-    elim: l s => [|[]] //=.
-    + by move=> s; rewrite valid_tree_big_and_cutr.
-    + by move=> _ r l IH s; rewrite IH valid_tree_big_and_cutr B.bbOr_cutr (if_same, B.bbOr_big_or).
-  Qed. *)
 
   Lemma valid_tree_backchain pr s sv t : valid_tree (backchain u pr sv s t).2.
   Proof.
