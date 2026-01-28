@@ -14,7 +14,7 @@ theories/tree_test.v
 theories/tree_prop.v
 theories/tree_vars.v
 theories/valid_tree.v
-# theories/tree_prop_hard.v
+theories/tree_prop_hard.v
 
 theories/elpi.v
 theories/elpi_clean_ca.v

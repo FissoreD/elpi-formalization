@@ -430,4 +430,8 @@ Hint Resolve is_ko_cutr : core.
 
 Ltac elim_tree A := elim: A => [||t|A HA sm B HB|sm B HB|A HA B0 B HB] => //; auto.
 
+(* Ltac elim_tree T X := revert X; elim: T => [||t|A HA sm B HB|sm B HB|A HA B0 B HB]; intros X => //; auto.
+
+Tactic Notation "elim_tree" hyp(T) hyp_list(X) := elim_tree T X. *)
+
 (*END*)

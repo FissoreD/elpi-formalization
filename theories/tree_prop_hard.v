@@ -12,15 +12,14 @@ Section s.
     remember (Or _ _ _) as o eqn:Ho => H.
     elim: H A s B Ho; clear => //.
     - move=> s1 s2 r A B n sv fv' ? + _ _ C s D ?; subst => /=.
-      by case: ifP; case: step => [[?[]]]//.
+      destruct C; case: step => [[?[]]]//.
     - move=> s1 s2 r A B n fv fv' ? + HB IH C s D ?; subst => /=.
-      case: ifP => dC; case X: step => [[?[]]D']//=[??]; subst; by apply: IH.
+      destruct C; case X: step => [[?[]]D']//=[??]; subst; by apply: IH.
     - move=> s1 s2 A B r n fv ? _ + H IH C s3 D ?; subst => /=.
-      case: ifP => //= dA.
-        case: next_alt => //= ? [/esym]; apply IH.
-      case: next_alt => //=.
-        move=>? [/esym]; apply IH.
-      case: next_alt => //= ? [/esym]; apply IH.
+      case: C => [C|]; (case: next_alt => [?|]//).
+        by move=> []/esym; apply: IH.
+        by case: next_alt => //= ? [?]; subst; apply/IH.
+      by move=> []/esym; apply: IH.
   Qed.
 
   Lemma next_alt_run fv fv' A B C s s2 b1:
@@ -35,110 +34,142 @@ Section s.
     rewrite next_alt_not_failed//.
   Qed.
 
-  (* Definition get_dead A B := if is_dead A && ~~(is_dead B) then A else Dead. *)
-
-  Lemma run_ko_left1 fv fv' s1 s2 A B A' B' sx:
-    is_ko A -> run u p fv s1 (Or A s2 B) sx (Some (Or A' s2 B')) false fv' ->
-      exists b, run u p fv s2 B sx (Some B') b fv' /\ 
-        (A' = Dead).
+  (* Lemma run_ko_left_Some_None fv fv' s2 X B B' r sIgn:
+    is_ko X ->
+    run u p fv sIgn (Or (Some X) s2 B) r (omap (fun x => Or None s2 x) B') false fv' <->
+    run u p fv sIgn (Or None s2 B) r (omap (fun x => Or None s2 x) B') false fv'.
   Proof.
-    rewrite/get_dead.
-    remember (Or A _ _) as o1 eqn:Ho1.
-    remember (Some _) as o2 eqn:Ho2 => + H.
-    elim: H A B A' B' s2 Ho1 Ho2; clear => //.
-    + move=> s _ A _ fv + <-<- A1 B1 A2 B2 s2 ? + kA'; subst => /=.
-      rewrite (is_ko_success kA') (is_ko_next_alt _ kA').
-      case: ifP =>// dA1 sB1.
-      case X: next_alt => [B1'|]//= [??]; subst.
-      repeat eexists.
-        apply: run_done sB1 erefl _.
-        by rewrite X.
-      rewrite (next_alt_dead X)//.
-    - move=> s1 s2 r A B n fv fv' ? + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
-      by case: ifP => dC; case X: step => [[?[]]]//.
-    - move=> s1 s2 r A B n fv fv' ? + HB IH A1 A2 B1 B2 s4 ?? kA1; subst => /=.
-      rewrite (is_ko_step _ _ _ _ kA1)//.
-      case: ifP => dC//.
-      case X: step => [[?[]D']]//[??]; subst;
-      have {IH} [b[H1 ?]] := IH _ _ _ _ _ erefl erefl kA1; subst; rewrite dC/=;
-      repeat eexists.
-        apply:run_step X H1.
-      by apply/run_cut/H1.
-    - move=> s1 s2 A B r n fv ? ++ rB IH A1 A2 B1 B2 s3 ?? kA1; subst => /=.
-      rewrite (is_ko_next_alt _ kA1).
-      case: ifP => /=dA H1.
-        case X: next_alt => [A2'|]//=.
+    move=> kX; split => H.
+      inversion H; subst; clear H.
+      - by move: H0 => /=; rewrite is_ko_success.
+      - by move: H0; rewrite/= is_ko_step//.
+      - move: H0 H1 => /= fX; rewrite is_ko_next_alt//=.
+        case nB: next_alt => [B2|]//=[?]; subst.
+        by apply: next_alt_run; first by rewrite/=nB.
+      - destruct B' => //; simpl in *.
+        move: H6; rewrite/= is_ko_next_alt//.
+        case nB: next_alt => [B'|]//= _.
+        apply: run_dead => /=.
+          by rewrite (next_alt_None_failed nB).
+        by rewrite nB.
+    inversion H; subst; clear H.
+      - move: H0 H2 => /= sB.
+        case nB: next_alt => [B2|]/=; destruct B' => //=.
           move=> [?]; subst.
-          have [b[H3 H4]] := IH _ _ _ _ _ erefl erefl kA1; subst.
-          rewrite dA/=; repeat eexists.
-          apply: run_fail H1 X H3.
-        case X: next_alt => //[A2'][?]; subst.
-        have [b[H3]]:= IH _ _ _ _ _ erefl erefl isT.
-        rewrite if_same => ?; subst.
-        repeat eexists.
-        apply: next_alt_run X H3.
-  Qed.
+          apply: run_fail => /=.
+            by rewrite is_ko_failed.
+            by rewrite is_ko_next_alt//next_alt_not_failed//success_failed.
+          by apply: run_done; rewrite //= nB.
+        move=> _.
+        apply: run_fail => /=.
+          by rewrite is_ko_failed.
+          by rewrite is_ko_next_alt//next_alt_not_failed//success_failed.
+        by apply: run_done; rewrite //= nB.
+      - move: H0; rewrite/=!push.
+        case eB: step => //=[[fvx r'] B2]/=.
+        case: ifP.
+          destruct r' => // _ [??]; subst.
+          apply: run_fail => /=.
+            by rewrite is_ko_failed//=.
+            rewrite is_ko_next_alt//=next_alt_not_failed// (step_not_failed eB)//.
+          by apply: run_step H1; rewrite/= eB.
+        move=> _ [???]; subst.
+        apply: run_fail => /=.
+          by rewrite is_ko_failed//=.
+          rewrite is_ko_next_alt//=next_alt_not_failed// (step_not_failed eB)//.
+        by apply: run_step H1; rewrite/= eB.
+      - move: H0 H1 => /=fB.
+        case nB: next_alt => //[B2][?]; subst.
+        by apply: run_fail H2; rewrite//=(is_ko_failed, is_ko_next_alt)//nB.
+      - destruct B' => //.
+        move: H6 => /=; case nB: next_alt => //= _.
+        by apply: run_dead; rewrite//=(is_ko_failed, is_ko_next_alt)//nB.
+  Qed. *)
 
-  Lemma run_ko_left2 fv fv' s2 X B B' r b1 sIgn:
-    is_ko X -> run u p fv s2 B r B' b1 fv' ->
-    run u p fv sIgn (Or X s2 B) r (if B' is Some B' then Some (Or (get_dead X B') s2 B') else None) false fv'.
+  Lemma run_ko_left_Some_None fv fv' s2 X B r r1 b1 sIgn:
+    is_ko X ->
+    run u p fv sIgn (Or (Some X) s2 B) r r1 b1 fv' <->
+    run u p fv sIgn (Or None s2 B) r r1 b1 fv'.
   Proof.
-    rewrite/get_dead.
-    move=> + HB; elim: HB sIgn X; clear.
-    + move=> s _ A _ fv sA <-<- sIgn X kX; subst => /=.
-      case dX: (is_dead X) => /=.
-        apply: run_done.
-          by rewrite/= sA dX.
-          by rewrite /= dX//.
-        rewrite/=dX //.
-        case Y: next_alt => [A'|]//=.
-        by rewrite (next_alt_dead Y)//.
+    move=> kX; split => H.
+      inversion H; subst; clear H.
+      - by move: H0 => /=; rewrite is_ko_success.
+      - by move: H0; rewrite/= is_ko_step//.
+      - by move: H0; rewrite/= is_ko_step//.
+      - move: H0 H1 => /= fX; rewrite is_ko_next_alt//=.
+        case nB: next_alt => [B2|]//=[?]; subst.
+        by apply: next_alt_run; first by rewrite/=nB.
+      - move: H0 H1 => /= fX; rewrite is_ko_next_alt//=.
+        case nB: next_alt => //= _.
+        by apply: run_dead; rewrite/= (next_alt_None_failed nB, nB).
+    inversion H; subst; clear H.
+    - move: H0 => /= sB.
+      case nB: next_alt => [B2|]/=.
+        apply: run_fail => /=.
+          by rewrite is_ko_failed.
+          by rewrite is_ko_next_alt//next_alt_not_failed//success_failed.
+        by apply: run_done; rewrite //= nB.
       apply: run_fail => /=.
-        by rewrite dX is_ko_failed.
-        by rewrite/= dX is_ko_next_alt// next_alt_not_failed// success_failed//.
-      by apply: run_done => //.
-    + move=> s1 s2 r A B n fv fv' ? HA HB IH sIgn X kX.
-      case dX: (is_dead X) => /=.
-        have {}IH := IH sIgn _ kX.
-        rewrite dX in IH.
-        apply: run_step IH.
-        by rewrite /= dX HA//.
-      have {}IH:= IH sIgn Dead isT.
-      have fA := step_not_failed HA notF.
-      apply: run_fail.
-        rewrite/=dX is_ko_failed//.
-        by rewrite /= dX is_ko_next_alt// next_alt_not_failed//=failed_dead.
-      destruct r; rewrite ?if_same in IH;
-      by apply: run_step IH; rewrite/= HA.
-    (* TODO: the following case is same as previous... *)
-    + move=> s1 s2 r A B n fv fv' ? HA HB IH sIgn X kX.
-      case dX: (is_dead X) => /=.
-        have {}IH := IH sIgn _ kX.
-        rewrite dX in IH.
-        apply: run_step IH.
-        by rewrite /= dX HA//.
-      have {}IH:= IH sIgn Dead isT.
-      have fA := step_not_failed HA notF.
-      apply: run_fail.
-        rewrite/=dX is_ko_failed//.
-        by rewrite /= dX is_ko_next_alt// next_alt_not_failed//=failed_dead.
-      destruct r; rewrite ?if_same in IH;
-      by apply: run_step IH; rewrite/= HA.
-    + move=> s1 s2 A B r n fv ? fA nB rC IH sIgn X kX; subst.
-      case dX: (is_dead X).
-        have {}IH:= IH sIgn _ kX.
-        rewrite dX/= in IH; subst.
-        apply: run_fail IH; rewrite /=dX//nB//.
-      have {}IH:= IH sIgn Dead isT.
-      apply: run_fail; only 1,2: rewrite//=dX (is_ko_failed,is_ko_next_alt)//nB//.
-      by destruct r => //=; rewrite if_same in IH.
-    + move=> s1 B fv fB nB sIgn X kX.
-      apply: run_dead; rewrite/=.
-        by rewrite fB is_ko_failed//if_same.
-      by rewrite nB/= is_ko_next_alt//if_same.
+        by rewrite is_ko_failed.
+        by rewrite is_ko_next_alt//next_alt_not_failed//success_failed.
+      by apply: run_done; rewrite //= nB.
+    - move: H0; rewrite/=!push; case eB: step => //=[[fvx []] B2]//=.
+    - move: H0; rewrite/=!push; case eB: step => [[fvx r'] B2]/=.
+      case: ifP.
+        destruct r' => // _ [??]; subst.
+        apply: run_fail => /=.
+          by rewrite is_ko_failed//=.
+          by rewrite is_ko_next_alt//=next_alt_not_failed// (step_not_failed eB)//.
+        by apply: run_step H1; rewrite /=eB//=.
+      move=> _ [???]; subst.
+      apply: run_fail => /=.
+        by rewrite is_ko_failed//=.
+        by rewrite is_ko_next_alt//=next_alt_not_failed// (step_not_failed eB)//.
+      by apply: run_step H1; rewrite /=eB//=.
+    - move: H0 H1 => /=fB.
+      case nB: next_alt => //[B2][?]; subst.
+      by apply: run_fail H2; rewrite//=(is_ko_failed, is_ko_next_alt)//nB.
+    - move: H1 => /=; case nB: next_alt => //= _.
+      by apply: run_dead; rewrite//=(is_ko_failed, is_ko_next_alt)//nB.
   Qed.
 
-  Lemma run_or_ko_right1 fv fv' s2 X B B' SOL b1 sIgn:
+  Lemma run_ko_left2 fv fv' s2 B B' r sIgn:
+    (exists b1, run u p fv s2 B r B' b1 fv') <->
+    run u p fv sIgn (Or None s2 B) r (omap (fun x => Or None s2 x) B') false fv'.
+  Proof.
+    split.
+      move=> [b1 HB]; elim: HB sIgn; clear.
+      + by move=> > sA <-<- sIgn; apply: run_done.
+      + by move=> > sB rB IH ign; apply: run_step; first (by rewrite /=sB); apply: IH.
+      + by move=> > sB rB IH ign; apply: run_step; first (by rewrite /=sB); apply: IH.
+      + by move=> > fA nA rB IH i; apply: run_fail; rewrite//=nA//.
+      + by move=> > fA nA i; apply: run_dead; rewrite//= nA.
+    remember (Or _ _ _) as OR eqn:HO.
+    remember (omap _ _) as M eqn:HM.
+    remember false as F eqn:HF => HB.
+    elim: HB s2 B B' HO HM HF; clear.
+    + move=> > + <-<- s2 B B' ? + _; subst => /= sB.
+      case nB: next_alt => [B2|]//=; destruct B' => //=.
+        by move=> [?]; subst; exists false; apply: run_done.
+      by move=> _; exists false; apply: run_done.
+    + move=> > sA rB IH s2 B B'//.
+    + move=> > + rB IH s2 B B' ???; subst => /=.
+      rewrite !push.
+      case eB: step => [[fvx rx] B2][?+?]; subst.
+      have [? {}IH] := IH _ _ _ erefl erefl erefl.
+      case: ifP; first destruct rx; move => // _ ?; subst; eexists.
+        apply: run_cut eB IH.
+      apply: run_step eB IH.
+    + move=> > ++ rB IH s2 B B' ???; subst => /= fB.
+      case nB: next_alt => //[B2][?]; subst.
+      have [? {}IH] := IH _ _ _ erefl erefl erefl.
+      by eexists; apply: run_fail IH.
+    + move=> _ > fA nA s2 B []//? _ _; subst.
+      eexists; apply: run_dead => //.
+      by move: nA => /=; case: next_alt.
+  Qed.
+
+  (* Lemma run_or_ko_right1 fv fv' s2 X B B' SOL b1 sIgn:
     is_ko X -> run u p fv s2 B SOL B' b1 fv' ->
     run u p fv s2 (Or B sIgn X) SOL (
       if B' is Some B' then Some (Or B' sIgn (if is_dead B' then Dead else if b1 == false then X else cutr X)) else None) false fv'.
@@ -167,7 +198,7 @@ Section s.
       apply: run_dead => /=.
         by rewrite fA is_ko_failed// if_same.
       by rewrite is_ko_next_alt//=nA if_same.
-  Qed.
+  Qed. *)
 
   (* Lemma run_or_ko_right2 fv fv' s2 X X' A A' SOL sIgn:
     is_ko X -> run u p fv s2 (Or A sIgn X) SOL (Some (Or A' sIgn X')) false fv' ->
@@ -221,13 +252,13 @@ Section s.
       rewrite is_dead_dead//.
   Qed. *)
 
-  Definition build_or_state cn A' X :=
+  (* Definition build_or_state cn A' X :=
     if cn == false then 
       if is_dead A' then 
         if next_alt false X is Some X' then X'
         else Dead
       else X
-    else if is_dead A' then Dead else cutr X.
+    else if is_dead A' then Dead else cutr X. *)
 
   Lemma run_none_dead_res fv fv' s A B cn :
     run u p fv s A None B cn fv' -> B = None.
@@ -237,67 +268,54 @@ Section s.
     by elim: H Hn.
   Qed.
 
-  Lemma next_alt_deadE X A:
-    next_alt false X = Some A -> A == Dead = false.
-  Proof.
-    move=> /next_alt_dead -[].
-    destruct A => //.
-  Qed.
-
   Lemma run_or_correct_left fv fv' s1 A A' s2 b:
     run u p fv s1 A s2 A' b fv' ->
       if s2 is None then
         if b then
-          forall sX X, run u p fv s1 (Or A sX X) None None false fv'
+          forall sX X, run u p fv s1 (Or (Some A) sX X) None None false fv'
         else
           forall sX X s3 X' n1 fv2, run u p fv' sX X s3 X' n1 fv2 ->
-          run u p fv s1 (Or A sX X) s3 (omap (fun x => Or Dead sX x) X') false fv2
+          run u p fv s1 (Or (Some A) sX X) s3 (omap (fun x => Or None sX x) X') false fv2
       else forall sX X, 
-      run u p fv s1 (Or A sX X) s2 
+      run u p fv s1 (Or (Some A) sX X) s2 
         (if A' is Some A' then
-          Some (Or A' sX (if b then cutr X else X))
+          Some (Or (Some A') sX (if b then cutr X else X))
         else 
           if b then None
-          else omap (fun x => Or Dead sX x) (next_alt false X)) false fv'
-        .
+          else omap (fun x => Or None sX x) (next_alt false X)) false fv'.
   Proof.
-    rewrite/build_or_state/=.
     move=> H; elim: H; clear => //.
     + move=> s _ A _ ? sA <-<- sX X; subst => /=.
-      apply: run_done;rewrite /=(success_is_dead sA)//=.
+      by apply: run_done.
     + move=> s1 s2 r A B n fv0 fv1 fv2 HA HB.
       case: s2 HB => //= [s2|] HB/=.
         move=> + sX X.
         move=> /(_ sX (cutr X)); rewrite next_alt_cutr cutr2 if_same.
         move=> H.
         rewrite if_same/= in H.
-        by apply: run_step H; rewrite /=(step_not_dead1 HA)//=HA//.
+        by apply: run_step H; rewrite /=HA.
       have ? := run_none_dead_res HB; subst.
       destruct n => //=IH sX X; last first.
         apply: run_step.
-          rewrite/=(step_not_dead1 HA)//=HA//=.
+          by rewrite/= HA.
         apply: (IH _ (cutr X) _ None).
         apply: is_ko_run is_ko_cutr.
       apply/run_step/IH.
-      rewrite/=(step_not_dead1 HA)//=HA//=.
+      by rewrite/=HA.
     + move=> s1 s3 r A B n fv0 fv1 fv2 HA HB.
       case: s3 HB => //[s3|] H3.
         move=> + sX X.
         move=> /(_ sX X).
         apply: run_step => /=.
-        rewrite HA.
-        case: ifP => //dA.
-        by rewrite is_dead_step in HA.
+        by rewrite HA//=.
       destruct n => /=; last first.
-        move=> IH.
-        move=> sX X s3 X' n1 fv3 H.
+        move=> IH sX X s3 X' n1 fv3 H.
         apply: run_step.
           rewrite/= HA //(step_not_dead1 HA)//=.
         by apply:IH H.
       move=> IH sX X.
       apply: run_step.
-        rewrite/= HA; case: ifP => // dA.
-        by rewrite is_dead_step in HA.
+        by rewrite/= HA//.
       by apply: IH.
     + move=> s1 s2 A B r n fv fv' fA nA.
       case: s2 => //[s2|] HB; auto.
@@ -306,260 +324,194 @@ Section s.
         rewrite nA//.
       destruct n => //=.
         move=> IH sX X.
-        by apply: run_fail; rewrite //=!(next_alt_dead nA,nA)//.
+        by apply: run_fail; rewrite //=nA.
       move=> IH sX X s3 X' n1 fv2 H.
-      apply: run_fail; only 1,2: rewrite //=!(next_alt_dead nA,nA)//.
+      apply: run_fail; only 1,2: rewrite //=nA//.
       by apply: IH H.
     + move=> s1 B fB fv nB/=sX X s3 X' n1 fv' H.
-      case dB: (is_dead B).
-        have:= run_ko_left2 s1 (is_dead_is_ko dB) H.
-        destruct X' => //=.
-        rewrite/get_dead dB/=//.
-
-
       inversion H; subst; clear H.
-      - apply: run_fail => /=.
-          rewrite dB//.
-          rewrite dB nB //=next_alt_not_failed//success_failed//.
-        apply: run_done; rewrite /= is_dead_dead//.
-        rewrite //?is_dead_dead//.
-        case W: next_alt => //=.
-        rewrite dead2//.
-      - apply: run_fail => /=.
-          rewrite dB//.
-          rewrite dB nB next_alt_not_failed//=.
+      + apply: run_fail => //=; first rewrite nB next_alt_not_failed//.
+          by rewrite success_failed.
+        by apply: run_done.
+      + apply: run_fail => //=; first rewrite nB next_alt_not_failed//.
           by rewrite (step_not_failed H0).
-        apply: run_step => //=.
-          rewrite H0 is_dead_dead//.
-        have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) X0 .
-        by rewrite /get_dead is_dead_dead dead2 if_same.
-      - apply: run_fail => /=.
-          rewrite dB//.
-          rewrite dB nB next_alt_not_failed//=.
+        apply: run_step; first by rewrite/=H0.
+        by apply/run_ko_left2; exists n.
+      + apply: run_fail => //=; first rewrite nB next_alt_not_failed//.
           by rewrite (step_not_failed H0).
-        apply: run_step => //=.
-          rewrite H0 is_dead_dead//.
-        have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) X0 .
-        by rewrite /get_dead is_dead_dead dead2 if_same.
-      - apply: run_fail => /=.
-          rewrite dB//.
-          rewrite dB nB H1//.
-        have:= run_ko_left2 s1 (is_dead_is_ko (@is_dead_dead B)) X0.
-        by rewrite /get_dead is_dead_dead dead2 if_same.
-      - rewrite -/(dead (Or B sX X)).
-        by apply: run_dead; rewrite /=dB// nB H1.
+        apply: run_step; first by rewrite/=H0.
+        by apply/run_ko_left2; exists n1.
+      + apply: run_fail => //=; first by rewrite H1 nB.
+        by apply/run_ko_left2; exists n1.
+      + by apply: run_dead => //=; rewrite nB H1.
   Qed.
 
-  Lemma run_or_complete {s1 s2 A B s3 A' B'}:
-    run u p s1 (Or A s2 B) s3 (Or A' s2 B') false ->
-      (Texists n1,
+  Definition is_or A := match A with Or _ _ _ => true | _ => false end.
+
+  Lemma run_or_complete fv0 fv2 s1 s2 A B X s3:
+    run u p fv0 s1 (Or (Some A) s2 B) s3 X false fv2 ->
         if s3 is Some s3 then
-          ((run u p s1 A (Some s3) A' n1 /\ B' = build_or_state n1 A' B)%type2
-          +
-          (if is_dead A then 
-              A' = get_dead A B' /\
-              run u p s1 A None (dead A') false /\ run u p s2 B (Some s3) B' n1
-           else (A' = dead A') /\ run u p s1 A None A' false
-              /\ run u p s2 B (Some s3) B' n1)%type2)%type
+          exists b, 
+          (exists A', run u p fv0 s1 A (Some s3) A' b fv2 /\ 
+          if X is Some (Or Ax _ Bx) then A' = Ax /\ 
+            if b then Bx = KO
+            else if Ax is Some Ax then 
+              (*if next_alt true Ax then*) Bx = B (*else Some Bx = next_alt false B*)
+            else Some Bx = next_alt false B
+          else A' = None)
+          \/
+          (exists fv1, run u p fv0 s1 A None None false fv1 /\ 
+            run u p fv1 s2 B (Some s3) (if X is Some (Or _ _ B') then Some B' else None) b fv2)
         else
-          run u p s1 A None A' n1 /\ (if n1 == false then Texists n2, 
-            run u p s2 B None B' n2 else B' = dead B) /\ A' = dead A' 
-              /\ B' = dead B'
-          ).
+          exists b fv1, run u p fv0 s1 A None None b fv1 /\ 
+            (if b then True else exists b1, run u p fv1 s2 B None None b1 fv2).
   Proof.
-    rewrite/build_or_state.
-    remember (Or A _ _) as o1 eqn:Ho1.
+    remember (Or (Some A) _ _) as o1 eqn:Ho1.
     remember false as z eqn:Hz.
-    remember (Or A' _ _) as o2 eqn:Ho2 => H.
-    elim: H s2 A B A' B' Ho1 Ho2 Hz => //=; clear.
-    + move=> s1 _ A _ + <-<- s3 A1 B1 A2 B2 ? + _; subst => /=.
-      case: ifP => [dA1 sB1|dA sA1].
-        case nB1: next_alt => [B1'|]//=[??]; subst.
-          rewrite next_alt_not_failed//?success_failed//=if_same dA1.
-          eexists; right; repeat split; auto.
-            rewrite/get_dead dA1 (next_alt_dead nB1)//=.
-            apply: run_dead (is_dead_failed dA1) (is_dead_next_alt _ dA1).
-          apply: run_done => //.
-          by rewrite nB1//.
-        eexists; right; rewrite dead2; repeat split; auto.
-          rewrite/get_dead dA1 is_dead_dead//.
-          apply: run_dead (is_dead_failed dA1) (is_dead_next_alt _ dA1).
-        apply: run_done => //.
-        rewrite nB1//.
-      case nA1 : next_alt => [A1'|]//=.
-        move=>[??]; subst.
-        rewrite (next_alt_dead nA1).
-        eexists;left; split.
-          apply: run_done => //=.
-          rewrite nA1//.
-        move=> //.
-      case nB1: next_alt => //[B1'|][??]; subst; eexists; rewrite is_dead_dead dead2; left.
-        split.
-          apply: run_done => //=.
-          rewrite nA1//.
-        move=> //.
-      split.
-        apply: run_done => //.
-        rewrite nA1//.
-      move=> //.
-    + move=> s1 s3 r A B n + HB IH s4 A1 A2 B1 B2 ???; subst => //=.
-      case: ifP => dA1.
-        case X: step => [[]B'']//[?]; subst; have {IH}[n1+] := IH _ _ _ _ _ erefl erefl erefl.
-          case: s3 HB => [s3|] HB//.
-            move=> [].
-              move=>[H1 ?]; subst.
-              by have [] := run_dead1 dA1 H1.
-            rewrite dA1 => -[?[H1 H2]]; subst.
-            have [_[H3 _]] := run_dead1 dA1 H1.
-            eexists; right; repeat split; auto.
-            apply: run_step X H2.
-          move=> [H1[+[H3 H4]]]; subst.
-          case:eqP => H5; subst.
-            move=> [n2 H5].
-            repeat eexists; eauto => /=.
-            repeat eexists.
-            apply: run_step X H5.
-          move=> ?; subst; rewrite dead2.
-          repeat eexists; eauto.
-          case: eqP => //.
-          by have [_[??]] := run_dead1 dA1 H1; subst.
-        case: s3 HB => [s3|] HB//.
-          move=> [].
-            move=> [H1 ?]; subst.
-            eexists; left; split.
-              apply: H1.
-            by have []:= run_dead1 dA1 H1.
-          rewrite dA1 => -[?[H1 H2]]; subst.
-          eexists; right; repeat split; auto.
-          apply: run_cut X H2.
-        move=> [H1[H2[H3 H4]]]; subst.
-        repeat eexists; eauto; move:H2; case:eqP => H; subst.
-          move=> [n2 H].
-          eexists; apply: run_cut X H.
-        move=> ?; subst.
-        by have [_[??]] := run_dead1 dA1 H1; subst.
-      case X: step => [[]D']//[?]; subst; have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
-        case: s3 HB => [s3|] HB//.
-          move=> [].
-            move=> [H1?]; subst.
-            eexists; left; split.
-              apply: run_step X H1.
-            by move=> //.
-          rewrite (step_not_dead dA1 X) => -[Hz [H1 H2]].
-          eexists; right; repeat split; eauto.
-          apply: run_step X H1.
-        move=> [H1[H2[H3 H4]]]; subst.
-        repeat eexists; eauto.
-        apply: run_step X H1.
-      case: s3 HB => [s3|] HB//.
-        move=> [].
-          move=> [H1 ?]; subst.
-          eexists; left; split.
-            apply: run_cut X H1.
-          by rewrite next_alt_cutr/= cutr2 if_same dead_cutr.
-        rewrite (step_not_dead dA1 X) => -[Hz [H1 H2]].
-        by have [] := run_consistent H2 (is_ko_run _ _ _ is_ko_cutr).
-      move=> [H1[H2[H3 H4]]]; subst.
-      move: H2; case:eqP => H; subst.
-        move=>[n2]/(run_consistent (is_ko_run _ _ _ is_ko_cutr)) [?[??]]; subst.
-        rewrite dead2 dead_cutr.
-        repeat eexists; eauto.
-          apply: run_cut X H1.
+    move=> H.
+    elim: H s2 A B Ho1 Hz => //=; clear.
+    + move=> s1 s2 A B fv + <-<- s3 A1 B1 ? _; subst => /= sA.
+      case nA: next_alt => [A3|]/=.
+        exists false; left; repeat eexists.
+        apply: run_done => //=.
+      eexists; left; repeat eexists.
+        by apply: run_done.
+      case nB: next_alt => [B1'|]//=.
+    + move=> s1 s2 r A B n fv0 fv1 fv2 + rB IH s3 C D ??; subst => /=.
+      rewrite !push; case eC: step => [[fvx rx] Cx]/=[?+?]; subst.
+      have {IH} := IH _ _ _ erefl erefl => +H.
+      destruct s2 => //=.
+        move=> [b[[A' [rC]]|[fv3 [rCx]]]].
+          case: r rB => //=[t|].
+            case: (boolP (is_or t)).
+              case: t => //= L sm R _.
+              move=> H1 [?]; subst.
+              destruct b.
+                move: H H1.
+                case: ifP => is_cb S H H1; subst.
+                  destruct rx => //=.
+                  repeat eexists; left; repeat eexists.
+                    by apply: run_cut eC rC.
+                  move=> //=.
+                eexists; left; repeat eexists.
+                  by apply: run_step eC rC.
+                move=> //.
+              destruct L.
+                move=> ?; subst.
+                move: H H1; case: ifP => cb? H; subst. 
+                  repeat eexists; left; repeat eexists.
+                    destruct rx => //=; subst.
+                    apply: run_cut eC rC.
+                  move=> //.
+                repeat eexists; left; repeat eexists.
+                  by apply: run_step eC rC.
+                by [].
+              case: ifP => // cB /esym nD.
+              rewrite cB in H; subst.
+              repeat eexists; left; repeat eexists.
+                apply: run_step eC rC.
+              by [].
+            move=> H1 + H2.
+            have {H2}?: A' = None by destruct t.
+            subst => H2.
+            move: H; case: ifP => cb H; subst. 
+              eexists; left; repeat eexists.
+              destruct rx => //; apply: run_cut eC rC.
+              by destruct t => //.
+            eexists; left; repeat eexists.
+              by apply: run_step eC rC.
+            destruct t => //.
+          move=> H1 ?; subst.
+          move: H; case: ifP => cb ?; subst.
+            repeat eexists; left; repeat eexists.
+            by destruct rx => //; apply: run_cut eC rC.
+          repeat eexists; left; repeat eexists.
+          apply: run_step eC rC.
+        case: ifP.
+          by move=> ? /(run_consistent (is_ko_run _ _ _ _ (is_ko_cutr)))[]//.
+        move=> H1; rewrite H1 in H; subst.
+        move=> H2.
+        repeat eexists; right; repeat eexists.
+          apply: run_step eC rCx.
+        apply: H2.
+      move=> [b[fv3[H1]]] H2.
+      move: H; case: ifP => cr ?; subst.
+        destruct rx => //.
+        repeat eexists.
+          by apply: run_cut eC H1.
         by [].
-      move=> ?; subst.
-      rewrite dead2 dead_cutr; eexists; repeat split; auto.
-        apply: run_cut X H1.
-      move=> //=.
-    + move=> s1 r A B C n ++ rB IH s2 A1 B1 A2 B2 ???; subst.
-      move=> /=; case: ifP => [dA fB|dA fA].
-        case X: next_alt => //[B1'][?]; subst.
-        have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
-        case: r rB => //[s3|] rB.
-          move=> [].
-            move=> [H1 ?]; subst.
-            by have [] := run_dead1 dA H1.
-          rewrite dA => -[?[H1 H2]]; subst.
-          eexists; right; repeat split; auto.
-          apply: run_fail fB X H2.
-        move=> [H1 [H2[H3 H4]]]; subst.
-        case: n1 H1 H2 => //=[|n1] H1; last first.
-          move: H1.
-          move=> [n2 H]; repeat eexists; eauto.
-          move=> /=; eexists; apply: run_fail fB X H.
-        by have [_[??]] := run_dead1 dA H1; subst.
-      case nA1 : next_alt => [A1'|]//.
+      repeat eexists.
+        by apply: run_step eC H1.
+      by [].
+    + move=> s1 s2 A B r n fv0 fv1 ++ rB IH s3 C D ??; subst => /=fC.
+      case nC: next_alt => [C'|]//=.
         move=> [?]; subst.
-        have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
-        case: r rB => //[s3|] rB.
-          move=> [].
-            move=> [H1 ?]; subst.
-            eexists; left; split; eauto.
-            apply: run_fail fA nA1 H1.
-          rewrite (next_alt_dead nA1)/=.
-          move=> [Hx [H1 H2]].
-          eexists; right; repeat split; eauto.
-          apply: run_fail fA nA1 H1.
-        move=> [H1 [H2[H3 H4]]]; subst.
-        case: n1 H1 H2 => //= H1; last first.
-          move=> [n2 H]; repeat eexists; eauto.
-            apply: run_fail fA nA1 H1.
-          by eexists; eauto.
-        move=> ?; subst; repeat eexists => //.
-          apply: run_fail fA nA1 H1.
-        by [].
-      case nB1: next_alt => [B1'|]//=[?]; subst.
-      have {IH}[n1] := IH _ _ _ _ _ erefl erefl erefl.
-      case: r rB => //[s3|] rB.
-        move=> [].
-          move=>[H1 ?]; subst.
-          by have [] := run_dead2 H1.
-        rewrite is_dead_dead.
-        move=> [?[H1 H2]]; subst.
-        eexists; right; repeat split; eauto.
-          rewrite/get_dead is_dead_dead/= dead2 if_same dead2//.
-          rewrite/get_dead dead2 if_same.
-          rewrite/get_dead dead2 if_same dead2 in H1.
-          apply: next_alt_run nA1 H1.
-        apply: next_alt_run nB1 H2.
-      move=> [H1 [H2[H3 H4]]]; subst.
-      case: n1 H1 H2 => //= H1; last first.
-        have [_[? _]]:= run_dead2 H1; subst.
-        move=> [n2 H]; repeat eexists; eauto.
-          apply: run_dead fA nA1.
-        by eexists; apply: next_alt_run; eauto.
-      move=> ?; subst; repeat eexists => //.
-        have [_[? _]]:= run_dead2 H1; subst.
-        apply: run_dead fA nA1.
-      by have [?[]]:= run_dead2 H1.
-    + move=> s1 B ++ s2 A1 B1 A2 B2 ? + _; subst => /=.
-      case:ifP => [dA1 fB1|dA1 fA1].
-        case nB1: next_alt => // _ [<-{A2}<-{B2}].
-        repeat eexists; rewrite?dead2//.
-          apply: run_dead (is_dead_failed dA1) _.
-          by rewrite is_dead_next_alt.
-        eexists; apply: run_dead fB1 nB1.
-      case nA1: next_alt => [A1'|]//=.
-      case nB1: next_alt => // _ [<-<-{A2 B2}].
-      repeat eexists; rewrite ?dead2//.
-        apply: run_dead fA1 nA1.
-      eexists.
-      case X: (failed B1).
-        apply: run_dead X nB1.
-      by rewrite next_alt_not_failed in nB1.
+        have {IH} := IH _ _ _ erefl erefl.
+        destruct s2 => //=; last first.
+          move=> [b[fv2[H1 H2]]]; repeat eexists.
+            by apply: run_fail H1.
+          by [].
+        move=> [b[[C2[HC']]|[fv2[HC2]]]].
+          destruct r; last first.
+            move=> ?; subst.
+            repeat eexists; left; repeat eexists.
+            by apply: run_fail HC'.
+          case: (boolP (is_or t)).
+            case: t rB => //= L sm R rB _ [?]; subst.
+            destruct b.
+              move=> ?; subst.
+              eexists; left; repeat eexists.
+                by apply: run_fail HC'.
+              by [].
+            destruct L.
+              move=> ?; subst.
+              eexists; left; repeat eexists.
+                by apply: run_fail HC'.
+              by [].
+            move=> /esym H.
+            repeat eexists; left; repeat eexists.
+              by apply: run_fail HC'.
+            by rewrite H.
+          move=> H1 H2.
+          have {H2}?: C2 = None by destruct t.
+          subst.
+          repeat eexists; left; repeat eexists.
+            by apply: run_fail HC'.
+          by destruct t.
+        move=> H.
+        eexists; right; repeat eexists.
+          by apply: run_fail HC2.
+        by apply: H.
+      case nD: next_alt => //[D'][?]; subst.
+      have /= := run_same_structure rB.
+      case: r rB IH => [r|] rB IH/=.
+        case: r rB IH => // l s3' D2 rB IH /andP[/eqP?/eqP?]; subst.
+        have [b1 H] := proj2 (run_ko_left2 fv0 fv1 s3' D' (Some D2) s2 s1) rB.
+        destruct s2.
+          eexists; right; repeat eexists.
+            by apply: run_dead.
+          by apply: next_alt_run nD H.
+        by have:= run_none_dead_res H.
+      move=> _.
+      destruct s2.
+        have/= := proj2 (run_ko_left2 fv0 fv1 s3 D' None (Some s) s1) rB.
+        move=> [b H].
+        eexists; right; repeat eexists; first by apply: run_dead.
+        apply: next_alt_run nD H.
+      have [b1 H] := proj2 (run_ko_left2 fv0 fv1 s3 D' None None s1) rB.
+      repeat eexists.
+        by apply: run_dead.
+      repeat eexists.
+      by apply: next_alt_run nD H.
+    move=> s1 ? fs ++ s2 A B?; subst => /=fA.
+    case nA: next_alt => //=; case nB: next_alt => //= _ _.
+    repeat eexists; first by apply: run_dead.
+    move=> /=; repeat eexists.
+    apply: run_dead (nB).
+    by apply: next_alt_None_failed.
   Qed.
 
-  (* Lemma run_or_is_ko_left_ign_subst {A s B s2 D b2 sIgn1} sIgn2:
-    is_ko A -> run u p sIgn1 (Or A s B) s2 D b2 ->
-      run u p sIgn2 (Or A s B) s2 D false.
-  Proof.
-    move=> H1 H2.
-    have:= run_same_structure H2.
-    case: D H2 => //= A' s' B' + /eqP?; subst.
-    move=> /[dup] /run_or0-> /(run_ko_left1 H1) [b'][H2 -> {A'}].
-    apply: run_ko_left2 H1 H2.
-  Qed. *)
-
-  Lemma failed_cutl_run A:
+  (*Lemma failed_cutl_run A:
     failed (cutl A) -> forall s, run u p s (cutl A) None (dead A) false.
   Proof.
     Search failed cutl.
@@ -603,8 +555,9 @@ Section s.
         apply: run_dead; rewrite/= sA/= failed_cutr//.
         by rewrite next_alt_cutr. *)
       admit.
-  Abort.
+  Abort. *)
 
+  (*
   Lemma run_and_correct_successL {s0 sn A B0 B A' B0' B' b}:
     success A -> next_alt true A = None ->
     run u p s0 (And A B0 B) sn (And A' B0' B') b ->
@@ -660,18 +613,18 @@ Section s.
       case X: next_alt => // fB1 _.
       rewrite is_dead_dead; repeat split.
       apply: run_dead fB1 X. *)
-  Abort.
+  Abort. *)
 
-  Lemma run_big_and_total {r s}:
+  (* Lemma run_big_and_total {r s}:
       Texists r0 B n, run u p s ((big_and r)) r0 B n.
   Proof.
     elim: r s => //=.
     - move=> s; repeat eexists; apply: run_done => //.
     - move=> x xs IH s.
       admit.
-  Admitted.
+  Admitted. *)
 
-  Lemma run_big_or_total {sr r rs c s}:
+  (* Lemma run_big_or_total {sr r rs c s}:
     F u p c s = (sr, r) :: rs -> 
       Texists r0 B n, run u p s (TA (call c)) r0 B n.
   Proof.
@@ -684,9 +637,9 @@ Section s.
         rewrite next_alt_big_and//.
       by apply: run_ko_left2; eauto.
     - move=> [sx r] rs IH sr r' c s H.
-  Abort.
+  Abort. *)
 
-  Lemma run_is_total {s A}:
+  (* Lemma run_is_total {s A}:
     Texists r B n, run u p s A r B n.
   Proof.
     elim: A s.
@@ -706,9 +659,9 @@ Section s.
     (* - repeat eexists; apply: run_cut => //; apply: run_done => //. *)
     (* - admit. *)
     (* - admit. *)
-  Abort.
+  Abort. *)
 
-  (*Lemma run_and_correct {s0 sn A B0 B A' B0' B' b}:
+  (* Lemma run_and_correct {s0 sn A B0 B A' B0' B' b}:
     run u s0 (And A B0 B) sn (And A' B0' B') b ->
     if sn is Some sn then true :> Type
     else (

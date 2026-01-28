@@ -282,86 +282,8 @@ Section RunP.
   Lemma failed_big_or u p fv s t: failed (backchain u p fv s t).2.
   Proof. rewrite/backchain; case: bc => // ? -[|[]]//. Qed.
 
-  (* Section same_structure.
-
-    Fixpoint same_structure A B :=
-      match A with
-      | And A1 B0 B1 =>
-        match B with 
-        | And A' B0' B' => [&& B0 == B0', same_structure A1 A' & same_structure B1 B']
-        | _ => false
-        end
-      | Or A1 s B1 =>
-        match B with 
-        | Or A' s' B' => [&& s == s', omap same_structure A1 A' & same_structure B1 B']
-        | _ => false
-        end
-      | _ => true
-      end.
-
-    Lemma same_structure_id {A}: same_structure A A.
-    Proof. 
-      elim: A => //=.
-        by move=>?->??->; rewrite eqxx.
-      by move=> ?->??->; rewrite eqxx.
-    Qed.
-
-    Lemma same_structure_trans: transitive same_structure.
-    Proof.
-      move=> + A; elim: A => //.
-      - move=> A HA s B HB []//A' s' B'[]//A2 s2 B2/=.
-        move=>/and3P[/eqP<-HA' HB']/and3P[/eqP<-HA2 HB2].
-        rewrite eqxx (HA A' A2)//(HB B' B2)//.
-      - move=> A HA B0 B HB[]//A1 B01 B1[]//A2 B02 B2/=.
-        move=>/and3P[HA1 HB01 HB1]/and3P[HA2 HB02 HB2].
-        by rewrite (HA A1 A2)//(HB B1 B2)// (eqP HA1) HA2.
-    Qed.
-
-    Lemma same_structure_cutr {A B}: same_structure A B -> same_structure A (cutr B).
-    Proof. 
-      elim: A B => //=.
-        by move=> A HA s B HB []// A' s' B' /= /and3P[/eqP<-/HA->/HB->]; rewrite eqxx.
-      move=> A HA B0 B HB []//A' B0' B'/=/and3P[->/HA->]//.
-    Qed.
-    
-    Lemma same_structure_cut {A B}: same_structure A B -> same_structure A (cutl B).
-    Proof. 
-      elim: A B => //=.
-        move=> A HA s B HB []// A' s' B' /= /and3P[/eqP<- H2 H3].
-        case: ifP => //.
-          by rewrite H2 HB//eqxx.
-        by rewrite eqxx HA// same_structure_cutr//.
-      move=> A HA B0 B HB []//A' B0' B'/=. 
-      move=> /and3P[sB0 sA sB].
-      by case: ifP => //=sA'; rewrite sB0 !(HA, same_structure_cutr, HB)//.
-    Qed.
-    
-    (* Lemma same_structure_dead {B}: same_structure B (dead B).
-    Proof. 
-      elim: B => //=.
-        move=> A HA s B HB; rewrite eqxx HA HB//.
-      by move=> A HA B0 B HB; rewrite HA eqxx same_structure_id.
-    Qed. *)
-
-    Lemma step_same_structure u p fv s A r: 
-      step u p fv s A = r -> same_structure A r.2.
-    Proof.
-      move=><-{r}.
-      elim: A s fv => //.
-        move=> A HA s B HB s1 fv; subst => /=.
-        case: ifP => dA.
-          move: (HB s fv).
-          by case_step_tag eB B' => //=; rewrite eqxx same_structure_id.
-        move: (HA s1 fv).
-        by case_step_tag eA A' => //=;rewrite eqxx ?same_structure_cutr//?same_structure_id// => ->.
-      move=> A HA B0 B HB s1 fv; subst => /=.
-      have:= (HA s1) fv.
-      case_step_tag eA A' => //= {}HA; only 1-3: by rewrite HA !same_structure_id eqxx.
-      have := (HB (get_substS s1 A') _fv).
-      by case_step_tag eB B' => //= H; rewrite ?same_structure_cut// ?same_structure_cutr// ?same_structure_id// ?HA// eqxx// ?eA.
-    Qed.
-
-    Definition same_structure_sup A B :=
+  Section same_structure.
+    Definition same_structure A B :=
       match A with
       | And A1 B0 B1 =>
         match B with 
@@ -370,77 +292,63 @@ Section RunP.
         end
       | Or A1 s B1 =>
         match B with 
-        | Or A' s' B' => s == s'
+        | Or A' s' B' => (s == s') && ((A1 != None) || (A' == None))
         | _ => false
         end
       | _ => true
       end.
 
-    Lemma same_structure_sup_refl A : same_structure_sup A A.
-    Proof. case: A => //=. Qed.
+    Lemma same_structure_refl {A}: same_structure A A.
+    Proof. by case: A => //=>; rewrite orNb eqxx. Qed.
 
-    Lemma next_alt_same_structure {b A B}:
-      next_alt b A = Some B -> same_structure_sup A B.
+    Hint Resolve same_structure_refl : core.
+
+    Lemma same_structure_trans: transitive same_structure.
     Proof.
-      case: A => //=.
-      - move=> ???; case: ifP => dA.
-          case: next_alt => //[?][<-]//.
-        case next_alt => //[?[<-]|]//.
-        case: next_alt => //?[<-]//.
-      - move=> ???; case sA: success => //.
-          case: next_alt => //.
-            move=> ?[<-]//.
-          by case nA: next_alt => //=-[<-].
-        by case nA: next_alt => //=; case: ifP => //= _ [<-].
+      move=> +[]//=.
+        move=> []//= > _ > _ []// > _ /andP[/eqP<-+]/andP[/eqP<-+]; rewrite eqxx/=.
+        by move=> /orP[->|/eqP->]//=->; rewrite orbT.
+      by move=> []//.
     Qed.
 
-    Lemma same_structure_sup2_trans {A B C}:
-      same_structure A B -> same_structure_sup B C -> same_structure_sup A C.
-    Proof. by destruct A, B => //; destruct C => //=; do 2 case: eqP => ?//; subst. Qed.
+    Lemma step_same_structure u p fv s A r: 
+      step u p fv s A = r -> same_structure A r.2.
+    Proof.
+      move=><-{r}; case: A=> //=[[]|]>; rewrite !push//=?eqxx//.
+      by case: ifP => //.
+    Qed.
 
-    Lemma same_structure_sup_trans:
-      transitive same_structure_sup.
-    Proof. move=> B A C; by destruct A, B => //; destruct C => //=; do 2 case: eqP => ?//; subst. Qed.
-
-    (* Lemma same_structure_sup_dead {A}:
-      same_structure_sup A (dead A).
-    Proof. case: A => //=. Qed. *)
+    Lemma next_alt_same_structure {b A B}:
+      next_alt b A = Some B -> same_structure A B.
+    Proof.
+      case: A => //=.
+      - move=> [t|]//= ??; case n: next_alt => //=; only 1, 3: by move=> [<-]; rewrite eqxx.
+        by case: next_alt => //?[<-]; rewrite eqxx.
+      - move=> >; repeat case: ifP => _.
+          by (do 2 case: next_alt => //=) => >; first move=>??; move=> [<-].
+          by case: next_alt => [a|]//[<-].
+        by move => [<-].
+    Qed.
 
     Lemma run_same_structure u p fv1 fv2 s A s1 r n:
-      run u p fv1 s A s1 r n fv2 -> same_structure_sup A (odflt A r).
+      run u p fv1 s A s1 r n fv2 -> same_structure A (odflt A r).
     Proof.
       elim; clear => //.
       - move=> s1 s2 A B ? sA _ <-/=.
-        case X: next_alt => [B'|]/=; subst; move: X.
-          by move=> /next_alt_same_structure//.
-        by rewrite same_structure_sup_refl.
+        case X: next_alt => [B'|]/=; subst; move: X => //.
+        by move=> /next_alt_same_structure//.
       - move=> s1 s2 r A B n ??? /step_same_structure/= + _.
-        destruct r => //=; last by rewrite !same_structure_sup_refl.
-        apply: same_structure_sup2_trans.
+        destruct r => //=.
+        apply: same_structure_trans.
       - move=> s1 s2 r A B n ??? /step_same_structure/= + _.
-        destruct r => //=; last by rewrite !same_structure_sup_refl.
-        apply: same_structure_sup2_trans.
+        destruct r => //=.
+        apply: same_structure_trans.
       - move=> s1 s2 A B oB r n ??.
-          move=> /next_alt_same_structure + _.
-          destruct oB => //=; last by rewrite !same_structure_sup_refl.
-          apply: same_structure_sup_trans.
-      - by move=> *; rewrite same_structure_sup_refl.
+        move=> /next_alt_same_structure + _.
+        destruct oB => //=.
+        apply: same_structure_trans.
     Qed.
-
-    Lemma run_dead1 u p fv0 s1 B s2 r n fv1:  
-      is_dead B -> run u p fv0 s1 B s2 r n fv1 -> (s2 = None /\ r = None /\ n = false)%type2.
-    Proof.
-      move=> dB H; inversion H; clear H; subst;
-        try rewrite // is_dead_step//is_dead_dead in H0.
-        by rewrite success_is_dead in dB.
-      rewrite is_dead_next_alt// in H1.
-    Qed.
-
-    (* Lemma run_dead2 u p fv  s1 B s2 r n:  
-      run u p fv s1 (dead B) s2 r n -> (s2 = None /\ r = dead B /\ n = false)%type2.
-    Proof. move=> /(run_dead1 is_dead_dead)//; rewrite dead2//. Qed. *)
-
-  End same_structure. *)
+  End same_structure.
 
   Lemma ges_subst_cutl {s A} : 
     success A -> get_substS s (cutl A) = get_substS s A.
