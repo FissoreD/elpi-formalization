@@ -204,146 +204,80 @@ Section s.
 
   Definition is_or A := match A with Or _ _ _ => true | _ => false end.
 
+  Definition is_cb_exp rx:
+    (if is_cb rx then Expanded else rx) = Expanded ->
+      rx = CutBrothers \/ rx = Expanded.
+  Proof. by destruct rx => //=; auto. Qed.
+
+  Definition or_succ_build_res b B A' X :=
+    if X is Some (Or Ax _ Bx) then A' = Ax /\ 
+      if b then Bx = KO
+      else if Ax is Some Ax then Bx = B
+      else Some Bx = next_alt false B
+    else A' = None.
+
+  Lemma or_succ_build_resP1 b D A' r:
+    or_succ_build_res b (cutr D) A' r -> or_succ_build_res true D A' r.
+  Proof. by case: r => [[]|]//[t|]//= _ t1 [->]; case: ifP => //. Qed.
+
   Lemma run_or_complete fv0 fv2 s1 s2 A B X s3:
     run u p fv0 s1 (Or (Some A) s2 B) s3 X false fv2 ->
-        if s3 is Some s3 then
-          exists b, 
-          (exists A', run u p fv0 s1 A (Some s3) A' b fv2 /\ 
-          if X is Some (Or Ax _ Bx) then A' = Ax /\ 
-            if b then Bx = KO
-            else if Ax is Some Ax then Bx = B
-            else Some Bx = next_alt false B
-          else A' = None)
-          \/
-          (exists fv1, run u p fv0 s1 A None None false fv1 /\ 
-            run u p fv1 s2 B (Some s3) (if X is Some (Or _ _ B') then Some B' else None) b fv2)
-        else
-          exists b fv1, run u p fv0 s1 A None None b fv1 /\ 
-            (if b then True else exists b1, run u p fv1 s2 B None None b1 fv2).
+      if s3 is Some s3 then
+        (exists A' b, run u p fv0 s1 A (Some s3) A' b fv2 /\ 
+          or_succ_build_res b B A' X)
+        \/
+        (exists fv1, run u p fv0 s1 A None None false fv1 /\ 
+          exists b, run u p fv1 s2 B (Some s3) (if X is Some (Or _ _ B') then Some B' else None) b fv2)
+      else
+        exists b fv1, run u p fv0 s1 A None None b fv1 /\ 
+          (~ b -> exists b1, run u p fv1 s2 B None None b1 fv2).
   Proof.
     remember (Or (Some A) _ _) as o1 eqn:Ho1.
     remember false as z eqn:Hz.
     move=> H.
-    elim: H s2 A B Ho1 Hz => //=; clear.
+    elim: H s2 A B Ho1 Hz => //; clear.
     + move=> s1 s2 A B fv + <-<- s3 A1 B1 ? _; subst => /= sA.
-      case nA: next_alt => [A3|]/=.
-        exists false; left; repeat eexists.
-        apply: run_done => //=.
-      eexists; left; repeat eexists.
-        by apply: run_done.
-      case nB: next_alt => [B1'|]//=.
+      left; case nA: next_alt => [A3|]/=.
+        by repeat eexists; first apply: run_done => //=.
+      repeat eexists; first apply: run_done => //=.
+      move=> /=; case nB: next_alt => [B1'|]//=.
     + move=> s1 s2 r A B n fv0 fv1 fv2 + rB IH s3 C D ??; subst => /=.
       rewrite !push; case eC: step => [[fvx rx] Cx]/=[?+?]; subst.
       have {IH} := IH _ _ _ erefl erefl => +H.
       destruct s2 => //=.
-        move=> [b[[A' [rC]]|[fv3 [rCx]]]].
-          case: r rB => //=[t|].
-            case: (boolP (is_or t)).
-              case: t => //= L sm R _.
-              move=> H1 [?]; subst.
-              destruct b.
-                move: H H1.
-                case: ifP => is_cb S H H1; subst.
-                  destruct rx => //=.
-                  repeat eexists; left; repeat eexists.
-                    by apply: run_cut eC rC.
-                  move=> //=.
-                eexists; left; repeat eexists.
-                  by apply: run_step eC rC.
-                move=> //.
-              destruct L.
-                move=> ?; subst.
-                move: H H1; case: ifP => cb? H; subst. 
-                  repeat eexists; left; repeat eexists.
-                    destruct rx => //=; subst.
-                    apply: run_cut eC rC.
-                  move=> //.
-                repeat eexists; left; repeat eexists.
-                  by apply: run_step eC rC.
-                by [].
-              case: ifP => // cB /esym nD.
-              rewrite cB in H; subst.
-              repeat eexists; left; repeat eexists.
-                apply: run_step eC rC.
-              by [].
-            move=> H1 + H2.
-            have {H2}?: A' = None by destruct t.
-            subst => H2.
-            move: H; case: ifP => cb H; subst. 
-              eexists; left; repeat eexists.
-              destruct rx => //; apply: run_cut eC rC.
-              by destruct t => //.
-            eexists; left; repeat eexists.
-              by apply: run_step eC rC.
-            destruct t => //.
-          move=> H1 ?; subst.
-          move: H; case: ifP => cb ?; subst.
-            repeat eexists; left; repeat eexists.
-            by destruct rx => //; apply: run_cut eC rC.
-          repeat eexists; left; repeat eexists.
-          apply: run_step eC rC.
-        case: ifP.
-          by move=> ? /(run_consistent (is_ko_run _ _ _ _ (is_ko_cutr)))[]//.
-        move=> H1; rewrite H1 in H; subst.
-        move=> H2.
-        repeat eexists; right; repeat eexists.
-          apply: run_step eC rCx.
-        apply: H2.
-      move=> [b[fv3[H1]]] H2.
-      move: H; case: ifP => cr ?; subst.
-        destruct rx => //.
+        move=> [[A'[b [rC HS]]]|[fv3[H1[b HS]]]].
+          left; case: (is_cb_exp H) => ?; subst; repeat eexists.
+            by apply: run_cut eC rC.
+            by apply: or_succ_build_resP1 HS.
+            by apply: run_step eC rC.
+          by apply: HS.
+        right; case: (is_cb_exp H) => ?; subst; simpl  in HS.
+          by have [] := run_consistent (is_ko_run _ _ _ _ (is_ko_cutr)) HS.
         repeat eexists.
-          by apply: run_cut eC H1.
-        by [].
-      repeat eexists.
-        by apply: run_step eC H1.
-      by [].
+          by apply: run_step eC H1.
+        by apply: HS.
+      move=> [b[fv3[H1]]] H2.
+      case: (is_cb_exp H) => ?; subst; simpl in *.
+        by exists true, fv3; split => //=; apply: run_cut eC H1.
+      by exists b, fv3; split => //; apply: run_step eC H1.
     + move=> s1 s2 A B r n fv0 fv1 ++ rB IH s3 C D ??; subst => /=fC.
       case nC: next_alt => [C'|]//=.
         move=> [?]; subst.
         have {IH} := IH _ _ _ erefl erefl.
         destruct s2 => //=; last first.
-          move=> [b[fv2[H1 H2]]]; repeat eexists.
-            by apply: run_fail H1.
-          by [].
-        move=> [b[[C2[HC']]|[fv2[HC2]]]].
-          destruct r; last first.
-            move=> ?; subst.
-            repeat eexists; left; repeat eexists.
-            by apply: run_fail HC'.
-          case: (boolP (is_or t)).
-            case: t rB => //= L sm R rB _ [?]; subst.
-            destruct b.
-              move=> ?; subst.
-              eexists; left; repeat eexists.
-                by apply: run_fail HC'.
-              by [].
-            destruct L.
-              move=> ?; subst.
-              eexists; left; repeat eexists.
-                by apply: run_fail HC'.
-              by [].
-            move=> /esym H.
-            repeat eexists; left; repeat eexists.
-              by apply: run_fail HC'.
-            by rewrite H.
-          move=> H1 H2.
-          have {H2}?: C2 = None by destruct t.
-          subst.
-          repeat eexists; left; repeat eexists.
-            by apply: run_fail HC'.
-          by destruct t.
-        move=> H.
-        eexists; right; repeat eexists.
-          by apply: run_fail HC2.
-        by apply: H.
+          move=> [b[fv2[H1 H2]]]; exists b, fv2; split => //.
+          by apply: run_fail H1.
+        move=> [[A' [b [rA' H]]]|[fv2[rC' [b H]]]].
+          by left; repeat eexists; first by apply: run_fail rA'.
+        right; repeat eexists; last by apply: H.
+        by apply: run_fail rC'.
       case nD: next_alt => //[D'][?]; subst.
       have /= := run_same_structure rB.
       case: r rB IH => [r|] rB IH/=.
         case: r rB IH => // l s3' D2 rB IH /andP[/eqP?/eqP?]; subst.
         have [b1 H] := proj2 (run_ko_left2 fv0 fv1 s3' D' (Some D2) s2 s1) rB.
         destruct s2.
-          eexists; right; repeat eexists.
+          right; repeat eexists.
             by apply: run_dead.
           by apply: next_alt_run nD H.
         by have:= run_none_dead_res H.
@@ -351,7 +285,7 @@ Section s.
       destruct s2.
         have/= := proj2 (run_ko_left2 fv0 fv1 s3 D' None (Some s) s1) rB.
         move=> [b H].
-        eexists; right; repeat eexists; first by apply: run_dead.
+        right; repeat eexists; first by apply: run_dead.
         apply: next_alt_run nD H.
       have [b1 H] := proj2 (run_ko_left2 fv0 fv1 s3 D' None None s1) rB.
       repeat eexists.
