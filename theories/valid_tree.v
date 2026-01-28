@@ -131,7 +131,7 @@ Section valid_tree.
     valid_tree A -> step u p sv s A = r -> valid_tree r.2.
   Proof.
     move=>+<-; clear r.
-    move: s sv; elim_tree A => s sv/=.
+    elim_tree A s sv => /=.
     + by case: t => [|t]//=; rewrite push/= valid_tree_backchain.
     + move=> /andP[vA bB]; rewrite !push/= HA//=; case: ifP => //.
     + by move=> vB; rewrite !push /=; apply: HB.
@@ -149,12 +149,11 @@ Section valid_tree.
       congruence.
   Qed.
 
-  Lemma valid_tree_next_alt {A B b}: 
-    valid_tree A -> next_alt b A = Some (B) 
-    -> valid_tree B.
+  Lemma valid_tree_next_alt A R b: 
+    valid_tree A -> next_alt b A = Some R -> valid_tree R.
   Proof.
-    move: B b; elim_tree A => C b/=.
-    + by case: C => //=; case: b => //.
+    elim_tree A R b => /=.
+    + by case: R => //=; case: b => //.
     + by case: t => [|c]//= _ [<-]//.
     + move=> /andP[vA bB]; case nA: next_alt => [A'|]//=.
         by move=> [<-]/=; rewrite (HA A' b)//.

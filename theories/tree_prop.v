@@ -346,7 +346,7 @@ Section RunP.
 
   Lemma is_ko_run u p fv s A: is_ko A -> run u p fv s A None None false fv.
   Proof.
-    move:s; elim_tree A => s/=.
+    elim_tree A s => /=.
     - by move=> _; apply: run_dead => //=.
     - move=> /andP[kA kB].
       have {}HA := HA s kA.
@@ -409,10 +409,10 @@ Section RunP.
       by rewrite success_failed in fA.
   Qed.
 
-  Lemma tree_fv_step_cut u p A B fv fv' s:
-    step u p fv s A = (fv', CutBrothers, B) -> fv' = fv.
+  Lemma tree_fv_step_cut u p A R fv fv' s:
+    step u p fv s A = (fv', CutBrothers, R) -> fv' = fv.
   Proof.
-    move: B fv fv' s; elim_tree A => C fv fv' s/=.
+    elim_tree A R fv fv' s => /=.
       by case: t => [|c]/=; [congruence|rewrite push].
       by push; case: step => [[?[]]]//.
       by push; case: step => [[?[]]]//.

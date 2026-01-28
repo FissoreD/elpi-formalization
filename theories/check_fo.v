@@ -394,8 +394,8 @@ Qed.
       step u p sv s1 A = r ->
         det_tree sP r.2.
   Proof.
-    move=> H + <-; clear r; move: s1.
-    elim_tree A => s1/=.
+    move=> H + <-; clear r.
+    elim_tree A s1 => /=.
     - by case: t => [|c]//=; rewrite push => /is_det_no_free_alt->//.
     - move=> /andP[fA]; rewrite !push/= HA//=.
       case: ifP => //= cA; last first; rewrite /cutr.
@@ -453,10 +453,10 @@ Qed.
       next_alt true A = None.
   Proof. move=> H2 H3; rewrite (step_next_alt H2)//=. Qed.
 
-  Lemma has_cut_next_alt {A B b}: 
-    has_cut A -> next_alt b A = Some B -> has_cut B.
+  Lemma has_cut_next_alt {A R b}: 
+    has_cut A -> next_alt b A = Some R -> has_cut R.
   Proof.
-    move: B b; elim_tree A => C b/=.
+    elim_tree A R b => /=.
     - case: t => //= _ [<-]//.
     - by move=>/andP[kA kB]; rewrite !is_ko_next_alt//.
     - by move=>/is_ko_next_alt->.
@@ -481,10 +481,10 @@ Qed.
       by move=> [<-]/=; rewrite cB0 cB orbT.
   Qed.
 
-  Lemma no_free_alt_next_alt {sP A B b}:
-    det_tree sP A -> next_alt b A = Some B -> det_tree sP B.
+  Lemma no_free_alt_next_alt {sP A R b}:
+    det_tree sP A -> next_alt b A = Some R -> det_tree sP R.
   Proof.
-    move: B b; elim_tree A => C b/=.
+    elim_tree A R b => /=.
     - by case: b => // _ [<-].
     - by move=> _ [<-]//.
     - move=>/andP[fA].

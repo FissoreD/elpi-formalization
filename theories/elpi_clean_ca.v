@@ -200,14 +200,14 @@ Section clean_ca.
     clean_ca_goals bt (a2gs l) = a2gs l.
   Proof. by elim: l => //= -[|c] xs IH; rewrite IH//=. Qed.
 
-  Lemma clean_ca_s2l_next_alt {A x bt s A'}:
+  Lemma clean_ca_s2l_next_alt {A x bt s R}:
     valid_tree A ->
     success A ->
-    next_alt true A = Some A' ->
-    clean_ca bt (t2l A' s (x ++ bt)) =
-    t2l A' s (clean_ca bt x).
+    next_alt true A = Some R ->
+    clean_ca bt (t2l R s (x ++ bt)) =
+    t2l R s (clean_ca bt x).
   Proof.
-    move: s x bt A'; elim_tree A => s x bt C/=.
+    elim_tree A s x bt R => /=.
     - move=> /andP[vA bB]sA.
       case X: next_alt => //[A'|].
         move=> [<-]/=.
@@ -221,7 +221,7 @@ Section clean_ca.
     - move=> /andP[vA] +/andP[sA sB].
       rewrite sA/= => vB.
       case X: (next_alt _ B) => [B'|].
-        move=> [<-]{C}/=.
+        move=> [<-]{R}/=.
         rewrite !(success_t2l empty _ sA)//= !catl0.
         rewrite !clean_ca_cat.
         set W := map _ _.
@@ -254,7 +254,7 @@ Section clean_ca.
   Lemma clean_ca_s2l {s x bt A}:
     valid_tree A -> clean_ca bt (t2l A s (x ++ bt)) = t2l A s (clean_ca bt x).
   Proof.
-    move: s x bt; elim_tree A => s x bt/=.
+   elim_tree A s x bt => /=.
     - set X:= (t2l _ _ _ ++ _); by rewrite clean_ca_add_ca.
     - by rewrite clean_ca_add_ca.
     - move=> /andP[vA].
@@ -298,8 +298,8 @@ Section clean_ca.
         else r = (fv, Expanded, r.2).
   Proof.
     move=> +++ <-/=.
-    case X: step => /= [[fv' r'] A']; move: X; clear.
-    move: A' fv fv' r' s bt s1 ca gl a; elim_tree A => C fv fv' r' s bt s1 ca gl a/=.
+    case X: step => /= [[fv' r'] R]; move: X; clear.
+    elim_tree A R fv fv' r' s bt s1 ca gl a => /=.
     - case: t => [|c]//= [<-<-<-]//= _ _[<-<-<-]//.
     - rewrite !push.
       case eA: step => [[fva ra] A']/=[<-<-<-] fA /andP[vA bB].
@@ -396,17 +396,17 @@ Section clean_ca.
       rewrite clean_ca_size//.
   Qed.
 
-  Lemma next_callS_s2l fv A s3 s1 bt t gl a ign:
+  Lemma next_callS_s2l fv A s3 s1 bt q gl a ign:
     let X := step u p fv s3 A in
-    let F := bc u p fv t s1 in
+    let F := bc u p fv q s1 in
     failed A = false -> valid_tree A ->
-      clean_ca bt (t2l A s3 bt) = (s1, (call t, ign) :: gl) ::: a ->
+      clean_ca bt (t2l A s3 bt) = (s1, (call q, ign) :: gl) ::: a ->
         [/\
         clean_ca bt (t2l X.2 s3 bt) = 
           (save_alts a gl (aa2gs F.2) ++ a) &
         X = (F.1, Expanded, X.2)].
   Proof.
-    move: s3 bt s1 t gl a ign fv; elim_tree A => s3 bt s1 t' gl a ign fv/=.
+    elim_tree A s3 bt s1 q gl a ign fv => /=.
     - case: t => [|c]// _ _ [?????]; subst.
       rewrite push.
       rewrite what_I_want; last by rewrite valid_tree_backchain.

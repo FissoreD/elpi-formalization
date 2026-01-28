@@ -112,10 +112,10 @@ Section vars_tree.
   Lemma vars_tree_cutl A: vars_tree (cutl A) `<=` vars_tree A.
   Proof. elim_tree A => /=; last case: ifP => //=; rewrite !fsetUSS//vars_tree_cutr. Qed.
 
-  Lemma vars_tree_step_sub A B fv fv' s r:
-    step u p fv s A = (fv', r, B) -> fv `<=` fv'.
+  Lemma vars_tree_step_sub A R fv fv' s r:
+    step u p fv s A = (fv', r, R) -> fv `<=` fv'.
   Proof.
-    move: B fv fv' r s; elim_tree A => C fv fv' r s; only 1-2: by move=> [<-]//.
+    elim_tree A R fv fv' r s => /=; only 1-2: by move=> [<-]//.
       case: t => [|c]/=; first by move=> [<-].
       rewrite push => -[<- _ _].
       case X: backchain.
@@ -175,7 +175,7 @@ Section vars_tree.
   Lemma vars_sigma_get_subst s fvA A:
     vars_tree A `<=` fvA -> vars_sigma s `<=` fvA -> vars_sigma (get_substS s A) `<=` fvA.
   Proof.
-    move: s fvA; elim_tree A => s fvA/=.
+    elim_tree A s fvA => /=.
       by rewrite 2!fsubUset -andbA => /and3P[vA vB vsm] vs; apply/HA.
       by rewrite fsubUset => /andP[vA vB vsm]; apply/HB.
     rewrite 2!fsubUset -andbA => /and3P[vA vB vsm] vs;
@@ -183,11 +183,11 @@ Section vars_tree.
   Qed.
 
 
-  Lemma vars_tree_step_sub_flow A B fv fv' s r:
+  Lemma vars_tree_step_sub_flow A R fv fv' s r:
     vars_tree A `<=` fv -> vars_sigma s `<=` fv ->
-    step u p fv s A = (fv', r, B) -> ((vars_tree B `<=` fv') * (vars_sigma s `<=` fv')).
+    step u p fv s A = (fv', r, R) -> ((vars_tree R `<=` fv') * (vars_sigma s `<=` fv')).
   Proof.
-    move: B fv fv' r s; elim_tree A => C fv fv' r s/=; only 1,2: by move=> ?? [<-_<-].
+    elim_tree A R fv fv' r s => /=; only 1,2: by move=> ?? [<-_<-].
       case: t => [|c]; first by move=> ?? [<- _ <-]//=.
       move=> H1 H2; case X: backchain => [fvx c'][<-_<-].
       by apply/vars_tm_bc_sub/X.
@@ -217,13 +217,13 @@ Section vars_tree.
     by apply/andP; rewrite -andbA; apply/and3P; split; apply/fsubset_trans/vars_tree_step_sub/eA.
   Qed.
 
-  Lemma vars_tree_next_alt_sub_flow A B fv b:
+  Lemma vars_tree_next_alt_sub_flow A R fv b:
     vars_tree A `<=` fv ->
-    next_alt b A = Some B -> vars_tree B `<=` fv.
+    next_alt b A = Some R -> vars_tree R `<=` fv.
   Proof.
     clear.
-    move: B fv b; elim_tree A => C fv b/=.
-      by case: b; case: C.
+    elim_tree A R fv b => /=.
+      by case: b; case: R.
       by case: t => [|c]? [<-]//.
     - rewrite 2!fsubUset => /andP[/andP[Ha Hb] Hs].
       case nA: next_alt => [B'|]//=.

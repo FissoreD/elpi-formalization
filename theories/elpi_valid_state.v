@@ -433,7 +433,7 @@ Section NurValidState.
       valid_caA r r l.
   Proof.
     move=> <-; clear r.
-    move: l s0; elim_tree A => l s0/=.
+    elim_tree A l s0 => /=.
     - move=> _.
       rewrite suffix0s suffixs0/=.
       case: eqBP => //->//.
