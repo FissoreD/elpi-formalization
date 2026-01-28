@@ -95,13 +95,14 @@ Section NurProp.
   Section t2l_base.
     Lemma is_ko_t2l {A s l}: is_ko A -> t2l A s l = nilC.
     Proof.
-      elim: A l s => //.
-      - move=> A HA s B HB/= l s1/andP[dA dB]; rewrite HB// HA//.
-      - move=> A HA B0 B HB l s1 /=dA; rewrite HA//=.
+      move: l s; elim_tree A => l s/=.
+      - by move=> /andP[/HA->/HB->].
+      - by move=> /HB->.
+      - move=> /HA->//.
     Qed.
 
-    Lemma t2l_dead {A l s}: is_dead A -> t2l A s l = nilC.
-    Proof. by move=>/is_dead_is_ko; apply: is_ko_t2l. Qed.
+    (* Lemma t2l_dead {A l s}: is_dead A -> t2l A s l = nilC.
+    Proof. by move=>/is_dead_is_ko; apply: is_ko_t2l. Qed. *)
 
     Lemma t2l_cutr {A s l}: t2l (cutr A) s l = nilC.
     Proof. apply: is_ko_t2l is_ko_cutr. Qed.
@@ -133,57 +134,50 @@ Section NurProp.
   Proof.
     elim: Y X bt => //=.
     - by move=> X bt; rewrite next_alt_big_and => -[<-]//.
-    - move=> []//= sr r rs _ X bt; rewrite is_dead_big_and next_alt_big_and => -[<-]//.
+    - move=> []//= sr r rs _ X bt; rewrite next_alt_big_and => -[<-]//.
   Qed.
 
   Lemma success_t2l {A s m} s1:
     valid_tree A -> (*we need valid tree since in s2l we assume B0 to have length <= 1*)
     success A ->
-      t2l A s m = (get_substS s A, nilC) ::: (t2l (odflt Dead (next_alt true A)) s1 m).
+      t2l A s m = (get_substS s A, nilC) ::: (t2l (odflt KO (next_alt true A)) s1 m).
   Proof.
-    elim: A m s s1 => //.
-    - move=> A HA sb B HB/= m s s1.
-      case: ifP => [dA vB sB|dA /andP[vA bB] sA].
-        rewrite /=!(t2l_dead dA)!cat0s.
-        have H := [elaborate HB nilC sb sb vB sB].
-        rewrite H//=.
-        case X: next_alt => [B'|]//=.
-        by rewrite !(t2l_dead dA) cat0s//.
-      have {HB}HA //=:= [elaborate HA (t2l B sb nilC) s s1 vA sA].
+    move: m s s1; elim_tree A => m s s1 /=.
+    - move=> /andP[vA bB] sA.
+      have {HB}HA //=:= [elaborate HA (t2l B sm nilC) s s1 vA sA].
       rewrite HA//=; f_equal.
       case nA: next_alt => //=; rewrite seq2altsK.
-      move/spec_bbOr : bB => [X[Y []?]]; subst; last first.
-        by rewrite next_alt_cutr/= !is_ko_t2l//= !is_ko_cutr//.
+      move/spec_bbOr : bB => [X[Y []?]]; subst => //=.
       by rewrite next_alt_big_or/= cat0s.
-    - move=> A HA l B HB m s1 s2 /= /andP[vA +] /andP[sA sB].
+    - move=> vB sB; rewrite cat0s.
+      rewrite (HB _ _ sm)//=; case: next_alt => [A'|]; rewrite//=cat0s//.
+    - move=> /andP[vA +] /andP[sA sB].
       rewrite sA/= => vB.
       have {}HA := HA _ _ _ vA sA; repeat erewrite HA => /=.
       have {}HB := HB _ _ _ vB sB; repeat erewrite HB => /=.
       case X: (next_alt _ B) => [B'|]/=.
-        by rewrite (HA _ _ s2) //= H3 /=.
+        by rewrite (HA _ _ s1) //= H3 /=.
       rewrite catl0.
       case W: next_alt => [A'|]//=.
       rewrite cat_cons cat0s; f_equal.
-      case: t2l => //= -[s b] a. 
+      case: t2l => //= -[s2 b] a. 
       by rewrite t2l_big_and cat_cons cat0s//.
   Qed.
 
   Definition t2l_cons A :=
-    forall m l, Texists s x xs, t2l A m l = (s, x) ::: xs.
+    forall m l, exists s x xs, t2l A m l = (s, x) ::: xs.
 
   Section shape.
     Lemma s2l_size {A s1 l1} s2 l2: 
       size (t2l A s1 l1) = size (t2l A s2 l2).
     Proof.
-      elim: A s1 l1 s2 l2 => //=.
-      - move=> A HA s B HB s1 l1 s2 l2; rewrite !size_add_ca_deep!size_cat.
-        by f_equal; auto.
-      - move=> A HA B0 B HB /=s1 l1 s2 l2.
-        have:= HA s1 l1 s2 l2.
-        do 2 case: (t2l A) => //=.
-        move=> [s x] xs [s3 y] ys; rewrite !size_cons => -[]H.
-        rewrite !size_cat !size_map !size_add_deep H; f_equal.
-        by apply: HB.
+      move: s1 l1 s2 l2; elim_tree A => /= s1 l1 s2 l2;
+      only 1,2: by rewrite !size_add_ca_deep//= !size_cat//=; f_equal; auto.
+      have:= HA s1 l1 s2 l2.
+      do 2 case: (t2l A) => //=.
+      move=> [s x] xs [s3 y] ys; rewrite !size_cons => -[]H.
+      rewrite !size_cat !size_map !size_add_deep H; f_equal.
+      by apply: HB.
     Qed.
 
     Lemma s2l_empty {A s1 l1 s2 l2}: t2l A s1 l1 = nilC -> t2l A s2 l2 = nilC.
@@ -206,18 +200,13 @@ Section NurProp.
   Lemma failed_t2l {A}:
     valid_tree A -> failed A = false -> t2l_cons A.
   Proof.
-    elim: A => //=; try by do 3 eexists.
-    - move=> A HA s B HB/=++s1 l.
-      case: ifP => [dA vB fB|dA /andP[vA bB] fA]/=.
-        rewrite (t2l_dead dA)/=.
-        have [s2 [x [xs H]]] := HB vB fB s l.
-        have [s3 [hd [tl]]]:= s2l_cons H s nilC.
-        move=>->/=; by do 3 eexists.
-      set X := t2l B _ _.
-      have [s2 [x[xs H]]] := HA vA fA s1 X.
-      have [s3 [y[ys ->]]]:= s2l_cons H s1 X.
-      by do 3 eexists.
-    - move=> A HA B0 B HB/= /andP[vA] ++ s1 l.
+    rewrite/t2l_cons.
+    elim_tree A; try by repeat eexists.
+    - move=> /=/andP[vA bB] fA m l.
+      by have [s2 [x[xs ->]]] := HA vA fA m (t2l B sm [::]); repeat eexists.
+    - move=> /=vB fB _ l; rewrite cat0s.
+      by have [s2 [x[xs ->]]] := HB vB fB sm [::]; repeat eexists.
+    - move=> /=/andP[vA]++ s1 l.
       case: ifP => /=[sA vB|sA]/=.
         rewrite success_failed//==>fB.
         rewrite/t2l_cons/=.
@@ -244,24 +233,20 @@ Section NurProp.
         next_alt b E = None ->
           t2l A s3 l = nilC.
   Proof.
-    elim: A fv fv' s1 s3 E l b => //.
-    - move=> []//=> _ ? _; rewrite push//.
-    - move=> A HA s B HB/= fv fv' s1 s2 E l b.
-      rewrite !push.
-      case: ifP => //[dA vB|dA/andP[vA bB]][?+] <-{E}.
-        case eB: step => [[? []] B']//= _.
-        rewrite dA//=.
-        case nB': next_alt => [[]|]// _.
-        by rewrite (HB _ _ _ _ _ _ _ vB eB nB')/=t2l_dead//.
-      case eA: step => [[? []]A']//=.
-      rewrite (step_not_dead dA eA).
-      case nA': next_alt => [[]|]//.
-      have vB := bbOr_valid bB.
-      move /spec_bbOr: bB => [r[rs []?]] _; subst.
-        rewrite next_alt_big_or//.
-      rewrite next_alt_cutr//= t2l_cutr.
-      by rewrite (HA _ _ _ _ _ _ _ vA eA nA')/=.
-    - move=> A HA l' B HB fv fv' s2 s3 C l b/=/andP[vA].
+    move: fv fv' s1 s3 E l b; elim_tree A => fv fv' s1 s3 E l b.
+    - by case: t => [|c]//=; rewrite push//.
+    - move=> /=/andP[vA bB]; rewrite !push => -[?+] <-{E}.
+      case eA: step => [[? []] A']//= _.
+      case nA': next_alt => []//.
+      case nB: next_alt => []//= _.
+      rewrite (HA _ _ _ _ _ _ _ vA eA nA').
+      move /spec_bbOr: bB => [r[rs []?]]; subst => //.
+      by rewrite next_alt_big_or in nB.
+    - move=> /= vB; rewrite !push => -[?]; subst.
+      case eB: step => [[? []] B']//= _ <-/=; rewrite cat0s.
+      case nB': next_alt => []// _.
+      by rewrite (HB _ _ _ _ _ _ _ vB eB nB').
+    - move=> /=/andP[vA].
       rewrite !push.
       case eA: step => //[[? []]A']//.
         have [[??] fA]:= step_failed eA; subst.
@@ -307,7 +292,7 @@ Section NurProp.
 
   Lemma s2l_big_or k s {b bs ca gs}:
     (s, save_goals ca gs (a2gs b)) ::: (save_alts ca gs (aa2gs bs)) =
-    map (catr gs) (t2l (Or KO s (big_or b bs)) k ca).
+    map (catr gs) (t2l (Or (Some KO) s (big_or b bs)) k ca).
   Proof. 
     move=>/=; clear k.
     rewrite cat0s.
@@ -331,17 +316,17 @@ Section NurProp.
     valid_tree A -> failed A -> next_alt b A = None -> 
       forall l, t2l A s l = nilC.
   Proof.
-    elim: A s b => //.
-    - move=> A HA s B HB s2 b/=.
-      case: ifP => [dA vB fB|dA /andP[vA bB] fA].
-        case X: next_alt => [C|]//.
-        move=> _ l; rewrite (HB _ _ _ _ X)// t2l_dead//.
+    move: s b; elim_tree A => s b/=.
+    - move=> /andP[vA bB] fA.
       case Y: next_alt => [[]|]//.
       move=> + l.
       move /spec_bbOr: bB => [r[rs []?]]; subst.
         by rewrite next_alt_big_or.
-      rewrite t2l_cutr (HA s2 b)//=.
-    - move=> A HA l' B HB s2 b/=/andP[vA]+++l.
+      by rewrite t2l_cutr (HA s b)//=.
+    - move=> vB fB.
+      case X: next_alt => [C|]//.
+      by move=> _ l; rewrite (HB _ _ _ _ X).
+    - move=> /=/andP[vA]+++l.
       case: ifP => /=[sA vB|sA].
         rewrite (success_t2l empty)//=.
         rewrite success_failed//= => fB.
@@ -358,18 +343,18 @@ Section NurProp.
     valid_tree A -> failed A -> next_alt b A = Some B -> 
       (t2l A s3 l = t2l B s3 l).
   Proof.
-    elim: A s3 B l b => //.
-    - move=> A HA s B HB s3 C l b/=.
-      case: ifP => [dA vB fB|dA /andP[vA bB] fA].
-        case X: next_alt => [D|]//[<-]/=.
-        by rewrite !(t2l_dead dA)//=(HB _ _ _ _ vB fB X)//.
+    move: s3 B l b; elim_tree A => s3 C l b/=.
+    - move=> /andP[vA bB] fA.
       case X: next_alt => [A'|]//.
         move=>[?]/=; subst => /=.
         by rewrite (HA _ A' _ b)//.
       move/spec_bbOr : bB => [r[rs []?]]; subst.
         by rewrite next_alt_big_or => -[<-{C}]/=; rewrite (failed_next_alt_none_t2l vA fA X).
       by rewrite next_alt_cutr.
-    - move=> A HA l' B HB s1 C l b /=/andP[vA].
+    - move=> vB fB.
+      case X: next_alt => [D|]//[<-]/=.
+      by rewrite (HB _ _ _ _ vB fB X)//.
+    - move=> /=/andP[vA].
       case: ifP => /=[sA vB |sA ].
         rewrite success_failed//= => fB.
         case X: next_alt => [D|]//.
@@ -379,7 +364,7 @@ Section NurProp.
           rewrite HB.
           by case W: t2l => //[[s5 g1][]]//=.
         case Y: next_alt => //=[A'][<-]{C}.
-        rewrite (success_t2l s1)//=.
+        rewrite (success_t2l s3)//=.
         rewrite (failed_next_alt_none_t2l _ _ X)//Y.
         case: t2l => //[[s2 x]xs].
         by rewrite t2l_big_and//.
@@ -428,11 +413,11 @@ Qed.
   Lemma step_cb_same_subst1 fv fv' A B s1:
     valid_tree A -> step u p fv s1 A = (fv', CutBrothers, B) -> ((get_substS s1 A = get_substS s1 B)).
   Proof.
-    elim: A B s1 fv fv' => //=.
-    - move=> []// B s1 fv fv'; first by move=> _ [+<-]//.
-      by move=> s _; case: backchain => //.
-    - move=> A HA s B HB C s1 fv fv';  case: ifP => dA; case: step => [[?[]]]//.
-    - move=> A HA B0 B HB C s1 fv fv' /andP[vA].
+    move: B s1 fv fv'; elim_tree A => C s1 fv fv'/=.
+    - case: t => [|c] _//=; first (by move=> [_ <-]); case: backchain => //.
+    - case: step => [[?[]]]//.
+    - case: step => [[?[]]]//.
+    - move=> /andP[vA].
       case e: step => [[?[]]A']//=.
         rewrite (step_not_solved e)//=.
         move=> /eqP->[?<-]/=; rewrite get_substS_big_and if_same.
@@ -446,11 +431,10 @@ Qed.
   Lemma t2l_cutl {A s l}:
     valid_tree A -> success A -> t2l (cutl A) s l = (get_substS s A, nilC) ::: nilC.
   Proof.
-    elim: A s l => //.
-    - move=> A HA s B HB s1 l /=; case: ifP => [dA vB sB | dA /andP[vA bB] sA]/=.
-        rewrite HB// t2l_dead//=.
-      rewrite t2l_cutr cats0 HA//.
-    - move=> A HA B0 B HB s l/=/andP[vA] +/andP[sA sB].
+    move: s l; elim_tree A => s l => /=.
+    - by move=> /andP[vA bB] sA; rewrite cats0 HA//.
+    - by move=> vB sB; rewrite cat0s HB//.
+    - move=> /andP[vA] +/andP[sA sB].
       rewrite sA/= => vB.
       by rewrite HA//= cat0s catl0 cats0 HB.
   Qed.
@@ -458,18 +442,17 @@ Qed.
 
   Lemma s2l_CutBrothers fv fv' s1 A B sA l1:
     valid_tree A -> step u p fv s1 A = (fv', CutBrothers, B) -> 
-      Texists x tl, 
+      exists x tl, 
         ((t2l A sA l1 = (get_substS sA A, (cut, [::]) :: x) :: tl) /\
           (forall l sB, (t2l B sB l = (get_substS sB B, x) :: nilC)) /\ 
             (empty_caG x)).
   Proof.
-    move=>/=.
-    elim: A sA s1 B l1 fv fv' => //.
-    - move=> /=[|c]//=???????; last by rewrite push.
+    move: sA s1 B l1 fv fv'; elim_tree A => sA s1 C l1 fv fv'/=.
+    - case: t => [|c] _; last by rewrite push.
       move=> [? <-]/=; by do 2 eexists.
-    - move=> A HA s B HB sA s1 C l1 fv fv'/=.
-      by case: ifP => [dA vB|dA/andP[vA bB]]; case eB: step => //[[?[]] B'].
-    - move=> A HA B0 B HB sA s1 C l1 fv fv'/=/andP[vA].
+    - by case eB: step => //[[?[]] B'].
+    - by case eB: step => //[[?[]] B'].
+    - move=> /=/andP[vA].
       case eA: step => [[?[]]A']//=.
         rewrite (step_not_solved eA notF)/=.
         move=>/eqP?[?]/=; subst.
@@ -499,17 +482,16 @@ Qed.
     valid_tree A ->
     success A = false -> failed A = false -> t2l A s bt = (s2, nilC) ::: xs -> False.
   Proof.
-    elim: A s bt s2 xs => //=.
-    - move=> A HA s B HB s1 bt s2 x.
-      case: ifP => [dA vB sB fB|dA /andP[vA bB] sA fA].
-        rewrite t2l_dead//=.
-        case X: t2l => [|[z [|??]] ys]//=[??]; subst.
-        by apply: HB X.
+    move: s bt s2 xs; elim_tree A => s bt s2 xs/=.
+    - move=> /andP[vA bB] sA fA.
       set SB := t2l B _ _.
-      have [sy[y[ys H]]] := failed_t2l vA fA s1 SB.
+      have [sy[y[ys H]]] := failed_t2l vA fA s SB.
       rewrite H; case: y H => //= H [??]; subst.
       by apply: HA H.
-    - move => A HA B0 B HB s bt s1 xs /andP[vA].
+    - move=> vB sB fB.
+      case X: t2l => [|[z [|??]] ys]//=[??]; subst.
+      by apply: HB X.
+    - move => /andP[vA].
       case fA: failed => //=.
       case: ifP => //=[sA vB sB fB|sA /eqP->{B HB} _I _I1].
         rewrite (success_t2l empty) => //=.
@@ -529,12 +511,12 @@ Qed.
     valid_tree A ->
     step u p fv s1 A = (fv', CutBrothers, B) -> failed B = false.
   Proof.
-    elim: A B s1 fv fv' => //=.
-    - move=> [|c]// ?????; last by rewrite push.
+    move: B s1 fv fv'; elim_tree A => C s1 fv fv'/=.
+    - case: t => [|c] _; last by rewrite push.
       by move=> [_ <-].
-    - move=> A HA s B HB C s1 fv fv'.
-      case: ifP => //[dA fB|dA fA]; case e: step => [[?[]]]//.
-    - move=> A HA B0 B HB C s1 fv fv' /andP[vA].
+    - by case e: step => [[?[]]]//.
+    - by case e: step => [[?[]]]//.
+    - move=> /andP[vA].
       rewrite !push.
       case e: step => [[?[]]A']//.
         rewrite (step_not_solved e)//.
@@ -552,18 +534,17 @@ Qed.
     valid_tree A -> failed A = false ->
     t2l A s bt = (s2, nilC) ::: xs -> success A /\ (s2 = get_substS s A).
   Proof.
-    elim: A s bt s2 xs => //=.
-    - by move=> s1 _ s2 xs _ _ [<-].
-    - move=> A HA s B HB s1 bt s2 x.
-      case: ifP => [dA vB fB|dA /andP[vA bB] fA]/=.
-        rewrite (t2l_dead dA)//=.
-        case X: t2l => [|[z [|??]] ys]//=[??]; subst.
-        by apply: HB X.
+    move: s bt s2 xs; elim_tree A => //=s bt s2 xs.
+    - by move=> _ _ [<-].
+    - move=> /andP[vA bB] fA.
       set SB := t2l B _ _.
-      have [sy[y[ys H]]] := failed_t2l (vA) (fA) s1 SB.
+      have [sy[y[ys H]]] := failed_t2l (vA) (fA) s SB.
       rewrite H; case: y H => //= H [??]; subst.
       by apply: HA H.
-    - move => A HA B0 B HB s bt s1 xs /andP[vA].
+    - move=> vB fB.
+      case X: t2l => [|[z [|??]] ys]//=[??]; subst.
+      by apply: HB X.
+    - move => /andP[vA].
       case fA: failed => //=.
       case: ifP => //=[sA vB fB|sA /eqP-> _ {B HB}].
         rewrite (success_t2l empty)//=catl0.
@@ -585,25 +566,16 @@ Qed.
       step u p fv s1 A = r -> size(t2l r.2 s1 l1) <> 0.
   Proof.
     move=>++<-; clear r.
-    elim: A l l1 ca tl alts s1 s2 fv => //=.
-    - by move=> [].
-    - move=> A HA s0 B HB l l1 ca tl alts s1 s2 fv.
-      rewrite !push.
-      case: ifP => //[dA vB|dA/andP[vA bB]].
-        rewrite (t2l_dead dA)/=cat0s.
-        case SB: t2l => [|[sx[|[]ca' gs tl']]]//=.
-        move=>[?????]; subst.
-        rewrite t2l_dead//= cat0s.
-        set X:= t2l _ _ _ .
-        case F: X => //=[|[]]//=.
-        have:= [elaborate (HB _ nilC _ _ _ _ _ fv vB SB)].
-        rewrite -/X F//.
-      have:= HB nilC _ _ _ _ _ _ fv (bbOr_valid bB).
+    move: l l1 ca tl alts s1 s2 fv.
+    elim_tree A => l l1 ca tl alts s1 s2 fv/=.
+    - by case: t.
+    - rewrite !push => /andP[vA bB]/=.
+      have:= HB [::] _ _ _ _ _ _ fv (bbOr_valid bB).
       set SB := t2l B _ _.
       case SA: t2l =>  [|[sx[|[]a ca' gs tl']]]//=.
         case SB': SB =>  [|[sx[|[]a ca' gs tl']]]//=.
         move=>+[????]; subst.
-        move=> /(_ _ IsList_alts _ _ _ _ s0); rewrite-/SB SB'.
+        move=> /(_ _ _ _ _ sm); rewrite-/SB SB'.
         move=> -/(_ _ _ _ _ _ erefl) HH.
         case E: step => [[? []]A']//=; 
         rewrite size_add_ca_deep size_cat -/SB?SB'?size_cons; try by lia.
@@ -616,9 +588,15 @@ Qed.
       have:= HA _ SB _ _ _ _ _ fv vA SA.
       case e: step => [[?[]]A']/=; 
       rewrite size_add_ca_deep size_cat -/SB ?SB'; case X: size => //[n].
-      set Y:= t2l (cutr B) _ _.
       rewrite (s2l_size s1 SB) X//.
-    - move=> A HA B0 B HB l l1 ca tl alts s1 s2 fv/andP[vA].
+    - rewrite !push cat0s => vB.
+      case SB: t2l => [|[sx[|[]ca' gs tl']]]//=.
+      move=>[?????]; subst; rewrite cat0s.
+      set X:= t2l _ _ _ .
+      case F: X => //=[|[]]//=.
+      have:= [elaborate (HB _ nilC _ _ _ _ _ fv vB SB)].
+      rewrite -/X F//.
+    - move=> /andP[vA].
       rewrite !push.
       case: ifP => //=[sA vB|sA/eqP-> {B HB}].
         rewrite (success_t2l empty)//.
@@ -673,40 +651,35 @@ Qed.
       ((fv = fv') * (get_substS s0 A = get_substS s0 B) * (failed B = false) * 
         ( (t2l B s0 l1 ++ l1 = (s3, x) :: ca))%type )%type.
   Proof.
-    elim: A fv fv' s0 B s3 ca x tl l1 => //.
-    - by move=> [].
-    - move=> A HA s B HB fv fv' s0 C s3 c1 x tl l1 /=.
-      case: ifP => //=[dA vB|dA /andP[vA bB]].
-        rewrite !(t2l_dead dA)/=.
-        case eB: step => [[?[]]B']//=[??]; subst => /=; rewrite !(t2l_dead dA) dA.
-          case sB : t2l =>  [|[sx[|[]ca' gs tl']]]//=[????]; subst.
-          have [[[? XX] fB]{}HB] := HB _ _ _ _ _ _ _ _ _ vB eB sB; subst; rewrite fB XX; repeat split.
-          move: HB; rewrite !cats0.
-          case sB': t2l => [|w ws]//[??]; subst.
-          by rewrite cat0s -cat_cons; f_equal.
-        have [y[ys [H1 [H2 H2']]]]:= s2l_CutBrothers s nilC vB eB.
-        rewrite !H1/= => -[????]; subst.
-        rewrite (step_cb_failedF vB eB) (step_cb_same_subst1 _ eB)//.
-        rewrite (tree_fv_step_cut eB).
-        repeat split => //.
-        by rewrite !H2/= cat_cons //.
-      rewrite !push.
+    move: fv fv' s0 B s3 ca x tl l1; elim_tree A => fv fv' s0 C s3 ca x tl l1.
+    - by case: t.
+    - move=>  /=/andP[vA bB]; rewrite !push.
       case eA: step => [[?[]]A']//=[??]; subst;
-      rewrite add_ca_deep_cat?size_cat//=; set SB:= t2l _ _ [::];
-      rewrite (step_not_dead dA eA).
+      rewrite add_ca_deep_cat?size_cat//=; set SB:= t2l _ _ [::].
         have FA := step_not_failed eA notF.
         have [s4 [y[ys YY]]]:= failed_t2l vA FA s0 SB.
-        rewrite YY/=; case: y YY => //-[a ca] tl1 YY [????]; subst.
+        rewrite YY/=; case: y YY => //-[a ca'] tl1 YY [????]; subst.
         have [H {}HA] := HA _ _ _ _ _ _ _ _ _ vA eA YY; rewrite !H.
         by rewrite HA.
       have [z[zs [H1 [H1' H2]]]] := s2l_CutBrothers s0 SB vA eA.
-      rewrite !H1/=!H1'.
-      rewrite t2l_cutr ?bbOr_valid// cat0s/=.
-      rewrite (step_cb_failedF vA eA).
+      rewrite !H1/=!H1' cat0s/= (step_cb_failedF vA eA).
       move=>[????]; subst; auto.
       rewrite (tree_fv_step_cut eA).
       by rewrite cat_cons cat0s (step_cb_same_subst1 _ eA)//.
-    - move=> /= A HA B0 B HB fv fv' s1 C s4 ca x tl l1 /andP[vA].
+    - move=> /=vB; rewrite !push.
+      case eB: step => [[?[]]B']//=[??]; subst => /=; rewrite cat0s.
+        case sB : t2l =>  [|[sx[|[]ca' gs tl']]]//=[????]; subst.
+        have [[[? XX] fB]{}HB] := HB _ _ _ _ _ _ _ _ _ vB eB sB; subst; rewrite fB XX; repeat split.
+        move: HB; rewrite !cats0.
+        case sB': t2l => [|w ws]//[??]; subst.
+        by rewrite cat0s -cat_cons; f_equal.
+      have [y[ys [H1 [H2 H2']]]]:= s2l_CutBrothers sm nilC vB eB.
+      rewrite !H1/= => -[????]; subst.
+      rewrite (step_cb_failedF vB eB) (step_cb_same_subst1 _ eB)//.
+      rewrite (tree_fv_step_cut eB).
+      repeat split => //.
+      by rewrite !H2/= cat_cons //.
+    - move=> /= /andP[vA].
       rewrite !push.
       case eA: step => [[? []]A']//=.
         rewrite (step_not_solved eA notF)/=.
@@ -728,7 +701,7 @@ Qed.
           rewrite size_cons.
           replace (size ca' - (size ca').+1) with 0 by lia.
           rewrite take0 drop0 cat0s; f_equal.
-          have /= := [elaborate @xxx _ _ _ _ _ _ _ _ _ ((s4, gs) ::: ca') vA SA eA].
+          have /= := [elaborate @xxx _ _ _ _ _ _ _ _ _ ((s3, gs) ::: ca') vA SA eA].
           by rewrite SA'//.
         move=>[??]; subst.
         rewrite size_cat addnK drop_size_cat//add_deep_cat take_size_cat//?size_add_deep//.
@@ -740,7 +713,7 @@ Qed.
       rewrite sA (success_failed)//=.
       set SA:= add_deep _ _ _.
       rewrite !catl0.
-      have [s[y[ys]]] := failed_t2l vB (step_not_failed eB notF) (get_substS s1 A) (map (catr (r2l B0)) SA ++ l1).
+      have [s[y[ys]]] := failed_t2l vB (step_not_failed eB notF) (get_substS s0 A) (map (catr (r2l B0)) SA ++ l1).
       move=>H4; rewrite H4/=.
       move=>[???]; subst.
       have [[H5 H5'] H6] := HB _ _ _ _ _ _ _ _ _ vB eB H4; subst.
@@ -777,68 +750,59 @@ Qed.
     valid_tree A ->
     step u p fv s A = (fv', Expanded, B) -> 
     t2l A s l = (s3, (call t, ca) :: gs) :: xs ->
-    ((s3 = (get_substS s A)) * (
-      let (fv'', rs) := bc u p fv t (get_substS s A) in
-      (fv'' = fv') *
-      (if rs is (w :: ws)%SEQ then
-      (failed B * (t2l B s l = (w.1, save_goals (xs++l) gs (a2gs1 w)) :: 
-        ((save_alts (xs++l) gs (aa2gs ws)) ++ xs)))%type
-    else
-      (failed B * (t2l B s l = xs))%type)))%type
+    let bcr := bc u p fv t (get_substS s A) in
+    [/\ s3 = get_substS s A,
+      bcr.1 = fv', failed B &
+      t2l B s l =
+      if bcr.2 is (w :: ws)%SEQ then
+       (w.1, save_goals (xs++l) gs (a2gs1 w)) :: 
+        ((save_alts (xs++l) gs (aa2gs ws)) ++ xs)
+      else xs]
       .
   Proof.
-    elim: A fv fv' B s s3 l t gs xs ca => //=.
-    - move=> [|c]// fv fv' t C s1 s3 l t1 gs xs.
-      rewrite push.
-      move=> ?[??][?????]; subst.
-      rewrite failed_big_or/backchain; case: bc => [fv2 [|[s4 r1] rs]]/=; auto.
-      by rewrite !cats0 !cat0s !(s2l_big_or empty)/=cat0s catr0; auto.
-    - move=> A HA s B HB fv fv' C s1 s3 l t gs xs ca.
-      rewrite !push.
-      case: ifP => //[dA vB|dA /andP[vA bB]].
-        rewrite t2l_dead//=cat0s.
-        case e: step => [[?[]]B']//=[?<-]/=; subst; rewrite dA; last first.
-          have [w[ws []+[]]]:= s2l_CutBrothers s nilC vB e.
-          by move=>->//.
-        case SB: t2l =>  [//|[s2 [//|[a3 ca3] gs2]] a2] /= [?????] ; subst.  (*[sx[|[]// t1 tl ys]]]//=[????]; subst.*)
-        have {HB HA} := HB _ _ _ s s3 _ t gs2 a2 _ vB e SB.
-        move=> [?]; subst.
-        move=> /=HB; split => //; move: HB.
-        rewrite cats0.
-        case FF: bc => [fvx [|[s5 r] rs]]; rewrite (t2l_dead dA)//=.
-          move=> H; rewrite !H cat0s//.
-        move=> H; rewrite !H. split => //. rewrite cat0s.
-        rewrite -!cat_cons add_ca_deep_cat /=; f_equal.
-        rewrite save_alt_add_ca_deepG//?empty_ca_atoms//.
-        rewrite save_alt_add_ca_deepA//?empty_ca_atoms1//.
-      set SB := t2l B s nilC.
-      case e: step => [[?[]]A']//=[?<-]/=; subst;
-      rewrite (valid_tree_is_dead (valid_tree_step vA e)); last first.
-        have [w[ws []+[]]]:= s2l_CutBrothers s1 SB vA e.
-        move=>->//.
-      have [s5 [y[ys sA]]]:= failed_t2l vA (step_not_failed e notF) s1 SB.
+    move: fv fv' B s s3 l t gs xs ca; elim_tree A => fv fv' C s s3 l t' gs xs ca/=.
+    - case: t => [|c]//= _; rewrite push => -[??][?????]; subst.
+      rewrite failed_big_or/backchain; case: bc => [fv2 [|[s4 r1] rs]]//=; auto.
+      by rewrite !cats0 !cat0s !(s2l_big_or empty)/=cat0s catr0.
+    - move=> /andP[vA bB]; rewrite !push.
+      set SB := t2l B sm [::].
+      case e: step => [[?[]]A']//=[?<-]/=; subst; last first.
+        have [w[ws []+[]]]:= s2l_CutBrothers s SB vA e.
+        by move=>->//.
+      have [s5 [y[ys sA]]]:= failed_t2l vA (step_not_failed e notF) s SB.
       rewrite sA/=; case: y sA => // -[[//|t1] ca3] g1 sA [?????]; subst.
       have := HA _ _ _ _ _ _ _ _ _ _ vA e sA.
-      move=> []?; subst.
-      case FF: bc => [fvf [|r rs]].
-        move=>H; subst; rewrite !H-/SB.
-        by rewrite add_ca_deep_cat; auto.
-      move=>[? [fA' H1]]; rewrite fA'; split; auto; split => //; subst.
+      case FF: bc => [fvf [|r rs]][??] fA'/=; subst.
+        move=> H; subst; rewrite/= seq2alts_cat !seq2altsK -/SB.
+        by rewrite add_ca_deep_cat//.
+      move=> H1; rewrite fA'; split; auto.
       rewrite !H1 !add_ca_deep_cat.
       rewrite -!catA/=.
       rewrite cat_cons.
       f_equal.
-        rewrite save_alt_add_ca_deepG?empty_ca_atoms//add_ca_deep_cat catA//.
+        by rewrite save_alt_add_ca_deepG?empty_ca_atoms//add_ca_deep_cat catA//.
       rewrite catA add_ca_deep_cat.
-      split => //.
       rewrite save_alt_add_ca_deepA//?empty_ca_atoms1//add_ca_deep_cat -catA//.
-    - move=> A HA B0 B HB C fv fv' s1 s3 l t gs xs ca /andP[vA].
+      by rewrite-/SB !catA//.
+    - move=> vB; rewrite cat0s/=!push.
+      case e: step => [[?[]]B']//=[?<-]/=; subst; last first.
+        have [w[ws []+[]]]:= s2l_CutBrothers sm [::] vB e.
+        by move=>->//.
+      case SB: t2l =>  [//|[s2 [//|[a3 ca3] gs2]] a2] /= [?????] ; subst.  (*[sx[|[]// t1 tl ys]]]//=[????]; subst.*)
+      have {HB} := HB _ _ _ _ s3 _ t' gs2 a2 _ vB e SB; rewrite cat0s.
+      case FF: bc => [fvx [|[s5 r] rs]]/=[?? fB' H]; subst => //.
+      split => //=.
+      rewrite H/= cats0 .
+      rewrite -!cat_cons add_ca_deep_cat /=; f_equal.
+      rewrite save_alt_add_ca_deepG//?empty_ca_atoms//.
+      by rewrite save_alt_add_ca_deepA//?empty_ca_atoms1//.
+    - move=> /andP[vA].
       rewrite !push.
       case e: step => [[?[]]A']//.
         have /=fA := step_not_failed e notF.
         rewrite (step_not_solved e)//.
         move=>/eqP->{B HB} [?<-]/=; subst.
-        have [s5 [y[ys sA]]]:= failed_t2l vA fA s1 l.
+        have [s5 [y[ys sA]]]:= failed_t2l vA fA s l.
         rewrite sA/= !t2l_big_and.
         rewrite map_cons cat_cons cat0s.
         move=> [?] + ?; subst.
@@ -846,14 +810,11 @@ Qed.
           exfalso.
           apply: s2l_empty_hdF vA (step_not_solved e notF) (step_not_failed e notF) sA.
         move=> ? tl sA; rewrite cat_cons => -[??]; subst.
-        have := HA _ _ _ _ _ _ _ _ _ _ vA e sA.
-        move=> []?; subst.
-        case FF: bc => [? [|r rs]].
-          move=> H1; rewrite !H1?H; split; auto.
-          case: ys sA H1 => //=-[s6 y] ys sA H1.
+        have {HA} := HA _ _ _ _ _ _ _ _ _ _ vA e sA.
+        case FF: bc => [? [|r rs]]/=[?? fA' H0 H1]; subst; split => //=; try by rewrite fA'.
+          case: t2l => //=[[s0 g0]ca0].
           by rewrite t2l_big_and map_cons cat_cons cat0s// seq2altsK //.
-        move=> H1; rewrite !H1; split; auto; split => //=.
-        split=> //.
+        rewrite H0/=.
         rewrite t2l_big_and map_cons/= cat_cons cat0s /catl/=.
         rewrite add_deep_cat map_cat.
         set hd := (r2l B0).
@@ -867,33 +828,22 @@ Qed.
       rewrite (success_t2l empty)//= !catl0.
       set X := map _ _.
       set Y := get_substS _ _.
-      have [s[y[ys sB]]]:= failed_t2l vB (step_not_failed e1 notF) Y (X++l).
+      have [sy[y[ys sB]]]:= failed_t2l vB (step_not_failed e1 notF) Y (X++l).
       rewrite sB cat_cons => -[???] ; subst.
       have := HB _ _ _ _ _ _ _ _ _ _ vB e1 sB.
       rewrite-/Y.
-      move=> []?; subst.
-      case FF: bc => [? [|r rs]]/=.
-        by move=> Hz; rewrite !Hz//.
-      simpl in *.
-      move=>[? [fB' Hz]]; rewrite Hz !catA//.
+      case FF: bc => [? [|r rs]]/=[?? fB' H]; subst => //=.
+      by rewrite H !catA//.
   Qed.
 
   Lemma s2l_next_alt_tl {A s1 bt}:
     valid_tree A ->
     success A -> 
-      t2l (odflt Dead (next_alt true A)) s1 bt = behead (t2l A s1 bt).
+      t2l (odflt KO (next_alt true A)) s1 bt = behead (t2l A s1 bt).
   Proof.
-    elim: A s1 bt => //=.
-    - move=> A HA s B HB s1 bt.
-      case:ifP => [dA vB sB|dA /andP[vA bB] sA].
-        rewrite (t2l_dead dA) cat0s.
-        have {HB}:= [elaborate HB s nilC vB sB].
-        case X: next_alt => [B'|]/=.
-          rewrite (t2l_dead dA) cat0s.
-          move=> ->; case: t2l => [|[]]//=???.
-          by rewrite !behead_cons.
-        case: t2l => [|[]]//=>; rewrite behead_cons => <-//.
-      set SB:= t2l B s nilC.
+    move: s1 bt; elim_tree A => s1 bt/=.
+    - move=> /andP[vA bB] sA.
+      set SB:= t2l B sm [::].
       have:= HA s1 SB vA sA.
       case X: next_alt => //=[A'|].
         move=> ->; rewrite !add_ca_deep_cat.
@@ -906,7 +856,15 @@ Qed.
       move/spec_bbOr: bB => [r[rs []?]]; subst.
         by rewrite next_alt_big_or//.
       by rewrite next_alt_cutr//= t2l_cutr.
-    - move=> A HA l B HB s1 bt /andP[vA].
+    - move=> vB sB.
+      rewrite cat0s.
+      have {HB}:= [elaborate HB sm [::] vB sB].
+      case X: next_alt => [B'|]/=.
+        rewrite cat0s.
+        move=> ->; case: t2l => [|[]]//=???.
+        by rewrite !behead_cons.
+      case: t2l => [|[]]//=>; rewrite behead_cons => <-//.
+    - move=> /andP[vA].
       case:ifP => //= sA vB sB.
       move=> /=.
       case X: next_alt => [B'|]/=.

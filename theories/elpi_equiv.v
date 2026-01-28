@@ -13,7 +13,7 @@ Section NurEqiv.
       run u p fv s1 A (Some s2) B b fv' -> 
         exists x xs,
           t2l A s1 nilC = x ::: xs /\
-          nur u p fv x.1 x.2 xs s2 (t2l (odflt Dead B) s0 nilC).
+          nur u p fv x.1 x.2 xs s2 (t2l (odflt KO B) s0 nilC).
   Proof.
     move=> +++H.
     remember (Some _) as r eqn:Hr.
@@ -27,7 +27,7 @@ Section NurEqiv.
       have {IH} //= [|[sy y]/=[ys [+ H4]]]:= IH _ erefl sIgn _ fvP2 (valid_tree_step vA eA).
         by apply/fsubset_trans/fvP1/vars_tree_step_cut/eA.
       have H5 := step_cb_same_subst1 vA eA; subst.
-      have [x[tl[H1 H2]]] := [elaborate s2l_CutBrothers s1 nilC vA eA].
+      have [x[tl[H1 [H2 H3]]]] := s2l_CutBrothers s1 nilC vA eA.
       rewrite H1 H2 H5 => -[???]; subst.
       repeat eexists; by apply CutE.
     + move=> s1 s2 r A B n fv fv' ? eA rB IH s4 ? sIgn fvP1 fvP2 vA; subst. 
@@ -45,8 +45,8 @@ Section NurEqiv.
       case: g => [[|c] ca] H; last first.
         have:= s2l_Expanded_call vA eA H.
         move=> []?; subst.
-        case X: bc => [fv2 rules][?]; subst.
-        case: rules X => [|r0 rs] X [fB Hx]; rewrite Hx; subst.
+        case X: bc => /=[fv2 rules] ? fB ; subst => /=.
+        case: rules X => [|r0 rs] X Hx; rewrite Hx; subst.
           by move=> ->; apply: FailE X _.
         move=> [???]; subst.
         rewrite cats0 in IH.
@@ -66,7 +66,7 @@ Section NurEqiv.
 Lemma elpi_to_tree fv s1 s2 a na g  : 
   nur u p fv s1 g a s2 na -> 
   forall s0 t, valid_tree t -> (t2l t s0 nilC) = ((s1,g) ::: a) -> 
-  exists t1 n fv2, run u p fv s0 t (Some s2) t1 n fv2 /\ t2l (odflt Dead t1) s0 nilC = na.
+  exists t1 n fv2, run u p fv s0 t (Some s2) t1 n fv2 /\ t2l (odflt KO t1) s0 nilC = na.
 Proof.
   elim; clear.
   - move=> s a fv s1 A vA /= H.

@@ -65,11 +65,11 @@ Definition r2l a : goals := seq2goals [seq a2g x | x <- a].
 Fixpoint t2l (A: tree) s (bt : alts) : alts :=
 match A with
 | OK           => [:: (s, [::]) ]
-| (KO | Dead) => [::]
+| KO           => [::]
 | TA a         => [:: (s, [:: (a,[::]) ]) ]
 | Or A s1 B    =>
     let lB := t2l B s1 [::] in
-    let lA := t2l A s lB in
+    let lA := if A is Some A then t2l A s lB else [::] in
     add_ca_deep bt (lA ++ lB)
 | And A B0 B   =>
     let lB0 : goals := r2l B0 in
@@ -96,8 +96,8 @@ Section test.
   Variable p1 : program.
 
   Goal forall s3 l, 
-    t2l (And (Or OK s1 (TA cut)) ([:: cut]) KO) s3 l = 
-      t2l (And (Or Dead s1 (TA cut)) ([:: cut]) (TA cut)) s3 l.
+    t2l (And (Or (Some OK) s1 (TA cut)) ([:: cut]) KO) s3 l = 
+      t2l (And (Or None s1 (TA cut)) ([:: cut]) (TA cut)) s3 l.
   Proof.
     move=>s3 l/=.
     rewrite /=!cat0s ?cat0s subnn.

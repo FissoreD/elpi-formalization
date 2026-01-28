@@ -4,17 +4,39 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Export finmap lang.
 
+Unset Elimination Schemes.
+
 (*BEGIN*)
 (*SNIP: tree_def*)
 Inductive tree :=
-  | KO | OK | Dead
+  | KO | OK
   | TA : A -> tree
   (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
-  | Or  : tree -> Sigma -> tree -> tree 
+  | Or  : option tree -> Sigma -> tree -> tree 
   (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
   | And : tree -> seq A -> tree -> tree.
 (*ENDSNIP: tree_def*)
   (* | PiImpl : V -> R_ A -> A -> A. *)
+
+Set Elimination Schemes.
+
+Lemma tree_ind : forall P,
+  P KO ->
+  P OK ->
+  (forall a : A, P (TA a)) ->
+  (forall (l : tree), P l -> forall (s : Sigma) (t : tree), P t -> P (Or (Some l) s t)) ->
+  (forall (s : Sigma) (t : tree),
+    P t -> P (Or None s t)) ->
+  (forall t : tree,
+  P t -> forall (l : seq A) (t0 : tree), P t0 -> P (And t l t0)) ->
+  forall t : tree, P t.
+Proof.
+  move=> P H1 H2 H3 H4 H5 H6.
+  fix IH 1.
+  move=> []; only 1,2,3: by clear IH; auto.
+    by move=> [l|] s r; [apply: H4|apply: H5].
+  by move=> >; apply: H6.
+Qed.
 
 #[only(eqbOK)] derive tree.
 HB.instance Definition _ := hasDecEq.Build tree tree_eqb_OK.
@@ -40,22 +62,21 @@ Section tree_op.
       In this case, a valid alternative is "p /\ B0"
     *)
   (*SNIP: is_dead*)
-  Fixpoint is_dead A :=
+  (* Fixpoint is_dead A :=
     match A with
-    | Dead => true
     | OK | KO | TA _ => false
     | And A B0 B => is_dead A
     | Or A s B => is_dead A && is_dead B
-    end.
+    end. *)
   (*ENDSNIP: is_dead*)
 
   (*SNIP: path_end*)
   Fixpoint path_end A :=
     match A with
-    | Dead | OK | KO | TA _ => A
+    | OK | KO | TA _ => A
     | Or A _ B =>
-      if is_dead A then path_end B
-      else path_end A
+      if A is Some A then path_end A
+      else path_end B
     | And A B0 B => 
       match path_end A with
       | OK => path_end B
@@ -66,16 +87,16 @@ Section tree_op.
 
   Fixpoint is_ko A :=
     match A with
-    | Dead | KO => true
+    | KO => true
     | OK | TA _ => false
     | And A B0 B => is_ko A
-    | Or A s B => is_ko A && is_ko B
+    | Or A s B => (if A is Some A then is_ko A else true) && is_ko B
     end.
 
   Fixpoint success (A : tree) : bool :=
     match A with
     | OK => true
-    | TA _ | KO | Dead => false
+    | TA _ | KO => false
     | And A _ B => success A && success B
     (* We need to keep the if condition to reflect the behavior of step:
       For example, an interesting proprety of step is:
@@ -85,7 +106,7 @@ Section tree_op.
           KO \/ OK is success but step (KO \/ OK) is not Success but
           rather Expanded
     *)
-    | Or A _ B => if is_dead A  then success B else success A
+    | Or A _ B => if A is Some A then success A else success B
     end.
 
   Fixpoint failed (A : tree) : bool :=
@@ -94,11 +115,11 @@ Section tree_op.
         into Dead. This is because, we want step to transform a KO
         tree into a "Failed KO" (it does not introduce a Dead tree).
     *)
-    | KO | Dead => true
+    | KO => true
     | TA _ | OK => false
     | And A _ B => failed A || (success A && failed B)
     (* We keep the if condition to have the right behavior in next_alt *)
-    | Or A _ B => if is_dead A then failed B else failed A
+    | Or A _ B => if A is Some A then failed A else failed B
     end.
 
   (*SNIP: succ_path*)
@@ -106,14 +127,12 @@ Section tree_op.
   (*ENDSNIP: succ_path*)
 
   (*SNIP: failed_path*)
-  Definition failedT A := (path_end A == KO) || (path_end A == Dead).
+  Definition failedT A := (path_end A == KO).
   (*ENDSNIP: failed_path*)
 
   Lemma successP A : success A = successT A.
   Proof.
     rewrite/successT; elim: A => //=.
-      move=> A HA s B HB; rewrite HA HB fun_if.
-      case: ifP => //.
     move=> A HA B0 B HB; rewrite HA HB.
     case: path_end => //.
   Qed.
@@ -121,35 +140,32 @@ Section tree_op.
   Lemma failedP A : failed A = failedT A.
   Proof.
     rewrite/failedT; elim: A => //=.
-      move=> A HA s B HB; rewrite HA HB fun_if.
-      case: ifP => //.
     move=> A HA B0 B HB; rewrite HA HB.
     rewrite successP /successT.
     case pA: path_end => //=.
   Qed.
 
-  Fixpoint cutr A :=
-    match A with
+  Definition cutr (A: tree) := KO.
+    (* match A with
     | TA _| KO => KO
     | OK => KO
-    | Dead => Dead
     | And A B0 B => And (cutr A) B0 B
-    | Or A s B => Or (cutr A) s (cutr B)
-    end.
+    | Or A s B => Or (omap cutr A) s (cutr B)
+    end. *)
 
   (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
     match A with
     | TA _ | KO => KO
-    | Dead | OK => A
+    | OK => A
     | And A B0 B =>
       if success A then And (cutl A) B0 (cutl B)
-      else And (cutr A) B0 (cutr B)
+      else KO
     | Or A s B => 
         (* if A is dead then the success is to be found in B *)
-        if is_dead A then Or A s (cutl B)
+        if A is Some A then Or (Some (cutl A)) s (cutr B)
         (* otherwise we cutl A and completely kill B with cutr *)
-        else  Or (cutl A) s (cutr B)
+        else  Or A s (cutl B)
     end.
 
   (********************************************************************)
@@ -157,13 +173,13 @@ Section tree_op.
   (********************************************************************)
   
   (* IS_DEAD + IS_KO + FAILED + SUCCESS *)
-  Lemma is_dead_is_ko {A}: is_dead A -> is_ko A.
-  Proof. elim: A => // A HA s B HB/=/andP[/HA->/HB]//. Qed.
+  (* Lemma is_dead_is_ko {A}: is_dead A -> is_ko A.
+  Proof. elim: A => // A HA s B HB/=/andP[/HA->/HB]//. Qed. *)
 
   Lemma is_ko_failed {A}: is_ko A -> failed A.
   Proof.
     elim: A => //.
-    - move=> A HA s B HB/=/andP[/HA->/HB->]; rewrite if_same//.
+    - by move=> A HA s B HB/= /andP[/HA].
     - move=> A HA B0 B HB/=/HA->//.
   Qed.
 
@@ -173,21 +189,20 @@ Section tree_op.
   Lemma failed_success A: failed A -> success A = false.
   Proof.
     elim: A => //.
-    + move=> A HA s B HB /=; case: ifP => //.
     + move=> A HA B0 B HB /= /orP [/HA->|/andP[->/HB->]]//.
   Qed.
 
   Lemma is_ko_success {A}: is_ko A -> success A = false.
   Proof. move=>/is_ko_failed/failed_success//. Qed.
 
-  Lemma is_dead_failed {A} : is_dead A -> failed A.
-  Proof. move=>/is_dead_is_ko/is_ko_failed//. Qed.
+  (* Lemma is_dead_failed {A} : is_dead A -> failed A.
+  Proof. move=>/is_dead_is_ko/is_ko_failed//. Qed. *)
 
-  Lemma is_dead_success {A}: is_dead A -> success A = false.
-  Proof. move=>/is_dead_is_ko/is_ko_success//. Qed.
+  (* Lemma is_dead_success {A}: is_dead A -> success A = false.
+  Proof. move=>/is_dead_is_ko/is_ko_success//. Qed. *)
 
-  Lemma failed_dead {A} : failed A = false -> is_dead A = false.
-  Proof. apply: contraFF is_dead_failed. Qed.
+  (* Lemma failed_dead {A} : failed A = false -> is_dead A = false.
+  Proof. apply: contraFF is_dead_failed. Qed. *)
 
   Lemma success_failed A: success A -> failed A = false.
   Proof.
@@ -201,27 +216,27 @@ Section tree_op.
     move=>/is_ko_success; rewrite H//.
   Qed.
 
-  Lemma success_is_dead {A}: success A -> is_dead A = false.
+  (* Lemma success_is_dead {A}: success A -> is_dead A = false.
   Proof. 
     move=>H; apply: contraFF _ erefl.
     move=>/is_dead_success; rewrite H//.
-  Qed.
+  Qed. *)
 
   Lemma cutr2 {a}: cutr (cutr a) = cutr a.
-  Proof. elim: a => //= [A HA s B HB|A HA B0 B HB]; rewrite HA//HB//. Qed.
+  Proof. by []. Qed.
   
   Lemma is_ko_cutr {B}: is_ko (cutr B).
   Proof. elim: B => // A HA s B HB/=; rewrite HA HB//. Qed.
 
-  Lemma is_dead_cutr {A}: is_dead (cutr A) = is_dead A.
-  Proof. elim: A => //A HA s B HB/=; rewrite HA HB//. Qed.
+  (* Lemma is_dead_cutr {A}: is_dead (cutr A) = is_dead A.
+  Proof. elim: A => //A HA s B HB/=; rewrite HA HB//. Qed. *)
 
-  Lemma is_dead_cutl {A}: is_dead (cutl A) = is_dead A.
+  (* Lemma is_dead_cutl {A}: is_dead (cutl A) = is_dead A.
   Proof. 
     elim: A => //=.
     - move=> A HA s B HB; rewrite fun_if/= HA HB is_dead_cutr if_same//.
     - move=> A HA B0 B HB; rewrite fun_if/= HA is_dead_cutr// if_same//.
-  Qed.
+  Qed. *)
 
   Lemma failed_cutr {A}: failed (cutr A).
   Proof. elim: A => //=A->// _ B ->; rewrite if_same//. Qed.
@@ -232,28 +247,24 @@ Section tree_op.
   Lemma success_cut {A} : success (cutl A) = success A.
   Proof.
     elim: A => //. 
-    + move=> A HA s B HB /=.
-      case: ifP => /= dA; rewrite ?is_dead_cutl dA//.
-    + move=> A HA B C HC /=.
-      rewrite fun_if/= HA HC !success_cutr/=.
-      case: ifP => //=->//.
+    move=> A HA B C HC /=.
+    rewrite fun_if/= HA HC.
+    case: ifP => //=->//.
   Qed.
 
   Lemma is_ko_cutl {B}: is_ko B -> is_ko (cutl B).
   Proof. 
     elim: B => //. 
     - move=> //=A HA s B HB/andP[kA kB].
-      by rewrite fun_if/=kA HA//HB///= is_ko_cutr if_same.
-    - move=> A HA B0 B HB/= kA; rewrite fun_if/=; rewrite HA//is_ko_cutr if_same//.
+      by rewrite HA// is_ko_cutr.
+    - move=> A HA B0 B HB/= kA; rewrite is_ko_success//.
   Qed.
 
   Lemma failed_success_cut {A}: failed (cutl A) = ~~ (success (cutl A)).
   Proof.
     elim: A => //=.
-    - move=> A HA s B HB; case: ifP => dA/=; rewrite?is_dead_cutl dA//.
-    - move=> A HA B0 B HB/=. 
-      rewrite fun_if/= (fun_if success) /=!failed_cutr success_cutr success_cut/=.
-      rewrite HA HB !success_cut; case: ifP => //->//.
+    move=> A HA B0 B HB/=.
+    case sA: success => //=; rewrite HA HB success_cut sA//.
   Qed.
 
   Lemma success_failed_cut {A}: success (cutl A) = ~~ (failed (cutl A)).
@@ -263,9 +274,6 @@ Section tree_op.
   Lemma failed_cut {A}: failed A -> failed (cutl A).
   Proof.
     elim: A => //.
-      move=> A HA s B HB /=.
-      rewrite (fun_if failed)/= !failed_cutr.
-      by case: ifP => ///eqP dA /HA->; rewrite if_same.
     move=> A HA B0 B HB /=; rewrite fun_if/=.
     move=>/orP[fA|/andP[sA fB]].
       rewrite failed_success//= failed_cutr//.
@@ -284,11 +292,11 @@ Fixpoint big_and (a : list A) : tree :=
 Fixpoint big_or (r : list A) (l : seq (Sigma * R)) : tree :=
   match l with 
   | [::] => big_and r
-  | (s,r1) :: xs => Or (big_and r) s (big_or r1.(premises) xs)
+  | (s,r1) :: xs => Or (Some (big_and r)) s (big_or r1.(premises) xs)
   end.
 
-Lemma big_and_dead l: is_dead (big_and l) = false.
-Proof. elim l => //-[]//. Qed.
+(* Lemma big_and_dead l: is_dead (big_and l) = false.
+Proof. elim l => //-[]//. Qed. *)
 
 
 Section main.
@@ -296,18 +304,18 @@ Section main.
 
   Definition backchain pr fv s t :=
     let: (fv, l) := bc u pr fv t s in
-    (fv, if l is (s,r) :: xs then (Or KO s (big_or r.(premises) xs))
+    (fv, if l is (s,r) :: xs then (Or (Some KO) s (big_or r.(premises) xs))
          else KO).
 
-  Lemma dead_big_or p fv s t: is_dead (backchain p fv s t).2 = false.
+  (* Lemma dead_big_or p fv s t: is_dead (backchain p fv s t).2 = false.
   Proof.
     by rewrite /backchain; case F: bc => [fv' [//|[s1 r] xs]].
-  Qed.
+  Qed. *)
 
   Fixpoint get_substS s A :=
     match A with
-    | TA _ | KO | OK | Dead => s
-    | Or A s1 B => if is_dead A then get_substS s1 B else get_substS s A
+    | TA _ | KO | OK => s
+    | Or A s1 B => if A is Some A then get_substS s A else get_substS s1 B
     | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
     end.
 
@@ -319,7 +327,7 @@ Section main.
     match A with
     (* meta *)
     | OK             => (fv, Success, OK)
-    | KO | Dead     => (fv, Failed, A)
+    | KO             => (fv, Failed, A)
     
     (* lang *)
     | TA cut       => (fv, CutBrothers, OK)
@@ -329,12 +337,12 @@ Section main.
 
     (* recursive cases *)
     | Or A sB B =>
-        if is_dead A then 
+        if A is Some A then 
+          let: (fv, tA, rA) := step fv s A in
+          (fv, if is_cb tA then Expanded else tA, Or (Some rA) sB (if is_cb tA then cutr B else B))
+        else
           let: (fv, tB, rB) := (step fv sB B) in
           (fv, if is_cb tB then Expanded else tB, Or A sB rB)
-        else
-        let: (fv, tA, rA) := step fv s A in
-        (fv, if is_cb tA then Expanded else tA, Or rA sB (if is_cb tA then cutr B else B))
     | And A B0 B =>
         let: (fv, tA, rA) := step fv s A in
         if is_sc tA then 
@@ -354,7 +362,7 @@ Section main.
   (*ENDSNIP: next_alt*)
     fix next_alt b A :=
     match A with
-    | KO | Dead => None
+    | KO => None
     | OK => if b then None else Some OK
     | TA _ => Some A
     | And A B0 B =>
@@ -368,24 +376,26 @@ Section main.
       else if failed A then reset 
       else Some (And A B0 B)
     | Or A sB B =>
-      if is_dead A then omap (fun x => (Or A sB x)) (next_alt b B)
-      else match next_alt b A with
-        | None => obind (fun x => Some (Or Dead sB x)) (next_alt false B)
-        | Some nA => Some (Or nA sB B)
+      if A is Some A then
+        match next_alt b A with
+        | None => obind (fun x => Some (Or None sB x)) (next_alt false B)
+        | Some nA => Some (Or (Some nA) sB B)
       end
+      else 
+        omap (fun x => (Or None sB x)) (next_alt b B)
   end.
   (*ENDSNIP: next_alt_code *)
 
-  Goal forall r, next_alt false (And (Or OK empty OK) r KO) = Some (And (Or Dead empty OK) r (big_and r)).
+  Goal forall r, next_alt false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, next_alt false (And (Or OK empty OK) r KO) = Some (And (Or Dead empty OK) r (big_and r)).
+  Goal forall r, next_alt false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, next_alt true (And (Or OK empty OK) r OK) = Some (And (Or Dead empty OK) r (big_and r)).
+  Goal forall r, next_alt true (And (Or (Some OK) empty OK) r OK) = Some (And (Or None empty OK) r (big_and r)).
   Proof. move=> []//=. Qed.
 
-  Goal (next_alt false (Or KO empty OK)) = Some (Or Dead empty OK). move=> //=. Qed.
+  Goal (next_alt false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
 
   (* build next_alt tree *)
   (* Definition build_na A oA := odflt (dead A) oA. *)
@@ -407,13 +417,17 @@ Section main.
 
   Fixpoint vars_tree t : fvS :=
   match t with
-  | TA cut | Dead | KO | OK => fset0
+  | TA cut | KO | OK => fset0
   | TA (call t) => vars_tm (Callable2Tm t)
   | And A B0 B => vars_tree A `|` vars_tree B `|` vars_atoms B0
-  | Or A s B => vars_tree A `|` vars_tree B `|` vars_sigma s
+  | Or None s B => vars_tree B `|` vars_sigma s
+  | Or (Some A) s B => vars_tree A `|` vars_tree B `|` vars_sigma s
   end.
 
 End main.
 
-(* Hint Resolve is_dead_dead : core. *)
+Hint Resolve is_ko_cutr : core.
+
+Ltac elim_tree A := elim: A => [||t|A HA sm B HB|sm B HB|A HA B0 B HB] => //; auto.
+
 (*END*)

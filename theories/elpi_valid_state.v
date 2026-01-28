@@ -433,30 +433,30 @@ Section NurValidState.
       valid_caA r r l.
   Proof.
     move=> <-; clear r.
-    elim: A l s0 => //=.
-    - move=> a // l s0 _ /=.
+    move: l s0; elim_tree A => l s0/=.
+    - move=> _.
       rewrite suffix0s suffixs0/=.
       case: eqBP => //->//.
-    - move=> A HA s B HB l s0/=.
-      case:ifP => [dA vB|dA /andP[vA bB]].
-        rewrite t2l_dead//=cat0s.
-        set stl := t2l B s nilC.
-        have:= HB _ _ vB.
-        fold stl => H.
-        apply: valid_ca_add_ca_deep.
-        apply: H.
+    - move=>  /andP[vA bB].
       apply: valid_ca_add_ca_deep; rewrite ?size_cat//.
       rewrite /valid_ca valid_ca_split.
       rewrite drop_size_cat//.
       rewrite HB//?bbOr_valid//andbT.
-      have:= [elaborate HA (t2l B s nilC) s0 vA].
+      have:= [elaborate HA (t2l B sm nilC) s0 vA].
       set sB := t2l B _ => HH.
       apply: push_bt_out => //; last by rewrite cats0//.
       rewrite/sB.
       move /spec_bbOr: bB => [r[rs[]?]]; subst.
         apply: valid_caA_big_or.
       by rewrite t2l_cutr.
-    - move=> A HA B0 B HB l s0/= /andP[vA].
+    - move=> vB.
+      set stl := t2l B sm [::].
+      have:= HB _ _ vB.
+      fold stl => H.
+      rewrite //=cat0s.
+      apply: valid_ca_add_ca_deep.
+      apply: H.
+    - move=> /andP[vA].
       have:= HA l s0 vA => {}HA.
       case:ifP => /=[sA vB|sA /eqP?]; subst.
         move: HA.

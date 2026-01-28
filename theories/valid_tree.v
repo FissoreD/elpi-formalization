@@ -11,40 +11,33 @@ Module B.
     | _ => false
     end.
 
-  Lemma base_and_dead {A}: base_and A -> is_dead A = false.
-  Proof. case: A => // -[]//=. Qed.
+  (* Lemma base_and_dead {A}: base_and A -> is_dead A = false.
+  Proof. case: A => // -[]//=. Qed. *)
 
   Lemma base_and_big_and A: base_and (big_and A).
   Proof. by elim: A => // -[|t] l /= ->; rewrite eq_refl. Qed.
 
   Fixpoint base_or_aux s :=
     match s with
-    | Or l _ r => base_and l && (base_or_aux r)
+    | Or (Some l) _ r => base_and l && (base_or_aux r)
     | t => base_and t
     end.
 
-  Definition base_and_ko s :=
+  (* Definition base_and_ko s :=
     match s with
     | And KO r r1 =>
       [&& (big_and r == r1) & base_and r1]
     | KO => true
     | _ => false
-    end.
+    end. *)
 
-  Definition base_or s := 
-    match s with 
-    | KO => true
-    | Or KO _ t => base_or_aux t
-    | _ => false
-    end.
-
-  Fixpoint base_or_aux_ko s :=
+  (* Fixpoint base_or_aux_ko s := KO.
     match s with
     | Or l _ r => base_and_ko l && (base_or_aux_ko r)
     | t => base_and_ko t
-    end.
+    end. *)
 
-  Definition bbOr B := base_or_aux B || base_or_aux_ko B. 
+  Definition bbOr B := base_or_aux B || (B == KO). 
 
   Section specs.
     Lemma spec_base_and A:
@@ -67,10 +60,7 @@ Module B.
     Qed.
 
     Lemma bbOr_big_or s l: bbOr (big_or s l).
-    Proof.
-      rewrite/bbOr.
-      case: base_or_aux_ko; rewrite ?orbT//orbF base_or_aux_big_or//.
-    Qed.
+    Proof. by rewrite/bbOr; rewrite base_or_aux_big_or//. Qed.
 
     Lemma spec_base_or_aux A:
       reflect (exists X Y, big_or X Y = A) (base_or_aux A).
@@ -86,12 +76,12 @@ Module B.
       by exists  (A::l), [::].
     Qed.
 
-    Lemma base_and_base_and_ko_cutr {B} : base_and B -> base_and_ko (cutr B).
+    (* Lemma base_and_base_and_ko_cutr {B} : base_and B -> base_and_ko (cutr B).
     Proof. 
       by elim: B => // A; case: A => //[p c|] _ B0 B HB /=/andP[/eqP H1 H2]; rewrite HB// H1 eqxx.
-    Qed.
+    Qed. *)
     
-    Lemma spec_base_and_ko A:
+    (* Lemma spec_base_and_ko A:
       reflect (exists X, cutr (big_and X) = A) (base_and_ko A).
     Proof.
       case bA: base_and_ko; constructor.
@@ -99,17 +89,17 @@ Module B.
         by move=> []//= l t /andP[/eqP <-]; exists (cut :: l).
       move=> [x ?]; subst.
       by rewrite base_and_base_and_ko_cutr//base_and_big_and in bA.
-    Qed.
+    Qed. *)
 
-    Lemma base_or_base_or_ko_cutr {B}: base_or_aux B -> base_or_aux_ko (cutr B).
+    (* Lemma base_or_base_or_ko_cutr {B}: base_or_aux B -> base_or_aux_ko (cutr B).
     Proof.
       elim: B => //.
       + move=> A IHA s B IHB /= /andP [] /base_and_base_and_ko_cutr -> /IHB ->//.
       + move=> a; case: a => //=[_ _|] _ B C HC /andP [] /eqP /[subst1] hC;
         rewrite base_and_base_and_ko_cutr//eqxx//.
-    Qed.
+    Qed. *)
 
-    Lemma spec_base_or_aux_ko A:
+    (* Lemma spec_base_or_aux_ko A:
       reflect (exists X Y, cutr (big_or X Y) = A) (base_or_aux_ko A).
     Proof.
       case bA: base_or_aux_ko; constructor; last first.
@@ -121,24 +111,21 @@ Module B.
         by eexists X, ((s, {|head := head; premises := Y|}) :: Z) => //=.
       move=> []//= _ l t H1 /andP[/eqP?]; subst.
       by exists  (cut::l), [::].
-    Qed.
+    Qed. *)
 
-    Lemma base_and_ko_base_and_ko_cutr {B} : base_and_ko B -> base_and_ko (cutr B).
-    Proof. by elim: B => // -[]// _ l B HB /=/andP[/eqP<- H]; rewrite cutr2 eqxx//. Qed.
+    (* Lemma base_and_ko_base_and_ko_cutr {B} : base_and_ko B -> base_and_ko (cutr B).
+    Proof. by elim: B => // -[]// _ l B HB /=/andP[/eqP<- H]; rewrite cutr2 eqxx//. Qed. *)
 
-    Lemma base_or_ko_cutr {B}: base_or_aux_ko B -> base_or_aux_ko (cutr B).
+    (* Lemma base_or_ko_cutr {B}: base_or_aux_ko B -> base_or_aux_ko (cutr B).
     Proof.
       elim: B => //.
         move=> A HA s B HB /= /andP[bA bB].
         rewrite HB//base_and_ko_base_and_ko_cutr//.
       by move=> [] //= _ B0 B HB /andP[/eqP H1 H2]; rewrite base_and_ko_base_and_ko_cutr// -H1 cutr2 eqxx.
-    Qed.
+    Qed. *)
 
-    Lemma bbOr_cutr {B}: bbOr B -> bbOr (cutr B).
-    Proof.
-      rewrite/bbOr.
-      move=>/orP[/base_or_base_or_ko_cutr|/base_or_ko_cutr]->; rewrite orbT//.
-    Qed.
+    Lemma bbOr_cutr {B}: bbOr (cutr B).
+    Proof. by rewrite/bbOr orbT. Qed.
   End specs.  
 End B.
 
@@ -146,7 +133,8 @@ Lemma spec_bbOr A:
   reflect (exists X Y, let x := (big_or X Y) in x = A \/ cutr x = A) (B.bbOr A).
 Proof.
   case X: B.bbOr; constructor.
-    move/orP: X => [/B.spec_base_or_aux|/B.spec_base_or_aux_ko][?[??]]/=; subst; repeat eexists; eauto.
+    move/orP: X => [/B.spec_base_or_aux|+]; first by move=> [?[??]]/=; subst; repeat eexists; eauto.
+    by move=> /eqP?; subst; exists [::], [::]; right.
   move=> [Y [Z]]/=[]?; subst;
   by rewrite !(B.bbOr_cutr,B.bbOr_big_or) in X.
 Qed.
@@ -160,10 +148,9 @@ Section valid_tree.
   Fixpoint valid_tree s :=
     match s with
     | TA _ | OK | KO => true
-    | Dead => false
     | Or A _ B => 
-      if is_dead A then valid_tree B
-      else valid_tree A && (B.bbOr B)
+      if A is Some A then valid_tree A && (B.bbOr B)
+      else valid_tree B
     | And A B0 B => 
       valid_tree A &&
         if success A then valid_tree B 
@@ -174,17 +161,17 @@ Section valid_tree.
   Goal forall x r , (valid_tree (And (TA cut) x r)) -> is_ko r = false.
   Proof. move=> x r/= /eqP->; rewrite is_ko_big_and//. Qed.
 
-  Lemma is_dead_valid_tree {A} : is_dead A -> valid_tree A = false.
+  (* Lemma is_dead_valid_tree {A} : is_dead A -> valid_tree A = false.
   Proof.
     elim: A => //.
       move=> A HA s B HB/=/andP[]dA dB.
       rewrite HA// dA HB//andbF//.
     move=> A HA Bo B HB/=dA.
     rewrite HA// andbF//.
-  Qed.
+  Qed. *)
 
-  Lemma valid_tree_is_dead {A} : valid_tree A -> is_dead A = false.
-  Proof. apply: contraPF => /is_dead_valid_tree->//. Qed.
+  (* Lemma valid_tree_is_dead {A} : valid_tree A -> is_dead A = false.
+  Proof. apply: contraPF => /is_dead_valid_tree->//. Qed. *)
 
   Lemma valid_tree_big_and l : valid_tree (big_and l).
   Proof. elim: l => //=. Qed.
@@ -196,38 +183,30 @@ Section valid_tree.
   Proof.
     elim: l s => [|[]] //=.
     + move=> s; rewrite valid_tree_big_and//.
-    + by move=> _ b l H s; rewrite is_dead_big_and valid_tree_big_and B.bbOr_big_or.
+    + by move=> _ b l H s; rewrite valid_tree_big_and B.bbOr_big_or.
   Qed.
 
-  Lemma valid_tree_big_or_cutr s l : valid_tree (cutr (big_or s l)).
+  (* Lemma valid_tree_big_or_cutr s l : valid_tree (cutr (big_or s l)).
   Proof.
     elim: l s => [|[]] //=.
     + by move=> s; rewrite valid_tree_big_and_cutr.
     + by move=> _ r l IH s; rewrite IH valid_tree_big_and_cutr B.bbOr_cutr (if_same, B.bbOr_big_or).
-  Qed.
-
+  Qed. *)
 
   Lemma valid_tree_backchain pr s sv t : valid_tree (backchain u pr sv s t).2.
   Proof.
     rewrite/backchain; case: bc => [sv' [|[s1 r1] rs]]//=.
-    apply: B.bbOr_big_or.
+    by apply/B.bbOr_big_or.
   Qed.
 
   Lemma bbOr_valid {B}:
     B.bbOr B -> valid_tree B.
-  Proof.
-    move=> /spec_bbOr[X[Y /=[]<-]].
-      apply: valid_tree_big_or.
-    apply: valid_tree_big_or_cutr.
-  Qed.
+  Proof. move=> /spec_bbOr[X[Y /=[]<-]]//; apply: valid_tree_big_or. Qed.
 
   Lemma valid_tree_cut {A}: success A -> valid_tree A -> valid_tree (cutl A).
   Proof.
     elim: A => //.
-      move=> A HA s B HB => /=.
-      case: ifP => //[dA sB vB| dA sA /andP[vA bB]]/=.
-        rewrite dA HB//.
-      rewrite is_dead_cutl dA HA// B.bbOr_cutr//.
+      move=> A HA s B HB => /=sA /andP[vA bB]; rewrite HA//.
     move=> A HA B0 B HB /= /andP[sA sB] /andP[vA].
     rewrite sA/= => vB.
     rewrite success_cut sA HA//HB//=.
@@ -237,23 +216,19 @@ Section valid_tree.
     valid_tree A -> step u p sv s A = r -> valid_tree r.2.
   Proof.
     move=>+<-; clear r.
-    elim: A s sv => //; try by move=> s r // *; subst.
-    + by move=> /= []//= >; rewrite push/= valid_tree_backchain.
-    + move=> A IHA s B IHB s1 sv/=.
-      rewrite!push/=.
-      case:ifP => //[dA vB|dA/andP[vA bB]]/=.
-        by rewrite IHB//dA.
-      have /= := IHA s1 sv vA.
-      case X: step => [[?[]]A']//=->; rewrite (step_not_dead dA X)//B.bbOr_cutr//.
-    + move=> A HA B0 B HB s1 sv /=/andP[vA].
+    move: s sv; elim_tree A => s sv/=.
+    + by case: t => [|t]//=; rewrite push/= valid_tree_backchain.
+    + move=> /andP[vA bB]; rewrite !push/= HA//=; case: ifP => //.
+    + by move=> vB; rewrite !push /=; apply: HB.
+    + move=> /andP[vA].
       rewrite !push.
       case: ifP => [sA vB /= | sA]/=.
         rewrite success_step//=.
-        have {HB} := HB (get_substS s1 A) sv vB.
+        have {HB} := HB (get_substS s A) sv vB.
         case X: step => //[[?[]]C]/=vC; try by rewrite sA vA vC.
         rewrite success_cut sA/= vC valid_tree_cut//.
       move=> /eqP -> {B HB}.
-      have:= HA s1 sv vA.
+      have:= HA s sv vA.
       case X: step => //[[sv' []]A']/=vA'; only 1-3: by rewrite eqxx vA' valid_tree_big_and if_same.
       have [? sA']:= step_success X; subst.
       congruence.
@@ -263,17 +238,14 @@ Section valid_tree.
     valid_tree A -> next_alt b A = Some (B) 
     -> valid_tree B.
   Proof.
-    elim: A  B b => //=.
-    + move=> B b _; case: ifP => // _ [<-]//.
-    + move=> c B _ _ [<-]//.
-    + move=> A HA s B HB  C b/=.
-      case: ifP => //[dA vB|dA /andP[vA bB]].
-        case X: next_alt => //[D] [<-]/=.
-        rewrite dA (HB _ _ vB X)//.
-      case X: next_alt => [D|].
-        move=>[<-]/=; rewrite bB ; rewrite bbOr_valid// (HA _ _ vA X) if_same//.
-      case Y: next_alt => [D|]//[<-]/=; rewrite (HB _ _ _ Y)//bbOr_valid//.
-    + move=> A HA l B HB  C b /= /andP[vA].
+    move: B b; elim_tree A => C b/=.
+    + by case: C => //=; case: b => //.
+    + by case: t => [|c]//= _ [<-]//.
+    + move=> /andP[vA bB]; case nA: next_alt => [A'|]//=.
+        by move=> [<-]/=; rewrite (HA A' b)//.
+      by case nB: next_alt => [B'|]//[<-]/=; apply/HB/nB/bbOr_valid.
+    + by move=> vB; case nB: next_alt => [B'|]//=[<-]/=; apply/HB/nB.
+    + move=>/andP[vA].
       case: ifP => /=[sA vB|sA]; subst.
         case X: next_alt => [D|].
           move=>[<-]/=; rewrite vA sA/= (HB _ _ vB X)//.
