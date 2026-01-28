@@ -9,8 +9,7 @@ Unset Elimination Schemes.
 (*BEGIN*)
 (*SNIP: tree_def*)
 Inductive tree :=
-  | KO | OK
-  | TA : A -> tree
+  | KO | OK | TA : A -> tree
   (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
   | Or  : option tree -> Sigma -> tree -> tree 
   (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
