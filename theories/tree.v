@@ -348,7 +348,7 @@ Section main.
           failed A -> next_alt false A = Some B ->
               run fv0 s1 B s2 r n fv1 -> run fv0 s1 A s2 r n fv1
     | run_dead s1 A fv : 
-          failed A -> next_alt false A = None ->
+          next_alt false A = None ->
             run fv s1 A None None false fv.
 
   Fixpoint vars_tree t : fvS :=
@@ -366,7 +366,12 @@ Hint Resolve is_ko_cutr : core.
 
 
 Ltac elim_tree T X := revert X; elim: T => [||t|A HA sm B HB|sm B HB|A HA B0 B HB]; intros X => //; auto.
+Ltac elim_run T X := revert X; elim: T; clear; 
+  [move=> s1 s2 A B fv SA sA sB |
+    move=>s1 s2 r A B n fv0 fv1 fv2 eA rB IH|move=> s1 s2 r A B n fv0 fv1 fv2 eA rB IH|
+    move=>s1 s2 A B r n fv0 fv1 fA nA rB IH |move=> s1 A fv nA ]; intros X; subst => //; auto.
 
 Tactic Notation "elim_tree" hyp(T) hyp_list(X) := elim_tree T X.
+Tactic Notation "elim_run" hyp(T) hyp_list(X) := elim_run T X.
 
 (*END*)

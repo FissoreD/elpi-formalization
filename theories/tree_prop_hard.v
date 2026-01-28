@@ -6,17 +6,15 @@ Section s.
   Variable u : Unif.
   Variable p : program.
 
-  Lemma run_or0 s1 sv A s B s2 r b fv' :
-    run u p sv s1 (Or A s B) s2 r b fv' -> b = false.
+  Lemma run_or0 s1 sv X s Y s2 r b fv' :
+    run u p sv s1 (Or X s Y) s2 r b fv' -> b = false.
   Proof.
     remember (Or _ _ _) as o eqn:Ho => H.
-    elim: H A s B Ho; clear => //.
-    - move=> s1 s2 r A B n sv fv' ? + _ _ C s D ?; subst => /=.
-      destruct C; case: step => [[?[]]]//.
-    - move=> s1 s2 r A B n fv fv' ? + HB IH C s D ?; subst => /=.
-      destruct C; case X: step => [[?[]]D']//=[??]; subst; by apply: IH.
-    - move=> s1 s2 A B r n fv ? _ + H IH C s3 D ?; subst => /=.
-      case: C => [C|]; (case: next_alt => [?|]//).
+    elim_run H X s Y Ho.
+    - by move: eA; destruct X => //=; case: step => [[?[]]]//.
+    - by move: eA; destruct X => /=; case X: step => [[?[]]D']//=[??]; subst; apply: IH.
+    - move: fA nA => /=.
+      case: X => [X|]; (case: next_alt => [?|]//) => fX.
         by move=> []/esym; apply: IH.
         by case: next_alt => //= ? [?]; subst; apply/IH.
       by move=> []/esym; apply: IH.
@@ -47,7 +45,7 @@ Section s.
       - move: H0 H1 => /= fX; rewrite is_ko_next_alt//=.
         case nB: next_alt => [B2|]//=[?]; subst.
         by apply: next_alt_run; first by rewrite/=nB.
-      - move: H0 H1 => /= fX; rewrite is_ko_next_alt//=.
+      - move: H0; rewrite /=is_ko_next_alt//=.
         case nB: next_alt => //= _.
         by apply: run_dead; rewrite/= (next_alt_None_failed nB, nB).
     inversion H; subst; clear H.
@@ -77,7 +75,7 @@ Section s.
     - move: H0 H1 => /=fB.
       case nB: next_alt => //[B2][?]; subst.
       by apply: run_fail H2; rewrite//=(is_ko_failed, is_ko_next_alt)//nB.
-    - move: H1 => /=; case nB: next_alt => //= _.
+    - move: H0 => /=; case nB: next_alt => //= _.
       by apply: run_dead; rewrite//=(is_ko_failed, is_ko_next_alt)//nB.
   Qed.
 
@@ -91,7 +89,7 @@ Section s.
       + by move=> > sB rB IH ign; apply: run_step; first (by rewrite /=sB); apply: IH.
       + by move=> > sB rB IH ign; apply: run_step; first (by rewrite /=sB); apply: IH.
       + by move=> > fA nA rB IH i; apply: run_fail; rewrite//=nA//.
-      + by move=> > fA nA i; apply: run_dead; rewrite//= nA.
+      + by move=> > nA i; apply: run_dead; rewrite//= nA.
     remember (Or _ _ _) as OR eqn:HO.
     remember (omap _ _) as M eqn:HM.
     remember false as F eqn:HF => HB.
@@ -112,7 +110,7 @@ Section s.
       case nB: next_alt => //[B2][?]; subst.
       have [? {}IH] := IH _ _ _ erefl erefl erefl.
       by eexists; apply: run_fail IH.
-    + move=> _ > fA nA s2 B []//? _ _; subst.
+    + move=> _ > nA s2 B []//? _ _; subst.
       eexists; apply: run_dead => //.
       by move: nA => /=; case: next_alt.
   Qed.
@@ -185,7 +183,8 @@ Section s.
       move=> IH sX X s3 X' n1 fv2 H.
       apply: run_fail; only 1,2: rewrite //=nA//.
       by apply: IH H.
-    + move=> s1 B fB fv nB/=sX X s3 X' n1 fv' H.
+    + move=> s1 B fv nB/=sX X s3 X' n1 fv' H.
+      have fB := next_alt_None_failed nB.
       inversion H; subst; clear H.
       + apply: run_fail => //=; first rewrite nB next_alt_not_failed//.
           by rewrite success_failed.
@@ -200,7 +199,7 @@ Section s.
         by apply/run_ko_left2; exists n1.
       + apply: run_fail => //=; first by rewrite H1 nB.
         by apply/run_ko_left2; exists n1.
-      + by apply: run_dead => //=; rewrite nB H1.
+      + by apply: run_dead; rewrite /= nB H0.
   Qed.
 
   Definition is_or A := match A with Or _ _ _ => true | _ => false end.
@@ -359,12 +358,11 @@ Section s.
         by apply: run_dead.
       repeat eexists.
       by apply: next_alt_run nD H.
-    move=> s1 ? fs ++ s2 A B?; subst => /=fA.
+    move=> s1 ? ++ s2 A B?; subst => /=fA.
     case nA: next_alt => //=; case nB: next_alt => //= _ _.
     repeat eexists; first by apply: run_dead.
     move=> /=; repeat eexists.
-    apply: run_dead (nB).
-    by apply: next_alt_None_failed.
+    by apply: run_dead nB.
   Qed.
 
   (* Lemma run_or_ko_right1 fv fv' s2 X B B' SOL b1 sIgn:
