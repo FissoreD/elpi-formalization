@@ -61,10 +61,9 @@ Section tree_op.
   Fixpoint path_end A :=
     match A with
     | OK | KO | TA _ => A
-    | Or A _ B =>
-      if A is Some A then path_end A
-      else path_end B
-    | And A B0 B => 
+    | Or None _ B => path_end B
+    | Or (Some A) _ _ => path_end A
+    | And A _ B => 
       match path_end A with
       | OK => path_end B
       | A => A
