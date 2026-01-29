@@ -19,9 +19,7 @@ Section RunP.
   Lemma failed_big_and t: failed (big_and t) = false.
   Proof. case: t => [|[]]//. Qed.
 
-  (*SNIP: success_step*)
   Lemma success_step u p fv s A: success A -> step u p fv s A = (fv, Success, A).
-  (*ENDSNIP: success_step*)
   Proof.
     elim: A s => //; try by do 2 eexists.
     + move=> A HA s1 B HB s /= sA; rewrite HA//.
@@ -45,6 +43,11 @@ Section RunP.
       by rewrite !(HA _ _ _ _ X) in sA.
   Qed.
 
+  (*SNIP: success_step*)
+  Lemma succ_step_iff u p fv s A: success A <-> step u p fv s A = (fv, Success, A).
+  (*ENDSNIP: success_step*)
+  Proof. by split; [move=> /success_step->|move=>/step_success->]. Qed.
+
   Ltac push := rewrite !push.
 
   Lemma step_failed u p fv fv' s1 A B:
@@ -65,6 +68,24 @@ Section RunP.
       case_step_tag X A1 => //=.
       by move=> -[??]; subst; rewrite !(HA _ _ _ _ X).
   Qed.
+
+  Lemma failed_step u p fv s1 A: failed A -> step u p fv  s1 A = (fv, Failed, A).
+  Proof.
+    elim: A s1; clear => //; try by move=> ? [] //.
+    + move=> A HA s1 B HB s2/=fA; rewrite HA//.
+    + move=> s1 B HB s2/= /[!failed_or_None] fA; rewrite HB//.
+    + move=> A HA B0 B HB s/=.
+      rewrite failed_and.
+      case X: failed => /=.
+        by move=>_; rewrite HA// failed_success.
+      move=>/andP[sA fB]; rewrite sA HB//.
+  Qed. 
+
+  (*SNIP: failed_step*)
+  Lemma fail_step_iff u p fv s A: failed A <-> step u p fv s A = (fv, Failed, A).
+  (*ENDSNIP: failed_step*)
+  Proof. by split; [move=> /failed_step->|move=>/step_failed->]. Qed.
+
 
   Lemma next_alt_None_failed {A}: 
     next_alt false A = None -> failed A.
@@ -123,20 +144,6 @@ Section RunP.
   Lemma step_not_solved u p fv  s1 A r:
     step u p fv s1 A = r -> ~ (is_sc r.1.2) -> success A = false.
   Proof. by case: r => -[?[]]//=b; case X: success; rewrite // (success_step _ _ _ s1 X). Qed.
-
-  (*SNIP: failed_step*)
-  Lemma failed_step u p fv s1 A: failed A -> step u p fv  s1 A = (fv, Failed, A).
-  (*ENDSNIP: failed_step*)
-  Proof.
-    elim: A s1; clear => //; try by move=> ? [] //.
-    + move=> A HA s1 B HB s2/=fA; rewrite HA//.
-    + move=> s1 B HB s2/= /[!failed_or_None] fA; rewrite HB//.
-    + move=> A HA B0 B HB s/=.
-      rewrite failed_and.
-      case X: failed => /=.
-        by move=>_; rewrite HA// failed_success.
-      move=>/andP[sA fB]; rewrite sA HB//.
-  Qed. 
 
   Lemma step_not_failed u p fv s1 A r:
     step u p fv s1 A = r -> ~ (is_fl r.1.2) -> failed A = false.
