@@ -441,12 +441,12 @@ Section NurValidState.
       apply: valid_ca_add_ca_deep; rewrite ?size_cat//.
       rewrite /valid_ca valid_ca_split.
       rewrite drop_size_cat//.
-      rewrite HB//?bbOr_valid//andbT.
       have:= [elaborate HA (t2l B sm nilC) s0 vA].
-      set sB := t2l B _ => HH.
+      move/orP: bB => [/eqP->|]//=; first by rewrite andbT cats0.
+      move=> /spec_base_or[r0[rs ?]]; subst.
+      rewrite (HB _ _ (valid_tree_big_or _ _)) andbT.
+      move=> H.
       apply: push_bt_out => //; last by rewrite cats0//.
-      rewrite/sB.
-      move /spec_bbOr: bB => [r[rs[]?]]; subst; last by [].
       apply: valid_caA_big_or.
     - move=> vB.
       set stl := t2l B sm [::].

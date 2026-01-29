@@ -116,7 +116,7 @@ Section NurProp.
     case: x H1 => //= -[|?] []//.
   Qed.
 
-  Lemma base_or_aux_next_alt_t2l {X Y B s bt}: 
+  Lemma base_or_next_alt_t2l {X Y B s bt}: 
     next_alt false (big_or X Y) = Some B -> t2l (big_or X Y) s bt = t2l B s bt.
   Proof.
     elim: Y X bt => //=.
@@ -134,7 +134,7 @@ Section NurProp.
       have {HB}HA //=:= [elaborate HA (t2l B sm nilC) s s1 vA sA].
       rewrite HA//=; f_equal.
       case nA: next_alt => //=; rewrite seq2altsK.
-      move/spec_bbOr : bB => [X[Y []?]]; subst => //=.
+      move/orP: bB => [/eqP->|/B.spec_base_or[r0 [rs ?]]]//; subst.
       by rewrite next_alt_big_or/=.
     - move=> vB /[!success_or_None] sB.
       rewrite (HB _ _ sm)//=; case: next_alt => [A'|]; rewrite//=cat0s//.
@@ -229,7 +229,7 @@ Section NurProp.
       case nA': next_alt => []//.
       case nB: next_alt => []//= _.
       rewrite (HA _ _ _ _ _ _ _ vA eA nA').
-      move /spec_bbOr: bB => [r[rs []?]]; subst => //.
+      move/orP: bB => [/eqP->|/B.spec_base_or[r0[rs?]]]//; subst.
       by rewrite next_alt_big_or in nB.
     - move=> /= vB; rewrite !push => -[?]; subst.
       case eB: step => [[? []] B']//= _ <-/=.
@@ -309,9 +309,9 @@ Section NurProp.
     - move=> /andP[vA bB] fA.
       case Y: next_alt => [[]|]//.
       move=> + l.
-      move /spec_bbOr: bB => [r[rs []?]]; subst.
-        by rewrite next_alt_big_or.
-      by rewrite (HA s b)//=.
+      move/orP: bB => [/eqP->|/spec_base_or[r0[rs H]]]; subst.
+        by rewrite (HA s b)//=.
+      by rewrite next_alt_big_or.
     - move=> vB /[!failed_or_None] fB.
       case X: next_alt => [C|]//.
       by move=> _ l; rewrite (HB _ _ _ _ X).
@@ -338,7 +338,7 @@ Section NurProp.
       case X: next_alt => [A'|]//.
         move=>[?]/=; subst => /=.
         by rewrite (HA _ A' _ b)//.
-      move/spec_bbOr : bB => [r[rs []?]]; subst => //.
+      move/orP: bB => [/eqP->//|/spec_base_or[r[rs ?]]]; subst.
       by rewrite next_alt_big_or => -[<-]/=; rewrite (failed_next_alt_none_t2l vA fA X) cat0s.
     - move=> vB /[!failed_or_None] fB.
       case X: next_alt => [D|]//[<-]/=.
@@ -549,7 +549,9 @@ Qed.
     elim_tree A => l l1 ca tl alts s1 s2 fv/=.
     - by case: t.
     - rewrite !push => /andP[vA bB]/=.
-      have:= HB [::] _ _ _ _ _ _ fv (bbOr_valid bB).
+      have vB: valid_tree B.
+        by move/orP: bB => [/eqP->//|/spec_base_or[?[?<-]]]; apply: valid_tree_big_or.
+      have:= HB [::] _ _ _ _ _ _ fv vB.
       set SB := t2l B _ _.
       case SA: t2l =>  [|[sx[|[]a ca' gs tl']]]//=.
         case SB': SB =>  [|[sx[|[]a ca' gs tl']]]//=.
@@ -825,12 +827,9 @@ Qed.
         move=> ->; rewrite !add_ca_deep_cat.
         by rewrite (success_t2l empty)//= !behead_cons.
       rewrite (success_t2l empty)//=.
-      rewrite behead_cons.
-      rewrite X/=behead_cons.
-      have vB := bbOr_valid bB.
-      rewrite/SB => {SB}.
-      move/spec_bbOr: bB => [r[rs []?]]; subst => //.
-      by rewrite next_alt_big_or// seq2altsK/=.
+      rewrite behead_cons X/=behead_cons seq2altsK.
+      rewrite/SB; move: bB => /orP[/eqP->//|/spec_base_or[r0[r1 ?]]]; subst.
+      by rewrite next_alt_big_or//=.
     - move=> vB sB.
       rewrite success_or_None in sB.
       have {HB}:= [elaborate HB sm [::] vB sB].

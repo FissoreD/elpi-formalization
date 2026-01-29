@@ -14,13 +14,11 @@ Module B.
   Lemma base_and_big_and A: base_and (big_and A).
   Proof. by elim: A => // -[|t] l /= ->; rewrite eq_refl. Qed.
 
-  Fixpoint base_or_aux s :=
+  Fixpoint base_or s :=
     match s with
-    | Or (Some l) _ r => base_and l && (base_or_aux r)
+    | Or (Some l) _ r => base_and l && (base_or r)
     | t => base_and t
     end.
-
-  Definition bbOr B := base_or_aux B || (B == KO). 
 
   Section specs.
     Lemma spec_base_and A:
@@ -34,23 +32,20 @@ Module B.
       by rewrite base_and_big_and in bA.
     Qed.
 
-    Lemma base_or_aux_big_or s l:
-      base_or_aux (big_or s l).
+    Lemma base_or_big_or s l:
+      base_or (big_or s l).
     Proof.
       elim: l s => //=; clear.
       + by case => //= _ l; rewrite eqxx base_and_big_and.
       + by move=> [s r] rs IH r1 /=; rewrite IH base_and_big_and.
     Qed.
 
-    Lemma bbOr_big_or s l: bbOr (big_or s l).
-    Proof. by rewrite/bbOr; rewrite base_or_aux_big_or//. Qed.
-
-    Lemma spec_base_or_aux A:
-      reflect (exists X Y, big_or X Y = A) (base_or_aux A).
+    Lemma spec_base_or A:
+      reflect (exists X Y, big_or X Y = A) (base_or A).
     Proof.
-      case bA: base_or_aux; constructor; last first.
+      case bA: base_or; constructor; last first.
         move=> [X[Y H]]; subst.
-        by rewrite base_or_aux_big_or in bA.
+        by rewrite base_or_big_or in bA.
       pose head := Callable_P (IP 1).
       elim: A bA => //=; first by exists [::],[::].
         move=> A _ s B HB /andP[/spec_base_and[L <-]] /HB [X [Y <-]].
@@ -61,15 +56,7 @@ Module B.
   End specs.  
 End B.
 
-Lemma spec_bbOr A:
-  reflect (exists X Y, A = (big_or X Y) \/ A = KO) (B.bbOr A).
-Proof.
-  case X: B.bbOr; constructor.
-    move/orP: X => [/B.spec_base_or_aux|+]; first by move=> [?[??]]/=; subst; repeat eexists; eauto.
-    by move=> /eqP?; subst; exists [::], [::]; right.
-  move=> [Y [Z]]/=[]?; subst => //.
-  by rewrite !(B.bbOr_big_or) in X.
-Qed.
+Notation spec_base_or := B.spec_base_or.
 
 (*BEGIN*)
 Section valid_tree.
@@ -81,7 +68,7 @@ Section valid_tree.
     match s with
     | TA _ | OK | KO => true
     | Or None _ B => valid_tree B
-    | Or (Some A) _ B => valid_tree A && (B.bbOr B)
+    | Or (Some A) _ B => valid_tree A && ((B == KO) || B.base_or B)
     | And A B0 B => 
       valid_tree A &&
         if success A then valid_tree B 
@@ -96,18 +83,14 @@ Section valid_tree.
   Proof.
     elim: l s => [|[]] //=.
     + move=> s; rewrite valid_tree_big_and//.
-    + by move=> _ b l H s; rewrite valid_tree_big_and B.bbOr_big_or.
+    + by move=> _ b l H s; rewrite valid_tree_big_and/= B.base_or_big_or orbT.
   Qed.
 
   Lemma valid_tree_backchain pr s sv t : valid_tree (backchain u pr sv s t).2.
   Proof.
     rewrite/backchain; case: bc => [sv' [|[s1 r1] rs]]//=.
-    by apply/B.bbOr_big_or.
+    by rewrite B.base_or_big_or orbT.
   Qed.
-
-  Lemma bbOr_valid {B}:
-    B.bbOr B -> valid_tree B.
-  Proof. move=> /spec_bbOr[X[Y[] ->]]//; apply: valid_tree_big_or. Qed.
 
   Lemma valid_tree_cut {A}: success A -> valid_tree A -> valid_tree (cutl A).
   Proof.
@@ -148,7 +131,8 @@ Section valid_tree.
     + by case: t => [|c]//= _ [<-]//.
     + move=> /andP[vA bB]; case nA: next_alt => [A'|]//=.
         by move=> [<-]/=; rewrite (HA A' b)//.
-      by case nB: next_alt => [B'|]//[<-]/=; apply/HB/nB/bbOr_valid.
+      case nB: next_alt => [B'|]//[<-]/=; apply/HB/nB.
+      by move: bB => /orP[/eqP->|/spec_base_or[?[?]]]//<-; apply: valid_tree_big_or.
     + by move=> vB; case nB: next_alt => [B'|]//=[<-]/=; apply/HB/nB.
     + move=>/andP[vA].
       case: ifP => /=[sA vB|sA]; subst.
