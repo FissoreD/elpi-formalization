@@ -368,7 +368,10 @@ Section RunP.
       failed_or_None, failed_or_Some, failed_and
     ).
 
+
+  (*SNIP: path_atom_next_alt_id*)
   Lemma path_atom_next_alt_id b A: path_atom A -> next_alt b A = Some A.
+  (*ENDSNIP: path_atom_next_alt_id*)
   Proof.
     elim_tree A b => /=; rewrite ?rew_pa.
     - move=> /HA->//.
