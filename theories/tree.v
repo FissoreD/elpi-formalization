@@ -226,13 +226,12 @@ Section main.
     | TA _ => Some A
     | And A B0 B =>
       let build_B0 A := Some (And A B0 (big_and B0)) in
-      let reset := obind build_B0 (next_alt (success A) A) in
       if success A then
         match next_alt b B with
-        | None => reset
+        | None => obind build_B0 (next_alt true A)
         | Some B => Some (And A B0 B)
         end
-      else if failed A then reset 
+      else if failed A then obind build_B0 (next_alt false A) 
       else Some (And A B0 B)
     | Or None sB B => omap (fun x => (Or None sB x)) (next_alt b B)
     | Or (Some A) sB B =>
