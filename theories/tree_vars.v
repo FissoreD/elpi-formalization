@@ -123,11 +123,9 @@ Section vars_tree.
     - by rewrite /=!push; case: ifP => dA [<- _ _]; case X: step => [[]]//=; apply: HA X.
     - by rewrite /=!push; case: ifP => dA [<- _ _]; case X: step => [[]]//=; apply: HB X.
     rewrite/= !push.
-    case X: (step _ _ _ _ A) => [[fvx r'] A']/=; case: ifP.
-      destruct r' => //= _; have [[??] sA] := step_success X; subst.
-      move => [<- _ _].
-      by case Y: step => [[]]; apply/HB/Y.
-    by move=> _ [<- _ _]; apply/HA/X.
+    case: ifP => sA [<- _ _].
+      by case_step_tag eB B'; apply: HB eB.
+    by case_step_tag eA A'; apply: HA eA.
   Qed.
 
   Lemma vars_tree_big_and r0:
@@ -202,9 +200,7 @@ Section vars_tree.
       by apply/fsubset_trans/vars_tree_step_sub/eA.
     rewrite 2!fsubUset -andbA !push.
     move=> /and3P[vA vB0 vB] vs.
-    case eA: step => [[fvA rA] A']/=; case: ifP => H.
-      destruct rA => //=; have [[??] sA]:= step_success eA; subst.
-      move=> [<- ??]; subst.
+    case: ifP => sA/=[<- _ <-]/=.
       case eB: step => [[fvB rB] B']/=.
       rewrite 2!fsubUset (HB _ _ _ _ _ _ _ eB)//=; last by apply: vars_sigma_get_subst.
       split => /=; last first.
@@ -213,7 +209,8 @@ Section vars_tree.
         by apply/fsubset_trans/vars_tree_step_sub/eB.
       case: ifP => _; apply/fsubset_trans/vars_tree_step_sub/eB => //.
       by apply/fsubset_trans/vA/vars_tree_cutl.
-    move=> [<-??]; subst => /=; rewrite 2!fsubUset (HA _ _ _ _ _ _ _ eA)//=.
+    case eA: step => [[fvA rA] A']/=.
+    rewrite 2!fsubUset (HA _ _ _ _ _ _ _ eA)//=.
     by apply/andP; rewrite -andbA; apply/and3P; split; apply/fsubset_trans/vars_tree_step_sub/eA.
   Qed.
 
@@ -254,14 +251,13 @@ Section vars_tree.
       by move=> ??????>; rewrite !push; case: ifP => /=; case: step => [[?[]]]//.
       by move=> ??????>; rewrite !push; case: ifP => /=; case: step => [[?[]]]//.
     move=> A HA B0 B HB C fv fv' s.
-    rewrite!push; case eA: step => [[?[]] A']//=.
-      by move=> [_ <-]/=; rewrite !fsetSU//; apply: HA eA.
-    have [[??] _] := step_success eA; subst.
-    case eB: step => [[?[]]]//=[_ <-]/=.
-    rewrite !fsubUset fsubsetU//=.
-      rewrite fsubsetU//=; first by rewrite fsubsetUr.
-      by rewrite fsubsetU//(HB _ _ _ _ eB)orbT.
-    by rewrite fsubsetU//=vars_tree_cutl.
+    rewrite!push.
+    case: ifP => sA [_ + <-]; case_step_tag X S => //= _.
+      rewrite !fsubUset fsubsetU//=.
+        rewrite fsubsetU//=; first by rewrite fsubsetUr.
+        by rewrite fsubsetU//(HB _ _ _ _ X)orbT.
+      by rewrite fsubsetU//vars_tree_cutl.
+    by rewrite !fsetSU//; apply: HA X.
   Qed.
     
 

@@ -361,15 +361,13 @@ Qed.
     - by move=> s1 B HB s sv /= kB; rewrite !push is_ko_step//=; auto. *)
     - move=> A HA B0 B HB s sv /=.
       rewrite !push/= => /orP[].
-        move=> /(HA s sv); case eA: step => [[sv'[]] A']//= []//; auto => cC.
-        - by rewrite cC /=; left.
-        - by rewrite cC /=; left.
-        rewrite success_has_cut// in cC.
-        by rewrite !(step_success eA).
+        move=> cA; rewrite has_cut_success//=.
+        by have [->|] := HA s sv cA; auto.
       case/andP=> cB0 cB.
-      case eA: step => [[sv'[]]C]/=; rewrite ?cB ?cB0 ?orbT; auto.
-      move: (HB (get_subst s C) sv' cB).
-      by case: step => [[?[]] D] => -[]//=; auto => ->; rewrite orbT; left.
+      move: (HB (get_subst s A) sv cB).
+      case: ifP => sA/=; rewrite cB0/=.
+        by move=> [->|->]; rewrite ?orbT; auto.
+      by rewrite cB; rewrite orbT; auto.
   Qed.
 
   Lemma step_keep_cut A s sv: 
@@ -390,28 +388,18 @@ Qed.
       rewrite !fun_if => /[dup] Hx ->; do 2 case: ifP => //=.
       by move=> Hy Hz; rewrite step_keep_cut in Hz.
     - by rewrite !push; move=> /HB/=->.
-    - 
-      (* move=>/orP[]. *)
-        (* by move=>kA; rewrite is_ko_step//=kA//. *)
-      rewrite !push.
-      case sA: success =>/and3P[H1 H2 H3]/=.
-        have scA: success (cutl A) by rewrite success_cut.
-        rewrite success_step//=.
-        rewrite [success _]fun_if scA sA if_same.
-        (* rewrite //= !if_same/=. *)
-        rewrite HB//=.
+    - rewrite !push.
+      case: ifP => sA/=/and3P[H1 H2 H3].
+        rewrite [success _]fun_if success_cut if_same sA HB//.
         case: ifP => CB.
-          by rewrite next_alt_cutl eqxx/= no_free_alt_cutl// orbT/=.
+          by rewrite next_alt_cutl eqxx/= no_free_alt_cutl// orbT.
         rewrite H3.
         move/orP: H1 => [|->]; last by rewrite orbT//.
         move=> /andP[-> /step_keep_cut->]//.
       case fA: (failed A).
         by rewrite failed_step//=sA H3 H1 H2.
       move: H1 H3; rewrite (next_alt_not_failed fA)//=.
-      rewrite [snd _]fun_if/=.
-      case: ifP => /= H1 + H3; rewrite ?H2 H3 !orbT !andbT.
-        move: H1; case eA: step => [[?[]]A']//=.
-        by rewrite (step_success eA) in sA.
+      move=> + ->; rewrite H2 !orbT !andbT.
       move=> /orP[|/HA->]; last by rewrite !orbT.
       by move=> /andP[->->]; rewrite !orbT.
   Qed.

@@ -213,11 +213,10 @@ Section clean_ca.
         move=> [<-]/=.
         rewrite !clean_ca_add_ca//.
       case W: next_alt => //[B0'] [<-]/=.
-      rewrite //cat0s.
       rewrite !clean_ca_add_ca//.
     - move=> vB sB.
       case X: next_alt => //[B'][<-]/=.
-      rewrite //=cat0s clean_ca_add_ca//.
+      rewrite //= clean_ca_add_ca//.
     - move=> /[!success_and] /andP[vA] +/andP[sA sB].
       rewrite sA/= => vB.
       case X: (next_alt _ B) => [B'|].
@@ -321,7 +320,6 @@ Section clean_ca.
       by [].
     - rewrite !push => /[!failed_or_None] -[<-<-<-] fB vB.
       case eB: step => [[fvb rB] B']/=.
-      rewrite !cat0s/=.
       case X: t2l => //=[[s' [|[a' ca'] gs]] xs]//= [?????]; subst.
       rewrite size_cat addnK//.
       rewrite clean_ca_cat take_size_cat; last by rewrite clean_ca_size.
@@ -336,24 +334,23 @@ Section clean_ca.
         by rewrite clean_ca_goals_nil take_size clean_ca_add_ca1.
       by move: H2; destruct rB => //= -[<-]//.
     - rewrite !push failed_and.
-      case eA: step => [[fva ra] A']/=.
-      case eB: step => [[fvb rb] B']/=.
+      (* case eA: step => [[fva ra] A']/=.
+      case eB: step => [[fvb rb] B']/=. *)
       case fA: failed => //= ++ /andP[vA].
-      case: (ifP (success A)) => //=[sA + fB vB|sA + _ /eqP?]; subst.
+      case: ifP => [sA + fB vB|sA + _ /eqP?] => -[???]; subst.
         rewrite (success_t2l empty)//= catl0.
         rewrite clean_ca_cat.
         set ml:= map _ _.
         have [s2[x[xs H1]]] := [elaborate failed_t2l vB fB (get_subst s A) (ml ++ bt)].
         rewrite H1/=.
-        move: eA; rewrite success_step// => -[???]; subst => /=.
-        move=> [???]; subst => -[?+?]; subst.
+        case eB: step => [[fvb rb] B']/=[?+?]; subst => /=.
         case: x H1 => //-[[|?] ca' gs]//= H [??]; subst.
         have /={HA HB} := HB _ _ _ _ _ _ _ _ _ _ eB fB vB.
         move=> /(_ (ml ++ bt)); rewrite H => /= /(_ _ _ _ _ erefl).
         case: ifP => cbr/=[].
-          destruct r' => //= + [?]; subst.
+          destruct rb => //= + [?]; subst.
           rewrite t2l_cutl//= cat0s catl0 cats0.
-          have [x[tl]]:= s2l_CutBrothers (get_subst s A') (ml++bt) vB eB.
+          have [x[tl]]:= s2l_CutBrothers (get_subst s A) (ml++bt) vB eB.
           rewrite H => -[[????]][H1 H2]; subst.
           by rewrite !H1 take0/= => -[<-].
         move=> + [??]; subst.
@@ -372,28 +369,27 @@ Section clean_ca.
       case: x H => //=.
         move=> H; exfalso.
         by apply: s2l_empty_hdF H.
-      move=> [[] ca' gs]//= H + [????]; subst.
+      case eA: step => [[fva ra] A']/=.
+      move=> [[] ca' gs]//= H [????]; subst.
       rewrite seq2goals_cat !seq2goalsK.
       have /={HA HB} := HA _ _ _ _ _ _ _ _ _ _ eA fA vA.
       move=> /(_ bt); rewrite H/= => /(_ _ _ _ _ erefl).
       move=> [H2].
-      case: ifP => scr.
-        destruct ra => //= -[?[???]]; subst.
+      case: ifP => scr [??]; subst.
         have [x[tl]]:= s2l_CutBrothers s bt vA eA.
         rewrite H => -[[????]][H3 H4]; subst.
         rewrite drop0 take0/=H3/= cat0s cats0 t2l_big_and//=.
         by rewrite (step_cb_same_subst1 vA eA).
-      move=> [??]; subst.
       have [[[? Hx] fA']] := s2l_Expanded_cut vA eA H; subst.
-      move=> Hz/=[???]; subst => /=.
+      (* move=> Hz/=[???]; subst => /=. *)
       move: H2; rewrite (what_I_want (valid_tree_step vA eA))/=.
       have/= [s0[x[xs' Hy]]] := failed_t2l (valid_tree_step vA eA) fA' s bt.
-      move: Hz; rewrite Hy => -[???]; subst => /=.
-      rewrite seq2alts_cat !seq2altsK size_cat addnK drop_size_cat//.
-      rewrite add_deep_cat take_size_cat; last by rewrite size_add_deep.
-      rewrite t2l_big_and/= seq2altsK => Hw.
-      rewrite size_cat addnK clean_ca_cat take_size_cat//.
-      rewrite clean_ca_size//.
+      rewrite Hy => H1 [???]; subst => /=.
+      rewrite seq2alts_cat !seq2altsK !size_cat addnK add_deep_cat.
+      rewrite take_size_cat; last by rewrite size_add_deep.
+      rewrite drop_size_cat// addnK t2l_big_and/=.
+      rewrite clean_ca_cat take_size_cat; last by rewrite clean_ca_size.
+      by rewrite seq2altsK.
   Qed.
 
   Lemma next_callS_s2l fv A s3 s1 bt q gl a ign:
@@ -432,16 +428,16 @@ Section clean_ca.
       rewrite clean_ca_goals_add_ca_goal1.
       by rewrite !catA.
     - move=> /[!failed_or_None] fB vB.
-      rewrite !push cat0s/=.
+      rewrite !push/=.
       rewrite clean_ca_add_ca1 => X.
       rewrite -(@clean_ca_nil (t2l B sm [::])) in X.
       have [{}HB H]:= HB sm no_alt _ _ _ _ _ fv fB vB X.
       rewrite clean_ca_nil in HB.
-      by rewrite H HB/= cat0s clean_ca_add_ca1//.
+      by rewrite H HB/= clean_ca_add_ca1//.
     - rewrite failed_and; case fA: failed => //= + /andP[vA].
       rewrite !push/=.
-      case eA: step => [[fvA rA] A']/=.
       case eB: step => [[fvB rB] B']/=.
+      case eA: step => [[fvA rA] A']/=.
       case: ifP => /=[sA fB vB |sA _ /eqP?]; subst.
         move: eA; rewrite success_step// => -[???]; subst => /=.
         rewrite (success_t2l empty)//=.

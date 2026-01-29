@@ -452,7 +452,6 @@ Section NurValidState.
       set stl := t2l B sm [::].
       have:= HB _ _ vB.
       fold stl => H.
-      rewrite //=cat0s.
       apply: valid_ca_add_ca_deep.
       apply: H.
     - move=> /andP[vA].

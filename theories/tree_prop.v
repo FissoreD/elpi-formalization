@@ -3,6 +3,9 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import lang tree.
 From det Require Import zify_ssreflect.
 
+Ltac case_step_tag X A := let fv := fresh "_fv" in case X : step => [[fv []] A].
+Tactic Notation "case_step_tag" ident(X) ident(A) := case_step_tag X A.
+
 Section RunP.
   (* Variable u: Unif.
   Variable p : program.
@@ -23,11 +26,8 @@ Section RunP.
     elim: A s => //; try by do 2 eexists.
     + move=> A HA s1 B HB s /= sA; rewrite HA//.
     + move=> s B HB/= _ /[!success_or_None] sB; rewrite HB//.
-    + move=> A HA B0 B HB s /=/[!success_and]/andP[sA sB]; rewrite HA//HB//.
+    + move=> A HA B0 B HB s /=/[!success_and]/andP[sA sB]; rewrite sA HB//.
   Qed.
-
-  Ltac case_step_tag X A := let fv := fresh "_fv" in case X : step => [[fv []] A].
-  Tactic Notation "case_step_tag" ident(X) ident(A) := case_step_tag X A.
 
   Lemma step_success u p fv fv' {s1 A B}: 
     step u p fv s1 A = (fv', Success, B) -> ((fv' = fv) * (B = A) * (success A))%type.
@@ -40,10 +40,9 @@ Section RunP.
     + move=> s B HB ?? s1 C/=.
       by case_step_tag X B1 => //=-[??]; subst; rewrite success_or_None !(HB _ _ _ _ X).
     + move=> A HA B0 B HB s1 ?? C /=.
-      case_step_tag X A1 => //=; case_step_tag Y B1 => //= -[??]; subst.
-      rewrite success_and.
-      have [[??]->] := HA _ _ _ _ X; subst.
-      by rewrite !(HB _ _ _ _ Y).
+      case sA: success; case_step_tag X A1 => //= -[??]; subst; rewrite success_and sA.
+        by rewrite !(HB _ _ _ _ X).
+      by rewrite !(HA _ _ _ _ X) in sA.
   Qed.
 
   Ltac push := rewrite !push.
@@ -60,11 +59,11 @@ Section RunP.
       by case: ifP => dA /= [e + <-]{C}/=; do [case_step_tag S B1] in e * => //; subst; rewrite failed_or_None !(HB _ _ _ _ S).
     + move=> A HA B0 B HB ?? s1 C /=.
       rewrite failed_and.
+      case: ifP => sA.
+        rewrite success_failed//=.
+        by case_step_tag Y B1 => //= -[??]; subst; rewrite !(HB _ _ _ _ Y).
       case_step_tag X A1 => //=.
-        by move=> -[??]; subst; rewrite !(HA _ _ _ _ X).
-      case_step_tag Y B1 => //= -[??]; subst.
-      rewrite !(step_success X) in Y *.
-      by rewrite !(HB _ _ _ _ Y) orbT.
+      by move=> -[??]; subst; rewrite !(HA _ _ _ _ X).
   Qed.
 
   Lemma next_alt_None_failed {A}: 
@@ -135,9 +134,8 @@ Section RunP.
     + move=> A HA B0 B HB s/=.
       rewrite failed_and.
       case X: failed => /=.
-        move=>_; rewrite HA => //.
-      move=>/andP[sA fB].
-      by rewrite success_step//HB.
+        by move=>_; rewrite HA// failed_success.
+      move=>/andP[sA fB]; rewrite sA HB//.
   Qed. 
 
   Lemma step_not_failed u p fv s1 A r:
@@ -148,11 +146,9 @@ Section RunP.
     - move=> A HA s B HB s1/=; have:= HA s1; case_step_tag X B1 => //=.
     - move=> s B HB s1/= /[!failed_or_None] ; have:= HB s; case_step_tag X B1 => //=.
     - move=> A HA B0 B HB s1/=/[!failed_and].
-      have:= HA s1.
-      case_step_tag X A1 => //=; only 1,2: by move=> H/H->; rewrite (step_not_solved X).
-      move=> /(_ notF)->//=.
-      have [[-> <-] ->]:= (step_success X); subst.
-      by rewrite 2!push /= => /HB.
+      case: ifP => sA/=.
+        by rewrite success_failed//; have:= HB (get_subst s1 A); case: step => [[?[]]]//=.
+      by have:= HA s1; case_step_tag X A1 => //=->.
   Qed.
 
   (********************************************************************)
@@ -293,6 +289,9 @@ Section RunP.
     get_subst s1 (big_and A) = s1.
   Proof. elim: A => //. Qed.
 
+  Lemma get_subst_and_big_and s1 A B C: get_subst s1 (And A B (big_and C)) = get_subst s1 A.
+  Proof. by rewrite get_subst_and get_substS_big_and if_same. Qed.
+
   Lemma run_success1 u p fv A s: 
     success A -> run u p fv s A (Some (get_subst s A)) ((next_alt true A)) false fv.
   Proof.
@@ -345,11 +344,9 @@ Section RunP.
       by case: t => [|c]/=; [congruence|rewrite push].
       by push; case: step => [[?[]]]//.
       by push; case: step => [[?[]]]//.
-    rewrite!push; case eA: step => [[?[]] A']//=.
-      move=> [<- _]; by apply: HA eA.
-    have [[??] _] := step_success eA; subst.
-    case eB: step => [[?[]]]//=[<- _].
-    by apply: HB eB.
+    case: ifP => sA; rewrite !push => -[<-].
+      case_step_tag eB X => //= _ _; apply: HB eB.
+    case_step_tag eA A' => //= _ _; apply: HA eA.
   Qed.
 
 End RunP.

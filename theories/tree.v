@@ -61,7 +61,7 @@ Section tree_op.
 
 
   (*SNIP: get_end*)
-  Fixpoint get_end s A :=
+  Fixpoint get_end s A : Sigma * tree:=
     match A with
     | TA _ | KO | OK => (s, A)
     | Or None s1 B => get_end s1 B
@@ -79,7 +79,7 @@ Section tree_op.
   (*ENDSNIP: get_subst*)
 
   (*SNIP: path_end*)
-  Definition path_end A := (get_end empty A).2.
+  Definition path_end A := (get_end empty A).2. (*empty is the empty subst*)
   (*ENDSNIP: path_end*)
 
   (*SNIP: succ_path*)
@@ -204,11 +204,10 @@ Section main.
           let: (fv, tB, rB) := (step fv sB B) in
           (fv, if is_cb tB then Expanded else tB, Or A sB rB)
     | And A B0 B =>
-        let: (fv, tA, rA) := step fv s A in
-        if is_sc tA then 
-          let: (fv, tB, rB) := (step fv (get_subst s rA) B) in
+        if success A then 
+          let: (fv, tB, rB) := (step fv (get_subst s A) B) in
           (fv, tB, And (if is_cb tB then cutl A else A) B0 rB)
-        else (fv, tA, And rA B0 B)
+        else let: (fv, tA, rA) := step fv s A in (fv, tA, And rA B0 B)
     end.
 
   (* Next_alt takes a tree "T" returns a new tree "T'" representing the next
