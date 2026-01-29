@@ -150,17 +150,12 @@ Section valid_tree.
   Lemma valid_tree_run s1 fv A s2 B b fv':
     valid_tree A -> run u p fv s1 A s2 B b fv' -> valid_tree (odflt A B).
   Proof.
-    move=> + H; elim: H; clear => //=.
-    + move=> s1 s2 A B fv sA _ <- vA.
-      case X: next_alt => [B'|]//=.
+    move=> + H.
+    elim_run H => vA; only 2, 3: destruct r => //=.
+    + case X: next_alt => [B'|]//=.
       by rewrite (valid_tree_next_alt vA X); auto.
-    + move=> s1 s2 [r|]// A B n fv fv' ? eA rB IH vA; subst.
-      apply: IH (valid_tree_step vA eA).
-    + move=> s1 s2 [r|] A B n fv fv' ? eA rB IH vA//; subst.
-      apply: IH (valid_tree_step vA eA).
-    + move=> s1 s2 A B [r|] n fv fA ? + rB + vA; subst.
-      move=> /(valid_tree_next_alt vA) vB /(_ vB)//.
-    + move=> //.
+    + by apply: IH (valid_tree_step vA eA).
+    + by apply: IH (valid_tree_next_alt vA nA).
   Qed.
 (*END*)
 

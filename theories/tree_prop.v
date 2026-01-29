@@ -233,20 +233,12 @@ Section RunP.
     Lemma run_same_structure u p fv1 fv2 s A s1 r n:
       run u p fv1 s A s1 r n fv2 -> same_structure A (odflt A r).
     Proof.
-      elim; clear => //.
-      - move=> s1 s2 A B ? sA _ <-/=.
-        case X: next_alt => [B'|]/=; subst; move: X => //.
+      move=> H.
+      elim_run H; only 2, 3: destruct r => //=.
+      - case X: next_alt => [B'|]/=; subst; move: X => //.
         by move=> /next_alt_same_structure//.
-      - move=> s1 s2 r A B n ??? /step_same_structure/= + _.
-        destruct r => //=.
-        apply: same_structure_trans.
-      - move=> s1 s2 r A B n ??? /step_same_structure/= + _.
-        destruct r => //=.
-        apply: same_structure_trans.
-      - move=> s1 s2 A B oB r n ??.
-        move=> /next_alt_same_structure + _.
-        destruct oB => //=.
-        apply: same_structure_trans.
+      - apply: same_structure_trans (step_same_structure eA) IH.
+      - apply: same_structure_trans (next_alt_same_structure nA) IH.
     Qed.
   End same_structure.
 
@@ -306,44 +298,6 @@ Section RunP.
     by apply: run_done.
   Qed.
 
-  Lemma run_success u p fv A s1 s2 r n fv1: 
-    success A -> run u p fv s1 A s2 r n fv1 -> [/\ s2 = Some (get_subst s1 A), r = (next_alt true A), fv1 = fv & n = false].
-  Proof.
-    move=> sA H; have:= success_step u p fv s1 sA.
-    inversion H; clear H; try congruence; subst; rewrite success_step//; rewrite failed_success in sA => //=.
-    by rewrite next_alt_None_failed.
-  Qed.
-
-  Lemma run_consistent u p fv s A s1 B s2 C n1 n2 fv1 fv2:
-    run u p fv s A s1 B n1 fv1 -> run u p fv s A s2 C n2 fv2 -> [/\ (s2 = s1), (C = B), fv2 = fv1 & (n2 = n1)].
-  Proof.
-    move=> H; elim: H s2 C n2; clear.
-    + move=> s1 _ A _ ? sA <-<- s3 C n2 H; subst.
-      by apply: run_success sA H.
-    + move=> s1 s2 r A B n1 ??? HA HB IH s4 r' n2 H.
-      inversion H; clear H; try congruence; subst.
-      - by rewrite success_step in HA.
-      - move: H0; rewrite HA => -[??]; subst.
-        by case: (IH _ _ _ H1); subst.
-      - by rewrite failed_step in HA.
-      - by rewrite (failed_step _ _ _ _ (next_alt_None_failed _)) in HA.
-    + move=> s1 s2 r A B n1 ??? HA HB IH s4 r' n2 H.
-      inversion H; clear H; try congruence; subst.
-      - by rewrite success_step in HA.
-      - move: H0; rewrite HA => -[??]; subst; by case: (IH _ _ _  H1); subst.
-      - by rewrite failed_step in HA.
-      - by rewrite (failed_step _ _ _ _ (next_alt_None_failed _)) in HA.
-    + move=> s1 s2 A B r n1 ?? fA nB rB IH s3 C n2 H.
-      inversion H; clear H; try congruence; subst; try by rewrite failed_step in H0.
-        by rewrite success_failed in fA.
-      move: H1; rewrite nB => -[?]; subst.
-      by apply: IH.
-    + move=> s1 A ? nA s2 C n2 H.
-      have fA:= next_alt_None_failed nA.
-      inversion H; subst; try congruence; try rewrite //failed_step// in H0.
-      by rewrite success_failed in fA.
-  Qed.
-
   Lemma tree_fv_step_cut u p A R fv fv' s:
     step u p fv s A = (fv', CutBrothers, R) -> fv' = fv.
   Proof.
@@ -354,6 +308,72 @@ Section RunP.
     case: ifP => sA; rewrite !push => -[<-].
       case_step_tag eB X => //= _ _; apply: HB eB.
     case_step_tag eA A' => //= _ _; apply: HA eA.
+  Qed.
+
+  Lemma path_atom_or_Some A sm B: path_atom (Or (Some A) sm B) = path_atom A.
+  Proof. by rewrite/path_atom path_end_or_Some. Qed.
+
+  Lemma path_atom_or_None sm B: path_atom (Or None sm B) = path_atom B.
+  Proof. by rewrite/path_atom path_end_or_None. Qed.
+
+  Lemma path_atom_and A B0 B: path_atom (And A B0 B) = if success A then path_atom B else path_atom A.
+  Proof. rewrite/path_atom path_end_and; case: ifP => //. Qed.
+
+
+  Lemma path_atom_exp_cut u p A fv s r:
+    path_atom A -> step u p fv s A = r -> r.1.2 = CutBrothers \/ r.1.2 = Expanded.
+  Proof.
+    move=> + <-{r}.
+    elim_tree A fv s => //=.
+    - destruct t; auto; rewrite push; auto.
+    - move=> /[!path_atom_or_Some] pA; rewrite !push/=.
+      have [] := HA fv s pA; case_step_tag eA A' => //=; auto.
+    - move=> /[!path_atom_or_None] pA; rewrite !push/=.
+      have [] := HB fv sm pA; case_step_tag eA A' => //=; auto.
+    - move=> /[!path_atom_and]; case: ifP => sA pH; rewrite !push/=.
+        by apply: HB.
+      by apply: HA.
+  Qed.
+
+  Lemma path_atom_cut u p A fv s fv' A':
+    step u p fv s A = (fv', CutBrothers, A') -> path_atom A.
+  Proof.
+    elim_tree A fv s fv' A' => /=; rewrite !push.
+    - by case_step_tag eA A2 => //=.
+    - by case_step_tag eA A2 => //=.
+    - case: ifP=> sA; case_step_tag eA A2 => //= -[??]; subst; rewrite path_atom_and sA.
+        apply: HB eA.
+      apply: HA eA.
+  Qed.
+
+  Lemma path_atom_exp u p A fv s fv' A':
+    step u p fv s A = (fv', Expanded, A') -> path_atom A.
+  Proof.
+    elim_tree A fv s fv' A' => /=; rewrite !push.
+    - case_step_tag eA A2 => //=-[??]; subst; rewrite path_atom_or_Some.
+        apply: HA eA.
+      apply: path_atom_cut eA.
+    - case_step_tag eA A2 => //=-[??]; subst; rewrite path_atom_or_None.
+        apply: HB eA.
+      apply: path_atom_cut eA.
+    - case: ifP=> sA; case_step_tag eA A2 => //= -[??]; subst; rewrite path_atom_and sA.
+        apply: HB eA.
+      apply: HA eA.
+  Qed.
+
+  Definition rew_pa:= 
+    (
+      path_atom_or_None, path_atom_or_Some,path_atom_and,
+      success_or_None, success_or_Some, success_and,
+      failed_or_None, failed_or_Some, failed_and
+    ).
+
+  Lemma path_atom_next_alt_id b A: path_atom A -> next_alt b A = Some A.
+  Proof.
+    elim_tree A b => /=; rewrite ?rew_pa.
+    - move=> /HA->//.
+    - move=> /HB->//.
+    - case: ifP => [sA /HB->|]// sA /path_atom_failed->//.
   Qed.
 
 End RunP.

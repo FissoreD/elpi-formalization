@@ -519,16 +519,10 @@ Qed.
   Proof.
     rewrite/is_det.
     move=> H1 H2 b s sv s' B ? H3.
-    elim: H3 H2; clear -H1 => //.
-    - move=> s1 s2 A B _ sA _ <- fA.
-      have:= build_na_is_dead fA sA.
-      case: next_alt => //=.
-    - move=> s1 s2 r A B n sv sv' ? eA rB IH fA.
-      by apply/IH/(step_no_free_alt H1 fA eA).
-    - move=> s1 s2 r A B n sv sv' ? eA rB IH fA.
-      by apply/IH/(step_no_free_alt H1 fA eA).
-    - move=> s1 s2 A B r n sv ? fA nA H IH FA.
-      by apply/IH/no_free_alt_next_alt/nA.
+    elim_run H3 H1 H2.
+    - apply: build_na_is_dead H2 SA.
+    - by apply/IH/(step_no_free_alt H1 H2 eA).
+    - by apply/IH/no_free_alt_next_alt/nA.
   Qed.
 
   Lemma main {sP t}:

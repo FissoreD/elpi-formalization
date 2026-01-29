@@ -90,6 +90,10 @@ Section tree_op.
   Definition failed A := path_end A == KO.
   (*ENDSNIP: failed_path*)
 
+  (*SNIP: path_atom*)
+  Definition path_atom A := match path_end A with TA _ => true | _ => false end.
+  (*ENDSNIP: path_atom*)
+
   (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
     match A with
@@ -112,8 +116,23 @@ Section tree_op.
     by case: ifP => //=; rewrite !HB.
   Qed.
 
+  Lemma path_end_or_Some A s B: path_end (Or (Some A) s B) = path_end A.
+  Proof. by rewrite/path_end path_endP. Qed.
+
+  Lemma path_end_or_None s B: path_end (Or None s B) = path_end B.
+  Proof. by rewrite/path_end/= path_endP. Qed.
+
+  Lemma path_end_and A B0 B: path_end (And A B0 B) = if success A then path_end B else path_end A.
+  Proof. rewrite /success/path_end/=push !fun_if !path_endP; case: get_end => //=; case: path_end => //. Qed.
+
   Lemma failed_success A: failed A -> success A = false.
   Proof. by rewrite/failed/success => /eqP->. Qed.
+
+  Lemma success_path_atom A: success A -> path_atom A = false.
+  Proof. by rewrite/success/path_atom => /eqP->. Qed.
+
+  Lemma path_atom_failed A: path_atom A -> failed A = false.
+  Proof. by rewrite/path_atom/failed; case: path_end. Qed. 
 
   Lemma success_failed A: success A -> failed A = false.
   Proof. by apply: contraTF => /failed_success ->. Qed.
@@ -258,8 +277,7 @@ Section main.
                     option Sigma -> option tree -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig*)
     | run_done s1 s2 A B fv       : success A -> get_subst s1 A = s2 -> (next_alt true A) = B -> run fv s1 A (Some s2) B false fv
-    | run_cut  s1 s2 r A B n fv0 fv1 fv2 : step p fv0 s1 A = (fv1, CutBrothers, B) -> run fv1 s1 B s2 r n fv2 -> run fv0 s1 A s2 r true fv2
-    | run_step s1 s2 r A B n fv0 fv1 fv2 : step p fv0 s1 A = (fv1, Expanded,    B) -> run fv1 s1 B s2 r n fv2 -> run fv0 s1 A s2 r n fv2
+    | run_step  s1 s2 r A B b1 b2 fv0 fv1 fv2 st: path_atom A -> step p fv0 s1 A = (fv1, st, B) -> b2 = (st == CutBrothers) || b1 -> run fv1 s1 B s2 r b1 fv2 -> run fv0 s1 A s2 r b2 fv2
     | run_fail s1 s2 A B r n fv0 fv1    : 
           failed A -> next_alt false A = Some B ->
               run fv0 s1 B s2 r n fv1 -> run fv0 s1 A s2 r n fv1
@@ -280,7 +298,7 @@ End main.
 
 Ltac elim_run T X := revert X; elim: T; clear; 
   [move=> s1 s2 A B fv SA sA sB |
-    move=>s1 s2 r A B n fv0 fv1 fv2 eA rB IH|move=> s1 s2 r A B n fv0 fv1 fv2 eA rB IH|
+    move=>s1 s2 r A B b1 b2 fv0 fv1 fv2 st pA eA ? rB IH|
     move=>s1 s2 A B r n fv0 fv1 fA nA rB IH |move=> s1 A fv nA ]; intros X; subst => //; auto.
 Tactic Notation "elim_run" hyp(T) hyp_list(X) := elim_run T X.
 
