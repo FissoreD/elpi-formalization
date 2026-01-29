@@ -63,28 +63,29 @@ Definition r2l a : goals := seq2goals [seq a2g x | x <- a].
   *)
 (*SNIP: t2l*)
 Fixpoint t2l (A: tree) s (bt : alts) : alts :=
-match A with
-| OK           => [:: (s, [::]) ]
-| KO           => [::]
-| TA a         => [:: (s, [:: (a,[::]) ]) ]
-| Or A s1 B    =>
-    let lB := t2l B s1 [::] in
-    let lA := if A is Some A then t2l A s lB else [::] in
-    add_ca_deep bt (lA ++ lB)
-| And A B0 B   =>
-    let lB0 : goals := r2l B0 in
-    let lA  := t2l A s bt in
-    if lA is [:: (slA, x) & xs] then 
-      (* the reset point exists, it has to be added to all cut-to alternatives *)
-      let xz := add_deepG bt lB0 x in
-      let xs := add_deep bt lB0 xs in 
-      (* each alt in xs must have lB0 has rightmost conjunct  *)
-      let xs := map (catr lB0) xs in
-      (* xs are alternatives that should be added in the deep cuts in B *)
-      let lB := t2l B slA (xs ++ bt) in
-      (* lB are alternatives, each of them have x has head *)
-      (map (catl xz) lB) ++ xs
-    else [::]
+  match A with
+  | OK           => [:: (s, [::]) ]
+  | KO           => [::]
+  | TA a         => [:: (s, [:: (a,[::]) ]) ]
+  | Or None s1 B => add_ca_deep bt (t2l B s1 [::])
+  | Or (Some A) s1 B    =>
+      let lB := t2l B s1 [::] in
+      let lA := t2l A s lB in
+      add_ca_deep bt (lA ++ lB)
+  | And A B0 B   =>
+      let lB0 := r2l B0 in
+      let lA  := t2l A s bt in
+      if lA is [:: (slA, x) & xs] then 
+        (* the reset point exists, it has to be added to all cut-to alternatives *)
+        let xz := add_deepG bt lB0 x in
+        let xs := add_deep bt lB0 xs in 
+        (* each alt in xs must have lB0 has rightmost conjunct  *)
+        let xs := map (catr lB0) xs in
+        (* xs are alternatives that should be added in the deep cuts in B *)
+        let lB := t2l B slA (xs ++ bt) in
+        (* lB are alternatives, each of them have x has head *)
+        (map (catl xz) lB) ++ xs
+      else [::]
 end.
 (*ENDSNIP*)
 
