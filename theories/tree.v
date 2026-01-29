@@ -225,18 +225,18 @@ Section main.
     | OK => if b then None else Some OK
     | TA _ => Some A
     | And A B0 B =>
-      let build_B0 A := Some (And A B0 (big_and B0)) in
+      let build_B0 A := And A B0 (big_and B0) in
       if success A then
         match next_alt b B with
-        | None => obind build_B0 (next_alt true A)
+        | None => omap build_B0 (next_alt true A)
         | Some B => Some (And A B0 B)
         end
-      else if failed A then obind build_B0 (next_alt false A) 
+      else if failed A then omap build_B0 (next_alt false A) 
       else Some (And A B0 B)
-    | Or None sB B => omap (fun x => (Or None sB x)) (next_alt b B)
+    | Or None sB B => omap (fun x => Or None sB x) (next_alt b B)
     | Or (Some A) sB B =>
         match next_alt b A with
-        | None => obind (fun x => Some (Or None sB x)) (next_alt false B)
+        | None => omap (fun x => Or None sB x) (next_alt false B)
         | Some nA => Some (Or (Some nA) sB B)
        end
   end.
