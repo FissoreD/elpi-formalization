@@ -65,12 +65,9 @@ Section check.
     | KO => true
     | OK => false
     | And A B0 B => has_cut A || (has_cut_seq B0 && has_cut B)
-    | Or _ _ _ => is_ko A
+    | Or _ _ _ => false
     end.
 
-
-  Lemma has_cut_cut {B}: has_cut (cutr B).
-  Proof. by []. Qed.
 
   Fixpoint det_tree_seq sP L :=
     match L with
@@ -93,24 +90,20 @@ Section check.
     | TA (call a) => tm_is_det sP a
     | KO | OK => true
     | And A B0 B =>
-      (is_ko A) || 
         [&& (((next_alt (success A) A == None) || (has_cut_seq B0)) && has_cut B) || det_tree sP A, 
           det_tree sP B & ((next_alt (success A) A == None) || det_tree_seq sP B0)]
     | Or None _ B => det_tree sP B
     | Or (Some A) _ B =>
         det_tree sP A && 
         if has_cut A then det_tree sP B 
-        else (B == cutr B) 
+        else (B == KO) 
     end.
-
-  Lemma no_alt_cut {sP A}: det_tree sP (cutr A).
-  Proof. by []. Qed.
 
   Lemma has_cut_cutl {A}: has_cut A -> has_cut (cutl A).
   Proof.
     elim_tree A => /=.
-      by move=> /andP[/is_ko_cutl->].
-      by move=> /is_ko_cutl.
+      (* by move=> /andP[/is_ko_cutl->].
+      by move=> /is_ko_cutl. *)
     rewrite fun_if/=.
     case:ifP => // sA.
     move=> /orP[].
@@ -147,12 +140,11 @@ Section check.
 
   Lemma no_free_alt_cutl {sP A}: success A -> det_tree sP (cutl A).
   Proof.
-    elim: A => //=.
-      move=> A HA s B HB/=.
-      case: ifP => dA/= succ; rewrite !(HA,HB,cutr2,eqxx,no_alt_cut,if_same)//=.
-    move=> A HA B0 B HB /=/andP[sA sB].
-    rewrite sA/= HB//HA//= !orbT/= .
-    by rewrite success_cut sA next_alt_cutl orbT.
+    elim_tree A => //=.
+      by case: ifP => dA/= succ; rewrite !(HA,HB,eqxx,if_same)//=.
+      by rewrite success_or_None.
+    rewrite success_and fun_if/= success_cut => /andP[/[dup]/HA->->/HB->].
+    by rewrite orbT next_alt_cutl.
   Qed.
 
   Variable u : Unif.
@@ -349,28 +341,24 @@ Qed.
     has_cut A -> success A = false.
   Proof.
     elim_tree A => //=.
-      by move=> /andP[/is_ko_success].
-      by move=> /is_ko_success.
+    rewrite success_and.
+      (* by move=> /andP[/is_ko_success].
+      by move=> /is_ko_success. *)
     by move=> /orP[/HA->|/andP[+ /HB->]]//; rewrite andbF.
   Qed.
 
   Lemma success_has_cut {A}:
     success A -> has_cut A = false.
-  Proof.
-    elim_tree A => //=.
-      by move=> /success_is_ko->.
-      by move=> /success_is_ko->.
-    by move=> /andP[/HA->/HB->]; rewrite andbF.
-  Qed.
+  Proof. by apply/contraTF => /has_cut_success->. Qed.
 
   Lemma step_has_cut_help sv A s: 
     has_cut A -> has_cut (step u p sv s A).2 \/ is_cb (step u p sv s A).1.2.
   Proof.
     elim: A s sv; try by move=> /=; auto.
     - by move=> []//=; auto.
-    - move=> A HA s1 B HB s sv /=/andP[kA kB].
+    (* - move=> A HA s1 B HB s sv /=/andP[kA kB].
       by rewrite !push is_ko_step //=kA; left.
-    - by move=> s1 B HB s sv /= kB; rewrite !push is_ko_step//=; auto.
+    - by move=> s1 B HB s sv /= kB; rewrite !push is_ko_step//=; auto. *)
     - move=> A HA B0 B HB s sv /=.
       rewrite !push/= => /orP[].
         move=> /(HA s sv); case eA: step => [[sv'[]] A']//= []//; auto => cC.
@@ -398,19 +386,19 @@ Qed.
     elim_tree A s1 => /=.
     - by case: t => [|c]//=; rewrite push => /is_det_no_free_alt->//.
     - move=> /andP[fA]; rewrite !push/= HA//=.
-      case: ifP => //= cA; last first; rewrite /cutr.
-        by move=> /eqP?; subst; rewrite !if_same.
+      case: ifP => //= cA; last by move=> /eqP->; rewrite !if_same.
       rewrite !fun_if => /[dup] Hx ->; do 2 case: ifP => //=.
       by move=> Hy Hz; rewrite step_keep_cut in Hz.
     - by rewrite !push; move=> /HB/=->.
-    - move=>/orP[].
-        by move=>kA; rewrite is_ko_step//=kA//.
+    - 
+      (* move=>/orP[]. *)
+        (* by move=>kA; rewrite is_ko_step//=kA//. *)
       rewrite !push.
       case sA: success =>/and3P[H1 H2 H3]/=.
         have scA: success (cutl A) by rewrite success_cut.
         rewrite success_step//=.
-        rewrite [is_ko _]fun_if [success _]fun_if scA sA if_same.
-        rewrite !success_is_ko//= !if_same/=.
+        rewrite [success _]fun_if scA sA if_same.
+        (* rewrite //= !if_same/=. *)
         rewrite HB//=.
         case: ifP => CB.
           by rewrite next_alt_cutl eqxx/= no_free_alt_cutl// orbT/=.
@@ -418,7 +406,7 @@ Qed.
         move/orP: H1 => [|->]; last by rewrite orbT//.
         move=> /andP[-> /step_keep_cut->]//.
       case fA: (failed A).
-        by rewrite failed_step//=sA H3 H1 H2 orbT.
+        by rewrite failed_step//=sA H3 H1 H2.
       move: H1 H3; rewrite (next_alt_not_failed fA)//=.
       rewrite [snd _]fun_if/=.
       case: ifP => /= H1 + H3; rewrite ?H2 H3 !orbT !andbT.
@@ -437,11 +425,10 @@ Qed.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB /andP[nA +]sA.
-      rewrite success_has_cut///cutr => /eqP?; subst.
+      rewrite success_has_cut// => /eqP?; subst.
       by rewrite HA.
-    - by move=> s B H*; rewrite H//.
-    - move=> A HA l B HB /orPT[].
-        move=> /is_ko_success->//.
+    - by move=> s B /[!success_or_None] H*; rewrite H//.
+    - move=> A HA l B HB /[!success_and].
       move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0]/andP[sA sB].
         rewrite success_has_cut// in cB.
       rewrite success_failed//sA.
@@ -458,8 +445,8 @@ Qed.
   Proof.
     elim_tree A R b => /=.
     - case: t => //= _ [<-]//.
-    - by move=>/andP[kA kB]; rewrite !is_ko_next_alt//.
-    - by move=>/is_ko_next_alt->.
+    (* - by move=>/andP[kA kB]; rewrite !is_ko_next_alt//. *)
+    (* - by move=>/is_ko_next_alt->. *)
     - move=> /orP[].
         move=> cA.
         case: ifP => sA.
@@ -489,18 +476,15 @@ Qed.
     - by move=> _ [<-]//.
     - move=>/andP[fA].
       case nA: next_alt => [A'|].
-        move=> + [<-]/=;rewrite (HA _ _ _ nA)//=/cutr.
+        move=> + [<-]/=;rewrite (HA _ _ _ nA)//=.
         case: ifP => //= cA.
-          rewrite/cutr (has_cut_next_alt _ nA)//.
+          rewrite (has_cut_next_alt _ nA)//.
         by move=> /eqP?; subst; rewrite if_same.
       case nB: next_alt => //=[B']+[<-]/=.
-      case: ifP => [|_ /eqP]; rewrite/cutr => ?; subst => // H.
+      case: ifP => [|_ /eqP] => ?; subst => // H.
       by rewrite (HB _ _ _ nB).
     - by case nB: next_alt => //=[B']H[<-]/=; apply: (HB B' b).
-    - move=>/orP[].
-        move=>kA.
-        by rewrite is_ko_failed// is_ko_success// is_ko_next_alt//.
-      move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
+    - move=> /and3P[/orP[/andP[cB0 cB]|fA] fB fB0].
         case sA: success; rewrite sA in cB0, fB0.
           have:= HB _ b fB.
           case X: next_alt => // [B'|].

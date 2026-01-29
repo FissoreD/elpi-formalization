@@ -58,20 +58,17 @@ Module B.
       move=> []//= A _ l t H1 /andP[/eqP?] /spec_base_and[x?]; subst.
       by exists  (A::l), [::].
     Qed.
-
-    Lemma bbOr_cutr {B}: bbOr (cutr B).
-    Proof. by rewrite/bbOr orbT. Qed.
   End specs.  
 End B.
 
 Lemma spec_bbOr A:
-  reflect (exists X Y, let x := (big_or X Y) in x = A \/ cutr x = A) (B.bbOr A).
+  reflect (exists X Y, A = (big_or X Y) \/ A = KO) (B.bbOr A).
 Proof.
   case X: B.bbOr; constructor.
     move/orP: X => [/B.spec_base_or_aux|+]; first by move=> [?[??]]/=; subst; repeat eexists; eauto.
     by move=> /eqP?; subst; exists [::], [::]; right.
-  move=> [Y [Z]]/=[]?; subst;
-  by rewrite !(B.bbOr_cutr,B.bbOr_big_or) in X.
+  move=> [Y [Z]]/=[]?; subst => //.
+  by rewrite !(B.bbOr_big_or) in X.
 Qed.
 
 (*BEGIN*)
@@ -92,13 +89,7 @@ Section valid_tree.
     end.
 (*ENDSNIP: valid_tree*)
 
-  Goal forall x r , (valid_tree (And (TA cut) x r)) -> is_ko r = false.
-  Proof. move=> x r/= /eqP->; rewrite is_ko_big_and//. Qed.
-
   Lemma valid_tree_big_and l : valid_tree (big_and l).
-  Proof. elim: l => //=. Qed.
-
-  Lemma valid_tree_big_and_cutr l : valid_tree (cutr (big_and l)).
   Proof. elim: l => //=. Qed.
 
   Lemma valid_tree_big_or s l : valid_tree (big_or s l).
@@ -116,13 +107,14 @@ Section valid_tree.
 
   Lemma bbOr_valid {B}:
     B.bbOr B -> valid_tree B.
-  Proof. move=> /spec_bbOr[X[Y /=[]<-]]//; apply: valid_tree_big_or. Qed.
+  Proof. move=> /spec_bbOr[X[Y[] ->]]//; apply: valid_tree_big_or. Qed.
 
   Lemma valid_tree_cut {A}: success A -> valid_tree A -> valid_tree (cutl A).
   Proof.
-    elim: A => //.
-      move=> A HA s B HB => /=sA /andP[vA bB]; rewrite HA//.
-    move=> A HA B0 B HB /= /andP[sA sB] /andP[vA].
+    elim_tree A.
+      move=> /=sA /andP[vA bB]; rewrite HA//.
+      by rewrite success_or_None.
+    move=>/[!success_and]/= /andP[sA sB] /andP[vA].
     rewrite sA/= => vB.
     rewrite success_cut sA HA//HB//=.
   Qed.

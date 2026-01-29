@@ -32,7 +32,7 @@ Section s.
     rewrite next_alt_not_failed//.
   Qed.
 
-  Lemma run_ko_left_Some_None fv fv' s2 X B r r1 b1 sIgn:
+  (* Lemma run_ko_left_Some_None fv fv' s2 X B r r1 b1 sIgn:
     is_ko X ->
     run u p fv sIgn (Or (Some X) s2 B) r r1 b1 fv' <->
     run u p fv sIgn (Or None s2 B) r r1 b1 fv'.
@@ -77,7 +77,7 @@ Section s.
       by apply: run_fail H2; rewrite//=(is_ko_failed, is_ko_next_alt)//nB.
     - move: H0 => /=; case nB: next_alt => //= _.
       by apply: run_dead; rewrite//=(is_ko_failed, is_ko_next_alt)//nB.
-  Qed.
+  Qed. *)
 
   Lemma run_ko_left2 fv fv' s2 B B' r sIgn:
     (exists b1, run u p fv s2 B r B' b1 fv') <->
@@ -85,16 +85,17 @@ Section s.
   Proof.
     split.
       move=> [b1 HB]; elim: HB sIgn; clear.
-      + by move=> > sA <-<- sIgn; apply: run_done.
+      + by move=> > sA <-<- sIgn; apply: run_done; rewrite//success_or_None.
       + by move=> > sB rB IH ign; apply: run_step; first (by rewrite /=sB); apply: IH.
       + by move=> > sB rB IH ign; apply: run_step; first (by rewrite /=sB); apply: IH.
-      + by move=> > fA nA rB IH i; apply: run_fail; rewrite//=nA//.
+      + by move=> > fA nA rB IH i; apply: run_fail; rewrite//=(failed_or_None,nA).
       + by move=> > nA i; apply: run_dead; rewrite//= nA.
     remember (Or _ _ _) as OR eqn:HO.
     remember (omap _ _) as M eqn:HM.
     remember false as F eqn:HF => HB.
     elim: HB s2 B B' HO HM HF; clear.
     + move=> > + <-<- s2 B B' ? + _; subst => /= sB.
+      rewrite success_or_None in sB.
       case nB: next_alt => [B2|]//=; destruct B' => //=.
         by move=> [?]; subst; exists false; apply: run_done.
       by move=> _; exists false; apply: run_done.
@@ -109,6 +110,7 @@ Section s.
     + move=> > ++ rB IH s2 B B' ???; subst => /= fB.
       case nB: next_alt => //[B2][?]; subst.
       have [? {}IH] := IH _ _ _ erefl erefl erefl.
+      rewrite failed_or_None in fB.
       by eexists; apply: run_fail IH.
     + move=> _ > nA s2 B []//? _ _; subst.
       eexists; apply: run_dead => //.
@@ -134,7 +136,7 @@ Section s.
       else forall sX X, 
       run u p fv s1 (Or (Some A) sX X) s2 
         (if A' is Some A' then
-          Some (Or (Some A') sX (if b then cutr X else X))
+          Some (Or (Some A') sX (if b then KO else X))
         else 
           if b then None
           else omap (fun x => Or None sX x) (next_alt false X)) false fv'.
@@ -145,7 +147,7 @@ Section s.
     + move=> s1 s2 r A B n fv0 fv1 fv2 HA HB.
       case: s2 HB => //= [s2|] HB/=.
         move=> + sX X.
-        move=> /(_ sX (cutr X)); rewrite next_alt_cutr cutr2 if_same.
+        move=> /(_ sX KO); rewrite if_same.
         move=> H.
         rewrite if_same/= in H.
         by apply: run_step H; rewrite /=HA.
@@ -153,8 +155,8 @@ Section s.
       destruct n => //=IH sX X; last first.
         apply: run_step.
           by rewrite/= HA.
-        apply: (IH _ (cutr X) _ None).
-        apply: is_ko_run is_ko_cutr.
+        apply: (IH _ KO _ None).
+        by apply: run_dead.
       apply/run_step/IH.
       by rewrite/=HA.
     + move=> s1 s3 r A B n fv0 fv1 fv2 HA HB.
@@ -188,7 +190,7 @@ Section s.
       inversion H; subst; clear H.
       + apply: run_fail => //=; first rewrite nB next_alt_not_failed//.
           by rewrite success_failed.
-        by apply: run_done.
+        by apply: run_done; rewrite//=success_or_None.
       + apply: run_fail => //=; first rewrite nB next_alt_not_failed//.
           by rewrite (step_not_failed H0).
         apply: run_step; first by rewrite/=H0.
@@ -217,7 +219,7 @@ Section s.
     else A' = None.
 
   Lemma or_succ_build_resP1 b D A' r:
-    or_succ_build_res b (cutr D) A' r -> or_succ_build_res true D A' r.
+    or_succ_build_res b KO A' r -> or_succ_build_res true D A' r.
   Proof. by case: r => [[]|]//[t|]//= _ t1 [->]; case: ifP => //. Qed.
 
   Lemma run_or_complete fv0 fv2 s1 s2 A B X s3:
@@ -252,7 +254,7 @@ Section s.
             by apply: run_step eC rC.
           by apply: HS.
         right; case: (is_cb_exp H) => ?; subst; simpl  in HS.
-          by have [] := run_consistent (is_ko_run _ _ _ _ (is_ko_cutr)) HS.
+          by inversion HS.
         repeat eexists.
           by apply: run_step eC H1.
         by apply: HS.

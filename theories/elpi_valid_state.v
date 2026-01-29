@@ -446,9 +446,8 @@ Section NurValidState.
       set sB := t2l B _ => HH.
       apply: push_bt_out => //; last by rewrite cats0//.
       rewrite/sB.
-      move /spec_bbOr: bB => [r[rs[]?]]; subst.
-        apply: valid_caA_big_or.
-      by rewrite t2l_cutr.
+      move /spec_bbOr: bB => [r[rs[]?]]; subst; last by [].
+      apply: valid_caA_big_or.
     - move=> vB.
       set stl := t2l B sm [::].
       have:= HB _ _ vB.

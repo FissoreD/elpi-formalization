@@ -178,7 +178,7 @@ Section vars_tree.
     elim_tree A s fvA => /=.
       by rewrite 2!fsubUset -andbA => /and3P[vA vB vsm] vs; apply/HA.
       by rewrite fsubUset => /andP[vA vB vsm]; apply/HB.
-    rewrite 2!fsubUset -andbA => /and3P[vA vB vsm] vs;
+    rewrite 2!fsubUset -andbA get_subst_and => /and3P[vA vB vsm] vs.
     by case: ifP => dA; auto.
   Qed.
 

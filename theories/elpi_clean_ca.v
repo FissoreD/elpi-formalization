@@ -218,7 +218,7 @@ Section clean_ca.
     - move=> vB sB.
       case X: next_alt => //[B'][<-]/=.
       rewrite //=cat0s clean_ca_add_ca//.
-    - move=> /andP[vA] +/andP[sA sB].
+    - move=> /[!success_and] /andP[vA] +/andP[sA sB].
       rewrite sA/= => vB.
       case X: (next_alt _ B) => [B'|].
         move=> [<-]{R}/=.
@@ -319,7 +319,7 @@ Section clean_ca.
       move=> + [??]; subst => /=.
       have [[[? Hx] fA']] := s2l_Expanded_cut vA eA H; subst.
       by [].
-    - rewrite !push => -[<-<-<-] fB vB.
+    - rewrite !push => /[!failed_or_None] -[<-<-<-] fB vB.
       case eB: step => [[fvb rB] B']/=.
       rewrite !cat0s/=.
       case X: t2l => //=[[s' [|[a' ca'] gs]] xs]//= [?????]; subst.
@@ -335,7 +335,7 @@ Section clean_ca.
         rewrite H1 /CG/CA subn0 clean_ca_nil clean_ca_goals_add_ca_goal1.
         by rewrite clean_ca_goals_nil take_size clean_ca_add_ca1.
       by move: H2; destruct rB => //= -[<-]//.
-    - rewrite !push.
+    - rewrite !push failed_and.
       case eA: step => [[fva ra] A']/=.
       case eB: step => [[fvb rb] B']/=.
       case fA: failed => //= ++ /andP[vA].
@@ -431,14 +431,14 @@ Section clean_ca.
       move=> Hm Hn; rewrite Hn/=.
       rewrite clean_ca_goals_add_ca_goal1.
       by rewrite !catA.
-    - move=> fB vB.
+    - move=> /[!failed_or_None] fB vB.
       rewrite !push cat0s/=.
       rewrite clean_ca_add_ca1 => X.
       rewrite -(@clean_ca_nil (t2l B sm [::])) in X.
       have [{}HB H]:= HB sm no_alt _ _ _ _ _ fv fB vB X.
       rewrite clean_ca_nil in HB.
       by rewrite H HB/= cat0s clean_ca_add_ca1//.
-    - case fA: failed => //= + /andP[vA].
+    - rewrite failed_and; case fA: failed => //= + /andP[vA].
       rewrite !push/=.
       case eA: step => [[fvA rA] A']/=.
       case eB: step => [[fvB rB] B']/=.
