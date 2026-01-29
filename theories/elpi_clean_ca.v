@@ -343,7 +343,7 @@ Section clean_ca.
         rewrite (success_t2l empty)//= catl0.
         rewrite clean_ca_cat.
         set ml:= map _ _.
-        have [s2[x[xs H1]]] := [elaborate failed_t2l vB fB (get_substS s A) (ml ++ bt)].
+        have [s2[x[xs H1]]] := [elaborate failed_t2l vB fB (get_subst s A) (ml ++ bt)].
         rewrite H1/=.
         move: eA; rewrite success_step// => -[???]; subst => /=.
         move=> [???]; subst => -[?+?]; subst.
@@ -353,7 +353,7 @@ Section clean_ca.
         case: ifP => cbr/=[].
           destruct r' => //= + [?]; subst.
           rewrite t2l_cutl//= cat0s catl0 cats0.
-          have [x[tl]]:= s2l_CutBrothers (get_substS s A') (ml++bt) vB eB.
+          have [x[tl]]:= s2l_CutBrothers (get_subst s A') (ml++bt) vB eB.
           rewrite H => -[[????]][H1 H2]; subst.
           by rewrite !H1 take0/= => -[<-].
         move=> + [??]; subst.
@@ -448,10 +448,10 @@ Section clean_ca.
         rewrite catl0/=.
         rewrite clean_ca_cat.
         set ml:= map _ _.
-        have [s2'[x[xs H1]]] := [elaborate failed_t2l vB fB (get_substS s3 A') (ml ++ bt)].
+        have [s2'[x[xs H1]]] := [elaborate failed_t2l vB fB (get_subst s3 A') (ml ++ bt)].
         rewrite H1/=.
         case: x H1 => [|[[|c']ca'] gs]// H1 [?????]; subst.
-        have /={HA HB} := HB (get_substS s3 A') (ml ++ bt) _ _ _ _ _ fvA fB vB.
+        have /={HA HB} := HB (get_subst s3 A') (ml ++ bt) _ _ _ _ _ fvA fB vB.
         move=> /(_ _ IsList_alts).
         rewrite H1/= =>  // /(_ _ _ _ _ _ erefl) [{}HB].
         rewrite eB => -[??]; subst => /=.

@@ -280,7 +280,7 @@ Section RunP.
   End same_structure.
 
   Lemma ges_subst_cutl {s A} : 
-    success A -> get_substS s (cutl A) = get_substS s A.
+    success A -> get_subst s (cutl A) = get_subst s A.
   Proof.
     elim: A s => //=; auto.
     move=> A HA B0 B HB s /andP[sA sB]; rewrite sA/=success_cut sA HA// HB//.
@@ -341,7 +341,7 @@ Section RunP.
   Qed.
 
   Lemma get_substS_big_and A s1:
-    get_substS s1 (big_and A) = s1.
+    get_subst s1 (big_and A) = s1.
   Proof. elim: A => //. Qed.
 
   Lemma is_ko_run u p fv s A: is_ko A -> run u p fv s A None None false fv.
@@ -364,14 +364,14 @@ Section RunP.
   Qed.
 
   Lemma run_success1 u p fv A s: 
-    success A -> run u p fv s A (Some (get_substS s A)) ((next_alt true A)) false fv.
+    success A -> run u p fv s A (Some (get_subst s A)) ((next_alt true A)) false fv.
   Proof.
     move=> sA.
     by apply: run_done.
   Qed.
 
   Lemma run_success u p fv A s1 s2 r n fv1: 
-    success A -> run u p fv s1 A s2 r n fv1 -> [/\ s2 = Some (get_substS s1 A), r = (next_alt true A), fv1 = fv & n = false].
+    success A -> run u p fv s1 A s2 r n fv1 -> [/\ s2 = Some (get_subst s1 A), r = (next_alt true A), fv1 = fv & n = false].
   Proof.
     move=> sA H; have:= success_step u p fv s1 sA.
     inversion H; clear H; try congruence; subst; rewrite success_step//; rewrite failed_success in sA => //=.

@@ -173,7 +173,7 @@ Section vars_tree.
   Qed.
 
   Lemma vars_sigma_get_subst s fvA A:
-    vars_tree A `<=` fvA -> vars_sigma s `<=` fvA -> vars_sigma (get_substS s A) `<=` fvA.
+    vars_tree A `<=` fvA -> vars_sigma s `<=` fvA -> vars_sigma (get_subst s A) `<=` fvA.
   Proof.
     elim_tree A s fvA => /=.
       by rewrite 2!fsubUset -andbA => /and3P[vA vB vsm] vs; apply/HA.

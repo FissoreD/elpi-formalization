@@ -406,7 +406,7 @@ Section s.
       case:ifP => //= sA.
         rewrite failed_success_cut success_cut sA/=.
         move=> fB s.
-        have {}HB := HB fB (get_substS s A).
+        have {}HB := HB fB (get_subst s A).
         inversion HB; clear HB; subst => //.
         - by rewrite failed_step// in H.
         - by rewrite next_alt_cutl_failed// in H0.
@@ -440,7 +440,7 @@ Section s.
   Lemma run_and_correct_successL {s0 sn A B0 B A' B0' B' b}:
     success A -> next_alt true A = None ->
     run u p s0 (And A B0 B) sn (And A' B0' B') b ->
-    (run u p (get_substS s0 A) B sn B' b /\ 
+    (run u p (get_subst s0 A) B sn B' b /\ 
       (B0' = B0) /\
       (A' = if is_dead B' then dead A else if b == false then A else cutl A)
     )%type2.

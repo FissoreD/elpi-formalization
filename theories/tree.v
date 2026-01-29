@@ -111,7 +111,7 @@ Section tree_op.
   (*ENDSNIP: succ_path*)
 
   (*SNIP: failed_path*)
-  Definition failedT A := (path_end A == KO).
+  Definition failedT A := path_end A == KO.
   (*ENDSNIP: failed_path*)
 
   Lemma successP A : success A = successT A.
@@ -252,11 +252,11 @@ Section main.
     (fv, if l is (s,r) :: xs then (Or (Some KO) s (big_or r.(premises) xs))
          else KO).
 
-  Fixpoint get_substS s A :=
+  Fixpoint get_subst s A :=
     match A with
     | TA _ | KO | OK => s
-    | Or A s1 B => if A is Some A then get_substS s A else get_substS s1 B
-    | And A _ B => if success A then get_substS (get_substS s A) B else (get_substS s A)
+    | Or A s1 B => if A is Some A then get_subst s A else get_subst s1 B
+    | And A _ B => if success A then get_subst (get_subst s A) B else (get_subst s A)
     end.
 
   (*SNIP: step_sig*)
@@ -286,7 +286,7 @@ Section main.
     | And A B0 B =>
         let: (fv, tA, rA) := step fv s A in
         if is_sc tA then 
-          let: (fv, tB, rB) := (step fv (get_substS s rA) B) in
+          let: (fv, tB, rB) := (step fv (get_subst s rA) B) in
           (fv, tB, And (if is_cb tB then cutl A else A) B0 rB)
         else (fv, tA, And rA B0 B)
     end.
@@ -341,7 +341,7 @@ Section main.
   Inductive run (p : program): fvS -> Sigma -> tree -> 
                     option Sigma -> option tree -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig*)
-    | run_done s1 s2 A B fv       : success A -> get_substS s1 A = s2 -> (next_alt true A) = B -> run fv s1 A (Some s2) B false fv
+    | run_done s1 s2 A B fv       : success A -> get_subst s1 A = s2 -> (next_alt true A) = B -> run fv s1 A (Some s2) B false fv
     | run_cut  s1 s2 r A B n fv0 fv1 fv2 : step p fv0 s1 A = (fv1, CutBrothers, B) -> run fv1 s1 B s2 r n fv2 -> run fv0 s1 A s2 r true fv2
     | run_step s1 s2 r A B n fv0 fv1 fv2 : step p fv0 s1 A = (fv1, Expanded,    B) -> run fv1 s1 B s2 r n fv2 -> run fv0 s1 A s2 r n fv2
     | run_fail s1 s2 A B r n fv0 fv1    : 

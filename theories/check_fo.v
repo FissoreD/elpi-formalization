@@ -380,7 +380,7 @@ Qed.
         by rewrite !(step_success eA).
       case/andP=> cB0 cB.
       case eA: step => [[sv'[]]C]/=; rewrite ?cB ?cB0 ?orbT; auto.
-      move: (HB (get_substS s C) sv' cB).
+      move: (HB (get_subst s C) sv' cB).
       by case: step => [[?[]] D] => -[]//=; auto => ->; rewrite orbT; left.
   Qed.
 
