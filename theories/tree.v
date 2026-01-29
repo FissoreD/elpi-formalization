@@ -59,6 +59,8 @@ Section tree_op.
   (* STATE OP DEFINITIONS                                             *)
   (********************************************************************)
 
+
+  (*SNIP: get_end*)
   Fixpoint get_end s A :=
     match A with
     | TA _ | KO | OK => (s, A)
@@ -69,9 +71,14 @@ Section tree_op.
       if pA == OK then get_end s' B
       else (s', pA)
     end.
+  (*ENDSNIP: get_end*)
+
+
+  (*SNIP: get_subst*)
+  Definition get_subst s A := (get_end s A).1.
+  (*ENDSNIP: get_subst*)
 
   (*SNIP: path_end*)
-  Definition get_subst s A := (get_end s A).1.
   Definition path_end A := (get_end empty A).2.
   (*ENDSNIP: path_end*)
 
