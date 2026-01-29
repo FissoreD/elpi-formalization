@@ -235,14 +235,12 @@ Section main.
         end
       else if failed A then reset 
       else Some (And A B0 B)
-    | Or A sB B =>
-      if A is Some A then
+    | Or None sB B => omap (fun x => (Or None sB x)) (next_alt b B)
+    | Or (Some A) sB B =>
         match next_alt b A with
         | None => obind (fun x => Some (Or None sB x)) (next_alt false B)
         | Some nA => Some (Or (Some nA) sB B)
-      end
-      else 
-        omap (fun x => (Or None sB x)) (next_alt b B)
+       end
   end.
   (*ENDSNIP: next_alt_code *)
 
