@@ -4,6 +4,8 @@
 
 theories/prelude.v
 theories/zify_ssreflect.v
+theories/list.v
+
 
 theories/finmap.v
 theories/ctx.v

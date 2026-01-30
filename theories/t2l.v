@@ -1,7 +1,7 @@
-From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
+From det Require Import prelude.
+From det Require Import list.
 From det Require Import tree elpi.
-
 
 (*BEGIN*)
 

@@ -1,7 +1,7 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import ctx tree tree_prop valid_tree elpi t2l.
-From det Require Import zify_ssreflect.
+From det Require Import list zify_ssreflect.
 
 Open Scope SE.
 

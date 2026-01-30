@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import tree elpi t2l.
+From det Require Import tree elpi t2l list.
 
 Section Nur.
 
@@ -14,7 +14,7 @@ Fixpoint of_goals l :=
 Fixpoint of_alt l :=
   match l with
   | [::]%SEQ => [::]%A
-  | [:: x & xs]%SEQ => (empty, of_goals x) ::: (of_alt xs)
+  | [:: x & xs]%SEQ => (empty, of_goals x) :: (of_alt xs)
   end.
 
 Definition clean_ca_G f (g : A * alts) :=
@@ -26,12 +26,12 @@ Definition clean_ca_G f (g : A * alts) :=
 Fixpoint clean_ca_goals gl :=
   match gl with
   | no_goals => nilC 
-  | more_goals hd tl => (clean_ca_G clean_ca hd) ::: (clean_ca_goals tl)
+  | more_goals hd tl => (clean_ca_G clean_ca hd) :: (clean_ca_goals tl)
   end
 with clean_ca (ats: alts) : alts :=
   match ats with
   | no_alt => nilC
-  | more_alt (hd,xs) tl => (hd, clean_ca_goals xs) ::: (clean_ca tl)
+  | more_alt (hd,xs) tl => (hd, clean_ca_goals xs) :: (clean_ca tl)
   end.
 
 Definition tester l r :=
@@ -41,7 +41,7 @@ Goal forall B B0,
 let f x := (TA (call x)) in
 let g x := ([:: (call x) ]%SEQ) in
   tester (And (Or (Some OK) empty (f B)) (g B0) KO) 
-    ((empty, (call B,[::]) ::: ((call B0,[::]) ::: nilC)) ::: nilC).
+    ((empty, (call B,[::]) :: ((call B0,[::]) :: nilC)) :: nilC).
 Proof.
   by move=> //.
 Qed.

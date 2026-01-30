@@ -1,7 +1,7 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import tree tree_prop valid_tree elpi t2l t2l_prop.
-From det Require Import tree_vars elpi_clean_ca.
+From det Require Import list tree_vars elpi_clean_ca.
 
 Section NurEqiv.
   Variable (u : Unif).

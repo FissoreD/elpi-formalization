@@ -1,4 +1,5 @@
 From mathcomp Require Import all_ssreflect.
+From det Require Import list.
 From det Require Import tree valid_tree elpi t2l t2l_prop.
 From det Require Import zify_ssreflect.
 
