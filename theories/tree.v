@@ -9,11 +9,11 @@ Unset Elimination Schemes.
 (*BEGIN*)
 (*SNIP: tree_def*)
 Inductive tree :=
-  | KO | OK | TA : A -> tree
+  | KO | OK | TA of A
   (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
-  | Or  : option tree -> Sigma -> tree -> tree 
+  | Or  of option tree & Sigma & tree 
   (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
-  | And : tree -> seq A -> tree -> tree.
+  | And of tree & seq A & tree.
 (*ENDSNIP: tree_def*)
   (* | PiImpl : V -> R_ A -> A -> A. *)
 
