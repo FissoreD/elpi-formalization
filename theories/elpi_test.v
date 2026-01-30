@@ -2,6 +2,7 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import tree elpi t2l list.
 
 Section Nur.
+Open Scope L.
 
 Variable u : Unif.
 

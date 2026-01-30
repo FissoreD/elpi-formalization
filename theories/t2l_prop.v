@@ -3,7 +3,7 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import ctx tree tree_prop valid_tree elpi t2l.
 From det Require Import list zify_ssreflect.
 
-Open Scope SE.
+Open Scope L.
 
 Section NurProp.
   Variable u: Unif.
@@ -75,7 +75,7 @@ Section NurProp.
   Qed.
   
   Lemma add_deep_cons bt s hd l1 l2: 
-    add_deep bt hd ((s, l1) ::: l2) = (s, add_deepG bt hd l1) ::: (add_deep bt hd l2).
+    add_deep bt hd ((s, l1) :: l2) = (s, add_deepG bt hd l1) :: (add_deep bt hd l2).
   Proof. move=> //. Qed.
 
   Lemma add_ca_deep_empty2 {tl} : add_ca_deep tl nilC = nilC.
@@ -95,7 +95,7 @@ Section NurProp.
   Section t2l_base.
 
     Lemma t2l_big_and r1 s l: 
-      t2l (big_and r1) s l = (s, a2g r1) ::: nilC.
+      t2l (big_and r1) s l = (s, a2g r1) :: nilC.
     Proof. 
       elim: r1 => //= t xs H.
       rewrite ?cat0s H/= drop0 cats0 map_cons /catl cat_cons cat0s//.
@@ -127,7 +127,7 @@ Section NurProp.
   Lemma success_t2l {A s m} s1:
     valid_tree A -> (*we need valid tree since in s2l we assume B0 to have length <= 1*)
     success A ->
-      t2l A s m = (get_subst s A, nilC) ::: (t2l (odflt KO (next_alt true A)) s1 m).
+      t2l A s m = (get_subst s A, nilC) :: (t2l (odflt KO (next_alt true A)) s1 m).
   Proof.
     elim_tree A m s s1 => /=.
     - move=> /andP[vA bB] sA.
@@ -153,7 +153,7 @@ Section NurProp.
   Qed.
 
   Definition t2l_cons A :=
-    forall m l, exists s x xs, t2l A m l = (s, x) ::: xs.
+    forall m l, exists s x xs, t2l A m l = (s, x) :: xs.
 
   Section shape.
     Lemma s2l_size {A s1 l1} s2 l2: 
@@ -175,7 +175,7 @@ Section NurProp.
     Qed.
 
     Lemma s2l_cons {A s1 l x xs}:
-      t2l A s1 l = x ::: xs -> t2l_cons A.
+      t2l A s1 l = x :: xs -> t2l_cons A.
     Proof.
       move=> H s2 l2.
       have:= f_equal size H => /(_ _ IsList_alts).
@@ -280,7 +280,7 @@ Section NurProp.
   Qed.
 
   Lemma s2l_big_or k s {b bs ca gs}:
-    (s, save_goals ca gs (a2g b)) ::: (save_alts ca gs (r2a bs)) =
+    (s, save_goals ca gs (a2g b)) :: (save_alts ca gs (r2a bs)) =
     map (catr gs) (t2l (Or (Some KO) s (big_or b bs)) k ca).
   Proof. 
     move=>/=; clear k.
@@ -419,7 +419,7 @@ Qed.
   Qed.
 
   Lemma t2l_cutl {A s l}:
-    valid_tree A -> success A -> t2l (cutl A) s l = (get_subst s A, nilC) ::: nilC.
+    valid_tree A -> success A -> t2l (cutl A) s l = (get_subst s A, nilC) :: nilC.
   Proof.
     elim_tree A s l => /=.
     - by move=> /andP[vA bB] sA; rewrite cats0 HA//.
@@ -466,7 +466,7 @@ Qed.
 
   Lemma s2l_empty_hdF {A s bt s2 xs}:
     valid_tree A ->
-    success A = false -> failed A = false -> t2l A s bt = (s2, nilC) ::: xs -> False.
+    success A = false -> failed A = false -> t2l A s bt = (s2, nilC) :: xs -> False.
   Proof.
     elim_tree A s bt s2 xs => /=.
     - move=> /andP[vA bB] sA fA.
@@ -513,7 +513,7 @@ Qed.
 
   Lemma s2l_empty_hd_success {A s bt s2 xs}:
     valid_tree A -> failed A = false ->
-    t2l A s bt = (s2, nilC) ::: xs -> success A /\ (s2 = get_subst s A).
+    t2l A s bt = (s2, nilC) :: xs -> success A /\ (s2 = get_subst s A).
   Proof.
     elim_tree A s bt s2 xs => /=.
     - by move=> _ _ [<-].
@@ -567,7 +567,7 @@ Qed.
         by rewrite SA//.
       move=> {}HB.
       move=>[?????]; subst.
-      move: SA; fConsG (cut, ca') gs; fConsA (s2, (cut, ca') ::: gs) tl' => SA.
+      move: SA; fConsG (cut, ca') gs; fConsA (s2, (cut, ca') :: gs) tl' => SA.
       have:= HA _ SB _ _ _ _ _ fv vA SA.
       case e: step => [[?[]]A']/=; 
       rewrite size_add_ca_deep size_cat -/SB ?SB'; case X: size => //[n].
@@ -692,7 +692,7 @@ Qed.
         rewrite size_cons.
         replace (size ca' - (size ca').+1) with 0 by lia.
         rewrite take0 drop0 cat0s; f_equal.
-        have /= := [elaborate @xxx _ _ _ _ _ _ _ _ _ ((s3, gs) ::: ca') vA SA H].
+        have /= := [elaborate @xxx _ _ _ _ _ _ _ _ _ ((s3, gs) :: ca') vA SA H].
         by rewrite SA'//.
       move=>[??]; subst.
       rewrite size_cat addnK drop_size_cat//add_deep_cat take_size_cat//?size_add_deep//.

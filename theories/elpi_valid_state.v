@@ -60,7 +60,7 @@ Section NurValidState.
   Proof. rewrite//. Qed.
 
 
-  Goal forall s r1 r2 z, valid_ca ((s, (cut, r1) ::: ((cut, r2) ::: nilC)) ::: z ++ r1) -> suffix r2 r1.
+  Goal forall s r1 r2 z, valid_ca ((s, (cut, r1) :: ((cut, r2) :: nilC)) :: z ++ r1) -> suffix r2 r1.
   Proof.
     move=> s r1 r2 z/=.
     rewrite/valid_ca/=/valid_caA/= !suffix0s -!andbA.

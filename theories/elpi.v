@@ -6,15 +6,9 @@ From HB Require Import structures.
 
 (*BEGIN*)
 
-Global Notation "x ::: xs" :=
-  (consC x xs)
-  (at level 3, no associativity, only parsing)
-  : SE.
-
-Global Notation "x :: xs" :=
-  (consC x xs)
-  (at level 60, no associativity, only parsing)
-  : SE.
+Declare Scope L.
+Infix "::" := consC : L.
+Bind Scope L with IsList.
 
 (*SNIP: elpi_def*)
 Inductive alts := no_alt | more_alt of (Sigma * goals) & alts

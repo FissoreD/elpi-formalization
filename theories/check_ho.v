@@ -4889,7 +4889,7 @@ Module elpi.
     tc_call sV c ->
     check_program sP p -> mutual_exclusion ->
       check_callable_func sP sV c -> 
-        is_det ((callE p c):::nilC).
+        is_det ((callE p c)::nilC).
   Proof.
     move=> /= tcc ckp ME ckc u s' a' H.
     have /= := main tcc ckp ME ckc.

@@ -15,12 +15,12 @@ Section clean_ca.
   Fixpoint clean_ca (bt:alts) (ats: alts) : alts :=
     match ats with
     | no_alt => nilC
-    | more_alt (hd,xs) tl => (hd, clean_ca_goals bt xs) ::: (clean_ca bt tl)
+    | more_alt (hd,xs) tl => (hd, clean_ca_goals bt xs) :: (clean_ca bt tl)
     end
   with clean_ca_goals bt gl :=
     match gl with
     | no_goals => nilC 
-    | more_goals hd tl => (clean_ca_G clean_ca bt hd) ::: (clean_ca_goals bt tl)
+    | more_goals hd tl => (clean_ca_G clean_ca bt hd) :: (clean_ca_goals bt tl)
     end.
 
   Lemma clean_ca_size {bt L}: size (clean_ca bt L) = size L
@@ -125,7 +125,7 @@ Section clean_ca.
       add_deepG (clean_ca bt x) hd (clean_ca_goals bt L).
   Proof.
     - move=> H; case: L => //=-[]s g a/=; rewrite clean_ca_add_deep //clean_ca_add_deep_gs//.
-    - move=> H; case: L => [|[a ca]] //= gs; rewrite clean_ca_add_deep_gs//=; congr (_ ::: _).
+    - move=> H; case: L => [|[a ca]] //= gs; rewrite clean_ca_add_deep_gs//=; congr (_ :: _).
       f_equal.
       rewrite !size_cat !size_map.
       rewrite !clean_ca_cat clean_ca_mk_lb0//.
@@ -288,9 +288,9 @@ Section clean_ca.
 
   Lemma next_cut_s2l fv A s bt s1 ca gl a r:
     failed A = false -> valid_tree A ->
-      clean_ca bt (t2l A s bt) = (s1, (cut, ca) ::: gl) ::: a ->
+      clean_ca bt (t2l A s bt) = (s1, (cut, ca) :: gl) :: a ->
         step u p fv s A = r ->
-        clean_ca bt (t2l r.2 s bt) = (s1, gl) ::: ca /\
+        clean_ca bt (t2l r.2 s bt) = (s1, gl) :: ca /\
         if is_cb r.1.2 then r = (fv, CutBrothers, r.2)
         else r = (fv, Expanded, r.2).
   Proof.
@@ -394,7 +394,7 @@ Section clean_ca.
     let X := step u p fv s3 A in
     let F := bc u p fv q s1 in
     failed A = false -> valid_tree A ->
-      clean_ca bt (t2l A s3 bt) = (s1, (call q, ign) :: gl) ::: a ->
+      clean_ca bt (t2l A s3 bt) = (s1, (call q, ign) :: gl) :: a ->
         [/\
         clean_ca bt (t2l X.2 s3 bt) = 
           (save_alts a gl (r2a F.2) ++ a) &
