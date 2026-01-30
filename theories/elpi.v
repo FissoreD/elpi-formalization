@@ -360,12 +360,8 @@ Global Notation "x :: xs" :=
   : SE.
 
 (*SNIP: elpi_def*)
-Inductive alts :=
-  | no_alt
-  | more_alt : (Sigma * goals) -> alts -> alts
-with goals :=
-  | no_goals
-  | more_goals : (A * alts) -> goals -> goals .
+Inductive alts := no_alt | more_alt of (Sigma * goals) & alts
+with goals := no_goals | more_goals of (A * alts) & goals .
 (*ENDSNIP: elpi_def*)
 
 Declare Scope alts_scope.
