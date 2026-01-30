@@ -65,7 +65,7 @@ Section s.
     case fA: (failed A).
       case X: next_alt => [A'|]//= H.
       by apply: run_fail fA X H.
-    rewrite next_alt_not_failed//.
+    rewrite failedF_next_alt//.
   Qed.
 
   (* Lemma run_ko_left_Some_None fv fv' s2 X B r r1 b1 sIgn:
@@ -89,11 +89,11 @@ Section s.
       case nB: next_alt => [B2|]/=.
         apply: run_fail => /=.
           by rewrite is_ko_failed.
-          by rewrite is_ko_next_alt//next_alt_not_failed//success_failed.
+          by rewrite is_ko_next_alt//failedF_next_alt//success_failed.
         by apply: run_done; rewrite //= nB.
       apply: run_fail => /=.
         by rewrite is_ko_failed.
-        by rewrite is_ko_next_alt//next_alt_not_failed//success_failed.
+        by rewrite is_ko_next_alt//failedF_next_alt//success_failed.
       by apply: run_done; rewrite //= nB.
     - move: H0; rewrite/=!push; case eB: step => //=[[fvx []] B2]//=.
     - move: H0; rewrite/=!push; case eB: step => [[fvx r'] B2]/=.
@@ -101,12 +101,12 @@ Section s.
         destruct r' => // _ [??]; subst.
         apply: run_fail => /=.
           by rewrite is_ko_failed//=.
-          by rewrite is_ko_next_alt//=next_alt_not_failed// (step_not_failed eB)//.
+          by rewrite is_ko_next_alt//=failedF_next_alt// (step_not_failed eB)//.
         by apply: run_step H1; rewrite /=eB//=.
       move=> _ [???]; subst.
       apply: run_fail => /=.
         by rewrite is_ko_failed//=.
-        by rewrite is_ko_next_alt//=next_alt_not_failed// (step_not_failed eB)//.
+        by rewrite is_ko_next_alt//=failedF_next_alt// (step_not_failed eB)//.
       by apply: run_step H1; rewrite /=eB//=.
     - move: H0 H1 => /=fB.
       case nB: next_alt => //[B2][?]; subst.
@@ -208,10 +208,10 @@ Section s.
     + move=> sX X s3 X' n1 fv' H.
       have fB := next_alt_None_failed nA.
       inversion H; subst; clear H.
-      + apply: run_fail => //=; first rewrite nA next_alt_not_failed//.
+      + apply: run_fail => //=; first rewrite nA failedF_next_alt//.
           by rewrite success_failed.
         by apply: run_done; rewrite//=success_or_None.
-      + apply: run_fail => //=; first rewrite nA next_alt_not_failed//.
+      + apply: run_fail => //=; first rewrite nA failedF_next_alt//.
           by rewrite path_atom_failed.
         apply: run_step; rewrite/= ?(rew_pa,H1)//; first destruct st => //.
         by apply/run_ko_left2; exists b1.
@@ -318,6 +318,19 @@ Section s.
     move=> /=; repeat eexists.
     by apply: run_dead nB.
   Qed.
+
+  Fixpoint not_bt A B :=
+    match A, B with
+    | Or None _ A, Or None _ B => not_bt A B
+    | Or (Some A) _ _, Or (Some B) _ _ => not_bt A B
+    | And Ax _ Ay, And Bx _ By => not_bt Ax Bx && not_bt Ay By
+    | TA _, _ => B != KO
+    | OK, OK => true
+    | KO, KO => true
+    | (KO|OK|Or _ _ _|And _ _ _), _ => false
+    end.
+
+  
 
   (* Lemma run_or_ko_right1 fv fv' s2 X B B' SOL b1 sIgn:
     is_ko X -> run u p fv s2 B SOL B' b1 fv' ->

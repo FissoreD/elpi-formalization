@@ -69,7 +69,7 @@ Proof.
     case fA: (failed A).
       case nA: (next_alt false A) => [A'|]; last first.
         by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
-      have /= fA' := next_alt_failed nA.
+      have /= fA' := next_alt_failedF nA.
       have /= vA' := (valid_tree_next_alt vA nA).
       rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
       have [skA ?]:= s2l_empty_hd_success vA' fA' H; subst.
@@ -89,7 +89,7 @@ Proof.
       case fA: (failed A).
         case nA: (next_alt false A) => [A'|]; last first.
           by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
-        have /= fA' := next_alt_failed nA.
+        have /= fA' := next_alt_failedF nA.
         have /= vA' := (valid_tree_next_alt vA nA).
         rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
@@ -120,7 +120,7 @@ Proof.
           by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
         rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
-        have /= fA' := next_alt_failed nA.
+        have /= fA' := next_alt_failedF nA.
         have /= vA' := (valid_tree_next_alt vA nA).
         have [] := next_callS_s2l p u fv fA' vA' H.
         rewrite B/=clean_ca_nil => H1 H2.
@@ -143,7 +143,7 @@ Proof.
       case fA: (failed A).
         case nA: (next_alt false A) => [A'|]; last first.
           by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
-        have /= fA' := next_alt_failed nA.
+        have /= fA' := next_alt_failedF nA.
         have /= vA' := (valid_tree_next_alt vA nA).
         rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.

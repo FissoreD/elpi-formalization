@@ -162,21 +162,37 @@ Section RunP.
   (* NEXT_ALT OP PROPERTIES                                           *)
   (********************************************************************)
 
-  Lemma next_alt_failed {b A r}: next_alt b A = r -> failed (odflt OK r) = false.
+  Lemma path_atom_or_Some A sm B: path_atom (Or (Some A) sm B) = path_atom A.
+  Proof. by rewrite/path_atom path_end_or_Some. Qed.
+
+  Lemma path_atom_or_None sm B: path_atom (Or None sm B) = path_atom B.
+  Proof. by rewrite/path_atom path_end_or_None. Qed.
+
+  Lemma path_atom_and A B0 B: path_atom (And A B0 B) = if success A then path_atom B else path_atom A.
+  Proof. rewrite/path_atom path_end_and; case: ifP => //. Qed.
+
+  Definition rew_pa:= 
+  (
+    path_atom_or_None, path_atom_or_Some,path_atom_and,
+    success_or_None, success_or_Some, success_and,
+    failed_or_None, failed_or_Some, failed_and
+  ).
+
+  Lemma next_alt_failedF {b A r}: next_alt b A = Some r -> failed r = false.
   Proof.
-    move=><-; elim: A b {r} => //=.
-    - move=> []//.
-    - move=> A HA s B HB b; have:= HA b; case: next_alt => //=.
-      by have:= HB false; case: next_alt => //= ?; rewrite failed_or_None.
-    - by move=> s B HB b; have:= HB b; case: next_alt => //=*; rewrite failed_or_None.
-    - move=> A HA l B HB b.
-      case sA: success.
+    elim_tree A b r => //=.
+    - by case: b => //-[<-].
+    - move=> [<-]//.
+    - have:= HA b; case: next_alt => //=.
+        by move=> A' /(_ _ erefl) + [<-]; rewrite rew_pa.
+      by have:= HB false; case: next_alt => //= ? /(_ _ erefl) + _ [<-]; rewrite rew_pa.
+    - by have:= HB b; case: next_alt => //=?/(_ _ erefl)+ [<-]; rewrite rew_pa.
+    - case: ifP => sA.
         have:= HB b; case: next_alt => [A'|]//=.
-          rewrite failed_and.
-          by move=> ->; rewrite sA success_failed.
-        by have:= HA true; case: next_alt => //= A' /[!failed_and] ->; rewrite failed_big_and andbF.
-      case: ifP => /=fA; last by rewrite failed_and sA fA.
-      by have:= HA false; case: next_alt => //= ? /[!failed_and] ->; rewrite failed_big_and andbF.
+          by move=> /(_ _ erefl) + [<-]; rewrite rew_pa (success_failed sA) sA.
+        by case nA: next_alt => //= _ [<-]; rewrite rew_pa (HA _ _ nA) failed_big_and andbF.
+      case: ifP => /=fA; last by move=> [<-]; rewrite rew_pa sA fA.
+      by case nA: next_alt => //=-[<-]; rewrite rew_pa (HA _ _ nA) failed_big_and andbF.
   Qed.
 
   Lemma failed_big_or u p fv s t: failed (backchain u p fv s t).2.
@@ -262,7 +278,7 @@ Section RunP.
     by rewrite sA HB//HA//.
   Qed.
 
-  Lemma next_alt_not_failed {A}:
+  Lemma failedF_next_alt {A}:
     failed A = false -> next_alt false A = Some A.
   Proof.
     elim: A => //=.
@@ -310,16 +326,6 @@ Section RunP.
     case_step_tag eA A' => //= _ _; apply: HA eA.
   Qed.
 
-  Lemma path_atom_or_Some A sm B: path_atom (Or (Some A) sm B) = path_atom A.
-  Proof. by rewrite/path_atom path_end_or_Some. Qed.
-
-  Lemma path_atom_or_None sm B: path_atom (Or None sm B) = path_atom B.
-  Proof. by rewrite/path_atom path_end_or_None. Qed.
-
-  Lemma path_atom_and A B0 B: path_atom (And A B0 B) = if success A then path_atom B else path_atom A.
-  Proof. rewrite/path_atom path_end_and; case: ifP => //. Qed.
-
-
   Lemma path_atom_exp_cut u p A fv s r:
     path_atom A -> step u p fv s A = r -> r.1.2 = CutBrothers \/ r.1.2 = Expanded.
   Proof.
@@ -360,14 +366,6 @@ Section RunP.
         apply: HB eA.
       apply: HA eA.
   Qed.
-
-  Definition rew_pa:= 
-    (
-      path_atom_or_None, path_atom_or_Some,path_atom_and,
-      success_or_None, success_or_Some, success_and,
-      failed_or_None, failed_or_Some, failed_and
-    ).
-
 
   (*SNIP: path_atom_next_alt_id*)
   Lemma path_atom_next_alt_id b A: path_atom A -> next_alt b A = Some A.

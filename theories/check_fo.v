@@ -398,7 +398,7 @@ Qed.
         move=> /andP[-> /step_keep_cut->]//.
       case fA: (failed A).
         by rewrite failed_step//=sA H3 H1 H2.
-      move: H1 H3; rewrite (next_alt_not_failed fA)//=.
+      move: H1 H3; rewrite (failedF_next_alt fA)//=.
       move=> + ->; rewrite H2 !orbT !andbT.
       move=> /orP[|/HA->]; last by rewrite !orbT.
       by move=> /andP[->->]; rewrite !orbT.
@@ -481,7 +481,7 @@ Qed.
           rewrite Y/= in cB0, fB0.
           by rewrite has_cut_seq_has_cut_big_and det_tree_big_and fB0 cB0 !orbT.
         case: ifP => fA; last first.
-          rewrite next_alt_not_failed//= in cB0, fB0.
+          rewrite failedF_next_alt//= in cB0, fB0.
           by move=> [<-]/=; rewrite cB0/= cB/= fB fB0 !orbT.
         case nA: next_alt => //=[A'][<-]/=.
         rewrite nA/= in cB0, fB0.
@@ -493,14 +493,14 @@ Qed.
         rewrite nA/= in fB0.
         by rewrite (HA _ _ _ nA)// det_tree_big_and fB0 !orbT.
       case: ifP => FA; last first.
-        rewrite next_alt_not_failed//= in fB0.
+        rewrite failedF_next_alt//= in fB0.
         by move=>[<-]/=; rewrite fA fB fB0 !orbT.
       case X: next_alt => // [A'][<-]/=.
       rewrite X/= in fB0.
       by rewrite det_tree_big_and fB0 (HA _ false)//= !orbT.
   Qed.
 
-  Lemma step_next_alt_failed {sP sv sv' A B C s b}:
+  Lemma step_next_alt_failedF {sP sv sv' A B C s b}:
     check_program sP p ->
       det_tree sP A -> step u p sv s A = (sv', Failed, B) ->
         next_alt b B = Some (C) -> det_tree sP C.
