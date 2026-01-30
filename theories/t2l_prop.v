@@ -95,7 +95,7 @@ Section NurProp.
   Section t2l_base.
 
     Lemma t2l_big_and r1 s l: 
-      t2l (big_and r1) s l = (s, a2gs r1) ::: nilC.
+      t2l (big_and r1) s l = (s, a2g r1) ::: nilC.
     Proof. 
       elim: r1 => //= t xs H.
       rewrite ?cat0s H/= drop0 cats0 map_cons /catl cat_cons cat0s//.
@@ -145,7 +145,7 @@ Section NurProp.
       have {}HB := HB _ _ _ vB sB; repeat erewrite HB => /=.
       case X: (next_alt _ B) => [B'|]/=.
         by rewrite (HA _ _ s1) //= sA/=.
-      rewrite catl0.
+      rewrite catl0a.
       case W: next_alt => [A'|]//=.
       rewrite cat_cons cat0s; f_equal.
       case: t2l => //= -[s2 b] a. 
@@ -243,7 +243,7 @@ Section NurProp.
         rewrite success_failed//sA.
         case nB': next_alt => [[]|]//.
         case X: next_alt => //= _.
-        rewrite (success_t2l empty)//= catl0.
+        rewrite (success_t2l empty)//= catl0a.
         by rewrite (HB _ _ _ _ _ _ _ vB eB nB')// X.
       case eA: step => //[[? []]A']//.
       have [[??] fA]:= step_failed eA; subst.
@@ -254,9 +254,9 @@ Section NurProp.
   Qed.
 
   Lemma add_ca_deep_map_empty ca X:
-    empty_caG X -> map (add_ca ca) X = add_ca_deep_goals ca X 
+    empty_caG X -> map (catr ca) X = add_ca_deep_goals ca X 
   with
-    add_ca_deep_goals_map_empty ca g: empty_ca_G g -> add_ca ca g = add_ca_deep_g ca g.
+    add_ca_deep_goals_map_empty ca g: empty_ca_G g -> catr ca g = add_ca_deep_g ca g.
   Proof.
     {
       case: X => /=.
@@ -269,10 +269,10 @@ Section NurProp.
     case: g => ? [] //=.
   Qed.
 
-  Lemma empty_ca_atoms  b: empty_caG (a2gs b).
+  Lemma empty_ca_atoms  b: empty_caG (a2g b).
   Proof. elim: b => //= -[]//. Qed.
 
-  Lemma empty_ca_atoms1 rs: empty_ca (aa2gs rs).
+  Lemma empty_ca_atoms1 rs: empty_ca (r2a rs).
   Proof. 
     rewrite/empty_ca.
     elim: rs => //=-[s b l]/= H.
@@ -280,7 +280,7 @@ Section NurProp.
   Qed.
 
   Lemma s2l_big_or k s {b bs ca gs}:
-    (s, save_goals ca gs (a2gs b)) ::: (save_alts ca gs (aa2gs bs)) =
+    (s, save_goals ca gs (a2g b)) ::: (save_alts ca gs (r2a bs)) =
     map (catr gs) (t2l (Or (Some KO) s (big_or b bs)) k ca).
   Proof. 
     move=>/=; clear k.
@@ -290,7 +290,7 @@ Section NurProp.
       rewrite t2l_big_and/= map_cons; f_equal.
       rewrite /save_goals; f_equal.
       have:= empty_ca_atoms b.
-      set X := (a2gs _).
+      set X := (a2g _).
       generalize X => {}X.
       move=> /add_ca_deep_map_empty->//.
     move=> [s1 [hd bo]]/=rs IH s2 b ca gs/=.
@@ -367,7 +367,7 @@ Section NurProp.
 
   Lemma save_goals_cons (a: alts) (gs :goals) b1 (bs : goals) :
     save_goals a gs [:: b1 & bs]%G =
-    [:: add_ca a b1 & save_goals a gs bs]%G.
+    [:: catr a b1 & save_goals a gs bs]%G.
     by rewrite /save_goals map_cons.
 Qed.
 
@@ -384,6 +384,8 @@ Qed.
     rewrite !save_goals_cons -IH //.
     case: g H1 => [? [|//]] /= _.
     rewrite !cat0s size_cat addnK drop_size_cat//add_deep_cat take_size_cat ?size_add_deep //.
+    rewrite !cat_cons; f_equal.
+    rewrite /catr/= cat0s//.
   Qed.
 
   Lemma add_deep_altsP hd rs ys l tl:
@@ -424,7 +426,7 @@ Qed.
     - by move=> /[!success_or_None] vB sB; rewrite HB//.
     - move=> /[!success_and] /andP[vA] +/andP[sA sB].
       rewrite get_subst_and sA/= => vB.
-      by rewrite HA//= cat0s catl0 cats0 HB.
+      by rewrite HA//= cat0s catl0a cats0 HB.
   Qed.
 
   Lemma s2l_CutBrothers fv fv' s1 A R sA l1:
@@ -447,11 +449,11 @@ Qed.
         have [x[tl [H [H1 H4]]]] := HB (get_subst sA A) _ _ (X++l1) _ _ vB eB.
         rewrite get_subst_and H//=sAx.
         do 2 eexists; split; try eassumption.
-          by rewrite catl0//.
+          by rewrite catl0a//.
         rewrite H4; split => //.
         move=> //l sB.
         rewrite t2l_cutl//= get_subst_and.
-        by rewrite success_cut sAx ges_subst_cutl//H1//catl0.
+        by rewrite success_cut sAx ges_subst_cutl//H1//catl0a.
       case_step_tag eA A' => //=-[??]; subst.
       have {HA HB}[x [tl [H3 [H4 H5]]]] := HA sA _ _ l1 _ _ vA eA.
       rewrite /= get_subst_and_big_and.
@@ -479,7 +481,7 @@ Qed.
       case fA: failed => //=.
       case: ifP => //=[sA vB sB fB|sA /eqP->{B HB} _I _I1].
         rewrite (success_t2l empty) => //=.
-        rewrite catl0.
+        rewrite catl0a.
         set ml := map _ _.
         have [s2'[y[ys H1]]] := [elaborate failed_t2l vB fB (get_subst s A) (ml ++ bt)].
         rewrite H1/=.
@@ -526,7 +528,7 @@ Qed.
     - move => /andP[vA]/[!failed_and]/[!success_and]/[!get_subst_and].
       case fA: failed => //=.
       case: ifP => //=[sA vB fB|sA /eqP-> _ {B HB}].
-        rewrite (success_t2l empty)//=catl0.
+        rewrite (success_t2l empty)//=catl0a.
         set ml := map _ _.
         have [s2'[y[ys H1]]] := [elaborate failed_t2l vB (fB) (get_subst s A) (ml ++ bt)].
         rewrite H1/=.
@@ -581,14 +583,14 @@ Qed.
       rewrite !push.
       case: ifP => //=[sA vB|sA/eqP-> {B HB}].
         rewrite (success_t2l empty)//.
-        set SA := t2l (odflt _ _) _ _ => /=; rewrite catl0.
+        set SA := t2l (odflt _ _) _ _ => /=; rewrite catl0a.
         case: ifP => //.
           case eB: step => [[?[]]B']// _.
           set X:= map _ _.
           have [hd1[tl1[Hz [Hw Hy]]]] := s2l_CutBrothers  (get_subst s1 A) (X ++ l) vB eB.
           rewrite !Hz/= => -[????]; subst.
           rewrite (success_t2l empty)?success_cut//?valid_tree_cut//=!Hw/=.
-          rewrite size_cat catl0 size_cons//.
+          rewrite size_cat catl0a size_cons//.
         rewrite ((success_t2l empty) _ sA)//= size_cat size_map.
         set SA' := t2l (odflt _ _) _ _.
         case X : t2l => [|r rs]/=.
@@ -666,8 +668,8 @@ Qed.
         rewrite (success_t2l empty vA)//=.
         rewrite get_subst_and sA failed_and (success_failed)//=.
         set SA:= add_deep _ _ _.
-        rewrite !catl0.
-        have [s[y[ys]]] := failed_t2l vB (step_not_failed H notF) (get_subst s0 A) (map (catr (a2gs B0)) SA ++ l1).
+        rewrite !catl0a.
+        have [s[y[ys]]] := failed_t2l vB (step_not_failed H notF) (get_subst s0 A) (map (catr (a2g B0)) SA ++ l1).
         move=>H4; rewrite H4/=.
         move=>[???]; subst.
         have [[H5 H5'] H6] := HB _ _ _ _ _ _ _ _ _ vB H H4; subst.
@@ -716,7 +718,8 @@ Qed.
     }
     case: b; rewrite ?cat0s // => -[a' [t|]] H; rewrite  ?map_cons ?cat_cons //.
     simpl.
-      rewrite save_alt_add_ca_deepG // !cat0s //.
+    rewrite save_alt_add_ca_deepG // !cat0s //.
+    rewrite /catr/= cat0s//.
   Qed.
 
   Lemma s2l_Expanded_call fv fv' s s3 A R l q gs xs ca:
@@ -728,8 +731,8 @@ Qed.
       bcr.1 = fv', failed R &
       t2l R s l =
       if bcr.2 is (w :: ws)%SEQ then
-       (w.1, save_goals (xs++l) gs (a2gs1 w)) :: 
-        ((save_alts (xs++l) gs (aa2gs ws)) ++ xs)
+       (w.1, save_goals (xs++l) gs (a2g1 w)) :: 
+        ((save_alts (xs++l) gs (r2a ws)) ++ xs)
       else xs]
       .
   Proof.
@@ -777,7 +780,7 @@ Qed.
       case_step_tag H T => //= _.
         rewrite get_subst_and failed_and.
         rewrite (success_failed sA)/=sA/=.
-        rewrite (success_t2l empty)//= !catl0.
+        rewrite (success_t2l empty)//= !catl0a.
         set X := map _ _.
         set Y := get_subst _ _.
         have [sy[y[ys sB]]]:= failed_t2l vB (step_not_failed H notF) Y (X++l).
@@ -805,7 +808,7 @@ Qed.
       rewrite H0/=.
       rewrite t2l_big_and map_cons/= cat_cons cat0s /catl/=.
       rewrite add_deep_cat map_cat.
-      (* set hd := (a2gs B0). *)
+      (* set hd := (a2g B0). *)
       rewrite -!cat_cons; f_equal.
       rewrite add_deep_goalsP//?empty_ca_atoms//.
       by rewrite add_deep_altsP//(empty_ca_atoms1, empty_ca_atoms).
@@ -841,9 +844,9 @@ Qed.
       case X: next_alt => [B'|]/=.
         rewrite (success_t2l (get_subst s1 A) vA sA)//=.
         rewrite (success_t2l (get_subst s1 A) vB sB)//=.
-        by rewrite !catl0 cat_cons behead_cons X/=.
+        by rewrite !catl0a cat_cons behead_cons X/=.
       rewrite (success_t2l s1 vA sA)//=.
-      rewrite (success_t2l (get_subst s1 A) vB sB)//= catl0.
+      rewrite (success_t2l (get_subst s1 A) vB sB)//= catl0a.
       rewrite cat_cons behead_cons X.
       rewrite cat0s.
       case Y: next_alt => [A'|]//=.

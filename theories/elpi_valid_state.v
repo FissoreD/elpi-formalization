@@ -172,14 +172,14 @@ Section NurValidState.
       rewrite suffixs0 => /eqBP->//.
     move=> [s g] gs IH bt l Hbt.
     rewrite size_cons => H.
-    have := suffix_cons _ _ _ H.
+    have := suffix_cons H.
     move=> [].
       move=> ?; subst.
       rewrite eqxx/= size_cat size_cons addnS subSS.
       replace (size gs - (size bt + size gs)) with 0 by lia.
       by rewrite take0/=.
-    move=> H1.
-    move=> /(suffix_cons _ _ _)[].
+    move=> H1 H2.
+    have {H2} [] := suffix_cons H2.
       destruct bt => //=.
         rewrite cat0s => ?; subst.
         have [X HF ] := suffixP1 H1.
@@ -190,7 +190,7 @@ Section NurValidState.
       move: Hbt => /=.
       rewrite addnK/= take_cons take_cat// !behead_cons.
       do 2 case: ifP => //=; first by clear; lia.
-      rewrite subnn take0 cats0 => H2 H3.
+      rewrite subnn take0 cats0 => Hx Hy.
       move=> /andP[H4 H5]; rewrite H4.
       rewrite -valid_ca_valid_ca_aux//.
     clear H => H2.
@@ -276,7 +276,7 @@ Section NurValidState.
     case: eqP => //.
       by move=><- _ _; rewrite size_cons subnn take0 cat0s valid_caA_aux_refl//.
     move=> H1 H2.
-    have {H2}[] := suffix_cons _ _ _ H2.
+    have {H2}[] := suffix_cons H2.
       by move=> ?; subst.
     move=> H3.
     case X: subn => [|n].
@@ -397,8 +397,8 @@ Section NurValidState.
     by rewrite valid_ca_valid_ca_aux// cats0.
   Qed.
 
-  Lemma valid_caG_a2gs x l:
-    valid_caG (a2gs x) l nilC.
+  Lemma valid_caG_a2g x l:
+    valid_caG (a2g x) l nilC.
   Proof. by elim: x l => //a l H l0/=; rewrite suffix0s take0 H. Qed.
 
   Lemma empty_caG_cat A B: empty_caG (A ++ B) = empty_caG A && empty_caG B.
@@ -418,9 +418,9 @@ Section NurValidState.
     valid_caA (t2l (big_or x xs) s0 nilC) rs nilC.
   Proof.
     elim: xs x s0 rs => //= [|[s0 r0] rs IH] x s1 l.
-      by rewrite t2l_big_and//= empty_ca_atoms valid_caG_a2gs if_same.
+      by rewrite t2l_big_and//= empty_ca_atoms valid_caG_a2g if_same.
     rewrite /= add_ca_deep_empty1 t2l_big_and.
-    rewrite cat_cons/= empty_ca_atoms cat0s valid_caG_a2gs/=.
+    rewrite cat_cons/= empty_ca_atoms cat0s valid_caG_a2g/=.
     by rewrite fold_valid_caA IH empty_ca_big_or if_same.
   Qed.
 
@@ -460,7 +460,7 @@ Section NurValidState.
       case:ifP => /=[sA vB|sA /eqP?]; subst.
         move: HA.
         have SA:= success_t2l empty vA sA; rewrite SA/=.
-        rewrite catl0 behead_cons => H1.
+        rewrite catl0a behead_cons => H1.
         set M := map _ _.
         rewrite valid_ca_split.
         rewrite drop_size_cat//{4 5}/M.

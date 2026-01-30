@@ -4,13 +4,14 @@ From det Require Import tree elpi.
 
 
 (*BEGIN*)
-Definition catr (suff: goals) (e: Sigma * goals) := (e.1, e.2 ++ suff).
-Definition catl (pref: goals) (e: Sigma * goals) := (e.1, pref ++ e.2).
 
-Lemma catl0 l: map (catl [::]) l = l.
+Lemma catl0 (l: goals): map (catl (nilC)) l = l.
 Proof. elim: l => //=[[s g]gs] H; rewrite map_cons/=H/catl cat0s//. Qed.
 
-Lemma catr0 l: map (catr [::]) l = l.
+Lemma catl0a (l: alts): map (catl (nilC)) l = l.
+Proof. elim: l => //=[[s g]gs] H; rewrite map_cons/=H/catl cat0s//. Qed.
+
+Lemma catr0 (l: alts): map (catr (@nilC _ _ IsList_goals)) l = l.
 Proof. elim: l => //=[[s g]gs] H; rewrite map_cons/=H/catr cats0//. Qed.
 
 Definition add_ca_deep_g' (add_ca_deep : alts -> alts -> alts) bt (x : A * alts) :=
@@ -71,7 +72,7 @@ Fixpoint t2l (A: tree) s (bt : alts) : alts :=
   | And A B0 B   =>
       let lA  := t2l A s bt in
       if lA is [:: (slA, x) & xs] then 
-        let lB0 := a2gs B0 in
+        let lB0 := a2g B0 in
         (* the reset point exists, it has to be added to all cut-to alternatives *)
         let xz := add_deepG bt lB0 x in
         let xs := add_deep bt lB0 xs in 

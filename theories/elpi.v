@@ -1,3 +1,4 @@
+From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From elpi.apps Require Import derive derive.std.
@@ -546,39 +547,29 @@ Proof.
   move=>[<-]/IH->//.
 Qed.
 
+Section cat.
+  Variable A B T : Type.
+  Definition catr {H : IsList A B} (suff: B) (e: T * B) := (e.1, e.2 ++ suff).
+  Definition catl {H : IsList A B} (pref: B) (e: T * B) := (e.1, pref ++ e.2).
+End cat.
 
-Definition if_cut F (g : A * alts) :=
-  match g with
-  | (lang.cut, a) => F a
-  | _ => true
-  end.
-
-Definition apply_cut F (g : A * alts) : A * alts :=
-  match g with
-  | (a, ca) => (a, F ca)
-  end.
-
-
-Definition add_ca alts := apply_cut (fun x => x ++ alts).
-
-Definition save_goals (a: alts) (gs b:goals) := map (add_ca a) b ++ gs.
+Definition save_goals (a: alts) (gs b:goals) := map (catr a) b ++ gs.
 
 Definition save_alts (a : alts) (gs: goals) (bs : alts) := 
-  map (fun '((s,x): Sigma * goals) => (s, save_goals a gs x)) bs.
+  map (fun '(s,x) => (s, save_goals a gs x)) bs.
 
-  Definition empty_ca_G (g : A * alts) :=
+Definition empty_ca_G (g : A * alts) :=
   match g with (_,[::]) => true | _ => false end.
+
 Definition empty_caG goals := all empty_ca_G goals.
 Definition empty_ca alts := all (fun x => empty_caG (snd x)) alts.
 
-Definition a2g (a : A) : (A * alts) := (a,[::]).
+Definition a2g (b: seq A) := seq2goals [seq (x, [::]) | x <- b].
 
-Definition a2gs (b: seq A) := seq2goals [seq a2g x | x <- b].
+Definition r2a (b: (seq (Sigma * R))) : alts := 
+    seq2alts [seq (x.1, a2g x.2.(premises)) | x <- b].
 
-Definition aa2gs (b: (seq (Sigma * R))) : alts := seq2alts [seq (x.1, a2gs x.2.(premises)) | x <- b].
-
-Definition a2gs1 (b : Sigma * R) :=
-  a2gs b.2.(premises).
+Definition a2g1 (b : Sigma * R) := a2g b.2.(premises).
 
 Section Nur.
 
@@ -596,7 +587,7 @@ Inductive nur : fvS -> Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
 | CutE s s1 a ca r gl fv : nur fv s gl ca s1 r -> nur fv s [:: (cut, ca) & gl]%G a s1 r
 | CallE s s1 a b bs gl r t ca fv fv': 
   bc u p fv t s = (fv', [:: b & bs ]%SEQ) -> 
-    nur fv' b.1 (save_goals a gl (a2gs1 b)) (save_alts a gl (aa2gs bs) ++ a) s1 r -> 
+    nur fv' b.1 (save_goals a gl (a2g1 b)) (save_alts a gl (r2a bs) ++ a) s1 r -> 
       nur fv s [:: (call t, ca) & gl]%G a s1 r
 | FailE s s1 s2 t gl a al r ca fv fv': 
     bc u p fv t s = (fv',[::]%SEQ) -> nur fv' s1 a al s2 r ->   
