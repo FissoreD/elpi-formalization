@@ -587,7 +587,11 @@ Variable p : program.
 
 From det Require Import finmap.
 Open Scope fset_scope.
+
+(*SNIP: nur *)
+(*SNIP: nur_type*)
 Inductive nur : fvS -> Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
+(*ENDSNIP: nur_type*)
 | StopE s a fv : nur fv s nilC a s a
 | CutE s s1 a ca r gl fv : nur fv s gl ca s1 r -> nur fv s [:: (cut, ca) & gl]%G a s1 r
 | CallE s s1 a b bs gl r t ca fv fv': 
@@ -595,7 +599,9 @@ Inductive nur : fvS -> Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
     nur fv' b.1 (save_goals a gl (a2gs1 b)) (save_alts a gl (aa2gs bs) ++ a) s1 r -> 
       nur fv s [:: (call t, ca) & gl]%G a s1 r
 | FailE s s1 s2 t gl a al r ca fv fv': 
-  bc u p fv t s = (fv',[::]%SEQ) -> nur fv' s1 a al s2 r -> nur fv s [:: (call t, ca) & gl]%G [:: (s1, a) & al] s2 r.
+    bc u p fv t s = (fv',[::]%SEQ) -> nur fv' s1 a al s2 r ->   
+      nur fv s [:: (call t, ca) & gl]%G [:: (s1, a) & al] s2 r.
+(*ENDSNIP: nur *)
 
 Lemma nur_consistent fv s G x xs1 xs2 s1 s2 :
   nur fv s G x s1 xs1 -> nur fv s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
