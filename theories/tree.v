@@ -248,7 +248,7 @@ Section main.
       if success A then
         match next_alt b B with
         | None => omap build_B0 (next_alt true A)
-        | Some B => Some (And A B0 B)
+        | Some B' => Some (And A B0 B')
         end
       else if failed A then omap build_B0 (next_alt false A) 
       else Some (And A B0 B)
@@ -256,7 +256,7 @@ Section main.
     | Or (Some A) sB B =>
         match next_alt b A with
         | None => omap (fun x => Or None sB x) (next_alt false B)
-        | Some nA => Some (Or (Some nA) sB B)
+        | Some A' => Some (Or (Some A') sB B)
        end
   end.
   (*ENDSNIP: next_alt_code *)

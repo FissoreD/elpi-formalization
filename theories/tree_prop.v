@@ -179,18 +179,18 @@ Section RunP.
   ).
 
   (*SNIP: na_failed *)
-  Lemma next_alt_failedF {b A r}: next_alt b A = Some r -> failed r = false.
+  Lemma next_alt_failedF b A A': next_alt b A = Some A' -> failed A' = false.
   (*ENDSNIP: na_failed *)
   Proof.
-    elim_tree A b r => //=.
+    elim_tree A b A' => //=.
     - by case: b => //-[<-].
     - move=> [<-]//.
     - have:= HA b; case: next_alt => //=.
-        by move=> A' /(_ _ erefl) + [<-]; rewrite rew_pa.
+        by move=> X /(_ _ erefl) + [<-]; rewrite rew_pa.
       by have:= HB false; case: next_alt => //= ? /(_ _ erefl) + _ [<-]; rewrite rew_pa.
     - by have:= HB b; case: next_alt => //=?/(_ _ erefl)+ [<-]; rewrite rew_pa.
     - case: ifP => sA.
-        have:= HB b; case: next_alt => [A'|]//=.
+        have:= HB b; case: next_alt => [X|]//=.
           by move=> /(_ _ erefl) + [<-]; rewrite rew_pa (success_failed sA) sA.
         by case nA: next_alt => //= _ [<-]; rewrite rew_pa (HA _ _ nA) failed_big_and andbF.
       case: ifP => /=fA; last by move=> [<-]; rewrite rew_pa sA fA.
