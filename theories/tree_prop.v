@@ -178,7 +178,9 @@ Section RunP.
     failed_or_None, failed_or_Some, failed_and
   ).
 
+  (*SNIP: na_failed *)
   Lemma next_alt_failedF {b A r}: next_alt b A = Some r -> failed r = false.
+  (*ENDSNIP: na_failed *)
   Proof.
     elim_tree A b r => //=.
     - by case: b => //-[<-].
