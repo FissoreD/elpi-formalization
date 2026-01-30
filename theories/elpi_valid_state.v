@@ -456,6 +456,7 @@ Section NurValidState.
       apply: H.
     - move=> /andP[vA].
       have:= HA l s0 vA => {}HA.
+      have ? := empty_ca_atoms B0.
       case:ifP => /=[sA vB|sA /eqP?]; subst.
         move: HA.
         have SA:= success_t2l empty vA sA; rewrite SA/=.
@@ -463,7 +464,6 @@ Section NurValidState.
         set M := map _ _.
         rewrite valid_ca_split.
         rewrite drop_size_cat//{4 5}/M.
-        have? := empty_caG_r2l.
         rewrite valid_ca_make_lB0_empty_ca//.
         apply/andP; split; last first.
           by apply: valid_ca_add_deep_make_lB0 _ H1.
@@ -475,7 +475,6 @@ Section NurValidState.
       case lA: t2l => [|[s x] xs]//=.
       rewrite !t2l_big_and//=.
       rewrite map_cons cat_cons behead_cons.
-      have? := empty_caG_r2l B0.
       rewrite valid_caG_cat_empty_ca//= cat0s seq2altsK.
       move: HA; rewrite lA => /=.
       rewrite behead_cons => /andP[H1 H2].

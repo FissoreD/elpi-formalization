@@ -667,7 +667,7 @@ Qed.
         rewrite get_subst_and sA failed_and (success_failed)//=.
         set SA:= add_deep _ _ _.
         rewrite !catl0.
-        have [s[y[ys]]] := failed_t2l vB (step_not_failed H notF) (get_subst s0 A) (map (catr (r2l B0)) SA ++ l1).
+        have [s[y[ys]]] := failed_t2l vB (step_not_failed H notF) (get_subst s0 A) (map (catr (a2gs B0)) SA ++ l1).
         move=>H4; rewrite H4/=.
         move=>[???]; subst.
         have [[H5 H5'] H6] := HB _ _ _ _ _ _ _ _ _ vB H H4; subst.
@@ -718,9 +718,6 @@ Qed.
     simpl.
       rewrite save_alt_add_ca_deepG // !cat0s //.
   Qed.
-
-  Lemma empty_caG_r2l l: empty_caG (r2l l).
-  Proof. by elim: l => //= -[|t] xs. Qed.
 
   Lemma s2l_Expanded_call fv fv' s s3 A R l q gs xs ca:
     valid_tree A ->
@@ -808,10 +805,10 @@ Qed.
       rewrite H0/=.
       rewrite t2l_big_and map_cons/= cat_cons cat0s /catl/=.
       rewrite add_deep_cat map_cat.
-      set hd := (r2l B0).
+      (* set hd := (a2gs B0). *)
       rewrite -!cat_cons; f_equal.
       rewrite add_deep_goalsP//?empty_ca_atoms//.
-      by rewrite add_deep_altsP//?empty_ca_atoms1?empty_caG_r2l// H.
+      by rewrite add_deep_altsP//(empty_ca_atoms1, empty_ca_atoms).
   Qed.
 
   Lemma s2l_next_alt_tl {A s1 bt}:

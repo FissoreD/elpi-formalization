@@ -46,10 +46,6 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
       [:: (a, ca) & add_deepG bt l tl]%G
   end.
 
-(* reset-point to list *)
-Definition r2l a : goals := seq2goals [seq a2g x | x <- a].
-
-
   (* bt is the backtracking list for the cut-alternatives
     this list is important since in this tree:
           or   
@@ -73,9 +69,9 @@ Fixpoint t2l (A: tree) s (bt : alts) : alts :=
       let lA := t2l A s lB in
       add_ca_deep bt (lA ++ lB)
   | And A B0 B   =>
-      let lB0 := r2l B0 in
       let lA  := t2l A s bt in
       if lA is [:: (slA, x) & xs] then 
+        let lB0 := a2gs B0 in
         (* the reset point exists, it has to be added to all cut-to alternatives *)
         let xz := add_deepG bt lB0 x in
         let xs := add_deep bt lB0 xs in 
