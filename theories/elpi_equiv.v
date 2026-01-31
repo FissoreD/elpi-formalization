@@ -12,8 +12,8 @@ Section NurEqiv.
     valid_tree A ->
       run u p fv s1 A (Some sF) B b fv' -> 
         exists x xs,
-          t2l A s1 nilC = x :: xs /\
-          nur u p fv x.1 x.2 xs sF (t2l (odflt KO B) s0 nilC).
+          t2l A s1 [::] = x :: xs /\
+          nur u p fv x.1 x.2 xs sF (t2l (odflt KO B) s0 [::]).
   Proof.
     move=> +++H.
     remember (Some _) as r eqn:Hr.
@@ -27,12 +27,12 @@ Section NurEqiv.
       have [[sy y][ys /=[+ {}IH]]]:= IH _ erefl s0 fvB fvs vB.
       have /=[] := path_atom_exp_cut pA eA => ?; subst.
         have H5 := step_cb_same_subst1 vA eA; subst.
-        have [x[tl[H1 [H2 H3]]]] := s2l_CutBrothers s1 nilC vA eA.
+        have [x[tl[H1 [H2 H3]]]] := s2l_CutBrothers s1 [::] vA eA.
         rewrite H1 H2 H5 => -[???]; subst.
         have ?:= tree_fv_step_cut eA; subst.
         by repeat eexists; apply: CutE => //=.
       have fA := step_not_failed eA notF.
-      have [s[x[xs +]]] := failed_t2l vA fA s1 nilC.
+      have [s[x[xs +]]] := failed_t2l vA fA s1 [::].
       move=> H Hx; rewrite H; repeat eexists.
       case: x H => [|g gs].
         fNilG => H.
@@ -61,8 +61,8 @@ Section NurEqiv.
 
 Lemma elpi_to_tree fv s1 s2 a na g  : 
   nur u p fv s1 g a s2 na -> 
-  forall s0 t, valid_tree t -> (t2l t s0 nilC) = ((s1,g) :: a) -> 
-  exists t1 n fv2, run u p fv s0 t (Some s2) t1 n fv2 /\ t2l (odflt KO t1) s0 nilC = na.
+  forall s0 t, valid_tree t -> (t2l t s0 [::]) = ((s1,g) :: a) -> 
+  exists t1 n fv2, run u p fv s0 t (Some s2) t1 n fv2 /\ t2l (odflt KO t1) s0 [::] = na.
 Proof.
   elim; clear.
   - move=> s a fv s1 A vA /= H.

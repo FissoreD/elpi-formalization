@@ -14,12 +14,12 @@ Section clean_ca.
 
   Fixpoint clean_ca (bt:alts) (ats: alts) : alts :=
     match ats with
-    | no_alt => nilC
+    | no_alt => [::]
     | more_alt (hd,xs) tl => (hd, clean_ca_goals bt xs) :: (clean_ca bt tl)
     end
   with clean_ca_goals bt gl :=
     match gl with
-    | no_goals => nilC 
+    | no_goals => [::] 
     | more_goals hd tl => (clean_ca_G clean_ca bt hd) :: (clean_ca_goals bt tl)
     end.
 
@@ -68,11 +68,11 @@ Section clean_ca.
       by rewrite size_add_ca_deep.
   Qed.
 
-  Lemma clean_ca_G_nil {L}: (forall L, clean_ca nilC L = L) -> clean_ca_G clean_ca nilC L = L.
+  Lemma clean_ca_G_nil {L}: (forall L, clean_ca [::] L = L) -> clean_ca_G clean_ca [::] L = L.
   by move=> IH; case: L => a alts /=; rewrite IH subn0 take_size. Defined.
 
-  Lemma clean_ca_nil {L}: clean_ca nilC L = L
-  with clean_ca_goals_nil {L}: clean_ca_goals nilC L = L.
+  Lemma clean_ca_nil {L}: clean_ca [::] L = L
+  with clean_ca_goals_nil {L}: clean_ca_goals [::] L = L.
   Proof.
     - case: L => /=// [[sx x]xs]; rewrite clean_ca_goals_nil clean_ca_nil//.
     - case: L => //= g gs. rewrite clean_ca_goals_nil clean_ca_G_nil//.
@@ -277,10 +277,10 @@ Section clean_ca.
   Qed.
 
   Lemma what_I_want {A s bt}:
-    valid_tree A -> clean_ca bt (t2l A s bt) = t2l A s nilC.
+    valid_tree A -> clean_ca bt (t2l A s bt) = t2l A s [::].
   Proof.
     move=> vA.
-    have:= [elaborate @clean_ca_s2l s nilC bt _ vA].
+    have:= [elaborate @clean_ca_s2l s [::] bt _ vA].
     by rewrite cat0s.
   Qed.
 

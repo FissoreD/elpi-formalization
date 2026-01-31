@@ -31,7 +31,7 @@ Section NurValidState.
         let ca' := take n ca in
         valid_caG xs ca' bt
         && valid_caA_aux true ca ca' bt
-      else (ca == nilC) && empty_caG xs
+      else (ca == [::]) && empty_caG xs
       end
     (* b tells if ca should have bt as suffix *)
     with valid_caA_aux b ca ca1 bt : bool :=
@@ -40,14 +40,14 @@ Section NurValidState.
       match ca with
       | no_alt => ~~b (*here b = true and bt is not its suffix, i.e. error*)
       | more_alt hd tl => 
-        if ca1 == nilC then empty_caG hd.2 && empty_ca tl 
+        if ca1 == [::] then empty_caG hd.2 && empty_ca tl 
         else valid_caG hd.2 (behead ca1) bt && valid_caA_aux b tl (behead ca1) bt
     end
     .
 
   Definition valid_caA := valid_caA_aux false.
 
-  Definition valid_ca L := valid_caA L L nilC.
+  Definition valid_ca L := valid_caA L L [::].
 
   Lemma fold_valid_caA : valid_caA_aux false = valid_caA.
   Proof. move=> //. Qed.
@@ -56,7 +56,7 @@ Section NurValidState.
   (* VALID CA PROPERTIES                                              *)
   (********************************************************************)
 
-  Lemma valid_ca_nil: valid_ca nilC.
+  Lemma valid_ca_nil: valid_ca [::].
   Proof. rewrite//. Qed.
 
 
@@ -68,7 +68,7 @@ Section NurValidState.
     move => /and4P[]//.
   Qed.
 
-  Lemma valid_cas_empty1 {l} bt: valid_caA nilC l bt.
+  Lemma valid_cas_empty1 {l} bt: valid_caA [::] l bt.
   Proof. move=>//. Qed.
 
   Lemma empty_ca_valid {hd l} bt:
@@ -371,7 +371,7 @@ Section NurValidState.
     valid_ca stl ->
     valid_caA (add_ca_deep l stl) (add_ca_deep l stl) l
     with valid_caG_add_ca_deepG l x xs: 
-      valid_caG x xs nilC ->
+      valid_caG x xs [::] ->
       valid_caG (add_ca_deep_goals l x) (add_ca_deep l xs) l
     .
   Proof.
@@ -399,14 +399,14 @@ Section NurValidState.
   Qed.
 
   Lemma valid_caG_a2g x l:
-    valid_caG (a2g x) l nilC.
+    valid_caG (a2g x) l [::].
   Proof. by elim: x l => //a l H l0/=; rewrite suffix0s take0 H. Qed.
 
   Lemma empty_caG_cat A B: empty_caG (A ++ B) = empty_caG A && empty_caG B.
   Proof. by rewrite/empty_caG all_cat. Qed.
 
   Lemma empty_ca_big_or r rs s0:
-    empty_ca (t2l (big_or r rs) s0 nilC).
+    empty_ca (t2l (big_or r rs) s0 [::]).
   Proof.
     rewrite/empty_ca/=.
     elim: rs r s0 => [|[s0 r0] rs IH] x s1//=; rewrite t2l_big_and.
@@ -416,7 +416,7 @@ Section NurValidState.
   Qed.
 
   Lemma valid_caA_big_or x xs s0 rs:
-    valid_caA (t2l (big_or x xs) s0 nilC) rs nilC.
+    valid_caA (t2l (big_or x xs) s0 [::]) rs [::].
   Proof.
     elim: xs x s0 rs => //= [|[s0 r0] rs IH] x s1 l.
       by rewrite t2l_big_and//= empty_ca_atoms valid_caG_a2g if_same.
