@@ -229,6 +229,12 @@ Section main.
         else let: (fv, tA, rA) := step fv s A in (fv, tA, And rA B0 B)
     end.
 
+    Lemma step_and A B0 B pr fv s: (step pr fv s (And A B0 B)).2 = 
+        if success A then 
+          And (if is_cb (step pr fv (get_subst s A) B).1.2 then cutl A else A) B0 (step pr fv (get_subst s A) B).2
+        else And (step pr fv s A).2 B0 B.
+    Proof. by rewrite/=!push; case: ifP => //=. Qed.
+
   (* Next_alt takes a tree "T" returns a new tree "T'" representing the next
      alternative wrt "T", if no new alternative exists, None is returned.
      Next_alt takes a boolean b to know if a successful path should be erased in

@@ -75,6 +75,9 @@ Section check.
     | x :: xs => (check_atom sP x || has_cut_seq xs) && det_tree_seq sP xs
     end.
 
+
+  Definition no_alt A := next_alt (success A) A == None.
+
   (** DOC:
     a tree is deterministic if it calls deterministic atoms. 
     delicate cases are And and Or subtrees.
@@ -90,8 +93,11 @@ Section check.
     | TA (call a) => tm_is_det sP a
     | KO | OK => true
     | And A B0 B =>
-        [&& (((next_alt (success A) A == None) || (has_cut_seq B0)) && has_cut B) || det_tree sP A, 
-          det_tree sP B & ((next_alt (success A) A == None) || det_tree_seq sP B0)]
+        det_tree sP B && 
+        if no_alt A then det_tree sP A || has_cut B
+        else 
+          det_tree_seq sP B0 &&
+          (det_tree sP A || has_cut_seq B0)
     | Or None _ B => det_tree sP B
     | Or (Some A) _ B =>
         det_tree sP A && 
@@ -122,10 +128,9 @@ Section check.
   Lemma det_tree_big_and sP L:
     det_tree sP (big_and L) = det_tree_seq sP L.
   Proof.
-    elim: L => //= [[|c]]//= L IH; rewrite IH Bool.andb_diag.
-      by rewrite orbT.
-    case: tm_is_det; case: det_tree_seq; rewrite?(andbF, andbT, orbT, orbF)//=.
-    by rewrite has_cut_seq_has_cut_big_and Bool.andb_diag.
+    elim: L => //=-[|c] L ->/=;
+    case: (det_tree_seq sP L); case: (has_cut_seq L); 
+    rewrite//(orbT,orbF)//=(andbT,andbF)//=.
   Qed.
 
   Lemma cut_followed_by_det_nfa_and {sP bo} :
@@ -138,13 +143,16 @@ Section check.
     by move=> /[dup] /cut_followed_by_det_has_cut -> /IH-> /[!orbT].
   Qed.
 
-  Lemma no_free_alt_cutl {sP A}: success A -> det_tree sP (cutl A).
+  Lemma no_alt_cutl A: success A -> no_alt (cutl A).
+  Proof. by rewrite /no_alt success_cut => ->; rewrite next_alt_cutl. Qed.
+
+  Lemma det_tree_cutl {sP A}: success A -> det_tree sP (cutl A).
   Proof.
     elim_tree A => //=.
       by case: ifP => dA/= succ; rewrite !(HA,HB,eqxx,if_same)//=.
       by rewrite success_or_None.
-    rewrite success_and fun_if/= success_cut => /andP[/[dup]/HA->->/HB->].
-    by rewrite orbT next_alt_cutl.
+    rewrite success_and fun_if/= => /andP[sA sB]/=.
+    by rewrite sA HA// HB//no_alt_cutl//.
   Qed.
 
   Variable u : Unif.
@@ -375,29 +383,65 @@ Qed.
       has_cut (step u p sv s A).2.
   Proof. move/step_has_cut_help => /(_ sv s)[]//->//. Qed.
 
+  Lemma succ_failF_no_alt A: success A = false -> failed A = false -> no_alt A = false.
+  Proof. by rewrite/no_alt => -> /failedF_next_alt ->//. Qed.
+
+  Lemma no_alt_det_tree sP fv c s:
+    no_alt (backchain u p fv s c).2 -> det_tree sP (backchain u p fv s c).2.
+  Proof.
+    rewrite/backchain !push/=.
+    case bc: bc => [fv' [|[s0 r0] sr]] //=.
+    rewrite/no_alt/=.
+    rewrite next_alt_big_or//.
+  Qed.
+
+  (* Lemma det_tree_exp sP sv s1 A:
+    let sA := step u p sv s1 A in
+    no_alt sA.2 -> det_tree sP sA.2.
+  Proof.
+    move=> /=.
+    elim_tree A sv s1.
+    - by case: t => //= c; rewrite !push/= => _ /no_alt_det_tree->.
+    - rewrite/=.  *)
+    
+
+
   Lemma step_no_free_alt {sP sv s1 A r} : 
     check_program sP p -> det_tree sP A -> 
       step u p sv s1 A = r ->
         det_tree sP r.2.
   Proof.
     move=> H + <-; clear r.
-    elim_tree A s1 => /=.
+    elim_tree A s1.
     - by case: t => [|c]//=; rewrite push => /is_det_no_free_alt->//.
-    - move=> /andP[fA]; rewrite !push/= HA//=.
+    - move=>/= /andP[fA]; rewrite !push/= HA//=.
       case: ifP => //= cA; last by move=> /eqP->; rewrite !if_same.
       rewrite !fun_if => /[dup] Hx ->; do 2 case: ifP => //=.
       by move=> Hy Hz; rewrite step_keep_cut in Hz.
-    - by rewrite !push; move=> /HB/=->.
-    - rewrite !push.
-      case: ifP => sA/=/and3P[H1 H2 H3].
-        rewrite [success _]fun_if success_cut if_same sA HB//.
-        case: ifP => CB.
-          by rewrite next_alt_cutl eqxx/= no_free_alt_cutl// orbT.
-        rewrite H3.
-        move/orP: H1 => [|->]; last by rewrite orbT//.
-        move=> /andP[-> /step_keep_cut->]//.
+    - by rewrite /=!push; move=> /HB/=->.
+    - rewrite step_and/= => /andP[dB].
+      (* rewrite/no_alt. *)
+      set sB:= step _ _ _ _ B.
+      set sA:= step _ _ _ _ A.
+        rewrite (fun_if (det_tree sP)).
+      (* rewrite [det_tree _ _]fun_if. *)
+      case SA: success.
+        case : (ifP (is_cb _)) => /=; rewrite {}HB//=.
+          by rewrite det_tree_cutl//no_alt_cutl//= andbT.
+        by case: ifP => //= _ is_cb /orP[->//|/step_keep_cut ->]//; rewrite orbT.
+      rewrite /=dB/=.
       case fA: (failed A).
-        by rewrite failed_step//=sA H3 H1 H2.
+        by rewrite/sA failed_step//=.
+      rewrite (succ_failF_no_alt SA fA) => /andP[->]/=.
+      case dt : det_tree => //=; first by rewrite HA//if_same.
+      move=> ->; rewrite orbT.
+      case: ifP => //=.
+      move=> /orP[/HA->|->]; rewrite (if_same, orbT)//=.
+
+
+      (* have no_altE : no_alt A =  *)
+      rewrite/no_alt.
+      rewrite/no_alt.
       move: H1 H3; rewrite (failedF_next_alt fA)//=.
       move=> + ->; rewrite H2 !orbT !andbT.
       move=> /orP[|/HA->]; last by rewrite !orbT.
