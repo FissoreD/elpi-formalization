@@ -27,7 +27,7 @@ From det Require Import finmap.
 (*                      the keys of g override the keys of f                 *)
 (*                                                                           *)
 
-Notation ctx A B := {fmap A -> B}.
+Local Notation ctx A B := {fmap A -> B}.
 Open Scope fmap_scope.
 
 Notation key_absent k c := (k \notin c) (only parsing).
