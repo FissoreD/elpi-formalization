@@ -35,6 +35,20 @@ Section checker.
     | call t => tm_is_det sP t
     end. 
 
+  (* Definition not_same_head u p r1 r2 :=
+      exists i, input_pos i r1 = i1 -> input_pos i r2 = i2 ->
+         u.unif empty i1 i2 = None.
+
+          Axiom:
+  unif empty a b = None ->
+    forall s, match s a t = Some -> match s b t = None.
+
+  Lemma not_same_head_backchain :
+    not_same_head u p r1 r2 ->
+    let rl := (bc u p fv c s).2 in
+    r1 \in rl -> r2 \notin rl.
+ *)
+
   (* There is cut and after the cut there are only call to Det preds *)
   Fixpoint check_atoms (sP :sigT) (s: seq A) :=
     match s with
