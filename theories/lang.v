@@ -954,3 +954,5 @@ Proof.
   case t: tm2RC => //=[[]][<-<-].
   apply: Hf t.
 Qed.
+
+Axiom unif_refl: forall unif t s, unif.(unify) t t s.
