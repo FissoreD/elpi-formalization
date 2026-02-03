@@ -379,7 +379,7 @@ Qed.
   Lemma check_rulesP s rs c fv s1:
     check_rules s rs ->
     tm_is_det s c ->
-    all (fun x => check_atoms s x.2.(premises)) (bc u {| rules := rs; sig := s |} fv c s1).2.
+    all (fun x => check_atoms s x.2) (bc u {| rules := rs; sig := s |} fv c s1).2.
   Proof.
     rewrite/bc.
     case DR: tm2RC => //=[[q p]].
@@ -541,7 +541,7 @@ Qed.
   Lemma mut_exclP s rs fv c s1:
     mut_excl u s rs -> 
       tm_is_det s c ->
-        all_but_last (fun x => has_cut_seq x.2.(premises)) (bc u {|sig:=s; rules := rs|} fv c s1).2.
+        all_but_last (fun x => has_cut_seq x.2) (bc u {|sig:=s; rules := rs|} fv c s1).2.
   Proof.
     rewrite/bc.
     case DR: tm2RC => //=[[q p]].
@@ -579,32 +579,6 @@ Qed.
       by rewrite (select_head_nil _ FS H H3 SH).
     move=> /andP[CBo _].
     by rewrite (fresh_has_cut CBo X); case: select => //= _ [].
-  Qed.
-
-
-  Lemma is_det_no_free_alt pr c sv s1:
-    check_program u pr -> tm_is_det (sig pr) c -> 
-    det_tree (sig pr) (backchain u pr sv s1 c).2.
-  Proof.
-    rewrite /backchain/bc/check_program/check_program_aux.
-    case: pr => rs s/= => /andP[].
-    case X: tm2RC => //=[[q qp]]; rewrite !push/=.
-    case: fndP => //= kP.
-    move=> ++ H.
-    have [q'[qp' [H1 [H2 H3]]]] := tm_is_det_tm2RC s1 H.
-    move=> ME CR.
-    have := mut_exclP sv s1 ME H.
-    have := check_rulesP sv s1 CR H.
-    rewrite/bc X/= in_fnd.
-    case: fresh_rules => [a rs'].
-    case: select => /= _.
-    move=> [|[_ + {ME CR}rs]]//=; clear.
-    elim: rs => //=[|[s0 r0] rs IH] [h b]/=.
-      by move=> /andP[]*; rewrite det_tree_big_and cut_followed_by_det_nfa_and//.
-    move=> /and3P[Cb Cr0 HL] /andP[cb].
-    rewrite has_cut_seq_has_cut_big_and cb.
-    rewrite det_tree_big_and cut_followed_by_det_nfa_and//=.
-    by move=> /IH; rewrite /= Cr0 HL => /(_ isT).
   Qed.
 
   Lemma has_cut_success {A}:
@@ -645,13 +619,29 @@ Qed.
   Lemma succ_failF_no_alt A: success A = false -> failed A = false -> no_alt A = false.
   Proof. by rewrite/no_alt => -> /failedF_next_alt ->//. Qed.
 
-  Lemma no_alt_det_tree p sP fv c s:
-    no_alt (backchain u p fv s c).2 -> det_tree sP (backchain u p fv s c).2.
+  Lemma is_det_big_or pr c sv fv' s0 r0 rs s1:
+    check_program u pr -> tm_is_det (sig pr) c -> 
+    bc u pr sv c s1 = (fv', (s0, r0) :: rs) ->
+    det_tree (sig pr) (big_or r0 rs).
   Proof.
-    rewrite/backchain !push/=.
-    case bc: bc => [fv' [|[s0 r0] sr]] //=.
-    rewrite/no_alt/=.
-    rewrite next_alt_big_or//.
+    rewrite /bc/check_program/check_program_aux.
+    case: pr => rules s/= => /andP[].
+    case X: tm2RC => //=[[q qp]].
+    case: fndP => //= kP.
+    move=> ++ H.
+    have [q'[qp' [H1 [H2 H3]]]] := tm_is_det_tm2RC s1 H.
+    move=> ME CR.
+    have := mut_exclP sv s1 ME H.
+    have := check_rulesP sv s1 CR H.
+    rewrite/bc X/= in_fnd.
+    case: fresh_rules => [a rs'].
+    case: select => /= fv2 rs'' ++ [??]; subst => /=/andP[].
+    clear.
+    elim: rs s r0 => //= [|[s0 r0] rs IH] sp r1 H1; 
+    rewrite /=det_tree_big_and//cut_followed_by_det_nfa_and//.
+    move=> /andP[Cr0 HL] /andP[cb].
+    rewrite has_cut_seq_has_cut_big_and cb.
+    by move=> /IH-/(_ sp)//=; auto.
   Qed.
 
   Lemma step_no_free_alt pr sv s1 A r: 
@@ -662,7 +652,8 @@ Qed.
     move=> H + <-; clear r.
     elim_tree A s1.
     - case: t => [|c]//=; rewrite !push/=.
-      by apply: is_det_no_free_alt.
+      case bc: bc => //=[fv'[|[s0 r0]rs]]//= H1.
+      by apply: is_det_big_or bc.
     - move=>/= /andP[fA]; rewrite !push/= HA//=.
       case: ifP => //= cA; last by move=> /eqP->; rewrite !if_same.
       rewrite !fun_if => /[dup] Hx ->; do 2 case: ifP => //=.

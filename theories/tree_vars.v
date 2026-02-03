@@ -7,14 +7,6 @@ Section vars_tree.
   Variable (u : Unif).
   Variable (p : program).
 
-  (* Search rename.
-
-  Lemma rename_app fv f a: exists x, rename fv (Tm_App f a) = x.
-  Proof.
-    rewrite/rename/= !push.
-    
-    case X: fresh_tm => /=. *)
-
   Lemma fresh_tm_sub fv fv' m tm ign:
     fresh_tm fv m tm = (fv', ign) -> fv `<=` fv'.
   Proof.
@@ -26,7 +18,6 @@ Section vars_tree.
     case t2: fresh_tm => /=[fv2 a'].
     by apply/fsubset_trans/Ha/t2/Hf/t1.
   Qed.
-
 
   Lemma rename_sub fv fv' r r':
     rename fv r = (fv', r') -> fv `<=` fv'.
@@ -54,7 +45,6 @@ Section vars_tree.
     case X: fresh_callable.
     by apply/fresh_callable_sub/X.
   Qed.
-
 
   Lemma fresh_atoms_sub fv fv' r r':
     fresh_atoms fv r = (fv', r') -> fv `<=` fv'.
@@ -98,15 +88,16 @@ Section vars_tree.
 
   Lemma select_sub_rules r0 rn fv fv' q m s:
     select u fv q m r0 s = (fv', rn) ->
-      varsU (seq.map (fun x => vars_sigma x.1 `|` varsU_rule x.2) rn) `<=` fv'.
+      varsU (seq.map (fun x => vars_sigma x.1 `|` vars_atoms x.2) rn) `<=` fv'.
   Proof.
     elim: r0 rn fv fv' q m s => [|x xs IH] rn fv fv' q m s/=; first by move=> [<-<-]//.
     case X: H => [s'|]; last by apply: IH.
     case Y: select => [fv2 rs][??]; subst => /=.
-    rewrite fsetUS//.
+    rewrite -!fsetUA/= !fsetUS//.
+    case: x X; rewrite/=/varsU_rhead/varsU_rprem/= => hd pm _.
+    rewrite fsubsetU// fsetUS//=; first by rewrite orbT.
     by apply: IH Y.
   Qed.
-
 
   Lemma bc_sub c rs fv fv' s:
     bc u p fv c s = (fv', rs) -> fv `<=` fv'.
@@ -118,15 +109,6 @@ Section vars_tree.
     apply/fsubset_trans/select_sub/H/fresh_rules_sub/F.
   Qed.
 
-  Lemma backchain_sub c c' fv fv' s:
-    backchain u p fv s c = (fv', c') ->
-    fv `<=` fv'.
-  Proof.
-    rewrite/backchain push => -[<- _].
-    case X: bc => [fvx rs]/=.
-    apply/bc_sub/X.
-  Qed.
-
   Lemma vars_tree_cutl A: vars_tree (cutl A) `<=` vars_tree A.
   Proof. elim_tree A => /=; last case: ifP => //=; rewrite !fsetUSS//vars_tree_cutr. Qed.
 
@@ -136,8 +118,8 @@ Section vars_tree.
     elim_tree A R fv fv' r s => /=; only 1-2: by move=> [<-]//.
       case: t => [|c]/=; first by move=> [<-].
       rewrite push => -[<- _ _].
-      case X: backchain.
-      apply/backchain_sub/X.
+      case bc: bc => /=.
+      by apply: bc_sub bc.
     - by rewrite /=!push; case: ifP => dA [<- _ _]; case X: step => [[]]//=; apply: HA X.
     - by rewrite /=!push; case: ifP => dA [<- _ _]; case X: step => [[]]//=; apply: HB X.
     rewrite/= !push.
@@ -150,42 +132,33 @@ Section vars_tree.
     vars_tree (big_and r0) = vars_atoms r0.
   Proof. by elim: r0 => //= -[|c]//=l ->; rewrite/vars_atoms/= -fsetUA fsetUid//. Qed.
 
-  Lemma vars_tree_big_or s0 r0 rs:
-    vars_sigma s0 `|` vars_tree (big_or (premises r0) rs)
-    `<=` vars_sigma s0 `|` varsU_rule r0
-     `|` varsU [seq vars_sigma x.1 `|` varsU_rule x.2 | x <- rs].
+  Lemma vars_tree_big_or r0 rs:
+    vars_tree (big_or r0 rs) = vars_atoms r0 `|` varsU [seq vars_sigma x.1 `|` vars_atoms x.2 | x <- rs].
   Proof.
-    elim: rs s0 r0 => //=[|[s0 r0] rs IH] s l/=; rewrite vars_tree_big_and ?fsetU0.
-      by rewrite /varsU_rule/varsU_rprem (fsetUC (varsU_rhead _)) fsetUA fsubsetUl.
+    elim: rs r0 => //=[|[s0 r0] rs IH] l/=; rewrite vars_tree_big_and ?fsetU0 => //.
     rewrite -fsetUA (fsetUC _ (vars_sigma s0)).
-    rewrite fsetUA fsetUSS// fsetUSS//.
-    by apply/fsubsetUr.
+    by rewrite IH//= !fsetUA//.
   Qed.
 
-  Lemma vars_tm_bc_sub c c' fv fv' s:
+  Lemma vars_tm_bc_sub c fv fvx s s0 r0 rs:
     vars_sigma s `<=` fv ->
     vars_tm (Callable2Tm c) `<=` fv ->
-    backchain u p fv s c = (fv', c') ->
-    vars_tree c' `<=` fv' /\  vars_sigma s `<=` fv'.
+    bc u p fv c s = (fvx, (s0, r0) :: rs) ->
+    vars_tree (big_or r0 rs) `<=` fvx  /\ vars_sigma s0 `<=` fvx.
   Proof.
-    rewrite/backchain !push => H1 H2 [<-].
+    move => H1 H2.
     rewrite/bc/=.
-    case X: tm2RC => [[cd hd]|]/=; last by move=> <-/=.
-    case: fndP => /=hp; last by move=> <-.
+    case X: tm2RC => [[cd hd]|]/=; last by move=> [<-]/=.
+    case: fndP => /=hp; last by move=> [<-].
     rewrite !push.
     case FR: fresh_rules => [fF RF]/=.
-    case S: select => [fv1 rs]/=<-{c'}//=.
+    case S: select => [fv1 rs1]/=[<-]{fvx}?; subst.
     have Hx := select_sub S.
     have Hy := fresh_rules_sub FR.
     have Hz := fsubset_trans Hy Hx.
-    split; last first.
-      by apply/fsubset_trans/Hz.
-    case: rs S => [|[r0 s0] rs]//= S.
-    rewrite fset0U.
-    rewrite fsetUC.
-    apply/fsubset_trans.
-      apply/vars_tree_big_or.
-    by have:= select_sub_rules S.
+    have /= := select_sub_rules S.
+    rewrite 2!fsubUset -andbA => /and3P[Ha Hb Hc].
+    rewrite vars_tree_big_or fsubUset Hb => //.
   Qed.
 
   Lemma vars_sigma_get_subst s fvA A:
@@ -198,15 +171,19 @@ Section vars_tree.
     by case: ifP => dA; auto.
   Qed.
 
-
   Lemma vars_tree_step_sub_flow A R fv fv' s r:
     vars_tree A `<=` fv -> vars_sigma s `<=` fv ->
     step u p fv s A = (fv', r, R) -> ((vars_tree R `<=` fv') * (vars_sigma s `<=` fv')).
   Proof.
     elim_tree A R fv fv' r s => /=; only 1,2: by move=> ?? [<-_<-].
       case: t => [|c]; first by move=> ?? [<- _ <-]//=.
-      move=> H1 H2; case X: backchain => [fvx c'][<-_<-].
-      by apply/vars_tm_bc_sub/X.
+      move=> H1 H2; case X: bc => [fvx c'][<-_<-].
+      have H := bc_sub X.
+      have ? := fsubset_trans H2 H.
+      split => //.
+      case: c' X => //=[[s0 r0] rs]//=; rewrite fset0U => H3.
+      rewrite fsubUset; apply/andP.
+      by apply: vars_tm_bc_sub H3.
     - rewrite 2!fsubUset !push -!andbA => /and3P[vA vB vsm] vs.
       move=> [???]; subst; case eA: step => [[v' r'] t']//=; rewrite 2!fsubUset.
       have [-> H] := HA _ _ _ _ _ vA vs eA; split => //=.

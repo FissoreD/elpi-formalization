@@ -184,19 +184,14 @@ Fixpoint big_and (a : list A) : tree :=
   | x :: xs => And (TA x) xs (big_and xs)
   end.
 
-Fixpoint big_or (r : list A) (l : seq (Sigma * R)) : tree :=
+Fixpoint big_or (r : list A) (l : seq (Sigma * seq A)) : tree :=
   match l with 
   | [::] => big_and r
-  | (s,r1) :: xs => Or (Some (big_and r)) s (big_or r1.(premises) xs)
+  | (s,r1) :: xs => Or (Some (big_and r)) s (big_or r1 xs)
   end.
 
 Section main.
   Variable u: Unif.
-
-  Definition backchain pr fv s t :=
-    let: (fv, l) := bc u pr fv t s in
-    (fv, if l is (s,r) :: xs then (Or (Some KO) s (big_or r.(premises) xs))
-         else KO).
 
   (*SNIP: step_sig*)
   Definition step : program -> fvS -> Sigma -> tree -> (fvS * step_tag * tree) := 
@@ -211,9 +206,9 @@ Section main.
     (* lang *)
     | TA cut       => (fv, CutBrothers, OK)
     | TA (call t)  => 
-       let: (fv, t) := backchain pr fv s t in
-       (fv, Expanded, t)
-
+      let: (fv, l) := bc u pr fv t s in
+      (fv, Expanded, if l is ((s, r) :: xs) then (Or (Some KO) s (big_or r xs))
+                     else KO)
     (* recursive cases *)
     | Or A sB B =>
         if A is Some A then 

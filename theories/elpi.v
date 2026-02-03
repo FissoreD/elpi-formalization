@@ -216,10 +216,10 @@ Definition empty_ca alts := all (fun x => empty_caG (snd x)) alts.
 
 Definition a2g (b: seq A) := seq2goals [seq (x, [::]) | x <- b].
 
-Definition r2a (b: (seq (Sigma * R))) : alts := 
-    seq2alts [seq (x.1, a2g x.2.(premises)) | x <- b].
+Definition r2a (b: (seq (Sigma * seq A))) : alts := 
+    seq2alts [seq (x.1, a2g x.2) | x <- b].
 
-Definition a2g1 (b : Sigma * R) := a2g b.2.(premises).
+(* Definition a2g1 (b : Sigma * R) := a2g b.2.(premises). *)
 
 Section Nur.
 

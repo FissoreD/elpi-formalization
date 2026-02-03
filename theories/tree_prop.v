@@ -32,7 +32,7 @@ Section RunP.
   Proof.
     elim: A fv fv' s1 B => //.
     + by move=> /= ???? [? <-].
-    + by move=> []//= ?????; case: backchain.
+    + by move=> []//= ?????; case: bc.
     + move=> A HA s B HB ?? s1 C/=.
       by case_step_tag X B1 => //=-[??]; subst; rewrite success_or_Some !(HA _ _ _ _ X).
     + move=> s B HB ?? s1 C/=.
@@ -197,8 +197,8 @@ Section RunP.
       by case nA: next_alt => //=-[<-]; rewrite rew_pa (HA _ _ nA) failed_big_and andbF.
   Qed.
 
-  Lemma failed_big_or u p fv s t: failed (backchain u p fv s t).2.
-  Proof. rewrite/backchain; case: bc => // ? -[|[]]//. Qed.
+  (* Lemma failed_big_or u p fv s t: failed (backchain u p fv s t).2.
+  Proof. rewrite/backchain; case: bc => // ? -[|[]]//. Qed. *)
 
   Section same_structure.
     Definition same_structure A B :=

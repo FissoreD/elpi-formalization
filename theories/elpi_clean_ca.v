@@ -403,11 +403,11 @@ Section clean_ca.
     elim_tree A s3 bt s1 q gl a ign fv => /=.
     - case: t => [|c]// _ _ [?????]; subst.
       rewrite push.
-      rewrite what_I_want; last by rewrite valid_tree_backchain.
-      rewrite/backchain !push/=.
+      rewrite what_I_want/=; last first.
+        by case: bc => //= _ []//[>]/=; rewrite (B.base_or_big_or) orbT.
       case X: bc => [fv' [|[s0 r0] rs]]//=.
       rewrite cat0s cats0 add_ca_deep_empty1.
-      have:= @s2l_big_or s1 s0 (premises r0) rs no_alt no_goals.
+      have:= @s2l_big_or s1 s0 r0 rs no_alt no_goals.
       rewrite catr0/= add_ca_deep_empty1 cat0s => <-//.
     - move=> fA /andP[vA bB].
       have [s'[x[xs H]]] := failed_t2l vA fA s3 (t2l B sm [::]).
@@ -496,7 +496,7 @@ Section clean_ca.
       rewrite (clean_ca_goals_empty (EA _)).
       set T1 := clean_ca bt xs.
       set T2 := (clean_ca_goals bt gs).
-      have H1 := @add_deep_goalsP _ (a2g1 (sz, z)) T1 no_alt T2 (EA _) (empty_ca_atoms _).
+      have H1 := @add_deep_goalsP _ (a2g z) T1 no_alt T2 (EA _) (empty_ca_atoms _).
       rewrite !cats0 in H1.
       rewrite H1//cats0.
       f_equal.

@@ -880,7 +880,7 @@ Fixpoint H u (ml : list mode) (q : Callable) (h: Callable) s : option Sigma :=
   | _, _, _ => None
   end.
 
-Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma : (fvS * seq (Sigma * R)) :=
+Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma : (fvS * seq (Sigma * seq A)) :=
   match rules with
   | [::] => (fv, [::])
   | rule :: rules =>
@@ -888,7 +888,7 @@ Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma 
     | None => select u fv query modes rules sigma
     | Some (sigma1) => 
       let: (fv, rs) := select u fv query modes rules sigma in
-      (vars_sigma sigma1 `|` varsU_rule rule `|` fv, (sigma1, rule) :: rs)
+      (vars_sigma sigma1 `|` varsU_rule rule `|` fv, (sigma1, rule.(premises)) :: rs)
     end
   end.
 
@@ -898,7 +898,7 @@ Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma 
 *)
 (*SNIP: bc_type*)
 Definition bc : Unif -> program -> fvS -> Callable -> 
-                        Sigma -> fvS * seq (Sigma * R) :=
+                        Sigma -> fvS * seq (Sigma * seq A) :=
 (*ENDSNIP: bc_type*)
   fun u pr fv (query:Callable) s =>
   match tm2RC (deref s (Callable2Tm query)) with
@@ -917,7 +917,7 @@ Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a
 Qed.
 
 
-Lemma select_in_rules u fv R modes rules s r:
+(* Lemma select_in_rules u fv R modes rules s r:
   (select u fv R modes rules s) = r ->
     all (fun x => x.2 \in rules) r.2.
 Proof.
@@ -929,9 +929,9 @@ Proof.
   rewrite !push/=.
   rewrite in_cons; case: eqP => /=; first by move=> ->; rewrite eqxx.
   by move=> _ /IH->; rewrite orbT.
-Qed.
+Qed. *)
 
-Lemma bc_in u pr fv query s r:
+(* Lemma bc_in u pr fv query s r:
   bc u pr fv query s = r ->
     all (fun x => x.2 \in (fresh_rules fv pr.(rules)).2) r.2.
 Proof.
@@ -941,7 +941,7 @@ Proof.
   case: tm2RC => //=[[r p]].
   case: fndP => //= kP.
   by apply: select_in_rules.
-Qed.
+Qed. *)
 
 Lemma tm2RC_get_tm_hd t c' p:
   tm2RC t = Some (c', p) ->

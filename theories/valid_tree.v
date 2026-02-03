@@ -46,10 +46,9 @@ Module B.
       case bA: base_or; constructor; last first.
         move=> [X[Y H]]; subst.
         by rewrite base_or_big_or in bA.
-      pose head := Callable_P (IP 1).
       elim: A bA => //=; first by exists [::],[::].
         move=> A _ s B HB /andP[/spec_base_and[L <-]] /HB [X [Y <-]].
-        by eexists L, ((s, {|head := head; premises := X|}) :: Y) => //=.
+        by eexists L, ((s, X) :: Y) => //=.
       move=> []//= A _ l t H1 /andP[/eqP?] /spec_base_and[x?]; subst.
       by exists  (A::l), [::].
     Qed.
@@ -85,12 +84,6 @@ Section valid_tree.
     + by move=> _ b l H s; rewrite valid_tree_big_and/= B.base_or_big_or orbT.
   Qed.
 
-  Lemma valid_tree_backchain pr s sv t : valid_tree (backchain u pr sv s t).2.
-  Proof.
-    rewrite/backchain; case: bc => [sv' [|[s1 r1] rs]]//=.
-    by rewrite B.base_or_big_or orbT.
-  Qed.
-
   Lemma valid_tree_cut {A}: success A -> valid_tree A -> valid_tree (cutl A).
   Proof.
     elim_tree A.
@@ -106,7 +99,7 @@ Section valid_tree.
   Proof.
     move=>+<-; clear r.
     elim_tree A s sv => /=.
-    + by case: t => [|t]//=; rewrite push/= valid_tree_backchain.
+    + by case: t => [|t]//=; rewrite push/=; case: bc => [_ []]//=>; rewrite push//= B.base_or_big_or orbT.
     + move=> /andP[vA bB]; rewrite !push/= HA//=; case: ifP => //.
     + by move=> vB; rewrite !push /=; apply: HB.
     + move=> /andP[vA].

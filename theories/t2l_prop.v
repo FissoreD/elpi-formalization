@@ -293,7 +293,7 @@ Section NurProp.
       set X := (a2g _).
       generalize X => {}X.
       move=> /add_ca_deep_map_empty->//.
-    move=> [s1 [hd bo]]/=rs IH s2 b ca gs/=.
+    move=> [s1 bo]/=rs IH s2 b ca gs/=.
     rewrite add_ca_deep_empty1 add_ca_deep_cat map_cat t2l_big_and/=map_cons.
     rewrite cat_cons cat0s; f_equal.
       rewrite -add_ca_deep_map_empty//.
@@ -405,7 +405,7 @@ Qed.
     valid_tree A -> step u p fv s1 A = (fv', CutBrothers, R) -> ((get_subst s1 A = get_subst s1 R)).
   Proof.
     elim_tree A R s1 fv fv' => /=.
-    - case: t => [|c] _//=; first (by move=> [_ <-]); case: backchain => //.
+    - case: t => [|c] _//=; first (by move=> [_ <-]); case: bc => //.
     - case: step => [[?[]]]//.
     - case: step => [[?[]]]//.
     - move=> /andP[vA].
@@ -731,15 +731,15 @@ Qed.
       bcr.1 = fv', failed R &
       t2l R s l =
       if bcr.2 is (w :: ws)%SEQ then
-       (w.1, save_goals (xs++l) gs (a2g1 w)) :: 
+       (w.1, save_goals (xs++l) gs (a2g w.2)) :: 
         ((save_alts (xs++l) gs (r2a ws)) ++ xs)
       else xs]
       .
   Proof.
     elim_tree A fv fv' R s s3 l q gs xs ca => /=.
-    - case: t => [|c]//= _; rewrite push => -[??][?????]; subst.
-      rewrite failed_big_or/backchain; case: bc => [fv2 [|[s4 r1] rs]]//=; auto.
-      by rewrite !cats0 !cat0s !(s2l_big_or empty)/=cat0s catr0.
+    - case: t => [|c]//= _; rewrite push => -[??][?????]; subst => /=.
+      case: bc => //= ?[]//= []/= >; rewrite !cat0s !cats0.
+      rewrite !(s2l_big_or empty)//= !cat0s catr0//.
     - move=> /andP[vA bB]; rewrite !push.
       set SB := t2l B sm [::].
       case e: step => [[?[]]A']//=[?<-]/=; subst; last first.
