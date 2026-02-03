@@ -44,10 +44,13 @@ Section NurEqiv.
         move=> [??]; subst; move: IH.
         case X: bc => /=[fv3 rules] IH fB ; subst => /=.
         case: rules X => [|r0 rs] X; rewrite Hx.
-          by move=> <-; apply: FailE X _.
+          move=> <-; apply: FailE IH.
+          by rewrite/stepE X.
         move=> [???]; subst.
         rewrite cats0 in IH.
-        by apply: CallE X _.
+        apply: CallE.
+          rewrite /stepE X//=.
+        apply: IH.
       have [[[? SS] H1]] := s2l_Expanded_cut vA eA H; subst.
       rewrite cats0 Hx => -[???]; subst.
       by apply: CutE.
@@ -112,7 +115,8 @@ Proof.
         by apply: path_atom_cut X.
       by apply: path_atom_exp X.
     }
-  - move=> s1 s2 a [s0 r0]/= rs gl r t ca fv fv' B ELPI IH s3 A vA H.
+  - move=> s1 s2 a [s0 r0]/= rs gl r t ca fv fv' + ELPI IH s3 A vA H.
+    rewrite/stepE; case B: bc => [fv2 [|x xs]]//[????]; subst.
     {
       (* CALL SUCCESS CASE *)
       case fA: (failed A).
@@ -137,7 +141,8 @@ Proof.
       apply: run_step (H2) erefl IH.
       apply: path_atom_exp H2.
     }
-  - move=> s1 s2 s3 t gl a al r ca fv fv' B ELPI IH s4 A vA H.
+  - move=> s1 s2 s3 t gl a al r ca fv fv' + ELPI IH s4 A vA H.
+    rewrite/stepE; case B: bc => [fv2 [|x xs]]//[?]; subst.
     {
       (* CALL FAIL CASE *)
       case fA: (failed A).

@@ -229,20 +229,33 @@ Variable p : program.
 From det Require Import finmap.
 Open Scope fset_scope.
 
+Definition stepE fv t s a gl :=
+  let (fv', rs) := bc u p fv t s  in
+  let rs_ca := save_alts a gl (r2a rs) in
+  (fv', rs_ca).
+
 (*SNIP: nur *)
 (*SNIP: nur_type*)
 Inductive nur : fvS -> Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
 (*ENDSNIP: nur_type*)
 | StopE s a fv : nur fv s nilC a s a
-| CutE s s1 a ca r gl fv : nur fv s gl ca s1 r -> nur fv s [:: (cut, ca) & gl]%G a s1 r
-| CallE s s1 a b bs gl r t ca fv fv': 
-  bc u p fv t s = (fv', [:: b & bs ]%SEQ) -> 
-    nur fv' b.1 (save_goals a gl (a2g1 b)) (save_alts a gl (r2a bs) ++ a) s1 r -> 
-      nur fv s [:: (call t, ca) & gl]%G a s1 r
+| CutE s s1 a ca r gl fv : nur fv s gl ca s1 r -> nur fv s [:: (cut, ca) & gl] a s1 r
+| CallE s s1 al b bs gl r t ca fv fv': 
+    stepE fv t s al gl = (fv', [:: b & bs ]) -> 
+      nur fv' b.1 b.2 (bs++al) s1 r -> 
+        nur fv s [:: (call t, ca) & gl] al s1 r
 | FailE s s1 s2 t gl a al r ca fv fv': 
-    bc u p fv t s = (fv',[::]%SEQ) -> nur fv' s1 a al s2 r ->   
-      nur fv s [:: (call t, ca) & gl]%G [:: (s1, a) & al] s2 r.
+    stepE fv t s al gl = (fv', [::]) -> 
+      nur fv' s1 a al s2 r ->   
+        nur fv s [:: (call t, ca) & gl] [:: (s1, a) & al] s2 r.
 (*ENDSNIP: nur *)
+
+Lemma stepE_len fv t s a1 a2 gl:
+  size (stepE fv t s a1 gl).2 = size (stepE fv t s a2 gl).2.
+Proof.
+  rewrite/stepE; case: bc => //= _ b.
+  by rewrite/save_alts !size_map.
+Qed.
 
 Lemma nur_consistent fv s G x xs1 xs2 s1 s2 :
   nur fv s G x s1 xs1 -> nur fv s G x s2 xs2 -> xs1 = xs2 /\ s1 = s2.
@@ -251,13 +264,16 @@ Proof.
   - inversion 1 => //.
   - move=> s a ca r gl fv H IH xs2.
     by inversion 1; subst; auto.
-  - move=> s s1 a b bs gl r t ca ?? H H1 IH xs2 s2 H2.
+  - move=> s s1 a b bs gl r t ca fv1 fv2 H H1 IH xs2 s2 H2.
     apply: IH.
-    inversion H2; subst; move: H10; rewrite H => //-[???]; subst.
-    assumption.
-  - move=> s s1 s2 t gl a al r ca ?? H H1 IH xs2 s3 H2.
+    inversion H2; subst => //; first by congruence.
+    have:= stepE_len fv1 t s al [:: (s3, a0)& al] gl.
+    by rewrite H10 H.
+  - move=> s s1 s2 t gl a al r ca f1 f2 H H1 IH xs2 s3 H2.
     apply: IH.
-    inversion H2; subst => //; congruence.
+    inversion H2; subst => //; try congruence.
+    have:= stepE_len f1 t s al [:: (s1, a)& al] gl.
+    by rewrite H10 H.
 Qed.
 
 End Nur. 
