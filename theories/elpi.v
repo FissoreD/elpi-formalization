@@ -236,7 +236,7 @@ Definition stepE fv t s a gl :=
   (fv', rs_ca).
 (*ENDSNIP: stepE *)
 
-(*BP: nurbp*)
+(*prooftree: nurbp*)
 (*SNIP: nur *)
 (*SNIP: nur_type*)
 Inductive nur : fvS -> Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
@@ -252,7 +252,7 @@ Inductive nur : fvS -> Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
       nur fv' s1 a al s2 r ->   
         nur fv s [:: (call t, ca) & gl] [:: (s1, a) & al] s2 r.
 (*ENDSNIP: nur *)
-(*ENDBP: nurbp *)
+(*endprooftree: nurbp *)
 
 Lemma stepE_len fv t s a1 a2 gl:
   size (stepE fv t s a1 gl).2 = size (stepE fv t s a2 gl).2.

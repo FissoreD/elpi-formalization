@@ -6,7 +6,7 @@ From det Require Import tree elpi.
 From det Require Import t2l valid_tree elpi elpi_equiv.
 
 
-(*BP: runbp*)
+(*prooftree: runbp*)
 (*SNIP: run_sig *)
 Inductive run (u:Unif) (p : program): fvS -> Sigma -> tree -> 
                   Sigma -> option tree -> Prop :=
@@ -14,7 +14,7 @@ Inductive run (u:Unif) (p : program): fvS -> Sigma -> tree ->
   | run_done s1 s2 A B fv            : success A -> get_subst s1 A = s2 -> (next_alt true A) = B -> run fv s1 A s2 B
   | run_step  s1 s2 r A B fv0 fv1 st : path_atom A -> step u p fv0 s1 A = (fv1, st, B) -> run fv1 s1 B s2 r -> run fv0 s1 A s2 r
   | run_fail s1 s2 A B r fv0         : failed A -> next_alt false A = Some B -> run fv0 s1 B s2 r -> run fv0 s1 A s2 r.
-(*ENDBP: runbp*)
+(*endprooftree: runbp*)
 
 Lemma run_runT u p fv s0 t0 s1 t1:
   run u p fv s0 t0 s1 t1 -> (exists b fv1, tree.run u p fv s0 t0 (Some s1) t1 b fv1).
