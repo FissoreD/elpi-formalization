@@ -7,15 +7,33 @@ Section vars_tree.
   Variable (u : Unif).
   Variable (p : program).
 
-  Lemma fresh_tm_sub fv fv' r r':
-    fresh_tm fv r = (fv', r') -> fv `<=` fv'.
+  (* Search rename.
+
+  Lemma rename_app fv f a: exists x, rename fv (Tm_App f a) = x.
   Proof.
-    elim: r r' fv fv' => /=; only 1,2: by move=> > [<-].
-      by move=> v r' fv fv' [<- _]; rewrite fsubsetU// fsubsetU1 orbT.
-    move=> f Hf a Ha r' fv fv'; rewrite !push => -[<- _].
+    rewrite/rename/= !push.
+    
+    case X: fresh_tm => /=. *)
+
+  Lemma fresh_tm_sub fv fv' m tm ign:
+    fresh_tm fv m tm = (fv', ign) -> fv `<=` fv'.
+  Proof.
+    elim: tm fv fv' m ign => /=; only 1,2: by move=> _ > [<-].
+      by move=> v fv fv' m ign; case: fndP => H [<-]//; rewrite fsubsetUr.
+    move=> f Hf a Ha fv fv' m ign.
+    rewrite !push => -[<- _].
     case t1: (fresh_tm fv) => [fv1 f'].
-    case t2: fresh_tm => [fv2 a'].
+    case t2: fresh_tm => /=[fv2 a'].
     by apply/fsubset_trans/Ha/t2/Hf/t1.
+  Qed.
+
+
+  Lemma rename_sub fv fv' r r':
+    rename fv r = (fv', r') -> fv `<=` fv'.
+  Proof.
+    rewrite/rename !push => -[<- _].
+    case X: fresh_tm => /=.
+    apply: fresh_tm_sub X.
   Qed.
 
   Lemma fresh_callable_sub fv fv' r r':
@@ -24,8 +42,8 @@ Section vars_tree.
     elim: r r' fv fv'; only 1: by move=> > [<-].
     move=> f Hf a r' fv fv'; rewrite/=!push => -[<- _].
     case X: fresh_callable.
-    case Y: fresh_tm.
-    apply/fsubset_trans/fresh_tm_sub/Y/Hf/X.
+    case R: rename => /=.
+    by apply/fsubset_trans/rename_sub/R/Hf/X.
   Qed.
 
   Lemma fresh_atom_sub fv fv' r r':
