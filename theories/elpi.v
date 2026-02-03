@@ -241,7 +241,7 @@ Definition stepE fv t s a gl :=
 (*SNIP: nur_type*)
 Inductive nur : fvS -> Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
 (*ENDSNIP: nur_type*)
-| StopE s a fv : nur fv s nilC a s a
+| StopE s a fv : nur fv s [::] a s a
 | CutE s s1 a ca r gl fv : nur fv s gl ca s1 r -> nur fv s [:: (cut, ca) & gl] a s1 r
 | CallE s s1 al b bs gl r t ca fv fv': 
     stepE fv t s al gl = (fv', [:: b & bs ]) -> 
