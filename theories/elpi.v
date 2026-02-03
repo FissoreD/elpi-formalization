@@ -229,10 +229,12 @@ Variable p : program.
 From det Require Import finmap.
 Open Scope fset_scope.
 
+(*SNIP: stepE *)
 Definition stepE fv t s a gl :=
   let (fv', rs) := bc u p fv t s  in
   let rs_ca := save_alts a gl (r2a rs) in
   (fv', rs_ca).
+(*ENDSNIP: stepE *)
 
 (*BP: nurbp*)
 (*SNIP: nur *)
