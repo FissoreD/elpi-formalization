@@ -956,3 +956,8 @@ Proof.
 Qed.
 
 Axiom unif_refl: forall unif t s, unif.(unify) t t s.
+
+Axiom unif_match: forall a1 a2 a3 sAny s0 s1 s2 fvx fvy,
+  u.(unify) a1 a3 sAny = None ->
+  matching u a2 (rename fvx a1).2 s0 = Some s1 ->
+  matching u a2 (rename fvy a3).2 s2 = None.
