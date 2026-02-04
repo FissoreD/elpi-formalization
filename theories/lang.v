@@ -892,14 +892,14 @@ Fixpoint H u (ml : list mode) (q : Callable) (h: Callable) s : option Sigma :=
   | _, _, _ => None
   end.
 
-Fixpoint select u fv (query : Callable) (modes:list mode) (rules: list R) sigma : (fvS * seq (Sigma * seq A)) :=
+Fixpoint select u (query : Callable) (modes:list mode) (rules: list R) sigma : (fvS * seq (Sigma * seq A)) :=
   match rules with
-  | [::] => (fv, [::])
+  | [::] => (fset0, [::])
   | rule :: rules =>
     match H u modes query rule.(head) sigma with
-    | None => select u fv query modes rules sigma
+    | None => select u query modes rules sigma
     | Some (sigma1) => 
-      let: (fv, rs) := select u fv query modes rules sigma in
+      let: (fv, rs) := select u query modes rules sigma in
       (vars_sigma sigma1 `|` varsU_rule rule `|` fv, (sigma1, rule.(premises)) :: rs)
     end
   end.
@@ -919,7 +919,8 @@ Definition bc : Unif -> program -> fvS -> Callable ->
         match pr.(sig).[? kp] with 
           | Some sig => 
             let: (fv, rules) := fresh_rules fv (pr.(rules)) in
-            select u fv query (get_modes_rev query sig) rules s
+            let: (fv', rules) := select u query (get_modes_rev query sig) rules s
+            in (fv `|` fv', rules)
           | None => (fv, [::])
           end
       end.
