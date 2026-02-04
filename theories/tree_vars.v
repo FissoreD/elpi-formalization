@@ -7,18 +7,6 @@ Section vars_tree.
   Variable (u : Unif).
   Variable (p : program).
 
-  (* Lemma fresh_tm_sub fv fv' m tm ign:
-    fresh_tm fv m tm = (fv', ign) -> fv `<=` fv'.
-  Proof.
-    elim: tm fv fv' m ign => /=; only 1,2: by move=> _ > [<-].
-      by move=> v fv fv' m ign; case: fndP => H [<-]//; rewrite fsubsetUr.
-    move=> f Hf a Ha fv fv' m ign.
-    rewrite !push => -[<- _].
-    case t1: (fresh_tm fv) => [fv1 f'].
-    case t2: fresh_tm => /=[fv2 a'].
-    by apply/fsubset_trans/Ha/t2/Hf/t1.
-  Qed. *)
-
   Lemma rename_sub fv r:
     fv `<=` (rename fv r).1.
   Proof.
@@ -59,17 +47,6 @@ Section vars_tree.
     rewrite /=!push/=.
     apply/fsubset_trans/fresh_rule_sub/IH.
   Qed.
-
-  (*Lemma select_sub r0 rn fv fv' q m s:
-    select u fv q m r0 s = (fv', rn) ->
-      fv `<=` fv'.
-  Proof.
-    elim: r0 rn fv fv' q m s => [|x xs IH] rn fv fv' q m s; first by move=> [<-]//.
-    move=> /=.
-    case X: H => [s'|]; last by apply: IH.
-    case Y: select => [fv2 rs][??]; subst.
-    by rewrite fsubsetU// (IH _ _ _ _ _ _ Y) orbT.
-  Qed. *)
 
   Lemma select_sub_rules r0 rn fv' q m s:
     select u q m r0 s = (fv', rn) ->
