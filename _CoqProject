@@ -10,6 +10,7 @@ theories/list.v
 theories/finmap.v
 theories/ctx.v
 theories/lang.v
+theories/unif.v
 
 theories/tree.v
 theories/tree_test.v

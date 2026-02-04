@@ -447,7 +447,7 @@ elim: t m fv => [? m fv|? m fv|v m fv I|l Hl r Hr m fv I] /=;
 Qed.    
 
 Lemma fresh_tm_sub fv m t : fv `<=` (fresh_tm fv m t).1.
-
+Proof.
 elim: t m fv {2 4}fv (fsubset_refl fv) => // [v/=|l Hl r Hr] m fv fv' H.
   by case: ifP => //= ?; rewrite (fsubset_trans H) // fsubsetUr.
 by rewrite fresh_Tm_App; apply: Hr; apply: Hl.
@@ -828,6 +828,18 @@ Fixpoint fresh_callable fv c :=
       (fv, Callable_App h t)
   end.
 
+Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a bx) = F t.1 t.2.
+  by case: t => /=.
+Qed.
+
+Lemma fresh_callable_sub fv t : fv `<=` (fresh_callable fv t).1.
+Proof.
+  elim: t fv => //= f Hf a fv.
+  rewrite /rename !push/=.
+  by apply/fsubset_trans/fresh_tm_sub/Hf.
+Qed.
+  
+
 (* Lemma fresh_tmP fv t : vars_tm (fresh_tm fv t).2 `&` (vars_tm t `|` fv) = fset0.
 
 elim: t fv (fsubset_refl fv) => [?|?|v|l IHl r IHr] fv; rewrite /= ?fset0I //.
@@ -912,10 +924,6 @@ Definition bc : Unif -> program -> fvS -> Callable ->
           end
       end.
 
-Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a bx) = F t.1 t.2.
-  by case: t => /=.
-Qed.
-
 
 (* Lemma select_in_rules u fv R modes rules s r:
   (select u fv R modes rules s) = r ->
@@ -954,10 +962,3 @@ Proof.
   case t: tm2RC => //=[[]][<-<-].
   apply: Hf t.
 Qed.
-
-Axiom unif_refl: forall unif t s, unif.(unify) t t s.
-
-Axiom unif_match: forall u a1 a2 a3 sAny s0 s1 s2 fvx fvy,
-  u.(unify) a1 a3 sAny = None ->
-  matching u a2 (rename fvx a1).2 s0 = Some s1 ->
-  matching u a2 (rename fvy a3).2 s2 = None.
