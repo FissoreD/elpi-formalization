@@ -559,7 +559,6 @@ Qed.
   Qed.
 
   Lemma vars_tm_rename fv t:
-    (* vars_tm t `<=` fv -> *)
     vars_tm (rename fv t).2 `<=` (rename fv t).1.
   Proof.
     (* rewrite/rename push/= => H.
@@ -714,16 +713,24 @@ Qed.
     by case: x => //=c; rewrite !push//=.
   Qed.
 
+  Lemma select_size x q m s1 fv1 fv2:
+    size (select u fv1 q m x s1).2 =
+    size (select u fv2 q m x s1).2.
+  Proof.
+    elim: x => //= -[hd bo]/= rs.
+    case: H => //=s; rewrite !push/= => ->//.
+  Qed.
+
+
   Lemma all_but_last_fv x q m s1 fv1 fv2:
-    (* TODO: add hyps: s1 + vars_tm q <= fv1 *)
-    (* TODO: add hyps: s1 + vars_tm q <= fv2 *)
     all_but_last (fun x => has_cut_seq x.2) (select u fv1 q m x s1).2 =
     all_but_last (fun x => has_cut_seq x.2) (select u fv2 q m x s1).2.
   Proof.
-    elim: x q m s1 fv1 fv2 => //= -[hd bo]/= rs IH q m s1 fv1 fv2.
-    case: H => //= s2; rewrite !push/=.
-    rewrite (IH _ _ _ _ fv2).
-  Admitted.
+    elim: x => //= -[hd bo]/= rs.
+    case: H => //=s; rewrite !push/=.
+    have:= select_size rs q m s1 fv1 fv2.
+    case X: select => [f1 [|x xs]]; case Y: select => [f2 [|y ys]]//= [] HS ->//.
+  Qed.
 
   Lemma mut_exclP s rs fv c s1:
     vars_tm (Callable2Tm c) `<=` fv ->
