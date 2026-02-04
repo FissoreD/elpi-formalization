@@ -358,13 +358,6 @@ Qed.
     by rewrite (fresh_has_cut H Fs) orbT.
   Qed.
 
-  Lemma select_same2 vx vy q m rs s:
-    (select u vx q m rs s).2 = (select u vy q m rs s).2.
-  Proof.
-    elim: rs vx vy q m s => //= r rs IH vx vy q m s.
-    case: H => //=?; rewrite !push//=; f_equal; auto.
-  Qed.
-
   Lemma tm_is_det_tm2RC s s1 c :
     tm_is_det s c ->
     exists q qp (kP: qp \in domf s), 
@@ -393,12 +386,13 @@ Qed.
     case X: fresh_rules => [fv1 rs']/=.
     generalize (get_modes_rev q s.[pP]) => md.
     generalize fv1 => fv2.
-    elim: rs fv2 md rs' s c s1 fv q p {pP} fv1 DR X => //=[|[hd bo] rs IH] fv2 md rs' s c s1 fv q p fv1 DR ++ TD.
+    rewrite push/=.
+    elim: rs md rs' s c s1 fv q p {pP} fv1 DR X => //=[|[hd bo] rs IH] md rs' s c s1 fv q p fv1 DR ++ TD.
       move=> [_ <-]//.
     case FS: fresh_rules => [fv3 rs3].
     case FR: fresh_rule => [fv4 r'][??]/=/andP[H1 H2]; subst.
     move=> /=.
-    have {}IH := IH _ _ _ _ _ _ _ _ _ _ DR FS H2 TD.
+    have {}IH := IH _ _ _ _ _ _ _ _ _ DR FS H2 TD.
     case H: H => //=; last by apply: IH.
     rewrite !push/=.
     have TD' := tiki_taka DR TD H.
@@ -616,8 +610,7 @@ Qed.
     case: x; last first.
       case H: H => //=[s1'] U HD.
       rewrite (IH _ _ _ _ _ H HD)//=.
-      apply/fsubset_trans/D5.
-      by case X: rename; apply/rename_sub/X.
+      by apply/fsubset_trans/D5/rename_sub.
     move: D5.
     set F3:= fresh_callable _ _.
     set F1:= fresh_callable _ _.
@@ -626,24 +619,21 @@ Qed.
     case H: H => //=[s1'] D5 M.
     case HH: H_head; rewrite (andbF, andbT)/=; last first.
       rewrite (IH _ _ _ _ _ H HH)//=.
-      apply/fsubset_trans/D5.
-      by case X: rename; apply/rename_sub/X.
+      apply/fsubset_trans/D5/rename_sub.
     case U: unify => //= _.
     clear IH.
     case X: lang.H => //[s1'']/=.
     apply: unif_help U M.
       apply: disjoint_tm_sub.
-      rewrite/F2/=; case Y: fresh_callable.
-      apply/fsubset_trans/fresh_callable_sub/Y.
-      apply/fsubset_trans/D5.
-      by apply/vars_tm_rename.
+      rewrite/F2/=; apply/fsubset_trans/fresh_callable_sub.
+      apply/fsubset_trans/D5/vars_tm_rename.
     - rewrite/F1 disjoint_comm; apply/disjoint_tm_sub.
-      by case Y: fresh_callable; apply/fsubset_trans/fresh_callable_sub/Y.
+      by apply/fsubset_trans/fresh_callable_sub.
     - rewrite/F4 disjoint_comm; apply/disjoint_tm_sub.
-      by case Y: fresh_callable; apply/fsubset_trans/fresh_callable_sub/Y.
+      by apply/fsubset_trans/fresh_callable_sub.
   Qed.
 
-  Lemma select_head_nil fv fv1 fv2 fv3 fv4 rs hd s1 s2 q m:
+  Lemma select_head_nil fv fv1 fv2 fv3 rs hd s1 s2 q m:
     let FC := fresh_rules fv2 rs in
     vars_tm (Callable2Tm q) `<=` fv1 -> vars_sigma s1 `<=` fv1 ->
     vars_tm (Callable2Tm q) `<=` fv -> vars_sigma s1 `<=` fv ->
@@ -651,17 +641,15 @@ Qed.
     (* vars_tm (Callable2Tm (fresh_callable fv3 hd).2) `<=` vars_tm (Callable2Tm (fresh_callable fv1 hd).2) -> *)
     H u m q (fresh_callable fv1 hd).2 s1 = Some s2 ->     (*hd ~ q*)
     select_head u (fresh_callable fv3 hd).2 m (FC).2 = [::] ->                       (*select hd' rs =  [::]*)
-    (select u fv4 q m (fresh_rules fv rs).2 s1).2 = [::]. (*select q   rs' = [::]*) 
+    (select u q m (fresh_rules fv rs).2 s1).2 = [::]. (*select q   rs' = [::]*) 
   Proof.
-    elim: rs fv fv1 fv2 fv4 hd s1 s2 q m => //=.
-    move=> x xs IH fv fv1 fv2 fv4 hd s1 s2 q m D1 S1 D2 S2 + H.
+    elim: rs fv fv1 fv2 hd s1 s2 q m => //=.
+    move=> x xs IH fv fv1 fv2 hd s1 s2 q m D1 S1 D2 S2 + H.
     rewrite !push/= => HH.
     case Hd: H_head => //= SH.
     have D3 : (fresh_rules fv2 xs).1 `<=` fv3.
-      apply/fsubset_trans/HH.
-      case Y: fresh_rule => /=.
-      apply/fresh_rule_sub/Y.
-    have {}IH := IH _ _ _ _ _ _ _ _ _ D1 S1 D2 S2 D3 H SH.
+      by apply/fsubset_trans/HH/fresh_rule_sub.
+    have {}IH := IH _ _ _ _ _ _ _ _ D1 S1 D2 S2 D3 H SH.
     case H1: lang.H => [s1'|]//=.
     rewrite !push/= {}IH.
     exfalso.
@@ -676,17 +664,11 @@ Qed.
     set hd0F:= fresh_callable _ _.
     move=> + B => H1 H2.
     rewrite (H_head_None _ _ _ _ _ H1 H2)//.
-      rewrite/FR2.
-      case X: fresh_rules => /=.
-      by apply/fsubset_trans/fresh_rules_sub/X.
-    - rewrite/FR2.
-      case X: fresh_rules => /=.
-      by apply/fsubset_trans/fresh_rules_sub/X.
-    move: B; rewrite /fresh_rule/=!push/=.
-    case X: fresh_atoms => /=[a b] H.
-    have Hx := fresh_atoms_sub X => /= .
-    have Hz :=fsubset_trans Hx H.
-    apply:fsubset_trans Hz => //.
+      by apply/fsubset_trans/fresh_rules_sub.
+    - by apply/fsubset_trans/fresh_rules_sub.
+    apply/fsubset_trans/B.
+    rewrite /fresh_rule/=!push/=.
+    apply/fresh_atoms_sub.
   Qed.
 
   (* Lemma count_tm_ag_fresh: *)
@@ -713,25 +695,6 @@ Qed.
     by case: x => //=c; rewrite !push//=.
   Qed.
 
-  Lemma select_size x q m s1 fv1 fv2:
-    size (select u fv1 q m x s1).2 =
-    size (select u fv2 q m x s1).2.
-  Proof.
-    elim: x => //= -[hd bo]/= rs.
-    case: H => //=s; rewrite !push/= => ->//.
-  Qed.
-
-
-  Lemma all_but_last_fv x q m s1 fv1 fv2:
-    all_but_last (fun x => has_cut_seq x.2) (select u fv1 q m x s1).2 =
-    all_but_last (fun x => has_cut_seq x.2) (select u fv2 q m x s1).2.
-  Proof.
-    elim: x => //= -[hd bo]/= rs.
-    case: H => //=s; rewrite !push/=.
-    have:= select_size rs q m s1 fv1 fv2.
-    case X: select => [f1 [|x xs]]; case Y: select => [f2 [|y ys]]//= [] HS ->//.
-  Qed.
-
   Lemma mut_exclP s rs fv c s1:
     vars_tm (Callable2Tm c) `<=` fv ->
     vars_sigma s1 `<=` fv ->
@@ -753,9 +716,6 @@ Qed.
     set FS1 := fresh_rule _ _.
     set FS2 := fresh_rule _ _.
     move=> {}IH.
-    have {}IH : all_but_last
-      (fun x => has_cut_seq x.2) (select u FS2.1 q (get_modes_rev q s.[pP]) FRS1.2 s1).2.
-      by rewrite (all_but_last_fv _ _ _ _ _ FRS1.1)//.
     case H: H => [s2|]//; rewrite !push/={}IH andbT.
     have TD' := tiki_taka DF TD H.
     move: H; rewrite/FS2.
@@ -781,8 +741,8 @@ Qed.
     case SH: select_head => //.
     (* have Hx := vars_deref D1 D2. *)
     have Hy := tm2RC_Callable2 D1 D2 DF.
-    by rewrite (select_head_nil _ _ _ _ _ _ H SH)//=;
-    rewrite/FRS1; case X: fresh_rules; apply/fsubset_trans/fresh_rules_sub/X.
+    rewrite (select_head_nil _ _ _ _ _ H SH)//=;
+    by rewrite/FRS1;apply/fsubset_trans/fresh_rules_sub.
   Qed.
 
   Lemma has_cut_success {A}:
