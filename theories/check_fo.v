@@ -552,17 +552,33 @@ Qed.
     by rewrite fsubUset (Hf _ _ _ S1 S3 H) vars_deref//.
   Qed.
 
+  Lemma fresh_tm_sub1 fv m t:
+    vars_tm t `<=` fv -> vars_tm t `<=` (fresh_tm fv m t).1.
+  Proof.
+    elim: t fv m => //= [v|f Hf a Ha] fv m.
+    by rewrite !fsub1set; case: ifP => //=; rewrite in_fset1U => _ ->; rewrite orbT.
+    rewrite !push/= !fsubUset => /andP[H1 H2]; apply/andP; split;
+    by apply/fsubset_trans/fresh_tm_sub/fsubset_trans/fresh_tm_sub.
+  Qed.
+
   Lemma vars_tm_rename fv t:
     vars_tm (rename fv t).2 `<=` (rename fv t).1.
   Proof.
-    (* rewrite/rename push/= => H.
-    have:= @fresh_tm_dom fv empty t H (fsub0set _).
-    generalize (fresh_tm fv empty t) => -[{H}fv m]/=.
-    rewrite/ren.
-    elim: t fv => //=.
-      move=> >; case: fndP => //=.
-    elim: t fv => //=[v|f Hf a Ha] fv; last rewrite !push/=. *)
-  Admitted.
+    rewrite/rename push/=.
+    set vt := vars_tm _ `|` _.
+    set ft := fresh_tm vt _ _.
+    have:= @fresh_tm_dom vt empty t (fsubsetUl _ _) (fsub0set _).
+    have:= @fresh_tm_codom_fv vt empty t.
+    rewrite codomf0 fsub0set -/ft => /(_ isT).
+    have: vars_tm t `<=` ft.1 by apply/fresh_tm_sub1/fsubsetUl.
+    clear; rewrite/ren; move: vt ft => _ []/=.
+    elim: t => //=[v|f Hf a Ha] fs mp.
+      case: fndP => //= H1; rewrite ffunE/= valPE.
+      move=> H2 /fsubsetP /(_ mp.[H1]) H H3.
+      by rewrite fsub1set; apply/H/codomfP; exists v; rewrite in_fnd.
+    rewrite !fsubUset => /andP[H1 H2] H3 H4.
+    apply/andP; split; [apply: Hf|apply: Ha] => //.
+  Qed.
 
   Lemma disjoint_tm_sub t1 t2 fv2:
     vars_tm t1 `<=` fv2 ->

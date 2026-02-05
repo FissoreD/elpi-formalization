@@ -632,7 +632,7 @@ Lemma ren_comb m l r : ren m (Tm_App l r) = Tm_App (ren m l) (ren m r).
 by []. Qed.
 
 Definition rename fv tm :=
-  let: (fv', m) := fresh_tm fv fmap0 tm in
+  let: (fv', m) := fresh_tm (vars_tm tm `|` fv) fmap0 tm in
   ((fv'(*, m*)), ren m tm).
 
   (*
@@ -836,7 +836,7 @@ Lemma fresh_callable_sub fv t : fv `<=` (fresh_callable fv t).1.
 Proof.
   elim: t fv => //= f Hf a fv.
   rewrite /rename !push/=.
-  by apply/fsubset_trans/fresh_tm_sub/Hf.
+  by apply/fsubset_trans/fresh_tm_sub; rewrite fsubsetU//Hf orbT.
 Qed.
   
 

@@ -11,7 +11,7 @@ Section vars_tree.
     fv `<=` (rename fv r).1.
   Proof.
     rewrite/rename !push/=.
-    by apply/fresh_tm_sub.
+    by apply/fsubset_trans/fresh_tm_sub; rewrite fsubsetUr.
   Qed.
 
   Lemma fresh_callable_sub fv r:
