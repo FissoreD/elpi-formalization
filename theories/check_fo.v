@@ -22,8 +22,8 @@ Section checker.
     (tm_is_det sP head == false) || 
       check_atoms sP prems.
 
-  Definition check_rules sP rules :=
-    all (fun x => check_rule sP x.(head) x.(premises)) rules.
+  Definition check_rules p :=
+    all (fun x => check_rule p.(sig) x.(head) x.(premises)) p.(rules).
 End checker.
 
 Lemma callable_is_det_fresh sP fv hd:
@@ -211,9 +211,6 @@ Section check.
     by rewrite sA HA// HB//no_alt_cutl//.
   Qed.
 
-  Lemma check_rules_cons sP x xs : check_rules sP (x :: xs) = check_rule sP (head x) (premises x) && check_rules sP xs.
-  by []. Qed.
-
   Lemma fresh_rules_cons fv r rs : fresh_rules fv (r :: rs) =
     ((fresh_rule (fresh_rules fv rs).1 r).1, (fresh_rule (fresh_rules fv rs).1 r).2 :: (fresh_rules fv rs).2).
   by simpl; rewrite !push.
@@ -232,11 +229,12 @@ Section check.
 
   (* Lemma mut_exclP *)
 
-  Lemma check_rulesP s rs c fv s1:
-    check_rules s rs ->
-    tm_is_det s c ->
-    all (fun x => check_atoms s x.2) (bc u {| rules := rs; sig := s |} fv c s1).2.
+  Lemma check_rulesP p c fv s1:
+    check_rules p ->
+    tm_is_det p.(sig) c ->
+    all (fun x => check_atoms p.(sig) x.2) (bc u p fv c s1).2.
   Proof.
+    case: p => [rs s].
     rewrite/bc.
     case DR: tm2RC => //=[[q p]].
     case: fndP => //= pP.
@@ -391,11 +389,8 @@ Section check.
       by case/orP=> [/HA/(_ nA)->//|/andP[? ->]]; rewrite orbT.
   Qed.
 
-  Definition check_program_aux sig pr := 
-    mut_excl u sig pr && check_rules sig pr.
-
   Definition check_program pr := 
-    check_program_aux pr.(sig) pr.(rules).
+    mut_excl u pr && check_rules pr.
   
   Lemma is_det_big_or pr c fv fv' s0 r0 rs s1:
     vars_tm (Callable2Tm c) `<=` fv ->
@@ -404,7 +399,7 @@ Section check.
     bc u pr fv c s1 = (fv', (s0, r0) :: rs) ->
     det_tree (sig pr) (big_or r0 rs).
   Proof.
-    rewrite /bc/check_program/check_program_aux.
+    rewrite /bc/check_program.
     case: pr => rules s/= => ++/andP[].
     case X: tm2RC => //=[[q qp]].
     case: fndP => //= kP.
@@ -493,50 +488,43 @@ Section check.
 
   Print Assumptions  main.
   
-  (* Section tail_cut.
+  Section tail_cut.
 
     Definition tail_cut (r : R) :=
     match r.(premises) with [::] => false | x :: xs => last x xs == cut end.
     
-    Definition AllTailCut p := (all tail_cut (rules p)).
+    Definition all_tail_cut p := (all tail_cut (rules p)).
 
-    Lemma cut_in_prem_tail_cut : AllTailCut p -> check_program u p.
-    Proof.
-      case: p; rewrite/AllTailCut/check_program/=.
-      move=> rules sig H; apply/andP; split.
-        elim: rules sig H => //= x xs IH sig /andP[H1 H2].
-        rewrite IH//andbT.
-        rewrite/mut_excl_head/=.
-        case: tm2RC => [[c p']|]//; case: fndP => //= kP.
-        case: ifP => //= HD.
-        case: x H1 => /= hd pm; clear -H2.
-        rewrite/tail_cut/=.
-        elim: pm hd xs H2 => //= x xs IH.
-        generalize sig.[kP].
-        move : (sig.[kP]) => /=.
-      move=> H; apply/andP; split. move: H; case: p.
-      rewrite /AllTailCut /check_program.
-      rewrite /tail_cut /check_rules.
-      remember (rules p) as RS.
-
-      apply: sub_all => r; clear.
-      rewrite /check_rule.
-      case X: callable_is_det => //=.
-      case: r X => //= hd []//= + l.
-      elim: l => //=.
-      move=> x xs IH []//=; last first.
-        move=> _; apply IH.
-      by move=> H1 H2; rewrite IH//orbT.
+    Lemma tail_cut_has_cut r: tail_cut r -> has_cut_seq (premises r).
+    Proof. 
+      rewrite/tail_cut; case: r => /= _; elim => //= -[|c] xs IH /eqP H//=.
+      by case: xs H IH => //= x xs H ->//; rewrite H.
     Qed.
 
-    Lemma tail_cut_is_det sP t:
-      AllTailCut p -> tm_is_det sP t -> is_det (TA (call t)).
+    Lemma all_tail_cut_all_cut p: all_tail_cut p -> all_cut p.
+    Proof. by apply/sub_all => x H; apply/tail_cut_has_cut. Qed.
+
+    Lemma last_has_cut a xs:
+      last a xs == cut -> cut == a \/ has_cut_seq xs.
     Proof.
-      move=> /(cut_in_prem_tail_cut sP).
-      apply main.
+      elim: xs => //=; first by move=> /eqP->; left.
+      move=> [|c]/= xs IH; auto.
+      by case: a IH; auto => c1 IH H; apply: IH; destruct xs.
     Qed.
-  End tail_cut. *)
 
-  (* Print Assumptions tail_cut_is_det. *)
-
+    Lemma cut_in_prem_tail_cut p: all_tail_cut p -> check_program p.
+    Proof.
+      rewrite/check_program/=.
+      move=> H; apply/andP; split.
+        by apply/all_cut_mut_excl/all_tail_cut_all_cut.
+      move: H; apply:sub_all => -[hd bo].
+      rewrite/tail_cut/=.
+      rewrite/check_rule.
+      case: tm_is_det => //=.
+      elim: bo => //= x xs IH//=.
+      destruct xs => //=[/eqP->|/[dup]{}/IH]//=->.
+      destruct x; rewrite (orbT,andbT)//.
+      by move=> /last_has_cut[]->; rewrite !orbT.
+    Qed.
+  End tail_cut.
 End check.

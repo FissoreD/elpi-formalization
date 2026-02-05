@@ -47,9 +47,9 @@ Section mut_excl.
     | x :: xs => mut_excl_head sig x xs && mut_excl_aux sig xs
     end.
 
-  Definition mut_excl sig rules :=
-    let: (fv, rules) := fresh_rules fset0 rules in
-    mut_excl_aux sig rules.
+  Definition mut_excl pr :=
+    let: (fv, rules) := fresh_rules fset0 pr.(rules) in
+    mut_excl_aux pr.(sig) rules.
 
   Lemma head_fresh_rule fv r:
     head (fresh_rule fv r).2 = (fresh_callable fv r.(head)).2.
@@ -58,7 +58,7 @@ Section mut_excl.
     case bc: fresh_atoms => [fv' A']//=.
   Qed.
 
-  Lemma head_fresh_premises fv r:
+  Lemma premises_fresh_rule fv r:
     premises (fresh_rule fv r).2 = (fresh_atoms (fresh_callable fv r.(head)).1 r.(premises)).2.
   Proof.
     destruct r; rewrite/fresh_rule/= 1!push.
@@ -449,21 +449,22 @@ Section mut_excl.
     rewrite !push/= Hf//.
   Qed.
 
-  Lemma has_cut_seq_fresh fv1 fv2 bo:  
-    has_cut_seq (fresh_atoms fv1 bo).2 = has_cut_seq (fresh_atoms fv2 bo).2.
+  Lemma has_cut_seq_fresh fv1 bo:  
+    has_cut_seq (fresh_atoms fv1 bo).2 = has_cut_seq bo.
   Proof.
-    elim: bo fv1 fv2 => //= x xs IH fv1 fv2; rewrite !push/= (IH fv1 fv2)//.
+    elim: bo fv1 => //= x xs IH fv1; rewrite !push/= IH//.
     by case: x => //=c; rewrite !push//=.
   Qed.
 
-  Lemma mut_exclP s rs fv c s1:
+  Lemma mut_exclP p fv c s1:
     vars_tm (Callable2Tm c) `<=` fv ->
     vars_sigma s1 `<=` fv ->
-    mut_excl s rs -> 
-      tm_is_det s c ->
-        all_but_last (fun x => has_cut_seq x.2) (bc u {|sig:=s; rules := rs|} fv c s1).2.
+    mut_excl p -> 
+      tm_is_det p.(sig) c ->
+        all_but_last (fun x => has_cut_seq x.2) (bc u p fv c s1).2.
   Proof.
     rewrite/bc.
+    case: p => [rs s] => /=.
     case DR: tm2RC => //=[[q p]].
     case: fndP => //= pP.
     rewrite/mut_excl !push/=.
@@ -497,7 +498,7 @@ Section mut_excl.
     rewrite -{}MEQ in H *.
     rewrite{1}/FC2 get_modes_rev_fresh IS.
     move: H; generalize (get_modes_rev hd s.[pP]) as m => m H SM.
-    rewrite (has_cut_seq_fresh _ FC1.1).
+    rewrite !has_cut_seq_fresh.
     case CS: has_cut_seq; first by case: select => [?[|[]]].
     case SH: select_head => //.
     (* have Hx := vars_deref D1 D2. *)
@@ -506,6 +507,36 @@ Section mut_excl.
     by rewrite/FRS1;apply/fsubset_trans/fresh_rules_sub.
   Qed.
 
+
+  Definition all_rs_cut rs := all (fun p => has_cut_seq p.(premises)) rs.
+
+  Definition all_cut p :=  all_rs_cut (rules p).
+
+  Lemma all_all_but_last {T} P (L: seq T) : all P L -> all_but_last P L.
+  Proof. by elim: L => //= x xs IH /andP[->/IH->]; case: xs {IH}. Qed.
+
+  Lemma all_cut_select_head c m rs fv:
+    all_rs_cut rs ->
+    all_rs_cut (select_head c m (fresh_rules fv rs).2).
+  Proof.
+    elim: rs m fv c => //=[[hd bo]]/= rs IH m fv c /andP[H1 H2].
+    rewrite !push/= fun_if/= IH//= andbT; case: ifP => //=.
+    by rewrite premises_fresh_rule//= has_cut_seq_fresh//.
+  Qed.
+
+  Lemma all_cut_mut_excl p: all_cut p -> mut_excl p.
+  Proof.
+    rewrite/all_cut/mut_excl push/=.
+    case: p => /= + s.
+    elim => //= [[hd bo]] rs/= IH; rewrite !push/=.
+    move=> /andP[HBO] H; rewrite IH// andbT.
+    rewrite/fresh_rule !push/=/mut_excl_head/=.
+    case tm: tm2RC => //=[[c p]]; case: fndP => //= kp.
+    case: ifP => // ds; case S: select_head => //=[r' rs'].
+    rewrite has_cut_seq_fresh HBO/=.
+    have:= all_cut_select_head c (get_modes_rev c s.[kp]) fset0 H.
+    by rewrite S/= => /andP[->/all_all_but_last->]; destruct rs'.
+  Qed.
 End mut_excl.
 
 
