@@ -104,6 +104,34 @@ Proof.
     case: yy eA1 eA2 => fv1 t eA1 eA2.
     have /= {HB} HA := HA _ _ _ _ _ _ eA1 eA2.
     move=> s2 fs C b H.
+    have ? := run_or0 H; subst.
+    have := run_or_complete H.
+    destruct s2 => //=; last first.
+      move=> [?[[][fv2[H1]]]]; subst;
+      have[b {}HA] := HA _ _ _ _ H1.
+        move => ?; subst.
+        have {}HA := run_or_correct_left HA.
+        destruct b.
+          have:= HA sm (if is_cb t then KO else B).
+          by exists false.
+        admit.
+      move=> [b1 H2].
+      have := run_or_correct_left HA.
+      destruct b.
+        move=> /(_ sm (if is_cb t then KO else B)) HH.
+        eexists false => //.
+        admit. (*pb with fv*)
+      admit.
+    move=> [].
+      move=> [L'[b [H1 H2]]].
+      have[b1 {}HA] := HA _ _ _ _ H1.
+      have := run_or_correct_left HA sm (if is_cb t then KO else B).
+      move: H2; rewrite/or_succ_build_res.
+      case: C H => //; last first.
+        move=> H ?; subst.
+        destruct b1; first by eexists false.
+        admit.
+      admit.
     admit.
   - rewrite!push/= => -[??][??]; subst => /=.
     case eA1: step => [xx A1].
@@ -111,7 +139,21 @@ Proof.
     have:= step_add_cut_sf u p fv0 sm B; rewrite eA1 eA2/= =>?; subst.
     case: yy eA1 eA2 => fv1 t eA1 eA2/= s2 fs C b R.
     have /= {}HB := HB _ _ _ _ _ _ eA1 eA2.
-    admit.
+    have ? := run_or0 R; subst.
+    have/=:= run_same_structure R; case: C R => [[]|]//=.
+      move=> L S R H.
+        move=> /andP[/eqP?/eqP?]; subst.
+      have [b1 RR] := proj2 (run_ko_left2 u p fv1 fs S A1 ((Some R)) s2 s1) H.
+      have [b2 {}HB] := HB _ _ _ _ RR.
+      have {}HB: (exists b2 : bool, run u (add_head_prog p) fv1 S A2 s2 (Some R) b2 fs) by exists b2.
+      have := proj1 (run_ko_left2 u (add_head_prog p) fv1 fs S A2 ((Some R)) s2 s1) HB.
+      by exists false.
+    move=> H _.
+    have [b1 RR] := proj2 (run_ko_left2 u p fv1 fs sm A1 None s2 s1) H.
+    have [b2 {}HB] := HB _ _ _ _ RR.
+    have {}HB: (exists b2 : bool, run u (add_head_prog p) fv1 sm A2 s2 None b2 fs) by exists b2.
+    have := proj1 (run_ko_left2 u (add_head_prog p) fv1 fs sm A2 None s2 s1) HB.
+    by exists false.
   - rewrite !push/=; case: ifP => sA [??][??]s2 fs C b; subst; last first.
       case eA1: step => [xx A1].
       case eA2: step => [yy A2]/=.
