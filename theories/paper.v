@@ -49,25 +49,27 @@ Notation "x :: y" :=
 Open Scope my_scope.
 
 (*SNIP: tree_to_elpi *)
-Lemma tree_to_elpi: forall u p fv A s1 B sF s0,
-  vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
-  valid_tree A ->
-    run u p fv s1 A sF B -> 
-      exists x xs,
-        t2l A s1 [::] = x :: xs /\
-        nur u p fv x.1 x.2 xs sF (t2l (odflt KO B) s0 [::]).
+Lemma tree_to_elpi: forall u p fv t s0 t' s2,
+  vars_tree t `<=` fv -> vars_sigma s0 `<=` fv ->
+  valid_tree t ->
+    run u p fv s0 t s2 t' -> 
+      exists na s1 g a,
+        t2l (odflt KO t') s0 [::] = na /\
+        t2l t s0 [::] = (s1,g) :: a /\
+          nur u p fv s1 g a s2 na.
 (*ENDSNIP: tree_to_elpi *)
 Proof.
-  move=> > H1 H2 H3 H4.
+  move=> u p fv t s0 t' s2 H1 H2 H3 H4.
   have [b[fv1 H]] := run_runT H4.
-  by apply: elpi_equiv.tree_to_elpi H.
+  have:= elpi_equiv.tree_to_elpi s0 _ _ _ H.
+  move=> []//[s1 g][a IH]; do 3 eexists; eauto.
 Qed.
 
 (*SNIP: elpi_to_tree *)
 Lemma elpi_to_tree: forall u p fv s1 s2 a na g,
   nur u p fv s1 g a s2 na -> 
-    forall s0 t, valid_tree t -> t2l t s0 nilC = (s1,g) :: a -> 
-      exists t1, run u p fv s0 t s2 t1 /\ t2l (odflt KO t1) s0 nilC = na.
+    forall s0 t, valid_tree t -> t2l t s0 [::] = (s1,g) :: a -> 
+      exists t', run u p fv s0 t s2 t' /\ t2l (odflt KO t') s0 [::] = na.
 (*ENDSNIP: elpi_to_tree *)
 Proof.
   move=> > H1 H2 H3 H4 H5.
