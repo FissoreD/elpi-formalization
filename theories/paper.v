@@ -2,7 +2,7 @@ From mathcomp Require Import all_ssreflect.
 From elpi.apps Require Import derive derive.std.
 
 From det Require Import prelude.
-From det Require Import tree elpi.
+From det Require Import list tree elpi.
 From det Require Import t2l valid_tree elpi elpi_equiv.
 
 
@@ -44,8 +44,8 @@ Lemma tree_to_elpi u p fv A s1 B sF s0:
   valid_tree A ->
     run u p fv s1 A sF B -> 
       exists x xs,
-        t2l A s1 nilC = x :: xs /\
-        nur u p fv x.1 x.2 xs sF (t2l (odflt KO B) s0 nilC).
+        t2l A s1 [::] = consC x xs /\
+        nur u p fv x.1 x.2 xs sF (t2l (odflt KO B) s0 [::]).
 Proof.
   move=> H1 H2 H3 H4.
   have [b[fv1 H]] := run_runT H4.
@@ -54,7 +54,7 @@ Qed.
 
 Lemma elpi_to_tree u p fv s1 s2 a na g  : 
   nur u p fv s1 g a s2 na -> 
-  forall s0 t, valid_tree t -> (t2l t s0 nilC) = ((s1,g) :: a) -> 
+  forall s0 t, valid_tree t -> (t2l t s0 nilC) = (consC (s1,g) a) -> 
   exists t1, run u p fv s0 t s2 t1 /\ t2l (odflt KO t1) s0 nilC = na.
 Proof.
   move=> H1 H2 H3 H4 H5.
