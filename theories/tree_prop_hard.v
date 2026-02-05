@@ -227,16 +227,16 @@ Section s.
       rx = CutBrothers \/ rx = Expanded.
   Proof. by destruct rx => //=; auto. Qed.
 
-  Definition or_succ_build_res b B A' X :=
-    if X is Some (Or Ax _ Bx) then A' = Ax /\ 
+  Definition or_succ_build_res s b B A' X :=
+    if X is Some (Or Ax sx Bx) then sx = s /\ A' = Ax /\ 
       if b then Bx = KO
       else if Ax is Some Ax then Bx = B
       else Some Bx = next_alt false B
     else A' = None.
 
-  Lemma or_succ_build_resP1 b D A' r:
-    or_succ_build_res b KO A' r -> or_succ_build_res true D A' r.
-  Proof. by case: r => [[]|]//[t|]//= _ t1 [->]; case: ifP => //. Qed.
+  Lemma or_succ_build_resP1 s1 b D A' r:
+    or_succ_build_res s1 b KO A' r -> or_succ_build_res s1 true D A' r.
+  Proof. by case: r => [[]|]//[t|]//= s t1 [->]; case: ifP => // _ []//. Qed.
 
   Lemma run_or_fail_L1 b fv1 s1 Cx fv3 fn sx rs:
     run u p fv1 s1 Cx None None b fv3 ->
@@ -268,7 +268,7 @@ Section s.
     run u p fv0 s1 (Or (Some L) sx R) s3 X false fv2 ->
       if s3 is Some s3 then
         (exists L' b, run u p fv0 s1 L (Some s3) L' b fv2 /\ 
-          or_succ_build_res b R L' X)
+          or_succ_build_res sx b R L' X)
         \/
         (exists fv1, run u p fv0 s1 L None None false fv1 /\ 
           exists b, run u p fv1 sx R (Some s3) (if X is Some (Or _ _ R') then Some R' else None) b fv2)
