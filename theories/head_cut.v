@@ -81,79 +81,94 @@ Proof.
 Qed.
 
 Lemma step_add_cut u p A fv0 s1 R R' xx yy:
+  mut_excl u p ->
   step u p                 fv0 s1 A = (xx, R) ->
   step u (add_head_prog p) fv0 s1 A = (yy,R') ->
   forall s2 fs C b, run u p xx.1 s1 R s2 C b fs ->
-  exists b', run u (add_head_prog p) yy.1 s1 R' s2 C b' fs.
+  exists b', b' || ~~b /\ exists C', run u (add_head_prog p) yy.1 s1 R' s2 C' b' fs
+with prog_equiv_head_cut u p fv s A s2 C b fs:
+  mut_excl u p ->
+  run u p fv s A s2 C b fs ->
+    exists b' C, run u (add_head_prog p) fv s A s2 C b' fs.
 Proof.
-  elim_tree A fv0 xx yy s1 R R' => //=.
+  move=> ME.
+  case: A => //=.
   - move=> [??][??]; subst => >; inversion 1 => //; subst.
-    by eexists; apply: run_dead.
+    by repeat eexists; only 2: apply: run_dead.
   - move=> [??][??]; subst => >; inversion 1 => //; subst.
-    by eexists; apply: run_done.
-  - case: t => [|c].
+    by repeat eexists; only 2: apply: run_done.
+  - move => [|c].
       move=> [<-<-][<-<-]>; inversion 1 => //; subst => /=.
-      by eexists; apply: run_done.
+      by repeat eexists; only 2: apply: run_done.
     rewrite !push/= => -[??][??]; subst.
     move=> s2 fs C b.
     admit.
-  - rewrite!push/= => -[??][??]; subst => /=.
-    case eA1: step => [xx A1].
-    case eA2: step => [yy A2]/=.
-    have:= step_add_cut_sf u p fv0 s1 A; rewrite eA1 eA2/= =>?; subst.
-    case: yy eA1 eA2 => fv1 t eA1 eA2.
-    have /= {HB} HA := HA _ _ _ _ _ _ eA1 eA2.
-    move=> s2 fs C b H.
-    have ? := run_or0 H; subst.
-    have := run_or_complete H.
-    destruct s2 => //=; last first.
-      move=> [?[[][fv2[H1]]]]; subst;
-      have[b {}HA] := HA _ _ _ _ H1.
-        move => ?; subst.
+  - move=> [A|] sm B.
+      rewrite!push/= => -[??][??]; subst => /=.
+      case eA1: step => [xx A1].
+      case eA2: step => [yy A2]/=.
+      have:= step_add_cut_sf u p fv0 s1 A; rewrite eA1 eA2/= =>?; subst.
+      case: yy eA1 eA2 => fv1 t eA1 eA2.
+      have /= HA := step_add_cut _ _ _ _ _ _ _ _ _ ME eA1 eA2.
+      set CB := if _ then _ else _.
+      move=> s2 fs C b H.
+      exists false.
+      have ? := run_or0 H; subst; split => //.
+      have := run_or_complete H.
+      destruct s2 => //=; last first.
+        move=> [?[b[fv2[H1]]]]; subst.
+        have[b' [Hb [C {}HA]]] := HA _ _ _ _ H1.
         have {}HA := run_or_correct_left HA.
-        destruct b.
-          have:= HA sm (if is_cb t then KO else B).
-          by exists false.
+        destruct b => //=; first by move => ?; repeat eexists; subst; destruct b'.
+        move=> [b2 H2].
+        destruct b'.
+          have {}HA := HA sm CB.
+          admit. (*pb with fv*)
+        have /={}HA := HA sm CB None None false fs.
+        eexists; apply: HA.
+        admit. (*should be ok*)
+      move=> [].
+        move=> [L'[b [H1 H2]]].
+        have[b1 [Hb [C' {}HA]]] := HA _ _ _ _ H1.
+        have := run_or_correct_left HA sm CB.
+        by eexists; eauto.
+      move=> [fv' [H1 [b1 H2]]].
+      have[b2 [Hb [C' {}HA]]] := HA _ _ _ _ H1.
+      have HA' := run_or_correct_left HA.
+      destruct b2.
+        (* should be false by mut_excl? eA2 introduces a cut (HA vs H1), then if it is 
+          superficial, then CB does not exist
+        *)
         admit.
-      move=> [b1 H2].
-      have := run_or_correct_left HA.
-      destruct b.
-        move=> /(_ sm (if is_cb t then KO else B)) HH.
-        eexists false => //.
-        admit. (*pb with fv*)
-      admit.
-    move=> [].
-      move=> [L'[b [H1 H2]]].
-      have[b1 {}HA] := HA _ _ _ _ H1.
-      have := run_or_correct_left HA sm (if is_cb t then KO else B).
-      move: H2; rewrite/or_succ_build_res.
-      case: C H => //; last first.
-        move=> H ?; subst.
-        destruct b1; first by eexists false.
-        admit.
-      admit.
-    admit.
+      (* eexists; apply: HA'. *)
+      move: H H2; rewrite{}/CB; case: ifP => ct H H2.
+        by inversion H2.
+      have [b'[XX DD]] := prog_equiv_head_cut _ _ _ _ _ _ _ _ _ ME H2.
+      eexists.
+      apply: HA' DD.
   - rewrite!push/= => -[??][??]; subst => /=.
     case eA1: step => [xx A1].
     case eA2: step => [yy A2]/=.
     have:= step_add_cut_sf u p fv0 sm B; rewrite eA1 eA2/= =>?; subst.
     case: yy eA1 eA2 => fv1 t eA1 eA2/= s2 fs C b R.
-    have /= {}HB := HB _ _ _ _ _ _ eA1 eA2.
+    have /= {}HB := step_add_cut _ _ _ _ _ _ _ _ _ ME eA1 eA2.
     have ? := run_or0 R; subst.
+    exists false; split => //.
     have/=:= run_same_structure R; case: C R => [[]|]//=.
       move=> L S R H.
         move=> /andP[/eqP?/eqP?]; subst.
       have [b1 RR] := proj2 (run_ko_left2 u p fv1 fs S A1 ((Some R)) s2 s1) H.
-      have [b2 {}HB] := HB _ _ _ _ RR.
-      have {}HB: (exists b2 : bool, run u (add_head_prog p) fv1 S A2 s2 (Some R) b2 fs) by exists b2.
-      have := proj1 (run_ko_left2 u (add_head_prog p) fv1 fs S A2 ((Some R)) s2 s1) HB.
-      by exists false.
+      have [b2 [? [C {}HB]]] := HB _ _ _ _ RR.
+      simpl in *.
+      have {}HB := ex_intro (fun x => run _ _ _ _ _ _ _ x _) b2 HB.
+      have := proj1 (run_ko_left2 u (add_head_prog p) fv1 fs S A2 C s2 s1) HB.
+      by eexists; eauto.
     move=> H _.
     have [b1 RR] := proj2 (run_ko_left2 u p fv1 fs sm A1 None s2 s1) H.
-    have [b2 {}HB] := HB _ _ _ _ RR.
-    have {}HB: (exists b2 : bool, run u (add_head_prog p) fv1 sm A2 s2 None b2 fs) by exists b2.
-    have := proj1 (run_ko_left2 u (add_head_prog p) fv1 fs sm A2 None s2 s1) HB.
-    by exists false.
+    have [b2 [? [C {}HB]]] := HB _ _ _ _ RR.
+    have {}HB := ex_intro (fun x => run _ _ _ _ _ _ _ x _) b2 HB.
+    have := proj1 (run_ko_left2 u (add_head_prog p) fv1 fs sm A2 C s2 s1) HB.
+    by eexists; eauto.
   - rewrite !push/=; case: ifP => sA [??][??]s2 fs C b; subst; last first.
       case eA1: step => [xx A1].
       case eA2: step => [yy A2]/=.
@@ -172,13 +187,13 @@ Admitted.
 Lemma prog_equiv_head_cut u p fv s A s2 C b fs:
   mut_excl u p ->
   run u p fv s A s2 C b fs ->
-    exists b', run u (add_head_prog p) fv s A s2 C b' fs.
+    exists b' C, run u (add_head_prog p) fv s A s2 C b' fs.
 Proof.
   move=> ME H; elim_run H => //=.
-  - eexists; by apply: run_done => //.
-  - case: IH => b IH.
+  - repeat eexists; by apply: run_done => //.
+  - case: IH => b [C IH].
     have /=[?|?] := path_atom_exp_cut pA eA; subst.
-      eexists; by apply/run_step/IH/erefl/step_cut_add_cut.
+      repeat eexists; by apply/run_step/IH/erefl/step_cut_add_cut.
     case eA': (step u (add_head_prog p) fv0 s1 A) => [xx B'].
     have:=step_add_cut_sf u p fv0 s1 A; rewrite/=eA eA'/= => ?; subst.
     have [b' H] := step_add_cut eA eA' rB; subst.

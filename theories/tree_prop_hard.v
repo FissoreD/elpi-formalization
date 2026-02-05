@@ -268,7 +268,8 @@ Section s.
     run u p fv0 s1 (Or (Some L) sx R) s3 X false fv2 ->
       if s3 is Some s3 then
         (exists L' b, run u p fv0 s1 L (Some s3) L' b fv2 /\ 
-          or_succ_build_res sx b R L' X)
+          or_succ_build_res sx b R L' X /\ 
+          (~~b -> X = None -> next_alt false R = None))
         \/
         (exists fv1, run u p fv0 s1 L None None false fv1 /\ 
           exists b, run u p fv1 sx R (Some s3) (if X is Some (Or _ _ R') then Some R' else None) b fv2)
@@ -287,6 +288,7 @@ Section s.
         by repeat eexists; first apply: run_done => //=.
       repeat eexists; first apply: run_done => //=.
       move=> /=; case nB: next_alt => [B1'|]//=.
+      case: next_alt => //=.
     + move: eA pA; rewrite rew_pa/=.
       rewrite !push; case eC: step => [[fvx rx] Cx]/=[???] PL; subst.
       have/= rxP:= path_atom_exp_cut PL eC.
@@ -295,12 +297,15 @@ Section s.
       have {IH} := IH _ _ _ erefl erefl.
       rewrite orbF in Hz *.
       destruct s2 => //=.
-        move=> [[A'[b [rC HS]]]|[fv3[H1[b HS]]]].
+        move=> [[A'[b [rC [HS NR]]]]|[fv3[H1[b HS]]]].
           left; case: rxP => /=?; subst; repeat eexists.
             by apply: run_step eC erefl rC.
             by apply: or_succ_build_resP1 HS.
+            by [].
             by apply: run_step eC erefl rC.
           by apply: HS.
+          move=> /= H1 H2/=.
+          by apply: NR.
         right; case: rxP => ?; subst; simpl  in HS.
           by inversion HS.
         repeat eexists.
@@ -328,7 +333,7 @@ Section s.
         destruct s2 => //=; last first.
           move=> [?[b[fv2[H1 H2]]]]; subst; split => //; exists b, fv2; split => //.
           by apply: run_fail H1.
-        move=> [[A' [b [rA' H]]]|[fv2[rC' [b H]]]].
+        move=> [[A' [b [rA' [H HR]]]]|[fv2[rC' [b H]]]].
           by left; repeat eexists; first by apply: run_fail rA'.
         right; repeat eexists; last by apply: H.
         by apply: run_fail rC'.
