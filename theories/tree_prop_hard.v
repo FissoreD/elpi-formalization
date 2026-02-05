@@ -238,6 +238,56 @@ Section s.
     or_succ_build_res b KO A' r -> or_succ_build_res true D A' r.
   Proof. by case: r => [[]|]//[t|]//= _ t1 [->]; case: ifP => //. Qed.
 
+  Lemma run_or_fail_L b fv1 s1 Cx fv3 fn sx rs:
+    run u p fv1 s1 Cx None None b fv3 ->
+    run u p fv1 s1 (Or (Some Cx) sx KO) None rs false fn ->
+    rs = None.
+  Proof.
+    remember None as n1 eqn:H1.
+    remember (@None tree) as n2 eqn:H2 => H.
+    elim_run H H1 H2.
+    - inversion 1 => //; subst; last by rewrite rew_pa path_atom_failed in H0.
+      apply: IH => //.
+      move: H1 => /=; rewrite eA/= => -[???]; subst.
+      rewrite if_same in H3.
+      destruct b0 => //; by rewrite orbT in H2.
+    - inversion 1 => //=; subst.
+        by rewrite rew_pa in H0; rewrite path_atom_failed in fA.
+      apply: IH => //.
+      move: H1 => /=; case nA': next_alt => //= -[?]; subst.
+      by move: nA; rewrite nA' => -[?]; subst.
+    - have fA := next_alt_None_failed nA.
+      inversion 1 => //; subst.
+        by rewrite rew_pa in H0; rewrite path_atom_failed in fA.
+      by move: H3 => /=; rewrite nA.
+  Qed.
+
+  Lemma run_or_fail_L1 b fv1 s1 Cx fv3 fn sx rs:
+    run u p fv1 s1 Cx None None b fv3 ->
+    run u p fv1 s1 (Or (Some Cx) sx KO) None rs false fn ->
+    fv3 = fn.
+  Proof.
+    remember None as n1 eqn:H1.
+    remember (@None tree) as n2 eqn:H2 => H.
+    elim_run H H1 H2.
+    - inversion 1 => //; subst.
+        move: H1; rewrite/=eA/=if_same => -[???]; subst.
+        apply: IH => //.
+        destruct b0 => //; by rewrite orbT in H2.
+      - by rewrite rew_pa path_atom_failed in H0.
+      by move: H0 => /=; rewrite path_atom_next_alt_id.
+    - inversion 1 => //=; subst.
+        by rewrite rew_pa in H0; rewrite path_atom_failed in fA.
+      - apply: IH => //.
+        move: H1 => /=; case nA': next_alt => //= -[?]; subst.
+        by move: nA; rewrite nA' => -[?]; subst.
+      by move: H0 => /=; rewrite nA.
+    - have fA := next_alt_None_failed nA.
+      inversion 1 => //; subst.
+        by rewrite rew_pa in H0; rewrite path_atom_failed in fA.
+      by move: H3 => /=; rewrite nA.
+  Qed.
+
   Lemma run_or_complete fv0 fv2 s1 sx L R X s3:
     run u p fv0 s1 (Or (Some L) sx R) s3 X false fv2 ->
       if s3 is Some s3 then
@@ -248,7 +298,8 @@ Section s.
           exists b, run u p fv1 sx R (Some s3) (if X is Some (Or _ _ R') then Some R' else None) b fv2)
       else
         exists b fv1, run u p fv0 s1 L None None b fv1 /\ 
-          (~ b -> exists b1, run u p fv1 sx R None None b1 fv2).
+          if b then X = None /\ fv1 = fv2
+          else exists b1, run u p fv1 sx R None None b1 fv2.
   Proof.
     remember (Or (Some L) _ _) as o1 eqn:Ho1.
     remember false as z eqn:Hz.
@@ -279,9 +330,20 @@ Section s.
           by apply: run_step eC erefl H1.
         by apply: HS.
       move=> [b[fv3[H1]]] H2.
-      case: rxP => ?; subst; simpl in *.
-        by exists true, fv3; split => //=; apply: run_step eC erefl H1.
-      by exists b, fv3; split => //; apply: run_step eC erefl H1.
+      destruct b; subst.
+        exists true, fv3; split => //=.
+        by case: rxP => ?; subst; apply: run_step eC erefl H1.
+      case: H2 => [b1 H2].
+      case: rxP => ?; subst.
+        repeat eexists.
+          by apply: run_step eC _ H1.
+        move=> //=.
+        simpl in *.
+        by rewrite (run_or_fail_L H1 rB) (run_or_fail_L1 H1 rB).
+      exists false.
+      repeat eexists.
+        by apply: run_step eC _ H1.
+      apply: H2.
     + move: fA nA; rewrite rew_pa/= => fA.
       case nC: next_alt => [C'|]//=.
         move=> [?]; subst.
