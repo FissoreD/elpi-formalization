@@ -963,3 +963,76 @@ Proof.
   case t: tm2RC => //=[[]][<-<-].
   apply: Hf t.
 Qed.
+
+Fixpoint all_but_last {T : Type} P (l : seq T) :=
+  match l with 
+  | [::] | (_ :: [::]) => true
+  | x :: xs => P x && all_but_last P xs
+  end.
+
+Fixpoint is_det_sig (sig:S) : bool :=
+  match sig with
+  | b (d Func) => true
+  | b (d Pred) => false
+  | b Exp => false
+  | arr _ _ s => is_det_sig s
+  end.
+
+Definition has_cut_seq:= (has (fun x => cut == x)).
+
+Fixpoint getS_Callable (sP: sigT) (t: Callable) : option S :=
+  match t with
+  | Callable_P pn => sP.[? pn]
+  | Callable_App hd _ => getS_Callable sP hd
+  end.
+
+Definition tm_is_det (sP: sigT) (t : Callable) :=
+  if getS_Callable sP t is Some s then is_det_sig s
+  else false.
+
+
+Lemma tiki_taka sP s s3 modes t q pn hd1 u:
+  let t' := tm2RC (deref s (Callable2Tm t)) in
+  t' = Some (q, pn) ->
+  tm_is_det sP t ->
+    H u modes q hd1 s = Some s3 ->
+      tm_is_det sP hd1.
+Proof.
+  move=>/=.
+  elim: modes q pn hd1 t s s3 => //=.
+    move=> []//=k kp hd1 t s1 s2.
+    case: hd1 => //={}k0.
+    case: eqP => //=?; subst k0.
+    move=> ++ [?]; subst.
+    destruct t => //=; last by case: tm2RC => //=[[]].
+    by move=> [->->]/=; rewrite/tm_is_det/=; case: fndP.
+  move=> m //ml IH q pn hd t s1 s2 H1 H2 H3.
+  have {H3}: exists f1 a1 f2 a2,
+    q = Callable_App f1 a1 /\
+    hd = Callable_App f2 a2 /\
+    (obind (matching u a1 a2) (H u ml f1 f2 s1) = Some s2 \/
+    obind (unify u a1 a2) (H u ml f1 f2 s1) = Some s2).
+  by move: H3; destruct m, q, hd => //; repeat eexists; auto.
+  move=> [f1 [a1 [f2 [a2 [?[?]]]]]]; subst.
+  case e: H => //=[s3|]; last by case.
+  move: H2; rewrite/tm_is_det/=.
+  case: t H1 => //= c t.
+  case H : tm2RC => //=[[h1' hp]] [??]?; subst => /=.
+  case X: getS_Callable => //[S] H1/= H2.
+  by apply: IH H _ e; rewrite/tm_is_det X//.
+Qed.
+
+Lemma tm_is_det_tm2RC s s1 c :
+  tm_is_det s c ->
+  exists q qp (kP: qp \in domf s), 
+    tm2RC (deref s1 (Callable2Tm c)) = Some (q, qp) /\ is_det_sig s.[kP].
+Proof.
+  rewrite/tm_is_det.
+  case CS: getS_Callable => //=[S].
+  elim: c s1 S CS => //= [p|f IH a] s1 S.
+    by case: fndP => //= kP [<-] dS; repeat eexists; eassumption.
+  move=> H DS.
+  have [q[qp [kP [H1 H2]]]] := IH s1 _ H DS.
+  by rewrite H1; repeat eexists; apply: H2.
+Qed.
+
