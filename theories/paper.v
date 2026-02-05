@@ -39,23 +39,27 @@ Proof.
   - by apply: run_fail nA (IH _ erefl).
 Qed.
 
-Lemma tree_to_elpi u p fv A s1 B sF s0:
+(*SNIP: tree_to_elpi *)
+Lemma tree_to_elpi: forall u p fv A s1 B sF s0,
   vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
   valid_tree A ->
     run u p fv s1 A sF B -> 
       exists x xs,
         t2l A s1 [::] = consC x xs /\
         nur u p fv x.1 x.2 xs sF (t2l (odflt KO B) s0 [::]).
+(*ENDSNIP: tree_to_elpi *)
 Proof.
   move=> H1 H2 H3 H4.
   have [b[fv1 H]] := run_runT H4.
   by apply: elpi_equiv.tree_to_elpi H.
 Qed.
 
-Lemma elpi_to_tree u p fv s1 s2 a na g  : 
+(*SNIP: elpi_to_tree *)
+Lemma elpi_to_tree: forall u p fv s1 s2 a na g,
   nur u p fv s1 g a s2 na -> 
   forall s0 t, valid_tree t -> (t2l t s0 nilC) = (consC (s1,g) a) -> 
   exists t1, run u p fv s0 t s2 t1 /\ t2l (odflt KO t1) s0 nilC = na.
+(*ENDSNIP: elpi_to_tree *)
 Proof.
   move=> H1 H2 H3 H4 H5.
   have [?[?[?[H6 H7]]]] := elpi_equiv.elpi_to_tree H1 H4 H5; subst.
