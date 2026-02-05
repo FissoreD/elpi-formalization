@@ -217,7 +217,7 @@ Section check.
   Lemma fresh_rules_cons fv r rs : fresh_rules fv (r :: rs) =
     ((fresh_rule (fresh_rules fv rs).1 r).1, (fresh_rule (fresh_rules fv rs).1 r).2 :: (fresh_rules fv rs).2).
   by simpl; rewrite !push.
-Qed.
+  Qed.
 
   Lemma det_tree_fresh sP sv bo:
     det_tree_seq sP bo -> det_tree_seq sP (fresh_atoms sv bo).2.
@@ -303,74 +303,6 @@ Qed.
   Lemma succ_failF_no_alt A: success A = false -> failed A = false -> no_alt A = false.
   Proof. by rewrite/no_alt => -> /failedF_next_alt ->//. Qed.
 
-  Definition check_program_aux sig pr := 
-    mut_excl u sig pr && check_rules sig pr.
-
-  Definition check_program pr := 
-    check_program_aux pr.(sig) pr.(rules).
-  
-  Lemma is_det_big_or pr c fv fv' s0 r0 rs s1:
-    vars_tm (Callable2Tm c) `<=` fv ->
-    vars_sigma s1 `<=` fv ->
-    check_program pr -> tm_is_det (sig pr) c -> 
-    bc u pr fv c s1 = (fv', (s0, r0) :: rs) ->
-    det_tree (sig pr) (big_or r0 rs).
-  Proof.
-    rewrite /bc/check_program/check_program_aux.
-    case: pr => rules s/= => ++/andP[].
-    case X: tm2RC => //=[[q qp]].
-    case: fndP => //= kP.
-    move=> ++++ H.
-    have [q'[qp' [H1 [H2 H3]]]] := tm_is_det_tm2RC s1 H.
-    move=> D1 D2 ME CR.
-    have := mut_exclP D1 D2 ME H.
-    have := check_rulesP fv s1 CR H.
-    rewrite/bc X/= in_fnd.
-    case: fresh_rules => [a rs'].
-    case: select => /= fv2 rs'' ++ [??]; subst => /=/andP[].
-    clear.
-    elim: rs s r0 => //= [|[s0 r0] rs IH] sp r1 H1; 
-    rewrite /=det_tree_big_and//cut_followed_by_det_nfa_and//.
-    move=> /andP[Cr0 HL] /andP[cb].
-    rewrite has_cut_seq_has_cut_big_and cb.
-    by move=> /IH-/(_ sp)//=; auto.
-  Qed.
-
-  Lemma step_no_free_alt pr sv s1 A r: 
-    vars_tree A `<=` sv ->
-    vars_sigma s1 `<=` sv ->
-    check_program pr -> det_tree pr.(sig) A -> 
-      step u pr sv s1 A = r ->
-        det_tree pr.(sig) r.2.
-  Proof.
-    move=> ++ H + <-; clear r.
-    elim_tree A s1.
-    - case: t => [|c]//=; rewrite !push/=.
-      case bc: bc => //=[fv'[|[s0 r0]rs]]//= V1 V2 H1.
-      by apply: is_det_big_or bc.
-    - rewrite/=2!fsubUset -andbA => /and3P[S1 S2 S3] S4 /andP[fA]; rewrite !push/= HA//=.
-      case: ifP => //= cA; last by move=> /eqP->; rewrite !if_same.
-      rewrite !fun_if => /[dup] Hx ->; do 2 case: ifP => //=.
-      by move=> H1; rewrite (step_keep_cut _ H1).
-    - rewrite /=fsubUset => /andP[S1 S2] S3.
-      by rewrite /=!push; move=> /HB/=->.
-    - rewrite step_and/= 2!fsubUset -andbA => /and3P[S1 S2 S3] S4 /andP[dB].
-      set sB:= step _ _ _ _ B.
-      set sA:= step _ _ _ _ A.
-      have S5 : vars_sigma (get_subst s1 A) `<=` sv by apply: vars_sigma_get_subst.
-      rewrite (fun_if (det_tree (sig pr))).
-      case SA: success.
-        case : (ifP (is_cb _)) => /=; rewrite {}HB//=.
-          by rewrite det_tree_cutl//no_alt_cutl//= andbT.
-        case: ifP => //= _ is_cb; first by case/orP=> [->//|/step_keep_cut->]; rewrite // orbT.
-        case hcB: (has_cut B); case hcsB: (has_cut sB.2) => //=; last by rewrite orbC /= => /andP[-> ->].
-        by rewrite (step_keep_cut hcB) in hcsB.
-      rewrite /= dB /=.
-      case fA: (failed A).
-        by rewrite /no_alt /sA failed_step//= SA.
-      rewrite (succ_failF_no_alt SA fA) => /andP[+ ->]/=.
-      by case/orP=> [/HA->/= | /[dup]/andP[-> ?] ->]; rewrite ?andbT ?orbT ?if_same.
-  Qed.
 
   Goal forall sP s, det_tree sP (Or (Some OK) s OK) == false.
   Proof. move=> ?? //=. Qed.
@@ -457,6 +389,75 @@ Qed.
       rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (next_alt_no_alt nA)//.
       rewrite andbb=> /andP[+ ->]; rewrite andbT if_same /=.
       by case/orP=> [/HA/(_ nA)->//|/andP[? ->]]; rewrite orbT.
+  Qed.
+
+  Definition check_program_aux sig pr := 
+    mut_excl u sig pr && check_rules sig pr.
+
+  Definition check_program pr := 
+    check_program_aux pr.(sig) pr.(rules).
+  
+  Lemma is_det_big_or pr c fv fv' s0 r0 rs s1:
+    vars_tm (Callable2Tm c) `<=` fv ->
+    vars_sigma s1 `<=` fv ->
+    check_program pr -> tm_is_det (sig pr) c -> 
+    bc u pr fv c s1 = (fv', (s0, r0) :: rs) ->
+    det_tree (sig pr) (big_or r0 rs).
+  Proof.
+    rewrite /bc/check_program/check_program_aux.
+    case: pr => rules s/= => ++/andP[].
+    case X: tm2RC => //=[[q qp]].
+    case: fndP => //= kP.
+    move=> ++++ H.
+    have [q'[qp' [H1 [H2 H3]]]] := tm_is_det_tm2RC s1 H.
+    move=> D1 D2 ME CR.
+    have := mut_exclP D1 D2 ME H.
+    have := check_rulesP fv s1 CR H.
+    rewrite/bc X/= in_fnd.
+    case: fresh_rules => [a rs'].
+    case: select => /= fv2 rs'' ++ [??]; subst => /=/andP[].
+    clear.
+    elim: rs s r0 => //= [|[s0 r0] rs IH] sp r1 H1; 
+    rewrite /=det_tree_big_and//cut_followed_by_det_nfa_and//.
+    move=> /andP[Cr0 HL] /andP[cb].
+    rewrite has_cut_seq_has_cut_big_and cb.
+    by move=> /IH-/(_ sp)//=; auto.
+  Qed.
+
+  Lemma step_no_free_alt pr sv s1 A r: 
+    vars_tree A `<=` sv ->
+    vars_sigma s1 `<=` sv ->
+    check_program pr -> det_tree pr.(sig) A -> 
+      step u pr sv s1 A = r ->
+        det_tree pr.(sig) r.2.
+  Proof.
+    move=> ++ H + <-; clear r.
+    elim_tree A s1.
+    - case: t => [|c]//=; rewrite !push/=.
+      case bc: bc => //=[fv'[|[s0 r0]rs]]//= V1 V2 H1.
+      by apply: is_det_big_or bc.
+    - rewrite/=2!fsubUset -andbA => /and3P[S1 S2 S3] S4 /andP[fA]; rewrite !push/= HA//=.
+      case: ifP => //= cA; last by move=> /eqP->; rewrite !if_same.
+      rewrite !fun_if => /[dup] Hx ->; do 2 case: ifP => //=.
+      by move=> H1; rewrite (step_keep_cut _ H1).
+    - rewrite /=fsubUset => /andP[S1 S2] S3.
+      by rewrite /=!push; move=> /HB/=->.
+    - rewrite step_and/= 2!fsubUset -andbA => /and3P[S1 S2 S3] S4 /andP[dB].
+      set sB:= step _ _ _ _ B.
+      set sA:= step _ _ _ _ A.
+      have S5 : vars_sigma (get_subst s1 A) `<=` sv by apply: vars_sigma_get_subst.
+      rewrite (fun_if (det_tree (sig pr))).
+      case SA: success.
+        case : (ifP (is_cb _)) => /=; rewrite {}HB//=.
+          by rewrite det_tree_cutl//no_alt_cutl//= andbT.
+        case: ifP => //= _ is_cb; first by case/orP=> [->//|/step_keep_cut->]; rewrite // orbT.
+        case hcB: (has_cut B); case hcsB: (has_cut sB.2) => //=; last by rewrite orbC /= => /andP[-> ->].
+        by rewrite (step_keep_cut hcB) in hcsB.
+      rewrite /= dB /=.
+      case fA: (failed A).
+        by rewrite /no_alt /sA failed_step//= SA.
+      rewrite (succ_failF_no_alt SA fA) => /andP[+ ->]/=.
+      by case/orP=> [/HA->/= | /[dup]/andP[-> ?] ->]; rewrite ?andbT ?orbT ?if_same.
   Qed.
 
   Definition is_det u p s fv A := forall b s' B fv',
