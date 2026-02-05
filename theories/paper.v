@@ -49,7 +49,7 @@ Notation "x :: y" :=
 Open Scope my_scope.
 
 (*SNIP: tree_to_elpi *)
-Lemma tree_to_elpi: forall u p fv t s0 t' s2,
+Lemma tree_to_elpi: forall u p fv s0 t s2 t',
   vars_tree t `<=` fv -> vars_sigma s0 `<=` fv ->
   valid_tree t ->
     run u p fv s0 t s2 t' -> 
@@ -59,14 +59,14 @@ Lemma tree_to_elpi: forall u p fv t s0 t' s2,
           nur u p fv s1 g a s2 na.
 (*ENDSNIP: tree_to_elpi *)
 Proof.
-  move=> u p fv t s0 t' s2 H1 H2 H3 H4.
+  move=> u p fv s0 t s2 t' H1 H2 H3 H4.
   have [b[fv1 H]] := run_runT H4.
   have:= elpi_equiv.tree_to_elpi s0 _ _ _ H.
   move=> []//[s1 g][a IH]; do 3 eexists; eauto.
 Qed.
 
 (*SNIP: elpi_to_tree *)
-Lemma elpi_to_tree: forall u p fv s1 s2 a na g,
+Lemma elpi_to_tree: forall u p fv s1 g s2 a na,
   nur u p fv s1 g a s2 na -> 
     forall s0 t, valid_tree t -> t2l t s0 [::] = (s1,g) :: a -> 
       exists t', run u p fv s0 t s2 t' /\ t2l (odflt KO t') s0 [::] = na.
