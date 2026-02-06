@@ -74,8 +74,6 @@ Fixpoint t2l A s0 bt :=
       let lB0 := a2g B0 in
       let lA  := add_deep bt lB0 lA in
       if lA is [:: (s0, gs) & al] then 
-        (* the reset point exists, it has to be added to all cut-to alternatives *)
-        (* each alt in al must have lB0 has rightmost conjunct  *)
         let al := map (catr lB0) al in
         (* al are alternatives that should be added in the deep cuts in B *)
         let lB := t2l B s0 (al ++ bt) in
