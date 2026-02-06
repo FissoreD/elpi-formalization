@@ -63,8 +63,8 @@ Section valid_tree.
   Variable p : program.
 
 (*SNIP: valid_tree*)
-  Fixpoint valid_tree s :=
-    match s with
+  Fixpoint valid_tree A :=
+    match A with
     | TA _ | OK | KO => true
     | Or None _ B => valid_tree B
     | Or (Some A) _ B => 

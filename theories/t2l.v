@@ -59,7 +59,7 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
     the "great^n uncles" on the right of a cut ARE alternatives
   *)
 (*SNIP: t2l*)
-Fixpoint t2l (A: tree) s (bt : alts) : alts :=
+Fixpoint t2l A s bt :=
   match A with
   | OK           => [:: (s, [::]) ]
   | KO           => [::]
