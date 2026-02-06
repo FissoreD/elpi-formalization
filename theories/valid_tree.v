@@ -67,7 +67,9 @@ Section valid_tree.
     match s with
     | TA _ | OK | KO => true
     | Or None _ B => valid_tree B
-    | Or (Some A) _ B => valid_tree A && ((B == KO) || B.base_or B)
+    | Or (Some A) _ B => 
+      valid_tree A && 
+          ((B == KO) || B.base_or B)
     | And A B0 B => valid_tree A &&
         if success A then valid_tree B 
         else B == big_and B0
