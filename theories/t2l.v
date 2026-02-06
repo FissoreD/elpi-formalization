@@ -59,29 +59,29 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
     the "great^n uncles" on the right of a cut ARE alternatives
   *)
 (*SNIP: t2l*)
-Fixpoint t2l A s bt :=
+Fixpoint t2l A s0 bt :=
   match A with
-  | OK           => [:: (s, [::]) ]
+  | OK           => [:: (s0, [::])]
   | KO           => [::]
-  | TA a         => [:: (s, [:: (a,[::]) ]) ]
+  | TA a         => [:: (s0, [:: (a, [::]) ])]
   | Or None s1 B => add_ca_deep bt (t2l B s1 [::])
   | Or (Some A) s1 B    =>
       let lB := t2l B s1 [::] in
-      let lA := t2l A s lB in
+      let lA := t2l A s0 lB in
       add_ca_deep bt (lA ++ lB)
   | And A B0 B   =>
-      let lA  := t2l A s bt in
-      if lA is [:: (slA, x) & xs] then 
+      let lA  := t2l A s0 bt in
+      if lA is [:: (s0, gs) & al] then 
         let lB0 := a2g B0 in
         (* the reset point exists, it has to be added to all cut-to alternatives *)
-        let xz := add_deepG bt lB0 x in
-        let xs := add_deep bt lB0 xs in 
-        (* each alt in xs must have lB0 has rightmost conjunct  *)
-        let xs := map (catr lB0) xs in
-        (* xs are alternatives that should be added in the deep cuts in B *)
-        let lB := t2l B slA (xs ++ bt) in
-        (* lB are alternatives, each of them have x has head *)
-        (map (catl xz) lB) ++ xs
+        let xz := add_deepG bt lB0 gs in
+        let al := add_deep bt lB0 al in 
+        (* each alt in al must have lB0 has rightmost conjunct  *)
+        let al := map (catr lB0) al in
+        (* al are alternatives that should be added in the deep cuts in B *)
+        let lB := t2l B s0 (al ++ bt) in
+        (* lB are alternatives, each of them have gs has head *)
+        (map (catl xz) lB) ++ al
       else [::]
 end.
 (*ENDSNIP*)
