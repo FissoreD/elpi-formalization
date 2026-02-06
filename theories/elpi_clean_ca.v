@@ -268,7 +268,7 @@ Section clean_ca.
       have {HA}:= HA s x bt vA.
       case X: (t2l A _ (_ ++ _)) => [|[sy y]ys]; 
       case Y: (t2l A _ (clean_ca _ _)) => [|[sz z]yz]//.
-      move=> [???]; subst => _.
+      move=> [???]; subst => _/=.
       rewrite !t2l_big_and/= cat_cons cat0s clean_ca_goals_cat.
       repeat f_equal.
         by rewrite /catl/= clean_ca_add_deep_gs//clean_ca_goals_a2g.

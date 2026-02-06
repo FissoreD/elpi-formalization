@@ -349,13 +349,11 @@ Section NurProp.
         case X: next_alt => [D|]//.
           move=>[?]/=; subst => /=.
           have{}HB := (HB _ _ _ _ vB fB X).
-          case Z: t2l => //[[s4 g]gs].
-          rewrite HB.
-          by case W: t2l => //[[s5 g1][]]//=.
+          by case add_deep => [|[]]//= s gs al; rewrite HB.
         case Y: next_alt => //=[A'][<-].
         rewrite (success_t2l s3)//=.
         rewrite (failed_next_alt_none_t2l _ _ X)//Y.
-        case: t2l => //[[s2 x]xs].
+        case: t2l => //=[[s2 x]xs].
         by rewrite t2l_big_and//.
       rewrite orbF => /eqP->{B HB} fA.
       rewrite fA.
@@ -603,8 +601,8 @@ Qed.
         set Y:= map _ _.
         have:= HB _ (Y ++ l1) _ _ _ _ _ fv vB X => /(_ _ IsList_alts).
         by case: t2l => //.
-      case SA: t2l => [|[s4 z] zs]//.
-      rewrite t2l_big_and cat_cons cat0s => -[? + ?]; subst.
+      case SA: t2l => [|[s4 z] zs]//=.
+      rewrite t2l_big_and cat_cons cat0s => -[?+?]; subst.
       case: z SA => //=.
         rewrite cat0s => H1 H2.
         case e: step => [[?[]]A']//=.
@@ -619,10 +617,9 @@ Qed.
           by case: t2l => //=[[? x] xs]; rewrite //=t2l_big_and//.
         - have [??]:= (step_success e); congruence.
       move=> [a ca1] l2 SA []??; subst.
+      rewrite seq2goals_cat !seq2goalsK => ?; subst.
       have:= HA _ l1 _ _ _ _ _ fv vA SA.
-      case e: step => [[?[]]A']//=;
-      case: t2l => //[[s x] xs]; only 1-3: by rewrite t2l_big_and.
-      have [??]:= step_success e; congruence.
+      case: t2l => //[[]]>/=; rewrite t2l_big_and//.
   Qed.
 
   Lemma s2l_Expanded_cut fv fv' A R s0 s3 ca x tl l1:
@@ -675,7 +672,7 @@ Qed.
         have [[H5 H5'] H6] := HB _ _ _ _ _ _ _ _ _ vB H H4; subst.
         rewrite H !H5 sA; repeat split => //.
         by rewrite -catA H6//success_and.
-      case SA : t2l => //[[s5 w] ws].
+      case SA : t2l => //[[s5 w] ws]/=.
       rewrite t2l_big_and.
       move=>[?+?]; subst.
       rewrite get_subst_and_big_and failed_and.
