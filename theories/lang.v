@@ -81,22 +81,23 @@ Inductive Tm :=
 (*ENDSNIP: tm_type*)
 
 (*SNIP: call_type*)
-Inductive Callable := 
+(* Inductive Callable := 
   | Callable_P   of P
-  | Callable_App of Callable & Tm.
+  | Callable_V   of V
+  | Callable_App of Callable & Tm. *)
 (*ENDSNIP: call_type*)
 
 derive Tm.
-derive Callable.
+(* derive Callable. *)
 HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
-HB.instance Definition _ := hasDecEq.Build Callable Callable_eqb_OK.
+(* HB.instance Definition _ := hasDecEq.Build Callable Callable_eqb_OK. *)
 
 (*SNIP: atom_type*)
-Inductive A := cut | call : Callable -> A.
+Inductive A := cut | call : Tm -> A.
 (*ENDSNIP: atom_type*)
 
 (*SNIP: R_type*)
-Record R := mkR { head : Callable; premises : list A }.
+Record R := mkR { head : Tm; premises : list A }.
 (*ENDSNIP: R_type*)
 
 derive A.
@@ -197,22 +198,18 @@ Fixpoint get_tm_hd (tm: Tm) : (D + (P + V)) :=
     | Tm_App h _ => get_tm_hd h
     end.
 
-Fixpoint Callable2Tm (c : Callable) : Tm :=
+(* Fixpoint Callable2Tm (c : Callable) : Tm :=
   match c with
   | Callable_P p => Tm_P p
   | Callable_App h t => Tm_App (Callable2Tm h) t
-  end.
+  end. *)
 
-Fixpoint tm2RC (t : Tm) : option (Callable * P) :=
+Fixpoint callable (t : Tm) : option P :=
   match t with
   | Tm_D _ => None
   | Tm_V _ => None
-  | Tm_P p => Some (Callable_P p, p)
-  | Tm_App t1 t2 => 
-    match tm2RC t1 with
-    | None => None
-    | Some (x, p) => Some (Callable_App x t2, p)
-    end
+  | Tm_P p => Some p
+  | Tm_App t1 t2 => callable t1
   end.
 
 Fixpoint count_tm_ag t := 
@@ -238,7 +235,7 @@ Definition sigtm tm s :=
 Definition sigtm_rev tm s := rev (sigtm tm s).
 
 Definition get_modes_rev tm sig :=
-  map fst (sigtm_rev (Callable2Tm tm) sig).
+  map fst (sigtm_rev tm sig).
 
 Open Scope fset_scope.
 
@@ -251,7 +248,7 @@ Fixpoint vars_tm t : fvS :=
   end.
 
 Definition vars_atom A : fvS :=
-  match A with cut => fset0 | call c => vars_tm (Callable2Tm c) end.
+  match A with cut => fset0 | call c => vars_tm c end.
 
 Definition varsU (l: seq fvS) :=
   foldr (fun a e => a `|` e) fset0 l.
@@ -259,7 +256,7 @@ Definition varsU (l: seq fvS) :=
 Definition vars_atoms L := varsU (map vars_atom L).
 
 Definition varsU_rprem r : fvS := vars_atoms r.(premises).
-Definition varsU_rhead (r: R) : fvS := vars_tm (Callable2Tm r.(head)).
+Definition varsU_rhead (r: R) : fvS := vars_tm r.(head).
 Definition varsU_rule r : fvS := varsU_rhead r `|` varsU_rprem r.
 
 Lemma freshV (fv : fvS) :  exists v : V, v \notin fv.
@@ -628,12 +625,66 @@ Qed.
 
 Definition ren m := deref [fmap x : domf m => Tm_V m.[valP x]].
 
-Lemma ren_comb m l r : ren m (Tm_App l r) = Tm_App (ren m l) (ren m r).
+Lemma ren_app m l r : ren m (Tm_App l r) = Tm_App (ren m l) (ren m r).
 by []. Qed.
+
+Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a bx) = F t.1 t.2.
+  by case: t => /=.
+Qed.
 
 Definition rename fv tm :=
   let: (fv', m) := fresh_tm (vars_tm tm `|` fv) fmap0 tm in
   ((fv'(*, m*)), ren m tm).
+
+(* Lemma rename_app fv f a:
+  let tm := Tm_App f a in
+  rename fv tm = 
+    let fv := fresh_tm (vars_tm tm `|` fv) fmap0 f in 
+    let (fv', m) := fresh_tm fv.1 fv.2 a in
+    ((fv'(*, m*)), Tm_App (rename fv' f) (ren m a)).
+Proof. by rewrite/rename/=!push/= ren_app//. Qed. *)
+
+Lemma ren_V b v:
+  ren b (Tm_V v) = Tm_V (odflt v b.[?v]).
+Proof.
+  rewrite/ren/=; case: fndP => //=vb.
+    by rewrite in_fnd//=ffunE valPE.
+  rewrite not_fnd//=.
+Qed.
+
+Lemma ren_P b p:
+  ren b (Tm_P p) = Tm_P p.
+Proof. by []. Qed.
+
+Lemma ren_isP b tm p:
+  ren b tm = Tm_P p ->
+  exists p', tm = Tm_P p'.
+Proof.
+  case: tm => //[p'|v]; first by repeat eexists.
+  by rewrite ren_V.
+Qed.
+
+Lemma ren_isApp b hd f2 a2:
+  ren b hd = Tm_App f2 a2 ->
+  exists f1 a1, hd = Tm_App f1 a1.
+Proof.
+  case: hd => //=[v|f1 a1].
+    by rewrite ren_V.
+  by repeat eexists.
+Qed.
+
+Lemma rename_isApp fv hd fv' f2 a2:
+  rename fv hd = (fv', Tm_App f2 a2) ->
+  exists f1 a1, hd = Tm_App f1 a1.
+Proof.
+  rewrite/rename !push => -[?+]; subst.
+  rewrite/ren.
+  case: hd => //=[v|f1 a1].
+    rewrite in_fnd//=.
+      by rewrite in_fsetU in_fset1 eqxx orbT.
+    move=> H; rewrite !ffunE//=.
+  by repeat eexists.
+Qed.
 
   (*
 Lemma renameP t fv : vars_tm t `<=` fv -> 
@@ -667,7 +718,7 @@ elim: t fv m0; only 1,2: by rewrite /= ?fdisjointX0.
   have := freshP (fv `|` codomf m); move: Hv; case: eqP => //= -> + <-.
   by rewrite !inE => /fsubsetP -> //; rewrite inE. 
 move=> l Hl r Hr fv m Im Sd Dc; rewrite [vars_tm _]/= fsubUset => /andP[Sl Sr].
-rewrite fresh_Tm_App ren_comb [vars_tm _]/=.
+rewrite fresh_Tm_App ren_app [vars_tm _]/=.
 set m' := (fresh_tm fv m l).2; set fv' := (fresh_tm fv m l).1.
 have Dcl : [disjoint  codomf m  & (fresh_tm fv m l).1].
   by apply: fdisjointWr Dc; rewrite fresh_Tm_App /= fresh_tm_sub.
@@ -818,26 +869,21 @@ Proof.
   by apply: Ha ea.
 Qed. *)
 
-
-Fixpoint fresh_callable fv c :=
+(* Fixpoint fresh_term fv c :=
   match c with
-  | Callable_P _ => (fv, c)
-  | Callable_App h t =>
-      let: (fv, h) := fresh_callable fv h in
+  (* | Callable_P _ => (fv, c)
+  | Callable_App h t => *)
+      (* let: (fv, h) := fresh_callable fv h in *)
       let: (fv, t) := rename fv t in
       (fv, Callable_App h t)
-  end.
+  end. *)
 
-Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a bx) = F t.1 t.2.
-  by case: t => /=.
-Qed.
-
-Lemma fresh_callable_sub fv t : fv `<=` (fresh_callable fv t).1.
+(* Lemma fresh_callable_sub fv t : fv `<=` (fresh_callable fv t).1.
 Proof.
   elim: t fv => //= f Hf a fv.
   rewrite /rename !push/=.
   by apply/fsubset_trans/fresh_tm_sub; rewrite fsubsetU//Hf orbT.
-Qed.
+Qed. *)
   
 
 (* Lemma fresh_tmP fv t : vars_tm (fresh_tm fv t).2 `&` (vars_tm t `|` fv) = fset0.
@@ -864,14 +910,14 @@ Axiom fresh_rule : fv -> R -> fv * R. *)
 Definition fresh_atom fv a :=
   match a with
   | cut => (fv, cut)
-  | call t => let: (fv, t) := fresh_callable fv t in (fv, call t)
+  | call t => let: (fv, t) := rename fv t in (fv, call t)
   end.
 
 Definition fresh_atoms fv a :=
   foldr (fun x '(fv,xs) => let: (fv, x) := fresh_atom fv x in (fv,x::xs)) (fv,[::]) a.
 
 Definition fresh_rule fv r :=
-  let: (fv, head) := fresh_callable fv r.(head) in
+  let: (fv, head) := rename fv r.(head) in
   let: (fv, premises) := fresh_atoms fv r.(premises) in
   (fv, mkR head premises ).
 
@@ -884,15 +930,18 @@ Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
 Definition fresh_rules fv rules :=
   foldr (fun x '(fv,xs) => let: (fv, x) := fresh_rule fv x in (fv,x::xs)) (fv,[::]) rules.
 
-Fixpoint H u (ml : list mode) (q : Callable) (h: Callable) s : option Sigma :=
+(* Unification between query and rule-head *)
+Fixpoint H u (ml : list mode) (q : Tm) (h: Tm) s : option Sigma :=
   match ml,q,h with
-  | [::], Callable_P c, Callable_P c1 => if c == c1 then Some s else None
-  | [:: i & ml], (Callable_App q a1), (Callable_App h a2) => obind (u.(matching) a1 a2) (H u ml q h s)
-  | [:: o & ml], (Callable_App q a1), (Callable_App h a2) => obind (u.(unify) a1 a2) (H u ml q h s)
+  (* only terms with rigid head are accepted *)
+  | [::], Tm_P c, _ => if q == h then Some s else None
+  | [:: m & ml], (Tm_App q a1), (Tm_App h a2) => 
+    let m := if m == i then u.(matching) else u.(unify) in
+    obind (u.(matching) a1 a2) (H u ml q h s)
   | _, _, _ => None
   end.
 
-Fixpoint select u (query : Callable) (modes:list mode) (rules: list R) sigma : (fvS * seq (Sigma * seq A)) :=
+Fixpoint select u (query : Tm) (modes:list mode) (rules: list R) sigma : (fvS * seq (Sigma * seq A)) :=
   match rules with
   | [::] => (fset0, [::])
   | rule :: rules =>
@@ -909,13 +958,14 @@ Fixpoint select u (query : Callable) (modes:list mode) (rules: list R) sigma : (
    outside this set
 *)
 (*SNIP: bc_type*)
-Definition bc : Unif -> program -> fvS -> Callable -> 
+Definition bc : Unif -> program -> fvS -> Tm -> 
                         Sigma -> fvS * seq (Sigma * seq A) :=
 (*ENDSNIP: bc_type*)
-  fun u pr fv (query:Callable) s =>
-  match tm2RC (deref s (Callable2Tm query)) with
+  fun u pr fv (query:Tm) s =>
+  let query := deref s query in
+  match callable query with
       | None => (fv, [::]) (*this is a call with flex head, in elpi it is an error! *)
-      | Some (query, kp) =>
+      | Some (kp) =>
         match pr.(sig).[? kp] with 
           | Some sig => 
             let: (fv, rules) := fresh_rules fv (pr.(rules)) in
@@ -947,22 +997,22 @@ Proof.
   move=> <-{r}.
   rewrite/bc/=.
   case: fresh_rules => [fv' pr'].
-  case: tm2RC => //=[[r p]].
+  case: callable => //=[[r p]].
   case: fndP => //= kP.
   by apply: select_in_rules.
 Qed. *)
 
-Lemma tm2RC_get_tm_hd t c' p:
-  tm2RC t = Some (c', p) ->
+(* Lemma tm2RC_get_tm_hd t c' p:
+  callable t = Some p ->
     ((get_tm_hd t = inr (inl p)) *
-    (get_tm_hd (Callable2Tm c') = inr (inl p))).
+    (get_tm_hd c' = inr (inl p))).
 Proof.
   elim: t c' p => //=.
     move=> k c' p [<-<-]//.
   move=> f Hf a _ c' p.
-  case t: tm2RC => //=[[]][<-<-].
+  case t: callable => //=[[]][<-<-].
   apply: Hf t.
-Qed.
+Qed. *)
 
 Fixpoint all_but_last {T : Type} P (l : seq T) :=
   match l with 
@@ -980,59 +1030,41 @@ Fixpoint is_det_sig (sig:S) : bool :=
 
 Definition has_cut_seq:= (has (fun x => cut == x)).
 
-Fixpoint getS_Callable (sP: sigT) (t: Callable) : option S :=
-  match t with
-  | Callable_P pn => sP.[? pn]
-  | Callable_App hd _ => getS_Callable sP hd
-  end.
+Definition getS_Callable (sP: sigT) (t: Tm) : option S :=
+  obind (fun x =>  sP.[?x]) (callable t).
 
-Definition tm_is_det (sP: sigT) (t : Callable) :=
+Definition tm_is_det (sP: sigT) (t : Tm) :=
   if getS_Callable sP t is Some s then is_det_sig s
   else false.
 
+Lemma tm_is_det_app sP f1 a1:
+  tm_is_det sP (Tm_App f1 a1) = tm_is_det sP f1.
+Proof. by []. Qed.
 
-Lemma tiki_taka sP s s3 modes t q pn hd1 u:
-  let t' := tm2RC (deref s (Callable2Tm t)) in
-  t' = Some (q, pn) ->
-  tm_is_det sP t ->
-    H u modes q hd1 s = Some s3 ->
-      tm_is_det sP hd1.
+Lemma is_detH u sP modes s s' t t':
+  H u modes t t' s = Some s' ->
+    tm_is_det sP t' = tm_is_det sP t.
 Proof.
-  move=>/=.
-  elim: modes q pn hd1 t s s3 => //=.
-    move=> []//=k kp hd1 t s1 s2.
-    case: hd1 => //={}k0.
-    case: eqP => //=?; subst k0.
-    move=> ++ [?]; subst.
-    destruct t => //=; last by case: tm2RC => //=[[]].
-    by move=> [->->]/=; rewrite/tm_is_det/=; case: fndP.
-  move=> m //ml IH q pn hd t s1 s2 H1 H2 H3.
-  have {H3}: exists f1 a1 f2 a2,
-    q = Callable_App f1 a1 /\
-    hd = Callable_App f2 a2 /\
-    (obind (matching u a1 a2) (H u ml f1 f2 s1) = Some s2 \/
-    obind (unify u a1 a2) (H u ml f1 f2 s1) = Some s2).
-  by move: H3; destruct m, q, hd => //; repeat eexists; auto.
-  move=> [f1 [a1 [f2 [a2 [?[?]]]]]]; subst.
-  case e: H => //=[s3|]; last by case.
-  move: H2; rewrite/tm_is_det/=.
-  case: t H1 => //= c t.
-  case H : tm2RC => //=[[h1' hp]] [??]?; subst => /=.
-  case X: getS_Callable => //[S] H1/= H2.
-  by apply: IH H _ e; rewrite/tm_is_det X//.
+  elim: modes s s' t t' => //=.
+    by move=> s s' []//= p t'; case: eqP => //=?; subst.
+  move=> _ f Hf s1 s2 []//=f1 a1 []//= f2 a2.
+  case H: H => //= _.
+  rewrite !tm_is_det_app; apply: Hf H.
 Qed.
 
-Lemma tm_is_det_tm2RC s s1 c :
-  tm_is_det s c ->
-  exists q qp (kP: qp \in domf s), 
-    tm2RC (deref s1 (Callable2Tm c)) = Some (q, qp) /\ is_det_sig s.[kP].
+Lemma callabe_some_deref s1 c p:
+  callable c = Some p -> callable (deref s1 c) = Some p.
+Proof. by elim: c p => //=. Qed.
+
+Lemma is_det_der s s1 c : tm_is_det s c ->
+  exists q (kP: q \in domf s), 
+    callable (deref s1 c) = Some q /\ is_det_sig s.[kP].
 Proof.
-  rewrite/tm_is_det.
-  case CS: getS_Callable => //=[S].
-  elim: c s1 S CS => //= [p|f IH a] s1 S.
-    by case: fndP => //= kP [<-] dS; repeat eexists; eassumption.
-  move=> H DS.
-  have [q[qp [kP [H1 H2]]]] := IH s1 _ H DS.
-  by rewrite H1; repeat eexists; apply: H2.
+  rewrite/tm_is_det/=.
+  rewrite/getS_Callable.
+  case X: callable => //=[p].
+  case: fndP => //=pP H.
+  exists p, pP; split => //.
+  by apply: callabe_some_deref.
 Qed.
 

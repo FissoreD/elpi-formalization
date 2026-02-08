@@ -287,7 +287,7 @@ Section main.
   Fixpoint vars_tree t : fvS :=
   match t with
   | TA cut | KO | OK => fset0
-  | TA (call t) => vars_tm (Callable2Tm t)
+  | TA (call t) => vars_tm t
   | And A B0 B => vars_tree A `|` vars_tree B `|` vars_atoms B0
   | Or None s B => vars_tree B `|` vars_sigma s
   | Or (Some A) s B => vars_tree A `|` vars_tree B `|` vars_sigma s

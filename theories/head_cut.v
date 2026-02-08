@@ -62,7 +62,7 @@ Qed.
 Lemma bc_add_cut_sf u p fv0 c s1:
   (bc u (add_head_prog p) fv0 c s1).1 = (bc u p fv0 c s1).1.
 Proof.
-  rewrite/bc; case: tm2RC => [[hd q]|]//.
+  rewrite/bc. case: callable => [[hd q]|]//.
   rewrite/add_head_prog/=; case: fndP => //=k; rewrite !push/=.
   rewrite frs_add_cut_sf; f_equal.
   rewrite sel_add_cut_sf//.

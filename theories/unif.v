@@ -63,6 +63,19 @@ Axiom unif_help: forall qa u f0 f1 f2 f3 hd0a hd1a s1' s2 s1'',
   matching u qa tm3 s1' = Some s2 ->
   matching u qa tm4 s1'' = None.
 
+Axiom unif_help1: forall u tm1 tm2 m1 m2 m3 m4 qa s1 s1' s2,
+  let t1 := ren m1 tm1 in
+  let t2 := ren m2 tm2 in
+  let t3 := ren m3 tm1 in
+  let t4 := ren m4 tm2 in
+  disjoint_tm t1 t2 ->
+  disjoint_tm qa t3 ->
+  disjoint_tm qa t4 ->
+  unify u t1 t2 fmap0 = None ->
+  matching u qa t3 s1 = Some s2 ->
+  matching u qa t4 s1' = None.
+
+
 Axiom unif_rename: forall unif fv1 fv2 t1 t2 s,
   vars_tm t2 `<=` fv1 -> vars_sigma s `<=` fv1 ->
   vars_tm t2 `<=` fv2 -> vars_sigma s `<=` fv2 ->

@@ -26,20 +26,26 @@ Section checker.
     all (fun x => check_rule p.(sig) x.(head) x.(premises)) p.(rules).
 End checker.
 
-Lemma callable_is_det_fresh sP fv hd:
-  tm_is_det sP (fresh_callable fv hd).2 =
+Lemma is_det_rename sP fv hd:
+  tm_is_det sP (rename fv hd).2 =
     tm_is_det sP hd.
 Proof.
-  rewrite/tm_is_det.
-  elim: hd fv => //= a Ha t fv.
-  by rewrite !push/= -(Ha fv).
+  rewrite/rename!push/=.
+  move: (fresh_tm _ _ _) => -[]/= _.
+  elim: hd => //= v b; rewrite ren_V//.
 Qed.
 
+Lemma is_det_deref sig fv c :
+  tm_is_det sig c ->
+  tm_is_det sig (deref fv c).
+Proof. by elim: c => //. Qed.
+
+
 Lemma tm_is_det_comb sP f a:
-  tm_is_det sP (Callable_App f a) = tm_is_det sP f.
+  tm_is_det sP (Tm_App f a) = tm_is_det sP f.
 Proof. by rewrite/tm_is_det/=. Qed.
 
-Lemma tm_is_det_fresh sP c c' sv sv':
+(* Lemma tm_is_det_fresh sP c c' sv sv':
   tm_is_det sP c ->
   fresh_callable sv c = (sv', c') ->
   tm_is_det sP c'.
@@ -51,59 +57,25 @@ Proof.
   case Y: rename => [sv3 a'] + [_ <-].
   rewrite !tm_is_det_comb => H.
   by apply/Hf/X.
-Qed.
+Qed. *)
 
-Lemma fresh_has_cut sv xs sv' xs':
-  has_cut_seq xs -> fresh_atoms sv xs = (sv', xs') -> has_cut_seq xs'.
-Proof.
-  elim: xs sv xs' sv' => //= x xs IH sv xs' sv'.
-  case Fs: fresh_atoms => [b' a'].
-  case Fa: fresh_atom => [b2 a2]/=+[_<-]/=.
-  move=> /orP [/eqP?|]; subst; first by move: Fa => /=[_<-].
-  by move=> H; rewrite (IH _ _ _ H Fs) orbT.
-Qed.
+Lemma fresh_has_cut sv xs:
+  has_cut_seq (fresh_atoms sv xs).2 = has_cut_seq xs.
+Proof. by elim: xs sv => //= -[|c] xs IH sv; rewrite!push//=IH !push//. Qed.
 
-Lemma check_atom_fresh sP x x' sv sv':
-  check_atom sP x ->
-  fresh_atom sv x = (sv', x') ->
-  check_atom sP x'.
-Proof.
-  destruct x => //=; first by move=> _ [_ <-].
-  case X: fresh_callable => [svE c'] H [_ <-]/=.
-  by apply/tm_is_det_fresh/X.
-Qed.
+Lemma check_atom_fresh sP x sv:
+  check_atom sP (fresh_atom sv x).2 = check_atom sP x.
+Proof. by destruct x; rewrite //= !push/= is_det_rename. Qed.
 
-Lemma all_check_atom_fresh sP xs xs' sv sv':
-  all (check_atom sP) xs ->
-  fresh_atoms sv xs = (sv', xs') ->
-  all (check_atom sP) xs'.
-Proof.
-  elim: xs xs' sv sv' => //=; first by move=> > _ [_ <-].
-  move=> x xs IH xsE sv svE /andP[H1 H2].
-  case Fs: fresh_atoms => [sv' xs'].
-  case Fa: fresh_atom => [sv2 xs2] [_ <-]/=.
-  rewrite (IH _ _ _ _ Fs)//andbT.
-  by apply/check_atom_fresh/Fa.
-Qed.
+Lemma all_check_atom_fresh sP xs sv:
+  all (check_atom sP) (fresh_atoms sv xs).2 = all (check_atom sP) xs.
+Proof. by elim: xs sv => //=x xs IH sv; rewrite !push/= IH check_atom_fresh. Qed.
 
-Lemma check_atoms_fresh sP sv bo sv' bo':
-  check_atoms sP bo ->
-    fresh_atoms sv bo = (sv', bo') ->
-    check_atoms sP bo'.
+Lemma check_atoms_fresh sP sv bo:
+  check_atoms sP (fresh_atoms sv bo).2 = check_atoms sP bo.
 Proof.
-  elim: bo bo' sv sv' => //=.
-    move=> > _ [_ <-]//.
-  move=> //= x xs IH bo' sv sv'.
-  case Fs: fresh_atoms => [b' xs'].
-  case Fa: fresh_atom => [b2 a2] + [_ <-]/=.
-  destruct x; move: Fa => /=.
-    move=> [_<-].
-    move=> /orP[] H; apply/orP.
-      by rewrite (all_check_atom_fresh H Fs); left.
-    by right; apply/IH/Fs.
-  case X: fresh_callable => [b3 c'][_<-] /andP[+/IH-/(_ _ _ _ Fs)->].
-  rewrite andbT.
-  by move=> /orP[/tm_is_det_fresh -/(_ _ _ _ X)|/fresh_has_cut-/(_ _ _ _ Fs)]->//; rewrite orbT.
+  elim: bo sv => //= -[|c] xs IH sv; rewrite !push//=IH//all_check_atom_fresh//.
+  rewrite !push/= is_det_rename has_cut_seq_fresh//.
 Qed.
 
 Section check.
@@ -217,14 +189,9 @@ Section check.
   Qed.
 
   Lemma det_tree_fresh sP sv bo:
-    det_tree_seq sP bo -> det_tree_seq sP (fresh_atoms sv bo).2.
+    det_tree_seq sP (fresh_atoms sv bo).2 = det_tree_seq sP bo.
   Proof.
-    elim: bo sv => //= [x xs] IH sv /andP[H1 /IH -/(_ sv)].
-    case Fs: fresh_atoms => [b' a'].
-    case Fa: fresh_atom => [b2 a2]/=->; rewrite andbT {IH}.
-    move/orP: H1 => [|] H.
-      by rewrite (check_atom_fresh H Fa).
-    by rewrite (fresh_has_cut H Fs) orbT.
+    by elim: bo sv => //= [x xs] IH sv; rewrite !push/= check_atom_fresh IH has_cut_seq_fresh.
   Qed.
 
   (* Lemma mut_exclP *)
@@ -235,30 +202,23 @@ Section check.
     all (fun x => check_atoms p.(sig) x.2) (bc u p fv c s1).2.
   Proof.
     case: p => [rs s].
-    rewrite/bc.
-    case DR: tm2RC => //=[[q p]].
+    rewrite/bc/=/check_rules/= => CR TD.
+    rewrite (is_det_cder _ TD).
+    case DR: callable => //=[p].
     case: fndP => //= pP.
-    rewrite push/=.
-    case X: fresh_rules => [fv1 rs']/=.
-    generalize (get_modes_rev q s.[pP]) => md.
-    generalize fv1 => fv2.
-    rewrite push/=.
-    elim: rs md rs' s c s1 fv q p {pP} fv1 DR X => //=[|[hd bo] rs IH] md rs' s c s1 fv q p fv1 DR ++ TD.
-      move=> [_ <-]//.
-    case FS: fresh_rules => [fv3 rs3].
-    case FR: fresh_rule => [fv4 r'][??]/=/andP[H1 H2]; subst.
-    move=> /=.
-    have {}IH := IH _ _ _ _ _ _ _ _ _ DR FS H2 TD.
-    case H: H => //=; last by apply: IH.
     rewrite !push/=.
-    have TD' := tiki_taka DR TD H.
-    move: FR.
-    rewrite/fresh_rule !push/=.
-    case X: fresh_atoms => [fs2 f']/= => -[??]; subst => /=.
-    rewrite /= callable_is_det_fresh in TD'.
-    move: H1; rewrite/check_rule TD'/= => ?.
-    rewrite (check_atoms_fresh _ X)//=.
-    apply: IH.
+    move: (get_modes_rev _ _).
+    elim: rs s s1 fv c CR TD p DR pP => //= -[hd bo] xs IH sig s fv c/=.
+    move=> /andP[c1 c2] TD p C pP m.
+    have {}IH := IH _ _ _ _ c2 TD _ C pP.
+    rewrite !push/= head_fresh_rule/=.
+    case H: H => //=[s'].
+    rewrite !push/= IH andbT.
+    rewrite premises_fresh_rule/=.
+    rewrite check_atoms_fresh.
+    move: c1; rewrite/check_rule.
+    have := is_detH sig H.
+    by rewrite is_det_rename (is_det_deref _ TD) => ->.
   Qed.
 
   Lemma deref_empty t:
@@ -391,32 +351,41 @@ Section check.
 
   Definition check_program pr := 
     mut_excl u pr && check_rules pr.
+
+  Lemma det_tree_big_or s r0 rs:
+    all (fun x : (Sigma /\ seq A)%type2 => check_atoms s x.2) (r0 :: rs) ->
+    all_but_last (fun x : (Sigma /\ seq A)%type2 => has_cut_seq x.2) (r0 :: rs) ->
+    det_tree s (big_or r0.2 rs).
+  Proof.
+    move=> /= => /andP[].
+    elim: rs r0 => [|x xs IH] r0/= H; rewrite?push/=det_tree_big_and cut_followed_by_det_nfa_and//.
+    move=> /andP[c1 c2]/andP[cu1 +]/=.
+    rewrite has_cut_seq_has_cut_big_and cu1.
+    by apply: IH.
+  Qed.
   
-  Lemma is_det_big_or pr c fv fv' s0 r0 rs s1:
-    vars_tm (Callable2Tm c) `<=` fv ->
+  Lemma is_det_big_or pr c fv fv' r0 rs s1:
+    vars_tm c `<=` fv ->
     vars_sigma s1 `<=` fv ->
     check_program pr -> tm_is_det (sig pr) c -> 
-    bc u pr fv c s1 = (fv', (s0, r0) :: rs) ->
-    det_tree (sig pr) (big_or r0 rs).
+    bc u pr fv c s1 = (fv', r0 :: rs) ->
+    det_tree (sig pr) (big_or r0.2 rs).
   Proof.
     rewrite /bc/check_program.
     case: pr => rules s/= => ++/andP[].
-    case X: tm2RC => //=[[q qp]].
+    case X: callable => //=[p].
     case: fndP => //= kP.
     move=> ++++ H.
-    have [q'[qp' [H1 [H2 H3]]]] := tm_is_det_tm2RC s1 H.
+    have [q'[qp' [+ H2]]] := is_det_der s1 H.
+    rewrite X => -[?]; subst.
     move=> D1 D2 ME CR.
     have := mut_exclP D1 D2 ME H.
     have := check_rulesP fv s1 CR H.
     rewrite/bc X/= in_fnd.
-    case: fresh_rules => [a rs'].
-    case: select => /= fv2 rs'' ++ [??]; subst => /=/andP[].
-    clear.
-    elim: rs s r0 => //= [|[s0 r0] rs IH] sp r1 H1; 
-    rewrite /=det_tree_big_and//cut_followed_by_det_nfa_and//.
-    move=> /andP[Cr0 HL] /andP[cb].
-    rewrite has_cut_seq_has_cut_big_and cb.
-    by move=> /IH-/(_ sp)//=; auto.
+    rewrite !push/= => /= ++[?]; subst.
+    rewrite (bool_irrelevance kP qp') => ++ S.
+    rewrite S.
+    by apply/det_tree_big_or.
   Qed.
 
   Lemma step_no_free_alt pr sv s1 A r: 
@@ -477,7 +446,7 @@ Section check.
   Qed.
 
   Lemma main s fv p t:
-    vars_tm (Callable2Tm t) `<=` fv ->
+    vars_tm t `<=` fv ->
     vars_sigma s `<=` fv ->
     check_program p -> tm_is_det p.(sig)  t -> 
       is_det u p s fv (TA (call t)).

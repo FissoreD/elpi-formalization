@@ -49,20 +49,20 @@ Notation "x :: y" :=
 Open Scope my_scope.
 
 (*SNIP: tree_to_elpi *)
-Lemma tree_to_elpi: forall u p fv s0 t s2 t',
-  vars_tree t `<=` fv -> vars_sigma s0 `<=` fv ->
+Lemma tree_to_elpi: forall u p s0 t s2 t',
+  let fv := vars_tree t `|` vars_sigma s0 in
   valid_tree t ->
     run u p fv s0 t s2 t' -> 
-      exists na s1 g a,
-        t2l (odflt KO t') s0 [::] = na /\
+      exists s1 g a,
+        let: na := (t2l (odflt KO t') s0 [::]) in
         t2l t s0 [::] = (s1,g) :: a /\
           nur u p fv s1 g a s2 na.
 (*ENDSNIP: tree_to_elpi *)
 Proof.
-  move=> u p fv s0 t s2 t' H1 H2 H3 H4.
-  have [b[fv1 H]] := run_runT H4.
-  have:= elpi_equiv.tree_to_elpi s0 _ _ _ H.
-  move=> []//[s1 g][a IH]; do 3 eexists; eauto.
+  move=> u p s0 t s2 t' /= vt R.
+  have [b[fv1 H]] := run_runT R.
+  have:= elpi_equiv.tree_to_elpi s0 (fsubsetUl _ _) (fsubsetUr _ _) vt H.
+  by move=> [[s1 g] [a IH]]; do 3 eexists; eauto.
 Qed.
 
 (*SNIP: elpi_to_tree *)

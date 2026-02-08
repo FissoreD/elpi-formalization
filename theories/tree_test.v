@@ -39,11 +39,11 @@ Definition s2 : Sigma := [fmap].[IV false <- Tm_D (ID 2)].
 Section Test1.
 
   Definition p_test : program := build_progr [:: 
-      mkR (Callable_App (Callable_P p) (Tm_D (ID 1))) [::] ;
-      mkR (Callable_App (Callable_P p) (Tm_D (ID 2))) [::] ;
-      mkR (Callable_App (Callable_P r) (Tm_D (ID 2))) [::] ;
-      mkR (Callable_App (Callable_P q) (Tm_D (ID 1)))
-        [:: call (Callable_App (Callable_P p) v_X) ; call (Callable_App (Callable_P r) v_X) ] 
+      mkR (Tm_App (Tm_P p) (Tm_D (ID 1))) [::] ;
+      mkR (Tm_App (Tm_P p) (Tm_D (ID 2))) [::] ;
+      mkR (Tm_App (Tm_P r) (Tm_D (ID 2))) [::] ;
+      mkR (Tm_App (Tm_P q) (Tm_D (ID 1)))
+        [:: call (Tm_App (Tm_P p) v_X) ; call (Tm_App (Tm_P r) v_X) ] 
     ].
 
   Goal unify unif v_X (Tm_D (ID 1)) empty = Some s1.
@@ -54,7 +54,7 @@ Section Test1.
     move=> //.
   Qed.
 
-  (* Goal Texists r, run unif empty (CallS p_test (Callable_App (Callable_P q) (Tm_D (ID 1)))) (Some s2) r false.
+  (* Goal Texists r, run unif empty (CallS p_test (Tm_App (Tm_P q) (Tm_D (ID 1)))) (Some s2) r false.
   Proof.
     eexists.
     apply: run_step => //.
@@ -72,13 +72,13 @@ End Test1.
 Section Test5.
 
   Definition p_test1 : program := build_progr [:: 
-      mkR (Callable_App (Callable_P p) (Tm_D (ID false))) 
-        [::call (Callable_App (Callable_P q) v_X); cut] ;
-      mkR (Callable_App (Callable_P q) (Tm_D (ID 1))) [::] ;
-      mkR (Callable_App (Callable_P q) (Tm_D (ID 2))) [::] 
+      mkR (Tm_App (Tm_P p) (Tm_D (ID false))) 
+        [::call (Tm_App (Tm_P q) v_X); cut] ;
+      mkR (Tm_App (Tm_P q) (Tm_D (ID 1))) [::] ;
+      mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
     ].
 
-  (* Goal Texists r, run unif empty (CallS p_test1 (Callable_App (Callable_P p) (Tm_D (ID false)))) (Some s1) r false /\ is_dead r.
+  (* Goal Texists r, run unif empty (CallS p_test1 (Tm_App (Tm_P p) (Tm_D (ID false)))) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
     apply: run_step => //.
@@ -96,14 +96,14 @@ Section Test6.
   Definition pred_true := ((IP 200)).
 
   Definition p_test2 : program := build_progr [:: 
-      mkR ((Callable_P pred_true)) [::];
-      mkR (Callable_App (Callable_P p) (Tm_D (ID false))) 
-        [::call (Callable_App (Callable_P q) v_X);call ((Callable_P pred_true)); cut] ;
-      mkR (Callable_App (Callable_P q) (Tm_D (ID 1))) [::] ;
-      mkR (Callable_App (Callable_P q) (Tm_D (ID 2))) [::] 
+      mkR ((Tm_P pred_true)) [::];
+      mkR (Tm_App (Tm_P p) (Tm_D (ID false))) 
+        [::call (Tm_App (Tm_P q) v_X);call ((Tm_P pred_true)); cut] ;
+      mkR (Tm_App (Tm_P q) (Tm_D (ID 1))) [::] ;
+      mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
   ].
 
-  (* Goal Texists r, run unif empty ((CallS p_test2 (Callable_App (Callable_P p) (Tm_D (ID false)))) ) (Some s1) r false /\ is_dead r.
+  (* Goal Texists r, run unif empty ((CallS p_test2 (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
     apply: run_step => //.

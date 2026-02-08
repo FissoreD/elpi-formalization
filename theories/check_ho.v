@@ -49,7 +49,7 @@ Qed. *)
   varsD (map (fun x => varsU_rprem x.2) (F u pr query s)).
 Proof.
   rewrite/F.
-  case: tm2RC => // [[r p]].
+  case: callable => // [[r p]].
   case: fndP => // kP.
   apply: varsD_rule_prem.
   apply: select_fresh.
@@ -61,7 +61,7 @@ Lemma backchain_fresh_premE u pr query s l :
 Proof. by move=> <-; apply/backchain_fresh_prem. Qed. *)
 
 (* Lemma tm2RC_deref s c c' p:
-  tm2RC (deref s (Callable2Tm c)) = Some (c', p) ->
+  callable (deref s (Callable2Tm c)) = Some (c', p) ->
     match get_tm_hd (Callable2Tm c) with
     | inl K => False
     | inr (inl P) => P = p
@@ -80,7 +80,7 @@ Proof.
   move=> f Hf t c' p.
   remember (deref _ _) as df eqn:H.
   have {}H := esym H.
-  case X: tm2RC => //=[[RC P]][??]; subst.
+  case X: callable => //=[[RC P]][??]; subst.
   by apply: Hf X.
 Qed. *)
 
@@ -2453,7 +2453,7 @@ Proof.
   rewrite/check_program.
   move=> /=CP COMPLETE tcC SP D + <-{L}.
   rewrite /F.
-  case trc: tm2RC => [[c' p]|]//=.
+  case trc: callable => [[c' p]|]//=.
   case: prog CP => /= index sig CP.
   case: fndP => pP//.
   rewrite check_rule_fresh.

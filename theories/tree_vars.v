@@ -14,17 +14,9 @@ Section vars_tree.
     by apply/fsubset_trans/fresh_tm_sub; rewrite fsubsetUr.
   Qed.
 
-  Lemma fresh_callable_sub fv r:
-    fv `<=` (fresh_callable fv r).1.
-  Proof.
-    elim: r fv => //.
-    move=> f Hf a fv; rewrite/=!push/=.
-    apply/fsubset_trans/rename_sub/Hf.
-  Qed.
-
   Lemma fresh_atom_sub fv r:
     fv `<=` (fresh_atom fv r).1.
-  Proof. by case: r => //= c; rewrite push/=fresh_callable_sub. Qed.
+  Proof. by case: r => //= c; rewrite push/=rename_sub. Qed.
 
   Lemma fresh_atoms_sub fv r:
     fv `<=` (fresh_atoms fv r).1.
@@ -37,7 +29,7 @@ Section vars_tree.
     fv `<=` (fresh_rule fv r).1.
   Proof.
     rewrite/fresh_rule !push/=.
-    by apply/fsubset_trans/fresh_atoms_sub/fresh_callable_sub.
+    by apply/fsubset_trans/fresh_atoms_sub/rename_sub.
   Qed.
 
   Lemma fresh_rules_sub rs fv: 
@@ -65,7 +57,7 @@ Section vars_tree.
     fv `<=` (bc u p fv c s).1.
   Proof.
     rewrite/bc.
-    case X: tm2RC => [[cd chd]|]//.
+    case X: callable => [c'|]//=.
     case: fndP => cP//.
     rewrite !push/= fsubsetU//.
     rewrite fresh_rules_sub//.
@@ -96,13 +88,13 @@ Section vars_tree.
 
   Lemma vars_tm_bc_sub c fv fvx s s0 r0 rs:
     vars_sigma s `<=` fv ->
-    vars_tm (Callable2Tm c) `<=` fv ->
+    vars_tm c `<=` fv ->
     bc u p fv c s = (fvx, (s0, r0) :: rs) ->
     vars_tree (big_or r0 rs) `<=` fvx  /\ vars_sigma s0 `<=` fvx.
   Proof.
     move => H1 H2.
     rewrite/bc/=.
-    case X: tm2RC => [[cd hd]|]/=; last by move=> [<-]/=.
+    case X: callable => [c'|]//=.
     case: fndP => /=hp; last by move=> [<-].
     rewrite !push.
     case FR: fresh_rules => [fF RF]/=.

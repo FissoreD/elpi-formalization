@@ -6,17 +6,15 @@ From det Require Import tree tree_prop ctx tree_vars unif.
 Section mut_excl.
   Variable u : Unif.
 
-  Fixpoint H_head (ml : list mode) (q : Callable) (h: Callable) : bool :=
+  Fixpoint H_head (ml : list mode) (q : Tm) (h: Tm) : bool :=
     match ml,q,h with
-    | [::], Callable_P c, Callable_P c1 => c == c1
-    | [:: i & ml], (Callable_App q a1), (Callable_App h a2) => u.(unify) a1 a2 fmap0 && H_head ml q h
-    | [:: o & ml], (Callable_App q a1), (Callable_App h a2) => H_head ml q h
+    | [::], Tm_P c, Tm_P c1 => c == c1
+    | [:: m & ml], (Tm_App q a1), (Tm_App h a2) => 
+      ((m == o) || u.(unify) a1 a2 fmap0) && H_head ml q h
     | _, _, _ => false
     end.
   
-  (* Definition unif_head := H_head empty. *)
-
-  Fixpoint select_head (query : Callable) (modes:list mode) (rules: list R) : (seq R) :=
+  Fixpoint select_head (query : Tm) (modes:list mode) (rules: list R) : (seq R) :=
     match rules with
     | [::] => [::]
     | rule :: rules =>
@@ -26,9 +24,9 @@ Section mut_excl.
   
   Definition mut_excl_head (sig:sigT) (r:R) rules :=
     let query := r.(head) in
-    match tm2RC (Callable2Tm query) with
+    match callable query with
       | None => true (*a callable against a non rigid term is OK: failure at runtime*)
-      | Some (query, kp) =>
+      | Some kp =>
         match sig.[? kp] with 
           | Some sig => 
             if is_det_sig sig then 
@@ -52,102 +50,59 @@ Section mut_excl.
     mut_excl_aux pr.(sig) rules.
 
   Lemma head_fresh_rule fv r:
-    head (fresh_rule fv r).2 = (fresh_callable fv r.(head)).2.
+    head (fresh_rule fv r).2 = (rename fv r.(head)).2.
   Proof.
     destruct r; rewrite/fresh_rule/= 1!push.
     case bc: fresh_atoms => [fv' A']//=.
   Qed.
 
   Lemma premises_fresh_rule fv r:
-    premises (fresh_rule fv r).2 = (fresh_atoms (fresh_callable fv r.(head)).1 r.(premises)).2.
+    premises (fresh_rule fv r).2 = (fresh_atoms (rename fv r.(head)).1 r.(premises)).2.
   Proof.
     destruct r; rewrite/fresh_rule/= 1!push.
-    generalize (fresh_callable fv head) => -[{}fv/=b].
+    generalize (rename fv head) => -[{}fv/=b].
     case FA: fresh_atoms => [b1 a']//=.
   Qed.
 
      (* sufficient modes length for callable t *)
-  Fixpoint suff_mode (t:Callable) (m:seq mode) :=
+  Fixpoint suff_mode (t:Tm) (m:seq mode) :=
     match m, t with
-    | [::], Callable_P _ => true
-    | [:: _ & xs], Callable_App x _ => suff_mode x xs
+    | [::], Tm_P _ => true
+    | [:: _ & xs], Tm_App x _ => suff_mode x xs
     | _, _ => false
     end.
 
-  Lemma HH q' hd qp m :
-    suff_mode hd m -> tm2RC (Callable2Tm hd) = Some (q', qp) ->
-    H_head m q' hd.
-  Proof.
-    elim: hd m qp q' => //=[p [|_ _]|f Hf a [|m0 ms]]//= qp q' sm.
-      by move=> [<-]; rewrite //= eqxx.
-    case X: tm2RC => [[q2 qp2]|]//=[??]; subst.
-    have:= Hf _ _ _ sm X.
-    case: m0 => //=; case: H_head => //=.
-    by rewrite unif_refl.
-  Qed.
-
   Lemma H_head_refl m t: suff_mode t m -> H_head m t t.
   Proof.
-    elim: m t => //=[|m l IH] []//=.
-    move=> c t H; case: m; auto.
-    have:= IH c H; case: H_head => //= > _.
-    by rewrite unif_refl.
+    elim: m t => //=[|m l IH] []//=c t H.
+    by rewrite unif_refl IH//orbT.
   Qed.
 
-  Lemma tm2RC_rigid_deref c1 d1 h1 d2 h2 s1 s2 fv1 fv m c:
-    tm2RC (Callable2Tm (fresh_callable fv1 c1).2) = Some (d1, h1) ->
-    H u m d2 (fresh_callable fv c1).2 s1 = Some s2 ->
-    tm2RC c = Some (d2, h2) -> h1 = h2.
+  Lemma H_callable m t1 t2 s1 s2:
+    H u m t1 t2 s1 = Some s2 ->
+    callable t1 = callable t2.
   Proof.
-    elim: c1 d1 h1 d2 h2 s1 s2 fv fv1 m c => //=[p|f Hf r] d1 h1 d2 h2 s1 s2 fv fv1 m c.
-      move=> [??]; subst.
-      case: m => /=[|[] _]; case: d2 => //p; case: eqP => //=-> _.
-      elim: c h1 h2 => //=[>[<-<-]|]//f Hf a Ha h1 h2.
-      by case X: tm2RC => //[[c1 p1]][//].
-    rewrite !push/=.
-    case H: tm2RC => [[C P]|]//=[??]; subst.
-    have {H}Hf := Hf _ _ _ _ _ _ _ _ _ _ H.
-    case m => [|[]]//=; case: d2 => //= c1 t1 l1;
-    case H: H => //=[s3]; have {}Hf := Hf _ _ _ _ _ _ _ H;
-    case: c => //= f' a'; case tm: tm2RC => //=[[c' p']]/= + [???]; subst;
-    have:= Hf _ _ tm => //.
+    elim: m t1 t2 s1 s2 => //=.
+      by move=> []//= p []//p' s1 s2; case: eqP => //-[->].
+    move=> _ m IH []//f1 a1 []//f2 a2 s1 s2.
+    case H: H => //= _.
+    by apply: IH H.
   Qed.
-
-  Lemma tm2RC_get_modes d1 d2 h2 s1 s2 fv m c l:
-    H u m d2 (fresh_callable fv d1).2 s1 = Some s2 ->
-    tm2RC c = Some (d2, h2) -> 
-      get_modes_rev d1 l = get_modes_rev d2 l.
-  Proof.
-    elim: d1 d2 h2 s1 s2 fv m c l => //=[p|f Hf r] d2 h2 s1 s2 fv m c l.
-      by case: m => //=[|[] _]; case: d2 => //=.
-    rewrite !push/=.
-    case m => [|[]]//=; case: d2 => //= c1 t1 l1;
-    case H: H => //=[s3]; have {}Hf := Hf _ _ _ _ _ _ _ _ H;
-    case: c => //= f' a'; case tm: tm2RC => //=[[c' p']]/= + [???]; subst;
-    have:= Hf _ _ _ tm => //; case: l => //=;
-    rewrite/get_modes_rev/=/sigtm_rev/sigtm/=!add0n => m1 ml mr IH _;
-    by rewrite !rev_cons/=!map_rcons/= IH.
-  Qed.
-
 
   Lemma H_suff_mode l q fv hd s1 s2:
-    H u l q (fresh_callable fv hd).2 s1 = Some s2 -> suff_mode hd l.
+    H u l q (rename fv hd).2 s1 = Some s2 -> suff_mode hd l.
   Proof.
-    elim: l hd q s1 s2 fv => //=.
-      move=> hd []//= p s1 s2 fv; case fc: fresh_callable => [fv' [p'|]]/=//.
-      case: eqP => //? [?]; subst.
-      by case: hd fc => //= c t; rewrite !push.
-    move=> m l IH hd q s1 s2 fv.
-    case: m; case: q => //= c t; case fc: fresh_callable => [fv' [|f a]]//=;
-    case H: H => [s3|]//=; move: fc; case: hd => //=[f' a']; rewrite !push;
-    move=> [???]; subst => H1; apply: IH H.
-  Qed.
-
-  Lemma tm2RC_Callable hd:
-    exists r, tm2RC (Callable2Tm hd) = Some r /\ r.1 = hd.
-  Proof.
-    elim: hd => //=[p|f [[c p] [H1 H2]] a]; first by repeat eexists.
-    rewrite H1; subst; repeat eexists.
+    rewrite/rename !push/=.
+    move: (fresh_tm _ _ _) => -[]/= _.
+    elim: l q hd s1 s2 {fv} => //=.
+      move=> []//=p hd s1 s2 b; case: eqP => ///esym/[dup].
+      by move=>/ren_isP[p'->]/=.
+    move=> m ms IH []//=f1 a1 hd s1 s2 fv.
+    case R: ren => //=[f a].
+    move: (R) => /ren_isApp[f2[a2?]]/=; subst; move: R.
+    rewrite ren_app => -[<- _].
+    case H: H => //= _.
+    apply: IH H.
   Qed.
 
   Lemma fsetUE0 {T: choiceType} (A B:{fset T}):
@@ -160,18 +115,6 @@ Section mut_excl.
   Lemma fsetU0E {T: choiceType} (A B:{fset T}):
     A = fset0 -> B = fset0 -> A `|` B = fset0.
   Proof. by move=> ->->; rewrite fsetU0. Qed.
-
-  (* f X 3 = f 4 X non unifica, ma se cambio le variabili allora si, attenzione! *)
-
-
-  Lemma vars_tm2rc t x:
-    tm2RC t = Some x ->
-    vars_tm (Callable2Tm x.1) = vars_tm t.
-  Proof.
-    elim: t x => //=[q|f Hf a Ha][c p]; first by move=> [<-].
-    case X: tm2RC => //[[c' p']][<-<-]/=.
-    by rewrite (Hf _ X).
-  Qed.
 
   Lemma varsUP x l:
     forall t, x \in vars_tm t -> t \in l -> x \in varsU [seq vars_tm e | e <- l].
@@ -201,16 +144,6 @@ Section mut_excl.
       apply/fsubset_trans/H3/codom_sub.
     rewrite 2!fsubUset => /andP[H1 H2] H3.
     rewrite Hf//Ha//.
-  Qed.
-
-  Lemma tm2RC_Callable2 c s1 fv r:
-    vars_tm (Callable2Tm c) `<=` fv -> vars_sigma s1 `<=` fv ->
-    tm2RC (deref s1 (Callable2Tm c))  = Some r ->
-      vars_tm (Callable2Tm r.1) `<=` fv.
-  Proof.
-    elim: c s1 fv r => [p|f Hf a] s1 fv r/=; first by move=> H1 H2 [<-]//.
-    rewrite fsubUset => /andP[S1 S2] S3; case H: tm2RC => [[c p]|]//=[<-]/=.
-    by rewrite fsubUset (Hf _ _ _ S1 S3 H) vars_deref//.
   Qed.
 
   Lemma fresh_tm_domf_sub f m a:
@@ -345,63 +278,72 @@ Section mut_excl.
   Lemma disjoint_comm a b: disjoint_tm a b = disjoint_tm b a.
   Proof. rewrite/disjoint_tm fsetIC//. Qed.
 
+  Lemma H_head_None_ren m q hd1 hd2 s1 s2 m1 m2 m3 m4:
+    disjoint_tm q (ren m1 hd1) ->
+    disjoint_tm q (ren m4 hd2) ->
+    disjoint_tm (ren m2 hd1) (ren m3 hd2) ->
+    H u m q  (ren m1 hd1) s1 = Some s2 ->           (*q   ~  hd1*)
+    H_head m (ren m2 hd1) (ren m3 hd2) = false ->  (*hd1 <> hd2*)
+    H u m q  (ren m4 hd2) s1 = None.                (*hd2 <> q*)
+  Proof.
+    rewrite/disjoint_tm.
+    elim: m q hd1 hd2 s1 s2 m1 m2 m3 m4 => [|x xs IH] q hd1 hd2 s1 s2 fv1 fv2 fv3 fv4/=.
+      case: q => //=p _ _.
+      case: eqP => //=/esym/[dup]/ren_isP[p'->][->]/= _ _.
+      case: hd2 => //=[p2|v]; rewrite !(ren_P,ren_V)//=.
+      by do 2 case: eqP => //=; congruence.
+    case: q => //=f1 a1.
+    case: hd1 => // [?|f2 a2]; rewrite !(ren_V,ren_app)//.
+    case: hd2 => // [?|f3 a3]; rewrite !(ren_V,ren_app)//=.
+    rewrite !fsetIUl !fsetIUr.
+    move=> /eqP; rewrite !fsetU_eq0 => /andP[/andP[/eqP H1 /eqP H2] /andP[/eqP H3 /eqP H4]].
+    move=> /eqP; rewrite !fsetU_eq0 => /andP[/andP[/eqP H5 /eqP H6] /andP[/eqP H7 /eqP H8]].
+    move=> /eqP; rewrite !fsetU_eq0 => /andP[/andP[/eqP H9 /eqP H10] /andP[/eqP H11 /eqP H12]].
+    case H: H => //=[s1'] M.
+    case: eqP => //=Md; subst.
+      move=> HH; rewrite (IH _ _ _ _ _ _ _ _ _ _ _ _ H HH)//=.
+    case U: unify => [sx|]//=HH.
+      rewrite (IH _ _ _ _ _ _ _ _ _ _ _ _ H HH)//=.
+    case H': lang.H => //=[s1''].
+    apply/unif_help1/M/U; rewrite/disjoint_tm//.
+  Qed.
 
   Lemma H_head_None m q hd1 hd2 s1 s2 fv1 fv2 fv3 fv4:
-    vars_tm (Callable2Tm q) `<=` fv1 -> vars_sigma s1 `<=` fv1 ->
-    vars_tm (Callable2Tm q) `<=` fv4 -> vars_sigma s1 `<=` fv4 ->
-    (fresh_callable fv3 hd2).1 `<=` fv2 ->
-    H u m q (fresh_callable fv1 hd1).2 s1 = Some s2 ->                                (*q   ~  hd1*)
-    H_head m (fresh_callable fv2 hd1).2 (fresh_callable fv3 hd2).2 = false ->  (*hd1 <> hd2*)
-    H u m q (fresh_callable fv4 hd2).2 s1 = None.                                     (*hd2 <> q*)
+    vars_tm q `<=` fv1 -> vars_sigma s1 `<=` fv1 ->
+    vars_tm q `<=` fv4 -> vars_sigma s1 `<=` fv4 ->
+    (rename fv3 hd2).1 `<=` fv2 ->
+    H u m q (rename fv1 hd1).2 s1 = Some s2 ->                 (*q   ~  hd1*)
+    H_head m (rename fv2 hd1).2 (rename fv3 hd2).2 = false ->  (*hd1 <> hd2*)
+    H u m q (rename fv4 hd2).2 s1 = None.                      (*hd2 <> q*)
   Proof.
-    elim: m q hd1 hd2 s1 s2 fv1 fv2 fv3 fv4 => [|x xs IH] q hd1 hd2 s1 s2 fv1 fv2 fv3 fv4/=.
-      case: q => //=; case: hd1 => //=; last by move=>>; rewrite !push.
-      case: hd2 => /=; last by move=>>; rewrite !push.
-      move=> >; repeat case: eqP => //; congruence.
-    case: q => //=; first by case: x.
-    move=> qf qa.
-    case: hd1 => /=; first by case: x.
-    move=> hd0f hd0a.
-    rewrite !push/=.
-    case: hd2 => /=; first by case: x.
-    move=> hd1f hd1a.
-    rewrite !push/=.
-    rewrite !(fsubUset _ (vars_tm (Callable2Tm qf))) => /andP[D1 D2] DS1 /andP[D3 D4] DS2 D5.
-    have {}IH := IH _ hd0f _ _ _ _ _ _ _ D1 DS1 D3 DS2.
-    case: x; last first.
-      case H: H => //=[s1'] U HD.
-      rewrite (IH _ _ _ _ _ H HD)//=.
-      by apply/fsubset_trans/D5/rename_sub.
-    move: D5.
-    set F3:= fresh_callable _ _.
-    set F1:= fresh_callable _ _.
-    set F2:= fresh_callable _ _.
-    set F4:= fresh_callable _ _.
-    case H: H => //=[s1'] D5 M.
-    case HH: H_head; rewrite (andbF, andbT)/=; last first.
-      rewrite (IH _ _ _ _ _ H HH)//=.
-      apply/fsubset_trans/D5/rename_sub.
-    case U: unify => //= _.
-    clear IH.
-    case X: lang.H => //[s1'']/=.
-    apply: unif_help U M.
-      apply: disjoint_tm_sub.
-      rewrite/F2/=; apply/fsubset_trans/fresh_callable_sub.
-      apply/fsubset_trans/D5/vars_tm_rename.
-    - rewrite/F1 disjoint_comm; apply/disjoint_tm_sub.
-      by apply/fsubset_trans/fresh_callable_sub.
-    - rewrite/F4 disjoint_comm; apply/disjoint_tm_sub.
-      by apply/fsubset_trans/fresh_callable_sub.
+    rewrite/rename !push/=.
+    move=> V1 V2 V3 V4 V5 H HH.
+    apply:H_head_None_ren H HH; rewrite/disjoint_tm.
+      set X:= (rename fv1 hd1); set Y := ren _ _.
+      replace Y with X.2 by rewrite/X/Y/rename!push//.
+      by rewrite fsetIC; apply/disjoint_tm_sub.
+    - set X:= (rename fv4 hd2); set Y := ren _ _.
+      replace Y with X.2 by rewrite/X/Y/rename!push//.
+      by rewrite fsetIC; apply/disjoint_tm_sub.
+    move: V5.
+    (* set K := fresh_tm _ _ _. *)
+    set X:= (rename fv2 hd1); set Y := ren _ _.
+    replace Y with X.2 by rewrite/X/Y/rename!push//.
+    set Z:= (rename fv3 hd2); set W := ren _ _.
+    replace W with Z.2 by rewrite/Z/W/rename!push//.
+    set K := fresh_tm _ _ _; move=> H.
+    apply/disjoint_tm_sub/fsubset_trans/H.
+    replace K.1 with Z.1 by rewrite/K/Z/rename!push//.
+    apply: vars_tm_rename.
   Qed.
 
   Lemma select_head_nil fv fv1 fv2 fv3 rs hd s1 s2 q m:
     let FC := fresh_rules fv2 rs in
-    vars_tm (Callable2Tm q) `<=` fv1 -> vars_sigma s1 `<=` fv1 ->
-    vars_tm (Callable2Tm q) `<=` fv -> vars_sigma s1 `<=` fv ->
+    vars_tm (q) `<=` fv1 -> vars_sigma s1 `<=` fv1 ->
+    vars_tm (q) `<=` fv -> vars_sigma s1 `<=` fv ->
     FC.1 `<=` fv3 ->
-    (* vars_tm (Callable2Tm (fresh_callable fv3 hd).2) `<=` vars_tm (Callable2Tm (fresh_callable fv1 hd).2) -> *)
-    H u m q (fresh_callable fv1 hd).2 s1 = Some s2 ->     (*hd ~ q*)
-    select_head (fresh_callable fv3 hd).2 m (FC).2 = [::] ->                       (*select hd' rs =  [::]*)
+    H u m q (rename fv1 hd).2 s1 = Some s2 ->         (*hd ~ q*)
+    select_head (rename fv3 hd).2 m (FC).2 = [::] ->  (*select hd' rs =  [::]*)
     (select u q m (fresh_rules fv rs).2 s1).2 = [::]. (*select q   rs' = [::]*) 
   Proof.
     elim: rs fv fv1 fv2 hd s1 s2 q m => //=.
@@ -419,10 +361,10 @@ Section mut_excl.
     move: H.
     set FR1:= fresh_rules _ _.
     set FR2:= fresh_rules _ _.
-    set hdF1:= fresh_callable _ _.
-    set hdF2:= fresh_callable _ _.
-    set hd0F1:= fresh_callable _ _.
-    set hd0F:= fresh_callable _ _.
+    set hdF1:= rename _ _.
+    set hdF2:= rename _ _.
+    set hd0F1:= rename _ _.
+    set hd0F:= rename _ _.
     move=> + B => H1 H2.
     rewrite (H_head_None _ _ _ _ _ H1 H2)//.
       by apply/fsubset_trans/fresh_rules_sub.
@@ -432,21 +374,16 @@ Section mut_excl.
     apply/fresh_atoms_sub.
   Qed.
 
-  (* Lemma count_tm_ag_fresh: *)
-
-  Lemma get_modes_rev_fresh fs hd m:
-    get_modes_rev (fresh_callable fs hd).2 m = get_modes_rev hd m.
+  Lemma get_modes_rev_rename fs hd m:
+    get_modes_rev (rename fs hd).2 m = get_modes_rev hd m.
   Proof.
     rewrite/get_modes_rev/sigtm_rev; do 2 f_equal.
     rewrite/sigtm/=; f_equal.
-    elim: hd fs {m} => //= f Hf a fs; rewrite !push/= Hf//.
-  Qed.
-
-  Lemma suff_mode_fresh hd m fv:
-    suff_mode hd m -> suff_mode (fresh_callable fv hd).2 m.
-  Proof.
-    elim: hd m fv => //=f Hf a []//=m ml fv H.
-    rewrite !push/= Hf//.
+    rewrite/rename !push/=.
+    move: (fresh_tm _ _ _) => -[/= _].
+    elim: hd => //[v|a Ha f Hf] b.
+      by rewrite ren_V.
+    by rewrite ren_app/= Ha.
   Qed.
 
   Lemma has_cut_seq_fresh fv1 bo:  
@@ -456,53 +393,85 @@ Section mut_excl.
     by case: x => //=c; rewrite !push//=.
   Qed.
 
+  Lemma callable_ren m hd: callable (ren m hd) = callable hd.
+  Proof. elim: hd => //= v; rewrite ren_V//. Qed.
+
+  Lemma callable_rename fv hd: callable (rename fv hd).2 = callable hd.
+  Proof. by rewrite/rename!push/=callable_ren. Qed.
+
+  Lemma is_det_cder s s1 c: tm_is_det s c -> callable (deref s1 c) = callable c.
+  Proof. by elim: c s. Qed.
+
+  Lemma is_det_lookup p c s (pP: p \in domf s):
+    callable c = Some p -> tm_is_det s c -> is_det_sig s.[pP].
+  Proof. by elim: c p s pP => //=p1 p2 s pP [->]; rewrite/tm_is_det/getS_Callable/=in_fnd//. Qed.
+
+  Lemma count_tm_ag_deref s c p: 
+    callable c = Some p -> count_tm_ag (deref s c) = count_tm_ag c.
+  Proof. by elim: c p s => //=f Hf a Ha p s H; rewrite (Hf p)//. Qed.
+
+  Lemma get_modes_rev_deref c p s1 s: 
+    callable c = Some p -> get_modes_rev (deref s1 c) s = get_modes_rev c s.
+  Proof. by move=> H; rewrite/get_modes_rev/sigtm_rev/sigtm (count_tm_ag_deref _ H)//. Qed.
+
+  Lemma count_tm_ag_H d1 d2 s1 s2 m p:
+    H u m d1 d2 s1 = Some s2 ->
+    callable d1 = Some p -> 
+      count_tm_ag d1 = count_tm_ag d2.
+  Proof.
+    elim: d1 d2 s1 s2 m p => //=[p|f Hf a Ha] d2 s1 s2 m l.
+      by case: m => //=; case: eqP => //<-.
+    case: m => //= _ m; case: d2 => //= f1 a1; case H: H => //[s1']/= M C.
+    by f_equal; apply: Hf H C.
+  Qed.
+
+  Lemma get_modes_rev_H d1 d2 s1 s2 m l p:
+    H u m d1 d2 s1 = Some s2 ->
+    callable d1 = Some p -> 
+      get_modes_rev d1 l = get_modes_rev d2 l.
+  Proof. by move=> H C; rewrite/get_modes_rev/sigtm_rev/sigtm (count_tm_ag_H H C). Qed.
+
   Lemma mut_exclP p fv c s1:
-    vars_tm (Callable2Tm c) `<=` fv ->
+    vars_tm c `<=` fv ->
     vars_sigma s1 `<=` fv ->
     mut_excl p -> 
       tm_is_det p.(sig) c ->
         all_but_last (fun x => has_cut_seq x.2) (bc u p fv c s1).2.
   Proof.
     rewrite/bc.
-    case: p => [rs s] => /=.
-    case DR: tm2RC => //=[[q p]].
+    case: p => [rs s]/=+++TD.
+    rewrite (is_det_cder _ TD).
+    case DR: callable => //=[p].
     case: fndP => //= pP.
     rewrite/mut_excl !push/=.
-    (* move: fset0. *)
-    elim: rs s c s1 fv q p pP DR => [|[hd bo] rs IH]//= s c s1 fv q p pP DF D1 D2 + TD.
+    elim: rs s c s1 fv p pP DR TD => [|[hd bo] rs IH]//= s c s1 fv p pP DF TD D1 D2.
     rewrite !push/=.
     move=> /andP[+ ME].
-    have:= IH _ _ _ _ _ _ pP DF D1 D2 ME TD.
+    have:= IH _ _ _ _ _ pP DF TD D1 D2 ME.
     set FRS1 := fresh_rules _ _.
     set FRS2 := fresh_rules _ _.
     set FS1 := fresh_rule _ _.
     set FS2 := fresh_rule _ _.
     move=> {}IH.
     case H: H => [s2|]//; rewrite !push/={}IH andbT.
-    have TD' := tiki_taka DF TD H.
     move: H; rewrite/FS2.
     rewrite/FS1 head_fresh_rule/=/fresh_rule/=!push/=.
     rewrite/mut_excl_head.
-    set FC1:= fresh_callable _ _.
-    set FC2:= fresh_callable _ _.
-    have [[? p1] [H1 /=H2]]:= tm2RC_Callable FC2.2; subst; rewrite H1.
-    move=> H.
-    have ? := tm2RC_rigid_deref H1 H DF; subst.
-    rewrite in_fnd//=.
-    move: TD'; rewrite/FS2 head_fresh_rule/= -/FC1 => TD'.
-    have:= tm_is_det_tm2RC s1 TD; rewrite DF => -[q'[p' [kp' [[??] IS]]]]; subst.
-    rewrite (bool_irrelevance kp' pP) in IS.
-    clear kp'.
+    set FC1:= rename _ _.
+    set FC2:= rename _ _.
+    move=> H/=.
+    have /esym := H_callable H.
+    rewrite (callabe_some_deref _ DF) {1}/FC1{1}/FC2 !callable_rename => DF1.
+    rewrite DF1 in_fnd (is_det_lookup _ DF)//=.
+    move: H; rewrite{2}/FC2 get_modes_rev_rename (get_modes_rev_deref _ _ DF) => H.
+    have:= get_modes_rev_H s.[pP] H (callabe_some_deref _ DF).
+    rewrite (get_modes_rev_deref _ _ DF){1}/FC1 get_modes_rev_rename.
+    move: H => +<-; move: (get_modes_rev _ _) => m H.
     have := H_suff_mode H.
-    have MEQ := (tm2RC_get_modes _ H DF).
-    rewrite -{}MEQ in H *.
-    rewrite{1}/FC2 get_modes_rev_fresh IS.
-    move: H; generalize (get_modes_rev hd s.[pP]) as m => m H SM.
     rewrite !has_cut_seq_fresh.
     case CS: has_cut_seq; first by case: select => [?[|[]]].
-    case SH: select_head => //.
-    (* have Hx := vars_deref D1 D2. *)
-    have Hy := tm2RC_Callable2 D1 D2 DF.
+    case SH: select_head => //SM.
+    have Hx := vars_deref D1 D2.
     rewrite (select_head_nil _ _ _ _ _ H SH)//=;
     by rewrite/FRS1;apply/fsubset_trans/fresh_rules_sub.
   Qed.
@@ -531,10 +500,11 @@ Section mut_excl.
     elim => //= [[hd bo]] rs/= IH; rewrite !push/=.
     move=> /andP[HBO] H; rewrite IH// andbT.
     rewrite/fresh_rule !push/=/mut_excl_head/=.
-    case tm: tm2RC => //=[[c p]]; case: fndP => //= kp.
+    case tm: callable => //=[p]; case: fndP => //= kp.
     case: ifP => // ds; case S: select_head => //=[r' rs'].
     rewrite has_cut_seq_fresh HBO/=.
-    have:= all_cut_select_head c (get_modes_rev c s.[kp]) fset0 H.
+    set X := rename (fresh_rules fset0 rs).1 hd.
+    have:= all_cut_select_head X.2 (get_modes_rev X.2 s.[kp]) fset0 H.
     by rewrite S/= => /andP[->/all_all_but_last->]; destruct rs'.
   Qed.
 End mut_excl.
