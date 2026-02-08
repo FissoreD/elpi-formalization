@@ -305,7 +305,7 @@ Section mut_excl.
     case U: unify => [sx|]//=HH.
       rewrite (IH _ _ _ _ _ _ _ _ _ _ _ _ H HH)//=.
     case H': lang.H => //=[s1''].
-    apply/unif_help1/M/U; rewrite/disjoint_tm//.
+    apply/unif_help/M/U; rewrite/disjoint_tm//.
   Qed.
 
   Lemma H_head_None m q hd1 hd2 s1 s2 fv1 fv2 fv3 fv4:
