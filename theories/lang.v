@@ -80,17 +80,8 @@ Inductive Tm :=
   | Tm_V of V     | Tm_App  of Tm & Tm.
 (*ENDSNIP: tm_type*)
 
-(*SNIP: call_type*)
-(* Inductive Callable := 
-  | Callable_P   of P
-  | Callable_V   of V
-  | Callable_App of Callable & Tm. *)
-(*ENDSNIP: call_type*)
-
 derive Tm.
-(* derive Callable. *)
 HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
-(* HB.instance Definition _ := hasDecEq.Build Callable Callable_eqb_OK. *)
 
 (*SNIP: atom_type*)
 Inductive A := cut | call : Tm -> A.
@@ -197,12 +188,6 @@ Fixpoint get_tm_hd (tm: Tm) : (D + (P + V)) :=
     | Tm_V V => inr (inr V)
     | Tm_App h _ => get_tm_hd h
     end.
-
-(* Fixpoint Callable2Tm (c : Callable) : Tm :=
-  match c with
-  | Callable_P p => Tm_P p
-  | Callable_App h t => Tm_App (Callable2Tm h) t
-  end. *)
 
 Fixpoint callable (t : Tm) : option P :=
   match t with
