@@ -79,7 +79,7 @@ Section tree_op.
   (*ENDSNIP: get_subst*)
 
   (*SNIP: path_end*)
-  Definition path_end A := (get_end empty A).2. (*empty is the empty subst*)
+  Definition path_end A := (get_end empty A).2.
   (*ENDSNIP: path_end*)
 
   (*SNIP: succ_path*)
