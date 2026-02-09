@@ -353,8 +353,8 @@ Section check.
     mut_excl u pr && check_rules pr.
 
   Lemma det_tree_big_or s r0 rs:
-    all (fun x : (Sigma /\ seq A)%type2 => check_atoms s x.2) (r0 :: rs) ->
-    all_but_last (fun x : (Sigma /\ seq A)%type2 => has_cut_seq x.2) (r0 :: rs) ->
+    all (fun x => check_atoms s x.2) (r0 :: rs) ->
+    all_but_last (fun x  => has_cut_seq x.2) (r0 :: rs) ->
     det_tree s (big_or r0.2 rs).
   Proof.
     move=> /= => /andP[].
