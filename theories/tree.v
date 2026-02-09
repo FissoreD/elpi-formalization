@@ -91,7 +91,9 @@ Section tree_op.
   (*ENDSNIP: failed_path*)
 
   (*SNIP: path_atom*)
-  Definition path_atom A := if path_end A is TA _ then true else false.
+  Definition path_atom A := 
+      if path_end A is TA _ then true 
+      else false.
   (*ENDSNIP: path_atom*)
 
   (* This cuts away everything except for the only path with success *)
