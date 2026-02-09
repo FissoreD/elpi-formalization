@@ -11,15 +11,27 @@ Definition disjoint_tm t1 t2:=
 Axiom match_unif: forall u a b s,
   matching u a b s -> unify u a b s.
 
-Axiom unifP: forall u t1 t2 t3 s1 s2,
-  ~~ unify u t1 t2 fmap0 -> unify u t3 t1 s1 -> ~~ unify u t3 t2 s2.
+Axiom unif_trans : forall u a b c s,
+  unify u a b s -> unify u b c s -> unify u a c s.
+
+Axiom unif_sym : forall u a b s,
+  unify u a b s = unify u b a s.
+
+(* Axiom unifP: forall u t1 t2 t3 s1 s2,  ground t3 ->
+  ~~ unify u t1 t2 fmap0 -> unify u t3 t1 s1 -> ~~ unify u t3 t2 s2. *)
 
 (* if 2 disjoint terms do not unify, then any rename cannot make them unify *)
-Axiom unif_none_ren: forall u f1 f2 f3 f4 t1 t2 s,
+(* Axiom unif_none_ren: forall u f1 f2 f3 f4 t1 t2 s,
   let tm1:= deref f1 t1 in let tm2:= deref f2 t2 in
   disjoint_tm tm1 tm2 ->
   ~~ unify u tm1 tm2 empty ->
-  ~~ unify u (deref f3 t1) (deref f4 t2) s.
+  ~~ unify u (deref f3 t1) (deref f4 t2) s. *)
+
+(* Axiom unif_none_ren: forall u f1 f2 f3 f4 t1 t2 s,
+  let tm1:= ren f1 t1 in let tm2:= ren f2 t2 in
+  disjoint_tm tm1 tm2 ->
+  ~~ unify u tm1 tm2 empty ->
+  ~~ unify u (ren f3 t1) (ren f4 t2) s. *)
 
 Lemma unif_match u a b s:
   ~~unify u a b s -> ~~matching u a b s.
@@ -34,7 +46,7 @@ Proof. by move=> ->. Qed.
 Lemma isNoneP1 T (P : option T) : ~~ P -> P = None.
 Proof. case: P => //. Qed.
 
-Lemma unif_matchP: forall u h1 h2 q  s1 s2,
+(* Lemma unif_matchP: forall u h1 h2 q  s1 s2,
   ~~ unify u h1 h2 fmap0  ->
      matching u q h1 s1   ->
   ~~ matching u q h2 s2.
@@ -44,6 +56,24 @@ Proof.
   have U3 := unifP _ U1 U2.
   by apply: unif_match.
 Qed.
+
+ *)
+Axiom matching_subst : forall u q t s, (matching u q t s) <-> (matching u q (deref s t) fmap0).
+
+
+Axiom matching_monotone : forall u q t s, (matching u q (deref s t) fmap0) -> (matching u q t fmap0).
+
+Lemma match2_unif : forall u q t1 t2 s, (matching u q t1 s) -> (matching u q t2 s) -> (unify u t1 t2 s).
+Proof.
+ move=> u q t1 t2 s /match_unif H1 /match_unif H2; apply: unif_trans H2.
+ by rewrite unif_sym.
+Qed.
+
+(* Axiom ad : adesive f f1 -> ren f t = ren (f + f1) t. *)
+
+Axiom unif_rename : forall u t1 t2 (f : {fmap V -> V}), 
+  injectiveb f ->
+  (unify u t1 t2 fmap0) <-> (unify u (ren f t1) (ren f t2) fmap0).
 
 Lemma unif_help: forall qa u f0 f1 f2 f3 t1 t2 s1' s2 s1'',
   let tm1 := (ren f0 t1) in let tm2 := (ren f1 t2) in
@@ -57,6 +87,9 @@ Proof.
   have {}U := isNoneP U.
   have {}M := isSomeP M.
   apply/isNoneP1.
-  apply/unif_matchP/M.
-  apply/unif_none_ren/U/D1.
-Qed.
+  apply: contra U => M'.
+  move/matching_subst/matching_monotone: M => M.
+  move/matching_subst/matching_monotone: M' => M'.
+  have Abs := match2_unif M M'.
+  have := (iffLR (unif_rename _ _ _ _)).
+Admitted.
