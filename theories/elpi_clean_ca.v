@@ -404,9 +404,9 @@ Section clean_ca.
     - case: t => [|c]// _ _ [?????]; subst.
       rewrite push.
       rewrite what_I_want/=; last first.
-        by case: bc => //= _ []//[>]/=; rewrite (B.base_or_big_or) orbT.
+        by case: bc => //= _ []//[>]/=; rewrite valid_tree_big_or.
       case X: bc => [fv' [|[s0 r0] rs]]//=.
-      rewrite cat0s cats0 add_ca_deep_empty1.
+      rewrite cats0 add_ca_deep_empty1.
       have:= @s2l_big_or s1 s0 r0 rs no_alt no_goals.
       rewrite catr0/= add_ca_deep_empty1 cat0s => <-//.
     - move=> fA /andP[vA bB].
@@ -421,8 +421,8 @@ Section clean_ca.
       move=> [?]; subst.
       move: Hz H1.
       case X: bc => [?[|[sz z]zs]]/= Hz H1 ?.
-        by move=> Hm Hn; rewrite Hn/=cat0s//.
-      move=> Hm Hn; rewrite Hn/=.
+        by move=> ->; rewrite cat0s.
+      move=> ->.
       rewrite clean_ca_goals_add_ca_goal1.
       by rewrite !catA.
     - move=> /[!failed_or_None] fB vB.
@@ -452,7 +452,7 @@ Section clean_ca.
         rewrite (success_t2l empty)//=.
         rewrite catl0a; repeat split => //.
         have [?] := s2l_Expanded_call vB eB H1; subst.
-        case X: bc => [?[|[sz z]zs]]/= ? fB' Hn; rewrite Hn/=.
+        case X: bc => [?[|[sz z]zs]]/= ? Hn; rewrite Hn/=.
           by rewrite //clean_ca_cat//cat0s.
         rewrite !clean_ca_cat /save_alts map_cons !catA !cat_cons; repeat f_equal.
           rewrite clean_ca_save_goals//=?clean_ca_cat//=.
@@ -474,7 +474,7 @@ Section clean_ca.
       rewrite seq2altsK seq2goals_cat !seq2goalsK.
       have [?] := s2l_Expanded_call vA eA H; subst.
       have EA := empty_ca_atoms.
-      case X: bc => [?[|[sz z]zs]]/= _ fA' Hn; rewrite Hn/=; subst.
+      case X: bc => [?[|[sz z]zs]]/= _ Hn; rewrite Hn/=; subst.
         case W: t2l => //=[[sw w]ws].
         rewrite map_cons !clean_ca_cat clean_ca_mk_lb0//=.
         rewrite/save_alts/= cat0s t2l_big_and//= !cat_cons !cat0s.

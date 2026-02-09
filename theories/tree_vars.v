@@ -132,7 +132,7 @@ Section vars_tree.
       rewrite !push/= => H1 H2 [???]; subst => /=.
       split; last by apply: fsubset_trans H2 (bc_sub _ _ _).
       case X: bc => [fvx [|[s0 r0] rs]]//=.
-      rewrite fset0U fsubUset; apply/andP.
+      rewrite fsubUset; apply/andP.
       by apply: vars_tm_bc_sub X.
     - rewrite 2!fsubUset !push -!andbA => /and3P[vA vB vsm] vs [???]; subst.
       have Hs := vars_tree_step_sub A fv s.

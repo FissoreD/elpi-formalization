@@ -726,7 +726,7 @@ Qed.
     t2l A s l = (s3, (call q, ca) :: gs) :: xs ->
     let bcr := bc u p fv q (get_subst s A) in
     [/\ s3 = get_subst s A,
-      bcr.1 = fv', failed R &
+      bcr.1 = fv' &
       t2l R s l =
       if bcr.2 is (w :: ws)%SEQ then
        (w.1, save_goals (xs++l) gs (a2g w.2)) :: 
@@ -746,11 +746,11 @@ Qed.
       have [s5 [y[ys sA]]]:= failed_t2l vA (step_not_failed e notF) s SB.
       rewrite sA/=; case: y sA => // -[[//|t1] ca3] g1 sA [?????]; subst.
       have := HA _ _ _ _ _ _ _ _ _ _ vA e sA.
-      case FF: bc => [fvf [|r rs]][??] fA'/=; subst.
+      case FF: bc => [fvf [|r rs]][??]/=; subst.
         move=> H; subst; rewrite/= seq2alts_cat !seq2altsK -/SB.
         by rewrite add_ca_deep_cat//.
-      rewrite get_subst_or_Some failed_or_Some.
-      move=> H1; rewrite fA'; split; auto.
+      rewrite get_subst_or_Some.
+      move=> H1; split; auto.
       rewrite !H1 !add_ca_deep_cat.
       rewrite -!catA/=.
       rewrite cat_cons.
@@ -763,10 +763,10 @@ Qed.
       case e: step => [[?[]]B']//=[?<-]/=; subst; last first.
         have [w[ws []+[]]]:= s2l_CutBrothers sm [::] vB e.
         by move=>->//.
-      rewrite get_subst_or_None failed_or_None.
+      rewrite get_subst_or_None.
       case SB: t2l =>  [//|[s2 [//|[a3 ca3] gs2]] a2] /= [?????] ; subst.
       have {HB} := HB _ _ _ _ s3 _ q gs2 a2 _ vB e SB.
-      case FF: bc => [fvx [|[s5 r] rs]]/=[?? fB' H]; subst => //.
+      case FF: bc => [fvx [|[s5 r] rs]]/=[?? H]; subst => //.
       split => //=.
       rewrite H/= cats0 .
       rewrite -!cat_cons add_ca_deep_cat /=; f_equal.
@@ -776,8 +776,8 @@ Qed.
       rewrite !push.
       case: ifP => [sA vB|nsA /eqP->][?+?]; subst; 
       case_step_tag H T => //= _.
-        rewrite get_subst_and failed_and.
-        rewrite (success_failed sA)/=sA/=.
+        rewrite get_subst_and.
+        rewrite /=sA/=.
         rewrite (success_t2l empty)//= !catl0a.
         set X := map _ _.
         set Y := get_subst _ _.
@@ -785,7 +785,7 @@ Qed.
         rewrite sB cat_cons => -[???] ; subst.
         have := HB _ _ _ _ _ _ _ _ _ _ vB H sB.
         rewrite-/Y.
-        case FF: bc => [? [|r rs]]/=[?? fB' H1]; subst => //=.
+        case FF: bc => [? [|r rs]]/=[??  H1]; subst => //=.
         by rewrite H1 !catA//.
       have /=fA := step_not_failed H notF.
       (* rewrite (step_not_solved H)//. *)
@@ -793,14 +793,14 @@ Qed.
       have [s5 [y[ys sA]]]:= failed_t2l vA fA s l.
       rewrite sA/= !t2l_big_and.
       rewrite map_cons cat_cons cat0s.
-      rewrite failed_and get_subst_and_big_and.
+      rewrite get_subst_and_big_and.
       move=> [?] + ?; subst.
       case: y sA => [sA|[[t1|]] ?]//=.
         exfalso.
         apply: s2l_empty_hdF vA (step_not_solved H notF) (step_not_failed H notF) sA.
       move=> ? tl sA; rewrite cat_cons => -[??]; subst.
       have {HA} := HA _ _ _ _ _ _ _ _ _ _ vA H sA.
-      case FF: bc => [? [|r rs]]/=[?? fA' H0 H1]; subst; split => //=; try by rewrite fA'.
+      case FF: bc => [? [|r rs]]/=[?? H0 H1]; subst; split => //=; try by rewrite fA'.
         case: t2l => //=[[s0 g0]ca0].
         by rewrite t2l_big_and map_cons cat_cons cat0s// seq2altsK //.
       rewrite H0/=.

@@ -215,7 +215,7 @@ Section main.
     | TA cut       => (fv, CutBrothers, OK)
     | TA (call t)  => 
       let: (fv, l) := bc u pr fv t s in
-      (fv, Expanded, if l is ((s, r) :: xs) then (Or (Some KO) s (big_or r xs))
+      (fv, Expanded, if l is ((s, r) :: xs) then (Or None s (big_or r xs))
                      else KO)
     (* recursive cases *)
     | Or A sB B =>

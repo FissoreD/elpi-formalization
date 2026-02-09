@@ -114,7 +114,7 @@ Section valid_tree.
   Proof.
     move=>+<-; clear r.
     elim_tree A s sv => /=.
-    + by case: t => [|t]//=; rewrite push/=; case: bc => [_ []]//=>; rewrite push//= B.base_or_big_or orbT.
+    + by case: t => [|t]//=; rewrite push/=; case: bc => [_ []]//=-[]//= _ >; rewrite valid_tree_big_or.
     + move=> /andP[vA bB]; rewrite !push/= HA//=; case: ifP => //.
     + by move=> vB; rewrite !push /=; apply: HB.
     + move=> /andP[vA].
