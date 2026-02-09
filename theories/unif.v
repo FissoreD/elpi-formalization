@@ -46,8 +46,8 @@ Proof.
 Qed.
 
 Lemma unif_help: forall qa u f0 f1 f2 f3 t1 t2 s1' s2 s1'',
-  let tm1 := (deref f0 t1) in let tm2 := (deref f1 t2) in
-  let tm3 := (deref f2 t1) in let tm4 := (deref f3 t2) in
+  let tm1 := (ren f0 t1) in let tm2 := (ren f1 t2) in
+  let tm3 := (ren f2 t1) in let tm4 := (ren f3 t2) in
   disjoint_tm tm1 tm2 ->
   unify u tm1 tm2 fmap0  = None    ->
   matching u qa tm3 s1'  = Some s2 ->
