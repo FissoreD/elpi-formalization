@@ -72,12 +72,6 @@ Section mut_excl.
     | _, _ => false
     end.
 
-  Lemma H_head_refl m t: suff_mode t m -> H_head m t t.
-  Proof.
-    elim: m t => //=[|m l IH] []//=c t H.
-    by rewrite unif_refl IH//orbT.
-  Qed.
-
   Lemma H_callable m t1 t2 s1 s2:
     H u m t1 t2 s1 = Some s2 ->
     callable t1 = callable t2.
