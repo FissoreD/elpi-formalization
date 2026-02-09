@@ -144,9 +144,13 @@ Section check.
     move=>/andP[->/HB->]; rewrite orbT//.
   Qed.
 
+  Lemma has_cut_big_and x xs:
+    has_cut (big_andA x xs) = has_cut_seq (x::xs).
+  Proof. by elim: xs x => //=[|x xs ->][]//=; rewrite andbb. Qed.
+
   Lemma has_cut_seq_has_cut_big_and l:
     has_cut (big_and l) = has_cut_seq l.
-  Proof. by elim: l => //[[|c]] xs IH//=; rewrite IH Bool.andb_diag. Qed.
+  Proof. by case: l => >//; rewrite /=has_cut_big_and//. Qed.
 
   (* Lemma cut_followed_by_det_has_cut {sP l}:
       check_atoms sP l -> has_cut_seq l.
@@ -155,10 +159,10 @@ Section check.
   Lemma det_tree_big_and sP L:
     det_tree sP (big_and L) = det_tree_seq sP L.
   Proof.
-    elim: L => //=-[|c] L ->.
-      by rewrite orTb andTb andbb.
-    rewrite has_cut_seq_has_cut_big_and /= [RHS]andbC.
-    by case: det_tree_seq => //=; case: has_cut_seq => //=; rewrite orbC //= andbC.
+    case: L => //= + L.
+    elim: L => [|x xs IH][|c]//=; rewrite ?(orbF,andbT)//=IH;
+    rewrite (andbb,has_cut_big_and)//=andbb.
+    by case: check_atom; case: det_tree_seq; case: has_cut_seq; rewrite//=andbF.
   Qed.
 
   Lemma cut_followed_by_det_nfa_and {sP bo} :

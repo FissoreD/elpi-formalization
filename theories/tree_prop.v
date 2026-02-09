@@ -17,7 +17,7 @@ Section RunP.
   (********************************************************************)
 
   Lemma failed_big_and t: failed (big_and t) = false.
-  Proof. case: t => [|[]]//. Qed.
+  Proof. case: t => /=[|x []]//. Qed.
 
   Lemma success_step u p fv s A: success A -> step u p fv s A = (fv, Success, A).
   Proof.
@@ -293,7 +293,7 @@ Section RunP.
 
   Lemma next_alt_big_and r:
     next_alt false (big_and r) = Some (big_and r).
-  Proof. elim: r => //=x xs IH p; case: x => //=. Qed.
+  Proof. case: r => //=+l; elim: l => //. Qed.
 
   Lemma next_alt_big_or r rs:
     next_alt false (big_or r rs) = Some (big_or r rs).
@@ -304,7 +304,7 @@ Section RunP.
 
   Lemma get_substS_big_and A s1:
     get_subst s1 (big_and A) = s1.
-  Proof. elim: A => //. Qed.
+  Proof. case: A => //+l; elim: l => //. Qed.
 
   Lemma get_subst_and_big_and s1 A B C: get_subst s1 (And A B (big_and C)) = get_subst s1 A.
   Proof. by rewrite get_subst_and get_substS_big_and if_same. Qed.

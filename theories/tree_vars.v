@@ -74,9 +74,18 @@ Section vars_tree.
     case: ifP => sA//=.
   Qed.
 
+  Lemma vars_atoms_cons a xs: vars_atoms [:: a & xs] = vars_atom a `|` vars_atoms xs.
+  Proof. by []. Qed.
+
+  Lemma vars_atoms1 a: vars_atoms [:: a] = vars_atom a.
+  Proof. by rewrite/vars_atoms/=fsetU0. Qed.
+
   Lemma vars_tree_big_and r0:
     vars_tree (big_and r0) = vars_atoms r0.
-  Proof. by elim: r0 => //= -[|c]//=l ->; rewrite/vars_atoms/= -fsetUA fsetUid//. Qed.
+  Proof. 
+    case: r0 => //=+l; elim: l => //=[|x xs ->] a; first by rewrite vars_atoms1.
+    by rewrite !vars_atoms_cons -fsetUA fsetUid.
+  Qed.
 
   Lemma vars_tree_big_or r0 rs:
     vars_tree (big_or r0 rs) = vars_atoms r0 `|` varsU [seq vars_sigma x.1 `|` vars_atoms x.2 | x <- rs].

@@ -180,10 +180,16 @@ End tree_op.
 
 Definition step_res := (step_tag * tree)%type.
 
-Fixpoint big_and (a : list A) : tree :=
+Fixpoint big_andA x xs : tree :=
+  match xs with
+  | [::] => TA x
+  | y :: ys => And (TA x) xs (big_andA y ys)
+  end.
+
+Definition big_and (a : list A) : tree :=
   match a with
   | [::] => OK
-  | x :: xs => And (TA x) xs (big_and xs)
+  | x :: xs => big_andA  x xs
   end.
 
 Fixpoint big_or (r : list A) (l : seq (Sigma * seq A)) : tree :=

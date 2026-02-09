@@ -96,8 +96,9 @@ Section NurProp.
 
     Lemma t2l_big_and r1 s l: 
       t2l (big_and r1) s l = (s, a2g r1) :: nilC.
-    Proof. 
-      elim: r1 => //= t xs H.
+    Proof.
+      case: r1 => //=+l0. 
+      elim: l0 => //= t xs H x.
       rewrite ?cat0s H/= drop0 cats0 map_cons /catl cat_cons cat0s//.
     Qed.
   End t2l_base.

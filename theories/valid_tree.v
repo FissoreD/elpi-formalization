@@ -4,15 +4,21 @@ From det Require Import lang.
 From det Require Import tree tree_prop.
 
 Module B.
-  Fixpoint base_and s :=
+  Fixpoint base_andA s :=
     match s with
-    | And (TA _) r r1 => (big_and r == r1) && base_and r1
-    | OK => true
+    | And (TA _) (x::xs) r1 => (big_andA x xs == r1) && base_andA r1
+    | TA _ => true
     | _ => false
     end.
 
+  Definition base_and s := (s == OK) || base_andA s.
+
+  Lemma base_andA_big_andA x xs: base_andA (big_andA x xs).
+  Proof. by elim: xs x => //=x xs->; rewrite eqxx. Qed.
+
+
   Lemma base_and_big_and A: base_and (big_and A).
-  Proof. by elim: A => // -[|t] l /= ->; rewrite eq_refl. Qed.
+  Proof. by rewrite/base_and/big_and; case: A => >; rewrite//base_andA_big_andA orbT. Qed.
 
   Fixpoint base_or s :=
     match s with
@@ -24,19 +30,26 @@ Module B.
     Lemma spec_base_and A:
       reflect (exists X, big_and X = A) (base_and A).
     Proof.
-      case bA: base_and; constructor.
-        case: A bA => //=; first by exists [::].
-        move=> []//= A l t /andP[/eqP? bB]; subst.
-        by exists (A :: l).
-      move=> [x ?]; subst.
-      by rewrite base_and_big_and in bA.
+      rewrite /base_and/big_and.
+      case: eqP => /=.
+        by move=> ->; constructor; exists [::].
+      move=> H.
+      case bA: base_andA; constructor.
+        case: A bA H => //=[a|]; first by exists [::a].
+        move=> []//= A [|y ys] t//= /andP[/eqP? bB]; subst.
+        move=> _.
+        by exists (A::y::ys).
+      move=> [x]; subst.
+      case: x => //=; first by move=> ?; subst.
+      move=> x xs ?; subst.
+      by rewrite base_andA_big_andA in bA.
     Qed.
 
     Lemma base_or_big_or s l:
       base_or (big_or s l).
     Proof.
       elim: l s => //=; clear.
-      + by case => //= _ l; rewrite eqxx base_and_big_and.
+      + by move=> []//=a []//=x xs; rewrite/base_and/=eqxx base_andA_big_andA.
       + by move=> [s r] rs IH r1 /=; rewrite IH base_and_big_and.
     Qed.
 
@@ -46,11 +59,13 @@ Module B.
       case bA: base_or; constructor; last first.
         move=> [X[Y H]]; subst.
         by rewrite base_or_big_or in bA.
-      elim: A bA => //=; first by exists [::],[::].
-        move=> A _ s B HB /andP[/spec_base_and[L <-]] /HB [X [Y <-]].
-        by eexists L, ((s, X) :: Y) => //=.
-      move=> []//= A _ l t H1 /andP[/eqP?] /spec_base_and[x?]; subst.
-      by exists  (A::l), [::].
+      elim: A bA => //=. 
+        by exists [::],[::].
+        by move=> A; eexists [::A],[::] => //.
+        move=> l Hl s r Hr /andP[/spec_base_and[x?]]/Hr[y[z ?]]; subst.
+        by exists x, ((s,y)::z).
+      move=> l Hl s r Hr/spec_base_and[[]]//=x xs H.
+      by exists (x::xs),[::] => //.
     Qed.
   End specs.  
 End B.
@@ -76,13 +91,12 @@ Section valid_tree.
 (*ENDSNIP: valid_tree*)
 
   Lemma valid_tree_big_and l : valid_tree (big_and l).
-  Proof. elim: l => //=. Qed.
+  Proof. case: l => //= + l; case: l => //=. Qed.
 
   Lemma valid_tree_big_or s l : valid_tree (big_or s l).
   Proof.
-    elim: l s => [|[]] //=.
-    + move=> s; rewrite valid_tree_big_and//.
-    + by move=> _ b l H s; rewrite valid_tree_big_and/= B.base_or_big_or orbT.
+    case: l => //=; first by apply/valid_tree_big_and.
+    by move=> [/=_ b] x; rewrite valid_tree_big_and B.base_or_big_or orbT.
   Qed.
 
   Lemma valid_tree_cut {A}: success A -> valid_tree A -> valid_tree (cutl A).
