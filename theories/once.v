@@ -57,7 +57,8 @@ Section once.
     (sig + once_sigS).[? once_sym] = Some once_sig.
   Proof. by rewrite/once_sigS !FmapE.fmapE eqxx/= fsetU0 in_fset1 eqxx. Qed.
 
-  Lemma bc_once u rs fv s t sig: no_once rs ->
+  Lemma bc_once u rs s t sig: no_once rs ->
+    let fv := (vars_tm t `|` vars_sigma s) in
     exists x y, (bc u {| rules := once_impl :: rs; sig := sig + once_sigS |} fv
     (Tm_App (Tm_P once_sym) t) s).2 = 
      ([::(x, call y :: cut :: [::])]).
@@ -67,9 +68,15 @@ Section once.
     rewrite /=!FmapE.fmapE/= fsetU0 in_fset1 eqxx.
     case Y: select => [fv2 rs2]/=.
     move: X; rewrite/=!push => -[??]; subst.
-    move: Y; rewrite/= eqxx/= in_fnd/=.
-      by rewrite in_fsetU in_fset1 eqxx orbT.
-    move=> HP; rewrite !ffunE/=.
+    move: Y.
+    rewrite !cat0f.
+    set X := ren _ _.
+    set Y := ren _ _.
+    rewrite/=eqxx/= in_fnd/=; first by rewrite in_fset1.
+    move=> H + NR.
+    rewrite ffunE. erewrite (valPE H).
+    rewrite ffunE fset0U codomf0 fsetU0.
+
     case M: matching => /=.
       rewrite !push/= => -[??]; subst.
       repeat eexists; f_equal.
@@ -77,9 +84,9 @@ Section once.
     admit.
   Admitted.
 
-  Lemma id_det_once u p s fv t:
+  Lemma id_det_once u p s t:
     prog_once p ->
-    is_det u p s fv (TA (call (Tm_App (Tm_P once_sym) t))).
+    is_det u p s (vars_tm t `|` vars_sigma s) (TA (call (Tm_App (Tm_P once_sym) t))).
   Proof.
     case: p => -[|r rs] sig []//= HS; first by move=> /(_ [::]) [].
     move=> /(_ rs) [[?] H]; subst.
@@ -88,7 +95,7 @@ Section once.
     move: H1; rewrite/= !push/= => -[???]; subst.
     move: H3.
     set PR := {|rules := _; sig := _|}.
-    have [x[y Hx]] := bc_once u fv s t sig H.
+    have [x[y Hx]] := bc_once u s t sig H.
     rewrite Hx => Hy; inversion Hy; clear Hy; subst => //.
     rewrite rew_pa in H1.
     move: H2 => /= => -[?]; subst.
