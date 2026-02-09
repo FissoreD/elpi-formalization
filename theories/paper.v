@@ -11,7 +11,7 @@ From det Require Import t2l valid_tree elpi elpi_equiv.
 Inductive runT (u:Unif) (p : program): fvS -> Sigma -> tree -> 
                   Sigma -> option tree -> Prop :=
 (*ENDSNIP: run_sig *)
-  | run_done s1 s2 A B fv            : success A -> get_subst s1 A = s2 -> (next_alt true A) = B -> runT fv s1 A s2 B
+  | run_done s1 s2 A B fv0           : success A -> get_subst s1 A = s2 -> next_alt true A = B -> runT fv0 s1 A s2 B
   | run_step  s1 s2 r A B fv0 fv1 st : path_atom A -> step u p fv0 s1 A = (fv1, st, B) -> runT fv1 s1 B s2 r -> runT fv0 s1 A s2 r
   | run_fail s1 s2 A B r fv0         : failed A -> next_alt false A = Some B -> runT fv0 s1 B s2 r -> runT fv0 s1 A s2 r.
 (*endprooftree: runbp*)
@@ -54,7 +54,7 @@ Lemma tree_to_elpi: forall u p s0 t s2 t',
   valid_tree t ->
     runT u p fv s0 t s2 t' -> 
       exists s1 g a,
-        let: na := (t2l (odflt KO t') s0 [::]) in
+        let: na := t2l (odflt KO t') s0 [::] in
         t2l t s0 [::] = (s1,g) :: a /\
           nur u p fv s1 g a s2 na.
 (*ENDSNIP: tree_to_elpi *)
