@@ -85,36 +85,36 @@ Qed.
 
 From det Require Import tree_prop_hard.
 
-Lemma run_orSST p f0 f1 s0 s1 A A' sB B:
+Lemma run_orSST: forall p f0 f1 s0 s1 A A' sB B,
   tree.runT p f0 s0 A (Some s1) (Some A') true f1 ->
     tree.runT p f0 s0 (Or (Some A) sB B) (Some s1) (Some (Or (Some A') sB KO)) false f1.
-Proof. move=> /run_or_correct_left; auto. Qed.
+Proof. move=>> /run_or_correct_left; auto. Qed.
 
-Lemma run_orSSF p f0 f1 s0 s1 A A' sB B:
+Lemma run_orSSF: forall p f0 f1 s0 s1 A A' sB B,
   tree.runT p f0 s0 A (Some s1) (Some A') false f1 ->
     tree.runT p f0 s0 (Or (Some A) sB B) (Some s1) (Some (Or (Some A') sB B)) false f1.
-Proof. move=> /run_or_correct_left; auto. Qed.
+Proof. move=>> /run_or_correct_left; auto. Qed.
 
-Lemma run_orSNF p f0 f1 s0 A s1 sB B:
+Lemma run_orSNF: forall p f0 f1 s0 A s1 sB B,
   tree.runT p f0 s0 A (Some s1) None false f1 ->
     let nB := (next_alt false B) in
     tree.runT p f0 s0 (Or (Some A) sB B) (Some s1) (omap (Or None sB) nB) false f1.
-Proof. move=> /run_or_correct_left; auto. Qed.
+Proof. move=>> /run_or_correct_left; auto. Qed.
 
-Lemma run_orSNT p f0 f1 s0 A s1 sB B:
+Lemma run_orSNT: forall p f0 f1 s0 A s1 sB B,
   tree.runT p f0 s0 A (Some s1) None true f1 ->
     tree.runT p f0 s0 (Or (Some A) sB B) (Some s1) None false f1.
-Proof. move=> /run_or_correct_left; auto. Qed.
+Proof. move=>> /run_or_correct_left; auto. Qed.
 
-Lemma run_orNT p f0 f1 s0 A A' sB B:
+Lemma run_orNT: forall p f0 f1 s0 A A' sB B,
   tree.runT p f0 s0 A None A' true f1 ->
     tree.runT p f0 s0 (Or (Some A) sB B) None None false f1.
-Proof. move=> /run_or_correct_left; auto. Qed.
+Proof. move=>> /run_or_correct_left; auto. Qed.
 
-Lemma run_orNF p f0 f1 f2 s0 s3 A A' sB B B' b:
+Lemma run_orNF: forall p f0 f1 f2 s0 s3 A A' sB B B' b,
   tree.runT p f0 s0 A None A' false f1 ->
     tree.runT p f1 sB B s3 B' b f2 ->
         tree.runT p f0 s0 (Or (Some A) sB B) s3 (omap (fun x => Or None sB x) B') false f2.
-Proof. by move=> /run_or_correct_left; eauto. Qed.
+Proof. by move=>> /run_or_correct_left; eauto. Qed.
 
 End S.
