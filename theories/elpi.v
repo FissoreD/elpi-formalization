@@ -233,9 +233,8 @@ Notation bc := (bc u).
 
 (*SNIP: stepE *)
 Definition stepE v0 t s a gl :=
-  let (v1, rs) := bc p v0 t s  in
-  let rs_ca := save_alts a gl (r2a rs) in
-  (v1, rs_ca).
+  let (v1, rs) := bc p v0 t s in
+  (v1, save_alts a gl (r2a rs)).
 (*ENDSNIP: stepE *)
 
 (*prooftree: nurbp*)
