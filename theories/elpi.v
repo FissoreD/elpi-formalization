@@ -249,7 +249,7 @@ Inductive runE : fvS -> Sigma -> goals ->  alts -> Sigma -> alts -> Prop :=
     stepE v0 t s0 al gl = (v1, [:: b & bs ]) -> 
       runE v1 b.1 b.2 (bs++al) s1 r -> 
         runE v0 s0 [:: (call t, ca) & gl] al s1 r
-| FailE s0 s1 s2 t gl a al r ca v0 v1: 
+| BackE s0 s1 s2 t gl a al r ca v0 v1: 
     stepE v0 t s0 al gl = (v1, [::]) -> 
       runE v1 s1 a al s2 r ->   
         runE v0 s0 [:: (call t, ca) & gl] [:: (s1, a) & al] s2 r.

@@ -44,7 +44,7 @@ Section NurEqiv.
         move=> [??]; subst; move: IH.
         case X: bc => /=[fv3 rules] IH ; subst => /=.
         case: rules X => [|r0 rs] X; rewrite Hx.
-          move=> <-; apply: FailE IH.
+          move=> <-; apply: BackE IH.
           by rewrite/stepE X.
         move=> [???]; subst.
         rewrite cats0 in IH.

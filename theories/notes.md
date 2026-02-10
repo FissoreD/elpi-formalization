@@ -393,7 +393,7 @@ Inductive runE : Sigma -> list G -> list alt -> Sigma -> list alt -> Prop :=
     F p t s = [:: b & bs ] ->
     runE s (save_alt a (a2gs p b) gl) (more_alt a (map (a2gs p) bs) gl) s1 r ->
     runE s [::call p t & gl] a s1 r
-| FailE p s s1 t gl a al r :
+| BackE p s s1 t gl a al r :
     F p t s = [::] -> runE s a al s1 r -> runE s [::call p t & gl] (a :: al) s1 r.
 ```
 > TODO: *The substitutions are incorrect; they should be stored in the

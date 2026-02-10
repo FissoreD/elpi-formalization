@@ -129,7 +129,7 @@ Inductive runE' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Prop :=
   F u p t s = [:: b & bs ] -> 
     runE' b.1 (save_goals' a gl (a2gs1' p b)) (save_alts' a gl ((aa2gs' p) bs) ++ a) s1 r -> 
       runE' s ((call' p t) ::: gl) a s1 r
-| FailE' p s s1 s2 t gl a al r : 
+| BackE' p s s1 s2 t gl a al r : 
   F u p t s = [::] -> runE' s1 a al s2 r -> runE' s ((call' p t) ::: gl) ((s1, a) ::: al) s2 r.
 
 Fixpoint decorate_G (g : G) : G' :=
@@ -165,7 +165,7 @@ Inductive nurk u : Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
   F u p t s = [:: b & bs ] -> 
     nurk b.1 (save_goals a gl (a2gs1 p b)) (save_alts a gl ((aa2gs p) bs) ++ a) s1 r -> 
       nurk s ((call p t) ::: gl) a s1 r
-| FailE p s s1 s2 t gl a al r : 
+| BackE p s s1 s2 t gl a al r : 
   F u p t s = [::] -> nurk s1 a al s2 r -> nurk s ((call p t) ::: gl) ((s1, a) ::: al) s2 r.
 
 Lemma two u s s1 a a1 xs  : nurk u s xs a s1 a1 -> { a' & { a1' & { xs' |

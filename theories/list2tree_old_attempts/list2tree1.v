@@ -160,7 +160,7 @@ Inductive runE' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Type :=
   F u p t s = [:: b & bs ] -> 
     runE' b.1 (save_goals' a gl (a2gs1' n1.+1 p b)) (save_alts' a gl ((aa2gs' n1.+1 p) bs) ++ a) s1 r -> 
       runE' s ((n1, call' p t) ::: gl) a s1 r
-| FailE' p s s1 s2 t gl a al r n n1 : 
+| BackE' p s s1 s2 t gl a al r n n1 : 
   F u p t s = [::] -> runE' s1 a al s2 r -> runE' s ((n, call' p t) ::: gl) ((n1, s1, a) ::: al) s2 r.
 
 (* Lemma listP' {l x xs} : erase_goals' l = x ::: xs ->
@@ -249,7 +249,7 @@ Proof.
       by rewrite /save_goals/map/= -a2gs1_erase.
     by rewrite (aa2gs_erase n.+1) save_alts_erase cat_erase_alts'.
   - move=> p s s1 s2 t gl a al r _ _ H H1 H2.
-    apply: FailE H H2.
+    apply: BackE H H2.
 Qed.
 
 
@@ -283,7 +283,7 @@ move=> p s s1 s2 c gl gl1 al al1 BC H1 IH [//|[[]]] /= n s3 g' a' [//|[m [|]//]]
 subst.
 have [new_alts' [? ?]] := (IH _ _ erefl erefl).
 eexists; split; try eassumption.
-by apply: FailE' BC _  => /=.
+by apply: BackE' BC _  => /=.
 
 Defined.
 
