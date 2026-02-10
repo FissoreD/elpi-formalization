@@ -13,9 +13,9 @@ Variable u : Unif.
 Inductive runT (p : program): fvS -> Sigma -> tree -> 
                   Sigma -> option tree -> Prop :=
 (*ENDSNIP: run_sig *)
-  | run_done s0 s1 A B v0           : success A -> get_subst s0 A = s1 -> next_alt true A = B -> runT v0 s0 A s1 B
-  | run_step  s0 s1 C A B v0 v1 st : path_atom A -> step u p v0 s0 A = (v1, st, B) -> runT v1 s0 B s1 C -> runT v0 s0 A s1 C
-  | run_fail s0 s1 A B C v0         : failed A -> next_alt false A = Some B -> runT v0 s0 B s1 C -> runT v0 s0 A s1 C.
+  | StopT s0 s1 A B v0          : success A -> get_subst s0 A = s1 -> next_alt true A = B -> runT v0 s0 A s1 B
+  | StepT s0 s1 C A B v0 v1 st  : path_atom A -> step u p v0 s0 A = (v1, st, B) -> runT v1 s0 B s1 C -> runT v0 s0 A s1 C
+  | BackT s0 s1 A B C v0        : failed A -> next_alt false A = Some B -> runT v0 s0 B s1 C -> runT v0 s0 A s1 C.
 (*endprooftree: runbp*)
 End S.
 
@@ -24,11 +24,11 @@ Lemma run_runT u p fv s0 t0 s1 t1:
 Proof.
   elim => >.
   - move=> sA <-<-; repeat eexists.
-    by apply: tree.run_done.
+    by apply: tree.StopT.
   - move=> pA sA rA [b1 [fv1 IH]]; repeat eexists.
-    by apply: tree.run_step sA erefl IH.
+    by apply: tree.StepT sA erefl IH.
   - move=> fA nA r [b[fv1 IH]]; repeat eexists.
-    by apply: tree.run_fail IH.
+    by apply: tree.BackT IH.
 Qed.
 
 
@@ -37,9 +37,9 @@ Lemma runT_run u p fv s0 t0 sx t1 b fv1:
 Proof.
   remember (Some sx) as ss eqn:Hss.
   move=> H; elim_run H sx Hss.
-  - by move: Hss => -[<-]; apply: run_done.
-  - by apply: run_step eA (IH _ erefl).
-  - by apply: run_fail nA (IH _ erefl).
+  - by move: Hss => -[<-]; apply: StopT.
+  - by apply: StepT eA (IH _ erefl).
+  - by apply: BackT nA (IH _ erefl).
 Qed.
 
 Declare Scope my_scope.

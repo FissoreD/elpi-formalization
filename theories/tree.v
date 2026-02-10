@@ -283,12 +283,12 @@ Section main.
 
   Inductive runT (p : program): fvS -> Sigma -> tree -> 
                     option Sigma -> option tree -> bool -> fvS -> Prop :=
-    | run_done s1 s2 A B fv       : success A -> get_subst s1 A = s2 -> (next_alt true A) = B -> runT fv s1 A (Some s2) B false fv
-    | run_step  s1 s2 r A B b1 b2 fv0 fv1 fv2 st: path_atom A -> step p fv0 s1 A = (fv1, st, B) -> b2 = (st == CutBrothers) || b1 -> runT fv1 s1 B s2 r b1 fv2 -> runT fv0 s1 A s2 r b2 fv2
-    | run_fail s1 s2 A B r n fv0 fv1    : 
+    | StopT s1 s2 A B fv       : success A -> get_subst s1 A = s2 -> (next_alt true A) = B -> runT fv s1 A (Some s2) B false fv
+    | StepT  s1 s2 r A B b1 b2 fv0 fv1 fv2 st: path_atom A -> step p fv0 s1 A = (fv1, st, B) -> b2 = (st == CutBrothers) || b1 -> runT fv1 s1 B s2 r b1 fv2 -> runT fv0 s1 A s2 r b2 fv2
+    | BackT s1 s2 A B r n fv0 fv1    : 
           failed A -> next_alt false A = Some B ->
               runT fv0 s1 B s2 r n fv1 -> runT fv0 s1 A s2 r n fv1
-    | run_dead s1 A fv : 
+    | FailT s1 A fv : 
           next_alt false A = None ->
             runT fv s1 A None None false fv.
 

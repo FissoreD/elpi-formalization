@@ -313,7 +313,7 @@ Section RunP.
     success A -> runT u p fv s A (Some (get_subst s A)) ((next_alt true A)) false fv.
   Proof.
     move=> sA.
-    by apply: run_done.
+    by apply: StopT.
   Qed.
 
   Lemma tree_fv_step_cut u p A R fv fv' s:

@@ -57,15 +57,15 @@ Section Test1.
   (* Goal Texists r, runT unif empty (CallS p_test (Tm_App (Tm_P q) (Tm_D (ID 1)))) (Some s2) r false.
   Proof.
     eexists.
-    apply: run_step => //.
-    apply: run_fail => //=. 
-    apply: run_step => //=.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //.
-    apply: run_done => //=.
+    apply: StepT => //.
+    apply: BackT => //=. 
+    apply: StepT => //=.
+    apply: BackT => //=.
+    apply: StepT => //=.
+    apply: BackT => //=.
+    apply: StepT => //=.
+    apply: BackT => //.
+    apply: StopT => //=.
   Qed. *)
 End Test1.
 
@@ -81,12 +81,12 @@ Section Test5.
   (* Goal Texists r, runT unif empty (CallS p_test1 (Tm_App (Tm_P p) (Tm_D (ID false)))) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
-    apply: run_step => //.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_done => //=.
+    apply: StepT => //.
+    apply: BackT => //=.
+    apply: StepT => //=.
+    apply: BackT => //=.
+    apply: StepT => //=.
+    apply: StopT => //=.
     by [].
   Qed. *)
 End Test5.
@@ -106,14 +106,14 @@ Section Test6.
   (* Goal Texists r, runT unif empty ((CallS p_test2 (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
-    apply: run_step => //.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_done => //.
+    apply: StepT => //.
+    apply: BackT => //=.
+    apply: StepT => //=.
+    apply: BackT => //=.
+    apply: StepT => //=.
+    apply: BackT => //=.
+    apply: StepT => //=.
+    apply: StopT => //.
     by [].
   Qed. *)
 End Test6.
@@ -126,19 +126,19 @@ Section Test2.
   Goal step unif emptyp fset0 empty (Or (Some OK) empty OK) = (fset0, Success, Or (Some OK) empty OK). by []. Qed.
 
   Goal runT unif emptyp fset0 empty (Or (Some CutS) empty OK) (Some empty) None false fset0.
-    apply: run_step => //=.
-    apply: run_done => //.
+    apply: StepT => //=.
+    apply: StopT => //.
   Qed.
 
   Goal forall r, 
     runT unif emptyp fset0 empty (Or (Some CutS) empty r) (Some empty) None false fset0.
     move=> r.
-    apply: run_step => //.
-    apply: run_done => //=.
+    apply: StepT => //.
+    apply: StopT => //=.
   Qed.
 
   Goal runT unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Some empty) (Some (Or None empty (((Or (Some OK) empty OK))))) false fset0.
-  Proof. apply: run_done => //=. Qed.
+  Proof. apply: StopT => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
   Goal step unif emptyp fset0 empty (Or (Some (Or None empty (CutS))) empty OK) = (fset0, Expanded, (Or (Some (Or None empty OK)) empty OK)).

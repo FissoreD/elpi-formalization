@@ -161,7 +161,7 @@ Proof.
     apply: run_backtrack => //.
     - apply: expanded_fail => //.
     - move=> //=.
-    - apply: run_done => //.
+    - apply: StopT => //.
     - apply: expanded_step => //.
       apply: expanded_done => //.
   - move=> A HA s B HB s1 bt.
@@ -249,7 +249,7 @@ Proof.
       apply: run_backtrack erefl.
         apply: expanded_fail => //.
         move=> //.
-      apply : run_done erefl.
+      apply : StopT erefl.
       apply: expanded_step => //=.
       apply: expanded_done => //=.
     inversion H0 => //.
@@ -266,7 +266,7 @@ Proof.
     apply: run_backtrack erefl.
       apply: expanded_fail => //.
       move=>//.
-    apply: run_done => //.
+    apply: StopT => //.
     apply: expanded_step => //.
     apply: expanded_done => //.
   - move=> p c r s1 s2 b bt _ H.

@@ -90,12 +90,12 @@ Proof.
   move=> ME.
   elim_tree A fv0 xx yy s1 R R' => //=.
   - move=> [??][??]; subst => >; inversion 1 => //; subst.
-    by repeat eexists; only 2: apply: run_dead.
+    by repeat eexists; only 2: apply: FailT.
   - move=> [??][??]; subst => >; inversion 1 => //; subst.
-    by repeat eexists; only 2: apply: run_done.
+    by repeat eexists; only 2: apply: StopT.
   - case: t => [|c].
       move=> [<-<-][<-<-]>; inversion 1 => //; subst => /=.
-      by repeat eexists; only 2: apply: run_done.
+      by repeat eexists; only 2: apply: StopT.
     rewrite !push/= => -[??][??]; subst.
     move=> s2 fs C b.
     admit.
@@ -181,16 +181,16 @@ Lemma prog_equiv_head_cut u p fv s A s2 C b fs:
     exists b' C, runT u (add_head_prog p) fv s A s2 C b' fs.
 Proof.
   move=> + H; elim_run H => //=ME.
-  - repeat eexists; by apply: run_done => //.
+  - repeat eexists; by apply: StopT => //.
   - have [b'[C' {}IH]] := IH ME.
     have /=[?|?] := path_atom_exp_cut pA eA; subst.
-      repeat eexists; by apply/run_step/IH/erefl/step_cut_add_cut.
+      repeat eexists; by apply/StepT/IH/erefl/step_cut_add_cut.
     case eA': (step u (add_head_prog p) fv0 s1 A) => [xx B'].
     have:=step_add_cut_sf u p fv0 s1 A; rewrite/=eA eA'/= => ?; subst.
     have/= [b2 [?[C2 {}IH]]] := step_add_cut ME eA eA' rB; subst.
-    by repeat eexists; apply: run_step eA' erefl IH.
+    by repeat eexists; apply: StepT eA' erefl IH.
   - have [b'[C' {}IH]] := IH ME.
-    repeat eexists; by apply: run_fail IH.
-  - repeat eexists; by apply: run_dead.
+    repeat eexists; by apply: BackT IH.
+  - repeat eexists; by apply: FailT.
 Qed.
     
