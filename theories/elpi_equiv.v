@@ -7,6 +7,7 @@ Section NurEqiv.
   Variable (u : Unif).
   Variable (p : program).
 
+  (*SNIP: tree_to_elpi *)
   Lemma tree_to_elpi fv A s1 b fv' r:
     vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
     valid_tree A ->
@@ -14,6 +15,7 @@ Section NurEqiv.
         let xs := t2l A s1 [::] in
         let r' := omap (fun '(s, t) => (s, (t2l (odflt KO t) s1 [::]))) r in
         runE u p fv xs r'.
+  (*ENDSNIP: tree_to_elpi *)
   Proof.
     move=> +++H.
     elim_run H => vtA vts1 vA.
@@ -61,6 +63,7 @@ Section NurEqiv.
   Qed.
   Print Assumptions tree_to_elpi.
 
+(*SNIP: elpi_to_tree *)
 Lemma elpi_to_tree v0 a r : 
   runE u p v0 a r -> 
   forall s0 t, valid_tree t -> t2l t s0 [::] = a ->  
@@ -68,6 +71,7 @@ Lemma elpi_to_tree v0 a r :
   if r is Some (s1, a') then 
     exists t1, runT u p v0 s0 t (Some (s1, t1)) b v1 /\ t2l (odflt KO t1) s0 [::] = a'
   else runT u p v0 s0 t None b v1.
+(*ENDSNIP: elpi_to_tree *)
 Proof.
   elim; clear.
   - move=> s a fv s1 A vA /= H.

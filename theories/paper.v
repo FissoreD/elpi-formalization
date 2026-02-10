@@ -10,14 +10,14 @@ Section S.
 Variable u : Unif.
 Notation step := (step u).
 Notation runE := (runE u).
-(*prooftree: runbp*)
-(*SNIP: run_sig *)
+(*xprooftree: runbp*)
+(*xSNIP: run_sig *)
 Inductive runT (p : program): fvS -> Sigma -> tree -> Sigma -> option tree -> Prop :=
 (*ENDSNIP: run_sig *)
   | StopT s0 s1 A B v0          : success A -> get_subst s0 A = s1 -> next_alt true A = B -> runT v0 s0 A s1 B
   | StepT s0 s1 C A B v0 v1 st  : path_atom A -> step p v0 s0 A = (v1, st, B) -> runT v1 s0 B s1 C -> runT v0 s0 A s1 C
   | BackT s0 s1 A B C v0        : failed A -> next_alt false A = Some B -> runT v0 s0 B s1 C -> runT v0 s0 A s1 C.
-(*endprooftree: runbp*)
+(*xendprooftree: runbp*)
 Notation "tree.runT" := (tree.runT u).
 
 
@@ -53,7 +53,7 @@ Notation "x :: y" :=
 
 Open Scope my_scope.
 
-(*SNIP: tree_to_elpi *)
+(*xSNIP: tree_to_elpi *)
 Lemma tree_to_elpi: forall p s0 t s2 t',
   let v0 := vars_tree t `|` vars_sigma s0 in
   valid_tree t ->
@@ -62,7 +62,7 @@ Lemma tree_to_elpi: forall p s0 t s2 t',
         let: na := t2l (odflt KO t') s0 [::] in
         t2l t s0 [::] = (s1,g) :: a /\
           runE p v0 s1 g a s2 na.
-(*ENDSNIP: tree_to_elpi *)
+(*xENDSNIP: tree_to_elpi *)
 Proof.
   move=> p s0 t s2 t' /= vt R.
   have [b[fv1 H]] := run_runT R.
@@ -70,12 +70,12 @@ Proof.
   by move=> [[s1 g] [a IH]]; do 3 eexists; eauto.
 Qed.
 
-(*SNIP: elpi_to_tree *)
+(*xSNIP: elpi_to_tree *)
 Lemma elpi_to_tree: forall p v0 s1 g s2 a na,
   runE p v0 s1 g a s2 na -> 
     forall s0 t, valid_tree t -> t2l t s0 [::] = (s1,g) :: a -> 
       exists t', runT p v0 s0 t s2 t' /\ t2l (odflt KO t') s0 [::] = na.
-(*ENDSNIP: elpi_to_tree *)
+(*xENDSNIP: elpi_to_tree *)
 Proof.
   move=> > H1 H2 H3 H4 H5.
   have [?[?[?[H6 H7]]]] := elpi_equiv.elpi_to_tree H1 H4 H5; subst.
