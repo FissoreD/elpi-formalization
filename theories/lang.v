@@ -936,8 +936,7 @@ Fixpoint select u (query : Tm) (modes:list mode) (rules: list R) sigma : (fvS * 
 Section s.
 Variable u : Unif.
 (*SNIP: bc_type*)
-Definition bc : program -> fvS -> Tm -> 
-                        Sigma -> fvS * seq (Sigma * seq A) :=
+Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq A) :=
 (*ENDSNIP: bc_type*)
   fun pr fv (query:Tm) s =>
   let query := deref s query in
