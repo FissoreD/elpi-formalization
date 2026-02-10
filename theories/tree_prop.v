@@ -44,7 +44,7 @@ Section RunP.
   Qed.
 
   (*SNIP: success_step*)
-  Lemma succ_step_iff u p fv s A: success A <-> step u p fv s A = (fv, Success, A).
+  Lemma succ_step_iff u p v s A: success A <-> step u p v s A = (v, Success, A).
   (*ENDSNIP: success_step*)
   Proof. by split; [move=> /success_step->|move=>/step_success->]. Qed.
 
@@ -82,7 +82,7 @@ Section RunP.
   Qed. 
 
   (*SNIP: failed_step*)
-  Lemma fail_step_iff u p fv s A: failed A <-> step u p fv s A = (fv, Failed, A).
+  Lemma fail_step_iff u p v s A: failed A <-> step u p v s A = (v, Failed, A).
   (*ENDSNIP: failed_step*)
   Proof. by split; [move=> /failed_step->|move=>/step_failed->]. Qed.
 

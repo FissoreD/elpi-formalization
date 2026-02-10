@@ -53,13 +53,13 @@ Open Scope my_scope.
 
 (*SNIP: tree_to_elpi *)
 Lemma tree_to_elpi: forall u p s0 t s2 t',
-  let fv := vars_tree t `|` vars_sigma s0 in
+  let v0 := vars_tree t `|` vars_sigma s0 in
   valid_tree t ->
-    runT u p fv s0 t s2 t' -> 
+    runT u p v0 s0 t s2 t' -> 
       exists s1 g a,
         let: na := t2l (odflt KO t') s0 [::] in
         t2l t s0 [::] = (s1,g) :: a /\
-          runE u p fv s1 g a s2 na.
+          runE u p v0 s1 g a s2 na.
 (*ENDSNIP: tree_to_elpi *)
 Proof.
   move=> u p s0 t s2 t' /= vt R.
@@ -69,10 +69,10 @@ Proof.
 Qed.
 
 (*SNIP: elpi_to_tree *)
-Lemma elpi_to_tree: forall u p fv s1 g s2 a na,
-  runE u p fv s1 g a s2 na -> 
+Lemma elpi_to_tree: forall u p v0 s1 g s2 a na,
+  runE u p v0 s1 g a s2 na -> 
     forall s0 t, valid_tree t -> t2l t s0 [::] = (s1,g) :: a -> 
-      exists t', runT u p fv s0 t s2 t' /\ t2l (odflt KO t') s0 [::] = na.
+      exists t', runT u p v0 s0 t s2 t' /\ t2l (odflt KO t') s0 [::] = na.
 (*ENDSNIP: elpi_to_tree *)
 Proof.
   move=> > H1 H2 H3 H4 H5.
