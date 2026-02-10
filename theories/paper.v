@@ -83,33 +83,34 @@ Qed.
 
 From det Require Import tree_prop_hard.
 
-Lemma run_orSST u p fv fv' s1 A A' s2 sX X:
-  run u p fv s1 A (Some s2) (Some A') true fv' ->
-    run u p fv s1 (Or (Some A) sX X) (Some s2) (Some (Or (Some A') sX KO)) false fv'.
+Lemma run_orSST u p f0 f1 s0 s1 A A' sB B:
+  run u p f0 s0 A (Some s1) (Some A') true f1 ->
+    run u p f0 s0 (Or (Some A) sB B) (Some s1) (Some (Or (Some A') sB KO)) false f1.
 Proof. move=> /run_or_correct_left; auto. Qed.
 
-Lemma run_orSSF u p fv fv' s1 A A' s2 sX X:
-  run u p fv s1 A (Some s2) (Some A') false fv' ->
-    run u p fv s1 (Or (Some A) sX X) (Some s2) (Some (Or (Some A') sX X)) false fv'.
+Lemma run_orSSF u p f0 f1 s0 s1 A A' sB B:
+  run u p f0 s0 A (Some s1) (Some A') false f1 ->
+    run u p f0 s0 (Or (Some A) sB B) (Some s1) (Some (Or (Some A') sB B)) false f1.
 Proof. move=> /run_or_correct_left; auto. Qed.
 
-Lemma run_orSNF u p fv fv' s1 A s2 sX X:
-  run u p fv s1 A (Some s2) None false fv' ->
-    run u p fv s1 (Or (Some A) sX X) (Some s2) (omap (Or None sX) (next_alt false X)) false fv'.
+Lemma run_orSNF u p f0 f1 s0 A s1 sB B:
+  run u p f0 s0 A (Some s1) None false f1 ->
+    let nB := (next_alt false B) in
+    run u p f0 s0 (Or (Some A) sB B) (Some s1) (omap (Or None sB) nB) false f1.
 Proof. move=> /run_or_correct_left; auto. Qed.
 
-Lemma run_orSNT u p fv fv' s1 A s2 sX X:
-  run u p fv s1 A (Some s2) None true fv' ->
-    run u p fv s1 (Or (Some A) sX X) (Some s2) None false fv'.
+Lemma run_orSNT u p f0 f1 s0 A s1 sB B:
+  run u p f0 s0 A (Some s1) None true f1 ->
+    run u p f0 s0 (Or (Some A) sB B) (Some s1) None false f1.
 Proof. move=> /run_or_correct_left; auto. Qed.
 
-Lemma run_orNT u p fv fv' s1 A A' sX X:
-  run u p fv s1 A None A' true fv' ->
-    run u p fv s1 (Or (Some A) sX X) None None false fv'.
+Lemma run_orNT u p f0 f1 s0 A A' sB B:
+  run u p f0 s0 A None A' true f1 ->
+    run u p f0 s0 (Or (Some A) sB B) None None false f1.
 Proof. move=> /run_or_correct_left; auto. Qed.
 
-Lemma run_orNF u p fv fv' s1 A A' sX X s3 X' n1 fv2:
-  run u p fv s1 A None A' false fv' ->
-    run u p fv' sX X s3 X' n1 fv2 ->
-        run u p fv s1 (Or (Some A) sX X) s3 (omap (fun x => Or None sX x) X') false fv2.
+Lemma run_orNF u p f0 f1 f2 s0 s3 A A' sB B B' b:
+  run u p f0 s0 A None A' false f1 ->
+    run u p f1 sB B s3 B' b f2 ->
+        run u p f0 s0 (Or (Some A) sB B) s3 (omap (fun x => Or None sB x) B') false f2.
 Proof. by move=> /run_or_correct_left; eauto. Qed.
