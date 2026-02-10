@@ -10,7 +10,7 @@ Section NurEqiv.
   Lemma tree_to_elpi fv A s1 B sF b s0 fv':
     vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
     valid_tree A ->
-      run u p fv s1 A (Some sF) B b fv' -> 
+      runT u p fv s1 A (Some sF) B b fv' -> 
         exists x xs,
           t2l A s1 [::] = x :: xs /\
           runE u p fv x.1 x.2 xs sF (t2l (odflt KO B) s0 [::]).
@@ -65,7 +65,7 @@ Section NurEqiv.
 Lemma elpi_to_tree fv s1 s2 a na g  : 
   runE u p fv s1 g a s2 na -> 
   forall s0 t, valid_tree t -> (t2l t s0 [::]) = ((s1,g) :: a) -> 
-  exists t1 n fv2, run u p fv s0 t (Some s2) t1 n fv2 /\ t2l (odflt KO t1) s0 [::] = na.
+  exists t1 n fv2, runT u p fv s0 t (Some s2) t1 n fv2 /\ t2l (odflt KO t1) s0 [::] = na.
 Proof.
   elim; clear.
   - move=> s a fv s1 A vA /= H.

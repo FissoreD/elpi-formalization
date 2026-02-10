@@ -10,7 +10,7 @@ Section RunP.
   (* Variable u: Unif.
   Variable p : program.
   Notation step := (step u p).
-  Notation run := (run u p). *)
+  Notation runT := (runT u p). *)
 
   (********************************************************************)
   (* EXPAND PROPERTIES                                                *)
@@ -249,7 +249,7 @@ Section RunP.
     Qed.
 
     Lemma run_same_structure u p fv1 fv2 s A s1 r n:
-      run u p fv1 s A s1 r n fv2 -> same_structure A (odflt A r).
+      runT u p fv1 s A s1 r n fv2 -> same_structure A (odflt A r).
     Proof.
       move=> H.
       elim_run H; only 2, 3: destruct r => //=.
@@ -310,7 +310,7 @@ Section RunP.
   Proof. by rewrite get_subst_and get_substS_big_and if_same. Qed.
 
   Lemma run_success1 u p fv A s: 
-    success A -> run u p fv s A (Some (get_subst s A)) ((next_alt true A)) false fv.
+    success A -> runT u p fv s A (Some (get_subst s A)) ((next_alt true A)) false fv.
   Proof.
     move=> sA.
     by apply: run_done.

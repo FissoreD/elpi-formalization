@@ -20,7 +20,7 @@ Inductive runT (p : program): fvS -> Sigma -> tree ->
 End S.
 
 Lemma run_runT u p fv s0 t0 s1 t1:
-  runT u p fv s0 t0 s1 t1 -> (exists b fv1, tree.run u p fv s0 t0 (Some s1) t1 b fv1).
+  runT u p fv s0 t0 s1 t1 -> (exists b fv1, tree.runT u p fv s0 t0 (Some s1) t1 b fv1).
 Proof.
   elim => >.
   - move=> sA <-<-; repeat eexists.
@@ -33,7 +33,7 @@ Qed.
 
 
 Lemma runT_run u p fv s0 t0 sx t1 b fv1:
-  tree.run u p fv s0 t0 (Some sx) t1 b fv1 -> runT u p fv s0 t0 sx t1.
+  tree.runT u p fv s0 t0 (Some sx) t1 b fv1 -> runT u p fv s0 t0 sx t1.
 Proof.
   remember (Some sx) as ss eqn:Hss.
   move=> H; elim_run H sx Hss.
@@ -84,33 +84,33 @@ Qed.
 From det Require Import tree_prop_hard.
 
 Lemma run_orSST u p f0 f1 s0 s1 A A' sB B:
-  run u p f0 s0 A (Some s1) (Some A') true f1 ->
-    run u p f0 s0 (Or (Some A) sB B) (Some s1) (Some (Or (Some A') sB KO)) false f1.
+  tree.runT u p f0 s0 A (Some s1) (Some A') true f1 ->
+    tree.runT u p f0 s0 (Or (Some A) sB B) (Some s1) (Some (Or (Some A') sB KO)) false f1.
 Proof. move=> /run_or_correct_left; auto. Qed.
 
 Lemma run_orSSF u p f0 f1 s0 s1 A A' sB B:
-  run u p f0 s0 A (Some s1) (Some A') false f1 ->
-    run u p f0 s0 (Or (Some A) sB B) (Some s1) (Some (Or (Some A') sB B)) false f1.
+  tree.runT u p f0 s0 A (Some s1) (Some A') false f1 ->
+    tree.runT u p f0 s0 (Or (Some A) sB B) (Some s1) (Some (Or (Some A') sB B)) false f1.
 Proof. move=> /run_or_correct_left; auto. Qed.
 
 Lemma run_orSNF u p f0 f1 s0 A s1 sB B:
-  run u p f0 s0 A (Some s1) None false f1 ->
+  tree.runT u p f0 s0 A (Some s1) None false f1 ->
     let nB := (next_alt false B) in
-    run u p f0 s0 (Or (Some A) sB B) (Some s1) (omap (Or None sB) nB) false f1.
+    tree.runT u p f0 s0 (Or (Some A) sB B) (Some s1) (omap (Or None sB) nB) false f1.
 Proof. move=> /run_or_correct_left; auto. Qed.
 
 Lemma run_orSNT u p f0 f1 s0 A s1 sB B:
-  run u p f0 s0 A (Some s1) None true f1 ->
-    run u p f0 s0 (Or (Some A) sB B) (Some s1) None false f1.
+  tree.runT u p f0 s0 A (Some s1) None true f1 ->
+    tree.runT u p f0 s0 (Or (Some A) sB B) (Some s1) None false f1.
 Proof. move=> /run_or_correct_left; auto. Qed.
 
 Lemma run_orNT u p f0 f1 s0 A A' sB B:
-  run u p f0 s0 A None A' true f1 ->
-    run u p f0 s0 (Or (Some A) sB B) None None false f1.
+  tree.runT u p f0 s0 A None A' true f1 ->
+    tree.runT u p f0 s0 (Or (Some A) sB B) None None false f1.
 Proof. move=> /run_or_correct_left; auto. Qed.
 
 Lemma run_orNF u p f0 f1 f2 s0 s3 A A' sB B B' b:
-  run u p f0 s0 A None A' false f1 ->
-    run u p f1 sB B s3 B' b f2 ->
-        run u p f0 s0 (Or (Some A) sB B) s3 (omap (fun x => Or None sB x) B') false f2.
+  tree.runT u p f0 s0 A None A' false f1 ->
+    tree.runT u p f1 sB B s3 B' b f2 ->
+        tree.runT u p f0 s0 (Or (Some A) sB B) s3 (omap (fun x => Or None sB x) B') false f2.
 Proof. by move=> /run_or_correct_left; eauto. Qed.

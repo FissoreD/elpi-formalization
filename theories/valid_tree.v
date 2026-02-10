@@ -155,7 +155,7 @@ Section valid_tree.
     Qed.
 
   Lemma valid_tree_run s1 fv A s2 B b fv':
-    valid_tree A -> run u p fv s1 A s2 B b fv' -> valid_tree (odflt A B).
+    valid_tree A -> runT u p fv s1 A s2 B b fv' -> valid_tree (odflt A B).
   Proof.
     move=> + H.
     elim_run H => vA; only 2, 3: destruct r => //=.

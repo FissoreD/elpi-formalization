@@ -84,8 +84,8 @@ Lemma step_add_cut u p A fv0 s1 R R' xx yy:
   mut_excl u p ->
   step u p                 fv0 s1 A = (xx, R) ->
   step u (add_head_prog p) fv0 s1 A = (yy,R') ->
-  forall s2 fs C b, run u p xx.1 s1 R s2 C b fs ->
-  exists b', b' || ~~b /\ exists C', run u (add_head_prog p) yy.1 s1 R' s2 C' b' fs.
+  forall s2 fs C b, runT u p xx.1 s1 R s2 C b fs ->
+  exists b', b' || ~~b /\ exists C', runT u (add_head_prog p) yy.1 s1 R' s2 C' b' fs.
 Proof.
   move=> ME.
   elim_tree A fv0 xx yy s1 R R' => //=.
@@ -151,13 +151,13 @@ Proof.
       have [b1 RR] := proj2 (run_ko_left2 u p fv1 fs S A1 ((Some R)) s2 s1) H.
       have [b2 [? [C {}HB]]] := HB _ _ _ _ RR.
       simpl in *.
-      have {}HB := ex_intro (fun x => run _ _ _ _ _ _ _ x _) b2 HB.
+      have {}HB := ex_intro (fun x => runT _ _ _ _ _ _ _ x _) b2 HB.
       have := proj1 (run_ko_left2 u (add_head_prog p) fv1 fs S A2 C s2 s1) HB.
       by eexists; eauto.
     move=> H _.
     have [b1 RR] := proj2 (run_ko_left2 u p fv1 fs sm A1 None s2 s1) H.
     have [b2 [? [C {}HB]]] := HB _ _ _ _ RR.
-    have {}HB := ex_intro (fun x => run _ _ _ _ _ _ _ x _) b2 HB.
+    have {}HB := ex_intro (fun x => runT _ _ _ _ _ _ _ x _) b2 HB.
     have := proj1 (run_ko_left2 u (add_head_prog p) fv1 fs sm A2 C s2 s1) HB.
     by eexists; eauto.
   - rewrite !push/=; case: ifP => sA [??][??]s2 fs C b; subst; last first.
@@ -177,8 +177,8 @@ Admitted.
 
 Lemma prog_equiv_head_cut u p fv s A s2 C b fs:
   mut_excl u p ->
-  run u p fv s A s2 C b fs ->
-    exists b' C, run u (add_head_prog p) fv s A s2 C b' fs.
+  runT u p fv s A s2 C b fs ->
+    exists b' C, runT u (add_head_prog p) fv s A s2 C b' fs.
 Proof.
   move=> + H; elim_run H => //=ME.
   - repeat eexists; by apply: run_done => //.

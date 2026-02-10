@@ -1,10 +1,10 @@
 # Status quo = Elpi Run and Nur
 
 - [The language: lang.v](#the-language-langv)
-- [The interpreter: run.v](#the-interpreter-runv)
+- [The interpreter: runT.v](#the-interpreter-runv)
   - [Useful lemmas](#useful-lemmas)
-- [Tests: run\_test.v](#tests-run_testv)
-- [Properties of run: run\_prop.v](#properties-of-run-run_propv)
+- [Tests: runT\_test.v](#tests-run_testv)
+- [Properties of runT: runT\_prop.v](#properties-of-runT-run_propv)
 - [Determinacy checking: check.v](#determinacy-checking-checkv)
 - [Valid tree: valid\_tree.v](#valid-tree-valid_treev)
 - [Elpi interpreter: elpi.v](#elpi-interpreter-elpiv)
@@ -40,7 +40,7 @@ The main inductives of the language are:
 
 > Note: A query is a term.
 
-## The interpreter: run.v
+## The interpreter: runT.v
 
 The interpreter is a functor that takes a module of type **Unif** as input.
 Every file working with the interpreter is also a functor expecting **Unif** as
@@ -63,7 +63,7 @@ Inductive tree :=
   (* concrete base cases *)
   | KO : tree (* the fail predicate *)
   | Top : tree (* the true predicate *)
-  | Goal : program -> A -> tree (* an atom to be run in a program *)
+  | Goal : program -> A -> tree (* an atom to be runT in a program *)
 
   (* meta-level atoms *)
   | OK : tree    (* a meta tree identifying an explored and successful tree *)
@@ -146,14 +146,14 @@ three functions and four inductives to animate a program. Specifically:
   whether, during the resolution of the query, there is a superficial cut (i.e.,
   a cut whose effect should be visible outside the current tree).
 
-- **run**: This inductive represents the interpreter of our language. It
+- **runT**: This inductive represents the interpreter of our language. It
   iterates over **expandedb** until reaching a success. If **expandedb** results
   in a failure, it backtracks and continues calling **expandedb**.
 
 - **next_alt**: Backtracking is enabled by the `next_alt` procedure. It takes a
   tree and erases (i.e., replaces with `Dead`) the internal nodes representing
   a previous failure. It also returns the substitution for launching the new
-  tree within **run**. `next_alt` is implemented with knowledge of how
+  tree within **runT**. `next_alt` is implemented with knowledge of how
   `step` works, choosing which atoms to keep or erase based on their status
   (e.g., `is_dead` or `failed`).
    > Note 1: The function can be significantly simplified under the assumption
@@ -190,7 +190,7 @@ three functions and four inductives to animate a program. Specifically:
    > \lor_{X=2} \top) \land_{r X} \bot)$ is returned after calling
    > `clean_success`.
 
-- **clean_success**: This function is used by **run**. If the interpretation
+- **clean_success**: This function is used by **runT**. If the interpretation
   of a tree succeeds, the returned tree is cleaned of its successful path.
 
 ### Useful lemmas
@@ -216,14 +216,14 @@ The more interesting and used are:
 
 ## Tests: run_test.v
 
-This file contains tests for the execution of **run** in a custom environment
+This file contains tests for the execution of **runT** in a custom environment
 where a Unif module is defined for simple term unification. The file is expected
 to pass all tests without issues.
 
-## Properties of run: run_prop.v
+## Properties of runT: run_prop.v
 
 In `run_prop`, we tree properties of the interpreter, proving that `expandedb`
-and `run` are consistent, i.e., they always produce the same outputs given the
+and `runT` are consistent, i.e., they always produce the same outputs given the
 same inputs (`expanded_consistent` and `run_consistent`).
 
 The `same_structure` postulate asserts that the structure of a tree is
@@ -307,7 +307,7 @@ produce no choice points.
 
 ```
 Definition is_det A := forall s s' B,
-  run s A s' B -> forall s2, next_alt s2 B = None.
+  runT s A s' B -> forall s2, next_alt s2 B = None.
 ```
 
 `is_det` asserts that running a tree `A` from a substitution `s` results in a
@@ -322,7 +322,7 @@ tree `B` with no alternatives.
 ## Valid tree: valid_tree.v
 
 The concept of a valid tree has been introduced to model the "real" Elpi
-interpreter. It defines the invariant of the `run` procedure, i.e., the
+interpreter. It defines the invariant of the `runT` procedure, i.e., the
 structure of a tree preserved during goal interpretation.
 
 A valid tree includes `Goals`, `Top`, `KO`, and `OK`. A `Dead` tree is
@@ -352,7 +352,7 @@ We prove the following properties:
 - `valid_tree_expanded`: `valid_tree A -> expandedb s1 A r -> valid_tree (get_tree_exp r).`
 - `valid_tree_next_alt`: `valid_tree A -> next_alt s1 A = Some (s2, B) -> valid_tree B.`
 - `valid_tree_clean_success`: `valid_tree A -> valid_tree (clean_success A).`
-- `valid_tree_run`: `valid_tree A -> run s1 A s2 B -> valid_tree B.`  
+- `valid_tree_run`: `valid_tree A -> runT s1 A s2 B -> valid_tree B.`  
 
 
 ## Elpi interpreter: elpi.v
@@ -453,7 +453,7 @@ The function takes a tree and a list of alternatives (`bt` for backtrack
 points), which are used to construct the "cut-to" in `Or` nodes. Initially,
 `bt` is an empty list.
 
-The `OK` and `Top` nodes represent future success in `run`, so they are
+The `OK` and `Top` nodes represent future success in `runT`, so they are
 collapsed into `[::[::]]`, corresponding to success in the list semantics.
 Similarly, `Dead` and `KO` represent future failures and are translated into
 an empty list.
@@ -612,12 +612,12 @@ The primary lemma we aim to prove is as follows:
 Lemma runElpi A :
   forall s B s1 b,
     valid_tree A ->
-    run s A s1 B b ->
+    runT s A s1 B b ->
       exists x xs, tree_to_list A [::] = x :: xs /\
         runE s x xs s1 (tree_to_list B [::]).
 ```
 
-The proof proceeds by induction on `run`, addressing the cases of success and
+The proof proceeds by induction on `runT`, addressing the cases of success and
 backtracking separately. These cases are handled using auxiliary lemmas.
 
 # WIP:

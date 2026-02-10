@@ -4702,7 +4702,7 @@ Lemma run_is_det sP sV sV' s A tE:
     compat_subst sP tE s ->
     tc_tree_aux false sP A tE (Func, sV) = (Func, sV') ->
      forall u s' B n,
-      run u s A (Some s') B n ->
+      runT u s A (Some s') B n ->
         next_alt false B = None /\ sigPO sP tE s' sV'.
 Proof.
   move=> + ME +++++++ u s' B n H.
@@ -4826,7 +4826,7 @@ Lemma run_is_detP1 sP sV sV' s A tE:
     sigP sP tE s sV ->
     tc_tree_aux false sP A tE (Func, sV) = (Func, sV') ->
      forall u s' B n,
-      run u s A (Some s') B n ->
+      runT u s A (Some s') B n ->
         next_alt false B = None.
 Proof.
   by move=> *; apply: proj1 (run_is_det _ _ _ _ _ _ _ _ _ _); eassumption.
@@ -4835,7 +4835,7 @@ Qed.
 Definition typ_func {T:Type} (A: (_ * T)%type) := match A with (Func, _) => true | _ => false end.
 Definition det_tree sP sV A := typ_func (tc_tree_aux false sP A sV (Func, sV)).
 Definition is_det s A := forall u s' B n,
-  run u s A (Some s') B n -> next_alt false B = None.
+  runT u s A (Some s') B n -> next_alt false B = None.
 
 Definition check_callable_func sP sV t:=
   forall ign, check_callable sP sV t Func = (Func, ign).

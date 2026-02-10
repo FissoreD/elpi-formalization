@@ -7,7 +7,7 @@ Section s.
   Variable p : program.
 
   Lemma run_success fv A s1 s2 r n fv1: 
-    success A -> run u p fv s1 A s2 r n fv1 -> [/\ s2 = Some (get_subst s1 A), r = (next_alt true A), fv1 = fv & n = false].
+    success A -> runT u p fv s1 A s2 r n fv1 -> [/\ s2 = Some (get_subst s1 A), r = (next_alt true A), fv1 = fv & n = false].
   Proof.
     move=> sA H; have:= success_step u p fv s1 sA.
     have pA := success_path_atom sA.
@@ -17,7 +17,7 @@ Section s.
   Qed.
 
   Lemma run_consistent fv s A s1 B sn C n1 n2 fv1 fv3:
-    run u p fv s A s1 B n1 fv1 -> run u p fv s A sn C n2 fv3 -> [/\ (sn = s1), (C = B), fv3 = fv1 & (n2 = n1)].
+    runT u p fv s A s1 B n1 fv1 -> runT u p fv s A sn C n2 fv3 -> [/\ (sn = s1), (C = B), fv3 = fv1 & (n2 = n1)].
   Proof.
     move=> H.
     elim_run H sn C n2 => H1.
@@ -40,7 +40,7 @@ Section s.
   Qed.
 
   Lemma run_or0 s1 sv X s Y s2 r b fv' :
-    run u p sv s1 (Or X s Y) s2 r b fv' -> b = false.
+    runT u p sv s1 (Or X s Y) s2 r b fv' -> b = false.
   Proof.
     remember (Or _ _ _) as o eqn:Ho => H.
     elim_run H X s Y Ho.
@@ -58,8 +58,8 @@ Section s.
 
   Lemma next_alt_run fv fv' A B C s s2 b1:
     next_alt false A = B ->
-      run u p fv s (odflt A B) s2 C b1 fv' ->
-        run u p fv s A s2 C b1 fv'.
+      runT u p fv s (odflt A B) s2 C b1 fv' ->
+        runT u p fv s A s2 C b1 fv'.
   Proof.
     move=> <-{B}.
     case fA: (failed A).
@@ -70,8 +70,8 @@ Section s.
 
   (* Lemma run_ko_left_Some_None fv fv' s2 X B r r1 b1 sIgn:
     is_ko X ->
-    run u p fv sIgn (Or (Some X) s2 B) r r1 b1 fv' <->
-    run u p fv sIgn (Or None s2 B) r r1 b1 fv'.
+    runT u p fv sIgn (Or (Some X) s2 B) r r1 b1 fv' <->
+    runT u p fv sIgn (Or None s2 B) r r1 b1 fv'.
   Proof.
     move=> kX; split => H.
       inversion H; subst; clear H.
@@ -116,8 +116,8 @@ Section s.
   Qed. *)
 
   Lemma run_ko_left2 fv fv' s2 B B' r sIgn:
-    (exists b1, run u p fv s2 B r B' b1 fv') <->
-    run u p fv sIgn (Or None s2 B) r (omap (fun x => Or None s2 x) B') false fv'.
+    (exists b1, runT u p fv s2 B r B' b1 fv') <->
+    runT u p fv sIgn (Or None s2 B) r (omap (fun x => Or None s2 x) B') false fv'.
   Proof.
     split.
       move=> [b1 HB]; elim_run HB sIgn.
@@ -152,7 +152,7 @@ Section s.
   Qed.
 
   Lemma run_none_dead_res fv fv' s A B cn :
-    run u p fv s A None B cn fv' -> B = None.
+    runT u p fv s A None B cn fv' -> B = None.
   Proof.
     move=> H.
     remember None as n eqn:Hn.
@@ -160,15 +160,15 @@ Section s.
   Qed.
 
   Lemma run_or_correct_left fv fv' s1 A A' s2 b:
-    run u p fv s1 A s2 A' b fv' ->
+    runT u p fv s1 A s2 A' b fv' ->
       if s2 is None then
         if b then
-          forall sX X, run u p fv s1 (Or (Some A) sX X) None None false fv'
+          forall sX X, runT u p fv s1 (Or (Some A) sX X) None None false fv'
         else
-          forall sX X s3 X' n1 fv2, run u p fv' sX X s3 X' n1 fv2 ->
-          run u p fv s1 (Or (Some A) sX X) s3 (omap (fun x => Or None sX x) X') false fv2
+          forall sX X s3 X' n1 fv2, runT u p fv' sX X s3 X' n1 fv2 ->
+          runT u p fv s1 (Or (Some A) sX X) s3 (omap (fun x => Or None sX x) X') false fv2
       else forall sX X, 
-      run u p fv s1 (Or (Some A) sX X) s2 
+      runT u p fv s1 (Or (Some A) sX X) s2 
         (if A' is Some A' then
           Some (Or (Some A') sX (if b then KO else X))
         else 
@@ -239,8 +239,8 @@ Section s.
   Proof. by case: r => [[]|]//[t|]//= s t1 [->]; case: ifP => // _ []//. Qed.
 
   Lemma run_or_fail_L1 b fv1 s1 Cx fv3 fn sx rs:
-    run u p fv1 s1 Cx None None b fv3 ->
-    run u p fv1 s1 (Or (Some Cx) sx KO) None rs false fn ->
+    runT u p fv1 s1 Cx None None b fv3 ->
+    runT u p fv1 s1 (Or (Some Cx) sx KO) None rs false fn ->
     fv3 = fn.
   Proof.
     remember None as n1 eqn:H1.
@@ -265,19 +265,19 @@ Section s.
   Qed.
 
   Lemma run_or_complete fv0 fv2 s1 sx L R X s3:
-    run u p fv0 s1 (Or (Some L) sx R) s3 X false fv2 ->
+    runT u p fv0 s1 (Or (Some L) sx R) s3 X false fv2 ->
       if s3 is Some s3 then
-        (exists L' b, run u p fv0 s1 L (Some s3) L' b fv2 /\ 
+        (exists L' b, runT u p fv0 s1 L (Some s3) L' b fv2 /\ 
           or_succ_build_res sx b R L' X /\ 
           (~~b -> X = None -> next_alt false R = None))
         \/
-        (exists fv1, run u p fv0 s1 L None None false fv1 /\ 
-          exists b, run u p fv1 sx R (Some s3) (if X is Some (Or _ _ R') then Some R' else None) b fv2)
+        (exists fv1, runT u p fv0 s1 L None None false fv1 /\ 
+          exists b, runT u p fv1 sx R (Some s3) (if X is Some (Or _ _ R') then Some R' else None) b fv2)
       else
         X = None /\
-        exists b fv1, run u p fv0 s1 L None None b fv1 /\ 
+        exists b fv1, runT u p fv0 s1 L None None b fv1 /\ 
           if b then  fv1 = fv2
-          else exists b1, run u p fv1 sx R None None b1 fv2.
+          else exists b1, runT u p fv1 sx R None None b1 fv2.
   Proof.
     remember (Or (Some L) _ _) as o1 eqn:Ho1.
     remember false as z eqn:Hz.
@@ -377,8 +377,8 @@ Section s.
   
 
   (* Lemma run_or_ko_right1 fv fv' s2 X B B' SOL b1 sIgn:
-    is_ko X -> run u p fv s2 B SOL B' b1 fv' ->
-    run u p fv s2 (Or B sIgn X) SOL (
+    is_ko X -> runT u p fv s2 B SOL B' b1 fv' ->
+    runT u p fv s2 (Or B sIgn X) SOL (
       if B' is Some B' then Some (Or B' sIgn (if is_dead B' then Dead else if b1 == false then X else cutr X)) else None) false fv'.
   Proof.
     move=> + HB; elim: HB sIgn X; clear.
@@ -408,8 +408,8 @@ Section s.
   Qed. *)
 
   (* Lemma run_or_ko_right2 fv fv' s2 X X' A A' SOL sIgn:
-    is_ko X -> run u p fv s2 (Or A sIgn X) SOL (Some (Or A' sIgn X')) false fv' ->
-      exists b1, run u p fv s2 A SOL (Some A') b1 fv' /\ X' = if b1 == false then X else cutr X.
+    is_ko X -> runT u p fv s2 (Or A sIgn X) SOL (Some (Or A' sIgn X')) false fv' ->
+      exists b1, runT u p fv s2 A SOL (Some A') b1 fv' /\ X' = if b1 == false then X else cutr X.
   Proof.
     remember (Or A _ _) as o1 eqn:Ho1.
     remember (Or A' _ _) as o2 eqn:Ho2 => + H.
@@ -468,7 +468,7 @@ Section s.
     else if is_dead A' then Dead else cutr X. *)
 
   (*Lemma failed_cutl_run A:
-    failed (cutl A) -> forall s, run u p s (cutl A) None (dead A) false.
+    failed (cutl A) -> forall s, runT u p s (cutl A) None (dead A) false.
   Proof.
     Search failed cutl.
     elim: A => //=; try by move=> *; apply: run_dead => //.
@@ -516,8 +516,8 @@ Section s.
   (*
   Lemma run_and_correct_successL {s0 sn A B0 B A' B0' B' b}:
     success A -> next_alt true A = None ->
-    run u p s0 (And A B0 B) sn (And A' B0' B') b ->
-    (run u p (get_subst s0 A) B sn B' b /\ 
+    runT u p s0 (And A B0 B) sn (And A' B0' B') b ->
+    (runT u p (get_subst s0 A) B sn B' b /\ 
       (B0' = B0) /\
       (A' = if is_dead B' then dead A else if b == false then A else cutl A)
     )%type2.
@@ -572,7 +572,7 @@ Section s.
   Abort. *)
 
   (* Lemma run_big_and_total {r s}:
-      Texists r0 B n, run u p s ((big_and r)) r0 B n.
+      Texists r0 B n, runT u p s ((big_and r)) r0 B n.
   Proof.
     elim: r s => //=.
     - move=> s; repeat eexists; apply: run_done => //.
@@ -582,7 +582,7 @@ Section s.
 
   (* Lemma run_big_or_total {sr r rs c s}:
     F u p c s = (sr, r) :: rs -> 
-      Texists r0 B n, run u p s (TA (call c)) r0 B n.
+      Texists r0 B n, runT u p s (TA (call c)) r0 B n.
   Proof.
     elim: rs sr r c s => //=.
     - move=> sr r c s H.
@@ -596,7 +596,7 @@ Section s.
   Abort. *)
 
   (* Lemma run_is_total {s A}:
-    Texists r B n, run u p s A r B n.
+    Texists r B n, runT u p s A r B n.
   Proof.
     elim: A s.
     - repeat eexists; apply: run_dead => //.
@@ -618,22 +618,22 @@ Section s.
   Abort. *)
 
   (* Lemma run_and_correct {s0 sn A B0 B A' B0' B' b}:
-    run u s0 (And A B0 B) sn (And A' B0' B') b ->
+    runT u s0 (And A B0 B) sn (And A' B0' B') b ->
     if sn is Some sn then true :> Type
     else (
-      run u s0 A None A' b + 
-      (Texists s0', run u s0 A (Some s0') )
+      runT u s0 A None A' b + 
+      (Texists s0', runT u s0 A (Some s0') )
     
     ).
 (*     true
-    (Texists sm r1 b1, run u s0 A sm r1 b1 /\
-      Texists b2 r2, ((run u sm B sn r2 b2) + 
+    (Texists sm r1 b1, runT u s0 A sm r1 b1 /\
+      Texists b2 r2, ((runT u sm B sn r2 b2) + 
         (* TODO: it should not be Texsists sm, but I should provide the right substitution *)
         (* The problem is given by a state like (A \/ B) /\ C
-           A succeeds, C fails, the substitution on which we should run C0
+           A succeeds, C fails, the substitution on which we should runT C0
            is the one obtained by running B (i.e. next_alt A).
         *)
-        (Texists sm, run u sm B0 sn r2 b2))). *)
+        (Texists sm, runT u sm B0 sn r2 b2))). *)
   Proof.
     remember (And _ _ _) as a eqn:Ha => H.
     elim: H A B0 B Ha; clear.

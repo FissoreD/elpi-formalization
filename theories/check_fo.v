@@ -429,7 +429,7 @@ Section check.
   Qed.
 
   Definition is_det u p s fv A := forall b s' B fv',
-    run u p fv s A s' B b fv' -> B = None.
+    runT u p fv s A s' B b fv' -> B = None.
 
   Lemma run_next_alt s fv p A: 
     vars_tree A `<=` fv ->

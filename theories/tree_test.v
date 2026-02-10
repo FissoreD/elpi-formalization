@@ -54,7 +54,7 @@ Section Test1.
     move=> //.
   Qed.
 
-  (* Goal Texists r, run unif empty (CallS p_test (Tm_App (Tm_P q) (Tm_D (ID 1)))) (Some s2) r false.
+  (* Goal Texists r, runT unif empty (CallS p_test (Tm_App (Tm_P q) (Tm_D (ID 1)))) (Some s2) r false.
   Proof.
     eexists.
     apply: run_step => //.
@@ -78,7 +78,7 @@ Section Test5.
       mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
     ].
 
-  (* Goal Texists r, run unif empty (CallS p_test1 (Tm_App (Tm_P p) (Tm_D (ID false)))) (Some s1) r false /\ is_dead r.
+  (* Goal Texists r, runT unif empty (CallS p_test1 (Tm_App (Tm_P p) (Tm_D (ID false)))) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
     apply: run_step => //.
@@ -103,7 +103,7 @@ Section Test6.
       mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
   ].
 
-  (* Goal Texists r, run unif empty ((CallS p_test2 (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (Some s1) r false /\ is_dead r.
+  (* Goal Texists r, runT unif empty ((CallS p_test2 (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (Some s1) r false /\ is_dead r.
   Proof.
     repeat eexists.
     apply: run_step => //.
@@ -125,19 +125,19 @@ Definition CutS := TA cut.
 Section Test2.
   Goal step unif emptyp fset0 empty (Or (Some OK) empty OK) = (fset0, Success, Or (Some OK) empty OK). by []. Qed.
 
-  Goal run unif emptyp fset0 empty (Or (Some CutS) empty OK) (Some empty) None false fset0.
+  Goal runT unif emptyp fset0 empty (Or (Some CutS) empty OK) (Some empty) None false fset0.
     apply: run_step => //=.
     apply: run_done => //.
   Qed.
 
   Goal forall r, 
-    run unif emptyp fset0 empty (Or (Some CutS) empty r) (Some empty) None false fset0.
+    runT unif emptyp fset0 empty (Or (Some CutS) empty r) (Some empty) None false fset0.
     move=> r.
     apply: run_step => //.
     apply: run_done => //=.
   Qed.
 
-  Goal run unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Some empty) (Some (Or None empty (((Or (Some OK) empty OK))))) false fset0.
+  Goal runT unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Some empty) (Some (Or None empty (((Or (Some OK) empty OK))))) false fset0.
   Proof. apply: run_done => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
