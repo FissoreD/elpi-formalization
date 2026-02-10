@@ -428,8 +428,10 @@ Section check.
       by case/orP=> [/HA->/= | /[dup]/andP[-> ?] ->]; rewrite ?andbT ?orbT ?if_same.
   Qed.
 
-  Definition is_det u p s fv A := forall b s' B fv',
-    runT u p fv s A s' B b fv' -> B = None.
+  Definition is_det u p s fv A := forall b fv' r,
+    runT u p fv s A r b fv' -> 
+      if r is Some (_, x) then x = None
+      else r = None.
 
   Lemma run_next_alt s fv p A: 
     vars_tree A `<=` fv ->
@@ -438,9 +440,9 @@ Section check.
       det_tree p.(sig) A -> is_det u p s fv A.
   Proof.
     rewrite/is_det.
-    move=> D1 D2 H1 H2 b s' B ? H3.
+    move=> D1 D2 H1 H2 b B ? H3.
     elim_run H3 H1 H2 D1 D2.
-    - apply: build_na_is_dead H2 SA.
+    - apply: build_na_is_dead H2 sA.
     - have [H3 H4] := vars_tree_step_sub_flow D1 D2 eA.
       apply: (IH H1 _ H3 H4).
       by apply: step_no_free_alt eA.

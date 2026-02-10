@@ -855,4 +855,26 @@ Qed.
       case S: t2l => //=[[sx x] xs].
       by rewrite t2l_big_and//= cat_cons cat0s.
   Qed.
+
+  Lemma t2l_nil_na t s a: 
+    valid_tree t -> t2l t s a = [::] -> next_alt false t = None.
+  Proof.
+    elim_tree t s a => /=.
+    - move=> /andP[vA /orP[/eqP->|/spec_base_or[r[rs ?]]]]//=; subst.
+        by case tA: t2l => [|[]]//=; rewrite (HA _ _ vA tA).
+      case tA: t2l => [|[]]//=; case tB: t2l => [|[]]//= _.
+      by rewrite (HA _ _ vA tA) (HB _ _ (valid_tree_big_or _ _) tB).
+    - move=> vB; by case tB: t2l => [|[]]//= _; rewrite (HB _ _ vB tB).
+    - move=> /andP[vA].
+      case: ifP => [sA vB|sA /eqP?]; subst.
+        rewrite (success_t2l s vA sA)/=.
+        case tB: t2l; rewrite//=(HB _ _ vB tB).
+        case nA: next_alt => //=[A'].
+        have fA' := next_alt_failedF nA.
+        by have [?[?[?->]]] := failed_t2l (valid_tree_next_alt vA nA) fA' s a.
+      case: ifP => fA; last first.
+        by have [sx[x[xs H]]]/= := failed_t2l vA fA s a; rewrite H/= t2l_big_and//.
+      case tA: t2l => //=[|[s0 h0]]; last by rewrite t2l_big_and.
+      by rewrite (HA _ _ vA tA).
+    Qed.
 End NurProp.

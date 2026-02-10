@@ -154,13 +154,14 @@ Section valid_tree.
       by move=> [<-]/=; rewrite (HA _ false)//= eqxx valid_tree_big_and !if_same.
     Qed.
 
-  Lemma valid_tree_run s1 fv A s2 B b fv':
-    valid_tree A -> runT u p fv s1 A s2 B b fv' -> valid_tree (odflt A B).
+  Lemma valid_tree_run s1 fv A x b fv':
+    valid_tree A -> runT u p fv s1 A (Some x) b fv' -> valid_tree (odflt A x.2).
   Proof.
+    case: x => //= s []//= R.
+    remember (Some _) as S eqn:HS.
     move=> + H.
-    elim_run H => vA; only 2, 3: destruct r => //=.
-    + case X: next_alt => [B'|]//=.
-      by rewrite (valid_tree_next_alt vA X); auto.
+    elim_run H s R HS => vA.
+    + by move: HS => [_]; apply: valid_tree_next_alt.
     + by apply: IH (valid_tree_step vA eA).
     + by apply: IH (valid_tree_next_alt vA nA).
   Qed.

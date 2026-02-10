@@ -7,65 +7,67 @@ Section NurEqiv.
   Variable (u : Unif).
   Variable (p : program).
 
-  Lemma tree_to_elpi fv A s1 B sF b s0 fv':
+  Lemma tree_to_elpi fv A s1 b fv' r:
     vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
     valid_tree A ->
-      runT u p fv s1 A (Some sF) B b fv' -> 
-        exists x xs,
-          t2l A s1 [::] = x :: xs /\
-          runE u p fv x.1 x.2 xs sF (t2l (odflt KO B) s0 [::]).
+      runT u p fv s1 A r b fv' -> 
+        let xs := t2l A s1 [::] in
+        let r' := omap (fun '(s, t) => (s, (t2l (odflt KO t) s1 [::]))) r in
+        runE u p fv xs r'.
   Proof.
     move=> +++H.
-    remember (Some _) as r eqn:Hr.
-    elim_run H sF Hr s0 => vtA vts1 vA.
-    + move: Hr => [?]; subst.
-      rewrite (success_t2l s0)//.
+    elim_run H => vtA vts1 vA.
+    + rewrite (success_t2l s1)//.
       repeat eexists.
       apply: StopE.
     + have [fvB fvs] := vars_tree_step_sub_flow vtA vts1 eA.
       have /=vB:= (valid_tree_step vA eA). 
-      have [[sy y][ys /=[+ {}IH]]]:= IH _ erefl s0 fvB fvs vB.
+      have {IH}/=:= IH fvB fvs vB; subst.
       have /=[] := path_atom_exp_cut pA eA => ?; subst.
         have H5 := step_cb_same_subst1 vA eA; subst.
         have [x[tl[H1 [H2 H3]]]] := s2l_CutBrothers s1 [::] vA eA.
-        rewrite H1 H2 H5 => -[???]; subst.
+        rewrite H1 H2 H5 => IH.
         have ?:= tree_fv_step_cut eA; subst.
-        by repeat eexists; apply: CutE => //=.
+        by apply: CutE => //=.
       have fA := step_not_failed eA notF.
       have [s[x[xs +]]] := failed_t2l vA fA s1 [::].
-      move=> H Hx; rewrite H; repeat eexists.
-      case: x H => [|g gs].
-        fNilG => H.
+      move=> H; rewrite H/=.
+      case: x H => [|g gs]/= H.
         have [] := s2l_empty_hd_success vA (step_not_failed eA notF) H.
-        rewrite (step_not_solved eA notF)//.
+        by rewrite (step_not_solved eA notF)//.
       fConsG g gs.
-      case: g => [[|c] ca] H; last first.
+      case: g H => [[|c] ca] H; last first.
         have:= s2l_Expanded_call vA eA H.
-        move=> [??]; subst; move: IH.
-        case X: bc => /=[fv3 rules] IH ; subst => /=.
-        case: rules X => [|r0 rs] X; rewrite Hx.
-          move=> <-; apply: BackE IH.
-          by rewrite/stepE X.
-        move=> [???]; subst.
-        rewrite cats0 in IH.
+        move=> [??]; subst.
+        case X: bc => /=[fv3 rules] H1; subst => /=.
+        rewrite H1.
+        case: rules X H1 => [|r0 rs] X H1.
+          by apply: BackE; rewrite/stepE X.
+        rewrite cats0.
         apply: CallE.
-          rewrite /stepE X//=.
-        apply: IH.
+        rewrite /stepE X//=.
       have [[[? SS] H1]] := s2l_Expanded_cut vA eA H; subst.
-      rewrite cats0 Hx => -[???]; subst.
+      rewrite cats0 => ->.
       by apply: CutE.
     + have vB := valid_tree_next_alt vA nA.
       have H1 := failed_next_alt_some_t2l _ vA fA nA.
       have {}fvP := vars_tree_next_alt_sub_flow vtA nA.
-      have {IH} /= [[sx x][xs [H2 H3]]] := IH _ erefl s0 fvP vts1 vB.
+      have {IH} /= := IH fvP vts1 vB.
       by rewrite H1; eauto.
+    + move=>/=.
+      rewrite (failed_next_alt_none_t2l _ _ nA)//.
+        by constructor.
+      by apply/next_alt_None_failed.
   Qed.
   Print Assumptions tree_to_elpi.
 
-Lemma elpi_to_tree fv s1 s2 a na g  : 
-  runE u p fv s1 g a s2 na -> 
-  forall s0 t, valid_tree t -> (t2l t s0 [::]) = ((s1,g) :: a) -> 
-  exists t1 n fv2, runT u p fv s0 t (Some s2) t1 n fv2 /\ t2l (odflt KO t1) s0 [::] = na.
+Lemma elpi_to_tree v0 a r : 
+  runE u p v0 a r -> 
+  forall s0 t, valid_tree t -> t2l t s0 [::] = a ->  
+  exists b v1,
+  if r is Some (s1, a') then 
+    exists t1, runT u p v0 s0 t (Some (s1, t1)) b v1 /\ t2l (odflt KO t1) s0 [::] = a'
+  else runT u p v0 s0 t None b v1.
 Proof.
   elim; clear.
   - move=> s a fv s1 A vA /= H.
@@ -86,7 +88,7 @@ Proof.
       by apply: StopT.
     have:=@s2l_next_alt_tl _ s1 no_alt vA skA.
     by rewrite H => ->//; rewrite behead_cons.
-  - move=> s1 s2 a ca r gl fv ELPI IH s A vA H.
+  - move=> s1 a ca r gl fv ELPI IH s A vA H.
     {
       (* CUT CASE *)
       case fA: (failed A).
@@ -99,23 +101,37 @@ Proof.
         case X: (step u p fv s A') => [[fv' r'] A''].
         have:= next_cut_s2l fA' vA' H X => /=.
         rewrite clean_ca_nil/= => -[H1 H2].
-        have /= [t1[n [fv0[{}IH H3]]]] := IH _ _ (valid_tree_step vA' X) H1; subst.
-        move: H2; case: ifP => Hx [??]; subst;
+        have {IH}/=[b[v1]] := IH _ _ (valid_tree_step vA' X) H1; subst.
+        case: r ELPI => [[s' a']|] ELPI.
+          move=> [t1[IH ?]]; subst.
+          move: H2; case: ifP => //= CB [??]; subst;
+          repeat eexists; apply: BackT fA nA _;
+          apply: StepT erefl IH; eauto.
+            by apply: path_atom_cut X.
+          by apply: path_atom_exp X.
+        move: H2; case: ifP => //= CB [??] IH; subst;
         repeat eexists; apply: BackT fA nA _;
-        apply: StepT (X) erefl IH.
+        apply: StepT erefl IH; eauto.
           by apply: path_atom_cut X.
         by apply: path_atom_exp X.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
       case X: (step u p fv s A) => [[fv' r'] A'].
       have:= next_cut_s2l fA vA H X => /=.
       rewrite clean_ca_nil/= => -[H1 H2].
-      have /= [t1[n[fv0[{}IH H3]]]] := IH _ _ (valid_tree_step vA X) H1; subst.
-      move: H2; case: ifP => Hx [??]; subst;
-      repeat eexists; apply: StepT (X) erefl IH.
+      have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA X) H1; subst.
+      case: r ELPI => [[s' a']|] ELPI.
+        move=> [t1[IH ?]]; subst.
+        move: H2; case: ifP => Hx [??]; subst;
+        repeat eexists; apply: StepT (X) erefl IH.
+          by apply: path_atom_cut X.
+        by apply: path_atom_exp X.
+      move: H2; case: ifP => //= CB [??] IH; subst;
+      repeat eexists;
+      apply: StepT erefl IH; eauto.
         by apply: path_atom_cut X.
       by apply: path_atom_exp X.
     }
-  - move=> s1 s2 a [s0 r0]/= rs gl r t ca fv fv' + ELPI IH s3 A vA H.
+  - move=> s1 a [s0 r0]/= bs gl r t ca fv fv' + ELPI IH s3 A vA H.
     rewrite/stepE; case B: bc => [fv2 [|x xs]]//[????]; subst.
     {
       (* CALL SUCCESS CASE *)
@@ -128,20 +144,32 @@ Proof.
         have /= vA' := (valid_tree_next_alt vA nA).
         have [] := next_callS_s2l p u fv fA' vA' H.
         rewrite B/=clean_ca_nil => H1 H2.
-        have /= [t1[n[fv0[{}IH ?]]]] := IH _ _ (valid_tree_step vA' erefl) H1; subst.
-        repeat eexists.
+        have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA' erefl) H1; subst.
+        case: r ELPI => [[s' a']|] ELPI.
+          move=> [t'[IH ?]]; subst.
+          repeat eexists.
+          apply: BackT fA nA _.
+          apply: StepT (H2) erefl IH.
+          apply: path_atom_exp H2.
+        move=> IH; repeat eexists.
         apply: BackT fA nA _.
         apply: StepT (H2) erefl IH.
         apply: path_atom_exp H2.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
       have [] := next_callS_s2l p u fv fA vA H.
       rewrite B/= clean_ca_nil/= => H1 H2.
-      have /= [t1[n [?[{}IH ?]]]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
+      have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
+      case: r ELPI => [[s' a']|] ELPI.
+        move=> [t'[IH ?]]; subst.
+        repeat eexists.
+        apply: StepT (H2) erefl IH.
+        apply: path_atom_exp H2.
+      move=> IH.
       repeat eexists.
       apply: StepT (H2) erefl IH.
       apply: path_atom_exp H2.
     }
-  - move=> s1 s2 s3 t gl a al r ca fv fv' + ELPI IH s4 A vA H.
+  - move=> s1 t gl al r ca fv fv' + ELPI IH s4 A vA H.
     rewrite/stepE; case B: bc => [fv2 [|x xs]]//[?]; subst.
     {
       (* CALL FAIL CASE *)
@@ -154,19 +182,22 @@ Proof.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
         have [] := next_callS_s2l p u fv fA' vA' H.
         rewrite B/= clean_ca_nil/= cat0s => H1 H2.
-        have /= [t1[n[?[{}IH ?]]]] := IH _ _ (valid_tree_step vA' erefl) H1; subst.
-        repeat eexists.
-        apply: BackT fA nA _.
-        apply: StepT (H2) erefl IH.
+        have /= {IH}[b[v']] := IH _ _ (valid_tree_step vA' erefl) H1; subst.
+        case: r {ELPI} => [[s' a' [t'[IH ?]]]|IH]; subst;
+        repeat eexists;
+        apply: BackT fA nA _;
+        apply: StepT (H2) erefl IH;
         apply: path_atom_exp H2.
       rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
       have [] := next_callS_s2l p u fv fA vA H.
       rewrite B/= clean_ca_nil/=cat0s => H1 H2.
-      have /= [t1[n[?[{}IH ?]]]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
-      repeat eexists.
-      apply: StepT (H2) erefl IH.
+      have /= {IH}[b[v']] := IH _ _ (valid_tree_step vA erefl) H1; subst.
+      case: r {ELPI} => [[s' a' [t'[IH ?]]]|IH]; subst;
+      repeat eexists;
+      apply: StepT (H2) erefl IH;
       apply: path_atom_exp H2.
     }
+  + by move=> > vT H; repeat eexists; apply/FailT/t2l_nil_na/H.
 Qed.
 
 Print Assumptions elpi_to_tree.

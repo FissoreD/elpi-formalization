@@ -282,15 +282,15 @@ Section main.
   Goal (next_alt false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
 
   Inductive runT (p : program): fvS -> Sigma -> tree -> 
-                    option Sigma -> option tree -> bool -> fvS -> Prop :=
-    | StopT s1 s2 A B fv       : success A -> get_subst s1 A = s2 -> (next_alt true A) = B -> runT fv s1 A (Some s2) B false fv
-    | StepT  s1 s2 r A B b1 b2 fv0 fv1 fv2 st: path_atom A -> step p fv0 s1 A = (fv1, st, B) -> b2 = (st == CutBrothers) || b1 -> runT fv1 s1 B s2 r b1 fv2 -> runT fv0 s1 A s2 r b2 fv2
-    | BackT s1 s2 A B r n fv0 fv1    : 
+                    option (Sigma * option tree) -> bool -> fvS -> Prop :=
+    | StopT s1 s2 A B v0       : success A -> get_subst s1 A = s2 -> (next_alt true A) = B -> runT v0 s1 A (Some (s2, B)) false v0
+    | StepT s1 r A B b1 b2 v0 v1 v2 st: path_atom A -> step p v0 s1 A = (v1, st, B) -> b2 = (st == CutBrothers) || b1 -> runT v1 s1 B r b1 v2 -> runT v0 s1 A r b2 v2
+    | BackT s1 A B r n v0 v1    : 
           failed A -> next_alt false A = Some B ->
-              runT fv0 s1 B s2 r n fv1 -> runT fv0 s1 A s2 r n fv1
-    | FailT s1 A fv : 
+              runT v0 s1 B r n v1 -> runT v0 s1 A r n v1
+    | FailT s1 A v0 : 
           next_alt false A = None ->
-            runT fv s1 A None None false fv.
+            runT v0 s1 A None false v0.
 
   Fixpoint vars_tree t : fvS :=
   match t with
@@ -304,9 +304,10 @@ Section main.
 End main.
 
 Ltac elim_run T X := revert X; elim: T; clear; 
-  [move=> s1 s2 A B fv SA sA sB |
-    move=>s1 s2 r A B b1 b2 fv0 fv1 fv2 st pA eA ? rB IH|
-    move=>s1 s2 A B r n fv0 fv1 fA nA rB IH |move=> s1 A fv nA ]; intros X; subst => //; auto.
+  [ move=> s1 s2 A B v0 sA ?? |
+    move=> s1 r A B b1 b2 v0 v1 v2 st pA eA ? rB IH|
+    move=> s1 A B r n v0 v1 fA nA rB IH |
+    move=> s1 A v0 nA ]; intros X; subst => //; auto.
 Tactic Notation "elim_run" hyp(T) hyp_list(X) := elim_run T X.
 
 (*END*)

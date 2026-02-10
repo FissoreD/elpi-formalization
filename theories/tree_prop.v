@@ -252,15 +252,15 @@ Section RunP.
         by move => [<-].
     Qed.
 
-    Lemma run_same_structure p fv1 fv2 s A s1 r n:
-      runT u p fv1 s A s1 r n fv2 -> same_structure A (odflt A r).
+    Lemma run_same_structure p fv1 fv2 s A x n:
+      runT u p fv1 s A (Some x) n fv2 -> same_structure A (odflt A x.2).
     Proof.
-      move=> H.
-      elim_run H; only 2, 3: destruct r => //=.
-      - case X: next_alt => [B'|]/=; subst; move: X => //.
-        by move=> /next_alt_same_structure//.
-      - apply: same_structure_trans (step_same_structure eA) IH.
-      - apply: same_structure_trans (next_alt_same_structure nA) IH.
+      case: x => //= + []//= => s' A'.
+      remember (Some _) as sx eqn:Hx => H.
+      elim_run H s' A' Hx => //=.
+      - by move: Hx => [?]; subst => /=; apply/next_alt_same_structure.
+      - apply: same_structure_trans (step_same_structure eA) (IH _ _ erefl).
+      - apply: same_structure_trans (next_alt_same_structure nA) (IH _ _ erefl).
     Qed.
   End same_structure.
 
@@ -312,13 +312,6 @@ Section RunP.
 
   Lemma get_subst_and_big_and s1 A B C: get_subst s1 (And A B (big_and C)) = get_subst s1 A.
   Proof. by rewrite get_subst_and get_substS_big_and if_same. Qed.
-
-  Lemma run_success1 p fv A s: 
-    success A -> runT u p fv s A (Some (get_subst s A)) ((next_alt true A)) false fv.
-  Proof.
-    move=> sA.
-    by apply: StopT.
-  Qed.
 
   Lemma tree_fv_step_cut p A R fv fv' s:
     step p fv s A = (fv', CutBrothers, R) -> fv' = fv.
@@ -383,4 +376,15 @@ Section RunP.
     - case: ifP => [sA /HB->|]// sA /path_atom_failed->//.
   Qed.
 
+  Lemma next_alt_run p fv fv' A B C s b1:
+    next_alt false A = B ->
+      runT u p fv s (odflt A B) C b1 fv' ->
+        runT u p fv s A C b1 fv'.
+  Proof.
+    move=> <-{B}.
+    case fA: (failed A).
+      case X: next_alt => [A'|]//= H.
+      by apply: BackT fA X H.
+    rewrite failedF_next_alt//.
+  Qed.
 End RunP.
