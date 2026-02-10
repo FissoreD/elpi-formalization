@@ -13,7 +13,7 @@ Section NurEqiv.
       run u p fv s1 A (Some sF) B b fv' -> 
         exists x xs,
           t2l A s1 [::] = x :: xs /\
-          nur u p fv x.1 x.2 xs sF (t2l (odflt KO B) s0 [::]).
+          runE u p fv x.1 x.2 xs sF (t2l (odflt KO B) s0 [::]).
   Proof.
     move=> +++H.
     remember (Some _) as r eqn:Hr.
@@ -63,7 +63,7 @@ Section NurEqiv.
   Print Assumptions tree_to_elpi.
 
 Lemma elpi_to_tree fv s1 s2 a na g  : 
-  nur u p fv s1 g a s2 na -> 
+  runE u p fv s1 g a s2 na -> 
   forall s0 t, valid_tree t -> (t2l t s0 [::]) = ((s1,g) :: a) -> 
   exists t1 n fv2, run u p fv s0 t (Some s2) t1 n fv2 /\ t2l (odflt KO t1) s0 [::] = na.
 Proof.

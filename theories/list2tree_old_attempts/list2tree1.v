@@ -153,15 +153,15 @@ Definition same' x y := erase_alts' x = erase_alts' y.
 
 Definition hd' x y ys := erase_goals' x = (erase_G' y) ::: (erase_goals' ys).
 
-Inductive nur' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Type :=
-| StopE' s a : nur' s nilC a s a
-| CutE' s s1 a ca r gl n1 : nur' s gl ca s1 r -> nur' s ((n1, cut' ca) ::: gl) a s1 r
+Inductive runE' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Type :=
+| StopE' s a : runE' s nilC a s a
+| CutE' s s1 a ca r gl n1 : runE' s gl ca s1 r -> runE' s ((n1, cut' ca) ::: gl) a s1 r
 | CallE' p s s1 a b bs gl r t n1: 
   F u p t s = [:: b & bs ] -> 
-    nur' b.1 (save_goals' a gl (a2gs1' n1.+1 p b)) (save_alts' a gl ((aa2gs' n1.+1 p) bs) ++ a) s1 r -> 
-      nur' s ((n1, call' p t) ::: gl) a s1 r
+    runE' b.1 (save_goals' a gl (a2gs1' n1.+1 p b)) (save_alts' a gl ((aa2gs' n1.+1 p) bs) ++ a) s1 r -> 
+      runE' s ((n1, call' p t) ::: gl) a s1 r
 | FailE' p s s1 s2 t gl a al r n n1 : 
-  F u p t s = [::] -> nur' s1 a al s2 r -> nur' s ((n, call' p t) ::: gl) ((n1, s1, a) ::: al) s2 r.
+  F u p t s = [::] -> runE' s1 a al s2 r -> runE' s ((n, call' p t) ::: gl) ((n1, s1, a) ::: al) s2 r.
 
 (* Lemma listP' {l x xs} : erase_goals' l = x ::: xs ->
   exists y ys, erase_goals' l = (erase_G' y) ::: (erase_goals' ys).
@@ -193,8 +193,8 @@ Qed.
 
 Definition ed := (erase_decorate_alts, erase_decorate_goals, erase_decorate_G).
 
-Notation elpi_annot := nur'.
-Notation elpi := nur.
+Notation elpi_annot := runE'.
+Notation elpi := runE.
 
 (* Lemma e erase_goals' (map (add_ca' a)) = mapG (add_ca (erase_alts' a)) *)
 
@@ -234,8 +234,8 @@ Admitted.
 Lemma a2gs1_erase n p bs : (a2gs1 p bs) = erase_goals' (a2gs1' n p bs).
 Admitted.
 
-Lemma one u s xs a s1 a1: nur' u s xs a s1 a1 -> 
-  nur u s (erase_goals' xs) (erase_alts' a) s1 (erase_alts' a1).
+Lemma one u s xs a s1 a1: runE' u s xs a s1 a1 -> 
+  runE u s (erase_goals' xs) (erase_alts' a) s1 (erase_alts' a1).
 Proof.
   elim => /=; clear.
   - move=> *; constructor.
@@ -253,11 +253,11 @@ Proof.
 Qed.
 
 
-Lemma two' {u s s1 alts alts_left andg}  : nur u s andg alts s1 alts_left -> forall alts' andg',
+Lemma two' {u s s1 alts alts_left andg}  : runE u s andg alts s1 alts_left -> forall alts' andg',
   (erase_alts' alts' = alts) -> 
   (erase_goals' andg' = andg) ->
   Texists alts_left',
-  (erase_alts' alts_left' = alts_left) /\ (nur' u s andg' alts' s1 alts_left').
+  (erase_alts' alts_left' = alts_left) /\ (runE' u s andg' alts' s1 alts_left').
 elim; clear.
 
 move=> s a a' [|[]//] ? _; subst.

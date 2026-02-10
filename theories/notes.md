@@ -386,15 +386,15 @@ Definition a2g p A :=
 
 The interpreter is defined as:
 ```coq
-Inductive nur : Sigma -> list G -> list alt -> Sigma -> list alt -> Prop :=
-| StopE s a : nur s [::] a s a
-| CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s [:: cut ca & gl] a s1 r
+Inductive runE : Sigma -> list G -> list alt -> Sigma -> list alt -> Prop :=
+| StopE s a : runE s [::] a s a
+| CutE s s1 a ca r gl : runE s gl ca s1 r -> runE s [:: cut ca & gl] a s1 r
 | CallE p s s1 a b bs gl r t :
     F p t s = [:: b & bs ] ->
-    nur s (save_alt a (a2gs p b) gl) (more_alt a (map (a2gs p) bs) gl) s1 r ->
-    nur s [::call p t & gl] a s1 r
+    runE s (save_alt a (a2gs p b) gl) (more_alt a (map (a2gs p) bs) gl) s1 r ->
+    runE s [::call p t & gl] a s1 r
 | FailE p s s1 t gl a al r :
-    F p t s = [::] -> nur s a al s1 r -> nur s [::call p t & gl] (a :: al) s1 r.
+    F p t s = [::] -> runE s a al s1 r -> runE s [::call p t & gl] (a :: al) s1 r.
 ```
 > TODO: *The substitutions are incorrect; they should be stored in the
 disjuncts.*
@@ -614,7 +614,7 @@ Lemma runElpi A :
     valid_tree A ->
     run s A s1 B b ->
       exists x xs, tree_to_list A [::] = x :: xs /\
-        nur s x xs s1 (tree_to_list B [::]).
+        runE s x xs s1 (tree_to_list B [::]).
 ```
 
 The proof proceeds by induction on `run`, addressing the cases of success and

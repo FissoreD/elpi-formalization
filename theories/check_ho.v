@@ -4883,7 +4883,7 @@ Module elpi.
   From det Require Import tree t2l_prop valid_tree tree_prop.
 
   Definition is_det g := forall u s' a',
-    nur u empty g nilC s' a' -> a' = nilC.
+    runE u empty g nilC s' a' -> a' = nilC.
 
   Lemma elpi_is_det {sP p c sV}: 
     tc_call sV c ->

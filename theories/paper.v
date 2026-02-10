@@ -59,7 +59,7 @@ Lemma tree_to_elpi: forall u p s0 t s2 t',
       exists s1 g a,
         let: na := t2l (odflt KO t') s0 [::] in
         t2l t s0 [::] = (s1,g) :: a /\
-          nur u p fv s1 g a s2 na.
+          runE u p fv s1 g a s2 na.
 (*ENDSNIP: tree_to_elpi *)
 Proof.
   move=> u p s0 t s2 t' /= vt R.
@@ -70,7 +70,7 @@ Qed.
 
 (*SNIP: elpi_to_tree *)
 Lemma elpi_to_tree: forall u p fv s1 g s2 a na,
-  nur u p fv s1 g a s2 na -> 
+  runE u p fv s1 g a s2 na -> 
     forall s0 t, valid_tree t -> t2l t s0 [::] = (s1,g) :: a -> 
       exists t', runT u p fv s0 t s2 t' /\ t2l (odflt KO t') s0 [::] = na.
 (*ENDSNIP: elpi_to_tree *)
