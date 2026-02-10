@@ -81,5 +81,35 @@ Proof.
   by apply: runT_run H6.
 Qed.
 
+From det Require Import tree_prop_hard.
 
+Lemma run_orSST u p fv fv' s1 A A' s2 sX X:
+  run u p fv s1 A (Some s2) (Some A') true fv' ->
+    run u p fv s1 (Or (Some A) sX X) (Some s2) (Some (Or (Some A') sX KO)) false fv'.
+Proof. move=> /run_or_correct_left; auto. Qed.
 
+Lemma run_orSSF u p fv fv' s1 A A' s2 sX X:
+  run u p fv s1 A (Some s2) (Some A') false fv' ->
+    run u p fv s1 (Or (Some A) sX X) (Some s2) (Some (Or (Some A') sX X)) false fv'.
+Proof. move=> /run_or_correct_left; auto. Qed.
+
+Lemma run_orSNF u p fv fv' s1 A s2 sX X:
+  run u p fv s1 A (Some s2) None false fv' ->
+    run u p fv s1 (Or (Some A) sX X) (Some s2) (omap (Or None sX) (next_alt false X)) false fv'.
+Proof. move=> /run_or_correct_left; auto. Qed.
+
+Lemma run_orSNT u p fv fv' s1 A s2 sX X:
+  run u p fv s1 A (Some s2) None true fv' ->
+    run u p fv s1 (Or (Some A) sX X) (Some s2) None false fv'.
+Proof. move=> /run_or_correct_left; auto. Qed.
+
+Lemma run_orNT u p fv fv' s1 A A' sX X:
+  run u p fv s1 A None A' true fv' ->
+    run u p fv s1 (Or (Some A) sX X) None None false fv'.
+Proof. move=> /run_or_correct_left; auto. Qed.
+
+Lemma run_orNF u p fv fv' s1 A A' sX X s3 X' n1 fv2:
+  run u p fv s1 A None A' false fv' ->
+    run u p fv' sX X s3 X' n1 fv2 ->
+        run u p fv s1 (Or (Some A) sX X) s3 (omap (fun x => Or None sX x) X') false fv2.
+Proof. by move=> /run_or_correct_left; eauto. Qed.
