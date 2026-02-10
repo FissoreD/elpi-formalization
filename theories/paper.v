@@ -6,15 +6,18 @@ From det Require Import list tree elpi.
 From det Require Import t2l valid_tree elpi elpi_equiv.
 
 
+Section S.
+Variable u : Unif.
 (*prooftree: runbp*)
 (*SNIP: run_sig *)
-Inductive runT (u:Unif) (p : program): fvS -> Sigma -> tree -> 
+Inductive runT (p : program): fvS -> Sigma -> tree -> 
                   Sigma -> option tree -> Prop :=
 (*ENDSNIP: run_sig *)
   | run_done s1 s2 A B fv0           : success A -> get_subst s1 A = s2 -> next_alt true A = B -> runT fv0 s1 A s2 B
   | run_step  s1 s2 r A B fv0 fv1 st : path_atom A -> step u p fv0 s1 A = (fv1, st, B) -> runT fv1 s1 B s2 r -> runT fv0 s1 A s2 r
   | run_fail s1 s2 A B r fv0         : failed A -> next_alt false A = Some B -> runT fv0 s1 B s2 r -> runT fv0 s1 A s2 r.
 (*endprooftree: runbp*)
+End S.
 
 Lemma run_runT u p fv s0 t0 s1 t1:
   runT u p fv s0 t0 s1 t1 -> (exists b fv1, tree.run u p fv s0 t0 (Some s1) t1 b fv1).

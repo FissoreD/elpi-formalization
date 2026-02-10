@@ -933,11 +933,13 @@ Fixpoint select u (query : Tm) (modes:list mode) (rules: list R) sigma : (fvS * 
    when we "fresh the program" we need to takes variables
    outside this set
 *)
+Section s.
+Variable u : Unif.
 (*SNIP: bc_type*)
-Definition bc : Unif -> program -> fvS -> Tm -> 
+Definition bc : program -> fvS -> Tm -> 
                         Sigma -> fvS * seq (Sigma * seq A) :=
 (*ENDSNIP: bc_type*)
-  fun u pr fv (query:Tm) s =>
+  fun pr fv (query:Tm) s =>
   let query := deref s query in
   match callable query with
       | None => (fv, [::]) (*this is a call with flex head, in elpi it is an error! *)
@@ -950,7 +952,7 @@ Definition bc : Unif -> program -> fvS -> Tm ->
           | None => (fv, [::])
           end
       end.
-
+End s.
 
 (* Lemma select_in_rules u fv R modes rules s r:
   (select u fv R modes rules s) = r ->
