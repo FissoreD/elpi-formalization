@@ -360,7 +360,7 @@ Section s.
   (*SNIP: run_orSST *)
   Lemma run_orSST p v0 v2 s0 s1 sm t0 t0' t1 t1':
     runT p v0 s0 (Or (Some t0) sm t1) (Some (s1, (Some (Or (Some t0') sm t1')))) false v2 ->
-    (exists b, runT p v0 s0 t0 (Some (s1, Some t0')) b v2 /\ t1' = if b then KO else t1).
+    exists b, runT p v0 s0 t0 (Some (s1, Some t0')) b v2 /\ t1' = if b then KO else t1.
   (*ENDSNIP: run_orSST *)
   Proof.
     move=> /run_or_complete.
