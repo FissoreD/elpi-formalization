@@ -313,8 +313,7 @@ Section s.
   (*SNIP: runSST_or *)
   Lemma runSST_or: forall p v0 v1 s0 s1 t0 t0' sm t1,
     runT p v0 s0 t0 (Some (s1, Some t0')) true v1 ->
-      let sR := Some (Or (Some t0') sm KO) in
-      runT p v0 s0 (Or (Some t0) sm t1) (Some (s1, sR)) false v1.
+      runT p v0 s0 (Or (Some t0) sm t1) (Some (s1, Some (Or (Some t0') sm KO))) false v1.
   (*ENDSNIP: run_orSST *)
   Proof. move=> > /run_or_correct_left H; auto. Qed.
 
