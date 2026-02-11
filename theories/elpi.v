@@ -12,7 +12,7 @@ Bind Scope L with IsList.
 
 (*SNIP: elpi_def*)
 Inductive alts  := nilA | consA of (Sigma * goals) & alts
-with      goals := nilG | consG of (A     * alts)  & goals .
+with      goals := nilG | consG of (A * alts)  & goals .
 (*ENDSNIP: elpi_def*)
 
 Declare Scope alts_scope.
