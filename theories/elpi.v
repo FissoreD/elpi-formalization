@@ -203,21 +203,17 @@ Section cat.
   Definition catl {H : IsList A B} (pref: B) (e: T * B) := (e.1, pref ++ e.2).
 End cat.
 
-Definition save_goals (a: alts) (gs b:goals) := map (catr a) b ++ gs.
+Definition save_goals (a: alts) (gs:goals) (b: seq A) := 
+    seq2goals [seq (x, a) | x <- b] ++ gs.
 
-Definition save_alts (a : alts) (gs: goals) (bs : alts) := 
-  map (fun '(s,x) => (s, save_goals a gs x)) bs.
+Definition save_alts (a : alts) (gs: goals) (bs : seq (Sigma * seq A)) := 
+  seq2alts [seq (x.1, save_goals a gs (x.2)) | x <- bs].
 
 Definition empty_ca_G (g : A * alts) :=
   match g with (_,[::]) => true | _ => false end.
 
 Definition empty_caG goals := all empty_ca_G goals.
 Definition empty_ca alts := all (fun x => empty_caG (snd x)) alts.
-
-Definition a2g (b: seq A) := seq2goals [seq (x, [::]) | x <- b].
-
-Definition r2a (b: (seq (Sigma * seq A))) : alts := 
-    seq2alts [seq (x.1, a2g x.2) | x <- b].
 
 (* Definition a2g1 (b : Sigma * R) := a2g b.2.(premises). *)
 
@@ -234,7 +230,7 @@ Notation bc := (bc u).
 (*SNIP: stepE *)
 Definition stepE v0 t s a gl :=
   let (v1, rs) := bc p v0 t s in
-  (v1, save_alts a gl (r2a rs)).
+  (v1, save_alts a gl rs).
 (*ENDSNIP: stepE *)
 
 
@@ -260,11 +256,20 @@ Inductive runE : fvS -> alts -> option (Sigma * alts) -> Prop :=
 (*ENDSNIP: runE *)
 (*endprooftree: nurbp *)
 
+Lemma size_seq2alts l : size (seq2alts l) = seq.size l.
+Proof. by elim: l => //= x xs<-//. Qed.
+
+Lemma map_seq2alts f l : map f (seq2alts l) = seq2alts (seq.map f l).
+Proof. by elim: l => //= x xs<-//. Qed.
+
+Lemma map_seq2goals f l : map f (seq2goals l) = seq2goals (seq.map f l).
+Proof. by elim: l => //= x xs<-//. Qed.
+
 Lemma stepE_len v t s a1 a2 gl:
   size (stepE v t s a1 gl).2 = size (stepE v t s a2 gl).2.
 Proof.
   rewrite/stepE; case: bc => //= _ b.
-  by rewrite/save_alts !size_map.
+  by rewrite/save_alts !size_seq2alts !seq.size_map.
 Qed.
 
 Lemma nur_consistent v A s1 s2 :

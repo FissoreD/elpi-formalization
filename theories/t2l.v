@@ -47,6 +47,8 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
       [:: (a, ca) & add_deepG bt l tl]%G
   end.
 
+  Definition a2g (b: seq A) := seq2goals [seq (x, [::]) | x <- b].
+
   (* bt is the backtracking list for the cut-alternatives
     this list is important since in this tree:
           or   

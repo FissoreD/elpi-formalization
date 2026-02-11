@@ -273,15 +273,21 @@ Section NurProp.
   Lemma empty_ca_atoms  b: empty_caG (a2g b).
   Proof. elim: b => //= -[]//. Qed.
 
-  Lemma empty_ca_atoms1 rs: empty_ca (r2a rs).
-  Proof. 
-    rewrite/empty_ca.
-    elim: rs => //=-[s b l]/= H.
-    rewrite all_cons empty_ca_atoms//.
+
+  Lemma seq_catr {T:Type} ca (b: seq T):
+    [seq catr ca j | j <- [seq (x, [::]) | x <- b]] = [seq (x, ca) | x <- b].
+  Proof. elim: b => //= x xs <-; rewrite/catr//= cat0s//. Qed.
+
+  Lemma save_goals_a2g b ca: 
+    map (fun e : A * alts => (e.1, e.2 ++ ca)) (a2g b) =
+    seq2goals [seq (x, ca) | x <- b].
+  Proof.
+    elim: b => //= x xs <-; rewrite /a2g/= map_seq2goals seq_catr map_cons//=cat0s.
+    rewrite map_seq2goals seq_catr//.
   Qed.
 
   Lemma s2l_big_or k s {b bs ca gs}:
-    (s, save_goals ca gs (a2g b)) :: (save_alts ca gs (r2a bs)) =
+    (s, save_goals ca gs b) :: (save_alts ca gs bs) =
     map (catr gs) (t2l (Or (Some KO) s (big_or b bs)) k ca).
   Proof. 
     move=>/=; clear k.
@@ -292,13 +298,14 @@ Section NurProp.
       rewrite /save_goals; f_equal.
       have:= empty_ca_atoms b.
       set X := (a2g _).
-      generalize X => {}X.
-      move=> /add_ca_deep_map_empty->//.
+      rewrite/catr/= => /add_ca_deep_map_empty<-.
+      by rewrite map_seq2goals seq_catr.
     move=> [s1 bo]/=rs IH s2 b ca gs/=.
     rewrite add_ca_deep_empty1 add_ca_deep_cat map_cat t2l_big_and/=map_cons.
     rewrite cat_cons cat0s; f_equal.
-      rewrite -add_ca_deep_map_empty//.
-      rewrite empty_ca_atoms//.
+      rewrite -add_ca_deep_map_empty//=.
+      by rewrite/catr/=/save_goals save_goals_a2g.
+      by rewrite empty_ca_atoms//.
     apply: IH.
   Qed.
 
@@ -364,40 +371,34 @@ Section NurProp.
 
   Lemma map_nil F : map F [::]%G = [::]%G. by []. Qed.
 
-  Lemma save_goals_cons (a: alts) (gs :goals) b1 (bs : goals) :
-    save_goals a gs [:: b1 & bs]%G =
-    [:: catr a b1 & save_goals a gs bs]%G.
-    by rewrite /save_goals map_cons.
-Qed.
+  Lemma save_goals_cons (a: alts) (gs :goals) b1 bs :
+    save_goals a gs [:: b1 & bs] =
+    [:: (b1, a) & save_goals a gs bs]%G.
+  Proof. rewrite/save_goals/= cat_cons//. Qed.
 
   Lemma add_deep_goalsP hd r ys l tl:
-    empty_caG hd -> empty_caG r ->
+    empty_caG hd ->
       add_deepG l hd (save_goals (ys ++ l) tl r) ++ hd =
         save_goals (map (catr hd) (add_deep l hd ys) ++ l)
           ( (add_deepG l hd tl) ++ hd) r.
   Proof.
     elim: r hd ys l tl.
-      by rewrite /save_goals =>>; rewrite !map_nil !cat0s.
+      by rewrite /save_goals// => >/=; rewrite !cat0s.
     move=> g gs IH hd ys l tl Hhd.
-    rewrite/empty_caG all_cons => /andP[H1 H2].
-    rewrite !save_goals_cons -IH //.
-    case: g H1 => [? [|//]] /= _.
-    rewrite !cat0s size_cat addnK drop_size_cat//add_deep_cat take_size_cat ?size_add_deep //.
-    rewrite !cat_cons; f_equal.
-    rewrite /catr/= cat0s//.
+    rewrite !save_goals_cons -IH //= !cat_cons.
+    rewrite size_cat addnK drop_size_cat//add_deep_cat take_size_cat ?size_add_deep//.
   Qed.
 
   Lemma add_deep_altsP hd rs ys l tl:
-    empty_caG hd -> empty_ca rs ->
+    empty_caG hd ->
     map (catr hd) (add_deep l hd (save_alts (ys ++ l) tl rs)) =
       save_alts (map (catr hd) (add_deep l hd ys) ++ l)
         ((add_deepG l hd tl) ++ hd) rs.
   Proof.
     move=> H.
     elim: rs => //=-[s1 g] gs IH.
-    rewrite /empty_ca all_cons=>/andP[H1 H2].
-    rewrite /save_alts !map_cons; f_equal; last by apply: IH H2.
-    rewrite /catr add_deep_goalsP//.
+    rewrite /=/save_alts/= map_cons/= IH.
+    rewrite/catr//=add_deep_goalsP//.
   Qed.
 
   Lemma step_cb_same_subst1 fv fv' A R s1:
@@ -697,27 +698,34 @@ Qed.
       by rewrite -cat_cons t2l_big_and map_cons !cat_cons cat0s//.
   Qed.
 
+  Lemma add_ca_deep_map2 bt a b:
+    [seq add_ca_deep_g bt j | j <- [seq (x, a) | x <- b]] = 
+    [seq (x, add_ca_deep bt a ++ bt) | x <- b].
+  Proof.
+    elim: b => //= x xs IH; rewrite IH//.
+  Qed.
+
   Lemma save_alt_add_ca_deepA bt a gs bs:
-    empty_ca bs ->
       add_ca_deep bt ((save_alts a gs bs)) = 
         (save_alts ((add_ca_deep bt a) ++ bt) (add_ca_deep_goals bt gs) bs)
   with save_alt_add_ca_deepG bt a gs b:
-    empty_caG b ->
       add_ca_deep_goals bt (save_goals a gs b) = 
         save_goals ((add_ca_deep bt a) ++ bt) (add_ca_deep_goals bt gs) b.
   Proof.
-    all: rewrite/save_alts/save_goals/empty_ca in save_alt_add_ca_deepA save_alt_add_ca_deepG *.
+    all: rewrite/save_alts/save_goals/empty_ca/=
+     in save_alt_add_ca_deepA save_alt_add_ca_deepG *.
     {
       case: bs => //=-[s1 b] bs.
-      rewrite all_cons =>/andP[H1 H2].
-      rewrite map_cons.
-      rewrite (save_alt_add_ca_deepG _ _ _ _ H1).
-      rewrite save_alt_add_ca_deepA//.
+      f_equal.
+        rewrite -add_ca_deep_goals_map map_cat.
+        rewrite !add_ca_deep_goals_map/=.
+        do 2 f_equal.
+        by rewrite -add_ca_deep_goals_map map_seq2goals add_ca_deep_map2.
+      by rewrite save_alt_add_ca_deepA.
     }
-    case: b; rewrite ?cat0s // => -[a' [t|]] H; rewrite  ?map_cons ?cat_cons //.
-    simpl.
-    rewrite save_alt_add_ca_deepG // !cat0s //.
-    rewrite /catr/= cat0s//.
+    case: b => /=; first by rewrite !cat0s//.
+    move=> x xs; rewrite cat_cons/=.
+    rewrite save_alt_add_ca_deepG//.
   Qed.
 
   Lemma s2l_Expanded_call fv fv' s s3 A R l q gs xs ca:
@@ -729,8 +737,8 @@ Qed.
       bcr.1 = fv' &
       t2l R s l =
       if bcr.2 is (w :: ws)%SEQ then
-       (w.1, save_goals (xs++l) gs (a2g w.2)) :: 
-        ((save_alts (xs++l) gs (r2a ws)) ++ xs)
+       (w.1, save_goals (xs++l) gs w.2) :: 
+        ((save_alts (xs++l) gs ws) ++ xs)
       else xs]
       .
   Proof.
@@ -809,7 +817,7 @@ Qed.
       (* set hd := (a2g B0). *)
       rewrite -!cat_cons; f_equal.
       rewrite add_deep_goalsP//?empty_ca_atoms//.
-      by rewrite add_deep_altsP//(empty_ca_atoms1, empty_ca_atoms).
+      by rewrite add_deep_altsP// empty_ca_atoms.
   Qed.
 
   Lemma s2l_next_alt_tl {A s1 bt}:
