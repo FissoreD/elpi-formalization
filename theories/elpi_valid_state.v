@@ -23,8 +23,8 @@ Section NurValidState.
   *)
   Fixpoint valid_caG (gs:goals) (a:alts) (bt:alts) {struct gs} :=
     match gs with
-    | no_goals => true
-    | more_goals (_, ca) xs =>
+    | nilG => true
+    | consG (_, ca) xs =>
       if suffix bt ca then
         suffix ca (a ++ bt) &&
         let n := size ca - size bt in
@@ -38,8 +38,8 @@ Section NurValidState.
       if b && (ca == bt) then true
       else
       match ca with
-      | no_alt => ~~b (*here b = true and bt is not its suffix, i.e. error*)
-      | more_alt hd tl => 
+      | nilA => ~~b (*here b = true and bt is not its suffix, i.e. error*)
+      | consA hd tl => 
         if ca1 == [::] then empty_caG hd.2 && empty_ca tl 
         else valid_caG hd.2 (behead ca1) bt && valid_caA_aux b tl (behead ca1) bt
     end

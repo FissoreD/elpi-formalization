@@ -85,12 +85,12 @@ Proof.
       repeat eexists.
         apply: BackT fA nA _.
         apply: StopT => //.
-      have:=@s2l_next_alt_tl _ s1 no_alt vA' skA.
+      have:=@s2l_next_alt_tl _ s1 nilA vA' skA.
       by rewrite H => ->//; rewrite behead_cons.
     have [skA ?]:= s2l_empty_hd_success vA fA H; subst.
     repeat eexists.
       by apply: StopT.
-    have:=@s2l_next_alt_tl _ s1 no_alt vA skA.
+    have:=@s2l_next_alt_tl _ s1 nilA vA skA.
     by rewrite H => ->//; rewrite behead_cons.
   - move=> s1 a ca r gl fv ELPI IH s A vA H.
     {

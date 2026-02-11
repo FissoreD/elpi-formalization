@@ -101,7 +101,7 @@ Section check.
     end.
 
 
-  Definition no_alt A := next_alt (success A) A == None.
+  Definition nilA A := next_alt (success A) A == None.
 
   (** DOC:
     a tree is deterministic if it calls deterministic atoms. 
@@ -119,7 +119,7 @@ Section check.
     | KO | OK => true
     | And A B0 B =>
         det_tree sP B && 
-        if no_alt A
+        if nilA A
         then det_tree sP A || has_cut B
         else
           (* alternatives are mutually exclusive (only 1 alt can succeed) || B/B0 cuts them *)
@@ -175,8 +175,8 @@ Section check.
     by move=> /andP[->]/=.
   Qed.
 
-  Lemma no_alt_cutl A: success A -> no_alt (cutl A).
-  Proof. by rewrite /no_alt success_cut => ->; rewrite next_alt_cutl. Qed.
+  Lemma no_alt_cutl A: success A -> nilA (cutl A).
+  Proof. by rewrite /nilA success_cut => ->; rewrite next_alt_cutl. Qed.
 
   Lemma det_tree_cutl {sP A}: success A -> det_tree sP (cutl A).
   Proof.
@@ -262,8 +262,8 @@ Section check.
       has_cut (step u p sv s A).2.
   Proof. move/step_has_cut_help => /(_ p sv s)[]//->//. Qed.
 
-  Lemma succ_failF_no_alt A: success A = false -> failed A = false -> no_alt A = false.
-  Proof. by rewrite/no_alt => -> /failedF_next_alt ->//. Qed.
+  Lemma succ_failF_no_alt A: success A = false -> failed A = false -> nilA A = false.
+  Proof. by rewrite/nilA => -> /failedF_next_alt ->//. Qed.
 
 
   Goal forall sP s, det_tree sP (Or (Some OK) s OK) == false.
@@ -316,8 +316,8 @@ Section check.
       by move=> [<-]/=; rewrite cB0 cB orbT.
   Qed.
 
-  Lemma next_alt_no_alt b A A' : next_alt b A  = Some A' -> success A = b -> no_alt A = false.
-  Proof. by rewrite /no_alt=> + -> => ->. Qed.
+  Lemma next_alt_no_alt b A A' : next_alt b A  = Some A' -> success A = b -> nilA A = false.
+  Proof. by rewrite /nilA=> + -> => ->. Qed.
 
   Lemma no_free_alt_next_alt {sP A R b}:
     det_tree sP A -> next_alt b A = Some R -> det_tree sP R.
@@ -423,7 +423,7 @@ Section check.
         by rewrite (step_keep_cut hcB) in hcsB.
       rewrite /= dB /=.
       case fA: (failed A).
-        by rewrite /no_alt /sA failed_step//= SA.
+        by rewrite /nilA /sA failed_step//= SA.
       rewrite (succ_failF_no_alt SA fA) => /andP[+ ->]/=.
       by case/orP=> [/HA->/= | /[dup]/andP[-> ?] ->]; rewrite ?andbT ?orbT ?if_same.
   Qed.

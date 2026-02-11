@@ -6,18 +6,18 @@ From det Require Import zify_ssreflect.
 
 (* Fixpoint list_to_state (l: alts) : state :=
   match l with
-  | no_alt => Bot
-  | more_alt x no_alt => 
+  | nilA => Bot
+  | consA x nilA => 
     let l := goals_to_state x.2 KO in
     Or KO x.1 l
-  | more_alt x (more_alt y ys as t) => 
+  | consA x (consA y ys as t) => 
     let t := goals_to_state x.2 (list_to_state t) in
     Or KO x.1 t
   end
 with goals_to_state (l:goals) t: (state):=
   match l with
-  | no_goals => (Or Top empty t)
-  | more_goals x xs => 
+  | nilG => (Or Top empty t)
+  | consG x xs => 
     let '(l, tca) := goal_to_state x in
     let r := goals_to_state xs t  in
       (And l l r)
@@ -33,11 +33,11 @@ Inductive G' :=
   | call' : program -> Callable -> G'
   | cut' : alts' -> G'
 with alts' :=
-  | no_alt'
-  | more_alt' : (nat * Sigma * goals') -> alts' -> alts'
+  | nilA'
+  | consA' : (nat * Sigma * goals') -> alts' -> alts'
 with goals' :=
-  | no_goals'
-  | more_goals' : (nat * G') -> goals' -> goals' 
+  | nilG'
+  | consG' : (nat * G') -> goals' -> goals' 
   .
 
 Fixpoint erase_G' (g : G') : G :=
@@ -47,19 +47,19 @@ Fixpoint erase_G' (g : G') : G :=
   end
 with erase_alts' (a : alts') : alts := 
   match a with
-  | no_alt' => nilC
-  | more_alt' (_, s,gl') a' => (s,erase_goals' gl') ::: (erase_alts' a')
+  | nilA' => nilC
+  | consA' (_, s,gl') a' => (s,erase_goals' gl') ::: (erase_alts' a')
   end
 with erase_goals' (a : goals') : goals :=
   match a with
-  | no_goals' => nilC
-  | more_goals' (_, g') a' => (erase_G' g') ::: (erase_goals' a')
+  | nilG' => nilC
+  | consG' (_, g') a' => (erase_G' g') ::: (erase_goals' a')
   end.
 
   Fixpoint append_alts' l1 l2 := 
     match l1 with
-    | no_alt' => l2
-    | more_alt' (n, hd) tl => more_alt' (n, hd) (append_alts' tl l2)
+    | nilA' => l2
+    | consA' (n, hd) tl => consA' (n, hd) (append_alts' tl l2)
     end.
 
     Axiom eqb_alts' : alts' -> alts' -> bool.
@@ -74,14 +74,14 @@ with erase_goals' (a : goals') : goals :=
 
   Fixpoint map_alts' F l :=
     match l with
-    | no_alt' => no_alt'
-    | more_alt' x xs => more_alt' (F x) (map_alts' F xs)
+    | nilA' => nilA'
+    | consA' x xs => consA' (F x) (map_alts' F xs)
     end.
 
 
   #[program] Global Instance IsList_alts' : @IsList (nat * Sigma * goals') alts' :=
     {| 
-    nilC := no_alt'; consC := more_alt';
+    nilC := nilA'; consC := consA';
     appendC := append_alts'; 
     map := map_alts';
     (*size := _; take := _; drop := _;
@@ -92,20 +92,20 @@ with erase_goals' (a : goals') : goals :=
 
   Fixpoint append_goals' l1 l2 := 
     match l1 with
-    | no_goals' => l2
-    | more_goals' (n, hd) tl => more_goals' (n, hd) (append_goals' tl l2)
+    | nilG' => l2
+    | consG' (n, hd) tl => consG' (n, hd) (append_goals' tl l2)
     end.
 
   Fixpoint map_goals' F l :=
     match l with
-    | no_goals' => no_goals'
-    | more_goals' x xs => more_goals' (F x) (map_goals' F xs)
+    | nilG' => nilG'
+    | consG' x xs => consG' (F x) (map_goals' F xs)
     end.
 
 
   #[program] Global Instance IsList_goals' : @IsList _ _ :=
     {| 
-    nilC := no_goals'; consC := more_goals';
+    nilC := nilG'; consC := consG';
     appendC := append_goals';
     map := map_goals';
     (*size := _; take := _; drop := _;
@@ -174,13 +174,13 @@ Fixpoint decorate_G (g : G) : G' :=
   end
 with decorate_alts (a : alts) : alts' :=
   match a with
-  | no_alt => nilC
-  | more_alt (s,gl) a => (0, s,decorate_goals gl) ::: (decorate_alts a)
+  | nilA => nilC
+  | consA (s,gl) a => (0, s,decorate_goals gl) ::: (decorate_alts a)
   end
 with decorate_goals (a : goals) : goals' :=
   match a with
-  | no_goals => nilC
-  | more_goals g a => (0, decorate_G g) ::: (decorate_goals a)
+  | nilG => nilC
+  | consG g a => (0, decorate_G g) ::: (decorate_goals a)
   end.
 
 Lemma erase_decorate_G x : erase_G' (decorate_G x) = x
@@ -328,13 +328,13 @@ Qed.
 
 Fixpoint la2t (a : alts') : state :=
   match a with
-  | no_alt' => Bot
-  | more_alt' (n,s,gl) a => g2t gl
+  | nilA' => Bot
+  | consA' (n,s,gl) a => g2t gl
   end
 with g2t (g : goals') : state :=
   match g with
-  | no_goals' => Top
-  | more_goals' (n,g) gs => G2t g
+  | nilG' => Top
+  | consG' (n,g) gs => G2t g
   end
 with G2t (g : G') : state :=
   match g with

@@ -7,14 +7,14 @@ From det Require Import zify_ssreflect.
 
 Fixpoint a2t_ l :=
   match l with
-  | no_alt => Bot
-  | more_alt (s1, x) t =>
+  | nilA => Bot
+  | consA (s1, x) t =>
     Or KO s1 (Or (gs2t_ x) empty (a2t_ t))
   end
 with gs2t_ l :=
   match l with
-  | no_goals => Top
-  | more_goals x xs => 
+  | nilG => Top
+  | consG x xs => 
     let tl := gs2t_ xs in
     match (g2t_ x) with
     | (x, None) => And x tl tl 
@@ -55,7 +55,7 @@ Section s.
   Goal exists x, (a2t_ ((s, (c ::: (q:::nilC))) ::: nilC)) = x.
   Proof. move=> /=. Admitted.
 
-  Goal exists x, a2t_ ((s, (c ::: nilC)) ::: ((s, (q ::: nilC)) ::: no_alt)) = x.
+  Goal exists x, a2t_ ((s, (c ::: nilC)) ::: ((s, (q ::: nilC)) ::: nilA)) = x.
   Proof. move=> /=. Admitted.
 
   Goal

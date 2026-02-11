@@ -26,13 +26,13 @@ Definition clean_ca_G f (g : A * alts) :=
 
 Fixpoint clean_ca_goals gl :=
   match gl with
-  | no_goals => nilC 
-  | more_goals hd tl => (clean_ca_G clean_ca hd) :: (clean_ca_goals tl)
+  | nilG => nilC 
+  | consG hd tl => (clean_ca_G clean_ca hd) :: (clean_ca_goals tl)
   end
 with clean_ca (ats: alts) : alts :=
   match ats with
-  | no_alt => nilC
-  | more_alt (hd,xs) tl => (hd, clean_ca_goals xs) :: (clean_ca tl)
+  | nilA => nilC
+  | consA (hd,xs) tl => (hd, clean_ca_goals xs) :: (clean_ca tl)
   end.
 
 Definition tester l r :=
@@ -47,7 +47,7 @@ Proof.
   by move=> //.
 Qed.
 
-Definition callN A := (call A, no_alt).
+Definition callN A := (call A, nilA).
 
 Goal forall A B D0 D,
   (* (((! \/ A) \/ B)) /\ (D) *)

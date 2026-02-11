@@ -8,14 +8,14 @@ Search exapnedb failed.
 
 Fixpoint a2t_ l :=
   match l with
-  | no_alt => Bot
-  | more_alt (s, x) xs =>
+  | nilA => Bot
+  | consA (s, x) xs =>
     Or (a2t_ xs) s (gs2t_ x)
   end
 with gs2t_ l :=
   match l with
-  | no_goals => Top
-  | more_goals x xs => 
+  | nilG => Top
+  | consG x xs => 
     match (g2t_ x) with
     | (x, None) => And (gs2t_ xs) x x
     | (x, Some _) => And (gs2t_ xs) x x
@@ -54,7 +54,7 @@ Section s.
   Goal exists x, (a2t ((s, (c ::: (q:::nilC))) ::: nilC)) = x.
   Proof. move=> /=. Admitted.
 
-  Goal exists x, a2t ((s, (c ::: nilC)) ::: ((s, (q ::: nilC)) ::: no_alt)) = x.
+  Goal exists x, a2t ((s, (c ::: nilC)) ::: ((s, (q ::: nilC)) ::: nilA)) = x.
   Proof. move=> /=. Admitted.
 
   Goal
@@ -157,13 +157,13 @@ Module remake.
 
   Fixpoint a2t_ l :=
     match l with
-    | no_alt => Bot
-    | more_alt (s, x) xs => gs2t_ s x (a2t_ xs)
+    | nilA => Bot
+    | consA (s, x) xs => gs2t_ s x (a2t_ xs)
     end
   with gs2t_ s l t :=
     match l with
-    | no_goals => add_rotate s Top t
-    | more_goals x xs => 
+    | nilG => add_rotate s Top t
+    | consG x xs => 
       let tl := gs2t_ s xs t in
       let '(node, bt) := g2t_ x in
       match bt with
@@ -189,7 +189,7 @@ Module remake.
     Goal exists x, (a2t ((s, (c ::: (q:::nilC))) ::: nilC)) = x.
     Proof. move=> /=. Admitted.
 
-    Goal exists x, a2t ((s, (c ::: nilC)) ::: ((s, (q ::: nilC)) ::: no_alt)) = x.
+    Goal exists x, a2t ((s, (c ::: nilC)) ::: ((s, (q ::: nilC)) ::: nilA)) = x.
     Proof. move=> /=. Admitted.
 
     Goal

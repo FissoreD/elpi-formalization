@@ -391,7 +391,7 @@ Inductive runE : Sigma -> list G -> list alt -> Sigma -> list alt -> Prop :=
 | CutE s s1 a ca r gl : runE s gl ca s1 r -> runE s [:: cut ca & gl] a s1 r
 | CallE p s s1 a b bs gl r t :
     F p t s = [:: b & bs ] ->
-    runE s (save_alt a (a2gs p b) gl) (more_alt a (map (a2gs p) bs) gl) s1 r ->
+    runE s (save_alt a (a2gs p b) gl) (consA a (map (a2gs p) bs) gl) s1 r ->
     runE s [::call p t & gl] a s1 r
 | BackE p s s1 t gl a al r :
     F p t s = [::] -> runE s a al s1 r -> runE s [::call p t & gl] (a :: al) s1 r.
@@ -406,13 +406,13 @@ Definition add_ca alts a :=
   | call pr t => call pr t
   end.
 Definition save_alt a gs b := map (add_ca a) b ++ gs.
-Definition more_alt a bs gs := map (save_alt a gs) bs ++ a.
+Definition consA a bs gs := map (save_alt a gs) bs ++ a.
 ```
 
 The interesting case in `CallE` involves finding the rules applicable to a term `t` in
 a program `p`. Since the term and program types originate from `lang`, we reuse
 `F` to find these rules. The list of goals is then updated using auxiliary
-functions `add_ca`, `save_alt`, and `more_alt`.
+functions `add_ca`, `save_alt`, and `consA`.
 
 ### Tree_to_list
 

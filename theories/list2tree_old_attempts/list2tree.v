@@ -6,18 +6,18 @@ From det Require Import zify_ssreflect.
 
 (* Fixpoint list_to_state (l: alts) : state :=
   match l with
-  | no_alt => Bot
-  | more_alt x no_alt => 
+  | nilA => Bot
+  | consA x nilA => 
     let l := goals_to_state x.2 KO in
     Or KO x.1 l
-  | more_alt x (more_alt y ys as t) => 
+  | consA x (consA y ys as t) => 
     let t := goals_to_state x.2 (list_to_state t) in
     Or KO x.1 t
   end
 with goals_to_state (l:goals) t: (state):=
   match l with
-  | no_goals => (Or Top empty t)
-  | more_goals x xs => 
+  | nilG => (Or Top empty t)
+  | consG x xs => 
     let '(l, tca) := goal_to_state x in
     let r := goals_to_state xs t  in
       (And l l r)
@@ -33,12 +33,12 @@ Inductive G' :=
   | call' : program -> Callable -> G'
   | cut' : alts' -> G'
 with alts' :=
-  | no_alt'
-  | more_alt' : (Sigma * goals') -> alts' -> alts'
+  | nilA'
+  | consA' : (Sigma * goals') -> alts' -> alts'
   | append_alt' :  alts' -> alts' -> alts'
 with goals' :=
-  | no_goals'
-  | more_goals' : G' -> goals' -> goals' 
+  | nilG'
+  | consG' : G' -> goals' -> goals' 
   | append_goals' : goals' -> goals' -> goals' 
   .
 
@@ -49,20 +49,20 @@ with goals' :=
   end
 with erase_alts' (a : alts') : alts :=
   match a with
-  | no_alt' => nilC
-  | more_alt' (s,gl') a' => (s,erase_goals' gl') ::: (erase_alts' a')
+  | nilA' => nilC
+  | consA' (s,gl') a' => (s,erase_goals' gl') ::: (erase_alts' a')
   | append_alt' a1' a2' => (erase_alts' a1') ++ (erase_alts' a2')
   end
 with erase_goals' (a : goals') : goals :=
   match a with
-  | no_goals' => nilC
-  | more_goals' g' a' => (erase_G' g') ::: (erase_goals' a')
+  | nilG' => nilC
+  | consG' g' a' => (erase_G' g') ::: (erase_goals' a')
   | append_goals' a1' a2' => (erase_goals' a1') ++ (erase_goals' a2')
   end.
 
   #[program] Global Instance IsList_alts' : @IsList (Sigma * goals') alts' :=
     {| 
-    nilC := no_alt'; consC := more_alt';
+    nilC := nilA'; consC := consA';
     appendC := append_alt'; 
     (*size := _; take := _; drop := _;
     behead := _; eqB := _; suffix:= _; all:= _;
@@ -73,7 +73,7 @@ with erase_goals' (a : goals') : goals :=
 
     #[program] Global Instance IsList_goals' : @IsList G' goals' :=
     {| 
-    nilC := no_goals'; consC := more_goals';
+    nilC := nilG'; consC := consG';
     appendC := append_goals'; 
     (*size := _; take := _; drop := _;
     behead := _; eqB := _; suffix:= _; all:= _;
@@ -139,13 +139,13 @@ Fixpoint decorate_G (g : G) : G' :=
   end
 with decorate_alts (a : alts) : alts' :=
   match a with
-  | no_alt => nilC
-  | more_alt (s,gl) a => (s,decorate_goals gl) ::: (decorate_alts a)
+  | nilA => nilC
+  | consA (s,gl) a => (s,decorate_goals gl) ::: (decorate_alts a)
   end
 with decorate_goals (a : goals) : goals' :=
   match a with
-  | no_goals => nilC
-  | more_goals g a => (decorate_G g) ::: (decorate_goals a)
+  | nilG => nilC
+  | consG g a => (decorate_G g) ::: (decorate_goals a)
   end.
 
 Lemma erase_decorate_G x : erase_G' (decorate_G x) = x
@@ -229,9 +229,9 @@ Definition G'2s (g : G') : state :=
 
 Fixpoint upto_append (a : goals') : state :=
   match a with
-  | no_goals' => Top
+  | nilG' => Top
   | append_goals' _ _ => Top
-  | more_goals' x xs => And (G'2s x) (upto_append xs) (upto_append xs)
+  | consG' x xs => And (G'2s x) (upto_append xs) (upto_append xs)
   end.
 
 
@@ -254,8 +254,8 @@ runE g [] -> runE' g g' [] []
 (* todo, flip everything *)
 (* Fixpoint alts'2s (a : alts') : state :=
   match a with
-  | no_alt' => Bot
-  | more_alt' (s,a) a1 => Bot
+  | nilA' => Bot
+  | consA' (s,a) a1 => Bot
   | append_alt' a1 a2 => 
        Or (aux Top a1) empty (alts'2s a2)
   end
@@ -263,14 +263,14 @@ with goals'2s (g : goals') : state :=
   Top 
 with aux reset (a : alts') : state := 
   match a with
-  | no_alt' => Bot
-  | more_alt' (s,a) a1 =>
+  | nilA' => Bot
+  | consA' (s,a) a1 =>
      (* a may not be unexplored, the reset point is reset *)
      (* one alternative for this level *)
      And (upto_append a) reset a
   | append_alt' a1 a2 => 
      (* the level had only one applicable rule *)
-  | more_alt' (s,a) a1 => And reset aux (upto_append a) a1
+  | consA' (s,a) a1 => And reset aux (upto_append a) a1
 
   end
 

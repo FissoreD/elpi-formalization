@@ -11,8 +11,8 @@ Infix "::" := consC : L.
 Bind Scope L with IsList.
 
 (*SNIP: elpi_def*)
-Inductive alts := no_alt | more_alt of (Sigma * goals) & alts
-with goals := no_goals | more_goals of (A * alts) & goals .
+Inductive alts  := nilA | consA of (Sigma * goals) & alts
+with      goals := nilG | consG of (A     * alts)  & goals .
 (*ENDSNIP: elpi_def*)
 
 Declare Scope alts_scope.
@@ -23,28 +23,28 @@ Declare Scope goals_scope.
 Delimit Scope goals_scope with G.
 Bind Scope goals_scope with goals.
 
-Notation "[ :: ]" := no_goals (format "[ :: ]") : goals_scope.
-Notation "[ :: ]" := no_alt (format "[ :: ]") : alts_scope.
+Notation "[ :: ]" := nilG (format "[ :: ]") : goals_scope.
+Notation "[ :: ]" := nilA (format "[ :: ]") : alts_scope.
 
-Notation "[ :: x1 ]" := (more_alt x1%G [::]) (format "[ ::  x1 ]") : alts_scope.
-Notation "[ :: x1 ]" := (more_goals x1%A [::]) (format "[ ::  x1 ]") : goals_scope.
+Notation "[ :: x1 ]" := (consA x1%G [::]) (format "[ ::  x1 ]") : alts_scope.
+Notation "[ :: x1 ]" := (consG x1%A [::]) (format "[ ::  x1 ]") : goals_scope.
 
-Notation "[ :: x & s ]" := (more_alt x%G s) (format "'[hv' [ :: '['  x ']' '/ ' &  s ] ']'") : alts_scope.
-Notation "[ :: x & s ]" := (more_goals x%A s) (format "'[hv' [ :: '['  x ']' '/ ' &  s ] ']'") : goals_scope.
+Notation "[ :: x & s ]" := (consA x%G s) (format "'[hv' [ :: '['  x ']' '/ ' &  s ] ']'") : alts_scope.
+Notation "[ :: x & s ]" := (consG x%A s) (format "'[hv' [ :: '['  x ']' '/ ' &  s ] ']'") : goals_scope.
 
-Notation "[ :: x1 , x2 , .. , xn & s ]" := (more_alt x1 (more_alt x2 .. (more_alt xn s) ..))
+Notation "[ :: x1 , x2 , .. , xn & s ]" := (consA x1 (consA x2 .. (consA xn s) ..))
   (format
   "'[hv' [ :: '['  x1 , '/'  x2 , '/'  .. , '/'  xn ']' '/ '  &  s ] ']'"
   ) : alts_scope.
-Notation "[ :: x1 , x2 , .. , xn & s ]" := (more_goals x1 (more_goals x2 .. (more_goals xn s) ..))
+Notation "[ :: x1 , x2 , .. , xn & s ]" := (consG x1 (consG x2 .. (consG xn s) ..))
   (format
   "'[hv' [ :: '['  x1 , '/'  x2 , '/'  .. , '/'  xn ']' '/ '  &  s ] ']'"
   ) : goals_scope.
 
-Notation "[ :: x1 ; x2 ; .. ; xn ]" := (more_alt x1 (more_alt x2 .. (more_alt xn [::]) ..))
+Notation "[ :: x1 ; x2 ; .. ; xn ]" := (consA x1 (consA x2 .. (consA xn [::]) ..))
   (format "[ :: '['  x1 ; '/'  x2 ; '/'  .. ; '/'  xn ']' ]"
   ) : alts_scope.
-Notation "[ :: x1 ; x2 ; .. ; xn ]" := (more_goals x1 (more_goals x2 .. (more_goals xn [::]) ..))
+Notation "[ :: x1 ; x2 ; .. ; xn ]" := (consG x1 (consG x2 .. (consG xn [::]) ..))
   (format "[ :: '['  x1 ; '/'  x2 ; '/'  .. ; '/'  xn ']' ]"
   ) : goals_scope.
 
@@ -54,14 +54,14 @@ Open Scope alts_scope.
 
 Fixpoint eqbA t1 t2 :=
   match t1, t2 with
-  | no_alt, no_alt => true
-  | more_alt (s1,h1) t1, more_alt (s2, h2) t2 => (s1 == s2) && eqbGs h1 h2 && eqbA t1 t2
+  | nilA, nilA => true
+  | consA (s1,h1) t1, consA (s2, h2) t2 => (s1 == s2) && eqbGs h1 h2 && eqbA t1 t2
   | _, _ => false
   end
 with eqbGs t1 t2 :=
   match t1, t2 with
-  | no_goals, no_goals => true
-  | more_goals (a1,h1) t1, more_goals (a2,h2) t2 => (a1 == a2) && eqbA h1 h2 && eqbGs t1 t2
+  | nilG, nilG => true
+  | consG (a1,h1) t1, consG (a2,h2) t2 => (a1 == a2) && eqbA h1 h2 && eqbGs t1 t2
   | _, _ => false
   end.
 
@@ -167,10 +167,10 @@ HB.instance Definition _ : hasDecEq alts := hasDecEq.Build alts alts_eqb_OK.
     mkIsList seq2goals goals2seq goals2seqs goals2seq0 seq2goalss seq2goals0
       goals2seqK seq2goalsK seq2goals_inj goals2seq_inj.
 
-Ltac fConsA x xs := change (more_alt x xs) with (consC x xs).
-Ltac fConsG x xs := change (more_goals x xs) with (consC x xs).
-Ltac fNilA := change no_alt with (@nilC _ _ IsList_alts).
-Ltac fNilG := change no_goals with nilC.
+Ltac fConsA x xs := change (consA x xs) with (consC x xs).
+Ltac fConsG x xs := change (consG x xs) with (consC x xs).
+Ltac fNilA := change nilA with (@nilC _ _ IsList_alts).
+Ltac fNilG := change nilG with nilC.
 
 Lemma seq2alts_cat : forall l1 l2,  seq2alts (l1 ++ l2) = (seq2alts l1 ++ seq2alts l2).
 Proof. by elim => //=[|x xs IH] l2; rewrite (cat0s, cat_cons)//IH. Qed.
