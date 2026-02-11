@@ -67,53 +67,6 @@ Section s.
       by move=> []/esym; apply: IH.
   Qed.
 
-  (* Lemma run_ko_left_Some_None fv fv' s2 X B r r1 b1 sIgn:
-    is_ko X ->
-    runT p fv sIgn (Or (Some X) s2 B) r r1 b1 fv' <->
-    runT p fv sIgn (Or None s2 B) r r1 b1 fv'.
-  Proof.
-    move=> kX; split => H.
-      inversion H; subst; clear H.
-      - by move: H0 => /=; rewrite is_ko_success.
-      - by move: H0; rewrite/= is_ko_step//.
-      - by move: H0; rewrite/= is_ko_step//.
-      - move: H0 H1 => /= fX; rewrite is_ko_next_alt//=.
-        case nB: next_alt => [B2|]//=[?]; subst.
-        by apply: next_alt_run; first by rewrite/=nB.
-      - move: H0; rewrite /=is_ko_next_alt//=.
-        case nB: next_alt => //= _.
-        by apply: FailT; rewrite/= (next_altFN_fail nB, nB).
-    inversion H; subst; clear H.
-    - move: H0 => /= sB.
-      case nB: next_alt => [B2|]/=.
-        apply: BackT => /=.
-          by rewrite is_ko_failed.
-          by rewrite is_ko_next_alt//failedF_next_alt//success_failed.
-        by apply: StopT; rewrite //= nB.
-      apply: BackT => /=.
-        by rewrite is_ko_failed.
-        by rewrite is_ko_next_alt//failedF_next_alt//success_failed.
-      by apply: StopT; rewrite //= nB.
-    - move: H0; rewrite/=!push; case eB: step => //=[[fvx []] B2]//=.
-    - move: H0; rewrite/=!push; case eB: step => [[fvx r'] B2]/=.
-      case: ifP.
-        destruct r' => // _ [??]; subst.
-        apply: BackT => /=.
-          by rewrite is_ko_failed//=.
-          by rewrite is_ko_next_alt//=failedF_next_alt// (step_not_failed eB)//.
-        by apply: StepT H1; rewrite /=eB//=.
-      move=> _ [???]; subst.
-      apply: BackT => /=.
-        by rewrite is_ko_failed//=.
-        by rewrite is_ko_next_alt//=failedF_next_alt// (step_not_failed eB)//.
-      by apply: StepT H1; rewrite /=eB//=.
-    - move: H0 H1 => /=fB.
-      case nB: next_alt => //[B2][?]; subst.
-      by apply: BackT H2; rewrite//=(is_ko_failed, is_ko_next_alt)//nB.
-    - move: H0 => /=; case nB: next_alt => //= _.
-      by apply: FailT; rewrite//=(is_ko_failed, is_ko_next_alt)//nB.
-  Qed. *)
-
   Lemma run_ko_left2 p fv fv' s2 B B' sIgn:
     (exists b1, runT p fv s2 B B' b1 fv') <->
     runT p fv sIgn (Or None s2 B) (omap (fun '(s, x) => (s, omap (Or None s2) x)) B') false fv'.
