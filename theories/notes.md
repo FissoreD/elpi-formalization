@@ -224,7 +224,7 @@ to pass all tests without issues.
 
 In `run_prop`, we tree properties of the interpreter, proving that `expandedb`
 and `runT` are consistent, i.e., they always produce the same outputs given the
-same inputs (`expanded_consistent` and `run_consistent`).
+same inputs (`expanded_consistent` and `runT_det`).
 
 The `same_structure` postulate asserts that the structure of a tree is
 preserved by `step` and `expandedb`, i.e., they maintain the structure of

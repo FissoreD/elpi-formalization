@@ -17,11 +17,13 @@ Section s.
     by rewrite next_altFN_fail in fA.
   Qed.
 
-  Lemma run_consistent p fv s A B C n1 n2 fv1 fv3:
-    runT p fv s A B n1 fv1 -> runT p fv s A C n2 fv3 -> [/\ (C = B), fv3 = fv1 & (n2 = n1)].
+  (*SNIP: runT_det*)
+  Lemma runT_det: forall p v0 s0 t0 r1 r2 b1 b2 v1 v2,
+    runT p v0 s0 t0 r1 b1 v1 -> runT p v0 s0 t0 r2 b2 v2 -> [/\ r2 = r1, v2 = v1 & b2 = b1].
+  (*ENDSNIP: runT_det*)
   Proof.
-    move=> H.
-    elim_run H C n2 => H1.
+    move=> p v0 s A r1 r2 b1 bx v1 vx H.
+    elim_run H bx vx => H1.
     + by apply: run_success sA H1.
     + inversion H1; clear H1; try congruence; subst.
       - by rewrite success_path_atom in pA.
@@ -686,13 +688,13 @@ Section s.
       have [[??]sC]:= step_success _ X; subst.
       have sC' := sC.
         rewrite -success_cut in sC'.
-      have {IH} [?[??]] := run_consistent _ _ IH (run_success1 _ _ sC'); subst.
+      have {IH} [?[??]] := runT_det _ _ IH (run_success1 _ _ sC'); subst.
       rewrite ges_subst_cutl in H2.
       case: H2 => H2.
         by repeat eexists; left; apply: run_cut Y H2.
       move: H2 => [sm H2].
       case sD: (success (cutl D)).
-        have [?[??]] := run_consistent _ _ H2 (run_success1 _ _ sD); subst.
+        have [?[??]] := runT_det _ _ H2 (run_success1 _ _ sD); subst.
         repeat eexists; right.
         rewrite success_cut in sD.
         rewrite ges_subst_cutl.
@@ -711,7 +713,7 @@ Section s.
       do 3 eexists; split.
         apply: StopT X erefl.
       have [[??]sC]:= step_success _ X; subst.
-      have {IH} [?[??]] := run_consistent _ _ IH (run_success1 _ _ sC); subst.
+      have {IH} [?[??]] := runT_det _ _ IH (run_success1 _ _ sC); subst.
       case: H2 => H2.
         repeat eexists; left; apply: StepT Y H2.
       by repeat eexists; eauto.
