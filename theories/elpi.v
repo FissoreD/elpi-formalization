@@ -243,16 +243,12 @@ Notation " x :: y" := (consC x y)(at level 60).
 Inductive runE : fvS -> alts -> option (Sigma * alts) -> Prop :=
 (*ENDSNIP: nur_type*)
 | StopE s0 a v0 : runE v0 ((s0, [::]%G) :: a) (Some (s0, a))
-| CutE s0 a ca r gl v0 : runE v0 ((s0, gl) :: ca) r -> runE v0 ((s0, [:: (cut, ca) & gl]%G) :: a) r
-| CallE s0 al b bs gl r t ca v0 v1: 
-    stepE v0 t s0 al gl = (v1, [:: b & bs ]) -> 
-      runE v1 (b :: bs++al) r -> 
-        runE v0 ((s0, [:: (call t, ca) & gl]%G) :: al) r
-| BackE s0 t gl al r ca v0 v1: 
-    stepE v0 t s0 al gl = (v1, [::]) -> 
-      runE v1 al r ->   
-        runE v0 ((s0, [:: (call t, ca) & gl]%G) :: al) r
-| FailE v0: runE v0 [::] None.
+| CutE s0 _a ca r g v0 : runE v0 ((s0, g) :: ca) r -> runE v0 ((s0, (cut, ca) :: g) :: _a) r
+| CallE s0 a g bs r t _ca v0 v1: 
+    stepE v0 t s0 a g = (v1, bs) -> 
+      runE v1 (bs ++ a) r -> 
+        runE v0 ((s0, (call t, _ca) :: g) :: a) r
+| FailE _v0: runE _v0 [::] None.
 (*ENDSNIP: runE *)
 (*endprooftree: nurbp *)
 
@@ -279,7 +275,6 @@ Proof.
   - inversion 1 => //.
   - move=> s0 a ca r gl v0 H IH s2.
     by inversion 1; subst; auto.
-  - move=> > ?? IH > H; apply/IH; inversion H; congruence.
   - move=> > ?? IH > H; apply/IH; inversion H; congruence.
   - by move=> >; inversion 1; congruence.
 Qed.

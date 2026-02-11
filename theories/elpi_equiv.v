@@ -43,11 +43,10 @@ Section NurEqiv.
         move=> [??]; subst.
         case X: bc => /=[fv3 rules] H1; subst => /=.
         rewrite H1.
-        case: rules X H1 => [|r0 rs] X H1.
-          by apply: BackE; rewrite/stepE X.
-        rewrite cats0.
+        rewrite cats0 => Hz.
         apply: CallE.
         rewrite /stepE X//=.
+        by destruct rules;rewrite//cat0s.
       have [[[? SS] H1]] := s2l_Expanded_cut vA eA H; subst.
       rewrite cats0 => ->.
       by apply: CutE.
@@ -135,8 +134,8 @@ Proof.
         by apply: path_atom_cut X.
       by apply: path_atom_exp X.
     }
-  - move=> s1 a [s0 r0]/= bs gl r t ca fv fv' + ELPI IH s3 A vA H.
-    rewrite/stepE; case B: bc => [fv2 [|x xs]]//[????]; subst.
+  - move=> s1 a g bs r t ca fv fv' + ELPI IH s3 A vA H.
+    rewrite/stepE; case B: bc => [fv2 rules] [??]; subst.
     {
       (* CALL SUCCESS CASE *)
       case fA: (failed A).
@@ -171,34 +170,6 @@ Proof.
       move=> IH.
       repeat eexists.
       apply: StepT (H2) erefl IH.
-      apply: path_atom_exp H2.
-    }
-  - move=> s1 t gl al r ca fv fv' + ELPI IH s4 A vA H.
-    rewrite/stepE; case B: bc => [fv2 [|x xs]]//[?]; subst.
-    {
-      (* CALL FAIL CASE *)
-      case fA: (failed A).
-        case nA: (next_alt false A) => [A'|]; last first.
-          by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
-        have /= fA' := next_alt_failedF nA.
-        have /= vA' := (valid_tree_next_alt vA nA).
-        rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
-        rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-        have [] := next_callS_s2l p u fv fA' vA' H.
-        rewrite B/= clean_ca_nil/= cat0s => H1 H2.
-        have /= {IH}[b[v']] := IH _ _ (valid_tree_step vA' erefl) H1; subst.
-        case: r {ELPI} => [[s' a' [t'[IH ?]]]|IH]; subst;
-        repeat eexists;
-        apply: BackT fA nA _;
-        apply: StepT (H2) erefl IH;
-        apply: path_atom_exp H2.
-      rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-      have [] := next_callS_s2l p u fv fA vA H.
-      rewrite B/= clean_ca_nil/=cat0s => H1 H2.
-      have /= {IH}[b[v']] := IH _ _ (valid_tree_step vA erefl) H1; subst.
-      case: r {ELPI} => [[s' a' [t'[IH ?]]]|IH]; subst;
-      repeat eexists;
-      apply: StepT (H2) erefl IH;
       apply: path_atom_exp H2.
     }
   + by move=> > vT H; repeat eexists; apply/FailT/t2l_nil_na/H.

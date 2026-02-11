@@ -184,9 +184,10 @@ Section RunP.
 
 
   (*SNIP: na_failed *)
-  Lemma next_alt_failedF b A A': next_alt b A = Some A' -> failed A' = false.
+  Lemma next_alt_failedF: forall b A A', next_alt b A = Some A' -> failed A' = false.
   (*ENDSNIP: na_failed *)
   Proof.
+    move=> b A A'.
     elim_tree A b A' => //=.
     - by case: b => //-[<-].
     - move=> [<-]//.
@@ -368,10 +369,10 @@ Section RunP.
   Qed.
 
   (*SNIP: path_atom_next_alt_id*)
-  Lemma path_atom_next_alt_id b A: path_atom A -> next_alt b A = Some A.
+  Lemma path_atom_next_alt_id: forall b A, path_atom A -> next_alt b A = Some A.
   (*ENDSNIP: path_atom_next_alt_id*)
   Proof.
-    elim_tree A b => /=; rewrite ?rew_pa.
+    move=> b A; elim_tree A b => /=; rewrite ?rew_pa.
     - move=> /HA->//.
     - move=> /HB->//.
     - case: ifP => [sA /HB->|]// sA /path_atom_failed->//.
