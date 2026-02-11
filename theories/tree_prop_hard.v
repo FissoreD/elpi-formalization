@@ -403,16 +403,17 @@ Section s.
   (*ENDSNIP: run_orNF *)
   Proof. by move=>> /run_or_correct_left; eauto. Qed.
 
-  (*SNIP: run_orSF *)
-  Lemma run_orSF p v0 v1 v1' s0 sm t0 t0' t0'' t1 t1' s1 s1':
+  (*SNIP: run_orSST *)
+  Lemma run_orSSF p v0 v1 v1' s0 sm t0 t0' t0'' t1 t1' s1 s1':
     runT p v0 s0 (Or (Some t0) sm t1) (Some (s1, Some (Or (Some t0') sm t1'))) false v1 ->
       runT p v0 s0 t0 (Some (s1', Some t0'')) true v1' ->
         v1 = v1' /\ s1 = s1' /\ t0' = t0'' /\ t1' = KO.
-  (*ENDSNIP: run_orSF *)
+  (*ENDSNIP: run_orSST *)
   Proof. 
     move=> + H => /run_or_complete [[?[?[+[+ H3]]]]|[?[]]] => /(runT_det1 H)[]//.
     by move=> [????]/=; subst => -[?[[?]?]]; subst.
   Qed.
+
 
   Fixpoint not_bt A B :=
     match A, B with
