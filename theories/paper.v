@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect.
+(* From mathcomp Require Import all_ssreflect.
 From elpi.apps Require Import derive derive.std.
 
 From det Require Import prelude.
@@ -87,4 +87,4 @@ From det Require Import tree_prop_hard.
 
 
 
-End S.
+End S. *)

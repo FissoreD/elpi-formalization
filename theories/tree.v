@@ -281,15 +281,24 @@ Section main.
 
   Goal (next_alt false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
 
+  (* Definition optT := option tree.
+  Definition optC t : optT := Some t.
+  Coercion optC : tree >-> optT.
+
+  Definition ST : Type := (Sigma * optT).
+  Definition optST := option ST.
+  Definition opt_ST ST : optST := Some ST.
+  Coercion opt_ST: ST >-> optST. *)
+
   (*prooftree: runbp*)
   (*SNIP: run_sig *)
   Inductive runT (p : program): fvS -> Sigma -> tree 
             -> option (Sigma * option tree) -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig *)
-    | StopT s1 s2 A B v0       : success A -> get_subst s1 A = s2 -> (next_alt true A) = B -> runT v0 s1 A (Some (s2, B)) false v0
-    | StepT s1 r A B b1 b2 v0 v1 v2 st: path_atom A -> step p v0 s1 A = (v1, st, B) -> b2 = (st == CutBrothers) || b1 -> runT v1 s1 B r b1 v2 -> runT v0 s1 A r b2 v2
-    | BackT s1 A B r n v0 v1    : failed A -> next_alt false A = Some B -> runT v0 s1 B r n v1 -> runT v0 s1 A r n v1
-    | FailT s1 A v0 : next_alt false A = None -> runT v0 s1 A None false v0.
+    | StopT s1 s2 A B v0              : success A -> get_subst s1 A = s2 -> next_alt true A = B -> runT v0 s1 A (Some (s2, B)) false v0
+    | StepT s1 r A B b1 b2 v0 v1 v2 st: path_atom A -> step p v0 s1 A = (v1, st, B) -> b2 = is_cb st || b1 -> runT v1 s1 B r b1 v2 -> runT v0 s1 A r b2 v2
+    | BackT s1 A B r n v0 v1          : failed A -> next_alt false A = Some B -> runT v0 s1 B r n v1 -> runT v0 s1 A r n v1
+    | FailT s1 A v0                   : next_alt false A = None -> runT v0 s1 A None false v0.
   (*endprooftree: runbp*)
 
   Fixpoint vars_tree t : fvS :=
