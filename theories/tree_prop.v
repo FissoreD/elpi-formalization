@@ -19,6 +19,22 @@ Section RunP.
   Variable u : Unif.
   Notation step := (step u).
 
+  Lemma path_atom_or_Some A sm B: path_atom (Or (Some A) sm B) = path_atom A.
+  Proof. by rewrite/path_atom path_end_or_Some. Qed.
+
+  Lemma path_atom_or_None sm B: path_atom (Or None sm B) = path_atom B.
+  Proof. by rewrite/path_atom path_end_or_None. Qed.
+
+  Lemma path_atom_and A B0 B: path_atom (And A B0 B) = if success A then path_atom B else path_atom A.
+  Proof. rewrite/path_atom path_end_and; case: ifP => //. Qed.
+
+  Definition rew_pa:= 
+  (
+    path_atom_or_None, path_atom_or_Some,path_atom_and,
+    success_or_None, success_or_Some, success_and,
+    failed_or_None, failed_or_Some, failed_and
+  ).
+
   Lemma failed_big_and t: failed (big_and t) = false.
   Proof. case: t => /=[|x []]//. Qed.
 
@@ -91,14 +107,14 @@ Section RunP.
   Proof. by split; [move=> /failed_step->|move=>/step_failed->]. Qed.
 
 
-  Lemma next_alt_None_failed {A}: 
-    next_alt false A = None -> failed A.
+  (*SNIP: naNfail*)
+  Lemma next_altFN_fail: forall A, next_alt false A = None -> failed A.
+  (*ENDSNIP: naNfail*)
   Proof.
-    elim: A => //=.
-    - move=> A + s1 B +/=; do 2 case: next_alt => //.
-    - by move=> s1 B +/=; case: next_alt => //; rewrite failed_or_None.
-    - move=> A + l B +.
-      rewrite failed_and.
+    move=> A; elim_tree A => /=.
+    - by move: HA HB; do 2 case: next_alt.
+    - by move: HB; case: next_alt; rewrite//rew_pa; auto.
+    - rewrite rew_pa; move: HA HB.
       case sA: success.
         rewrite (success_failed sA)/=.
         by case: (next_alt _ B) => //=; auto.
@@ -166,21 +182,6 @@ Section RunP.
   (* NEXT_ALT OP PROPERTIES                                           *)
   (********************************************************************)
 
-  Lemma path_atom_or_Some A sm B: path_atom (Or (Some A) sm B) = path_atom A.
-  Proof. by rewrite/path_atom path_end_or_Some. Qed.
-
-  Lemma path_atom_or_None sm B: path_atom (Or None sm B) = path_atom B.
-  Proof. by rewrite/path_atom path_end_or_None. Qed.
-
-  Lemma path_atom_and A B0 B: path_atom (And A B0 B) = if success A then path_atom B else path_atom A.
-  Proof. rewrite/path_atom path_end_and; case: ifP => //. Qed.
-
-  Definition rew_pa:= 
-  (
-    path_atom_or_None, path_atom_or_Some,path_atom_and,
-    success_or_None, success_or_Some, success_and,
-    failed_or_None, failed_or_Some, failed_and
-  ).
 
   (*SNIP: na_failed *)
   Lemma next_alt_failedF b A A': next_alt b A = Some A' -> failed A' = false.

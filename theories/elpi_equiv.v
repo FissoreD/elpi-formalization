@@ -59,7 +59,7 @@ Section NurEqiv.
     + move=>/=.
       rewrite (failed_next_alt_none_t2l _ _ nA)//.
         by constructor.
-      by apply/next_alt_None_failed.
+      by apply/next_altFN_fail.
   Qed.
   Print Assumptions tree_to_elpi.
 

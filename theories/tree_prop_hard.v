@@ -14,7 +14,7 @@ Section s.
     have pA := success_path_atom sA.
     have fA := success_failed sA.
     inversion H; clear H; subst; rewrite success_step//; try congruence.
-    by rewrite next_alt_None_failed in fA.
+    by rewrite next_altFN_fail in fA.
   Qed.
 
   Lemma run_consistent p fv s A B C n1 n2 fv1 fv3:
@@ -34,7 +34,7 @@ Section s.
         by rewrite path_atom_failed in fA.      
       move: H0; rewrite nA => -[?]; subst.
       by apply: IH.
-    + have fA:= next_alt_None_failed nA.
+    + have fA:= next_altFN_fail nA.
       have sA := failed_success fA.
       inversion H1; subst => //; try congruence.
       by rewrite path_atom_failed in fA.
@@ -72,7 +72,7 @@ Section s.
         by apply: next_alt_run; first by rewrite/=nB.
       - move: H0; rewrite /=is_ko_next_alt//=.
         case nB: next_alt => //= _.
-        by apply: FailT; rewrite/= (next_alt_None_failed nB, nB).
+        by apply: FailT; rewrite/= (next_altFN_fail nB, nB).
     inversion H; subst; clear H.
     - move: H0 => /= sB.
       case nB: next_alt => [B2|]/=.
@@ -187,7 +187,7 @@ Section s.
       apply: BackT; only 1,2: rewrite //=nA//.
       by apply: IH H.
     + move=> sX X X' n1 fv' H.
-      have fB := next_alt_None_failed nA.
+      have fB := next_altFN_fail nA.
       inversion H; subst; clear H.
       + apply: BackT => //=; first rewrite nA failedF_next_alt//.
           by rewrite success_failed.
@@ -239,7 +239,7 @@ Section s.
         move: H1 => /=; case nA': next_alt => //= -[?]; subst.
         by move: nA; rewrite nA' => -[?]; subst.
       by move: H0 => /=; rewrite nA.
-    - have fA := next_alt_None_failed nA.
+    - have fA := next_altFN_fail nA.
       inversion 1 => //; subst.
         by rewrite rew_pa in H0; rewrite path_atom_failed in fA.
       by move: H2 => /=; rewrite nA.
