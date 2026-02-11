@@ -194,7 +194,7 @@ Section s.
         by apply: StopT; rewrite//=success_or_None.
       + apply: BackT => //=; first rewrite nA failedF_next_alt//.
           by rewrite path_atom_failed.
-        apply: StepT; rewrite/= ?(rew_pa,H1)//; first destruct st => //.
+        apply: StepT; rewrite/= ?(rew_pa,H1)//; first destruct tg => //.
         by apply/run_ko_left2; exists b1.
       + apply: BackT => //=; first by rewrite H1 nA.
         by apply/run_ko_left2; exists n1.
