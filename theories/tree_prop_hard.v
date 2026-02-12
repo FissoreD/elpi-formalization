@@ -158,7 +158,7 @@ Section s.
       + apply: BackT => //=; first rewrite nA failedF_next_alt//.
           by rewrite path_atom_failed.
         apply: StepT; rewrite/= ?(rew_pa,H1)//; first destruct tg => //.
-        by apply/run_ko_left2; exists b1.
+        by apply/run_ko_left2; eexists; eauto.
       + apply: BackT => //=; first by rewrite H1 nA.
         by apply/run_ko_left2; exists n1.
       + by apply: FailT; rewrite /= nA H0.
@@ -193,7 +193,7 @@ Section s.
     - inversion 1 => //; subst.
         move: H1; rewrite/=eA/=if_same => -[???]; subst.
         apply: IH => //.
-        destruct b0 => //; by rewrite orbT in H2.
+        destruct b => //; by rewrite orbT in H2.
       - by rewrite rew_pa path_atom_failed in H0.
       by move: H0 => /=; rewrite path_atom_next_alt_id.
     - inversion 1 => //=; subst.
