@@ -228,9 +228,9 @@ Open Scope fset_scope.
 Notation bc := (bc u).
 
 (*SNIP: stepE *)
-Definition stepE v0 t s a gl :=
-  let (v1, rs) := bc p v0 t s in
-  (v1, save_alts a gl rs).
+Definition stepE v t s a g :=
+  let (v', r) := bc p v t s in
+  (v', save_alts a g r).
 (*ENDSNIP: stepE *)
 
 
