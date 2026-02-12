@@ -61,9 +61,9 @@ Section tree_op.
 
 
   (*SNIP: get_end*)
-  Fixpoint get_end s A : Sigma * tree:=
-    match A with
-    | TA _ | KO | OK => (s, A)
+  Fixpoint get_end s t : Sigma * tree:=
+    match t with
+    | TA _ | KO | OK => (s, t)
     | Or None s1 B => get_end s1 B
     | Or (Some A) _ _ => get_end s A
     | And A _ B => 
@@ -75,24 +75,24 @@ Section tree_op.
 
 
   (*SNIP: get_subst*)
-  Definition get_subst s A := (get_end s A).1.
+  Definition get_subst s t := (get_end s t).1.
   (*ENDSNIP: get_subst*)
 
   (*SNIP: path_end*)
-  Definition path_end A := (get_end empty A).2.
+  Definition path_end t := (get_end empty t).2.
   (*ENDSNIP: path_end*)
 
   (*SNIP: succ_path*)
-  Definition success A := path_end A == OK.
+  Definition success t := path_end t == OK.
   (*ENDSNIP: succ_path*)
 
   (*SNIP: failed_path*)
-  Definition failed A := path_end A == KO.
+  Definition failed t := path_end t == KO.
   (*ENDSNIP: failed_path*)
 
   (*SNIP: path_atom*)
-  Definition path_atom A := 
-      if path_end A is TA _ then true 
+  Definition path_atom t := 
+      if path_end t is TA _ then true 
       else false.
   (*ENDSNIP: path_atom*)
 

@@ -64,7 +64,7 @@ Section RunP.
   Qed.
 
   (*SNIP: success_step*)
-  Lemma succ_step_iff: forall p v s A, success A <-> step p v s A = (v, Success, A).
+  Lemma succ_step_iff: forall p v s t, success t <-> step p v s t = (v, Success, t).
   (*ENDSNIP: success_step*)
   Proof. by split; [move=> /success_step->|move=>/step_success->]. Qed.
 
@@ -102,13 +102,13 @@ Section RunP.
   Qed. 
 
   (*SNIP: failed_step*)
-  Lemma fail_step_iff: forall p v s A, failed A <-> step p v s A = (v, Failed, A).
+  Lemma fail_step_iff: forall p v s t, failed t <-> step p v s t = (v, Failed, t).
   (*ENDSNIP: failed_step*)
   Proof. by split; [move=> /failed_step->|move=>/step_failed->]. Qed.
 
 
   (*SNIP: naNfail*)
-  Lemma next_altFN_fail: forall A, next_alt false A = None -> failed A.
+  Lemma next_altFN_fail: forall t, next_alt false t = None -> failed t.
   (*ENDSNIP: naNfail*)
   Proof.
     move=> A; elim_tree A => /=.
@@ -369,7 +369,7 @@ Section RunP.
   Qed.
 
   (*SNIP: path_atom_next_alt_id*)
-  Lemma path_atom_next_alt_id: forall b A, path_atom A -> next_alt b A = Some A.
+  Lemma path_atom_next_alt_id: forall b t, path_atom t -> next_alt b t = Some t.
   (*ENDSNIP: path_atom_next_alt_id*)
   Proof.
     move=> b A; elim_tree A b => /=; rewrite ?rew_pa.
