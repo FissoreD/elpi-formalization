@@ -5,15 +5,17 @@ From det Require Import list tree_vars elpi_clean_ca.
 
 Section NurEqiv.
   Variable (u : Unif).
-  Variable (p : program).
+  (* Variable (p : program). *)
+  Notation runT := (runT u).
+  Notation runE := (runE u).
 
-  Lemma tree_to_elpi_aux fv A s1 b fv' r:
+  Lemma tree_to_elpi_aux p fv A s1 b fv' r:
     vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
     valid_tree A ->
-      runT u p fv s1 A r b fv' -> 
+      runT p fv s1 A r b fv' -> 
         let xs := t2l A s1 [::] in
         let r' := omap (fun '(s, t) => (s, (t2l (odflt KO t) s1 [::]))) r in
-        runE u p fv xs r'.
+        runE p fv xs r'.
   Proof.
     move=> +++H.
     elim_run H => vtA vts1 vA.
@@ -59,34 +61,13 @@ Section NurEqiv.
       by apply/next_altFN_fail.
   Qed.
 
-  (*SNIP: tree_to_elpi *)
-  Lemma tree_to_elpi A s1 b fv' r:
-    let fv := vars_tree A `|` vars_sigma s1 in
-    valid_tree A ->
-      runT u p fv s1 A r b fv' -> 
-        let xs := t2l A s1 [::] in
-        if r is Some (s, t) then
-          runE u p fv xs (Some (s, t2l (odflt KO t) s1 [::]))
-        else
-          runE u p fv xs None.
-  (*ENDSNIP: tree_to_elpi *)
-  Proof. 
-    move=> /= H1 H2.
-    have /= := tree_to_elpi_aux (fsubsetUl _ _) (fsubsetUr _ _) H1 H2.
-    by case: r H2 => [[]|]//.
-  Qed.
-
-  Print Assumptions tree_to_elpi.
-
-(*SNIP: elpi_to_tree *)
-Lemma elpi_to_tree v0 a r : 
-  runE u p v0 a r -> 
-  forall s0 t, valid_tree t -> t2l t s0 [::] = a ->  
+Lemma elpi_to_tree_aux p v0 a r : 
+  runE p v0 a r -> 
+  forall s0 t0, valid_tree t0 -> t2l t0 s0 [::] = a ->  
   exists b v1,
   if r is Some (s1, a') then 
-    exists t1, runT u p v0 s0 t (Some (s1, t1)) b v1 /\ t2l (odflt KO t1) s0 [::] = a'
-  else runT u p v0 s0 t None b v1.
-(*ENDSNIP: elpi_to_tree *)
+    exists t1, runT p v0 s0 t0 (Some (s1, t1)) b v1 /\ t2l (odflt KO t1) s0 [::] = a'
+  else runT p v0 s0 t0 None b v1.
 Proof.
   elim; clear.
   - move=> s a fv s1 A vA /= H.
@@ -191,5 +172,41 @@ Proof.
   + by move=> > vT H; repeat eexists; apply/FailT/t2l_nil_na/H.
 Qed.
 
+Definition runT' p v s t r := exists b fv, runT p v s t r b fv.
+
+(*SNIP: tree_to_elpi *)
+Lemma tree_to_elpi: forall p t0 s0 r,
+  let v0 := vars_tree t0 `|` vars_sigma s0 in
+  valid_tree t0 ->
+    runT' p v0 s0 t0 r -> 
+      let a := t2l t0 s0 [::] in
+      let r :=
+        if r is Some (s, t) then  (Some (s, t2l (odflt KO t) s0 [::]))
+        else None
+      in
+      runE p v0 a r.
+(*ENDSNIP: tree_to_elpi *)
+Proof. 
+  move=> /= p t0 s0 r/= vt [b [fv H1]].
+  have /= := tree_to_elpi_aux (fsubsetUl _ _) (fsubsetUr _ _) vt H1.
+  by case: r H1 => [[]|]//.
+Qed.
+
+(*SNIP: elpi_to_tree *)
+Lemma elpi_to_tree p v0 a r : 
+  runE p v0 a r -> 
+  forall s0 t0, valid_tree t0 -> t2l t0 s0 [::] = a ->  
+  if r is Some (s1, a') then 
+    exists t1, runT' p v0 s0 t0 (Some (s1, t1)) /\ t2l (odflt KO t1) s0 [::] = a'
+  else runT' p v0 s0 t0 None.
+(*ENDSNIP: elpi_to_tree *)
+Proof.
+  move=> /= H1 s1 t vt tl.
+  have:= elpi_to_tree_aux H1 vt tl.
+  by move=> [b[v1]]; case: r H1 => [[s' b' H [t1 [H2 <-]]]|]; repeat eexists; eauto.
+Qed.
+
+
 Print Assumptions elpi_to_tree.
+Print Assumptions tree_to_elpi.
 End NurEqiv.
