@@ -295,10 +295,10 @@ Section main.
   Inductive runT (p : program): fvS -> Sigma -> tree 
             -> option (Sigma * option tree) -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig *)
-    | StopT s0 s1 t0 t1 v0              : success t0 -> get_subst s0 t0 = s1 -> next_alt true t0 = t1 -> runT v0 s0 t0 (Some (s1, t1)) false v0
-    | StepT s0 r t0 t1 b1 b2 v0 v1 v2 tg: path_atom t0 -> step p v0 s0 t0 = (v1, tg, t1) -> b2 = is_cb tg || b1 -> runT v1 s0 t1 r b1 v2 -> runT v0 s0 t0 r b2 v2
-    | BackT s0 t0 t1 r n v0 v1          : failed t0 -> next_alt false t0 = Some t1 -> runT v0 s0 t1 r n v1 -> runT v0 s0 t0 r n v1
-    | FailT s0 t0 v0                   : next_alt false t0 = None -> runT v0 s0 t0 None false v0.
+    | StopT s s' t t' v              : success t -> get_subst s t = s' -> next_alt true t = t' -> runT v s t (Some (s', t')) false v
+    | StepT s r t t' b b' v v' v'' tg: path_atom t -> step p v s t = (v', tg, t') -> b' = is_cb tg || b -> runT v' s t' r b v'' -> runT v s t r b' v''
+    | BackT s t t' r n v v'          : failed t -> next_alt false t = Some t' -> runT v s t' r n v' -> runT v s t r n v'
+    | FailT s t v                   : next_alt false t = None -> runT v s t None false v.
   (*endprooftree: runbp*)
 
   Fixpoint vars_tree t : fvS :=
