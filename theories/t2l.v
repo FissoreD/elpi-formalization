@@ -62,7 +62,7 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
   *)
 (*SNIP: t2l*)
 (*SNIP: t2l_min*)
-Fixpoint t2l t0 s0 (cp: alts) :=
+Fixpoint t2l t0 s0 (cp: alts) : alts :=
   match t0 with
   | OK           => [:: (s0, [::])]
   | KO           => [::]
