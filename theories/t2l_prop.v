@@ -337,10 +337,13 @@ Section NurProp.
       by rewrite (HA _ _ vA fA X)//.
   Qed.
 
-  Lemma failed_next_alt_some_t2l {A R l b} s3:
-    valid_tree A -> failed A -> next_alt b A = Some R -> 
-      (t2l A s3 l = t2l R s3 l).
+  (*SNIP: next_altF_t2l *)
+  Lemma next_altF_t2l: forall t0 t1 b,
+    valid_tree t0 -> failed t0 -> next_alt b t0 = Some t1 -> 
+      forall l s3, t2l t0 s3 l = t2l t1 s3 l.
+  (*ENDSNIP: next_altF_t2l *)
   Proof.
+    move=> A R b +++ l s3.
     elim_tree A s3 R l b => /=.
     - move=> /andP[vA bB] /[!failed_or_Some] fA.
       case X: next_alt => [A'|]//.

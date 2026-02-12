@@ -51,10 +51,9 @@ Section NurEqiv.
       rewrite cats0 => ->.
       by apply: CutE.
     + have vB := valid_tree_next_alt vA nA.
-      have H1 := failed_next_alt_some_t2l _ vA fA nA.
       have {}fvP := vars_tree_next_alt_sub_flow vtA nA.
       have {IH} /= := IH fvP vts1 vB.
-      by rewrite H1; eauto.
+      by rewrite (next_altF_t2l vA fA nA).
     + move=>/=.
       rewrite (failed_next_alt_none_t2l _ _ nA)//.
         by constructor.
@@ -76,7 +75,7 @@ Proof.
         by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
       have /= fA' := next_alt_failedF nA.
       have /= vA' := (valid_tree_next_alt vA nA).
-      rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
+      rewrite (next_altF_t2l vA fA nA) in H.
       have [skA ?]:= s2l_empty_hd_success vA' fA' H; subst.
       repeat eexists.
         apply: BackT fA nA _.
@@ -96,7 +95,7 @@ Proof.
           by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
         have /= fA' := next_alt_failedF nA.
         have /= vA' := (valid_tree_next_alt vA nA).
-        rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
+        rewrite (next_altF_t2l vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
         case X: (step u p fv s A') => [[fv' r'] A''].
         have:= next_cut_s2l fA' vA' H X => /=.
@@ -139,7 +138,7 @@ Proof.
         case nA: (next_alt false A) => [A'|]; last first.
           by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-        rewrite (failed_next_alt_some_t2l _ vA fA nA) in H.
+        rewrite (next_altF_t2l vA fA nA) in H.
         have /= fA' := next_alt_failedF nA.
         have /= vA' := (valid_tree_next_alt vA nA).
         have [] := next_callS_s2l p u fv fA' vA' H.
@@ -172,7 +171,9 @@ Proof.
   + by move=> > vT H; repeat eexists; apply/FailT/t2l_nil_na/H.
 Qed.
 
+(*SNIP: runt1 *)
 Definition runT' p v s t r := exists b fv, runT p v s t r b fv.
+(*ENDSNIP: runt1 *)
 
 (*SNIP: tree_to_elpi *)
 Lemma tree_to_elpi: forall p t0 s0 r,
