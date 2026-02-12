@@ -172,7 +172,7 @@ Proof.
 Qed.
 
 (*SNIP: runt1 *)
-Definition runT' p v s t r := exists b fv, runT p v s t r b fv.
+Definition runT' p v s t r := exists b v', runT p v s t r b v'.
 (*ENDSNIP: runt1 *)
 
 (*SNIP: tree_to_elpi *)
@@ -192,17 +192,17 @@ Proof.
 Qed.
 
 (*SNIP: elpi_to_tree *)
-Lemma elpi_to_tree p v0 a0 r0 : 
-  runE p v0 a0 r0 -> 
-  forall s0 t0, valid_tree t0 -> t2l t0 s0 [::] = a0 ->  
-  if r0 is Some (s1, a1) then 
-    exists t1, runT' p v0 s0 t0 (Some (s1, t1)) /\ t2l (odflt KO t1) s0 [::] = a1
-  else runT' p v0 s0 t0 None.
+Lemma elpi_to_tree p v a r : 
+  runE p v a r -> 
+  forall s t0, valid_tree t0 -> t2l t0 s [::] = a ->  
+  if r is Some (s', a') then 
+    exists t', runT' p v s t0 (Some (s', t')) /\ t2l (odflt KO t') s [::] = a'
+  else runT' p v s t0 None.
 (*ENDSNIP: elpi_to_tree *)
 Proof.
-  move=> /= H1 s1 t vt tl.
+  move=> /= H1 s' t vt tl.
   have:= elpi_to_tree_aux H1 vt tl.
-  by move=> [b[v1]]; case: r0 H1 => [[s' b' H [t1 [H2 <-]]]|]; repeat eexists; eauto.
+  by move=> [b[v1]]; case: r H1 => [[? b' H [t1 [H2 <-]]]|]; repeat eexists; eauto.
 Qed.
 
 
