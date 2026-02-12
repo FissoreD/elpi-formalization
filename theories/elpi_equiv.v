@@ -181,10 +181,8 @@ Lemma tree_to_elpi: forall p t0 s0 r,
   valid_tree t0 ->
     runT' p v0 s0 t0 r -> 
       let a := t2l t0 s0 [::] in
-      let r :=
-        if r is Some (s, t) then  (Some (s, t2l (odflt KO t) s0 [::]))
-        else None
-      in
+      let r :=  if r is Some (s, t) then  (Some (s, t2l (odflt KO t) s0 [::]))
+                else None in
       runE p v0 a r.
 (*ENDSNIP: tree_to_elpi *)
 Proof. 

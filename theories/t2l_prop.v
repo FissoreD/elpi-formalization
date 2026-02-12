@@ -338,8 +338,8 @@ Section NurProp.
   Qed.
 
   (*SNIP: next_altF_t2l *)
-  Lemma next_altF_t2l: forall t0 t1 b,
-    valid_tree t0 -> failed t0 -> next_alt b t0 = Some t1 -> 
+  Lemma next_altF_t2l: forall t0 t1 b0,
+    valid_tree t0 -> failed t0 -> next_alt b0 t0 = Some t1 -> 
       forall l s3, t2l t0 s3 l = t2l t1 s3 l.
   (*ENDSNIP: next_altF_t2l *)
   Proof.
