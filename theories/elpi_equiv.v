@@ -65,10 +65,16 @@ Section NurEqiv.
     valid_tree A ->
       runT u p fv s1 A r b fv' -> 
         let xs := t2l A s1 [::] in
-        let r' := omap (fun '(s, t) => (s, (t2l (odflt KO t) s1 [::]))) r in
-        runE u p fv xs r'.
+        if r is Some (s, t) then
+          runE u p fv xs (Some (s, t2l (odflt KO t) s1 [::]))
+        else
+          runE u p fv xs None.
   (*ENDSNIP: tree_to_elpi *)
-  Proof. by apply: tree_to_elpi_aux; rewrite (fsubsetUl,fsubsetUr). Qed.
+  Proof. 
+    move=> /= H1 H2.
+    have /= := tree_to_elpi_aux (fsubsetUl _ _) (fsubsetUr _ _) H1 H2.
+    by case: r H2 => [[]|]//.
+  Qed.
 
   Print Assumptions tree_to_elpi.
 
