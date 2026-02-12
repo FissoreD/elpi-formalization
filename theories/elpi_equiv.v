@@ -176,14 +176,14 @@ Definition runT' p v s t r := exists b fv, runT p v s t r b fv.
 (*ENDSNIP: runt1 *)
 
 (*SNIP: tree_to_elpi *)
-Lemma tree_to_elpi: forall p t0 s0 r,
+Lemma tree_to_elpi: forall p t0 s0 r0,
   let v0 := vars_tree t0 `|` vars_sigma s0 in
   valid_tree t0 ->
-    runT' p v0 s0 t0 r -> 
-      let a := t2l t0 s0 [::] in
-      let r :=  if r is Some (s, t) then  (Some (s, t2l (odflt KO t) s0 [::]))
+    runT' p v0 s0 t0 r0 -> 
+      let a0 := t2l t0 s0 [::] in
+      let r1 :=  if r0 is Some (s, t) then  (Some (s, t2l (odflt KO t) s0 [::]))
                 else None in
-      runE p v0 a r.
+      runE p v0 a0 r1.
 (*ENDSNIP: tree_to_elpi *)
 Proof. 
   move=> /= p t0 s0 r/= vt [b [fv H1]].
@@ -192,17 +192,17 @@ Proof.
 Qed.
 
 (*SNIP: elpi_to_tree *)
-Lemma elpi_to_tree p v0 a r : 
-  runE p v0 a r -> 
-  forall s0 t0, valid_tree t0 -> t2l t0 s0 [::] = a ->  
-  if r is Some (s1, a') then 
-    exists t1, runT' p v0 s0 t0 (Some (s1, t1)) /\ t2l (odflt KO t1) s0 [::] = a'
+Lemma elpi_to_tree p v0 a0 r0 : 
+  runE p v0 a0 r0 -> 
+  forall s0 t0, valid_tree t0 -> t2l t0 s0 [::] = a0 ->  
+  if r0 is Some (s1, a1) then 
+    exists t1, runT' p v0 s0 t0 (Some (s1, t1)) /\ t2l (odflt KO t1) s0 [::] = a1
   else runT' p v0 s0 t0 None.
 (*ENDSNIP: elpi_to_tree *)
 Proof.
   move=> /= H1 s1 t vt tl.
   have:= elpi_to_tree_aux H1 vt tl.
-  by move=> [b[v1]]; case: r H1 => [[s' b' H [t1 [H2 <-]]]|]; repeat eexists; eauto.
+  by move=> [b[v1]]; case: r0 H1 => [[s' b' H [t1 [H2 <-]]]|]; repeat eexists; eauto.
 Qed.
 
 
