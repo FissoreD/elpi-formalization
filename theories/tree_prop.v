@@ -184,7 +184,7 @@ Section RunP.
 
 
   (*SNIP: na_failed *)
-  Lemma next_alt_failedF: forall b A A', next_alt b A = Some A' -> failed A' = false.
+  Lemma next_alt_failedF: forall b t t', next_alt b t = Some t' -> failed t' = false.
   (*ENDSNIP: na_failed *)
   Proof.
     move=> b A A'.

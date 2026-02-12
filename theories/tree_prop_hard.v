@@ -41,11 +41,11 @@ Section s.
   Qed.
 
   (*SNIP: runT_det*)
-  Lemma runT_det: forall p v0 s0 t0 r1 r2 b1 b2 v1 v2,
-    runT p v0 s0 t0 r1 b1 v1 -> runT p v0 s0 t0 r2 b2 v2 -> r2 = r1 /\ v2 = v1 /\ b2 = b1.
+  Lemma runT_det: forall p v0 s t r r' b b' v v',
+    runT p v0 s t r b v -> runT p v0 s t r' b' v' -> r' = r /\ v' = v /\ b' = b.
   (*ENDSNIP: runT_det*)
   Proof.
-    move=> p v0 s A r1 r2 b1 bx v1 vx H1 H2.
+    move=> p v s A r1 r2 b1 bx v1 vx H1 H2.
     by have [] := runT_det1 H1 H2 => *; subst.
   Qed.
 
