@@ -7,15 +7,13 @@ Section NurEqiv.
   Variable (u : Unif).
   Variable (p : program).
 
-  (*SNIP: tree_to_elpi *)
-  Lemma tree_to_elpi fv A s1 b fv' r:
+  Lemma tree_to_elpi_aux fv A s1 b fv' r:
     vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
     valid_tree A ->
       runT u p fv s1 A r b fv' -> 
         let xs := t2l A s1 [::] in
         let r' := omap (fun '(s, t) => (s, (t2l (odflt KO t) s1 [::]))) r in
         runE u p fv xs r'.
-  (*ENDSNIP: tree_to_elpi *)
   Proof.
     move=> +++H.
     elim_run H => vtA vts1 vA.
@@ -60,6 +58,18 @@ Section NurEqiv.
         by constructor.
       by apply/next_altFN_fail.
   Qed.
+
+  (*SNIP: tree_to_elpi *)
+  Lemma tree_to_elpi A s1 b fv' r:
+    let fv := vars_tree A `|` vars_sigma s1 in
+    valid_tree A ->
+      runT u p fv s1 A r b fv' -> 
+        let xs := t2l A s1 [::] in
+        let r' := omap (fun '(s, t) => (s, (t2l (odflt KO t) s1 [::]))) r in
+        runE u p fv xs r'.
+  (*ENDSNIP: tree_to_elpi *)
+  Proof. by apply: tree_to_elpi_aux; rewrite (fsubsetUl,fsubsetUr). Qed.
+
   Print Assumptions tree_to_elpi.
 
 (*SNIP: elpi_to_tree *)

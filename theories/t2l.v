@@ -84,7 +84,7 @@ Fixpoint t2l t0 s0 (cp: alts) : alts :=
         (* lB are alternatives, each of them have gs has head *)
         map (catl gs) lB ++ al
       else [::]
-end.s
+end.
 (*ENDSNIP*)
 
 Section test.
