@@ -338,9 +338,9 @@ Section NurProp.
   Qed.
 
   (*SNIP: next_altF_t2l *)
-  Lemma next_altF_t2l: forall t0 t1 b0,
-    valid_tree t0 -> failed t0 -> next_alt b0 t0 = Some t1 -> 
-      forall l s3, t2l t0 s3 l = t2l t1 s3 l.
+  Lemma next_altF_t2l: forall t t' b,
+    valid_tree t -> failed t -> next_alt b t = Some t' -> 
+      forall l s, t2l t s l = t2l t' s l.
   (*ENDSNIP: next_altF_t2l *)
   Proof.
     move=> A R b +++ l s3.

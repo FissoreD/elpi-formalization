@@ -176,14 +176,14 @@ Definition runT' p v s t r := exists b fv, runT p v s t r b fv.
 (*ENDSNIP: runt1 *)
 
 (*SNIP: tree_to_elpi *)
-Lemma tree_to_elpi: forall p t0 s0 r0,
-  let v0 := vars_tree t0 `|` vars_sigma s0 in
-  valid_tree t0 ->
-    runT' p v0 s0 t0 r0 -> 
-      let a0 := t2l t0 s0 [::] in
-      let r1 :=  if r0 is Some (s, t) then  (Some (s, t2l (odflt KO t) s0 [::]))
+Lemma tree_to_elpi: forall p t s r,
+  let v := vars_tree t `|` vars_sigma s in
+  valid_tree t ->
+    runT' p v s t r -> 
+      let a := t2l t s [::] in
+      let r' :=  if r is Some (s', t) then  (Some (s', t2l (odflt KO t) s [::]))
                 else None in
-      runE p v0 a0 r1.
+      runE p v a r'.
 (*ENDSNIP: tree_to_elpi *)
 Proof. 
   move=> /= p t0 s0 r/= vt [b [fv H1]].
