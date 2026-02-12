@@ -61,28 +61,30 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
     the "great^n uncles" on the right of a cut ARE alternatives
   *)
 (*SNIP: t2l*)
-Fixpoint t2l A s0 bt :=
-  match A with
+(*SNIP: t2l_min*)
+Fixpoint t2l t0 s0 (cp: alts) :=
+  match t0 with
   | OK           => [:: (s0, [::])]
   | KO           => [::]
   | TA a         => [:: (s0, [:: (a, [::]) ])]
-  | Or None s1 B => add_ca_deep bt (t2l B s1 [::])
+(*ENDSNIP: t2l_min*)
+  | Or None s1 B => add_ca_deep cp (t2l B s1 [::])
   | Or (Some A) s1 B    =>
       let lB := t2l B s1 [::] in
       let lA := t2l A s0 lB in
-      add_ca_deep bt (lA ++ lB)
+      add_ca_deep cp (lA ++ lB)
   | And A B0 B   =>
-      let lA  := t2l A s0 bt in
+      let lA  := t2l A s0 cp in
       let lB0 := a2g B0 in
-      let lA  := add_deep bt lB0 lA in
+      let lA  := add_deep cp lB0 lA in
       if lA is [:: (s0, gs) & al] then 
         let al := map (catr lB0) al in
         (* al are alternatives that should be added in the deep cuts in B *)
-        let lB := t2l B s0 (al ++ bt) in
+        let lB := t2l B s0 (al ++ cp) in
         (* lB are alternatives, each of them have gs has head *)
         map (catl gs) lB ++ al
       else [::]
-end.
+end.s
 (*ENDSNIP*)
 
 Section test.
