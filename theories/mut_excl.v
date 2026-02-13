@@ -288,6 +288,7 @@ Section mut_excl.
     case U: unify => [sx|]//=HH.
       rewrite (IH _ _ _ _ _ _ _ _ _ _ _ _ H HH)//=.
     case H': lang.H => //=[s1''].
+    destruct x => //=.
     apply/unif_help/M/U; rewrite/disjoint_tm//.
   Qed.
 
@@ -385,7 +386,7 @@ Section mut_excl.
   Proof.
     elim: m t1 t2 s1 s2 p => //=.
       by move=> []//= p []//p' s1 s2; case: eqP => //-[->].
-    move=> _ m IH []//f1 a1 []//f2 a2 s1 s2 p.
+    move=> m ms IH []//f1 a1 []//f2 a2 s1 s2 p.
     case H: H => //= _.
     by apply: IH H.
   Qed.
@@ -418,7 +419,7 @@ Section mut_excl.
   Proof.
     elim: d1 d2 s1 s2 m p => //=[p|f Hf a Ha] d2 s1 s2 m l.
       by case: m => //=; case: eqP => //<-.
-    case: m => //= _ m; case: d2 => //= f1 a1; case H: H => //[s1']/= M C.
+    case: m => //= m ms; case: d2 => //= f1 a1; case H: H => //[s1']/= M C.
     by f_equal; apply: Hf H C.
   Qed.
 

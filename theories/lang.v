@@ -912,8 +912,8 @@ Fixpoint H u (ml : list mode) (q : Tm) (h: Tm) s : option Sigma :=
   (* only terms with rigid head are accepted *)
   | [::], Tm_P c, _ => if q == h then Some s else None
   | [:: m & ml], (Tm_App q a1), (Tm_App h a2) => 
-    let m := if m == i then u.(matching) else u.(unify) in
-    obind (u.(matching) a1 a2) (H u ml q h s)
+    let f := if m == i then u.(matching) else u.(unify) in
+    obind (f a1 a2) (H u ml q h s)
   | _, _, _ => None
   end.
 
@@ -1026,7 +1026,7 @@ Lemma is_detH u sP modes s s' t t':
 Proof.
   elim: modes s s' t t' => //=.
     by move=> s s' []//= p t'; case: eqP => //=?; subst.
-  move=> _ f Hf s1 s2 []//=f1 a1 []//= f2 a2.
+  move=> m f Hf s1 s2 []//=f1 a1 []//= f2 a2.
   case H: H => //= _.
   rewrite !tm_is_det_app; apply: Hf H.
 Qed.
