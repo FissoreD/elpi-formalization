@@ -47,7 +47,7 @@ HB.instance Definition _ := hasDecEq.Build tree tree_eqb_OK.
 Inductive tag := Expanded | CutBrothers | Failed | Success.
 (*ENDSNIP: tag*)
 derive tag.
-HB.instance Definition _ := hasDecEq.Build tag step_tag_eqb_OK.
+HB.instance Definition _ := hasDecEq.Build tag tag_eqb_OK.
 
 Definition is_fl := eq_op Failed.
 Definition is_cb := eq_op CutBrothers.

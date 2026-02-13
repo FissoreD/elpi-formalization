@@ -122,15 +122,15 @@ Definition same' x y := erase_alts' x = erase_alts' y.
 
 Definition hd' x y ys := erase_goals' x = (erase_G' y) ::: (erase_goals' ys).
 
-Inductive runE' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Prop :=
-| StopE' s a a' x : isnil x -> same' a a' -> runE' s x a s a'
-| CutE' s s1 a ca r gl gl' : runE' s gl ca s1 r -> hd' gl' (cut' ca) gl -> runE' s gl' a s1 r
-| CallE' p s s1 a b bs gl r t : 
+Inductive runS' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Prop :=
+| StopS' s a a' x : isnil x -> same' a a' -> runS' s x a s a'
+| CutS' s s1 a ca r gl gl' : runS' s gl ca s1 r -> hd' gl' (cut' ca) gl -> runS' s gl' a s1 r
+| CallS' p s s1 a b bs gl r t : 
   F u p t s = [:: b & bs ] -> 
-    runE' b.1 (save_goals' a gl (a2gs1' p b)) (save_alts' a gl ((aa2gs' p) bs) ++ a) s1 r -> 
-      runE' s ((call' p t) ::: gl) a s1 r
+    runS' b.1 (save_goals' a gl (a2gs1' p b)) (save_alts' a gl ((aa2gs' p) bs) ++ a) s1 r -> 
+      runS' s ((call' p t) ::: gl) a s1 r
 | BackE' p s s1 s2 t gl a al r : 
-  F u p t s = [::] -> runE' s1 a al s2 r -> runE' s ((call' p t) ::: gl) ((s1, a) ::: al) s2 r.
+  F u p t s = [::] -> runS' s1 a al s2 r -> runS' s ((call' p t) ::: gl) ((s1, a) ::: al) s2 r.
 
 Fixpoint decorate_G (g : G) : G' :=
   match g with
@@ -159,9 +159,9 @@ Qed.
 Definition ed := (erase_decorate_alts, erase_decorate_goals, erase_decorate_G).
 
 Inductive nurk u : Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
-| StopE s a : nurk s nilC a s a
-| CutE s s1 a ca r gl : nurk s gl ca s1 r -> nurk s ((cut ca) ::: gl) a s1 r
-| CallE p s s1 a b bs gl r t : 
+| StopS s a : nurk s nilC a s a
+| CutS s s1 a ca r gl : nurk s gl ca s1 r -> nurk s ((cut ca) ::: gl) a s1 r
+| CallS p s s1 a b bs gl r t : 
   F u p t s = [:: b & bs ] -> 
     nurk b.1 (save_goals a gl (a2gs1 p b)) (save_alts a gl ((aa2gs p) bs) ++ a) s1 r -> 
       nurk s ((call p t) ::: gl) a s1 r
@@ -170,44 +170,44 @@ Inductive nurk u : Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
 
 Lemma two u s s1 a a1 xs  : nurk u s xs a s1 a1 -> { a' & { a1' & { xs' |
   erase_alts' a' = a /\ erase_alts' a1' = a1 /\ erase_goals' xs' = xs /\
-    runE' u s xs' a' s1 a1'}}}.
+    runS' u s xs' a' s1 a1'}}}.
 elim; clear.
 - move=> s2 a2 *.
   exists (decorate_alts a2).
   exists (decorate_alts a2).
   exists (decorate_goals nilC).
   rewrite !ed /=; repeat split.
-  apply: StopE' => //=.
+  apply: StopS' => //=.
 
 - move=> s s1 a ca r gl H [a' [a1' [xs' [Ha' [Ha1' [Hxs' H']]]]]].
   eexists (decorate_alts a), a1', (decorate_goals ((cut ca) ::: gl)) => /=.
   rewrite !ed /=; repeat split => //.
-  by apply: CutE' H' _; subst; rewrite /hd' /= !ed.
+  by apply: CutS' H' _; subst; rewrite /hd' /= !ed.
 
 Admitted.
 
-Lemma two' u s s1 a a1 xs  : runE u s xs a s1 a1 -> exists a' a1' xs',
+Lemma two' u s s1 a a1 xs  : runS u s xs a s1 a1 -> exists a' a1' xs',
   erase_alts' a' = a /\ erase_alts' a1' = a1 /\ erase_goals' xs' = xs /\
-    runE' u s xs' a' s1 a1'.
+    runS' u s xs' a' s1 a1'.
 elim; clear.
 - move=> s2 a2 *.
   exists (decorate_alts a2).
   exists (decorate_alts a2).
   exists (decorate_goals nilC).
   rewrite !ed /=; repeat split.
-  apply: StopE' => //=.
+  apply: StopS' => //=.
 
 - move=> s s1 a ca r gl H [a' [a1' [xs' [Ha' [Ha1' [Hxs' H']]]]]].
   eexists (decorate_alts a), a1', (decorate_goals ((cut ca) ::: gl)) => /=.
   rewrite !ed /=; repeat split => //.
-  by apply: CutE' H' _; subst; rewrite /hd' /= !ed.
+  by apply: CutS' H' _; subst; rewrite /hd' /= !ed.
 
 Admitted.
 
-Definition l2l' {s s1 a a1 xs} (H : runE s xs a s1 a1) : alts' :=
+Definition l2l' {s s1 a a1 xs} (H : runS s xs a s1 a1) : alts' :=
    projT1 (projT2 (two s s1 a a1 xs H)).
 
-Lemma l2l'P s s1 a a1 xs (H : runE s xs a s1 a1) :
+Lemma l2l'P s s1 a a1 xs (H : runS s xs a s1 a1) :
   erase_alts' (l2l' H) = a1.
 by rewrite /l2l'; case: two => /= ? [? []] //= ? [] ? [] ? [] ?.
 Qed.
@@ -215,7 +215,7 @@ Qed.
 
 Axiom F : alts' -> state.
 
-Lemma titi u s xs' a' s1 a1': runE' u s xs' a' s1 a1' -> valid_state (F ((s, xs') ::: a')) /\
+Lemma titi u s xs' a' s1 a1': runS' u s xs' a' s1 a1' -> valid_state (F ((s, xs') ::: a')) /\
   run u s (F ((s, xs'):::a')) s1 (F a1').
 Admitted.
 
@@ -237,16 +237,16 @@ Fixpoint upto_append (a : goals') : state :=
 
 
 
-runtree t -> runE (t2l t)
-nulr' g g' a a' -> runE g a
-nulr' |g'| g' |a'| a' -> runE |g'| |a'|
+runtree t -> runS (t2l t)
+nulr' g g' a a' -> runS g a
+nulr' |g'| g' |a'| a' -> runS |g'| |a'|
 
 
-runE |g'| |a'| = s |b'| -> nulr' |g'| g' |a'| a'  = s |b| b'
+runS |g'| |a'| = s |b'| -> nulr' |g'| g' |a'| a'  = s |b| b'
 
-runE g a = s b -> exists g' a' b', |g'| = g /\ runE' g g' a a'  = s b b'
+runS g a = s b -> exists g' a' b', |g'| = g /\ runS' g g' a a'  = s b b'
 
-runE g [] -> runE' g g' [] []
+runS g [] -> runS' g g' [] []
 
 
 

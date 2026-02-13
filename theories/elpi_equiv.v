@@ -7,7 +7,7 @@ Section NurEqiv.
   Variable (u : Unif).
   (* Variable (p : program). *)
   Notation runT := (runT u).
-  Notation runE := (runE u).
+  Notation runS := (runS u).
 
   Lemma tree_to_elpi_aux p fv A s1 b fv' r:
     vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
@@ -15,13 +15,13 @@ Section NurEqiv.
       runT p fv s1 A r b fv' -> 
         let xs := t2l A s1 [::] in
         let r' := omap (fun '(s, t) => (s, (t2l (odflt KO t) s1 [::]))) r in
-        runE p fv xs r'.
+        runS p fv xs r'.
   Proof.
     move=> +++H.
     elim_run H => vtA vts1 vA.
     + rewrite (success_t2l s1)//.
       repeat eexists.
-      apply: StopE.
+      apply: StopS.
     + have [fvB fvs] := vars_tree_step_sub_flow vtA vts1 eA.
       have /=vB:= (valid_tree_step vA eA). 
       have {IH}/=:= IH fvB fvs vB; subst.
@@ -30,7 +30,7 @@ Section NurEqiv.
         have [x[tl[H1 [H2 H3]]]] := s2l_CutBrothers s1 [::] vA eA.
         rewrite H1 H2 H5 => IH.
         have ?:= tree_fv_step_cut eA; subst.
-        by apply: CutE => //=.
+        by apply: CutS => //=.
       have fA := step_not_failed eA notF.
       have [s[x[xs +]]] := failed_t2l vA fA s1 [::].
       move=> H; rewrite H/=.
@@ -44,12 +44,12 @@ Section NurEqiv.
         case X: bc => /=[fv3 rules] H1; subst => /=.
         rewrite H1.
         rewrite cats0 => Hz.
-        apply: CallE.
+        apply: CallS.
         rewrite /stepE X//=.
         by destruct rules;rewrite//cat0s.
       have [[[? SS] H1]] := s2l_Expanded_cut vA eA H; subst.
       rewrite cats0 => ->.
-      by apply: CutE.
+      by apply: CutS.
     + have vB := valid_tree_next_alt vA nA.
       have {}fvP := vars_tree_next_alt_sub_flow vtA nA.
       have {IH} /= := IH fvP vts1 vB.
@@ -61,7 +61,7 @@ Section NurEqiv.
   Qed.
 
 Lemma elpi_to_tree_aux p v0 a r : 
-  runE p v0 a r -> 
+  runS p v0 a r -> 
   forall s0 t0, valid_tree t0 -> t2l t0 s0 [::] = a ->  
   exists b v1,
   if r is Some (s1, a') then 
@@ -183,7 +183,7 @@ Lemma tree_to_elpi: forall p t s r,
       let a := t2l t s [::] in
       let r' :=  if r is Some (s', t) then  (Some (s', t2l (odflt KO t) s [::]))
                 else None in
-      runE p v a r'.
+      runS p v a r'.
 (*ENDSNIP: tree_to_elpi *)
 Proof. 
   move=> /= p t0 s0 r/= vt [b [fv H1]].
@@ -193,7 +193,7 @@ Qed.
 
 (*SNIP: elpi_to_tree *)
 Lemma elpi_to_tree p v a r : 
-  runE p v a r -> 
+  runS p v a r -> 
   forall s t, valid_tree t -> t2l t s [::] = a ->  
   if r is Some (s', a') then 
     exists t', runT' p v s t (Some (s', t')) /\ t2l (odflt KO t') s [::] = a'

@@ -238,18 +238,18 @@ Definition stepE v t s a g :=
 Notation " x :: y" := (consC x y)(at level 60).
  
 (*prooftree: nurbp*)
-(*SNIP: runE *)
+(*SNIP: runS *)
 (*SNIP: nur_type*)
-Inductive runE : fvS -> alts -> option (Sigma * alts) -> Prop :=
+Inductive runS : fvS -> alts -> option (Sigma * alts) -> Prop :=
 (*ENDSNIP: nur_type*)
-| StopE s a v : runE v ((s, [::]%G) :: a) (Some (s, a))
-| CutE s _a ca r g v : runE v ((s, g) :: ca) r -> runE v ((s, (cut, ca) :: g) :: _a) r
-| CallE s a g bs r t _ca v v': 
+| StopS s a v : runS v ((s, [::]%G) :: a) (Some (s, a))
+| CutS s _a ca r g v : runS v ((s, g) :: ca) r -> runS v ((s, (cut, ca) :: g) :: _a) r
+| CallS s a g bs r t _ca v v': 
     stepE v t s a g = (v', bs) -> 
-      runE v' (bs ++ a) r -> 
-        runE v ((s, (call t, _ca) :: g) :: a) r
-| FailE _v0: runE _v0 [::] None.
-(*ENDSNIP: runE *)
+      runS v' (bs ++ a) r -> 
+        runS v ((s, (call t, _ca) :: g) :: a) r
+| FailS _v0: runS _v0 [::] None.
+(*ENDSNIP: runS *)
 (*endprooftree: nurbp *)
 
 Lemma size_seq2alts l : size (seq2alts l) = seq.size l.
@@ -269,7 +269,7 @@ Proof.
 Qed.
 
 Lemma nur_consistent v A s1 s2 :
-  runE v A s1 -> runE v A s2 -> s1 = s2.
+  runS v A s1 -> runS v A s2 -> s1 = s2.
 Proof.
   move=> H; elim: H s2; clear.
   - inversion 1 => //.

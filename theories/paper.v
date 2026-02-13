@@ -9,7 +9,7 @@ From det Require Import t2l valid_tree elpi elpi_equiv.
 Section S.
 Variable u : Unif.
 Notation step := (step u).
-Notation runE := (runE u).
+Notation runS := (runS u).
 (*xprooftree: runbp*)
 (*xSNIP: run_sig *)
 Inductive runT (p : program): fvS -> Sigma -> tree -> Sigma -> option tree -> Prop :=
@@ -61,7 +61,7 @@ Lemma tree_to_elpi: forall p s0 t s2 t',
       exists s1 g a,
         let: na := t2l (odflt KO t') s0 [::] in
         t2l t s0 [::] = (s1,g) :: a /\
-          runE p v0 s1 g a s2 na.
+          runS p v0 s1 g a s2 na.
 (*xENDSNIP: tree_to_elpi *)
 Proof.
   move=> p s0 t s2 t' /= vt R.
@@ -72,7 +72,7 @@ Qed.
 
 (*xSNIP: elpi_to_tree *)
 Lemma elpi_to_tree: forall p v0 s1 g s2 a na,
-  runE p v0 s1 g a s2 na -> 
+  runS p v0 s1 g a s2 na -> 
     forall s0 t, valid_tree t -> t2l t s0 [::] = (s1,g) :: a -> 
       exists t', runT p v0 s0 t s2 t' /\ t2l (odflt KO t') s0 [::] = na.
 (*xENDSNIP: elpi_to_tree *)

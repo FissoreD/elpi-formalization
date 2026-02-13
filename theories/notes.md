@@ -386,15 +386,15 @@ Definition a2g p A :=
 
 The interpreter is defined as:
 ```coq
-Inductive runE : Sigma -> list G -> list alt -> Sigma -> list alt -> Prop :=
-| StopE s a : runE s [::] a s a
-| CutE s s1 a ca r gl : runE s gl ca s1 r -> runE s [:: cut ca & gl] a s1 r
-| CallE p s s1 a b bs gl r t :
+Inductive runS : Sigma -> list G -> list alt -> Sigma -> list alt -> Prop :=
+| StopS s a : runS s [::] a s a
+| CutS s s1 a ca r gl : runS s gl ca s1 r -> runS s [:: cut ca & gl] a s1 r
+| CallS p s s1 a b bs gl r t :
     F p t s = [:: b & bs ] ->
-    runE s (save_alt a (a2gs p b) gl) (consA a (map (a2gs p) bs) gl) s1 r ->
-    runE s [::call p t & gl] a s1 r
+    runS s (save_alt a (a2gs p b) gl) (consA a (map (a2gs p) bs) gl) s1 r ->
+    runS s [::call p t & gl] a s1 r
 | BackE p s s1 t gl a al r :
-    F p t s = [::] -> runE s a al s1 r -> runE s [::call p t & gl] (a :: al) s1 r.
+    F p t s = [::] -> runS s a al s1 r -> runS s [::call p t & gl] (a :: al) s1 r.
 ```
 > TODO: *The substitutions are incorrect; they should be stored in the
 disjuncts.*
@@ -409,7 +409,7 @@ Definition save_alt a gs b := map (add_ca a) b ++ gs.
 Definition consA a bs gs := map (save_alt a gs) bs ++ a.
 ```
 
-The interesting case in `CallE` involves finding the rules applicable to a term `t` in
+The interesting case in `CallS` involves finding the rules applicable to a term `t` in
 a program `p`. Since the term and program types originate from `lang`, we reuse
 `F` to find these rules. The list of goals is then updated using auxiliary
 functions `add_ca`, `save_alt`, and `consA`.
@@ -614,7 +614,7 @@ Lemma runElpi A :
     valid_tree A ->
     runT s A s1 B b ->
       exists x xs, tree_to_list A [::] = x :: xs /\
-        runE s x xs s1 (tree_to_list B [::]).
+        runS s x xs s1 (tree_to_list B [::]).
 ```
 
 The proof proceeds by induction on `runT`, addressing the cases of success and
