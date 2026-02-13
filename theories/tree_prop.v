@@ -389,4 +389,14 @@ Section RunP.
       by apply: BackT fA X H.
     rewrite failedF_next_alt//.
   Qed.
+
+  Lemma succF_failF_paF A: success A = false -> failed A = false -> path_atom A = false -> False.
+  Proof.
+    rewrite/success/failed/path_atom/path_end; move: empty => s.
+    case E: get_end => [s' A']//=.
+    elim_tree A s s' A' E; move: E => /=; (only 1-3: by case: A'); eauto.
+    rewrite !push; case eqP => H1 H2; eauto.
+    move: H2 => [??]; subst.
+    by case gA: get_end => /=; eauto.
+  Qed.
 End RunP.

@@ -194,10 +194,10 @@ Qed.
 (*SNIP: elpi_to_tree *)
 Lemma elpi_to_tree p v a r : 
   runE p v a r -> 
-  forall s t0, valid_tree t0 -> t2l t0 s [::] = a ->  
+  forall s t, valid_tree t -> t2l t s [::] = a ->  
   if r is Some (s', a') then 
-    exists t', runT' p v s t0 (Some (s', t')) /\ t2l (odflt KO t') s [::] = a'
-  else runT' p v s t0 None.
+    exists t', runT' p v s t (Some (s', t')) /\ t2l (odflt KO t') s [::] = a'
+  else runT' p v s t None.
 (*ENDSNIP: elpi_to_tree *)
 Proof.
   move=> /= H1 s' t vt tl.

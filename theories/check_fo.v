@@ -420,7 +420,7 @@ Section check.
       case pA: (path_atom A).
         rewrite/nilA path_atom_next_alt_id//= => /andP[+ ->]/=.
         by case/orP=> [/HA->/= | /[dup]/andP[-> ?] ->]; rewrite ?andbT ?orbT ?if_same.
-      
+      by have:= succF_failF_paF SA fA pA.
   Qed.
 
   (*SNIP: is_det *)
