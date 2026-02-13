@@ -451,17 +451,18 @@ Section check.
       by apply/no_free_alt_next_alt/nA.
   Qed.
 
-  Lemma main s fv p t:
-    vars_tm t `<=` fv ->
-    vars_sigma s `<=` fv ->
-    check_program p -> tm_is_det p.(sig)  t -> 
+  (*SNIP: det_check_call *)
+  Lemma det_check_call s p t:
+    let fv := vars_tm t `|` vars_sigma s in
+    check_program p -> tm_is_det p.(sig) t -> 
       is_det u p s fv (TA (call t)).
+  (*ENDSNIP: det_check_call *)
   Proof.
-    move=> H1 fA HA H2.
-    apply: run_next_alt => //=.
+    move=> /= H1 fA HA H2.
+    by apply: run_next_alt; rewrite//= (fsubsetUl,fsubsetUr).
   Qed.
 
-  Print Assumptions  main.
+  Print Assumptions  det_check_call.
   
   Section tail_cut.
 
