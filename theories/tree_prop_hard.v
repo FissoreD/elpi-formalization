@@ -311,9 +311,9 @@ Section s.
   Qed.
 
   (*SNIP: runSST_or *)
-  Lemma runSST_or: forall p v0 v1 s0 s1 t0 t0' sm t1,
-    runT p v0 s0 t0 (Some (s1, Some t0')) true v1 ->
-      runT p v0 s0 (Or (Some t0) sm t1) (Some (s1, Some (Or (Some t0') sm KO))) false v1.
+  Lemma runSST_or: forall p v v' s s' l l' s1 r,
+    runT p v s l (Some (s', Some l')) true v' ->
+      runT p v s (Or (Some l) s1 r) (Some (s', Some (Or (Some l') s1 KO))) false v'.
   (*ENDSNIP: run_orSST *)
   Proof. move=> > /run_or_correct_left H; auto. Qed.
 
@@ -342,9 +342,9 @@ Section s.
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
   (*SNIP: runNT_or *)
-  Lemma runNT_or: forall p v0 v1 s0 t0 sm t1,
-    runT p v0 s0 t0 None true v1 ->
-      runT p v0 s0 (Or (Some t0) sm t1) None false v1.
+  Lemma runNT_or: forall p v v' s t s1 t',
+    runT p v s t None true v' ->
+      runT p v s (Or (Some t) s1 t') None false v'.
   (*ENDSNIP: run_orNT *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
@@ -358,9 +358,9 @@ Section s.
   Proof. by move=>> /run_or_correct_left; eauto. Qed.
 
   (*SNIP: run_orSST *)
-  Lemma run_orSST p v0 v2 s0 s1 sm t0 t0' t1 t1':
-    runT p v0 s0 (Or (Some t0) sm t1) (Some (s1, (Some (Or (Some t0') sm t1')))) false v2 ->
-    exists b, runT p v0 s0 t0 (Some (s1, Some t0')) b v2 /\ t1' = if b then KO else t1.
+  Lemma run_orSST p v v' s s' s1 l l' r r':
+    runT p v s (Or (Some l) s1 r) (Some (s', (Some (Or (Some l') s1 r')))) false v' ->
+    exists b, runT p v s l (Some (s', Some l')) b v' /\ r' = if b then KO else r.
   (*ENDSNIP: run_orSST *)
   Proof.
     move=> /run_or_complete.

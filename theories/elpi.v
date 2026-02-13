@@ -242,12 +242,12 @@ Notation " x :: y" := (consC x y)(at level 60).
 (*SNIP: nur_type*)
 Inductive runE : fvS -> alts -> option (Sigma * alts) -> Prop :=
 (*ENDSNIP: nur_type*)
-| StopE s0 a v0 : runE v0 ((s0, [::]%G) :: a) (Some (s0, a))
-| CutE s0 _a ca r g v0 : runE v0 ((s0, g) :: ca) r -> runE v0 ((s0, (cut, ca) :: g) :: _a) r
-| CallE s0 a g bs r t _ca v0 v1: 
-    stepE v0 t s0 a g = (v1, bs) -> 
-      runE v1 (bs ++ a) r -> 
-        runE v0 ((s0, (call t, _ca) :: g) :: a) r
+| StopE s a v : runE v ((s, [::]%G) :: a) (Some (s, a))
+| CutE s _a ca r g v : runE v ((s, g) :: ca) r -> runE v ((s, (cut, ca) :: g) :: _a) r
+| CallE s a g bs r t _ca v v': 
+    stepE v t s a g = (v', bs) -> 
+      runE v' (bs ++ a) r -> 
+        runE v ((s, (call t, _ca) :: g) :: a) r
 | FailE _v0: runE _v0 [::] None.
 (*ENDSNIP: runE *)
 (*endprooftree: nurbp *)

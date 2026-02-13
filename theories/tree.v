@@ -64,7 +64,7 @@ Section tree_op.
   Fixpoint get_end s t : Sigma * tree:=
     match t with
     | TA _ | KO | OK => (s, t)
-    | Or None s1 B => get_end s1 B
+    | Or None s' B => get_end s' B
     | Or (Some A) _ _ => get_end s A
     | And A _ B => 
       let (s', pA) := get_end s A in
