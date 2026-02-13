@@ -43,11 +43,11 @@ Tactic Notation "elim_tree" hyp(T) hyp_list(X) := elim_tree T X.
 #[only(eqbOK)] derive tree.
 HB.instance Definition _ := hasDecEq.Build tree tree_eqb_OK.
 
-(*SNIP: step_tag*)
-Inductive step_tag := Expanded | CutBrothers | Failed | Success.
-(*ENDSNIP: step_tag*)
-derive step_tag.
-HB.instance Definition _ := hasDecEq.Build step_tag step_tag_eqb_OK.
+(*SNIP: tag*)
+Inductive tag := Expanded | CutBrothers | Failed | Success.
+(*ENDSNIP: tag*)
+derive tag.
+HB.instance Definition _ := hasDecEq.Build tag step_tag_eqb_OK.
 
 Definition is_fl := eq_op Failed.
 Definition is_cb := eq_op CutBrothers.
@@ -178,7 +178,7 @@ Section tree_op.
   Proof. by rewrite failed_success_cut success_cut => /failed_success->. Qed.
 End tree_op.
 
-Definition step_res := (step_tag * tree)%type.
+Definition step_res := (tag * tree)%type.
 
 Fixpoint big_andA x xs : tree :=
   match xs with
@@ -202,7 +202,7 @@ Section main.
   Variable u: Unif.
 
   (*SNIP: step_sig*)
-  Definition step : program -> fvS -> Sigma -> tree -> (fvS * step_tag * tree) := 
+  Definition step : program -> fvS -> Sigma -> tree -> (fvS * tag * tree) := 
   (*ENDSNIP: step_sig*)
     fix step pr fv s A :=
     let step := step pr in
