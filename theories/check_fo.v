@@ -80,6 +80,8 @@ Qed.
 
 Section check.
   Variable u : Unif.
+  Notation runT := (runT u).
+  Definition runT' p v s t r := (exists v' b', runT p v s t r v' b').
   (* Variable p : program. *)
 
 
@@ -429,20 +431,20 @@ Section check.
       by case/orP=> [/HA->/= | /[dup]/andP[-> ?] ->]; rewrite ?andbT ?orbT ?if_same.
   Qed.
 
-  Definition is_det u p s fv A := forall b fv' r,
-    runT u p fv s A r b fv' -> 
-      if r is Some (_, x) then x = None
-      else r = None.
+  (*SNIP: is_det *)
+  Definition is_det p s v t := 
+      forall r, runT' p v s t r -> if r is Some (_, x) then x = None else r = None.
+  (*ENDSNIP: is_det *)
 
-  Lemma run_next_alt s fv p A: 
-    vars_tree A `<=` fv ->
-    vars_sigma s `<=` fv ->
-    check_program p -> 
-      det_tree p.(sig) A -> is_det u p s fv A.
+  (*SNIP: det_check_tree *)
+  Lemma det_check_tree s v p t: 
+    vars_tree t `<=` v -> vars_sigma s `<=` v ->
+    check_program p -> det_tree p.(sig) t -> is_det p s v t.
+  (*ENDSNIP: det_check_tree *)
   Proof.
     rewrite/is_det.
-    move=> D1 D2 H1 H2 b B ? H3.
-    elim_run H3 H1 H2 D1 D2.
+    move=> D1 D2 H1 H2 r [b[v' R]].
+    elim_run R H1 H2 D1 D2.
     - apply: build_na_is_dead H2 sA.
     - have [H3 H4] := vars_tree_step_sub_flow D1 D2 eA.
       apply: (IH H1 _ H3 H4).
@@ -453,14 +455,13 @@ Section check.
   Qed.
 
   (*SNIP: det_check_call *)
-  Lemma det_check_call s p t:
-    let fv := vars_tm t `|` vars_sigma s in
-    check_program p -> tm_is_det p.(sig) t -> 
-      is_det u p s fv (TA (call t)).
+  Lemma det_check_call p s t:
+    let v := vars_tm t `|` vars_sigma s in
+    check_program p -> tm_is_det p.(sig) t -> is_det p s v (TA (call t)).
   (*ENDSNIP: det_check_call *)
   Proof.
     move=> /= H1 fA HA H2.
-    by apply: run_next_alt; rewrite//= (fsubsetUl,fsubsetUr).
+    by apply: det_check_tree H2; rewrite//= (fsubsetUl,fsubsetUr).
   Qed.
 
   Print Assumptions  det_check_call.
