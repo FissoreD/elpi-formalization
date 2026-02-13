@@ -24,9 +24,8 @@ Section mut_excl.
   
   Definition mut_excl_head (sig:sigT) (r:R) rules :=
     let query := r.(head) in
-    match callable query with
-      | None => true (*a callable against a non rigid term is OK: failure at runtime*)
-      | Some kp =>
+    match get_tm_hd query with
+      | inl kp =>
         match sig.[? kp] with 
           | Some sig => 
             if is_det_sig sig then 
@@ -37,7 +36,8 @@ Section mut_excl.
           (*a callable against a rigid term non in sig OK: failure at runtime*)
           | None => true
           end
-      end.
+      | _ => true (*OK: vars and data heads correspond to runtime failures *)
+    end.
 
   Fixpoint mut_excl_aux sig rules :=
     match rules with
@@ -71,17 +71,6 @@ Section mut_excl.
     | [:: _ & xs], Tm_App x _ => suff_mode x xs
     | _, _ => false
     end.
-
-  Lemma H_callable m t1 t2 s1 s2:
-    H u m t1 t2 s1 = Some s2 ->
-    callable t1 = callable t2.
-  Proof.
-    elim: m t1 t2 s1 s2 => //=.
-      by move=> []//= p []//p' s1 s2; case: eqP => //-[->].
-    move=> _ m IH []//f1 a1 []//f2 a2 s1 s2.
-    case H: H => //= _.
-    by apply: IH H.
-  Qed.
 
   Lemma H_suff_mode l q fv hd s1 s2:
     H u l q (rename fv hd).2 s1 = Some s2 -> suff_mode hd l.
@@ -387,30 +376,44 @@ Section mut_excl.
     by case: x => //=c; rewrite !push//=.
   Qed.
 
-  Lemma callable_ren m hd: callable (ren m hd) = callable hd.
+  (* Definition callable t := match get_tm_hd t with inl t => Some t | _ => None end. *)
+
+  Lemma H_callable m t1 t2 s1 s2 p:
+    H u m t1 t2 s1 = Some s2 ->
+    get_tm_hd t1 = inl p ->
+    get_tm_hd t2 = inl p.
+  Proof.
+    elim: m t1 t2 s1 s2 p => //=.
+      by move=> []//= p []//p' s1 s2; case: eqP => //-[->].
+    move=> _ m IH []//f1 a1 []//f2 a2 s1 s2 p.
+    case H: H => //= _.
+    by apply: IH H.
+  Qed.
+
+  Lemma callable_ren m hd p: get_tm_hd (ren m hd) = inl p <-> get_tm_hd hd = inl p.
   Proof. elim: hd => //= v; rewrite ren_V//. Qed.
 
-  Lemma callable_rename fv hd: callable (rename fv hd).2 = callable hd.
-  Proof. by rewrite/rename!push/=callable_ren. Qed.
+  Lemma callable_rename fv hd p: get_tm_hd (rename fv hd).2 = inl p <-> get_tm_hd hd = inl p.
+  Proof. by rewrite/rename!push/= => /=; split => /callable_ren. Qed.
 
-  Lemma is_det_cder s s1 c: tm_is_det s c -> callable (deref s1 c) = callable c.
+  Lemma is_det_cder s s1 c: tm_is_det s c -> get_tm_hd (deref s1 c) = get_tm_hd c.
   Proof. by elim: c s. Qed.
 
   Lemma is_det_lookup p c s (pP: p \in domf s):
-    callable c = Some p -> tm_is_det s c -> is_det_sig s.[pP].
-  Proof. by elim: c p s pP => //=p1 p2 s pP [->]; rewrite/tm_is_det/getS_Callable/=in_fnd//. Qed.
+    get_tm_hd c = inl p -> tm_is_det s c -> is_det_sig s.[pP].
+  Proof. by elim: c p s pP => //=p1 p2 s pP [->]; rewrite/tm_is_det/=in_fnd//. Qed.
 
   Lemma count_tm_ag_deref s c p: 
-    callable c = Some p -> count_tm_ag (deref s c) = count_tm_ag c.
+    get_tm_hd c = inl p -> count_tm_ag (deref s c) = count_tm_ag c.
   Proof. by elim: c p s => //=f Hf a Ha p s H; rewrite (Hf p)//. Qed.
 
   Lemma get_modes_rev_deref c p s1 s: 
-    callable c = Some p -> get_modes_rev (deref s1 c) s = get_modes_rev c s.
+    get_tm_hd c = inl p -> get_modes_rev (deref s1 c) s = get_modes_rev c s.
   Proof. by move=> H; rewrite/get_modes_rev/sigtm_rev/sigtm (count_tm_ag_deref _ H)//. Qed.
 
   Lemma count_tm_ag_H d1 d2 s1 s2 m p:
     H u m d1 d2 s1 = Some s2 ->
-    callable d1 = Some p -> 
+    get_tm_hd d1 = inl p -> 
       count_tm_ag d1 = count_tm_ag d2.
   Proof.
     elim: d1 d2 s1 s2 m p => //=[p|f Hf a Ha] d2 s1 s2 m l.
@@ -421,7 +424,7 @@ Section mut_excl.
 
   Lemma get_modes_rev_H d1 d2 s1 s2 m l p:
     H u m d1 d2 s1 = Some s2 ->
-    callable d1 = Some p -> 
+    get_tm_hd d1 = inl p -> 
       get_modes_rev d1 l = get_modes_rev d2 l.
   Proof. by move=> H C; rewrite/get_modes_rev/sigtm_rev/sigtm (count_tm_ag_H H C). Qed.
 
@@ -435,7 +438,7 @@ Section mut_excl.
     rewrite/bc.
     case: p => [rs s]/=+++TD.
     rewrite (is_det_cder _ TD).
-    case DR: callable => //=[p].
+    case DR: get_tm_hd => //=[p].
     case: fndP => //= pP.
     rewrite/mut_excl !push/=.
     elim: rs s c s1 fv p pP DR TD => [|[hd bo] rs IH]//= s c s1 fv p pP DF TD D1 D2.
@@ -454,9 +457,11 @@ Section mut_excl.
     set FC1:= rename _ _.
     set FC2:= rename _ _.
     move=> H/=.
-    have /esym := H_callable H.
-    rewrite (callabe_some_deref _ DF) {1}/FC1{1}/FC2 !callable_rename => DF1.
-    rewrite DF1 in_fnd (is_det_lookup _ DF)//=.
+    have := (H_callable H).
+    (* have /esym := H_callable H. *)
+    rewrite (callabe_some_deref _ DF) {1}/FC1{1}/FC2 => /(_ _ erefl)/callable_rename.
+    move=> /[dup] DF1/callable_rename ->.
+    rewrite in_fnd (is_det_lookup _ DF)//=.
     move: H; rewrite{2}/FC2 get_modes_rev_rename (get_modes_rev_deref _ _ DF) => H.
     have:= get_modes_rev_H s.[pP] H (callabe_some_deref _ DF).
     rewrite (get_modes_rev_deref _ _ DF){1}/FC1 get_modes_rev_rename.
@@ -494,7 +499,7 @@ Section mut_excl.
     elim => //= [[hd bo]] rs/= IH; rewrite !push/=.
     move=> /andP[HBO] H; rewrite IH// andbT.
     rewrite/fresh_rule !push/=/mut_excl_head/=.
-    case tm: callable => //=[p]; case: fndP => //= kp.
+    case tm: get_tm_hd => //=[p]; case: fndP => //= kp.
     case: ifP => // ds; case S: select_head => //=[r' rs'].
     rewrite has_cut_seq_fresh HBO/=.
     set X := rename (fresh_rules fset0 rs).1 hd.

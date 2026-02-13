@@ -208,7 +208,7 @@ Section check.
     case: p => [rs s].
     rewrite/bc/=/check_rules/= => CR TD.
     rewrite (is_det_cder _ TD).
-    case DR: callable => //=[p].
+    case DR: get_tm_hd => //=[p].
     case: fndP => //= pP.
     rewrite !push/=.
     move: (get_modes_rev _ _).
@@ -353,8 +353,9 @@ Section check.
       by case/orP=> [/HA/(_ nA)->//|/andP[? ->]]; rewrite orbT.
   Qed.
 
-  Definition check_program pr := 
-    mut_excl u pr && check_rules pr.
+  (*SNIP: check_program *)
+  Definition check_program pr := mut_excl u pr && check_rules pr.
+  (*ENDSNIP: check_program *)
 
   Lemma det_tree_big_or s r0 rs:
     all (fun x => check_atoms s x.2) (r0 :: rs) ->
@@ -377,7 +378,7 @@ Section check.
   Proof.
     rewrite /bc/check_program.
     case: pr => rules s/= => ++/andP[].
-    case X: callable => //=[p].
+    case X: get_tm_hd => //=[p].
     case: fndP => //= kP.
     move=> ++++ H.
     have [q'[qp' [+ H2]]] := is_det_der s1 H.

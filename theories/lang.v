@@ -172,21 +172,21 @@ Record Unif := {
 }.  
 (*ENDSNIP: unif_type*)
 
-Fixpoint get_tm_hd (tm: Tm) : (D + (P + V)) :=
+Fixpoint get_tm_hd (tm: Tm) : (P + (D + V)) :=
     match tm with
-    | Tm_D K => inl K
-    | Tm_P K => inr (inl K)
+    | Tm_P K => inl K
+    | Tm_D K => inr (inl K)
     | Tm_V V => inr (inr V)
     | Tm_App h _ => get_tm_hd h
     end.
 
-Fixpoint callable (t : Tm) : option P :=
+(* Fixpoint callable (t : Tm) : option P :=
   match t with
   | Tm_D _ => None
   | Tm_V _ => None
   | Tm_P p => Some p
   | Tm_App t1 t2 => callable t1
-  end.
+  end. *)
 
 Fixpoint count_tm_ag t := 
     match t with
@@ -940,17 +940,17 @@ Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq A) :=
 (*ENDSNIP: bc_type*)
   fun pr fv (query:Tm) s =>
   let query := deref s query in
-  match callable query with
-      | None => (fv, [::]) (*this is a call with flex head, in elpi it is an error! *)
-      | Some (kp) =>
-        match pr.(sig).[? kp] with 
-          | Some sig => 
-            let: (fv, rules) := fresh_rules fv (pr.(rules)) in
-            let: (fv', rules) := select u query (get_modes_rev query sig) rules s
-            in (fv `|` fv', rules)
-          | None => (fv, [::])
-          end
-      end.
+  match get_tm_hd query with
+    | inl kP =>  (*this is a call with flex head, in elpi it is an error! *)
+      match pr.(sig).[? kP] with 
+        | Some sig => 
+          let: (fv, rules) := fresh_rules fv (pr.(rules)) in
+          let: (fv', rules) := select u query (get_modes_rev query sig) rules s
+          in (fv `|` fv', rules)
+        | None => (fv, [::])
+        end
+    | _ => (fv, [::])
+    end.
 End s.
 
 (* Lemma select_in_rules u fv R modes rules s r:
@@ -1007,12 +1007,14 @@ Fixpoint is_det_sig (sig:S) : bool :=
 
 Definition has_cut_seq:= (has (fun x => cut == x)).
 
-Definition getS_Callable (sP: sigT) (t: Tm) : option S :=
-  obind (fun x =>  sP.[?x]) (callable t).
+(* Definition getS_Callable (sP: sigT) (t: Tm) : option S :=
+  obind (fun x =>  sP.[?x]) (callable t). *)
 
-Definition tm_is_det (sP: sigT) (t : Tm) :=
-  if getS_Callable sP t is Some s then is_det_sig s
-  else false.
+Definition tm_is_det (sP: sigT) (t : Tm) : bool :=
+  match get_tm_hd t with
+  | inl P => if sP.[?P] is Some s then is_det_sig s else false
+  | _ => false
+  end.
 
 Lemma tm_is_det_app sP f1 a1:
   tm_is_det sP (Tm_App f1 a1) = tm_is_det sP f1.
@@ -1030,17 +1032,16 @@ Proof.
 Qed.
 
 Lemma callabe_some_deref s1 c p:
-  callable c = Some p -> callable (deref s1 c) = Some p.
+  get_tm_hd c = inl p -> get_tm_hd (deref s1 c) = inl p.
 Proof. by elim: c p => //=. Qed.
 
 Lemma is_det_der s s1 c : tm_is_det s c ->
   exists q (kP: q \in domf s), 
-    callable (deref s1 c) = Some q /\ is_det_sig s.[kP].
+    get_tm_hd (deref s1 c) = inl q /\ is_det_sig s.[kP].
 Proof.
   rewrite/tm_is_det/=.
-  rewrite/getS_Callable.
-  case X: callable => //=[p].
-  case: fndP => //=pP H.
+  case X: get_tm_hd => //=[p].
+  case: fndP => //pP.
   exists p, pP; split => //.
   by apply: callabe_some_deref.
 Qed.

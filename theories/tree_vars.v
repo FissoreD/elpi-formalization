@@ -57,7 +57,7 @@ Section vars_tree.
     fv `<=` (bc u p fv c s).1.
   Proof.
     rewrite/bc.
-    case X: callable => [c'|]//=.
+    case X: get_tm_hd => //=[c'].
     case: fndP => cP//.
     rewrite !push/= fsubsetU//.
     rewrite fresh_rules_sub//.
@@ -103,7 +103,7 @@ Section vars_tree.
   Proof.
     move => H1 H2.
     rewrite/bc/=.
-    case X: callable => [c'|]//=.
+    case X: get_tm_hd => [c'|]//=.
     case: fndP => /=hp; last by move=> [<-].
     rewrite !push.
     case FR: fresh_rules => [fF RF]/=.
