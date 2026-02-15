@@ -4849,9 +4849,6 @@ Proof.
   by have:= H (Sub k ks).
 Qed.
 
-Lemma varsU_empty: codom empty = [::].
-Proof. apply/eqP; by rewrite -size_eq0 size_map enum_fset0. Qed.
-
 Lemma vars_sigma_empty V: V \in vars_sigma empty -> False.
 Proof. by rewrite/vars_sigma in_fsetU /codom_vars in_fset0 varsU_empty//=. Qed.
 

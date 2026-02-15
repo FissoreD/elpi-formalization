@@ -7,19 +7,19 @@ Section vars_tree.
   Variable (u : Unif).
   Variable (p : program).
 
-  Lemma rename_sub fv r:
-    fv `<=` (rename fv r).1.
+  Lemma rename_sub fv r m:
+    fv `<=` (rename fv m r).1.1.
   Proof.
     rewrite/rename !push/=.
     by apply/fsubset_trans/fresh_tm_sub; rewrite fsubsetUr.
   Qed.
 
-  Lemma fresh_atom_sub fv r:
-    fv `<=` (fresh_atom fv r).1.
-  Proof. by case: r => //= c; rewrite push/=rename_sub. Qed.
+  Lemma fresh_atom_sub fv r m:
+    fv `<=` (fresh_atom fv r m).1.1.
+  Proof. by case: r => //= c; rewrite !push/= rename_sub. Qed.
 
-  Lemma fresh_atoms_sub fv r:
-    fv `<=` (fresh_atoms fv r).1.
+  Lemma fresh_atoms_sub fv r m:
+    fv `<=` (fresh_atoms fv r m).1.1.
   Proof.
     elim: r fv => [|x xs IH] fv//=.
     rewrite/=!push/=; apply/fsubset_trans/fresh_atom_sub/IH.

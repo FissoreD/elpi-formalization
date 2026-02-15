@@ -608,9 +608,9 @@ Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a
   by case: t => /=.
 Qed.
 
-Definition rename fv tm :=
-  let: (fv', m) := fresh_tm (vars_tm tm `|` fv) fmap0 tm in
-  ((fv'(*, m*)), ren m tm).
+Definition rename fv tm m :=
+  let: (fv', m) := fresh_tm (vars_tm tm `|` fv) m tm in
+  ((fv', m), ren m tm).
 
 (* Lemma rename_app fv f a:
   let tm := Tm_App f a in
@@ -649,16 +649,15 @@ Proof.
   by repeat eexists.
 Qed.
 
-Lemma rename_isApp fv hd fv' f2 a2:
-  rename fv hd = (fv', Tm_App f2 a2) ->
+Lemma rename_isApp fv hd fv' f2 a2 m:
+  rename fv hd m = (fv', Tm_App f2 a2) ->
   exists f1 a1, hd = Tm_App f1 a1.
 Proof.
   rewrite/rename !push => -[?+]; subst.
   rewrite/ren.
   case: hd => //=[v|f1 a1].
-    rewrite in_fnd//=.
-      by rewrite in_fsetU in_fset1 eqxx orbT.
-    move=> H; rewrite !ffunE//=.
+    rewrite in_fnd//=; last by move=> >; rewrite ffunE.
+    by case: ifP; rewrite// in_fsetU in_fset1 eqxx orbT.
   by repeat eexists.
 Qed.
 
@@ -883,18 +882,18 @@ have := fsetP.
 
 Axiom fresh_rule : fv -> R -> fv * R. *)
 
-Definition fresh_atom fv a :=
+Definition fresh_atom fv a m :=
   match a with
-  | cut => (fv, cut)
-  | call t => let: (fv, t) := rename fv t in (fv, call t)
+  | cut => (fv, m, cut)
+  | call t => let: (fv, m, t) := rename fv t m in (fv, m, call t)
   end.
 
-Definition fresh_atoms fv a :=
-  foldr (fun x '(fv,xs) => let: (fv, x) := fresh_atom fv x in (fv,x::xs)) (fv,[::]) a.
+Definition fresh_atoms fv a m :=
+  foldr (fun x '(fv,m,xs) => let: (fv,m, x) := fresh_atom fv x m in (fv,m,x::xs)) (fv,m,[::]) a.
 
 Definition fresh_rule fv r :=
-  let: (fv, head) := rename fv r.(head) in
-  let: (fv, premises) := fresh_atoms fv r.(premises) in
+  let: (fv, m, head) := rename fv r.(head) fmap0 in
+  let: (fv, m, premises) := fresh_atoms fv r.(premises) m in
   (fv, mkR head premises ).
 
 Definition codom_vars (s:Sigma) := 
@@ -1046,3 +1045,5 @@ Proof.
   by apply: callabe_some_deref.
 Qed.
 
+Lemma varsU_empty: codom empty = [::].
+Proof. apply/eqP; by rewrite -size_eq0 size_map enum_fset0. Qed.

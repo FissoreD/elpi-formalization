@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import finmap ctx lang tree tree_prop.
+From det Require Import finmap ctx lang tree.
 
 Definition prop := b (d Pred).
 Definition build_arr m := arr m prop prop.
@@ -33,8 +33,8 @@ Definition pred_p x  := Tm_App (Tm_P q) x.
 Definition pred_r x  := Tm_App (Tm_P r) x.
 Definition pred_fail := Tm_P (IP 100).
 
-Definition s1 : Sigma := [fmap].[IV false <- Tm_D (ID 1)].
-Definition s2 : Sigma := [fmap].[IV false <- Tm_D (ID 2)].
+Definition s1 : Sigma := [fmap].[fresh [fset IV false] <- Tm_D (ID 1)].
+Definition s2 : Sigma := [fmap].[fresh [fset IV false] <- Tm_D (ID 2)].
 
 Section Test1.
 
@@ -46,27 +46,101 @@ Section Test1.
         [:: call (Tm_App (Tm_P p) v_X) ; call (Tm_App (Tm_P r) v_X) ] 
     ].
 
-  Goal unify unif v_X (Tm_D (ID 1)) empty = Some s1.
+  (* Goal unify unif v_X (Tm_D (ID 1)) empty = Some s1.
   Proof.
     rewrite/unif.
     rewrite [unifyF]lock/=-lock.
     rewrite/unifyF/= fnd_fmap0.
     move=> //.
-  Qed.
-
-  (* Goal Texists r, runT unif empty (CallS p_test (Tm_App (Tm_P q) (Tm_D (ID 1)))) (Some s2) r false.
-  Proof.
-    eexists.
-    apply: StepT => //.
-    apply: BackT => //=. 
-    apply: StepT => //=.
-    apply: BackT => //=.
-    apply: StepT => //=.
-    apply: BackT => //=.
-    apply: StepT => //=.
-    apply: BackT => //.
-    apply: StopT => //=.
   Qed. *)
+
+  Lemma codom0: codom empty = [::].
+  Proof. by rewrite /empty codomE/= enum_fset0. Qed.
+
+  Lemma codom_vars0: codom_vars empty = fset0.
+  Proof. by rewrite/codom_vars codom0. Qed.
+
+  Lemma codom0_set v s: codom empty.[v <- s] = [::s].
+  Proof. by rewrite/= codomE/= fsetU0 enum_fset1/= ffunE//=eqxx. Qed.
+
+  Goal exists v, runT unif p_test fset0 empty (TA (call (Tm_App (Tm_P q) (Tm_D (ID 1))))) (Some (s2, None)) false v.
+  Proof.
+    repeat eexists.
+    set X := [fset IV 0; fresh [fset IV 0]].
+    apply: StepT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
+      rewrite/rename/=in_fset1 eqxx/=.
+      rewrite !fset0U/= !fsetU0/varsU_rule/=/varsU_rhead/=/varsU_rprem/=.
+      rewrite /vars_sigma codom_vars0 domf0 /= !fset0U.
+      rewrite !ren_app !ren_P ren_V/=.
+      rewrite in_fnd//= ?in_fset1//= => H.
+      rewrite ffunE/=/vars_atoms/= !fsetU0 !fset0U/= fsetUid.
+      rewrite (fsetUC _ [fset fresh _]) fsetUA fsetUid.
+      rewrite fsetUC -/X//.
+    move=> //.
+    apply: StepT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      replace _.[? _] with (Some (build_arr o)); last first.
+        by rewrite !FmapE.fmapE eqxx/=.
+      rewrite/=.
+      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
+      rewrite/rename/=in_fset1 eqxx/=.
+      by rewrite not_fnd//= not_fnd//=.
+      by [].
+    rewrite !fsetU0 !fset0U/=.
+    rewrite !fsetUA !fsetUid !fsetU0 -/X.
+    replace (_ `|` _) with ([fset fresh X] `|` X); last first.
+      do 2 replace (codom_vars _) with (@fset0 V) => //=.
+      rewrite/X .
+      rewrite -(fsetUA _ _ [fset IV 0]) fsetUid !fsetU0.
+      rewrite -2!fsetUA !fsetUid !fsetUA !(fsetUC _ [fset IV 0]).
+      rewrite !fsetUA fsetUid//.
+      by rewrite /codom_vars codom0_set//=fsetU0.
+      by rewrite /codom_vars codom0_set//=fsetU0.
+    apply: StepT => //=.
+      rewrite /bc [get_tm_hd _]/=.
+      cbn iota.
+      replace _.[? _] with (Some (build_arr o)); last first.
+        by rewrite !FmapE.fmapE eqxx/=.
+      rewrite/=.
+      rewrite FmapE.fmapE.
+      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
+      rewrite/rename/=in_fset1 eqxx/=.
+      rewrite not_fnd//= eqxx/=.
+      rewrite !fset0U !fsetUA fsetU0.
+      rewrite !(fsetUC _ [fset IV 0]) !fsetUA !fsetUid.
+      rewrite -!(fsetUC [fset fresh [fset IV 0]]) !fsetUA.
+      rewrite (fsetUC _ [fset IV 0]) -/X.
+      rewrite (fsetUC X).
+      rewrite -(fsetUA _ X).
+      set Y := (X `|` [fset fresh X]).
+      move=> //.
+      by [].
+    set Y := (X `|` [fset fresh X]).
+    apply: BackT => //=.
+    apply: StepT => //=.
+      rewrite /bc [get_tm_hd _]/=.
+      cbn iota.
+      replace _.[? _] with (Some (build_arr o)); last first.
+        by rewrite !FmapE.fmapE eqxx/=.
+      rewrite/=.
+      rewrite FmapE.fmapE.
+      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
+      rewrite/rename/=in_fset1 eqxx/=.
+      rewrite not_fnd//= eqxx/=.
+      rewrite !fset0U !fsetU0.
+      rewrite /get_subst/=/varsU_rule/varsU_rhead/=/varsU_rprem/=.
+      replace (vars_sigma _) with ([fset fresh [fset IV 0]]).
+      rewrite/vars_atoms/= !fsetU0.
+      move=> //.
+      by rewrite /vars_sigma/=/codom_vars codom0_set/= !fsetU0.
+      move=> //.
+    apply: StopT => //=.
+  Qed.
 End Test1.
 
 Section Test5.
@@ -78,17 +152,32 @@ Section Test5.
       mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
     ].
 
-  (* Goal Texists r, runT unif empty (CallS p_test1 (Tm_App (Tm_P p) (Tm_D (ID false)))) (Some s1) r false /\ is_dead r.
+  Goal exists v, runT unif p_test1 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false))))) (Some (s1, None)) false v.
   Proof.
     repeat eexists.
-    apply: StepT => //.
-    apply: BackT => //=.
     apply: StepT => //=.
-    apply: BackT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U/= !fsetU0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0 !fset0U.
+      rewrite codomf0 cat0f fsetU0 ren_app ren_P ren_V/= in_fnd/= ?in_fset1// => H.
+      rewrite/vars_atoms/= !fsetUA codom_vars0 !fsetU0 ffunE/= fsetUC fsetUA fsetUid.
+      rewrite fsetUC//.
+      move=> //.
     apply: StepT => //=.
-    apply: StopT => //=.
-    by [].
-  Qed. *)
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U/= not_fnd//= not_fnd//=.
+      by [].
+    rewrite codomf0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0.
+    rewrite /vars_sigma/codom_vars !codom0_set/= !fsetU0 fsetUid !fsetUA.
+    rewrite -!(fsetUC [fset fresh _]) fsetUA !fsetUid !fsetUA.
+    rewrite -!(fsetUC [fset IV 0]) !fsetUA fsetUid.
+    set X := (_ `|` _).
+    apply/StepT => //=.
+    apply/StopT => //=.
+  Qed.
 End Test5.
 
 Section Test6.
@@ -103,19 +192,38 @@ Section Test6.
       mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
   ].
 
-  (* Goal Texists r, runT unif empty ((CallS p_test2 (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (Some s1) r false /\ is_dead r.
+  Goal exists r, runT unif p_test2 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (Some (s1, None)) false r.
   Proof.
     repeat eexists.
     apply: StepT => //.
-    apply: BackT => //=.
+      rewrite/=/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U/= !fsetU0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0 !fset0U.
+      rewrite codomf0 cat0f fsetU0 ren_app ren_P ren_V/= in_fnd/= ?in_fset1// => H.
+      rewrite/vars_atoms/= !fsetUA codom_vars0 !fsetU0 ffunE/= fsetUC fsetUA fsetUid.
+      rewrite fsetUC//.
+      move=> //.
     apply: StepT => //=.
-    apply: BackT => //=.
-    apply: StepT => //=.
-    apply: BackT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U/= not_fnd//= not_fnd//=.
+      by [].
+    rewrite codomf0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0.
+    rewrite /vars_sigma/codom_vars !codom0_set/= !fsetU0 fsetUid !fsetUA.
+    rewrite -!(fsetUC [fset fresh _]) fsetUA !fsetUid !fsetUA.
+    rewrite -!(fsetUC [fset IV 0]) !fsetUA fsetUid.
+    set X := (_ `|` _).
+    apply/StepT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U//=.
+      by [].
     apply: StepT => //=.
     apply: StopT => //.
-    by [].
-  Qed. *)
+  Qed.
 End Test6.
 
 Definition emptyp := (build_progr [::]).

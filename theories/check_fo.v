@@ -26,8 +26,8 @@ Section checker.
     all (fun x => check_rule p.(sig) x.(head) x.(premises)) p.(rules).
 End checker.
 
-Lemma is_det_rename sP fv hd:
-  tm_is_det sP (rename fv hd).2 =
+Lemma is_det_rename sP fv hd m:
+  tm_is_det sP (rename fv hd m).2 =
     tm_is_det sP hd.
 Proof.
   rewrite/rename!push/=.
@@ -59,20 +59,20 @@ Proof.
   by apply/Hf/X.
 Qed. *)
 
-Lemma fresh_has_cut sv xs:
-  has_cut_seq (fresh_atoms sv xs).2 = has_cut_seq xs.
+Lemma fresh_has_cut sv xs m:
+  has_cut_seq (fresh_atoms sv xs m).2 = has_cut_seq xs.
 Proof. by elim: xs sv => //= -[|c] xs IH sv; rewrite!push//=IH !push//. Qed.
 
-Lemma check_atom_fresh sP x sv:
-  check_atom sP (fresh_atom sv x).2 = check_atom sP x.
+Lemma check_atom_fresh sP x sv m:
+  check_atom sP (fresh_atom sv x m).2 = check_atom sP x.
 Proof. by destruct x; rewrite //= !push/= is_det_rename. Qed.
 
-Lemma all_check_atom_fresh sP xs sv:
-  all (check_atom sP) (fresh_atoms sv xs).2 = all (check_atom sP) xs.
+Lemma all_check_atom_fresh sP xs sv m:
+  all (check_atom sP) (fresh_atoms sv xs m).2 = all (check_atom sP) xs.
 Proof. by elim: xs sv => //=x xs IH sv; rewrite !push/= IH check_atom_fresh. Qed.
 
-Lemma check_atoms_fresh sP sv bo:
-  check_atoms sP (fresh_atoms sv bo).2 = check_atoms sP bo.
+Lemma check_atoms_fresh sP sv bo m:
+  check_atoms sP (fresh_atoms sv bo m).2 = check_atoms sP bo.
 Proof.
   elim: bo sv => //= -[|c] xs IH sv; rewrite !push//=IH//all_check_atom_fresh//.
   rewrite !push/= is_det_rename has_cut_seq_fresh//.
@@ -193,14 +193,6 @@ Section check.
     ((fresh_rule (fresh_rules fv rs).1 r).1, (fresh_rule (fresh_rules fv rs).1 r).2 :: (fresh_rules fv rs).2).
   by simpl; rewrite !push.
   Qed.
-
-  Lemma det_tree_fresh sP sv bo:
-    det_tree_seq sP (fresh_atoms sv bo).2 = det_tree_seq sP bo.
-  Proof.
-    by elim: bo sv => //= [x xs] IH sv; rewrite !push/= check_atom_fresh IH has_cut_seq_fresh.
-  Qed.
-
-  (* Lemma mut_exclP *)
 
   Lemma check_rulesP p c fv s1:
     check_rules p ->
