@@ -203,10 +203,10 @@ Section cat.
   Definition catl {H : IsList A B} (pref: B) (e: T * B) := (e.1, pref ++ e.2).
 End cat.
 
-Definition save_goals (a: alts) (gs:goals) (b: seq A) := 
+Definition save_goals a gs b := 
     seq2goals [seq (x, a) | x <- b] ++ gs.
 
-Definition save_alts (a : alts) (gs: goals) (bs : seq (Sigma * seq A)) := 
+Definition save_alts a gs bs := 
   seq2alts [seq (x.1, save_goals a gs (x.2)) | x <- bs].
 
 Definition empty_ca_G (g : A * alts) :=
