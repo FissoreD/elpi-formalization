@@ -117,12 +117,12 @@ Section NurProp.
     case: x H1 => //= -[|?] []//.
   Qed.
 
-  Lemma base_or_next_alt_t2l {X Y B s bt}: 
+  Lemma base_or_prune_t2l {X Y B s bt}: 
     prune false (big_or X Y) = Some B -> t2l (big_or X Y) s bt = t2l B s bt.
   Proof.
     elim: Y X bt => //=.
-    - by move=> X bt; rewrite next_alt_big_and => -[<-]//.
-    - move=> []//= sr r rs _ X bt; rewrite next_alt_big_and => -[<-]//.
+    - by move=> X bt; rewrite prune_big_and => -[<-]//.
+    - move=> []//= sr r rs _ X bt; rewrite prune_big_and => -[<-]//.
   Qed.
 
   Lemma success_t2l {A s m} s1:
@@ -136,7 +136,7 @@ Section NurProp.
       rewrite HA//=; f_equal.
       case nA: prune => //=; rewrite seq2altsK.
       move/orP: bB => [/eqP->|/B.spec_base_or[r0 [rs ?]]]//; subst.
-      by rewrite next_alt_big_or/=.
+      by rewrite prune_big_or/=.
     - move=> vB /[!success_or_None] sB.
       rewrite (HB _ _ sm)//=; case: prune => [A'|]; rewrite//=cat0s//.
     - move=> /andP[vA +] /[!success_and] /andP[sA sB].
@@ -217,7 +217,7 @@ Section NurProp.
   Proof. case: r => [[?[]]B]//vA H/= _; apply: failed_t2l vA (step_not_failed H notF). Qed.
 
 
-  Lemma step_failure_next_alt_none_empty A fv fv' s1 s3 E l b:
+  Lemma step_failure_prune_none_empty A fv fv' s1 s3 E l b:
     valid_tree A ->
       step u p fv s1 A = (fv', Failed, E) ->
         prune b E = None ->
@@ -231,7 +231,7 @@ Section NurProp.
       case nB: prune => []//= _.
       rewrite (HA _ _ _ _ _ _ _ vA eA nA').
       move/orP: bB => [/eqP->|/B.spec_base_or[r0[rs?]]]//; subst.
-      by rewrite next_alt_big_or in nB.
+      by rewrite prune_big_or in nB.
     - move=> /= vB; rewrite !push => -[?]; subst.
       case eB: step => [[? []] B']//= _ <-/=.
       case nB': prune => []// _.
@@ -309,7 +309,7 @@ Section NurProp.
     apply: IH.
   Qed.
 
-  Lemma failed_next_alt_none_t2l {s A b}:
+  Lemma failed_prune_none_t2l {s A b}:
     valid_tree A -> failed A -> prune b A = None -> 
       forall l, t2l A s l = nilC.
   Proof.
@@ -319,7 +319,7 @@ Section NurProp.
       move=> + l.
       move/orP: bB => [/eqP->|/spec_base_or[r0[rs H]]]; subst.
         by rewrite (HA s b)//=.
-      by rewrite next_alt_big_or.
+      by rewrite prune_big_or.
     - move=> vB /[!failed_or_None] fB.
       case X: prune => [C|]//.
       by move=> _ l; rewrite (HB _ _ _ _ X).
@@ -337,11 +337,11 @@ Section NurProp.
       by rewrite (HA _ _ vA fA X)//.
   Qed.
 
-  (*SNIP: next_altF_t2l *)
-  Lemma next_altF_t2l: forall t t' b,
+  (*SNIP: pruneF_t2l *)
+  Lemma pruneF_t2l: forall t t' b,
     valid_tree t -> failed t -> prune b t = Some t' -> 
       forall l s, t2l t s l = t2l t' s l.
-  (*ENDSNIP: next_altF_t2l *)
+  (*ENDSNIP: pruneF_t2l *)
   Proof.
     move=> A R b +++ l s3.
     elim_tree A s3 R l b => /=.
@@ -350,7 +350,7 @@ Section NurProp.
         move=>[?]/=; subst => /=.
         by rewrite (HA _ A' _ b)//.
       move/orP: bB => [/eqP->//|/spec_base_or[r[rs ?]]]; subst.
-      by rewrite next_alt_big_or => -[<-]/=; rewrite (failed_next_alt_none_t2l vA fA X) cat0s.
+      by rewrite prune_big_or => -[<-]/=; rewrite (failed_prune_none_t2l vA fA X) cat0s.
     - move=> vB /[!failed_or_None] fB.
       case X: prune => [D|]//[<-]/=.
       by rewrite (HB _ _ _ _ vB fB X)//.
@@ -363,7 +363,7 @@ Section NurProp.
           by case add_deep => [|[]]//= s gs al; rewrite HB.
         case Y: prune => //=[A'][<-].
         rewrite (success_t2l s3)//=.
-        rewrite (failed_next_alt_none_t2l _ _ X)//Y.
+        rewrite (failed_prune_none_t2l _ _ X)//Y.
         case: t2l => //=[[s2 x]xs].
         by rewrite t2l_big_and//.
       rewrite orbF => /eqP->{B HB} fA.
@@ -823,7 +823,7 @@ Section NurProp.
       by rewrite add_deep_altsP// empty_ca_atoms.
   Qed.
 
-  Lemma s2l_next_alt_tl {A s1 bt}:
+  Lemma s2l_prune_tl {A s1 bt}:
     valid_tree A ->
     success A -> 
       t2l (odflt KO (prune true A)) s1 bt = behead (t2l A s1 bt).
@@ -838,7 +838,7 @@ Section NurProp.
       rewrite (success_t2l empty)//=.
       rewrite behead_cons X/=behead_cons seq2altsK.
       rewrite/SB; move: bB => /orP[/eqP->//|/spec_base_or[r0[r1 ?]]]; subst.
-      by rewrite next_alt_big_or//=.
+      by rewrite prune_big_or//=.
     - move=> vB sB.
       rewrite success_or_None in sB.
       have {HB}:= [elaborate HB sm [::] vB sB].
@@ -881,8 +881,8 @@ Section NurProp.
         rewrite (success_t2l s vA sA)/=.
         case tB: t2l; rewrite//=(HB _ _ vB tB).
         case nA: prune => //=[A'].
-        have fA' := next_alt_failedF nA.
-        by have [?[?[?->]]] := failed_t2l (valid_tree_next_alt vA nA) fA' s a.
+        have fA' := prune_failedF nA.
+        by have [?[?[?->]]] := failed_t2l (valid_tree_prune vA nA) fA' s a.
       case: ifP => fA; last first.
         by have [sx[x[xs H]]]/= := failed_t2l vA fA s a; rewrite H/= t2l_big_and//.
       case tA: t2l => //=[|[s0 h0]]; last by rewrite t2l_big_and.

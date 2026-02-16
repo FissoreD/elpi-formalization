@@ -227,7 +227,7 @@ Proof.
     apply: run_a2t_expandedb vA HA.
   - move=> s1 s2 A B C r b1 b2 b3 HA HB HC IH ? vA; subst.
     have /= vB := valid_state_expanded _ vA HA.
-    have vC := valid_state_next_alt vB HB.
+    have vC := valid_state_prune vB HB.
     have [r'[bx {}IH]]:= IH vC.
     repeat eexists.
     apply: run_backtrack IH erefl.
@@ -301,7 +301,7 @@ Proof.
     apply: run_a2t_expandedb vA HA.
   - move=> s1 s2 A B C r b1 b2 b3 HA HB HC IH ? vA; subst.
     have /= vB := valid_state_expanded _ vA HA.
-    have vC := valid_state_next_alt vB HB.
+    have vC := valid_state_prune vB HB.
     have [r'[bx {}IH]]:= IH vC.
     repeat eexists.
     apply: run_backtrack IH erefl. *)

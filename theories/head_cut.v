@@ -183,7 +183,7 @@ Proof.
   move=> + H; elim_run H => //=ME.
   - repeat eexists; by apply: StopT => //.
   - have [b'[C' {}IH]] := IH ME.
-    have /=[?|?] := path_atom_exp_cut pA eA; subst.
+    have /=[?|?] := incomplete_exp_cut pA eA; subst.
       repeat eexists; by apply/StepT/IH/erefl/step_cut_add_cut.
     case eA': (step u (add_head_prog p) fv0 s1 A) => [xx B'].
     have:=step_add_cut_sf u p fv0 s1 A; rewrite/=eA eA'/= => ?; subst.

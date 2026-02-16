@@ -130,7 +130,7 @@ Section valid_tree.
       congruence.
   Qed.
 
-  Lemma valid_tree_next_alt A R b: 
+  Lemma valid_tree_prune A R b: 
     valid_tree A -> prune b A = Some R -> valid_tree R.
   Proof.
     elim_tree A R b => /=.
@@ -161,9 +161,9 @@ Section valid_tree.
     remember (Some _) as S eqn:HS.
     move=> + H.
     elim_run H s R HS => vA.
-    + by move: HS => [_]; apply: valid_tree_next_alt.
+    + by move: HS => [_]; apply: valid_tree_prune.
     + by apply: IH (valid_tree_step vA eA).
-    + by apply: IH (valid_tree_next_alt vA nA).
+    + by apply: IH (valid_tree_prune vA nA).
   Qed.
 (*END*)
 

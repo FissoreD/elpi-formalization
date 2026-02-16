@@ -16,7 +16,7 @@ Proof.
     case: ifP => sl pA [???]; subst.
     rewrite -success_cut in sl.
     inversion rB; subst => //=.
-    - rewrite sl next_alt_cutl//.
+    - rewrite sl prune_cutl//.
     - move: H0 => /=; rewrite sl => -[???]; subst.
       by move: H; rewrite rew_pa sl//.
     - move: H; rewrite rew_pa sl success_failed//.

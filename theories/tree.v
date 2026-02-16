@@ -90,11 +90,11 @@ Section tree_op.
   Definition failed t := path_end t == KO.
   (*ENDSNIP: failed_path*)
 
-  (*SNIP: path_atom*)
-  Definition path_atom t := 
+  (*SNIP: incomplete*)
+  Definition incomplete t := 
       if path_end t is TA _ then true 
       else false.
-  (*ENDSNIP: path_atom*)
+  (*ENDSNIP: incomplete*)
 
   (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
@@ -130,11 +130,11 @@ Section tree_op.
   Lemma failed_success A: failed A -> success A = false.
   Proof. by rewrite/failed/success => /eqP->. Qed.
 
-  Lemma success_path_atom A: success A -> path_atom A = false.
-  Proof. by rewrite/success/path_atom => /eqP->. Qed.
+  Lemma success_incomplete A: success A -> incomplete A = false.
+  Proof. by rewrite/success/incomplete => /eqP->. Qed.
 
-  Lemma path_atom_failed A: path_atom A -> failed A = false.
-  Proof. by rewrite/path_atom/failed; case: path_end. Qed. 
+  Lemma incomplete_failed A: incomplete A -> failed A = false.
+  Proof. by rewrite/incomplete/failed; case: path_end. Qed. 
 
   Lemma success_failed A: success A -> failed A = false.
   Proof. by apply: contraTF => /failed_success ->. Qed.
@@ -238,12 +238,12 @@ Section main.
         else And (step pr fv s A).2 B0 B.
     Proof. by rewrite/=!push; case: ifP => //=. Qed.
 
-  (* Next_alt takes a tree "T" returns a new tree "T'" representing the next
+  (* prune takes a tree "T" returns a new tree "T'" representing the next
      alternative wrt "T", if no new alternative exists, None is returned.
-     Next_alt takes a boolean b to know if a successful path should be erased in
+     prune takes a boolean b to know if a successful path should be erased in
      "T".
   *)
-  (*SNIP: next_alt_code *)
+  (*SNIP: prune_code *)
   (*SNIP: prune*)
   Definition prune : bool -> tree -> option tree :=
   (*ENDSNIP: prune*)
@@ -268,7 +268,7 @@ Section main.
         | Some A' => Some (Or (Some A') sB B)
        end
   end.
-  (*ENDSNIP: next_alt_code *)
+  (*ENDSNIP: prune_code *)
 
   Goal forall r, prune false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
@@ -296,7 +296,7 @@ Section main.
             -> option (Sigma * option tree) -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig *)
     | StopT s s' t t' v              : success t -> get_subst s t = s' -> prune true t = t' -> runT v s t (Some (s', t')) false v
-    | StepT s r t t' b b' v v' v'' tg: path_atom t -> step p v s t = (v', tg, t') -> b' = is_cb tg || b -> runT v' s t' r b v'' -> runT v s t r b' v''
+    | StepT s r t t' b b' v v' v'' tg: incomplete t -> step p v s t = (v', tg, t') -> b' = is_cb tg || b -> runT v' s t' r b v'' -> runT v s t r b' v''
     | BackT s t t' r n v v'          : failed t -> prune false t = Some t' -> runT v s t' r n v' -> runT v s t r n v'
     | FailT s t v                   : prune false t = None -> runT v s t None false v.
   (*endprooftree: runbp*)

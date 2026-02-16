@@ -178,7 +178,7 @@ Section check.
   Qed.
 
   Lemma no_alt_cutl A: success A -> nilA (cutl A).
-  Proof. by rewrite /nilA success_cut => ->; rewrite next_alt_cutl. Qed.
+  Proof. by rewrite /nilA success_cut => ->; rewrite prune_cutl. Qed.
 
   Lemma det_tree_cutl {sP A}: success A -> det_tree sP (cutl A).
   Proof.
@@ -259,7 +259,7 @@ Section check.
   Goal forall sP s, det_tree sP (Or (Some OK) s OK) == false.
   Proof. move=> ?? //=. Qed.
 
-  Lemma det_check_next_alt_succ {sP A} : 
+  Lemma det_check_prune_succ {sP A} : 
     det_tree sP A -> success A -> prune true A = None.
   Proof.
     elim: A => //=.
@@ -274,7 +274,7 @@ Section check.
       by rewrite HA.
   Qed.
 
-  Lemma has_cut_next_alt {A R b}: 
+  Lemma has_cut_prune {A R b}: 
     has_cut A -> prune b A = Some R -> has_cut R.
   Proof.
     elim_tree A R b => /=.
@@ -300,10 +300,10 @@ Section check.
       by move=> [<-]/=; rewrite cB0 cB orbT.
   Qed.
 
-  Lemma next_alt_no_alt b A A' : prune b A  = Some A' -> success A = b -> nilA A = false.
+  Lemma prune_no_alt b A A' : prune b A  = Some A' -> success A = b -> nilA A = false.
   Proof. by rewrite /nilA=> + -> => ->. Qed.
 
-  Lemma det_check_next_alt {sP A R b}:
+  Lemma det_check_prune {sP A R b}:
     det_tree sP A -> prune b A = Some R -> det_tree sP R.
   Proof.
     elim_tree A R b => /=.
@@ -313,7 +313,7 @@ Section check.
       case nA: prune => [A'|].
         move=> + [<-]/=;rewrite (HA _ _ _ nA)//=.
         case: ifP => //= cA.
-          rewrite (has_cut_next_alt _ nA)//.
+          rewrite (has_cut_prune _ nA)//.
         by move=> /eqP?; subst; rewrite if_same.
       case nB: prune => //=[B']+[<-]/=.
       case: ifP => [|_ /eqP] => ?; subst => // H.
@@ -323,16 +323,16 @@ Section check.
       case sA: (success A).
         case nB: prune => [B'|] => [+ [<-/=]|].
           rewrite (HB B' b)//=.
-          case cB: (has_cut B); first by rewrite (has_cut_next_alt cB nB).
+          case cB: (has_cut B); first by rewrite (has_cut_prune cB nB).
           case cB': (has_cut B'); rewrite /= orbC //= ?orbT.
           by rewrite -{1}[det_tree sP A]andbT -fun_if => /andP[-> //].
         case nA: prune => [A'|] //= + [<-/=].
-        rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (next_alt_no_alt nA)//.
+        rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (prune_no_alt nA)//.
         rewrite andbb=> /andP[+ ->]; rewrite andbT if_same /=.
         by case/orP=> [/HA/(_ nA)->//|/andP[? ->]]; rewrite orbT.
       case fA : (failed A) => [|] => [|+ [<-/=]]; last by rewrite dB.
       case nA: prune => [A'|] => [+ [<-/=]|//].
-      rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (next_alt_no_alt nA)//.
+      rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (prune_no_alt nA)//.
       rewrite andbb=> /andP[+ ->]; rewrite andbT if_same /=.
       by case/orP=> [/HA/(_ nA)->//|/andP[? ->]]; rewrite orbT.
   Qed.
@@ -409,8 +409,8 @@ Section check.
       rewrite /= dB /=.
       case fA: (failed A).
         by rewrite /nilA /sA failed_step//= SA.
-      case pA: (path_atom A).
-        rewrite/nilA path_atom_next_alt_id//= => /andP[+ ->]/=.
+      case pA: (incomplete A).
+        rewrite/nilA incomplete_prune_id//= => /andP[+ ->]/=.
         by case/orP=> [/HA->/= | /[dup]/andP[-> ?] ->]; rewrite ?andbT ?orbT ?if_same.
       by have:= succF_failF_paF SA fA pA.
   Qed.
@@ -429,13 +429,13 @@ Section check.
     rewrite/is_det.
     move=> D1 D2 H1 H2 r [b[v' R]].
     elim_run R H1 H2 D1 D2.
-    - apply: det_check_next_alt_succ H2 sA.
+    - apply: det_check_prune_succ H2 sA.
     - have [H3 H4] := vars_tree_step_sub_flow D1 D2 eA.
       apply: (IH H1 _ H3 H4).
       by apply: det_check_step eA.
-    - have D3:= vars_tree_next_alt_sub_flow D1 nA.
+    - have D3:= vars_tree_prune_sub_flow D1 nA.
       apply: IH => //.
-      by apply/det_check_next_alt/nA.
+      by apply/det_check_prune/nA.
   Qed.
 
   (*SNIP: det_check_call *)

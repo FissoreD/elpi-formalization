@@ -995,7 +995,7 @@ Proof.
       case kA: is_ko => //=.
         case tB: tc_tree_aux => [DB SB]/=.
         case: ifP => kB//=[??]; subst.
-        rewrite (HB _ _ _ tB) is_ko_next_alt//.
+        rewrite (HB _ _ _ tB) is_ko_prune//.
         case: ifP => //=dA.
 
 
@@ -1008,7 +1008,7 @@ Proof.
       case tA: tc_tree_aux => [DA SA]/=.
       case: ifP => kB[?]; subst.
         move=> ?; subst.
-        rewrite (is_ko_next_alt _ kB)/=.
+        rewrite (is_ko_prune _ kB)/=.
         rewrite (HA _ _ _ _ tA)//.
       case tB: tc_tree_aux => [DB SB]/=.
       destruct SA, SB => //= _.
@@ -3158,7 +3158,7 @@ Proof.
   by rewrite (HA _ _ tA).
 Qed.
 
-Lemma tc_tree_aux_next_alt_same_opt b sP A tyO X Y:
+Lemma tc_tree_aux_prune_same_opt b sP A tyO X Y:
   tc_tree_aux b sP A tyO X = Y ->
   if Y then (prune b A) <> None
   else prune b A = None.
@@ -3318,7 +3318,7 @@ Proof.
   rewrite [check_atoms _ _ _ _]surjective_pairing/=; congruence.
 Qed.
 
-Lemma success_det_tree_next_alt sP tyO A d0 s0 N:
+Lemma success_det_tree_prune sP tyO A d0 s0 N:
   (* tc sP tyO A -> *)
   valid_tree A -> success A -> tc_tree_aux false sP A tyO (d0,s0) = Some (Func, N) ->
     (((prune true A) = None) * (N = (tyO + get_ctxS sP tyO s0 A))).
@@ -3338,7 +3338,7 @@ Proof.
       by move: H; case: tc_tree_aux => [[Dx Sx]|]; destruct d0, DA.
     move: H; rewrite !(HA _ _ _ vA sA tA)//=.
     move/spec_bbOr : bB => [r[rs []?]]; subst; last first.
-      by rewrite cutr_tc_tree_aux next_alt_cutr => -[->].      
+      by rewrite cutr_tc_tree_aux prune_cutr => -[->].      
     case tB: tc_tree_aux => [[DB SB]|]//[<-{N}].
     by have:= tc_tree_aux_big_or_is_some tB.
   - move=> A HA l B HB d0 s0 N /andP[vA +] /andP[sA sB].
@@ -3346,7 +3346,7 @@ Proof.
     case tA: (tc_tree_aux _ _ A) => //=[[DA SA]|]; last first.
       move=> tB.
       rewrite !(HB _ _ _ vB sB tB).
-      by rewrite (tc_tree_aux_next_alt_same_opt tA).
+      by rewrite (tc_tree_aux_prune_same_opt tA).
     case tB: (tc_tree_aux _ _ B) => //=[[DB SB]|]//=[].
       move=> +<-{N}.
       destruct DB; last by rewrite maxD_comm.
@@ -4709,7 +4709,7 @@ Proof.
   remember (Some s') as ss eqn:Hs'.
   elim: H s' Hs' sV sV' tE; clear - ME => //=.
   - move=> s1 s2 A B sA <-{s2} <-{B} s' [<-]{s'} sV sV' tE ckA tOA vA DR CS SP CSS tA.
-    rewrite !(success_det_tree_next_alt tOA vA sA tA)/=is_dead_next_alt//.
+    rewrite !(success_det_tree_prune tOA vA sA tA)/=is_dead_prune//.
     split; auto.
     apply: sigP_catR => //=.
       by apply: compat_sig_get_ctxS.
@@ -4802,17 +4802,17 @@ Proof.
     *)
     admit.
   - move=> s1 s2 A B r n fA nA RB IH s ? sV sV' tE ckP tOA vA DR CS SP CSS dtA; subst.
-    (* TODO: take the lemma failed_det_tree_next_alt from check1.v *)
+    (* TODO: take the lemma failed_det_tree_prune from check1.v *)
     
     admit.
 
-    (* have := failed_det_tree_next_alt vA C TC nA.
+    (* have := failed_det_tree_prune vA C TC nA.
     move => [[]// [N [? X MP]]]//.
-    have [] := IH _ erefl _ _ _ (valid_tree_next_alt vA nA) SP X; last first.
+    have [] := IH _ erefl _ _ _ (valid_tree_prune vA nA) SP X; last first.
       move=> H INV.
       split; first by [].
       by apply: sigP_more_precise MP INV.
-    by apply: closed_in_next_alt nA. *)
+    by apply: closed_in_prune nA. *)
     (* admit. *)
 Admitted.
 
@@ -4893,10 +4893,10 @@ Module elpi.
     have:= elpi_to_tree _ _ _ _ _ _ H.
     move=> /(_ _ (TA p (call c)) isT erefl) [t1[n[H1 H2]]]; subst.
     move=> /(_ u _ _ _ H1) nA.
-    have ft1':= next_altFN_fail nA.
+    have ft1':= pruneFN_fail nA.
     have:= valid_tree_run _ _ H1 => /(_ isT).
     move=> [|VT]; first by move=> ->; rewrite t2l_dead//is_dead_dead//.
-    have:= failed_next_alt_none_t2l VT ft1' nA.
+    have:= failed_prune_none_t2l VT ft1' nA.
     by auto.
   Qed.
 End elpi.

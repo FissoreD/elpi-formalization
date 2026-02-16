@@ -19,18 +19,18 @@ Section RunP.
   Variable u : Unif.
   Notation step := (step u).
 
-  Lemma path_atom_or_Some A sm B: path_atom (Or (Some A) sm B) = path_atom A.
-  Proof. by rewrite/path_atom path_end_or_Some. Qed.
+  Lemma incomplete_or_Some A sm B: incomplete (Or (Some A) sm B) = incomplete A.
+  Proof. by rewrite/incomplete path_end_or_Some. Qed.
 
-  Lemma path_atom_or_None sm B: path_atom (Or None sm B) = path_atom B.
-  Proof. by rewrite/path_atom path_end_or_None. Qed.
+  Lemma incomplete_or_None sm B: incomplete (Or None sm B) = incomplete B.
+  Proof. by rewrite/incomplete path_end_or_None. Qed.
 
-  Lemma path_atom_and A B0 B: path_atom (And A B0 B) = if success A then path_atom B else path_atom A.
-  Proof. rewrite/path_atom path_end_and; case: ifP => //. Qed.
+  Lemma incomplete_and A B0 B: incomplete (And A B0 B) = if success A then incomplete B else incomplete A.
+  Proof. rewrite/incomplete path_end_and; case: ifP => //. Qed.
 
   Definition rew_pa:= 
   (
-    path_atom_or_None, path_atom_or_Some,path_atom_and,
+    incomplete_or_None, incomplete_or_Some,incomplete_and,
     success_or_None, success_or_Some, success_and,
     failed_or_None, failed_or_Some, failed_and
   ).
@@ -108,7 +108,7 @@ Section RunP.
 
 
   (*SNIP: naNfail*)
-  Lemma next_altFN_fail: forall t, prune false t = None -> failed t.
+  Lemma pruneFN_fail: forall t, prune false t = None -> failed t.
   (*ENDSNIP: naNfail*)
   Proof.
     move=> A; elim_tree A => /=.
@@ -121,42 +121,42 @@ Section RunP.
       by case: ifP.
   Qed.
 
-  (* Lemma is_dead_next_alt {A} b: is_dead A -> prune b A = None.
-  Proof. move=>/is_dead_is_ko/is_ko_next_alt//. Qed. *)
+  (* Lemma is_dead_prune {A} b: is_dead A -> prune b A = None.
+  Proof. move=>/is_dead_is_ko/is_ko_prune//. Qed. *)
 
-  Lemma next_alt_cutl_success {A}:
+  Lemma prune_cutl_success {A}:
     success A -> prune true (cutl A) = None.
   Proof.
     elim: A => //=.
-    - move=> A HA s B HB sA; rewrite HA//is_ko_next_alt//.
+    - move=> A HA s B HB sA; rewrite HA//is_ko_prune//.
     - move=> s B HB /[!success_or_None] sA; rewrite HB//.
     - move=> A HA l B HB /[!success_and] /andP[sA sB].
       rewrite sA/= success_cut sA HA// HB//.
   Qed.
 
-  Lemma next_alt_cutl_failed {A b}:
+  Lemma prune_cutl_failed {A b}:
     failed (cutl A) -> prune b (cutl A) = None.
   Proof.
     elim: A b => //=.
-    - move=> A HA s B HB b fA; rewrite HA// is_ko_next_alt//.
-    - move=> s B HB b /[!failed_or_None] fA; rewrite HB// is_ko_next_alt//.
+    - move=> A HA s B HB b fA; rewrite HA// is_ko_prune//.
+    - move=> s B HB b /[!failed_or_None] fA; rewrite HB// is_ko_prune//.
     - move=> A HA l B HB b.
       case: ifP => sA//=.
       rewrite failed_and failed_success_cut success_cut sA/=.
       move=> fB.
-      rewrite HB//=next_alt_cutl_success//.
+      rewrite HB//=prune_cutl_success//.
   Qed.
 
-  Lemma next_alt_cutl_failedF {A b}:
+  Lemma prune_cutl_failedF {A b}:
     failed A -> prune b (cutl A) = None.
-  Proof. move=> /failed_cut /next_alt_cutl_failed//. Qed.
+  Proof. move=> /failed_cut /prune_cutl_failed//. Qed.
 
-  Lemma next_alt_cutl {A}:
+  Lemma prune_cutl {A}:
     prune true (cutl A) = None.
   Proof.
     elim: A => //=.
-    - move=> A HA s B HB; rewrite HA//is_ko_next_alt//.
-    - move=> s B HB; rewrite HB//is_ko_next_alt//.
+    - move=> A HA s B HB; rewrite HA//is_ko_prune//.
+    - move=> s B HB; rewrite HB//is_ko_prune//.
     - move=> A HA l B HB; case: ifP => //sA/=.
       by rewrite success_cut sA HB HA //.
   Qed.
@@ -179,12 +179,12 @@ Section RunP.
   Qed.
 
   (********************************************************************)
-  (* NEXT_ALT OP PROPERTIES                                           *)
+  (* prune OP PROPERTIES                                           *)
   (********************************************************************)
 
 
   (*SNIP: na_failed *)
-  Lemma next_alt_failedF: forall b t t', prune b t = Some t' -> failed t' = false.
+  Lemma prune_failedF: forall b t t', prune b t = Some t' -> failed t' = false.
   (*ENDSNIP: na_failed *)
   Proof.
     move=> b A A'.
@@ -242,7 +242,7 @@ Section RunP.
       by case: ifP => //.
     Qed.
 
-    Lemma next_alt_same_structure {b A B}:
+    Lemma prune_same_structure {b A B}:
       prune b A = Some B -> same_structure A B.
     Proof.
       case: A => //=.
@@ -260,9 +260,9 @@ Section RunP.
       case: x => //= + []//= => s' A'.
       remember (Some _) as sx eqn:Hx => H.
       elim_run H s' A' Hx => //=.
-      - by move: Hx => [?]; subst => /=; apply/next_alt_same_structure.
+      - by move: Hx => [?]; subst => /=; apply/prune_same_structure.
       - apply: same_structure_trans (step_same_structure eA) (IH _ _ erefl).
-      - apply: same_structure_trans (next_alt_same_structure nA) (IH _ _ erefl).
+      - apply: same_structure_trans (prune_same_structure nA) (IH _ _ erefl).
     Qed.
   End same_structure.
 
@@ -286,7 +286,7 @@ Section RunP.
     by rewrite sA HB//HA//.
   Qed.
 
-  Lemma failedF_next_alt {A}:
+  Lemma failedF_prune {A}:
     failed A = false -> prune false A = Some A.
   Proof.
     elim: A => //=.
@@ -297,15 +297,15 @@ Section RunP.
       case sA: success => //= fB; rewrite (HA, HB)//=.
   Qed.
 
-  Lemma next_alt_big_and r:
+  Lemma prune_big_and r:
     prune false (big_and r) = Some (big_and r).
   Proof. case: r => //=+l; elim: l => //. Qed.
 
-  Lemma next_alt_big_or r rs:
+  Lemma prune_big_or r rs:
     prune false (big_or r rs) = Some (big_or r rs).
   Proof.
     elim: rs r => //= [|[sr r] rs IH] r0/=;
-    by rewrite ?is_dead_big_and next_alt_big_and//.
+    by rewrite ?is_dead_big_and prune_big_and//.
   Qed.
 
   Lemma get_substS_big_and A s1:
@@ -327,58 +327,58 @@ Section RunP.
     case_step_tag eA A' => //= _ _; apply: HA eA.
   Qed.
 
-  Lemma path_atom_exp_cut p A fv s r:
-    path_atom A -> step p fv s A = r -> r.1.2 = CutBrothers \/ r.1.2 = Expanded.
+  Lemma incomplete_exp_cut p A fv s r:
+    incomplete A -> step p fv s A = r -> r.1.2 = CutBrothers \/ r.1.2 = Expanded.
   Proof.
     move=> + <-{r}.
     elim_tree A fv s => //=.
     - destruct t; auto; rewrite push; auto.
-    - move=> /[!path_atom_or_Some] pA; rewrite !push/=.
+    - move=> /[!incomplete_or_Some] pA; rewrite !push/=.
       have [] := HA fv s pA; case_step_tag eA A' => //=; auto.
-    - move=> /[!path_atom_or_None] pA; rewrite !push/=.
+    - move=> /[!incomplete_or_None] pA; rewrite !push/=.
       have [] := HB fv sm pA; case_step_tag eA A' => //=; auto.
-    - move=> /[!path_atom_and]; case: ifP => sA pH; rewrite !push/=.
+    - move=> /[!incomplete_and]; case: ifP => sA pH; rewrite !push/=.
         by apply: HB.
       by apply: HA.
   Qed.
 
-  Lemma path_atom_cut p A fv s fv' A':
-    step p fv s A = (fv', CutBrothers, A') -> path_atom A.
+  Lemma incomplete_cut p A fv s fv' A':
+    step p fv s A = (fv', CutBrothers, A') -> incomplete A.
   Proof.
     elim_tree A fv s fv' A' => /=; rewrite !push.
     - by case_step_tag eA A2 => //=.
     - by case_step_tag eA A2 => //=.
-    - case: ifP=> sA; case_step_tag eA A2 => //= -[??]; subst; rewrite path_atom_and sA.
+    - case: ifP=> sA; case_step_tag eA A2 => //= -[??]; subst; rewrite incomplete_and sA.
         apply: HB eA.
       apply: HA eA.
   Qed.
 
-  Lemma path_atom_exp p A fv s fv' A':
-    step p fv s A = (fv', Expanded, A') -> path_atom A.
+  Lemma incomplete_exp p A fv s fv' A':
+    step p fv s A = (fv', Expanded, A') -> incomplete A.
   Proof.
     elim_tree A fv s fv' A' => /=; rewrite !push.
-    - case_step_tag eA A2 => //=-[??]; subst; rewrite path_atom_or_Some.
+    - case_step_tag eA A2 => //=-[??]; subst; rewrite incomplete_or_Some.
         apply: HA eA.
-      apply: path_atom_cut eA.
-    - case_step_tag eA A2 => //=-[??]; subst; rewrite path_atom_or_None.
+      apply: incomplete_cut eA.
+    - case_step_tag eA A2 => //=-[??]; subst; rewrite incomplete_or_None.
         apply: HB eA.
-      apply: path_atom_cut eA.
-    - case: ifP=> sA; case_step_tag eA A2 => //= -[??]; subst; rewrite path_atom_and sA.
+      apply: incomplete_cut eA.
+    - case: ifP=> sA; case_step_tag eA A2 => //= -[??]; subst; rewrite incomplete_and sA.
         apply: HB eA.
       apply: HA eA.
   Qed.
 
-  (*SNIP: path_atom_next_alt_id*)
-  Lemma path_atom_next_alt_id: forall b t, path_atom t -> prune b t = Some t.
-  (*ENDSNIP: path_atom_next_alt_id*)
+  (*SNIP: incomplete_prune_id*)
+  Lemma incomplete_prune_id: forall b t, incomplete t -> prune b t = Some t.
+  (*ENDSNIP: incomplete_prune_id*)
   Proof.
     move=> b A; elim_tree A b => /=; rewrite ?rew_pa.
     - move=> /HA->//.
     - move=> /HB->//.
-    - case: ifP => [sA /HB->|]// sA /path_atom_failed->//.
+    - case: ifP => [sA /HB->|]// sA /incomplete_failed->//.
   Qed.
 
-  Lemma next_alt_run p fv fv' A B C s b1:
+  Lemma prune_run p fv fv' A B C s b1:
     prune false A = B ->
       runT u p fv s (odflt A B) C b1 fv' ->
         runT u p fv s A C b1 fv'.
@@ -387,12 +387,12 @@ Section RunP.
     case fA: (failed A).
       case X: prune => [A'|]//= H.
       by apply: BackT fA X H.
-    rewrite failedF_next_alt//.
+    rewrite failedF_prune//.
   Qed.
 
-  Lemma succF_failF_paF A: success A = false -> failed A = false -> path_atom A = false -> False.
+  Lemma succF_failF_paF A: success A = false -> failed A = false -> incomplete A = false -> False.
   Proof.
-    rewrite/success/failed/path_atom/path_end; move: empty => s.
+    rewrite/success/failed/incomplete/path_end; move: empty => s.
     case E: get_end => [s' A']//=.
     elim_tree A s s' A' E; move: E => /=; (only 1-3: by case: A'); eauto.
     rewrite !push; case eqP => H1 H2; eauto.

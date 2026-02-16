@@ -206,8 +206,8 @@ The more interesting and used are:
 - `step_not_dead : is_dead A = false -> step s A = r -> is_dead (get_tree r) = false`
 - `step_failure_failed : step s1 A = Failed B -> (failed A * failed B)%type.`
 -  `failed_step : failed A -> step s1 A = Failed A.`
--  `next_alt_none : prune s1 A = None -> forall s2, prune s2 A = None.`
-- `next_alt_some : prune s1 A = Some (s2, B) -> (forall s3, exists s4, prune s3 A = Some (s4, B)).`
+-  `prune_none : prune s1 A = None -> forall s2, prune s2 A = None.`
+- `prune_some : prune s1 A = Some (s2, B) -> (forall s3, exists s4, prune s3 A = Some (s4, B)).`
 
 > Note: the key of the interpretation of a query is of course the substitution,
 > we haven't really pay lot of attention of it, but looking to the code, we see
@@ -350,7 +350,7 @@ We prove the following properties:
 - `bbOr_valid`: `bbOr B -> valid_tree B.`
 - `valid_tree_step`: `valid_tree A -> step s A = r -> valid_tree (get_tree r).`
 - `valid_tree_expanded`: `valid_tree A -> expandedb s1 A r -> valid_tree (get_tree_exp r).`
-- `valid_tree_next_alt`: `valid_tree A -> prune s1 A = Some (s2, B) -> valid_tree B.`
+- `valid_tree_prune`: `valid_tree A -> prune s1 A = Some (s2, B) -> valid_tree B.`
 - `valid_tree_clean_success`: `valid_tree A -> valid_tree (clean_success A).`
 - `valid_tree_run`: `valid_tree A -> runT s1 A s2 B -> valid_tree B.`  
 

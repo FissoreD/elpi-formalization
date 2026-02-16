@@ -11,10 +11,10 @@ Section s.
     success A -> runT p fv s1 A r n fv1 -> [/\ r = Some (get_subst s1 A, prune true A), fv1 = fv & n = false].
   Proof.
     move=> sA H; have:= success_step u p fv s1 sA.
-    have pA := success_path_atom sA.
+    have pA := success_incomplete sA.
     have fA := success_failed sA.
     inversion H; clear H; subst; rewrite success_step//; try congruence.
-    by rewrite next_altFN_fail in fA.
+    by rewrite pruneFN_fail in fA.
   Qed.
 
   Lemma runT_det1: forall p v0 s0 t0 r1 r2 b1 b2 v1 v2,
@@ -24,20 +24,20 @@ Section s.
     elim_run H bx vx => H1.
     + by apply: run_success sA H1.
     + inversion H1; clear H1; try congruence; subst.
-      - by rewrite success_path_atom in pA.
+      - by rewrite success_incomplete in pA.
       - move: H0; rewrite eA => -[???]; subst.
         by case: (IH _ _ H3) => ???; subst.
-      - by rewrite path_atom_failed in H.
-      - by rewrite path_atom_next_alt_id in H.
+      - by rewrite incomplete_failed in H.
+      - by rewrite incomplete_prune_id in H.
     + inversion H1; clear H1; try congruence; subst.
         by rewrite success_failed in fA.
-        by rewrite path_atom_failed in fA.      
+        by rewrite incomplete_failed in fA.      
       move: H0; rewrite nA => -[?]; subst.
       by apply: IH.
-    + have fA:= next_altFN_fail nA.
+    + have fA:= pruneFN_fail nA.
       have sA := failed_success fA.
       inversion H1; subst => //; try congruence.
-      by rewrite path_atom_failed in fA.
+      by rewrite incomplete_failed in fA.
   Qed.
 
   (*SNIP: runT_det*)
@@ -123,7 +123,7 @@ Section s.
     - by move=> sX X; subst => /=; apply: StopT.
     + case: r rB IH => [[s B']|].
         move=> rB IH sX X.
-        case: (path_atom_exp_cut pA eA) => /=?; subst => //=; apply: StepT;
+        case: (incomplete_exp_cut pA eA) => /=?; subst => //=; apply: StepT;
         rewrite /= ?(rew_pa,eA)//=.
         by have:= IH sX KO; rewrite !if_same//=.
       move=> HB.
@@ -132,7 +132,7 @@ Section s.
         apply: StepT; rewrite/= ?(eA,rew_pa)//=.
         by destruct st.
       rewrite orbF.
-      case: (path_atom_exp_cut pA eA) => /=?; subst => //=.
+      case: (incomplete_exp_cut pA eA) => /=?; subst => //=.
         move=> sX X.
         apply: StepT; rewrite/= ?(eA,rew_pa)//=.
         apply: (IH _ KO None); by apply: FailT.
@@ -141,7 +141,7 @@ Section s.
       by apply:IH H.
     + case: r rB IH => [[s B']|] rB.
         move=> IH sX X.
-        apply: BackT; rewrite /=?(next_alt_dead nA)//.
+        apply: BackT; rewrite /=?(prune_dead nA)//.
         rewrite nA//.
       destruct n => //=.
         move=> IH sX X.
@@ -150,13 +150,13 @@ Section s.
       apply: BackT; only 1,2: rewrite //=nA//.
       by apply: IH H.
     + move=> sX X X' n1 fv' H.
-      have fB := next_altFN_fail nA.
+      have fB := pruneFN_fail nA.
       inversion H; subst; clear H.
-      + apply: BackT => //=; first rewrite nA failedF_next_alt//.
+      + apply: BackT => //=; first rewrite nA failedF_prune//.
           by rewrite success_failed.
         by apply: StopT; rewrite//=success_or_None.
-      + apply: BackT => //=; first rewrite nA failedF_next_alt//.
-          by rewrite path_atom_failed.
+      + apply: BackT => //=; first rewrite nA failedF_prune//.
+          by rewrite incomplete_failed.
         apply: StepT; rewrite/= ?(rew_pa,H1)//; first destruct tg => //.
         by apply/run_ko_left2; eexists; eauto.
       + apply: BackT => //=; first by rewrite H1 nA.
@@ -194,17 +194,17 @@ Section s.
         move: H1; rewrite/=eA/=if_same => -[???]; subst.
         apply: IH => //.
         destruct b => //; by rewrite orbT in H2.
-      - by rewrite rew_pa path_atom_failed in H0.
-      by move: H0 => /=; rewrite path_atom_next_alt_id.
+      - by rewrite rew_pa incomplete_failed in H0.
+      by move: H0 => /=; rewrite incomplete_prune_id.
     - inversion 1 => //=; subst.
-        by rewrite rew_pa in H0; rewrite path_atom_failed in fA.
+        by rewrite rew_pa in H0; rewrite incomplete_failed in fA.
       - apply: IH => //.
         move: H1 => /=; case nA': prune => //= -[?]; subst.
         by move: nA; rewrite nA' => -[?]; subst.
       by move: H0 => /=; rewrite nA.
-    - have fA := next_altFN_fail nA.
+    - have fA := pruneFN_fail nA.
       inversion 1 => //; subst.
-        by rewrite rew_pa in H0; rewrite path_atom_failed in fA.
+        by rewrite rew_pa in H0; rewrite incomplete_failed in fA.
       by move: H2 => /=; rewrite nA.
   Qed.
 
@@ -236,7 +236,7 @@ Section s.
       case: prune => //=.
     + move: eA pA; rewrite rew_pa/=.
       rewrite !push; case eC: step => [[fvx rx] Cx]/=[???] PL; subst.
-      have/= rxP:= path_atom_exp_cut PL eC.
+      have/= rxP:= incomplete_exp_cut PL eC.
       have ? : b1 = false by case: rxP => ?; subst.
       subst.
       have {IH} := IH _ _ _ erefl erefl.
@@ -293,16 +293,16 @@ Section s.
           destruct s2.
           right; repeat eexists.
             by apply: FailT.
-          by apply: next_alt_run nD H.
+          by apply: prune_run nD H.
         move=> _.
         have [b H] := proj2 (run_ko_left2 p v0 v1 sm D' (Some (s2, None)) s1) rB.
         destruct s2.
           right; repeat eexists; first by apply: FailT.
-          apply: next_alt_run nD H.
+          apply: prune_run nD H.
       repeat eexists.
         by apply: FailT.
       have [b H] := proj2 (run_ko_left2 p v0 v1 sm D' None s1) rB.
-      by eexists; apply: next_alt_run nD H.
+      by eexists; apply: prune_run nD H.
     move: nA => /=.
     case nA: prune => //=; case nB: prune => //= _.
     repeat eexists; first by apply: FailT.

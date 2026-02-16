@@ -163,7 +163,7 @@ Section vars_tree.
     by apply/andP; rewrite -andbA; apply/and3P; split; apply/fsubset_trans/Hs.
   Qed.
 
-  Lemma vars_tree_next_alt_sub_flow A R fv b:
+  Lemma vars_tree_prune_sub_flow A R fv b:
     vars_tree A `<=` fv ->
     prune b A = Some R -> vars_tree R `<=` fv.
   Proof.

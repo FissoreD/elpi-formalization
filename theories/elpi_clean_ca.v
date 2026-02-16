@@ -210,7 +210,7 @@ Section clean_ca.
     clean_ca_goals bt (a2g l) = a2g l.
   Proof. by elim: l => //= -[|c] xs IH; rewrite IH//=. Qed.
 
-  Lemma clean_ca_s2l_next_alt {A x bt s R}:
+  Lemma clean_ca_s2l_prune {A x bt s R}:
     valid_tree A ->
     success A ->
     prune true A = Some R ->
@@ -273,7 +273,7 @@ Section clean_ca.
         rewrite !clean_ca_mk_lb0//.
         case X: prune => //[A']/=.
         rewrite !clean_ca_add_deep//=.
-        repeat f_equal; apply: clean_ca_s2l_next_alt X => //; apply: HA => //.
+        repeat f_equal; apply: clean_ca_s2l_prune X => //; apply: HA => //.
       have:= [elaborate @s2l_size A s (x++bt) s (clean_ca bt x)].
       have {HA}:= HA s x bt vA.
       case X: (t2l A _ (_ ++ _)) => [|[sy y]ys]; 
