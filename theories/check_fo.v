@@ -419,14 +419,14 @@ Section check.
   Definition is_det p s v t := forall r, runT' p v s t r -> r = None \/ exists s, r = (Some (s, None)).
   (*ENDSNIP: is_det *)
 
-  (*SNIP: det_check_tree *)
-  Lemma det_check_tree s v p t: 
-    vars_tree t `<=` v -> vars_sigma s `<=` v ->
+  (*SNIPT: det_check_tree *)
+  Lemma det_check_tree: 
+    forall s v p t, vars_tree t `<=` v -> vars_sigma s `<=` v ->
     check_program p -> det_tree p.(sig) t -> is_det p s v t.
-  (*ENDSNIP: det_check_tree *)
+  (*ENDSNIPT: det_check_tree *)
   Proof.
     rewrite/is_det.
-    move=> D1 D2 H1 H2 r [b[v' R]].
+    move=> s v p t D1 D2 H1 H2 r [b[v' R]].
     elim_run R H1 H2 D1 D2.
     - rewrite (det_check_prune_succ H2 sA); eauto.
     - have [H3 H4] := vars_tree_step_sub_flow D1 D2 eA.
@@ -437,13 +437,13 @@ Section check.
       by apply/det_check_prune/nA.
   Qed.
 
-  (*SNIP: det_check_call *)
-  Lemma det_check_call p s t:
-    let v := vars_tm t `|` vars_sigma s in
+  (*SNIPT: det_check_call *)
+  Lemma det_check_call:
+    forall p s t, let v := vars_tm t `|` vars_sigma s in
     check_program p -> tm_is_det p.(sig) t -> is_det p s v (TA (call t)).
-  (*ENDSNIP: det_check_call *)
+  (*ENDSNIPT: det_check_call *)
   Proof.
-    move=> /= H1 fA HA H2.
+    move=> /= p t s H1 fA HA H2.
     by apply: det_check_tree H2; rewrite//= (fsubsetUl,fsubsetUr).
   Qed.
 
