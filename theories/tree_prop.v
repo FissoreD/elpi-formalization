@@ -20,13 +20,13 @@ Section RunP.
   Notation step := (step u).
 
   Lemma incomplete_or_Some A sm B: incomplete (Or (Some A) sm B) = incomplete A.
-  Proof. by rewrite/incomplete path_end_or_Some. Qed.
+  Proof. by rewrite/incomplete next_tree_or_Some. Qed.
 
   Lemma incomplete_or_None sm B: incomplete (Or None sm B) = incomplete B.
-  Proof. by rewrite/incomplete path_end_or_None. Qed.
+  Proof. by rewrite/incomplete next_tree_or_None. Qed.
 
   Lemma incomplete_and A B0 B: incomplete (And A B0 B) = if success A then incomplete B else incomplete A.
-  Proof. rewrite/incomplete path_end_and; case: ifP => //. Qed.
+  Proof. rewrite/incomplete next_tree_and; case: ifP => //. Qed.
 
   Definition rew_pa:= 
   (
@@ -274,7 +274,7 @@ Section RunP.
 
   Lemma next_subst_and s A B0 B : 
     next_subst s (And A B0 B) = if success A then next_subst (next_subst s A) B else next_subst s A. 
-  Proof. by rewrite/next_subst/success/=/path_end push !path_endP; case: path_end => //. Qed.
+  Proof. by rewrite/next_subst/success/=/next_tree push !next_treeP; case: next_tree => //. Qed.
 
   Lemma ges_subst_cutl {s A} : 
     success A -> next_subst s (cutl A) = next_subst s A.
@@ -392,7 +392,7 @@ Section RunP.
 
   Lemma succF_failF_paF A: success A = false -> failed A = false -> incomplete A = false -> False.
   Proof.
-    rewrite/success/failed/incomplete/path_end; move: empty => s.
+    rewrite/success/failed/incomplete/next_tree; move: empty => s.
     case E: next => [s' A']//=.
     elim_tree A s s' A' E; move: E => /=; (only 1-3: by case: A'); eauto.
     rewrite !push; case eqP => H1 H2; eauto.

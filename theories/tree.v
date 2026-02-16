@@ -78,18 +78,19 @@ Section tree_op.
   (*SNIP: next_subst*)
   Definition next_subst s t := (next s t).1.
   (*ENDSNIP: next_subst*)
-  (*SNIP: path_end*)
-  Definition path_end t := (next empty t).2.
-  (*ENDSNIP: path_end*)
+  (*SNIP: next_tree*)
+  Definition next_tree t := (next empty t).2.
+  (*ENDSNIP: next_tree*)
+
   (*SNIP: succ_path*)
-  Definition success t := path_end t == OK.
+  Definition success t := next_tree t == OK.
   (*ENDSNIP: succ_path*)
   (*SNIP: failed_path*)
-  Definition failed t := path_end t == KO.
+  Definition failed t := next_tree t == KO.
   (*ENDSNIP: failed_path*)
   (*SNIP: incomplete*)
   Definition incomplete t := 
-      if path_end t is TA _ then true else false.
+      if next_tree t is TA _ then true else false.
   (*ENDSNIP: incomplete*)
   (*ENDSNIP: next_aux *)
 
@@ -109,20 +110,20 @@ Section tree_op.
   (* STATE OP PROPERTIES                                              *)
   (********************************************************************)
 
-  Lemma path_endP A s: (next s A).2 = path_end A .
+  Lemma next_treeP A s: (next s A).2 = next_tree A .
   Proof. 
-    rewrite/path_end; elim_tree A s => //=; rewrite !push HA.
+    rewrite/next_tree; elim_tree A s => //=; rewrite !push HA.
     by case: ifP => //=; rewrite !HB.
   Qed.
 
-  Lemma path_end_or_Some A s B: path_end (Or (Some A) s B) = path_end A.
-  Proof. by rewrite/path_end path_endP. Qed.
+  Lemma next_tree_or_Some A s B: next_tree (Or (Some A) s B) = next_tree A.
+  Proof. by rewrite/next_tree next_treeP. Qed.
 
-  Lemma path_end_or_None s B: path_end (Or None s B) = path_end B.
-  Proof. by rewrite/path_end/= path_endP. Qed.
+  Lemma next_tree_or_None s B: next_tree (Or None s B) = next_tree B.
+  Proof. by rewrite/next_tree/= next_treeP. Qed.
 
-  Lemma path_end_and A B0 B: path_end (And A B0 B) = if success A then path_end B else path_end A.
-  Proof. rewrite /success/path_end/=push !fun_if !path_endP; case: next => //=; case: path_end => //. Qed.
+  Lemma next_tree_and A B0 B: next_tree (And A B0 B) = if success A then next_tree B else next_tree A.
+  Proof. rewrite /success/next_tree/=push !fun_if !next_treeP; case: next => //=; case: next_tree => //. Qed.
 
   Lemma failed_success A: failed A -> success A = false.
   Proof. by rewrite/failed/success => /eqP->. Qed.
@@ -131,28 +132,28 @@ Section tree_op.
   Proof. by rewrite/success/incomplete => /eqP->. Qed.
 
   Lemma incomplete_failed A: incomplete A -> failed A = false.
-  Proof. by rewrite/incomplete/failed; case: path_end. Qed. 
+  Proof. by rewrite/incomplete/failed; case: next_tree. Qed. 
 
   Lemma success_failed A: success A -> failed A = false.
   Proof. by apply: contraTF => /failed_success ->. Qed.
 
   Lemma success_or_None sm B: success (Or None sm B) = success B.
-  Proof. by rewrite/success/path_end/= path_endP. Qed.
+  Proof. by rewrite/success/next_tree/= next_treeP. Qed.
 
   Lemma success_or_Some A sm B: success (Or (Some A) sm B) = success A.
-  Proof. by rewrite/success/path_end/= !path_endP. Qed.
+  Proof. by rewrite/success/next_tree/= !next_treeP. Qed.
 
   Lemma success_and A sm B: success (And A sm B) = success A && success B.
-  Proof. rewrite/success/path_end/= push !fun_if/= !path_endP; case:path_end => //. Qed.
+  Proof. rewrite/success/next_tree/= push !fun_if/= !next_treeP; case:next_tree => //. Qed.
 
   Lemma failed_or_None sm B: failed (Or None sm B) = failed B.
-  Proof. by rewrite/failed/path_end/= !path_endP. Qed.
+  Proof. by rewrite/failed/next_tree/= !next_treeP. Qed.
 
   Lemma failed_or_Some A sm B: failed (Or (Some A) sm B) = failed A.
-  Proof. by rewrite/failed/path_end/= !path_endP. Qed.
+  Proof. by rewrite/failed/next_tree/= !next_treeP. Qed.
 
   Lemma failed_and A sm B: failed (And A sm B) = failed A || (success A && failed B).
-  Proof. rewrite/failed/success/path_end/= !push fun_if/= !path_endP; case p: path_end => //=. Qed.
+  Proof. rewrite/failed/success/next_tree/= !push fun_if/= !next_treeP; case p: next_tree => //=. Qed.
 
   Lemma success_cut {A} : success (cutl A) = success A.
   Proof.
