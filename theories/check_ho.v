@@ -1591,7 +1591,7 @@ Proof.
 Qed.
 
 Lemma get_ctx_sigma2_ctx sP te s A:
-  get_ctxS sP te (sigma2ctx sP te s) A = sigma2ctx sP te (get_subst s A).
+  get_ctxS sP te (sigma2ctx sP te s) A = sigma2ctx sP te (next_subst s A).
 Proof.
   elim: A s => //=.
     move=> A HA smid B HB s; case: ifP => //.
@@ -1600,7 +1600,7 @@ Qed.
 
 Lemma sigP_success sP tE s O A:
   sigP sP tE s O ->
-  sigP sP tE (get_subst s A) (get_ctxS sP tE O A).
+  sigP sP tE (next_subst s A) (get_ctxS sP tE O A).
 Proof.
   elim: A s O => //=.
     move=> A HA sB B HB s O H.
@@ -1829,15 +1829,15 @@ Proof.
   by apply: compat_type_max => //; apply: compat_type_comm1.
 Qed.
 
-Lemma compat_subst_get_substS sP tyO s A:
+Lemma compat_subst_next_substS sP tyO s A:
   compat_subst sP tyO s -> tc sP tyO A ->
-  compat_subst sP tyO (get_subst s A).
+  compat_subst sP tyO (next_subst s A).
 Proof. by elim: A s => //=[???????/tc_orP[]|???????/tc_andP[]]*; case:ifP; auto. Qed.
 
-Lemma get_substS_domf sP tyO s A: 
+Lemma next_substS_domf sP tyO s A: 
   domf s `<=` domf tyO ->
   compat_subst sP tyO s -> tc sP tyO A ->
-  domf (get_subst s A) `<=` domf tyO.
+  domf (next_subst s A) `<=` domf tyO.
 Proof.
   elim: A s => //=.
     move=> A HA sm B HB s H CS /tc_orP[tA tB ts].
@@ -1846,7 +1846,7 @@ Proof.
   move=> A HA B0 B HB s H CS /tc_andP[tA tB0 tB].
   case:ifP => _; last by auto.
   apply: HB; auto.
-  by apply: compat_subst_get_substS.
+  by apply: compat_subst_next_substS.
 Qed.
 
 Lemma compat_subst_domf sP tyO sm:
@@ -1867,7 +1867,7 @@ Proof.
     move=> A HA sm B HB s /tc_orP[tA tB ts] H.
     case: ifP => _; last by auto.
     rewrite get_ctx_sigma2_ctx sigma2ctx_domf.
-    apply: get_substS_domf tB; auto.
+    apply: next_substS_domf tB; auto.
     apply: compat_subst_domf ts.
   move=> A HA B0 B HB s /tc_andP[tA tB0 tB] d.
   by case: ifP => _; auto.
@@ -1884,7 +1884,7 @@ Proof.
     rewrite get_ctx_sigma2_ctx.
     case:ifP; last by auto.
     rewrite compat_sig_sigma2ctx//.
-    rewrite compat_subst_get_substS//.
+    rewrite compat_subst_next_substS//.
   move=> A HA B0 B HB s H /tc_andP[tA tB0 tB]/=.
   case: ifP; auto => sA.
 Qed.
@@ -2858,7 +2858,7 @@ Proof.
   - move=> A HA B0 B HB s /and3P[cA cB0 cB].
     have:= HA s cA.
     case: step => //=[[]] A' cA'; only 1, 2, 3: by apply/and3P.
-    have:= HB (get_subst s A') cB.
+    have:= HB (next_subst s A') cB.
     case: step => /=[[]] B' ->/=; only 1, 3, 4: by rewrite cA cB0.
     by rewrite cB0 check_program_cutl.
 Qed. *)
@@ -2925,7 +2925,7 @@ Proof.
   move=> A HA B0 B HB s.
   move: (HA s).
   case eA: step => [[]A']//= /(_ isT) {}HA; cycle-1; [|by rewrite HA..].
-  move: (HB (get_subst s A')).
+  move: (HB (next_subst s A')).
   have [? sA] := step_success eA; subst A'.
   by case eB: step => [[]B']//= /(_ isT) {}HB _; rewrite HB//.
 Qed.
@@ -3989,7 +3989,7 @@ Proof.
   move=> [[H1 H2]|/(_ _ Y)->]; last by [].
   rewrite /Y H1 in H2.
   rewrite /Y H1 H2.
-  rewrite (HB _ _ _ (get_subst s1 A))//.
+  rewrite (HB _ _ _ (next_subst s1 A))//.
 Qed. *)
 
 (* Lemma get_ctxS_step_succ b sP tyO A O N DA SA d0 :

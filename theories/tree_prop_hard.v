@@ -8,7 +8,7 @@ Section s.
   Notation runT := (runT u).
 
   Lemma run_success p fv A s1 r n fv1: 
-    success A -> runT p fv s1 A r n fv1 -> [/\ r = Some (get_subst s1 A, prune true A), fv1 = fv & n = false].
+    success A -> runT p fv s1 A r n fv1 -> [/\ r = Some (next_subst s1 A, prune true A), fv1 = fv & n = false].
   Proof.
     move=> sA H; have:= success_step u p fv s1 sA.
     have pA := success_incomplete sA.

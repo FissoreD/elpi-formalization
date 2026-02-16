@@ -154,7 +154,7 @@ Admitted.
 
 Lemma run_a2t_success {C} u s1 bt:
   success C ->
-  Texists D b2, run u s1 (a2t_ (state_to_list C s1 bt)) (get_substS s1 C) D b2.
+  Texists D b2, run u s1 (a2t_ (state_to_list C s1 bt)) (next_substS s1 C) D b2.
 Proof.
   elim: C s1 bt => //=.
   - move=> s1 _; do 2 eexists.

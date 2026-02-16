@@ -74,27 +74,24 @@ Section tree_op.
   (*ENDSNIP: next*)
 
 
-  (*SNIP: get_subst*)
-  Definition get_subst s t := (next s t).1.
-  (*ENDSNIP: get_subst*)
-
+  (*SNIP: next_aux *)
+  (*SNIP: next_subst*)
+  Definition next_subst s t := (next s t).1.
+  (*ENDSNIP: next_subst*)
   (*SNIP: path_end*)
   Definition path_end t := (next empty t).2.
   (*ENDSNIP: path_end*)
-
   (*SNIP: succ_path*)
   Definition success t := path_end t == OK.
   (*ENDSNIP: succ_path*)
-
   (*SNIP: failed_path*)
   Definition failed t := path_end t == KO.
   (*ENDSNIP: failed_path*)
-
   (*SNIP: incomplete*)
   Definition incomplete t := 
-      if path_end t is TA _ then true 
-      else false.
+      if path_end t is TA _ then true else false.
   (*ENDSNIP: incomplete*)
+  (*ENDSNIP: next_aux *)
 
   (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
@@ -227,14 +224,14 @@ Section main.
           (fv, if is_cb tB then Expanded else tB, Or A sB rB)
     | And A B0 B =>
         if success A then 
-          let: (fv, tB, rB) := (step fv (get_subst s A) B) in
+          let: (fv, tB, rB) := (step fv (next_subst s A) B) in
           (fv, tB, And (if is_cb tB then cutl A else A) B0 rB)
         else let: (fv, tA, rA) := step fv s A in (fv, tA, And rA B0 B)
     end.
 
     Lemma step_and A B0 B pr fv s: (step pr fv s (And A B0 B)).2 = 
         if success A then 
-          And (if is_cb (step pr fv (get_subst s A) B).1.2 then cutl A else A) B0 (step pr fv (get_subst s A) B).2
+          And (if is_cb (step pr fv (next_subst s A) B).1.2 then cutl A else A) B0 (step pr fv (next_subst s A) B).2
         else And (step pr fv s A).2 B0 B.
     Proof. by rewrite/=!push; case: ifP => //=. Qed.
 
@@ -295,7 +292,7 @@ Section main.
   Inductive runT (p : program): fvS -> Sigma -> tree 
             -> option (Sigma * option tree) -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig *)
-    | StopT s s' t t' v              : success t -> get_subst s t = s' -> prune true t = t' -> runT v s t (Some (s', t')) false v
+    | StopT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = t' -> runT v s t (Some (s', t')) false v
     | StepT s r t t' b b' v v' v'' tg: incomplete t -> step p v s t = (v', tg, t') -> b' = is_cb tg || b -> runT v' s t' r b v'' -> runT v s t r b' v''
     | BackT s t t' r n v v'          : failed t -> prune false t = Some t' -> runT v s t' r n v' -> runT v s t r n v'
     | FailT s t v                   : prune false t = None -> runT v s t None false v.

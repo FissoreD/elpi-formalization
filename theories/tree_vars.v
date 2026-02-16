@@ -113,13 +113,13 @@ Section vars_tree.
     rewrite vars_tree_big_or fsubUset !fsubsetU//(Ha,Hb,Hc) orbT//.
   Qed.
 
-  Lemma vars_sigma_get_subst s fvA A:
-    vars_tree A `<=` fvA -> vars_sigma s `<=` fvA -> vars_sigma (get_subst s A) `<=` fvA.
+  Lemma vars_sigma_next_subst s fvA A:
+    vars_tree A `<=` fvA -> vars_sigma s `<=` fvA -> vars_sigma (next_subst s A) `<=` fvA.
   Proof.
     elim_tree A s fvA => /=.
       by rewrite 2!fsubUset -andbA => /and3P[vA vB vsm] vs; apply/HA.
       by rewrite fsubUset => /andP[vA vB vsm]; apply/HB.
-    rewrite 2!fsubUset -andbA get_subst_and => /and3P[vA vB vsm] vs.
+    rewrite 2!fsubUset -andbA next_subst_and => /and3P[vA vB vsm] vs.
     by case: ifP => dA; auto.
   Qed.
 
@@ -150,9 +150,9 @@ Section vars_tree.
     rewrite 2!fsubUset -andbA !push.
     move=> /and3P[vA vB0 vB] vs.
     case: ifP => sA/=[<- _ <-]/=.
-      have := vars_tree_step_sub B fv (get_subst s A).
+      have := vars_tree_step_sub B fv (next_subst s A).
       case eB: step => [[fvB rB] B']/= Hs.
-      rewrite 2!fsubUset (HB _ _ _ _ _ _ _ eB)//=; last by apply: vars_sigma_get_subst.
+      rewrite 2!fsubUset (HB _ _ _ _ _ _ _ eB)//=; last by apply: vars_sigma_next_subst.
       split => /=; last by apply/fsubset_trans/Hs.
       rewrite andbT; apply/andP; split; last by apply/fsubset_trans/Hs.
       case: ifP => _; apply/fsubset_trans/Hs => //. 

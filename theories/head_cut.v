@@ -169,7 +169,7 @@ Proof.
       admit.
     case eA1: step => [xx A1].
     case eA2: step => [yy A2]/=.
-    have:= step_add_cut_sf u p fv0 (get_subst s1 A) B; rewrite eA1 eA2/= =>?; subst.
+    have:= step_add_cut_sf u p fv0 (next_subst s1 A) B; rewrite eA1 eA2/= =>?; subst.
     case: yy eA1 eA2 => fv1 t eA1 eA2/=.
     have /= {HA} HB := HB _ _ _ _ _ _ eA1 eA2.
     admit.

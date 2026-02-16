@@ -245,7 +245,7 @@ Section check.
         move=> cA; rewrite has_cut_success//=.
         by have [->|] := HA s sv cA; auto.
       case/andP=> cB0 cB.
-      move: (HB (get_subst s A) sv cB).
+      move: (HB (next_subst s A) sv cB).
       case: ifP => sA/=; rewrite cB0/=.
         by move=> [->|->]; rewrite ?orbT; auto.
       by rewrite cB; rewrite orbT; auto.
@@ -398,7 +398,7 @@ Section check.
     - rewrite step_and/= 2!fsubUset -andbA => /and3P[S1 S2 S3] S4 /andP[dB].
       set sB:= step _ _ _ _ B.
       set sA:= step _ _ _ _ A.
-      have S5 : vars_sigma (get_subst s1 A) `<=` sv by apply: vars_sigma_get_subst.
+      have S5 : vars_sigma (next_subst s1 A) `<=` sv by apply: vars_sigma_next_subst.
       rewrite (fun_if (det_tree (sig pr))).
       case SA: success.
         case : (ifP (is_cb _)) => /=; rewrite {}HB//=.

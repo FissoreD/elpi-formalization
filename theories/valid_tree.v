@@ -120,7 +120,7 @@ Section valid_tree.
     + move=> /andP[vA].
       rewrite !push.
       case: ifP => [sA vB /= | sA]/=.
-        have {HB} := HB (get_subst s A) sv vB.
+        have {HB} := HB (next_subst s A) sv vB.
         case X: step => //[[?[]]C]/=vC; try by rewrite sA vA vC.
         rewrite success_cut sA/= vC valid_tree_cut//.
       move=> /eqP -> {B HB}.

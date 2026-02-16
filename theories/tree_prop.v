@@ -174,7 +174,7 @@ Section RunP.
     - move=> s B HB s1/= /[!failed_or_None] ; have:= HB s; case_step_tag X B1 => //=.
     - move=> A HA B0 B HB s1/=/[!failed_and].
       case: ifP => sA/=.
-        by rewrite success_failed//; have:= HB (get_subst s1 A); case: step => [[?[]]]//=.
+        by rewrite success_failed//; have:= HB (next_subst s1 A); case: step => [[?[]]]//=.
       by have:= HA s1; case_step_tag X A1 => //=->.
   Qed.
 
@@ -266,23 +266,23 @@ Section RunP.
     Qed.
   End same_structure.
 
-  Lemma get_subst_or_None s sm B: get_subst s (Or None sm B) = get_subst sm B.
-  Proof. by rewrite/get_subst/=. Qed.
+  Lemma next_subst_or_None s sm B: next_subst s (Or None sm B) = next_subst sm B.
+  Proof. by rewrite/next_subst/=. Qed.
   
-  Lemma get_subst_or_Some s sm A B: get_subst s (Or (Some A) sm B) = get_subst s A.
-  Proof. by rewrite/get_subst/=. Qed.
+  Lemma next_subst_or_Some s sm A B: next_subst s (Or (Some A) sm B) = next_subst s A.
+  Proof. by rewrite/next_subst/=. Qed.
 
-  Lemma get_subst_and s A B0 B : 
-    get_subst s (And A B0 B) = if success A then get_subst (get_subst s A) B else get_subst s A. 
-  Proof. by rewrite/get_subst/success/=/path_end push !path_endP; case: path_end => //. Qed.
+  Lemma next_subst_and s A B0 B : 
+    next_subst s (And A B0 B) = if success A then next_subst (next_subst s A) B else next_subst s A. 
+  Proof. by rewrite/next_subst/success/=/path_end push !path_endP; case: path_end => //. Qed.
 
   Lemma ges_subst_cutl {s A} : 
-    success A -> get_subst s (cutl A) = get_subst s A.
+    success A -> next_subst s (cutl A) = next_subst s A.
   Proof.
     elim_tree A s => //=; auto.
-      move=> /[!success_or_Some]/HA{}HA/[!get_subst_or_Some]//.
-      move=> /[!success_or_None]/HB{}HB/[!get_subst_or_None]//.
-    rewrite success_and fun_if !get_subst_and success_cut => /andP[sA sB].
+      move=> /[!success_or_Some]/HA{}HA/[!next_subst_or_Some]//.
+      move=> /[!success_or_None]/HB{}HB/[!next_subst_or_None]//.
+    rewrite success_and fun_if !next_subst_and success_cut => /andP[sA sB].
     by rewrite sA HB//HA//.
   Qed.
 
@@ -308,12 +308,12 @@ Section RunP.
     by rewrite ?is_dead_big_and prune_big_and//.
   Qed.
 
-  Lemma get_substS_big_and A s1:
-    get_subst s1 (big_and A) = s1.
+  Lemma next_substS_big_and A s1:
+    next_subst s1 (big_and A) = s1.
   Proof. case: A => //+l; elim: l => //. Qed.
 
-  Lemma get_subst_and_big_and s1 A B C: get_subst s1 (And A B (big_and C)) = get_subst s1 A.
-  Proof. by rewrite get_subst_and get_substS_big_and if_same. Qed.
+  Lemma next_subst_and_big_and s1 A B C: next_subst s1 (And A B (big_and C)) = next_subst s1 A.
+  Proof. by rewrite next_subst_and next_substS_big_and if_same. Qed.
 
   Lemma tree_fv_step_cut p A R fv fv' s:
     step p fv s A = (fv', CutBrothers, R) -> fv' = fv.

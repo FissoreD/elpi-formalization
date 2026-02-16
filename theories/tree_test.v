@@ -133,7 +133,7 @@ Section Test1.
       rewrite/rename/=in_fset1 eqxx/=.
       rewrite not_fnd//= eqxx/=.
       rewrite !fset0U !fsetU0.
-      rewrite /get_subst/=/varsU_rule/varsU_rhead/=/varsU_rprem/=.
+      rewrite /next_subst/=/varsU_rule/varsU_rhead/=/varsU_rprem/=.
       replace (vars_sigma _) with ([fset fresh [fset IV 0]]).
       rewrite/vars_atoms/= !fsetU0.
       move=> //.
