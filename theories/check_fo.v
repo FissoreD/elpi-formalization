@@ -416,8 +416,7 @@ Section check.
   Qed.
 
   (*SNIP: is_det *)
-  Definition is_det p s v t := 
-      forall r, runT' p v s t r -> r = None \/ exists s, r = Some(s, None).
+  Definition is_det p s v t := forall r, runT' p v s t r -> r = None \/ exists s, r = (Some (s, None)).
   (*ENDSNIP: is_det *)
 
   (*SNIP: det_check_tree *)
