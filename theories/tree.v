@@ -244,10 +244,10 @@ Section main.
      "T".
   *)
   (*SNIP: next_alt_code *)
-  (*SNIP: next_alt*)
-  Definition next_alt : bool -> tree -> option tree :=
-  (*ENDSNIP: next_alt*)
-    fix next_alt b A :=
+  (*SNIP: prune*)
+  Definition prune : bool -> tree -> option tree :=
+  (*ENDSNIP: prune*)
+    fix prune b A :=
     match A with
     | KO => None
     | OK => if b then None else Some OK
@@ -255,31 +255,31 @@ Section main.
     | And A B0 B =>
       let build_B0 A := And A B0 (big_and B0) in
       if success A then
-        match next_alt b B with
-        | None => omap build_B0 (next_alt true A)
+        match prune b B with
+        | None => omap build_B0 (prune true A)
         | Some B' => Some (And A B0 B')
         end
-      else if failed A then omap build_B0 (next_alt false A) 
+      else if failed A then omap build_B0 (prune false A) 
       else Some (And A B0 B)
-    | Or None sB B => omap (fun x => Or None sB x) (next_alt b B)
+    | Or None sB B => omap (fun x => Or None sB x) (prune b B)
     | Or (Some A) sB B =>
-        match next_alt b A with
-        | None => omap (fun x => Or None sB x) (next_alt false B)
+        match prune b A with
+        | None => omap (fun x => Or None sB x) (prune false B)
         | Some A' => Some (Or (Some A') sB B)
        end
   end.
   (*ENDSNIP: next_alt_code *)
 
-  Goal forall r, next_alt false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
+  Goal forall r, prune false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, next_alt false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
+  Goal forall r, prune false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, next_alt true (And (Or (Some OK) empty OK) r OK) = Some (And (Or None empty OK) r (big_and r)).
+  Goal forall r, prune true (And (Or (Some OK) empty OK) r OK) = Some (And (Or None empty OK) r (big_and r)).
   Proof. move=> []//=. Qed.
 
-  Goal (next_alt false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
+  Goal (prune false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
 
   (* Definition optT := option tree.
   Definition optC t : optT := Some t.
@@ -295,10 +295,10 @@ Section main.
   Inductive runT (p : program): fvS -> Sigma -> tree 
             -> option (Sigma * option tree) -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig *)
-    | StopT s s' t t' v              : success t -> get_subst s t = s' -> next_alt true t = t' -> runT v s t (Some (s', t')) false v
+    | StopT s s' t t' v              : success t -> get_subst s t = s' -> prune true t = t' -> runT v s t (Some (s', t')) false v
     | StepT s r t t' b b' v v' v'' tg: path_atom t -> step p v s t = (v', tg, t') -> b' = is_cb tg || b -> runT v' s t' r b v'' -> runT v s t r b' v''
-    | BackT s t t' r n v v'          : failed t -> next_alt false t = Some t' -> runT v s t' r n v' -> runT v s t r n v'
-    | FailT s t v                   : next_alt false t = None -> runT v s t None false v.
+    | BackT s t t' r n v v'          : failed t -> prune false t = Some t' -> runT v s t' r n v' -> runT v s t r n v'
+    | FailT s t v                   : prune false t = None -> runT v s t None false v.
   (*endprooftree: runbp*)
 
   Fixpoint vars_tree t : fvS :=

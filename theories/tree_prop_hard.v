@@ -8,7 +8,7 @@ Section s.
   Notation runT := (runT u).
 
   Lemma run_success p fv A s1 r n fv1: 
-    success A -> runT p fv s1 A r n fv1 -> [/\ r = Some (get_subst s1 A, next_alt true A), fv1 = fv & n = false].
+    success A -> runT p fv s1 A r n fv1 -> [/\ r = Some (get_subst s1 A, prune true A), fv1 = fv & n = false].
   Proof.
     move=> sA H; have:= success_step u p fv s1 sA.
     have pA := success_path_atom sA.
@@ -61,9 +61,9 @@ Section s.
       move=> [???]; subst.
       by rewrite (IH _ _ _ erefl); case_step_tag eA A => //.
     - move: fA nA => /=.
-      case: X => [X|]; (case: next_alt => [?|]//) => fX.
+      case: X => [X|]; (case: prune => [?|]//) => fX.
         by move=> []/esym; apply: IH.
-        by case: next_alt => //= ? [?]; subst; apply/IH.
+        by case: prune => //= ? [?]; subst; apply/IH.
       by move=> []/esym; apply: IH.
   Qed.
 
@@ -84,7 +84,7 @@ Section s.
     rename B into C.
     elim_run HB s3 C B' HO HM HF.
     + move: sA HM; rewrite rew_pa/= => sC. 
-      by case nB: next_alt => [C'|]//=; case: B' => //=-[s [C2 |]]//=[]*; subst;
+      by case nB: prune => [C'|]//=; case: B' => //=-[s [C2 |]]//=[]*; subst;
       exists false; apply: StopT.
     + move: pA eA HF; rewrite rew_pa/= !push => pC [???]; subst.
       case eB: step => [[fvx rx] B2].
@@ -94,12 +94,12 @@ Section s.
       case: ifP; first destruct rx; move => // _ ?; subst; eexists;
       apply: StepT eB erefl IH => //.
     + move: fA nA; rewrite rew_pa/= => fC.
-      case nB: next_alt => //[B2][?]; subst.
+      case nB: prune => //[B2][?]; subst.
       have [? {}IH] := IH _ _ _ erefl erefl erefl.
       by eexists; apply: BackT IH.
     + destruct B' => //.
       eexists; apply: FailT => //.
-      by move: nA => /=; case: next_alt.
+      by move: nA => /=; case: prune.
   Qed.
 
   Lemma run_or_correct_left p fv fv' s1 A r b:
@@ -111,7 +111,7 @@ Section s.
             Some (Or (Some A') sX (if b then KO else X))
           else 
             if b then None
-            else omap (fun x => Or None sX x) (next_alt false X))) false fv'
+            else omap (fun x => Or None sX x) (prune false X))) false fv'
       else
         if b then
           forall sX X, runT p fv s1 (Or (Some A) sX X) None false fv'
@@ -175,7 +175,7 @@ Section s.
     if X is Some (Or Ax sx Bx) then sx = s /\ A' = Ax /\ 
       if b then Bx = KO
       else if Ax is Some Ax then Bx = B
-      else Some Bx = next_alt false B
+      else Some Bx = prune false B
     else A' = None.
 
   Lemma or_succ_build_resP1 s1 b D A' r:
@@ -199,7 +199,7 @@ Section s.
     - inversion 1 => //=; subst.
         by rewrite rew_pa in H0; rewrite path_atom_failed in fA.
       - apply: IH => //.
-        move: H1 => /=; case nA': next_alt => //= -[?]; subst.
+        move: H1 => /=; case nA': prune => //= -[?]; subst.
         by move: nA; rewrite nA' => -[?]; subst.
       by move: H0 => /=; rewrite nA.
     - have fA := next_altFN_fail nA.
@@ -213,7 +213,7 @@ Section s.
       if X is Some (s3, X) then
         (exists t0' b, runT p v0 s0 t0 (Some (s3, t0')) b v2 /\ 
           or_succ_build_res sm b t1 t0' X /\ 
-          (~~b -> X = None -> next_alt false t1 = None))
+          (~~b -> X = None -> prune false t1 = None))
         \/
         (exists v1, runT p v0 s0 t0 None false v1 /\ 
           (if X is Some (Or (Some _ ) _ _) then false else true) /\
@@ -229,11 +229,11 @@ Section s.
     move=> H.
     elim_run H sm t0 t1 Ho1 Hz => //.
     + rewrite rew_pa in sA; rewrite/=.
-      left; case nA: next_alt => [A3|]/=.
+      left; case nA: prune => [A3|]/=.
         by repeat eexists; first apply: StopT => //=.
       repeat eexists; first apply: StopT => //=.
-      move=> /=; case nB: next_alt => [B1'|]//=.
-      case: next_alt => //=.
+      move=> /=; case nB: prune => [B1'|]//=.
+      case: prune => //=.
     + move: eA pA; rewrite rew_pa/=.
       rewrite !push; case eC: step => [[fvx rx] Cx]/=[???] PL; subst.
       have/= rxP:= path_atom_exp_cut PL eC.
@@ -273,7 +273,7 @@ Section s.
         by apply: StepT eC _ H1.
       apply: H2.
     + move: fA nA; rewrite rew_pa/= => fA.
-      case nC: next_alt => [C'|]//=.
+      case nC: prune => [C'|]//=.
         move=> [?]; subst.
         have {IH} := IH _ _ _ erefl erefl.
         case: r rB => [[s2 X]|] rB/=; last first.
@@ -284,7 +284,7 @@ Section s.
         right; repeat eexists; last by apply H.
           by apply: BackT rC'.
         by destruct X => //.
-      case nD: next_alt => //[D'][?]; subst.
+      case nD: prune => //[D'][?]; subst.
       case: r rB IH => [[s2 r]|] rB IH.
         have /= := run_same_structure rB.
         case: r rB IH => [r|] rB IH/=.
@@ -304,7 +304,7 @@ Section s.
       have [b H] := proj2 (run_ko_left2 p v0 v1 sm D' None s1) rB.
       by eexists; apply: next_alt_run nD H.
     move: nA => /=.
-    case nA: next_alt => //=; case nB: next_alt => //= _.
+    case nA: prune => //=; case nB: prune => //= _.
     repeat eexists; first by apply: FailT.
     move=> /=; repeat eexists.
     by apply: FailT nB.
@@ -328,7 +328,7 @@ Section s.
   (*SNIP: runSNF_or *)
   Lemma runSNF_or: forall p v0 v1 s0 t0 s1 sm t1,
     runT p v0 s0 t0 (Some (s1, None)) false v1 ->
-      let nB := (next_alt false t1) in
+      let nB := (prune false t1) in
       let sR := (omap (Or None sm) nB) in
       runT p v0 s0 (Or (Some t0) sm t1) (Some (s1, sR)) false v1.
   (*ENDSNIP: run_orSNF *)

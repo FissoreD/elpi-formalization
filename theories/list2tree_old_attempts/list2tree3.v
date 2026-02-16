@@ -197,7 +197,7 @@ Proof.
     inversion H; subst; clear H => //.
     move: H8 => //[?]; subst.
     move: H0 => /=; rewrite andbF; case: ifP => //dx.
-    case X: next_alt => //[x'][?]; subst.
+    case X: prune => //[x'][?]; subst.
     have [H5 H6]:= step_cb_same_subst1 _ vA HA; subst.
     have:= run_dead_left1 _ _ H4 => /= /(_ isT) [b1[r' [Hx Hy]]].
     do 2 eexists.

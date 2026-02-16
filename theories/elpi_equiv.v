@@ -71,7 +71,7 @@ Proof.
   elim; clear.
   - move=> s a fv s1 A vA /= H.
     case fA: (failed A).
-      case nA: (next_alt false A) => [A'|]; last first.
+      case nA: (prune false A) => [A'|]; last first.
         by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
       have /= fA' := next_alt_failedF nA.
       have /= vA' := (valid_tree_next_alt vA nA).
@@ -91,7 +91,7 @@ Proof.
     {
       (* CUT CASE *)
       case fA: (failed A).
-        case nA: (next_alt false A) => [A'|]; last first.
+        case nA: (prune false A) => [A'|]; last first.
           by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
         have /= fA' := next_alt_failedF nA.
         have /= vA' := (valid_tree_next_alt vA nA).
@@ -135,7 +135,7 @@ Proof.
     {
       (* CALL SUCCESS CASE *)
       case fA: (failed A).
-        case nA: (next_alt false A) => [A'|]; last first.
+        case nA: (prune false A) => [A'|]; last first.
           by rewrite (failed_next_alt_none_t2l vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
         rewrite (next_altF_t2l vA fA nA) in H.

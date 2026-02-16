@@ -103,7 +103,7 @@ Section check.
     end.
 
 
-  Definition nilA A := next_alt (success A) A == None.
+  Definition nilA A := prune (success A) A == None.
 
   (** DOC:
     a tree is deterministic if it calls deterministic atoms. 
@@ -260,7 +260,7 @@ Section check.
   Proof. move=> ?? //=. Qed.
 
   Lemma det_check_next_alt_succ {sP A} : 
-    det_tree sP A -> success A -> next_alt true A = None.
+    det_tree sP A -> success A -> prune true A = None.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB /andP[nA +]sA.
@@ -275,63 +275,63 @@ Section check.
   Qed.
 
   Lemma has_cut_next_alt {A R b}: 
-    has_cut A -> next_alt b A = Some R -> has_cut R.
+    has_cut A -> prune b A = Some R -> has_cut R.
   Proof.
     elim_tree A R b => /=.
     - case: t => //= _ [<-]//.
     - move=> /orP[].
         move=> cA.
         case: ifP => sA.
-          case X: next_alt => // [A'|].
+          case X: prune => // [A'|].
             by move=> [<-]/=; rewrite cA.
-          by case nA: next_alt => //=[A'][<-]/=; rewrite (HA _ _ _ nA).
+          by case nA: prune => //=[A'][<-]/=; rewrite (HA _ _ _ nA).
         case: ifP => //= fA.
-          by case nA: next_alt => //[A'][<-]/=; rewrite (HA _ _ _ nA).
+          by case nA: prune => //[A'][<-]/=; rewrite (HA _ _ _ nA).
         by move=> [<-]/=; rewrite cA.
       move=>/andP[cB0 cB].
       case: ifP => /= sA.
-        case X: next_alt => [B'|].
+        case X: prune => [B'|].
           move=> [<-]/=; rewrite cB0 (HB _ _ cB X) orbT//.
-        case Y: next_alt => //[A'][<-]/=.
+        case Y: prune => //[A'][<-]/=.
         by rewrite has_cut_seq_has_cut_big_and  cB0 orbT.
       case: ifP=> fA.
-        case X: next_alt => //= [A'][<-]/=.
+        case X: prune => //= [A'][<-]/=.
         by rewrite has_cut_seq_has_cut_big_and cB0 orbT.
       by move=> [<-]/=; rewrite cB0 cB orbT.
   Qed.
 
-  Lemma next_alt_no_alt b A A' : next_alt b A  = Some A' -> success A = b -> nilA A = false.
+  Lemma next_alt_no_alt b A A' : prune b A  = Some A' -> success A = b -> nilA A = false.
   Proof. by rewrite /nilA=> + -> => ->. Qed.
 
   Lemma det_check_next_alt {sP A R b}:
-    det_tree sP A -> next_alt b A = Some R -> det_tree sP R.
+    det_tree sP A -> prune b A = Some R -> det_tree sP R.
   Proof.
     elim_tree A R b => /=.
     - by case: b => // _ [<-].
     - by move=> _ [<-]//.
     - move=>/andP[fA].
-      case nA: next_alt => [A'|].
+      case nA: prune => [A'|].
         move=> + [<-]/=;rewrite (HA _ _ _ nA)//=.
         case: ifP => //= cA.
           rewrite (has_cut_next_alt _ nA)//.
         by move=> /eqP?; subst; rewrite if_same.
-      case nB: next_alt => //=[B']+[<-]/=.
+      case nB: prune => //=[B']+[<-]/=.
       case: ifP => [|_ /eqP] => ?; subst => // H.
       by rewrite (HB _ _ _ nB).
-    - by case nB: next_alt => //=[B']H[<-]/=; apply: (HB B' b).
+    - by case nB: prune => //=[B']H[<-]/=; apply: (HB B' b).
     - move=> /andP[dB +].
       case sA: (success A).
-        case nB: next_alt => [B'|] => [+ [<-/=]|].
+        case nB: prune => [B'|] => [+ [<-/=]|].
           rewrite (HB B' b)//=.
           case cB: (has_cut B); first by rewrite (has_cut_next_alt cB nB).
           case cB': (has_cut B'); rewrite /= orbC //= ?orbT.
           by rewrite -{1}[det_tree sP A]andbT -fun_if => /andP[-> //].
-        case nA: next_alt => [A'|] //= + [<-/=].
+        case nA: prune => [A'|] //= + [<-/=].
         rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (next_alt_no_alt nA)//.
         rewrite andbb=> /andP[+ ->]; rewrite andbT if_same /=.
         by case/orP=> [/HA/(_ nA)->//|/andP[? ->]]; rewrite orbT.
       case fA : (failed A) => [|] => [|+ [<-/=]]; last by rewrite dB.
-      case nA: next_alt => [A'|] => [+ [<-/=]|//].
+      case nA: prune => [A'|] => [+ [<-/=]|//].
       rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (next_alt_no_alt nA)//.
       rewrite andbb=> /andP[+ ->]; rewrite andbT if_same /=.
       by case/orP=> [/HA/(_ nA)->//|/andP[? ->]]; rewrite orbT.

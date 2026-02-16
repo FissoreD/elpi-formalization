@@ -165,28 +165,28 @@ Section vars_tree.
 
   Lemma vars_tree_next_alt_sub_flow A R fv b:
     vars_tree A `<=` fv ->
-    next_alt b A = Some R -> vars_tree R `<=` fv.
+    prune b A = Some R -> vars_tree R `<=` fv.
   Proof.
     clear.
     elim_tree A R fv b => /=.
       by case: b; case: R.
       by case: t => [|c]? [<-]//.
     - rewrite 2!fsubUset => /andP[/andP[Ha Hb] Hs].
-      case nA: next_alt => [B'|]//=.
+      case nA: prune => [B'|]//=.
           by move=> [<-]/=; rewrite 2!fsubUset Hb Hs (HA _ _ _ _ nA).
-      by case nB: next_alt => //=-[<-]/=; rewrite fsubUset (HB _ _ _ _ nB)//.
+      by case nB: prune => //=-[<-]/=; rewrite fsubUset (HB _ _ _ _ nB)//.
     - rewrite fsubUset => /andP[Hb Hs].
-      by case nB: next_alt => //=-[<-]/=; rewrite fsubUset (HB _ _ _ _ nB)//.
+      by case nB: prune => //=-[<-]/=; rewrite fsubUset (HB _ _ _ _ nB)//.
     rewrite !fsubUset -andbA.
     move=> /and3P [Ha Hb Hs].
     case: ifP => sA.
-      case nB: next_alt => [B'|]//=.
+      case nB: prune => [B'|]//=.
         by move=> [<-]/=; rewrite 2!fsubUset Ha Hs andbT; apply/HB/nB.
-      case nA: next_alt => [A'|]//=[<-]/=.
+      case nA: prune => [A'|]//=[<-]/=.
       rewrite !fsubUset (HA _ _ _ _ nA)//=.
       by rewrite vars_tree_big_and Hs.
     case: ifP => fA.
-      case nA: next_alt => [A'|]//= [<-]/=.
+      case nA: prune => [A'|]//= [<-]/=.
       by rewrite !fsubUset (HA _ _ _ _ nA)//= vars_tree_big_and Hs.
     move=> [<-]/=.
     by rewrite !fsubUset Ha Hs Hb.

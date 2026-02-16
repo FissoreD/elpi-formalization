@@ -24,7 +24,7 @@ Proof.
   - move: fA nA; rewrite rew_pa/=.
     move=> /orP[fl|/andP[]]//.
     rewrite fl failed_success//.
-    case nl: next_alt => //=[l'][?]; subst. 
+    case nl: prune => //=[l'][?]; subst. 
     apply: IH erefl.
 Qed.
 

@@ -14,9 +14,9 @@ Notation runS := (runS u).
 (*xSNIP: run_sig *)
 Inductive runT (p : program): fvS -> Sigma -> tree -> Sigma -> option tree -> Prop :=
 (*ENDSNIP: run_sig *)
-  | StopT s0 s1 A B v0          : success A -> get_subst s0 A = s1 -> next_alt true A = B -> runT v0 s0 A s1 B
+  | StopT s0 s1 A B v0          : success A -> get_subst s0 A = s1 -> prune true A = B -> runT v0 s0 A s1 B
   | StepT s0 s1 C A B v0 v1 st  : path_atom A -> step p v0 s0 A = (v1, st, B) -> runT v1 s0 B s1 C -> runT v0 s0 A s1 C
-  | BackT s0 s1 A B C v0        : failed A -> next_alt false A = Some B -> runT v0 s0 B s1 C -> runT v0 s0 A s1 C.
+  | BackT s0 s1 A B C v0        : failed A -> prune false A = Some B -> runT v0 s0 B s1 C -> runT v0 s0 A s1 C.
 (*xendprooftree: runbp*)
 Notation "tree.runT" := (tree.runT u).
 

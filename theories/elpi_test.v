@@ -405,7 +405,7 @@ Goal forall p l,
   let s := ((Or (Some (Or None empty (TA cut))) empty OK)) in
   let bt := of_alt([::]%SEQ :: l) in
   t2l s empty (of_alt l) = of_alt[:: [:: (cut, bt)]; [::]]%SEQ /\ 
-    t2l (odflt KO (next_alt true (step u p fset0 empty s).2)) empty (of_alt l) ++ (of_alt l) = bt.
+    t2l (odflt KO (prune true (step u p fset0 empty s).2)) empty (of_alt l) ++ (of_alt l) = bt.
 Proof.
   move=>//= _ l.
   rewrite cat_cons cat0s//.

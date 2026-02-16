@@ -118,7 +118,7 @@ three functions and four inductives to animate a program. Specifically:
   substitution $s_1$. Reset points in the $\land$ nodes are implicitly equal to
   their right-hand side. For instance, the reset point of the first `And` is
   $r_{12} \land ... \land r_{1x}$. Reset points currently have no role but will
-  be explained in the `next_alt` procedure.
+  be explained in the `prune` procedure.
 
   The expansion for the `Or` tree checks if the left-hand side is dead (i.e.,
   the tree has been fully explored with failure). If so, it steps the right-
@@ -150,17 +150,17 @@ three functions and four inductives to animate a program. Specifically:
   iterates over **expandedb** until reaching a success. If **expandedb** results
   in a failure, it backtracks and continues calling **expandedb**.
 
-- **next_alt**: Backtracking is enabled by the `next_alt` procedure. It takes a
+- **prune**: Backtracking is enabled by the `prune` procedure. It takes a
   tree and erases (i.e., replaces with `Dead`) the internal nodes representing
   a previous failure. It also returns the substitution for launching the new
-  tree within **runT**. `next_alt` is implemented with knowledge of how
+  tree within **runT**. `prune` is implemented with knowledge of how
   `step` works, choosing which atoms to keep or erase based on their status
   (e.g., `is_dead` or `failed`).
    > Note 1: The function can be significantly simplified under the assumption
    > that the input tree is valid. However, since we want our interpreter to
    > behave correctly in any tree, the function is more complex.
 
-   > Note 2: In `next_alt`, the reset point stored inside the $\land$ nodes is
+   > Note 2: In `prune`, the reset point stored inside the $\land$ nodes is
    > used. When a subtree in the left-hand side of a conjunction is killed,
    > the new left-hand side is launched with the reset point. For example, in
    > the following program:
@@ -206,8 +206,8 @@ The more interesting and used are:
 - `step_not_dead : is_dead A = false -> step s A = r -> is_dead (get_tree r) = false`
 - `step_failure_failed : step s1 A = Failed B -> (failed A * failed B)%type.`
 -  `failed_step : failed A -> step s1 A = Failed A.`
--  `next_alt_none : next_alt s1 A = None -> forall s2, next_alt s2 A = None.`
-- `next_alt_some : next_alt s1 A = Some (s2, B) -> (forall s3, exists s4, next_alt s3 A = Some (s4, B)).`
+-  `next_alt_none : prune s1 A = None -> forall s2, prune s2 A = None.`
+- `next_alt_some : prune s1 A = Some (s2, B) -> (forall s3, exists s4, prune s3 A = Some (s4, B)).`
 
 > Note: the key of the interpretation of a query is of course the substitution,
 > we haven't really pay lot of attention of it, but looking to the code, we see
@@ -307,7 +307,7 @@ produce no choice points.
 
 ```
 Definition is_det A := forall s s' B,
-  runT s A s' B -> forall s2, next_alt s2 B = None.
+  runT s A s' B -> forall s2, prune s2 B = None.
 ```
 
 `is_det` asserts that running a tree `A` from a substitution `s` results in a
@@ -350,7 +350,7 @@ We prove the following properties:
 - `bbOr_valid`: `bbOr B -> valid_tree B.`
 - `valid_tree_step`: `valid_tree A -> step s A = r -> valid_tree (get_tree r).`
 - `valid_tree_expanded`: `valid_tree A -> expandedb s1 A r -> valid_tree (get_tree_exp r).`
-- `valid_tree_next_alt`: `valid_tree A -> next_alt s1 A = Some (s2, B) -> valid_tree B.`
+- `valid_tree_next_alt`: `valid_tree A -> prune s1 A = Some (s2, B) -> valid_tree B.`
 - `valid_tree_clean_success`: `valid_tree A -> valid_tree (clean_success A).`
 - `valid_tree_run`: `valid_tree A -> runT s1 A s2 B -> valid_tree B.`  
 
@@ -596,7 +596,7 @@ When verifying suffixes, the boolean is removed from the lists using the
 `G2Gs` function.
 
 In the rest of the file, we prove several properties relating a tree `A` and
-a tree `B` that are connected through calls to `next_alt`, `step`,
+a tree `B` that are connected through calls to `prune`, `step`,
 `expandedb`, and similar functions.
 
 ## Tree to list tests: elpi_test.v

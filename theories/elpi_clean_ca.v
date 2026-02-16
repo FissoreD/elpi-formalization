@@ -213,24 +213,24 @@ Section clean_ca.
   Lemma clean_ca_s2l_next_alt {A x bt s R}:
     valid_tree A ->
     success A ->
-    next_alt true A = Some R ->
+    prune true A = Some R ->
     clean_ca bt (t2l R s (x ++ bt)) =
     t2l R s (clean_ca bt x).
   Proof.
     elim_tree A s x bt R => /=.
     - move=> /andP[vA bB]sA.
-      case X: next_alt => //[A'|].
+      case X: prune => //[A'|].
         move=> [<-]/=.
         rewrite !clean_ca_add_ca//.
-      case W: next_alt => //[B0'] [<-]/=.
+      case W: prune => //[B0'] [<-]/=.
       rewrite !clean_ca_add_ca//.
     - move=> vB sB.
-      case X: next_alt => //[B'][<-]/=.
+      case X: prune => //[B'][<-]/=.
       rewrite //= clean_ca_add_ca//.
     - move=> /[!success_and] /andP[vA] +/andP[sA sB].
       rewrite sA/= => vB.
       have H := empty_ca_atoms.
-      case X: (next_alt _ B) => [B'|].
+      case X: (prune _ B) => [B'|].
         move=> [<-]{R}/=.
         rewrite !(success_t2l empty _ sA)//= !catl0a.
         rewrite !clean_ca_cat.
@@ -243,9 +243,9 @@ Section clean_ca.
         rewrite/W/Z => {W Z}.
         rewrite !clean_ca_mk_lb0//clean_ca_add_deep//.
         repeat f_equal.
-        case Y: next_alt => //=[A'].
+        case Y: prune => //=[A'].
         apply: HA => //.
-      case Y: next_alt => //[A'].
+      case Y: prune => //[A'].
       move=> [<-]/=.
       have:= [elaborate @s2l_size A' s (x++bt) s (clean_ca bt x)].
       case M: t2l => [|[sy y]ys]; case N: t2l => [|[sz z]zs]//=.
@@ -271,7 +271,7 @@ Section clean_ca.
         rewrite clean_ca_cat.
         rewrite catA HB//= clean_ca_cat.
         rewrite !clean_ca_mk_lb0//.
-        case X: next_alt => //[A']/=.
+        case X: prune => //[A']/=.
         rewrite !clean_ca_add_deep//=.
         repeat f_equal; apply: clean_ca_s2l_next_alt X => //; apply: HA => //.
       have:= [elaborate @s2l_size A s (x++bt) s (clean_ca bt x)].

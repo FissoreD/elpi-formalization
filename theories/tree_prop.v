@@ -108,24 +108,24 @@ Section RunP.
 
 
   (*SNIP: naNfail*)
-  Lemma next_altFN_fail: forall t, next_alt false t = None -> failed t.
+  Lemma next_altFN_fail: forall t, prune false t = None -> failed t.
   (*ENDSNIP: naNfail*)
   Proof.
     move=> A; elim_tree A => /=.
-    - by move: HA HB; do 2 case: next_alt.
-    - by move: HB; case: next_alt; rewrite//rew_pa; auto.
+    - by move: HA HB; do 2 case: prune.
+    - by move: HB; case: prune; rewrite//rew_pa; auto.
     - rewrite rew_pa; move: HA HB.
       case sA: success.
         rewrite (success_failed sA)/=.
-        by case: (next_alt _ B) => //=; auto.
+        by case: (prune _ B) => //=; auto.
       by case: ifP.
   Qed.
 
-  (* Lemma is_dead_next_alt {A} b: is_dead A -> next_alt b A = None.
+  (* Lemma is_dead_next_alt {A} b: is_dead A -> prune b A = None.
   Proof. move=>/is_dead_is_ko/is_ko_next_alt//. Qed. *)
 
   Lemma next_alt_cutl_success {A}:
-    success A -> next_alt true (cutl A) = None.
+    success A -> prune true (cutl A) = None.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB sA; rewrite HA//is_ko_next_alt//.
@@ -135,7 +135,7 @@ Section RunP.
   Qed.
 
   Lemma next_alt_cutl_failed {A b}:
-    failed (cutl A) -> next_alt b (cutl A) = None.
+    failed (cutl A) -> prune b (cutl A) = None.
   Proof.
     elim: A b => //=.
     - move=> A HA s B HB b fA; rewrite HA// is_ko_next_alt//.
@@ -148,11 +148,11 @@ Section RunP.
   Qed.
 
   Lemma next_alt_cutl_failedF {A b}:
-    failed A -> next_alt b (cutl A) = None.
+    failed A -> prune b (cutl A) = None.
   Proof. move=> /failed_cut /next_alt_cutl_failed//. Qed.
 
   Lemma next_alt_cutl {A}:
-    next_alt true (cutl A) = None.
+    prune true (cutl A) = None.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB; rewrite HA//is_ko_next_alt//.
@@ -184,23 +184,23 @@ Section RunP.
 
 
   (*SNIP: na_failed *)
-  Lemma next_alt_failedF: forall b t t', next_alt b t = Some t' -> failed t' = false.
+  Lemma next_alt_failedF: forall b t t', prune b t = Some t' -> failed t' = false.
   (*ENDSNIP: na_failed *)
   Proof.
     move=> b A A'.
     elim_tree A b A' => //=.
     - by case: b => //-[<-].
     - move=> [<-]//.
-    - have:= HA b; case: next_alt => //=.
+    - have:= HA b; case: prune => //=.
         by move=> X /(_ _ erefl) + [<-]; rewrite rew_pa.
-      by have:= HB false; case: next_alt => //= ? /(_ _ erefl) + _ [<-]; rewrite rew_pa.
-    - by have:= HB b; case: next_alt => //=?/(_ _ erefl)+ [<-]; rewrite rew_pa.
+      by have:= HB false; case: prune => //= ? /(_ _ erefl) + _ [<-]; rewrite rew_pa.
+    - by have:= HB b; case: prune => //=?/(_ _ erefl)+ [<-]; rewrite rew_pa.
     - case: ifP => sA.
-        have:= HB b; case: next_alt => [X|]//=.
+        have:= HB b; case: prune => [X|]//=.
           by move=> /(_ _ erefl) + [<-]; rewrite rew_pa (success_failed sA) sA.
-        by case nA: next_alt => //= _ [<-]; rewrite rew_pa (HA _ _ nA) failed_big_and andbF.
+        by case nA: prune => //= _ [<-]; rewrite rew_pa (HA _ _ nA) failed_big_and andbF.
       case: ifP => /=fA; last by move=> [<-]; rewrite rew_pa sA fA.
-      by case nA: next_alt => //=-[<-]; rewrite rew_pa (HA _ _ nA) failed_big_and andbF.
+      by case nA: prune => //=-[<-]; rewrite rew_pa (HA _ _ nA) failed_big_and andbF.
   Qed.
 
   (* Lemma failed_big_or u p fv s t: failed (backchain u p fv s t).2.
@@ -243,14 +243,14 @@ Section RunP.
     Qed.
 
     Lemma next_alt_same_structure {b A B}:
-      next_alt b A = Some B -> same_structure A B.
+      prune b A = Some B -> same_structure A B.
     Proof.
       case: A => //=.
-      - move=> [t|]//= ??; case n: next_alt => //=; only 1, 3: by move=> [<-]; rewrite eqxx.
-        by case: next_alt => //?[<-]; rewrite eqxx.
+      - move=> [t|]//= ??; case n: prune => //=; only 1, 3: by move=> [<-]; rewrite eqxx.
+        by case: prune => //?[<-]; rewrite eqxx.
       - move=> >; repeat case: ifP => _.
-          by (do 2 case: next_alt => //=) => >; first move=>??; move=> [<-].
-          by case: next_alt => [a|]//[<-].
+          by (do 2 case: prune => //=) => >; first move=>??; move=> [<-].
+          by case: prune => [a|]//[<-].
         by move => [<-].
     Qed.
 
@@ -287,7 +287,7 @@ Section RunP.
   Qed.
 
   Lemma failedF_next_alt {A}:
-    failed A = false -> next_alt false A = Some A.
+    failed A = false -> prune false A = Some A.
   Proof.
     elim: A => //=.
     - move=> A HA s B HB fA; rewrite HA//=.
@@ -298,11 +298,11 @@ Section RunP.
   Qed.
 
   Lemma next_alt_big_and r:
-    next_alt false (big_and r) = Some (big_and r).
+    prune false (big_and r) = Some (big_and r).
   Proof. case: r => //=+l; elim: l => //. Qed.
 
   Lemma next_alt_big_or r rs:
-    next_alt false (big_or r rs) = Some (big_or r rs).
+    prune false (big_or r rs) = Some (big_or r rs).
   Proof.
     elim: rs r => //= [|[sr r] rs IH] r0/=;
     by rewrite ?is_dead_big_and next_alt_big_and//.
@@ -369,7 +369,7 @@ Section RunP.
   Qed.
 
   (*SNIP: path_atom_next_alt_id*)
-  Lemma path_atom_next_alt_id: forall b t, path_atom t -> next_alt b t = Some t.
+  Lemma path_atom_next_alt_id: forall b t, path_atom t -> prune b t = Some t.
   (*ENDSNIP: path_atom_next_alt_id*)
   Proof.
     move=> b A; elim_tree A b => /=; rewrite ?rew_pa.
@@ -379,13 +379,13 @@ Section RunP.
   Qed.
 
   Lemma next_alt_run p fv fv' A B C s b1:
-    next_alt false A = B ->
+    prune false A = B ->
       runT u p fv s (odflt A B) C b1 fv' ->
         runT u p fv s A C b1 fv'.
   Proof.
     move=> <-{B}.
     case fA: (failed A).
-      case X: next_alt => [A'|]//= H.
+      case X: prune => [A'|]//= H.
       by apply: BackT fA X H.
     rewrite failedF_next_alt//.
   Qed.

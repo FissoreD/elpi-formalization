@@ -131,26 +131,26 @@ Section valid_tree.
   Qed.
 
   Lemma valid_tree_next_alt A R b: 
-    valid_tree A -> next_alt b A = Some R -> valid_tree R.
+    valid_tree A -> prune b A = Some R -> valid_tree R.
   Proof.
     elim_tree A R b => /=.
     + by case: R => //=; case: b => //.
     + by case: t => [|c]//= _ [<-]//.
-    + move=> /andP[vA bB]; case nA: next_alt => [A'|]//=.
+    + move=> /andP[vA bB]; case nA: prune => [A'|]//=.
         by move=> [<-]/=; rewrite (HA A' b)//.
-      case nB: next_alt => [B'|]//[<-]/=; apply/HB/nB.
+      case nB: prune => [B'|]//[<-]/=; apply/HB/nB.
       by move: bB => /orP[/eqP->|/spec_base_or[?[?]]]//<-; apply: valid_tree_big_or.
-    + by move=> vB; case nB: next_alt => [B'|]//=[<-]/=; apply/HB/nB.
+    + by move=> vB; case nB: prune => [B'|]//=[<-]/=; apply/HB/nB.
     + move=>/andP[vA].
       case: ifP => /=[sA vB|sA]; subst.
-        case X: next_alt => [D|].
+        case X: prune => [D|].
           move=>[<-]/=; rewrite vA sA/= (HB _ _ vB X)//.
-        case Y: next_alt => //=[A'].
+        case Y: prune => //=[A'].
         by move=> [<-]/=; rewrite (HA _ true)//= valid_tree_big_and eqxx !if_same.
       move=> /eqP->{B HB}.
       case: ifP => fA; last first.
         by move=> [<-]/=; rewrite vA sA eqxx.
-      case X: next_alt => [D|]//=.
+      case X: prune => [D|]//=.
       by move=> [<-]/=; rewrite (HA _ false)//= eqxx valid_tree_big_and !if_same.
     Qed.
 
