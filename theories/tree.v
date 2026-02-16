@@ -288,13 +288,14 @@ Section main.
   Definition opt_ST ST : optST := Some ST.
   Coercion opt_ST: ST >-> optST. *)
 
+  Notation "tg == CutBrothers" := (is_cb tg).
   (*prooftree: runbp*)
   (*SNIP: run_sig *)
   Inductive runT (p : program): fvS -> Sigma -> tree 
             -> option (Sigma * option tree) -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig *)
     | StopT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = t' -> runT v s t (Some (s', t')) false v
-    | StepT s r t t' b b' v v' v'' tg: incomplete t -> step p v s t = (v', tg, t') -> b' = is_cb tg || b -> runT v' s t' r b v'' -> runT v s t r b' v''
+    | StepT s r t t' b b' v v' v'' tg: incomplete t -> step p v s t = (v', tg, t') -> b' = (tg == CutBrothers) || b -> runT v' s t' r b v'' -> runT v s t r b' v''
     | BackT s t t' r n v v'          : failed t -> prune false t = Some t' -> runT v s t' r n v' -> runT v s t r n v'
     | FailT s t v                   : prune false t = None -> runT v s t None false v.
   (*endprooftree: runbp*)
