@@ -175,30 +175,30 @@ Qed.
 Definition runT' p v s t r := exists b v', runT p v s t r b v'.
 (*ENDSNIP: runt1 *)
 
-(*SNIP: tree_to_elpi *)
-Lemma tree_to_elpi: forall p t s r,
-  let v := vars_tree t `|` vars_sigma s in
-  valid_tree t ->
-    runT' p v s t r -> 
-      let a := t2l t s [::] in
-      let r' :=  if r is Some (s', t) then  (Some (s', t2l (odflt KO t) s [::]))
-                else None in
-      runS p v a r'.
-(*ENDSNIP: tree_to_elpi *)
+(*SNIPT: tree_to_elpi *)
+Theorem tree_to_elpi:
+  forall p t s r, let v := vars_tree t `|` vars_sigma s in
+    valid_tree t ->
+      runT' p v s t r -> 
+        let a := t2l t s [::] in
+        let r' :=  if r is Some (s', t) then  (Some (s', t2l (odflt KO t) s [::]))
+                  else None in
+        runS p v a r'.
+(*ENDSNIPT: tree_to_elpi *)
 Proof. 
   move=> /= p t0 s0 r/= vt [b [fv H1]].
   have /= := tree_to_elpi_aux (fsubsetUl _ _) (fsubsetUr _ _) vt H1.
   by case: r H1 => [[]|]//.
 Qed.
 
-(*SNIP: elpi_to_tree *)
-Lemma elpi_to_tree p v a r : 
-  runS p v a r -> 
-  forall s t, valid_tree t -> t2l t s [::] = a ->  
-  if r is Some (s', a') then 
-    exists t', runT' p v s t (Some (s', t')) /\ t2l (odflt KO t') s [::] = a'
-  else runT' p v s t None.
-(*ENDSNIP: elpi_to_tree *)
+(*SNIPT: elpi_to_tree *)
+Theorem elpi_to_tree:
+  forall p v a r, runS p v a r -> 
+    forall s t, valid_tree t -> t2l t s [::] = a ->  
+      if r is Some (s', a') then 
+        exists t', runT' p v s t (Some (s', t')) /\ t2l (odflt KO t') s [::] = a'
+      else runT' p v s t None.
+(*ENDSNIPT: elpi_to_tree *)
 Proof.
   move=> /= H1 s' t vt tl.
   have:= elpi_to_tree_aux H1 vt tl.

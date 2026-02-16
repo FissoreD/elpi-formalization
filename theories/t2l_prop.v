@@ -337,11 +337,11 @@ Section NurProp.
       by rewrite (HA _ _ vA fA X)//.
   Qed.
 
-  (*SNIP: pruneF_t2l *)
-  Lemma pruneF_t2l: forall t t' b,
-    valid_tree t -> failed t -> prune b t = Some t' -> 
+  (*SNIPT: pruneF_t2l *)
+  Lemma pruneF_t2l: 
+    forall t t' b, valid_tree t -> failed t -> prune b t = Some t' -> 
       forall l s, t2l t s l = t2l t' s l.
-  (*ENDSNIP: pruneF_t2l *)
+  (*ENDSNIPT: pruneF_t2l *)
   Proof.
     move=> A R b +++ l s3.
     elim_tree A s3 R l b => /=.
