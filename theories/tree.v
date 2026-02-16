@@ -60,26 +60,26 @@ Section tree_op.
   (********************************************************************)
 
 
-  (*SNIP: get_end*)
-  Fixpoint get_end s t : Sigma * tree:=
+  (*SNIP: next*)
+  Fixpoint next s t : Sigma * tree:=
     match t with
     | TA _ | KO | OK => (s, t)
-    | Or None s' B => get_end s' B
-    | Or (Some A) _ _ => get_end s A
+    | Or None s' B => next s' B
+    | Or (Some A) _ _ => next s A
     | And A _ B => 
-      let (s', pA) := get_end s A in
-      if pA == OK then get_end s' B
+      let (s', pA) := next s A in
+      if pA == OK then next s' B
       else (s', pA)
     end.
-  (*ENDSNIP: get_end*)
+  (*ENDSNIP: next*)
 
 
   (*SNIP: get_subst*)
-  Definition get_subst s t := (get_end s t).1.
+  Definition get_subst s t := (next s t).1.
   (*ENDSNIP: get_subst*)
 
   (*SNIP: path_end*)
-  Definition path_end t := (get_end empty t).2.
+  Definition path_end t := (next empty t).2.
   (*ENDSNIP: path_end*)
 
   (*SNIP: succ_path*)
@@ -112,7 +112,7 @@ Section tree_op.
   (* STATE OP PROPERTIES                                              *)
   (********************************************************************)
 
-  Lemma path_endP A s: (get_end s A).2 = path_end A .
+  Lemma path_endP A s: (next s A).2 = path_end A .
   Proof. 
     rewrite/path_end; elim_tree A s => //=; rewrite !push HA.
     by case: ifP => //=; rewrite !HB.
@@ -125,7 +125,7 @@ Section tree_op.
   Proof. by rewrite/path_end/= path_endP. Qed.
 
   Lemma path_end_and A B0 B: path_end (And A B0 B) = if success A then path_end B else path_end A.
-  Proof. rewrite /success/path_end/=push !fun_if !path_endP; case: get_end => //=; case: path_end => //. Qed.
+  Proof. rewrite /success/path_end/=push !fun_if !path_endP; case: next => //=; case: path_end => //. Qed.
 
   Lemma failed_success A: failed A -> success A = false.
   Proof. by rewrite/failed/success => /eqP->. Qed.

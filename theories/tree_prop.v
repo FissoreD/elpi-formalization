@@ -393,10 +393,10 @@ Section RunP.
   Lemma succF_failF_paF A: success A = false -> failed A = false -> incomplete A = false -> False.
   Proof.
     rewrite/success/failed/incomplete/path_end; move: empty => s.
-    case E: get_end => [s' A']//=.
+    case E: next => [s' A']//=.
     elim_tree A s s' A' E; move: E => /=; (only 1-3: by case: A'); eauto.
     rewrite !push; case eqP => H1 H2; eauto.
     move: H2 => [??]; subst.
-    by case gA: get_end => /=; eauto.
+    by case gA: next => /=; eauto.
   Qed.
 End RunP.
