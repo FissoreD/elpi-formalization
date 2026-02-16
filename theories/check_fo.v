@@ -417,7 +417,7 @@ Section check.
 
   (*SNIP: is_det *)
   Definition is_det p s v t := 
-      forall r, runT' p v s t r -> if r is Some (_, x) then x = None else r = None.
+      forall r, runT' p v s t r -> r = None \/ exists s, r = Some(s, None).
   (*ENDSNIP: is_det *)
 
   (*SNIP: det_check_tree *)
@@ -429,7 +429,7 @@ Section check.
     rewrite/is_det.
     move=> D1 D2 H1 H2 r [b[v' R]].
     elim_run R H1 H2 D1 D2.
-    - apply: det_check_prune_succ H2 sA.
+    - rewrite (det_check_prune_succ H2 sA); eauto.
     - have [H3 H4] := vars_tree_step_sub_flow D1 D2 eA.
       apply: (IH H1 _ H3 H4).
       by apply: det_check_step eA.
