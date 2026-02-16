@@ -88,10 +88,10 @@ Definition add_ca' alts a :=
   | call' pr t => call' pr t
   end.
 
-Definition save_goals' (a: alts') (gs b:goals') := map (add_ca' a) b ++ gs.
+Definition save_gs' (a: alts') (gs b:goals') := map (add_ca' a) b ++ gs.
 
-Definition save_alts' (a : alts') (gs: goals') (bs : alts') := 
-  map (fun '((s,x): Sigma * goals') => (s, save_goals' a gs x)) bs.
+Definition save_as' (a : alts') (gs: goals') (bs : alts') := 
+  map (fun '((s,x): Sigma * goals') => (s, save_gs' a gs x)) bs.
 
   Definition a2g' p A :=
   match A with
@@ -127,7 +127,7 @@ Inductive runS' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Prop :=
 | CutS' s s1 a ca r gl gl' : runS' s gl ca s1 r -> hd' gl' (cut' ca) gl -> runS' s gl' a s1 r
 | CallS' p s s1 a b bs gl r t : 
   F u p t s = [:: b & bs ] -> 
-    runS' b.1 (save_goals' a gl (a2gs1' p b)) (save_alts' a gl ((aa2gs' p) bs) ++ a) s1 r -> 
+    runS' b.1 (save_gs' a gl (a2gs1' p b)) (save_as' a gl ((aa2gs' p) bs) ++ a) s1 r -> 
       runS' s ((call' p t) ::: gl) a s1 r
 | BackE' p s s1 s2 t gl a al r : 
   F u p t s = [::] -> runS' s1 a al s2 r -> runS' s ((call' p t) ::: gl) ((s1, a) ::: al) s2 r.
@@ -163,7 +163,7 @@ Inductive nurk u : Sigma -> goals ->  alts -> Sigma -> alts -> Type :=
 | CutS s s1 a ca r gl : nurk s gl ca s1 r -> nurk s ((cut ca) ::: gl) a s1 r
 | CallS p s s1 a b bs gl r t : 
   F u p t s = [:: b & bs ] -> 
-    nurk b.1 (save_goals a gl (a2gs1 p b)) (save_alts a gl ((aa2gs p) bs) ++ a) s1 r -> 
+    nurk b.1 (save_gs a gl (a2gs1 p b)) (save_as a gl ((aa2gs p) bs) ++ a) s1 r -> 
       nurk s ((call p t) ::: gl) a s1 r
 | BackE p s s1 s2 t gl a al r : 
   F u p t s = [::] -> nurk s1 a al s2 r -> nurk s ((call p t) ::: gl) ((s1, a) ::: al) s2 r.

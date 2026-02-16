@@ -120,10 +120,10 @@ Definition add_ca' alts a : (nat * _) :=
   | (n, call' pr t) => (n, call' pr t)
   end.
 
-Definition save_goals' (a: alts') (gs b:goals') := map (add_ca' a) b ++ gs.
+Definition save_gs' (a: alts') (gs b:goals') := map (add_ca' a) b ++ gs.
 
-Definition save_alts' (a : alts') (gs: goals') (bs : alts') := 
-  map (fun '((n,s,x): nat * Sigma * goals') => (n, s, save_goals' a gs x)) bs.
+Definition save_as' (a : alts') (gs: goals') (bs : alts') := 
+  map (fun '((n,s,x): nat * Sigma * goals') => (n, s, save_gs' a gs x)) bs.
 
   Definition a2g' p A :=
   match A with
@@ -158,7 +158,7 @@ Inductive runS' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Type :=
 | CutS' s s1 a ca r gl n1 : runS' s gl ca s1 r -> runS' s ((n1, cut' ca) ::: gl) a s1 r
 | CallS' p s s1 a b bs gl r t n1: 
   F u p t s = [:: b & bs ] -> 
-    runS' b.1 (save_goals' a gl (a2gs1' n1.+1 p b)) (save_alts' a gl ((aa2gs' n1.+1 p) bs) ++ a) s1 r -> 
+    runS' b.1 (save_gs' a gl (a2gs1' n1.+1 p b)) (save_as' a gl ((aa2gs' n1.+1 p) bs) ++ a) s1 r -> 
       runS' s ((n1, call' p t) ::: gl) a s1 r
 | BackE' p s s1 s2 t gl a al r n n1 : 
   F u p t s = [::] -> runS' s1 a al s2 r -> runS' s ((n, call' p t) ::: gl) ((n1, s1, a) ::: al) s2 r.
@@ -207,25 +207,25 @@ Admitted.
 Lemma cat_erase_alts' a x : erase_alts' a ++ erase_alts' x = erase_alts' (a ++ x).
 Admitted.
 
-Lemma save_alts_erase x y gl :
-  save_alts (erase_alts' x) (erase_goals' y) (erase_alts' gl) =
-  erase_alts' (save_alts' x y gl)
-with save_goals_erase x y gl :
-  save_goals (erase_alts' x) (erase_goals' y) (erase_goals' gl) =
-  erase_goals' (save_goals' x y gl).
-- rewrite /save_alts.
+Lemma save_as_erase x y gl :
+  save_as (erase_alts' x) (erase_goals' y) (erase_alts' gl) =
+  erase_alts' (save_as' x y gl)
+with save_gs_erase x y gl :
+  save_gs (erase_alts' x) (erase_goals' y) (erase_goals' gl) =
+  erase_goals' (save_gs' x y gl).
+- rewrite /save_as.
   case: gl => //= -[[? s] gl] a.
   rewrite map_cons.
   congr ((_,_) ::: _).
-    by rewrite save_goals_erase.
-  by rewrite [LHS]save_alts_erase.
+    by rewrite save_gs_erase.
+  by rewrite [LHS]save_as_erase.
 - case: gl => //= -[? g gs] //=.
-  rewrite /save_goals /save_goals' !map_cons /= [in RHS]cat_cons /=.
+  rewrite /save_gs /save_gs' !map_cons /= [in RHS]cat_cons /=.
   rewrite cat_cons.
   case: g => /= [p c|a].
   congr (_ ::: _).
-    by rewrite -save_goals_erase.
-  congr ((cut _) ::: _); try rewrite -save_goals_erase //.
+    by rewrite -save_gs_erase.
+  congr ((cut _) ::: _); try rewrite -save_gs_erase //.
   exact: cat_erase_alts'.
 Qed.
 
@@ -243,11 +243,11 @@ Proof.
   - move=> p s s1 a [s2 r] rs gl a1 t n/= H H1 H2.
     apply: CallS H _ => /=.
     move: H2.
-    rewrite/save_goals/=/map/=/save_goals'/=.
-    rewrite -!save_goals_erase => H.
+    rewrite/save_gs/=/map/=/save_gs'/=.
+    rewrite -!save_gs_erase => H.
     congr (elpi _ _ _ _ _) : H.
-      by rewrite /save_goals/map/= -a2gs1_erase.
-    by rewrite (aa2gs_erase n.+1) save_alts_erase cat_erase_alts'.
+      by rewrite /save_gs/map/= -a2gs1_erase.
+    by rewrite (aa2gs_erase n.+1) save_as_erase cat_erase_alts'.
   - move=> p s s1 s2 t gl a al r _ _ H H1 H2.
     apply: BackE H H2.
 Qed.
@@ -272,9 +272,9 @@ by apply: CutS'.
 
 move=> p s1 s2 old_alts [s0 b0]/= bs andg new_alts c EF He IH old_alts' [|[n [p'|ct]] c'] // andg' E1 /= [-> ->] E2.
 subst.
-rewrite (aa2gs_erase n.+1) save_alts_erase cat_erase_alts' in IH.
+rewrite (aa2gs_erase n.+1) save_as_erase cat_erase_alts' in IH.
 have {}IH:= (IH _ _ erefl).
-rewrite (a2gs1_erase n.+1) save_goals_erase in IH.
+rewrite (a2gs1_erase n.+1) save_gs_erase in IH.
 have {IH} [new_alts' [H1 H2]]:= (IH _ erefl).
 eexists; split; try eassumption.
 apply: CallS' EF H2 => /=.

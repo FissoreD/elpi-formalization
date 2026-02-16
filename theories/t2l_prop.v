@@ -278,7 +278,7 @@ Section NurProp.
     [seq catr ca j | j <- [seq (x, [::]) | x <- b]] = [seq (x, ca) | x <- b].
   Proof. elim: b => //= x xs <-; rewrite/catr//= cat0s//. Qed.
 
-  Lemma save_goals_a2g b ca: 
+  Lemma save_gs_a2g b ca: 
     map (fun e : A * alts => (e.1, e.2 ++ ca)) (a2g b) =
     seq2goals [seq (x, ca) | x <- b].
   Proof.
@@ -287,7 +287,7 @@ Section NurProp.
   Qed.
 
   Lemma s2l_big_or k s {b bs ca gs}:
-    (s, save_goals ca gs b) :: (save_alts ca gs bs) =
+    (s, save_gs ca gs b) :: (save_as ca gs bs) =
     map (catr gs) (t2l (Or (Some KO) s (big_or b bs)) k ca).
   Proof. 
     move=>/=; clear k.
@@ -295,7 +295,7 @@ Section NurProp.
     elim: bs s b ca gs => //=.
       move=> s b ca gs.
       rewrite t2l_big_and/= map_cons; f_equal.
-      rewrite /save_goals; f_equal.
+      rewrite /save_gs; f_equal.
       have:= empty_ca_atoms b.
       set X := (a2g _).
       rewrite/catr/= => /add_ca_deep_map_empty<-.
@@ -304,7 +304,7 @@ Section NurProp.
     rewrite add_ca_deep_empty1 add_ca_deep_cat map_cat t2l_big_and/=map_cons.
     rewrite cat_cons cat0s; f_equal.
       rewrite -add_ca_deep_map_empty//=.
-      by rewrite/catr/=/save_goals save_goals_a2g.
+      by rewrite/catr/=/save_gs save_gs_a2g.
       by rewrite empty_ca_atoms//.
     apply: IH.
   Qed.
@@ -374,33 +374,33 @@ Section NurProp.
 
   Lemma map_nil F : map F [::]%G = [::]%G. by []. Qed.
 
-  Lemma save_goals_cons (a: alts) (gs :goals) b1 bs :
-    save_goals a gs [:: b1 & bs] =
-    [:: (b1, a) & save_goals a gs bs]%G.
-  Proof. rewrite/save_goals/= cat_cons//. Qed.
+  Lemma save_gs_cons (a: alts) (gs :goals) b1 bs :
+    save_gs a gs [:: b1 & bs] =
+    [:: (b1, a) & save_gs a gs bs]%G.
+  Proof. rewrite/save_gs/= cat_cons//. Qed.
 
   Lemma add_deep_goalsP hd r ys l tl:
     empty_caG hd ->
-      add_deepG l hd (save_goals (ys ++ l) tl r) ++ hd =
-        save_goals (map (catr hd) (add_deep l hd ys) ++ l)
+      add_deepG l hd (save_gs (ys ++ l) tl r) ++ hd =
+        save_gs (map (catr hd) (add_deep l hd ys) ++ l)
           ( (add_deepG l hd tl) ++ hd) r.
   Proof.
     elim: r hd ys l tl.
-      by rewrite /save_goals// => >/=; rewrite !cat0s.
+      by rewrite /save_gs// => >/=; rewrite !cat0s.
     move=> g gs IH hd ys l tl Hhd.
-    rewrite !save_goals_cons -IH //= !cat_cons.
+    rewrite !save_gs_cons -IH //= !cat_cons.
     rewrite size_cat addnK drop_size_cat//add_deep_cat take_size_cat ?size_add_deep//.
   Qed.
 
   Lemma add_deep_altsP hd rs ys l tl:
     empty_caG hd ->
-    map (catr hd) (add_deep l hd (save_alts (ys ++ l) tl rs)) =
-      save_alts (map (catr hd) (add_deep l hd ys) ++ l)
+    map (catr hd) (add_deep l hd (save_as (ys ++ l) tl rs)) =
+      save_as (map (catr hd) (add_deep l hd ys) ++ l)
         ((add_deepG l hd tl) ++ hd) rs.
   Proof.
     move=> H.
     elim: rs => //=-[s1 g] gs IH.
-    rewrite /=/save_alts/= map_cons/= IH.
+    rewrite /=/save_as/= map_cons/= IH.
     rewrite/catr//=add_deep_goalsP//.
   Qed.
 
@@ -709,13 +709,13 @@ Section NurProp.
   Qed.
 
   Lemma save_alt_add_ca_deepA bt a gs bs:
-      add_ca_deep bt ((save_alts a gs bs)) = 
-        (save_alts ((add_ca_deep bt a) ++ bt) (add_ca_deep_goals bt gs) bs)
+      add_ca_deep bt ((save_as a gs bs)) = 
+        (save_as ((add_ca_deep bt a) ++ bt) (add_ca_deep_goals bt gs) bs)
   with save_alt_add_ca_deepG bt a gs b:
-      add_ca_deep_goals bt (save_goals a gs b) = 
-        save_goals ((add_ca_deep bt a) ++ bt) (add_ca_deep_goals bt gs) b.
+      add_ca_deep_goals bt (save_gs a gs b) = 
+        save_gs ((add_ca_deep bt a) ++ bt) (add_ca_deep_goals bt gs) b.
   Proof.
-    all: rewrite/save_alts/save_goals/empty_ca/=
+    all: rewrite/save_as/save_gs/empty_ca/=
      in save_alt_add_ca_deepA save_alt_add_ca_deepG *.
     {
       case: bs => //=-[s1 b] bs.
@@ -740,8 +740,8 @@ Section NurProp.
       bcr.1 = fv' &
       t2l R s l =
       if bcr.2 is (w :: ws)%SEQ then
-       (w.1, save_goals (xs++l) gs w.2) :: 
-        ((save_alts (xs++l) gs ws) ++ xs)
+       (w.1, save_gs (xs++l) gs w.2) :: 
+        ((save_as (xs++l) gs ws) ++ xs)
       else xs]
       .
   Proof.

@@ -203,11 +203,11 @@ Section cat.
   Definition catl {H : IsList A B} (pref: B) (e: T * B) := (e.1, pref ++ e.2).
 End cat.
 
-Definition save_goals a gs b := 
-    seq2goals [seq (x, a) | x <- b] ++ gs.
+Definition save_gs a gs b : goals := 
+  seq2goals [seq (x, a) | x <- b] ++ gs.
 
-Definition save_alts a gs bs := 
-  seq2alts [seq (x.1, save_goals a gs (x.2)) | x <- bs].
+Definition save_as a gs bs := 
+  seq2alts [seq (x.1, save_gs a gs (x.2)) | x <- bs].
 
 Definition empty_ca_G (g : A * alts) :=
   match g with (_,[::]) => true | _ => false end.
@@ -220,7 +220,6 @@ Definition empty_ca alts := all (fun x => empty_caG (snd x)) alts.
 Section Nur.
 
 Variable u : Unif.
-Variable p : program.
 
 From det Require Import finmap.
 Open Scope fset_scope.
@@ -228,9 +227,9 @@ Open Scope fset_scope.
 Notation bc := (bc u).
 
 (*SNIP: stepE *)
-Definition stepE v t s a g :=
+Definition stepE p v t s a g :=
   let (v', r) := bc p v t s in
-  (v', save_alts a g r).
+  (v', save_as a g r).
 (*ENDSNIP: stepE *)
 
 
@@ -240,12 +239,12 @@ Notation " x :: y" := (consC x y)(at level 60).
 (*prooftree: nurbp*)
 (*SNIP: runS *)
 (*SNIP: nur_type*)
-Inductive runS : fvS -> alts -> option (Sigma * alts) -> Prop :=
+Inductive runS (p: program) : fvS -> alts -> option (Sigma * alts) -> Prop :=
 (*ENDSNIP: nur_type*)
 | StopS s a v : runS v ((s, [::]%G) :: a) (Some (s, a))
 | CutS s _a ca r g v : runS v ((s, g) :: ca) r -> runS v ((s, (cut, ca) :: g) :: _a) r
 | CallS s a g bs r t _ca v v': 
-    stepE v t s a g = (v', bs) -> 
+    stepE p v t s a g = (v', bs) -> 
       runS v' (bs ++ a) r -> 
         runS v ((s, (call t, _ca) :: g) :: a) r
 | FailS _v0: runS _v0 [::] None.
@@ -261,15 +260,15 @@ Proof. by elim: l => //= x xs<-//. Qed.
 Lemma map_seq2goals f l : map f (seq2goals l) = seq2goals (seq.map f l).
 Proof. by elim: l => //= x xs<-//. Qed.
 
-Lemma stepE_len v t s a1 a2 gl:
-  size (stepE v t s a1 gl).2 = size (stepE v t s a2 gl).2.
+Lemma stepE_len p v t s a1 a2 gl:
+  size (stepE p v t s a1 gl).2 = size (stepE p v t s a2 gl).2.
 Proof.
   rewrite/stepE; case: bc => //= _ b.
-  by rewrite/save_alts !size_seq2alts !seq.size_map.
+  by rewrite/save_as !size_seq2alts !seq.size_map.
 Qed.
 
-Lemma nur_consistent v A s1 s2 :
-  runS v A s1 -> runS v A s2 -> s1 = s2.
+Lemma nur_consistent p v A s1 s2 :
+  runS p v A s1 -> runS p v A s2 -> s1 = s2.
 Proof.
   move=> H; elim: H s2; clear.
   - inversion 1 => //.

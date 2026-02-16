@@ -200,7 +200,7 @@ Theorem elpi_to_tree:
       else runT' p v s t None.
 (*ENDSNIPT: elpi_to_tree *)
 Proof.
-  move=> /= H1 s' t vt tl.
+  move=> /= p v a r H1 s' t vt tl.
   have:= elpi_to_tree_aux H1 vt tl.
   by move=> [b[v1]]; case: r H1 => [[? b' H [t1 [H2 <-]]]|]; repeat eexists; eauto.
 Qed.
