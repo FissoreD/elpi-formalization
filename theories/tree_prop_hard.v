@@ -102,6 +102,18 @@ Section s.
       by move: nA => /=; case: prune.
   Qed.
 
+
+  Lemma run_ko_EON p fv fv' s2 B B' sIgn b1:
+    runT p fv s2 B B' b1 fv' ->
+    runT p fv sIgn (Or None s2 B) (omap (fun '(s, x) => (s, omap (Or None s2) x)) B') false fv'.
+  Proof. by move=> H; have:= ex_intro (fun x => runT p fv s2 B B' x fv') _ H => /run_ko_left2. Qed.
+
+  Lemma run_ko_ONK p fv fv' s2 B B' sIgn ss:
+    runT p fv sIgn (Or None s2 B) ss false fv' ->
+    ss = (omap (fun '(s, x) => (s, omap (Or None s2) x)) B') ->
+      (exists b1, runT p fv s2 B B' b1 fv').
+  Proof. by move=> +?; subst => /run_ko_left2. Qed.
+
   Lemma run_or_correct_left p fv fv' s1 A r b:
     runT p fv s1 A r b fv' ->
       if r is Some (s2, A') then

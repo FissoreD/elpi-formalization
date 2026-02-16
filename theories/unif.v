@@ -93,3 +93,7 @@ Proof.
   have Abs := match2_unif M M'.
   have := (iffLR (unif_rename _ _ _ _)).
 Admitted.
+
+Axiom matching_V: forall u s t d,
+  vars_sigma s `<=` d -> vars_tm t `<=` d ->
+  matching u t (Tm_V (fresh d)) s = Some (s.[fresh d <- t]).
