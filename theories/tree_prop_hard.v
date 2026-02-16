@@ -310,10 +310,13 @@ Section s.
     by apply: FailT nB.
   Qed.
 
+  Notation "A \/ B -sub( s )" := (Or A s B)
+   (at level 50, s at level 0).
+
   (*SNIP: runSST_or *)
   Lemma runSST_or: forall p v v' s s' l l' s1 r,
     runT p v s l (Some (s', Some l')) true v' ->
-      runT p v s (Or (Some l) s1 r) (Some (s', Some (Or (Some l') s1 KO))) false v'.
+      runT p v s (Or (Some l) s1 r) (Some (s', Some ( ((Some l') \/ KO -sub(s1)) ))) false v'.
   (*ENDSNIP: run_orSST *)
   Proof. move=> > /run_or_correct_left H; auto. Qed.
 
@@ -344,7 +347,7 @@ Section s.
   (*SNIP: runNT_or *)
   Lemma runNT_or: forall p v v' s t s1 t',
     runT p v s t None true v' ->
-      runT p v s (Or (Some t) s1 t') None false v'.
+      runT p v s ( (Some t) \/ t' -sub(s1)) None false v'.
   (*ENDSNIP: run_orNT *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
@@ -359,7 +362,7 @@ Section s.
 
   (*SNIP: run_orSST *)
   Lemma run_orSST p v v' s s' s1 l l' r r':
-    runT p v s (Or (Some l) s1 r) (Some (s', (Some (Or (Some l') s1 r')))) false v' ->
+    runT p v s ( (Some l) \/ r -sub(s1) ) (Some (s', (Some ( (Some l') \/ r' -sub(s1))))) false v' ->
     exists b, runT p v s l (Some (s', Some l')) b v' /\ r' = if b then KO else r.
   (*ENDSNIP: run_orSST *)
   Proof.
