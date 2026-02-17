@@ -436,9 +436,10 @@ Section check.
       by have:= succF_failF_paF SA fA pA.
   Qed.
 
-  (*SNIP: is_det *)
-  Definition is_det p s v t := forall r, runT' p v s t r -> r = None \/ exists s, r = (Some (s, None)).
-  (*ENDSNIP: is_det *)
+  (*SNIPT: is_det *)
+  Definition is_det p s v t := 
+    forall r, runT' p v s t r -> r = None \/ exists s, r = (Some (s, None)).
+  (*ENDSNIPT: is_det *)
 
   Lemma acyclic_sigmaT_big_and B0: acyclic_sigmaT (big_and B0).
   Proof. rewrite/big_and; case: B0 => //= + l; elim: l => //=. Qed.
