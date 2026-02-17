@@ -4,14 +4,14 @@ From det Require Import tree tree_prop ctx tree_vars unif mut_excl.
 
 Section checker.
 
-  Definition check_atom sP (a: A) :=
+  Definition check_atom sP (a: Atom) :=
     match a with
     | cut => true
     | call t => tm_is_det sP t
     end. 
 
   (* There is cut and after the cut there are only call to Det preds *)
-  Fixpoint check_atoms (sP :sigT) (s: seq A) :=
+  Fixpoint check_atoms (sP :sigT) (s: seq Atom) :=
     match s with
     | [::] => true
     | cut :: xs => all (check_atom sP) xs || check_atoms sP xs

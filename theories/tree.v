@@ -9,11 +9,11 @@ Unset Elimination Schemes.
 (*BEGIN*)
 (*SNIP: tree_def*)
 Inductive tree :=
-  | KO | OK | TA of A
+  | KO | OK | TA of Atom
   (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
   | Or  of option tree & Sigma & tree 
   (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
-  | And of tree & seq A & tree.
+  | And of tree & seq Atom & tree.
 (*ENDSNIP: tree_def*)
   (* | PiImpl : V -> R_ A -> A -> A. *)
 
@@ -22,12 +22,12 @@ Set Elimination Schemes.
 Lemma tree_ind : forall P,
   P KO ->
   P OK ->
-  (forall a : A, P (TA a)) ->
+  (forall a : Atom, P (TA a)) ->
   (forall (l : tree), P l -> forall (s : Sigma) (t : tree), P t -> P (Or (Some l) s t)) ->
   (forall (s : Sigma) (t : tree),
     P t -> P (Or None s t)) ->
   (forall t : tree,
-  P t -> forall (l : seq A) (t0 : tree), P t0 -> P (And t l t0)) ->
+  P t -> forall (l : seq Atom) (t0 : tree), P t0 -> P (And t l t0)) ->
   forall t : tree, P t.
 Proof.
   move=> P H1 H2 H3 H4 H5 H6.
@@ -184,13 +184,13 @@ Fixpoint big_andA x xs : tree :=
   | y :: ys => And (TA x) xs (big_andA y ys)
   end.
 
-Definition big_and (a : list A) : tree :=
+Definition big_and (a : list Atom) : tree :=
   match a with
   | [::] => OK
   | x :: xs => big_andA  x xs
   end.
 
-Fixpoint big_or (r : list A) (l : seq (Sigma * seq A)) : tree :=
+Fixpoint big_or (r : list Atom) (l : seq (Sigma * seq Atom)) : tree :=
   match l with 
   | [::] => big_and r
   | (s,r1) :: xs => Or (Some (big_and r)) s (big_or r1 xs)

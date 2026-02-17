@@ -75,16 +75,16 @@ derive Tm.
 HB.instance Definition _ := hasDecEq.Build Tm Tm_eqb_OK.
 
 (*SNIP: atom_type*)
-Inductive A := cut | call : Tm -> A.
+Inductive Atom := cut | call of Tm.
 (*ENDSNIP: atom_type*)
 
 (*SNIP: R_type*)
-Record R := mkR { head : Tm; premises : list A }.
+Record R := mkR { head : Tm; premises : list Atom }.
 (*ENDSNIP: R_type*)
 
-derive A.
+derive Atom.
 derive R.
-HB.instance Definition _ := hasDecEq.Build A A_eqb_OK.
+HB.instance Definition _ := hasDecEq.Build Atom Atom_eqb_OK.
 HB.instance Definition _ := hasDecEq.Build R (R_eqb_OK).
 
 Elpi Command derive.eqbOK.register_axiomx.
@@ -916,7 +916,7 @@ Fixpoint H u (out : nat) (arity: nat) (q : Tm) (h: Tm) s : option Sigma :=
   | _, _, _ => None
   end.
 
-Fixpoint select u (query : Tm) inp arity (rules: list R) sigma : (fvS * seq (Sigma * seq A)) :=
+Fixpoint select u (query : Tm) inp arity (rules: list R) sigma : (fvS * seq (Sigma * seq Atom)) :=
   match rules with
   | [::] => (fset0, [::])
   | rule :: rules =>
@@ -935,7 +935,7 @@ Fixpoint select u (query : Tm) inp arity (rules: list R) sigma : (fvS * seq (Sig
 Section s.
 Variable u : Unif.
 (*SNIP: bc_type*)
-Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq A) :=
+Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq Atom) :=
 (*ENDSNIP: bc_type*)
   fun pr fv (query:Tm) s =>
   let query := deref s query in

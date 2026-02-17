@@ -279,7 +279,7 @@ Section NurProp.
   Proof. elim: b => //= x xs <-; rewrite/catr//= cat0s//. Qed.
 
   Lemma save_gs_a2g b ca: 
-    map (fun e : A * alts => (e.1, e.2 ++ ca)) (a2g b) =
+    map (fun e => (e.1, e.2 ++ ca)) (a2g b) =
     seq2goals [seq (x, ca) | x <- b].
   Proof.
     elim: b => //= x xs <-; rewrite /a2g/= map_seq2goals seq_catr map_cons//=cat0s.

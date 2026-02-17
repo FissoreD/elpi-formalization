@@ -14,7 +14,7 @@ Proof. elim: l => //=[[s g]gs] H; rewrite map_cons/=H/catl cat0s//. Qed.
 Lemma catr0 (l: alts): map (catr (@nilC _ _ IsList_goals)) l = l.
 Proof. elim: l => //=[[s g]gs] H; rewrite map_cons/=H/catr cats0//. Qed.
 
-Definition add_ca_deep_g' (add_ca_deep : alts -> alts -> alts) bt (x : A * alts) :=
+Definition add_ca_deep_g' (add_ca_deep : alts -> alts -> alts) bt (x : Atom * alts) :=
   match x with
   | (a,ca) => (a,add_ca_deep bt ca ++ bt)
   end.
@@ -47,7 +47,7 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
       [:: (a, ca) & add_deepG bt l tl]%G
   end.
 
-  Definition a2g (b: seq A) := seq2goals [seq (x, [::]) | x <- b].
+  Definition a2g (b: seq Atom) := seq2goals [seq (x, [::]) | x <- b].
 
   (* bt is the backtracking list for the cut-alternatives
     this list is important since in this tree:

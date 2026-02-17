@@ -12,7 +12,7 @@ Bind Scope L with IsList.
 
 (*SNIP: elpi_def*)
 Inductive alts  := nilA | consA of (Sigma * goals) & alts
-with      goals := nilG | consG of (A * alts)  & goals .
+with      goals := nilG | consG of (Atom * alts)  & goals .
 (*ENDSNIP: elpi_def*)
 
 Declare Scope alts_scope.
@@ -139,13 +139,13 @@ HB.instance Definition _ : hasDecEq alts := hasDecEq.Build alts alts_eqb_OK.
     mkIsList seq2alts alts2seq alts2seqs alts2seq0 seq2altss seq2alts0
       alts2seqK seq2altsK seq2alts_inj alts2seq_inj.
 
-  Fixpoint seq2goals (l : seq (A * alts)) : goals :=
+  Fixpoint seq2goals (l : seq (Atom * alts)) : goals :=
     match l with
     | [::]%SEQ => [::]%G
     | [:: x & xs]%SEQ => [:: x & seq2goals xs]%G
     end.
 
-  Fixpoint goals2seq (a : goals) : seq (A * alts) :=
+  Fixpoint goals2seq (a : goals) : seq (Atom * alts) :=
     match a with
     | [::]%G => [::]%SEQ
     | [:: x & xs]%G => [:: x & goals2seq xs]%SEQ
@@ -163,7 +163,7 @@ HB.instance Definition _ : hasDecEq alts := hasDecEq.Build alts alts_eqb_OK.
   Lemma goals2seq_inj : forall l1 l2,  goals2seq l1 = goals2seq l2 -> l1 = l2.
   by move=> l1 l2 H; rewrite -[l1]seq2goalsK -[l2]seq2goalsK H. Qed.
 
-  Global Instance IsList_goals : @IsList (A * alts)%type goals :=
+  Global Instance IsList_goals : @IsList (Atom * alts)%type goals :=
     mkIsList seq2goals goals2seq goals2seqs goals2seq0 seq2goalss seq2goals0
       goals2seqK seq2goalsK seq2goals_inj goals2seq_inj.
 
@@ -209,7 +209,7 @@ Definition save_gs a gs b : goals :=
 Definition save_as a gs bs := 
   seq2alts [seq (x.1, save_gs a gs (x.2)) | x <- bs].
 
-Definition empty_ca_G (g : A * alts) :=
+Definition empty_ca_G (g : Atom * alts) :=
   match g with (_,[::]) => true | _ => false end.
 
 Definition empty_caG goals := all empty_ca_G goals.

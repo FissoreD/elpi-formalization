@@ -6,7 +6,7 @@ From det Require Import zify_ssreflect.
 Section clean_ca.
   Variable p : program.
 
-  Definition clean_ca_G (clean_ca : alts -> alts -> alts) bt (g : A * alts) :=
+  Definition clean_ca_G (clean_ca : alts -> alts -> alts) bt (g : Atom * alts) :=
     match g with
     | (a, ca) => (a, ((take (size ca - size bt) (clean_ca bt ca))))
     end.

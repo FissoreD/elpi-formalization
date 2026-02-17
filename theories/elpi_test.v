@@ -18,7 +18,7 @@ Fixpoint of_alt l :=
   | [:: x & xs]%SEQ => (empty, of_goals x) :: (of_alt xs)
   end.
 
-Definition clean_ca_G f (g : A * alts) :=
+Definition clean_ca_G f (g : Atom * alts) :=
   match g with
   | (call a, ca) => (call a, [::])
   | (cut, ca) => (cut, f ca)
