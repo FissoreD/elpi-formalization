@@ -543,6 +543,53 @@ Section mut_excl.
     by apply/acyclic_sigma_dis.
   Qed.
 
+  (* Lemma unify_ren m1 m2 m3 m4 a a1:
+    unify u (ren m1 a) (ren m2 a1) empty =
+    unify u (ren m3 a) (ren m4 a1) empty.
+  Admitted.
+
+  Search adesive.
+  Print fresh_tm.
+
+  Lemma tata1 m inp hd q m1 m2 m1' m2':
+    H_head inp m (ren m1' q) (ren m1 hd) = false ->
+    H_head inp m (ren m2' q) (ren m2 hd) = false.
+  Proof.
+    elim: m inp hd q m1 m2 m1' m2' => //= [|m IH] inp hd q m1 m2 m1' m2'.
+      case: q => //=[p|v]; last by rewrite !ren_V.
+      by case: hd => //=*; rewrite ren_V.
+    case: q => //=[?|f a]; first by rewrite !ren_V.
+    case: hd => //=[?|f1 a1]; first by rewrite !ren_V.
+    case: eqP => ?; subst => //=.
+      case U: unify => [sx|]//= H.
+        case: unify => //= _.
+        apply/IH/H.
+      case: H_head; rewrite (andbF,andbT)//=.
+      rewrite (unify_ren _ _ m1' m1).
+      move/isNoneP: U; rewrite/ren; case: unify => //.
+    apply/IH.
+  Qed. *)
+
+
+  Lemma tata m inp fv' fv'' hd fx fy q r1 r2 r3 r4:
+    (vars_tm hd `|` fv') `<=` r1 ->
+    (vars_tm hd `|` fv'') `<=` r2 ->
+    (vars_tm q `|` fx) `<=` r3 ->
+    (vars_tm q `|` fy) `<=` r4 ->
+    vars_tm (ren (fresh_tm r1 empty hd).2 hd) `<=` fx ->
+    vars_tm (ren (fresh_tm r2 empty hd).2 hd) `<=` fy ->
+    H_head inp m (ren (fresh_tm r3 empty q).2 q)
+      (ren (fresh_tm r1 empty hd).2 hd) =
+    false ->
+    H_head inp m (ren (fresh_tm r4 empty q).2 q)
+      (ren (fresh_tm r2 empty hd).2 hd) =
+    false.
+  Proof.
+    move=> H1 H2 H3 H4 H5 H6 H7.
+    (* apply/tata1/H7 => //. *)
+  Admitted.
+
+
   Lemma titi m inp fv' fv'' hd fx fy q:
     vars_tm (ren (fresh_tm (vars_tm hd `|` fv') empty hd).2 hd) `<=` fx ->
     vars_tm (ren (fresh_tm (vars_tm hd `|` fv'') empty hd).2 hd) `<=` fy ->
@@ -552,9 +599,13 @@ Section mut_excl.
     H_head inp m (ren (fresh_tm (vars_tm q `|` fy) empty q).2 q)
       (ren (fresh_tm (vars_tm hd `|` fv'') empty hd).2 hd) =
     false.
-  Admitted.
+  Proof.
+    move=> H1 H2.
+    apply/tata => //=.
+  Qed.
   
   Lemma H_head_ren inp m fv1 fv2 x xs fx fy q:
+    (* todo: fx and fy are wrong, should be fresh_rules fv1 xs + e and and both adesive   *)
     (fresh_rule (fresh_rules fv1 xs).1 x).1 `<=` fx ->
     (fresh_rule (fresh_rules fv2 xs).1 x).1 `<=` fy ->
     H_head inp m (rename fx q empty).2 (rename (fresh_rules fv1 xs).1 (head x) empty).2 = false ->
@@ -571,8 +622,55 @@ Section mut_excl.
     move: (fresh_rules _ _).1 => /= fv'.
     move: (fresh_rules _ _).1 => /= fv''.
     rewrite/rename !push/=; clear.
-    apply/titi.
-  Qed.
+    have:= @fresh_tm_def (vars_tm hd `|` fv') empty hd.
+      rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
+      move=> [x [H1 HH I1 D1]].
+      rewrite H1.
+    have:= @fresh_tm_def (vars_tm hd `|` fv'') empty hd.
+      rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
+      move=> [y [Ha _ I2 D2]].
+      rewrite Ha.
+    have:= @fresh_tm_def (vars_tm q `|` fx) empty q.
+      rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
+      move=> [z [Hx _ I3 D3]].
+      rewrite Hx.
+    have:= @fresh_tm_def (vars_tm q `|` fy) empty q.
+      rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
+      move=> [w [Hl _ I4 D4]].
+      rewrite Hl.
+    rewrite !cat0f in H1 Ha Hx Hl *.
+    move: D3 D4 I1 I2 I3 I4.
+    rewrite !disjointUr => /andP[++]/andP[++].
+    Search fresh_tm snd.
+    (* have:= fresh_tm_sub1 (vars_tm hd `|` fv') empty hd; rewrite H1. *)
+    (* have:= fresh_tm_sub1 (vars_tm hd `|` fv'') empty hd; rewrite Ha. *)
+    have:= fresh_tm_sub1 (vars_tm q `|` fx) empty q; rewrite Hx.
+    have:= fresh_tm_sub1 (vars_tm q `|` fy) empty q; rewrite Hl.
+    clear.
+    elim: m inp x y z w q hd fx fy => [|m IH] inp x y z w q hd fx fy//=.
+      case: q => //=[p|v]; last by rewrite !ren_V.
+      by case: hd => //=[v]; rewrite !ren_V//.
+    case: q  => //=[?|f1 a1]; first by rewrite !ren_V.
+    case: hd => //=[?|f2 a2]; first by rewrite !ren_V.
+    rewrite !fsubUset => /andP[S1 S2] /andP[S3 S4].
+    rewrite !disjointUr => /andP[H1 H2] H3 /andP[H4 H5] H6 I1 I2 I3 I4.
+    move=> /andP[S5 S6] /andP[S7 S8].
+    case: eqP => H; subst => //=; last apply: IH => //; last first.
+      by apply: disjoint_sub H6 _.
+      by apply: disjoint_sub H3 _.
+    case U: unify => [s'|]/= H.
+      case : unify => //= _; apply/IH/H => //=.
+      by apply: disjoint_sub H3 _.
+      by apply: disjoint_sub H6 _.
+    case H_head; rewrite (andbT,andbF)//=.
+    move /isNoneP: U; rewrite -/(ren z) -/(ren x) -/(ren w) -/(ren y) in S1 S2 S3 S4 S5 S6 S7 S8 *.
+    apply: contraNF.
+    clear f1 f2 H1 H4 S5 S7 S1 S3.
+    have {H3 S6} := disjoint_sub H3 S6.
+    have {H6 S8} := disjoint_sub H6 S8.
+    move: S2 S4 H2 H5.
+    move: I1 I2 I3 I4.
+  Admitted.
 
   Lemma select_head_ren rs fx fy fv1 fv2 inp m hd:
     let FRS1 := fresh_rules fv1 rs in
