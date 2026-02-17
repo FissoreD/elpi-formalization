@@ -543,17 +543,53 @@ Section mut_excl.
     by apply/acyclic_sigma_dis.
   Qed.
 
-  Print Assumptions HSH.
+  Lemma titi m inp fv' fv'' hd fx fy q:
+    vars_tm (ren (fresh_tm (vars_tm hd `|` fv') empty hd).2 hd) `<=` fx ->
+    vars_tm (ren (fresh_tm (vars_tm hd `|` fv'') empty hd).2 hd) `<=` fy ->
+    H_head inp m (ren (fresh_tm (vars_tm q `|` fx) empty q).2 q)
+      (ren (fresh_tm (vars_tm hd `|` fv') empty hd).2 hd) =
+    false ->
+    H_head inp m (ren (fresh_tm (vars_tm q `|` fy) empty q).2 q)
+      (ren (fresh_tm (vars_tm hd `|` fv'') empty hd).2 hd) =
+    false.
+  Admitted.
+  
+  Lemma H_head_ren inp m fv1 fv2 x xs fx fy q:
+    (fresh_rule (fresh_rules fv1 xs).1 x).1 `<=` fx ->
+    (fresh_rule (fresh_rules fv2 xs).1 x).1 `<=` fy ->
+    H_head inp m (rename fx q empty).2 (rename (fresh_rules fv1 xs).1 (head x) empty).2 = false ->
+    H_head inp m (rename fy q empty).2 (rename (fresh_rules fv2 xs).1 (head x) empty).2 = false.
+  Proof.
+    rewrite/fresh_rule!push/=.
+    case: x => //=hd bo H2 H3.
+    have {}H2 := fsubset_trans (fresh_atoms_sub _ _ _) H2.
+    have {}H3 := fsubset_trans (fresh_atoms_sub _ _ _) H3.
+    clear bo.
+    have {}H2 := fsubset_trans (vars_tm_rename _ _) H2.
+    have {}H3 := fsubset_trans (vars_tm_rename _ _) H3.
+    move: H2 H3.
+    move: (fresh_rules _ _).1 => /= fv'.
+    move: (fresh_rules _ _).1 => /= fv''.
+    rewrite/rename !push/=; clear.
+    apply/titi.
+  Qed.
 
-  Lemma select_head_ren rs fv1 fv2 inp m hd:
+  Lemma select_head_ren rs fx fy fv1 fv2 inp m hd:
     let FRS1 := fresh_rules fv1 rs in
     let FRS2 := fresh_rules fv2 rs in
-    select_head (rename FRS1.1 hd empty).2 inp m FRS1.2 = [::] ->
-    select_head (rename FRS2.1 hd empty).2 inp m FRS2.2 = [::].
+    fv1 `<=` fv2 ->
+    FRS1.1 `<=` fx ->
+    FRS2.1 `<=` fy ->
+    select_head (rename fx hd empty).2 inp m FRS1.2 = [::] ->
+    select_head (rename fy hd empty).2 inp m FRS2.2 = [::].
   Proof.
-    elim: rs fv1 fv2 inp m hd => //= x xs IH fv1 fv2 inp m hd; rewrite !push/=.
-
-  Admitted.
+    elim: rs fx fy fv1 fv2 inp m hd => //= x xs IH fx fy fv1 fv2 inp m hd; rewrite !push/=.
+    move=> H1 H2 H3.
+    case H: H_head => //=.
+    move: H; rewrite !head_fresh_rule => H.
+    rewrite (H_head_ren H2 H3 H).
+    by apply: IH H1 _ _; (apply:fsubset_trans; first apply: fresh_rule_sub).
+  Qed.
 
   Lemma disjoint_varsU fv fv' rs hd:
     let FRS2 := fresh_rules fv rs in
@@ -665,13 +701,14 @@ Section mut_excl.
     rewrite !has_cut_seq_fresh.
     case CS: has_cut_seq; first by case: select => [?[|[]]].
     case SH: select_head => //SM _.
-    have:= select_head_ren (vars_sigma s1 `|` vars_tm (deref s1 c) `|` fv) SH.
+    have/(_  (vars_sigma s1 `|` vars_tm (deref s1 c) `|` fv)):= select_head_ren _ (fsubset_refl _) (fsubset_refl _) SH.
+    rewrite fsub0set => /(_ isT).
     rewrite -/FRS2-/FC2.
     move=> HS.
     rewrite (HSH _ _ _ _ H HS)//=.
       by rewrite/FC2; apply/disjoint_varsU.
       apply/disjoint_varsU1; rewrite -fsetUA fsetUC -!fsetUA.
-      Timeout 4 apply/fsubsetUl.
+      apply/fsubsetUl.
     rewrite disjoint_comm.
     apply/disjoint_sub.
     apply/vars_tm_rename_disjoint => //.

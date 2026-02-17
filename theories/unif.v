@@ -27,13 +27,11 @@ Axiom unif_sym : forall t1 t2 s, unify t1 t2 s = unify t2 t1 s.
 Definition acyclic_sigma (s:Sigma) :=
   [disjoint (domf s) & (codom_vars s)].
 
-Axiom matching_acyclic: forall a a1 s1 s2,
-  acyclic_sigma s1 -> 
-    matching a a1 s1 = Some s2 -> acyclic_sigma s2.
+Axiom matching_acyclic: forall t1 t2 s s',
+  acyclic_sigma s -> matching t1 t2 s = Some s' -> acyclic_sigma s'.
 
-Axiom unif_acyclic: forall a a1 s1 s2,
-  acyclic_sigma s1 -> 
-    unify a a1 s1 = Some s2 -> acyclic_sigma s2.
+Axiom unif_acyclic: forall t1 t2 s s',
+  acyclic_sigma s -> unify t1 t2 s = Some s' -> acyclic_sigma s'.
 
 Axiom matching_subst : forall q t s, 
   [disjoint vars_tm q & domf s] ->
