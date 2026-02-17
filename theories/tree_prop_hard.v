@@ -326,11 +326,11 @@ Section s.
   Notation "A \/ B -sub( s )" := (Or A s B)
    (at level 50, s at level 0).
 
-  (*SNIP: runSST_or *)
-  Lemma runSST_or: forall p v v' s s' l l' s1 r,
-    runT p v s l (Some (s', Some l')) true v' ->
+  (*SNIPT: runSST_or *)
+  Lemma runSST_or: 
+    forall p v v' s s' l l' s1 r, runT p v s l (Some (s', Some l')) true v' ->
       runT p v s (Or (Some l) s1 r) (Some (s', Some ( ((Some l') \/ KO -sub(s1)) ))) false v'.
-  (*ENDSNIP: run_orSST *)
+  (*ENDSNIPT: run_orSST *)
   Proof. move=> > /run_or_correct_left H; auto. Qed.
 
   (*SNIP: runSSF_or *)
@@ -357,11 +357,11 @@ Section s.
   (*ENDSNIP: run_orSNT *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
-  (*SNIP: runNT_or *)
-  Lemma runNT_or: forall p v v' s t s1 t',
-    runT p v s t None true v' ->
+  (*SNIPT: runNT_or *)
+  Lemma runNT_or: 
+    forall p v v' s t s1 t', runT p v s t None true v' ->
       runT p v s ( (Some t) \/ t' -sub(s1)) None false v'.
-  (*ENDSNIP: run_orNT *)
+  (*ENDSNIPT: run_orNT *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
   (*SNIP: runNF_or *)
@@ -373,13 +373,13 @@ Section s.
   (*ENDSNIP: run_orNF *)
   Proof. by move=>> /run_or_correct_left; eauto. Qed.
 
-  (*SNIP: run_orSST *)
-  Lemma run_orSST p v v' s s' s1 l l' r r':
-    runT p v s ( (Some l) \/ r -sub(s1) ) (Some (s', (Some ( (Some l') \/ r' -sub(s1))))) false v' ->
+  (*SNIPT: run_orSST *)
+  Lemma run_orSST:
+    forall p v v' s s' s1 l l' r r', runT p v s ( (Some l) \/ r -sub(s1) ) (Some (s', (Some ( (Some l') \/ r' -sub(s1))))) false v' ->
     exists b, runT p v s l (Some (s', Some l')) b v' /\ r' = if b then KO else r.
-  (*ENDSNIP: run_orSST *)
+  (*ENDSNIPT: run_orSST *)
   Proof.
-    move=> /run_or_complete.
+    move=> > /run_or_complete.
     move=> [[t0''[b[H[[?[? Ht1]] H3]]]]|[t0''[H[b H1]]]]//; subst.
     exists b; split => //.
     by destruct b.

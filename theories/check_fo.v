@@ -558,7 +558,7 @@ Section check.
   Qed.
 
   (*SNIPT: det_check_call *)
-  Lemma det_check_call:
+  Theorem det_check_call:
     forall p s t v, acyclic_sigma s ->
     check_program p -> tm_is_det p.(sig) t -> is_det p s v (TA (call t)).
   (*ENDSNIPT: det_check_call *)
