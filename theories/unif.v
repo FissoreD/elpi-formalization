@@ -6,7 +6,7 @@ From det Require Import finmap ctx.
 From det Require Import lang.
 
 Definition disjoint_tm t1 t2:=
-  vars_tm t1 `&` vars_tm t2 = fset0.
+  [disjoint vars_tm t1 & vars_tm t2].
 
 Axiom match_unif: forall u a b s,
   matching u a b s -> unify u a b s.
@@ -58,10 +58,32 @@ Proof.
 Qed.
 
  *)
-Axiom matching_subst : forall u q t s, (matching u q t s) <-> (matching u q (deref s t) fmap0).
+Axiom matching_subst : forall u q t s, 
+  [disjoint vars_tm q & domf s] ->
+  (matching u q (deref s t) fmap0) <-> (matching u q t s).
 
+Lemma matching_subst1:
+  forall u q t s, 
+  [disjoint vars_tm q & domf s] ->
+  (matching u q t s) -> (matching u q (deref s t) fmap0).
+Proof. by move=> > H1 H2; apply/matching_subst. Qed.
 
-Axiom matching_monotone : forall u q t s, (matching u q (deref s t) fmap0) -> (matching u q t fmap0).
+Lemma matching_subst2:
+  forall u q t s, 
+  [disjoint vars_tm q & domf s] ->
+  (matching u q (deref s t) fmap0) -> (matching u q t s).
+Proof. by move=> > H1 H2; apply/matching_subst. Qed.
+
+Axiom matching_disj : 
+  forall u a b s1 s1', 
+  [disjoint vars_tm a & domf s1] ->
+  disjoint_tm a b ->
+  matching u a b s1 = Some s1' ->
+  exists x, domf s1' = domf s1 `|` x /\ x `<=` vars_tm b.
+
+Axiom matching_monotone : 
+  forall u q t s, 
+  (matching u q (deref s t) fmap0) -> (matching u q t fmap0).
 
 Lemma match2_unif : forall u q t1 t2 s, (matching u q t1 s) -> (matching u q t2 s) -> (unify u t1 t2 s).
 Proof.
@@ -75,7 +97,7 @@ Axiom unif_rename : forall u t1 t2 (f : {fmap V -> V}),
   injectiveb f ->
   (unify u t1 t2 fmap0) <-> (unify u (ren f t1) (ren f t2) fmap0).
 
-Lemma unif_help: forall qa u f0 f1 f2 f3 t1 t2 s1' s2 s1'',
+(* Lemma unif_help: forall qa u f0 f1 f2 f3 t1 t2 s1' s2 s1'',
   let tm1 := (ren f0 t1) in let tm2 := (ren f1 t2) in
   let tm3 := (ren f2 t1) in let tm4 := (ren f3 t2) in
   disjoint_tm tm1 tm2 ->
@@ -91,9 +113,23 @@ Proof.
   move/matching_subst/matching_monotone: M => M.
   move/matching_subst/matching_monotone: M' => M'.
   have Abs := match2_unif M M'.
-  have := (iffLR (unif_rename _ _ _ _)).
-Admitted.
+  have := (iffLR (unif_rename _ _ _ _)). *)
+(* Admitted. *)
 
 Axiom matching_V: forall u s t d,
   vars_sigma s `<=` d -> vars_tm t `<=` d ->
   matching u t (Tm_V (fresh d)) s = Some (s.[fresh d <- t]).
+
+
+Definition acyclic_sigma (s:Sigma) :=
+  [disjoint (domf s) & (codom_vars s)].
+
+Axiom matching_acyclic: forall u a a1 s1 s2,
+  acyclic_sigma s1 -> 
+    matching u a a1 s1 = Some s2 -> acyclic_sigma s2.
+
+Axiom unif_acyclic: forall u a a1 s1 s2,
+  acyclic_sigma s1 -> 
+    unify u a a1 s1 = Some s2 -> acyclic_sigma s2.
+
+    

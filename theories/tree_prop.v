@@ -28,11 +28,23 @@ Section RunP.
   Lemma incomplete_and A B0 B: incomplete (And A B0 B) = if success A then incomplete B else incomplete A.
   Proof. rewrite/incomplete next_tree_and; case: ifP => //. Qed.
 
+
+  Lemma next_subst_or_None s sm B: next_subst s (Or None sm B) = next_subst sm B.
+  Proof. by rewrite/next_subst/=. Qed.
+  
+  Lemma next_subst_or_Some s sm A B: next_subst s (Or (Some A) sm B) = next_subst s A.
+  Proof. by rewrite/next_subst/=. Qed.
+
+  Lemma next_subst_and s A B0 B : 
+    next_subst s (And A B0 B) = if success A then next_subst (next_subst s A) B else next_subst s A. 
+  Proof. by rewrite/next_subst/success/=/next_tree push !next_treeP; case: next_tree => //. Qed.
+
   Definition rew_pa:= 
   (
     incomplete_or_None, incomplete_or_Some,incomplete_and,
     success_or_None, success_or_Some, success_and,
-    failed_or_None, failed_or_Some, failed_and
+    failed_or_None, failed_or_Some, failed_and,
+    next_subst_or_None, next_subst_or_Some, next_subst_and
   ).
 
   Lemma failed_big_and t: failed (big_and t) = false.
@@ -265,16 +277,6 @@ Section RunP.
       - apply: same_structure_trans (prune_same_structure nA) (IH _ _ erefl).
     Qed.
   End same_structure.
-
-  Lemma next_subst_or_None s sm B: next_subst s (Or None sm B) = next_subst sm B.
-  Proof. by rewrite/next_subst/=. Qed.
-  
-  Lemma next_subst_or_Some s sm A B: next_subst s (Or (Some A) sm B) = next_subst s A.
-  Proof. by rewrite/next_subst/=. Qed.
-
-  Lemma next_subst_and s A B0 B : 
-    next_subst s (And A B0 B) = if success A then next_subst (next_subst s A) B else next_subst s A. 
-  Proof. by rewrite/next_subst/success/=/next_tree push !next_treeP; case: next_tree => //. Qed.
 
   Lemma ges_subst_cutl {s A} : 
     success A -> next_subst s (cutl A) = next_subst s A.

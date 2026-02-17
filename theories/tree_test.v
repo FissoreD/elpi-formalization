@@ -2,10 +2,10 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import finmap ctx lang tree.
 
 Definition prop := b (d Pred).
-Definition build_arr m := arr m prop prop.
+Definition build_arr := arr prop prop.
 
 Definition build_progr l := {|
-  sig := [fmap].[IP false <- build_arr o].[IP 1 <- build_arr o].[IP 2 <- build_arr o].[IP 200 <- prop];
+  sig := [fmap].[IP false <- (0, build_arr)].[IP 1 <- (0, build_arr)].[IP 2 <- (0, build_arr)].[IP 200 <- (0, prop)];
   rules := l;
 |}.
 
@@ -84,7 +84,7 @@ Section Test1.
     apply: StepT => //=.
       rewrite/bc [get_tm_hd _]/=.
       cbn iota.
-      replace _.[? _] with (Some (build_arr o)); last first.
+      replace _.[? _] with (Some (0, build_arr)); last first.
         by rewrite !FmapE.fmapE eqxx/=.
       rewrite/=.
       rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
@@ -92,40 +92,35 @@ Section Test1.
       by rewrite not_fnd//= not_fnd//=.
       by [].
     rewrite !fsetU0 !fset0U/=.
-    rewrite !fsetUA !fsetUid !fsetU0 -/X.
-    replace (_ `|` _) with ([fset fresh X] `|` X); last first.
-      do 2 replace (codom_vars _) with (@fset0 V) => //=.
-      rewrite/X .
-      rewrite -(fsetUA _ _ [fset IV 0]) fsetUid !fsetU0.
-      rewrite -2!fsetUA !fsetUid !fsetUA !(fsetUC _ [fset IV 0]).
-      rewrite !fsetUA fsetUid//.
-      by rewrite /codom_vars codom0_set//=fsetU0.
-      by rewrite /codom_vars codom0_set//=fsetU0.
+    rewrite !fsetUA !fsetU0 /codom_vars !codom0_set/=.
+    rewrite !fsetU0 -!(fsetUC [fset fresh _]).
+    rewrite !fsetUA !fsetUid.
+    rewrite -!(fsetUC [fset IV 0]) !fsetUA !fsetUid.
+    rewrite-/X.
+    set Y:= (_ `|` _).
     apply: StepT => //=.
       rewrite /bc [get_tm_hd _]/=.
       cbn iota.
-      replace _.[? _] with (Some (build_arr o)); last first.
+      replace _.[? _] with (Some (0, build_arr)); last first.
         by rewrite !FmapE.fmapE eqxx/=.
       rewrite/=.
       rewrite FmapE.fmapE.
       rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
       rewrite/rename/=in_fset1 eqxx/=.
       rewrite not_fnd//= eqxx/=.
-      rewrite !fset0U !fsetUA fsetU0.
-      rewrite !(fsetUC _ [fset IV 0]) !fsetUA !fsetUid.
+      rewrite !fset0U fsetU0.
+      (* rewrite !(fsetUC _ [fset IV 0]) !fsetUA !fsetUid.
       rewrite -!(fsetUC [fset fresh [fset IV 0]]) !fsetUA.
       rewrite (fsetUC _ [fset IV 0]) -/X.
-      rewrite (fsetUC X).
-      rewrite -(fsetUA _ X).
-      set Y := (X `|` [fset fresh X]).
+      rewrite (fsetUC X) -fsetUA -/Y. *)
       move=> //.
       by [].
-    set Y := (X `|` [fset fresh X]).
+    set Z := (_ `|` _).
     apply: BackT => //=.
     apply: StepT => //=.
       rewrite /bc [get_tm_hd _]/=.
       cbn iota.
-      replace _.[? _] with (Some (build_arr o)); last first.
+      replace _.[? _] with (Some (0, build_arr)); last first.
         by rewrite !FmapE.fmapE eqxx/=.
       rewrite/=.
       rewrite FmapE.fmapE.
@@ -133,12 +128,10 @@ Section Test1.
       rewrite/rename/=in_fset1 eqxx/=.
       rewrite not_fnd//= eqxx/=.
       rewrite !fset0U !fsetU0.
-      rewrite /next_subst/=/varsU_rule/varsU_rhead/=/varsU_rprem/=.
-      replace (vars_sigma _) with ([fset fresh [fset IV 0]]).
-      rewrite/vars_atoms/= !fsetU0.
+      (* rewrite /next_subst/=/varsU_rule/varsU_rhead/=/varsU_rprem/=.
+      rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0/=. *)
       move=> //.
-      by rewrite /vars_sigma/=/codom_vars codom0_set/= !fsetU0.
-      move=> //.
+      by [].
     apply: StopT => //=.
   Qed.
 End Test1.

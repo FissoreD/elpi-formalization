@@ -14,10 +14,10 @@ Notation "[subst2]" := ltac:(move=> ??;subst).
 
 Inductive Det := Func | Pred.
 Inductive B := Exp | d of Det.
-Inductive mode := i | o.
-Inductive S :=  b of B | arr of mode & S & S.
-Notation "x '--i-->' y" := (arr i x y) (at level 3).
-Notation "x '--o-->' y" := (arr o x y) (at level 3).
+(* Inductive mode := i | o. *)
+Inductive S :=  b of B | arr of S & S.
+Notation "x '--i-->' y" := (arr x y) (at level 3).
+Notation "x '--o-->' y" := (arr x y) (at level 3).
 
 Definition D2o D : 'I_2 := match D with Func => @Ordinal 2 0 isT | Pred => @Ordinal 2 1 isT end.
 Definition o2D (i : 'I_2) : option Det := match val i with 0 => Some Func | 1 => Some Pred | _ => None end.
@@ -29,14 +29,14 @@ Definition o2B (i :  GenTree.tree Det) : option B := match i with GenTree.Node 0
 Lemma B2oK : pcancel B2o o2B. Proof. by case. Qed.
 HB.instance Definition _ := Countable.copy B (pcan_type B2oK).
 
-Definition mode2o mode : 'I_2 := match mode with i => @Ordinal 2 0 isT | o => @Ordinal 2 1 isT end.
+(* Definition mode2o mode : 'I_2 := match mode with i => @Ordinal 2 0 isT | o => @Ordinal 2 1 isT end.
 Definition o2mode (x : 'I_2) : option mode := match val x with 0 => Some i | 1 => Some o | _ => None end.
 Lemma mode2oK : pcancel mode2o o2mode. Proof. by case. Qed.
-HB.instance Definition _ := Finite.copy mode (pcan_type mode2oK).
+HB.instance Definition _ := Finite.copy mode (pcan_type mode2oK). *)
 
-Fixpoint S2o S : GenTree.tree (B + mode) := match S with b x => GenTree.Leaf (inl x) | arr m x y => GenTree.Node 0 [:: GenTree.Leaf (inr m); S2o x; S2o y] end.
-Fixpoint o2S (i :  GenTree.tree (B + mode)) : option S := match i with GenTree.Leaf (inl x) => Some (b x) | GenTree.Node 0 [:: GenTree.Leaf (inr m); x; y] => obind (fun x => obind (fun y => Some (arr m x y)) (o2S y) ) (o2S x)  | _ => None end.
-Lemma S2oK : pcancel S2o o2S. Proof. by elim=> //= ?? -> ? ->. Qed.
+Fixpoint S2o S : GenTree.tree (B) := match S with b x => GenTree.Leaf (x) | arr x y => GenTree.Node 0 [:: S2o x; S2o y] end.
+Fixpoint o2S (i :  GenTree.tree (B)) : option S := match i with GenTree.Leaf x => Some (b x) | GenTree.Node 0 [:: x; y] => obind (fun x => obind (fun y => Some (arr x y)) (o2S y) ) (o2S x)  | _ => None end.
+Lemma S2oK : pcancel S2o o2S. Proof. by elim=> //= ? -> ? ->. Qed.
 HB.instance Definition _ := Countable.copy S (pcan_type S2oK).
 
 Goal b Exp == b Exp. by []. Qed.
@@ -134,17 +134,17 @@ Elpi derive.eqbOK.register_axiomx Sigma is_Sigma is_Sigma_inhab Sigma_eqb Sigma_
 HB.instance Definition _ : hasDecEq Sigma := Equality.copy Sigma _.
 
 (* Notation index := (list R). *)
-Definition mode_ctx := {fmap P -> (list mode)}.
-Definition sigT := {fmap P -> S}.
+(* Definition mode_ctx := {fmap P -> (list mode)}. *)
+Definition sigT := {fmap P -> (nat * S)}.
 Definition empty_sig : sigT := [fmap].
 
-Definition is_mode_ctx (x : mode_ctx) := unit.
-Lemma is_mode_ctx_inhab : forall x, is_mode_ctx x. Proof. exact (fun x => tt). Qed.
-Definition mode_ctx_eqb (x y : mode_ctx) := x == y.
-Lemma mode_ctx_eqb_correct : forall x, eqb_correct_on mode_ctx_eqb x. Proof. by move=>??/eqP. Qed.
-Lemma mode_ctx_eqb_refl : forall x, eqb_refl_on mode_ctx_eqb x. Proof. by move=>?; exact: eqxx. Qed.
-Elpi derive.eqbOK.register_axiomx mode_ctx is_mode_ctx is_mode_ctx_inhab mode_ctx_eqb mode_ctx_eqb_correct mode_ctx_eqb_refl.
-HB.instance Definition _ : hasDecEq mode_ctx := Equality.copy mode_ctx _.
+(* Definition is_mode_ctx (x : mode_ctx) := unit. *)
+(* Lemma is_mode_ctx_inhab : forall x, is_mode_ctx x. Proof. exact (fun x => tt). Qed. *)
+(* Definition mode_ctx_eqb (x y : mode_ctx) := x == y. *)
+(* Lemma mode_ctx_eqb_correct : forall x, eqb_correct_on mode_ctx_eqb x. Proof. by move=>??/eqP. Qed. *)
+(* Lemma mode_ctx_eqb_refl : forall x, eqb_refl_on mode_ctx_eqb x. Proof. by move=>?; exact: eqxx. Qed. *)
+(* Elpi derive.eqbOK.register_axiomx mode_ctx is_mode_ctx is_mode_ctx_inhab mode_ctx_eqb mode_ctx_eqb_correct mode_ctx_eqb_refl. *)
+(* HB.instance Definition _ : hasDecEq mode_ctx := Equality.copy mode_ctx _. *)
 
 Notation fvS := {fset V}.
 
@@ -199,7 +199,7 @@ Fixpoint keep_sig n s :=
   | 0 => [::]
   | n.+1 => 
     match s with
-    | arr m l r => (m, l) :: keep_sig n r
+    | arr l r => l :: keep_sig n r
     | _ => [::]
     end
   end.
@@ -210,8 +210,8 @@ Definition sigtm tm s :=
   
 Definition sigtm_rev tm s := rev (sigtm tm s).
 
-Definition get_modes_rev tm sig :=
-  map fst (sigtm_rev tm sig).
+Definition get_modes_rev tm sig := size (sigtm tm sig).
+  (* map fst (sigtm_rev tm sig). *)
 
 Open Scope fset_scope.
 
@@ -906,24 +906,24 @@ Definition fresh_rules fv rules :=
   foldr (fun x '(fv,xs) => let: (fv, x) := fresh_rule fv x in (fv,x::xs)) (fv,[::]) rules.
 
 (* Unification between query and rule-head *)
-Fixpoint H u (ml : list mode) (q : Tm) (h: Tm) s : option Sigma :=
-  match ml,q,h with
+Fixpoint H u (out : nat) (arity: nat) (q : Tm) (h: Tm) s : option Sigma :=
+  match arity,q,h with
   (* only terms with rigid head are accepted *)
-  | [::], Tm_P c, _ => if q == h then Some s else None
-  | [:: m & ml], (Tm_App q a1), (Tm_App h a2) => 
-    let f := if m == i then u.(matching) else u.(unify) in
-    obind (f a1 a2) (H u ml q h s)
+  | 0, Tm_P c, _ => if q == h then Some s else None
+  | arity.+1, (Tm_App q a1), (Tm_App h a2) => 
+    let f := if out == 0 then u.(matching) else u.(unify) in
+    obind (f a1 a2) (H u out.-1 arity q h s)
   | _, _, _ => None
   end.
 
-Fixpoint select u (query : Tm) (modes:list mode) (rules: list R) sigma : (fvS * seq (Sigma * seq A)) :=
+Fixpoint select u (query : Tm) inp arity (rules: list R) sigma : (fvS * seq (Sigma * seq A)) :=
   match rules with
   | [::] => (fset0, [::])
   | rule :: rules =>
-    match H u modes query rule.(head) sigma with
-    | None => select u query modes rules sigma
+    match H u inp arity query rule.(head) sigma with
+    | None => select u query inp arity rules sigma
     | Some (sigma1) => 
-      let: (fv, rs) := select u query modes rules sigma in
+      let: (fv, rs) := select u query inp arity rules sigma in
       (vars_sigma sigma1 `|` varsU_rule rule `|` fv, (sigma1, rule.(premises)) :: rs)
     end
   end.
@@ -942,9 +942,10 @@ Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq A) :=
   match get_tm_hd query with
     | inl kP =>  (*this is a call with flex head, in elpi it is an error! *)
       match pr.(sig).[? kP] with 
-        | Some sig => 
-          let: (fv, rules) := fresh_rules fv (pr.(rules)) in
-          let: (fv', rules) := select u query (get_modes_rev query sig) rules s
+        | Some (inp, sig) => 
+          let: (fv, rules) := fresh_rules (vars_sigma s `|` vars_tm query `|` fv) (pr.(rules)) in
+          let: md := (get_modes_rev query sig) in
+          let: (fv', rules) := select u query (md - inp) md rules s
           in (fv `|` fv', rules)
         | None => (fv, [::])
         end
@@ -1001,7 +1002,7 @@ Fixpoint is_det_sig (sig:S) : bool :=
   | b (d Func) => true
   | b (d Pred) => false
   | b Exp => false
-  | arr _ _ s => is_det_sig s
+  | arr _ s => is_det_sig s
   end.
 
 Definition has_cut_seq:= (has (fun x => cut == x)).
@@ -1011,7 +1012,7 @@ Definition has_cut_seq:= (has (fun x => cut == x)).
 
 Definition tm_is_det (sP: sigT) (t : Tm) : bool :=
   match get_tm_hd t with
-  | inl P => if sP.[?P] is Some s then is_det_sig s else false
+  | inl P => if sP.[?P] is Some s then is_det_sig s.2 else false
   | _ => false
   end.
 
@@ -1019,13 +1020,13 @@ Lemma tm_is_det_app sP f1 a1:
   tm_is_det sP (Tm_App f1 a1) = tm_is_det sP f1.
 Proof. by []. Qed.
 
-Lemma is_detH u sP modes s s' t t':
-  H u modes t t' s = Some s' ->
+Lemma is_detH u sP inp modes s s' t t':
+  H u inp modes t t' s = Some s' ->
     tm_is_det sP t' = tm_is_det sP t.
 Proof.
-  elim: modes s s' t t' => //=.
-    by move=> s s' []//= p t'; case: eqP => //=?; subst.
-  move=> m f Hf s1 s2 []//=f1 a1 []//= f2 a2.
+  elim: modes inp s s' t t' => //=.
+    by move=> inp s s' []//= p t'; case: eqP => //=?; subst.
+  move=> f Hf inp s1 s2 []//=f1 a1 []//= f2 a2.
   case H: H => //= _.
   rewrite !tm_is_det_app; apply: Hf H.
 Qed.
@@ -1036,7 +1037,7 @@ Proof. by elim: c p => //=. Qed.
 
 Lemma is_det_der s s1 c : tm_is_det s c ->
   exists q (kP: q \in domf s), 
-    get_tm_hd (deref s1 c) = inl q /\ is_det_sig s.[kP].
+    get_tm_hd (deref s1 c) = inl q /\ is_det_sig s.[kP].2.
 Proof.
   rewrite/tm_is_det/=.
   case X: get_tm_hd => //=[p].

@@ -40,11 +40,11 @@ Section vars_tree.
     apply/fsubset_trans/fresh_rule_sub/IH.
   Qed.
 
-  Lemma select_sub_rules r0 rn fv' q m s:
-    select u q m r0 s = (fv', rn) ->
+  Lemma select_sub_rules r0 rn fv' q inp m s:
+    select u q inp m r0 s = (fv', rn) ->
       varsU (seq.map (fun x => vars_sigma x.1 `|` vars_atoms x.2) rn) `<=` fv'.
   Proof.
-    elim: r0 rn fv' q m s => [|x xs IH] rn fv' q m s/=; first by move=> [<-<-]//.
+    elim: r0 rn fv' q inp m s => [|x xs IH] rn fv' q inp m s/=; first by move=> [<-<-]//.
     case X: H => [s'|]; last by apply: IH.
     case Y: select => [fv2 rs][??]; subst => /=.
     rewrite -!fsetUA/= !fsetUS//.
@@ -60,7 +60,8 @@ Section vars_tree.
     case X: get_tm_hd => //=[c'].
     case: fndP => cP//.
     rewrite !push/= fsubsetU//.
-    rewrite fresh_rules_sub//.
+    apply/orP; left.
+    by apply/fsubset_trans/fresh_rules_sub/fsubsetUr.
   Qed.
 
   Lemma vars_tree_cutl A: vars_tree (cutl A) `<=` vars_tree A.
