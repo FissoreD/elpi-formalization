@@ -75,9 +75,10 @@ Section RunP.
       by rewrite !(HA _ _ _ _ X) in sA.
   Qed.
 
-  (*SNIP: success_step*)
-  Lemma succ_step_iff: forall p v s t, success t <-> step p v s t = (v, Success, t).
-  (*ENDSNIP: success_step*)
+  (*SNIPT: success_step*)
+  Lemma succ_step_iff: 
+    forall p v s t, success t <-> step p v s t = (v, Success, t).
+  (*ENDSNIPT: success_step*)
   Proof. by split; [move=> /success_step->|move=>/step_success->]. Qed.
 
   Ltac push := rewrite !push.
@@ -113,15 +114,17 @@ Section RunP.
       move=>/andP[sA fB]; rewrite sA HB//.
   Qed. 
 
-  (*SNIP: failed_step*)
-  Lemma fail_step_iff: forall p v s t, failed t <-> step p v s t = (v, Failed, t).
-  (*ENDSNIP: failed_step*)
+  (*SNIPT: failed_step*)
+  Lemma fail_step_iff: 
+    forall p v s t, failed t <-> step p v s t = (v, Failed, t).
+  (*ENDSNIPT: failed_step*)
   Proof. by split; [move=> /failed_step->|move=>/step_failed->]. Qed.
 
 
-  (*SNIP: naNfail*)
-  Lemma pruneFN_fail: forall t, prune false t = None -> failed t.
-  (*ENDSNIP: naNfail*)
+  (*SNIPT: naNfail*)
+  Lemma pruneFN_fail: 
+    forall t, prune false t = None -> failed t.
+  (*ENDSNIPT: naNfail*)
   Proof.
     move=> A; elim_tree A => /=.
     - by move: HA HB; do 2 case: prune.
@@ -195,9 +198,10 @@ Section RunP.
   (********************************************************************)
 
 
-  (*SNIP: na_failed *)
-  Lemma prune_failedF: forall b t t', prune b t = Some t' -> failed t' = false.
-  (*ENDSNIP: na_failed *)
+  (*SNIPT: na_failed *)
+  Lemma prune_failedF:
+    forall b t t', prune b t = Some t' -> failed t' = false.
+  (*ENDSNIPT: na_failed *)
   Proof.
     move=> b A A'.
     elim_tree A b A' => //=.
@@ -370,9 +374,10 @@ Section RunP.
       apply: HA eA.
   Qed.
 
-  (*SNIP: incomplete_prune_id*)
-  Lemma incomplete_prune_id: forall b t, incomplete t -> prune b t = Some t.
-  (*ENDSNIP: incomplete_prune_id*)
+  (*SNIPT: incomplete_prune_id*)
+  Lemma incomplete_prune_id: 
+    forall b t, incomplete t -> prune b t = Some t.
+  (*ENDSNIPT: incomplete_prune_id*)
   Proof.
     move=> b A; elim_tree A b => /=; rewrite ?rew_pa.
     - move=> /HA->//.

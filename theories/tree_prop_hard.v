@@ -40,10 +40,11 @@ Section s.
       by rewrite incomplete_failed in fA.
   Qed.
 
-  (*SNIP: runT_det*)
-  Lemma runT_det: forall p v0 s t r r' b b' v v',
-    runT p v0 s t r b v -> runT p v0 s t r' b' v' -> r' = r /\ v' = v /\ b' = b.
-  (*ENDSNIP: runT_det*)
+  (*SNIPT: runT_det*)
+  Lemma runT_det: 
+    forall p v0 s t r r' b b' v v', runT p v0 s t r b v -> 
+      runT p v0 s t r' b' v' -> r' = r /\ v' = v /\ b' = b.
+  (*ENDSNIPT: runT_det*)
   Proof.
     move=> p v s A r1 r2 b1 bx v1 vx H1 H2.
     by have [] := runT_det1 H1 H2 => *; subst.
