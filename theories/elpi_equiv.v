@@ -171,9 +171,10 @@ Proof.
   + by move=> > vT H; repeat eexists; apply/FailT/t2l_nil_na/H.
 Qed.
 
-(*SNIP: runt1 *)
-Definition runT' p v s t r := exists b v', runT p v s t r b v'.
-(*ENDSNIP: runt1 *)
+(*SNIPT: runt1 *)
+Definition runT' p v s t r := 
+  exists b v', runT p v s t r b v'.
+(*ENDSNIPT: runt1 *)
 
 (*SNIPT: tree_to_elpi *)
 Theorem tree_to_elpi:
