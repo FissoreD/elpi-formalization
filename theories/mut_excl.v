@@ -586,6 +586,7 @@ Section mut_excl.
     (* [disjoint vars_atoms rs & codomf m] -> *)
     t `<=` v -> [disjoint t & vars_atoms (fresh_atoms v rs m).2].
   Proof.
+    clear u.
     rewrite/vars_atoms.
     elim: rs t v m => //=.
       by move=> >; rewrite fdisjointX0.
