@@ -57,8 +57,19 @@ Adjust names above to match actual subfolders in this repo.
   for lemmas/theorems, and file naming patterns.  -->
 
 ## How to build / run proofs
-- Prerequisites: list required tools and versions `Rocq v9.0.0`, `rocq-mathcomp-ssreflect 2.4.0`
-- The project can be built thanks to the `make` command
+
+The mechanization requires Rocq 9.0 and mathcomp 2.4.0.
+Using opam:
+```
+opam init --root ./_opam --bare
+opam switch create default --packages=rocq-core.9.0.0
+opam repo add --all rocq https://rocq-prover.org/opam/released
+opam install rocq-mathcomp-ssreflect.2.4.0 rocq-stdlib
+eval $(opam env --root=./_opam)
+rocq makefile -f _CoqProject -o Makefile
+make
+```
+
 <!-- - Example:
   - Install dependencies: `sudo apt install coq`
   - Run full build: `make -C theories` -->
