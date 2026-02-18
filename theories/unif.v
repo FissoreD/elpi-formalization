@@ -24,9 +24,6 @@ Axiom unif_trans:
 
 Axiom unif_sym : forall t1 t2 s, unify t1 t2 s = unify t2 t1 s.
 
-Definition acyclic_sigma (s:Sigma) :=
-  [disjoint (domf s) & (codom_vars s)].
-
 Axiom matching_acyclic: forall t1 t2 s s',
   acyclic_sigma s -> matching t1 t2 s = Some s' -> acyclic_sigma s'.
 
@@ -89,6 +86,4 @@ Axiom matching_V: forall s t d,
   vars_sigma s `<=` d -> vars_tm t `<=` d ->
   matching t (Tm_V (fresh d)) s = Some (s.[fresh d <- t]).
 
-Lemma acyclic_sigma0: acyclic_sigma empty.
-Proof. by rewrite/acyclic_sigma/=fdisjoint0X. Qed.
 End s.

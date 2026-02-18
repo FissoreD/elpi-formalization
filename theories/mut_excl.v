@@ -779,18 +779,19 @@ Section mut_excl.
   Qed.
 
   Lemma mut_exclP p fv c s1:
-    acyclic_sigma s1 ->
+    (* acyclic_sigma s1 -> *)
     mut_excl p -> 
       tm_is_det p.(sig) c ->
         all_but_last (fun x => has_cut_seq x.2) (bc u p fv c s1).2.
   Proof.
     rewrite/bc.
-    case: p => [rs s]/=++TD.
+    case: p => [rs s]/=+TD.
     rewrite (is_det_cder _ TD).
+    case: ifP => //= /negbFE AS.
     case DR: get_tm_hd => //=[p].
     case: fndP => //= pP.
     rewrite/mut_excl !push/=.
-    elim: rs s c s1 fv p pP DR TD => [|[hd bo] rs IH]//= s c s1 fv p pP DF TD AS.
+    elim: rs s c s1 fv p pP DR TD AS => [|[hd bo] rs IH]//= s c s1 fv p pP DF TD AS.
     rewrite !push/=.
     move=> /andP[+ ME].
     have:= IH _ _ _ _ _ pP DF TD AS ME.

@@ -934,10 +934,18 @@ Fixpoint select u (query : Tm) inp arity (rules: list R) sigma : (fvS * seq (Sig
 *)
 Section s.
 Variable u : Unif.
+
+Definition acyclic_sigma (s:Sigma) := [disjoint (domf s) & (codom_vars s)].
+
+Lemma acyclic_sigma0: acyclic_sigma empty.
+Proof. by rewrite/acyclic_sigma/=fdisjoint0X. Qed.
+
 (*SNIP: bc_type*)
 Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq Atom) :=
 (*ENDSNIP: bc_type*)
   fun pr fv (query:Tm) s =>
+  if ~~ acyclic_sigma s then (fv, [::])
+  else
   let query := deref s query in
   match get_tm_hd query with
     | inl kP =>  (*this is a call with flex head, in elpi it is an error! *)

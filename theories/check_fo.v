@@ -202,6 +202,7 @@ Section check.
     case: p => [rs s].
     rewrite/bc/=/check_rules/= => CR TD.
     rewrite (is_det_cder _ TD).
+    case: ifP => // _.
     case DR: get_tm_hd => //=[p].
     case: fndP => //= pP.
     rewrite !push/=.
@@ -356,25 +357,27 @@ Section check.
   Lemma det_check_big_or pr c fv fv' r0 rs s1:
     (* vars_tm c `<=` fv ->
     vars_sigma s1 `<=` fv -> *)
-    acyclic_sigma s1 ->
+    (* acyclic_sigma s1 -> *)
     check_program pr -> tm_is_det (sig pr) c -> 
     bc u pr fv c s1 = (fv', r0 :: rs) ->
     det_tree (sig pr) (big_or r0.2 rs).
   Proof.
     rewrite /bc/check_program.
-    case: pr => rules s/= => +/andP[].
+    case: pr => rules s/= => /andP[].
+    case: ifP => ///negbFE AS.
     case X: get_tm_hd => //=[p].
     case: fndP => //= kP.
-    move=> +++ H.
+    move=> ++ H.
     have [q'[qp' [+ H2]]] := is_det_der s1 H.
     rewrite X => -[?]; subst.
-    move=> AS ME CR.
-    have := mut_exclP fv AS ME H.
+    move=> ME CR.
+    have := mut_exclP fv s1 ME H.
     have := check_rulesP fv s1 CR H.
     rewrite/bc X/= in_fnd.
     rewrite !push/= => /= ++[?]; subst.
     rewrite (bool_irrelevance kP qp') => ++ S.
     rewrite S.
+    rewrite AS/=.
     by apply/det_check_big_or_help.
   Qed.
 
@@ -399,28 +402,28 @@ Section check.
   Lemma det_check_step pr sv s1 A r: 
     (* vars_tree A `<=` sv ->
     vars_sigma s1 `<=` sv -> *)
-    acyclic_sigma s1 -> acyclic_sigmaT A ->
+    (* acyclic_sigma s1 -> acyclic_sigmaT A -> *)
     check_program pr -> det_tree pr.(sig) A -> 
       step u pr sv s1 A = r ->
         det_tree pr.(sig) r.2.
   Proof.
-    move=> ++ H + <-; clear r.
-    elim_tree A s1 => AS/=.
-    - case: t => [|c]//= _; rewrite !push/=.
+    move=> H + <-; clear r.
+    elim_tree A s1.
+    - case: t => [|c]//=; rewrite !push/=.
       case bc: bc => //=[fv'[|[s0 r0]rs]]//= H1.
       by apply: det_check_big_or bc.
-    - move=> /and3P[As AA AB]; rewrite/= => /andP[fA]; rewrite !push/= HA//=.
+    - (*move=> /and3P[As AA AB];*) rewrite/= => /andP[fA]; rewrite !push/= HA//=.
       case: ifP => //= cA; last by move=> /eqP->; rewrite !if_same.
       rewrite !fun_if => /[dup] Hx ->; do 2 case: ifP => //=.
       by move=> H1; rewrite (step_keep_cut _ H1).
-    - by move=> /andP[As AB]; by rewrite /=!push/=; apply/HB.
-    - move=> /andP[AA AB]/andP[dB].
+    - by (*move=> /andP[As AB];*) by rewrite /=!push/=; apply/HB.
+    - move=> (*/andP[AA AB]*)/=/andP[dB].
       rewrite step_and/=.
       set sB:= step _ _ _ _ B.
       set sA:= step _ _ _ _ A.
       (* have S5 : vars_sigma (next_subst s1 A) `<=` sv by apply: vars_sigma_next_subst. *)
       rewrite (fun_if (det_tree (sig pr))).
-      have AA' := acyclic_sigma_next_subst AS AA.
+      (* have AA' := acyclic_sigma_next_subst AS AA. *)
       case SA: success.
         case : (ifP (is_cb _)) => /=; rewrite {}HB//=.
           by rewrite det_tree_cutl//no_alt_cutl//= andbT.
@@ -504,6 +507,7 @@ Section check.
         acyclic_sigma x.1.
   Proof.
     rewrite/bc/= => H1 -[s2 b]/=.
+    case: ifP => ///negbFE AS.
     case: get_tm_hd => //= x; case: fndP => //= kP.
     by rewrite !push/=; apply/acyclic_sigma_select.
   Qed.
@@ -541,30 +545,28 @@ Section check.
 
   (*SNIPT: det_check_tree *)
   Lemma det_check_tree: 
-    forall s v p t, acyclic_sigma s -> acyclic_sigmaT t ->
-    check_program p -> det_tree p.(sig) t -> is_det p s v t.
+    forall s v p t, check_program p -> det_tree p.(sig) t -> is_det p s v t.
   (*ENDSNIPT: det_check_tree *)
   Proof.
     rewrite/is_det.
-    move=> s v p t AS AT H1 H2 r [b[v' R]].
-    elim_run R H1 H2 AS AT.
+    move=> s v p t H1 H2 r [b[v' R]].
+    elim_run R H1 H2.
     - rewrite (det_check_prune_succ H2 sA); eauto.
     - apply: IH => //=.
         by apply: det_check_step eA.
-      move: eA; rewrite [step _ _ _ _ _]surjective_pairing => -[??]; subst.
-      by apply/acyclic_sigmaT_step.
+      (* move: eA; rewrite [step _ _ _ _ _]surjective_pairing => -[??]; subst. *)
+      (* by apply/acyclic_sigmaT_step. *)
     - apply: IH => //.
         by apply/det_check_prune/nA.
-      by apply/acyclic_sigmaT_prune/nA.
+      (* by apply/acyclic_sigmaT_prune/nA. *)
   Qed.
 
   (*SNIPT: det_check_calls *)
   Theorem det_check_calls:
-    forall p s t v, acyclic_sigma s ->
-    check_program p -> tm_is_det p.(sig) t -> is_det p s v (TA (call t)).
+    forall p s t v, check_program p -> tm_is_det p.(sig) t -> is_det p s v (TA (call t)).
   (*ENDSNIPT: det_check_calls *)
   Proof.
-    move=> /= p t s v AS cp td r H.
+    move=> /= p t s v cp td r H.
     by apply/det_check_tree/H => //.
   Qed.
 
@@ -575,7 +577,7 @@ Section check.
   Proof.
     move=> /= p t v cp td r H.
     apply/det_check_tree/H => //.
-    by apply/acyclic_sigma0.
+    (* by apply/acyclic_sigma0. *)
   Qed.
 
 

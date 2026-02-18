@@ -63,6 +63,15 @@ Section Test1.
   Lemma codom0_set v s: codom empty.[v <- s] = [::s].
   Proof. by rewrite/= codomE/= fsetU0 enum_fset1/= ffunE//=eqxx. Qed.
 
+  Lemma acyclic_sigma_set_D k t:
+    k \notin vars_tm t ->
+    acyclic_sigma empty.[k <- t].
+  Proof.
+    rewrite/acyclic_sigma/=/codom_vars codom0_set/= !fsetU0/=.
+    by rewrite/fdisjoint fsetIC fsetI1 => /negPf ->.
+  Qed.
+  
+
   Goal exists v, runT unif p_test fset0 empty (TA (call (Tm_App (Tm_P q) (Tm_D (ID 1))))) (Some (s2, None)) false v.
   Proof.
     repeat eexists.
@@ -80,6 +89,7 @@ Section Test1.
       rewrite ffunE/=/vars_atoms/= !fsetU0 !fset0U/= fsetUid.
       rewrite (fsetUC _ [fset fresh _]) fsetUA fsetUid.
       rewrite fsetUC -/X//.
+      rewrite acyclic_sigma0//.
     move=> //.
     apply: StepT => //=.
       rewrite/bc [get_tm_hd _]/=.
@@ -89,6 +99,7 @@ Section Test1.
       rewrite/=.
       rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
       rewrite/rename/=in_fset1 eqxx/=.
+      rewrite acyclic_sigma0//.
       by rewrite not_fnd//= not_fnd//=.
       by [].
     rewrite !fsetU0 !fset0U/=.
@@ -113,7 +124,7 @@ Section Test1.
       rewrite -!(fsetUC [fset fresh [fset IV 0]]) !fsetUA.
       rewrite (fsetUC _ [fset IV 0]) -/X.
       rewrite (fsetUC X) -fsetUA -/Y. *)
-      move=> //.
+      rewrite /next_subst/= acyclic_sigma_set_D//=.
       by [].
     set Z := (_ `|` _).
     apply: BackT => //=.
@@ -128,9 +139,9 @@ Section Test1.
       rewrite/rename/=in_fset1 eqxx/=.
       rewrite not_fnd//= eqxx/=.
       rewrite !fset0U !fsetU0.
+      rewrite/next_subst/= acyclic_sigma_set_D//.
       (* rewrite /next_subst/=/varsU_rule/varsU_rhead/=/varsU_rprem/=.
       rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0/=. *)
-      move=> //.
       by [].
     apply: StopT => //=.
   Qed.
@@ -156,12 +167,14 @@ Section Test5.
       rewrite codomf0 cat0f fsetU0 ren_app ren_P ren_V/= in_fnd/= ?in_fset1// => H.
       rewrite/vars_atoms/= !fsetUA codom_vars0 !fsetU0 ffunE/= fsetUC fsetUA fsetUid.
       rewrite fsetUC//.
+      by rewrite acyclic_sigma0.
       move=> //.
     apply: StepT => //=.
       rewrite/bc [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
       rewrite !fset0U/= not_fnd//= not_fnd//=.
+      by rewrite acyclic_sigma0.
       by [].
     rewrite codomf0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0.
     rewrite /vars_sigma/codom_vars !codom0_set/= !fsetU0 fsetUid !fsetUA.
@@ -196,12 +209,14 @@ Section Test6.
       rewrite codomf0 cat0f fsetU0 ren_app ren_P ren_V/= in_fnd/= ?in_fset1// => H.
       rewrite/vars_atoms/= !fsetUA codom_vars0 !fsetU0 ffunE/= fsetUC fsetUA fsetUid.
       rewrite fsetUC//.
+      by rewrite acyclic_sigma0.
       move=> //.
     apply: StepT => //=.
       rewrite/bc [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
       rewrite !fset0U/= not_fnd//= not_fnd//=.
+      by rewrite acyclic_sigma0.
       by [].
     rewrite codomf0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0.
     rewrite /vars_sigma/codom_vars !codom0_set/= !fsetU0 fsetUid !fsetUA.
@@ -213,6 +228,7 @@ Section Test6.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
       rewrite !fset0U//=.
+      by rewrite /next_subst/= acyclic_sigma_set_D//.
       by [].
     apply: StepT => //=.
     apply: StopT => //.

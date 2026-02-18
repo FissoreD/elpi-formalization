@@ -180,6 +180,8 @@ Section once.
     rewrite !(fsetUC _ fvx') !fsetUA.
     rewrite !(fsetUC _ [fset IV 0]) !fsetUA fsetUid.
     rewrite !(fsetUC _ [fset fresh _]) !fsetUA !fsetUid.
+    case: ifP => //=[/negPf|/negbFE] AS.
+      by move=> [???]; subst; inversion H3 => //; auto.
     move=> [???]; subst.
     have:= run_or0 H3 => ?; subst.
     have:= run_ko_ONK H3.

@@ -57,6 +57,7 @@ Section vars_tree.
     fv `<=` (bc u p fv c s).1.
   Proof.
     rewrite/bc.
+    case: ifP => // _.
     case X: get_tm_hd => //=[c'].
     case: fndP => cP//.
     rewrite !push/= fsubsetU//.
@@ -104,6 +105,7 @@ Section vars_tree.
   Proof.
     move => H1 H2.
     rewrite/bc/=.
+    case: ifP => //= _.
     case X: get_tm_hd => [c'|]//=.
     case: fndP => /=hp; last by move=> [<-].
     rewrite !push.
