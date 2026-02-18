@@ -563,7 +563,8 @@ Section check.
 
   (*SNIPT: det_check_call *)
   Theorem det_check_call:
-    forall p s t v, check_program p -> tm_is_det p.(sig) t -> is_det p s v (TA (call t)).
+    forall p s t v, 
+      check_program p -> tm_is_det p.(sig) t -> is_det p s v (TA (call t)).
   (*ENDSNIPT: det_check_call *)
   Proof.
     move=> /= p t s v cp td r H.
