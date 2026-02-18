@@ -558,15 +558,26 @@ Section check.
       by apply/acyclic_sigmaT_prune/nA.
   Qed.
 
-  (*SNIPT: det_check_call *)
-  Theorem det_check_call:
+  (*SNIPT: det_check_calls *)
+  Theorem det_check_calls:
     forall p s t v, acyclic_sigma s ->
     check_program p -> tm_is_det p.(sig) t -> is_det p s v (TA (call t)).
-  (*ENDSNIPT: det_check_call *)
+  (*ENDSNIPT: det_check_calls *)
   Proof.
     move=> /= p t s v AS cp td r H.
     by apply/det_check_tree/H => //.
   Qed.
+
+  (*SNIPT: det_check_call *)
+  Theorem det_check_call:
+    forall p t v, check_program p -> tm_is_det p.(sig) t -> is_det p empty v (TA (call t)).
+  (*ENDSNIPT: det_check_call *)
+  Proof.
+    move=> /= p t v cp td r H.
+    apply/det_check_tree/H => //.
+    by apply/acyclic_sigma0.
+  Qed.
+
 
   Print Assumptions  det_check_call.
   

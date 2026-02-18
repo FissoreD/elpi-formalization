@@ -88,4 +88,7 @@ Qed.
 Axiom matching_V: forall s t d,
   vars_sigma s `<=` d -> vars_tm t `<=` d ->
   matching t (Tm_V (fresh d)) s = Some (s.[fresh d <- t]).
+
+Lemma acyclic_sigma0: acyclic_sigma empty.
+Proof. by rewrite/acyclic_sigma/=fdisjoint0X. Qed.
 End s.
