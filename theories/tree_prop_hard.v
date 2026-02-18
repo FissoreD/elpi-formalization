@@ -14,7 +14,7 @@ Section s.
     have pA := success_incomplete sA.
     have fA := success_failed sA.
     inversion H; clear H; subst; rewrite success_step//; try congruence.
-    by rewrite pruneFN_fail in fA.
+    by rewrite prune_None in fA.
   Qed.
 
   Lemma runT_det1: forall p v0 s0 t0 r1 r2 b1 b2 v1 v2,
@@ -34,7 +34,7 @@ Section s.
         by rewrite incomplete_failed in fA.      
       move: H0; rewrite nA => -[?]; subst.
       by apply: IH.
-    + have fA:= pruneFN_fail nA.
+    + have fA:= prune_None nA.
       have sA := failed_success fA.
       inversion H1; subst => //; try congruence.
       by rewrite incomplete_failed in fA.
@@ -163,7 +163,7 @@ Section s.
       apply: BackT; only 1,2: rewrite //=nA//.
       by apply: IH H.
     + move=> sX X X' n1 fv' H.
-      have fB := pruneFN_fail nA.
+      have fB := prune_None nA.
       inversion H; subst; clear H.
       + apply: BackT => //=; first rewrite nA failedF_prune//.
           by rewrite success_failed.
@@ -215,7 +215,7 @@ Section s.
         move: H1 => /=; case nA': prune => //= -[?]; subst.
         by move: nA; rewrite nA' => -[?]; subst.
       by move: H0 => /=; rewrite nA.
-    - have fA := pruneFN_fail nA.
+    - have fA := prune_None nA.
       inversion 1 => //; subst.
         by rewrite rew_pa in H0; rewrite incomplete_failed in fA.
       by move: H2 => /=; rewrite nA.

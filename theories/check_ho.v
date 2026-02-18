@@ -4893,7 +4893,7 @@ Module elpi.
     have:= elpi_to_tree _ _ _ _ _ _ H.
     move=> /(_ _ (TA p (call c)) isT erefl) [t1[n[H1 H2]]]; subst.
     move=> /(_ u _ _ _ H1) nA.
-    have ft1':= pruneFN_fail nA.
+    have ft1':= prune_None nA.
     have:= valid_tree_run _ _ H1 => /(_ isT).
     move=> [|VT]; first by move=> ->; rewrite t2l_dead//is_dead_dead//.
     have:= failed_prune_none_t2l VT ft1' nA.

@@ -881,7 +881,7 @@ Section NurProp.
         rewrite (success_t2l s vA sA)/=.
         case tB: t2l; rewrite//=(HB _ _ vB tB).
         case nA: prune => //=[A'].
-        have fA' := prune_failedF nA.
+        have fA' := prune_Some nA.
         by have [?[?[?->]]] := failed_t2l (valid_tree_prune vA nA) fA' s a.
       case: ifP => fA; last first.
         by have [sx[x[xs H]]]/= := failed_t2l vA fA s a; rewrite H/= t2l_big_and//.

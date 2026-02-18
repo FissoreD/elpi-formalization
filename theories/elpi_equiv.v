@@ -57,7 +57,7 @@ Section NurEqiv.
     + move=>/=.
       rewrite (failed_prune_none_t2l _ _ nA)//.
         by constructor.
-      by apply/pruneFN_fail.
+      by apply/prune_None.
   Qed.
 
 Lemma elpi_to_tree_aux p v0 a r : 
@@ -73,7 +73,7 @@ Proof.
     case fA: (failed A).
       case nA: (prune false A) => [A'|]; last first.
         by rewrite (failed_prune_none_t2l vA fA nA) in H.
-      have /= fA' := prune_failedF nA.
+      have /= fA' := prune_Some nA.
       have /= vA' := (valid_tree_prune vA nA).
       rewrite (pruneF_t2l vA fA nA) in H.
       have [skA ?]:= s2l_empty_hd_success vA' fA' H; subst.
@@ -93,7 +93,7 @@ Proof.
       case fA: (failed A).
         case nA: (prune false A) => [A'|]; last first.
           by rewrite (failed_prune_none_t2l vA fA nA) in H.
-        have /= fA' := prune_failedF nA.
+        have /= fA' := prune_Some nA.
         have /= vA' := (valid_tree_prune vA nA).
         rewrite (pruneF_t2l vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
@@ -139,7 +139,7 @@ Proof.
           by rewrite (failed_prune_none_t2l vA fA nA) in H.
         rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
         rewrite (pruneF_t2l vA fA nA) in H.
-        have /= fA' := prune_failedF nA.
+        have /= fA' := prune_Some nA.
         have /= vA' := (valid_tree_prune vA nA).
         have [] := next_callS_s2l p u fv fA' vA' H.
         rewrite B/=clean_ca_nil => H1 H2.

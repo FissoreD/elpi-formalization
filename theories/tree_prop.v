@@ -122,7 +122,7 @@ Section RunP.
 
 
   (*SNIPT: naNfail*)
-  Lemma pruneFN_fail: 
+  Lemma prune_None: 
     forall t, prune false t = None -> failed t.
   (*ENDSNIPT: naNfail*)
   Proof.
@@ -199,7 +199,7 @@ Section RunP.
 
 
   (*SNIPT: na_failed *)
-  Lemma prune_failedF:
+  Lemma prune_Some:
     forall b t t', prune b t = Some t' -> failed t' = false.
   (*ENDSNIPT: na_failed *)
   Proof.
