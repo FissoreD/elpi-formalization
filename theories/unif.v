@@ -88,15 +88,22 @@ Axiom matching_V: forall s t d,
   vars_sigma s `<=` d -> vars_tm t `<=` d ->
   matching t (Tm_V (fresh d)) s = Some (s.[fresh d <- t]).
 
-Definition good_ren (x: {fmap V -> V}) a1 :=
-  (vars_tm a1 `<=` domf x) && injectiveb x.
+Notation "A | B" := (A `|` B) (at level 15).
+Notation injectiveb := (@injectiveb _ V).
+(*SNIPT: good_ren *)
+Definition good_ren x t :=
+  (vars_tm t `<=` domf x) && injectiveb x.
+(*ENDSNIPT: good_ren *)
 
-Axiom unif_ren: forall (x y z w: {fmap V -> V}) a1 a2,
-  good_ren w a1 -> good_ren y a2 ->
-  good_ren z a1 -> good_ren x a2 ->
-  [disjoint codomf w & vars_tm a1 `|` vars_tm (ren y a2)] ->
-  [disjoint codomf z & vars_tm a1 `|` vars_tm (ren x a2)] ->
+
+(*SNIPT: unif_ren *)
+Axiom unif_ren: 
+  forall (x y z w: {fmap V -> V}) a1 a2,
+  good_ren w a1 -> good_ren y a2 -> good_ren z a1 -> good_ren x a2 ->
+  codomf w # vars_tm a1 | vars_tm (ren y a2) ->
+  codomf z # vars_tm a1 | vars_tm (ren x a2) ->
   unify (ren w a1) (ren y a2) empty -> unify (ren z a1) (ren x a2) empty.
+(*ENDSNIPT: unif_ren *)
 
 Lemma good_ren_app x f a: good_ren x (Tm_App f a) = good_ren x f && good_ren x a.
 Proof. by rewrite/good_ren/= fsubUset !andbA -!(andbC (injectiveb x)) !andbA andbb. Qed.
