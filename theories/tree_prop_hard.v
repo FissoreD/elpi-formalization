@@ -363,14 +363,24 @@ Section s.
   (*ENDSNIPT: run_orNT *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
-  (*SNIPT: runNF_or *)
-  Lemma runNF_or: 
+  (*SNIPT: runNF_or' *)
+  Lemma runNF_or': 
     forall p v0 v1 v2 s l s1 r r' b,
     runT p v0 s l None false v1 -> runT p v1 s1 r r' b v2 ->
       let sR := (omap (fun '(x, b) => (x, omap (fun x => None \/ x -sub(s1)) b)) r') in
       runT p v0 s ((Some l) \/ r -sub(s1)) sR false v2.
-  (*ENDSNIPT: run_orNF *)
+  (*ENDSNIPT: runNF_or' *)
   Proof. by move=>> /run_or_correct_left; eauto. Qed.
+
+
+  (*SNIPT: runNF_or *)
+  Lemma runNF_or: 
+    forall p v0 v1 v2 s l s1 s2 r r' b,
+    runT p v0 s l None false v1 -> runT p v1 s1 r (Some (s2, r')) b v2 ->
+      let sR := omap (fun x => None \/ x -sub(s1)) r' in
+      runT p v0 s ((Some l) \/ r -sub(s1)) (Some (s2,sR)) false v2.
+  (*ENDSNIPT: run_orNF *)
+  Proof. move=> ???????? []> H1 H2/=; have:= run_or_correct_left H1 _ _ _ _ _ H2 => //=. Qed.
 
   (*SNIPT: run_orSST *)
   Lemma run_orSST:
