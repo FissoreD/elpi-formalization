@@ -61,7 +61,7 @@ Section tree_op.
 
 
   (*SNIP: next*)
-  Fixpoint next s t : Sigma * tree:=
+  Fixpoint next s t : Sigma * tree :=
     match t with
     | TA _ | KO | OK => (s, t)
     | Or None s' B => next s' B
