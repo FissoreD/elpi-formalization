@@ -31,8 +31,6 @@ theories/elpi_equiv.v
 theories/elpi_valid_state.v
 
 theories/check_fo.v
-# theories/head_cut.v
-theories/paper.v
 
 theories/once.v
 
