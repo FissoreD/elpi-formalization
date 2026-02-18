@@ -576,52 +576,46 @@ Section mut_excl.
     apply: contraNF.
     by apply/unif_ren; rewrite//disjointUr; apply/andP.
   Qed.
-  
+
+  Lemma good_ren_fresh fv t: good_ren (fresh_tm  (vars_tm t `|` fv) empty t).2 t.
+  Proof.
+    set X := _ `|` _.
+    have:= @fresh_tm_def X empty t.
+    rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
+    move=> [x [H1 HH I1 D1]]; rewrite cat0f in H1.
+    rewrite /good_ren H1 I1 andbT.
+    by have:= fresh_tm_sub1 X empty t; rewrite H1.
+  Qed.
+
+  Lemma disj_codom0 q fv: vars_tm q `<=` fv -> [disjoint codomf (fresh_tm fv empty q).2 & fv].
+  Proof.
+    move=> H.
+    have:= @fresh_tm_def fv empty q.
+    rewrite /=fsub0set H injectiveb0 => /(_ isT isT isT).
+    by move=> [e[-> H1 H2 H3]]; rewrite cat0f.
+  Qed.
+
+  Lemma disj_codom0R q fv: [disjoint codomf (fresh_tm (vars_tm q `|` fv) empty q).2 & fv].
+  Proof. by have:= @disj_codom0 q (vars_tm q `|` fv) (fsubsetUl _ _); rewrite disjointUr => /andP[]. Qed.
+
+  Lemma disj_codom0L q fv: [disjoint codomf (fresh_tm (vars_tm q `|` fv) empty q).2 & vars_tm q].
+  Proof. by have:= @disj_codom0 q (vars_tm q `|` fv) (fsubsetUl _ _); rewrite disjointUr => /andP[]. Qed.
+
   Lemma H_head_ren inp m fv1 fv2 x xs fx fy q:
     (fresh_rule (fresh_rules fv1 xs).1 x).1 `<=` fx ->
     (fresh_rule (fresh_rules fv2 xs).1 x).1 `<=` fy ->
     H_head inp m (rename fx q empty).2 (rename (fresh_rules fv1 xs).1 (head x) empty).2 = false ->
     H_head inp m (rename fy q empty).2 (rename (fresh_rules fv2 xs).1 (head x) empty).2 = false.
   Proof.
-    rewrite/fresh_rule!push/=.
-    case: x => //=hd bo H2 H3.
+    rewrite /fresh_rule !push/= => H1 H2.
+    have {}H1 := fsubset_trans (fresh_atoms_sub _ _ _) H1.
     have {}H2 := fsubset_trans (fresh_atoms_sub _ _ _) H2.
-    have {}H3 := fsubset_trans (fresh_atoms_sub _ _ _) H3.
-    clear bo.
+    have {}H1 := fsubset_trans (vars_tm_rename _ _) H1.
     have {}H2 := fsubset_trans (vars_tm_rename _ _) H2.
-    have {}H3 := fsubset_trans (vars_tm_rename _ _) H3.
-    move: H2 H3.
-    move: (fresh_rules _ _).1 => /= fv'.
-    move: (fresh_rules _ _).1 => /= fv''.
-    rewrite/rename !push/=; clear.
-    have:= @fresh_tm_def (vars_tm hd `|` fv') empty hd.
-      rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
-      move=> [x [H1 HH I1 D1]].
-      rewrite H1.
-    have:= @fresh_tm_def (vars_tm hd `|` fv'') empty hd.
-      rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
-      move=> [y [Ha _ I2 D2]].
-      rewrite Ha.
-    have:= @fresh_tm_def (vars_tm q `|` fx) empty q.
-      rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
-      move=> [z [Hx _ I3 D3]].
-      rewrite Hx.
-    have:= @fresh_tm_def (vars_tm q `|` fy) empty q.
-      rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
-      move=> [w [Hl _ I4 D4]].
-      rewrite Hl.
-    rewrite !cat0f in H1 Ha Hx Hl *.
-    move: D3 D4 I1 I2 I3 I4.
-    rewrite !disjointUr => /andP[++]/andP[++].
-    have:= fresh_tm_sub1 (vars_tm q `|` fx) empty q; rewrite Hx.
-    have:= fresh_tm_sub1 (vars_tm q `|` fy) empty q; rewrite Hl.
-    have:= fresh_tm_sub1 (vars_tm hd `|` fv') empty hd; rewrite H1.
-    have:= fresh_tm_sub1 (vars_tm hd `|` fv'') empty hd; rewrite Ha.
-    clear.
-    move=> H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14. 
-    apply/H_head_ren_aux; rewrite ?disjointUr; apply/andP; split => //.
-      by apply/disjoint_sub/H13.
-    by apply/disjoint_sub/H14.
+    rewrite/rename!push/= in H1 H2 *.
+    apply/H_head_ren_aux; only 1-4: by apply: good_ren_fresh.
+      rewrite disjointUr disj_codom0L; apply/disjoint_sub/H1/disj_codom0R.
+    rewrite disjointUr disj_codom0L; apply/disjoint_sub/H2/disj_codom0R.
   Qed.
 
   Lemma select_head_ren rs fx fy fv1 fv2 inp m hd:
