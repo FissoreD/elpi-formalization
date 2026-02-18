@@ -359,18 +359,17 @@ Section s.
 
   (*SNIPT: runNT_or *)
   Lemma runNT_or: 
-    forall p v v' s t s1 t', runT p v s t None true v' ->
-      runT p v s ((Some t) \/ t' -sub(s1)) None false v'.
+    forall p v v' s t s1 t', runT p v s t None true v' -> runT p v s ((Some t) \/ t' -sub(s1)) None false v'.
   (*ENDSNIPT: run_orNT *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
-  (*SNIP: runNF_or *)
-  Lemma runNF_or: forall p v0 v1 v2 s0 t0 sm t1 t1' b,
-    runT p v0 s0 t0 None false v1 ->
-      runT p v1 sm t1 t1' b v2 ->
-        let sR := (omap (fun '(x, b) => (x, omap (Or None sm) b)) t1') in
-        runT p v0 s0 (Or (Some t0) sm t1) sR false v2.
-  (*ENDSNIP: run_orNF *)
+  (*SNIPT: runNF_or *)
+  Lemma runNF_or: 
+    forall p v0 v1 v2 s l s1 r r' b,
+    runT p v0 s l None false v1 -> runT p v1 s1 r r' b v2 ->
+      let sR := (omap (fun '(x, b) => (x, omap (fun x => None \/ x -sub(s1)) b)) r') in
+      runT p v0 s ((Some l) \/ r -sub(s1)) sR false v2.
+  (*ENDSNIPT: run_orNF *)
   Proof. by move=>> /run_or_correct_left; eauto. Qed.
 
   (*SNIPT: run_orSST *)
