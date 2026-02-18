@@ -34,10 +34,12 @@ Axiom matching_subst : forall q t s,
   [disjoint vars_tm q & domf s] ->
   (matching q (deref s t) fmap0) <-> (matching q t s).
 
+Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
+
 (*SNIPT: matchdisj *)
-Axiom matching_disj: 
-  forall t1 t2 s s', [disjoint vars_tm t1 & domf s] -> disjoint_tm t1 t2 ->
-  matching t1 t2 s = Some s' -> exists e, domf s' = domf s `|` e /\ e `<=` vars_tm t2.
+Axiom matching_disj:
+  forall s s' t1 t2, vars_tm t1 # domf s -> vars_tm t1 # vars_tm t2 ->
+    matching t1 t2 s = Some s' -> exists e, domf s' = domf s `|` e /\ e `<=` vars_tm t2.
 (*ENDSNIPT: matchdisj *)
 
 (*SNIPT: matchingmono *)
