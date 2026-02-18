@@ -385,8 +385,9 @@ Section s.
 
   (*SNIPT: run_orSST *)
   Lemma run_orSST:
-    forall p v v' s s' s1 l l' r r', runT p v s ((Some l) \/ r -sub(s1)) (Some (s', Some ((Some l') \/ r' -sub(s1)))) false v' ->
-    exists b, runT p v s l (Some (s', Some l')) b v' /\ r' = if b then KO else r.
+    forall p v v' s s' s1 l l' r r', 
+    runT p v s ((Some l) \/ r -sub(s1)) (Some (s', Some ((Some l') \/ r' -sub(s1)))) false v' ->
+      exists b, runT p v s l (Some (s', Some l')) b v' /\ r' = if b then KO else r.
   (*ENDSNIPT: run_orSST *)
   Proof.
     move=> > /run_or_complete.
