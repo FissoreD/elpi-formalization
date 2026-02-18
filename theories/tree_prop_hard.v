@@ -359,7 +359,8 @@ Section s.
 
   (*SNIPT: runNT_or *)
   Lemma runNT_or: 
-    forall p v v' s t s1 t', runT p v s t None true v' -> runT p v s ((Some t) \/ t' -sub(s1)) None false v'.
+    forall p v v' s t s1 t', runT p v s t None true v' -> 
+      runT p v s ((Some t) \/ t' -sub(s1)) None false v'.
   (*ENDSNIPT: run_orNT *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
