@@ -601,17 +601,13 @@ Section mut_excl.
   Lemma disj_codom0L q fv: [disjoint codomf (fresh_tm (vars_tm q `|` fv) empty q).2 & vars_tm q].
   Proof. by have:= @disj_codom0 q (vars_tm q `|` fv) (fsubsetUl _ _); rewrite disjointUr => /andP[]. Qed.
 
-  Lemma H_head_ren inp m fv1 fv2 x xs fx fy q:
-    (fresh_rule (fresh_rules fv1 xs).1 x).1 `<=` fx ->
-    (fresh_rule (fresh_rules fv2 xs).1 x).1 `<=` fy ->
-    H_head inp m (rename fx q empty).2 (rename (fresh_rules fv1 xs).1 (head x) empty).2 = false ->
-    H_head inp m (rename fy q empty).2 (rename (fresh_rules fv2 xs).1 (head x) empty).2 = false.
+  Lemma H_head_ren inp m fv1 fv2 t xs fx fy q:
+    vars_tm (rename (fresh_rules fv1 xs).1 t empty).2 `<=` fx ->
+    vars_tm (rename (fresh_rules fv2 xs).1 t empty).2 `<=` fy ->
+    H_head inp m (rename fx q empty).2 (rename (fresh_rules fv1 xs).1 t empty).2 = false ->
+    H_head inp m (rename fy q empty).2 (rename (fresh_rules fv2 xs).1 t empty).2 = false.
   Proof.
-    rewrite /fresh_rule !push/= => H1 H2.
-    have {}H1 := fsubset_trans (fresh_atoms_sub _ _ _) H1.
-    have {}H2 := fsubset_trans (fresh_atoms_sub _ _ _) H2.
-    have {}H1 := fsubset_trans (vars_tm_rename _ _) H1.
-    have {}H2 := fsubset_trans (vars_tm_rename _ _) H2.
+    move=> H1 H2.
     rewrite/rename!push/= in H1 H2 *.
     apply/H_head_ren_aux; only 1-4: by apply: good_ren_fresh.
       rewrite disjointUr disj_codom0L; apply/disjoint_sub/H1/disj_codom0R.
@@ -630,8 +626,13 @@ Section mut_excl.
     move=> H2 H3.
     case H: H_head => //=.
     move: H; rewrite !head_fresh_rule => H.
-    rewrite (H_head_ren H2 H3 H).
-    by apply: IH; (apply:fsubset_trans; first apply: fresh_rule_sub).
+    rewrite /fresh_rule!push/= in H2 H3.
+    have {}H2' := fsubset_trans (fresh_atoms_sub _ _ _) H2.
+    have {}H3' := fsubset_trans (fresh_atoms_sub _ _ _) H3.
+    have {}H2' := fsubset_trans (vars_tm_rename _ _) H2'.
+    have {}H3' := fsubset_trans (vars_tm_rename _ _) H3'.
+    rewrite (H_head_ren H2' H3' H).
+    apply: IH; (apply:fsubset_trans; first apply: fresh_rule_sub); rewrite/fresh_rule?push//=.
   Qed.
 
   Lemma disjoint_varsU fv fv' rs hd:
