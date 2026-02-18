@@ -323,6 +323,7 @@ Section s.
     by apply: FailT nB.
   Qed.
 
+  Notation  "A ∨ B" := (A \/ B) (at level 20).
   Notation "A \/ B -sub( s )" := (Or A s B)
    (at level 50, s at level 0).
 
@@ -395,6 +396,23 @@ Section s.
     exists b; split => //.
     by destruct b.
   Qed.
+
+  (*SNIPT: run_orSNT *)
+  Lemma run_orSNT:
+    forall p v v' s s' s1 l r r', 
+    runT p v s ((Some l) \/ r -sub(s1)) (Some (s', Some (None \/ r' -sub(s1)))) false v' ->
+      (exists b, runT p v s l (Some (s', None)) b v' /\ if b then r' = KO else prune false r = Some r') ∨
+      (exists v2 b, runT p v s l None false v2 /\ runT p v2 s1 r (Some (s', Some r')) b v').
+  (*ENDSNIPT: run_orSNT *)
+  Proof.
+    move=> p v v' s s' s1 l r r' H1.
+    have /=[] := run_or_complete H1.
+      move=> [x[b[H2 [[H3 [H4 H5 H6]]]]]]; subst.
+      left; exists b => //; destruct b => //.
+    move=> [v1[H2[_ [b H]]]].
+    by right; exists v1, b.
+  Qed.
+
 
 
   Fixpoint not_bt A B :=
