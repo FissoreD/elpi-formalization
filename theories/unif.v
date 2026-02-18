@@ -108,4 +108,64 @@ Axiom unif_ren:
 Lemma good_ren_app x f a: good_ren x (Tm_App f a) = good_ren x f && good_ren x a.
 Proof. by rewrite/good_ren/= fsubUset !andbA -!(andbC (injectiveb x)) !andbA andbb. Qed.
 
+Lemma disjoint_sub {T: choiceType} (s1 s2 s3: {fset T}):
+  [disjoint s1 & s2] ->
+  s3 `<=` s2 -> [disjoint s1 & s3].
+Proof.
+  move=> /eqP H1 D; apply/eqP; move: H1 D.
+  move=> /fsetP I /fsubsetP S; apply/fsetP => x.
+  have:= I x; have:= S x.
+  rewrite !in_fsetI; case: (x \in s1) => //=.
+  by case: (_ \in s3) => //=->//.
+Qed.
+
+Lemma varUP v (s: seq fvS):
+  reflect (exists x, x \in s /\ v \in x) (v \in varsU s).
+Proof.
+  move=> /=; case vs: (_ \in _); constructor.
+    elim: s v vs => //= x xs IH v; rewrite in_fsetU => /orP[] H.
+      by exists x; rewrite in_cons eqxx//.
+    have:= IH _ H => -[e [H1 H2]].
+    by exists e; rewrite in_cons H1 orbT.
+  move: vs; apply/contraFnot => -[+ []].
+  elim: s v => //= x xs IH v vs.
+  rewrite in_cons in_fsetU => /orP[/eqP?|]; subst; first by move => ->.
+  by move=> H1 H2; rewrite (IH v vs)//orbT.
+Qed.
+
+Lemma codom_vars_sub v s (vs: v \in domf s): vars_tm s.[vs] `<=` codom_vars s.
+Proof.
+  rewrite/codom_vars.
+  apply/fsubsetP => /=v' H.
+  apply/varUP; exists (vars_tm s.[vs]); split => //.
+  by apply/map_f/codomP; eexists.
+Qed.
+
+Lemma disjointUr {T:choiceType} (A B C: {fset T}): 
+  fdisjoint A (B `|` C) = fdisjoint A B && fdisjoint A C.
+Proof. by rewrite/fdisjoint fsetIUr fsetU_eq0//. Qed.
+
+Lemma disjointUl {T:choiceType} (A B C: {fset T}): 
+  fdisjoint (B `|` C) A = fdisjoint B A && fdisjoint C A.
+Proof. by rewrite fdisjoint_sym disjointUr !(fdisjoint_sym A). Qed.
+
+Lemma deref_disj_id s t: domf s # vars_tm t -> deref s t = t.
+Proof. 
+  elim: t => //=[v|f Hf a Ha].
+    rewrite/fdisjoint fsetI1; case: ifP.
+      by move=> _ /eqP/fsetP/(_ v); rewrite !inE eqxx.
+    by move=> H; rewrite not_fnd//H.
+  by rewrite disjointUr => /andP[H1 H2]; rewrite Ha//Hf//.
+Qed.
+
+Lemma deref2 s t:
+  acyclic_sigma s -> deref s (deref s t) = deref s t.
+Proof.
+  move=> H; elim: t => //=[v|f -> a ->]//.
+  case: fndP => //= vs; last by rewrite not_fnd//.
+  have: fdisjoint (domf s) (vars_tm s.[vs]).
+    by apply/disjoint_sub/codom_vars_sub/H.
+  by apply/deref_disj_id.
+Qed.
+
 End s.

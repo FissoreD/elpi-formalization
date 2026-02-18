@@ -228,17 +228,6 @@ Section mut_excl.
     by apply/fsubset_trans/fresh_tm_sub/fsubsetUr.
   Qed.
 
-  Lemma disjoint_sub {T: choiceType} (s1 s2 s3: {fset T}):
-    [disjoint s1 & s2] ->
-    s3 `<=` s2 -> [disjoint s1 & s3].
-  Proof.
-    move=> /eqP H1 D; apply/eqP; move: H1 D.
-    move=> /fsetP I /fsubsetP S; apply/fsetP => x.
-    have:= I x; have:= S x.
-    rewrite !in_fsetI; case: (x \in s1) => //=.
-    by case: (_ \in s3) => //=->//.
-  Qed.
-
   Lemma codom_sub1 {T : choiceType} (b: {fmap T -> T}) r :
     codomf b.[\r] `<=` codomf b.
   Proof.
@@ -246,14 +235,6 @@ Section mut_excl.
     rewrite fnd_restrict; case: ifP => //= H; case: fndP => // vb [?]; subst.
     by apply/codomfP; exists v; rewrite in_fnd.
   Qed.
-
-  Lemma disjointUr {T:choiceType} (A B C: {fset T}): 
-    fdisjoint A (B `|` C) = fdisjoint A B && fdisjoint A C.
-  Proof. by rewrite/fdisjoint fsetIUr fsetU_eq0//. Qed.
-
-  Lemma disjointUl {T:choiceType} (A B C: {fset T}): 
-    fdisjoint (B `|` C) A = fdisjoint B A && fdisjoint C A.
-  Proof. by rewrite fdisjoint_sym disjointUr !(fdisjoint_sym A). Qed.
 
   Lemma fresh_good_codom_aux x fv m t: 
     fv `<=` x ->
@@ -486,28 +467,6 @@ Section mut_excl.
     have {}U2:= match_unif M2.
     rewrite unif_sym in U1.
     by rewrite (unif_trans U1 U2) in U.
-  Qed.
-
-  Lemma varUP v (s: seq fvS):
-    reflect (exists x, x \in s /\ v \in x) (v \in varsU s).
-  Proof.
-    move=> /=; case vs: (_ \in _); constructor.
-      elim: s v vs => //= x xs IH v; rewrite in_fsetU => /orP[] H.
-        by exists x; rewrite in_cons eqxx//.
-      have:= IH _ H => -[e [H1 H2]].
-      by exists e; rewrite in_cons H1 orbT.
-    move: vs; apply/contraFnot => -[+ []].
-    elim: s v => //= x xs IH v vs.
-    rewrite in_cons in_fsetU => /orP[/eqP?|]; subst; first by move => ->.
-    by move=> H1 H2; rewrite (IH v vs)//orbT.
-  Qed.
-
-  Lemma codom_vars_sub v s (vs: v \in domf s): vars_tm s.[vs] `<=` codom_vars s.
-  Proof.
-    rewrite/codom_vars.
-    apply/fsubsetP => /=v' H.
-    apply/varUP; exists (vars_tm s.[vs]); split => //.
-    by apply/map_f/codomP; eexists.
   Qed.
 
   Lemma acyclic_sigma_dis c s:
