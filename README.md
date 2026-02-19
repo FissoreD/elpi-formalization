@@ -70,6 +70,11 @@ rocq makefile -f _CoqProject -o Makefile
 make
 ```
 
+sudo apt-get install linux-libc-dev pkg-config libgmp-dev --yes
+opam switch create default ocaml-base-compiler.5.1.1
+eval $(opam env)
+opam install rocq-core.9.0.0 --yes
+
 <!-- - Example:
   - Install dependencies: `sudo apt install coq`
   - Run full build: `make -C theories` -->
