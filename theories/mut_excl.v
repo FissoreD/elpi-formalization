@@ -258,7 +258,7 @@ Section mut_excl.
     case H_head; rewrite (andbT,andbF)//=.
     move /isNoneP: U; rewrite -/(ren z) -/(ren x) -/(ren w) -/(ren y) in H3 H4 H7 H8 *.
     apply: contraNF.
-    by apply/unif_ren; rewrite//disjointUr; apply/andP.
+    by apply/unif_ren.
   Qed.
 
   Lemma good_ren_fresh fv t: refresh_for (fresh_tm  (vars_tm t `|` fv) empty t).2 t.

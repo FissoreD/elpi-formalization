@@ -102,10 +102,9 @@ Definition refresh_for x t :=
 Axiom unif_ren: 
   forall x y z w t1 t2,
   refresh_for w t1 -> refresh_for y t2 -> refresh_for z t1 -> refresh_for x t2 ->
-  codomf w # vars t1 | vars (rename y t2) ->
-  codomf z # vars t1 | vars (rename x t2) ->
+  codomf w # vars (rename y t2) -> codomf z # vars (rename x t2) ->
   unify (rename w t1) (rename y t2) empty -> unify (rename z t1) (rename x t2) empty.
-(*ENDSNIPT: unif_ren *)
+(*ENDSNIPT: unif_ren *)  
 
 Lemma good_ren_app x f a: refresh_for x (Tm_App f a) = refresh_for x f && refresh_for x a.
 Proof. rewrite/refresh_for/= fsubUset !andbA -!(andbC (injective x)) !andbA andbb !(andbC _ (_ # _)) !andbA andbb//. Qed.
