@@ -704,18 +704,11 @@ apply/andP; split.
 by apply: fsubset_trans (Hr fv' m') _; rewrite -/m''. 
 Admitted.
 
-Lemma renameP t fv0 : (*vars_tm t `<=` fv -> *)
-  [disjoint vars_tm (rename fv0 t fmap0).2 & vars_tm t]%fset.
+Lemma renameP_aux m0 t fv:
+  [disjoint domf m0 & codomf m0] ->
+  [disjoint codomf m0 & vars_tm t] ->
+  vars_tm t `<=` fv -> [disjoint vars_tm (ren (fresh_tm fv m0 t).2 t) & vars_tm t].
 Proof.
-rewrite /rename; set m0 : {fmap V -> V} := fmap0; set fv := vars_tm t `|` fv0.
-rewrite [fresh_tm _ _ t]surjective_pairing /=.
-(* have: [disjoint domf m0 & fv] by rewrite fdisjoint0X. *)
-(* have: [disjoint codomf m0 & (fresh_tm fv m0 t).1] by rewrite codomf0 fdisjoint0X. *)
-have: vars_tm t `<=` fv by rewrite fsubsetUl.
-have: [disjoint codomf m0 & vars_tm t] by rewrite codomf0 fdisjoint0X.
-have: [disjoint domf m0 & codomf m0] by rewrite codomf0 fdisjoint0X.
-(* have: codomf m0 `<=` fv by rewrite codomf0 fsub0set. *)
-(* have: injectiveb m0 by apply/injectiveP=> -[x H]; exfalso; rewrite inE in H. *)
 elim: t fv m0; only 1,2: by rewrite /= ?fdisjointX0.
 - move=> v fv m R J Hv; rewrite /= in Hv; rewrite [fresh_tm _ _ _]/=.
   have [vm/=|nvm] := ifP.
@@ -764,6 +757,17 @@ rewrite fdisjointXU !fdisjointUX Pr H1 Pl andbT /=.
   have D1 := xxx r fv' m'; rewrite -/m'' in D1.
   admit.
 Admitted.
+
+Lemma renameP t fv0 : (*vars_tm t `<=` fv -> *)
+  [disjoint vars_tm (rename fv0 t fmap0).2 & vars_tm t]%fset.
+Proof.
+rewrite /rename; set m0 : {fmap V -> V} := fmap0; set fv := vars_tm t `|` fv0.
+rewrite [fresh_tm _ _ t]surjective_pairing /=.
+have: vars_tm t `<=` fv by rewrite fsubsetUl.
+have: [disjoint codomf m0 & vars_tm t] by rewrite codomf0 fdisjoint0X.
+have: [disjoint domf m0 & codomf m0] by rewrite codomf0 fdisjoint0X.
+apply/renameP_aux.
+Qed.
 (*  
 Search fdisjoint fsetU.
 have R' : [disjoint domf m' & codomf m'].
