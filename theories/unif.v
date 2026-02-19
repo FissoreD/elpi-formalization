@@ -91,24 +91,25 @@ Axiom matching_V: forall s t d,
 Notation "A | B" := (A `|` B) (at level 15).
 Notation injective := (@injectiveb _ V).
 Notation "A ∧ B" := (A && B) (at level 15).
+Notation rename := ren.
 
-(*SNIPT: refresh *)
-Definition refresh x t := 
+(*SNIPT: refresh_for *)
+Definition refresh_for x t := 
   (vars_tm t `<=` domf x) ∧ injective x.
-(*ENDSNIPT: refresh *)
+(*ENDSNIPT: refresh_for *)
 
 
 (*SNIPT: unif_ren *)
 Axiom unif_ren: 
   forall x y z w t1 t2,
-  refresh w t1 -> refresh y t2 -> refresh z t1 -> refresh x t2 ->
-  codomf w # vars_tm t1 | vars_tm (ren y t2) ->
-  codomf z # vars_tm t1 | vars_tm (ren x t2) ->
-  unify (ren w t1) (ren y t2) empty -> unify (ren z t1) (ren x t2) empty.
+  refresh_for w t1 -> refresh_for y t2 -> refresh_for z t1 -> refresh_for x t2 ->
+  codomf w # vars_tm t1 | vars_tm (rename y t2) ->
+  codomf z # vars_tm t1 | vars_tm (rename x t2) ->
+  unify (rename w t1) (rename y t2) empty -> unify (rename z t1) (rename x t2) empty.
 (*ENDSNIPT: unif_ren *)
 
-Lemma good_ren_app x f a: refresh x (Tm_App f a) = refresh x f && refresh x a.
-Proof. by rewrite/refresh/= fsubUset !andbA -!(andbC (injective x)) !andbA andbb. Qed.
+Lemma good_ren_app x f a: refresh_for x (Tm_App f a) = refresh_for x f && refresh_for x a.
+Proof. by rewrite/refresh_for/= fsubUset !andbA -!(andbC (injective x)) !andbA andbb. Qed.
 
 Lemma disjoint_sub {T: choiceType} (s1 s2 s3: {fset T}):
   [disjoint s1 & s2] ->

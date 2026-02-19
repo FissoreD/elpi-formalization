@@ -512,8 +512,8 @@ Section mut_excl.
   Qed.
 
   Lemma H_head_ren_aux m inp hd q x y z w:
-    good_ren y hd -> good_ren x hd ->
-    good_ren z q -> good_ren w q ->
+    refresh_for y hd -> refresh_for x hd ->
+    refresh_for z q -> refresh_for w q ->
     [disjoint codomf z & vars_tm q `|` vars_tm (ren x hd)] ->
     [disjoint codomf w & vars_tm q `|` vars_tm (ren y hd)] ->
     H_head inp m (ren z q) (ren x hd) = false ->
@@ -536,13 +536,13 @@ Section mut_excl.
     by apply/unif_ren; rewrite//disjointUr; apply/andP.
   Qed.
 
-  Lemma good_ren_fresh fv t: good_ren (fresh_tm  (vars_tm t `|` fv) empty t).2 t.
+  Lemma good_ren_fresh fv t: refresh_for (fresh_tm  (vars_tm t `|` fv) empty t).2 t.
   Proof.
     set X := _ `|` _.
     have:= @fresh_tm_def X empty t.
     rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
     move=> [x [H1 HH I1 D1]]; rewrite cat0f in H1.
-    rewrite /good_ren H1 I1 andbT.
+    rewrite /refresh_for H1 I1 andbT.
     by have:= fresh_tm_sub1 X empty t; rewrite H1.
   Qed.
 
