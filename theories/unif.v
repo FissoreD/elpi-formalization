@@ -92,23 +92,23 @@ Notation "A | B" := (A `|` B) (at level 15).
 Notation injective := (@injectiveb _ V).
 Notation "A ∧ B" := (A && B) (at level 15).
 
-(*SNIPT: good_ren *)
-Definition good_ren x t := 
+(*SNIPT: refresh *)
+Definition refresh x t := 
   (vars_tm t `<=` domf x) ∧ injective x.
-(*ENDSNIPT: good_ren *)
+(*ENDSNIPT: refresh *)
 
 
 (*SNIPT: unif_ren *)
 Axiom unif_ren: 
   forall x y z w t1 t2,
-  good_ren w t1 -> good_ren y t2 -> good_ren z t1 -> good_ren x t2 ->
+  refresh w t1 -> refresh y t2 -> refresh z t1 -> refresh x t2 ->
   codomf w # vars_tm t1 | vars_tm (ren y t2) ->
   codomf z # vars_tm t1 | vars_tm (ren x t2) ->
   unify (ren w t1) (ren y t2) empty -> unify (ren z t1) (ren x t2) empty.
 (*ENDSNIPT: unif_ren *)
 
-Lemma good_ren_app x f a: good_ren x (Tm_App f a) = good_ren x f && good_ren x a.
-Proof. by rewrite/good_ren/= fsubUset !andbA -!(andbC (injective x)) !andbA andbb. Qed.
+Lemma good_ren_app x f a: refresh x (Tm_App f a) = refresh x f && refresh x a.
+Proof. by rewrite/refresh/= fsubUset !andbA -!(andbC (injective x)) !andbA andbb. Qed.
 
 Lemma disjoint_sub {T: choiceType} (s1 s2 s3: {fset T}):
   [disjoint s1 & s2] ->
