@@ -710,8 +710,7 @@ have /andP{Hr} := Hr fv' m' Im' R' J' Sr'.
 rewrite -/m'' -/fv'' => -[Pr Im''].
 
 apply/andP; split; last first.
-  admit.
-  (* have := fresh_tm_def Sd Sl Im. rewrite adesive_catf *)
+  by apply: fresh_tm_inj; apply: fresh_tm_inj.
 rewrite fdisjointXU !fdisjointUX Pr.
   admit.
 Admitted.
