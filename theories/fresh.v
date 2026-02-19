@@ -837,6 +837,37 @@ Proof.
   by apply/fresh_tm_codom_fv; rewrite codomf0.
 Qed.
 
+Lemma fresh_tm_disjoint v t m:
+  domf m `<=` v -> codomf m `<=` v ->
+  vars_tm t `<=` v ->
+  [disjoint vars_tm t & codomf m] -> 
+  [disjoint domf m & codomf m] -> 
+  [disjoint domf (fresh_tm v m t).2 & codomf (fresh_tm v m t).2].
+Proof.
+  elim: t v m => //=[e|f Hf a Ha] v m D C.
+    rewrite fsub1set.
+    rewrite fdisjoint1X => ev ecm J.
+    case: ifP => //= em.
+    rewrite codomf_cat/=remf1_id?em//=.
+    rewrite fdisjointUX; apply/andP; split.
+      apply: fdisjointWl (fsubD1set _ _) _.
+      rewrite fdisjointXU; apply/andP; split => //.
+      rewrite codomf1 fdisjointX1; apply/negP => H.
+      have:= fsubsetP D (fresh (v `|` codomf m)) H.
+      by rewrite freshPwr.
+    rewrite fdisjointXU fdisjoint1X; apply/andP; split.
+      rewrite codomf1 in_fset1; apply/eqP => ?; subst.
+      by rewrite freshPwr in ev.
+    by rewrite fdisjoint1X//.
+  rewrite fsubUset fdisjointUX => /andP[H1 H2] /andP[H3 H4] D1.
+  rewrite !push/=.
+  apply/Ha/Hf => //=.
+    by apply: fresh_tm_dom.
+    by apply: fresh_tm_codom_fv.
+    by apply/fsubset_trans/fresh_tm_sub.
+  by apply/fresh_good_codom_aux.
+Qed.
+
 
 
 (*  

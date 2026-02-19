@@ -94,7 +94,7 @@ Notation rename := ren.
 
 (*SNIPT: refresh_for *)
 Definition refresh_for x t := 
-  (vars t `<=` domf x) ∧ injective x.
+  (vars t `<=` domf x) ∧ injective x ∧ (domf x # codomf x).
 (*ENDSNIPT: refresh_for *)
 
 
@@ -108,7 +108,7 @@ Axiom unif_ren:
 (*ENDSNIPT: unif_ren *)
 
 Lemma good_ren_app x f a: refresh_for x (Tm_App f a) = refresh_for x f && refresh_for x a.
-Proof. by rewrite/refresh_for/= fsubUset !andbA -!(andbC (injective x)) !andbA andbb. Qed.
+Proof. rewrite/refresh_for/= fsubUset !andbA -!(andbC (injective x)) !andbA andbb !(andbC _ (_ # _)) !andbA andbb//. Qed.
 
 Lemma disjoint_sub {T: choiceType} (s1 s2 s3: {fset T}):
   [disjoint s1 & s2] ->

@@ -268,7 +268,8 @@ Section mut_excl.
     rewrite /=fsub0set fsubsetUl injectiveb0 => /(_ isT isT isT).
     move=> [x [H1 HH I1 D1]]; rewrite cat0f in H1.
     rewrite /refresh_for H1 I1 andbT.
-    by have:= fresh_tm_sub1 X empty t; rewrite H1.
+    have:= fresh_tm_sub1 X empty t; rewrite H1 => ->.
+    rewrite-H1; apply/fresh_tm_disjoint; rewrite ?(fdisjoint0X, codomf0, fdisjointX0, fsubsetUl)//.
   Qed.
 
   Lemma H_head_ren inp m fv1 fv2 t xs fx fy q:
