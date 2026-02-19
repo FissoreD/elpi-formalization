@@ -1,7 +1,7 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import tree tree_prop ctx.
-From det Require Import tree_prop_hard tree_vars mut_excl unif.
+From det Require Import tree_prop_hard tree_vars mut_excl unif fresh.
 
 From det Require Import check_fo.
 

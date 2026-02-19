@@ -11,8 +11,6 @@ Notation matching := (matching u).
 Notation unify := (unify u).
 Notation vars := vars_tm.
 
-Definition disjoint_tm t1 t2:= [disjoint vars t1 & vars t2].
-
 (*SNIPT: matchunif *)
 Axiom match_unif: 
   forall t1 t2 s, matching t1 t2 s -> unify t1 t2 s.

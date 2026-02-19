@@ -1,69 +1,11 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
-From det Require Import tree tree_prop.
+From det Require Import tree tree_prop fresh.
 
 Section vars_tree.
   Variable (u : Unif).
   Variable (p : program).
-
-  Lemma rename_sub fv r m:
-    fv `<=` (rename fv m r).1.1.
-  Proof.
-    rewrite/rename !push/=.
-    by apply/fsubset_trans/fresh_tm_sub; rewrite fsubsetUr.
-  Qed.
-
-  Lemma fresh_atom_sub fv r m:
-    fv `<=` (fresh_atom fv r m).1.1.
-  Proof. by case: r => //= c; rewrite !push/= rename_sub. Qed.
-
-  Lemma fresh_atoms_sub fv r m:
-    fv `<=` (fresh_atoms fv r m).1.1.
-  Proof.
-    elim: r fv => [|x xs IH] fv//=.
-    rewrite/=!push/=; apply/fsubset_trans/fresh_atom_sub/IH.
-  Qed.
-
-  Lemma fresh_rule_sub fv r:
-    fv `<=` (fresh_rule fv r).1.
-  Proof.
-    rewrite/fresh_rule !push/=.
-    by apply/fsubset_trans/fresh_atoms_sub/rename_sub.
-  Qed.
-
-  Lemma fresh_rules_sub rs fv: 
-    fv `<=` (fresh_rules fv rs).1.
-  Proof.
-    elim: rs fv => [|x xs IH] fv//=.
-    rewrite /=!push/=.
-    apply/fsubset_trans/fresh_rule_sub/IH.
-  Qed.
-
-  Lemma select_sub_rules r0 rn fv' q inp m s:
-    select u q inp m r0 s = (fv', rn) ->
-      varsU (seq.map (fun x => vars_sigma x.1 `|` vars_atoms x.2) rn) `<=` fv'.
-  Proof.
-    elim: r0 rn fv' q inp m s => [|x xs IH] rn fv' q inp m s/=; first by move=> [<-<-]//.
-    case X: H => [s'|]; last by apply: IH.
-    case Y: select => [fv2 rs][??]; subst => /=.
-    rewrite -!fsetUA/= !fsetUS//.
-    case: x X; rewrite/=/varsU_rhead/varsU_rprem/= => hd pm _.
-    rewrite fsubsetU// fsetUS//=; first by rewrite orbT.
-    by apply: IH Y.
-  Qed.
-
-  Lemma bc_sub c fv s:
-    fv `<=` (bc u p fv c s).1.
-  Proof.
-    rewrite/bc.
-    case: ifP => // _.
-    case X: get_tm_hd => //=[c'].
-    case: fndP => cP//.
-    rewrite !push/= fsubsetU//.
-    apply/orP; left.
-    by apply/fsubset_trans/fresh_rules_sub/fsubsetUr.
-  Qed.
 
   Lemma vars_tree_cutl A: vars_tree (cutl A) `<=` vars_tree A.
   Proof. elim_tree A => /=; last case: ifP => //=; rewrite !fsetUSS//vars_tree_cutr. Qed.
@@ -75,12 +17,6 @@ Section vars_tree.
       by case: t => [|c]//=; by rewrite push/=bc_sub.
     case: ifP => sA//=.
   Qed.
-
-  Lemma vars_atoms_cons a xs: vars_atoms [:: a & xs] = vars_atom a `|` vars_atoms xs.
-  Proof. by []. Qed.
-
-  Lemma vars_atoms1 a: vars_atoms [:: a] = vars_atom a.
-  Proof. by rewrite/vars_atoms/=fsetU0. Qed.
 
   Lemma vars_tree_big_and r0:
     vars_tree (big_and r0) = vars_atoms r0.
@@ -133,7 +69,7 @@ Section vars_tree.
     elim_tree A R fv fv' r s => /=; only 1,2: by move=> ?? [<-_<-].
       case: t => [|c]; first by move=> ?? [<- _ <-]//=.
       rewrite !push/= => H1 H2 [???]; subst => /=.
-      split; last by apply: fsubset_trans H2 (bc_sub _ _ _).
+      split; last by apply: fsubset_trans H2 (bc_sub _ _ _ _ _).
       case X: bc => [fvx [|[s0 r0] rs]]//=.
       rewrite fsubUset; apply/andP.
       by apply: vars_tm_bc_sub X.
@@ -167,8 +103,7 @@ Section vars_tree.
   Qed.
 
   Lemma vars_tree_prune_sub_flow A R fv b:
-    vars_tree A `<=` fv ->
-    prune b A = Some R -> vars_tree R `<=` fv.
+    vars_tree A `<=` fv -> prune b A = Some R -> vars_tree R `<=` fv.
   Proof.
     clear.
     elim_tree A R fv b => /=.

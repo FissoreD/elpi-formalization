@@ -73,3 +73,15 @@ rewrite fdisjointXU !fdisjointUX Pr H1 Pl andbT /=.
   have D1 := xxx r fv' m'; rewrite -/m'' in D1.
   admit.
 Admitted.
+
+
+Lemma renameP t fv0 : (*vars_tm t `<=` fv -> *)
+  [disjoint vars_tm (rename fv0 t fmap0).2 & vars_tm t]%fset.
+Proof.
+rewrite /rename; set m0 : {fmap V -> V} := fmap0; set fv := vars_tm t `|` fv0.
+rewrite [fresh_tm _ _ t]surjective_pairing /=.
+have: vars_tm t `<=` fv by rewrite fsubsetUl.
+have: [disjoint codomf m0 & vars_tm t] by rewrite codomf0 fdisjoint0X.
+have: [disjoint domf m0 & codomf m0] by rewrite codomf0 fdisjoint0X.
+(* apply/renameP_aux. *)
+Qed.

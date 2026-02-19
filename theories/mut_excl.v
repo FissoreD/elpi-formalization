@@ -1,7 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import tree tree_prop ctx tree_vars unif.
-
+From det Require Import tree tree_prop ctx tree_vars unif fresh.
 
 Section mut_excl.
   Variable u : Unif.
@@ -50,21 +49,6 @@ Section mut_excl.
     let: (fv, rules) := fresh_rules fset0 pr.(rules) in
     mut_excl_aux pr.(sig) rules.
 
-  Lemma head_fresh_rule fv r:
-    head (fresh_rule fv r).2 = (rename fv r.(head) fmap0).2.
-  Proof.
-    destruct r; rewrite/fresh_rule/= !push.
-    case bc: fresh_atoms => [fv' A']//=.
-  Qed.
-
-  Lemma premises_fresh_rule fv r:
-    premises (fresh_rule fv r).2 = 
-      let fh := fresh_tm (vars_tm r.(head) `|` fv) fmap0 r.(head) in
-      (fresh_atoms fh.1 r.(premises) fh.2).2.
-  Proof.
-    destruct r; rewrite/fresh_rule/= !push/=.
-    rewrite/rename !push//=.
-  Qed.
 
      (* sufficient modes length for callable t *)
   Fixpoint suff_mode (t:Tm) (m:nat) :=
@@ -88,254 +72,6 @@ Section mut_excl.
     rewrite ren_app => -[<- _].
     case H: H => //= _.
     apply: IH H.
-  Qed.
-
-  Lemma fsetUE0 {T: choiceType} (A B:{fset T}):
-    A `|` B = fset0 -> A = fset0 /\ B = fset0.
-  Proof.
-    move=> /fsetP H; split; apply/fsetP => x;
-    have := H x; rewrite in_fsetU; case xA: (_ \in A) => //=.
-  Qed.
-
-  Lemma fsetU0E {T: choiceType} (A B:{fset T}):
-    A = fset0 -> B = fset0 -> A `|` B = fset0.
-  Proof. by move=> ->->; rewrite fsetU0. Qed.
-
-  Lemma varsUP x l:
-    forall t, x \in vars_tm t -> t \in l -> x \in varsU [seq vars_tm e | e <- l].
-  Proof.
-    elim: l x => //= x xs IH v t H.
-    rewrite in_fsetU in_cons => /orP[/eqP|] H1; subst; first by rewrite H.
-    by rewrite (IH _ _ H H1) orbT.
-  Qed.
-
-  Lemma codom_sub v (s1:Sigma) (vP : v \in domf s1): 
-    vars_tm s1.[vP] `<=` varsU [seq vars_tm e | e <- codom s1].
-  Proof.
-    apply/fsubsetP => x H.
-    have: s1.[vP] \in codom s1 by apply/codomP; repeat eexists.
-    move: H; generalize (s1.[vP]) (codom s1) => +l; clear.
-    by apply: varsUP.
-  Qed.
-
-  Lemma vars_deref t fv s1:
-    vars_tm t `<=` fv ->
-    vars_sigma s1 `<=` fv ->
-    vars_tm (deref s1 t) `<=` fv.
-  Proof.
-    elim: t fv s1 => //[v|f Hf a Ha] fv s1/=.
-      move=> H1; case: fndP => vP//=.
-      rewrite/vars_sigma fsubUset /codom_vars => /andP[H2 H3].
-      apply/fsubset_trans/H3/codom_sub.
-    rewrite 2!fsubUset => /andP[H1 H2] H3.
-    rewrite Hf//Ha//.
-  Qed.
-
-  Lemma fresh_tm_domf_sub f m a:
-    domf m `<=` domf (fresh_tm f m a).2.
-  Proof.
-    elim: a m f => //=[v|f Hf a Ha] m fs.
-      by case: (fndP m) => //= H; rewrite fsubsetU// mem_fsetD1// fsubset_refl.
-    rewrite !push/=; apply/fsubset_trans/Ha/Hf.
-  Qed.
-
-  Lemma fresh_tm_sub1 fv m t:
-    vars_tm t `<=` domf (fresh_tm fv m t).2.
-  Proof.
-    elim: t fv m => //=[v|f Hf a Ha] fv m.
-      rewrite !fsub1set.
-      by case: (fndP m) => //=; rewrite in_fsetU in_fset1 eqxx orbT.
-    rewrite !push/= !fsubUset; apply/andP; split; last by apply: Ha.
-    apply/fsubset_trans/fresh_tm_domf_sub/Hf.
-  Qed.
-
-  Lemma fresh_tm_sub_all fv t m:
-    vars_tm t `<=` fv ->
-    domf m `<=` fv ->
-    codomf m `<=` fv ->
-    let x := fresh_tm fv m t in
-      [/\ domf x.2 `<=` x.1, codomf x.2 `<=` x.1 & vars_tm t `<=` domf x.2].
-  Proof.
-    move=> H H1 H2/=.
-    have->//:= @fresh_tm_dom fv m t.
-    have->//:= @fresh_tm_codom_fv fv m t.
-    by have->:= fresh_tm_sub1 fv m t.
-  Qed.
-
-  Lemma vars_tm_rename1 fv t m:
-    domf m `<=` fv ->
-    codomf m `<=` fv ->
-    vars_tm (rename fv t m).2 `<=` (rename fv t m).1.1.
-  Proof.
-    rewrite/rename push/= => H1 H2.
-    set vt := vars_tm _ `|` _.
-    set ft := fresh_tm vt _ _.
-    have/=:= @fresh_tm_sub_all vt t m (fsubsetUl _ _).
-    rewrite !fsubsetU ?(H1,H2,orbT)// => /(_ isT isT) [].
-    rewrite-/ft.
-    move: ft => -[]/=; clear.
-    elim: t => //[v|f Hf a Ha] fs m D1 D2/=.
-      rewrite fsub1set ren_V => H; rewrite in_fnd//= fsub1set.
-      have:= fsubsetP D2 => /(_ m.[H])->//.
-      by apply/codomfP; exists v; rewrite in_fnd.
-    rewrite !fsubUset => /andP[H1 H2].
-    by rewrite Hf//=Ha//=.
-  Qed.
-
-  Lemma vars_tm_rename fv t:
-    vars_tm (rename fv t empty).2 `<=` (rename fv t empty).1.1.
-  Proof. by apply/vars_tm_rename1; rewrite// codomf0. Qed.
-
-  Lemma domf_rename fv hd: domf (rename fv hd empty).1.2 `<=` (rename fv hd empty).1.1.
-  Proof. by rewrite/rename!push/=; apply/fresh_tm_dom; rewrite// fsubsetUl. Qed.
-
-  Lemma codomf_rename fv hd: codomf (rename fv hd empty).1.2 `<=` (rename fv hd empty).1.1.
-  Proof.
-    rewrite/rename!push/=; apply/fsubset_trans.
-      apply/fresh_tm_codom2.
-    rewrite codomf0 fset0U//.
-  Qed.
-
-  Lemma vars_tm_fresh_atoms fv t m:    
-    domf m `<=` fv ->
-    codomf m `<=` fv ->
-    vars_atoms (fresh_atoms fv t m).2 `<=` (fresh_atoms fv t m).1.1.
-  Proof.
-    rewrite/vars_atoms.
-    elim: t fv => //= x xs IH fv H1 H2; rewrite !push/=.
-    rewrite fsubUset; apply/andP; split; last first.
-      by apply/fsubset_trans/fresh_atom_sub/IH.
-    case: x => //=t; rewrite !push/=vars_tm_rename1//=.
-      move: H1 H2; clear.
-      elim: xs fv => //= x xs IH fv H1 H2; rewrite !push/=.
-      case: x => //=; first by apply: IH.
-      move=> t; rewrite !push/=.
-      rewrite/rename!push/= fresh_tm_dom//.
-        rewrite fsubsetUl//.
-      apply/fsubset_trans.
-        apply/IH => //.
-      rewrite fsubsetUr//.
-    move: H1 H2; clear.
-    elim: xs fv => //= x xs IH fv H1 H2; rewrite !push/=.
-    case: x => //=; first by apply: IH.
-    move=> t; rewrite !push/=.
-    rewrite/rename!push/=.
-    apply/fsubset_trans.
-      apply/fresh_tm_codom2.
-    rewrite fsubUset; apply/andP; split => //.
-    apply/fsubset_trans.
-      apply/IH => //.
-    by apply/fsubset_trans/fresh_tm_sub/fsubsetUr.
-  Qed.
-
-  Lemma codom_sub1 {T : choiceType} (b: {fmap T -> T}) r :
-    codomf b.[\r] `<=` codomf b.
-  Proof.
-    apply/fsubsetP => x /codomfP [v].
-    rewrite fnd_restrict; case: ifP => //= H; case: fndP => // vb [?]; subst.
-    by apply/codomfP; exists v; rewrite in_fnd.
-  Qed.
-
-  Lemma fresh_good_codom_aux x fv m t: 
-    fv `<=` x ->
-    [disjoint fv & codomf m] -> [disjoint fv & codomf (fresh_tm x m t).2].
-  Proof.
-    elim: t m fv x => //= [v|f Hf a Ha] m fv x H1 H2.
-      case: (fndP m) => //=.
-      move=> H; rewrite codomf_cat.
-      rewrite disjointUr;apply/andP; split; last first.
-        apply/disjoint_sub/codom_sub1/H2.
-      apply/eqP.
-      apply/fsetP => k; rewrite in_fsetI.
-      case kP: (k \in fv) => //=.
-      have kx := fsubsetP H1 k kP.
-      case: (boolP (_ \in _)) => ///codomfP [y].
-      case: fndP => //= /[dup]; rewrite {1}in_fset1 => /eqP?; subst.
-      move=> kf; rewrite ffunE => -[?]; subst.
-      by rewrite freshPwr in kx.
-    rewrite !push/=.
-    apply/Ha/Hf => //.
-    by apply/fsubset_trans/fresh_tm_sub.
-  Qed.
-
-  Lemma fresh_good_codom fv t m: [disjoint fv & codomf m] -> [disjoint fv & codomf (fresh_tm fv m t).2].
-  Proof. by apply/fresh_good_codom_aux => //. Qed.
-
-  Lemma ren_mp m t:
-    vars_tm t `<=` domf m -> vars_tm (ren m t) `<=` codomf m.
-  Proof.
-    rewrite/ren.
-    elim: t => //[v|f Hf a Ha]/=.
-      rewrite fsub1set => H.
-      rewrite in_fnd//=ffunE valPE/= fsub1set.
-      by apply/codomfP; exists v; rewrite in_fnd.
-    rewrite !fsubUset => /andP[H1 H2].
-    by rewrite Hf//Ha//.
-  Qed.
-
-  Lemma disjoint_comm a b: disjoint_tm a b = disjoint_tm b a.
-  Proof. rewrite/disjoint_tm fdisjoint_sym//. Qed.
-
-  Lemma vars_tm_rename_disjoint fv t m:
-    domf m `<=` fv ->
-    codomf m `<=` fv ->
-    [disjoint (vars_tm t `|` fv ) & codomf m] ->
-    [disjoint vars_tm (rename fv t m).2 & fv].
-  Proof.
-    rewrite/rename push/= => H H1 H2.
-    have[]/=:= @fresh_tm_sub_all (vars_tm t `|` fv) t m => //=.
-      by rewrite fsubsetUl.
-      by apply/fsubset_trans/fsubsetUr.
-      by apply/fsubset_trans/fsubsetUr.
-    set vt := vars_tm _ `|` _.
-    have /= := @fresh_good_codom vt t m H2.
-    set ft := fresh_tm vt _ _.
-    move=> D H3 H4 VT.
-    have VTR := ren_mp VT.
-    rewrite fdisjoint_sym.
-    apply: disjoint_sub VTR.
-    rewrite fdisjoint_sym in D.
-    rewrite fdisjoint_sym.
-    apply: disjoint_sub D _.
-    by rewrite/vt fsubsetUr.
-  Qed.
-
-  (* Lemma disjoint_tm_sub t1 t2 fv2:
-    vars_tm t1 `<=` fv2 ->
-    disjoint_tm (rename fv2 t2 empty).2 t1.
-  Proof.
-    have:= vars_tm_rename_disjoint fv2 t2.
-    rewrite/rename !push/=.
-    set vt := (vars_tm _ `|` _).
-    set ft := (fresh_tm _ _ _).
-    by apply: disjoint_sub.
-  Qed. *)
-
-  Lemma disjoint_tm_appL f a t:
-    disjoint_tm (Tm_App f a) t = disjoint_tm f t && disjoint_tm a t.
-  Proof. rewrite/disjoint_tm/= disjointUl//. Qed.
-
-  Lemma disjoint_tm_appR f a t:
-    disjoint_tm t (Tm_App f a) = disjoint_tm t f && disjoint_tm t a.
-  Proof. rewrite disjoint_comm disjoint_tm_appL//!(disjoint_comm _ t)//. Qed.
-
-  Lemma get_modes_rev_rename fs hd m mp:
-    get_modes_rev (rename fs hd mp).2 m = get_modes_rev hd m.
-  Proof.
-    rewrite/get_modes_rev/sigtm_rev; f_equal.
-    rewrite/sigtm/=; f_equal.
-    rewrite/rename !push/=.
-    move: (fresh_tm _ _ _) => -[/= _].
-    elim: hd => //[v|a Ha f Hf] b.
-      by rewrite ren_V.
-    by rewrite ren_app/= Ha.
-  Qed.
-
-  Lemma has_cut_seq_fresh fv1 bo mp:  
-    has_cut_seq (fresh_atoms fv1 bo mp).2 = has_cut_seq bo.
-  Proof.
-    elim: bo fv1 => //= x xs IH fv1; rewrite !push/= IH//.
-    by case: x => //=c; rewrite !push//=.
   Qed.
 
   (* Definition callable t := match get_tm_hd t with inl t => Some t | _ => None end. *)
@@ -390,17 +126,9 @@ Section mut_excl.
       get_modes_rev d1 l = get_modes_rev d2 l.
   Proof. by move=> H C; rewrite/get_modes_rev/sigtm_rev/sigtm (count_tm_ag_H H C). Qed.
 
-  Lemma disjoint1S {T:choiceType} (v:T) s:
-    [disjoint [fset v] & s] = (v \notin s).
-  Proof.
-    rewrite /fdisjoint fsetIC fsetI1.
-    case: ifP => //= H; case: eqP => //=.
-    by move=> /fsetP => /(_ v); rewrite !inE eqxx.
-  Qed.
-
   Lemma disjointH m f f1 s1 s1': 
     [disjoint vars_tm f & domf s1] ->
-    disjoint_tm f f1 ->
+    [disjoint vars_tm f & vars_tm f1] ->
       H u 0 m f f1 s1 = Some s1' ->
         exists x, domf s1' = domf s1 `|` x /\ x `<=` vars_tm f1.
   Proof.
@@ -410,7 +138,7 @@ Section mut_excl.
     move=> n IH f f1 s1 s1'.
     case: f => //=f2 a2; case: f1 => //=f3 a3/=.
     rewrite disjointUl => /andP[D1 D2].
-    rewrite !disjoint_tm_appR !disjoint_tm_appL.
+    rewrite fdisjointXU !fdisjointUX.
     move=> /andP[/andP[D6 D7] /andP[D8 D9]].
     case H: H => //=[s1''] M.
     have [x {IH}[H1 H2]] := IH _ _ _ _ D1 D6 H.
@@ -422,12 +150,11 @@ Section mut_excl.
     rewrite fsetUA; split => //.
     by rewrite fsubUset !fsubsetU//(H2,H4)//orbT.
   Qed.
-  
 
   Lemma SHS inp m c hd2 hd1 (s1 s2:Sigma):
-    disjoint_tm hd1 hd2 ->
-    disjoint_tm c hd1 ->
-    disjoint_tm c hd2 ->
+    [disjoint vars_tm hd1 & vars_tm hd2] ->
+    [disjoint vars_tm c & vars_tm hd1] ->
+    [disjoint vars_tm c & vars_tm hd2] ->
     [disjoint (vars_tm c) & (domf s1)] ->
     H u inp m c hd1 s1 = Some s2 ->
     H_head inp m hd1 hd2 = false ->
@@ -438,8 +165,8 @@ Section mut_excl.
       case: eqP => //<-[->]; case: hd2 => //=[]p1/eqP; case: eqP; congruence.
     move=> m IH inp c h1 h2 s1 s2.
     case: c => //=f a; case: h1 => //=f1 a1; case: h2 => //=f2 a2.
-    rewrite !disjoint_tm_appL !disjoint_tm_appR.
-    rewrite !disjointUl => /andP[/andP[D1 D2] /andP[D3 D4]].
+    rewrite !fdisjointUX !fdisjointXU.
+    move=> /andP[/andP[D1 D2] /andP[D3 D4]].
     move=> /andP[/andP[D5 D6] /andP[D7 D8]].
     move=> /andP[/andP[D9 D10] /andP[D11 D12]].
     move=> /andP[D13 D14].
@@ -473,7 +200,7 @@ Section mut_excl.
     acyclic_sigma s -> [disjoint vars_tm (deref s c) & domf s].
   Proof.
     move=> H; elim: c => //=; only 1, 2: by rewrite fdisjoint0X.
-      move=> v; case: fndP => //= vs; last by rewrite disjoint1S.
+      move=> v; case: fndP => //= vs; last by rewrite fdisjoint1X.
       rewrite fdisjoint_sym.
       apply: disjoint_sub H _.
       apply/codom_vars_sub.
@@ -484,7 +211,7 @@ Section mut_excl.
     acyclic_sigma s1 ->
     [disjoint (vars_tm hd) & (varsU (map varsU_rule pr))] ->
     [disjoint (vars_tm (deref s1 c)) & (varsU (map varsU_rule pr))] ->
-    disjoint_tm (deref s1 c) hd ->
+    [disjoint (vars_tm (deref s1 c)) & vars_tm hd] ->
     H u inp m (deref s1 c) hd s1 = Some s2 ->
     select_head hd inp m pr = [::] ->
     (select u (deref s1 c) inp m pr s1).2 = [::].
@@ -495,10 +222,8 @@ Section mut_excl.
     case HHead: H_head => //= SH.
     have {}IH := IH _ _ _ _ _ _ AS D2 D4 D5 HH SH.
     rewrite (SHS _ _ _ _ HH HHead)//=.
-      rewrite/disjoint_tm; move: D1.
-      by rewrite/varsU_rule disjointUr/varsU_rhead/= => /andP[->].
-      rewrite/disjoint_tm; move: D3.
-      by rewrite/varsU_rule disjointUr/varsU_rhead/= => /andP[->].
+      by move: D1; rewrite/varsU_rule disjointUr/varsU_rhead/= => /andP[->].
+      by move: D3; rewrite/varsU_rule disjointUr/varsU_rhead/= => /andP[->].
     by apply/acyclic_sigma_dis.
   Qed.
 
@@ -546,20 +271,6 @@ Section mut_excl.
     by have:= fresh_tm_sub1 X empty t; rewrite H1.
   Qed.
 
-  Lemma disj_codom0 q fv: vars_tm q `<=` fv -> [disjoint codomf (fresh_tm fv empty q).2 & fv].
-  Proof.
-    move=> H.
-    have:= @fresh_tm_def fv empty q.
-    rewrite /=fsub0set H injectiveb0 => /(_ isT isT isT).
-    by move=> [e[-> H1 H2 H3]]; rewrite cat0f.
-  Qed.
-
-  Lemma disj_codom0R q fv: [disjoint codomf (fresh_tm (vars_tm q `|` fv) empty q).2 & fv].
-  Proof. by have:= @disj_codom0 q (vars_tm q `|` fv) (fsubsetUl _ _); rewrite disjointUr => /andP[]. Qed.
-
-  Lemma disj_codom0L q fv: [disjoint codomf (fresh_tm (vars_tm q `|` fv) empty q).2 & vars_tm q].
-  Proof. by have:= @disj_codom0 q (vars_tm q `|` fv) (fsubsetUl _ _); rewrite disjointUr => /andP[]. Qed.
-
   Lemma H_head_ren inp m fv1 fv2 t xs fx fy q:
     vars_tm (rename (fresh_rules fv1 xs).1 t empty).2 `<=` fx ->
     vars_tm (rename (fresh_rules fv2 xs).1 t empty).2 `<=` fy ->
@@ -592,160 +303,6 @@ Section mut_excl.
     have {}H3' := fsubset_trans (vars_tm_rename _ _) H3'.
     rewrite (H_head_ren H2' H3' H).
     apply: IH; (apply:fsubset_trans; first apply: fresh_rule_sub); rewrite/fresh_rule?push//=.
-  Qed.
-
-  Lemma disjoint_varsU fv fv' rs hd:
-    let FRS2 := fresh_rules fv rs in
-    FRS2.1 `<=` fv' ->
-    [disjoint
-      vars_tm (rename fv' hd empty).2
-      & varsU [seq varsU_rule x | x <- FRS2.2]].
-  Proof.
-    elim: rs hd fv => //=.
-      by move=> >; rewrite fdisjointX0.
-    move=> [hd bo] l IH hd' fv; rewrite !push/= disjointUr.
-    rewrite /fresh_rule/=!push/= => H.
-    rewrite IH//=; last first.
-      apply/fsubset_trans/H/fsubset_trans/fresh_atoms_sub/rename_sub.
-    rewrite/varsU_rule/varsU_rhead/=/varsU_rprem/= disjointUr andbT.
-    apply/andP; split.
-      apply/disjoint_sub.
-        apply/vars_tm_rename_disjoint => //.
-        by rewrite codomf0.
-        by rewrite codomf0 fdisjointX0.
-      by apply/fsubset_trans/H/fsubset_trans/fresh_atoms_sub/vars_tm_rename.
-    apply/disjoint_sub.
-      apply/vars_tm_rename_disjoint => //.
-        by rewrite codomf0.
-        by rewrite codomf0 fdisjointX0.
-    by apply/fsubset_trans/H/vars_tm_fresh_atoms; rewrite(domf_rename,codomf_rename).
-  Qed.
-
-  Lemma disjoint_codom_fresh_tm2 v v'' m t:
-    v `<=` v'' -> [disjoint v & codomf m] -> [disjoint v & codomf (fresh_tm v'' m t).2].
-  Proof.
-    elim: t v v'' m => //=[e|f Hf a Ha] v v' m H1 H2.
-      case: ifP => //= H.
-      rewrite codomf_cat fdisjointXU/=remf_id; last by rewrite /fdisjoint fsetI1 H.
-      rewrite H2 andbT codomf1.
-      have J := freshPwr (codomf m) v'.
-      rewrite/fdisjoint fsetI1.
-      by case: ifP => ///fsubsetP - /(_ _ H1); rewrite J.
-    rewrite !push/=.
-    by apply/Ha/Hf; rewrite//; apply/fsubset_trans/fresh_tm_sub.
-  Qed.
-
-  Lemma disjoint_vars_tm t m v:
-    vars_tm t `<=` domf m -> [disjoint v & codomf m] -> [disjoint v & vars_tm (ren m t)].
-  Proof.
-    elim: t m v => //; only 1, 2: by move=>*; rewrite fdisjointX0.
-      move=> e m v; rewrite fsub1set ren_V => em D.
-      rewrite/= fdisjointX1.
-      apply: fdisjointP_sym D _ _.
-      by apply/codomfP => /=; exists e; rewrite in_fnd.
-    move=> f Hf a Ha m v; rewrite [vars_tm _]/= fsubUset => /andP[H1 H2] H.
-    by rewrite ren_app/= fdisjointXU Ha//Hf//.
-  Qed.
-
-  Lemma disjoint_vars_tm_rename t v v'  m:
-    v `<=` v' -> [disjoint v & codomf m] -> [disjoint v & vars_tm (rename v' t m).2].
-  Proof.
-    rewrite/rename!push/= => H1 H2.
-    set m' := _.2.
-    have: [disjoint v & codomf m'].
-      rewrite/m'.
-      set v'' := _ `|` _.
-      move: H2.
-      have: v `<=` v'' by apply/fsubset_trans/fsubsetUr.
-      apply: disjoint_codom_fresh_tm2.
-    have: vars_tm t `<=` domf m'.
-      by apply/fresh_tm_sub1.
-    apply: disjoint_vars_tm.
-  Qed.
-
-  Lemma disjoint_vars_atom v v' m a:
-    v `<=` v' -> [disjoint v & codomf m] ->
-    [disjoint v & vars_atom (fresh_atom v' a m).2].
-  Proof.
-    case: a => //=; first by rewrite fdisjointX0.
-    move=> t; rewrite !push/=.
-    apply:disjoint_vars_tm_rename.
-  Qed.
-
-  Lemma codomf_sub v' xs m:
-    codomf m `<=` v' ->
-    codomf (fresh_atoms v' xs m).1.2 `<=` (fresh_atoms v' xs m).1.1.
-  Proof.
-    clear u.
-    elim: xs m v' => //= x xs IH m v H; rewrite !push/=.
-    have {}IH := IH _ _ H.
-    case: x => [|t]//=; rewrite /rename!push/=.
-    by apply: fresh_tm_codom_fv; rewrite fsubsetU// IH orbT.
-  Qed.
-
-  Lemma disjoint_codom_atoms2 v v' m l:
-    codomf m `<=` v' ->
-    v `<=` v' -> [disjoint v & codomf m] -> [disjoint v & codomf (fresh_atoms v' l m).1.2].
-  Proof.
-    clear u.
-    elim: l v v' m => //= x xs IH v v' m C S J; rewrite !push/=.
-    have {}IH := IH _ _ _ C S J.
-    case: x => [|t] //=; rewrite !push/=.
-    rewrite/rename!push/=.
-    set X := fresh_atoms _ _ _.
-    rewrite -/X in IH.
-    set v'' := _ `|` _.
-    set m' := X.1.2.
-    apply/disjoint_codom_fresh_tm2 => //.
-    by apply/fsubset_trans/fsubsetUr/fsubset_trans/fresh_atoms_sub.
-  Qed.
-
-  Lemma disjoint_vars_atoms v v' rs m:
-    codomf m `<=` v' ->
-    v `<=` v' -> [disjoint v & codomf m] ->
-    [disjoint v & vars_atoms (fresh_atoms v' rs m).2].
-  Proof.
-    clear u.
-    rewrite/vars_atoms.
-    elim: rs v v' m => //=.
-      by move=> >; rewrite fdisjointX0.
-    move=> a l IH v v' m CM H1 H2; rewrite !push/= disjointUr IH// andbT.
-    set f := (fresh_atoms _ _ _).1.
-    apply: disjoint_vars_atom.
-      by apply/fsubset_trans/fresh_atoms_sub.
-    move: H1 H2; rewrite/f.
-    move: CM; by apply: disjoint_codom_atoms2.
-  Qed.
-  
-  Lemma disjoint_varsU1 v rs:
-    [disjoint v & varsU [seq varsU_rule i | i <- (fresh_rules v rs).2]].
-  Proof.
-    elim: rs v => //=.
-      by move=> >; rewrite fdisjointX0.
-    move=> [hd bo] l IH v; rewrite !push/= disjointUr.
-    rewrite /fresh_rule/=!push/=.
-    rewrite IH//=andbT.
-    rewrite/varsU_rule/varsU_rhead/=/varsU_rprem/= disjointUr.
-    apply/andP; split.
-      rewrite fdisjoint_sym.
-      apply/disjoint_sub.
-        apply/vars_tm_rename_disjoint.
-      by apply/fsubset_trans/fresh_rules_sub.
-      by rewrite codomf0.
-      by rewrite codomf0 fdisjointX0.
-      by apply/fsubset_trans/fresh_rules_sub.
-    rewrite/rename!push/=.
-    set f := fresh_tm _ _ _.
-    have: [disjoint v & codomf f.2].
-      apply/fdisjointWl; last first.
-      rewrite /fdisjoint fsetIC -/(fdisjoint _ v).
-      by apply/disj_codom0; rewrite fsubsetU// fsubset_refl.
-      by rewrite fsubsetU// fresh_rules_sub orbT.
-    have: v `<=` f.1.
-      by apply/fsubset_trans/fresh_tm_sub; rewrite fsubsetU//fresh_rules_sub orbT.
-    suffices: codomf f.2 `<=` f.1.
-      apply: disjoint_vars_atoms.
-    by apply/fresh_tm_codom_fv; rewrite codomf0.
   Qed.
 
   Lemma mut_exclP p fv c s1:
@@ -796,7 +353,7 @@ Section mut_excl.
       by rewrite/FC2; apply/disjoint_varsU.
       apply/fdisjointWl/disjoint_varsU1.
       by rewrite -fsetUA fsetUC -!fsetUA fsubsetUl.
-    rewrite disjoint_comm.
+    rewrite fdisjoint_sym.
     apply/disjoint_sub.
     apply/vars_tm_rename_disjoint => //.
       by rewrite codomf0.
