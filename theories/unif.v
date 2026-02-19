@@ -9,8 +9,9 @@ Section s.
 Variable u: Unif.
 Notation matching := (matching u).
 Notation unify := (unify u).
+Notation vars := vars_tm.
 
-Definition disjoint_tm t1 t2:= [disjoint vars_tm t1 & vars_tm t2].
+Definition disjoint_tm t1 t2:= [disjoint vars t1 & vars t2].
 
 (*SNIPT: matchunif *)
 Axiom match_unif: 
@@ -31,15 +32,15 @@ Axiom unif_acyclic: forall t1 t2 s s',
   acyclic_sigma s -> unify t1 t2 s = Some s' -> acyclic_sigma s'.
 
 Axiom matching_subst : forall q t s, 
-  [disjoint vars_tm q & domf s] ->
+  [disjoint vars q & domf s] ->
   (matching q (deref s t) fmap0) <-> (matching q t s).
 
 Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
 
 (*SNIPT: matchdisj *)
 Axiom matching_disj:
-  forall s s' t1 t2, vars_tm t1 # domf s -> vars_tm t1 # vars_tm t2 ->
-    matching t1 t2 s = Some s' -> exists e, domf s' = domf s `|` e /\ e `<=` vars_tm t2.
+  forall s s' t1 t2, vars t1 # domf s -> vars t1 # vars t2 ->
+    matching t1 t2 s = Some s' -> exists e, domf s' = domf s `|` e /\ e `<=` vars t2.
 (*ENDSNIPT: matchdisj *)
 
 (*SNIPT: matchingmono *)
@@ -50,13 +51,13 @@ Axiom matching_monotone:
 
 Lemma matching_subst1:
   forall q t s, 
-  [disjoint vars_tm q & domf s] ->
+  [disjoint vars q & domf s] ->
   (matching q t s) -> (matching q (deref s t) fmap0).
 Proof. by move=> > H1 H2; apply/matching_subst. Qed.
 
 Lemma matching_subst2:
   forall q t s, 
-  [disjoint vars_tm q & domf s] ->
+  [disjoint vars q & domf s] ->
   (matching q (deref s t) fmap0) -> (matching q t s).
 Proof. by move=> > H1 H2; apply/matching_subst. Qed.
 
@@ -85,7 +86,7 @@ Proof.
 Qed.
 
 Axiom matching_V: forall s t d,
-  vars_sigma s `<=` d -> vars_tm t `<=` d ->
+  vars_sigma s `<=` d -> vars t `<=` d ->
   matching t (Tm_V (fresh d)) s = Some (s.[fresh d <- t]).
 
 Notation "A | B" := (A `|` B) (at level 15).
@@ -95,7 +96,7 @@ Notation rename := ren.
 
 (*SNIPT: refresh_for *)
 Definition refresh_for x t := 
-  (vars_tm t `<=` domf x) ∧ injective x.
+  (vars t `<=` domf x) ∧ injective x.
 (*ENDSNIPT: refresh_for *)
 
 
@@ -103,8 +104,8 @@ Definition refresh_for x t :=
 Axiom unif_ren: 
   forall x y z w t1 t2,
   refresh_for w t1 -> refresh_for y t2 -> refresh_for z t1 -> refresh_for x t2 ->
-  codomf w # vars_tm t1 | vars_tm (rename y t2) ->
-  codomf z # vars_tm t1 | vars_tm (rename x t2) ->
+  codomf w # vars t1 | vars (rename y t2) ->
+  codomf z # vars t1 | vars (rename x t2) ->
   unify (rename w t1) (rename y t2) empty -> unify (rename z t1) (rename x t2) empty.
 (*ENDSNIPT: unif_ren *)
 
@@ -136,11 +137,11 @@ Proof.
   by move=> H1 H2; rewrite (IH v vs)//orbT.
 Qed.
 
-Lemma codom_vars_sub v s (vs: v \in domf s): vars_tm s.[vs] `<=` codom_vars s.
+Lemma codom_vars_sub v s (vs: v \in domf s): vars s.[vs] `<=` codom_vars s.
 Proof.
   rewrite/codom_vars.
   apply/fsubsetP => /=v' H.
-  apply/varUP; exists (vars_tm s.[vs]); split => //.
+  apply/varUP; exists (vars s.[vs]); split => //.
   by apply/map_f/codomP; eexists.
 Qed.
 
@@ -152,7 +153,7 @@ Lemma disjointUl {T:choiceType} (A B C: {fset T}):
   fdisjoint (B `|` C) A = fdisjoint B A && fdisjoint C A.
 Proof. by rewrite fdisjoint_sym disjointUr !(fdisjoint_sym A). Qed.
 
-Lemma deref_disj_id s t: domf s # vars_tm t -> deref s t = t.
+Lemma deref_disj_id s t: domf s # vars t -> deref s t = t.
 Proof. 
   elim: t => //=[v|f Hf a Ha].
     rewrite/fdisjoint fsetI1; case: ifP.
@@ -166,7 +167,7 @@ Lemma deref2 s t:
 Proof.
   move=> H; elim: t => //=[v|f -> a ->]//.
   case: fndP => //= vs; last by rewrite not_fnd//.
-  have: fdisjoint (domf s) (vars_tm s.[vs]).
+  have: fdisjoint (domf s) (vars s.[vs]).
     by apply/disjoint_sub/codom_vars_sub/H.
   by apply/deref_disj_id.
 Qed.
