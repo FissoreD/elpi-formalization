@@ -89,10 +89,12 @@ Axiom matching_V: forall s t d,
   matching t (Tm_V (fresh d)) s = Some (s.[fresh d <- t]).
 
 Notation "A | B" := (A `|` B) (at level 15).
-Notation injectiveb := (@injectiveb _ V).
+Notation injective := (@injectiveb _ V).
+Notation "A ∧ B" := (A && B) (at level 15).
+
 (*SNIPT: good_ren *)
-Definition good_ren x t :=
-  (vars_tm t `<=` domf x) && injectiveb x.
+Definition good_ren x t := 
+  (vars_tm t `<=` domf x) ∧ injective x.
 (*ENDSNIPT: good_ren *)
 
 
@@ -106,7 +108,7 @@ Axiom unif_ren:
 (*ENDSNIPT: unif_ren *)
 
 Lemma good_ren_app x f a: good_ren x (Tm_App f a) = good_ren x f && good_ren x a.
-Proof. by rewrite/good_ren/= fsubUset !andbA -!(andbC (injectiveb x)) !andbA andbb. Qed.
+Proof. by rewrite/good_ren/= fsubUset !andbA -!(andbC (injective x)) !andbA andbb. Qed.
 
 Lemma disjoint_sub {T: choiceType} (s1 s2 s3: {fset T}):
   [disjoint s1 & s2] ->
