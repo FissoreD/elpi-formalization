@@ -8,9 +8,9 @@ Section vars_tree.
   Variable (p : program).
 
   Lemma rename_sub fv r m:
-    fv `<=` (rename_fresh fv m r).1.1.
+    fv `<=` (rename fv m r).1.1.
   Proof.
-    rewrite/rename_fresh !push/=.
+    rewrite/rename !push/=.
     by apply/fsubset_trans/fresh_tm_sub; rewrite fsubsetUr.
   Qed.
 

@@ -81,7 +81,7 @@ Section Test1.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
       rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename_fresh/=in_fset1 eqxx/=.
+      rewrite/rename/=in_fset1 eqxx/=.
       rewrite !fset0U/= !fsetU0/varsU_rule/=/varsU_rhead/=/varsU_rprem/=.
       rewrite /vars_sigma codom_vars0 domf0 /= !fset0U.
       rewrite !ren_app !ren_P ren_V/=.
@@ -98,7 +98,7 @@ Section Test1.
         by rewrite !FmapE.fmapE eqxx/=.
       rewrite/=.
       rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename_fresh/=in_fset1 eqxx/=.
+      rewrite/rename/=in_fset1 eqxx/=.
       rewrite acyclic_sigma0//.
       by rewrite not_fnd//= not_fnd//=.
       by [].
@@ -117,7 +117,7 @@ Section Test1.
       rewrite/=.
       rewrite FmapE.fmapE.
       rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename_fresh/=in_fset1 eqxx/=.
+      rewrite/rename/=in_fset1 eqxx/=.
       rewrite not_fnd//= eqxx/=.
       rewrite !fset0U fsetU0.
       (* rewrite !(fsetUC _ [fset IV 0]) !fsetUA !fsetUid.
@@ -136,7 +136,7 @@ Section Test1.
       rewrite/=.
       rewrite FmapE.fmapE.
       rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename_fresh/=in_fset1 eqxx/=.
+      rewrite/rename/=in_fset1 eqxx/=.
       rewrite not_fnd//= eqxx/=.
       rewrite !fset0U !fsetU0.
       rewrite/next_subst/= acyclic_sigma_set_D//.

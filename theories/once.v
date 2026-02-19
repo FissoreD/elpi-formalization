@@ -147,7 +147,7 @@ Section once.
       by rewrite in_cons H2 orbT.
     rewrite/fresh_rule!push/=.
     case: x H => /= hd bo H.
-    rewrite/rename_fresh !push/=.
+    rewrite/rename !push/=.
     set X := fresh_tm _ _ _.
     case Y: get_tm_hd => //=[p].
     have:= callable_ren X.2 hd p; rewrite Y => /proj1/(_ erefl) H1.
@@ -168,7 +168,7 @@ Section once.
     rewrite once_sigP/=.
     rewrite fset0U.
     case X: fresh_rules => [fvx' rs'].
-    rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename_fresh cat0f.
+    rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
     rewrite/fresh_tm inE eqxx get_modes_rev_once_sym ren_app ren_V ren_P.
     rewrite in_fnd; first by rewrite inE.
     move=> H1/=.
@@ -234,7 +234,7 @@ Section once.
       by do 2 eexists; apply/StepT/FailT; only 2: rewrite/=/bc AS //.
     rewrite fset0U.
     case X: fresh_rules => [fvx' rs'].
-    rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename_fresh cat0f.
+    rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
     rewrite/fresh_tm inE eqxx get_modes_rev_once_sym ren_app ren_V ren_P.
     rewrite in_fnd; first by rewrite inE.
     move=> H1/=.
