@@ -599,6 +599,33 @@ rewrite codomf_cat /fdisjoint fsetIUl disjoint_fsetI0 ?(fdisjointWr Sfv' K) ?fse
 by rewrite remf_id; last by case/andP: adesive_ef.
 Qed.
 
+Lemma fresh_tm_def2 fv (m : {fmap V -> V}) t :
+  vars_tm t `<=` fv ->
+  exists e, [/\ (fresh_tm fv m t).2 = m + e, adesive m e & [disjoint codomf e & fv]%fset].
+Proof.
+elim: t fv m => //; only 1, 2: by move=>*; exists fmap0; rewrite ?catf0 ?injectiveb0 ?adesive0 ?codomf0 ?fdisjoint0X.
+- move=> v fv m /=; case: ifP; first by exists fmap0; rewrite ?catf0 ?injectiveb0 ?adesive0 ?codomf0 ?fdisjoint0X.
+  exists [fmap x: fset1 v => fresh (fv `|` codomf m)]; rewrite ?injectiveb1 ?adesive1 ?n ?codomf1 //.
+    by rewrite (fdisjointWr (fsubsetUl _ (codomf m))) ?disjoint_fresh //=.
+    by rewrite freshPwl.
+move=> l Hl r Hr fv m (*Sd*); rewrite [vars_tm _]/= fsubUset => /andP[Sl Sr].
+rewrite fresh_Tm_App.
+set m' := (fresh_tm fv m l).2; set fv' := (fresh_tm fv m l).1; set m'' := (fresh_tm fv' m' r).2.
+have [e [De Ame J]] := Hl fv m (*Sd*) Sl; rewrite -/m' in De.
+(* have Sd' : domf m' `<=` fv' by apply: fresh_tm_dom. *)
+have Sfv' : fv `<=` fv' by apply fresh_tm_sub.
+have Sr' : vars_tm r `<=` fv' by apply: fsubset_trans Sr _.
+have [f [Df Amf K]] := Hr fv' m' (*Sd'*) Sr'; rewrite -/m'' in Df.
+exists (e + f).
+have adesive_ef : adesive e f by rewrite De in Amf; apply: adesive_catr Amf.
+have adesive_mf : adesive m f by rewrite De in Amf; apply: adesive_catl Ame Amf.
+have adesive_mef : adesive m (e + f) by rewrite adesiveA // adesive_trans.
+split; rewrite ?catfA ?Df ?De //.
+rewrite codomf_cat /fdisjoint fsetIUl disjoint_fsetI0 ?(fdisjointWr Sfv' K) ?fset0U //=.
+by rewrite remf_id; last by case/andP: adesive_ef.
+Qed.
+
+
 Definition ren m := deref [fmap x : domf m => Tm_V m.[valP x]].
 
 Lemma ren_app m l r : ren m (Tm_App l r) = Tm_App (ren m l) (ren m r).
@@ -661,57 +688,80 @@ Proof.
   by repeat eexists.
 Qed.
 
+Lemma xxx t fv m : vars_tm t `<=` domf (fresh_tm fv m t).2.
+elim: t fv m => //=.
+- move=> v fv m; rewrite fsub1set; case: ifP => //=.
+  by rewrite !inE eqxx orbT.
+move=> l Hl r Hr fv m; rewrite fsubUset !push /=.
+set m' := (fresh_tm fv m l).2.
+set fv' := (fresh_tm fv m l).1.
+set m'' := (fresh_tm fv' m' r).2.
+set fv'' := (fresh_tm fv' m' r).1.
+apply/andP; split.
+-  apply: fsubset_trans (Hl fv m) _; rewrite -/m'. 
+   (* have [f [Dm' Adf Jf]]:= fresh_tm_def2 m Sl; rewrite -/m' in Dm'. *)
+   admit.
+by apply: fsubset_trans (Hr fv' m') _; rewrite -/m''. 
+Admitted.
 
 Lemma renameP t fv0 : (*vars_tm t `<=` fv -> *)
-  [disjoint vars_tm (rename fv0 t fmap0).2 & vars_tm t]%fset && 
-  injectiveb (rename fv0 t fmap0).1.2.
+  [disjoint vars_tm (rename fv0 t fmap0).2 & vars_tm t]%fset.
 Proof.
 rewrite /rename; set m0 : {fmap V -> V} := fmap0; set fv := vars_tm t `|` fv0.
 rewrite [fresh_tm _ _ t]surjective_pairing /=.
 (* have: [disjoint domf m0 & fv] by rewrite fdisjoint0X. *)
 (* have: [disjoint codomf m0 & (fresh_tm fv m0 t).1] by rewrite codomf0 fdisjoint0X. *)
 have: vars_tm t `<=` fv by rewrite fsubsetUl.
-have: [disjoint codomf m0 & fv] by rewrite codomf0 fdisjoint0X.
+have: [disjoint codomf m0 & vars_tm t] by rewrite codomf0 fdisjoint0X.
 have: [disjoint domf m0 & codomf m0] by rewrite codomf0 fdisjoint0X.
 (* have: codomf m0 `<=` fv by rewrite codomf0 fsub0set. *)
-have: injectiveb m0 by apply/injectiveP=> -[x H]; exfalso; rewrite inE in H.
+(* have: injectiveb m0 by apply/injectiveP=> -[x H]; exfalso; rewrite inE in H. *)
 elim: t fv m0; only 1,2: by rewrite /= ?fdisjointX0.
-- move=> v fv m Im R J Hv; rewrite /= in Hv; rewrite [fresh_tm _ _ _]/=.
+- move=> v fv m R J Hv; rewrite /= in Hv; rewrite [fresh_tm _ _ _]/=.
   have [vm/=|nvm] := ifP.
-    rewrite Im andbT /ren/= in_fnd /= ffunE valPE /=.
-    apply: fdisjointWr Hv _.
+    rewrite /ren/= in_fnd /= ffunE valPE /=.
+    (* apply: fdisjointWr Hv _. *)
     apply: fdisjointWl _ J.
     by apply/fsubsetP=> x; rewrite /= inE => /eqP->; apply: in_codomf.
-  rewrite injective_catf ?andbT ?injectiveb1 ?adesive1 ?nvm //; last first.
-    by rewrite freshPwl.
+  rewrite /=.
   rewrite /ren/deref; set F := [fmap=> _].
   have vV : v \in [fset v] by rewrite inE.
-  have vD : v \in domf F. simpl. apply: fsubsetP (fsubsetUr _ _) _ vV.
+  have vD : v \in domf F by simpl; apply: fsubsetP (fsubsetUr _ _) _ vV.
   rewrite (in_fnd vD).
   rewrite /F ffunE valPE getf_catr //= ffunE.
   rewrite /fdisjoint; apply/eqP/fsetP=> x; rewrite !inE andbC; case: eqP => [-> /=| //].
   move: Hv; case: eqP => // -> /fsubsetP/(_ (fresh (fv `|` codomf m))); rewrite inE eqxx => /(_ isT).
   by have := freshPwl (codomf m) fv; rewrite fsetUC => ->. 
-move=> l Hl r Hr fv m Im R J; rewrite [vars_tm _]/= fsubUset => /andP[Sl Sr].
+move=> l Hl r Hr fv m R J; rewrite [vars_tm _]/= fsubUset => /andP[Sl Sr].
 rewrite fresh_Tm_App ren_app [vars_tm _]/=.
 set m' := (fresh_tm fv m l).2; set fv' := (fresh_tm fv m l).1.
 set m'' := (fresh_tm fv' m' r).2; set fv'' := (fresh_tm fv' m' r).1.
+move: J; rewrite /= fdisjointXU => /andP[Jl Jr].
 
-have /andP{Hl} := Hl fv m Im R J Sl.
-rewrite -/m' -/fv' => -[Pl Im'].
+have {Hl} := Hl fv m R Jl Sl.
+rewrite -/m' -/fv' => Pl.
+
+have Sr' : vars_tm r `<=` fv'.
+  by apply: fsubset_trans Sr _; apply: fresh_tm_sub.
+have [f [Dm' Adf Jf]]:= fresh_tm_def2 m Sl; rewrite -/m' in Dm'.
+have [g [Dm'' Adg Jg]]:= fresh_tm_def2 m' Sr'; rewrite -/m'' in Dm''.
+case/andP: Adf => J1 J2.
 
 have R' : [disjoint domf m' & codomf m'].
+  rewrite Dm' domf_cat codomf_cat fdisjointXU !fdisjointUX.
   admit.
-have J' : [disjoint codomf m' & fv'].
-  admit.
-have Sr' : vars_tm r `<=` fv'.
-  admit.
-have /andP{Hr} := Hr fv' m' Im' R' J' Sr'.
-rewrite -/m'' -/fv'' => -[Pr Im''].
+have J' : [disjoint codomf m' & vars_tm r].
+  rewrite Dm' codomf_cat fdisjointUX.
+  rewrite (fdisjointWr Sr Jf) (fdisjointWl _ Jr) //.
+  by rewrite remf_id.
+have {Hr} := Hr fv' m' R' J' Sr'.
+rewrite -/m'' -/fv'' => Pr.
 
-apply/andP; split; last first.
-  by apply: fresh_tm_inj; apply: fresh_tm_inj.
-rewrite fdisjointXU !fdisjointUX Pr.
+have H1 : vars_tm (ren m'' l) = vars_tm (ren m' l).
+  admit.
+rewrite fdisjointXU !fdisjointUX Pr H1 Pl andbT /=.
+  have D2 := xxx l fv m; rewrite -/m' in D2.
+  have D1 := xxx r fv' m'; rewrite -/m'' in D1.
   admit.
 Admitted.
 (*  
