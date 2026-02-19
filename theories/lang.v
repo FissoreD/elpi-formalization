@@ -626,41 +626,41 @@ by rewrite remf_id; last by case/andP: adesive_ef.
 Qed.
 
 
-Definition ren m := deref [fmap x : domf m => Tm_V m.[valP x]].
+Definition rename m := deref [fmap x : domf m => Tm_V m.[valP x]].
 
-Lemma ren_app m l r : ren m (Tm_App l r) = Tm_App (ren m l) (ren m r).
+Lemma ren_app m l r : rename m (Tm_App l r) = Tm_App (rename m l) (rename m r).
 by []. Qed.
 
 Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a bx) = F t.1 t.2.
   by case: t => /=.
 Qed.
 
-Definition rename fv tm m :=
+Definition rename_fresh fv tm m :=
   let: (fv', m) := fresh_tm (vars_tm tm `|` fv) m tm in
-  ((fv', m), ren m tm).
+  ((fv', m), rename m tm).
 
 (* Lemma rename_app fv f a:
   let tm := Tm_App f a in
-  rename fv tm = 
+  rename_fresh fv tm = 
     let fv := fresh_tm (vars_tm tm `|` fv) fmap0 f in 
     let (fv', m) := fresh_tm fv.1 fv.2 a in
-    ((fv'(*, m*)), Tm_App (rename fv' f) (ren m a)).
-Proof. by rewrite/rename/=!push/= ren_app//. Qed. *)
+    ((fv'(*, m*)), Tm_App (rename_fresh fv' f) (rename m a)).
+Proof. by rewrite/rename_fresh/=!push/= ren_app//. Qed. *)
 
 Lemma ren_V b v:
-  ren b (Tm_V v) = Tm_V (odflt v b.[?v]).
+  rename b (Tm_V v) = Tm_V (odflt v b.[?v]).
 Proof.
-  rewrite/ren/=; case: fndP => //=vb.
+  rewrite/rename/=; case: fndP => //=vb.
     by rewrite in_fnd//=ffunE valPE.
   rewrite not_fnd//=.
 Qed.
 
 Lemma ren_P b p:
-  ren b (Tm_P p) = Tm_P p.
+  rename b (Tm_P p) = Tm_P p.
 Proof. by []. Qed.
 
 Lemma ren_isP b tm p:
-  ren b tm = Tm_P p ->
+  rename b tm = Tm_P p ->
   exists p', tm = Tm_P p'.
 Proof.
   case: tm => //[p'|v]; first by repeat eexists.
@@ -668,7 +668,7 @@ Proof.
 Qed.
 
 Lemma ren_isApp b hd f2 a2:
-  ren b hd = Tm_App f2 a2 ->
+  rename b hd = Tm_App f2 a2 ->
   exists f1 a1, hd = Tm_App f1 a1.
 Proof.
   case: hd => //=[v|f1 a1].
@@ -677,11 +677,11 @@ Proof.
 Qed.
 
 Lemma rename_isApp fv hd fv' f2 a2 m:
-  rename fv hd m = (fv', Tm_App f2 a2) ->
+  rename_fresh fv hd m = (fv', Tm_App f2 a2) ->
   exists f1 a1, hd = Tm_App f1 a1.
 Proof.
-  rewrite/rename !push => -[?+]; subst.
-  rewrite/ren.
+  rewrite/rename_fresh !push => -[?+]; subst.
+  rewrite/rename.
   case: hd => //=[v|f1 a1].
     rewrite in_fnd//=; last by move=> >; rewrite ffunE.
     by case: ifP; rewrite// in_fsetU in_fset1 eqxx orbT.
@@ -707,17 +707,17 @@ Admitted.
 Lemma renameP_aux m0 t fv:
   [disjoint domf m0 & codomf m0] ->
   [disjoint codomf m0 & vars_tm t] ->
-  vars_tm t `<=` fv -> [disjoint vars_tm (ren (fresh_tm fv m0 t).2 t) & vars_tm t].
+  vars_tm t `<=` fv -> [disjoint vars_tm (rename (fresh_tm fv m0 t).2 t) & vars_tm t].
 Proof.
 elim: t fv m0; only 1,2: by rewrite /= ?fdisjointX0.
 - move=> v fv m R J Hv; rewrite /= in Hv; rewrite [fresh_tm _ _ _]/=.
   have [vm/=|nvm] := ifP.
-    rewrite /ren/= in_fnd /= ffunE valPE /=.
+    rewrite /rename/= in_fnd /= ffunE valPE /=.
     (* apply: fdisjointWr Hv _. *)
     apply: fdisjointWl _ J.
     by apply/fsubsetP=> x; rewrite /= inE => /eqP->; apply: in_codomf.
   rewrite /=.
-  rewrite /ren/deref; set F := [fmap=> _].
+  rewrite /rename/deref; set F := [fmap=> _].
   have vV : v \in [fset v] by rewrite inE.
   have vD : v \in domf F by simpl; apply: fsubsetP (fsubsetUr _ _) _ vV.
   rewrite (in_fnd vD).
@@ -750,7 +750,7 @@ have J' : [disjoint codomf m' & vars_tm r].
 have {Hr} := Hr fv' m' R' J' Sr'.
 rewrite -/m'' -/fv'' => Pr.
 
-have H1 : vars_tm (ren m'' l) = vars_tm (ren m' l).
+have H1 : vars_tm (rename m'' l) = vars_tm (rename m' l).
   admit.
 rewrite fdisjointXU !fdisjointUX Pr H1 Pl andbT /=.
   have D2 := xxx l fv m; rewrite -/m' in D2.
@@ -759,9 +759,9 @@ rewrite fdisjointXU !fdisjointUX Pr H1 Pl andbT /=.
 Admitted.
 
 Lemma renameP t fv0 : (*vars_tm t `<=` fv -> *)
-  [disjoint vars_tm (rename fv0 t fmap0).2 & vars_tm t]%fset.
+  [disjoint vars_tm (rename_fresh fv0 t fmap0).2 & vars_tm t]%fset.
 Proof.
-rewrite /rename; set m0 : {fmap V -> V} := fmap0; set fv := vars_tm t `|` fv0.
+rewrite /rename_fresh; set m0 : {fmap V -> V} := fmap0; set fv := vars_tm t `|` fv0.
 rewrite [fresh_tm _ _ t]surjective_pairing /=.
 have: vars_tm t `<=` fv by rewrite fsubsetUl.
 have: [disjoint codomf m0 & vars_tm t] by rewrite codomf0 fdisjoint0X.
@@ -935,14 +935,14 @@ Qed. *)
   (* | Callable_P _ => (fv, c)
   | Callable_App h t => *)
       (* let: (fv, h) := fresh_callable fv h in *)
-      let: (fv, t) := rename fv t in
+      let: (fv, t) := rename_fresh fv t in
       (fv, Callable_App h t)
   end. *)
 
 (* Lemma fresh_callable_sub fv t : fv `<=` (fresh_callable fv t).1.
 Proof.
   elim: t fv => //= f Hf a fv.
-  rewrite /rename !push/=.
+  rewrite /rename_fresh !push/=.
   by apply/fsubset_trans/fresh_tm_sub; rewrite fsubsetU//Hf orbT.
 Qed. *)
   
@@ -971,14 +971,14 @@ Axiom fresh_rule : fv -> R -> fv * R. *)
 Definition fresh_atom fv a m :=
   match a with
   | cut => (fv, m, cut)
-  | call t => let: (fv, m, t) := rename fv t m in (fv, m, call t)
+  | call t => let: (fv, m, t) := rename_fresh fv t m in (fv, m, call t)
   end.
 
 Definition fresh_atoms fv a m :=
   foldr (fun x '(fv,m,xs) => let: (fv,m, x) := fresh_atom fv x m in (fv,m,x::xs)) (fv,m,[::]) a.
 
 Definition fresh_rule fv r :=
-  let: (fv, m, head) := rename fv r.(head) fmap0 in
+  let: (fv, m, head) := rename_fresh fv r.(head) fmap0 in
   let: (fv, m, premises) := fresh_atoms fv r.(premises) m in
   (fv, mkR head premises ).
 

@@ -27,10 +27,10 @@ Section checker.
 End checker.
 
 Lemma is_det_rename sP fv hd m:
-  tm_is_det sP (rename fv hd m).2 =
+  tm_is_det sP (rename_fresh fv hd m).2 =
     tm_is_det sP hd.
 Proof.
-  rewrite/rename!push/=.
+  rewrite/rename_fresh!push/=.
   move: (fresh_tm _ _ _) => -[]/= _.
   elim: hd => //= v b; rewrite ren_V//.
 Qed.
@@ -54,7 +54,7 @@ Proof.
     by move=> k c' sv sv' + [_ <-]//.
   move=> f Hf a c' sv sv'.
   case X: fresh_callable => [sv2 f'].
-  case Y: rename => [sv3 a'] + [_ <-].
+  case Y: rename_fresh => [sv3 a'] + [_ <-].
   rewrite !tm_is_det_comb => H.
   by apply/Hf/X.
 Qed. *)

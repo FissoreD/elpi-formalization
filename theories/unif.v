@@ -76,7 +76,7 @@ Proof. case: P => //. Qed.
 
 (* Axiom unif_rename : forall t1 t2 (f : {fmap V -> V}), 
   injectiveb f ->
-  (unify t1 t2 fmap0) <-> (unify (ren f t1) (ren f t2) fmap0). *)
+  (unify t1 t2 fmap0) <-> (unify (rename f t1) (rename f t2) fmap0). *)
 
 Lemma match2_unif : forall q t1 t2 s, (matching q t1 s) -> (matching q t2 s) -> (unify t1 t2 s).
 Proof.
@@ -100,9 +100,9 @@ Definition good_ren x t :=
 Axiom unif_ren: 
   forall x y z w t1 t2,
   good_ren w t1 -> good_ren y t2 -> good_ren z t1 -> good_ren x t2 ->
-  codomf w # vars_tm t1 | vars_tm (ren y t2) ->
-  codomf z # vars_tm t1 | vars_tm (ren x t2) ->
-  unify (ren w t1) (ren y t2) empty -> unify (ren z t1) (ren x t2) empty.
+  codomf w # vars_tm t1 | vars_tm (rename y t2) ->
+  codomf z # vars_tm t1 | vars_tm (rename x t2) ->
+  unify (rename w t1) (rename y t2) empty -> unify (rename z t1) (rename x t2) empty.
 (*ENDSNIPT: unif_ren *)
 
 Lemma good_ren_app x f a: good_ren x (Tm_App f a) = good_ren x f && good_ren x a.
