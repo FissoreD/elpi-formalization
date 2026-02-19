@@ -26,36 +26,6 @@ folder.
 The *elpi* language is available here:
 https://github.com/LPCIC/elpi
 
-
-<!-- ## High-level description
-
-We provide two semantics of a 
-
-- Purpose: briefly state what is being formalized (e.g., "a small-step semantics
-  and type system for a toy language", "a verification of algorithm X", "proofs
-  about data structure Y").
-- Logic/assistant used: name the theorem prover or framework (e.g., Coq,
-  Isabelle, Lean, Why3, custom proof engine) and any required libraries.
-
-## Folder organization
-- theories/
-  - base/ — foundational definitions and common utilities (sets, lists, basic
-    lemmas)
-  - syntax/ — syntactic definitions (AST, tokens, parsers)
-  - semantics/ — operational/denotational semantics and interpreter models
-  - typing/ — typing rules, judgments, and type preservation proofs
-  - properties/ — lemmas and theorems (soundness, completeness, termination)
-  - proofs/ — proof scripts, automation tactics, helper lemmas
-  - examples/ — example encodings and test proofs
-
-Adjust names above to match actual subfolders in this repo.
-
-## Notation and conventions
-- Explain notation used in the theories (e.g., ⟨e,σ⟩ → ⟨e',σ'⟩ for transitions,
-  Γ ⊢ e : τ for typing)
-- Mention proof style (structured proofs vs tactic-based), naming conventions
-  for lemmas/theorems, and file naming patterns.  -->
-
 ## How to build / run proofs
 
 The mechanization requires Rocq 9.0 and mathcomp 2.4.0.
@@ -69,35 +39,3 @@ eval $(opam env --root=./_opam)
 rocq makefile -f _CoqProject -o Makefile
 make
 ```
-
-sudo apt-get install linux-libc-dev pkg-config libgmp-dev --yes
-opam switch create default ocaml-base-compiler.5.1.1
-eval $(opam env)
-opam install rocq-core.9.0.0 --yes
-
-<!-- - Example:
-  - Install dependencies: `sudo apt install coq`
-  - Run full build: `make -C theories` -->
-
-
-<!-- ## Key files (example)
-- base/Prelude.v — base definitions and frequently used lemmas
-- syntax/AST.v — AST and helpers
-- semantics/SmallStep.v — small-step transition relation
-- typing/Typing.v — typing judgment and typing lemmas
-- properties/Progress.v — progress theorem
-- properties/Preservation.v — preservation theorem
-
-(Replace with the actual filenames in this repository.)
-
-## Editing and extending
-- How to add a new lemma: where to put it, naming conventions, and how to run
-  proof checks
-- How to add examples: add to examples/ and include a Makefile target if needed
-
-## Troubleshooting
-- Common build errors and remedies (version mismatches, missing stdlib packages)
-- How to increase proof verbosity or use an interactive mode (REPL, proof IDE)
-
-## References
-- Links to used theorem prover docs and key papers or specs. -->
