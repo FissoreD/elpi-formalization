@@ -329,8 +329,8 @@ Section s.
 
   (*SNIPT: runSST_or *)
   Lemma runSST_or: 
-    forall p v v' s s' l l' s1 r, runT p v s l (Some (s', Some l')) true v' ->
-      runT p v s ((Some l) \/ r -sub(s1)) (Some (s', Some((Some l') \/ KO -sub(s1)))) false v'.
+    forall p v v' s s' A A' s1 B, runT p v s A (Some (s', Some A')) true v' ->
+      runT p v s ((Some A) \/ B -sub(s1)) (Some (s', Some((Some A') \/ KO -sub(s1)))) false v'.
   (*ENDSNIPT: run_orSST *)
   Proof. move=> > /run_or_correct_left H; auto. Qed.
 
@@ -360,8 +360,8 @@ Section s.
 
   (*SNIPT: runNT_or *)
   Lemma runNT_or: 
-    forall p v v' s t s1 t', runT p v s t None true v' -> 
-      runT p v s ((Some t) \/ t' -sub(s1)) None false v'.
+    forall p v v' s A s1 B, runT p v s A None true v' -> 
+      runT p v s ((Some A) \/ B -sub(s1)) None false v'.
   (*ENDSNIPT: run_orNT *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
@@ -377,18 +377,18 @@ Section s.
 
   (*SNIPT: runNF_or *)
   Lemma runNF_or: 
-    forall p v0 v1 v2 s l s1 s2 r r' b,
-    runT p v0 s l None false v1 -> runT p v1 s1 r (Some (s2, r')) b v2 ->
-      let sR := omap (fun x => None \/ x -sub(s1)) r' in
-      runT p v0 s ((Some l) \/ r -sub(s1)) (Some (s2,sR)) false v2.
+    forall p v0 v1 v2 s A s1 s2 B B' b,
+    runT p v0 s A None false v1 -> runT p v1 s1 B (Some (s2, B')) b v2 ->
+      let sR := omap (fun x => None \/ x -sub(s1)) B' in
+      runT p v0 s ((Some A) \/ B -sub(s1)) (Some (s2,sR)) false v2.
   (*ENDSNIPT: run_orNF *)
   Proof. move=> ???????? []> H1 H2/=; have:= run_or_correct_left H1 _ _ _ _ _ H2 => //=. Qed.
 
   (*SNIPT: run_orSST *)
   Lemma run_orSST:
-    forall p v v' s s' s1 l l' r r', 
-    runT p v s ((Some l) \/ r -sub(s1)) (Some (s', Some ((Some l') \/ r' -sub(s1)))) false v' ->
-      exists b, runT p v s l (Some (s', Some l')) b v' /\ r' = if b then KO else r.
+    forall p v v' s s' s1 A A' B B', 
+    runT p v s ((Some A) \/ B -sub(s1)) (Some (s', Some ((Some A') \/ B' -sub(s1)))) false v' ->
+      exists b, runT p v s A (Some (s', Some A')) b v' /\ B' = if b then KO else B.
   (*ENDSNIPT: run_orSST *)
   Proof.
     move=> > /run_or_complete.
@@ -399,10 +399,10 @@ Section s.
 
   (*SNIPT: run_orSNT *)
   Lemma run_orSNT:
-    forall p v v' s s' s1 l r r', 
-    runT p v s ((Some l) \/ r -sub(s1)) (Some (s', Some (None \/ r' -sub(s1)))) false v' ->
-      (exists b, runT p v s l (Some (s', None)) b v' /\ if b then r' = KO else prune false r = Some r') ∨
-      (exists v2 b, runT p v s l None false v2 /\ runT p v2 s1 r (Some (s', Some r')) b v').
+    forall p v v' s s' s1 A B B', 
+    runT p v s ((Some A) \/ B -sub(s1)) (Some (s', Some (None \/ B' -sub(s1)))) false v' ->
+      (exists b, runT p v s A (Some (s', None)) b v' /\ if b then B' = KO else prune false B = Some B') ∨
+      (exists v2 b, runT p v s A None false v2 /\ runT p v2 s1 B (Some (s', Some B')) b v').
   (*ENDSNIPT: run_orSNT *)
   Proof.
     move=> p v v' s s' s1 l r r' H1.
