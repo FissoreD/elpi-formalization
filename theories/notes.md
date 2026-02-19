@@ -1,10 +1,10 @@
 # Status quo = Elpi Run and Nur
 
 - [The language: lang.v](#the-language-langv)
-- [The interpreter: run.v](#the-interpreter-runv)
+- [The interpreter: runT.v](#the-interpreter-runv)
   - [Useful lemmas](#useful-lemmas)
-- [Tests: run\_test.v](#tests-run_testv)
-- [Properties of run: run\_prop.v](#properties-of-run-run_propv)
+- [Tests: runT\_test.v](#tests-run_testv)
+- [Properties of runT: runT\_prop.v](#properties-of-runT-run_propv)
 - [Determinacy checking: check.v](#determinacy-checking-checkv)
 - [Valid tree: valid\_tree.v](#valid-tree-valid_treev)
 - [Elpi interpreter: elpi.v](#elpi-interpreter-elpiv)
@@ -40,7 +40,7 @@ The main inductives of the language are:
 
 > Note: A query is a term.
 
-## The interpreter: run.v
+## The interpreter: runT.v
 
 The interpreter is a functor that takes a module of type **Unif** as input.
 Every file working with the interpreter is also a functor expecting **Unif** as
@@ -61,9 +61,9 @@ We represent a tree in a tree-like structure using the `tree` inductive.
 ```coq
 Inductive tree :=
   (* concrete base cases *)
-  | Bot : tree (* the fail predicate *)
+  | KO : tree (* the fail predicate *)
   | Top : tree (* the true predicate *)
-  | Goal : program -> A -> tree (* an atom to be run in a program *)
+  | Goal : program -> A -> tree (* an atom to be runT in a program *)
 
   (* meta-level atoms *)
   | OK : tree    (* a meta tree identifying an explored and successful tree *)
@@ -83,19 +83,19 @@ Inductive tree :=
 The evolution of a tree is achieved through small-step semantics. We define
 three functions and four inductives to animate a program. Specifically:
 
-- **expand_res**:
+- **step_res**:
     ```coq
-    Inductive expand_res :=
+    Inductive step_res :=
     | Expanded    of Sigma & tree
     | CutBrothers of Sigma & tree
-    | Failure     of tree
+    | Failed     of tree
     | Success     of Sigma & tree.
     ```
   This inductive indicates whether a tree evolution succeeds, fails, resolves
   a cut, or processes a non-cut query. It is used by the small-step semantics.
 
-- **expand**: This function is the core of the interpreter. It takes a tree
-  and a substitution, expanding the current tree. If the tree is a meta-level
+- **step**: This function is the core of the interpreter. It takes a tree
+  and a substitution, steping the current tree. If the tree is a meta-level
   tree, it returns either a success with the input substitution and tree or a
   failure with the current tree. If the tree is a concrete base case, it
   returns either `Expanded` or `CutBrother`.
@@ -118,49 +118,49 @@ three functions and four inductives to animate a program. Specifically:
   substitution $s_1$. Reset points in the $\land$ nodes are implicitly equal to
   their right-hand side. For instance, the reset point of the first `And` is
   $r_{12} \land ... \land r_{1x}$. Reset points currently have no role but will
-  be explained in the `next_alt` procedure.
+  be explained in the `prune` procedure.
 
   The expansion for the `Or` tree checks if the left-hand side is dead (i.e.,
-  the tree has been fully explored with failure). If so, it expands the right-
+  the tree has been fully explored with failure). If so, it steps the right-
   hand side of the `Or` with the substitution written in it. Otherwise, it
   explores the left-hand side. Note that within an `Or` node, a **CutBrother**
-  is never returned as `expand_res`. This is because cuts cannot escape an `Or`
+  is never returned as `step_res`. This is because cuts cannot escape an `Or`
   in our language; they are compartmentalized within `And`. If the expansion of
   the left-hand side returns a cut, the right-hand side is **hard-cut** away.
   Hard-cutting replaces all nodes (including reset points in the `And`) with
-  the `Bot` tree.
+  the `KO` tree.
 
-  The expansion for the `And` node first expands the left-hand side. If it
-  resolves successfully, it then expands the right-hand side. If the left-hand
+  The expansion for the `And` node first steps the left-hand side. If it
+  resolves successfully, it then steps the right-hand side. If the left-hand
   side succeeds and the right-hand side turns into a **CutBrother**, the left-
   hand side is **soft-cut** away. Soft-cutting replaces all non-meta-level
-  atoms with `Bot`.
+  atoms with `KO`.
 
 - **exp_res**: This is essentially an enhanced boolean indicating whether the
   execution of a query will eventually succeed or fail (both cases refer to
   outputs without backtracking).
 
-- **expandedb**: This inductive iterates over the `expand` function until it
-  reaches either a **Failure** or a **Success**. The last argument of `expandedb`
+- **expandedb**: This inductive iterates over the `step` function until it
+  reaches either a **Failed** or a **Success**. The last argument of `expandedb`
   is a bool indicating
   whether, during the resolution of the query, there is a superficial cut (i.e.,
   a cut whose effect should be visible outside the current tree).
 
-- **runb**: This inductive represents the interpreter of our language. It
+- **runT**: This inductive represents the interpreter of our language. It
   iterates over **expandedb** until reaching a success. If **expandedb** results
   in a failure, it backtracks and continues calling **expandedb**.
 
-- **next_alt**: Backtracking is enabled by the `next_alt` procedure. It takes a
+- **prune**: Backtracking is enabled by the `prune` procedure. It takes a
   tree and erases (i.e., replaces with `Dead`) the internal nodes representing
   a previous failure. It also returns the substitution for launching the new
-  tree within **runb**. `next_alt` is implemented with knowledge of how
-  `expand` works, choosing which atoms to keep or erase based on their status
+  tree within **runT**. `prune` is implemented with knowledge of how
+  `step` works, choosing which atoms to keep or erase based on their status
   (e.g., `is_dead` or `failed`).
    > Note 1: The function can be significantly simplified under the assumption
    > that the input tree is valid. However, since we want our interpreter to
    > behave correctly in any tree, the function is more complex.
 
-   > Note 2: In `next_alt`, the reset point stored inside the $\land$ nodes is
+   > Note 2: In `prune`, the reset point stored inside the $\land$ nodes is
    > used. When a subtree in the left-hand side of a conjunction is killed,
    > the new left-hand side is launched with the reset point. For example, in
    > the following program:
@@ -190,7 +190,7 @@ three functions and four inductives to animate a program. Specifically:
    > \lor_{X=2} \top) \land_{r X} \bot)$ is returned after calling
    > `clean_success`.
 
-- **clean_success**: This function is used by **runb**. If the interpretation
+- **clean_success**: This function is used by **runT**. If the interpretation
   of a tree succeeds, the returned tree is cleaned of its successful path.
 
 ### Useful lemmas
@@ -201,13 +201,13 @@ The more interesting and used are:
 - the small lemmas in the section `tree_op` relating the success, failed,
   is_dead, cutr and cutl functions. (The is_ko definition is no longer useful,
   it should be cleaned up in a future version)
-- `expand_solved_same : expand s1 A = Success s2 B -> ((s1 = s2) * (A = B))%type.`
-- `expand_solved_success : expand s1 A = Success s2 B -> (success A * success B)%type.` (*which can only return the first projection, due to the previous lemma*)
-- `expand_not_dead : is_dead A = false -> expand s A = r -> is_dead (get_tree r) = false`
-- `expand_failure_failed : expand s1 A = Failure B -> (failed A * failed B)%type.`
--  `failed_expand : failed A -> expand s1 A = Failure A.`
--  `next_alt_none : next_alt s1 A = None -> forall s2, next_alt s2 A = None.`
-- `next_alt_some : next_alt s1 A = Some (s2, B) -> (forall s3, exists s4, next_alt s3 A = Some (s4, B)).`
+- `step_success : step s1 A = Success s2 B -> ((s1 = s2) * (A = B))%type.`
+- `step_solved_success : step s1 A = Success s2 B -> (success A * success B)%type.` (*which can only return the first projection, due to the previous lemma*)
+- `step_not_dead : is_dead A = false -> step s A = r -> is_dead (get_tree r) = false`
+- `step_failure_failed : step s1 A = Failed B -> (failed A * failed B)%type.`
+-  `failed_step : failed A -> step s1 A = Failed A.`
+-  `prune_none : prune s1 A = None -> forall s2, prune s2 A = None.`
+- `prune_some : prune s1 A = Some (s2, B) -> (forall s3, exists s4, prune s3 A = Some (s4, B)).`
 
 > Note: the key of the interpretation of a query is of course the substitution,
 > we haven't really pay lot of attention of it, but looking to the code, we see
@@ -216,18 +216,18 @@ The more interesting and used are:
 
 ## Tests: run_test.v
 
-This file contains tests for the execution of **runb** in a custom environment
+This file contains tests for the execution of **runT** in a custom environment
 where a Unif module is defined for simple term unification. The file is expected
 to pass all tests without issues.
 
-## Properties of run: run_prop.v
+## Properties of runT: run_prop.v
 
 In `run_prop`, we tree properties of the interpreter, proving that `expandedb`
-and `runb` are consistent, i.e., they always produce the same outputs given the
-same inputs (`expanded_consistent` and `run_consistent`).
+and `runT` are consistent, i.e., they always produce the same outputs given the
+same inputs (`expanded_consistent` and `runT_det`).
 
 The `same_structure` postulate asserts that the structure of a tree is
-preserved by `expand` and `expandedb`, i.e., they maintain the structure of
+preserved by `step` and `expandedb`, i.e., they maintain the structure of
 `And` and `Or` nodes.
 
 We prove `expanded_and_complete`:
@@ -307,7 +307,7 @@ produce no choice points.
 
 ```
 Definition is_det A := forall s s' B,
-  run s A s' B -> forall s2, next_alt s2 B = None.
+  runT s A s' B -> forall s2, prune s2 B = None.
 ```
 
 `is_det` asserts that running a tree `A` from a substitution `s` results in a
@@ -322,10 +322,10 @@ tree `B` with no alternatives.
 ## Valid tree: valid_tree.v
 
 The concept of a valid tree has been introduced to model the "real" Elpi
-interpreter. It defines the invariant of the `run` procedure, i.e., the
+interpreter. It defines the invariant of the `runT` procedure, i.e., the
 structure of a tree preserved during goal interpretation.
 
-A valid tree includes `Goals`, `Top`, `Bot`, and `OK`. A `Dead` tree is
+A valid tree includes `Goals`, `Top`, `KO`, and `OK`. A `Dead` tree is
 invalid, since a `Dead` tree is meaningless.
 
 The tree `Or A s B` is valid if:
@@ -333,7 +333,7 @@ The tree `Or A s B` is valid if:
 - Otherwise, `A` is valid, and `B` remains untouched. `B` must be a basic `Or`
   tree or a `bbOr` tree, which is either a disjunction of conjunctions where
   each conjunction is a `Goal`, or a disjunction of conjunctions where each
-  conjunction is `Bot` (to account for superficial cuts in `A` that could
+  conjunction is `KO` (to account for superficial cuts in `A` that could
   invalidate `B`).
 
 The tree `And A B0 B` is valid if:
@@ -342,17 +342,17 @@ The tree `And A B0 B` is valid if:
   - Otherwise, `B` equals `B0`, as it has not been explored yet.
 
 Additionally, the reset point must be a basic `And` tree, or a `bbAnd` tree,
-which is a conjunction of `Goals` or a conjunction of `Bot`.
+which is a conjunction of `Goals` or a conjunction of `KO`.
 
 We prove the following properties:
 
 - `bbAnd_valid`: `bbAnd B -> valid_tree B.`
 - `bbOr_valid`: `bbOr B -> valid_tree B.`
-- `valid_tree_expand`: `valid_tree A -> expand s A = r -> valid_tree (get_tree r).`
+- `valid_tree_step`: `valid_tree A -> step s A = r -> valid_tree (get_tree r).`
 - `valid_tree_expanded`: `valid_tree A -> expandedb s1 A r -> valid_tree (get_tree_exp r).`
-- `valid_tree_next_alt`: `valid_tree A -> next_alt s1 A = Some (s2, B) -> valid_tree B.`
+- `valid_tree_prune`: `valid_tree A -> prune s1 A = Some (s2, B) -> valid_tree B.`
 - `valid_tree_clean_success`: `valid_tree A -> valid_tree (clean_success A).`
-- `valid_tree_run`: `valid_tree A -> run s1 A s2 B -> valid_tree B.`  
+- `valid_tree_run`: `valid_tree A -> runT s1 A s2 B -> valid_tree B.`  
 
 
 ## Elpi interpreter: elpi.v
@@ -386,15 +386,15 @@ Definition a2g p A :=
 
 The interpreter is defined as:
 ```coq
-Inductive nur : Sigma -> list G -> list alt -> Sigma -> list alt -> Prop :=
-| StopE s a : nur s [::] a s a
-| CutE s s1 a ca r gl : nur s gl ca s1 r -> nur s [:: cut ca & gl] a s1 r
-| CallE p s s1 a b bs gl r t :
+Inductive runS : Sigma -> list G -> list alt -> Sigma -> list alt -> Prop :=
+| StopS s a : runS s [::] a s a
+| CutS s s1 a ca r gl : runS s gl ca s1 r -> runS s [:: cut ca & gl] a s1 r
+| CallS p s s1 a b bs gl r t :
     F p t s = [:: b & bs ] ->
-    nur s (save_alt a (a2gs p b) gl) (more_alt a (map (a2gs p) bs) gl) s1 r ->
-    nur s [::call p t & gl] a s1 r
-| FailE p s s1 t gl a al r :
-    F p t s = [::] -> nur s a al s1 r -> nur s [::call p t & gl] (a :: al) s1 r.
+    runS s (save_alt a (a2gs p b) gl) (consA a (map (a2gs p) bs) gl) s1 r ->
+    runS s [::call p t & gl] a s1 r
+| BackE p s s1 t gl a al r :
+    F p t s = [::] -> runS s a al s1 r -> runS s [::call p t & gl] (a :: al) s1 r.
 ```
 > TODO: *The substitutions are incorrect; they should be stored in the
 disjuncts.*
@@ -406,13 +406,13 @@ Definition add_ca alts a :=
   | call pr t => call pr t
   end.
 Definition save_alt a gs b := map (add_ca a) b ++ gs.
-Definition more_alt a bs gs := map (save_alt a gs) bs ++ a.
+Definition consA a bs gs := map (save_alt a gs) bs ++ a.
 ```
 
-The interesting case in `CallE` involves finding the rules applicable to a term `t` in
+The interesting case in `CallS` involves finding the rules applicable to a term `t` in
 a program `p`. Since the term and program types originate from `lang`, we reuse
 `F` to find these rules. The list of goals is then updated using auxiliary
-functions `add_ca`, `save_alt`, and `more_alt`.
+functions `add_ca`, `save_alt`, and `consA`.
 
 ### Tree_to_list
 
@@ -429,7 +429,7 @@ Fixpoint tree_to_list_aux A bt :=
   match A with
   | OK => [::[::]]
   | Top => [::[::]]
-  | Bot => [::]
+  | KO => [::]
   | Dead => [::]
   | Goal _ Cut => [::[::cut' false [::]]]
   | Goal pr (Call t) => [::[::call' pr t]]
@@ -453,9 +453,9 @@ The function takes a tree and a list of alternatives (`bt` for backtrack
 points), which are used to construct the "cut-to" in `Or` nodes. Initially,
 `bt` is an empty list.
 
-The `OK` and `Top` nodes represent future success in `runb`, so they are
+The `OK` and `Top` nodes represent future success in `runT`, so they are
 collapsed into `[::[::]]`, corresponding to success in the list semantics.
-Similarly, `Dead` and `Bot` represent future failures and are translated into
+Similarly, `Dead` and `KO` represent future failures and are translated into
 an empty list.
 
 To distinguish superficial cuts from deep cuts (i.e., cuts whose effects are
@@ -521,7 +521,7 @@ Definition add_alt (x: alt') (xs lB0 lB:list alt') : list alt' :=
       | [::] => [::]
       end
   | [::] =>
-      (* If the reset point is nil, xs are killed (append Bot to all alternatives). *)
+      (* If the reset point is nil, xs are killed (append KO to all alternatives). *)
       [seq x ++ y | y <- lB]
   | _ => [::] (* Unreachable. *)
   end.
@@ -596,7 +596,7 @@ When verifying suffixes, the boolean is removed from the lists using the
 `G2Gs` function.
 
 In the rest of the file, we prove several properties relating a tree `A` and
-a tree `B` that are connected through calls to `next_alt`, `expand`,
+a tree `B` that are connected through calls to `prune`, `step`,
 `expandedb`, and similar functions.
 
 ## Tree to list tests: elpi_test.v
@@ -612,12 +612,12 @@ The primary lemma we aim to prove is as follows:
 Lemma runElpi A :
   forall s B s1 b,
     valid_tree A ->
-    runb s A s1 B b ->
+    runT s A s1 B b ->
       exists x xs, tree_to_list A [::] = x :: xs /\
-        nur s x xs s1 (tree_to_list B [::]).
+        runS s x xs s1 (tree_to_list B [::]).
 ```
 
-The proof proceeds by induction on `runb`, addressing the cases of success and
+The proof proceeds by induction on `runT`, addressing the cases of success and
 backtracking separately. These cases are handled using auxiliary lemmas.
 
 # WIP:
@@ -639,4 +639,3 @@ list `x::xs`, then `x` should treat `B` as its natural execution tail, while
 `xs` should use `B0` as its execution tail. This implies that `B0` is appended
 as a tail-conjunct to all cut-to alternatives in `x` and `xs` that do not
 come from `C`.
-

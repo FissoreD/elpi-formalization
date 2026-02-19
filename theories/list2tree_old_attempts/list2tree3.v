@@ -7,14 +7,14 @@ From det Require Import zify_ssreflect.
 
 Fixpoint a2t_ l :=
   match l with
-  | no_alt => Bot
-  | more_alt (s1, x) t =>
-    Or Bot s1 (Or (gs2t_ x) empty (a2t_ t))
+  | nilA => Bot
+  | consA (s1, x) t =>
+    Or KO s1 (Or (gs2t_ x) empty (a2t_ t))
   end
 with gs2t_ l :=
   match l with
-  | no_goals => Top
-  | more_goals x xs => 
+  | nilG => Top
+  | consG x xs => 
     let tl := gs2t_ xs in
     match (g2t_ x) with
     | (x, None) => And x tl tl 
@@ -55,7 +55,7 @@ Section s.
   Goal exists x, (a2t_ ((s, (c ::: (q:::nilC))) ::: nilC)) = x.
   Proof. move=> /=. Admitted.
 
-  Goal exists x, a2t_ ((s, (c ::: nilC)) ::: ((s, (q ::: nilC)) ::: no_alt)) = x.
+  Goal exists x, a2t_ ((s, (c ::: nilC)) ::: ((s, (q ::: nilC)) ::: nilA)) = x.
   Proof. move=> /=. Admitted.
 
   Goal
@@ -72,28 +72,28 @@ Section s.
     move=>/=.
     set X:= And _ _ Top.
     set Y:= And _ _ X.
-    set Z:= Or _ _ Bot.
+    set Z:= Or _ _ KO.
     set W:= And _ _ Top.
     set T:= And _ _ W.
   Abort.
 
   Goal
   (* original (OK \/ A) /\_B OK *)
-  (* produces is : (Bot \/ Top) \/ AB *)
+  (* produces is : (KO \/ Top) \/ AB *)
   let f x := (CallS p x) in
   a2t_ (of_alt [::[::]; [::call p A; call p B]]) = 
-    Or Bot empty
+    Or KO empty
   (Or Top empty
-     (Or Bot empty
+     (Or KO empty
         (Or
            (And (CallS p A) (And (CallS p B) Top Top)
               (And (CallS p B) Top Top))
-           empty Bot))) .
+           empty KO))) .
   Proof.
     move=>/=.
     set X:= And _ _ Top.
     set Y:= And _ _ X.
-    set Z:= Or _ _ Bot.
+    set Z:= Or _ _ KO.
     move=>//.
   Qed.
 End s.
@@ -118,8 +118,8 @@ Proof.
   - move=> /=. *)
   
 
-Lemma expand_a2t {u ign1 L}: 
-  expand u ign1 (a2t_ L) = Failure (a2t_ L).
+Lemma step_a2t {u ign1 L}: 
+  step u ign1 (a2t_ L) = Failed (a2t_ L).
 Proof. case: L => //=-[]//. Qed.
 
 Lemma expanded_a2t u ign1 L:
@@ -127,11 +127,11 @@ Lemma expanded_a2t u ign1 L:
 Proof. case: L => [|[s g]gs]/=; constructor => //. Qed.
 
 Lemma run_a2t_ign {u s2 D b2 sIgn1 L} sIgn2:
-  runb u sIgn1 (a2t_ L) s2 D b2 ->
-    Texists b2, runb u sIgn2 (a2t_ L) s2 D b2.
+  run u sIgn1 (a2t_ L) s2 D b2 ->
+    Texists b2, run u sIgn2 (a2t_ L) s2 D b2.
 Proof.
   case: L => //=.
-    move=> /is_ko_runb -/(_ isT)//.
+    move=> /is_ko_run -/(_ isT)//.
   move=> [s g]gs.
   set X:= (Or _ empty _); generalize X; clear X => X H.
   apply: run_or_is_ko_left_ign_subst _ H => //.
@@ -139,9 +139,9 @@ Qed.
 
 Lemma run_success_add_ca_deep {u s s1 B D bt bt1 res b}:
   success B ->
-    runb u s1 (a2t_ (state_to_list B s bt)) res D b ->
+    run u s1 (a2t_ (state_to_list B s bt)) res D b ->
     Texists D0 b0,
-      runb u s1 (a2t_ (add_ca_deep bt1 (state_to_list B s bt))) res D0 b0 .
+      run u s1 (a2t_ (add_ca_deep bt1 (state_to_list B s bt))) res D0 b0 .
 Proof.
   elim: B s s1 D bt bt1 res b => //=.
   - move=> s s1 D _ _ res b _.
@@ -154,14 +154,14 @@ Admitted.
 
 Lemma run_a2t_success {C} u s1 bt:
   success C ->
-  Texists D b2, runb u s1 (a2t_ (state_to_list C s1 bt)) (get_substS s1 C) D b2.
+  Texists D b2, run u s1 (a2t_ (state_to_list C s1 bt)) (next_substS s1 C) D b2.
 Proof.
   elim: C s1 bt => //=.
   - move=> s1 _; do 2 eexists.
     apply: run_backtrack => //.
     - apply: expanded_fail => //.
     - move=> //=.
-    - apply: run_done => //.
+    - apply: StopT => //.
     - apply: expanded_step => //.
       apply: expanded_done => //.
   - move=> A HA s B HB s1 bt.
@@ -175,19 +175,19 @@ Proof.
   - move=> A HA B0 _ B HB.
 Admitted.
 
-Lemma runb_a2t_expandedb {u s A s' B b bt}:
+Lemma run_a2t_expandedb {u s A s' B b bt}:
   valid_state A ->
   expandedb u s A (Done s' B) b ->
     Texists C b2,
-    runb u s (a2t_ (state_to_list A s bt)) s' C b2.
+    run u s (a2t_ (state_to_list A s bt)) s' C b2.
 Proof.
   remember (Done _ _) as d eqn:Hd => +H.
   elim: H s' B Hd; clear => //=.
   - move=> s1 s2 A B HA s3 C [??]vA; subst.
-    have [[??] sC]:= expand_solved_same _ HA; subst.
+    have [[??] sC]:= step_success _ HA; subst.
     apply: run_a2t_success sC.
   - move=> s1 s2 r A B b HA HB IH s3 C ? vA; subst.
-    have /=vB := valid_state_expand _ vA HA.
+    have /=vB := valid_state_step _ vA HA.
     have {IH} := IH _ _ erefl vB.
     have [x[tl[H1 [H2 H3]]]]:= s2l_CutBrothers _ s1 bt vA HA.
     rewrite H1 H2/=.
@@ -197,8 +197,8 @@ Proof.
     inversion H; subst; clear H => //.
     move: H8 => //[?]; subst.
     move: H0 => /=; rewrite andbF; case: ifP => //dx.
-    case X: next_alt => //[x'][?]; subst.
-    have [H5 H6]:= expand_cb_same_subst1 _ vA HA; subst.
+    case X: prune => //[x'][?]; subst.
+    have [H5 H6]:= step_cb_same_subst1 _ vA HA; subst.
     have:= run_dead_left1 _ _ H4 => /= /(_ isT) [b1[r' [Hx Hy]]].
     do 2 eexists.
     apply: run_backtrack => //.
@@ -208,26 +208,26 @@ Proof.
       apply: run_or_correct_left.
       admit.
   - move=> s1 s2 r A B b HA HB IH s3 C ? vA; subst.
-    have [D[b2 {}IH]]:= IH _ _ erefl (valid_state_expand _ vA HA).
+    have [D[b2 {}IH]]:= IH _ _ erefl (valid_state_step _ vA HA).
     admit.
 Admitted.
 
 Inductive equiv_run : state -> state -> Prop :=
   | equiv_run_fail u s A B : dead_run u s A -> dead_run u s B -> equiv_run A B
   | equiv_run_success u s1 s2 A B A' B' b1 b2 :
-    runb u s1 A s2 (Some A') b1 -> runb u s1 B s2 (Some B') b2 -> equiv_run A' B' -> equiv_run A B.
+    run u s1 A s2 (Some A') b1 -> run u s1 B s2 (Some B') b2 -> equiv_run A' B' -> equiv_run A B.
 
 Lemma xx u s1 s2 A B b1: 
   valid_state A ->
-  runb u s1 A s2 B b1 -> 
-    Texists C b2, runb u s1 (a2t_ (state_to_list A s1 nilC)) s2 C b2. (*/\ equiv_run B C*)
+  run u s1 A s2 B b1 -> 
+    Texists C b2, run u s1 (a2t_ (state_to_list A s1 nilC)) s2 C b2. (*/\ equiv_run B C*)
 Proof.
   move=> +H; elim: H; clear.
   - move=> s s' A B C b HA HB vA.
-    apply: runb_a2t_expandedb vA HA.
+    apply: run_a2t_expandedb vA HA.
   - move=> s1 s2 A B C r b1 b2 b3 HA HB HC IH ? vA; subst.
     have /= vB := valid_state_expanded _ vA HA.
-    have vC := valid_state_next_alt vB HB.
+    have vC := valid_state_prune vB HB.
     have [r'[bx {}IH]]:= IH vC.
     repeat eexists.
     apply: run_backtrack IH erefl.
@@ -236,8 +236,8 @@ Admitted.
 
 Lemma zz u s1 s2 A B b1 bt: 
   valid_state A ->
-  runb u s1 A s2 B b1 -> 
-    Texists C b2, runb u s1 (a2t_ (state_to_list A s1 bt)) s2 C b2. (*/\ equiv_run B C*)
+  run u s1 A s2 B b1 -> 
+    Texists C b2, run u s1 (a2t_ (state_to_list A s1 bt)) s2 C b2. (*/\ equiv_run B C*)
 Proof.
   elim: A B s1 s2 b1 bt => //=.
   - by repeat eexists; eauto.
@@ -249,7 +249,7 @@ Proof.
       apply: run_backtrack erefl.
         apply: expanded_fail => //.
         move=> //.
-      apply : run_done erefl.
+      apply : StopT erefl.
       apply: expanded_step => //=.
       apply: expanded_done => //=.
     inversion H0 => //.
@@ -266,7 +266,7 @@ Proof.
     apply: run_backtrack erefl.
       apply: expanded_fail => //.
       move=>//.
-    apply: run_done => //.
+    apply: StopT => //.
     apply: expanded_step => //.
     apply: expanded_done => //.
   - move=> p c r s1 s2 b bt _ H.
@@ -298,10 +298,10 @@ Proof.
   (* OLD PROOF *)
   (* move=> +H; elim: H; clear.
   - move=> s s' A B C b HA HB vA.
-    apply: runb_a2t_expandedb vA HA.
+    apply: run_a2t_expandedb vA HA.
   - move=> s1 s2 A B C r b1 b2 b3 HA HB HC IH ? vA; subst.
     have /= vB := valid_state_expanded _ vA HA.
-    have vC := valid_state_next_alt vB HB.
+    have vC := valid_state_prune vB HB.
     have [r'[bx {}IH]]:= IH vC.
     repeat eexists.
     apply: run_backtrack IH erefl. *)

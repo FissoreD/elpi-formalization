@@ -6,18 +6,18 @@ From det Require Import zify_ssreflect.
 
 (* Fixpoint list_to_state (l: alts) : state :=
   match l with
-  | no_alt => Bot
-  | more_alt x no_alt => 
-    let l := goals_to_state x.2 Bot in
-    Or Bot x.1 l
-  | more_alt x (more_alt y ys as t) => 
+  | nilA => Bot
+  | consA x nilA => 
+    let l := goals_to_state x.2 KO in
+    Or KO x.1 l
+  | consA x (consA y ys as t) => 
     let t := goals_to_state x.2 (list_to_state t) in
-    Or Bot x.1 t
+    Or KO x.1 t
   end
 with goals_to_state (l:goals) t: (state):=
   match l with
-  | no_goals => (Or Top empty t)
-  | more_goals x xs => 
+  | nilG => (Or Top empty t)
+  | consG x xs => 
     let '(l, tca) := goal_to_state x in
     let r := goals_to_state xs t  in
       (And l l r)
@@ -33,11 +33,11 @@ Inductive G' :=
   | call' : program -> Callable -> G'
   | cut' : alts' -> G'
 with alts' :=
-  | no_alt'
-  | more_alt' : (nat * Sigma * goals') -> alts' -> alts'
+  | nilA'
+  | consA' : (nat * Sigma * goals') -> alts' -> alts'
 with goals' :=
-  | no_goals'
-  | more_goals' : (nat * G') -> goals' -> goals' 
+  | nilG'
+  | consG' : (nat * G') -> goals' -> goals' 
   .
 
 Fixpoint erase_G' (g : G') : G :=
@@ -47,19 +47,19 @@ Fixpoint erase_G' (g : G') : G :=
   end
 with erase_alts' (a : alts') : alts := 
   match a with
-  | no_alt' => nilC
-  | more_alt' (_, s,gl') a' => (s,erase_goals' gl') ::: (erase_alts' a')
+  | nilA' => nilC
+  | consA' (_, s,gl') a' => (s,erase_goals' gl') ::: (erase_alts' a')
   end
 with erase_goals' (a : goals') : goals :=
   match a with
-  | no_goals' => nilC
-  | more_goals' (_, g') a' => (erase_G' g') ::: (erase_goals' a')
+  | nilG' => nilC
+  | consG' (_, g') a' => (erase_G' g') ::: (erase_goals' a')
   end.
 
   Fixpoint append_alts' l1 l2 := 
     match l1 with
-    | no_alt' => l2
-    | more_alt' (n, hd) tl => more_alt' (n, hd) (append_alts' tl l2)
+    | nilA' => l2
+    | consA' (n, hd) tl => consA' (n, hd) (append_alts' tl l2)
     end.
 
     Axiom eqb_alts' : alts' -> alts' -> bool.
@@ -74,14 +74,14 @@ with erase_goals' (a : goals') : goals :=
 
   Fixpoint map_alts' F l :=
     match l with
-    | no_alt' => no_alt'
-    | more_alt' x xs => more_alt' (F x) (map_alts' F xs)
+    | nilA' => nilA'
+    | consA' x xs => consA' (F x) (map_alts' F xs)
     end.
 
 
   #[program] Global Instance IsList_alts' : @IsList (nat * Sigma * goals') alts' :=
     {| 
-    nilC := no_alt'; consC := more_alt';
+    nilC := nilA'; consC := consA';
     appendC := append_alts'; 
     map := map_alts';
     (*size := _; take := _; drop := _;
@@ -92,20 +92,20 @@ with erase_goals' (a : goals') : goals :=
 
   Fixpoint append_goals' l1 l2 := 
     match l1 with
-    | no_goals' => l2
-    | more_goals' (n, hd) tl => more_goals' (n, hd) (append_goals' tl l2)
+    | nilG' => l2
+    | consG' (n, hd) tl => consG' (n, hd) (append_goals' tl l2)
     end.
 
   Fixpoint map_goals' F l :=
     match l with
-    | no_goals' => no_goals'
-    | more_goals' x xs => more_goals' (F x) (map_goals' F xs)
+    | nilG' => nilG'
+    | consG' x xs => consG' (F x) (map_goals' F xs)
     end.
 
 
   #[program] Global Instance IsList_goals' : @IsList _ _ :=
     {| 
-    nilC := no_goals'; consC := more_goals';
+    nilC := nilG'; consC := consG';
     appendC := append_goals';
     map := map_goals';
     (*size := _; take := _; drop := _;
@@ -120,10 +120,10 @@ Definition add_ca' alts a : (nat * _) :=
   | (n, call' pr t) => (n, call' pr t)
   end.
 
-Definition save_goals' (a: alts') (gs b:goals') := map (add_ca' a) b ++ gs.
+Definition save_gs' (a: alts') (gs b:goals') := map (add_ca' a) b ++ gs.
 
-Definition save_alts' (a : alts') (gs: goals') (bs : alts') := 
-  map (fun '((n,s,x): nat * Sigma * goals') => (n, s, save_goals' a gs x)) bs.
+Definition save_as' (a : alts') (gs: goals') (bs : alts') := 
+  map (fun '((n,s,x): nat * Sigma * goals') => (n, s, save_gs' a gs x)) bs.
 
   Definition a2g' p A :=
   match A with
@@ -153,15 +153,15 @@ Definition same' x y := erase_alts' x = erase_alts' y.
 
 Definition hd' x y ys := erase_goals' x = (erase_G' y) ::: (erase_goals' ys).
 
-Inductive nur' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Type :=
-| StopE' s a : nur' s nilC a s a
-| CutE' s s1 a ca r gl n1 : nur' s gl ca s1 r -> nur' s ((n1, cut' ca) ::: gl) a s1 r
-| CallE' p s s1 a b bs gl r t n1: 
+Inductive runS' u : Sigma -> goals' ->  alts' -> Sigma -> alts' -> Type :=
+| StopS' s a : runS' s nilC a s a
+| CutS' s s1 a ca r gl n1 : runS' s gl ca s1 r -> runS' s ((n1, cut' ca) ::: gl) a s1 r
+| CallS' p s s1 a b bs gl r t n1: 
   F u p t s = [:: b & bs ] -> 
-    nur' b.1 (save_goals' a gl (a2gs1' n1.+1 p b)) (save_alts' a gl ((aa2gs' n1.+1 p) bs) ++ a) s1 r -> 
-      nur' s ((n1, call' p t) ::: gl) a s1 r
-| FailE' p s s1 s2 t gl a al r n n1 : 
-  F u p t s = [::] -> nur' s1 a al s2 r -> nur' s ((n, call' p t) ::: gl) ((n1, s1, a) ::: al) s2 r.
+    runS' b.1 (save_gs' a gl (a2gs1' n1.+1 p b)) (save_as' a gl ((aa2gs' n1.+1 p) bs) ++ a) s1 r -> 
+      runS' s ((n1, call' p t) ::: gl) a s1 r
+| BackE' p s s1 s2 t gl a al r n n1 : 
+  F u p t s = [::] -> runS' s1 a al s2 r -> runS' s ((n, call' p t) ::: gl) ((n1, s1, a) ::: al) s2 r.
 
 (* Lemma listP' {l x xs} : erase_goals' l = x ::: xs ->
   exists y ys, erase_goals' l = (erase_G' y) ::: (erase_goals' ys).
@@ -174,13 +174,13 @@ Fixpoint decorate_G (g : G) : G' :=
   end
 with decorate_alts (a : alts) : alts' :=
   match a with
-  | no_alt => nilC
-  | more_alt (s,gl) a => (0, s,decorate_goals gl) ::: (decorate_alts a)
+  | nilA => nilC
+  | consA (s,gl) a => (0, s,decorate_goals gl) ::: (decorate_alts a)
   end
 with decorate_goals (a : goals) : goals' :=
   match a with
-  | no_goals => nilC
-  | more_goals g a => (0, decorate_G g) ::: (decorate_goals a)
+  | nilG => nilC
+  | consG g a => (0, decorate_G g) ::: (decorate_goals a)
   end.
 
 Lemma erase_decorate_G x : erase_G' (decorate_G x) = x
@@ -193,8 +193,8 @@ Qed.
 
 Definition ed := (erase_decorate_alts, erase_decorate_goals, erase_decorate_G).
 
-Notation elpi_annot := nur'.
-Notation elpi := nur.
+Notation elpi_annot := runS'.
+Notation elpi := runS.
 
 (* Lemma e erase_goals' (map (add_ca' a)) = mapG (add_ca (erase_alts' a)) *)
 
@@ -207,25 +207,25 @@ Admitted.
 Lemma cat_erase_alts' a x : erase_alts' a ++ erase_alts' x = erase_alts' (a ++ x).
 Admitted.
 
-Lemma save_alts_erase x y gl :
-  save_alts (erase_alts' x) (erase_goals' y) (erase_alts' gl) =
-  erase_alts' (save_alts' x y gl)
-with save_goals_erase x y gl :
-  save_goals (erase_alts' x) (erase_goals' y) (erase_goals' gl) =
-  erase_goals' (save_goals' x y gl).
-- rewrite /save_alts.
+Lemma save_as_erase x y gl :
+  save_as (erase_alts' x) (erase_goals' y) (erase_alts' gl) =
+  erase_alts' (save_as' x y gl)
+with save_gs_erase x y gl :
+  save_gs (erase_alts' x) (erase_goals' y) (erase_goals' gl) =
+  erase_goals' (save_gs' x y gl).
+- rewrite /save_as.
   case: gl => //= -[[? s] gl] a.
   rewrite map_cons.
   congr ((_,_) ::: _).
-    by rewrite save_goals_erase.
-  by rewrite [LHS]save_alts_erase.
+    by rewrite save_gs_erase.
+  by rewrite [LHS]save_as_erase.
 - case: gl => //= -[? g gs] //=.
-  rewrite /save_goals /save_goals' !map_cons /= [in RHS]cat_cons /=.
+  rewrite /save_gs /save_gs' !map_cons /= [in RHS]cat_cons /=.
   rewrite cat_cons.
   case: g => /= [p c|a].
   congr (_ ::: _).
-    by rewrite -save_goals_erase.
-  congr ((cut _) ::: _); try rewrite -save_goals_erase //.
+    by rewrite -save_gs_erase.
+  congr ((cut _) ::: _); try rewrite -save_gs_erase //.
   exact: cat_erase_alts'.
 Qed.
 
@@ -234,56 +234,56 @@ Admitted.
 Lemma a2gs1_erase n p bs : (a2gs1 p bs) = erase_goals' (a2gs1' n p bs).
 Admitted.
 
-Lemma one u s xs a s1 a1: nur' u s xs a s1 a1 -> 
-  nur u s (erase_goals' xs) (erase_alts' a) s1 (erase_alts' a1).
+Lemma one u s xs a s1 a1: runS' u s xs a s1 a1 -> 
+  runS u s (erase_goals' xs) (erase_alts' a) s1 (erase_alts' a1).
 Proof.
   elim => /=; clear.
   - move=> *; constructor.
   - move=> *; constructor => //.
   - move=> p s s1 a [s2 r] rs gl a1 t n/= H H1 H2.
-    apply: CallE H _ => /=.
+    apply: CallS H _ => /=.
     move: H2.
-    rewrite/save_goals/=/map/=/save_goals'/=.
-    rewrite -!save_goals_erase => H.
+    rewrite/save_gs/=/map/=/save_gs'/=.
+    rewrite -!save_gs_erase => H.
     congr (elpi _ _ _ _ _) : H.
-      by rewrite /save_goals/map/= -a2gs1_erase.
-    by rewrite (aa2gs_erase n.+1) save_alts_erase cat_erase_alts'.
+      by rewrite /save_gs/map/= -a2gs1_erase.
+    by rewrite (aa2gs_erase n.+1) save_as_erase cat_erase_alts'.
   - move=> p s s1 s2 t gl a al r _ _ H H1 H2.
-    apply: FailE H H2.
+    apply: BackE H H2.
 Qed.
 
 
-Lemma two' {u s s1 alts alts_left andg}  : nur u s andg alts s1 alts_left -> forall alts' andg',
+Lemma two' {u s s1 alts alts_left andg}  : runS u s andg alts s1 alts_left -> forall alts' andg',
   (erase_alts' alts' = alts) -> 
   (erase_goals' andg' = andg) ->
   Texists alts_left',
-  (erase_alts' alts_left' = alts_left) /\ (nur' u s andg' alts' s1 alts_left').
+  (erase_alts' alts_left' = alts_left) /\ (runS' u s andg' alts' s1 alts_left').
 elim; clear.
 
 move=> s a a' [|[]//] ? _; subst.
-by eexists; split => //; apply: StopE'.
+by eexists; split => //; apply: StopS'.
 
 move=> s s1 a ca r gl H IH ? [|[n g gs]]// H1 [H2 H3].
 case: g H2 => //= [? [?]]; subst.
 have [x [? ?]] := IH _ _ erefl erefl.
 subst.
 eexists; split => //.
-by apply: CutE'.
+by apply: CutS'.
 
 move=> p s1 s2 old_alts [s0 b0]/= bs andg new_alts c EF He IH old_alts' [|[n [p'|ct]] c'] // andg' E1 /= [-> ->] E2.
 subst.
-rewrite (aa2gs_erase n.+1) save_alts_erase cat_erase_alts' in IH.
+rewrite (aa2gs_erase n.+1) save_as_erase cat_erase_alts' in IH.
 have {}IH:= (IH _ _ erefl).
-rewrite (a2gs1_erase n.+1) save_goals_erase in IH.
+rewrite (a2gs1_erase n.+1) save_gs_erase in IH.
 have {IH} [new_alts' [H1 H2]]:= (IH _ erefl).
 eexists; split; try eassumption.
-apply: CallE' EF H2 => /=.
+apply: CallS' EF H2 => /=.
 
 move=> p s s1 s2 c gl gl1 al al1 BC H1 IH [//|[[]]] /= n s3 g' a' [//|[m [|]//]] p' c' g'' [???] [???].
 subst.
 have [new_alts' [? ?]] := (IH _ _ erefl erefl).
 eexists; split; try eassumption.
-by apply: FailE' BC _  => /=.
+by apply: BackE' BC _  => /=.
 
 Defined.
 
@@ -328,13 +328,13 @@ Qed.
 
 Fixpoint la2t (a : alts') : state :=
   match a with
-  | no_alt' => Bot
-  | more_alt' (n,s,gl) a => g2t gl
+  | nilA' => Bot
+  | consA' (n,s,gl) a => g2t gl
   end
 with g2t (g : goals') : state :=
   match g with
-  | no_goals' => Top
-  | more_goals' (n,g) gs => G2t g
+  | nilG' => Top
+  | consG' (n,g) gs => G2t g
   end
 with G2t (g : G') : state :=
   match g with
@@ -345,7 +345,7 @@ end
 
 
 Definition l2tP {u s xs a s' a'} : elpi_annot u s xs a s' a' ->
-  Texists b n, runb u s (la2t ((n,s,xs):::a)) s' (la2t a') b.
+  Texists b n, run u s (la2t ((n,s,xs):::a)) s' (la2t a') b.
 Admitted.
 
 Lemma init_valid  u s g a s1 a1 (H : elpi u s g a s1 a1) :
@@ -353,7 +353,7 @@ Lemma init_valid  u s g a s1 a1 (H : elpi u s g a s1 a1) :
 Admitted.
 
 Lemma final p u s c s1 a1 (H : elpi u s ((call p c):::nilC) nilC s1 a1) :
-  runb u s (CallS p c) s1 (la2t (annotate_left_alts H)) 0.
+  run u s (CallS p c) s1 (la2t (annotate_left_alts H)) 0.
 Proof.
   have H' := l2l'P H.
   have [b [n H1]] := l2tP H'.

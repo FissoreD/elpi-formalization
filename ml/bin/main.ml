@@ -44,7 +44,7 @@ let _ =
 
 let _ =
   tester_pr (
-    let left = Bot ^| f xA in
+    let left = KO ^| f xA in
     let right = f xC ^| f xD in
     build_and1 left (f xC) right)
 

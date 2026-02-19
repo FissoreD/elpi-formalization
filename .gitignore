@@ -22,3 +22,4 @@ _opam
 **/*.vo
 **/*.generate
 **/_build
+**/tex_code

@@ -1,22 +1,18 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang tree tree_prop.
+From det Require Import finmap ctx lang tree.
 
-Notation "X &&& Y" := (And X _ Y) (at level 3).
-Notation "X ||[ Y s ]" := (Or X s Y) (at level 3).
-Notation "` X" := ((ACall X)) (at level 3).
-
-Definition empty_sig : sigT := fun _ => b(d Func).
+Definition prop := b (d Pred).
+Definition build_arr := arr prop prop.
 
 Definition build_progr l := {|
-    modes := (fix rec t := match t with RCallable_Comb h _ => o :: rec h | RCallable_Kp _ => [::] end);
-    sig := empty_sig;
-    rules := l;
+  sig := [fmap].[IP false <- (0, build_arr)].[IP 1 <- (0, build_arr)].[IP 2 <- (0, build_arr)].[IP 200 <- (0, prop)];
+  rules := l;
 |}.
 
 Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
   match t1, t2 with
-  | Tm_V X, _ => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t2 else s.(sigma) x) |} | Some t => if t == t2 then Some s else None end
-  | _, Tm_V X => match s.(sigma) X with None => Some {| sigma := (fun x => if x == X then Some t1 else s.(sigma) x) |} | Some t => if t == t1 then Some s else None end
+  | Tm_V X, _ => match lookup X s with None => Some (add X t2 s) | Some t => if t == t2 then Some s else None end
+  | _, Tm_V X => match lookup X s with None => Some (add X t2 s) | Some t => if t == t1 then Some s else None end
   | _, _ => if t1 == t2 then Some s else None
   end.
 
@@ -27,116 +23,242 @@ Definition unif : Unif := {|
   matching := matchingF;
 |}.
 
-Definition r := (IKp 2).
-Definition p := (IKp 1).
-Definition q := (IKp 0).
+Definition r := (IP 2).
+Definition p := (IP 1).
+Definition q := (IP false).
 
-Definition v_X := Tm_V (IV 0).
-Definition pred_q x  := Tm_Comb (Tm_Kp p) x.
-Definition pred_p x  := Tm_Comb (Tm_Kp q) x.
-Definition pred_r x  := Tm_Comb (Tm_Kp r) x.
-Definition pred_fail := Tm_Kp (IKp 100).
+Definition v_X := Tm_V (IV false).
+Definition pred_q x  := Tm_App (Tm_P p) x.
+Definition pred_p x  := Tm_App (Tm_P q) x.
+Definition pred_r x  := Tm_App (Tm_P r) x.
+Definition pred_fail := Tm_P (IP 100).
 
-Definition s1 := {| sigma := (fun x => if x == IV 0 then Some (Tm_Kd (IKd 1)) else None) |}.
-Definition s2 := {| sigma := (fun x => if x == IV 0 then Some (Tm_Kd (IKd 2)) else None) |}.
+Definition s1 : Sigma := [fmap].[fresh [fset IV false] <- Tm_D (ID 1)].
+Definition s2 : Sigma := [fmap].[fresh [fset IV false] <- Tm_D (ID 2)].
 
 Section Test1.
 
   Definition p_test : program := build_progr [:: 
-      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 1))) [::] ;
-      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 2))) [::] ;
-      mkR (RCallable_Comb (RCallable_Kp r) (Tm_Kd (IKd 2))) [::] ;
-      mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1)))
-        [:: ACall (Callable_Comb (Callable_Kp p) v_X) ; ACall (Callable_Comb (Callable_Kp r) v_X) ] 
+      mkR (Tm_App (Tm_P p) (Tm_D (ID 1))) [::] ;
+      mkR (Tm_App (Tm_P p) (Tm_D (ID 2))) [::] ;
+      mkR (Tm_App (Tm_P r) (Tm_D (ID 2))) [::] ;
+      mkR (Tm_App (Tm_P q) (Tm_D (ID 1)))
+        [:: call (Tm_App (Tm_P p) v_X) ; call (Tm_App (Tm_P r) v_X) ] 
     ].
 
-
-  Goal Texists r, runb unif empty (CallS p_test (Callable_Comb (Callable_Kp q) (Tm_Kd (IKd 1)))) (Some s2) r 0.
+  (* Goal unify unif v_X (Tm_D (ID 1)) empty = Some s1.
   Proof.
-    eexists.
-    apply: run_step => //.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //.
-    apply: run_done => //=.
+    rewrite/unif.
+    rewrite [unifyF]lock/=-lock.
+    rewrite/unifyF/= fnd_fmap0.
+    move=> //.
+  Qed. *)
+
+  Lemma codom0: codom empty = [::].
+  Proof. by rewrite /empty codomE/= enum_fset0. Qed.
+
+  Lemma codom_vars0: codom_vars empty = fset0.
+  Proof. by rewrite/codom_vars codom0. Qed.
+
+  Lemma codom0_set v s: codom empty.[v <- s] = [::s].
+  Proof. by rewrite/= codomE/= fsetU0 enum_fset1/= ffunE//=eqxx. Qed.
+
+  Lemma acyclic_sigma_set_D k t:
+    k \notin vars_tm t ->
+    acyclic_sigma empty.[k <- t].
+  Proof.
+    rewrite/acyclic_sigma/=/codom_vars codom0_set/= !fsetU0/=.
+    by rewrite/fdisjoint fsetIC fsetI1 => /negPf ->.
+  Qed.
+  
+
+  Goal exists v, runT unif p_test fset0 empty (TA (call (Tm_App (Tm_P q) (Tm_D (ID 1))))) (Some (s2, None)) false v.
+  Proof.
+    repeat eexists.
+    set X := [fset IV 0; fresh [fset IV 0]].
+    apply: StepT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
+      rewrite/rename/=in_fset1 eqxx/=.
+      rewrite !fset0U/= !fsetU0/varsU_rule/=/varsU_rhead/=/varsU_rprem/=.
+      rewrite /vars_sigma codom_vars0 domf0 /= !fset0U.
+      rewrite !ren_app !ren_P ren_V/=.
+      rewrite in_fnd//= ?in_fset1//= => H.
+      rewrite ffunE/=/vars_atoms/= !fsetU0 !fset0U/= fsetUid.
+      rewrite (fsetUC _ [fset fresh _]) fsetUA fsetUid.
+      rewrite fsetUC -/X//.
+      rewrite acyclic_sigma0//.
+    move=> //.
+    apply: StepT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      replace _.[? _] with (Some (0, build_arr)); last first.
+        by rewrite !FmapE.fmapE eqxx/=.
+      rewrite/=.
+      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
+      rewrite/rename/=in_fset1 eqxx/=.
+      rewrite acyclic_sigma0//.
+      by rewrite not_fnd//= not_fnd//=.
+      by [].
+    rewrite !fsetU0 !fset0U/=.
+    rewrite !fsetUA !fsetU0 /codom_vars !codom0_set/=.
+    rewrite !fsetU0 -!(fsetUC [fset fresh _]).
+    rewrite !fsetUA !fsetUid.
+    rewrite -!(fsetUC [fset IV 0]) !fsetUA !fsetUid.
+    rewrite-/X.
+    set Y:= (_ `|` _).
+    apply: StepT => //=.
+      rewrite /bc [get_tm_hd _]/=.
+      cbn iota.
+      replace _.[? _] with (Some (0, build_arr)); last first.
+        by rewrite !FmapE.fmapE eqxx/=.
+      rewrite/=.
+      rewrite FmapE.fmapE.
+      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
+      rewrite/rename/=in_fset1 eqxx/=.
+      rewrite not_fnd//= eqxx/=.
+      rewrite !fset0U fsetU0.
+      (* rewrite !(fsetUC _ [fset IV 0]) !fsetUA !fsetUid.
+      rewrite -!(fsetUC [fset fresh [fset IV 0]]) !fsetUA.
+      rewrite (fsetUC _ [fset IV 0]) -/X.
+      rewrite (fsetUC X) -fsetUA -/Y. *)
+      rewrite /next_subst/= acyclic_sigma_set_D//=.
+      by [].
+    set Z := (_ `|` _).
+    apply: BackT => //=.
+    apply: StepT => //=.
+      rewrite /bc [get_tm_hd _]/=.
+      cbn iota.
+      replace _.[? _] with (Some (0, build_arr)); last first.
+        by rewrite !FmapE.fmapE eqxx/=.
+      rewrite/=.
+      rewrite FmapE.fmapE.
+      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
+      rewrite/rename/=in_fset1 eqxx/=.
+      rewrite not_fnd//= eqxx/=.
+      rewrite !fset0U !fsetU0.
+      rewrite/next_subst/= acyclic_sigma_set_D//.
+      (* rewrite /next_subst/=/varsU_rule/varsU_rhead/=/varsU_rprem/=.
+      rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0/=. *)
+      by [].
+    apply: StopT => //=.
   Qed.
 End Test1.
 
 Section Test5.
 
   Definition p_test1 : program := build_progr [:: 
-      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 0))) 
-        [::ACall (Callable_Comb (Callable_Kp q) v_X); ACut] ;
-      mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1))) [::] ;
-      mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
+      mkR (Tm_App (Tm_P p) (Tm_D (ID false))) 
+        [::call (Tm_App (Tm_P q) v_X); cut] ;
+      mkR (Tm_App (Tm_P q) (Tm_D (ID 1))) [::] ;
+      mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
     ].
 
-  Goal Texists r, runb unif empty (CallS p_test1 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) (Some s1) r 0 /\ is_dead r.
+  Goal exists v, runT unif p_test1 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false))))) (Some (s1, None)) false v.
   Proof.
     repeat eexists.
-    apply: run_step => //.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_done => //=.
-    by [].
+    apply: StepT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U/= !fsetU0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0 !fset0U.
+      rewrite codomf0 cat0f fsetU0 ren_app ren_P ren_V/= in_fnd/= ?in_fset1// => H.
+      rewrite/vars_atoms/= !fsetUA codom_vars0 !fsetU0 ffunE/= fsetUC fsetUA fsetUid.
+      rewrite fsetUC//.
+      by rewrite acyclic_sigma0.
+      move=> //.
+    apply: StepT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U/= not_fnd//= not_fnd//=.
+      by rewrite acyclic_sigma0.
+      by [].
+    rewrite codomf0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0.
+    rewrite /vars_sigma/codom_vars !codom0_set/= !fsetU0 fsetUid !fsetUA.
+    rewrite -!(fsetUC [fset fresh _]) fsetUA !fsetUid !fsetUA.
+    rewrite -!(fsetUC [fset IV 0]) !fsetUA fsetUid.
+    set X := (_ `|` _).
+    apply/StepT => //=.
+    apply/StopT => //=.
   Qed.
 End Test5.
 
 Section Test6.
 
-  Definition pred_true := ((IKp 200)).
+  Definition pred_true := ((IP 200)).
 
   Definition p_test2 : program := build_progr [:: 
-      mkR ((RCallable_Kp pred_true)) [::];
-      mkR (RCallable_Comb (RCallable_Kp p) (Tm_Kd (IKd 0))) 
-        [::ACall (Callable_Comb (Callable_Kp q) v_X);ACall ((Callable_Kp pred_true)); ACut] ;
-      mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 1))) [::] ;
-      mkR (RCallable_Comb (RCallable_Kp q) (Tm_Kd (IKd 2))) [::] 
+      mkR ((Tm_P pred_true)) [::];
+      mkR (Tm_App (Tm_P p) (Tm_D (ID false))) 
+        [::call (Tm_App (Tm_P q) v_X);call ((Tm_P pred_true)); cut] ;
+      mkR (Tm_App (Tm_P q) (Tm_D (ID 1))) [::] ;
+      mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
   ].
 
-  Goal Texists r, runb unif empty ((CallS p_test2 (Callable_Comb (Callable_Kp p) (Tm_Kd (IKd 0)))) ) (Some s1) r 0 /\ is_dead r.
+  Goal exists r, runT unif p_test2 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (Some (s1, None)) false r.
   Proof.
     repeat eexists.
-    apply: run_step => //.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_fail => //=.
-    apply: run_step => //=.
-    apply: run_done => //.
-    by [].
+    apply: StepT => //.
+      rewrite/=/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U/= !fsetU0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0 !fset0U.
+      rewrite codomf0 cat0f fsetU0 ren_app ren_P ren_V/= in_fnd/= ?in_fset1// => H.
+      rewrite/vars_atoms/= !fsetUA codom_vars0 !fsetU0 ffunE/= fsetUC fsetUA fsetUid.
+      rewrite fsetUC//.
+      by rewrite acyclic_sigma0.
+      move=> //.
+    apply: StepT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U/= not_fnd//= not_fnd//=.
+      by rewrite acyclic_sigma0.
+      by [].
+    rewrite codomf0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0.
+    rewrite /vars_sigma/codom_vars !codom0_set/= !fsetU0 fsetUid !fsetUA.
+    rewrite -!(fsetUC [fset fresh _]) fsetUA !fsetUid !fsetUA.
+    rewrite -!(fsetUC [fset IV 0]) !fsetUA fsetUid.
+    set X := (_ `|` _).
+    apply/StepT => //=.
+      rewrite/bc [get_tm_hd _]/=.
+      cbn iota.
+      rewrite !FmapE.fmapE eqxx/=.
+      rewrite !fset0U//=.
+      by rewrite /next_subst/= acyclic_sigma_set_D//.
+      by [].
+    apply: StepT => //=.
+    apply: StopT => //.
   Qed.
 End Test6.
 
+Definition emptyp := (build_progr [::]).
+
+Definition CutS := TA cut.
 
 Section Test2.
-  Goal expand unif empty (Or OK empty OK) = Success (Or OK empty OK) . by []. Qed.
+  Goal step unif emptyp fset0 empty (Or (Some OK) empty OK) = (fset0, Success, Or (Some OK) empty OK). by []. Qed.
 
-  Goal runb unif empty (Or (CutS) empty OK) (Some empty) (Or Dead empty Dead) 0.
-    apply: run_step => //=.
-    apply: run_done => //.
+  Goal runT unif emptyp fset0 empty (Or (Some CutS) empty OK) (Some (empty, None)) false fset0.
+    apply: StepT => //=.
+    apply: StopT => //.
   Qed.
 
   Goal forall r, 
-    runb unif empty (Or (CutS) empty r) (Some empty) (dead (Or (CutS) empty r)) 0.
+    runT unif emptyp fset0 empty (Or (Some CutS) empty r) (Some (empty, None)) false fset0.
     move=> r.
-    apply: run_step => //.
-    apply: run_done => //=.
-    rewrite next_alt_cutr /= dead_cutr//.
+    apply: StepT => //.
+    apply: StopT => //=.
   Qed.
 
-  Goal runb unif empty (Or OK empty (Or OK empty OK)) (Some empty) ((Or Dead empty (((Or OK empty OK))))) 0.
-  Proof. apply: run_done => //=. Qed.
+  Goal runT unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Some (empty, (Some (Or None empty (((Or (Some OK) empty OK))))))) false fset0.
+  Proof. apply: StopT => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
-  Goal expand unif empty (Or (Or Dead empty (CutS)) empty OK) = Expanded (Or (Or Dead empty OK) empty OK) .
+  Goal step unif emptyp fset0 empty (Or (Some (Or None empty (CutS))) empty OK) = (fset0, Expanded, (Or (Some (Or None empty OK)) empty OK)).
   Proof.
     move=>//=.
   Qed.
