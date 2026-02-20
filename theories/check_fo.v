@@ -45,20 +45,6 @@ Lemma tm_is_det_comb sP f a:
   tm_is_det sP (Tm_App f a) = tm_is_det sP f.
 Proof. by rewrite/tm_is_det/=. Qed.
 
-(* Lemma tm_is_det_fresh sP c c' sv sv':
-  tm_is_det sP c ->
-  fresh_callable sv c = (sv', c') ->
-  tm_is_det sP c'.
-Proof.
-  elim: c c' sv sv' => //=.
-    by move=> k c' sv sv' + [_ <-]//.
-  move=> f Hf a c' sv sv'.
-  case X: fresh_callable => [sv2 f'].
-  case Y: rename => [sv3 a'] + [_ <-].
-  rewrite !tm_is_det_comb => H.
-  by apply/Hf/X.
-Qed. *)
-
 Lemma fresh_has_cut sv xs m:
   has_cut_seq (fresh_atoms sv xs m).2 = has_cut_seq xs.
 Proof. by elim: xs sv => //= -[|c] xs IH sv; rewrite!push//=IH !push//. Qed.
@@ -82,8 +68,6 @@ Section check.
   Variable u : Unif.
   Notation runT := (runT u).
   Definition runT' p v s t r := (exists v' b', runT p v s t r v' b').
-  (* Variable p : program. *)
-
 
   Fixpoint has_cut A :=
     match A with
@@ -109,10 +93,10 @@ Section check.
     a tree is deterministic if it calls deterministic atoms. 
     delicate cases are And and Or subtrees.
 
-    "((A, !, A') ; B) , C" is OK due to the cut in LHS of Or
-    "((A, A') ; B) , !, C" is OK because any alt from first conjunct dies
-    "((A, A') ; B) , C" is OK if B is dead already (cutr by predecessor of A for example)
-  
+    "((A, !, A') ; B) , C" is det if A' and B are deterministic
+    "((A, A') ; B) , !, C" is det if C is deterministic, because any alt from first conjunct dies
+    "((A, A') ; KO) , C" is det
+    "(A ; B)" for any A and B is not det since nothing prevents the execution of B if A fails
   *)
   Fixpoint det_tree (sP:sigT) A :=
     match A with
@@ -137,8 +121,6 @@ Section check.
   Lemma has_cut_cutl {A}: has_cut A -> has_cut (cutl A).
   Proof.
     elim_tree A => /=.
-      (* by move=> /andP[/is_ko_cutl->].
-      by move=> /is_ko_cutl. *)
     rewrite fun_if/=.
     case:ifP => // sA.
     move=> /orP[].
@@ -153,10 +135,6 @@ Section check.
   Lemma has_cut_seq_has_cut_big_and l:
     has_cut (big_and l) = has_cut_seq l.
   Proof. by case: l => >//; rewrite /=has_cut_big_and//. Qed.
-
-  (* Lemma cut_followed_by_det_has_cut {sP l}:
-      check_atoms sP l -> has_cut_seq l.
-  Proof. rewrite/check_atoms. elim: l => //= -[|c] l _ //=. Qed. *)
 
   Lemma det_tree_big_and sP L:
     det_tree sP (big_and L) = det_tree_seq sP L.
@@ -355,9 +333,6 @@ Section check.
   Qed.
   
   Lemma det_check_big_or pr c fv fv' r0 rs s1:
-    (* vars_tm c `<=` fv ->
-    vars_sigma s1 `<=` fv -> *)
-    (* acyclic_sigma s1 -> *)
     check_program pr -> tm_is_det (sig pr) c -> 
     bc u pr fv c s1 = (fv', r0 :: rs) ->
     det_tree (sig pr) (big_or r0.2 rs).
@@ -400,9 +375,6 @@ Section check.
   Qed.
 
   Lemma det_check_step pr sv s1 A r: 
-    (* vars_tree A `<=` sv ->
-    vars_sigma s1 `<=` sv -> *)
-    (* acyclic_sigma s1 -> acyclic_sigmaT A -> *)
     check_program pr -> det_tree pr.(sig) A -> 
       step u pr sv s1 A = r ->
         det_tree pr.(sig) r.2.
@@ -412,18 +384,16 @@ Section check.
     - case: t => [|c]//=; rewrite !push/=.
       case bc: bc => //=[fv'[|[s0 r0]rs]]//= H1.
       by apply: det_check_big_or bc.
-    - (*move=> /and3P[As AA AB];*) rewrite/= => /andP[fA]; rewrite !push/= HA//=.
+    - rewrite/= => /andP[fA]; rewrite !push/= HA//=.
       case: ifP => //= cA; last by move=> /eqP->; rewrite !if_same.
       rewrite !fun_if => /[dup] Hx ->; do 2 case: ifP => //=.
       by move=> H1; rewrite (step_keep_cut _ H1).
-    - by (*move=> /andP[As AB];*) by rewrite /=!push/=; apply/HB.
-    - move=> (*/andP[AA AB]*)/=/andP[dB].
+    - by rewrite /=!push/=; apply/HB.
+    - move=> /=/andP[dB].
       rewrite step_and/=.
       set sB:= step _ _ _ _ B.
       set sA:= step _ _ _ _ A.
-      (* have S5 : vars_sigma (next_subst s1 A) `<=` sv by apply: vars_sigma_next_subst. *)
       rewrite (fun_if (det_tree (sig pr))).
-      (* have AA' := acyclic_sigma_next_subst AS AA. *)
       case SA: success.
         case : (ifP (is_cb _)) => /=; rewrite {}HB//=.
           by rewrite det_tree_cutl//no_alt_cutl//= andbT.
@@ -554,11 +524,8 @@ Section check.
     - rewrite (det_check_prune_succ H2 sA); eauto.
     - apply: IH => //=.
         by apply: det_check_step eA.
-      (* move: eA; rewrite [step _ _ _ _ _]surjective_pairing => -[??]; subst. *)
-      (* by apply/acyclic_sigmaT_step. *)
     - apply: IH => //.
-        by apply/det_check_prune/nA.
-      (* by apply/acyclic_sigmaT_prune/nA. *)
+      by apply/det_check_prune/nA.
   Qed.
 
   (*SNIPT: det_check_call *)
@@ -578,7 +545,6 @@ Section check.
   Proof.
     move=> /= p t v cp td r H.
     apply/det_check_tree/H => //.
-    (* by apply/acyclic_sigma0. *)
   Qed.
 
 

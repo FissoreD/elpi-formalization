@@ -185,115 +185,8 @@ elim: t m fv => [? m fv|? m fv|v m fv /=|l Hl r Hr m fv] // S H.
   apply: Hr _ _ Sr' Hl.
 Qed.
 
-(* 
-Lemma fresh_tm_sub_aux fv (m : {fmap V -> V}) t : 
-  domf m `<=` fv -> codomf m `<=` fv -> vars_tm t `<=` fv ->
-    let: (fv', m') := fresh_tm fv m t in
-    [/\ domf m `<=` domf m', codomf m `<=` codomf m', domf m' `<=` fv', codomf m' `<=` fv' & fv `<=` fv'].
-Proof.
-elim: t m fv => [? m fv|? m fv|v m fv|l Hl r Hr m fv] Sd Sc /=;
-  rewrite ?fsetDv ?fsetU0 ?(fsubUset fv) ?fsubset_refl ?andbT//; last first.
-- move => /andP[Sl Sr].
-  case: fresh_tm (Hl m fv Sd Sc Sl) => [fv' m'] [SS DD] Sd' Sc' Sfv.
-  case: fresh_tm (Hr m' fv' Sd' Sc' (fsubset_trans Sr Sfv)) => [fv'' m''] -[SS' DD' Sd'' Sc'' Sfv'].
-  by rewrite Sd'' Sc'' (fsubset_trans Sfv Sfv') (fsubset_trans SS SS') (fsubset_trans DD DD'). 
-rewrite fsub1set => v_fv.
-have [?|nvm] := fndP; first by rewrite ?fsetDv ?fsetU0 Sd Sc !fsubset_refl.
-set w := fresh fv.
-rewrite [in _ `<=` _]domf_cat fsubsetUl.
-rewrite codomf_cat ?codomf1 // ?remf1_id // fsubsetUr. 
-rewrite domf_cat !fsubUset !fsubsetU ?fsubset_refl ?Sc ?Sd ?orbT //.
-by rewrite (_:domf _ = [fset v]) ?fsub1set ?v_fv ?orbT.
-Qed. *)
-(* 
-Lemma fresh_tm_sub_dom fv (m : {fmap V -> V}) t : 
-  domf m `<=` fv -> codomf m `<=` fv -> vars_tm t `<=` fv ->
-    domf m `<=` domf (fresh_tm fv m t).2.
-Proof. by move=> D C F; have:= fresh_tm_sub_aux D C F; case: fresh_tm => [??] []. Qed. *)
-(* 
-Lemma fresh_tm_sub_codom fv (m : {fmap V -> V}) t : 
-  domf m `<=` fv -> codomf m `<=` fv -> vars_tm t `<=` fv ->
-    codomf m `<=` codomf (fresh_tm fv m t).2.
-Proof. by move=> D C F; have:= fresh_tm_sub_aux D C F; case: fresh_tm => [??] []. Qed. *)
-
-(* 
-Lemma fresh_tm_dom fv (m : {fmap V -> V}) t : 
-  domf m `<=` fv -> codomf m `<=` fv -> vars_tm t `<=` fv ->
-    domf (fresh_tm fv m t).2 `<=` (fresh_tm fv m t).1.
-Proof. by move=> D C F; have:= fresh_tm_sub_aux D C F; case: fresh_tm => [??] []. Qed. *)
-(* 
-Lemma fresh_tm_sub_codomfv fv (m : {fmap V -> V}) t : 
-  domf m `<=` fv -> codomf m `<=` fv -> vars_tm t `<=` fv ->
-    codomf (fresh_tm fv m t).2 `<=` (fresh_tm fv m t).1.
-Proof. by move=> D C F; have:= fresh_tm_sub_aux D C F; case: fresh_tm => [??] []. Qed. *)
-(* 
-Lemma fresh_tm_sub_fv fv (m : {fmap V -> V}) t : 
-  domf m `<=` fv -> codomf m `<=` fv -> vars_tm t `<=` fv ->
-    fv `<=` (fresh_tm fv m t).1.
-Proof. by move=> D C F; have:= fresh_tm_sub_aux D C F; case: fresh_tm => [??] []. Qed. *)
-
-
 Lemma freshI fv : [fset fresh fv] `&` fv = fset0.
 Proof. by apply/fsetP => x; rewrite !inE; case: eqP => [->|//]; rewrite freshP. Qed.
-
-
-(* Lemma fresh_tm_codom_def fv (m : {fmap V -> V}) t :
-  domf m `<=` fv -> (*codomf m `<=` fv ->*) vars_tm t `<=` fv ->
-  codomf (fresh_tm fv m t).2 `\` codomf m = (fresh_tm fv m t).1 `\` fv.
-elim: t m fv; only 1,2: by move=> *; rewrite /= ?fsetDv.
-- move=> v m fv Sd (*Sc*) Sv /=; case: fndP; first by rewrite /= ?fsetDv ?fdisjoint0X.
-  move=> nvm; rewrite codomf_cat (remf1_id nvm) fsetDUl fsetDv fsetU0.
-  set w := fresh (fv `|` codomf m).
-  have fresh_fv : (w \notin fv) * (w \notin codomf m).
-    by have /negbT := freshP (fv `|` codomf m); rewrite inE negb_or => /andP[->->].
-  rewrite codomf1; apply/fsetP=> x.
-  have [->|/eqP/negPf] := x =P w.
-    by rewrite inE fresh_fv !inE fresh_fv eqxx.
-  by rewrite !inE => ->; rewrite andbF /= andNb.
-move=> l Hl r Hr m fv Sd (*Sc*); rewrite [vars_tm _]/= fsubUset => /andP[Sl Sr].
-rewrite fresh_Tm_App.
-set fv' := (fresh_tm fv m l).1; set m' := (fresh_tm fv m l).2.
-set fv'' := (fresh_tm fv' m' r).1; set m'' := (fresh_tm fv' m' r).2.
-have Sd' : domf m' `<=` fv' by apply: fresh_tm_dom.
-(* have Sc' : codomf m' `<=` fv' by apply fresh_tm_codom_fv. *)
-have Sfv' : fv `<=` fv' by apply fresh_tm_sub.
-have L : codomf m' `\` codomf m = fv' `\` fv by apply: Hl.
-have Sr' : vars_tm r `<=` fv' by apply: fsubset_trans Sr _.
-have Sd'' : domf m'' `<=` fv'' by apply: fresh_tm_dom.
-(* have Sc'' : codomf m'' `<=` fv'' by apply fresh_tm_codom_fv. *)
-have Sfv'' : fv `<=` fv'' by apply: fsubset_trans Sfv' _; apply fresh_tm_sub.
-have R : codomf m'' `\` codomf m' = fv'' `\` fv' by apply: Hr.
-apply/fsetP=> x; move/fsetP: L => /(_ x); move/fsetP: R => /(_ x).
-rewrite !in_fsetD.
-have [xfv|nxfv /=] := boolP (x \in fv).
-  have xfv': x \in fv' := fsubsetP Sfv' x xfv.
-  have xfv'': x \in fv'' := fsubsetP Sfv'' x xfv.
-  rewrite xfv' xfv'' /=.
-  have [/= _ _ |/= ? -> -> //] := boolP (x  \in codomf m').
-  by rewrite andbT => ->.
-have [x_fv'|] := boolP (x \in fv').
-  have -> := fsubsetP (fresh_tm_sub fv' m' r) _ x_fv'.
-  move=> + /andP[-> x_m']; rewrite x_m' => _.
-  by apply: fsubsetP (fresh_tm_codom _ _ _) _ x_m'. 
-have [x_fv''|] := boolP (x \in fv'').
-
-
-
-(* have ->/= : x  \notin codomf m by apply: contra nxfv => /(fsubsetP Sc). *)
-move=>+ H; rewrite H.
-have [xfvl'/= _|nxfv' /= ->//] := boolP (x \in fv').
-apply/idP/idP=> [/(fsubsetP Sc'')//|?].
-by apply/(fsubsetP (fresh_tm_codom _ _ _)); rewrite // H.
-Qed. *)
-
-(* Lemma fresh_tm_disj fv (m : {fmap V -> V}) t :
-  domf m `<=` fv -> codomf m `<=` fv -> vars_tm t `<=` fv ->
-  [disjoint codomf (fresh_tm fv m t).2 `\` codomf m & fv].
-Proof.
-move=> *; rewrite  fresh_tm_codom_def // /fdisjoint.
-by rewrite fsetIDAC fsetDIl fsetDv fsetI0.
-Qed. *)
-
 
 Lemma freshPwl x y : fresh (x `|` y) \in y = false.
 Proof.
@@ -315,7 +208,7 @@ elim: t fv m => //; only 1, 2: by move=>*; exists fmap0; rewrite ?catf0 ?injecti
   exists [fmap x: fset1 v => fresh (fv `|` codomf m)]; rewrite ?injectiveb1 ?adesive1 ?n ?codomf1 //.
     by rewrite (fdisjointWr (fsubsetUl _ (codomf m))) ?disjoint_fresh //=.
     by rewrite freshPwl.
-move=> l Hl r Hr fv m Sd (*Sc*); rewrite [vars_tm _]/= fsubUset => /andP[Sl Sr] Im.
+move=> l Hl r Hr fv m Sd; rewrite [vars_tm _]/= fsubUset => /andP[Sl Sr] Im.
 rewrite fresh_Tm_App.
 set m' := (fresh_tm fv m l).2; set fv' := (fresh_tm fv m l).1; set m'' := (fresh_tm fv' m' r).2.
 have [e [De Ame Ie J]] := Hl fv m Sd Sl Im; rewrite -/m' in De.
@@ -342,14 +235,13 @@ elim: t fv m => //; only 1, 2: by move=>*; exists fmap0; rewrite ?catf0 ?injecti
   exists [fmap x: fset1 v => fresh (fv `|` codomf m)]; rewrite ?injectiveb1 ?adesive1 ?n ?codomf1 //.
     by rewrite (fdisjointWr (fsubsetUl _ (codomf m))) ?disjoint_fresh //=.
     by rewrite freshPwl.
-move=> l Hl r Hr fv m (*Sd*); rewrite [vars_tm _]/= fsubUset => /andP[Sl Sr].
+move=> l Hl r Hr fv m; rewrite [vars_tm _]/= fsubUset => /andP[Sl Sr].
 rewrite fresh_Tm_App.
 set m' := (fresh_tm fv m l).2; set fv' := (fresh_tm fv m l).1; set m'' := (fresh_tm fv' m' r).2.
-have [e [De Ame J]] := Hl fv m (*Sd*) Sl; rewrite -/m' in De.
-(* have Sd' : domf m' `<=` fv' by apply: fresh_tm_dom. *)
+have [e [De Ame J]] := Hl fv m Sl; rewrite -/m' in De.
 have Sfv' : fv `<=` fv' by apply fresh_tm_sub.
 have Sr' : vars_tm r `<=` fv' by apply: fsubset_trans Sr _.
-have [f [Df Amf K]] := Hr fv' m' (*Sd'*) Sr'; rewrite -/m'' in Df.
+have [f [Df Amf K]] := Hr fv' m' Sr'; rewrite -/m'' in Df.
 exists (e + f).
 have adesive_ef : adesive e f by rewrite De in Amf; apply: adesive_catr Amf.
 have adesive_mf : adesive m f by rewrite De in Amf; apply: adesive_catl Ame Amf.
@@ -867,87 +759,3 @@ Proof.
     by apply/fsubset_trans/fresh_tm_sub.
   by apply/fresh_good_codom_aux.
 Qed.
-
-
-
-(*  
-Search fdisjoint fsetU.
-have R' : [disjoint domf m' & codomf m'].
-  admit.
-have J' : [disjoint codomf m' & fv].
-have Sd_ : domf m `<=` fv_.
-  by apply: fsubset_trans Sd _; rewrite fsubsetUr.
-have Sl_ : vars_tm l `<=` fv_.
-  by apply: fsubset_trans Sl _; rewrite fsubsetUr.
-have Dcl_ : [disjoint  codomf m  & (fresh_tm fv_ m l).1].
-  admit.
-have Dcl : [disjoint  codomf m  & (fresh_tm fv m l).1].
-  by apply: fdisjointWr Dc; rewrite fresh_Tm_App /= fresh_tm_sub.
-(* have Dcr : [disjoint  codomf m  & (fresh_tm fv m r).1].
-  apply: fdisjointWr Dc.  ; apply: fsubsetUr. *)
-have /andP{Hl} := Hl fv_ m Im Sd_ Dcl_ Sl_.
-have := fresh_tm_def Sd Sl Im. rewrite -/fv_ -/m' -/ fv'.
-case=> [e [De Ame Ie J]] [Dl' Ime]; set m'' := (fresh_tm fv' _ r).2.
-have Sd' : domf m' `<=` fv' by apply: fresh_tm_dom.
-(* have Sc' : codomf m' `<=` fv' by apply fresh_tm_sub_codomfv. *)
-have Sfv' : fv `<=` fv'. 
-  apply: fsubset_trans _ (fresh_tm_sub _ _ _).
-  by rewrite fsubsetUr.
-have Sr' : vars_tm r `<=` fv' by apply: fsubset_trans Sr _.
-have Dcr' : [disjoint  codomf m'  & (fresh_tm fv' m' r).1].
-  move: Dc; rewrite fresh_Tm_App /= -/fv' -/m'.
-  rewrite De codomf_cat remf_id //; last by case/andP: Ame.
-  apply: fdisjointWl.
-  (* rewrite De codomf_cat remf_id. *) admit.
-have := Hr fv' m'  Ime Sd' Dcr' Sr'. rewrite -/m''.
-case/andP=> + ->.
-
-simpl.
-
-
-have := @fresh_tm_sub fv m l; rewrite !fsubUset Sc Sd Sl=> /(_ isT).
-case E: fresh_tm => [fv' m'] [??]; rewrite !fsubUset => /andP[/andP[Sd' Sc'] Sfv'] D1.
-have Dcr' : [disjoint  codomf m'  & vars_tm r].
-  have := @fresh_tm_codom fv m l; rewrite !fsubUset Sc Sd Sl E=> /(_ isT).
-  move/fsetP=> H; apply/eqP/fsetP=> x; rewrite inE; move: (H x); rewrite inE ![in RHS]inE.
-  have  [xr|nxr] := boolP (x \in vars_tm r).
-    rewrite (fsubsetP Sr x xr); case:  (x  \in codomf m') => //=.
-    by rewrite andbT => /negbT; rewrite negbK => /(fdisjointP Dcr); rewrite xr.
-  by rewrite andbF.
-have:= Hr fv' m' Sc' Sd' Dcr' (fsubset_trans Sr Sfv').
-case F: fresh_tm => [fv'' m''] D2 /=.
-rewrite fdisjointXU !fdisjointUX D2.
-have Dcl' : [disjoint  codomf m'  & vars_tm l].
-  have := @fresh_tm_codom fv m l; rewrite !fsubUset Sc Sd Sl E=> /(_ isT).
-   move/fsetP=> H; apply/eqP/fsetP=> x; rewrite inE; move: (H x); rewrite inE ![in RHS]inE.
-  have  [xr|nxr] := boolP (x \in vars_tm l).
-    rewrite (fsubsetP Sl x xr); case:  (x  \in codomf m') => //=.
-    by rewrite andbT => /negbT; rewrite negbK => /(fdisjointP Dcl); rewrite xr.
-  by rewrite andbF.
-have:= Hl fv' m' Sc' Sd' Dcl' (fsubset_trans Sl Sfv'). rewrite F.
-
-
-Search fdisjoint.
-
-
-
-have:= @fresh_tm_inj fv' m' r Im'; rewrite !fsubUset Sc' Sd' (fsubset_trans Sr Sfv) => /(_ isT).
-have Dcr : [disjoint  codomf m'  & vars_tm r].
-  have: codomf m `<=` codomf m'. admit.
-  admit.
-have:= Hr fv' m' Im' Sc' Sd' Dcr (fsubset_trans Sr Sfv).
-case: fresh_tm => fv'' m'' Jr [Im'']; rewrite !fsubUset => /andP[/andP[Sd'' Sc''] Sfv'].
-have <- : deref [fmap x => Tm_V m'.[valP x]] l = deref [fmap x => Tm_V m''.[valP x]] l.
-  admit.
-move: Jl Jr; simpl.
-set L1 := vars_tm _; set R1 := vars_tm (deref _ _).
-set L := vars_tm _; set R := vars_tm _.
-rewrite /fdisjoint => Jl Jr.
-rewrite fsetIUl fsetIUr (eqP Jl) fset0U.
-rewrite fsetIUr (eqP Jr) fsetU0.
-Search fsetU fsetI.
-
-
-
-
-*)

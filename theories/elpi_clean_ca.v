@@ -342,8 +342,6 @@ Section clean_ca.
         by rewrite clean_ca_goals_nil take_size clean_ca_add_ca1.
       by move: H2; destruct rB => //= -[<-]//.
     - rewrite !push failed_and.
-      (* case eA: step => [[fva ra] A']/=.
-      case eB: step => [[fvb rb] B']/=. *)
       case fA: failed => //= ++ /andP[vA].
       case: ifP => [sA + fB vB|sA + _ /eqP?] => -[???]; subst.
         rewrite (success_t2l empty)//= catl0a.
@@ -389,7 +387,6 @@ Section clean_ca.
         rewrite drop0 take0/=H3/= cat0s cats0 t2l_big_and//=.
         by rewrite (step_cb_same_subst1 vA eA).
       have [[[? Hx] fA']] := s2l_Expanded_cut vA eA H; subst.
-      (* move=> Hz/=[???]; subst => /=. *)
       move: H2; rewrite (what_I_want (valid_tree_step vA eA))/=.
       have/= [s0[x[xs' Hy]]] := failed_t2l (valid_tree_step vA eA) fA' s bt.
       rewrite Hy => H1 [???]; subst => /=.
@@ -490,7 +487,6 @@ Section clean_ca.
         by rewrite clean_ca_mk_lb0//=.      
       rewrite t2l_big_and.
       rewrite !clean_ca_goals_cat/= seq2altsK.
-      (* have E : empty_caG hd by apply: empty_caG_r2l. *)
       rewrite -{2}(cat0s bt).
       have HH := @clean_ca_add_deep_gs nilA bt (a2g B0) gs (EA _).
       rewrite cat0s in HH.
@@ -500,7 +496,6 @@ Section clean_ca.
       rewrite !clean_ca_mk_lb0//.
       rewrite -{5 8 12}(cat0s bt) !(@clean_ca_add_deep nilA)//.
       rewrite clean_ca_cat clean_ca_save_as?empty_ca_atoms1//.
-      (* rewrite /save_as/=. *)
       rewrite cat_cons.
       rewrite (clean_ca_goals_empty (EA _)).
       set T1 := clean_ca bt xs.

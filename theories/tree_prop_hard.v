@@ -4,7 +4,6 @@ From det Require Import tree tree_prop valid_tree.
 
 Section s.
   Variable u : Unif.
-  (* Variable p : program. *)
   Notation runT := (runT u).
 
   Lemma run_success p fv A s1 r n fv1: 

@@ -7,13 +7,9 @@ Ltac case_step_tag X A := let fv := fresh "_fv" in case X : step => [[fv []] A].
 Tactic Notation "case_step_tag" ident(X) ident(A) := case_step_tag X A.
 
 Section RunP.
-  (* Variable u: Unif.
-  Variable p : program.
-  Notation step := (step u p).
-  Notation runT := (runT u p). *)
 
   (********************************************************************)
-  (* EXPAND PROPERTIES                                                *)
+  (* STEP PROPERTIES                                                  *)
   (********************************************************************)
 
   Variable u : Unif.
@@ -136,9 +132,6 @@ Section RunP.
       by case: ifP.
   Qed.
 
-  (* Lemma is_dead_prune {A} b: is_dead A -> prune b A = None.
-  Proof. move=>/is_dead_is_ko/is_ko_prune//. Qed. *)
-
   Lemma prune_cutl_success {A}:
     success A -> prune true (cutl A) = None.
   Proof.
@@ -218,9 +211,6 @@ Section RunP.
       case: ifP => /=fA; last by move=> [<-]; rewrite rew_pa sA fA.
       by case nA: prune => //=-[<-]; rewrite rew_pa (HA _ _ nA) failed_big_and andbF.
   Qed.
-
-  (* Lemma failed_big_or u p fv s t: failed (backchain u p fv s t).2.
-  Proof. rewrite/backchain; case: bc => // ? -[|[]]//. Qed. *)
 
   Section same_structure.
     Definition same_structure A B :=

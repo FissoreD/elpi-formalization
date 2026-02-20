@@ -279,15 +279,6 @@ Section main.
 
   Goal (prune false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
 
-  (* Definition optT := option tree.
-  Definition optC t : optT := Some t.
-  Coercion optC : tree >-> optT.
-
-  Definition ST : Type := (Sigma * optT).
-  Definition optST := option ST.
-  Definition opt_ST ST : optST := Some ST.
-  Coercion opt_ST: ST >-> optST. *)
-
   Notation "tg == CutBrothers" := (is_cb tg).
   (*prooftree: runbp*)
   (*SNIP: run_sig *)

@@ -73,10 +73,6 @@ Proof. by move=> ->. Qed.
 Lemma isNoneP1 T (P : option T) : ~~ P -> P = None.
 Proof. case: P => //. Qed.
 
-(* Axiom unif_rename : forall t1 t2 (f : {fmap V -> V}), 
-  injectiveb f ->
-  (unify t1 t2 fmap0) <-> (unify (ren f t1) (ren f t2) fmap0). *)
-
 Lemma match2_unif : forall q t1 t2 s, (matching q t1 s) -> (matching q t2 s) -> (unify t1 t2 s).
 Proof.
  move=> q t1 t2 s /match_unif H1 /match_unif H2; apply: unif_trans H2.

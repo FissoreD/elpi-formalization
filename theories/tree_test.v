@@ -46,14 +46,6 @@ Section Test1.
         [:: call (Tm_App (Tm_P p) v_X) ; call (Tm_App (Tm_P r) v_X) ] 
     ].
 
-  (* Goal unify unif v_X (Tm_D (ID 1)) empty = Some s1.
-  Proof.
-    rewrite/unif.
-    rewrite [unifyF]lock/=-lock.
-    rewrite/unifyF/= fnd_fmap0.
-    move=> //.
-  Qed. *)
-
   Lemma codom0: codom empty = [::].
   Proof. by rewrite /empty codomE/= enum_fset0. Qed.
 
@@ -120,10 +112,6 @@ Section Test1.
       rewrite/rename/=in_fset1 eqxx/=.
       rewrite not_fnd//= eqxx/=.
       rewrite !fset0U fsetU0.
-      (* rewrite !(fsetUC _ [fset IV 0]) !fsetUA !fsetUid.
-      rewrite -!(fsetUC [fset fresh [fset IV 0]]) !fsetUA.
-      rewrite (fsetUC _ [fset IV 0]) -/X.
-      rewrite (fsetUC X) -fsetUA -/Y. *)
       rewrite /next_subst/= acyclic_sigma_set_D//=.
       by [].
     set Z := (_ `|` _).
@@ -140,8 +128,6 @@ Section Test1.
       rewrite not_fnd//= eqxx/=.
       rewrite !fset0U !fsetU0.
       rewrite/next_subst/= acyclic_sigma_set_D//.
-      (* rewrite /next_subst/=/varsU_rule/varsU_rhead/=/varsU_rprem/=.
-      rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0/=. *)
       by [].
     apply: StopT => //=.
   Qed.

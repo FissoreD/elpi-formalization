@@ -5,7 +5,6 @@ From det Require Import list tree_vars elpi_clean_ca.
 
 Section NurEqiv.
   Variable (u : Unif).
-  (* Variable (p : program). *)
   Notation runT := (runT u).
   Notation runS := (runS u).
 

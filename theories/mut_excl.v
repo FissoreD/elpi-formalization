@@ -74,8 +74,6 @@ Section mut_excl.
     apply: IH H.
   Qed.
 
-  (* Definition callable t := match get_tm_hd t with inl t => Some t | _ => None end. *)
-
   Lemma H_callable inp m t1 t2 s1 s2 p:
     H u inp m t1 t2 s1 = Some s2 ->
     get_tm_hd t1 = inl p ->
@@ -307,7 +305,6 @@ Section mut_excl.
   Qed.
 
   Lemma mut_exclP p fv c s1:
-    (* acyclic_sigma s1 -> *)
     mut_excl p -> 
       tm_is_det p.(sig) c ->
         all_but_last (fun x => has_cut_seq x.2) (bc u p fv c s1).2.

@@ -14,7 +14,6 @@ Notation "[subst2]" := ltac:(move=> ??;subst).
 
 Inductive Det := Func | Pred.
 Inductive B := Exp | d of Det.
-(* Inductive mode := i | o. *)
 Inductive S :=  b of B | arr of S & S.
 Notation "x '--i-->' y" := (arr x y) (at level 3).
 Notation "x '--o-->' y" := (arr x y) (at level 3).
@@ -28,11 +27,6 @@ Definition B2o B : GenTree.tree Det := match B with Exp => GenTree.Node 0 [::] |
 Definition o2B (i :  GenTree.tree Det) : option B := match i with GenTree.Node 0 [::] => Some Exp | GenTree.Leaf x => Some (d x) | _ => None end.
 Lemma B2oK : pcancel B2o o2B. Proof. by case. Qed.
 HB.instance Definition _ := Countable.copy B (pcan_type B2oK).
-
-(* Definition mode2o mode : 'I_2 := match mode with i => @Ordinal 2 0 isT | o => @Ordinal 2 1 isT end.
-Definition o2mode (x : 'I_2) : option mode := match val x with 0 => Some i | 1 => Some o | _ => None end.
-Lemma mode2oK : pcancel mode2o o2mode. Proof. by case. Qed.
-HB.instance Definition _ := Finite.copy mode (pcan_type mode2oK). *)
 
 Fixpoint S2o S : GenTree.tree (B) := match S with b x => GenTree.Leaf (x) | arr x y => GenTree.Node 0 [:: S2o x; S2o y] end.
 Fixpoint o2S (i :  GenTree.tree (B)) : option S := match i with GenTree.Leaf x => Some (b x) | GenTree.Node 0 [:: x; y] => obind (fun x => obind (fun y => Some (arr x y)) (o2S y) ) (o2S x)  | _ => None end.
@@ -352,10 +346,6 @@ Fixpoint select u (query : Tm) inp arity (rules: list R) sigma : (fvS * seq (Sig
     end
   end.
 
-(* all_vars takes the set of used variables,
-   when we "fresh the program" we need to takes variables
-   outside this set
-*)
 Section s.
 Variable u : Unif.
 
@@ -372,7 +362,7 @@ Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq Atom) :=
   else
   let query := deref s query in
   match get_tm_hd query with
-    | inl kP =>  (*this is a call with flex head, in elpi it is an error! *)
+    | inl kP =>  
       match pr.(sig).[? kP] with 
         | Some (inp, sig) => 
           let: (fv, rules) := fresh_rules (vars_sigma s `|` vars_tm query `|` fv) (pr.(rules)) in
@@ -381,7 +371,7 @@ Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq Atom) :=
           in (fv `|` fv', rules)
         | None => (fv, [::])
         end
-    | _ => (fv, [::])
+    | _ => (fv, [::]) (*this is a call with flex head or head being a data, in elpi it is an error! *)
     end.
 End s.
 
