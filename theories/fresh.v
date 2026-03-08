@@ -284,11 +284,11 @@ Proof.
   apply/fsubset_trans/fresh_rule_sub/IH.
 Qed.
 
-Lemma select_sub_rules u r0 rn fv' q inp m s:
-  select u q inp m r0 s = (fv', rn) ->
+Lemma select_sub_rules u r0 rn fv' q m s:
+  select u q m r0 s = (fv', rn) ->
     varsU (seq.map (fun x => vars_sigma x.1 `|` vars_atoms x.2) rn) `<=` fv'.
 Proof.
-  elim: r0 rn fv' q inp m s => [|x xs IH] rn fv' q inp m s/=; first by move=> [<-<-]//.
+  elim: r0 rn fv' q m s => [|x xs IH] rn fv' q m s/=; first by move=> [<-<-]//.
   case X: H => [s'|]; last by apply: IH.
   case Y: select => [fv2 rs][??]; subst => /=.
   rewrite -!fsetUA/= !fsetUS//.
@@ -547,17 +547,18 @@ Proof.
   by apply: disjoint_sub.
 Qed. *)
 
-Lemma get_modes_rev_rename fs hd m mp:
+(* Lemma get_modes_rev_rename fs hd m mp:
   get_modes_rev (rename fs hd mp).2 m = get_modes_rev hd m.
 Proof.
   rewrite/get_modes_rev/sigtm_rev; f_equal.
   rewrite/sigtm/=; f_equal.
   rewrite/rename !push/=.
   move: (fresh_tm _ _ _) => -[/= _].
-  elim: hd => //[v|a Ha f Hf] b.
+  elim: hd m => //[v|a Ha f Hf] b m.
     by rewrite ren_V.
-  by rewrite ren_app/= Ha.
-Qed.
+  rewrite ren_app/=.
+  case: b => //m1 s1 s2; rewrite Ha//.
+Qed. *)
 
 Lemma has_cut_seq_fresh fv1 bo mp:  
   has_cut_seq (fresh_atoms fv1 bo mp).2 = has_cut_seq bo.
@@ -700,9 +701,8 @@ Proof. by have:= @disj_codom0 q (vars_tm q `|` fv) (fsubsetUl _ _); rewrite fdis
 Lemma disj_codom0L q fv: [disjoint codomf (fresh_tm (vars_tm q `|` fv) fmap0 q).2 & vars_tm q].
 Proof. by have:= @disj_codom0 q (vars_tm q `|` fv) (fsubsetUl _ _); rewrite fdisjointXU => /andP[]. Qed.
 
-
 Lemma disjoint_varsU1 v rs:
-  [disjoint v & varsU [seq varsU_rule i | i <- (fresh_rules v rs).2]].
+  [disjoint v & varsU [seq varsU_rule e | e <- (fresh_rules v rs).2]].
 Proof.
   elim: rs v => //=.
     by move=> >; rewrite fdisjointX0.

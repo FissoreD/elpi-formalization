@@ -100,10 +100,10 @@ Section once.
       premises := call (X) :: [::cut]
     |}.
 
-  Definition once_sig := arr  (b (d Pred)) (b (d Func)).
+  Definition once_sig := arrI (bI (bO (d Pred))) (bI (bO (d Func))).
 
   Definition once_sigS : sigT :=
-    [fmap].[once_sym <- (1, once_sig)].
+    [fmap].[once_sym <- once_sig].
 
   Definition no_once (r: seq R) :=
     forall x, x \in r -> 
@@ -118,16 +118,16 @@ Section once.
       p.(rules) = once_impl :: r /\ no_once r.
 
   Lemma once_sigP sig:
-    (sig + once_sigS).[? once_sym] = Some (1, once_sig).
+    (sig + once_sigS).[? once_sym] = Some (once_sig).
   Proof. by rewrite/once_sigS !FmapE.fmapE eqxx/= fsetU0 in_fset1 eqxx. Qed.
 
-  Lemma get_modes_rev_once_sym t:
+  (* Lemma get_modes_rev_once_sym t:
     get_modes_rev (Tm_App (Tm_P once_sym) t) once_sig = 1.
-  Proof. by []. Qed.
+  Proof. by []. Qed. *)
 
   Lemma no_once_select u t rs s:
     no_once rs ->
-    select u (Tm_App (Tm_P once_sym) t) 0 1 rs s = (fset0, [::]).
+    select u (Tm_App (Tm_P once_sym) t) [::i] rs s = (fset0, [::]).
   Proof.
     elim: rs t s => //= -[hd bo] xs IH t s/= H1.
     have {}IH := IH _ _ (no_once_cons H1).
@@ -169,7 +169,7 @@ Section once.
     rewrite fset0U.
     case X: fresh_rules => [fvx' rs'].
     rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
-    rewrite/fresh_tm inE eqxx get_modes_rev_once_sym ren_app ren_V ren_P.
+    rewrite/fresh_tm inE eqxx ren_app ren_V ren_P.
     rewrite in_fnd; first by rewrite inE.
     move=> H1/=.
     rewrite eqxx/=.

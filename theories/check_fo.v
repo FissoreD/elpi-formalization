@@ -184,7 +184,7 @@ Section check.
     case DR: get_tm_hd => //=[p].
     case: fndP => //= pP.
     rewrite !push/=.
-    move: (get_modes_rev _ _).
+    move: (sigtm_rev _).
     elim: rs s s1 fv c CR TD p DR pP => //= -[hd bo] xs IH sig s fv c/=.
     move=> /andP[c1 c2] TD p C pP m.
     have {}IH := IH _ _ _ _ c2 TD _ C pP.
@@ -446,23 +446,23 @@ Section check.
     by move=> /andP[H1 H2]; case: ifP => //=; rewrite HA//HB.
   Qed.
 
-  Lemma acyclic_sigma_H inp m t hd s1 s2:
+  Lemma acyclic_sigma_H m t hd s1 s2:
     acyclic_sigma s1 ->
-      H u inp m t hd s1 = Some s2 ->
+      H u m t hd s1 = Some s2 ->
         acyclic_sigma s2.
   Proof.
-    elim: m inp t hd s1 s2 => /=[|m IH] inp t hd s1 s2.
+    elim: m t hd s1 s2 => /=[|m ms IH] t hd s1 s2.
       case: t => //= p; case: eqP => //= _ + [<-]//.
     move=> AS; case: t => //=f a.
     case: hd => //f1 a1.
-    case H: H => //=[s1']; case: inp H => [|n]//= H.
-      by apply/matching_acyclic/IH/H.
-    by apply/unif_acyclic/IH/H.
+    case H: H => //=[s1']; case: m H => //= H U.
+      by apply/matching_acyclic/U/IH/H.
+    by apply/unif_acyclic/U/IH/H.
   Qed.
 
-  Lemma acyclic_sigma_select p inp m t s1 e:
+  Lemma acyclic_sigma_select p m t s1 e:
     acyclic_sigma s1 ->
-     e \in (select u t inp m p s1).2 ->
+     e \in (select u t m p s1).2 ->
         acyclic_sigma e.1.
   Proof.
     elim: p m t s1 e => //=-[hd bo] rs IH m t s1 e AS.

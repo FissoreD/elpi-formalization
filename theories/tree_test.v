@@ -1,11 +1,14 @@
 From mathcomp Require Import all_ssreflect.
 From det Require Import finmap ctx lang tree.
 
-Definition prop := b (d Pred).
-Definition build_arr := arr prop prop.
+Definition prop := bO (d Pred).
+Definition build_arr := bI (arrO (bI prop) prop).
+
+Goal sigtm_rev build_arr = [::o].
+Proof. by []. Qed.
 
 Definition build_progr l := {|
-  sig := [fmap].[IP false <- (0, build_arr)].[IP 1 <- (0, build_arr)].[IP 2 <- (0, build_arr)].[IP 200 <- (0, prop)];
+  sig := [fmap].[IP false <- build_arr].[IP 1 <- build_arr].[IP 2 <- build_arr].[IP 200 <- bI prop];
   rules := l;
 |}.
 
@@ -86,7 +89,7 @@ Section Test1.
     apply: StepT => //=.
       rewrite/bc [get_tm_hd _]/=.
       cbn iota.
-      replace _.[? _] with (Some (0, build_arr)); last first.
+      replace _.[? _] with (Some (build_arr)); last first.
         by rewrite !FmapE.fmapE eqxx/=.
       rewrite/=.
       rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
@@ -104,7 +107,7 @@ Section Test1.
     apply: StepT => //=.
       rewrite /bc [get_tm_hd _]/=.
       cbn iota.
-      replace _.[? _] with (Some (0, build_arr)); last first.
+      replace _.[? _] with (Some (build_arr)); last first.
         by rewrite !FmapE.fmapE eqxx/=.
       rewrite/=.
       rewrite FmapE.fmapE.
@@ -119,7 +122,7 @@ Section Test1.
     apply: StepT => //=.
       rewrite /bc [get_tm_hd _]/=.
       cbn iota.
-      replace _.[? _] with (Some (0, build_arr)); last first.
+      replace _.[? _] with (Some (build_arr)); last first.
         by rewrite !FmapE.fmapE eqxx/=.
       rewrite/=.
       rewrite FmapE.fmapE.
