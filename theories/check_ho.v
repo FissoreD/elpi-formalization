@@ -145,7 +145,7 @@ Qed. *)
 
 Definition full_sP {K:countType} {V:eqType} (s: {fmap K -> V}) := forall k, lookup k s <> None.
 
-Definition sigV := {fmap V -> S}.
+Definition sigV := {fmap V -> SInp}.
 
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
@@ -191,62 +191,93 @@ Section min_max.
 
   Definition negD x := match x with Pred => Func | Func => Pred end.
 
-  Fixpoint min_aux minD maxD s1 s2 : S :=
+  Fixpoint min_maxOut minD maxD s1 s2 : SOut :=
     let is_min : bool := minD Pred Func == Func in
     match s1, s2 with
-    | b Exp, b Exp => b Exp
-    | b(d D1), b(d D2) => b (d (minD D1 D2))
-    | arr i l1 r1, arr i l2 r2 => arr i (min_aux maxD minD l1 l2) (min_aux minD maxD r1 r2)
-    | arr o l1 r1, arr o l2 r2 => arr o (min_aux minD maxD l1 l2) (min_aux minD maxD r1 r2)
+    | bO Exp, bO Exp => bO Exp
+    | bO (d D1), bO(d D2) => bO (d (minD D1 D2))
+    | arrO l1 r1, arrO l2 r2 => arrO (min_auxInp minD maxD l1 l2) (min_maxOut minD maxD r1 r2)
   
-    | b (d X), arr _ _ _ | b (d X), b Exp => 
+    | bO (d X), arrO _ _ | bO (d X), bO Exp => 
         if is_min then if X == Func then s1 else s2 else if X == Pred then s1 else s2
-    | arr _ _ _, b (d X) | b Exp, b (d X) => 
+    | arrO _ _, bO (d X) | bO Exp, bO (d X) => 
         if is_min then if X == Pred then s1 else s2 else if X == Func then s1 else s2
 
-    | b Exp, arr _ _ _ | arr o _ _, arr i _ _ =>  if is_min then s1 else s2
-    | arr _ _ _, b Exp | arr i _ _, arr o _ _ => if ~~is_min then s1 else s2
-    end.
+    | bO Exp, arrO _ _ (*| arrO _ _, arrO _ _*) =>  if is_min then s1 else s2
+    | arrO _ _, bO Exp (*| arrO _ _, arrO _ _*) => if ~~is_min then s1 else s2
+  end
+  with min_auxInp minD maxD s1 s2 : SInp :=
+    let is_min : bool := minD Pred Func == Func in
+    match s1, s2 with
+    | bI l, bI r => bI (min_maxOut minD maxD l r)
+    | arrI l1 r1, arrI l2 r2 => arrI (min_auxInp maxD minD l1 l2) (min_auxInp minD maxD r1 r2)
+  
+    | bI (bO(d X)), arrI _ _ => 
+        if is_min then if X == Func then s1 else s2 else if X == Pred then s1 else s2
+    | arrI _ _, bI (bO (d X)) => 
+        if is_min then if X == Pred then s1 else s2 else if X == Func then s1 else s2
 
-  Definition min := min_aux minD maxD.
-  Definition max := min_aux maxD minD.
+    | bI (bO Exp), arrI _ _ | bI (arrO _ _), arrI _ _ =>  if is_min then s1 else s2
+    | arrI _ _, bI (bO Exp) | arrI _ _, bI (arrO _ _) => if ~~is_min then s1 else s2
+  end.
+
+  Definition min := min_auxInp minD maxD.
+  Definition max := min_auxInp maxD minD.
+  Definition minO := min_maxOut minD maxD.
+  Definition maxO := min_maxOut maxD minD.
 
   Lemma min_refl {A}: min A A = A
-  with max_refl {A}: max A A = A.
+  with max_refl {A}: max A A = A
+  with minO_refl {A}: minO A A = A
+  with maxO_refl {A}: maxO A A = A.
   Proof.
-    all: rewrite/min/max in min_refl max_refl *.
-    - by case d1: A => [[|[]]|[] bl br] //=; congr (arr _ _ _).
-    - by case d1: A => [[|[]]|[] bl br] //=; congr (arr _ _ _).
+    all: rewrite/min/max/minO/maxO in min_refl max_refl *.
+    - case: A => [[[|[]]|??]|??]//=; repeat f_equal => //.
+    - case: A => [[[|[]]|??]|??]//=; repeat f_equal => //.
+    - by case: A => [[|[]]|??]//=; f_equal.
+    - by case: A => [[|[]]|??]//=; f_equal.
   Qed.
 
   Lemma min_comm {A B}: min A B = min B A
-  with max_comm {A B}: max A B = max B A.
+  with max_comm {A B}: max A B = max B A
+  with minO_comm {A B}: minO A B = minO B A
+  with maxO_comm {A B}: maxO A B = maxO B A.
   Proof.
-    all: rewrite/min/max in min_comm max_comm *.
-    - by case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; congr(arr _ _ _).
-    - by case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr] //=; congr(arr _ _ _).
+    all: rewrite/min/max/minO/maxO in min_comm max_comm *.
+    - by case: A => [[[|[]]|]|]/=; case: B => [[[|[]]|]|]//=>; f_equal => //; f_equal.
+    - by case: A => [[[|[]]|]|]/=; case: B => [[[|[]]|]|]//=>; f_equal => //; f_equal.
+    - by case: A => [[|[]]|]/=; case: B => [[|[]]|]//=>; f_equal.
+    - by case: A => [[|[]]|]/=; case: B => [[|[]]|]//=>; f_equal.
   Qed.
 
   Lemma min_assoc {A B C}: min A (min B C) = min (min A B) C
-  with max_assoc {A B C}: max A (max B C) = max (max A B) C.
+  with max_assoc {A B C}: max A (max B C) = max (max A B) C
+  with minO_assoc {A B C}: minO A (minO B C) = minO (minO A B) C
+  with maxO_assoc {A B C}: maxO A (maxO B C) = maxO (maxO A B) C.
   Proof.
-    all: rewrite/max/min in min_assoc max_assoc *.
-    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr];
-      case d3: C => [[|[]]|[] dl dr]//=; f_equal; auto.
-    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr];
-      case d3: C => [[|[]]|[] dl dr]//=; f_equal; auto.
+    all: rewrite/max/min/minO/maxO in min_assoc max_assoc *.
+    - by case: A => [[[|[]]|??]|??]; case: B => [[[|[]]|??]|??]; case: C => [[[|[]]|??]|??]//=; repeat f_equal => //.
+    - by case: A => [[[|[]]|??]|??]; case: B => [[[|[]]|??]|??]; case: C => [[[|[]]|??]|??]//=; repeat f_equal => //.
+    - case: A => [[|[]]|]/=; case: B => [[|[]]|]/=; case: C => [[|[]]|]//=>; repeat f_equal => //.
+    - case: A => [[|[]]|]/=; case: B => [[|[]]|]/=; case: C => [[|[]]|]//=>; repeat f_equal => //.
   Qed.
 
   Lemma min_assorb {A B}: min A (max A B) = A
-  with max_assorb {A B}: max A (min A B) = A.
+  with max_assorb {A B}: max A (min A B) = A
+  with minO_assorb {A B}: minO A (maxO A B) = A
+  with maxO_assorb {A B}: maxO A (minO A B) = A.
   Proof.
-    all: rewrite/max/min in min_assorb max_assorb *.
-    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]//=; f_equal; auto; try by [apply min_refl | apply: max_refl].
-    - case d1: A => [[|[]]|[] bl br]; case d2: B => [[|[]]|[] cl cr]//=; f_equal; auto; try by [apply min_refl | apply: max_refl].
+    all: rewrite/max/min/minO/maxO in min_assorb max_assorb *.
+    - case: A => [[[|[]]|]|]/=; case: B => [[[|[]]|]|]//=*; repeat f_equal => //; try by [apply min_refl | apply: max_refl | apply: minO_refl | apply: maxO_refl].
+    - case: A => [[[|[]]|]|]/=; case: B => [[[|[]]|]|]//=*; repeat f_equal => //; try by [apply min_refl | apply: max_refl | apply: minO_refl | apply: maxO_refl].
+    - case: A => [[|[]]|]/=; case: B => [[|[]]|]//=*; repeat f_equal => //; try by [apply min_refl | apply: max_refl | apply: minO_refl | apply: maxO_refl].
+    - case: A => [[|[]]|]/=; case: B => [[|[]]|]//=*; repeat f_equal => //; try by [apply min_refl | apply: max_refl | apply: minO_refl | apply: maxO_refl].
   Qed.
 
   Definition incl A B := (min A B == A).
   Definition not_incl A B := max A B == A.
+  Definition inclO A B := (minO A B == A).
+  Definition not_inclO A B := maxO A B == A.
 
   Lemma incl_refl {r}: incl r r.
   Proof. rewrite/incl min_refl//. Qed.
@@ -320,115 +351,122 @@ Section min_max.
     case:eqP; auto.
   Qed.
 
-  Fixpoint strong s :=
+  Fixpoint strongO s :=
     match s with
-    | b Exp => b Exp
-    | b(d _) => b(d Func)
-    | arr i l r => arr i (weak l) (strong r)
-    | arr o l r => arr o (strong l) (strong r)
+    | bO Exp => bO Exp
+    | bO (d _) => bO (d Func)
+    | arrO l r => arrO (strong l) (strongO r)
+    end
+  with weakO s :=
+    match s with
+    | bO Exp => bO Exp
+    | bO (d _) => bO (d Pred) 
+    | arrO l r => arrO (weak l) (weakO r)
+    end
+  with strong s :=
+    match s with
+    | bI l => bI (strongO l)
+    | arrI l r => arrI (weak l) (strong r)
     end
   with weak s :=
     match s with
-    | b Exp => b Exp
-    | b(d _) => b(d Pred) 
-    | arr i l r => arr i (strong l) (weak r)
-    | arr o l r => arr o (weak l) (weak r)
+    | bI l => bI (weakO l)
+    | arrI l r => arrI (strong l) (weak r)
     end.
 
-  Section test.
-    Definition SMap := 
-      (arr i (arr i (b Exp) (arr o (b Exp) (b(d Func)))) (arr i (b Exp) (arr o (b Exp) (b(d Func))))).
-    Definition WMap := 
-      (arr i (arr i (b Exp) (arr o (b Exp) (b(d Func)))) (arr i (b Exp) (arr o (b Exp) (b(d Pred))))).
-    Goal incl SMap WMap. Proof. move=>//=. Qed.
-    Goal  (incl WMap SMap) = false. Proof. move=>//=. Qed.
-    Goal (weak SMap) == WMap. Proof. move=> //=. Qed.
-  End test.
-
   Lemma min_strong {A}: min A (strong A) = (strong A)
-  with max_weak {A}: max A (weak A) = (weak A).
+  with max_weak {A}: max A (weak A) = (weak A)
+  with minO_strong {A}: minO A (strongO A) = (strongO A)
+  with maxO_weak {A}: maxO A (weakO A) = (weakO A).
   Proof.
-    all: rewrite/min/max in min_strong max_weak *.
-    - case: A => /=[[|[]]|[]s1 s2]//; rewrite ?min_strong ?max_weak//=.
-    - case: A => /=[[|[]]|[]s1 s2]//; rewrite ?min_strong ?max_weak//=.
+    all: rewrite/min/max/maxO/minO in min_strong max_weak minO_strong maxO_weak *.
+    - case A': A =>  [[[|[]]|]|]; try by move=>/=; repeat f_equal => //.
+    - case A': A =>  [[[|[]]|]|]; try by move=>/=; repeat f_equal => //.
+    all: by case A': A =>  [[|[]]|]; try by move=>/=; repeat f_equal => //.
   Qed.
 
   Lemma min_weak {A}: min A (weak A) = A
-  with max_strong {A}: max A (strong A) = A.
+  with max_strong {A}: max A (strong A) = A
+  with minO_weak {A}: minO A (weakO A) = A
+  with maxO_strong {A}: maxO A (strongO A) = A.
   Proof.
-    all: rewrite/min/max in min_weak max_strong *.
-    - case: A => /=[[|[]]|[]s1 s2]//; rewrite /=?min_weak ?max_strong//=.
-    - case: A => /=[[|[]]|[]s1 s2]//; rewrite /=?min_weak ?max_strong//=.
+    all: rewrite/min/max/minO/maxO in min_weak max_strong *.
+    - by case: A => /=[[[|[]]|]|]>//=; repeat f_equal => //.
+    - by case: A => /=[[[|[]]|]|]>//=; repeat f_equal => //.
+    all: by case: A => /=[[|[]]|]>//=; repeat f_equal => //.
   Qed.
 
-  Lemma func_is_min {A}: incl (b (d Func)) A.
-  Proof. rewrite/incl/=; case: A => //=[[]]//. Qed.
+  (* Lemma func_is_min {A}: incl (bI (d Func)) A.
+  Proof. rewrite/incl/=; case: A => //=[[]]//. Qed. *)
 
-  Lemma pred_is_max {A}: incl A (b (d Pred)).
-  Proof. rewrite/incl/=; case: A => //=[[|[]]|[]]//. Qed.
+  (* Lemma pred_is_max {A}: incl A (b (d Pred)).
+  Proof. rewrite/incl/=; case: A => //=[[|[]]|[]]//. Qed. *)
 
   Lemma weak_incl {A}: incl A (weak A).
   Proof. apply/eqP; apply: min_weak. Qed.
 
-  Lemma max_predR {A}: max A (b (d Pred)) = (b (d Pred)).
-  Proof. rewrite max_comm/max/=; case: A => [[]|]//. Qed.
+  (* Lemma max_predR {A}: max A (b (d Pred)) = (b (d Pred)).
+  Proof. rewrite max_comm/max/=; case: A => [[]|]//. Qed. *)
   
-  Lemma max_predL {A}: max (b (d Pred)) A = (b (d Pred)).
-  Proof. case: A => [[|[]]|[]]//. Qed.
+  (* Lemma max_predL {A}: max (b (d Pred)) A = (b (d Pred)).
+  Proof. case: A => [[|[]]|[]]//. Qed. *)
 
-  Lemma max_funcR {A}: max A (b (d Func)) = A.
-  Proof. rewrite max_comm/max/=; case: A => [[]|]//. Qed.
+  (* Lemma max_funcR {A}: max A (b (d Func)) = A.
+  Proof. rewrite max_comm/max/=; case: A => [[]|]//. Qed. *)
   
-  Lemma max_funcL {A}: max (b (d Func)) A = A.
-  Proof. case: A => [[|[]]|[]]//. Qed.
+  (* Lemma max_funcL {A}: max (b (d Func)) A = A.
+  Proof. case: A => [[|[]]|[]]//. Qed. *)
 
-  Lemma min_funcR {A}: min A (b (d Func)) = (b (d Func)).
-  Proof. rewrite min_comm/min/=; case: A => [[]|]//. Qed.
+  (* Lemma min_funcR {A}: min A (b (d Func)) = (b (d Func)).
+  Proof. rewrite min_comm/min/=; case: A => [[]|]//. Qed. *)
 
-  Lemma min_funcL {A}: min (b (d Func)) A = (b (d Func)).
-  Proof. case: A => [[|[]]|[]]//. Qed.
+  (* Lemma min_funcL {A}: min (b (d Func)) A = (b (d Func)).
+  Proof. case: A => [[|[]]|[]]//. Qed. *)
 
   Lemma strong_incl {A}: incl (strong A) A.
   Proof. apply: min_incl min_strong. Qed.
 
   Lemma weak2 {A}: weak (weak A) = weak A
-  with strong2 {A}: strong (strong A) = strong A.
-  Proof. all: case: A => -[]//=??; rewrite?weak2?strong2//. Qed.
-
-  Lemma weak_strong {A B}: weak A = weak B -> strong A = strong B
-  with strong_weak {A B}: strong A = strong B -> weak A = weak B.
+  with strong2 {A}: strong (strong A) = strong A
+  with weakO2 {A}: weakO (weakO A) = weakO A
+  with strongO2 {A}: strongO (strongO A) = strongO A.
   Proof.
-    - case: A => [[|[]]|[] l1 r1]; case: B => [[]|[]l2 r2]//= [H1 H2]; f_equal; auto.
-    - case: A => [[|[]]|[] l1 r1]; case: B => [[]|[]l2 r2]//= [H1 H2]; f_equal; auto.
+    by case: A => //=>; rewrite !(strong2, weak2, weakO2, strongO2)//=.
+    by case: A => //=>; rewrite !(strong2, weak2, weakO2, strongO2)//=.
+    all: case: A => [[]|]//=>; rewrite ?(strong2, weak2, weakO2, strongO2)//=.
   Qed.
 
-  Lemma min_arr s t s' t' m : min (arr m s' t') (arr m s t)  = arr m (if m == i then max s' s else min s' s) (min t' t). by case: m. Qed.
-  Lemma max_arr s t s' t' m : max (arr m s' t') (arr m s t)  = arr m (if m == i then min s' s else max s' s) (max t' t). by case: m. Qed.
-
-  Lemma incl_arr s t s' t' m :
-    incl (arr m s' t') (arr m s t) = (if m == i then incl s s' else incl s' s) && incl t' t.
+  Lemma weak_strong {A B}: weak A = weak B -> strong A = strong B
+  with strong_weak {A B}: strong A = strong B -> weak A = weak B
+  with weakO_strong {A B}: weakO A = weakO B -> strongO A = strongO B
+  with strongO_weak {A B}: strongO A = strongO B -> weakO A = weakO B.
   Proof.
+    - case: A => [[[|[]]|]|]/=; case: B => [[[|[]]|]|]//=>[]*; repeat (f_equal; eauto).
+    - case: A => [[[|[]]|]|]/=; case: B => [[[|[]]|]|]//=>[]*; repeat (f_equal; eauto).
+    all: case: A => [[|[]]|]/=; case: B => [[|[]]|]//=>[]*; repeat (f_equal; eauto).
+  Qed.
+
+  Lemma min_arr s t s' t' : min (arrI s' t') (arrI s t)  = arrI (max s' s) (min t' t). by []. Qed.
+  Lemma max_arr s t s' t' : max (arrI s' t') (arrI s t)  = arrI (min s' s) (max t' t). by []. Qed.
+
+  Lemma incl_arr s t s' t' :
+    incl (arrI s' t') (arrI s t) = (incl s s') && incl t' t.
+  (* with inclI_arr s t s' t' :
+    inclO (arrO s' t') (arrO s t) = (incl s' s) && inclO t' t. *)
+  Proof.
+    rewrite/incl min_arr; symmetry; (repeat case: eqP); try by [|congruence].
+    by move=> + E F; rewrite E -F min_comm max_assorb.
+    by move=> [] <- ??; rewrite max_comm min_assorb.
+  Qed.
+    (* - rewrite/inclO min_arr; symmetry; (repeat case: eqP); try by [|congruence].
+      by move=> + E F; rewrite E -F min_comm max_assorb.
+      by move=> [] <- ??; rewrite max_comm min_assorb.
+    
     rewrite /incl min_arr; case: m => /=; symmetry; (repeat case: eqP); try by [|congruence].
     - by move=> + E F; rewrite E -F min_comm max_assorb.
     - by move=> [] <- ??; rewrite max_comm min_assorb.
-  Qed.
-
-  Lemma min_weakr s t : min (min s t) (weak t) = min s t
-  with max_strongr s t : max (max s t) (strong t) = max s t.
-  Proof.
-    all: rewrite/min/max in min_weakr max_strongr *.
-    - case: s => [[|[]]|[] f1 a1]; case: t => [[|[]]|[] f2 a2]//=; f_equal; auto;
-      try by [apply max_strong|apply: min_weak].
-    - case: s => [[|[]]|[] f1 a1]; case: t => [[|[]]|[] f2 a2]//=; f_equal; auto;
-      try by [apply max_strong|apply: min_weak].
-  Qed.
+  Qed. *)
   
-  Lemma incl_weakr s t : incl s t -> incl s (weak t).
-  Proof. move=> /eqP <-; apply/eqP/min_weakr. Qed.
-
-  Lemma incl_weakl t: incl (weak t) t -> weak t = t.
-  Proof. by move=> /eqP; rewrite min_comm min_weak. Qed.
-
 
   Lemma min_abb a b: min (min a b) b = min a b.
   Proof. rewrite -min_assoc min_refl//. Qed.
@@ -436,7 +474,7 @@ Section min_max.
   Lemma max_abb a b: max (max a b) b = max a b.
   Proof. rewrite -max_assoc max_refl//. Qed.
 
-  Lemma inclL_max A B C: incl A C -> incl B C -> incl (max A B) C
+  (* Lemma inclL_max A B C: incl A C -> incl B C -> incl (max A B) C
   with inclR_min A B C: incl C A -> incl C B -> incl C (min A B).
   Proof.
       case: A => [[|[]]|[] f a]; case: B => [[|[]]|[] f1 a1]; 
@@ -446,9 +484,9 @@ Section min_max.
     move=> /eqP<-/eqP<-; apply/eqP.
     rewrite -!min_assoc.
     by rewrite (@min_assoc A B) min_refl.
-  Qed.
+  Qed. *)
 
-  Lemma incl2_max A B C D: incl A C -> incl B D -> incl (max A B) (max C D)
+  (* Lemma incl2_max A B C D: incl A C -> incl B D -> incl (max A B) (max C D)
   with incl2_min A B C D: incl A C -> incl B D -> incl (min A B) (min C D).
   Proof.
     move=> H1 H2; apply: inclL_max.
@@ -461,9 +499,9 @@ Section min_max.
       rewrite min_comm min_assoc (@min_comm C) -(@min_assoc A C C) min_refl//.
     - move: H2; rewrite /incl => /eqP <-.
       by rewrite -!min_assoc min_refl.
-  Qed.
+  Qed. *)
   
-  Lemma inclL_min A B C: incl A C -> incl (min A B) C
+  (* Lemma inclL_min A B C: incl A C -> incl (min A B) C
   with inclR_max A B C: incl A C -> incl A (max B C).
   Proof.
       move=>/eqP<-; apply/eqP.
@@ -476,21 +514,21 @@ Section min_max.
     - by move=> /andP[]/inclR_max->/inclR_max->.
     - by rewrite min_comm; move=> /andP[/inclL_min->/inclR_max->]//.
     - rewrite/max/={3}/incl/=/min/=//.
-  Qed.
+  Qed. *)
 
-  Lemma eq_incl x y : (incl x y && incl y x) = (x == y).
+  (* Lemma eq_incl x y : (incl x y && incl y x) = (x == y).
   Proof.
     apply/andP/eqP => [[]|-> //]; rewrite?incl_refl//.
     by move=> /eqP<-/eqP<-; rewrite min_assoc min_refl (@min_comm x) min_assoc min_refl.
-  Qed.
+  Qed. *)
 
-  Lemma min_strong2 {A B}: strong (min (strong A) (strong B)) = (min (strong A) (strong B))
+  (* Lemma min_strong2 {A B}: strong (min (strong A) (strong B)) = (min (strong A) (strong B))
   with max_weak2 {A B}: weak (max (weak A) (weak B)) = (max (weak A) (weak B)).
   Proof.
     all: rewrite/min/max in min_strong2 max_weak2 *.
     - case: A => /=[[|[]]|[]s1 s2]//; case: B => /=[[|[]]|[]s3 s4]//=; rewrite ?strong2//; f_equal; auto.
     - case: A => /=[[|[]]|[]s1 s2]//; case: B => /=[[|[]]|[]s3 s4]//=; rewrite ?strong2//?weak2; f_equal; auto.
-  Qed.
+  Qed. *)
 
 
 End min_max.
@@ -498,12 +536,17 @@ Hint Resolve incl_refl : core.
 Hint Resolve minD_refl : core.
 
 Section compat_type.
-  Fixpoint compat_type x y :=
+  Fixpoint compat_typeO x y :=
     match x, y with
-    | b Exp, b Exp => true
-    | b (d _), b (d _) => true
-    | arr i a xb, arr i a' b' => compat_type a a' && compat_type xb b'
-    | arr o a xb, arr o a' b' => compat_type a a' && compat_type xb b'
+    | bO Exp, bO Exp => true
+    | bO (d _), bO (d _) => true
+    | arrO a b, arrO a' b' => compat_type a a' && compat_typeO b b'
+    | _, _ => false
+    end
+  with compat_type x y :=
+    match x, y with
+    | bI x, bI y => compat_typeO x y
+    | arrI a b, arrI a' b' => compat_type a a' && compat_type b b'
     | _, _ => false
     end.
 
@@ -611,15 +654,6 @@ Hint Resolve compat_type_refl : core.
 
 
 Section checker.
-
-  Fixpoint get_sig_hd (sig:S) :=
-    match sig with
-    | b V => V
-    | arr _ _ s => get_sig_hd s
-    end.
-
-  Definition is_det_sig (sig:S) : bool :=
-    get_sig_hd sig == (d Func).
 
   Definition get_tm_hd_sig (sP : sigT) (sV : sigV) (tm: Tm) : option S :=
     match get_tm_hd tm with

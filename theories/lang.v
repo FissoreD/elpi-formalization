@@ -70,6 +70,8 @@ Proof.
 Qed.
 
 HB.instance Definition _ := Countable.copy SInp (pcan_type SInp2oK).
+HB.instance Definition _ := Countable.copy SOut (pcan_type SOut2oK).
+
 
 (* Leave the one line code for the extracted code *)
 (*SNIP: base_type*)
