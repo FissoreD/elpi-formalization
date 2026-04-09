@@ -286,7 +286,7 @@ Section clean_ca.
       by rewrite clean_ca_mk_lb0// clean_ca_add_deep//.
   Qed.
 
-  Lemma what_I_want {A s bt}:
+  Lemma clean_ca_bt2 {A s bt}:
     valid_tree A -> clean_ca bt (t2l A s bt) = t2l A s [::].
   Proof.
     move=> vA.
@@ -316,7 +316,7 @@ Section clean_ca.
       have /={HA HB} := HA _ _ _ _ _ _ _ _ _ _ eA fA vA.
       move=> /(_ (t2l B sm [::])).
       rewrite H/= => /(_ _ _ _ _ erefl) [].
-      rewrite (what_I_want (valid_tree_step vA eA))/=.
+      rewrite (clean_ca_bt2 (valid_tree_step vA eA))/=.
       case: ifP => cra/=.
         destruct ra => //= H1 [?]; subst; split => //.
         rewrite /= cats0 H1; move: H1.
@@ -387,7 +387,7 @@ Section clean_ca.
         rewrite drop0 take0/=H3/= cat0s cats0 t2l_big_and//=.
         by rewrite (step_cb_same_subst1 vA eA).
       have [[[? Hx] fA']] := s2l_Expanded_cut vA eA H; subst.
-      move: H2; rewrite (what_I_want (valid_tree_step vA eA))/=.
+      move: H2; rewrite (clean_ca_bt2 (valid_tree_step vA eA))/=.
       have/= [s0[x[xs' Hy]]] := failed_t2l (valid_tree_step vA eA) fA' s bt.
       rewrite Hy => H1 [???]; subst => /=.
       rewrite seq2alts_cat !seq2altsK !size_cat addnK add_deep_cat.
@@ -410,7 +410,7 @@ Section clean_ca.
     elim_tree A s3 bt s1 q gl a ign fv => /=.
     - case: t => [|c]// _ _ [?????]; subst.
       rewrite push.
-      rewrite what_I_want/=; last first.
+      rewrite clean_ca_bt2/=; last first.
         by case: bc => //= _ []//[>]/=; rewrite valid_tree_big_or.
       case X: bc => [fv' [|[s0 r0] rs]]//=.
       rewrite cats0 add_ca_deep_empty1.
@@ -422,7 +422,7 @@ Section clean_ca.
       have {HA HB} := HA s3 (t2l B sm nilA) _ _ _ _ _ fv fA vA.
       rewrite H/= => /(_ _ _ _ _ _ erefl) [+ H1].
       rewrite H1/= seq2alts_cat !seq2altsK.
-      rewrite (what_I_want (valid_tree_step vA erefl)) !clean_ca_add_ca1/=.
+      rewrite (clean_ca_bt2 (valid_tree_step vA erefl)) !clean_ca_add_ca1/=.
       move=> Hz; repeat split.
       have /= := s2l_Expanded_call vA H1 H; subst.
       move=> [?]; subst.
@@ -475,7 +475,7 @@ Section clean_ca.
       have /={HA HB} := HA s3 bt _ _ _ _ _ fv fA vA.
       rewrite H/= => /(_ _ _ _ _ _ erefl)[].
       rewrite eA => /= + [??]; subst => /=.
-      rewrite (what_I_want (valid_tree_step vA eA)) => /=H2.
+      rewrite (clean_ca_bt2 (valid_tree_step vA eA)) => /=H2.
       split => //.
       rewrite seq2altsK seq2goals_cat !seq2goalsK.
       have [?] := s2l_Expanded_call vA eA H; subst.
