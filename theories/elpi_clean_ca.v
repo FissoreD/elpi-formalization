@@ -3,9 +3,10 @@ From det Require Import prelude list.
 From det Require Import tree tree_prop valid_tree elpi t2l t2l_prop.
 From det Require Import zify_ssreflect.
 
+Module M.
+
 Section clean_ca.
   Variable p : program.
-
   Definition clean_ca_G (clean_ca : alts -> alts -> alts) bt (g : Atom * alts) :=
     match g with
     | (a, ca) => (a, ((take (size ca - size bt) (clean_ca bt ca))))
@@ -296,15 +297,15 @@ Section clean_ca.
 
   Variable u: Unif.
 
-  Lemma next_cut_s2l fv A s bt s1 ca gl a r:
+  Lemma next_cut_s2l fv A s bt s1 ca gl a:
+    let r := step u p fv s A in
     failed A = false -> valid_tree A ->
       clean_ca bt (t2l A s bt) = (s1, (cut, ca) :: gl) :: a ->
-        step u p fv s A = r ->
         clean_ca bt (t2l r.2 s bt) = (s1, gl) :: ca /\
         if is_cb r.1.2 then r = (fv, CutBrothers, r.2)
         else r = (fv, Expanded, r.2).
   Proof.
-    move=> +++ <-/=.
+    simpl.
     case X: step => /= [[fv' r'] R]; move: X; clear.
     elim_tree A R fv fv' r' s bt s1 ca gl a => /=.
     - case: t => [|c]//= [<-<-<-]//= _ _[<-<-<-]//.
@@ -511,3 +512,31 @@ Section clean_ca.
 
 
 End clean_ca.
+End M.
+
+Lemma next_cut_s2l u p fv A s s1 ca gl a:
+  let r := step u p fv s A in
+  failed A = false -> valid_tree A ->
+    t2l A s [::] = (s1, (cut, ca) :: gl) :: a ->
+      t2l r.2 s [::] = (s1, gl) :: ca /\
+      if is_cb r.1.2 then r = (fv, CutBrothers, r.2)
+      else r = (fv, Expanded, r.2).
+Proof.
+  move=> r.
+  rewrite -(@M.clean_ca_nil (t2l _ s [::])).
+  rewrite -(@M.clean_ca_nil (t2l r.2 _ [::])).
+  apply: M.next_cut_s2l.
+Qed.
+
+Lemma next_callS_s2l u p fv A s3 s1 q gl a ign:
+  let r := step u p fv s3 A in
+  let b := bc u p fv q s1 in
+  failed A = false -> valid_tree A ->
+    t2l A s3 [::] = (s1, (call q, ign) :: gl) :: a ->
+      [/\ t2l r.2 s3 [::] = (save_as a gl b.2 ++ a) & r = (b.1, Expanded, r.2)].
+Proof.
+  move=> H1 H2.
+  rewrite -(@M.clean_ca_nil (t2l _ _ [::])).
+  rewrite -(@M.clean_ca_nil (t2l H1.2 _ [::])).
+  apply: M.next_callS_s2l.
+Qed.
