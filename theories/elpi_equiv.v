@@ -95,39 +95,37 @@ Proof.
         have /= fA' := prune_Some nA.
         have /= vA' := (valid_tree_prune vA nA).
         rewrite (pruneF_t2l vA fA nA) in H.
-        rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-        case X: (step u p fv s A') => [[fv' r'] A''].
-        have:= next_cut_s2l fA' vA' H X => /=.
-        rewrite clean_ca_nil/= => -[H1 H2].
-        have {IH}/=[b[v1]] := IH _ _ (valid_tree_step vA' X) H1; subst.
+        (* case X: (step u p fv s A') => [[fv' r'] A'']. *)
+        have:= next_cut_s2l u p fv fA' vA' H => /=.
+        move => -[H1 H2].
+        have {IH}/=[b[v1]] := IH _ _ (valid_tree_step vA' erefl) H1; subst.
         case: r ELPI => [[s' a']|] ELPI.
           move=> [t1[IH ?]]; subst.
-          move: H2; case: ifP => //= CB [??]; subst;
+          move: H2; case: ifP => //= CB ST; subst;
           repeat eexists; apply: BackT fA nA _;
           apply: StepT erefl IH; eauto.
-            by apply: incomplete_cut X.
-          by apply: incomplete_exp X.
-        move: H2; case: ifP => //= CB [??] IH; subst;
+            apply: incomplete_cut ST.
+          by apply: incomplete_exp ST.
+        move: H2; case: ifP => //= CB ST IH; subst;
         repeat eexists; apply: BackT fA nA _;
         apply: StepT erefl IH; eauto.
-          by apply: incomplete_cut X.
-        by apply: incomplete_exp X.
-      rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
+          by apply: incomplete_cut ST.
+        by apply: incomplete_exp ST.
       case X: (step u p fv s A) => [[fv' r'] A'].
-      have:= next_cut_s2l fA vA H X => /=.
-      rewrite clean_ca_nil/= => -[H1 H2].
-      have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA X) H1; subst.
+      have:= next_cut_s2l u p fv fA vA H => /=.
+      move => -[H1 H2].
+      have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
       case: r ELPI => [[s' a']|] ELPI.
         move=> [t1[IH ?]]; subst.
-        move: H2; case: ifP => Hx [??]; subst;
-        repeat eexists; apply: StepT (X) erefl IH.
-          by apply: incomplete_cut X.
-        by apply: incomplete_exp X.
-      move: H2; case: ifP => //= CB [??] IH; subst;
+        move: H2; case: ifP => Hx ST; subst;
+        repeat eexists; apply: StepT (ST) erefl IH.
+          by apply: incomplete_cut ST.
+        by apply: incomplete_exp ST.
+      move: H2; case: ifP => //= CB ST IH; subst;
       repeat eexists;
       apply: StepT erefl IH; eauto.
-        by apply: incomplete_cut X.
-      by apply: incomplete_exp X.
+        by apply: incomplete_cut ST.
+      by apply: incomplete_exp ST.
     }
   - move=> s1 a g bs r t ca fv fv' + ELPI IH s3 A vA H.
     rewrite/stepE; case B: bc => [fv2 rules] [??]; subst.
@@ -136,12 +134,11 @@ Proof.
       case fA: (failed A).
         case nA: (prune false A) => [A'|]; last first.
           by rewrite (failed_prune_none_t2l vA fA nA) in H.
-        rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
         rewrite (pruneF_t2l vA fA nA) in H.
         have /= fA' := prune_Some nA.
         have /= vA' := (valid_tree_prune vA nA).
-        have [] := next_callS_s2l p u fv fA' vA' H.
-        rewrite B/=clean_ca_nil => H1 H2.
+        have [] := next_callS_s2l u p fv fA' vA' H.
+        rewrite B/= => H1 H2.
         have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA' erefl) H1; subst.
         case: r ELPI => [[s' a']|] ELPI.
           move=> [t'[IH ?]]; subst.
@@ -153,9 +150,8 @@ Proof.
         apply: BackT fA nA _.
         apply: StepT (H2) erefl IH.
         apply: incomplete_exp H2.
-      rewrite -(@clean_ca_nil (t2l _ _ _)) in H.
-      have [] := next_callS_s2l p u fv fA vA H.
-      rewrite B/= clean_ca_nil/= => H1 H2.
+      have [] := next_callS_s2l u p fv fA vA H.
+      rewrite B/= => H1 H2.
       have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
       case: r ELPI => [[s' a']|] ELPI.
         move=> [t'[IH ?]]; subst.
