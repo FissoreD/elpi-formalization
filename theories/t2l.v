@@ -32,17 +32,18 @@ with add_ca_deep_goals bt (gl : goals) : goals :=
 
 Notation add_ca_deep_g := (add_ca_deep_g' add_ca_deep).
 
-Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
+(* adds the list of goals l at the end of each alterntive which is in the current scope *)
+Fixpoint add_deep (bt: nat) (l: goals) (A : alts) : alts :=
   match A with
   | [::] => [::]
   | [:: (s,hd) & tl ] => [:: (s,add_deepG bt l hd) & add_deep bt l tl]
   end
-  with add_deepG (bt: alts) (l: goals) (A : goals) : goals :=
+  with add_deepG (bt: nat) (l: goals) (A : goals) : goals :=
   match A with
   | [::]%G => [::]%G 
   | [:: (a, ca) & tl ]%G =>
-      let s := size ca - size bt in
-      let xx := (add_deep bt l (ca)) in
+      let s := size ca - bt in
+      let xx := add_deep bt l ca in
       let ca := map (catr l) (take s xx) ++ drop s ca in
       [:: (a, ca) & add_deepG bt l tl]%G
   end.
@@ -76,7 +77,7 @@ Fixpoint t2l t0 s0 (cp: alts) : alts :=
   | And A B0 B   =>
       let lA  := t2l A s0 cp in
       let lB0 := a2g B0 in
-      let lA  := add_deep cp lB0 lA in
+      let lA  := add_deep (size cp) lB0 lA in
       if lA is [:: (s0, gs) & al] then 
         let al := map (catr lB0) al in
         (* al are alternatives that should be added in the deep cuts in B *)

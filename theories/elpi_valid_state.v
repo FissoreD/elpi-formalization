@@ -255,7 +255,7 @@ Section NurValidState.
   Qed.
 
   Lemma valid_ca_aux_add_deep_make_lB0 ca l hd:
-    let pref := take (size ca - size l) (add_deep l hd ca) in
+    let pref := take (size ca - size l) (add_deep (size l) hd ca) in
     empty_caG hd -> suffix l ca -> valid_caA_aux true ca (take (size ca - size l) ca) l ->
       valid_caA_aux true (pref ++ l) 
         (map (catr hd) pref) l 
@@ -265,7 +265,7 @@ Section NurValidState.
       suffix G xs ->
       valid_caG x (take n xs) G ->
       valid_caA_aux true xs (take n xs) G ->
-      valid_caG (add_deepG G hd x) (map (catr hd) (take n (add_deep G hd xs))) G
+      valid_caG (add_deepG (size G) hd x) (map (catr hd) (take n (add_deep (size G) hd xs))) G
     .
   Proof.
     move=>/=.
@@ -337,7 +337,7 @@ Section NurValidState.
   Lemma valid_ca_add_deep_make_lB0 hd xs l: 
     empty_caG hd ->
     (valid_caA xs xs l) ->
-    (valid_caA (add_deep l hd xs) (map (catr hd) (add_deep l hd xs)) l).
+    (valid_caA (add_deep (size l) hd xs) (map (catr hd) (add_deep (size l) hd xs)) l).
   Proof.
     rewrite valid_ca_valid_ca_aux//.
     move=> H1 H2.
@@ -354,7 +354,7 @@ Section NurValidState.
     empty_caG hd ->
     valid_caG x xs l ->
     valid_caA xs xs l ->
-    valid_caG (add_deepG l hd x) (map (catr hd) (add_deep l hd xs)) l.
+    valid_caG (add_deepG (size l) hd x) (map (catr hd) (add_deep (size l) hd xs)) l.
   Proof.
     move=> H1 H2 H3.
     have /= := valid_caG_aux_add_deep_make_lB0 x (xs++l) l hd.
