@@ -73,6 +73,13 @@ Section NurProp.
     move=> [s g] gs IH l2 bt hd /=.
     rewrite IH cat_cons//.
   Qed.
+
+  Lemma add_deepG_cat bt hd l1 l2: add_deepG bt hd (l1 ++ l2) = add_deepG bt hd l1 ++ add_deepG bt hd l2.
+  Proof.
+    elim: l1 l2 bt hd; first by move=> *; rewrite !cat0s.
+    move=> [s g] gs IH l2 bt hd /=.
+    rewrite IH cat_cons//.
+  Qed.
   
   Lemma add_deep_cons bt s hd l1 l2: 
     add_deep bt hd ((s, l1) :: l2) = (s, add_deepG bt hd l1) :: (add_deep bt hd l2).
@@ -379,11 +386,16 @@ Section NurProp.
     [:: (b1, a) & save_gs a gs bs]%G.
   Proof. rewrite/save_gs/= cat_cons//. Qed.
 
+  Lemma save_as_cons a gs b1 bs :
+    save_as a gs [:: b1 & bs] =
+    [:: (b1.1, save_gs a gs b1.2) & save_as a gs bs]%A.
+  Proof. by rewrite/save_as//=. Qed.
+
   Lemma add_deep_goalsP hd r ys l tl:
     empty_caG hd ->
-      add_deepG l hd (save_gs (ys ++ l) tl r) ++ hd =
-        save_gs (map (catr hd) (add_deep l hd ys) ++ l)
-          ( (add_deepG l hd tl) ++ hd) r.
+      add_deepG (size l) hd (save_gs (ys ++ l) tl r) ++ hd =
+        save_gs (map (catr hd) (add_deep (size l) hd ys) ++ l)
+          ( (add_deepG (size l) hd tl) ++ hd) r.
   Proof.
     elim: r hd ys l tl.
       by rewrite /save_gs// => >/=; rewrite !cat0s.
@@ -392,17 +404,41 @@ Section NurProp.
     rewrite size_cat addnK drop_size_cat//add_deep_cat take_size_cat ?size_add_deep//.
   Qed.
 
+  Lemma add_deep_goalsP0 hd r ys tl:
+    empty_caG hd ->
+      add_deepG 0 hd (save_gs ys tl r) ++ hd =
+        save_gs (map (catr hd) (add_deep 0 hd ys))
+          ( (add_deepG 0 hd tl) ++ hd) r.
+  Proof.
+    move=> H.
+    have:= add_deep_goalsP r ys [::] tl H.
+    by rewrite !cats0 size_nil.
+  Qed.
+
+
   Lemma add_deep_altsP hd rs ys l tl:
     empty_caG hd ->
-    map (catr hd) (add_deep l hd (save_as (ys ++ l) tl rs)) =
-      save_as (map (catr hd) (add_deep l hd ys) ++ l)
-        ((add_deepG l hd tl) ++ hd) rs.
+    map (catr hd) (add_deep (size l) hd (save_as (ys ++ l) tl rs)) =
+      save_as (map (catr hd) (add_deep (size l) hd ys) ++ l)
+        ((add_deepG (size l) hd tl) ++ hd) rs.
   Proof.
     move=> H.
     elim: rs => //=-[s1 g] gs IH.
     rewrite /=/save_as/= map_cons/= IH.
     rewrite/catr//=add_deep_goalsP//.
   Qed.
+
+  Lemma add_deep_altsP0 hd rs ys tl:
+    empty_caG hd ->
+    map (catr hd) (add_deep 0 hd (save_as ys tl rs)) =
+      save_as (map (catr hd) (add_deep 0 hd ys))
+        ((add_deepG 0 hd tl) ++ hd) rs.
+  Proof.
+    move=> H.
+    have:= add_deep_altsP rs ys [::] tl H.
+    by rewrite !cats0 size_nil.
+  Qed.
+
 
   Lemma step_cb_same_subst1 fv fv' A R s1:
     valid_tree A -> step u p fv s1 A = (fv', CutBrothers, R) -> ((next_subst s1 A = next_subst s1 R)).

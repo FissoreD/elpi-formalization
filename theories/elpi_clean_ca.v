@@ -118,12 +118,12 @@ Section clean_ca.
 
   Lemma clean_ca_add_deep {x bt hd L}:
     empty_caG hd ->
-    clean_ca bt (add_deep (x ++ bt) hd L) = 
-      add_deep (clean_ca bt x) hd (clean_ca bt L)
+    clean_ca bt (add_deep (x + size bt) hd L) = 
+      add_deep x hd (clean_ca bt L)
   with clean_ca_add_deep_gs {x bt hd L}:
     empty_caG hd ->
-    clean_ca_goals bt (add_deepG (x ++ bt) hd L) = 
-      add_deepG (clean_ca bt x) hd (clean_ca_goals bt L).
+    clean_ca_goals bt (add_deepG (x + size bt) hd L) = 
+      add_deepG x hd (clean_ca_goals bt L).
   Proof.
     - move=> H; case: L => //=-[]s g a/=; rewrite clean_ca_add_deep //clean_ca_add_deep_gs//.
     - move=> H; case: L => [|[a ca]] //= gs; rewrite clean_ca_add_deep_gs//=; congr (_ :: _).
@@ -138,13 +138,12 @@ Section clean_ca.
       rewrite -size_cat cat_take_drop.
       rewrite -take_add_deep.
       rewrite clean_ca_drop.
-      rewrite !clean_ca_size.
       rewrite !clean_ca_take  -!take_add_deep -!map_take.
       set L1 := map _ _.
       set L2 := clean_ca _ _.
       rewrite subnDAC.
       set N := size ca - size bt.
-      set M := size x.
+      set M := x.
       clear.
       have K1: N <= size L2 by rewrite /L2 clean_ca_size/N; lia.
       have K2: size L1 = size ca by rewrite/L1 size_map size_add_deep clean_ca_size//.
@@ -174,6 +173,24 @@ Section clean_ca.
       replace (minn (size L2 - M) (size L2)) with (size L2 - M) by lia.
       f_equal.
       rewrite take_size take_oversize // size_drop; lia.
+  Qed.
+
+  Lemma clean_ca_add_deep_gs0 {bt hd L}:
+    empty_caG hd ->
+    clean_ca_goals bt (add_deepG (size bt) hd L) = 
+      add_deepG 0 hd (clean_ca_goals bt L).
+  Proof.
+    replace (size bt) with (0 + size bt)%nat by auto.
+    apply: clean_ca_add_deep_gs.
+  Qed.
+
+  Lemma clean_ca_add_deep0 {bt hd L}:
+    empty_caG hd ->
+    clean_ca bt (add_deep (size bt) hd L) = 
+      add_deep 0 hd (clean_ca bt L).
+  Proof.
+    replace (size bt) with (0 + size bt)%nat by auto.
+    apply: clean_ca_add_deep.
   Qed.
 
   Lemma save_gs_cat g a tl: save_gs a g tl = save_gs a [::] tl ++ g.
@@ -242,7 +259,7 @@ Section clean_ca.
           move=> <-.
           by rewrite HB// clean_ca_cat.
         rewrite/W/Z => {W Z}.
-        rewrite !clean_ca_mk_lb0//clean_ca_add_deep//.
+        rewrite !clean_ca_mk_lb0// size_cat clean_ca_add_deep// clean_ca_size.
         repeat f_equal.
         case Y: prune => //=[A'].
         apply: HA => //.
@@ -252,7 +269,7 @@ Section clean_ca.
       case M: t2l => [|[sy y]ys]; case N: t2l => [|[sz z]zs]//=.
       rewrite !t2l_big_and/=.
       rewrite !cat_cons cat0s.
-      rewrite clean_ca_goals_cat clean_ca_add_deep_gs//.
+      rewrite clean_ca_goals_cat size_cat clean_ca_add_deep_gs// clean_ca_size.
       move=> _.
       have {HA} := HA s x bt _ vA sA Y.
       rewrite M N /= => -[???]; subst.
@@ -273,14 +290,14 @@ Section clean_ca.
         rewrite catA HB//= clean_ca_cat.
         rewrite !clean_ca_mk_lb0//.
         case X: prune => //[A']/=.
-        rewrite !clean_ca_add_deep//=.
+        rewrite size_cat !clean_ca_add_deep//= !clean_ca_size.
         repeat f_equal; apply: clean_ca_s2l_prune X => //; apply: HA => //.
       have:= [elaborate @s2l_size A s (x++bt) s (clean_ca bt x)].
       have {HA}:= HA s x bt vA.
       case X: (t2l A _ (_ ++ _)) => [|[sy y]ys]; 
       case Y: (t2l A _ (clean_ca _ _)) => [|[sz z]yz]//.
       move=> [???]; subst => _/=.
-      rewrite !t2l_big_and/= cat_cons cat0s clean_ca_goals_cat.
+      rewrite !t2l_big_and/= cat_cons cat0s clean_ca_goals_cat size_cat clean_ca_size.
       repeat f_equal.
         by rewrite /catl/= clean_ca_add_deep_gs//clean_ca_goals_a2g.
       rewrite seq2altsK.
@@ -487,27 +504,20 @@ Section clean_ca.
         rewrite/save_as/= cat0s t2l_big_and//= !cat_cons !cat0s.
         by rewrite clean_ca_mk_lb0//=.      
       rewrite t2l_big_and.
-      rewrite !clean_ca_goals_cat/= seq2altsK.
-      rewrite -{2}(cat0s bt).
-      have HH := @clean_ca_add_deep_gs nilA bt (a2g B0) gs (EA _).
-      rewrite cat0s in HH.
-      rewrite HH clean_ca_goals_cat.
-      rewrite (@clean_ca_add_deep_gs nilA)//=.
-      rewrite clean_ca_save_gs?empty_ca_atoms//=.
+      rewrite clean_ca_mk_lb0//.
+      rewrite !(clean_ca_goals_cat, seq2altsK).
+      rewrite !(clean_ca_add_deep_gs0,  clean_ca_goals_cat)//=.
+      rewrite seq2altsK save_as_cons/= cat_cons.
       rewrite !clean_ca_mk_lb0//.
-      rewrite -{5 8 12}(cat0s bt) !(@clean_ca_add_deep nilA)//.
-      rewrite clean_ca_cat clean_ca_save_as?empty_ca_atoms1//.
-      rewrite cat_cons.
-      rewrite (clean_ca_goals_empty (EA _)).
-      set T1 := clean_ca bt xs.
-      set T2 := (clean_ca_goals bt gs).
-      have H1 := @add_deep_goalsP _ z T1 nilA T2 (EA _).
-      rewrite !cats0 in H1.
-      rewrite H1//cats0.
-      f_equal.
-      rewrite add_deep_cat map_cat; f_equal.
-      have:= @add_deep_altsP (a2g B0) zs T1 nilA T2 (EA _).
-      rewrite !cats0//.
+      rewrite !clean_ca_add_deep0//= clean_ca_goals_cat.
+      rewrite clean_ca_add_deep_gs0//= save_gs_cat clean_ca_goals_cat.
+      rewrite (clean_ca_goals_empty (EA _))// clean_ca_cat.
+      rewrite add_deep_cat map_cat.
+      set T1 := map (catr _) (add_deep _ _ (clean_ca _ xs)).
+      rewrite add_deepG_cat.
+      repeat f_equal.
+        by rewrite -add_deep_goalsP0//= /save_gs add_deepG_cat cats0 clean_ca_goals_map2.
+      by rewrite -add_deep_altsP0//= clean_ca_save_as.
   Qed.
 
 
