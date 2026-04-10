@@ -125,17 +125,20 @@ Proof.
     apply: H1; auto => {}A fA _ {}vA {}H.
     move: ST; rewrite/stepE; case B: bc => [fv2 rules] [??]; subst.
     have [] := next_callS_s2l u p fv fA vA H.
-    rewrite B/= => H1 H2.
+    rewrite B/= => H1.
+    case H2 : step => /=?; subst.
     have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
     case: r ELPI => [[s' a']|] ELPI.
       move=> [t'[IH ?]]; subst.
       repeat eexists.
-      apply: StepT (H2) erefl IH.
+      apply: StepT erefl IH.
       apply: incomplete_exp H2.
+      by rewrite H2.
     move=> IH.
     repeat eexists.
-    apply: StepT (H2) erefl IH.
+    apply: StepT erefl IH.
     apply: incomplete_exp H2.
+    by rewrite H2.
   + by move=> > vT H; repeat eexists; apply/FailT/t2l_nil_na/H.
 Qed.
 
