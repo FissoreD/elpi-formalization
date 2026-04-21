@@ -284,15 +284,16 @@ Proof.
   apply/fsubset_trans/fresh_rule_sub/IH.
 Qed.
 
-Lemma select_sub_rules u r0 rn fv' q inp m s:
-  select u q inp m r0 s = (fv', rn) ->
+Lemma select_sub_rules u p args r0 rn fv' md s:
+  select u p args md r0 s = (fv', rn) ->
     varsU (seq.map (fun x => vars_sigma x.1 `|` vars_atoms x.2) rn) `<=` fv'.
 Proof.
-  elim: r0 rn fv' q inp m s => [|x xs IH] rn fv' q inp m s/=; first by move=> [<-<-]//.
-  case X: H => [s'|]; last by apply: IH.
+  elim: r0 rn fv' md p args s => [|x xs IH] rn fv' md p args s/=; first by move=> [<-<-]//.
+  case: eqP => isP/=; last by apply: IH.
+  case H: H; last by apply: IH.
   case Y: select => [fv2 rs][??]; subst => /=.
   rewrite -!fsetUA/= !fsetUS//.
-  case: x X; rewrite/=/varsU_rhead/varsU_rprem/= => hd pm _.
+  case: x isP H; rewrite/=/varsU_rhead/varsU_rprem/= => hd pm isP H.
   rewrite fsubsetU// fsetUS//=; first by rewrite orbT.
   by apply: IH Y.
 Qed.
@@ -301,8 +302,8 @@ Lemma bc_sub u p c fv s:
   fv `<=` (bc u p fv c s).1.
 Proof.
   rewrite/bc.
-  case: ifP => // _.
-  case X: get_tm_hd => //=[c'].
+  case: ifP => //= _.
+  case X: get_tm_hd => //[k].
   case: fndP => cP//.
   rewrite !push/= fsubsetU//.
   apply/orP; left.
@@ -547,16 +548,11 @@ Proof.
   by apply: disjoint_sub.
 Qed. *)
 
-Lemma get_modes_rev_rename fs hd m mp:
-  get_modes_rev (rename fs hd mp).2 m = get_modes_rev hd m.
+Lemma count_tm_ag_rename fs hd mp:
+  count_tm_ag (rename fs hd mp).2  = count_tm_ag hd.
 Proof.
-  rewrite/get_modes_rev/sigtm_rev; f_equal.
-  rewrite/sigtm/=; f_equal.
-  rewrite/rename !push/=.
-  move: (fresh_tm _ _ _) => -[/= _].
-  elim: hd => //[v|a Ha f Hf] b.
-    by rewrite ren_V.
-  by rewrite ren_app/= Ha.
+  rewrite/rename !push/=; move: (fresh_tm _ _ _).2.
+  by elim: hd => //=[v|a Ha f Hf] snd/=; [rewrite ren_V|rewrite Ha].
 Qed.
 
 Lemma has_cut_seq_fresh fv1 bo mp:  

@@ -2,10 +2,10 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import finmap ctx lang tree.
 
 Definition prop := b (d Pred).
-Definition build_arr := arr prop prop.
+Definition build_arr := arr output prop prop.
 
 Definition build_progr l := {|
-  sig := [fmap].[IP false <- (0, build_arr)].[IP 1 <- (0, build_arr)].[IP 2 <- (0, build_arr)].[IP 200 <- (0, prop)];
+  sig := [fmap].[IP false <- build_arr].[IP 1 <- build_arr].[IP 2 <- build_arr].[IP 200 <- prop];
   rules := l;
 |}.
 
@@ -84,9 +84,9 @@ Section Test1.
       rewrite acyclic_sigma0//.
     move=> //.
     apply: StepT => //=.
-      rewrite/bc [get_tm_hd _]/=.
+      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
-      replace _.[? _] with (Some (0, build_arr)); last first.
+      replace _.[? _] with (Some (build_arr)); last first.
         by rewrite !FmapE.fmapE eqxx/=.
       rewrite/=.
       rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
@@ -102,9 +102,9 @@ Section Test1.
     rewrite-/X.
     set Y:= (_ `|` _).
     apply: StepT => //=.
-      rewrite /bc [get_tm_hd _]/=.
+      rewrite /bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
-      replace _.[? _] with (Some (0, build_arr)); last first.
+      replace _.[? _] with (Some build_arr); last first.
         by rewrite !FmapE.fmapE eqxx/=.
       rewrite/=.
       rewrite FmapE.fmapE.
@@ -117,9 +117,9 @@ Section Test1.
     set Z := (_ `|` _).
     apply: BackT => //=.
     apply: StepT => //=.
-      rewrite /bc [get_tm_hd _]/=.
+      rewrite /bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
-      replace _.[? _] with (Some (0, build_arr)); last first.
+      replace _.[? _] with (Some build_arr); last first.
         by rewrite !FmapE.fmapE eqxx/=.
       rewrite/=.
       rewrite FmapE.fmapE.
@@ -146,7 +146,7 @@ Section Test5.
   Proof.
     repeat eexists.
     apply: StepT => //=.
-      rewrite/bc [get_tm_hd _]/=.
+      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
       rewrite !fset0U/= !fsetU0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0 !fset0U.
@@ -156,7 +156,7 @@ Section Test5.
       by rewrite acyclic_sigma0.
       move=> //.
     apply: StepT => //=.
-      rewrite/bc [get_tm_hd _]/=.
+      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
       rewrite !fset0U/= not_fnd//= not_fnd//=.
@@ -188,7 +188,7 @@ Section Test6.
   Proof.
     repeat eexists.
     apply: StepT => //.
-      rewrite/=/bc [get_tm_hd _]/=.
+      rewrite/=/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
       rewrite !fset0U/= !fsetU0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0 !fset0U.
@@ -198,7 +198,7 @@ Section Test6.
       by rewrite acyclic_sigma0.
       move=> //.
     apply: StepT => //=.
-      rewrite/bc [get_tm_hd _]/=.
+      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
       rewrite !fset0U/= not_fnd//= not_fnd//=.
@@ -210,7 +210,7 @@ Section Test6.
     rewrite -!(fsetUC [fset IV 0]) !fsetUA fsetUid.
     set X := (_ `|` _).
     apply/StepT => //=.
-      rewrite/bc [get_tm_hd _]/=.
+      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
       rewrite !fset0U//=.
