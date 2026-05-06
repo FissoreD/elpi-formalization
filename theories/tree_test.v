@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import finmap ctx lang tree.
+From det Require Import finmap ctx lang tree unif.
 
 Definition prop := b (d Pred).
 Definition build_arr := arr output prop prop.
@@ -9,23 +9,20 @@ Definition build_progr l := {|
   rules := l;
 |}.
 
-Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
+(* Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
   match t1, t2 with
   | Tm_V X, _ => match lookup X s with None => Some (add X t2 s) | Some t => if t == t2 then Some s else None end
   | _, Tm_V X => match lookup X s with None => Some (add X t2 s) | Some t => if t == t1 then Some s else None end
   | _, _ => if t1 == t2 then Some s else None
   end.
 
-Definition matchingF (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
+Definition matchingF (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None. *)
 
-Definition unif : Unif := {|
-  unify := unifyF;
-  matching := matchingF;
-|}.
+Definition unif : Unif := mk_Unif unify matching.
 
-Definition r := (IP 2).
-Definition p := (IP 1).
-Definition q := (IP false).
+Notation r := (IP 2).
+Notation p := (IP 1).
+Notation q := (IP false).
 
 Definition v_X := Tm_V (IV false).
 Definition pred_q x  := Tm_App (Tm_P p) x.
@@ -35,6 +32,14 @@ Definition pred_fail := Tm_P (IP 100).
 
 Definition s1 : Sigma := [fmap].[fresh [fset IV false] <- Tm_D (ID 1)].
 Definition s2 : Sigma := [fmap].[fresh [fset IV false] <- Tm_D (ID 2)].
+
+Lemma codom0_set v s: codom empty.[v <- s] = [::s].
+Proof. by rewrite/= codomE/= fsetU0 enum_fset1/= ffunE//=eqxx. Qed.
+
+Lemma vars_sigma_set v s: vars_sigma empty.[v <- s] = v |` vars_tm s.
+Proof. by rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0. Qed.
+
+Definition simpl_set:= (fsetU0, fset0U, codomf0, cat0f, vars_sigma0, fsetUid, acyclic_sigma0, deref_D, deref_P, ren_P, ren_D, ren_app, deref_empty, vars_sigma_set, unify_refl, cardfs1).
 
 Section Test1.
 
@@ -46,23 +51,18 @@ Section Test1.
         [:: call (Tm_App (Tm_P p) v_X) ; call (Tm_App (Tm_P r) v_X) ] 
     ].
 
-  Lemma codom0: codom empty = [::].
-  Proof. by rewrite /empty codomE/= enum_fset0. Qed.
-
-  Lemma codom_vars0: codom_vars empty = fset0.
-  Proof. by rewrite/codom_vars codom0. Qed.
-
-  Lemma codom0_set v s: codom empty.[v <- s] = [::s].
-  Proof. by rewrite/= codomE/= fsetU0 enum_fset1/= ffunE//=eqxx. Qed.
-
   Lemma acyclic_sigma_set_D k t:
     k \notin vars_tm t ->
     acyclic_sigma empty.[k <- t].
   Proof.
-    rewrite/acyclic_sigma/=/codom_vars codom0_set/= !fsetU0/=.
-    by rewrite/fdisjoint fsetIC fsetI1 => /negPf ->.
+    rewrite/acyclic_sigma/=.
+    rewrite/deref/= fsetU0 cardfs1 => H.
+    rewrite/deref_aux/deref1.
+    apply/forallP => -[x xP].
+    rewrite !FmapE.fmapE/= not_fnd//=.
+    rewrite in_fset1 in xP; move/eqP: xP => ?; subst.
+    by rewrite eqxx.
   Qed.
-  
 
   Goal exists v, runT unif p_test fset0 empty (TA (call (Tm_App (Tm_P q) (Tm_D (ID 1))))) (Some (s2, None)) false v.
   Proof.
@@ -71,64 +71,71 @@ Section Test1.
     apply: StepT => //=.
       rewrite/bc [get_tm_hd _]/=.
       cbn iota.
-      rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename/=in_fset1 eqxx/=.
-      rewrite !fset0U/= !fsetU0/varsU_rule/=/varsU_rhead/=/varsU_rprem/=.
-      rewrite /vars_sigma codom_vars0 domf0 /= !fset0U.
-      rewrite !ren_app !ren_P ren_V/=.
-      rewrite in_fnd//= ?in_fset1//= => H.
-      rewrite ffunE/=/vars_atoms/= !fsetU0 !fset0U/= fsetUid.
-      rewrite (fsetUC _ [fset fresh _]) fsetUA fsetUid.
-      rewrite fsetUC -/X//.
-      rewrite acyclic_sigma0//.
-    move=> //.
+      rewrite deref_App [vars_tm _]/= !simpl_set.
+      rewrite in_fnd.
+        by rewrite /p_test/= !inE eqxx orbT.
+      move=> qs.
+      replace (flatten_mode _) with [::output]; last by rewrite/= ffunE !FmapE.fmapE.
+      rewrite/flatten_term -cats1 cat0s/=.
+      rewrite/= /fresh_rule/= !simpl_set.
+      rewrite /rename/= !simpl_set in_fset1/=.
+      rewrite !simpl_set.
+      rewrite /varsU_rule/varsU_rhead/=/varsU_rprem/= !simpl_set.
+      rewrite /vars_atoms/= !simpl_set//.
+    by [].
+    rewrite !fsetUA ren_V//=; last first.
+      rewrite/acyclic_ren/= fdisjoint1X.
+      apply/negP => /codomfP -[x].
+      case: fndP => //= k.
+      rewrite ffunE => -[].
+      have:= freshP [fset IV 0].
+      rewrite in_fset1 => /eqP//.
+    rewrite in_fnd/=; first by rewrite !inE.
+    move=> H.
+    rewrite ffunE -fsetUA fsetUid.
+    set F0 := fresh _.
     apply: StepT => //=.
-      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
+      rewrite /bc deref_App get_tm_hd_app !simpl_set [get_tm_hd _]/=.
       cbn iota.
-      replace _.[? _] with (Some (build_arr)); last first.
-        by rewrite !FmapE.fmapE eqxx/=.
-      rewrite/=.
-      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename/=in_fset1 eqxx/=.
-      rewrite acyclic_sigma0//.
-      by rewrite not_fnd//= not_fnd//=.
-      by [].
-    rewrite !fsetU0 !fset0U/=.
-    rewrite !fsetUA !fsetU0 /codom_vars !codom0_set/=.
-    rewrite !fsetU0 -!(fsetUC [fset fresh _]).
-    rewrite !fsetUA !fsetUid.
-    rewrite -!(fsetUC [fset IV 0]) !fsetUA !fsetUid.
-    rewrite-/X.
-    set Y:= (_ `|` _).
-    apply: StepT => //=.
-      rewrite /bc [flatten_term _]/= [get_tm_hd _]/=.
-      cbn iota.
-      replace _.[? _] with (Some build_arr); last first.
-        by rewrite !FmapE.fmapE eqxx/=.
-      rewrite/=.
-      rewrite FmapE.fmapE.
-      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename/=in_fset1 eqxx/=.
-      rewrite not_fnd//= eqxx/=.
-      rewrite !fset0U fsetU0.
-      rewrite /next_subst/= acyclic_sigma_set_D//=.
-      by [].
+      replace (_.[? _]) with (Some build_arr); last by rewrite !FmapE.fmapE.
+      rewrite [fresh_rules _ _]/= /fresh_rule !simpl_set.
+      rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
+      rewrite/=/rename/= !simpl_set /= !inE/= !simpl_set.
+      by rewrite !unify_V_empty.
+    by [].
+    rewrite/varsU_rule/varsU_rhead/=/varsU_rprem/= !simpl_set.
+    rewrite -!fsetUA !fsetUid.
+    rewrite fsetUC -fsetUA (fsetUC _ [fset IV 0]) (fsetUC _ [fset IV _; _]).
+    rewrite -!fsetUA fsetUid !fsetUA !fsetUid fsetUC -!fsetUA !fsetUid.
+    rewrite fsetUC.
+    set F1 := [fset _; _; _].
+    apply: StepT => //.
+      rewrite/step/=.
+      rewrite/bc /next_subst [next _ _]/= acyclic_sigma_set_D//.
+      rewrite deref_App deref_P get_tm_hd_app/get_tm_hd.
+      rewrite 2!FmapE.fmapE/= !simpl_set.
+      rewrite /fresh_rule/= !simpl_set.
+      rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
+      rewrite !inE/= !simpl_set.
+      rewrite/deref/= !simpl_set/= !FmapE.fmapE/= eqxx/=.
+      rewrite unify_diff_ground//.
+    by [].
+    rewrite !simpl_set fsetUC.
     set Z := (_ `|` _).
     apply: BackT => //=.
     apply: StepT => //=.
       rewrite /bc [flatten_term _]/= [get_tm_hd _]/=.
-      cbn iota.
-      replace _.[? _] with (Some build_arr); last first.
-        by rewrite !FmapE.fmapE eqxx/=.
-      rewrite/=.
-      rewrite FmapE.fmapE.
-      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename/=in_fset1 eqxx/=.
-      rewrite not_fnd//= eqxx/=.
-      rewrite !fset0U !fsetU0.
-      rewrite/next_subst/= acyclic_sigma_set_D//.
-      by [].
+      rewrite/next_subst/= acyclic_sigma_set_D//=.
+      rewrite deref_App//= deref_P//=.
+      rewrite !FmapE.fmapE/= !simpl_set.
+      rewrite/= /fresh_rule/= !simpl_set.
+      rewrite /rename/= !simpl_set in_fset1/=.
+      rewrite !simpl_set.
+      rewrite/deref/= !simpl_set/= !FmapE.fmapE/= eqxx/=.
+      rewrite unify_refl//=.
+    by [].
+    rewrite !simpl_set/=.
+    set Y:= (_ `|` _).
     apply: StopT => //=.
   Qed.
 End Test1.
@@ -148,27 +155,21 @@ Section Test5.
     apply: StepT => //=.
       rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
-      rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U/= !fsetU0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0 !fset0U.
-      rewrite codomf0 cat0f fsetU0 ren_app ren_P ren_V/= in_fnd/= ?in_fset1// => H.
-      rewrite/vars_atoms/= !fsetUA codom_vars0 !fsetU0 ffunE/= fsetUC fsetUA fsetUid.
-      rewrite fsetUC//.
-      by rewrite acyclic_sigma0.
-      move=> //.
+      by rewrite !FmapE.fmapE eqxx/= !simpl_set//=.
+    by [].
+    set X:= (_ `|` _).
     apply: StepT => //=.
       rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
-      rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U/= not_fnd//= not_fnd//=.
-      by rewrite acyclic_sigma0.
-      by [].
-    rewrite codomf0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0.
-    rewrite /vars_sigma/codom_vars !codom0_set/= !fsetU0 fsetUid !fsetUA.
-    rewrite -!(fsetUC [fset fresh _]) fsetUA !fsetUid !fsetUA.
-    rewrite -!(fsetUC [fset IV 0]) !fsetUA fsetUid.
-    set X := (_ `|` _).
+      rewrite !FmapE.fmapE eqxx/= !simpl_set/= ren_V; last first.
+        rewrite /acyclic_ren/= fdisjoint1X !inE/=.
+        apply/negP; move=> /existsP[/=]x; rewrite ffunE.
+        by have:= freshP [fset IV 0]; rewrite !inE => ->.
+      by rewrite !unify_V_empty => //=.
+    by [].
     apply/StepT => //=.
     apply/StopT => //=.
+    by rewrite /next_subst/= in_fnd/=?inE// => H; rewrite ffunE.
   Qed.
 End Test5.
 
@@ -191,31 +192,35 @@ Section Test6.
       rewrite/=/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U/= !fsetU0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0 !fset0U.
-      rewrite codomf0 cat0f fsetU0 ren_app ren_P ren_V/= in_fnd/= ?in_fset1// => H.
-      rewrite/vars_atoms/= !fsetUA codom_vars0 !fsetU0 ffunE/= fsetUC fsetUA fsetUid.
-      rewrite fsetUC//.
-      by rewrite acyclic_sigma0.
-      move=> //.
+      by rewrite unify_refl//= !simpl_set//=.
+    by [].
+    set X:= (_ `|` _).
     apply: StepT => //=.
       rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U/= not_fnd//= not_fnd//=.
-      by rewrite acyclic_sigma0.
-      by [].
-    rewrite codomf0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0.
-    rewrite /vars_sigma/codom_vars !codom0_set/= !fsetU0 fsetUid !fsetUA.
-    rewrite -!(fsetUC [fset fresh _]) fsetUA !fsetUid !fsetUA.
-    rewrite -!(fsetUC [fset IV 0]) !fsetUA fsetUid.
-    set X := (_ `|` _).
+      rewrite ren_V//=; last first.
+        rewrite /acyclic_ren/= fdisjoint1X !inE/=.
+        apply/negP; move=> /existsP[/=]x; rewrite ffunE.
+        by have:= freshP [fset IV 0]; rewrite !inE => ->.
+      by rewrite !unify_V_empty//!simpl_set.
+    by [].
+    set Y:= (_ `|` _).
+    rewrite/=.
+    rewrite in_fnd/=?inE// => H.
+    rewrite ffunE.
     apply/StepT => //=.
-      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
-      cbn iota.
-      rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U//=.
-      by rewrite /next_subst/= acyclic_sigma_set_D//.
-      by [].
+      rewrite/next_subst/=.
+      rewrite/bc [flatten_term _]/= [get_tm_hd _]/= !simpl_set.
+      rewrite ifF//=; last first.
+        rewrite/acyclic_sigma.
+        rewrite/deref/= !simpl_set/=.
+        apply/negP => x; apply:x; apply/forallP => -[/= k].
+        rewrite inE => /eqP ?; subst.
+        by rewrite !FmapE.fmapE/= eqxx//.
+      by rewrite !FmapE.fmapE.
+    by [].
+    rewrite !simpl_set.
     apply: StepT => //=.
     apply: StopT => //.
   Qed.

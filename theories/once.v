@@ -5,8 +5,8 @@ From det Require Import tree_prop_hard tree_vars mut_excl unif fresh.
 
 From det Require Import check_fo.
 
-Lemma is_det_tail_cut u p s fv l:
-  is_det u p s fv (And l [::cut] (TA cut)).
+Lemma is_det_tail_cut p s fv l:
+  is_det p s fv (And l [::cut] (TA cut)).
 Proof.
   move=> r [s'[r' H]].
   remember (And _ _ _) as t' eqn:Ht'.
@@ -37,11 +37,11 @@ Definition same_sub {T1 T2:eqType} (s1 s2: option (T1*T2)) :=
   | _, _ => false
   end.
 
-Lemma is_det_tail_cut1 u p s fv t r r':
-  check_program u p ->
+Lemma is_det_tail_cut1 p s fv t r r':
+  check_program p ->
   det_tree p.(sig) t ->
-  runT' u p fv s t r -> 
-  runT' u p fv s (And t [::cut] (TA cut)) r' -> 
+  runT' p fv s t r -> 
+  runT' p fv s (And t [::cut] (TA cut)) r' -> 
   r = r'.
 Proof.
   move=> H1 + [b'[c' H2]][+[]].
@@ -157,21 +157,26 @@ Section once.
   Qed.
 
 
-  Lemma id_det_once u p s t fv:
+  Lemma id_det_once p s t fv:
     prog_once p ->
-    is_det u p s fv (TA (call (Tm_App (Tm_P once_sym) t))).
+    is_det p s fv (TA (call (Tm_App (Tm_P once_sym) t))).
   Proof.
     case: p => -[|r rs] sig []//= HS; first by move=> /(_ [::]) [].
     move=> /(_ rs) [[?] H]; subst.
     rewrite/is_det HS => r' [b'[fv' Hx]].
     inversion Hx; clear Hx; subst => //.
     move: H1; rewrite/=/bc [get_tm_hd _]/=.
-    cbn iota.
-    rewrite once_sigP/=.
-    rewrite fset0U.
+    case: ifP => //=.
+      move=> _ [???]; subst.
+      by inversion H3; auto.
+    move=> AS.
+    rewrite deref_App/= deref_P/=.
+    rewrite !FmapE.fmapE/= !inE eqxx/=.
     case X: fresh_rules => [fvx' rs'].
     rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
-    rewrite/fresh_tm inE eqxx ren_app ren_V ren_P.
+    rewrite/fresh_tm inE eqxx ren_app ren_P ren_V; last first.
+      rewrite/acyclic_ren/= codomf1/= fdisjoint_sym.
+      by apply/fdisjointWr/disjoint_fresh/fsubsetUl.
     rewrite in_fnd; first by rewrite inE.
     move=> H1/=.
     rewrite eqxx/=.
@@ -179,21 +184,20 @@ Section once.
       rewrite fsubsetU//=; apply/orP; right.
       move: X; rewrite [fresh_rules _ _]surjective_pairing => -[??]; subst.
       apply/fsubset_trans/fresh_rules_sub.
-      by rewrite -fsetUA fsetUC -!fsetUA fsubsetUl.
+      by rewrite fset0U -fsetUA fsetUC -fsetUA fsubsetUl.
       move: X; rewrite [fresh_rules _ _]surjective_pairing => -[??]; subst.
       rewrite fsubsetU//=; apply/orP; right.
       apply/fsubset_trans/fresh_rules_sub.
       by rewrite -fsetUA fsubsetUl.
     move=>/=.
-    rewrite no_once_select//=.
+    rewrite no_once_select//=; last first.
+      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
+      by apply: no_once_fresh.
     rewrite/vars_sigma/= /varsU_rule/varsU_rhead/varsU_rprem/= fset0U/=.
-    rewrite !fsetUA/= !fsetU0.
-    rewrite !(fsetUC _ fvx') !fsetUA.
-    rewrite !(fsetUC _ [fset IV 0]) !fsetUA fsetUid.
-    rewrite !(fsetUC _ [fset fresh _]) !fsetUA !fsetUid.
-    case: ifP => //=[/negPf|/negbFE] AS.
-      by move=> [???]; subst; inversion H3 => //; auto.
+    set S := (_ `|` _).
     move=> [???]; subst.
+    rewrite inE in H1.
+    clear H1.
     have:= run_or0 H3 => ?; subst.
     have:= run_ko_ONK H3.
     case: r' H3 => [[s1 t1]|] H3; last by eauto.
@@ -206,7 +210,5 @@ Section once.
     have {}Hz := ex_intro (fun x => exists y, runT _ _ _ _ _ _ x _) _ Hz.
     have:= is_det_tail_cut Hz.
     by move=> [|[]]//.
-    move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
-    by apply: no_once_fresh.
   Qed.
 End once.

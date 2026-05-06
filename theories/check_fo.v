@@ -32,13 +32,14 @@ Lemma is_det_rename sP fv hd m:
 Proof.
   rewrite/rename!push/=.
   move: (fresh_tm _ _ _) => -[]/= _.
-  elim: hd => //= v b; rewrite ren_V//.
+  elim: hd => //=[p|d|v|f Hf a Ha] b; rewrite ?(ren_P,ren_D,ren_app)//=; last rewrite !tm_is_det_app Hf//.
+  by have [?->] := ren_VE b v.
 Qed.
 
-Lemma is_det_deref sig fv c :
+(* Lemma is_det_deref sig fv c :
   tm_is_det sig c ->
   tm_is_det sig (deref fv c).
-Proof. by elim: c => //. Qed.
+Proof. by elim: c => //. Qed. *)
 
 
 Lemma tm_is_det_comb sP f a:
@@ -65,8 +66,9 @@ Proof.
 Qed.
 
 Section check.
-  Variable u : Unif.
-  Notation runT := (runT u).
+  (* Variable u : Unif. *)
+  Definition u := mk_Unif unify matching.
+  Notation runT := (runT (mk_Unif unify matching)).
   Definition runT' p v s t r := (exists v' b', runT p v s t r v' b').
 
   Fixpoint has_cut A :=
@@ -316,7 +318,7 @@ Section check.
   Qed.
 
   (*SNIP: check_program *)
-  Definition check_program pr := mut_excl u pr && check_rules pr.
+  Definition check_program pr := mut_excl pr && check_rules pr.
   (*ENDSNIP: check_program *)
 
   Lemma det_check_big_or_help s r0 rs:

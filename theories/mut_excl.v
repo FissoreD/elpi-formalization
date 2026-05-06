@@ -3,13 +3,13 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import tree tree_prop ctx tree_vars unif fresh.
 
 Section mut_excl.
-  Variable u : Unif.
+  (* Variable u : Unif. *)
 
   Fixpoint H_head (ml: seq mode) (q : seq Tm) (h: seq Tm) : bool :=
     match ml,q,h with
     | _, [::], [::] => true
     | m :: tl, x :: xs, y :: ys => 
-      ((m != input) || u.(unify) x y fmap0) && H_head tl xs ys
+      ((m != input) || unify x y fmap0) && H_head tl xs ys
     | _, _, _ => false
     end.
   
@@ -101,8 +101,12 @@ Section mut_excl.
     by apply: IH H.
   Qed. *)
 
-  Lemma callable_ren m hd p: get_tm_hd (ren m hd) = inl p <-> get_tm_hd hd = inl p.
-  Proof. by elim: hd => //= v; rewrite ren_V//. Qed.
+  Lemma callable_ren m hd p:
+    get_tm_hd (ren m hd) = inl p <-> get_tm_hd hd = inl p.
+  Proof. 
+    elim: hd => //= [q|d|v|f Hf a Ha]; rewrite ?(ren_P,ren_D,ren_app)//=.
+    by have [x ->] := ren_VE m v.
+  Qed.
 
   Lemma callable_rename fv hd p mp: get_tm_hd (rename fv hd mp).2 = inl p <-> get_tm_hd hd = inl p.
   Proof. by rewrite/rename!push/= => /=; split => /callable_ren. Qed.
@@ -112,7 +116,10 @@ Section mut_excl.
   Proof. by rewrite/rename!push/= => /=; split => /callable_ren. Qed. *)
 
   Lemma is_det_cder s s1 c: tm_is_det s c -> get_tm_hd (deref s1 c) = get_tm_hd c.
-  Proof. by elim: c s => //= f Hf a Ha s; rewrite tm_is_det_app !push/=; apply: Hf. Qed.
+  Proof. 
+    elim: c s => //=[p|f Hf a Ha] s; rewrite ?deref_P//.
+    rewrite tm_is_det_app deref_App/=; apply: Hf.
+  Qed.
 
   Lemma is_det_lookup p c s (pP: p \in domf s):
     get_tm_hd c = inl p -> tm_is_det s c -> is_det_sig s.[pP].
@@ -120,7 +127,7 @@ Section mut_excl.
 
   Lemma count_tm_ag_deref s c p: 
     get_tm_hd c = inl p -> count_tm_ag (deref s c) = count_tm_ag c.
-  Proof. by elim: c p s => //=f Hf a Ha p s H; rewrite (Hf p)//. Qed.
+  Proof. elim: c p s => //[p|f Hf a Ha] q s/= H; rewrite (deref_App, deref_P)//=(Hf q)//. Qed.
 
   (* Lemma get_modes_rev_deref c p s1 s: 
     get_tm_hd c = inl p -> get_modes (deref s1 c) s = get_modes c s.
@@ -150,6 +157,8 @@ Section mut_excl.
 
   Lemma vars_tms_cons x xs: vars_tms (x::xs) = vars_tm x `|` vars_tms xs.
   Proof. by []. Qed.
+
+  Definition u := mk_Unif unify matching.
 
   Lemma disjointH m f f1 s1 s1': 
     all_inp m ->
@@ -226,21 +235,26 @@ Section mut_excl.
     have {}M2 := isSomeP M2.
     have {}M2 := matching_subst1 Dy M2.
     have {}M2 := matching_monotone M2.
+    move: M; case M: matching => //=.
+    move: M2; case M2: matching => //=.
     have {}U1:= match_unif M.
     have {}U2:= match_unif M2.
     rewrite unif_sym in U1.
-    by rewrite (unif_trans U1 U2) in U.
+    by rewrite (unif_trans (isSomeP U1) (isSomeP U2)) in U.
   Qed.
+
+  Lemma deref_V s t:
+    acyclic_sigma s -> [disjoint vars_tm (deref s t) & domf s].
+  Proof.
+    rewrite/deref => AS.
+  Admitted.
 
   Lemma acyclic_sigma_dis c s:
     acyclic_sigma s -> [disjoint vars_tm (deref s c) & domf s].
   Proof.
-    move=> H; elim: c => //=; only 1, 2: by rewrite fdisjoint0X.
-      move=> v; case: fndP => //= vs; last by rewrite fdisjoint1X.
-      rewrite fdisjoint_sym.
-      apply: disjoint_sub H _.
-      apply/codom_vars_sub.
-    by move=> f Hf a Ha; rewrite disjointUl Hf.
+    move=> H; elim: c => [p|d|v|f Hf a Ha]; rewrite ?(deref_P,deref_D)//=?fdisjoint0X//.
+      by apply/deref_V.
+    by rewrite deref_App/= disjointUl Hf.
   Qed.
 
   Lemma vars_tms_rcons f a: 
@@ -278,32 +292,35 @@ Section mut_excl.
     by apply/acyclic_sigma_dis.
   Qed.
 
-  Lemma ren_cat x t z: vars_tm t `<=` domf z -> (ren z t) = ren (x+z) t.
+  (* Lemma ren_cat x t z: vars_tm t `<=` domf z -> (ren z t) = ren (x+z) t.
   Proof.
     elim: t z x => //=.
       move=> v z x; rewrite fsub1set !ren_V => H.
       by rewrite lookup_cat H/=.
     move=> f Hf a Ha z x; rewrite fsubUset => /andP[H1 H2].
     rewrite !ren_app (Ha _ x)//(Hf _ x)//.
-  Qed.
+  Qed. *)
 
   (* Lemma flatten_term_size_rename z w q: 
     size (flatten_term (deref z q)) = size (flatten_term (deref w q)).
   Proof.
     elim: q => //=[v|f Hf a Ha]. *)
 
-  Lemma flatten_term_size_ren z w q: 
+  (* Lemma flatten_term_size_ren z w q: 
     size (flatten_term (ren z q)) = size (flatten_term (ren w q)).
   Proof.
     rewrite /ren.
     elim: q z w => //=[v|f Hf a Ha] z w.
       by (do 2 case: fndP => //=) => ??; rewrite !ffunE//.
     by rewrite !size_rcons; f_equal; eauto.
-  Qed.
+  Qed. *)
 
   Lemma flatten_term_ren z q:
     flatten_term (ren z q) = map (ren z) (flatten_term q).
-  Proof. by elim: q => //=[v|f Hf a Ha]; rewrite !(ren_V, map_rcons)// Hf//. Qed.
+  Proof.
+    elim: q => [p|d|v|f Hf a Ha]/=; rewrite ?(ren_P,ren_D,ren_app)//=; last by rewrite Hf map_rcons//.
+    by have [? ->] := ren_VE z v.
+  Qed.
 
   Lemma H_head_ren_aux m hd q x y z w:
     all (refresh_for y) hd -> all (refresh_for x) hd ->
@@ -486,8 +503,6 @@ Section mut_excl.
     rewrite fdisjoint_sym.
     apply/disjoint_sub.
     apply/vars_tm_rename_disjoint => //.
-      by rewrite codomf0.
-      by rewrite codomf0 fdisjointX0.
     apply/fsubset_trans/fresh_rules_sub.
     rewrite -fsetUA fsetUC -!fsetUA.
     apply/fsubsetUl.

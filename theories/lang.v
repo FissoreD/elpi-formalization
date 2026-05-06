@@ -157,7 +157,7 @@ Goal forall (p: program), exists p', p == p'.
 Proof. by move=>p; exists p; rewrite eqxx. Qed. 
 
 (*SNIP: unif_type*)
-Record Unif := {
+Record Unif := mk_Unif {
   unify : Tm -> Tm -> Sigma -> option Sigma;
   matching : Tm -> Tm -> Sigma -> option Sigma;
 }.  
@@ -253,16 +253,52 @@ Fixpoint fresh_tm fv m t : {fset V} * {fmap V -> V} :=
   | Tm_P _ => (fv, m)
   | Tm_V v =>
        if v \in domf m then (fv, m)
-       else let v' := fresh (fv `|` codomf m) in (v' |` fv, m + [fmap v : fset1 v => v'])
-  | Tm_App l r => let: (fv, m) := fresh_tm fv m l in let: (fv, m) := fresh_tm fv m r in (fv, m)
+       else let v' := fresh (fv `|` codomf m) in (v' |` fv,  m + [fmap v : fset1 v => v'])
+  | Tm_App l r => 
+      let: (fv, m) := fresh_tm fv m l in 
+      let: (fv, m) := fresh_tm fv m r in (fv, m)
   end.
 
-Fixpoint deref (s: Sigma) (tm:Tm) :=
+Fixpoint deref1 (s: Sigma) (tm:Tm) :=
   match tm with
   | Tm_V V => Option.default tm (lookup V s)
   | Tm_P _ | Tm_D _ => tm
-  | Tm_App h ag => Tm_App (deref s h) (deref s ag)
+  | Tm_App h ag => Tm_App (deref1 s h) (deref1 s ag)
   end.
+
+Fixpoint deref_aux n (s: Sigma) (tm:Tm) :=
+  match n with 
+  | 0 => tm
+  | n.+1 => deref_aux n s (deref1 s tm)
+  end.
+
+Definition deref s tm := deref_aux #|` domf s | s tm.
+
+Lemma deref_aux_App n s f a: 
+  deref_aux n s (Tm_App f a) = Tm_App (deref_aux n s f) (deref_aux n s a).
+Proof. elim: n f a => //=. Qed.
+
+Lemma deref_App s f a: deref s (Tm_App f a) = Tm_App (deref s f) (deref s a).
+Proof. rewrite/deref deref_aux_App//. Qed.
+
+Lemma deref_empty t: deref empty t = t.
+Proof. by []. Qed.
+
+Fixpoint acyclic_aux n s (seen: {fset V}) tm :=
+  let tm' := deref1 s tm in
+  let vtm' := vars_tm tm' in
+  match n with
+  | 0 => true
+  | n.+1 => (seen `&` vtm' == fset0) && (acyclic_aux n s (seen `|` vtm') tm')
+  end.
+
+Definition acyclic_sigma (s: Sigma) :=
+  (* [forall x : domf s, acyclic_aux #|` domf s | s [fset (val x)] s.[valP x]]. *)
+  [forall x : domf s, val x \notin vars_tm (deref s (Tm_V (val x)))].
+
+Definition acyclic_ren (m: {fmap V -> V}) := 
+  (* acyclic_sigma [fmap s => Tm_V m.[valP s]]. *)
+  [disjoint domf m & codomf m].
 
 Lemma fresh_Tm_App fv m l r :
   fresh_tm fv m (Tm_App l r) =
@@ -272,7 +308,7 @@ Proof.
 by rewrite /= [fresh_tm _ _ l]surjective_pairing [fresh_tm _ _ r]surjective_pairing /=.
 Qed.
 
-Definition ren m := deref [fmap x : domf m => Tm_V m.[valP x]].
+Definition ren (m: {fmap V -> V}) := deref [fmap x : domf m => Tm_V m.[valP x]].
 
 Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a bx) = F t.1 t.2.
   by case: t => /=.
@@ -282,36 +318,119 @@ Definition rename fv tm m :=
   let: (fv', m) := fresh_tm (vars_tm tm `|` fv) m tm in
   ((fv', m), ren m tm).
 
-Lemma ren_app m l r : ren m (Tm_App l r) = Tm_App (ren m l) (ren m r).
-by []. Qed.
+Lemma acyclic_sigma0: acyclic_sigma empty.
+(* Proof. by rewrite/acyclic_sigma/=; apply/forallP. Qed. *)
+Proof. by rewrite/acyclic_sigma; apply/forallP => //=-[]. Qed.
 
-Lemma ren_V b v:
-  ren b (Tm_V v) = Tm_V (odflt v b.[?v]).
+Require Import Lia.
+
+Lemma deref_succ_id n s t: 
+  acyclic_sigma s -> n > #|` domf s | -> deref_aux n s t = deref s t.
 Proof.
-  rewrite/ren/=; case: fndP => //=vb.
-    by rewrite in_fnd//=ffunE valPE.
-  rewrite not_fnd//=.
+  rewrite/acyclic_sigma/deref/=.
+  
+  (* remember (#|` domf s|) as N eqn:H. *)
+  (* rewrite -H. *)
+  move: (leqnn #|` domf s|) t n => //=.
+  move: (x in _ <= x) => size; move: s.
+  elim: size => //=.
+    (* admit.
+  move=> n IH s H t m.
+  Search (domf _).
+  (* move=> s
+
+
+  elim: (x in _ <= x) s (leqnn #|` domf s|) t n => //=.
+    admit.
+  case: n => //=[n]. *)
+  suffices [k[s' Hk]]: exists k (s': Sigma), s' = s.[~ k].
+    (* subst. *)
+    move=> H1 H2.
+    have {}IH := IH s'; subst. *)
+Admitted.
+
+Lemma ren_app m l r : ren m (Tm_App l r) = Tm_App (ren m l) (ren m r).
+Proof. by rewrite/ren deref_App. Qed.
+
+Lemma deref_aux_ren_V b v:
+  acyclic_ren b ->
+  deref_aux #|` domf b| [fmap x => Tm_V b.[valP x]] (Tm_V v) =
+  Tm_V (odflt v b.[? v]).
+Proof.
+  case: fndP => vb/= H; last first.
+    by move: #|` _ |; elim => //= n IH; rewrite not_fnd.
+  rewrite (cardfsD1 v) vb /= in_fnd/= ffunE valPE.
+  move: #|` _ |; elim => [// | n IH]/=.
+  case: fndP => //= bb; rewrite ffunE valPE.
+  have:= fdisjointP H _ bb.
+  move=> /codomfP/= Hx; exfalso; apply:Hx.
+  by exists v; rewrite in_fnd.
 Qed.
 
-Lemma ren_P b p:
-  ren b (Tm_P p) = Tm_P p.
-Proof. by []. Qed.
+Lemma deref_aux_P s n v: deref_aux n s (Tm_P v) = Tm_P v.
+Proof. elim: n => //. Qed.
+
+Lemma deref_P s v: deref s (Tm_P v) = Tm_P v.
+Proof. apply/deref_aux_P. Qed.
+
+Definition ren_P b p: ren b (Tm_P p) = Tm_P p := deref_P _ _.
+
+Lemma deref_aux_D s n v: deref_aux n s (Tm_D v) = Tm_D v.
+Proof. elim: n => //. Qed.
+
+Lemma deref_D s v: deref s (Tm_D v) = Tm_D v.
+Proof. apply/deref_aux_D. Qed.
+
+Definition ren_D b p: ren b (Tm_D p) = Tm_D p := deref_D _ _.
+
+Lemma deref_ren_V b v: acyclic_ren b ->
+  deref [fmap x => Tm_V b.[valP x]] (Tm_V v) = Tm_V (odflt v b.[? v]).
+Proof. by move=> H; rewrite/deref/=deref_aux_ren_V. Qed.
+
+Lemma ren_V b v: acyclic_ren b ->
+  ren b (Tm_V v) = Tm_V (odflt v b.[?v]).
+Proof. by apply/deref_ren_V. Qed.
+
+Lemma ren_VE b v: exists x, ren b (Tm_V v) = Tm_V x.
+Proof. 
+  rewrite/ren/deref; elim: #|`_| v => //=[|n IH] v; eauto. 
+  by case: fndP => //= vb; rewrite ffunE valPE//.
+Qed.
+
+Lemma not_in_deref_aux_V n s v: 
+  v \notin domf s -> deref_aux n s (Tm_V v) = Tm_V v.
+Proof. by elim: n => //= n IH H; rewrite not_fnd // IH. Qed.
+
+Lemma not_in_deref_V s v: v \notin domf s -> deref s (Tm_V v) = Tm_V v.
+Proof. apply: not_in_deref_aux_V. Qed.
+
+Lemma ren_VE1 b v: exists x, ren b (Tm_V v) = Tm_V x /\ (x = v \/ x \in codomf b).
+Proof. 
+  rewrite/ren/deref; elim: #|`_| v => //=[|n IH] v; eauto.
+  case: fndP => /= vb.
+    rewrite ffunE/= valPE.
+    have [x[H1[H2|H2]]] := IH (b.[vb]); subst; rewrite H1; eauto.
+    repeat eexists; eauto.
+    by right; apply/codomfP; exists v; rewrite in_fnd.
+  by exists v; split; auto; rewrite not_in_deref_aux_V//.
+Qed.
 
 Lemma ren_isP b tm p:
   ren b tm = Tm_P p ->
   exists p', tm = Tm_P p'.
 Proof.
-  case: tm => //[p'|v]; first by repeat eexists.
-  by rewrite ren_V.
+  case: tm => //[p'|d|v|f a]; first by repeat eexists.
+    by rewrite ren_D.
+    by have [? ->] := ren_VE b v.
+  rewrite ren_app//.
 Qed.
 
 Lemma ren_isApp b hd f2 a2:
   ren b hd = Tm_App f2 a2 ->
   exists f1 a1, hd = Tm_App f1 a1.
 Proof.
-  case: hd => //=[v|f1 a1].
-    by rewrite ren_V.
-  by repeat eexists.
+  case: hd => //=[p|d|v|f1 a1]; rewrite?(ren_P,ren_D,ren_app)//; eauto.
+  by have [? ->] := ren_VE b v.
 Qed.
 
 Lemma rename_isApp fv hd fv' f2 a2 m:
@@ -319,11 +438,9 @@ Lemma rename_isApp fv hd fv' f2 a2 m:
   exists f1 a1, hd = Tm_App f1 a1.
 Proof.
   rewrite/rename !push => -[?+]; subst.
-  rewrite/ren.
-  case: hd => //=[v|f1 a1].
-    rewrite in_fnd//=; last by move=> >; rewrite ffunE.
-    by case: ifP; rewrite// in_fsetU in_fset1 eqxx orbT.
-  by repeat eexists.
+  case: hd => //=[p|d|v|f1 a1]; rewrite ?(ren_P,ren_D,push,ren_app)//=; eauto.
+  move: (if _ then _ else _) => -[_ y]/=.
+  by have [? ->]:= ren_VE y v.
 Qed.
 
 Definition fresh_atom fv a m :=
@@ -343,8 +460,16 @@ Definition fresh_rule fv r :=
 Definition codom_vars (s:Sigma) := 
   varsU (map vars_tm (codom s)).
 
+Lemma codom0: codom empty = [::].
+Proof. by rewrite /empty codomE/= enum_fset0. Qed.
+
+Lemma codom_vars0: codom_vars empty = fset0.
+Proof. by rewrite/codom_vars codom0. Qed.
 
 Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
+
+Lemma vars_sigma0: vars_sigma empty = fset0.
+Proof. by rewrite/vars_sigma domf0 codom_vars0 fsetU0. Qed.
 
 Definition fresh_rules fv rules :=
   foldr (fun x '(fv,xs) => let: (fv, x) := fresh_rule fv x in (fv,x::xs)) (fv,[::]) rules.
@@ -377,11 +502,6 @@ Fixpoint select u (hd:P) args md (rules: list R) sigma : (fvS * seq (Sigma * seq
 
 Section s.
 Variable u : Unif.
-
-Definition acyclic_sigma (s:Sigma) := [disjoint (domf s) & (codom_vars s)].
-
-Lemma acyclic_sigma0: acyclic_sigma empty.
-Proof. by rewrite/acyclic_sigma/=fdisjoint0X. Qed.
 
 (*SNIP: bc_type*)
 Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq Atom) :=
@@ -447,7 +567,7 @@ Proof. by []. Qed.
 
 Lemma callabe_some_deref s1 c p:
   (get_tm_hd c) = inl p -> get_tm_hd (deref s1 c) = inl p.
-Proof. by elim: c p => //=f Hf a Ha p; rewrite !get_tm_hd_app; auto. Qed.
+Proof. elim: c p => //=[x p [<-]|f Hf a Ha p]; rewrite (deref_P,deref_App)//=; auto. Qed.
 
 Lemma is_det_der s s1 c : tm_is_det s c ->
   exists q (kP: q \in domf s), 

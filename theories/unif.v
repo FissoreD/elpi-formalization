@@ -6,15 +6,139 @@ From det Require Import finmap ctx.
 From det Require Import lang.
 
 Section s.
-Variable u: Unif.
-Notation matching := (matching u).
-Notation unify := (unify u).
+(* Variable u: Unif. *)
+(* Notation matching := (matching u). *)
+(* Notation unify := (unify u). *)
 Notation vars := vars_tm.
 
+Definition matching_var (s: Sigma) (query:V) (arg: Tm) := 
+  @None Sigma.
+
+Definition unify_var (s:Sigma) v arg := 
+  if v \in vars_tm arg then None
+  else Some s.[v <- arg].
+
+Fixpoint unifier_help var_matcher n query pat s :=
+  let unifier_help := unifier_help var_matcher in
+  let query := deref s query in
+  let pat := deref s pat in
+  if query == pat then Some s
+  else
+  match n with
+  | 0 => None
+  | n.+1 =>
+    match pat with 
+    | Tm_V v' => unify_var s v' query
+    | Tm_D _ | Tm_P _ =>
+        match query with 
+        | Tm_V v => var_matcher s v pat
+        | _ => None
+        end
+    | Tm_App t1 t2 =>
+      match query with
+      | Tm_App tx ty => obind (unifier_help n ty t2) (unifier_help n tx t1 s)
+      | Tm_V v => var_matcher s v pat
+      | _ => None
+      end
+    end
+  end.
+
+Definition vars_nb t1 t2 := #|` (vars_tm t1 `|` vars_tm t2)|.
+
+Definition matching_aux := unifier_help matching_var.
+Definition matching t1 t2 s := matching_aux (vars_nb t1 t2) t1 t2 s.
+
+Definition unify_aux := unifier_help unify_var.
+Definition unify t1 t2 s := unify_aux (vars_nb t1 t2) t1 t2 s.
+
+Lemma unify_V_empty v t:
+  v \notin vars_tm t ->
+  unify (Tm_V v) t empty = if t is Tm_V v' then Some empty.[v' <- Tm_V v] else Some empty.[v <- t].
+Proof.
+  rewrite/unify /vars_nb/= /unify_aux cardfsU1.
+  move=> H; rewrite H/= !deref_empty.
+  rewrite/unify_var.
+  case:t H => //= v'.
+    rewrite !inE => /eqP H; rewrite !ifF => //; apply/eqP; congruence.
+  move=> t; case: (_ \in _) => //.
+Qed.
+
+Lemma unifier_help_refl h n t s: unifier_help h n t t s = Some s.
+Proof. by elim: n s t => [|n IH] s t//=; case D: deref; rewrite ?eqxx//?IH/=IH//. Qed.
+
+Lemma unify_refl t s: unify t t s = Some s.
+Proof. apply/unifier_help_refl. Qed.
+
+Definition ground t := vars_tm t == fset0.
+
+Lemma ground_deref1 s t: ground t -> deref1 s t = t.
+Proof. 
+  rewrite/ground; elim: t => //=[v|f Hf a Ha].
+    by move=> /eqP /fsetP /(_ v); rewrite !inE eqxx.
+  by rewrite fsetU_eq0 => /andP => -[/Hf -> /Ha->].
+Qed.
+
+Lemma ground_deref s t: ground t -> deref s t = t.
+Proof. by rewrite/deref; elim: #|`_| t => //= n IH*; rewrite ground_deref1//IH. Qed.
+
+Lemma ground_V v: ground (Tm_V v) = false.
+Proof. by rewrite/ground/=; apply:contraFF erefl => /eqP/fsetP /(_ v); rewrite !inE eqxx. Qed.
+
+Lemma ground_app f a: ground (Tm_App f a) = ground f && ground a.
+Proof. by rewrite /ground/= fsetU_eq0. Qed.
+
+Lemma unify_help_ground_eq h n t1 t2 s s':
+  ground t1 -> ground t2 -> unifier_help h n t1 t2 s = Some s' -> t1 = t2.
+Proof.
+  elim: n t1 t2 s s' => //=[|n IH] t1 t2 s s' G1 G2; rewrite !ground_deref//.
+    by case: eqP => //.
+  case: t2 G2 => [p|d|v|f a]; case: t1 G1 => [p'|d'|v'|f' a']; rewrite ?ground_V//=; try by case: eqP.
+  rewrite !ground_app => /andP[Gf' Ga'] /andP[Gf Ga].
+  case: eqP => //= H.
+  case H1: unifier_help => [sx|]//=.
+  case H2: unifier_help => [sy|]//=.
+  by move=> [?]; subst; f_equal; apply/IH; eauto.
+Qed.
+
+Lemma unify_help_diff_ground h n t1 t2 s: 
+  ground t1 -> ground t2 -> t1 <> t2 -> unifier_help h n t1 t2 s = None.
+Proof.
+  elim: n t1 t2 s => [|n IH] t1 t2 s/= G1 G2; rewrite !ground_deref//; case: eqP => // _ H.
+  case: t2 G2 H => [p|d|v|f a]; case: t1 G1 => [p'|d'|v'|f' a']; rewrite?(ground_V)//.
+  rewrite !ground_app => /andP[Gf' Ga'] /andP[Gf Ga] H.
+  case X: unifier_help => [s'|]//=.
+  apply: IH => //.
+  have:= unify_help_ground_eq Gf' Gf X; congruence.
+Qed.
+
+Lemma unify_diff_ground t1 t2 s: 
+  ground t1 -> ground t2 -> t1 <> t2 -> unify t1 t2 s = None.
+Proof. by apply: unify_help_diff_ground. Qed.
+
+Lemma isSomeP T x (P : option T) : P = Some x -> P.
+Proof. by move=> ->. Qed.
+
+Lemma isNoneP T (P : option T) : P = None -> ~~ P.
+Proof. by move=> ->. Qed.
+
+Lemma isNoneP1 T (P : option T) : ~~ P -> P = None.
+Proof. case: P => //. Qed.
+
 (*SNIPT: matchunif *)
-Axiom match_unif: 
-  forall t1 t2 s, matching t1 t2 s -> unify t1 t2 s.
+Lemma match_unif: 
+  forall t1 t2 s s', matching t1 t2 s = Some s' -> unify t1 t2 s = Some s'.
 (*ENDSNIPT: matchunif *)
+Proof.
+  rewrite/matching/unify/matching_aux/unify_aux => t1 t2.
+  move: (vars_nb _ _) => n.
+  elim: n t1 t2 => [|n IH] t1 t2 s s'/=; first by [].
+  case D1: deref => [p|d|v|f a];
+  case D2: deref => [p'|d'|v'|f' a']//=.
+  case: eqP => //= J.
+  case u1: unifier_help => [sx|]//= u2.
+  rewrite (IH _ _ _ _ u1)//=.
+  by apply: IH.
+Qed.
 
 (*SNIPT: unif_trans *)
 Axiom unif_trans:
@@ -59,24 +183,21 @@ Lemma matching_subst2:
   (matching q (deref s t) fmap0) -> (matching q t s).
 Proof. by move=> > H1 H2; apply/matching_subst. Qed.
 
-
 Lemma unif_match a b s:
-  ~~unify a b s -> ~~matching a b s.
-Proof. apply: contraNN; apply: match_unif. Qed.
+  unify a b s = None -> matching a b s = None.
+Proof. case m: matching => [s'|]//; rewrite (match_unif m)//. Qed.
 
-Lemma isSomeP T x (P : option T) : P = Some x -> P.
-Proof. by move=> ->. Qed.
-
-Lemma isNoneP T (P : option T) : P = None -> ~~ P.
-Proof. by move=> ->. Qed.
-
-Lemma isNoneP1 T (P : option T) : ~~ P -> P = None.
-Proof. case: P => //. Qed.
-
-Lemma match2_unif : forall q t1 t2 s, (matching q t1 s) -> (matching q t2 s) -> (unify t1 t2 s).
+Lemma match2_unif : forall q t1 t2 s,
+  (matching q t1 s) -> (matching q t2 s) -> (unify t1 t2 s).
 Proof.
- move=> q t1 t2 s /match_unif H1 /match_unif H2; apply: unif_trans H2.
- by rewrite unif_sym.
+  move=> q t1 t2 s.
+  case m1: matching => [s'|]//; case m2: matching => //[s''] _ _.
+  have:= match_unif m1.
+  have:= match_unif m2.
+  move=> H1 H2.
+  apply/unif_trans/isSomeP/H1/isSomeP.
+  rewrite unif_sym.
+  eauto.
 Qed.
 
 Axiom matching_V: forall s t d,
@@ -148,14 +269,15 @@ Proof. by rewrite fdisjoint_sym disjointUr !(fdisjoint_sym A). Qed.
 
 Lemma deref_disj_id s t: domf s # vars t -> deref s t = t.
 Proof. 
-  elim: t => //=[v|f Hf a Ha].
+  elim: t => //=[p|d|v|f Hf a Ha]; rewrite ?(deref_P,deref_D,deref_App)//.
     rewrite/fdisjoint fsetI1; case: ifP.
       by move=> _ /eqP/fsetP/(_ v); rewrite !inE eqxx.
-    by move=> H; rewrite not_fnd//H.
+    move=> /negP H; rewrite not_in_deref_V//=.
+    by apply/negP.
   by rewrite disjointUr => /andP[H1 H2]; rewrite Ha//Hf//.
 Qed.
 
-Lemma deref2 s t:
+(* Lemma deref2 s t:
   acyclic_sigma s -> deref s (deref s t) = deref s t.
 Proof.
   move=> H; elim: t => //=[v|f -> a ->]//.
@@ -163,6 +285,6 @@ Proof.
   have: fdisjoint (domf s) (vars s.[vs]).
     by apply/disjoint_sub/codom_vars_sub/H.
   by apply/deref_disj_id.
-Qed.
+Qed. *)
 
 End s.
