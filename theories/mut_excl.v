@@ -103,10 +103,7 @@ Section mut_excl.
 
   Lemma callable_ren m hd p:
     get_tm_hd (ren m hd) = inl p <-> get_tm_hd hd = inl p.
-  Proof. 
-    elim: hd => //= [q|d|v|f Hf a Ha]; rewrite ?(ren_P,ren_D,ren_app)//=.
-    by have [x ->] := ren_VE m v.
-  Qed.
+  Proof. by elim: hd => //= [q|d|v|f Hf a Ha]. Qed.
 
   Lemma callable_rename fv hd p mp: get_tm_hd (rename fv hd mp).2 = inl p <-> get_tm_hd hd = inl p.
   Proof. by rewrite/rename!push/= => /=; split => /callable_ren. Qed.
@@ -317,10 +314,7 @@ Section mut_excl.
 
   Lemma flatten_term_ren z q:
     flatten_term (ren z q) = map (ren z) (flatten_term q).
-  Proof.
-    elim: q => [p|d|v|f Hf a Ha]/=; rewrite ?(ren_P,ren_D,ren_app)//=; last by rewrite Hf map_rcons//.
-    by have [? ->] := ren_VE z v.
-  Qed.
+  Proof. by elim: q => [p|d|v|f Hf a Ha]; rewrite//= map_rcons Hf. Qed.
 
   Lemma H_head_ren_aux m hd q x y z w:
     all (refresh_for y) hd -> all (refresh_for x) hd ->
@@ -431,9 +425,13 @@ Section mut_excl.
     select_head p (flatten_term (rename fy hd empty).2) m FRS2.2 = [::].
   Proof.
     elim: rs fx fy fv1 fv2 m hd => //= x xs IH fx fy fv1 fv2 m hd; rewrite !push/=.
-    move=> H2 H3. rewrite !(head_fresh_rule, eq_sym (inl p), callable_rename1).
+    move=> H2 H3.
+    rewrite !(head_fresh_rule, eq_sym (inl p), callable_rename1).
     case: eqP => //= Hd; last first.
-      by apply: IH; (apply: fsubset_trans; [|eassumption]); apply/fresh_rule_sub.
+      apply: IH.
+        (* by apply[::]. *)
+        by apply/fsubset_trans/H2/fresh_rule_sub.
+      by apply/fsubset_trans/H3/fresh_rule_sub.
     case H: H_head => //=.
     rewrite /fresh_rule!push/= in H2 H3.
     have {}H2' := fsubset_trans (fresh_atoms_sub _ _ _) H2.
@@ -441,14 +439,10 @@ Section mut_excl.
     have {}H2' := fsubset_trans (vars_tm_rename _ _) H2'.
     have {}H3' := fsubset_trans (vars_tm_rename _ _) H3'.
     rewrite (H_head_ren H2' H3' H).
-    apply: IH; (apply:fsubset_trans; first apply: fresh_rule_sub); rewrite/fresh_rule?push//=.
+    apply: IH _ _; (apply:fsubset_trans; first apply: fresh_rule_sub); rewrite/fresh_rule?push//=.
   Qed.
 
-  (* Lemma flatten_modes_rename fs hd m mp:
-    flatten_mode (rename fs hd mp).2 m = flatten_mode hd m.
-  Proof. by rewrite/flatten_mode count_tm_ag_rename//. Qed. *)
-  
-  Lemma build_and (a b: bool): a -> b -> a && b. move: a b => [][]//. Qed.
+  Lemma build_and (a b: bool): a -> b -> a && b. by move=> ??; apply/andP. Qed.
 
   Lemma mut_exclP p fv c s1:
     mut_excl p -> 
@@ -479,7 +473,7 @@ Section mut_excl.
     set FC2:= rename _ _ _.
     set FC1:= rename _ _ _.
     move=> H/= /esym/callable_rename B.
-    rewrite {1}/FC1 (proj2 (callable_rename FRS1.1 hd p empty))//.
+    rewrite {1}/FC1 (proj2 (callable_rename _ hd p empty))//.
     rewrite in_fnd (is_det_lookup _ DF)//=.
     (* move: H. *)
      (* rewrite{2}/FC2 get_modes_rev_rename (get_modes_rev_deref _ _ DF) => H. *)
@@ -493,7 +487,7 @@ Section mut_excl.
     rewrite !has_cut_seq_fresh.
     case CS: has_cut_seq; first by case: select => [?[|[]]].
     case SH: select_head => // _.
-    have/(_  (vars_sigma s1 `|` vars_tm (deref s1 c) `|` fv)):= select_head_ren (fsubset_refl _) (fsubset_refl _) SH.
+    have /(_  (vars_sigma s1 `|` vars_tm (deref s1 c) `|` fv)) := select_head_ren (fsubset_refl _) (fsubset_refl _) SH.
     rewrite -/FRS2-/FC2.
     move=> HS.
     rewrite (HSH _ _ _ _ _ H HS)//=.

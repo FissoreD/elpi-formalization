@@ -174,6 +174,26 @@ Section once.
     rewrite !FmapE.fmapE/= !inE eqxx/=.
     case X: fresh_rules => [fvx' rs'].
     rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
+    rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
+    rewrite ffunE/= /matching/= /matching_aux/= /vars_nb/= cardfs1 addnC/=.
+    rewrite no_once_select; last first.
+      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
+      by apply: no_once_fresh.
+    case:eqP => //= _.
+    case:eqP => //=.
+      move=> + [???]; subst.
+      inversion H3 => //=; subst.
+      move: H2 => /=; rewrite/bc/=.
+    case:eqP => //= _.
+    case: eqP => //=.
+      rewrite no_once_select//=.
+
+      rewrite/select/=.
+    rewrite ifF/=.
+    case: eqP => //=.
+
+    rewrite ren_V.
+    rewrite.    
     rewrite/fresh_tm inE eqxx ren_app ren_P ren_V; last first.
       rewrite/acyclic_ren/= codomf1/= fdisjoint_sym.
       by apply/fdisjointWr/disjoint_fresh/fsubsetUl.

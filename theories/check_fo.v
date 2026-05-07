@@ -32,8 +32,7 @@ Lemma is_det_rename sP fv hd m:
 Proof.
   rewrite/rename!push/=.
   move: (fresh_tm _ _ _) => -[]/= _.
-  elim: hd => //=[p|d|v|f Hf a Ha] b; rewrite ?(ren_P,ren_D,ren_app)//=; last rewrite !tm_is_det_app Hf//.
-  by have [?->] := ren_VE b v.
+  by elim: hd.
 Qed.
 
 (* Lemma is_det_deref sig fv c :

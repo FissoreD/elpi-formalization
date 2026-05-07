@@ -43,7 +43,7 @@ Fixpoint unifier_help var_matcher n query pat s :=
     end
   end.
 
-Definition vars_nb t1 t2 := #|` (vars_tm t1 `|` vars_tm t2)|.
+Definition vars_nb t1 t2 := ((#|` vars_tm t1 |) + #|` vars_tm t2|)%nat.
 
 Definition matching_aux := unifier_help matching_var.
 Definition matching t1 t2 s := matching_aux (vars_nb t1 t2) t1 t2 s.
@@ -55,10 +55,9 @@ Lemma unify_V_empty v t:
   v \notin vars_tm t ->
   unify (Tm_V v) t empty = if t is Tm_V v' then Some empty.[v' <- Tm_V v] else Some empty.[v <- t].
 Proof.
-  rewrite/unify /vars_nb/= /unify_aux cardfsU1.
-  move=> H; rewrite H/= !deref_empty.
+  rewrite/unify /vars_nb/= /unify_aux cardfs1/= !deref_empty/=.
   rewrite/unify_var.
-  case:t H => //= v'.
+  case:t => //= v'.
     rewrite !inE => /eqP H; rewrite !ifF => //; apply/eqP; congruence.
   move=> t; case: (_ \in _) => //.
 Qed.
@@ -235,28 +234,6 @@ Proof.
   have:= I x; have:= S x.
   rewrite !in_fsetI; case: (x \in s1) => //=.
   by case: (_ \in s3) => //=->//.
-Qed.
-
-Lemma varUP v (s: seq fvS):
-  reflect (exists x, x \in s /\ v \in x) (v \in varsU s).
-Proof.
-  move=> /=; case vs: (_ \in _); constructor.
-    elim: s v vs => //= x xs IH v; rewrite in_fsetU => /orP[] H.
-      by exists x; rewrite in_cons eqxx//.
-    have:= IH _ H => -[e [H1 H2]].
-    by exists e; rewrite in_cons H1 orbT.
-  move: vs; apply/contraFnot => -[+ []].
-  elim: s v => //= x xs IH v vs.
-  rewrite in_cons in_fsetU => /orP[/eqP?|]; subst; first by move => ->.
-  by move=> H1 H2; rewrite (IH v vs)//orbT.
-Qed.
-
-Lemma codom_vars_sub v s (vs: v \in domf s): vars s.[vs] `<=` codom_vars s.
-Proof.
-  rewrite/codom_vars.
-  apply/fsubsetP => /=v' H.
-  apply/varUP; exists (vars s.[vs]); split => //.
-  by apply/map_f/codomP; eexists.
 Qed.
 
 Lemma disjointUr {T:choiceType} (A B C: {fset T}): 
