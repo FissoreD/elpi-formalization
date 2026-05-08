@@ -272,7 +272,7 @@ Fixpoint deref_aux n (s: Sigma) (tm:Tm) :=
   | n.+1 => deref_aux n s (deref1 s tm)
   end.
 
-Definition deref s tm := deref_aux #|` domf s | s tm.
+Definition deref (s:Sigma) (tm:Tm) := deref_aux #|` domf s | s tm.
 
 Lemma deref_aux_App n s f a: 
   deref_aux n s (Tm_App f a) = Tm_App (deref_aux n s f) (deref_aux n s a).
@@ -298,8 +298,40 @@ Fixpoint deref_vars n s tm :=
   end.
 
 Definition acyclic_sigma (s: Sigma) :=
-  [forall x : domf s, val x \notin deref_vars #|` domf s | s s.[valP x]].
+  [forall x : domf s, val x \notin deref_vars #|` domf s | s (Tm_V (val x))].
   (* [forall x : domf s, val x \notin vars_tm (deref s (Tm_V (val x)))]. *)
+
+Goal ~ (acyclic_sigma [fmap].[IV 0 <- Tm_V (IV 0)]).
+Proof.
+  rewrite /acyclic_sigma => /forallP.
+  have: IV 0 \in (domf ctx.empty.[IV 0 <- Tm_V (IV 0)]) by rewrite !inE eqxx.
+  move=> H /(_ (Sub (IV 0) H)); rewrite /= fsetU0 cardfs1/= !FmapE.fmapE/= !inE//.
+Qed.
+
+Goal ~ (acyclic_sigma [fmap].[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)]).
+Proof.
+  rewrite /acyclic_sigma => /forallP.
+  have: IV 0 \in (domf ctx.empty.[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)]) by rewrite !inE eqxx.
+  move=> H /(_ (Sub (IV 0) H)); rewrite /= !fsetU0 cardfs2/= !FmapE.fmapE/= !inE !FmapE.fmapE eqxx inE//.
+Qed.
+
+Goal ~ (acyclic_sigma [fmap].[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)].[IV 2 <- Tm_D (ID 0)]).
+Proof.
+  rewrite /acyclic_sigma => /forallP.
+  have: IV 0 \in (domf ctx.empty.[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)].[IV 2 <- Tm_D (ID 0)]) by rewrite !inE eqxx.
+  move=> H /(_ (Sub (IV 0) H)).
+  rewrite /= fsetU0 (cardfsD1 (IV 2))/= 2!inE eqxx add1n/=.
+  rewrite in_fnd ?inE//= !ffunE/= !FmapE.fmapE/= !inE/=.
+  rewrite fsetU1K//=?inE//!cardfs2/= !FmapE.fmapE/= !inE//=.
+Qed.
+
+Goal (acyclic_sigma [fmap].[IV 0 <- Tm_V (IV 1)]).
+Proof.
+  apply/forallP => -[x xP]/=.
+  move: xP; rewrite !inE.
+  case: eqP => //->/=.
+  rewrite fsetU0 cardfs1/= !FmapE.fmapE/= !inE//.
+Qed.
 
 Definition acyclic_ren (m: {fmap V -> V}) := 
   (* acyclic_sigma [fmap s => Tm_V m.[valP s]]. *)
@@ -349,124 +381,11 @@ Proof.
   by rewrite andbb//.
 Qed.
 
-(* Lemma acyclic_sigma_rem: *)
-
-
-(* FROM A CERTAIN X, There are disappearing variables in t, which will never
-   come back *)
-
-(* Definition deref_skv (s: Sigma) (k:V) v : Sigma := 
-  [fmap x: domf s.[~k] => deref1 [fmap].[k <- v] s.[~k].[valP x]].
-
-Lemma domf_derefskv s k v: domf (deref_skv s k v) = domf s.[~k].
-Proof. rewrite//. Qed.
-
-Lemma zz n (s:Sigma) k t (E : k \in s):
-  acyclic_sigma s ->
-  #|` domf s | = n ->
-  deref_aux n (deref_skv s k s.[E]) t = deref_aux n s t.
-Proof.
-  elim: n s k t E => [|n IH] s k t ks//= A.
-  move=> H.
-  (* have [|[k' E]] := set0IN (domf s). *)
-    (* by move=> /fmap_nil ?; subst; move: (ks); rewrite inE in ks. *)
-  have:= cardfsD1 k (domf s).
-  rewrite ks/= add1n/= => HH.
-  rewrite HH in H.
-  case: H => {}H.
-  rewrite fset_sub_rem in H.
-  have [|[k' E]] := set0IN (domf s `\ k).
-    rewrite fset_sub_rem in HH H *.
-    move=> /fmap_nil Hx.
-    rewrite Hx in H HH.
-    move/eqP: HH => /cardfs1P [k'] /fsetP => /(_ k); rewrite !inE ks.
-    case: eqP => // ? _; subst.
-    rewrite domf0 restrictf0 domf0/=;rewrite /deref_skv.
-    rewrite !FmapE.fmapE/=.
-    Search (fmap0) (_ [` _]).
-    Search (_.[& fset0]).
-    rewrite /=.
-    rewrite -IH//.
-    admit.
-    admit.
-  rewrite fset_sub_rem in E, H.
-  rewrite -IH//=.
-    admit.
-  rewrite HH fset_sub_rem.
-  have:= IH _ _ _ E _ H. *)
-
-  (* rewrite HH in H.
-  have [|[k' E]] := set0IN (domf s `\ k).
-    rewrite fset_sub_rem in HH H *.
-    move=> /fmap_nil Hx.
-    rewrite Hx/= in H HH.
-    move /eqP/cardfs1P: HH => [k'] /fsetP /(_ k) ; rewrite !inE ks.
-    case: eqP => // ? _; subst.
-    rewrite -IH//.
-    admit.
-    admit.
-  rewrite fset_sub_rem in E, H.
-  rewrite -IH//=.
-    admit.
-  rewrite HH fset_sub_rem.
-  have:= IH _ _ _ E _ H.
-Admitted. *)
-
-(* Lemma acyclic_derefskv (k:V) (s:Sigma) (E : k \in domf s):
-  acyclic_sigma s -> acyclic_sigma (deref_skv s k s.[E]).
-Proof.
-  rewrite/acyclic_sigma {11}domf_derefskv.
-  have := cardfsD1 k (domf s).
-  rewrite E add1n -fset_sub_rem.
-  move=> D; rewrite D.
-  move=> /forallP H.
-  simpl in H.
-  apply/forallP => -[x xP]; rewrite valPE [val _]/=.
-  apply/negP => Hx.
-  have xs: x \in domf s by move: xP {Hx}; rewrite !inE/= => /andP[]//.
-  have {H} := H (Sub x xs) => /=/negP Hy.
-  apply: Hy; rewrite valPE.
-  rewrite inE.
-  case I: (_ \in _) => //=.
-
-Admitted. *)
-
-(* Lemma deref_vars_deref1 s t:
-  acyclic_sigma s -> s <> fmap0 -> 
-    exists x, x \in domf s /\ x \notin vars_tm (deref1 s t).
-Proof.
-  move=> A H.
-  elim: t => //=.
-    admit.
-    admit.
-    move=> v; case: fndP => //=.
-      exists v.
-
-  elim: t s => //=[p|d|v|f Hf a Ha] s A. *)
-
-(* Lemma useless n s t k:
-  acyclic_sigma s -> k \in domf s -> #|` domf s | <= n ->
-    k \notin vars_tm (deref_aux n s t).
-Proof.
-  elim: n s t k => //= [|n IH] s t k A KS H.
-    admit.
-  apply/IH.
-
-  apply IH.
-  apply/IH. *)
-
-(* Lemma zzzz s n k t:
-  deref_aux n s.[~ k] t = deref_aux n s t ->
-    k \notin vars_tm t.
-Proof.
-  elim: n s k t => //=. *)
-
-
 Definition codom_vars (s:Sigma) := 
   varsU (map vars_tm (codom s)).
 
-Lemma varUP v (s: seq fvS):
-  reflect (exists x, x \in s /\ v \in x) (v \in varsU s).
+Lemma varUP (v:V) (s: seq fvS):
+  reflect (exists x : {fset V}, x \in s /\ v \in x) (v \in varsU s).
 Proof.
   move=> /=; case vs: (_ \in _); constructor.
     elim: s v vs => //= x xs IH v; rewrite in_fsetU => /orP[] H.
@@ -487,69 +406,6 @@ Proof.
   by apply/map_f/codomP; eexists.
 Qed.
 
-Lemma acyclic_sigma1 s:
-  acyclic_sigma s -> 
-    s = fmap0 \/ exists k, k \in domf s /\ k \notin codom_vars s.
-Proof.
-  (* move=> /forallP/=. *)
-  remember #|` domf s| as n eqn:Hn; elim: n s Hn => //[|n IH] s Hn.
-    by have /fmap_nil -> := cardfs0_eq (esym Hn); left.
-  
-  (* move=> H.
-
-    
-  have [|[k' E]] := set0IN (domf s).
-    by move=> /fmap_nil Hx; auto.
-  have /= := H (Sub k' E); rewrite valPE => {}H.
-  right; exists k'; split => //.
-  rewrite/acyclic_sigma. *)
-Admitted.
-
-Lemma deref_succ_id1 k s: 
-  k \in domf s -> k \notin codom_vars s ->
-    forall t, k \notin vars_tm (deref1 s t).
-Proof.
-  move=> D C.
-  elim => //=[v|f /negP Hf a Ha].
-    move: C; apply: contra.
-    case: fndP => //=vs.
-      by move=> /fsubsetP -/(_ _ (codom_vars_sub _)).
-    by rewrite inE => /eqP?; subst; rewrite D in vs.
-  move: Ha; apply: contra.
-  rewrite inE => /orP[H|//]; auto.
-Qed.
-
-Lemma deref1_unreachable s k t:
-  k \notin vars_tm t -> deref1 s.[~ k] t = deref1 s t.
-Proof.
-  elim: t => // [v|f Hf a Ha].
-    by rewrite/deref1 fnd_rem1 inE eq_sym => ->.
-  by rewrite /= inE; case kf: (_ \in _) => //= /Ha ->; rewrite Hf//kf.
-Qed.
-
-Lemma deref1_codom k s t:
-  k \notin vars_tm t ->
-  k \notin codom_vars s -> k \notin vars_tm (deref1 s t).
-Proof.
-  move=> H; apply/contra.
-  elim: t H => //=[v|f Hf a Ha] /negP kv.
-    case: fndP => //= vs H.
-    apply/fsubsetP/H/codom_vars_sub.
-  move: kv => /negP; rewrite !inE negb_or => /andP[kf ka] /orP[kf'|ka']; auto.
-Qed.
-
-Lemma unreachable m s k t:
-   k \notin codom_vars s -> k \notin vars_tm t ->
-  deref_aux m s.[~ k] t = deref_aux m s t.
-Proof.
-  elim: m t => //= n IH t HD HV.
-  rewrite deref1_unreachable//IH//.
-  by apply: deref1_codom.
-Qed.
-
-Lemma deref_vars1 n s t:
-  deref_vars n.+1 s t = vars_tm (deref1 s t) `|` deref_vars n s (deref1 s t).
-Proof. by []. Qed.
 
 Fixpoint relT k t1 t2 :=
   match t1 with
@@ -623,22 +479,193 @@ Proof. by elim: n k s t => //= n IH k s t; rewrite fsetUSS//. Qed.
 Lemma acyclic_sigma_rem s k: acyclic_sigma s -> acyclic_sigma s.[~ k].
 Proof.
   rewrite/acyclic_sigma => /forallP H; apply/forallP => -[y ysk].
-  rewrite valPE [val _]/=.
-  move: (ysk).
-  rewrite mem_remf1 in ysk; move: ysk => /andP[yk ys].
-  have {}ys : y \in domf s by [] => ysk.
-  move: ysk; set sk := s.[~k] => ysk.
-  have: sk.[ysk] = s.[ys].
-    rewrite /sk.
-    suffices: Some (s.[~ k] [` ysk]) = Some s.[ys]; first by move=> [].
-    by rewrite -!in_fnd fnd_rem1 yk.
-  move=> ->.
-  have {H} := H (Sub y ys); rewrite valPE [val _]/=; apply/contra.
-  rewrite/sk (cardfsD1 k (domf s)).
-  move: (s.[ys]) => t; rewrite -fset_sub_rem.
-  move=> H; have {}H := deref_vars_in_rem yk H.
-  by rewrite addnC; apply/fsubsetP/H/deref_vars_add_sub.
+  rewrite [val _]/=.
+  move: ysk; rewrite -fset_sub_rem !inE => /andP[yk ys].
+  have {H} := H (Sub y ys).
+  rewrite [val _]/=; apply/contra => H.
+  have {}H := deref_vars_in_rem yk H.
+  rewrite (cardfsD1 k); rewrite addnC.
+  apply/fsubsetP/H/deref_vars_add_sub.
 Qed.
+
+Lemma deref1_singl k s t t':
+  s = ctx.empty.[k <- t'] -> vars_tm t `<=` vars_tm t' ->
+  k \in vars_tm t -> k \in vars_tm (deref1 s t).
+Proof.
+  move=> ->; elim: t t' => [p|d|v|f Hf a Ha] t'//; try by rewrite/= fsubset0 => /eqP->.
+    rewrite/deref1 fnd_set not_fnd//; case: eqP => //= H.
+    by rewrite fsub1set !inE => + /eqP->.
+  rewrite/= !inE fsubUset => /andP[H1 H2] /orP[] H; [rewrite Hf|rewrite Ha] => //.
+  by rewrite orbT.
+Qed.
+
+(* Lemma varsU_subset_rem (s:Sigma) k:
+  varsU (map vars_tm (codom s)) `<=` 
+    varsU (map vars_tm (codom s.[~ k])).
+Proof.
+  rewrite/codom.
+  Search codom *)
+
+Lemma codom0: codom empty = [::].
+Proof. by rewrite /empty codomE/= enum_fset0. Qed.
+
+Lemma codom_vars0: codom_vars empty = fset0.
+Proof. by rewrite/codom_vars codom0. Qed.
+
+(* Lemma wip cand (s:Sigma) (cs : cand \in s):
+  cand \notin deref_vars #|` domf s| s s.[cs] -> cand \notin codom_vars s.
+Proof.
+  apply:contra.
+  remember #|` domf s| as n eqn:Hn; elim: n s cs Hn => //[|n IH] s cs Hn.
+    by have /fmap_nil H := cardfs0_eq (esym Hn); rewrite {1}H/= codom_vars0.
+  have [] := set0IN (domf s).
+    by move : Hn => + /fmap_nil X; rewrite {1}X cardfs0.
+  move=> /=[k ks]; rewrite inE => H.
+    
+  Search (~~ (_ || _)).
+  rewrite (cardfsD1 k (domf s)) ks add1n in Hn; case: Hn.
+  rewrite fset_sub_rem => Hn.
+  move:
+  have := IH (s.[~ k]) _ Hn. *)
+
+Lemma deref_refl_not_in (s:Sigma) t:
+  [forall k : domf s, val k \notin vars_tm t] ->
+  deref1 s t = t.
+Proof.
+  elim: t s => //[v|f Hf a Ha]//= s.
+    by case: fndP => //=ks H; have:= forallP H (Sub v ks); rewrite /= inE eqxx.
+  move=> H; rewrite !(Hf,Ha)//; apply/forallP => -[k kP]/=;
+  by have:= forallP H (Sub k kP); rewrite !inE/=; apply:contra => ->//; rewrite orbT.
+Qed.
+
+(* Lemma acyclic_sigma1 s:
+  acyclic_sigma s -> 
+    s = fmap0 \/ 
+    exists (k: V),
+      (if s.[?k] is Some t then deref1 s t = t else false).
+Proof.
+    (* move=> /forallP/=. *)
+  remember #|` domf s| as n eqn:Hn; elim: n s Hn => //[|n IH] s Hn.
+    by have /fmap_nil -> := cardfs0_eq (esym Hn); left.
+  have [] := set0IN (domf s).
+    by move : Hn => + /fmap_nil X; rewrite X cardfs0.
+  move=> [k ks] AS; move: (Hn).
+  rewrite (cardfsD1 k (domf s)) ks add1n => -[Hn'].
+  rewrite fset_sub_rem in Hn'; right.
+  (* case: (boolP (deref1 s s.[ks] == s.[ks])) => H.
+    by exists k; rewrite in_fnd. *)
+  
+  have {IH} [] := IH (s.[~ k]) Hn' (acyclic_sigma_rem _ AS).
+    move=> H; exists k; rewrite in_fnd.
+    have Hx : s = [fmap].[k <- s.[ks]].
+      rewrite -H; apply/fmapP => k'; rewrite setf_rem1.
+      by rewrite fnd_set; case: eqP => //->; rewrite in_fnd.
+    have {AS} := forallP AS (Sub k ks); rewrite [val _]/=.
+    rewrite {1}Hx/= fsetU0 cardfs1/= fsetU0 in_fnd/= => H1.
+    rewrite {1}Hx; apply/deref_refl_not_in.
+    by apply/forallP => /=; rewrite fsetU0 => -[K]/=; rewrite inE => /eqP ->.
+  move=> [c]; rewrite fnd_rem1; case: eqP => //= ck.
+  case: fndP => //= cs IH.
+  (* have /= := forallP IH (Sub c _); rewrite !inE/= cs andbT; case: eqP => //= _. *)
+  (* move=> /(_ isT) {}IH. *)
+  exists c; rewrite in_fnd. apply/forallP => -[y yP]/=. *)
+
+Lemma acyclic_sigma1 s:
+  acyclic_sigma s -> 
+    s = fmap0 \/ 
+    exists k : V, k \in domf s /\ k \notin codom_vars s /\
+      (if s.[?k] is Some t then [forall x : domf s, val x \notin vars_tm t] else true).
+Proof.
+  (* move=> /forallP/=. *)
+  remember #|` domf s| as n eqn:Hn; elim: n s Hn => //[|n IH] s Hn.
+    by have /fmap_nil -> := cardfs0_eq (esym Hn); left.
+  have [] := set0IN (domf s).
+    by move : Hn => + /fmap_nil X; rewrite X cardfs0.
+  move=> [k ks] AS; move: (Hn).
+  rewrite (cardfsD1 k (domf s)) ks add1n => -[Hn'].
+  rewrite fset_sub_rem in Hn'; right.
+  have {IH} [] := IH (s.[~ k]) Hn' (acyclic_sigma_rem _ AS).
+    move=> H; exists k; split => //.
+    have Hx : s = [fmap].[k <- s.[ks]].
+      rewrite -H; apply/fmapP => k'; rewrite setf_rem1.
+      by rewrite fnd_set; case: eqP => //->; rewrite in_fnd.
+    have {AS} := forallP AS (Sub k ks); rewrite [val _]/=.
+    rewrite {1}Hx/= fsetU0 cardfs1/= fsetU0 in_fnd/= => H1.
+    split.
+      apply/varUP => -[k']; rewrite Hx codomE/= fsetU0 enum_fset1/=.
+      by rewrite !inE/= ffunE/= eqxx => -[] /eqP -> {k'} => H2; rewrite H2 in H1.
+    apply/forallP => -[y ys]/=.
+    by move: ys; rewrite {1}Hx/= !inE orbF => /eqP->.
+  move=> [c [csk [Hc]]].
+  have ck: c <> k by move=> ?; subst; rewrite -fset_sub_rem !inE eqxx in csk.
+  have cs: c \in domf s by move: csk; rewrite -fset_sub_rem inE => /andP[].
+  rewrite fnd_rem1 in_fnd ifT; last by apply/eqP.
+  move=> Hd.
+  have:= forallP Hd (Sub c csk) => /=.
+  (* devo dimostrare che c non appare in s[k]? *)
+  exists c; rewrite in_fnd; repeat split => //.
+    move: Hc; apply: contra.
+    have AS' := acyclic_sigma_rem k AS.
+
+    (* Print injective. *)
+    move=> /varUP[x[xH xH']].
+    apply/varUP; exists x; split => //.
+    have {xH} [y ys ?] := mapP xH; subst.
+    apply/map_f.
+    have [[z zP] zH] := codomP ys; subst.  
+Admitted.
+
+Lemma deref_V s t:
+  acyclic_sigma s -> [disjoint vars_tm (deref s t) & domf s].
+Proof.
+  rewrite/acyclic_sigma/deref.
+Admitted.
+
+Lemma deref_succ_id1 k s: 
+  k \in domf s -> k \notin codom_vars s ->
+    forall t, k \notin vars_tm (deref1 s t).
+Proof.
+  move=> D C.
+  elim => //=[v|f /negP Hf a Ha].
+    move: C; apply: contra.
+    case: fndP => //=vs.
+      by move=> /fsubsetP -/(_ _ (codom_vars_sub _)).
+    by rewrite inE => /eqP?; subst; rewrite D in vs.
+  move: Ha; apply: contra.
+  rewrite inE => /orP[H|//]; auto.
+Qed.
+
+Lemma deref1_unreachable s k t:
+  k \notin vars_tm t -> deref1 s.[~ k] t = deref1 s t.
+Proof.
+  elim: t => // [v|f Hf a Ha].
+    by rewrite/deref1 fnd_rem1 inE eq_sym => ->.
+  by rewrite /= inE; case kf: (_ \in _) => //= /Ha ->; rewrite Hf//kf.
+Qed.
+
+Lemma deref1_codom k s t:
+  k \notin vars_tm t ->
+  k \notin codom_vars s -> k \notin vars_tm (deref1 s t).
+Proof.
+  move=> H; apply/contra.
+  elim: t H => //=[v|f Hf a Ha] /negP kv.
+    case: fndP => //= vs H.
+    apply/fsubsetP/H/codom_vars_sub.
+  move: kv => /negP; rewrite !inE negb_or => /andP[kf ka] /orP[kf'|ka']; auto.
+Qed.
+
+Lemma unreachable m s k t:
+   k \notin codom_vars s -> k \notin vars_tm t ->
+  deref_aux m s.[~ k] t = deref_aux m s t.
+Proof.
+  elim: m t => //= n IH t HD HV.
+  rewrite deref1_unreachable//IH//.
+  by apply: deref1_codom.
+Qed.
+
+Lemma deref_vars1 n s t:
+  deref_vars n.+1 s t = vars_tm (deref1 s t) `|` deref_vars n s (deref1 s t).
+Proof. by []. Qed.
 
 Lemma deref_succ_id n s t: 
   acyclic_sigma s -> #|` domf s | <= n -> deref_aux n s t = deref s t.
@@ -654,7 +681,7 @@ Proof.
     by rewrite !deref_empty.
   have [->|] := acyclic_sigma1 H1.
     by rewrite/deref !deref_aux_empty.
-  move=> [k[HD HC]].
+  move=> [k[HD [HC _]]].
   have K := deref_succ_id1 HD HC t.
   rewrite/=.
   pose s' := s.[~k].
@@ -670,8 +697,24 @@ Qed.
 Lemma acyclic_deref_disjoint s t:
   acyclic_sigma s -> [disjoint vars_tm (deref s t) & domf s].
 Proof.
-
-  (* rewrite/acyclic_sigma/. *)
+  (* rewrite/acyclic_sigma. *)
+  move: (leqnn #|` domf s|) t => //=.
+  move: (x in _ <= x) => size; move: s.
+  elim: size => //=.
+    by move=> s; rewrite leqn0 => /eqP/cardfs0_eq/fmap_nil->/= *; rewrite fdisjointX0.
+  move=> n IH s H t H1.
+  have [->|] := acyclic_sigma1 H1.
+    by rewrite fdisjointX0.
+  move=> [k[HD [HC He]]].
+  rewrite in_fnd in He.
+  (* have K := deref_succ_id1 HD HC t. *)
+  (* rewrite/=. *)
+  pose s' := s.[~k].
+  have DD: #|` domf s'|.+1 = #|` domf s| by rewrite (cardfsD1 k (domf s)) HD add1n fset_sub_rem.
+  rewrite -DD in H.
+  have:= IH s.[~k] H t (acyclic_sigma_rem _ H1).
+  rewrite -fset_sub_rem.
+  Search fdisjoint (_ `\` _).
 Admitted.
 
 Lemma ren_app m l r : ren m (Tm_App l r) = Tm_App (ren m l) (ren m r).
@@ -747,12 +790,6 @@ Definition fresh_rule fv r :=
   let: (fv, m, head) := rename fv r.(head) fmap0 in
   let: (fv, m, premises) := fresh_atoms fv r.(premises) m in
   (fv, mkR head premises ).
-
-Lemma codom0: codom empty = [::].
-Proof. by rewrite /empty codomE/= enum_fset0. Qed.
-
-Lemma codom_vars0: codom_vars empty = fset0.
-Proof. by rewrite/codom_vars codom0. Qed.
 
 Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
 

@@ -184,6 +184,7 @@ Section once.
       move=> + [???]; subst.
       inversion H3 => //=; subst.
       move: H2 => /=; rewrite/bc/=.
+    rewrite inE.
     case:eqP => //= _.
     case: eqP => //=.
       rewrite no_once_select//=.

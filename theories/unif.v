@@ -20,8 +20,8 @@ Definition unify_var (s:Sigma) v arg :=
 
 Fixpoint unifier_help var_matcher n query pat s :=
   let unifier_help := unifier_help var_matcher in
-  let query := deref s query in
-  let pat := deref s pat in
+  (* let query := deref s query in *)
+  (* let pat := deref s pat in *)
   if query == pat then Some s
   else
   match n with
@@ -55,7 +55,7 @@ Lemma unify_V_empty v t:
   v \notin vars_tm t ->
   unify (Tm_V v) t empty = if t is Tm_V v' then Some empty.[v' <- Tm_V v] else Some empty.[v <- t].
 Proof.
-  rewrite/unify /vars_nb/= /unify_aux cardfs1/= !deref_empty/=.
+  rewrite/unify /vars_nb/= /unify_aux cardfs1/=.
   rewrite/unify_var.
   case:t => //= v'.
     rewrite !inE => /eqP H; rewrite !ifF => //; apply/eqP; congruence.
@@ -63,7 +63,7 @@ Proof.
 Qed.
 
 Lemma unifier_help_refl h n t s: unifier_help h n t t s = Some s.
-Proof. by elim: n s t => [|n IH] s t//=; case D: deref; rewrite ?eqxx//?IH/=IH//. Qed.
+Proof. by elim: n s t => [|n IH] s t//=; rewrite ?eqxx//?IH/=IH//. Qed.
 
 Lemma unify_refl t s: unify t t s = Some s.
 Proof. apply/unifier_help_refl. Qed.
@@ -87,27 +87,29 @@ Lemma ground_app f a: ground (Tm_App f a) = ground f && ground a.
 Proof. by rewrite /ground/= fsetU_eq0. Qed.
 
 Lemma unify_help_ground_eq h n t1 t2 s s':
-  ground t1 -> ground t2 -> unifier_help h n t1 t2 s = Some s' -> t1 = t2.
+  ground t1 -> ground t2 -> unifier_help h n t1 t2 s = Some s' -> t1 = t2 /\ s = s'.
 Proof.
-  elim: n t1 t2 s s' => //=[|n IH] t1 t2 s s' G1 G2; rewrite !ground_deref//.
-    by case: eqP => //.
-  case: t2 G2 => [p|d|v|f a]; case: t1 G1 => [p'|d'|v'|f' a']; rewrite ?ground_V//=; try by case: eqP.
+  elim: n t1 t2 s s' => //=[|n IH] t1 t2 s s' G1 G2.
+    by case: eqP => //=-> [->].
+  case: t2 G2 => [p|d|v|f a]; case: t1 G1 => [p'|d'|v'|f' a']; rewrite ?ground_V//=; try by  move=> _ _; case: eqP => //= ->[->]//.
   rewrite !ground_app => /andP[Gf' Ga'] /andP[Gf Ga].
-  case: eqP => //= H.
+  case: eqP => //= H; first by move=> [<-]; case: H => <-<-//.
   case H1: unifier_help => [sx|]//=.
   case H2: unifier_help => [sy|]//=.
-  by move=> [?]; subst; f_equal; apply/IH; eauto.
+  move=> [?]; subst.
+  have [??] := IH _ _ _ _ Gf' Gf H1; subst.
+  by have [??] := IH _ _ _ _ Ga' Ga H2; subst.
 Qed.
 
 Lemma unify_help_diff_ground h n t1 t2 s: 
   ground t1 -> ground t2 -> t1 <> t2 -> unifier_help h n t1 t2 s = None.
 Proof.
-  elim: n t1 t2 s => [|n IH] t1 t2 s/= G1 G2; rewrite !ground_deref//; case: eqP => // _ H.
+  elim: n t1 t2 s => [|n IH] t1 t2 s/= G1 G2; case: eqP => // _ H.
   case: t2 G2 H => [p|d|v|f a]; case: t1 G1 => [p'|d'|v'|f' a']; rewrite?(ground_V)//.
   rewrite !ground_app => /andP[Gf' Ga'] /andP[Gf Ga] H.
   case X: unifier_help => [s'|]//=.
   apply: IH => //.
-  have:= unify_help_ground_eq Gf' Gf X; congruence.
+  have [] := unify_help_ground_eq Gf' Gf X; congruence.
 Qed.
 
 Lemma unify_diff_ground t1 t2 s: 
@@ -131,9 +133,9 @@ Proof.
   rewrite/matching/unify/matching_aux/unify_aux => t1 t2.
   move: (vars_nb _ _) => n.
   elim: n t1 t2 => [|n IH] t1 t2 s s'/=; first by [].
-  case D1: deref => [p|d|v|f a];
-  case D2: deref => [p'|d'|v'|f' a']//=.
-  case: eqP => //= J.
+  case: eqP => //=.
+  case: t2 => [p|d|v|f a];
+  case: t1 => [p'|d'|v'|f' a']//=.
   case u1: unifier_help => [sx|]//= u2.
   rewrite (IH _ _ _ _ u1)//=.
   by apply: IH.
@@ -146,11 +148,12 @@ Axiom unif_trans:
 
 Axiom unif_sym : forall t1 t2 s, unify t1 t2 s = unify t2 t1 s.
 
-Axiom matching_acyclic: forall t1 t2 s s',
-  acyclic_sigma s -> matching t1 t2 s = Some s' -> acyclic_sigma s'.
-
 Axiom unif_acyclic: forall t1 t2 s s',
   acyclic_sigma s -> unify t1 t2 s = Some s' -> acyclic_sigma s'.
+
+Lemma matching_acyclic: forall t1 t2 s s',
+  acyclic_sigma s -> matching t1 t2 s = Some s' -> acyclic_sigma s'.
+Proof. by move=> > A /match_unif; apply: unif_acyclic. Qed.
 
 Axiom matching_subst : forall q t s, 
   [disjoint vars q & domf s] ->
@@ -159,10 +162,35 @@ Axiom matching_subst : forall q t s,
 Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
 
 (*SNIPT: matchdisj *)
-Axiom matching_disj:
+Lemma matching_disj:
   forall s s' t1 t2, vars t1 # domf s -> vars t1 # vars t2 ->
-    matching t1 t2 s = Some s' -> exists e, domf s' = domf s `|` e /\ e `<=` vars t2.
+    matching t1 t2 s = Some s' -> exists e, domf s' = e `|` domf s /\ e `<=` vars t2.
 (*ENDSNIPT: matchdisj *)
+Proof.
+  rewrite/matching/matching_aux => s s' t1 t2.
+  move: (vars_nb t1 t2) => n; elim: n t1 t2 s s' => //=[|n IH] t1 t2 s s' H1 H2.
+    by case: eqP =>// D [<-]; exists fset0; rewrite fset0U fsub0set//.
+  case: eqP => // D.
+    by move=> [<-]; exists fset0; rewrite fset0U fsub0set//.
+  case: t2 D H2 => [p|d|v|f a];
+  case: t1 H1 => [p'|d'|v'|f' a']//=.
+  - by move=> ??? [<-]; subst; exists [fset v]; rewrite dom_setf fsetUC; split => //.
+  - by move=> ??? [<-]; subst; exists [fset v]; rewrite dom_setf fsetUC; split => //.
+  - rewrite !fdisjoint1X => H1 H2 H3; rewrite/unify_var/= inE.
+    case: eqP => H; first by congruence.
+    by move=> [?]; subst;exists [fset v]; rewrite dom_setf fsetUC; split => //.
+  - rewrite !fdisjointUX !fdisjointX1 => /andP[D1 D2] _ /andP[IF IA].
+    by rewrite/unify_var/= inE; case: ifP => // H[<-{s'}]; exists [fset v] => /=.
+  - rewrite !fdisjointUX !fdisjointXU -!andbA.
+    move=> /andP[Df' Da'] H /and4P[Vff Vfa Vaf Vaa].
+    case U1: unifier_help => //=[sx] U2.
+    have [e'[H1 H2]] := IH _ _ _ _ Df' Vff U1.
+    have [|x[IH1 IH2]] := IH _ _ _ _ _ Vaa U2.
+      rewrite H1 fdisjointXU Da' andbT.
+      by apply/fdisjointWr/Vaf.
+    rewrite IH1 H1; exists (x `|` e'); rewrite fsetUA; split => //.
+    by rewrite fsubUset !fsubsetU//= (H2,IH2)//orbT.
+Qed.
 
 (*SNIPT: matchingmono *)
 Axiom matching_monotone: 
@@ -199,9 +227,19 @@ Proof.
   eauto.
 Qed.
 
-Axiom matching_V: forall s t d,
-  vars_sigma s `<=` d -> vars t `<=` d ->
+Lemma matching_V: forall s t (d: fvS),
+  vars t `<=` d ->
   matching t (Tm_V (fresh d)) s = Some (s.[fresh d <- t]).
+Proof.
+  move=> s t d; rewrite /matching/matching_aux.
+  rewrite /vars_nb/= cardfs1 addn1/= => H1.
+  rewrite/unify_var !ifF//.
+    have:= freshP d.
+    apply/contraFF => H.
+    by apply/fsubsetP/H.
+  have:= freshP d.
+  by move: H1; case: eqP => //->/=; rewrite fsub1set => ->.
+Qed.    
 
 Notation "A | B" := (A `|` B) (at level 15).
 Notation injective := (@injectiveb _ V).

@@ -83,12 +83,9 @@ Section Test1.
     acyclic_sigma empty.[k <- t].
   Proof.
     rewrite/acyclic_sigma/=.
-    rewrite/deref/= fsetU0 cardfs1 => H G.
-    apply/forallP => -[u uP]/=; rewrite ffunE/=.
-    move: uP; rewrite in_fset1 => /eqP->{u}/=; rewrite eqxx.
-    rewrite ground_deref1//.
-    rewrite fsetIC fsetI1/= ifF => //.
-    by apply/negP => H1; rewrite H1 in H.
+    rewrite/deref/= fsetU0 cardfs1 /ground => H /eqP G.
+    apply/forallP => -[u]/=.
+    by rewrite inE !FmapE.fmapE/= => ->/=; rewrite G !inE.
   Qed.
 
   Goal exists v, runT unif p_test fset0 empty (TA (call (Tm_App (Tm_P q) (Tm_D (ID 1))))) (Some (s2, None)) false v.
@@ -132,7 +129,7 @@ Section Test1.
       rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
       rewrite !inE/= !simpl_set.
       rewrite/deref/= !simpl_set/= !FmapE.fmapE/= eqxx/=.
-      rewrite unify_diff_ground//.
+      by [].
     by [].
     rewrite !simpl_set fsetUC.
     set T := (_ `|` _).
@@ -146,7 +143,7 @@ Section Test1.
       rewrite /rename/= !simpl_set in_fset1/=.
       rewrite !simpl_set.
       rewrite/deref/= !simpl_set/= !FmapE.fmapE/= eqxx/=.
-      rewrite unify_refl//=.
+      by [].
     by [].
     rewrite !simpl_set/=.
     apply: StopT => //=.

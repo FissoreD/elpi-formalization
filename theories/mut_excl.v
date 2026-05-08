@@ -179,7 +179,7 @@ Section mut_excl.
     have [| k [H3 H4]] := matching_disj _ D6 M.
       rewrite H1 disjointUr D1 (fdisjointWr H2)//.
     rewrite H3 H1; exists (w `|` k).
-    rewrite fsetUA; split => //.
+    rewrite !fsetUA fsetUC fsetUA fsetUC fsetUA; split => //.
     by rewrite fsubUset !fsubsetU//(H2,H4)//orbT.
   Qed.
 
@@ -239,12 +239,6 @@ Section mut_excl.
     rewrite unif_sym in U1.
     by rewrite (unif_trans (isSomeP U1) (isSomeP U2)) in U.
   Qed.
-
-  Lemma deref_V s t:
-    acyclic_sigma s -> [disjoint vars_tm (deref s t) & domf s].
-  Proof.
-    rewrite/deref => AS.
-  Admitted.
 
   Lemma acyclic_sigma_dis c s:
     acyclic_sigma s -> [disjoint vars_tm (deref s c) & domf s].
