@@ -60,9 +60,6 @@ Definition s4 := empty.[fresh
                         [:: call (Tm_App (Tm_P (IP 0)) v_X);
                             call (Tm_P pred_true); cut]|})) <- Tm_D (ID 1)].
 
-Lemma codom0_set v s: codom empty.[v <- s] = [::s].
-Proof. by rewrite/= codomE/= fsetU0 enum_fset1/= ffunE//=eqxx. Qed.
-
 Lemma vars_sigma_set v s: vars_sigma empty.[v <- s] = v |` vars_tm s.
 Proof. by rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0. Qed.
 
@@ -77,16 +74,6 @@ Section Test1.
       mkR (Tm_App (Tm_P q) (Tm_D (ID 1)))
         [:: call (Tm_App (Tm_P p) v_X) ; call (Tm_App (Tm_P r) v_X) ] 
     ].
-
-  Lemma acyclic_sigma_set_D k t:
-    k \notin vars_tm t -> ground t ->
-    acyclic_sigma empty.[k <- t].
-  Proof.
-    rewrite/acyclic_sigma/=.
-    rewrite/deref/= fsetU0 cardfs1 /ground => H /eqP G.
-    apply/forallP => -[u]/=.
-    by rewrite inE !FmapE.fmapE/= => ->/=; rewrite G !inE.
-  Qed.
 
   Goal exists v, runT unif p_test fset0 empty (TA (call (Tm_App (Tm_P q) (Tm_D (ID 1))))) (Some (s2, None)) false v.
   Proof.
@@ -129,7 +116,7 @@ Section Test1.
       rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
       rewrite !inE/= !simpl_set.
       rewrite/deref/= !simpl_set/= !FmapE.fmapE/= eqxx/=.
-      by [].
+      rewrite unify_diff_ground//.
     by [].
     rewrite !simpl_set fsetUC.
     set T := (_ `|` _).
@@ -143,7 +130,7 @@ Section Test1.
       rewrite /rename/= !simpl_set in_fset1/=.
       rewrite !simpl_set.
       rewrite/deref/= !simpl_set/= !FmapE.fmapE/= eqxx/=.
-      by [].
+      by rewrite unify_refl.
     by [].
     rewrite !simpl_set/=.
     apply: StopT => //=.

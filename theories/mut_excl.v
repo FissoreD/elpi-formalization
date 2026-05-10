@@ -175,7 +175,7 @@ Section mut_excl.
     rewrite fdisjointXU !fdisjointUX.
     move=> /andP[/andP[D6 D7] /andP[D8 D9]].
     case H: H => //=[s1''] M.
-    have [w {IH}[H1 H2]] := IH _ _ _ _ AI D2 D9 H.      
+    have [w {IH}[H1 H2]] := IH _ _ _ _ AI D2 D9 H.
     have [| k [H3 H4]] := matching_disj _ D6 M.
       rewrite H1 disjointUr D1 (fdisjointWr H2)//.
     rewrite H3 H1; exists (w `|` k).
@@ -240,14 +240,6 @@ Section mut_excl.
     by rewrite (unif_trans (isSomeP U1) (isSomeP U2)) in U.
   Qed.
 
-  Lemma acyclic_sigma_dis c s:
-    acyclic_sigma s -> [disjoint vars_tm (deref s c) & domf s].
-  Proof.
-    move=> H; elim: c => [p|d|v|f Hf a Ha]; rewrite ?(deref_P,deref_D)//=?fdisjoint0X//.
-      by apply/deref_V.
-    by rewrite deref_App/= disjointUl Hf.
-  Qed.
-
   Lemma vars_tms_rcons f a: 
     vars_tms (rcons f a) = vars_tm a `|` vars_tms f.
   Proof. by elim: f a => //= x xs IH a; rewrite !vars_tms_cons IH fsetUA (fsetUC (vars_tm x)) fsetUA. Qed.
@@ -280,7 +272,7 @@ Section mut_excl.
       apply/(fdisjointWl (vars_tms_flatten_term _))/(fdisjointWr (vars_tms_flatten_term _)).
       by move: D3; rewrite/varsU_rule disjointUr/varsU_rhead/= => /andP[->].
     apply/(fdisjointWl (vars_tms_flatten_term _)).
-    by apply/acyclic_sigma_dis.
+    by apply/acyclic_deref_disjoint.
   Qed.
 
   (* Lemma ren_cat x t z: vars_tm t `<=` domf z -> (ren z t) = ren (x+z) t.
