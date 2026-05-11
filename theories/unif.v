@@ -134,7 +134,52 @@ Lemma unif_trans:
 Proof.
 Admitted.
 
-Axiom unif_sym : forall t1 t2 s, unify t1 t2 s = unify t2 t1 s.
+
+Lemma unif_ext_sym t1 t2 s s': unify t1 t2 s = Some s' ->
+  exists e, [disjoint domf e & domf s] /\ s' = s + e.
+Proof.
+  rewrite/unify/unify_aux/vars_nb.
+  move: (_+_)%nat => n; elim: n t1 t2 s s' => //= [|n IH] t1 t2 s s'.
+    by case: eqP => // H [<-]; exists empty; rewrite catf0 fdisjoint0X.
+  case: eqP => // DE; first by move=> [<-]; exists empty; rewrite catf0 fdisjoint0X.
+  rewrite/unify_var/=.
+  case D1: deref => [p|d|v|f a].
+  - case D2: deref => [p'|d'|v'|f' a']//= [?]; subst; exists [fmap].[v' <- Tm_P p].
+    rewrite catf_setr catf0//= fsetU0 fdisjoint1X; split => //.
+    admit.
+  - case D2: deref => [p'|d'|v'|f' a']//= [?]; subst; exists [fmap].[v' <- Tm_D d].
+    rewrite catf_setr catf0//= fsetU0 fdisjoint1X; split => //.
+    admit.
+  - case: (boolP (_ \in _)) => // vd1[<-]; exists [fmap].[v <- deref s t1].
+    rewrite catf_setr catf0//= fsetU0 fdisjoint1X; split => //.
+    admit.
+  - case D2: deref => [p|d|v|f' a']//.
+      case: (boolP (_ \in _)) => // vd1[<-]; exists [fmap].[v <- Tm_App f a].
+      rewrite catf_setr catf0//= fsetU0 fdisjoint1X; split => //.
+
+      admit.
+    case Uf: unifier_help => [sx|]//= Ua.
+    have:= IH _ _ _ _ Uf; have:= IH _ _ _ _ Ua.
+    move=> [sy[D ?]][sz[R ?]]; subst.
+    move: D; rewrite domf_cat fdisjointXU => /andP[S T].
+    by exists (sz + sy); rewrite catfA domf_cat fdisjointUX R S.
+Admitted.
+
+Lemma unif_sym : forall t1 t2 s, unify t1 t2 s -> unify t2 t1 s.
+Proof.
+  rewrite/unify/unify_aux => t1 t2 s; rewrite /vars_nb addnC.
+  move: (_+_)%nat => n; elim: n t1 t2 s => //= [|n IH] t1 t2 s.
+    by rewrite/= eq_sym.
+  rewrite eq_sym; case: eqP => // DE.
+  case D1: deref => [p|d|v|f a]; case D2: deref => [p'|d'|v'|f' a']//=.
+    rewrite/unify_var; case: (boolP (_ \in _)); rewrite//=!inE.
+    rewrite eq_sym; case: eqP => //.
+  case U1: unifier_help => [s'|]//= U2.
+  have := IH _ _ _ (isSomeP U1).
+  case U1': unifier_help => [s''|]//= _.
+  apply: IH.
+Admitted.
+
 
 Axiom unif_acyclic: forall t1 t2 s s',
   acyclic_sigma s -> unify t1 t2 s = Some s' -> acyclic_sigma s'.
@@ -223,9 +268,9 @@ Proof.
   have:= match_unif m1.
   have:= match_unif m2.
   move=> H1 H2.
-  apply/unif_trans/isSomeP/H1/isSomeP.
-  rewrite unif_sym.
-  eauto.
+  apply/unif_sym.
+  apply/unif_trans/isSomeP/H2.
+  apply/unif_sym/isSomeP/H1.
 Qed.
 
 Axiom matching_V: forall s t d,

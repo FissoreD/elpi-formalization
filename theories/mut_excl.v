@@ -236,8 +236,8 @@ Section mut_excl.
     move: M2; case M2: matching => //=.
     have {}U1:= match_unif M.
     have {}U2:= match_unif M2.
-    rewrite unif_sym in U1.
-    by rewrite (unif_trans (isSomeP U1) (isSomeP U2)) in U.
+    have {}U1 := unif_sym (isSomeP U1).
+    by rewrite (unif_trans U1 (isSomeP U2)) in U.
   Qed.
 
   Lemma vars_tms_rcons f a: 
