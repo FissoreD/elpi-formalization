@@ -102,11 +102,11 @@ Section Test1.
       replace (_.[? _]) with (Some build_arr); last by rewrite !FmapE.fmapE.
       rewrite [fresh_rules _ _]/= /fresh_rule !simpl_set.
       rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
-      rewrite/=/rename/= !simpl_set /= !inE/= !simpl_set.
-      by rewrite !unify_V_empty.
+      rewrite /= !simpl_set /rename/= !simpl_set !inE /=.
+      move=> //.
     by [].
-    rewrite/varsU_rule/varsU_rhead/=/varsU_rprem/= !simpl_set.
-    set Y := (_ `|` _).
+    set R := (_ `|` _).
+    rewrite cat0f.
     apply: StepT => //.
       rewrite/step/=.
       rewrite/bc /next_subst [next _ _]/= acyclic_sigma_set_D//.
@@ -164,8 +164,8 @@ Section Test5.
     apply: StepT => //=.
       rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
-      rewrite /=!FmapE.fmapE eqxx/= !simpl_set/=.
-      by rewrite !unify_V_empty => //=.
+      rewrite /=!FmapE.fmapE eqxx/= !cat0f !simpl_set/=.
+      by [].
     by [].
     apply/StepT => //=.
     apply/StopT => //=.
@@ -197,8 +197,8 @@ Section Test6.
     apply: StepT => //=.
       rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
-      rewrite !FmapE.fmapE eqxx/= !simpl_set/=.
-      by rewrite !unify_V_empty//!simpl_set.
+      rewrite !FmapE.fmapE eqxx/= !cat0f !simpl_set/=.
+      by [].
     by [].
     rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
     set Y := _ `|` _.

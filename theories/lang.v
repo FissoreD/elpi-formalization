@@ -587,23 +587,25 @@ Proof.
 Qed.
 
 (* returns a variable v in s which is not in the codomain of s *)
-Fixpoint get_father v n (s : Sigma) :=
+Fixpoint get_father_aux (v:V) n (s : Sigma) :=
   let f := filter_in s v in
   match n with
   | 0 => v
   | n.+1 => 
-    if pick (domf f) is Some v then get_father (val v) n s
+    if pick (domf f) is Some v then get_father_aux (val v) n s
     else v
   end.
 
-Lemma get_father1 v n s: get_father v n.+1 s =  
-    if pick (domf (filter_in s v)) is Some v then get_father (val v) n s
+Definition get_father v (s:Sigma) := get_father_aux v #|` domf s| s.
+
+Lemma get_father1 v n s: get_father_aux v n.+1 s =  
+    if pick (domf (filter_in s v)) is Some v then get_father_aux (val v) n s
     else v. by []. Qed.
 
-Lemma get_father0n v s: get_father v 0 s = v. by []. Qed.
+Lemma get_father0n v s: get_father_aux v 0 s = v. by []. Qed.
 
 Goal let s := fmap0.[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 2)].[IV 2 <- Tm_D (ID 0)] in 
-  get_father (IV 2) #|`domf s| s = IV 0.
+  get_father_aux (IV 2) #|`domf s| s = IV 0.
 Proof.
   rewrite/= (cardfsD1 (IV 2)) !inE add1n fsetU1K?inE// fsetU0 cardfs2.
   rewrite !get_father1 filter_in_setN ?inE//.
@@ -623,7 +625,7 @@ Qed.
 Lemma filter_in_domf v s k: v \in domf (filter_in s k) -> v \in domf s.
 Proof. by rewrite/filter_in/= !inE; case: fndP. Qed.
 
-Lemma get_father_domf k n s:  k \in domf s -> get_father k n s \in domf s.
+Lemma get_father_domf k n s:  k \in domf s -> get_father_aux k n s \in domf s.
 Proof. 
   elim: n k => //n IH k ks; rewrite get_father1.
   by case P: pick => [[v' v'P]|//]; apply/IH/filter_in_domf/v'P.
@@ -631,7 +633,7 @@ Qed.
 
 Lemma get_father_codomf k n s:  
   acyclic_sigma s -> #|` domf s | = n ->
-  k \in domf s -> get_father k n s \notin codom_vars s.
+  k \in domf s -> get_father_aux k n s \notin codom_vars s.
 Proof.
   elim: n k s => //[|n IH] k s A; first by move=> /cardfs0_eq/fmap_nil->//.
   move=> H1 H2.
@@ -682,7 +684,7 @@ Lemma acyclic_sigma1 s: acyclic_sigma s ->
 Proof.
   have [] := set0IN (domf s); first by move => /fmap_nil ->; left.
   move=> [k ks] A; right.
-  by exists (get_father k #|` domf s| s); rewrite get_father_domf//get_father_codomf.
+  by exists (get_father_aux k #|` domf s| s); rewrite get_father_domf//get_father_codomf.
 Qed.
 
 Lemma deref_succ_id1 k s: 
@@ -778,18 +780,6 @@ Proof.
   by apply: IH; move: kP; rewrite !inE => /andP[].
 Qed.
 
-(* Devo dimostrare che la unif/match assegano nuove variabili:
-   che non toccano il codomonio. Quindi unif a b s = s' -> exists e, e + s' = s.
-   Dimostro prima che deref mi da un termine che contiene variabili non nel
-   dominio (vedi acyclic_deref_disjoint), sono queste le variabili assegnate.
-   In ricorsione, la dimostrazione deve essere vera
-
-   Quando faccio unif a b s = s' -> exists s'', unif b a s = s''
-   La prova di questo lemma mi sembra difficile (o impossibile, per l'induzione sul nodo app),
-  
-   Penso si debba avere un lemma scritto come:
-
-*)
 Lemma get_lowest_codom v s (vs : v \in domf s): acyclic_sigma s -> 
   [forall v: vars_tm (s [` get_lowest_domf vs]), val v \notin domf s].
 Proof.
