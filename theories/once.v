@@ -166,15 +166,38 @@ Section once.
     rewrite/is_det HS => r' [b'[fv' Hx]].
     inversion Hx; clear Hx; subst => //.
     move: H1; rewrite/=/bc [get_tm_hd _]/=.
-    case: ifP => //=.
-      move=> _ [???]; subst.
+    case (boolP (acyclic_sigma s)) => AS; last first => //=.
+      move=> [???]; subst.
       by inversion H3; auto.
-    move=> AS.
-    rewrite deref_App/= deref_P/=.
-    rewrite !FmapE.fmapE/= !inE eqxx/=.
+    rewrite !FmapE.fmapE !inE eqxx/=.
     case X: fresh_rules => [fvx' rs'].
     rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
     rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
+    rewrite ffunE/= eqxx/=.
+    (* case M: matching => //=[sx|]. *)
+    rewrite no_once_select; last first.
+      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
+      by apply: no_once_fresh.
+    rewrite /matching/montanari_deref/= deref2//.
+    rewrite not_fnd.
+      rewrite/montanari_pair/= montanari_equation/= ifN.
+      case D: deref => //=.
+        move=> [].
+      
+      
+      
+    fvx'
+    
+    case M: matching => //=[sx|][???]; subst.
+      inversion H3 => //; subst; clear H3.
+      move: H2 => /=; rewrite/bc.
+      case (boolP (acyclic_sigma s)) => AS; last first => //=.
+        move=> [???]; subst.
+        by inversion H3; auto.
+    rewrite /matching/montanari_deref/= deref2//=.
+    case M: m
+    case: fndP => //=.
+    rewrite/montanari_pair montanari_equation/= not_fnd//=.
     rewrite ffunE/= /matching/= /matching_aux/= /vars_nb/= cardfs1 addnC/=.
     rewrite no_once_select; last first.
       move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].

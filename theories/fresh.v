@@ -345,25 +345,13 @@ Qed.
 Lemma vars_deref1 t fv s1:
   vars_tm t `<=` fv ->
   vars_sigma s1 `<=` fv ->
-  vars_tm (deref1 s1 t) `<=` fv.
-Proof.
-  elim: t => //=[v|f Hf a Ha] H1 H2.
-    case: fndP => //= vs.
-    apply/fsubset_trans/H2; rewrite/vars_sigma fsubsetU// /codom_vars.
-    apply/orP; right.
-    apply: codom_sub.
-  move: H1; rewrite !fsubUset => /andP[/Hf->///Ha->]//.
-Qed.
-
-Lemma vars_deref t fv s1:
-  vars_tm t `<=` fv ->
-  vars_sigma s1 `<=` fv ->
   vars_tm (deref s1 t) `<=` fv.
 Proof.
-  rewrite/deref; move: #|`_| => n.
-  elim: n t fv s1 => [|n IH] t fv s1 H1 H2//=.
-    apply: IH => //.
-  by apply/vars_deref1.
+  rewrite/vars_sigma; rewrite fsubUset.
+  move=> H1 => /andP[H2 H3].
+  apply/fsubset_trans.
+    apply/vars_tm_deref_sub.
+  by rewrite fsubUset H3.
 Qed.
 
 Lemma fresh_tm_domf_sub f m a:

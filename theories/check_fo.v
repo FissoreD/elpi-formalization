@@ -1,6 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import tree tree_prop ctx tree_vars unif mut_excl fresh.
+From det Require Import tree tree_prop ctx tree_vars mut_excl fresh unif.
 
 Section checker.
 
@@ -66,8 +66,8 @@ Qed.
 
 Section check.
   (* Variable u : Unif. *)
-  Definition u := mk_Unif unify matching.
-  Notation runT := (runT (mk_Unif unify matching)).
+  Definition u : Unif := mk_Unif unify matching.
+  Notation runT := (runT u).
   Definition runT' p v s t r := (exists v' b', runT p v s t r v' b').
 
   Fixpoint has_cut A :=
@@ -317,7 +317,7 @@ Section check.
   Qed.
 
   (*SNIP: check_program *)
-  Definition check_program pr := mut_excl pr && check_rules pr.
+  Definition check_program pr := mut_excl u pr && check_rules pr.
   (*ENDSNIP: check_program *)
 
   Lemma det_check_big_or_help s r0 rs:
