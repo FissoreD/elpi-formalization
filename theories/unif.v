@@ -637,6 +637,26 @@ Proof.
     by rewrite/map_prod1/= eq_sym => ->.
 Qed.
 
+Lemma unifyP t1 t2 s s': acyclic_sigma s -> 
+  unify t1 t2 s = Some s' -> deref s' t1 = deref s' t2.
+Proof.
+  move=> A M.
+  have DL : disjoint_L s [:: (deref s t1, deref s t2)].
+    by rewrite /disjoint_L/= fsetU0/map_prod1/= fdisjointXU !acyclic_deref_disjoint//.
+  have:= montanariP A DL M; rewrite /= andbT /map_prod1/=.
+  by rewrite !(montanari_set_deref' _ A DL (catf2 _) M) => /eqP.
+Qed.
+
+Lemma matchingP t1 t2 s s': acyclic_sigma s -> 
+  matching t1 t2 s = Some s' -> deref s' t1 = deref s' t2.
+Proof.
+  move=> A M.
+  have DL : disjoint_L s [:: (deref s t1, deref s t2)].
+    by rewrite /disjoint_L/= fsetU0/map_prod1/= fdisjointXU !acyclic_deref_disjoint//.
+  have:= montanariP A DL M; rewrite /= andbT /map_prod1/=.
+  by rewrite !(montanari_set_deref' _ A DL (catf2 _) M) => /eqP.
+Qed.
+
 Lemma montanari_ground s b l:
   all (map_prod1 andb ground) l -> 
   montanari s b l = if all (fun '(x, y) => x == y) l then Some s else None.
