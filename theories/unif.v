@@ -228,6 +228,9 @@ Proof. rewrite/lex_seqT measure_commV//. Qed.
 
 Opaque measure.
 
+Definition deref_list v t l := map (map_prod (derefkv v t)) l.
+Definition deref_sigma v t (s:Sigma) := [fmap x : domf s => derefkv v t s.[valP x]].[v <- t].
+
 Function montanari s is_matching (l: seqT) {wf lex_seqT l} : option Sigma :=
   match l with
   | [::] => Some s
@@ -238,9 +241,7 @@ Function montanari s is_matching (l: seqT) {wf lex_seqT l} : option Sigma :=
       | Tm_App f1 a1, Tm_App f2 a2 => montanari s is_matching ((f1, f2) :: (a1, a2) :: tl)
       | Tm_V v, _ =>
         if (v \in vars_tm t2)  then None
-        else 
-          let s := [fmap x : domf s => derefkv v t2 s.[valP x]].[v <- t2] in
-          montanari s is_matching (map (map_prod (derefkv v t2)) tl)
+        else montanari (deref_sigma v t2 s) is_matching (deref_list v t2 tl)
       | _, Tm_V v => if is_matching then None else montanari s is_matching ((t2, t1) :: tl)
       | _, _ => None
       end
@@ -590,7 +591,7 @@ Proof.
 Qed.
 
 Lemma montanariP b l s s': acyclic_sigma s -> disjoint_L s l ->
-  montanari s b l = Some s' -> all (map_prod1 (eq_op) (deref s')) l.
+  montanari s b l = Some s' -> all (map_prod1 eq_op (deref s')) l.
 Proof.
   move: s'; montanari_ind s b l => s' A.
   - by [].
