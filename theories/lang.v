@@ -694,7 +694,7 @@ Fixpoint H u (md: seq mode) (q : list Tm) (h: list Tm) s : option Sigma :=
   | [::], [::], [::] => Some s
   | md :: tl, x :: xs, y :: ys => 
     let f := if md == input then u.(matching) else u.(unify) in
-    obind (f y x) (H u tl xs ys s)
+    obind (H u tl xs ys) (f y x s)
   | _, _, _ => None
   end.
 

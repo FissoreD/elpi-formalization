@@ -455,10 +455,9 @@ Section check.
       by case: t => //=; case: hd => //= + [<-].
     move=> AS; case: t; case: hd => //=.
     move=> f1 a1 f2 a2.
-    case H: H => //=[s1'].
-    case: m => //=.
-      by apply/matching_acyclic/IH/H.
-    by apply/unif_acyclic/IH/H.
+    case M: (_ f1 f2 s1) => [sx|]//=.
+    apply: IH.
+    by move: M; case: m => /=; [apply/matching_acyclic|apply/unif_acyclic].
   Qed.
 
   Lemma acyclic_sigma_select p pred m t s1 e:

@@ -824,18 +824,73 @@ Axiom matching_subst : forall q t s,
 
 Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
 
-(* TODO: *)
+(* Lemma matching_disj_help l s s':
+  acyclic_sigma s -> disjoint_L s l ->
+  montanari s false l = Some s' ->
+    exists e, domf s' = domf s `|` e /\ e `<=` varsU (map vars_tm (map fst l)).
+Proof.
+  move: s'; montanari_ind s f l => s' A; subst.
+  - by move=> _ _ [<-]; exists fset0; rewrite fsetU0.
+  - rewrite disjoint_L_cons/=varsL_cons fsubUset => /and3P[d _ D] /andP[v V] M.
+    have [x[H1 H2]]:= IH _ A D V M; exists x; split => //.
+    by apply/fsubsetU; rewrite H2 orbT.
+  - rewrite disjoint_L_cons/= !fdisjointXU !varsL_cons -!andbA fsubUset => /and5P[d1 d2 d3 d4 d5] /andP[v V] M.
+    have [||x [H1 /= H2]] := IH _ A _ _ M; last exists x.
+      by rewrite !disjoint_L_cons/= d1 d2 d3 d4.
+      by move: v; rewrite/map_prod1/= !varsL_cons/map_prod1/= !fsetUA !fsubUset; repeat case: fsubset => //.
+    by split => //; rewrite fsetUA in H2.
+  2:{
+    rewrite disjoint_L_cons/= => /and3P[d1 d2 d3].
+    rewrite varsL_cons !fsubUset -andbA/= => /and3P[v1 v2 V] M.
+    have:= IH _ A _ _ M.
+    rewrite disjoint_L_cons/= d1 d2 d3 varsL_cons /=!fsubUset/=v1 v2 V/=.
+    move=> []//x[-> H]; exists x; split => //.
+    apply/fsubsetP => y; rewrite inE => yx.
+    move/fsubsetP: H => /(_ y yx); rewrite !inE => /orP[/eqP?|]; subst.
+
+
+  }
+  - rewrite disjoint_L_cons/= => /and3P[d1 d2 d3].
+    rewrite varsL_cons !fsubUset -andbA/= => /and3P[v1 v2 V] M.
+    rewrite fdisjointX1 in d1.
+    have {IH} := IH _ (acyclic_sigma_derefkv_set vt d2 A) (disjoint_L_set vt d2 d3) _ M.
+    move=> [].
+      admit.
+    move=> x[-> H]; exists (v |` x); split => //; first by rewrite fsetUCA fsetUA.
+    rewrite fsubUset fsubsetUl.
+    apply/fsub.
+    apply/fsubsetP => y; rewrite !inE; case: eqP => //=yv ys.
+    have:= fsubsetP H y ys.
+    have:= fsubsetP H.
+    apply/fsubsetU.
+    move=> [x[H1 H2]]; exists (v |` x); split => //; first by rewrite H1 fsetUCA fsetUA.
+    apply/fsubsetP => y.
+    rewrite !inE => /orP[/eqP?|]; subst; first by rewrite eqxx.
+    move=> yx; have {H2} := fsubsetP H2 y yx.
+    case: eqP => //=yv.
+    apply/fsubsetP.
+    move=> /varUP[].
+    move=> /varUP[z[/mapP[? /mapP[? /mapP[t1 tl ???]]]]]; subst.
+    move=> H; apply/varUP. exists (vars (map_prod (derefkv v t) t1).1); split => //.
+    apply/mapP; eexists => //; apply/mapP; eexists => //.
+
+
+    
+Admitted. *)
+
 (*SNIPT: matchdisj *)
-(* Lemma matching_disj:
-  forall s s' t1 t2, vars t1 # domf s -> vars t1 # vars t2 ->
-                                                                  (*SHOULD BE: e `<=` vars (deref s t2)*)
-    matching t1 t2 s = Some s' -> exists e, domf s' = domf s `|` e /\ e `<=` vars t2.
+Lemma matching_disj s s' t1 t2:
+    domf s # vars t2 -> vars t1 # vars t2 ->
+    matching t1 t2 s = Some s' -> exists e, domf s' = domf s `|` e /\ e `<=` vars (deref s t2).
 (*ENDSNIPT: matchdisj *)
 Proof.
-  rewrite/matching/unifier_help2/unifier_help1 => s s' t1 t2.
-  case U: unifier_help => //=[sx] V1 V2[?]; subst.
-  exists (domf sx); rewrite domf_cat; split => //.
-Admitted. *)
+  move=> D1 D2.
+  rewrite/matching/montanari_deref/montanari_pair => M.
+  (* have /=[] := matching_disj_help _ _ M. *)
+    admit.
+    (* admit.
+    move=> x[-> H]. *)
+Admitted.
 
 Lemma montanari_monotoneR b s sx l1 l2:
   all2 (fun x y => (x.2 == y.2) && (deref sx y.1 == x.1)) l1 l2 ->
