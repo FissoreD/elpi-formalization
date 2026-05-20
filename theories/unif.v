@@ -1390,7 +1390,6 @@ Proof.
     have Z:= matching_ext1 M1.
     apply: fdisjointWl Z _.
     rewrite fdisjointUX .
-    Search matching fsubset. *)
 Admitted.
 
 

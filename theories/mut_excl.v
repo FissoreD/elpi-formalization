@@ -193,6 +193,8 @@ Proof.
   move=> H1 H2; apply/andP; split.
     apply: unif_match123 (isSomeP M2) (isSomeP M1); rewrite//?not_in_deref//.
     by rewrite fdisjoint_sym.
+    by rewrite fdisjoint_sym.
+    by rewrite fdisjoint_sym.
   have Hx := matching_ext1 M1.
   have Hy := matching_ext1 M2.
   have A1' := matching_acyclic A1 M1.
