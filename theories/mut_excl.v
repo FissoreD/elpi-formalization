@@ -114,6 +114,17 @@ Lemma vars_tms_flatten_term hd':
   vars_tms (flatten_term hd') `<=` vars_tm hd'.
 Proof. elim: hd' => //= f Hf a Ha; rewrite vars_tms_rcons fsetUC fsetSU//. Qed.
 
+Lemma fdisjoint_ftl s q : [disjoint vars_tm s & q] -> [disjoint vars_tms (flatten_term s) & q].
+Proof. by apply/fdisjointWl/vars_tms_flatten_term. Qed.
+
+Lemma fdisjoint_ftr s q : [disjoint q & vars_tm s] -> [disjoint q & vars_tms (flatten_term s)].
+Proof. by apply/fdisjointWr/vars_tms_flatten_term. Qed.
+
+Lemma fdisjoint_ft2 s q : [disjoint vars_tm q & vars_tm s] -> 
+  [disjoint vars_tms (flatten_term q) & vars_tms (flatten_term s)].
+Proof. by move=> H; apply/fdisjointWr/fdisjoint_ftl/H/vars_tms_flatten_term. Qed.
+
+
 From det Require Import unif.
 
 Definition u := mk_Unif unify matching.
@@ -270,44 +281,40 @@ Proof.
   rewrite vars_tms_cons => /IH ->//.
 Qed.
 
-Lemma HSH fv m hd pr s1 s2 c pred:
-  good_mode m ->
-  acyclic_sigma s1 ->
-  [disjoint (vars_tm hd) & (varsU (map varsU_rule pr))] ->
-  [disjoint (vars_tm (deref s1 c)) & (varsU (map varsU_rule pr))] ->
-  [disjoint (vars_tm (deref s1 c)) & vars_tm hd] ->
-  get_frozen_vars m (flatten_term (deref s1 c)) `<=` fv ->
-  H u fv m (flatten_term (deref s1 c)) (flatten_term hd) s1 = Some s2 ->
-  select_head u pred (flatten_term hd) m pr = [::] ->
-  (select u pred (flatten_term (deref s1 c)) m pr s1).2 = [::].
+Definition v_prog pr := varsU (map varsU_rule pr).
+
+Lemma v_prog_cons x xs: v_prog (x::xs) = varsU_rhead x `|` varsU_rprem x `|` v_prog xs.
+Proof. by []. Qed.
+
+
+Lemma HSH m hd pr s1 c pred: good_mode m -> acyclic_sigma s1 ->
+  [disjoint domf s1 & vars_tms c] ->
+  [disjoint vars_tms hd & v_prog pr] ->
+  [disjoint vars_tms c & v_prog pr] ->
+  [disjoint vars_tms c & vars_tms hd] ->
+  H u (get_frozen_vars m c) m c hd s1 ->
+  select_head u pred hd m pr = [::] ->
+  (select u pred c m pr s1).2 = [::].
 Proof.
-  elim: pr m hd s1 s2 c => //= -[hd bo] rs IH/= m hd' s1 s2 c GM AS.
-  rewrite fdisjointXU => /andP[D1 D2].
-  rewrite fdisjointXU => /andP[D3 D4] D5 FSUB HH.
-  case:eqP => //=; last by move=> _; apply:IH HH.
+  elim: pr m hd s1 c => //= -[hd bo] rs IH/= m hd' s1 c GM AS D.
+  rewrite !v_prog_cons /varsU_rhead /varsU_rprem/=.
+  rewrite !fdisjointXU -!andbA => /and3P[hh' hb' hr'] /and3P[ch cb cr] ch' H1.
+  case:eqP => //=; last by move=> _; apply:IH.
   move=> /esym Hd.
-  case HHead: H_head => //= SH.
-  have {}IH := IH _ _ _ _ _ GM AS D2 D4 D5 FSUB HH SH.
-  case X: H => [s'|]//.
-  exfalso; apply: (negP (negbT HHead)) => {HHead}.
+  case HH: H_head => //= S1.
+  have {S1} IH := IH _ _ _ _ GM AS D hr' cr ch' H1 S1.
+  case H2: H => [s'|]//{IH}; apply isSomeP in H2.
+  exfalso; apply: (negP (negbT HH)) => {HH}.
   apply: H_head_sublist (GM) _.
-  have X' := H_sublist (size_input m) (isSomeP X).
-  have HH' := H_sublist (size_input m) (isSomeP HH).
-  have A' := acyclic_deref_disjoint c AS.
-  apply: SHS HH' X' => //.
+  have H1' := H_sublist (size_input m) H1.
+  have H2' := H_sublist (size_input m) H2.
+  apply: SHS H1' H2' => //.
   - by apply/good_mode_take_inp.
-  - apply: disjoint_take2; apply: fdisjointWl (vars_tms_flatten_term  _) _.
-    apply: fdisjointWr D1; apply: fsubset_trans (vars_tms_flatten_term _) _.
-    by rewrite /varsU_rule /varsU_rhead/= fsubsetUl.
-  - apply: disjoint_takel; apply/disjoint_taker.
-    apply: fdisjointWl (vars_tms_flatten_term _) _.
-    by apply: fdisjointWr (vars_tms_flatten_term _) _.
-  - apply: disjoint_takel; apply/disjoint_taker.
-    apply: fdisjointWl (vars_tms_flatten_term _) _.
-    apply: fdisjointWr (vars_tms_flatten_term _) _.
-    by apply: fdisjointWr D3; rewrite /varsU_rule /varsU_rhead/= fsubsetUl.
-  - by apply/disjoint_taker; apply: fdisjointWr (vars_tms_flatten_term _) _.
-  - by apply/disjoint_taker; apply: fdisjointWr (vars_tms_flatten_term _) _.
+  - by apply: disjoint_take2; apply: fdisjoint_ftr _.
+  - by apply: disjoint_take2.
+  - by apply: disjoint_take2; apply: fdisjoint_ftr _.
+  - by apply/disjoint_taker.
+  - by apply/disjoint_taker.
   - by rewrite get_frozen_vars_sub.
   - by rewrite get_frozen_vars_sub.
 Qed.
@@ -374,12 +381,12 @@ Proof.
   rewrite !flatten_term_ren.
   apply/H_head_ren_aux => //=; only 1-4: by apply/good_ren_fresh_all; rewrite (vars_tms_flatten_term, fsubsetUl)//.
     rewrite fdisjointXU; apply/andP; split.
-      by apply/fdisjointWr/disj_codom0L; rewrite vars_tms_flatten_term.
+      by apply/fdisjoint_ftr/disj_codom0L.
     apply/fdisjointWr/disj_codom0R.
     apply/fsubset_trans/H1.
     rewrite -flatten_term_ren vars_tms_flatten_term//.
   rewrite fdisjointXU; apply/andP; split.
-    by apply/fdisjointWr/disj_codom0L; rewrite vars_tms_flatten_term.
+    by apply/fdisjoint_ftr/disj_codom0L.
   apply/fdisjointWr/disj_codom0R.
   apply/fsubset_trans/H2.
   rewrite -flatten_term_ren vars_tms_flatten_term//.
@@ -456,23 +463,21 @@ Proof.
     move: GM; rewrite /good_modes/flatten_mode.
     by move=> /forallP /(_ [` pP]); rewrite valPE.
   move: H; move: (flatten_mode _) => m H GM'.
+  apply isSomeP in H.
   rewrite !has_cut_seq_fresh.
   case CS: has_cut_seq; first by case: select => [?[|[]]].
   case SH: select_head => // _.
-  have /(_  (vars_sigma s1 `|` vars_tm (deref s1 c) `|` fv)) := select_head_ren (fsubset_refl _) (fsubset_refl _) SH.
+  have {SH}/(_  (vars_sigma s1 `|` vars_tm (deref s1 c) `|` fv)) := select_head_ren (fsubset_refl _) (fsubset_refl _) SH.
   rewrite -/FRS2-/FC2.
   move=> HS.
-  (* select_head *)
   have ->// : (select u p (flatten_term (deref s1 c)) m FRS2.2 s1).2 = [::].
-  rewrite (HSH _ _ _ _ _ _ H HS)//=.
-    by rewrite/FC2; apply/disjoint_varsU.
-    apply/fdisjointWl/disjoint_varsU1.
-    by rewrite -fsetUA fsetUC -!fsetUA fsubsetUl.
+  apply: HSH H HS => //=.
+    by apply: fdisjoint_ftr (acyclic_deref_disjoint _ AS).
+    by apply: fdisjoint_ftl (disjoint_varsU _ _).
+    by apply/fdisjoint_ftl/fdisjointWl/disjoint_varsU1/fsubsetP => x H; rewrite !inE H orbT.
   rewrite fdisjoint_sym.
-  apply/fdisjointWr/vars_tm_rename_disjoint.
-  apply/fsubset_trans/fresh_rules_sub.
-  rewrite -fsetUA fsetUC -!fsetUA.
-  apply/fsubsetUl.
+  apply/fdisjoint_ft2/fdisjointWr/vars_tm_rename_disjoint.
+  by apply/fsubset_trans/fresh_rules_sub/fsubsetP => x H; rewrite !inE H orbT.
 Qed.
 
 Print  Assumptions  mut_exclP.

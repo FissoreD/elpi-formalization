@@ -1128,7 +1128,33 @@ Proof.
   by rewrite not_fnd.
 Qed.
 
-Axiom enrico : False.
+Fixpoint tsize t :=
+  match t with
+  | Tm_P _ | Tm_D _ | Tm_V _ => 1
+  | Tm_App l r => (tsize l + tsize r).+1
+  end.
+
+Lemma deref_size_gt s v t (vs' : v \in domf s):
+  v \in vars t ->
+  (Tm_V v == t) = false ->
+  tsize (deref s t) > tsize s.[vs'].
+Proof.  
+  elim: t => //=.
+    move=> v'; rewrite inE => /eqP?; subst.
+    by rewrite eqxx.
+  move=> f Hf a Ha; rewrite inE => /orP[vf|va] H.
+    have {}Hf := Hf vf.
+    destruct f => //; last first.
+      have := Hf erefl.
+      lia.
+    move: vf; rewrite inE => /eqP?; subst.
+    rewrite deref_V in_fnd/=; lia.
+  have {}Ha := Ha va.
+  destruct a => //; last first.
+    have := Ha erefl; lia.
+  move: va; rewrite inE => /eqP?; subst.
+  rewrite deref_V in_fnd/=; lia.
+Qed.
 
 Lemma exists_montanari m l:
   acyclic_sigma m -> disjoint_L m l ->
@@ -1155,8 +1181,7 @@ Proof.
     (* rewrite fdisjointX1 => /negbTE<-. *)
     move: H; case: fndP => //= vs' H.
       have {}A := fdisjointP A' _ vs'.
-      (* enrico? *)
-      case: enrico.
+      by have:= deref_size_gt vs' vt EQ; rewrite H ltnn.
     case: t EQ vt d2 H => // v' H; rewrite !inE/= !fdisjointX1.
     by move=> /eqP? v'm v's'; subst; rewrite eqxx in H.
   - by [].
@@ -1279,7 +1304,10 @@ Proof.
     move=> kf; rewrite ffunE/= fdisjointX1 => vh2.
     move: kf; rewrite !inE vt/= (negbTE vh2) orbF => H.
     by rewrite in_fnd//.
-Admitted.
+  rewrite /=fsubUset => /andP[H1 H2].
+  rewrite fdisjointXU => /andP[D1 D2].
+  by rewrite Ha//Hf.
+Qed.
 
 Lemma deref_good_setR s1 s2 h1 h2 t:
   vars_tm h1 `<=` vars_tm t -> [disjoint domf s2 & vars_tm h1] ->
@@ -1292,7 +1320,10 @@ Proof.
     move=> kf; rewrite ffunE/= fdisjointX1 => vh2.
     move: kf; rewrite !inE vt/= (negbTE vh2) orbT/= => H.
     rewrite not_fnd//in_fnd//.
-Admitted.
+  rewrite /=fsubUset => /andP[H1 H2].
+  rewrite fdisjointXU => /andP[D1 D2].
+  by rewrite Ha//Hf.
+Qed.
 
 Lemma unif_pair_good_set s1 s2 h1 h2:
   [disjoint domf s1 & vars_tm h2] ->
@@ -1327,7 +1358,7 @@ Proof.
   exists (good_set s1 s2 h1 h2).
   rewrite andbT; repeat split.
     by apply: acyclic_sigma_good_set d1q d2q GSC.
-    by apply: unif_pair_good_set; subst.
+  by apply: unif_pair_good_set; subst.
 Qed.
 
 Lemma unif_match123 fv1 fv2 s1 s2 q h1 h2:
@@ -1335,13 +1366,15 @@ Lemma unif_match123 fv1 fv2 s1 s2 q h1 h2:
   [disjoint vars h1 & vars h2] ->
   [disjoint domf s1 & vars_tm q] -> 
   [disjoint domf s2 & vars_tm q] -> 
+  [disjoint vars_tm h1 & vars_tm q] -> 
+  [disjoint vars_tm h2 & vars_tm q] -> 
   vars_tm (deref s1 q) `<=` fv1 ->
   vars_tm (deref s2 q) `<=` fv2 ->
   matching fv1 h1 q s1 ->
   matching fv2 h2 q s2 ->
   unify h1 h2 fmap0.
 Proof.
-  move=> A1 A2 Dx H1 H2 S1 S2.
+  move=> A1 A2 Dx d1q d2q H1 H2 S1 S2.
   case M1: matching => [s1'|]//.
   case M2: matching => [s2'|]//.
   move=> _ _.
@@ -1354,11 +1387,9 @@ Proof.
   have A1' := matching_acyclic A1 M1.
   have A2' := matching_acyclic A2 M2.
   apply: ddu D1 D2 => //.
-    apply: fdisjointWl (matching_ext1 M1) _.
-    rewrite fdisjointUX .
-    (* have Z:= matching_ext1 M1.
+    have Z:= matching_ext1 M1.
     apply: fdisjointWl Z _.
-    rewrite fdisjointUX.
+    rewrite fdisjointUX .
     Search matching fsubset. *)
 Admitted.
 
