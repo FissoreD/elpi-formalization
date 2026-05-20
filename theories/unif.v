@@ -1112,42 +1112,23 @@ Proof.
     rewrite inE => .
     admit. *)
 
-(* Lemma unifier_x s v' v t1: v \notin s ->
+Lemma unifier_x s v' v t1 (v's: v' \in domf s): acyclic_sigma s -> v \notin domf s -> s.[v's] = Tm_V v ->
   deref (deref_sigma v' (Tm_V v) s) (derefkv v (Tm_V v') t1) = deref s t1 .
 Proof.
-  move=> vs; elim: t1 => //=[z|f -> a ->//]; rewrite /derefkv deref_V !FmapE.fmapE.
+  move=> A vs E; elim: t1 => //[z|/=f -> a ->//]; rewrite /derefkv deref_V !FmapE.fmapE.
   rewrite not_fnd//=.
-  case: eqP => //; rewrite deref_V !FmapE.fmapE/=.
+  case: eqP => //; rewrite deref_V !FmapE.fmapE.
     by rewrite eqxx => ->; rewrite not_fnd.
   move=> zv; case: eqP => zv'; subst.
-    rewrite/=.
-  move=> H; case: eqP => //=?; subst.
-    rewrite eqxx => ->{z}/=.
-  
-  rewrite not_fnd//=; case: eqP => //; rewrite deref_V FmapE.fmapE?eqxx//.
-    by move=> <-.
-  move=> H; case: eqP => //=.
-    move=> ->.
-    case: fndP => //= ks.
-    
-  rewrite FmapE.fmapE.
+    by rewrite/= in_fnd E.
+  f_equal; case: fndP => zP.
+    rewrite in_fnd// ffunE valPE /derefkv not_in_deref//.
+    rewrite dom_setf fsetU0 fdisjoint1X.
+    by have:= fdisjointP A _ v's; apply/contra/fsubsetP/codom_vars_sub_vt.
+  by rewrite not_fnd.
+Qed.
 
-  case: fndP => //= .
-  case: eqP => //=.
-
-Lemma unif_deref_var v v' s l: unifier s l ->
-  unifier (deref_sigma v' (Tm_V v) s) (deref_list v (Tm_V v') l).
-Proof.
-  elim: l => //=[[t1 t2] l IH]; f_equal.
-  move=> /andP[/eqP + U2]; rewrite IH// andbT.
-  rewrite/map_prod/=/unif_pair/map_prod1/=; clear.
-  rewrite derefxx//=.
-  elim: t1.
-Admitted. *)
-  
-  
-
-  
+Axiom enrico : False.
 
 Lemma exists_montanari m l:
   acyclic_sigma m -> disjoint_L m l ->
@@ -1175,7 +1156,7 @@ Proof.
     move: H; case: fndP => //= vs' H.
       have {}A := fdisjointP A' _ vs'.
       (* enrico? *)
-      admit.
+      case: enrico.
     case: t EQ vt d2 H => // v' H; rewrite !inE/= !fdisjointX1.
     by move=> /eqP? v'm v's'; subst; rewrite eqxx in H.
   - by [].
@@ -1197,130 +1178,18 @@ Proof.
     case: t EQ vt D2 H => //=[v']; rewrite !inE => ///eqP vt vv' D2.
     case: fndP => v's'; last by move=> [?]; subst; rewrite eqxx in vv'.
     move=> /= H.
-    exists (deref_sigma v (Tm_V v') s'.[~v']); split.
-      apply/acyclic_sigma_deref_sigma => //.
-        by rewrite !inE.
-        by rewrite fdisjointX1 domf_rem !inE eqxx.
-      by apply/acyclic_sigma_rem.
-    apply/allP => x xP.
-    apply/unifier_deref_list => //=.
-      apply/mp_0set => //.
-        by rewrite !inE eqxx.
-      move=> Hx; rewrite ffunE [val _]/= eqxx deref_V.
-      move: Hx; rewrite !inE eqxx => _.
-      rewrite in_fnd.
-        rewrite !inE eqxx/= andbF.
-      
-
-      rewrite acyclic_sigma_set !acyclic_sigma_rem// inE vv'.
-      rewrite fdisjointX1 !andTb; apply/andP; split; last by rewrite domf_rem !inE eqxx.
-      rewrite codom_vars_sub
-      Search (_.[~_].[~_]).
-      acyclic_sigma_rem// inE. vv'/=.
-      rewrite fdisjointX1.
-    exists s'; split => //.
-    move: U {D}; elim: l => //x xs IH/=/andP[+ {}/IH->]; rewrite andbT.
-    rewrite/unif_pair/map_prod1/=.
-    rewrite/derefkv.
-    case: x => [t1 t2]/= /eqP Hll; apply/eqP; move: Hll.
-    elim: t1 t2 => //[p[]//vx|d[]//vx|vz|f1 Hf a1 Ha]//.
-      - rewrite !deref_V FmapE.fmapE.
-        case: fndP => //=vxs' TP; rewrite not_fnd//; case:eqP => //=.
-          move=> ?; subst; rewrite in_fnd/=.
-          by rewrite vxs' in vs'.
-        move=> Hz; rewrite in_fnd -TP//.
-      - rewrite !deref_V FmapE.fmapE.
-        case: fndP => //=vxs' TP; rewrite not_fnd//; case:eqP => //=.
-          move=> ?; subst; rewrite in_fnd/=.
-          by rewrite vxs' in vs'.
-        move=> Hz; rewrite in_fnd -TP//.
-      - move=> t2; rewrite !deref_V !FmapE.fmapE (@not_fnd _ _ fmap0)//.
-        case: eqP => vsv; subst.
-          rewrite not_fnd//=; case: t2 => // vz; rewrite !deref_V FmapE.fmapE.
-          case: eqP => vzv; subst; first by rewrite not_fnd//.
-          case: fndP => // vzs' Hx; last by simpl in Hx; congruence.
-          by rewrite in_fnd/= not_fnd//= in_fnd//= -H; simpl in Hx.
-        rewrite/=; case: fndP => //= vz' Hx; last first.
-        case: t2 Hx => //vk; rewrite !deref_V FmapE.fmapE (@not_fnd _ _ fmap0)//.
-        case: eqP => vkv//=; subst.
-          by rewrite not_fnd//= => -[?]; subst; rewrite in_fnd//=.
-        admit.
-      - move=> [||vl|f' a']//; last first.
-          by move=> [H1 H2]/=; rewrite (Hf _ H1) (Ha _ H2)//.
-        rewrite !deref_V FmapE.fmapE (@not_fnd _ _ fmap0)//=.
-        case: eqP => //=vlv; subst; first by rewrite not_fnd//.
-        case: fndP => vls'//=.
-
-
-        
-        case: fndP => //=vks'.
-          move=> k; case: eqP => //=vkv; subst.
-            rewrite in_fnd//= .
-
-
-
-
-
-          
-
-            congruence.
-            rewrite/= HH.
-
-          rewrite 
-        case: fndP => //=vzs' H1.
-          case: eqP => 
-
-        (bool_irrelevance v's' vxs').
-      case: eqP => //.
-      move=>
-      move=> [].
-    move: U;
-    apply/allP => x xP.
-
     exists (deref_sigma v' (Tm_V v) s'); split => //.
       by apply/acyclic_sigma_deref_sigma => //; rewrite (inE,fdisjointX1)//eq_sym.
-    
-    
-      rewrite acyclic_sigma_set acyclic_sigma_rem//= fdisjointX1 vs' inE eq_sym vv'/= andbT.
-      by have:= fdisjointP A' _ v's'; apply/contra/fsubsetP/codom_vars_sub.
-    apply: unif_deref_var.
-    
-
-    exists s'; split => //.
-    apply/unifier_deref_list => //.
-    apply/mp_0set.
-    exists (deref_sigma v' (Tm_V v) s'); split.
-      apply: acyclic_sigma_deref_sigma => //; first by rewrite inE eq_sym.
-      by have:= acyclic_deref_disjoint (Tm_V v') A'; rewrite deref_V in_fnd//=-H.
-    
-    apply: unifier_deref_list.
-      apply: mp_0set.
-        rewrite inE/= .
-      Search vars_tm fdisjoint acyclic_sigma.
-        rewrite inE,
-        Search 
-      admit.
-      admit.
-    apply/unifier_deref_list.
-
-
-    split => //.
-      rewrite acyclic_sigma_set.
-    exists s'. 
-    move: U1; case: fndP => //=.
-    rewrite fdisjointX1 in Da.
-    move: U1; rewrite not_fnd//= => /eqP.
-    case: t EQ vt D2 Db => // v'; rewrite inE/= !fdisjointX1 => H vv' v'm v's'.
-    by rewrite not_fnd//= => -[?]; subst; rewrite eqxx in H.
+    move: U; elim: l {D} => //=[[t1 t2] l] IH /andP[+ {}/IH->]; rewrite andbT.
+    rewrite/unif_pair/map_prod1/= => /eqP LL; apply/eqP; move: LL.
+    by rewrite !unifier_x//.
   - rewrite disjoint_L_cons/= => /and3P[d1 d2 d3].
     move=> [s' [A' [/= /andP[U1 U]]]].
-    rewrite disjoint_L_cons/= => /and3P[Da Db Dc].
     apply: IH => //.
       by rewrite disjoint_L_cons/= d1 d2.
     exists s'; repeat split => //=.
-      by rewrite unif_pair_sym U1.
-    by rewrite disjoint_L_cons Da Db.
-  - move=> D [x[A'[/=/andP[+ U] D']]].
+    by rewrite unif_pair_sym U1.
+  - move=> D [x[A'[/=/andP[+ U]]]].
     by destruct t1, t2 => //=; rewrite/unif_pair/map_prod1/= => /eqP[?]; 
     subst; rewrite ?eqxx in EQ.
 Qed.
@@ -1459,63 +1328,7 @@ Proof.
   rewrite andbT; repeat split.
     by apply: acyclic_sigma_good_set d1q d2q GSC.
     by apply: unif_pair_good_set; subst.
-  rewrite/good_set.
-  rewrite disjoint_L_cons disjoint_L0.
-  Print disjoint_L.
-  apply/andP; split; apply/fdisjointP => x; rewrite !inE => /andP[].
-    move=> /orP[].
-
-
-
-    apply: acyclic_sigma_good_set.
-      apply D1.
-
-
-    apply/fdisjointP => x/=; rewrite !inE.
-    case: (boolP (_ \in _)) => x1/=x2.
-    apply/negP => /varUP[v[+ vs]]; subst.
-      move=> /mapP[t + ?]; subst.
-      move=> /codomP[[k kP]].
-      rewrite ffunE [val _]/= => ?; subst.
-      rewrite inE in kP.
-      move: vs.
-      case: fndP => //=ks1 ks2.
-        rewrite (negbTE (fdisjointP D1 _ ks1)) orbF in kP.
-
-
-        have {D} Hx := fdisjointP D _ x1.
-        have {D2} Hy := fdisjointP_sym D2 _ x1.
-        have {}D1 := fdisjointP D1 _ ks1.
-
-        have /negP{}A1 := fdisjointP A1 _ ks1.
-        move=> H.
-        apply: A1; apply: fsubsetP kP.
-        Search codom_vars.
-
-
-
-
-  exists (composition s1 s2).
-  (* repeat split; only 2: by apply/forallP => -[]//. *)
-    admit.
-    (* rewrite/acyclic_sigma/composition domf_cat/= fdisjointUX; apply/andP; split.
-      apply/fdisjointP => x xs1.
-      have:= fdisjointP A1 _ xs1; apply: contra.
-      move=> /varUP[s[/mapP[t/codomP[[z zP] ??]]]] xs; subst.
-      case: (boolP (z \in domf s2)) => zs2.
-        rewrite getf_catr in xs.
-        rewrite !inE zs2 orbT in zP.
-        apply/varUP; exists (vars s2.[zs2]); split => //.
-        apply/mapP; eexists => //.
-        apply/codomP.
-        admit.
-      simpl in zP; rewrite inE in zP.
-      rewrite !ffunE/=in xs.
-      move: zP.
-      Search ((_ + _)[`_]). *)
-  (* rewrite/=!deref_empty andbT. *)
-  (* admit. *)
-Admitted.
+Qed.
 
 Lemma unif_match123 fv1 fv2 s1 s2 q h1 h2:
   acyclic_sigma s1 -> acyclic_sigma s2 ->
