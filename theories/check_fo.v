@@ -446,9 +446,9 @@ Section check.
     by move=> /andP[H1 H2]; case: ifP => //=; rewrite HA//HB.
   Qed.
 
-  Lemma acyclic_sigma_H m t hd s1 s2:
+  Lemma acyclic_sigma_H m fv t hd s1 s2:
     acyclic_sigma s1 ->
-      H u m t hd s1 = Some s2 ->
+      H u fv m t hd s1 = Some s2 ->
         acyclic_sigma s2.
   Proof.
     elim: m t hd s1 s2 => /=[|m tl IH] t hd s1 s2.
