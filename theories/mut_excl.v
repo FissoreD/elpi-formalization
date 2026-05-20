@@ -117,7 +117,6 @@ Proof. elim: hd' => //= f Hf a Ha; rewrite vars_tms_rcons fsetUC fsetSU//. Qed.
 From det Require Import unif.
 
 Definition u := mk_Unif unify matching.
-Axiom f : False.
 
 (* Lemma disjointH m f f1 s1 s1': 
   all_out m ->
@@ -152,16 +151,18 @@ Proof.
   by rewrite not_in_deref//.
 Qed.
 
-Lemma SHS m c hd2 hd1 (s1 s2:Sigma):
+Lemma SHS fv1 fv2 m c hd2 hd1 (s1 s2:Sigma):
   acyclic_sigma s1 -> acyclic_sigma s2 ->
   all (eq_op input) m ->
   [disjoint vars_tms hd1 & vars_tms hd2] ->
-  [disjoint vars_tms c & vars_tms (map (deref s1) hd1)] ->
-  [disjoint vars_tms c & vars_tms (map (deref s2) hd2)] ->
-  [disjoint (domf s1) & (vars_tms c)] ->
-  [disjoint (domf s2) & (vars_tms c)] ->
-  H u m c hd1 s1 ->
-  H u m c hd2 s2 ->
+  [disjoint vars_tms c & vars_tms hd1] ->
+  [disjoint vars_tms c & vars_tms hd2] ->
+  [disjoint domf s1 & vars_tms c] ->
+  [disjoint domf s2 & vars_tms c] ->
+  vars_tms c `<=` fv1 ->
+  vars_tms c `<=` fv2 ->
+  H u fv1 m c hd1 s1 ->
+  H u fv2 m c hd2 s2 ->
   H_head u m hd1 hd2.
 Proof.
   elim: m c hd1 hd2 s1 s2 => //=.
@@ -172,26 +173,31 @@ Proof.
   move=> /andP[/andP[D1 D2] /andP[D3 D4]].
   move=> /andP[/andP[D5 D6] /andP[D7 D8]].
   move=> /andP[/andP[D9 D10] /andP[D11 D12]].
+  (* move=> /andP[Da Db] /andP[Dc Dd]. *)
   move=> /andP[D13 D14] .
   move=> /andP[D15 D16] .
-  (* case: m GM => //=GM; [case M: matching => [s'|] | case U: unify => [s'|]] => //= H; last first. *)
-    (* case U1: unify => [s''|]//= HH. *)
-    (* apply/IH/HH/H. *)
-
-    (* have {}IH := IH _ _ _ _ _ _ _ _ _ _ H HH. *)
-    (* case: f. *)
-  (* case U1: unify => [s''|]//=. *)
+  rewrite !fsubUset => /andP[S1 S2] /andP[S3 S4].
   case M1: matching => [s1'|]//=.
   case M2: matching => [s2'|]//=.
   move=> H1 H2; apply/andP; split.
-    apply: unif_match123 (isSomeP M2) (isSomeP M1) => //.
+    apply: unif_match123 (isSomeP M2) (isSomeP M1); rewrite//?not_in_deref//.
     by rewrite fdisjoint_sym.
   have Hx := matching_ext1 M1.
   have Hy := matching_ext1 M2.
+  have A1' := matching_acyclic A1 M1.
+  have A2' := matching_acyclic A2 M2.
+  rewrite !(@not_in_deref _ q)// in Hx Hy.
   apply/IH/H2/H1 => //.
-    by apply/matching_acyclic/M1.
-    by apply/matching_acyclic/M2.
-  all: case: f.
+  - apply: fdisjointWl Hx _.
+    rewrite fdisjointUX; apply/andP; split => //.
+    apply/fdisjointP => x.
+    rewrite !inE => /andP[+ _].
+    by apply/contra/fsubsetP.
+  - apply: fdisjointWl Hy _.
+    rewrite fdisjointUX; apply/andP; split => //.
+    apply/fdisjointP => x.
+    rewrite !inE => /andP[+ _].
+    by apply/contra/fsubsetP.
 Qed.
 
 Fixpoint size_input m :=
@@ -202,7 +208,7 @@ Fixpoint size_input m :=
 
 Definition tk_input T m := @take T (size_input m).
 
-Lemma H_sublist n m q h s: H u m q h s -> H u (take n m) (take n q) (take n h) s.
+Lemma H_sublist fv n m q h s: H u fv m q h s -> H u fv (take n m) (take n q) (take n h) s.
 Proof.
   elim: n m q h s => [|n IH] m q h s; first by rewrite !take0.
   case: m => [|m ms]; case: q => [|q qs]; case: h => [|h hs]//=.
@@ -222,13 +228,15 @@ Proof.
   by case: q => //= q qs; case: h => //= h hs gm/andP[-> /IH ->]//.
 Qed.
 
-Lemma disjoint_takel n a b:
-  [disjoint vars_tms a & b] -> [disjoint vars_tms (take n a) & b].
-Proof.
-  apply/fdisjointWl.
+Lemma vars_tm_take_sub n a: vars_tms (take n a) `<=` vars_tms a.
+Proof.  
   elim: n a => // [|n IH] t; first by rewrite take0.
   by destruct t => //=; rewrite !vars_tms_cons; apply/fsetUS/IH.
 Qed.
+
+Lemma disjoint_takel n a b:
+  [disjoint vars_tms a & b] -> [disjoint vars_tms (take n a) & b].
+Proof. by apply/fdisjointWl/vars_tm_take_sub. Qed.
 
 Lemma disjoint_taker n a b:
   [disjoint b & vars_tms a] -> [disjoint b & vars_tms (take n a)].
@@ -246,46 +254,63 @@ Proof.
   by case: b => //=x xs; rewrite !vars_tms_cons; apply/fsetUS/IH.
 Qed.
 
-Lemma HSH m hd pr s1 s2 c pred:
+Lemma good_mode_take_inp m: good_mode m ->
+  all (eq_op input) (take (size_input m) m).
+Proof. by elim: m => //=-[]. Qed.
+
+Lemma all_out_size_input m: all_out m -> size_input m = 0.
+Proof. by elim: m => //=-[]. Qed.
+
+Lemma get_frozen_vars_sub m t : good_mode m ->
+  vars_tms (take (size_input m) t) = get_frozen_vars m t.
+Proof.
+  elim: m t => //=[|m ms IH] t; first by rewrite take0.
+  case: m; case: t => //= x xs; last first.
+    by move=> /[dup] /all_inp_good_mode/IH<-/all_out_size_input->; rewrite take0.
+  rewrite vars_tms_cons => /IH ->//.
+Qed.
+
+Lemma HSH fv m hd pr s1 s2 c pred:
   good_mode m ->
   acyclic_sigma s1 ->
   [disjoint (vars_tm hd) & (varsU (map varsU_rule pr))] ->
   [disjoint (vars_tm (deref s1 c)) & (varsU (map varsU_rule pr))] ->
   [disjoint (vars_tm (deref s1 c)) & vars_tm hd] ->
-  H u m (flatten_term (deref s1 c)) (flatten_term hd) s1 = Some s2 ->
+  get_frozen_vars m (flatten_term (deref s1 c)) `<=` fv ->
+  H u fv m (flatten_term (deref s1 c)) (flatten_term hd) s1 = Some s2 ->
   select_head u pred (flatten_term hd) m pr = [::] ->
   (select u pred (flatten_term (deref s1 c)) m pr s1).2 = [::].
 Proof.
   elim: pr m hd s1 s2 c => //= -[hd bo] rs IH/= m hd' s1 s2 c GM AS.
   rewrite fdisjointXU => /andP[D1 D2].
-  rewrite fdisjointXU => /andP[D3 D4] D5 HH.
+  rewrite fdisjointXU => /andP[D3 D4] D5 FSUB HH.
   case:eqP => //=; last by move=> _; apply:IH HH.
   move=> /esym Hd.
   case HHead: H_head => //= SH.
-  have {}IH := IH _ _ _ _ _ GM AS D2 D4 D5 HH SH.
+  have {}IH := IH _ _ _ _ _ GM AS D2 D4 D5 FSUB HH SH.
   case X: H => [s'|]//.
   exfalso; apply: (negP (negbT HHead)) => {HHead}.
-  apply: H_head_sublist GM _.
+  apply: H_head_sublist (GM) _.
   have X' := H_sublist (size_input m) (isSomeP X).
   have HH' := H_sublist (size_input m) (isSomeP HH).
-  apply: SHS HH' X'. => //.
-    admit.
-    apply: disjoint_take2. admit.
-    apply: disjoint_takel; apply/disjoint_takeLr. admit.
-    apply: disjoint_takel; apply/disjoint_takeLr. admit.
-    apply: disjoint_taker. admit.
-    apply: disjoint_taker. admit.
-
-  (* TODO: should prove that the unification works on the sublist of input modes *)
-  (* apply: SHS (isSomeP HH) (isSomeP X) => //.
-    apply/(fdisjointWl (vars_tms_flatten_term _))/(fdisjointWr (vars_tms_flatten_term _)).
-    by move: D1; rewrite/varsU_rule fdisjointXU/varsU_rhead/= => /andP[->].
-    by apply/(fdisjointWl (vars_tms_flatten_term _))/(fdisjointWr (vars_tms_flatten_term _)).
-    apply/(fdisjointWl (vars_tms_flatten_term _))/(fdisjointWr (vars_tms_flatten_term _)).
-    by move: D3; rewrite/varsU_rule fdisjointXU/varsU_rhead/= => /andP[->].
-  apply/fdisjointWr/acyclic_deref_disjoint/AS.
-  apply/vars_tms_flatten_term. *)
-Admitted.
+  have A' := acyclic_deref_disjoint c AS.
+  apply: SHS HH' X' => //.
+  - by apply/good_mode_take_inp.
+  - apply: disjoint_take2; apply: fdisjointWl (vars_tms_flatten_term  _) _.
+    apply: fdisjointWr D1; apply: fsubset_trans (vars_tms_flatten_term _) _.
+    by rewrite /varsU_rule /varsU_rhead/= fsubsetUl.
+  - apply: disjoint_takel; apply/disjoint_taker.
+    apply: fdisjointWl (vars_tms_flatten_term _) _.
+    by apply: fdisjointWr (vars_tms_flatten_term _) _.
+  - apply: disjoint_takel; apply/disjoint_taker.
+    apply: fdisjointWl (vars_tms_flatten_term _) _.
+    apply: fdisjointWr (vars_tms_flatten_term _) _.
+    by apply: fdisjointWr D3; rewrite /varsU_rule /varsU_rhead/= fsubsetUl.
+  - by apply/disjoint_taker; apply: fdisjointWr (vars_tms_flatten_term _) _.
+  - by apply/disjoint_taker; apply: fdisjointWr (vars_tms_flatten_term _) _.
+  - by rewrite get_frozen_vars_sub.
+  - by rewrite get_frozen_vars_sub.
+Qed.
 
 Lemma flatten_term_ren z q:
   flatten_term (ren z q) = map (ren z) (flatten_term q).
@@ -439,7 +464,7 @@ Proof.
   move=> HS.
   (* select_head *)
   have ->// : (select u p (flatten_term (deref s1 c)) m FRS2.2 s1).2 = [::].
-  rewrite (HSH _ _ _ _ _ H HS)//=.
+  rewrite (HSH _ _ _ _ _ _ H HS)//=.
     by rewrite/FC2; apply/disjoint_varsU.
     apply/fdisjointWl/disjoint_varsU1.
     by rewrite -fsetUA fsetUC -!fsetUA fsubsetUl.

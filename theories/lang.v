@@ -159,7 +159,7 @@ Proof. by move=>p; exists p; rewrite eqxx. Qed.
 (*SNIP: unif_type*)
 Record Unif := mk_Unif {
   unify : Tm -> Tm -> Sigma -> option Sigma;
-  matching : Tm -> Tm -> Sigma -> option Sigma;
+  matching : fvS -> Tm -> Tm -> Sigma -> option Sigma;
 }.  
 (*ENDSNIP: unif_type*)
 
@@ -689,13 +689,39 @@ Definition fresh_rules fv rules :=
   foldr (fun x '(fv,xs) => let: (fv, x) := fresh_rule fv x in (fv,x::xs)) (fv,[::]) rules.
 
 (* Unification between query and rule-head *)
-Fixpoint H u (md: seq mode) (q : list Tm) (h: list Tm) s : option Sigma :=
+(* mv is the set of "frozen" variables appearing in input position in the query
+   the are not touched when unified with the matching procedure (input mode)
+
+   An example (using montanari algorithm) that can assign input variables
+   is the following:
+    let f be a predicate with 3 inputs
+    query := f X 3
+    rule  := f W W
+    =================
+    frozen variables X
+    unification problems : W = X, W = 3
+    step 1: X = W ===> W -> X, the list of unif problems becoes : X = 3 
+    step 2: since X is frozen, this unification fails
+*)
+Fixpoint H u fv (md: seq mode) (q : list Tm) (h: list Tm) s : option Sigma :=
   match md,q,h with
   | [::], [::], [::] => Some s
   | md :: tl, x :: xs, y :: ys => 
-    let f := if md == input then u.(matching) else u.(unify) in
-    obind (H u tl xs ys) (f y x s)
+    let f := if md == input then u.(matching) fv else u.(unify) in
+    obind (H u fv tl xs ys) (f y x s)
   | _, _, _ => None
+  end.
+
+Fixpoint get_frozen_vars ms qargs :=
+  match ms with
+  | [::] => fset0
+  | m :: ms =>
+    match qargs with
+    | [::] => fset0
+    | x :: xs => 
+      if m == input then vars_tm x `|` get_frozen_vars ms xs
+      else get_frozen_vars ms xs
+    end
   end.
 
 Fixpoint select u (hd:P) args md (rules: list R) sigma : (fvS * seq (Sigma * seq Atom)) :=
@@ -706,7 +732,7 @@ Fixpoint select u (hd:P) args md (rules: list R) sigma : (fvS * seq (Sigma * seq
     let args' := flatten_term rule.(head) in
     if inl hd != hd' then select u hd args md rules sigma
     else
-    match H u md args args' sigma with
+    match H u (get_frozen_vars md args) md args args' sigma with
     | None => select u hd args md rules sigma
     | Some (sigma1) => 
       let: (fv, rs) := select u hd args md rules sigma in
