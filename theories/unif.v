@@ -1073,57 +1073,57 @@ Qed.
 
 Lemma exists_montanari m l:
   acyclic_sigma m -> disjoint_L m l ->
-  (exists s, acyclic_sigma s /\ mp m s /\ unifier s l) -> montanari m fset0 l.
+  (exists s, acyclic_sigma s /\ unifier s l /\ disjoint_L s l) -> montanari m fset0 l.
 Proof.
   remember fset0 as f eqn:Hf; move: Hf.
   montanari_ind m f l => // ? A; subst.
-  - rewrite disjoint_L_cons => /and3P[D1 _ D3] [s [A' [MP' /=/andP[_ US]]]].
+  - rewrite !disjoint_L_cons => /and3P[D1 _ D3] [s [A' [/= /andP[_ U]]]].
+    rewrite disjoint_L_cons => /and3P[Dx _ D].
     by apply: IH => //; exists s.
   - rewrite disjoint_L_cons /=!fdisjointXU -!andbA => /and5P[d1 d2 d3 d4 D].
-    move=> [s'[A'[MP]]]; rewrite unif_pair_app => /andP[/andP[U1 U2] U].
-    apply: IH; rewrite//=; first by rewrite !disjoint_L_cons d1 d2 d3 d4.
-    exists s'; repeat split => //.
-    by rewrite U1 U2.
-  - move=> D [x]/=[A'[MP /andP[+ H]]].
-    rewrite unif_pair_v1; case: fndP => vx/= /eqP H1; last first.
-      by case: t D vt EQ H1 => //v'; rewrite !inE => D /eqP?; subst; rewrite eqxx.
-    have {A'} := fdisjointP A' _ vx => /negbTE <-.
-    apply/varUP; exists (vars_tm (deref x t)); split => //; rewrite ?inE//.
-      by apply/mapP; eexists => //; apply/codomP; exists [`vx].
-    (* ask Enrico *)
-    admit.
+    move=> [s' [A' [/= /andP[+ U]]]].
+    rewrite disjoint_L_cons/= !fdisjointXU -!andbA => + /and5P[Da Db Dc Dd De].
+    rewrite unif_pair_app => /andP[U1 U2].
+    apply: IH => //.
+      by rewrite !disjoint_L_cons/= d1 d2 d3 d4.
+    exists s'; repeat split => //=.
+      by rewrite U1 U2.
+    by rewrite !disjoint_L_cons Da Db Dc Dd.
+  - rewrite !disjoint_L_cons/= => /and3P[d1 d2 d3].
+    move=> [s' [A' [/andP[+ U]]]].
+    rewrite !disjoint_L_cons unif_pair_v1/= => /eqP H /and3P[+ D2 D3].
+    rewrite fdisjointX1 => /negbTE<-.
+    move: H; case: fndP => //= vs' H.
+    case: t EQ vt d2 D2 H => // v' H; rewrite !inE/= !fdisjointX1.
+    by move=> /eqP? v'm v's'; subst; rewrite eqxx in H.
   - by [].
-  - admit.
+  - rewrite !disjoint_L_cons/= => /and3P[D1 D2 D].
+    move=> [s' [A' [/= /andP[+ U]]]]; rewrite unif_pair_v2 => U1.
+    rewrite disjoint_L_cons/= => /and3P[Da Db Dc].
+    by apply: IH => //.
   - by [].
-  - rewrite !disjoint_L_cons/= => /and3P[d1 d2 D] [s'[A'[MP /andP[/eqP/= U1 U]]]].
+  - rewrite !disjoint_L_cons/= => /and3P[D1 D2 D].
+    move=> [s' [A' [/= /andP[+ U]]]]; rewrite unif_pair_v1 => U1.
+    rewrite disjoint_L_cons/= => /and3P[Da Db Dc].
     apply: IH => //.
       by apply/acyclic_sigma_deref_sigma => //.
       by apply: disjoint_L_set.
-    move: U1; case: fndP => vs'/= U1.
-      exists s'.
-      repeat split => //; first by apply: mp_deref_sigma3.
-      apply/unifier_deref_list => //.
-      apply/forallP => [[x xP]]; rewrite valPE ffunE /=.
-      by move: xP; rewrite !inE orbF => /eqP->{x}; rewrite eqxx in_fnd U1.
-    case: t EQ vt d2 U1 => //v'; rewrite inE => _ vv'; rewrite fdisjointX1 deref_V.
-    move=> v'm; case: fndP => v's'; last by move=> [?]; subst; rewrite eqxx in vv'.
-    move=> /= vH.
-    exists (deref_sigma v' (Tm_V v) s'); repeat split => //.
-    - apply/acyclic_sigma_deref_sigma => //; rewrite ?inE/=1?eq_sym//.
-      by rewrite fdisjointX1.
-    - admit.
-    apply/allP => x /mapP[t tl] ?; subst.
-    have:= allP U _ tl => UP.
-    rewrite /unif_pair /map_prod1/=.
-    admit.
-  - rewrite disjoint_L_cons/= => /and3P[d1 d2 D] [s'[A'[MP/andP[U1 U]]]].
-    apply: IH => //; first by rewrite disjoint_L_cons d1 d2.
-    exists s'; repeat split => //.
-    by rewrite/= unif_pair_sym U1.
-  - rewrite disjoint_L_cons/= => /and3P[d1 d2 D] [s'[A' [MP /andP[U1 U]]]].
-    move: U1; rewrite /unif_pair/map_prod1/=.
-    by destruct t1 => //=; destruct t2 => //=/eqP[?]; subst; rewrite ?eqxx in EQ.
-Admitted.
+    rewrite fdisjointX1 in Da.
+    move: U1; rewrite not_fnd//= => /eqP.
+    case: t EQ vt D2 Db => // v'; rewrite inE/= !fdisjointX1 => H vv' v'm v's'.
+    by rewrite not_fnd//= => -[?]; subst; rewrite eqxx in H.
+  - rewrite disjoint_L_cons/= => /and3P[d1 d2 d3].
+    move=> [s' [A' [/= /andP[U1 U]]]].
+    rewrite disjoint_L_cons/= => /and3P[Da Db Dc].
+    apply: IH => //.
+      by rewrite disjoint_L_cons/= d1 d2.
+    exists s'; repeat split => //=.
+      by rewrite unif_pair_sym U1.
+    by rewrite disjoint_L_cons Da Db.
+  - move=> D [x[A'[/=/andP[+ U] D']]].
+    by destruct t1, t2 => //=; rewrite/unif_pair/map_prod1/= => /eqP[?]; 
+    subst; rewrite ?eqxx in EQ.
+Qed.
 
 Lemma acyclic_composition s1 s2:
   acyclic_sigma s1 -> acyclic_sigma s2 -> acyclic_sigma (composition s1 s2).
@@ -1145,8 +1145,9 @@ Proof.
   apply: exists_montanari.
     by apply/acyclic_sigma0.
     by rewrite disjoint_L_cons/= !fdisjoint0X disjoint_L0.
+  rewrite !deref_empty.
   exists (composition s1 s2).
-  repeat split; only 2: by apply/forallP => -[]//.
+  (* repeat split; only 2: by apply/forallP => -[]//. *)
     admit.
     (* rewrite/acyclic_sigma/composition domf_cat/= fdisjointUX; apply/andP; split.
       apply/fdisjointP => x xs1.
@@ -1163,8 +1164,8 @@ Proof.
       rewrite !ffunE/=in xs.
       move: zP.
       Search ((_ + _)[`_]). *)
-  rewrite/=!deref_empty andbT.
-  admit.
+  (* rewrite/=!deref_empty andbT. *)
+  (* admit. *)
 Admitted.
 
 Lemma unif_acyclic t1 t2 s s':
