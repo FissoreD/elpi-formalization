@@ -1268,11 +1268,11 @@ Lemma exists_montanari m l:
 Proof.
   remember fset0 as f eqn:Hf; move: Hf.
   montanari_ind m f l => // ? A; subst.
-  - rewrite !disjoint_L_cons => /and3P[D1 _ D3] [s [A' [/= /andP[_ U]]]].
+  - rewrite !disjoint_L_cons => /and3P[D1 _ D3] [s [A' /= /andP[_ U]]].
     (* rewrite disjoint_L_cons => /and3P[Dx _ D]. *)
     by apply: IH => //; exists s.
   - rewrite disjoint_L_cons /=!fdisjointXU -!andbA => /and5P[d1 d2 d3 d4 D].
-    move=> [s' [A' [/= /andP[+ U]]]].
+    move=> [s' [A' /= /andP[+ U]]].
     (* rewrite disjoint_L_cons/= !fdisjointXU -!andbA => + /and5P[Da Db Dc Dd De]. *)
     rewrite unif_pair_app => /andP[U1 U2].
     apply: IH => //.
@@ -1281,7 +1281,7 @@ Proof.
       by rewrite U1 U2.
     (* by rewrite !disjoint_L_cons Da Db Dc Dd. *)
   - rewrite !disjoint_L_cons/= => /and3P[d1 d2 d3].
-    move=> [s' [A' [/andP[+ U]]]].
+    move=> [s' [A' /andP[+ U]]].
     rewrite unif_pair_v1 => /eqP H.
     (* rewrite !disjoint_L_cons unif_pair_v1/= => /eqP H /and3P[+ D2 D3]. *)
     (* rewrite fdisjointX1 => /negbTE<-. *)
@@ -1292,12 +1292,12 @@ Proof.
     by move=> /eqP? v'm v's'; subst; rewrite eqxx in H.
   - by [].
   - rewrite !disjoint_L_cons/= => /and3P[D1 D2 D].
-    move=> [s' [A' [/= /andP[+ U]]]]; rewrite unif_pair_v2 => U1.
+    move=> [s' [A' /= /andP[+ U]]]; rewrite unif_pair_v2 => U1.
     (* rewrite disjoint_L_cons/= => /and3P[Da Db Dc]. *)
     by apply: IH => //.
   - by [].
   - rewrite !disjoint_L_cons/= => /and3P[D1 D2 D].
-    move=> [s' [A' [/= /andP[+ U]]]]; rewrite unif_pair_v1 => U1.
+    move=> [s' [A' /= /andP[+ U]]]; rewrite unif_pair_v1 => U1.
     (* rewrite disjoint_L_cons/= => /and3P[Da Db Dc]. *)
     apply: IH => //.
       by apply/acyclic_sigma_deref_sigma => //.
@@ -1315,12 +1315,12 @@ Proof.
     rewrite/unif_pair/map_prod1/= => /eqP LL; apply/eqP; move: LL.
     by rewrite !unifier_x//.
   - rewrite disjoint_L_cons/= => /and3P[d1 d2 d3].
-    move=> [s' [A' [/= /andP[U1 U]]]].
+    move=> [s' [A' /= /andP[U1 U]]].
     apply: IH => //.
       by rewrite disjoint_L_cons/= d1 d2.
     exists s'; repeat split => //=.
     by rewrite unif_pair_sym U1.
-  - move=> D [x[A'[/=/andP[+ U]]]].
+  - move=> D [x[A'/=/andP[+ U]]].
     by destruct t1, t2 => //=; rewrite/unif_pair/map_prod1/= => /eqP[?]; 
     subst; rewrite ?eqxx in EQ.
 Qed.
