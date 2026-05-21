@@ -162,9 +162,12 @@ Proof.
   by rewrite not_in_deref//.
 Qed.
 
+
 Lemma SHS fv1 fv2 m c hd2 hd1 (s1 s2:Sigma):
   acyclic_sigma s1 -> acyclic_sigma s2 ->
   all (eq_op input) m ->
+  [disjoint vars_sigma s1 & vars_tms hd2] -> 
+  [disjoint vars_sigma s2 & vars_tms hd1] -> 
   [disjoint vars_tms hd1 & vars_tms hd2] ->
   [disjoint vars_tms c & vars_tms hd1] ->
   [disjoint vars_tms c & vars_tms hd2] ->
@@ -180,6 +183,7 @@ Proof.
   move=> []// tl IH c h1 h2 s1 s2 A1 A2 /andP[_ GM].
   case: c => [|q qs]; case: h1 => [|h1 h1s]; case: h2 => [|h2 h2s]//=.
   rewrite !vars_tms_cons.
+  rewrite 2!fdisjointXU => /andP[V1 V2] /andP[V3 V4].
   rewrite ?fdisjointUX !fdisjointXU.
   move=> /andP[/andP[D1 D2] /andP[D3 D4]].
   move=> /andP[/andP[D5 D6] /andP[D7 D8]].
@@ -201,6 +205,11 @@ Proof.
   have A2' := matching_acyclic A2 M2.
   rewrite !(@not_in_deref _ q)// in Hx Hy.
   apply/IH/H2/H1 => //.
+  - apply: fdisjointWl (matching_ext3 A1 M1) _.
+    by rewrite 2!fdisjointUX -andbA; apply/and3P; split => //.
+  - apply: fdisjointWl (matching_ext3 A2 M2) _.
+    rewrite 2!fdisjointUX -andbA; apply/and3P; split => //.
+    by rewrite fdisjoint_sym.
   - apply: fdisjointWl Hx _.
     rewrite fdisjointUX; apply/andP; split => //.
     apply/fdisjointP => x.
@@ -294,17 +303,20 @@ Lemma HSH m hd pr s1 c pred: good_mode m -> acyclic_sigma s1 ->
   [disjoint vars_tms hd & v_prog pr] ->
   [disjoint vars_tms c & v_prog pr] ->
   [disjoint vars_tms c & vars_tms hd] ->
+  [disjoint vars_sigma s1 & v_prog pr] ->
+  [disjoint vars_sigma s1 & vars_tms hd] ->
   H u (get_frozen_vars m c) m c hd s1 ->
   select_head u pred hd m pr = [::] ->
   (select u pred c m pr s1).2 = [::].
 Proof.
   elim: pr m hd s1 c => //= -[hd bo] rs IH/= m hd' s1 c GM AS D.
   rewrite !v_prog_cons /varsU_rhead /varsU_rprem/=.
-  rewrite !fdisjointXU -!andbA => /and3P[hh' hb' hr'] /and3P[ch cb cr] ch' H1.
+  rewrite !fdisjointXU -!andbA => /and3P[hh' hb' hr'] /and3P[ch cb cr] ch' ++ H1.
+  move=> /and3P[Dh Db Dr] Dh'.
   case:eqP => //=; last by move=> _; apply:IH.
   move=> /esym Hd.
   case HH: H_head => //= S1.
-  have {S1} IH := IH _ _ _ _ GM AS D hr' cr ch' H1 S1.
+  have {S1} IH := IH _ _ _ _ GM AS D hr' cr ch' Dr Dh' H1 S1.
   case H2: H => [s'|]//{IH}; apply isSomeP in H2.
   exfalso; apply: (negP (negbT HH)) => {HH}.
   apply: H_head_sublist (GM) _.
@@ -312,7 +324,9 @@ Proof.
   have H2' := H_sublist (size_input m) H2.
   apply: SHS H1' H2' => //.
   - by apply/good_mode_take_inp.
-  - by apply: disjoint_take2; apply: fdisjoint_ftr _.
+  - by apply: disjoint_taker; apply: fdisjoint_ftr _.
+  - by apply: disjoint_taker.
+  - by apply: disjoint_take2; apply: fdisjoint_ftr.
   - by apply: disjoint_take2.
   - by apply: disjoint_take2; apply: fdisjoint_ftr _.
   - by apply/disjoint_taker.
@@ -474,12 +488,15 @@ Proof.
   move=> HS.
   have ->// : (select u p (flatten_term (deref s1 c)) m FRS2.2 s1).2 = [::].
   apply: HSH H HS => //=.
-    by apply: fdisjoint_ftr (acyclic_deref_disjoint _ AS).
-    by apply: fdisjoint_ftl (disjoint_varsU _ _).
-    by apply/fdisjoint_ftl/fdisjointWl/disjoint_varsU1/fsubsetP => x H; rewrite !inE H orbT.
-  rewrite fdisjoint_sym.
-  apply/fdisjoint_ft2/fdisjointWr/vars_tm_rename_disjoint.
-  by apply/fsubset_trans/fresh_rules_sub/fsubsetP => x H; rewrite !inE H orbT.
+  - by apply: fdisjoint_ftr (acyclic_deref_disjoint _ AS).
+  - by apply: fdisjoint_ftl (disjoint_varsU _ _).
+  - by apply/fdisjoint_ftl/fdisjointWl/disjoint_varsU1/fsubsetP => x H; rewrite !inE H orbT.
+  - rewrite fdisjoint_sym; apply/fdisjoint_ft2/fdisjointWr/vars_tm_rename_disjoint.
+    by apply/fsubset_trans/fresh_rules_sub/fsubsetP => x H; rewrite !inE H orbT.
+  - by apply: fdisjointWl (disjoint_varsU1 _ _); rewrite -fsetUA fsubsetUl.
+  - apply: fdisjoint_ftr.
+    rewrite fdisjoint_sym; apply: fdisjointWr (vars_tm_rename_disjoint _ _).
+    by apply: fsubset_trans (fresh_rules_sub _ _); rewrite -fsetUA fsubsetUl.
 Qed.
 
 Print  Assumptions  mut_exclP.
