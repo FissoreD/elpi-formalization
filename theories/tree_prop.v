@@ -119,7 +119,7 @@ Section RunP.
 
   (*SNIPT: naNfail*)
   Lemma prune_None: 
-    forall t, prune false t = None -> failed t.
+    forall t, prune false t = None -> failed t = true.
   (*ENDSNIPT: naNfail*)
   Proof.
     move=> A; elim_tree A => /=.
