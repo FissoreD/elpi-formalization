@@ -339,8 +339,8 @@ Section NurProp.
 
   (*SNIPT: pruneF_t2l *)
   Lemma pruneF_t2l: 
-    forall t t' b, valid_tree t -> failed t -> prune b t = Some t' -> 
-      forall l s, t2l t s l = t2l t' s l.
+    forall t t' b, valid_tree t -> failed t -> 
+      prune b t = Some t' -> forall l s, t2l t s l = t2l t' s l.
   (*ENDSNIPT: pruneF_t2l *)
   Proof.
     move=> A R b +++ l s3.
