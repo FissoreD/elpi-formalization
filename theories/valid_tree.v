@@ -72,6 +72,8 @@ End B.
 
 Notation spec_base_or := B.spec_base_or.
 
+Notation base_or := B.base_or.
+
 (*BEGIN*)
 Section valid_tree.
   Variable u : Unif.
@@ -83,7 +85,7 @@ Section valid_tree.
     | TA _ | OK | KO => true
     | Or None _ B => valid_tree B
     | Or (Some A) _ B => valid_tree A && 
-          ((B == KO) || B.base_or B)
+          ((B == KO) || base_or B)
     | And A B0 B => valid_tree A &&
         if success A then valid_tree B 
         else B == big_and B0
