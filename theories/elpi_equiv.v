@@ -178,12 +178,10 @@ Definition runT' p v s t r :=
 (*SNIPT: tree_to_elpi *)
 Theorem tree_to_elpi:
   forall p t s r, let v := vars_tree t `|` vars_sigma s in
-    valid_tree t ->
-      runT' p v s t r -> 
-        let a := t2l t s [::] in
+    valid_tree t -> runT' p v s t r -> 
         let r' :=  if r is Some (s', t) then  (Some (s', t2l (odflt KO t) s [::]))
                   else None in
-        runS p v a r'.
+        runS p v (t2l t s [::]) r'.
 (*ENDSNIPT: tree_to_elpi *)
 Proof. 
   move=> /= p t0 s0 r/= vt [b [fv H1]].
