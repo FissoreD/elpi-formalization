@@ -90,7 +90,10 @@ Section tree_op.
   (*ENDSNIP: failed_path*)
   (*SNIP: incomplete*)
   Definition incomplete t := 
-      if next_tree t is TA _ then true else false.
+    match next_tree t with
+    | TA _ => true
+    | _ => false
+    end.
   (*ENDSNIP: incomplete*)
   (*ENDSNIP: next_aux *)
 
