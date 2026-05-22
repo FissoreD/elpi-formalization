@@ -27,7 +27,7 @@ Section s.
       - move: H0; rewrite eA => -[???]; subst.
         by case: (IH _ _ H3) => ???; subst.
       - by rewrite incomplete_failed in H.
-      - by rewrite incomplete_prune_id in H.
+      - by rewrite incpl_prune in H.
     + inversion H1; clear H1; try congruence; subst.
         by rewrite success_failed in fA.
         by rewrite incomplete_failed in fA.      
@@ -207,7 +207,7 @@ Section s.
         apply: IH => //.
         destruct b => //; by rewrite orbT in H2.
       - by rewrite rew_pa incomplete_failed in H0.
-      by move: H0 => /=; rewrite incomplete_prune_id.
+      by move: H0 => /=; rewrite incpl_prune.
     - inversion 1 => //=; subst.
         by rewrite rew_pa in H0; rewrite incomplete_failed in fA.
       - apply: IH => //.

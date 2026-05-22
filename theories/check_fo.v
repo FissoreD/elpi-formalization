@@ -404,7 +404,7 @@ Section check.
       case fA: (failed A).
         by rewrite /nilA /sA failed_step//= SA.
       case pA: (incomplete A).
-        rewrite/nilA incomplete_prune_id//= => /andP[+ ->]/=.
+        rewrite/nilA incpl_prune//= => /andP[+ ->]/=.
         by case/orP=> [/HA->/= | /[dup]/andP[-> ?] ->]; rewrite ?andbT ?orbT ?if_same.
       by have:= succF_failF_paF SA fA pA.
   Qed.

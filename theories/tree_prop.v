@@ -364,10 +364,10 @@ Section RunP.
       apply: HA eA.
   Qed.
 
-  (*SNIPT: incomplete_prune_id*)
-  Lemma incomplete_prune_id: 
+  (*SNIPT: incpl_prune*)
+  Lemma incpl_prune: 
     forall b t, incomplete t -> prune b t = Some t.
-  (*ENDSNIPT: incomplete_prune_id*)
+  (*ENDSNIPT: incpl_prune*)
   Proof.
     move=> b A; elim_tree A b => /=; rewrite ?rew_pa.
     - move=> /HA->//.
