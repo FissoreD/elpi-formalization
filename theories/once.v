@@ -179,7 +179,9 @@ Section once.
       move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
       by apply: no_once_fresh.
     rewrite /matching/montanari_deref/= deref2//.
-    rewrite not_fnd.
+    rewrite not_fnd; last first.
+      Search fresh.
+      apply/negP => /fsubsetP.
       rewrite/montanari_pair/= montanari_equation/= ifN.
       case D: deref => //=.
         move=> [].

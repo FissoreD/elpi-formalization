@@ -342,24 +342,22 @@ Proof. by elim: q => [p|d|v|f Hf a Ha]; rewrite//= map_rcons Hf. Qed.
 Lemma H_head_ren_aux m hd q x y z w:
   all (refresh_for y) hd -> all (refresh_for x) hd ->
   all (refresh_for z) q -> all (refresh_for w) q ->
-  [disjoint codomf z & vars_tms q `|` vars_tms (map (ren x) hd)] ->
-  [disjoint codomf w & vars_tms q `|` vars_tms (map (ren y) hd)] ->
+  [disjoint codomf z & codomf x] ->
+  [disjoint codomf w & codomf y] ->
   H_head u m (map (ren z) q) (map (ren x) hd) = false ->
   H_head u m (map (ren w) q) (map (ren y) hd) = false.
 Proof.
-  rewrite !fdisjointXU => ++++ /andP[++]/andP[].
-  elim: m hd q x y z w => [|m tl IH] hd q x y z w//=.
+  move=> ++++ D1 D2.
+  elim: m hd q => [|m tl IH] hd q//.
   case: q; case: hd => //= c cs d ds.
   move => /andP[gyf2 gya2] /andP[gxf1 gxa1] /andP[gzf1 gza1] /andP[gwf1 gwa1].
-  rewrite !vars_tms_cons.
-  rewrite !fdisjointXU => /andP[H1 H2] /andP[H3 H4] /andP[H5 H6] /andP[H7 H8].
-  case: eqP => H; subst => //=; last apply: IH => //; last first.
+  case: m => //=; last by apply: IH.
   case U: unify => [s'|]/= H.
     case : unify => //= _; apply/IH/H => //=.
   case H_head; rewrite (andbT,andbF)//=.
-  move /isNoneP: U; rewrite -/(ren z) -/(ren x) -/(ren w) -/(ren y) in H3 H4 H7 H8 *.
+  move /isNoneP: U.
   apply: contraNF.
-  apply/unif_ren => //.
+  apply/unif_ren => //; by rewrite fdisjointXU; apply/andP; split.
 Qed.
 
 Lemma good_ren_fresh s t q: 
@@ -370,7 +368,7 @@ Proof.
   rewrite/refresh_for.
   rewrite /=fsub0set injectiveb0 => /(_ isT H isT).
   move=> [x [H1 HH I1 D1]]; rewrite cat0f in H1; subst.
-  rewrite -andbA; apply/and3P; split => //.
+  apply/and3P; split => //.
     by apply/fsubset_trans/fresh_tm_sub1.
   apply/fresh_tm_disjoint;rewrite //?(fdisjoint0X, codomf0, fdisjointX0, fsubsetUl)//.
 Qed.
@@ -387,8 +385,8 @@ Proof.
 Qed.
 
 Lemma H_head_ren m fv1 fv2 t xs fx fy q:
-  vars_tm (lang.rename (fresh_rules fv1 xs).1 t empty).2 `<=` fx ->
-  vars_tm (lang.rename (fresh_rules fv2 xs).1 t empty).2 `<=` fy ->
+  (lang.rename (fresh_rules fv1 xs).1 t empty).1.1 `<=` fx ->
+  (lang.rename (fresh_rules fv2 xs).1 t empty).1.1 `<=` fy ->
   H_head u m (flatten_term (lang.rename fx q empty).2) (flatten_term (lang.rename (fresh_rules fv1 xs).1 t empty).2) = false ->
   H_head u m (flatten_term (lang.rename fy q empty).2) (flatten_term (lang.rename (fresh_rules fv2 xs).1 t empty).2) = false.
 Proof.
@@ -396,16 +394,12 @@ Proof.
   rewrite/lang.rename!push/= in H1 H2 *.
   rewrite !flatten_term_ren.
   apply/H_head_ren_aux => //=; only 1-4: by apply/good_ren_fresh_all; rewrite (vars_tms_flatten_term, fsubsetUl)//.
-    rewrite fdisjointXU; apply/andP; split.
-      by apply/fdisjoint_ftr/disj_codom0L.
-    apply/fdisjointWr/disj_codom0R.
-    apply/fsubset_trans/H1.
-    rewrite -flatten_term_ren vars_tms_flatten_term//.
-  rewrite fdisjointXU; apply/andP; split.
-    by apply/fdisjoint_ftr/disj_codom0L.
-  apply/fdisjointWr/disj_codom0R.
-  apply/fsubset_trans/H2.
-  rewrite -flatten_term_ren vars_tms_flatten_term//.
+    apply: fdisjointWr (disj_codom0R _ _).
+    apply: fsubset_trans (fresh_tm_codom2 _ _ _) _.
+    by rewrite codomf0 fset0U//.
+  apply: fdisjointWr (disj_codom0R _ _).
+  apply: fsubset_trans (fresh_tm_codom2 _ _ _) _.
+  by rewrite codomf0 fset0U//.
 Qed.
 
 Lemma callable_rename1 p fv1 hd mp: 
@@ -438,8 +432,12 @@ Proof.
   have {}H3' := fsubset_trans (fresh_atoms_sub _ _ _) H3.
   have {}H2' := fsubset_trans (vars_tm_rename _ _) H2'.
   have {}H3' := fsubset_trans (vars_tm_rename _ _) H3'.
-  rewrite (H_head_ren H2' H3' H).
-  apply: IH _ _; (apply:fsubset_trans; first apply: fresh_rule_sub); rewrite/fresh_rule?push//=.
+  case HH: H_head; last first.
+    apply: IH; (apply:fsubset_trans; first apply: fresh_rule_sub); rewrite/fresh_rule?push//=.
+  exfalso; apply: negP (negbT (negbF HH)); rewrite negbK; apply: negbT.
+  apply: H_head_ren H.
+    by apply: fsubset_trans H2; apply: fsubset_trans (fresh_atoms_sub _ _ _).
+  by apply: fsubset_trans H3; apply: fsubset_trans (fresh_atoms_sub _ _ _).
 Qed.
 
 Lemma build_and (a b: bool): a -> b -> a && b. by move=> ??; apply/andP. Qed.
