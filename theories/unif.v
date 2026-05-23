@@ -1577,14 +1577,33 @@ Proof.
   by move: xy; rewrite (ground_vars_tm (ground_deref_all l.[vT])) inE.
 Qed.
 
-Lemma fnd_codom (f:{fmap V -> V}) v (vP: v \in codomf f): exists x, x \in domf f.
-Proof. by move/codomfP: vP => [x]; case: fndP => // kf[?]; subst; exists x. Qed.
+Lemma fnd_codom (f:{fmap V -> V}) v (vP: v \in codomf f): 
+  exists x : domf f, f.[valP x] == v.
+Proof.
+  move/codomfP: vP => [x].
+  case: fndP => //kf [<-]; exists [`kf].
+  by rewrite valPE.
+  (* case: fndP => // kf [?]; subst; exists x, kf; done. *)
+Qed.
 
-Definition choose_in (s:{fmap V -> V}) (v:V) (vP: v \in codomf s) := 
+Definition choose_in (s:{fmap V -> V}) (v:V) (vP: v \in codomf s)  := 
   xchoose (fnd_codom vP).
 
-Lemma choose_inP (f:{fmap V -> V}) v (vP: v \in codomf f): (choose_in vP) \in domf f.
-Proof. by apply/xchooseP. Qed.
+Lemma choose_in_mem (s:{fmap V -> V}) (v:V) (vP: v \in codomf s) :
+  s.[valP (choose_in vP)] = v.
+Proof. by have:= xchooseP (fnd_codom vP) => /eqP//. Qed.
+
+Lemma injective_choose_in (v:V) (x:{fmap V -> V}) (vx : v \in domf x) 
+  (vc : x.[vx] \in codomf x): injective x -> fsval (choose_in vc) = v.
+Proof.
+  move=> /injectiveP xinj.
+  have H := choose_in_mem vc.
+  by have [] := xinj _ _ H.
+Qed.
+
+Lemma injective_choose_in' (v:V) (x:{fmap V -> V}) (vx : v \in domf x) 
+  (vc : x.[vx] \in codomf x): injective x -> val (choose_in vc) = v.
+Proof. by move=> H; have:= injective_choose_in vc H. Qed.
 
 (* 
   Idea:
@@ -1596,7 +1615,7 @@ Proof. by apply/xchooseP. Qed.
 Definition ren_deref2 (w r:{fmap V -> V}) (s : Sigma) : Sigma :=
   [fmap x : codomf w => 
     let k := choose_in (valP x) in 
-    if r.[? k] is Some v then
+    if r.[? val k] is Some v then
       if s.[? v] is Some t then t
       else Tm_D (ID 0)
     else Tm_D (ID 0)
@@ -1637,17 +1656,6 @@ Proof.
   rewrite FmapE.fmapE eqxx/= => /(_ erefl)//.
 Qed.
 
-Lemma injective_choose_in (v:V) (x:{fmap V -> V}) (vx : v \in domf x) (vc : x.[vx] \in codomf x):
-  injective x -> choose_in vc = v.
-Proof.
-  move=> /injectiveP I.
-  have H := choose_inP vc.
-
-  (* have [v'] := codomfP _ _ vc. *)
-  (* have [<-]// : [`vx] = [`H]. *)
-  (* apply: (I). *)
-Admitted.
-
 Lemma deref_catl s1 s2 t: [disjoint domf s2 & vars_tm t] ->
   deref (s1 + s2) t = deref s1 t.
 Proof.
@@ -1678,10 +1686,11 @@ Proof.
   elim: t => //[v|f Hf a Ha].
     rewrite !ren_V !deref_V !fsub1set => vy vx.
     rewrite (in_fnd vy) (in_fnd vx) !odflt_Some.
-    rewrite (in_fnd (in_codomf _)) ffunE injective_choose_in//.
+    rewrite (in_fnd (in_codomf _)) ffunE/= injective_choose_in//.
     cbn zeta; rewrite (in_fnd vy).
-    case: fndP => //H; first by rewrite in_fnd//=ffunE valPE.
-    by rewrite not_fnd//.
+    set X := [ffun _ => _].
+    case: fndP => //H; first by rewrite (@in_fnd _ _ X)//= ffunE valPE.
+    by rewrite (@not_fnd _ _ X)//.
   rewrite /=!fsubUset => /andP[D1 D2] /andP[D3 D4].
   by rewrite Hf//Ha//.
 Qed.
@@ -1728,25 +1737,27 @@ Proof.
       case: fndP => // H Z; simpl in Z.
       rewrite in_fnd// ?in_codomf// => Hx.
       rewrite/ren_deref2.
-      rewrite ffunE injective_choose_in// in_fnd.
+      rewrite ffunE injective_choose_in'//in_fnd.
       by rewrite in_fnd ffunE valPE -Z.
     - move=> p[]//v'; rewrite !fsub1set => _ v'y _ v'x.
       rewrite [ren z _]/= deref_D !ren_V !in_fnd !deref_V !odflt_Some.
       case: fndP => // H Z; simpl in Z.
       rewrite in_fnd// ?in_codomf// => Hx.
       rewrite/ren_deref2.
-      rewrite ffunE injective_choose_in// in_fnd.
+      rewrite ffunE injective_choose_in'// in_fnd.
       by rewrite in_fnd ffunE valPE -Z.
     - move=> v t2; rewrite !fsub1set => S1 S2 S3 S4.
       rewrite !ren_V !in_fnd !deref_V !odflt_Some.
-      rewrite (in_fnd (in_codomf _)) ffunE injective_choose_in// odflt_Some.
-      cbn zeta; rewrite (in_fnd S1).
+      rewrite (in_fnd (in_codomf _)) ffunE.
+      cbn zeta.
+      rewrite injective_choose_in'// odflt_Some (in_fnd S1).
       case: fndP => HH; last first.
         rewrite not_fnd//.
         case: t2 S2 S4 => // v'; rewrite !fsub1set => v'y v'x.
         rewrite !ren_V !deref_V in_fnd (in_fnd v'x) !odflt_Some.
-        rewrite (in_fnd (in_codomf _)) ffunE injective_choose_in//.
-        cbn zeta; rewrite (in_fnd v'y).
+        rewrite (in_fnd (in_codomf _)) ffunE.
+        cbn zeta.
+        rewrite injective_choose_in'// (in_fnd v'y).
         case: fndP => H.
           by rewrite in_fnd//=ffunE valPE => <-.
         by rewrite not_fnd.
@@ -1758,7 +1769,7 @@ Proof.
         f_equal; [by apply: Hf | by apply: Ha].
       rewrite !fsub1set => v'y v'x.
       rewrite !ren_V !deref_V (in_fnd v'y) (in_fnd v'x) !odflt_Some (in_fnd (in_codomf _)).
-      rewrite ffunE injective_choose_in//; cbn zeta; rewrite (in_fnd v'y).
+      cbn zeta; rewrite ffunE injective_choose_in'// (in_fnd v'y).
       case: fndP => // H; rewrite in_fnd ffunE valPE/= => <-.
       have:= @deref_all_ren2 s' z w (Tm_App f a) => ->//;
       by rewrite /=fsubUset; apply/andP.
