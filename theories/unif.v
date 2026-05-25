@@ -1518,23 +1518,8 @@ Proof.
   by apply: unif_match123 M1 M2 => //; rewrite deref_empty.
 Qed.
 
-(* Definition ren_sigma r (s : Sigma) :=
-  [fmap x: domf s => ren r s.[valP x]]. *)
-
-(* Definition ren_list r l := map (fun '(x, y) => ren r x, ren ) l. *)
-
 Notation injective := (@injectiveb _ V).
 Notation "A ∧ B" := (A && B) (at level 15).
-
-(* could be more general: instead of fset0, there could be 
-  - a set X in hypothesis
-  - a set "rename X" in the conclusion *)
-(* Lemma montanari_ren s l s' r1:
-  vars_sigma s `|` varsL l `<=` domf r -> injective r ->
-  acyclic_sigma s -> disjoint_L s l ->
-    montanari s fset0 l = Some s' ->
-      montanari (ren_sigma r s) fset0 (ren_list r l) = Some (ren_sigma r s').
-Admitted. *)
 
 Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
 
@@ -1548,6 +1533,35 @@ Proof.
   elim: t1 => //=[v|f Hf a Ha].
     by rewrite fsub1set => vw; rewrite in_fnd/=fsub1set in_codomf.
   by rewrite !fsubUset => /andP[/Hf-> /Ha->].
+Qed.
+
+Lemma vars_tm_ren_eq r t: vars_tm t `<=` domf r ->
+  codomf r.[& vars t] = vars (ren r t).
+Proof.
+  move=> C; rewrite codomf_restrict_exists; apply/fsetP => /=x; rewrite !inE.
+  case: existsP.
+    move=> [[y yP]]/eqP<-{x}/=.
+    case: existsP => H; apply/esym; move: H.
+      move=> [[z zP]/=/andP[zt /eqP H]].
+      elim: t zt {C} => //=[v|f Hf a Ha]; rewrite !inE.
+        by move=> /eqP<-{v}; rewrite in_fnd/= H; rewrite eqxx.
+      by move=> /orP[/Hf|/Ha]->; rewrite //orbT.
+    move=> H; apply/negbTE; move: H.
+    apply: contra_notN => H.
+    elim: t C H => //=[v|f Hf a Ha].
+      rewrite fsub1set => vr; rewrite in_fnd//=inE.
+      move=> /eqP->; exists [`vr]; rewrite inE/=eqxx//=.
+    rewrite fsubUset !inE => /andP[Hx Hy]/orP[]H.
+      have [x/andP[I /eqP <-]] := Hf Hx H; eexists; apply/andP; split => //.
+      by rewrite inE I.
+    have [x/andP[I /eqP <-]] := Ha Hy H; eexists; apply/andP; split => //.
+    by rewrite inE I orbT.
+  move=> H; apply/esym/negbTE/contra_notN/H; clear H.
+  elim: t C => //[v|f Hf a Ha].
+    by rewrite fsub1set => vr; rewrite inE in_fnd => /eqP->; eexists => /=.
+  rewrite /= fsubUset !inE => /andP[Hx Hy]/orP[]H.
+    by apply: Hf.
+  by apply: Ha.
 Qed.
 
 Fixpoint deref_all t :=
@@ -1602,32 +1616,23 @@ Proof.
 Qed.
 
 (* 
-  Idea:
-    w = {X -> V}
-    r = {X -> W} and s = {W -> f 3}
-    then we return {V -> f 3}
-  Conceptually, it maps the values in w to the composition of r and s for that key
+  Idea all variables in t points to the composition of r and s
 *)
-Definition ren_deref2 (w r:{fmap V -> V}) (s : Sigma) : Sigma :=
-  [fmap x : codomf w => 
-    let k := choose_in (valP x) in 
-    if r.[? val k] is Some v then
+Definition ren_deref2k t (r:{fmap V -> V}) (s : Sigma) : Sigma :=
+  [fmap x : vars_tm t => 
+    if r.[? val x] is Some v then
       if s.[? v] is Some t then t
       else Tm_D (ID 0)
     else Tm_D (ID 0)
   ].
 
-
-(* Definition build_disjoint_renaming (d ign : {fset V}) :  {fmap V -> V} :=
-  [fmap v : d ] *)
-
-Lemma codom_vars_ren_deref2 z w x y sx:
-  codom_vars (ren_deref2 z w sx + ren_deref2 x y sx) `<=` codom_vars sx.
+Lemma codom_vars_ren_deref2k z w x y sx:
+  codom_vars (ren_deref2k z w sx + ren_deref2k x y sx) `<=` codom_vars sx.
 Proof.  
   apply/fsubsetP => r /varUP[m [+rm]] => /mapP[t+?]; subst.
   move=> /codomP[[l lP ?]]; subst; move: (lP).
   rewrite/= inE.
-  case: (boolP (_ \in codomf x)) => lcx; rewrite (orbT,orbF).
+  case: (boolP (_ \in vars x)) => lcx; rewrite (orbT,orbF).
     move: rm; rewrite getf_catr ffunE/=; case: fndP => // cP.
     case: fndP => //yP H _.
     apply/varUP; exists (vars sx.[yP]); split => //.
@@ -1673,102 +1678,137 @@ Qed.
 Lemma odflt_Some T b c: odflt b (@Some T c) = c.
 Proof. by []. Qed.
 
-Lemma deref_all_ren2 s' (x y:{fmap V -> V}) t : let sx:= groundify s' in
-  injective x -> injective y ->
-  vars_tm t `<=` domf y -> vars_tm t `<=` domf x ->
-  deref_all (deref s' (ren y t)) = deref (ren_deref2 x y sx) (ren x t).
+Definition alpha_equiv t1 t2 := 
+  exists (r: {fmap V -> V}), [/\ injective r, t1 = ren r t2 & vars_tm t2 `<=` domf r].
+
+Lemma disjoint_Lempty l: disjoint_L empty l.
+Proof. by rewrite/disjoint_L fdisjoint0X. Qed.
+
+Lemma deref_all_deref_aux s r t k:
+  vars_tm t `<=` domf r ->
+  vars_tm t `<=` k ->
+  k `<=` domf r ->
+  deref [fmap x : k => 
+    if r.[? val x] is Some v then
+      if (groundify s).[? v] is Some t then t
+      else Tm_D (ID 0)
+    else Tm_D (ID 0)
+  ] t = deref_all (deref s (ren r t)).
 Proof.
-  cbn zeta => Ix Iy.
-  elim: t => //[v|f Hf a Ha].
-    rewrite !ren_V !deref_V !fsub1set => vy vx.
-    rewrite (in_fnd vy) (in_fnd vx) !odflt_Some.
-    rewrite (in_fnd (in_codomf _)) ffunE/= injective_choose_in//.
-    cbn zeta; rewrite (in_fnd vy).
+  move=> ++ S.
+  elim: t => //=[v|f Hf a Ha].
+    rewrite !fsub1set => vr vk.
     set X := [ffun _ => _].
-    case: fndP => //H; first by rewrite (@in_fnd _ _ X)//= ffunE valPE.
-    by rewrite (@not_fnd _ _ X)//.
-  rewrite /=!fsubUset => /andP[D1 D2] /andP[D3 D4].
-  by rewrite Hf//Ha//.
+    rewrite in_fnd/= (@in_fnd _ _ X)/= ffunE/= in_fnd; clear X.
+    set X := [ffun _ => _].
+    case: fndP => ks.
+      by rewrite (@in_fnd _ _ X)/= ffunE valPE.
+    by rewrite (@not_fnd _ _ X)//=.
+  rewrite /= !fsubUset => /andP[H1 H2] /andP[H3 H4].
+  rewrite -Hf//-Ha//; f_equal.
 Qed.
 
-(*SNIPT: unif_ren *)
+Lemma deref_all_deref s r t:
+  vars_tm t `<=` domf r ->
+  deref (ren_deref2k t r (groundify s)) t = deref_all (deref s (ren r t)).
+Proof. move=> H; by apply: deref_all_deref_aux. Qed.
+
+(*SNIPT: unif_ren *)  
+Lemma unif_ren_ac: 
+  forall t1 t2 t1' t2',
+  alpha_equiv t1 t1' -> alpha_equiv t2 t2' -> 
+  [disjoint vars_tm t1' & vars_tm t2'] ->
+  unify t1 t2 empty -> unify t1' t2' empty.
+(*ENDSNIPT: unif_ren *)  
+Proof.
+  move=> t1 t2 t1' t2' [w[Iw -> tw]] [r[Ir -> tr]] {t1 t2}; case U: unify => [s|]// D3 _.
+  have /= /andP[/eqP/= D _] := montanariP acyclic_sigma0 (disjoint_Lempty _) U.
+  apply: exists_montanari acyclic_sigma0 (disjoint_Lempty _) _.
+  rewrite !deref_empty in D *.
+  exists (ren_deref2k t1' w (groundify s) + ren_deref2k t2' r (groundify s)); split.
+    rewrite {1}/acyclic_sigma/=.
+    apply: fdisjointWr (codom_vars_ren_deref2k _ _ _ _ _) _.
+    by rewrite codom_vars_groundify fdisjointX0.
+  rewrite/=andbT; apply/eqP => /=.
+  rewrite deref_catl; last by rewrite fdisjoint_sym.
+  rewrite deref_catr; last by [].
+  by rewrite !deref_all_deref// D.
+Qed.
+
+Definition build (w r : {fmap V -> V}): {fmap V -> V}:=
+  [fmap x : codomf w =>
+     let v := choose_in (valP x) in
+     if r.[? val v] is Some k then k
+     else val x
+  ].
+
+Lemma ren_build (r w: {fmap V -> V}) t k: injectiveb r -> injectiveb w -> 
+  vars t `<=` domf r -> vars t `<=` domf w -> vars (ren w t) `<=` k ->
+  ren (build w r).[& k] (ren w t) = ren r t.
+Proof.
+  move=> Ir Iw.
+  elim: t k => //[v|f Hf a Ha] k.
+    rewrite !fsub1set !ren_V => vr vw.
+    rewrite (in_fnd vr) (in_fnd vw) !odflt_Some => H.
+    rewrite fnd_restrict H (in_fnd (in_codomf _)).
+    by rewrite ffunE injective_choose_in//= in_fnd.
+  rewrite /=!fsubUset => /andP[s1 s2] /andP[s3 s4] /andP[s5 s6].
+  by rewrite Hf//Ha.
+Qed.
+
+Lemma vart_build_sub w t2 r: vars t2 `<=` domf w ->
+  vars (ren w t2) `<=` domf (build w r).[& vars (ren w t2)].
+Proof.
+  move=> H; rewrite domf_restrict fsubsetI fsubset_refl.
+  by apply: fsubset_trans (vars_tm_ren_sub H) _.
+Qed.
+
+Lemma in_key z t2 w (zP: z \in domf w): injective w -> vars_tm t2 `<=` domf w ->
+  w.[zP] \in vars (ren w t2) -> z \in vars_tm t2.
+Proof.
+  move=> /injectiveP I; elim: t2 => //[v|f Hf a Ha]/=; rewrite !inE.
+    rewrite fsub1set => vw; rewrite in_fnd/= => /eqP H.
+    by have [->] := I _ _ H.
+  rewrite fsubUset => /andP[S1 S2] /orP[]H.
+    rewrite Hf//.
+  by rewrite Ha// orbT.
+Qed.
+
+Lemma alpha_equiv_renR (w: {fmap V -> V}) t1 t2: injective w ->
+   alpha_equiv t1 t2 -> vars_tm t2 `<=` domf w -> alpha_equiv t1 (ren w t2).
+Proof.
+  move=> Iw [r [Ir -> {t1}]] S1 S2.
+  exists (build w r).[& vars_tm (ren w t2)]; rewrite ren_build//vart_build_sub//.
+  split => //.
+  apply/injectiveP => [[x xP] [y yP]] H; apply: val_inj => /=; move: H.
+  move: (xP) (yP); rewrite domf_restrict !inE/= in xP yP.
+  move: xP => /andP[xP /existsP[[k kP /eqP]]]?; subst.
+  move: yP => /andP[yR /existsP[[z zP /eqP]]]?; subst.
+  have H := fsubsetP (vars_tm_ren_sub S2) _ xP.
+  move=> H1 H2; rewrite !ffunE !injective_choose_in//=.
+  have kt := fsubsetP S1 _ (in_key Iw S2 xP).
+  have zt := fsubsetP S1 _ (in_key Iw S2 yR).
+  rewrite !in_fnd => /(injectiveP _ Ir)[?]; subst.
+  by rewrite (bool_irrelevance zP kP).
+Qed.
+
+(*SNIPT: unif_ren1 *)
 Lemma unif_ren: 
   forall x y z w t1 t2,
   refresh_for w t1 -> refresh_for y t2 -> refresh_for z t1 -> refresh_for x t2 ->
   codomf y # codomf w -> codomf x # codomf z ->
   unify (ren w t1) (ren y t2) empty -> unify (ren z t1) (ren x t2) empty.
-(*ENDSNIPT: unif_ren *)  
+(*ENDSNIPT: unif_ren1 *)  
 Proof.
   move=> x y z w t1 t2 /and3P[R1 I1 P1] /and3P[R2 I2 P2] /and3P[R3 I3 P3] /and3P[R4 I4 P4] C1 C2.
-  rewrite/unify/montanari_deref !deref_empty/montanari_pair.
-  case M: montanari => [s'|]// _.
-  have D : disjoint_L empty [:: (ren w t1, ren y t2)].
-    by rewrite disjoint_L_cons/= !fdisjoint0X disjoint_L0.
-  have /andP[/eqP/= U _] := montanariP acyclic_sigma0 D M.
-  have := montanari_codom acyclic_sigma0 D M.
-  have := montanari_ext1 M.
-  clear D M.
-  rewrite vars_sigma0 !fset0U varsL_cons /map_prod1/= varsL0 fsetU0 fsetD0.
-  move=> Dx Cx.
-  have {}Dx : domf s' `<=` codomf w `|` codomf y.
-    apply: fsubset_trans Dx _; rewrite fsubUset; apply/andP;
-    by split; apply: fsubset_trans (vars_tm_ren_sub _) _; rewrite // (fsubsetUr,fsubsetUl).
-  have {}Cx : codom_vars s' `<=` codomf w `|` codomf y.
-    apply: fsubset_trans Cx _; rewrite fsubUset; apply/andP;
-    by split; apply: fsubset_trans (vars_tm_ren_sub _) _; rewrite // (fsubsetUr,fsubsetUl).
-  apply: exists_montanari acyclic_sigma0 _ _.
-    by rewrite disjoint_L_cons/= !fdisjoint0X disjoint_L0.
-  pose used_vars := (domf z `|` domf x).
-  pose sx := groundify s'.
-  exists (ren_deref2 z w sx + ren_deref2 x y sx); split.
-    rewrite {1}/acyclic_sigma/=.
-    apply: fdisjointWr (codom_vars_ren_deref2 _ _ _ _ _) _.
-    by rewrite codom_vars_groundify fdisjointX0.
-  rewrite/= andbT/unif_pair/map_prod1/=; apply/eqP.
-  rewrite deref_catl; last by apply: fdisjointWr (vars_tm_ren_sub _) _.
-  rewrite deref_catr; last by apply: fdisjointWr (vars_tm_ren_sub _) _; rewrite//fdisjoint_sym.
-  move: U; elim: t1 t2 R1 R2 R3 R4 => //.
-    - move=> p[]//v'; rewrite !fsub1set => _ v'y _ v'x.
-      rewrite [ren z _]/= deref_P !ren_V !in_fnd !deref_V !odflt_Some.
-      case: fndP => // H Z; simpl in Z.
-      rewrite in_fnd// ?in_codomf// => Hx.
-      rewrite/ren_deref2.
-      rewrite ffunE injective_choose_in//in_fnd.
-      by rewrite in_fnd ffunE valPE -Z.
-    - move=> p[]//v'; rewrite !fsub1set => _ v'y _ v'x.
-      rewrite [ren z _]/= deref_D !ren_V !in_fnd !deref_V !odflt_Some.
-      case: fndP => // H Z; simpl in Z.
-      rewrite in_fnd// ?in_codomf// => Hx.
-      rewrite/ren_deref2.
-      rewrite ffunE injective_choose_in// in_fnd.
-      by rewrite in_fnd ffunE valPE -Z.
-    - move=> v t2; rewrite !fsub1set => S1 S2 S3 S4.
-      rewrite !ren_V !in_fnd !deref_V !odflt_Some.
-      rewrite (in_fnd (in_codomf _)) ffunE.
-      cbn zeta.
-      rewrite injective_choose_in// odflt_Some (in_fnd S1).
-      case: fndP => HH; last first.
-        rewrite not_fnd//.
-        case: t2 S2 S4 => // v'; rewrite !fsub1set => v'y v'x.
-        rewrite !ren_V !deref_V in_fnd (in_fnd v'x) !odflt_Some.
-        rewrite (in_fnd (in_codomf _)) ffunE.
-        cbn zeta.
-        rewrite injective_choose_in// (in_fnd v'y).
-        case: fndP => H.
-          by rewrite in_fnd//=ffunE valPE => <-.
-        by rewrite not_fnd.
-      rewrite in_fnd// ffunE valPE/= => ->.
-      by apply: deref_all_ren2.
-    - move=> f Hf a Ha t; rewrite/= !fsubUset => /andP[s1 s2] s3.
-      move=> /andP[s4 s5] s6; case: t s3 s6 => //[v'|f' a']; last first.
-        rewrite /=!fsubUset => /andP[s3 s3'] /andP[s6 s6'] [df da].
-        f_equal; [by apply: Hf | by apply: Ha].
-      rewrite !fsub1set => v'y v'x.
-      rewrite !ren_V !deref_V (in_fnd v'y) (in_fnd v'x) !odflt_Some (in_fnd (in_codomf _)).
-      cbn zeta; rewrite ffunE injective_choose_in// (in_fnd v'y).
-      case: fndP => // H; rewrite in_fnd ffunE valPE/= => <-.
-      have:= @deref_all_ren2 s' z w (Tm_App f a) => ->//;
-      by rewrite /=fsubUset; apply/andP.
+  (* apply: unif_ren_ac. *)
+  have D: vars (ren z t1) # vars (ren x t2).
+    apply: fdisjointWr (vars_tm_ren_sub R4) _.
+    apply: fdisjointWl (vars_tm_ren_sub R3) _.
+    by rewrite fdisjoint_sym.
+  apply: unif_ren_ac => //; apply: alpha_equiv_renR => //.
+    exists w; split => //.
+  exists y; split => //.
 Qed.
 
 (* 

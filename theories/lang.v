@@ -302,20 +302,6 @@ Proof. by []. Qed.
 Lemma deref_empty t: deref empty t = t.
 Proof. elim: t => //=[v|f -> a ->]//; rewrite not_fnd//. Qed.
 
-
-(* Lemma deref_aux_empty n t: deref_aux n empty t = t.
-Proof. by elim: n t => //= n IH t; rewrite deref1_empty//. Qed.
-
-Lemma deref_empty t: deref empty t = t.
-Proof. by []. Qed. *)
-
-(* Fixpoint deref_vars n s tm :=
-  let tm := deref1 s tm in
-  match n with
-  | 0 => fset0
-  | n.+1 => vars_tm tm `|` (deref_vars n s tm)
-  end. *)
-
 Definition codom_vars (s:Sigma) := 
   varsU (map vars_tm (codom s)).
 
@@ -487,6 +473,19 @@ Fixpoint ren (s: {fmap V -> V}) tm :=
   | Tm_P _ | Tm_D _ => tm
   | Tm_App h ag => Tm_App (ren s h) (ren s ag)
   end.
+
+Lemma ren_empty t: ren fmap0 t = t.
+Proof. elim: t => //=[v|f -> a ->]//; rewrite not_fnd//. Qed.
+
+Lemma injectiveb0 : injectiveb (fmap0 : {fmap V -> V}).
+by apply/injectiveP=> -[].
+Qed.
+
+Lemma injectiveb1 (k : choiceType) (T : k) (S : eqType) (w : S) : 
+  injectiveb [fmap x : fset1 T => w].
+apply/injectiveP=> -[x Hx] [y Hy] _; apply:val_inj => /=.
+by move: Hx Hy; rewrite !inE => /eqP -> /eqP ->. 
+Qed.
 
 Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a bx) = F t.1 t.2.
   by case: t => /=.

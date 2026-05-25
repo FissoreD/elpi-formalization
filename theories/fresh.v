@@ -11,16 +11,6 @@ have kD : k \in domf [ffun x : [fset k] => v] by rewrite inE.
 by move/eqP->; exists (Sub k kD); rewrite ?ffunE.
 Qed.
 
-Lemma injectiveb0 : injectiveb (fmap0 : {fmap V -> V}).
-by apply/injectiveP=> -[].
-Qed.
-
-Lemma injectiveb1 (k : choiceType) (T : k) (S : eqType) (w : S) : 
-  injectiveb [fmap x : fset1 T => w].
-apply/injectiveP=> -[x Hx] [y Hy] _; apply:val_inj => /=.
-by move: Hx Hy; rewrite !inE => /eqP -> /eqP ->. 
-Qed.
-
 Lemma fdisjointFl [T : choiceType] [A B : {fset T}] [x : T] :
   [disjoint A & B] -> x \in B -> (x \in A) = false.
 Proof. by move/eqP/fsetP=> /(_ x); rewrite !inE => <- ->; rewrite andbT. Qed.
