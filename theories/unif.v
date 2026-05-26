@@ -952,10 +952,12 @@ Proof.
     by rewrite unif_pair_sym.
 Qed.
 
-Lemma unifyP t1 t2 s s': acyclic_sigma s -> 
-  unify t1 t2 s = Some s' -> deref s' t1 = deref s' t2.
+(*SNIPT: unif_correct *)
+Lemma unify_correct: 
+  forall t1 t2 s s', acyclic_sigma s -> unify t1 t2 s = Some s' -> deref s' t1 = deref s' t2.
+(*ENDSNIPT: unif_correct *)
 Proof.
-  move=> A M.
+  move=> t1 t2 s s' A M.
   have DL : disjoint_L s [:: (deref s t1, deref s t2)].
     by rewrite /disjoint_L/= fsetU0/map_prod1/= fdisjointXU !acyclic_deref_disjoint//.
   have:= montanariP A DL M; rewrite /= andbT /map_prod1/=.
@@ -1248,6 +1250,21 @@ Proof.
   - move=> D [x[A'/=/andP[+ U]]].
     by destruct t1, t2 => //=; rewrite/unif_pair/map_prod1/= => /eqP[?]; 
     subst; rewrite ?eqxx in EQ.
+Qed.
+
+(*SNIPT: unify_complete *)
+Lemma unify_complete:
+  forall t1 t2 s, acyclic_sigma s -> (exists s', acyclic_sigma s' /\ deref s' (deref s t1) = deref s' (deref s t2)) -> exists s'', unify t1 t2 s = Some s''.
+(*ENDSNIPT: unify_complete *)
+Proof.
+  move=> t1 t2 s A [sx [H1 H2]].
+  rewrite /unify/montanari_deref/montanari_pair.
+  have D : disjoint_L s [:: (deref s t1, deref s t2)].
+    by rewrite disjoint_L_cons !acyclic_deref_disjoint//disjoint_L0.
+  have:= exists_montanari A D (ex_intro _ sx _).
+  rewrite /unifier/= andbT /unif_pair/map_prod1 H1 H2 eqxx => /(_ (conj isT isT)).
+  case M: montanari => [s'|]// _.
+  by eexists.
 Qed.
 
 Lemma acyclic_composition s1 s2:
