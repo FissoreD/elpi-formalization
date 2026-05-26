@@ -1446,9 +1446,7 @@ Notation "A ∧ B" := (A && B) (at level 15).
 
 Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
 
-(*SNIPT: refresh_for *)
 Definition refresh_for x t := [&& (vars t `<=` domf x) & injective x].
-(*ENDSNIPT: refresh_for *)
   
 Lemma vars_tm_ren_sub w t1: vars_tm t1 `<=` domf w -> vars (ren w t1) `<=` codomf w.
 Proof.
