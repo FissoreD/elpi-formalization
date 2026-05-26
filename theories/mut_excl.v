@@ -1,6 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import tree tree_prop ctx tree_vars fresh.
+From det Require Import tree tree_prop ctx tree_vars fresh unif.
 
 Section mut_excl.
   Variable u : Unif.
@@ -13,7 +13,7 @@ Section mut_excl.
     (* here we return false if m == input and x and y can't unify
        this means that the two heads are non overlapping *)
     | m :: tl, x :: xs, y :: ys => 
-      ((m != input) || unify u y x fmap0) && H_head tl xs ys
+      ((m != input) || lang.unify u y x fmap0) && H_head tl xs ys
     | _, _, _ => true
     end.
   
@@ -123,9 +123,6 @@ Proof. by apply/fdisjointWr/vars_tms_flatten_term. Qed.
 Lemma fdisjoint_ft2 s q : [disjoint vars_tm q & vars_tm s] -> 
   [disjoint vars_tms (flatten_term q) & vars_tms (flatten_term s)].
 Proof. by move=> H; apply/fdisjointWr/fdisjoint_ftl/H/vars_tms_flatten_term. Qed.
-
-
-From det Require Import unif.
 
 Definition u := mk_Unif unify matching.
 
