@@ -343,11 +343,10 @@ Lemma H_head_ren_aux m hd q x y z w:
   all (refresh_for y) hd -> all (refresh_for x) hd ->
   all (refresh_for z) q -> all (refresh_for w) q ->
   [disjoint codomf z & codomf x] ->
-  [disjoint codomf w & codomf y] ->
   H_head u m (map (ren z) q) (map (ren x) hd) = false ->
   H_head u m (map (ren w) q) (map (ren y) hd) = false.
 Proof.
-  move=> ++++ D1 D2.
+  move=> ++++ D2.
   elim: m hd q => [|m tl IH] hd q//.
   case: q; case: hd => //= c cs d ds.
   move => /andP[gyf2 gya2] /andP[gxf1 gxa1] /andP[gzf1 gza1] /andP[gwf1 gwa1].
@@ -357,7 +356,10 @@ Proof.
   case H_head; rewrite (andbT,andbF)//=.
   move /isNoneP: U.
   apply: contraNF.
-  apply/unif_ren => //; by rewrite fdisjointXU; apply/andP; split.
+  apply/unif_ren => //.
+  apply: fdisjointWl (vars_tm_ren_sub (proj1 (andP gxf1))) _.
+  apply: fdisjointWr (vars_tm_ren_sub (proj1 (andP gzf1))) _.
+  by rewrite fdisjoint_sym.
 Qed.
 
 Lemma good_ren_fresh s t q: 
@@ -368,9 +370,8 @@ Proof.
   rewrite/refresh_for.
   rewrite /=fsub0set injectiveb0 => /(_ isT H isT).
   move=> [x [H1 HH I1 D1]]; rewrite cat0f in H1; subst.
-  apply/and3P; split => //.
-    by apply/fsubset_trans/fresh_tm_sub1.
-  apply/fresh_tm_disjoint;rewrite //?(fdisjoint0X, codomf0, fdisjointX0, fsubsetUl)//.
+  apply/andP; split => //.
+  by apply/fsubset_trans/fresh_tm_sub1.
 Qed.
 
 Lemma good_ren_fresh_all s t q: 
@@ -394,12 +395,9 @@ Proof.
   rewrite/lang.rename!push/= in H1 H2 *.
   rewrite !flatten_term_ren.
   apply/H_head_ren_aux => //=; only 1-4: by apply/good_ren_fresh_all; rewrite (vars_tms_flatten_term, fsubsetUl)//.
-    apply: fdisjointWr (disj_codom0R _ _).
-    apply: fsubset_trans (fresh_tm_codom2 _ _ _) _.
-    by rewrite codomf0 fset0U//.
   apply: fdisjointWr (disj_codom0R _ _).
   apply: fsubset_trans (fresh_tm_codom2 _ _ _) _.
-  by rewrite codomf0 fset0U//.
+  rewrite codomf0 fset0U//.
 Qed.
 
 Lemma callable_rename1 p fv1 hd mp: 
