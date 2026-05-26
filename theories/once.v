@@ -177,142 +177,19 @@ Section once.
       by apply: no_once_fresh.
     rewrite eqxx/=.
     case M: obind => [s'|][???]; subst; last by inversion H3 => //; auto.
+    set Y := _ `|` _ in H3.
+    rewrite ffunE/= in H3.
     have ? := run_or0 H3; subst.
-    inversion H3 => //; subst.
-    have:= run_ko_ONK H3.
-
-    set X := match 
-    rewrite ffunE/= eqxx/= !fsetU0.
-    case M: matching => [s'|]//=[???]; subst; inversion H3; subst; clear H3 => //; last by left.
-    move: H2; rewrite /step /bc [get_tm_hd _]/=.
-    case (boolP (acyclic_sigma s')) => AS'; last first => //.
-      by move=> [???]; subst; inversion H5; auto.
-    case Y: get_tm_hd => [h|]; last first.
-      by move=> [???]; subst; inversion H5 => //; auto.
-    rewrite/=!FmapE.fmapE !inE orbF.
-    rewrite not_fnd//.
-    case Z: fresh_rules => [fvy' ry']//.
-    rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
-    rewrite /= !(inE,FmapE.fmapE)/=.
-    move => -[???]; subst.
-    Search (runT _ _ _ _ (Or None _ _) _ _ _ -> _).
-
-    rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
-    rewrite no_once_select; last first.
-      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
-      by apply: no_once_fresh.
-    rewrite ffunE/= eqxx/= !fsetU0.
-    case M: matching => [s'|]//=[???]; subst; inversion H3; subst; clear H3 => //; last by left.
-    move: H2; rewrite /step /bc [get_tm_hd _]/=.
-    case (boolP (acyclic_sigma s')) => AS'; last first => //.
-      by move=> [???]; subst; inversion H5; auto.
-    case Y: get_tm_hd => [h|]; last first.
-      by move=> [???]; subst; inversion H5 => //; auto.
-    rewrite/=!FmapE.fmapE !inE orbF.
-    rewrite not_fnd//=; case: eqP => ho; subst.
-
-    rewrite/fresh_rules/= fset0U codomf0/= !fsetU0. /rename cat0f.
-    rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
-    rewrite !push/=.
-    rewrite !push/=.
-
-    
-    
-
-    rewrite !FmapE.fmapE. !inE eqxx/=.
-    case X: fresh_rules => [fvx' rs'].
-    rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
-    rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
-    rewrite no_once_select; last first.
-      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
-      by apply: no_once_fresh.
-    rewrite ffunE/= eqxx/= !fsetU0.
-    case M: matching => [s'|]//=[???]; subst; inversion H3; subst; clear H3 => //; last by left.
-    move: H2; rewrite/=/bc [get_tm_hd _]/=.
-
-    rewrite.
-
-
-
-    inversion
-    move=> [???]; subst.
-    rewrite /matching/montanari_deref/= deref2//.
-    rewrite not_fnd; last first.
-      Search fresh.
-      apply/negP => /fsubsetP.
-      rewrite/montanari_pair/= montanari_equation/= ifN.
-      case D: deref => //=.
-        move=> [].
-      
-      
-      
-    fvx'
-    
-    case M: matching => //=[sx|][???]; subst.
-      inversion H3 => //; subst; clear H3.
-      move: H2 => /=; rewrite/bc.
-      case (boolP (acyclic_sigma s)) => AS; last first => //=.
-        move=> [???]; subst.
-        by inversion H3; auto.
-    rewrite /matching/montanari_deref/= deref2//=.
-    case M: m
-    case: fndP => //=.
-    rewrite/montanari_pair montanari_equation/= not_fnd//=.
-    rewrite ffunE/= /matching/= /matching_aux/= /vars_nb/= cardfs1 addnC/=.
-    rewrite no_once_select; last first.
-      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
-      by apply: no_once_fresh.
-    case:eqP => //= _.
-    case:eqP => //=.
-      move=> + [???]; subst.
-      inversion H3 => //=; subst.
-      move: H2 => /=; rewrite/bc/=.
-    rewrite inE.
-    case:eqP => //= _.
-    case: eqP => //=.
-      rewrite no_once_select//=.
-
-      rewrite/select/=.
-    rewrite ifF/=.
-    case: eqP => //=.
-
-    rewrite ren_V.
-    rewrite.    
-    rewrite/fresh_tm inE eqxx ren_app ren_P ren_V; last first.
-      rewrite/acyclic_ren/= codomf1/= fdisjoint_sym.
-      by apply/fdisjointWr/disjoint_fresh/fsubsetUl.
-    rewrite in_fnd; first by rewrite inE.
-    move=> H1/=.
-    rewrite eqxx/=.
-    rewrite ffunE matching_V; last first.
-      rewrite fsubsetU//=; apply/orP; right.
-      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[??]; subst.
-      apply/fsubset_trans/fresh_rules_sub.
-      by rewrite fset0U -fsetUA fsetUC -fsetUA fsubsetUl.
-      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[??]; subst.
-      rewrite fsubsetU//=; apply/orP; right.
-      apply/fsubset_trans/fresh_rules_sub.
-      by rewrite -fsetUA fsubsetUl.
-    move=>/=.
-    rewrite no_once_select//=; last first.
-      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
-      by apply: no_once_fresh.
-    rewrite/vars_sigma/= /varsU_rule/varsU_rhead/varsU_rprem/= fset0U/=.
-    set S := (_ `|` _).
-    move=> [???]; subst.
-    rewrite inE in H1.
-    clear H1.
-    have:= run_or0 H3 => ?; subst.
-    have:= run_ko_ONK H3.
-    case: r' H3 => [[s1 t1]|] H3; last by eauto.
+    case: r' H3 => r'; auto => H3.
     have /= := run_same_structure H3.
-    case: t1 H3 => [[]|]//=; last by eauto.
-    move=> l sm r H3 /andP[/eqP?/eqP?]; subst.
-    move=> /(_ (Some (s1, Some r)) erefl).
-    move=> [b] Hz.
-    have {}Hz := ex_intro _ _ Hz.
-    have {}Hz := ex_intro (fun x => exists y, runT _ _ _ _ _ _ x _) _ Hz.
-    have:= is_det_tail_cut Hz.
-    by move=> [|[]]//.
+    case: r' H3 => //=sx []//=; last eauto.
+    move=> []// L sR R H3/andP[/eqP?/eqP?]; subst.
+    have:= run_ko_ONK H3.
+    move=> /(_ (Some (sx, Some R)) erefl) [b'] Hz.
+    set P := {| rules := _; sig := _|} in Hz.
+    set T := TA _ in Hz.
+    have {}Hz : runT' P Y sR (And T [:: cut] (TA cut)) (Some (sx, Some R)).
+      do 2 eexists; apply: Hz.
+    by have [//|[s'[]]] := is_det_tail_cut Hz.
   Qed.
 End once.
