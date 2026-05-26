@@ -1408,7 +1408,7 @@ Proof.
   by apply: unif_pair_good_set; subst.
 Qed.
 
-Lemma unif_match123 fv1 fv2 s1 s2 q h1 h2:
+Lemma matching_unify_trans fv1 fv2 s1 s2 q h1 h2:
   acyclic_sigma s1 -> acyclic_sigma s2 ->
   [disjoint vars h1 & vars h2] ->
   [disjoint domf s1 & vars_tm q] -> 
@@ -1455,7 +1455,7 @@ Proof.
   have A := acyclic_sigma0.
   have D := fdisjoint0X.
   have Dx : forall x, [disjoint vars_sigma ctx.empty & x] by move=> ?; rewrite vars_sigma0.
-  by apply: unif_match123 M1 M2 => //; rewrite deref_empty.
+  by apply: matching_unify_trans M1 M2 => //; rewrite deref_empty.
 Qed.
 
 Notation injective := (@injectiveb _ V).
