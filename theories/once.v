@@ -167,17 +167,75 @@ Section once.
     inversion Hx; clear Hx; subst => //.
     move: H1; rewrite/=/bc [get_tm_hd _]/=.
     case (boolP (acyclic_sigma s)) => AS; last first => //=.
-      move=> [???]; subst.
-      by inversion H3; auto.
+      by move=> [???]; subst; inversion H3; auto.
     rewrite !FmapE.fmapE !inE eqxx/=.
     case X: fresh_rules => [fvx' rs'].
     rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
     rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
-    rewrite ffunE/= eqxx/=.
-    (* case M: matching => //=[sx|]. *)
     rewrite no_once_select; last first.
       move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
       by apply: no_once_fresh.
+    rewrite eqxx/=.
+    case M: obind => [s'|][???]; subst; last by inversion H3 => //; auto.
+    have ? := run_or0 H3; subst.
+    inversion H3 => //; subst.
+    have:= run_ko_ONK H3.
+
+    set X := match 
+    rewrite ffunE/= eqxx/= !fsetU0.
+    case M: matching => [s'|]//=[???]; subst; inversion H3; subst; clear H3 => //; last by left.
+    move: H2; rewrite /step /bc [get_tm_hd _]/=.
+    case (boolP (acyclic_sigma s')) => AS'; last first => //.
+      by move=> [???]; subst; inversion H5; auto.
+    case Y: get_tm_hd => [h|]; last first.
+      by move=> [???]; subst; inversion H5 => //; auto.
+    rewrite/=!FmapE.fmapE !inE orbF.
+    rewrite not_fnd//.
+    case Z: fresh_rules => [fvy' ry']//.
+    rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
+    rewrite /= !(inE,FmapE.fmapE)/=.
+    move => -[???]; subst.
+    Search (runT _ _ _ _ (Or None _ _) _ _ _ -> _).
+
+    rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
+    rewrite no_once_select; last first.
+      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
+      by apply: no_once_fresh.
+    rewrite ffunE/= eqxx/= !fsetU0.
+    case M: matching => [s'|]//=[???]; subst; inversion H3; subst; clear H3 => //; last by left.
+    move: H2; rewrite /step /bc [get_tm_hd _]/=.
+    case (boolP (acyclic_sigma s')) => AS'; last first => //.
+      by move=> [???]; subst; inversion H5; auto.
+    case Y: get_tm_hd => [h|]; last first.
+      by move=> [???]; subst; inversion H5 => //; auto.
+    rewrite/=!FmapE.fmapE !inE orbF.
+    rewrite not_fnd//=; case: eqP => ho; subst.
+
+    rewrite/fresh_rules/= fset0U codomf0/= !fsetU0. /rename cat0f.
+    rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
+    rewrite !push/=.
+    rewrite !push/=.
+
+    
+    
+
+    rewrite !FmapE.fmapE. !inE eqxx/=.
+    case X: fresh_rules => [fvx' rs'].
+    rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
+    rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
+    rewrite no_once_select; last first.
+      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
+      by apply: no_once_fresh.
+    rewrite ffunE/= eqxx/= !fsetU0.
+    case M: matching => [s'|]//=[???]; subst; inversion H3; subst; clear H3 => //; last by left.
+    move: H2; rewrite/=/bc [get_tm_hd _]/=.
+
+    rewrite.
+
+
+
+    inversion
+    move=> [???]; subst.
     rewrite /matching/montanari_deref/= deref2//.
     rewrite not_fnd; last first.
       Search fresh.

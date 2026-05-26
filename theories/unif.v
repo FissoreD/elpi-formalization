@@ -1038,6 +1038,24 @@ Proof.
   by rewrite disjoint_L_cons/= !acyclic_deref_disjoint//disjoint_L0.
 Qed.
 
+Corollary mathingX fv t1 t2 s s' : acyclic_sigma s -> vars_tm (deref s t2) `<=` fv ->
+  matching fv t1 t2 s = Some s' -> forall v,
+    v \in vars_tm (deref s t2) -> s.[? v] = s'.[? v].
+Proof.
+  move=> A S M; have H:= matchingP_deref A S M.
+  move=> v vt.
+  have D : disjoint_L s [:: (deref s t1, deref s t2)].
+    rewrite disjoint_L_cons disjoint_L0/= !acyclic_deref_disjoint//.
+  have vs : v \notin s.
+    by have:= fdisjointP_sym (acyclic_deref_disjoint t2 A) _ vt.
+  rewrite not_fnd//.
+  move: vt; rewrite -H => Hx.
+  rewrite not_fnd//.
+  apply: fdisjointP Hx; rewrite fdisjoint_sym.
+  rewrite acyclic_deref_disjoint//.
+  by apply: matching_acyclic M.
+Qed.
+
 Lemma deref_vars_in v x t (vx : v \in domf x): v \in vars_tm x.[vx] -> v \in vars t -> v \in vars (deref x t).
 Proof.
   move=> Hx; elim: t => //=[v'|f Hf a Ha]; rewrite !inE.
