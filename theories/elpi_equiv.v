@@ -12,17 +12,17 @@ Section NurEqiv.
     vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
     valid_tree A ->
       runT p fv s1 A r b fv' -> 
-        let xs := t2l A s1 [::] in
+        let xs := tree_to_stack A s1 [::] in
         match r with
         | Zero => runS p fv xs None
         | One s' => runS p fv xs (Some (s', [::]))
-        | Many s' t => runS p fv xs (Some (s', t2l t s1 [::]))
+        | Many s' t => runS p fv xs (Some (s', tree_to_stack t s1 [::]))
         end.
   Proof.
     move=> +++H.
     elim_run H => vtA vts1 vA.
-    + by rewrite (success_t2l s1)//= NN; apply: StopS.
-    + by rewrite (success_t2l s1)//= NS; apply: StopS.
+    + by rewrite (success_tree_to_stack s1)//= NN; apply: StopS.
+    + by rewrite (success_tree_to_stack s1)//= NS; apply: StopS.
     + have [fvB fvs] := vars_tree_step_sub_flow vtA vts1 eA.
       have /=vB:= (valid_tree_step vA eA). 
       have {IH}/=:= IH fvB fvs vB; subst.
@@ -33,7 +33,7 @@ Section NurEqiv.
         have ?:= tree_fv_step_cut eA; subst.
         by case: r rB IH => > rB; apply: CutS => //=.
       have fA := step_not_failed eA notF.
-      have [s[x[xs +]]] := failed_t2l vA fA s1 [::].
+      have [s[x[xs +]]] := failed_tree_to_stack vA fA s1 [::].
       move=> H; rewrite H/=.
       case: x H => [|g gs]/= H.
         have [] := s2l_empty_hd_success vA (step_not_failed eA notF) H.
@@ -44,7 +44,7 @@ Section NurEqiv.
         move=> [??]; subst.
         case X: bc => /=[fv3 rules].
         rewrite !cats0 => H1.
-        have {}H1 : t2l B s1 [::] =
+        have {}H1 : tree_to_stack B s1 [::] =
             match rules with
             | [::]%SEQ => [::]
             | (w :: ws)%SEQ => (w.1, save_gs xs gs w.2) :: save_as xs gs ws
@@ -64,9 +64,9 @@ Section NurEqiv.
     + have vB := valid_tree_prune vA nA.
       have {}fvP := vars_tree_prune_sub_flow vtA nA.
       have {IH} /= := IH fvP vts1 vB.
-      by rewrite (pruneF_t2l vA fA nA).
+      by rewrite (pruneF_tree_to_stack vA fA nA).
     + move=>/=.
-      rewrite (failed_prune_none_t2l _ _ nA)//.
+      rewrite (failed_prune_none_tree_to_stack _ _ nA)//.
         by constructor.
       by apply/prune_None.
   Qed.
@@ -76,12 +76,12 @@ Lemma elpi_to_tree_no_op v0 p a r s0:
   size a != 0 ->
   let P t0 := 
     runS p v0 a r -> 
-    valid_tree t0 -> t2l t0 s0 [::] = a ->  
+    valid_tree t0 -> tree_to_stack t0 s0 [::] = a ->  
     exists b v1,
     if r is Some (s1, a') then 
       match a' with
       | [::] => runT p v0 s0 t0 (One s1) b v1
-      | _ => exists t1, runT p v0 s0 t0 (Many s1 t1) b v1 /\ t2l t1 s0 [::] = a'
+      | _ => exists t1, runT p v0 s0 t0 (Many s1 t1) b v1 /\ tree_to_stack t1 s0 [::] = a'
       end
     else runT p v0 s0 t0 Zero b v1 
   in
@@ -91,10 +91,10 @@ Proof.
   move=> sA P A R vA H.
   case fA: (failed A); last by auto.
   case nA: (prune false A) => [A'|]; last first.
-    by rewrite (failed_prune_none_t2l vA fA nA) in H; subst.
+    by rewrite (failed_prune_none_tree_to_stack vA fA nA) in H; subst.
   have /= fA' := prune_Some nA.
   have /= vA' := (valid_tree_prune vA nA).
-  rewrite (pruneF_t2l vA fA nA) in H.
+  rewrite (pruneF_tree_to_stack vA fA nA) in H.
   have [b[v1 {}P]] := P A' fA' R vA' H.
   case: r P R => [[s1 a0]|H1 H2]; subst.
     case: a0.
@@ -107,12 +107,12 @@ Qed.
 
 Lemma elpi_to_tree_aux p v0 a r : 
   runS p v0 a r -> 
-  forall s0 t0, valid_tree t0 -> t2l t0 s0 [::] = a ->  
+  forall s0 t0, valid_tree t0 -> tree_to_stack t0 s0 [::] = a ->  
   exists b v1,
   match r with
   | None => runT p v0 s0 t0 Zero b v1
   | Some (s, [::]) => runT p v0 s0 t0 (One s) b v1
-  | Some (s, a') => exists t1, runT p v0 s0 t0 (Many s t1) b v1 /\ t2l t1 s0 [::] = a'
+  | Some (s, a') => exists t1, runT p v0 s0 t0 (Many s t1) b v1 /\ tree_to_stack t1 s0 [::] = a'
   end.
 Proof.
   elim; clear.
@@ -122,7 +122,7 @@ Proof.
     have [skA ?]:= s2l_empty_hd_success vA' fA' H1; subst.    
     have:=@s2l_prune_tl _ s1 nilA vA' skA; rewrite H1 behead_cons => ?; subst.
     case P: prune => [A''|]/=; last by repeat eexists; apply: StopOT.
-    have [sz[k[ks Hk]]]/= := failed_t2l (valid_tree_prune vA' P) (prune_Some P) s1 [::].
+    have [sz[k[ks Hk]]]/= := failed_tree_to_stack (valid_tree_prune vA' P) (prune_Some P) s1 [::].
     by rewrite Hk; repeat eexists; first apply: StopMT P => //.
   - move=> s1 a ca r gl fv ELPI IH s A vA H.
     have H1 := elpi_to_tree_no_op _ _ (CutS _ _) vA H.
@@ -159,7 +159,7 @@ Proof.
       repeat eexists; [|eassumption]; by apply: StepT H2 IH.
     move=> IH.
     by repeat eexists; apply: StepT H2 IH.
-  + by move=> > vT H; repeat eexists; apply/FailT/t2l_nil_na/H.
+  + by move=> > vT H; repeat eexists; apply/FailT/tree_to_stack_nil_na/H.
 Qed.
 
 (*SNIPT: runt1 *)
@@ -174,9 +174,9 @@ Theorem runT_to_runS:
       let r' := match r with
       | Zero => None
       | One s' => Some (s', [::])
-      | Many s' t' => Some (s', t2l t' s [::]) 
+      | Many s' t' => Some (s', tree_to_stack t' s [::]) 
       end in
-        runS p v (t2l t s [::]) r'.
+        runS p v (tree_to_stack t s [::]) r'.
 (*ENDSNIPT: tree_to_elpi *)
 Proof. 
   move=> /= p t0 s0 r/= vt [b [fv H1]].
@@ -187,12 +187,12 @@ Qed.
 (*SNIPT: elpi_to_tree *)
 Theorem runS_to_runT:
   forall p v a r, runS p v a r -> 
-    forall s t, valid_tree t -> t2l t s [::] = a ->
+    forall s t, valid_tree t -> tree_to_stack t s [::] = a ->
       match r with
       | None => runT' p v s t Zero
       | Some (s', [::]) => runT' p v s t (One s')
       | Some (s', a') => 
-        exists t', runT' p v s t (Many s' t') /\ t2l t' s [::] = a'
+        exists t', runT' p v s t (Many s' t') /\ tree_to_stack t' s [::] = a'
       end.
 (*ENDSNIPT: elpi_to_tree *)
 Proof.

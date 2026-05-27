@@ -36,7 +36,7 @@ with clean_ca (ats: alts) : alts :=
   end.
 
 Definition tester l r :=
-  clean_ca (t2l l empty nilC) = r.
+  clean_ca (tree_to_stack l empty nilC) = r.
 
 Goal forall B B0,
 let f x := (TA (call x)) in
@@ -92,7 +92,7 @@ Definition g x := ([::call x]%SEQ).
       [::cut nilC ; call p C]]%SEQ).
 Proof.
   move=> A B C p/=.
-  rewrite/t2l//.
+  rewrite/tree_to_stack//.
 Qed. *)
 
 Goal forall A B C0 C,
@@ -119,7 +119,7 @@ Goal forall A B0,
   tester (And (Or (Some OK) empty (f A)) (g B0) OK) (of_alt [::[::]; [::callN A; callN B0]]%SEQ).
 Proof.
   move=> A B0 p.
-  rewrite/t2l//=.
+  rewrite/tree_to_stack//=.
 Qed.
 
 Goal forall A B0,
@@ -130,7 +130,7 @@ Goal forall A B0,
   (of_alt [::[::callN A; callN B0]]%SEQ).
 Proof.
   move=> A B0 p.
-  rewrite/t2l//=.
+  rewrite/tree_to_stack//=.
 Qed.
 
 Goal forall x y z w a, 
@@ -157,7 +157,7 @@ Goal forall z w a,
     (of_alt [:: [:: callN z]; [:: callN w]]%SEQ).
 Proof.
   move=>p z w a.
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   by [].
 Qed.
 
@@ -183,7 +183,7 @@ Goal forall a b,
       (TA (call b)))
   (of_alt [:: [:: (cut, (of_alt[:: [:: callN b]]))]; [:: callN a]; [:: callN b]]%SEQ).
 Proof.
-  move=> a b; rewrite/t2l/=.
+  move=> a b; rewrite/tree_to_stack/=.
   by []. Qed.
 
 (* Goal forall A1 A2 s  C0 B,
@@ -192,7 +192,7 @@ Proof.
   .
 Proof.
   move=> A1 A2 s  C0 B p.
-  rewrite/t2l.
+  rewrite/tree_to_stack.
   by [].
 Qed. *)
 
@@ -202,7 +202,7 @@ Qed. *)
   (of_alt[:: [:: callN A; call p C]]%SEQ).
 Proof.
   move=> s A B C p.
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   by [].
 Qed. *)
 
@@ -223,7 +223,7 @@ Goal forall b0 a b c,
   (of_alt[:: [:: callN c; (cut, (of_alt[:: [:: callN b]]))]; [:: callN a]; [:: callN b]]%SEQ).
 Proof.
   move=> b0 p a b .
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   rewrite//=.
 Qed.
 
@@ -234,7 +234,7 @@ Goal forall B C Res,
     (of_alt[::[::(cut, (of_alt[::[:: callN B; callN Res]]))]; [::callN C]; [:: callN B; callN Res]]%SEQ).
 Proof.
   move=> B C Res p.
-  rewrite /t2l/=.
+  rewrite /tree_to_stack/=.
   move=>//.
 Qed.
 
@@ -245,7 +245,7 @@ Goal forall B C Res Reempty,
     (of_alt[::[::(cut, nilC); callN C]; [:: callN B; callN Res]]%SEQ).
 Proof.
   move=> B C Res Reempty p/=.
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   f_equal => //.
 Qed.
 
@@ -259,7 +259,7 @@ Goal forall A B C C0,
     [:: callN A; callN C]]%SEQ).
 Proof.
   move=> A B C C0 p.
-  rewrite /t2l/=.
+  rewrite /tree_to_stack/=.
   repeat f_equal => //.
 Qed.
 
@@ -295,7 +295,7 @@ Goal forall B C D E,
       [:: callN B; callN C]]%SEQ).
 Proof.
   move=> B C D E p/=.
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   move=>//.
 Qed.
 
@@ -312,7 +312,7 @@ Goal forall A B C,
       [:: callN C] ]%SEQ).
 Proof.
   move=> A B C p/=.
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   move=>//=.
 Qed.
 
@@ -329,7 +329,7 @@ Goal forall A B C,
       [:: callN C] ]%SEQ).
 Proof.
   move=> A B C p/=.
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   move=>//=.
 Qed.
 
@@ -347,7 +347,7 @@ Goal forall A B C D0 D,
       [:: callN C; callN D0] ]%SEQ).
 Proof.
   move=> A B C D0 D p/=.
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   f_equal => //.
 Qed.
 
@@ -365,7 +365,7 @@ Goal forall X A B C D0 D,
       [:: callN C; callN D0] ]%SEQ).
 Proof.
   move=> X A B C D0 D p/=.
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   f_equal => //.
 Qed.
 
@@ -380,7 +380,7 @@ Goal forall B0 A B C D,
       [:: callN A; callN B]; [:: callN D]]%SEQ).
 Proof.
   move=> B0 A B C D p/=.
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   rewrite//.
 Qed.
 
@@ -398,14 +398,14 @@ Goal forall A B C,
     ]%SEQ).
 Proof.
   move=> p A B C/=.
-  rewrite/t2l/=.
+  rewrite/tree_to_stack/=.
   rewrite//.
 Qed.
 Goal forall p l,
   let s := ((Or (Some (Or None empty (TA cut))) empty OK)) in
   let bt := of_alt([::]%SEQ :: l) in
-  t2l s empty (of_alt l) = of_alt[:: [:: (cut, bt)]; [::]]%SEQ /\ 
-    t2l (odflt KO (prune true (step u p fset0 empty s).2)) empty (of_alt l) ++ (of_alt l) = bt.
+  tree_to_stack s empty (of_alt l) = of_alt[:: [:: (cut, bt)]; [::]]%SEQ /\ 
+    tree_to_stack (odflt KO (prune true (step u p fset0 empty s).2)) empty (of_alt l) ++ (of_alt l) = bt.
 Proof.
   move=>//= _ l.
   rewrite cat_cons cat0s//.

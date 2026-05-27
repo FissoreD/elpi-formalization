@@ -99,16 +99,16 @@ Section NurProp.
     move=> [[|t] ca] gs /=; rewrite ?add_ca_deepG_empty1 ?add_ca_deep_empty1 ?cats0//.
   Qed.
 
-  Section t2l_base.
+  Section tree_to_stack_base.
 
-    Lemma t2l_big_and r1 s l: 
-      t2l (big_and r1) s l = (s, a2g r1) :: nilC.
+    Lemma tree_to_stack_big_and r1 s l: 
+      tree_to_stack (big_and r1) s l = (s, a2g r1) :: nilC.
     Proof.
       case: r1 => //=+l0. 
       elim: l0 => //= t xs H x.
       rewrite ?cat0s H/= drop0 cats0 map_cons /catl cat_cons cat0s//.
     Qed.
-  End t2l_base.
+  End tree_to_stack_base.
 
   Lemma add_ca_deep_cat l SA SB:
     add_ca_deep l (SA ++ SB) = add_ca_deep l SA ++ add_ca_deep l SB.
@@ -124,22 +124,22 @@ Section NurProp.
     case: x H1 => //= -[|?] []//.
   Qed.
 
-  Lemma base_or_prune_t2l {X Y B s bt}: 
-    prune false (big_or X Y) = Some B -> t2l (big_or X Y) s bt = t2l B s bt.
+  Lemma base_or_prune_tree_to_stack {X Y B s bt}: 
+    prune false (big_or X Y) = Some B -> tree_to_stack (big_or X Y) s bt = tree_to_stack B s bt.
   Proof.
     elim: Y X bt => //=.
     - by move=> X bt; rewrite prune_big_and => -[<-]//.
     - move=> []//= sr r rs _ X bt; rewrite prune_big_and => -[<-]//.
   Qed.
 
-  Lemma success_t2l {A s m} s1:
+  Lemma success_tree_to_stack {A s m} s1:
     valid_tree A -> (*we need valid tree since in s2l we assume B0 to have length <= 1*)
     success A ->
-      t2l A s m = (next_subst s A, nilC) :: (t2l (odflt KO (prune true A)) s1 m).
+      tree_to_stack A s m = (next_subst s A, nilC) :: (tree_to_stack (odflt KO (prune true A)) s1 m).
   Proof.
     elim_tree A m s s1 => /=.
     - move=> /andP[vA bB] sA.
-      have {HB}HA //=:= [elaborate HA (t2l B sm nilC) s s1 vA sA].
+      have {HB}HA //=:= [elaborate HA (tree_to_stack B sm nilC) s s1 vA sA].
       rewrite HA//=; f_equal.
       case nA: prune => //=; rewrite seq2altsK.
       move/orP: bB => [/eqP->|/B.spec_base_or[r0 [rs ?]]]//; subst.
@@ -156,58 +156,58 @@ Section NurProp.
       rewrite catl0a.
       case W: prune => [A'|]//=.
       rewrite cat_cons cat0s; f_equal.
-      case: t2l => //= -[s2 b] a. 
-      by rewrite t2l_big_and cat_cons cat0s//.
+      case: tree_to_stack => //= -[s2 b] a. 
+      by rewrite tree_to_stack_big_and cat_cons cat0s//.
   Qed.
 
-  Definition t2l_cons A :=
-    forall m l, exists s x xs, t2l A m l = (s, x) :: xs.
+  Definition tree_to_stack_cons A :=
+    forall m l, exists s x xs, tree_to_stack A m l = (s, x) :: xs.
 
   Section shape.
     Lemma s2l_size {A s1 l1} s2 l2: 
-      size (t2l A s1 l1) = size (t2l A s2 l2).
+      size (tree_to_stack A s1 l1) = size (tree_to_stack A s2 l2).
     Proof.
       elim_tree A s1 l1 s2 l2 => /=;
       only 1,2: by rewrite !size_add_ca_deep//= !size_cat//=; f_equal; auto.
       have:= HA s1 l1 s2 l2.
-      do 2 case: (t2l A) => //=.
+      do 2 case: (tree_to_stack A) => //=.
       move=> [s x] xs [s3 y] ys; rewrite !size_cons => -[]H.
       rewrite !size_cat !size_map !size_add_deep H; f_equal.
       by apply: HB.
     Qed.
 
-    Lemma s2l_empty {A s1 l1 s2 l2}: t2l A s1 l1 = nilC -> t2l A s2 l2 = nilC.
+    Lemma s2l_empty {A s1 l1 s2 l2}: tree_to_stack A s1 l1 = nilC -> tree_to_stack A s2 l2 = nilC.
     Proof.
       move=> H; have:= f_equal size H => /(_ _ IsList_alts).
-      rewrite (s2l_size s2 l2); case: t2l => //.
+      rewrite (s2l_size s2 l2); case: tree_to_stack => //.
     Qed.
 
     Lemma s2l_cons {A s1 l x xs}:
-      t2l A s1 l = x :: xs -> t2l_cons A.
+      tree_to_stack A s1 l = x :: xs -> tree_to_stack_cons A.
     Proof.
       move=> H s2 l2.
       have:= f_equal size H => /(_ _ IsList_alts).
       rewrite (s2l_size s2 l2).
-      case: t2l => //-[]; by do 3 eexists.
+      case: tree_to_stack => //-[]; by do 3 eexists.
     Qed.
 
   End shape.
 
-  Lemma failed_t2l {A}:
-    valid_tree A -> failed A = false -> t2l_cons A.
+  Lemma failed_tree_to_stack {A}:
+    valid_tree A -> failed A = false -> tree_to_stack_cons A.
   Proof.
-    rewrite/t2l_cons.
+    rewrite/tree_to_stack_cons.
     elim_tree A; try by repeat eexists.
     - move=> /=/andP[vA bB] fA m l.
-      by have [s2 [x[xs ->]]] := HA vA fA m (t2l B sm [::]); repeat eexists.
+      by have [s2 [x[xs ->]]] := HA vA fA m (tree_to_stack B sm [::]); repeat eexists.
     - move=> /=vB /[!failed_or_None] fB _ l.
       by have [s2 [x[xs ->]]] := HB vB fB sm [::]; repeat eexists.
     - move=> /=/andP[vA]++ s1 l.
       rewrite failed_and.
       case: ifP => /=[sA vB|sA]/=.
         rewrite success_failed//==>fB.
-        rewrite/t2l_cons/=.
-        have X := success_t2l empty vA sA.
+        rewrite/tree_to_stack_cons/=.
+        have X := success_tree_to_stack empty vA sA.
         rewrite X/=.
         have [s2 [x[xs {}HB]]]:= HB vB fB s1 l.
         set Y := map (catr _) _.
@@ -215,20 +215,20 @@ Section NurProp.
         by do 3 eexists.
       move=> /eqP ->{B HB}; rewrite orbF => fA.
       have [s2 [x[xs ->]]]:= HA vA fA s1 l => /=.
-      rewrite t2l_big_and cat_cons.
+      rewrite tree_to_stack_big_and cat_cons.
       by repeat eexists.
   Qed.
 
-  Lemma step_t2l_cons fv s A r:
-    valid_tree A -> step u p fv s A = r -> ~ (is_fl r.1.2) -> t2l_cons A.
-  Proof. case: r => [[?[]]B]//vA H/= _; apply: failed_t2l vA (step_not_failed H notF). Qed.
+  Lemma step_tree_to_stack_cons fv s A r:
+    valid_tree A -> step u p fv s A = r -> ~ (is_fl r.1.2) -> tree_to_stack_cons A.
+  Proof. case: r => [[?[]]B]//vA H/= _; apply: failed_tree_to_stack vA (step_not_failed H notF). Qed.
 
 
   Lemma step_failure_prune_none_empty A fv fv' s1 s3 E l b:
     valid_tree A ->
       step u p fv s1 A = (fv', Failed, E) ->
         prune b E = None ->
-          t2l A s3 l = nilC.
+          tree_to_stack A s3 l = nilC.
   Proof.
     elim_tree A fv fv' s1 s3 E l b => /=.
     - by case: t => [|c]//=; rewrite push//.
@@ -251,7 +251,7 @@ Section NurProp.
         rewrite success_failed//sA.
         case nB': prune => [[]|]//.
         case X: prune => //= _.
-        rewrite (success_t2l empty)//= catl0a.
+        rewrite (success_tree_to_stack empty)//= catl0a.
         by rewrite (HB _ _ _ _ _ _ _ vB eB nB')// X.
       case eA: step => //[[? []]A']//.
       have [[??] fA]:= step_failed eA; subst.
@@ -295,20 +295,20 @@ Section NurProp.
 
   Lemma s2l_big_or k s {b bs ca gs}:
     (s, save_gs ca gs b) :: (save_as ca gs bs) =
-    map (catr gs) (t2l (Or (Some KO) s (big_or b bs)) k ca).
+    map (catr gs) (tree_to_stack (Or (Some KO) s (big_or b bs)) k ca).
   Proof. 
     move=>/=; clear k.
     rewrite cat0s.
     elim: bs s b ca gs => //=.
       move=> s b ca gs.
-      rewrite t2l_big_and/= map_cons; f_equal.
+      rewrite tree_to_stack_big_and/= map_cons; f_equal.
       rewrite /save_gs; f_equal.
       have:= empty_ca_atoms b.
       set X := (a2g _).
       rewrite/catr/= => /add_ca_deep_map_empty<-.
       by rewrite map_seq2goals seq_catr.
     move=> [s1 bo]/=rs IH s2 b ca gs/=.
-    rewrite add_ca_deep_empty1 add_ca_deep_cat map_cat t2l_big_and/=map_cons.
+    rewrite add_ca_deep_empty1 add_ca_deep_cat map_cat tree_to_stack_big_and/=map_cons.
     rewrite cat_cons cat0s; f_equal.
       rewrite -add_ca_deep_map_empty//=.
       by rewrite/catr/=/save_gs save_gs_a2g.
@@ -316,9 +316,9 @@ Section NurProp.
     apply: IH.
   Qed.
 
-  Lemma failed_prune_none_t2l {s A b}:
+  Lemma failed_prune_none_tree_to_stack {s A b}:
     valid_tree A -> failed A -> prune b A = None -> 
-      forall l, t2l A s l = nilC.
+      forall l, tree_to_stack A s l = nilC.
   Proof.
     elim_tree A s b => /=.
     - move=> /andP[vA bB] fA.
@@ -333,7 +333,7 @@ Section NurProp.
     - move=> /=/andP[vA]+++l.
       rewrite failed_and.
       case: ifP => /=[sA vB|sA].
-        rewrite (success_t2l empty)//=.
+        rewrite (success_tree_to_stack empty)//=.
         rewrite success_failed//= => fB.
         case X: prune => [[]|]//.
         rewrite /=(HB _ _ _ _ X)//.
@@ -344,11 +344,11 @@ Section NurProp.
       by rewrite (HA _ _ vA fA X)//.
   Qed.
 
-  (*SNIPT: pruneF_t2l *)
-  Lemma pruneF_t2l: 
-    forall t t' b, valid_tree t -> failed t -> 
-      prune b t = Some t' -> forall l s, t2l t s l = t2l t' s l.
-  (*ENDSNIPT: pruneF_t2l *)
+  (*SNIPT: pruneF_tree_to_stack *)
+  Lemma pruneF_tree_to_stack: 
+    forall t t' b, valid_tree t -> failed t -> prune b t = Some t' -> 
+      forall l s, tree_to_stack t s l = tree_to_stack t' s l.
+  (*ENDSNIPT: pruneF_tree_to_stack *)
   Proof.
     move=> A R b +++ l s3.
     elim_tree A s3 R l b => /=.
@@ -357,7 +357,7 @@ Section NurProp.
         move=>[?]/=; subst => /=.
         by rewrite (HA _ A' _ b)//.
       move/orP: bB => [/eqP->//|/spec_base_or[r[rs ?]]]; subst.
-      by rewrite prune_big_or => -[<-]/=; rewrite (failed_prune_none_t2l vA fA X) cat0s.
+      by rewrite prune_big_or => -[<-]/=; rewrite (failed_prune_none_tree_to_stack vA fA X) cat0s.
     - move=> vB /[!failed_or_None] fB.
       case X: prune => [D|]//[<-]/=.
       by rewrite (HB _ _ _ _ vB fB X)//.
@@ -369,10 +369,10 @@ Section NurProp.
           have{}HB := (HB _ _ _ _ vB fB X).
           by case add_deep => [|[]]//= s gs al; rewrite HB.
         case Y: prune => //=[A'][<-].
-        rewrite (success_t2l s3)//=.
-        rewrite (failed_prune_none_t2l _ _ X)//Y.
-        case: t2l => //=[[s2 x]xs].
-        by rewrite t2l_big_and//.
+        rewrite (success_tree_to_stack s3)//=.
+        rewrite (failed_prune_none_tree_to_stack _ _ X)//Y.
+        case: tree_to_stack => //=[[s2 x]xs].
+        by rewrite tree_to_stack_big_and//.
       rewrite orbF => /eqP->{B HB} fA.
       rewrite fA.
       case X: prune => //=[A'][<-].
@@ -457,8 +457,8 @@ Section NurProp.
       by apply: HA eA.
   Qed.
 
-  Lemma t2l_cutl {A s l}:
-    valid_tree A -> success A -> t2l (cutl A) s l = (next_subst s A, nilC) :: nilC.
+  Lemma tree_to_stack_cutl {A s l}:
+    valid_tree A -> success A -> tree_to_stack (cutl A) s l = (next_subst s A, nilC) :: nilC.
   Proof.
     elim_tree A s l => /=.
     - by move=> /andP[vA bB] sA; rewrite cats0 HA//.
@@ -471,8 +471,8 @@ Section NurProp.
   Lemma s2l_CutBrothers fv fv' s1 A R sA l1:
     valid_tree A -> step u p fv s1 A = (fv', CutBrothers, R) -> 
       exists x tl, 
-        ((t2l A sA l1 = (next_subst sA A, (cut, [::]) :: x) :: tl) /\
-          (forall l sB, (t2l R sB l = (next_subst sB R, x) :: nilC)) /\ 
+        ((tree_to_stack A sA l1 = (next_subst sA A, (cut, [::]) :: x) :: tl) /\
+          (forall l sB, (tree_to_stack R sB l = (next_subst sB R, x) :: nilC)) /\ 
             (empty_caG x)).
   Proof.
     elim_tree A sA s1 R l1 fv fv' => /=.
@@ -483,7 +483,7 @@ Section NurProp.
     - move=> /=/andP[vA].
       case: ifP => [sAx vB|sAx/eqP->].
         case eB: step => //[[?[]]B']// [?<-]/=; subst.
-        rewrite (success_t2l empty vA sAx)/=.
+        rewrite (success_tree_to_stack empty vA sAx)/=.
         set X:= map (catr _) _.
         have [x[tl [H [H1 H4]]]] := HB (next_subst sA A) _ _ (X++l1) _ _ vB eB.
         rewrite next_subst_and H//=sAx.
@@ -491,43 +491,43 @@ Section NurProp.
           by rewrite catl0a//.
         rewrite H4; split => //.
         move=> //l sB.
-        rewrite t2l_cutl//= next_subst_and.
+        rewrite tree_to_stack_cutl//= next_subst_and.
         by rewrite success_cut sAx ges_subst_cutl//H1//catl0a.
       case_step_tag eA A' => //=-[??]; subst.
       have {HA HB}[x [tl [H3 [H4 H5]]]] := HA sA _ _ l1 _ _ vA eA.
       rewrite /= next_subst_and_big_and.
       do 2 eexists; repeat split => /=; subst.
-      - rewrite H3/= t2l_big_and/= take0 drop0 !cat_cons/= cats0// next_subst_and_big_and//.
-      - by move=> l sB/=; rewrite next_subst_and_big_and H4/= t2l_big_and cats0 empty_caG_add_deepG//empty_caG_add_deepG//.
+      - rewrite H3/= tree_to_stack_big_and/= take0 drop0 !cat_cons/= cats0// next_subst_and_big_and//.
+      - by move=> l sB/=; rewrite next_subst_and_big_and H4/= tree_to_stack_big_and cats0 empty_caG_add_deepG//empty_caG_add_deepG//.
       - rewrite !empty_caG_add_deepG///empty_caG all_cat.
         apply/andP; split => //; apply: empty_ca_atoms.
   Qed.
 
   Lemma s2l_empty_hdF {A s bt s2 xs}:
     valid_tree A ->
-    success A = false -> failed A = false -> t2l A s bt = (s2, nilC) :: xs -> False.
+    success A = false -> failed A = false -> tree_to_stack A s bt = (s2, nilC) :: xs -> False.
   Proof.
     elim_tree A s bt s2 xs => /=.
     - move=> /andP[vA bB] sA fA.
-      set SB := t2l B _ _.
-      have [sy[y[ys H]]] := failed_t2l vA fA s SB.
+      set SB := tree_to_stack B _ _.
+      have [sy[y[ys H]]] := failed_tree_to_stack vA fA s SB.
       rewrite H; case: y H => //= H [??]; subst.
       by apply: HA H.
     - move=> vB /[!success_or_None] /[!failed_or_None] sB fB.
-      case X: t2l => [|[z [|??]] ys]//=[??]; subst.
+      case X: tree_to_stack => [|[z [|??]] ys]//=[??]; subst.
       by apply: HB X.
     - move => /andP[vA] /[!success_and] /[!failed_and].
       case fA: failed => //=.
       case: ifP => //=[sA vB sB fB|sA /eqP->{B HB} _I _I1].
-        rewrite (success_t2l empty) => //=.
+        rewrite (success_tree_to_stack empty) => //=.
         rewrite catl0a.
         set ml := map _ _.
-        have [s2'[y[ys H1]]] := [elaborate failed_t2l vB fB (next_subst s A) (ml ++ bt)].
+        have [s2'[y[ys H1]]] := [elaborate failed_tree_to_stack vB fB (next_subst s A) (ml ++ bt)].
         rewrite H1/=.
         case: y H1 => //= H1 [??]; subst.
         by apply: HB H1.
-      have [s2'[y[ys H]]] := failed_t2l vA fA s bt.
-      rewrite H/= t2l_big_and cat_cons cat0s => -[?+?]; subst.
+      have [s2'[y[ys H]]] := failed_tree_to_stack vA fA s bt.
+      rewrite H/= tree_to_stack_big_and cat_cons cat0s => -[?+?]; subst.
       case: y H => [H1 ?|[]] //=.
       by apply/HA/H1.
   Qed.
@@ -552,29 +552,29 @@ Section NurProp.
 
   Lemma s2l_empty_hd_success {A s bt s2 xs}:
     valid_tree A -> failed A = false ->
-    t2l A s bt = (s2, nilC) :: xs -> success A /\ (s2 = next_subst s A).
+    tree_to_stack A s bt = (s2, nilC) :: xs -> success A /\ (s2 = next_subst s A).
   Proof.
     elim_tree A s bt s2 xs => /=.
     - by move=> _ _ [<-].
     - move=> /andP[vA bB] fA.
-      set SB := t2l B _ _.
-      have [sy[y[ys H]]] := failed_t2l (vA) (fA) s SB.
+      set SB := tree_to_stack B _ _.
+      have [sy[y[ys H]]] := failed_tree_to_stack (vA) (fA) s SB.
       rewrite H; case: y H => //= H [??]; subst.
       by apply: HA H.
     - move=> vB /[!success_or_None]/[!next_subst_or_None]/[!failed_or_None] fB.
-      case X: t2l => [|[z [|??]] ys]//=[??]; subst.
+      case X: tree_to_stack => [|[z [|??]] ys]//=[??]; subst.
       by apply: HB X.
     - move => /andP[vA]/[!failed_and]/[!success_and]/[!next_subst_and].
       case fA: failed => //=.
       case: ifP => //=[sA vB fB|sA /eqP-> _ {B HB}].
-        rewrite (success_t2l empty)//=catl0a.
+        rewrite (success_tree_to_stack empty)//=catl0a.
         set ml := map _ _.
-        have [s2'[y[ys H1]]] := [elaborate failed_t2l vB (fB) (next_subst s A) (ml ++ bt)].
+        have [s2'[y[ys H1]]] := [elaborate failed_tree_to_stack vB (fB) (next_subst s A) (ml ++ bt)].
         rewrite H1/=.
         case: y H1 => //= H1 [??]; subst.
         by apply: HB H1.
-      have [s2'[y[ys /[dup] H ->]]]/= := failed_t2l vA fA s bt.
-      rewrite t2l_big_and => -[?+?]; subst.
+      have [s2'[y[ys /[dup] H ->]]]/= := failed_tree_to_stack vA fA s bt.
+      rewrite tree_to_stack_big_and => -[?+?]; subst.
       case: y H => [H?|[]] //=; subst.
       exfalso.
       apply: s2l_empty_hdF vA sA fA H.
@@ -582,8 +582,8 @@ Section NurProp.
 
   Lemma xxx fv A l ca tl alts r s1 s2 l1:
     valid_tree A ->
-    t2l A s1 l = ((s2, ((cut, ca) :: tl)) :: alts) ->
-      step u p fv s1 A = r -> size(t2l r.2 s1 l1) <> 0.
+    tree_to_stack A s1 l = ((s2, ((cut, ca) :: tl)) :: alts) ->
+      step u p fv s1 A = r -> size(tree_to_stack r.2 s1 l1) <> 0.
   Proof.
     move=>++<-; clear r.
     move: l l1 ca tl alts s1 s2 fv.
@@ -593,8 +593,8 @@ Section NurProp.
       have vB: valid_tree B.
         by move/orP: bB => [/eqP->//|/spec_base_or[?[?<-]]]; apply: valid_tree_big_or.
       have:= HB [::] _ _ _ _ _ _ fv vB.
-      set SB := t2l B _ _.
-      case SA: t2l =>  [|[sx[|[]a ca' gs tl']]]//=.
+      set SB := tree_to_stack B _ _.
+      case SA: tree_to_stack =>  [|[sx[|[]a ca' gs tl']]]//=.
         case SB': SB =>  [|[sx[|[]a ca' gs tl']]]//=.
         move=>+[????]; subst.
         move=> /(_ _ _ _ _ sm); rewrite-/SB SB'.
@@ -612,27 +612,27 @@ Section NurProp.
       rewrite size_add_ca_deep size_cat -/SB ?SB'; case X: size => //[n].
       by rewrite (s2l_size s1 SB) X//.
     - rewrite !push => vB.
-      case SB: t2l => [|[sx[|[]ca' gs tl']]]//=.
+      case SB: tree_to_stack => [|[sx[|[]ca' gs tl']]]//=.
       move=>[?????]; subst.
-      set X:= t2l _ _ _ .
+      set X:= tree_to_stack _ _ _ .
       case F: X => //=[|[]]//=.
       have:= [elaborate (HB _ nilC _ _ _ _ _ fv vB SB)].
       rewrite -/X F//.
     - move=> /andP[vA].
       rewrite !push.
       case: ifP => //=[sA vB|sA/eqP-> {B HB}].
-        rewrite (success_t2l empty)//.
-        set SA := t2l (odflt _ _) _ _ => /=; rewrite catl0a.
+        rewrite (success_tree_to_stack empty)//.
+        set SA := tree_to_stack (odflt _ _) _ _ => /=; rewrite catl0a.
         case: ifP => //.
           case eB: step => [[?[]]B']// _.
           set X:= map _ _.
           have [hd1[tl1[Hz [Hw Hy]]]] := s2l_CutBrothers  (next_subst s1 A) (X ++ l) vB eB.
           rewrite !Hz/= => -[????]; subst.
-          rewrite (success_t2l empty)?success_cut//?valid_tree_cut//=!Hw/=.
+          rewrite (success_tree_to_stack empty)?success_cut//?valid_tree_cut//=!Hw/=.
           rewrite size_cat catl0a size_cons//.
-        rewrite ((success_t2l empty) _ sA)//= size_cat size_map.
-        set SA' := t2l (odflt _ _) _ _.
-        case X : t2l => [|r rs]/=.
+        rewrite ((success_tree_to_stack empty) _ sA)//= size_cat size_map.
+        set SA' := tree_to_stack (odflt _ _) _ _.
+        case X : tree_to_stack => [|r rs]/=.
           rewrite cat0s.
           move=>_ H2.
           have:= [elaborate f_equal size H2].
@@ -641,9 +641,9 @@ Section NurProp.
         move=> _ [??]; subst.
         set Y:= map _ _.
         have:= HB _ (Y ++ l1) _ _ _ _ _ fv vB X => /(_ _ IsList_alts).
-        by case: t2l => //.
-      case SA: t2l => [|[s4 z] zs]//=.
-      rewrite t2l_big_and cat_cons cat0s => -[?+?]; subst.
+        by case: tree_to_stack => //.
+      case SA: tree_to_stack => [|[s4 z] zs]//=.
+      rewrite tree_to_stack_big_and cat_cons cat0s => -[?+?]; subst.
       case: z SA => //=.
         rewrite cat0s => H1 H2.
         case e: step => [[?[]]A']//=.
@@ -655,27 +655,27 @@ Section NurProp.
           have {H1} := f_equal size H1.
           move=>/(_ _ IsList_alts).
           rewrite (s2l_size s1 l1).
-          by case: t2l => //=[[? x] xs]; rewrite //=t2l_big_and//.
+          by case: tree_to_stack => //=[[? x] xs]; rewrite //=tree_to_stack_big_and//.
         - have [??]:= (step_success e); congruence.
       move=> [a ca1] l2 SA []??; subst.
       rewrite seq2goals_cat !seq2goalsK => ?; subst.
       have:= HA _ l1 _ _ _ _ _ fv vA SA.
-      case: t2l => //[[]]>/=; rewrite t2l_big_and//.
+      case: tree_to_stack => //[[]]>/=; rewrite tree_to_stack_big_and//.
   Qed.
 
   Lemma s2l_Expanded_cut fv fv' A R s0 s3 ca x tl l1:
     valid_tree A -> step u p fv s0 A = (fv', Expanded, R) ->
-      t2l A s0 l1 = (s3, ((cut, ca) :: x)) :: tl ->
+      tree_to_stack A s0 l1 = (s3, ((cut, ca) :: x)) :: tl ->
       ((fv = fv') * (next_subst s0 A = next_subst s0 R) * (failed R = false) * 
-        ( (t2l R s0 l1 ++ l1 = (s3, x) :: ca))%type )%type.
+        ( (tree_to_stack R s0 l1 ++ l1 = (s3, x) :: ca))%type )%type.
   Proof.
     elim_tree A fv fv' s0 R s3 ca x tl l1.
     - by case: t.
     - move=>  /=/andP[vA bB]; rewrite !push.
       case eA: step => [[?[]]A']//=[??]; subst;
-      rewrite add_ca_deep_cat?size_cat//=; set SB:= t2l _ _ [::].
+      rewrite add_ca_deep_cat?size_cat//=; set SB:= tree_to_stack _ _ [::].
         have FA := step_not_failed eA notF.
-        have [s4 [y[ys YY]]]:= failed_t2l vA FA s0 SB.
+        have [s4 [y[ys YY]]]:= failed_tree_to_stack vA FA s0 SB.
         rewrite YY/=; case: y YY => //-[a ca'] tl1 YY [?????]; subst.
         have [H {}HA] := HA _ _ _ _ _ _ _ _ _ vA eA YY.
         rewrite !next_subst_or_Some failed_or_Some !H.
@@ -689,10 +689,10 @@ Section NurProp.
     - move=> /=vB; rewrite !push.
       rewrite next_subst_or_None.
       case eB: step => [[?[]]B']//=[??]; subst => /=.
-        case sB : t2l =>  [|[sx[|[]ca' gs tl']]]//=[????]; subst; rewrite failed_or_None.
+        case sB : tree_to_stack =>  [|[sx[|[]ca' gs tl']]]//=[????]; subst; rewrite failed_or_None.
         have [[[? XX] fB]{}HB] := HB _ _ _ _ _ _ _ _ _ vB eB sB; subst; rewrite fB XX; repeat split.
         move: HB; rewrite !cats0.
-        case sB': t2l => [|w ws]//[??]; subst.
+        case sB': tree_to_stack => [|w ws]//[??]; subst.
         by rewrite -cat_cons; f_equal.
       have [y[ys [H1 [H2 H2']]]]:= s2l_CutBrothers sm nilC vB eB.
       rewrite !H1/= => -[????]; subst; rewrite next_subst_or_None failed_or_None.
@@ -703,18 +703,18 @@ Section NurProp.
     - move=> /= /andP[vA].
       rewrite !push next_subst_and.
       case: ifP => [sA vB|sA /eqP->][? + <-]; case_step_tag H X => //= _; subst.
-        rewrite (success_t2l empty vA)//=.
+        rewrite (success_tree_to_stack empty vA)//=.
         rewrite next_subst_and sA failed_and (success_failed)//=.
         set SA:= add_deep _ _ _.
         rewrite !catl0a.
-        have [s[y[ys]]] := failed_t2l vB (step_not_failed H notF) (next_subst s0 A) (map (catr (a2g B0)) SA ++ l1).
+        have [s[y[ys]]] := failed_tree_to_stack vB (step_not_failed H notF) (next_subst s0 A) (map (catr (a2g B0)) SA ++ l1).
         move=>H4; rewrite H4/=.
         move=>[???]; subst.
         have [[H5 H5'] H6] := HB _ _ _ _ _ _ _ _ _ vB H H4; subst.
         rewrite H !H5 sA; repeat split => //.
         by rewrite -catA H6//success_and.
-      case SA : t2l => //[[s5 w] ws]/=.
-      rewrite t2l_big_and.
+      case SA : tree_to_stack => //[[s5 w] ws]/=.
+      rewrite tree_to_stack_big_and.
       move=>[?+?]; subst.
       rewrite next_subst_and_big_and failed_and.
       case: w SA => //=.
@@ -725,7 +725,7 @@ Section NurProp.
       have [H1 H2] := HA _ _ _ _ _ _ _ _ _ vA H SA.
       rewrite H !H1/=.
       repeat split; first by rewrite failed_big_and andbF.
-      move: H2; case SA': t2l => //=[|t ts].
+      move: H2; case SA': tree_to_stack => //=[|t ts].
         rewrite cat0s =>?; subst.
         rewrite size_cons.
         replace (size ca' - (size ca').+1) with 0 by lia.
@@ -734,7 +734,7 @@ Section NurProp.
         by rewrite SA'//.
       move=>[??]; subst.
       rewrite size_cat addnK drop_size_cat//add_deep_cat take_size_cat//?size_add_deep//.
-      by rewrite -cat_cons t2l_big_and map_cons !cat_cons cat0s//.
+      by rewrite -cat_cons tree_to_stack_big_and map_cons !cat_cons cat0s//.
   Qed.
 
   Lemma add_ca_deep_map2 bt a b:
@@ -770,11 +770,11 @@ Section NurProp.
   Lemma s2l_Expanded_call fv fv' s s3 A R l q gs xs ca:
     valid_tree A ->
     step u p fv s A = (fv', Expanded, R) -> 
-    t2l A s l = (s3, (call q, ca) :: gs) :: xs ->
+    tree_to_stack A s l = (s3, (call q, ca) :: gs) :: xs ->
     let bcr := bc u p fv q (next_subst s A) in
     [/\ s3 = next_subst s A,
       bcr.1 = fv' &
-      t2l R s l =
+      tree_to_stack R s l =
       if bcr.2 is (w :: ws)%SEQ then
        (w.1, save_gs (xs++l) gs w.2) :: 
         ((save_as (xs++l) gs ws) ++ xs)
@@ -786,11 +786,11 @@ Section NurProp.
       case: bc => //= ?[]//= []/= >; rewrite !cat0s !cats0.
       rewrite !(s2l_big_or empty)//= !cat0s catr0//.
     - move=> /andP[vA bB]; rewrite !push.
-      set SB := t2l B sm [::].
+      set SB := tree_to_stack B sm [::].
       case e: step => [[?[]]A']//=[?<-]/=; subst; last first.
         have [w[ws []+[]]]:= s2l_CutBrothers s SB vA e.
         by move=>->//.
-      have [s5 [y[ys sA]]]:= failed_t2l vA (step_not_failed e notF) s SB.
+      have [s5 [y[ys sA]]]:= failed_tree_to_stack vA (step_not_failed e notF) s SB.
       rewrite sA/=; case: y sA => // -[[//|t1] ca3] g1 sA [?????]; subst.
       have := HA _ _ _ _ _ _ _ _ _ _ vA e sA.
       case FF: bc => [fvf [|r rs]][??]/=; subst.
@@ -811,7 +811,7 @@ Section NurProp.
         have [w[ws []+[]]]:= s2l_CutBrothers sm [::] vB e.
         by move=>->//.
       rewrite next_subst_or_None.
-      case SB: t2l =>  [//|[s2 [//|[a3 ca3] gs2]] a2] /= [?????] ; subst.
+      case SB: tree_to_stack =>  [//|[s2 [//|[a3 ca3] gs2]] a2] /= [?????] ; subst.
       have {HB} := HB _ _ _ _ s3 _ q gs2 a2 _ vB e SB.
       case FF: bc => [fvx [|[s5 r] rs]]/=[?? H]; subst => //.
       split => //=.
@@ -825,10 +825,10 @@ Section NurProp.
       case_step_tag H T => //= _.
         rewrite next_subst_and.
         rewrite /=sA/=.
-        rewrite (success_t2l empty)//= !catl0a.
+        rewrite (success_tree_to_stack empty)//= !catl0a.
         set X := map _ _.
         set Y := next_subst _ _.
-        have [sy[y[ys sB]]]:= failed_t2l vB (step_not_failed H notF) Y (X++l).
+        have [sy[y[ys sB]]]:= failed_tree_to_stack vB (step_not_failed H notF) Y (X++l).
         rewrite sB cat_cons => -[???] ; subst.
         have := HB _ _ _ _ _ _ _ _ _ _ vB H sB.
         rewrite-/Y.
@@ -837,8 +837,8 @@ Section NurProp.
       have /=fA := step_not_failed H notF.
       (* rewrite (step_not_solved H)//. *)
       (* move=>/eqP->{B HB} [?<-]/=; subst. *)
-      have [s5 [y[ys sA]]]:= failed_t2l vA fA s l.
-      rewrite sA/= !t2l_big_and.
+      have [s5 [y[ys sA]]]:= failed_tree_to_stack vA fA s l.
+      rewrite sA/= !tree_to_stack_big_and.
       rewrite map_cons cat_cons cat0s.
       rewrite next_subst_and_big_and.
       move=> [?] + ?; subst.
@@ -848,10 +848,10 @@ Section NurProp.
       move=> ? tl sA; rewrite cat_cons => -[??]; subst.
       have {HA} := HA _ _ _ _ _ _ _ _ _ _ vA H sA.
       case FF: bc => [? [|r rs]]/=[?? H0 H1]; subst; split => //=; try by rewrite fA'.
-        case: t2l => //=[[s0 g0]ca0].
-        by rewrite t2l_big_and map_cons cat_cons cat0s// seq2altsK //.
+        case: tree_to_stack => //=[[s0 g0]ca0].
+        by rewrite tree_to_stack_big_and map_cons cat_cons cat0s// seq2altsK //.
       rewrite H0/=.
-      rewrite t2l_big_and map_cons/= cat_cons cat0s /catl/=.
+      rewrite tree_to_stack_big_and map_cons/= cat_cons cat0s /catl/=.
       rewrite add_deep_cat map_cat.
       (* set hd := (a2g B0). *)
       rewrite -!cat_cons; f_equal.
@@ -862,16 +862,16 @@ Section NurProp.
   Lemma s2l_prune_tl {A s1 bt}:
     valid_tree A ->
     success A -> 
-      t2l (odflt KO (prune true A)) s1 bt = behead (t2l A s1 bt).
+      tree_to_stack (odflt KO (prune true A)) s1 bt = behead (tree_to_stack A s1 bt).
   Proof.
     elim_tree A s1 bt => /=.
     - move=> /andP[vA bB] sA.
-      set SB:= t2l B sm [::].
+      set SB:= tree_to_stack B sm [::].
       have:= HA s1 SB vA sA.
       case X: prune => //=[A'|].
         move=> ->; rewrite !add_ca_deep_cat.
-        by rewrite (success_t2l empty)//= !behead_cons.
-      rewrite (success_t2l empty)//=.
+        by rewrite (success_tree_to_stack empty)//= !behead_cons.
+      rewrite (success_tree_to_stack empty)//=.
       rewrite behead_cons X/=behead_cons seq2altsK.
       rewrite/SB; move: bB => /orP[/eqP->//|/spec_base_or[r0[r1 ?]]]; subst.
       by rewrite prune_big_or//=.
@@ -879,49 +879,49 @@ Section NurProp.
       rewrite success_or_None in sB.
       have {HB}:= [elaborate HB sm [::] vB sB].
       case X: prune => [B'|]/=.
-        move=> ->; case: t2l => [|[]]//=???.
+        move=> ->; case: tree_to_stack => [|[]]//=???.
         by rewrite !behead_cons.
-      case: t2l => [|[]]//=>; rewrite behead_cons => <-//.
+      case: tree_to_stack => [|[]]//=>; rewrite behead_cons => <-//.
     - move=> /andP[vA].
       rewrite success_and.
       case:ifP => //= sA vB sB.
       move=> /=.
       case X: prune => [B'|]/=.
-        rewrite (success_t2l (next_subst s1 A) vA sA)//=.
-        rewrite (success_t2l (next_subst s1 A) vB sB)//=.
+        rewrite (success_tree_to_stack (next_subst s1 A) vA sA)//=.
+        rewrite (success_tree_to_stack (next_subst s1 A) vB sB)//=.
         by rewrite !catl0a cat_cons behead_cons X/=.
-      rewrite (success_t2l s1 vA sA)//=.
-      rewrite (success_t2l (next_subst s1 A) vB sB)//= catl0a.
+      rewrite (success_tree_to_stack s1 vA sA)//=.
+      rewrite (success_tree_to_stack (next_subst s1 A) vB sB)//= catl0a.
       rewrite cat_cons behead_cons X.
       rewrite cat0s.
       case Y: prune => [A'|]//=.
       have:= HA s1 bt vA sA.
       rewrite Y/= => ->.
-      rewrite (success_t2l empty)// behead_cons.
+      rewrite (success_tree_to_stack empty)// behead_cons.
       rewrite Y/=.
-      case S: t2l => //=[[sx x] xs].
-      by rewrite t2l_big_and//= cat_cons cat0s.
+      case S: tree_to_stack => //=[[sx x] xs].
+      by rewrite tree_to_stack_big_and//= cat_cons cat0s.
   Qed.
 
-  Lemma t2l_nil_na t s a: 
-    valid_tree t -> t2l t s a = [::] -> prune false t = None.
+  Lemma tree_to_stack_nil_na t s a: 
+    valid_tree t -> tree_to_stack t s a = [::] -> prune false t = None.
   Proof.
     elim_tree t s a => /=.
     - move=> /andP[vA /orP[/eqP->|/spec_base_or[r[rs ?]]]]//=; subst.
-        by case tA: t2l => [|[]]//=; rewrite (HA _ _ vA tA).
-      case tA: t2l => [|[]]//=; case tB: t2l => [|[]]//= _.
+        by case tA: tree_to_stack => [|[]]//=; rewrite (HA _ _ vA tA).
+      case tA: tree_to_stack => [|[]]//=; case tB: tree_to_stack => [|[]]//= _.
       by rewrite (HA _ _ vA tA) (HB _ _ (valid_tree_big_or _ _) tB).
-    - move=> vB; by case tB: t2l => [|[]]//= _; rewrite (HB _ _ vB tB).
+    - move=> vB; by case tB: tree_to_stack => [|[]]//= _; rewrite (HB _ _ vB tB).
     - move=> /andP[vA].
       case: ifP => [sA vB|sA /eqP?]; subst.
-        rewrite (success_t2l s vA sA)/=.
-        case tB: t2l; rewrite//=(HB _ _ vB tB).
+        rewrite (success_tree_to_stack s vA sA)/=.
+        case tB: tree_to_stack; rewrite//=(HB _ _ vB tB).
         case nA: prune => //=[A'].
         have fA' := prune_Some nA.
-        by have [?[?[?->]]] := failed_t2l (valid_tree_prune vA nA) fA' s a.
+        by have [?[?[?->]]] := failed_tree_to_stack (valid_tree_prune vA nA) fA' s a.
       case: ifP => fA; last first.
-        by have [sx[x[xs H]]]/= := failed_t2l vA fA s a; rewrite H/= t2l_big_and//.
-      case tA: t2l => //=[|[s0 h0]]; last by rewrite t2l_big_and.
+        by have [sx[x[xs H]]]/= := failed_tree_to_stack vA fA s a; rewrite H/= tree_to_stack_big_and//.
+      case tA: tree_to_stack => //=[|[s0 h0]]; last by rewrite tree_to_stack_big_and.
       by rewrite (HA _ _ vA tA).
     Qed.
 End NurProp.

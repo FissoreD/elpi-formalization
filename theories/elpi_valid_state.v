@@ -406,21 +406,21 @@ Section NurValidState.
   Proof. by rewrite/empty_caG all_cat. Qed.
 
   Lemma empty_ca_big_or r rs s0:
-    empty_ca (t2l (big_or r rs) s0 [::]).
+    empty_ca (tree_to_stack (big_or r rs) s0 [::]).
   Proof.
     rewrite/empty_ca/=.
-    elim: rs r s0 => [|[s0 r0] rs IH] x s1//=; rewrite t2l_big_and.
+    elim: rs r s0 => [|[s0 r0] rs IH] x s1//=; rewrite tree_to_stack_big_and.
       by rewrite all_cons/= empty_ca_atoms.
     rewrite cat_cons/= all_cons cat0s add_ca_deep_empty1 IH.
     by rewrite add_ca_deepG_empty1/= empty_ca_atoms.
   Qed.
 
   Lemma valid_caA_big_or x xs s0 rs:
-    valid_caA (t2l (big_or x xs) s0 [::]) rs [::].
+    valid_caA (tree_to_stack (big_or x xs) s0 [::]) rs [::].
   Proof.
     elim: xs x s0 rs => //= [|[s0 r0] rs IH] x s1 l.
-      by rewrite t2l_big_and//= empty_ca_atoms valid_caG_a2g if_same.
-    rewrite /= add_ca_deep_empty1 t2l_big_and.
+      by rewrite tree_to_stack_big_and//= empty_ca_atoms valid_caG_a2g if_same.
+    rewrite /= add_ca_deep_empty1 tree_to_stack_big_and.
     rewrite cat_cons/= empty_ca_atoms cat0s valid_caG_a2g/=.
     by rewrite fold_valid_caA IH empty_ca_big_or if_same.
   Qed.
@@ -429,7 +429,7 @@ Section NurValidState.
   (* FINAL LEMMA                                                      *)
   (********************************************************************)
   Lemma valid_tree_valid_ca_help {A s0 r l}:
-    t2l A s0 l = r ->
+    tree_to_stack A s0 l = r ->
     valid_tree A ->
       valid_caA r r l.
   Proof.
@@ -442,7 +442,7 @@ Section NurValidState.
       apply: valid_ca_add_ca_deep; rewrite ?size_cat//.
       rewrite /valid_ca valid_ca_split.
       rewrite drop_size_cat//.
-      have:= [elaborate HA (t2l B sm nilC) s0 vA].
+      have:= [elaborate HA (tree_to_stack B sm nilC) s0 vA].
       move/orP: bB => [/eqP->|]//=; first by rewrite andbT cats0.
       move=> /spec_base_or[r0[rs ?]]; subst.
       rewrite (HB _ _ (valid_tree_big_or _ _)) andbT.
@@ -450,7 +450,7 @@ Section NurValidState.
       apply: push_bt_out => //; last by rewrite cats0//.
       apply: valid_caA_big_or.
     - move=> vB.
-      set stl := t2l B sm [::].
+      set stl := tree_to_stack B sm [::].
       have:= HB _ _ vB.
       fold stl => H.
       apply: valid_ca_add_ca_deep.
@@ -460,7 +460,7 @@ Section NurValidState.
       have ? := empty_ca_atoms B0.
       case:ifP => /=[sA vB|sA /eqP?]; subst.
         move: HA.
-        have SA:= success_t2l empty vA sA; rewrite SA/=.
+        have SA:= success_tree_to_stack empty vA sA; rewrite SA/=.
         rewrite catl0a behead_cons => H1.
         set M := map _ _.
         rewrite valid_ca_split.
@@ -473,8 +473,8 @@ Section NurValidState.
           rewrite valid_ca_make_lB0_empty_ca?Hhd//.
           apply: valid_ca_add_deep_make_lB0; rewrite//Hhd//.
         apply: HB vB.
-      case lA: t2l => [|[s x] xs]//=.
-      rewrite !t2l_big_and//=.
+      case lA: tree_to_stack => [|[s x] xs]//=.
+      rewrite !tree_to_stack_big_and//=.
       rewrite map_cons cat_cons behead_cons.
       rewrite valid_caG_cat_empty_ca//= cat0s seq2altsK.
       move: HA; rewrite lA => /=.
@@ -485,7 +485,7 @@ Section NurValidState.
   Qed.
 
   Lemma valid_tree_valid_ca A s r:
-    valid_tree A -> t2l A s nilC = r -> valid_ca r.
+    valid_tree A -> tree_to_stack A s nilC = r -> valid_ca r.
   Proof.
     rewrite/valid_ca => H1 H2.
     have:= valid_tree_valid_ca_help H2 H1.
