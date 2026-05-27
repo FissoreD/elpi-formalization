@@ -13,14 +13,16 @@ Section NurEqiv.
     valid_tree A ->
       runT p fv s1 A r b fv' -> 
         let xs := t2l A s1 [::] in
-        let r' := omap (fun '(s, t) => (s, (t2l (odflt KO t) s1 [::]))) r in
-        runS p fv xs r'.
+        match r with
+        | Zero => runS p fv xs None
+        | One s' => runS p fv xs (Some (s', [::]))
+        | Many s' t => runS p fv xs (Some (s', t2l t s1 [::]))
+        end.
   Proof.
     move=> +++H.
     elim_run H => vtA vts1 vA.
-    + rewrite (success_t2l s1)//.
-      repeat eexists.
-      apply: StopS.
+    + by rewrite (success_t2l s1)//= NN; apply: StopS.
+    + by rewrite (success_t2l s1)//= NS; apply: StopS.
     + have [fvB fvs] := vars_tree_step_sub_flow vtA vts1 eA.
       have /=vB:= (valid_tree_step vA eA). 
       have {IH}/=:= IH fvB fvs vB; subst.
@@ -29,7 +31,7 @@ Section NurEqiv.
         have [x[tl[H1 [H2 H3]]]] := s2l_CutBrothers s1 [::] vA eA.
         rewrite H1 H2 H5 => IH.
         have ?:= tree_fv_step_cut eA; subst.
-        by apply: CutS => //=.
+        by case: r rB IH => > rB; apply: CutS => //=.
       have fA := step_not_failed eA notF.
       have [s[x[xs +]]] := failed_t2l vA fA s1 [::].
       move=> H; rewrite H/=.
@@ -40,15 +42,25 @@ Section NurEqiv.
       case: g H => [[|c] ca] H; last first.
         have:= s2l_Expanded_call vA eA H.
         move=> [??]; subst.
-        case X: bc => /=[fv3 rules] H1; subst => /=.
+        case X: bc => /=[fv3 rules].
+        rewrite !cats0 => H1.
+        have {}H1 : t2l B s1 [::] =
+            match rules with
+            | [::]%SEQ => [::]
+            | (w :: ws)%SEQ => (w.1, save_gs xs gs w.2) :: save_as xs gs ws
+            end ++ xs.
+          by case: rules H1 X => //; rewrite cat0s.
+        have {}H2 : stepE u p v0 c (next_subst s1 A) xs gs = (fv3,
+          match rules with
+          | [::]%SEQ => [::]
+          | (w :: ws)%SEQ => (w.1, save_gs xs gs w.2) :: save_as xs gs ws
+          end).
+          by rewrite /stepE X//=; destruct rules;rewrite//cat0s.
         rewrite H1.
-        rewrite cats0 => Hz.
-        apply: CallS.
-        rewrite /stepE X//=.
-        by destruct rules;rewrite//cat0s.
+        by case: r rB => > rB Hx; apply: CallS Hx.
       have [[[? SS] H1]] := s2l_Expanded_cut vA eA H; subst.
       rewrite cats0 => ->.
-      by apply: CutS.
+      by case: r {rB} => >; apply: CutS.
     + have vB := valid_tree_prune vA nA.
       have {}fvP := vars_tree_prune_sub_flow vtA nA.
       have {IH} /= := IH fvP vts1 vB.
@@ -67,8 +79,12 @@ Lemma elpi_to_tree_no_op v0 p a r s0:
     valid_tree t0 -> t2l t0 s0 [::] = a ->  
     exists b v1,
     if r is Some (s1, a') then 
-      exists t1, runT p v0 s0 t0 (Some (s1, t1)) b v1 /\ t2l (odflt KO t1) s0 [::] = a'
-    else runT p v0 s0 t0 None b v1 in
+      match a' with
+      | [::] => runT p v0 s0 t0 (One s1) b v1
+      | _ => exists t1, runT p v0 s0 t0 (Many s1 t1) b v1 /\ t2l t1 s0 [::] = a'
+      end
+    else runT p v0 s0 t0 Zero b v1 
+  in
   (forall A, failed A = false -> P A) -> forall a, P a.
 Proof.
   simpl.
@@ -80,28 +96,34 @@ Proof.
   have /= vA' := (valid_tree_prune vA nA).
   rewrite (pruneF_t2l vA fA nA) in H.
   have [b[v1 {}P]] := P A' fA' R vA' H.
-  case: r P R => [[s1 a0] [t' [H1 H2 H3]]|H1 H2];
-  repeat eexists; [|by eauto|];
-  by apply: BackT fA nA H1.
+  case: r P R => [[s1 a0]|H1 H2]; subst.
+    case: a0.
+      by repeat eexists; apply: BackT P.
+    move=> x xs.
+    move=> [t' [H1 H2 H3]].
+    by repeat eexists; eauto; apply: BackT fA nA H1.
+  repeat eexists; apply: BackT fA nA H1.
 Qed.
 
 Lemma elpi_to_tree_aux p v0 a r : 
   runS p v0 a r -> 
   forall s0 t0, valid_tree t0 -> t2l t0 s0 [::] = a ->  
   exists b v1,
-  if r is Some (s1, a') then 
-    exists t1, runT p v0 s0 t0 (Some (s1, t1)) b v1 /\ t2l (odflt KO t1) s0 [::] = a'
-  else runT p v0 s0 t0 None b v1.
+  match r with
+  | None => runT p v0 s0 t0 Zero b v1
+  | Some (s, [::]) => runT p v0 s0 t0 (One s) b v1
+  | Some (s, a') => exists t1, runT p v0 s0 t0 (Many s t1) b v1 /\ t2l t1 s0 [::] = a'
+  end.
 Proof.
   elim; clear.
   - move=> s a fv s1 A vA /= H.
     have H1 := elpi_to_tree_no_op _ _ (StopS _ _ _ _ _) vA H.
     apply: H1; auto => A' fA' Hr vA' H1.
-    have [skA ?]:= s2l_empty_hd_success vA' fA' H1; subst.
-    repeat eexists.
-      by apply: StopT.
-    have:=@s2l_prune_tl _ s1 nilA vA' skA.
-    by rewrite H1 => ->//; rewrite behead_cons.
+    have [skA ?]:= s2l_empty_hd_success vA' fA' H1; subst.    
+    have:=@s2l_prune_tl _ s1 nilA vA' skA; rewrite H1 behead_cons => ?; subst.
+    case P: prune => [A''|]/=; last by repeat eexists; apply: StopOT.
+    have [sz[k[ks Hk]]]/= := failed_t2l (valid_tree_prune vA' P) (prune_Some P) s1 [::].
+    by rewrite Hk; repeat eexists; first apply: StopT P => //.
   - move=> s1 a ca r gl fv ELPI IH s A vA H.
     have H1 := elpi_to_tree_no_op _ _ (CutS _ _) vA H.
     apply: H1; auto => {}A fA _ {}vA {}H.
@@ -109,36 +131,34 @@ Proof.
     have:= next_cut_s2l u p fv fA vA H => /=.
     move => -[H1 H2].
     have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
+    have IA : incomplete A by move: H2; case: ifP => [_/incomplete_cut|_/incomplete_exp].
     case: r ELPI => [[s' a']|] ELPI.
-      move=> [t1[IH ?]]; subst.
-      move: H2; case: ifP => Hx ST; subst;
-      repeat eexists; apply: StepT (ST) erefl IH.
-        by apply: incomplete_cut ST.
-      by apply: incomplete_exp ST.
-    move: H2; case: ifP => //= CB ST IH; subst;
-    repeat eexists;
+      case: a' ELPI => [|x xs] ELPI; last first.
+        move=> [t1[IH Z]].
+        have S := StepT IA _ erefl IH.
+        move: H2; case: ifP => H2 ST;
+        by eexists _, _, t1; split => //; apply: S ST.
+      move: H2; case: ifP => CB H2 Hx;
+      by eexists; eexists; apply: StepT H2 erefl Hx.
+    move: H2; case: ifP => //= CB ST IH; subst; repeat eexists;
     apply: StepT erefl IH; eauto.
-      by apply: incomplete_cut ST.
-    by apply: incomplete_exp ST.
   - move=> s1 a g bs r t ca fv fv' ST ELPI IH s3 A vA H.
     have H1 := elpi_to_tree_no_op _ _ (CallS _ ST _) vA H.
     apply: H1; auto => {}A fA _ {}vA {}H.
     move: ST; rewrite/stepE; case B: bc => [fv2 rules] [??]; subst.
     have [] := next_callS_s2l u p fv fA vA H.
     rewrite B/= => H1.
-    case H2 : step => /=?; subst.
+    case H2 : step => /=[fvt A']?; subst.
     have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
+    have IA := incomplete_exp H2.
+    rewrite H2/=.
     case: r ELPI => [[s' a']|] ELPI.
-      move=> [t'[IH ?]]; subst.
-      repeat eexists.
-      apply: StepT erefl IH.
-      apply: incomplete_exp H2.
-      by rewrite H2.
+      case: a' ELPI => [|x xs] ELPI.
+        by move=> Hx; repeat eexists; apply: StepT H2 erefl Hx.
+      move=> [t'[IH Z]]; subst.
+      repeat eexists; [|eassumption]; by apply: StepT H2 erefl IH.
     move=> IH.
-    repeat eexists.
-    apply: StepT erefl IH.
-    apply: incomplete_exp H2.
-    by rewrite H2.
+    by repeat eexists; apply: StepT H2 erefl IH.
   + by move=> > vT H; repeat eexists; apply/FailT/t2l_nil_na/H.
 Qed.
 
@@ -148,34 +168,41 @@ Definition runT' p v s t r :=
 (*ENDSNIPT: runt1 *)
 
 (*SNIPT: tree_to_elpi *)
-Theorem tree_to_elpi:
+Theorem tree_to_stack:
   forall p t s r, let v := vars_tree t `|` vars_sigma s in
     valid_tree t -> runT' p v s t r -> 
-        let r' :=  if r is Some (s', t) then  (Some (s', t2l (odflt KO t) s [::]))
-                  else None in
+      let r' := match r with
+      | Zero => None
+      | One s' => Some (s', [::])
+      | Many s' t' => Some (s', t2l t' s [::]) 
+      end in
         runS p v (t2l t s [::]) r'.
 (*ENDSNIPT: tree_to_elpi *)
 Proof. 
   move=> /= p t0 s0 r/= vt [b [fv H1]].
   have /= := tree_to_elpi_aux (fsubsetUl _ _) (fsubsetUr _ _) vt H1.
-  by case: r H1 => [[]|]//.
+  by destruct r.
 Qed.
 
 (*SNIPT: elpi_to_tree *)
-Theorem elpi_to_tree:
+Theorem stack_to_tree:
   forall p v a r, runS p v a r -> 
-    forall s t, valid_tree t -> t2l t s [::] = a ->  
-      if r is Some (s', a') then 
-        exists t', runT' p v s t (Some (s', t')) /\ t2l (odflt KO t') s [::] = a'
-      else runT' p v s t None.
+    forall s t, valid_tree t -> t2l t s [::] = a ->
+      match r with
+      | None => runT' p v s t Zero
+      | Some (s', [::]) => runT' p v s t (One s')
+      | Some (s', a') => 
+        exists t', runT' p v s t (Many s' t') /\ t2l t' s [::] = a'
+      end.
 (*ENDSNIPT: elpi_to_tree *)
 Proof.
   move=> /= p v a r H1 s' t vt tl.
   have:= elpi_to_tree_aux H1 vt tl.
-  by move=> [b[v1]]; case: r H1 => [[? b' H [t1 [H2 <-]]]|]; repeat eexists; eauto.
+  move=> [b[v1]]; case: r H1 => [[x[|y ys H [t' [H1]]]]|]; repeat
+  eexists; eauto.
 Qed.
 
 
-Print Assumptions elpi_to_tree.
-Print Assumptions tree_to_elpi.
+Print Assumptions stack_to_tree.
+Print Assumptions tree_to_stack.
 End NurEqiv.

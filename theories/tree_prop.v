@@ -260,13 +260,12 @@ Section RunP.
         by move => [<-].
     Qed.
 
-    Lemma run_same_structure p fv1 fv2 s A x n:
-      runT u p fv1 s A (Some x) n fv2 -> same_structure A (odflt A x.2).
+    Lemma run_same_structure p fv1 fv2 s A s' A' n:
+      runT u p fv1 s A (Many s' A') n fv2 -> same_structure A A'.
     Proof.
-      case: x => //= + []//= => s' A'.
-      remember (Some _) as sx eqn:Hx => H.
+      remember (Many _ _) as sx eqn:Hx => H.
       elim_run H s' A' Hx => //=.
-      - by move: Hx => [?]; subst => /=; apply/prune_same_structure.
+      - by move: Hx => [??]; subst => /=; apply/prune_same_structure/NS.
       - apply: same_structure_trans (step_same_structure eA) (IH _ _ erefl).
       - apply: same_structure_trans (prune_same_structure nA) (IH _ _ erefl).
     Qed.

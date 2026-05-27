@@ -411,7 +411,7 @@ Section check.
 
   (*SNIPT: is_det *)
   Definition is_det p s v t := 
-    forall r, runT' p v s t r -> r = None \/ exists s, r = (Some (s, None)).
+    forall r, runT' p v s t r -> r = Zero \/ exists s, r = (One s).
   (*ENDSNIPT: is_det *)
 
   Lemma acyclic_sigmaT_big_and B0: acyclic_sigmaT (big_and B0).
@@ -522,11 +522,10 @@ Section check.
     rewrite/is_det.
     move=> s v p t H1 H2 r [b[v' R]].
     elim_run R H1 H2.
-    - rewrite (det_check_prune_succ H2 sA); eauto.
-    - apply: IH => //=.
-        by apply: det_check_step eA.
-    - apply: IH => //.
-      by apply/det_check_prune/nA.
+    - eauto.
+    - by move: NS; rewrite (det_check_prune_succ H2 sA).
+    - by apply: IH (det_check_step _ _ eA).
+    - by apply: IH (det_check_prune _ nA).
   Qed.
 
   (*SNIPT: det_check_call *)

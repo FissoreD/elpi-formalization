@@ -283,15 +283,19 @@ Section main.
   Goal (prune false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
 
   Notation "tg == CutBrothers" := (is_cb tg).
+
+  Inductive sol_nb := Zero | One of Sigma | Many of Sigma & tree.
+
   (*prooftree: runbp*)
   (*SNIP: run_sig *)
   Inductive runT (p : program): fvS -> Sigma -> tree 
-            -> option (Sigma * option tree) -> bool -> fvS -> Prop :=
+            -> sol_nb -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig *)
-    | StopT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = t' -> runT v s t (Some (s', t')) false v
+    | StopOT s s' t v              : success t -> next_subst s t = s' -> prune true t = None -> runT v s t (One s') false v
+    | StopT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = Some t' -> runT v s t (Many s' t') false v
     | StepT s r t t' b b' v v' v'' tg: incomplete t -> step p v s t = (v', tg, t') -> b' = (tg == CutBrothers) || b -> runT v' s t' r b v'' -> runT v s t r b' v''
     | BackT s t t' r n v v'          : failed t -> prune false t = Some t' -> runT v s t' r n v' -> runT v s t r n v'
-    | FailT s t v                   : prune false t = None -> runT v s t None false v.
+    | FailT s t v                   : prune false t = None -> runT v s t Zero false v.
   (*endprooftree: runbp*)
 
   Fixpoint vars_tree t : fvS :=
@@ -305,8 +309,15 @@ Section main.
 
 End main.
 
+Definition get_tree t r :=
+  match r with
+  | Zero | One _ => t
+  | Many _ t => t
+  end.
+
 Ltac elim_run T X := revert X; elim: T; clear; 
-  [ move=> s1 s2 A B v0 sA ?? |
+  [ move=> s1 s2 A v0 sA ? NN |
+    move=> s1 s2 A B v0 sA ? NS |
     move=> s1 r A B b1 b2 v0 v1 v2 st pA eA ? rB IH|
     move=> s1 A B r n v0 v1 fA nA rB IH |
     move=> s1 A v0 nA ]; intros X; subst => //; auto.

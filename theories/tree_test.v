@@ -75,7 +75,7 @@ Section Test1.
         [:: call (Tm_App (Tm_P p) v_X) ; call (Tm_App (Tm_P r) v_X) ] 
     ].
 
-  Goal exists v, runT unif p_test fset0 empty (TA (call (Tm_App (Tm_P q) (Tm_D (ID 1))))) (Some (s2, None)) false v.
+  Goal exists v, runT unif p_test fset0 empty (TA (call (Tm_App (Tm_P q) (Tm_D (ID 1))))) (One s2) false v.
   Proof.
     repeat eexists.
     set X := [fset IV 0; fresh [fset IV 0]].
@@ -130,7 +130,7 @@ Section Test1.
       rewrite eqxx/= unify_ground//.
     by [].
     rewrite !simpl_set/=.
-    apply: StopT => //=.
+    apply: StopOT => //=.
   Qed.
 End Test1.
 
@@ -143,7 +143,7 @@ Section Test5.
       mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
     ].
 
-  Goal exists v, runT unif p_test1 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false))))) (Some (s1, None)) false v.
+  Goal exists v, runT unif p_test1 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false))))) (One s1) false v.
   Proof.
     repeat eexists.
     apply: StepT => //=.
@@ -165,7 +165,7 @@ Section Test5.
       rewrite unify_V_0r//= acyclic_sigma0//=.
     by [].
     apply/StepT => //=.
-    apply/StopT => //=.
+    apply/StopOT => //=.
   Qed.
 End Test5.
 
@@ -179,7 +179,7 @@ Section Test6.
       mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
   ].
 
-  Goal exists r, runT unif p_test2 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (Some (s1, None)) false r.
+  Goal exists r, runT unif p_test2 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (One s1) false r.
   Proof.
     repeat eexists.
     apply: StepT => //.
@@ -205,7 +205,7 @@ Section Test6.
     by [].
     rewrite !simpl_set.
     apply: StepT => //=.
-    apply: StopT => //=.
+    apply: StopOT => //=.
   Qed.
 End Test6.
 
@@ -216,19 +216,19 @@ Definition CutS := TA cut.
 Section Test2.
   Goal step unif emptyp fset0 empty (Or (Some OK) empty OK) = (fset0, Success, Or (Some OK) empty OK). by []. Qed.
 
-  Goal runT unif emptyp fset0 empty (Or (Some CutS) empty OK) (Some (empty, None)) false fset0.
+  Goal runT unif emptyp fset0 empty (Or (Some CutS) empty OK) (One empty) false fset0.
     apply: StepT => //=.
-    apply: StopT => //.
+    apply: StopOT => //.
   Qed.
 
   Goal forall r, 
-    runT unif emptyp fset0 empty (Or (Some CutS) empty r) (Some (empty, None)) false fset0.
+    runT unif emptyp fset0 empty (Or (Some CutS) empty r) (One empty) false fset0.
     move=> r.
     apply: StepT => //.
-    apply: StopT => //=.
+    apply: StopOT => //=.
   Qed.
 
-  Goal runT unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Some (empty, (Some (Or None empty (((Or (Some OK) empty OK))))))) false fset0.
+  Goal runT unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Many empty (Or None empty (Or (Some OK) empty OK))) false fset0.
   Proof. apply: StopT => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
