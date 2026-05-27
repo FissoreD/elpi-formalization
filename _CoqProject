@@ -31,9 +31,10 @@ theories/t2l_prop.v
 theories/elpi_equiv.v
 theories/elpi_valid_state.v
 
+theories/sig_lattice.v
+theories/sig_compat.v
+
 theories/check_fo.v
 
 theories/once.v
 
-
-# theories/check_ho.v

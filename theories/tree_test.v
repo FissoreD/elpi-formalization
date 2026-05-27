@@ -1,31 +1,28 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import finmap ctx lang tree.
+From det Require Import finmap ctx lang tree unif.
 
 Definition prop := b (d Pred).
-Definition build_arr := arr prop prop.
+Definition build_arr := arr output prop prop.
 
 Definition build_progr l := {|
-  sig := [fmap].[IP false <- (0, build_arr)].[IP 1 <- (0, build_arr)].[IP 2 <- (0, build_arr)].[IP 200 <- (0, prop)];
+  sig := [fmap].[IP false <- build_arr].[IP 1 <- build_arr].[IP 2 <- build_arr].[IP 200 <- prop];
   rules := l;
 |}.
 
-Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
+(* Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
   match t1, t2 with
   | Tm_V X, _ => match lookup X s with None => Some (add X t2 s) | Some t => if t == t2 then Some s else None end
   | _, Tm_V X => match lookup X s with None => Some (add X t2 s) | Some t => if t == t1 then Some s else None end
   | _, _ => if t1 == t2 then Some s else None
   end.
 
-Definition matchingF (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None.
+Definition matchingF (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None. *)
 
-Definition unif : Unif := {|
-  unify := unifyF;
-  matching := matchingF;
-|}.
+Definition unif : Unif := mk_Unif unify matching.
 
-Definition r := (IP 2).
-Definition p := (IP 1).
-Definition q := (IP false).
+Notation r := (IP 2).
+Notation p := (IP 1).
+Notation q := (IP false).
 
 Definition v_X := Tm_V (IV false).
 Definition pred_q x  := Tm_App (Tm_P p) x.
@@ -35,6 +32,38 @@ Definition pred_fail := Tm_P (IP 100).
 
 Definition s1 : Sigma := [fmap].[fresh [fset IV false] <- Tm_D (ID 1)].
 Definition s2 : Sigma := [fmap].[fresh [fset IV false] <- Tm_D (ID 2)].
+Definition s3 : Sigma := empty.[fresh
+         (IV 0
+          |` (varsU_rule
+                {|
+                  head := Tm_App (Tm_P (IP 0)) (Tm_D (ID 2));
+                  premises := [::]
+                |}
+              `|` varsU_rule
+                    {|
+                      head := Tm_App test.p (Tm_D (ID 0));
+                      premises :=
+                        [:: call (Tm_App (Tm_P (IP 0)) v_X); cut]
+                    |})) <- Tm_D (ID 1)].
+Definition pred_true := ((IP 200)).
+
+Definition s4 := empty.[fresh
+         (IV 0
+          |` (varsU_rule
+                {|
+                  head := Tm_App (Tm_P (IP 0)) (Tm_D (ID 2)); premises := [::]
+                |}
+              `|` varsU_rule
+                    {|
+                      head := Tm_App test.p (Tm_D (ID 0));
+                      premises :=
+                        [:: call (Tm_App (Tm_P (IP 0)) v_X);
+                            call (Tm_P pred_true); cut]|})) <- Tm_D (ID 1)].
+
+Lemma vars_sigma_set v s: vars_sigma empty.[v <- s] = v |` vars_tm s.
+Proof. by rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0. Qed.
+
+Definition simpl_set:= (fsetU0, fset0U, codomf0, cat0f, vars_sigma0, fsetUid, acyclic_sigma0, deref_D, deref_P, ren_P, ren_D, ren_app, deref_empty, vars_sigma_set, unify_refl, cardfs1).
 
 Section Test1.
 
@@ -46,104 +75,59 @@ Section Test1.
         [:: call (Tm_App (Tm_P p) v_X) ; call (Tm_App (Tm_P r) v_X) ] 
     ].
 
-  (* Goal unify unif v_X (Tm_D (ID 1)) empty = Some s1.
-  Proof.
-    rewrite/unif.
-    rewrite [unifyF]lock/=-lock.
-    rewrite/unifyF/= fnd_fmap0.
-    move=> //.
-  Qed. *)
-
-  Lemma codom0: codom empty = [::].
-  Proof. by rewrite /empty codomE/= enum_fset0. Qed.
-
-  Lemma codom_vars0: codom_vars empty = fset0.
-  Proof. by rewrite/codom_vars codom0. Qed.
-
-  Lemma codom0_set v s: codom empty.[v <- s] = [::s].
-  Proof. by rewrite/= codomE/= fsetU0 enum_fset1/= ffunE//=eqxx. Qed.
-
-  Lemma acyclic_sigma_set_D k t:
-    k \notin vars_tm t ->
-    acyclic_sigma empty.[k <- t].
-  Proof.
-    rewrite/acyclic_sigma/=/codom_vars codom0_set/= !fsetU0/=.
-    by rewrite/fdisjoint fsetIC fsetI1 => /negPf ->.
-  Qed.
-  
-
-  Goal exists v, runT unif p_test fset0 empty (TA (call (Tm_App (Tm_P q) (Tm_D (ID 1))))) (Some (s2, None)) false v.
+  Goal exists v, runT unif p_test fset0 empty (TA (call (Tm_App (Tm_P q) (Tm_D (ID 1))))) (One s2) false v.
   Proof.
     repeat eexists.
     set X := [fset IV 0; fresh [fset IV 0]].
-    apply: StepT => //=.
+    apply: StepT' => //=; cycle 1.
       rewrite/bc [get_tm_hd _]/=.
       cbn iota.
-      rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename/=in_fset1 eqxx/=.
-      rewrite !fset0U/= !fsetU0/varsU_rule/=/varsU_rhead/=/varsU_rprem/=.
-      rewrite /vars_sigma codom_vars0 domf0 /= !fset0U.
-      rewrite !ren_app !ren_P ren_V/=.
-      rewrite in_fnd//= ?in_fset1//= => H.
-      rewrite ffunE/=/vars_atoms/= !fsetU0 !fset0U/= fsetUid.
-      rewrite (fsetUC _ [fset fresh _]) fsetUA fsetUid.
-      rewrite fsetUC -/X//.
-      rewrite acyclic_sigma0//.
-    move=> //.
-    apply: StepT => //=.
-      rewrite/bc [get_tm_hd _]/=.
-      cbn iota.
-      replace _.[? _] with (Some (0, build_arr)); last first.
-        by rewrite !FmapE.fmapE eqxx/=.
-      rewrite/=.
-      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename/=in_fset1 eqxx/=.
-      rewrite acyclic_sigma0//.
-      by rewrite not_fnd//= not_fnd//=.
-      by [].
-    rewrite !fsetU0 !fset0U/=.
-    rewrite !fsetUA !fsetU0 /codom_vars !codom0_set/=.
-    rewrite !fsetU0 -!(fsetUC [fset fresh _]).
-    rewrite !fsetUA !fsetUid.
-    rewrite -!(fsetUC [fset IV 0]) !fsetUA !fsetUid.
-    rewrite-/X.
-    set Y:= (_ `|` _).
-    apply: StepT => //=.
-      rewrite /bc [get_tm_hd _]/=.
-      cbn iota.
-      replace _.[? _] with (Some (0, build_arr)); last first.
-        by rewrite !FmapE.fmapE eqxx/=.
-      rewrite/=.
-      rewrite FmapE.fmapE.
-      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename/=in_fset1 eqxx/=.
-      rewrite not_fnd//= eqxx/=.
-      rewrite !fset0U fsetU0.
-      (* rewrite !(fsetUC _ [fset IV 0]) !fsetUA !fsetUid.
-      rewrite -!(fsetUC [fset fresh [fset IV 0]]) !fsetUA.
-      rewrite (fsetUC _ [fset IV 0]) -/X.
-      rewrite (fsetUC X) -fsetUA -/Y. *)
-      rewrite /next_subst/= acyclic_sigma_set_D//=.
-      by [].
+      rewrite deref_App [vars_tm _]/= !simpl_set.
+      rewrite in_fnd.
+        by rewrite /p_test/= !inE eqxx orbT.
+      move=> qs.
+      replace (flatten_mode _) with [::output]; last by rewrite/= ffunE !FmapE.fmapE.
+      rewrite/= !simpl_set.
+      rewrite/fresh_rule /varsU_rule/varsU_rhead/varsU_rprem/= !simpl_set/=.
+      rewrite !FmapE.fmapE/= !inE/= in_fnd/=?inE//=.
+      rewrite/rename/= !simpl_set/= => H; rewrite !inE/=.
+      rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
+      by rewrite in_fnd/= ffunE//=.
     set Z := (_ `|` _).
+    set K := (fresh _).
+    apply: StepT => //=.
+      rewrite /bc deref_App get_tm_hd_app !simpl_set [get_tm_hd _]/=.
+      cbn iota.
+      replace (_.[? _]) with (Some build_arr); last by rewrite !FmapE.fmapE.
+      rewrite [fresh_rules _ _]/= /fresh_rule !simpl_set.
+      rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
+      rewrite /= !simpl_set /rename/= !simpl_set !inE /=.
+      by rewrite !unify_V_0r//=.
+    set R := (_ `|` _).
+    apply: StepT => //.
+      rewrite/step/=.
+      rewrite/bc /next_subst [next _ _]/= acyclic_sigma_set_D//.
+      rewrite deref_App deref_P get_tm_hd_app/get_tm_hd.
+      rewrite 2!FmapE.fmapE/= !simpl_set.
+      rewrite /fresh_rule/= !simpl_set.
+      rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
+      rewrite !inE/= !simpl_set.
+      rewrite /=in_fnd/=?inE// => KK.
+      rewrite ffunE/= eqxx.
+      rewrite unify_ground//.
+    rewrite !simpl_set fsetUC.
+    set T := (_ `|` _).
     apply: BackT => //=.
     apply: StepT => //=.
-      rewrite /bc [get_tm_hd _]/=.
-      cbn iota.
-      replace _.[? _] with (Some (0, build_arr)); last first.
-        by rewrite !FmapE.fmapE eqxx/=.
-      rewrite/=.
-      rewrite FmapE.fmapE.
-      rewrite !fset0U/=/fresh_rule/= !codomf0 !fset0U/=!fsetU0 !cat0f.
-      rewrite/rename/=in_fset1 eqxx/=.
-      rewrite not_fnd//= eqxx/=.
-      rewrite !fset0U !fsetU0.
-      rewrite/next_subst/= acyclic_sigma_set_D//.
-      (* rewrite /next_subst/=/varsU_rule/varsU_rhead/=/varsU_rprem/=.
-      rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0/=. *)
-      by [].
-    apply: StopT => //=.
+      rewrite /bc [flatten_term _]/= [get_tm_hd _]/=.
+      rewrite/next_subst/= acyclic_sigma_set_D//=.
+      rewrite !FmapE.fmapE/= !simpl_set.
+      rewrite/= /fresh_rule/= !simpl_set.
+      rewrite /rename/= !simpl_set in_fset1/=.
+      rewrite eqxx/= unify_ground//.
+    rewrite !simpl_set/=.
+    apply: StopOT => //=.
+    by [].
   Qed.
 End Test1.
 
@@ -156,39 +140,32 @@ Section Test5.
       mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
     ].
 
-  Goal exists v, runT unif p_test1 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false))))) (Some (s1, None)) false v.
+  Goal exists v, runT unif p_test1 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false))))) (One s1) false v.
   Proof.
     repeat eexists.
-    apply: StepT => //=.
-      rewrite/bc [get_tm_hd _]/=.
+    apply: StepT' => //=; cycle 1.
+      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
-      rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U/= !fsetU0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0 !fset0U.
-      rewrite codomf0 cat0f fsetU0 ren_app ren_P ren_V/= in_fnd/= ?in_fset1// => H.
-      rewrite/vars_atoms/= !fsetUA codom_vars0 !fsetU0 ffunE/= fsetUC fsetUA fsetUid.
-      rewrite fsetUC//.
-      by rewrite acyclic_sigma0.
-      move=> //.
+      rewrite !simpl_set in_fnd; first by rewrite/= !inE eqxx orbT.
+      move=> H.
+      rewrite[fresh_rules _ _]/= !simpl_set/= !ffunE/= FmapE.fmapE/=.
+      rewrite FmapE.fmapE/= !simpl_set/=.
+      rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
+      rewrite /= !FmapE.fmapE/= !inE/= in_fnd/=?inE// => Hx.
+      rewrite ffunE//=.
+    set X := _ `|` _.
     apply: StepT => //=.
-      rewrite/bc [get_tm_hd _]/=.
+      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
-      rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U/= not_fnd//= not_fnd//=.
-      by rewrite acyclic_sigma0.
-      by [].
-    rewrite codomf0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0.
-    rewrite /vars_sigma/codom_vars !codom0_set/= !fsetU0 fsetUid !fsetUA.
-    rewrite -!(fsetUC [fset fresh _]) fsetUA !fsetUid !fsetUA.
-    rewrite -!(fsetUC [fset IV 0]) !fsetUA fsetUid.
-    set X := (_ `|` _).
+      rewrite !FmapE.fmapE/= not_fnd//= unify_V_0r//=.
+      rewrite unify_V_0r//= acyclic_sigma0//=.
     apply/StepT => //=.
-    apply/StopT => //=.
+    apply/StopOT => //=.
+    by [].
   Qed.
 End Test5.
 
 Section Test6.
-
-  Definition pred_true := ((IP 200)).
 
   Definition p_test2 : program := build_progr [:: 
       mkR ((Tm_P pred_true)) [::];
@@ -198,40 +175,31 @@ Section Test6.
       mkR (Tm_App (Tm_P q) (Tm_D (ID 2))) [::] 
   ].
 
-  Goal exists r, runT unif p_test2 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (Some (s1, None)) false r.
+  Goal exists r, runT unif p_test2 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (One s1) false r.
   Proof.
     repeat eexists.
-    apply: StepT => //.
-      rewrite/=/bc [get_tm_hd _]/=.
+    apply: StepT' => //; cycle 1.
+      rewrite/=/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
-      rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U/= !fsetU0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0 !fset0U.
-      rewrite codomf0 cat0f fsetU0 ren_app ren_P ren_V/= in_fnd/= ?in_fset1// => H.
-      rewrite/vars_atoms/= !fsetUA codom_vars0 !fsetU0 ffunE/= fsetUC fsetUA fsetUid.
-      rewrite fsetUC//.
-      by rewrite acyclic_sigma0.
-      move=> //.
+      rewrite !FmapE.fmapE eqxx/= !simpl_set.
+      rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
+      rewrite !FmapE.fmapE/= inE/= in_fnd?inE//= => H.
+      by rewrite ffunE//.
+    set X:= (_ `|` _).
     apply: StepT => //=.
-      rewrite/bc [get_tm_hd _]/=.
-      cbn iota.
-      rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U/= not_fnd//= not_fnd//=.
-      by rewrite acyclic_sigma0.
-      by [].
-    rewrite codomf0 /varsU_rule /varsU_rhead /varsU_rprem/= !fsetU0.
-    rewrite /vars_sigma/codom_vars !codom0_set/= !fsetU0 fsetUid !fsetUA.
-    rewrite -!(fsetUC [fset fresh _]) fsetUA !fsetUid !fsetUA.
-    rewrite -!(fsetUC [fset IV 0]) !fsetUA fsetUid.
-    set X := (_ `|` _).
+      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
+      rewrite acyclic_sigma0/= !FmapE.fmapE/= not_fnd//= !unify_V_0r//=.
+    rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
+    set Y := _ `|` _.
     apply/StepT => //=.
-      rewrite/bc [get_tm_hd _]/=.
-      cbn iota.
-      rewrite !FmapE.fmapE eqxx/=.
-      rewrite !fset0U//=.
-      by rewrite /next_subst/= acyclic_sigma_set_D//.
-      by [].
+      rewrite/next_subst/=.
+      rewrite/bc [flatten_term _]/= [get_tm_hd _]/= !simpl_set.
+      rewrite acyclic_sigma_set_D//=.
+      by rewrite !FmapE.fmapE.
+    rewrite !simpl_set.
     apply: StepT => //=.
-    apply: StopT => //.
+    apply: StopOT => //=.
+    by [].
   Qed.
 End Test6.
 
@@ -242,20 +210,22 @@ Definition CutS := TA cut.
 Section Test2.
   Goal step unif emptyp fset0 empty (Or (Some OK) empty OK) = (fset0, Success, Or (Some OK) empty OK). by []. Qed.
 
-  Goal runT unif emptyp fset0 empty (Or (Some CutS) empty OK) (Some (empty, None)) false fset0.
-    apply: StepT => //=.
-    apply: StopT => //.
+  Goal runT unif emptyp fset0 empty (Or (Some CutS) empty OK) (One empty) false fset0.
+    apply: StepT' => //=; cycle 1.
+    apply: StopOT => //.
+    by [].
   Qed.
 
   Goal forall r, 
-    runT unif emptyp fset0 empty (Or (Some CutS) empty r) (Some (empty, None)) false fset0.
+    runT unif emptyp fset0 empty (Or (Some CutS) empty r) (One empty) false fset0.
     move=> r.
-    apply: StepT => //.
-    apply: StopT => //=.
+    apply: StepT' => //; cycle 1.
+    apply: StopOT => //=.
+    by [].
   Qed.
 
-  Goal runT unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Some (empty, (Some (Or None empty (((Or (Some OK) empty OK))))))) false fset0.
-  Proof. apply: StopT => //=. Qed.
+  Goal runT unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Many empty (Or None empty (Or (Some OK) empty OK))) false fset0.
+  Proof. apply: StopMT => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
   Goal step unif emptyp fset0 empty (Or (Some (Or None empty (CutS))) empty OK) = (fset0, Expanded, (Or (Some (Or None empty OK)) empty OK)).

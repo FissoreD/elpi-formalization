@@ -215,8 +215,6 @@ Definition empty_ca_G (g : Atom * alts) :=
 Definition empty_caG goals := all empty_ca_G goals.
 Definition empty_ca alts := all (fun x => empty_caG (snd x)) alts.
 
-(* Definition a2g1 (b : Sigma * R) := a2g b.2.(premises). *)
-
 Section Nur.
 
 Variable u : Unif.
@@ -233,7 +231,6 @@ Definition stepE p v t s a g :=
 (*ENDSNIP: stepE *)
 
 
-(* Disable Notation "::" (all). *)
 Notation " x :: y" := (consC x y)(at level 60).
  
 (*prooftree: nurbp*)

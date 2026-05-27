@@ -4,32 +4,47 @@ From det Require Import tree tree_prop valid_tree.
 
 Section s.
   Variable u : Unif.
-  (* Variable p : program. *)
   Notation runT := (runT u).
 
   Lemma run_success p fv A s1 r n fv1: 
-    success A -> runT p fv s1 A r n fv1 -> [/\ r = Some (next_subst s1 A, prune true A), fv1 = fv & n = false].
+    success A -> runT p fv s1 A r n fv1 -> 
+      [/\ match prune true A with None => r = One (next_subst s1 A) | Some t => r = Many (next_subst s1 A) t end, fv1 = fv & n = false].
   Proof.
     move=> sA H; have:= success_step u p fv s1 sA.
     have pA := success_incomplete sA.
     have fA := success_failed sA.
     inversion H; clear H; subst; rewrite success_step//; try congruence.
+      rewrite H2 => //.
+      rewrite H2 => //.
     by rewrite prune_None in fA.
   Qed.
+
+  Lemma run_successS p fv A s1 r n fv1 t: 
+    success A -> runT p fv s1 A r n fv1 -> prune true A = Some t ->
+      [/\ r = Many (next_subst s1 A) t, fv1 = fv & n = false].
+  Proof. by move=> S R P; have := run_success S R; rewrite P. Qed.
+
+  Lemma run_successN p fv A s1 r n fv1: 
+    success A -> runT p fv s1 A r n fv1 -> prune true A = None ->
+      [/\ r = One (next_subst s1 A), fv1 = fv & n = false].
+  Proof. by move=> S R P; have := run_success S R; rewrite P. Qed.
 
   Lemma runT_det1: forall p v0 s0 t0 r1 r2 b1 b2 v1 v2,
     runT p v0 s0 t0 r1 b1 v1 -> runT p v0 s0 t0 r2 b2 v2 -> [/\ r2 = r1, v2 = v1 & b2 = b1].
   Proof.
     move=> p v0 s A r1 r2 b1 bx v1 vx H.
     elim_run H bx vx => H1.
-    + by apply: run_success sA H1.
+    + by apply: run_successN H1 NN.
+    + by apply: run_successS H1 NS.
     + inversion H1; clear H1; try congruence; subst.
       - by rewrite success_incomplete in pA.
+      - by rewrite success_incomplete in pA.
       - move: H0; rewrite eA => -[???]; subst.
-        by case: (IH _ _ H3) => ???; subst.
+        by case: (IH _ _ H2) => ???; subst.
       - by rewrite incomplete_failed in H.
-      - by rewrite incomplete_prune_id in H.
+      - by rewrite incpl_prune in H.
     + inversion H1; clear H1; try congruence; subst.
+        by rewrite success_failed in fA.
         by rewrite success_failed in fA.
         by rewrite incomplete_failed in fA.      
       move: H0; rewrite nA => -[?]; subst.
@@ -68,112 +83,119 @@ Section s.
       by move=> []/esym; apply: IH.
   Qed.
 
-  Lemma run_ko_left2 p fv fv' s2 B B' sIgn:
-    (exists b1, runT p fv s2 B B' b1 fv') <->
-    runT p fv sIgn (Or None s2 B) (omap (fun '(s, x) => (s, omap (Or None s2) x)) B') false fv'.
+  Definition map_many f m :=
+    match m with
+    | Many s l => Many s (f l)
+    | _ => m end.
+
+  Lemma runT_Nor_elim p fv fv' s2 R B b sIgn:
+    runT p fv sIgn (Or None s2 B) R b fv' ->
+      exists b1,
+      match R with
+      | Many sk l => exists2 B', l = Or None s2 B' & runT p fv s2 B (Many sk B') b1 fv'
+      | Zero => runT p fv s2 B Zero b1 fv'
+      | One s => runT p fv s2 B (One s) b1 fv'
+      end.
   Proof.
-    split.
-      move=> [b1 HB]; elim_run HB sIgn.
-      + by apply: StopT; rewrite//success_or_None.
-      + by apply: StepT (IH _); rewrite/= ?(rew_pa,eA)//; destruct st.
-      + by apply: BackT; rewrite//=(failed_or_None,nA).
-      + by apply: FailT; rewrite//= nA.
     remember (Or _ _ _) as OR eqn:HO.
-    remember (omap _ _) as M eqn:HM.
-    remember false as F eqn:HF => HB.
+    move => HB.
     rename s2 into s3.
     rename B into C.
-    elim_run HB s3 C B' HO HM HF.
-    + move: sA HM; rewrite rew_pa/= => sC. 
-      by case nB: prune => [C'|]//=; case: B' => //=-[s [C2 |]]//=[]*; subst;
-      exists false; apply: StopT.
-    + move: pA eA HF; rewrite rew_pa/= !push => pC [???]; subst.
-      case eB: step => [[fvx rx] B2].
-      have ? := run_or0 rB; subst.
-      have [b1 {}IH] := IH _ _ _ erefl erefl erefl.
-      rewrite eB/= in IH => /=.
-      case: ifP; first destruct rx; move => // _ ?; subst; eexists;
-      apply: StepT eB erefl IH => //.
+    elim_run HB s3 C HO.
+    + move: sA; rewrite rew_pa/= => sC.
+      eexists; apply: StopOT => //.
+      by move: NN => /=; case: prune.
+    + move: sA; rewrite rew_pa/= => sC.
+      move: NS => /=; case P: prune => //[C']/=[<-{B}].
+      by repeat eexists; apply: StopMT => //.
+    + move: pA eA; rewrite rew_pa/= => pC.
+      case eB: step => [[fvx rx] B2][???]; subst.
+      have {IH}[b] := IH _ _ erefl.
+      case: r {rB} => [|s|??[z ?]] IH; subst;
+      by repeat eexists; apply: StepT eB IH.
     + move: fA nA; rewrite rew_pa/= => fC.
       case nB: prune => //[B2][?]; subst.
-      have [? {}IH] := IH _ _ _ erefl erefl erefl.
-      by eexists; apply: BackT IH.
-    + destruct B' => //.
-      eexists; apply: FailT => //.
+      have [b {IH}] := IH _ _ erefl.
+      case: r {rB} => [|s|??[z ?]] IH; subst;
+      by repeat eexists; apply: BackT IH.
+    + eexists; apply: FailT => //.
       by move: nA => /=; case: prune.
   Qed.
 
-
-  Lemma run_ko_EON p fv fv' s2 B B' sIgn b1:
-    runT p fv s2 B B' b1 fv' ->
-    runT p fv sIgn (Or None s2 B) (omap (fun '(s, x) => (s, omap (Or None s2) x)) B') false fv'.
-  Proof. by move=> H; have:= ex_intro (fun x => runT p fv s2 B B' x fv') _ H => /run_ko_left2. Qed.
-
-  Lemma run_ko_ONK p fv fv' s2 B B' sIgn ss:
-    runT p fv sIgn (Or None s2 B) ss false fv' ->
-    ss = (omap (fun '(s, x) => (s, omap (Or None s2) x)) B') ->
-      (exists b1, runT p fv s2 B B' b1 fv').
-  Proof. by move=> +?; subst => /run_ko_left2. Qed.
+  Lemma runT_Nor_intro p fv fv' s2 B B' sIgn b1:
+    runT p fv s2 B B' b1 fv' -> runT p fv sIgn (Or None s2 B) 
+      (map_many (fun x => (Or None s2 x)) B') false fv' .
+  Proof.
+    move=> HB; elim_run HB sIgn.
+    + by apply: StopOT; rewrite //=(rew_pa,NN).
+    + by apply: StopMT; rewrite//=(rew_pa,NS).
+    + by apply: StepT' (IH _); rewrite/= ?(rew_pa,eA)//; destruct st.
+    + by apply: BackT; rewrite//=(failed_or_None,nA).
+    + by apply: FailT; rewrite//= nA.
+  Qed.
 
   Lemma run_or_correct_left p fv fv' s1 A r b:
     runT p fv s1 A r b fv' ->
-      if r is Some (s2, A') then
-        forall sX X, 
-        runT p fv s1 (Or (Some A) sX X) 
-          (Some (s2, if A' is Some A' then
-            Some (Or (Some A') sX (if b then KO else X))
-          else 
-            if b then None
-            else omap (fun x => Or None sX x) (prune false X))) false fv'
-      else
+      match r with
+      | Zero => 
         if b then
-          forall sX X, runT p fv s1 (Or (Some A) sX X) None false fv'
+          forall sX X, runT p fv s1 (Or (Some A) sX X) Zero false fv'
         else
           forall sX X X' n1 fv2, runT p fv' sX X X' n1 fv2 ->
-          runT p fv s1 (Or (Some A) sX X) (omap (fun '(s, x) => (s, omap (Or None sX) x)) X') false fv2.
+          runT p fv s1 (Or (Some A) sX X) (map_many (Or None sX) X') false fv2
+      | One s2 => forall sX X, 
+        runT p fv s1 (Or (Some A) sX X) 
+          (if b then One s2 else 
+            if prune false X is Some x then (Many s2 (Or None sX x))
+            else One s2) false fv'
+      | Many s2 A' =>
+        forall sX X, 
+        runT p fv s1 (Or (Some A) sX X) 
+          (Many s2 (Or (Some A') sX (if b then KO else X))) false fv'
+      end.
   Proof.
     move=> H; elim_run H.
-    - by move=> sX X; subst => /=; apply: StopT.
-    + case: r rB IH => [[s B']|].
-        move=> rB IH sX X.
-        case: (incomplete_exp_cut pA eA) => /=?; subst => //=; apply: StepT;
-        rewrite /= ?(rew_pa,eA)//=.
-        by have:= IH sX KO; rewrite !if_same//=.
-      move=> HB.
-      destruct b1 => //= IH.
-        rewrite orbT => sX X.
-        apply: StepT; rewrite/= ?(eA,rew_pa)//=.
-        by destruct st.
-      rewrite orbF.
-      case: (incomplete_exp_cut pA eA) => /=?; subst => //=.
-        move=> sX X.
-        apply: StepT; rewrite/= ?(eA,rew_pa)//=.
-        apply: (IH _ KO None); by apply: FailT.
-      move=> sX X X' n1 fv3 H.
-      apply: StepT;rewrite/= ?(eA,rew_pa)//=.
-      by apply:IH H.
-    + case: r rB IH => [[s B']|] rB.
-        move=> IH sX X.
-        apply: BackT; rewrite /=?(prune_dead nA)//.
-        rewrite nA//.
-      destruct n => //=.
-        move=> IH sX X.
-        by apply: BackT; rewrite //=nA.
-      move=> IH sX X X' n1 fv2 H.
-      apply: BackT; only 1,2: rewrite //=nA//.
-      by apply: IH H.
+    + by move=> sX X; case P: prune => [X'|]/=; [apply: StopMT|apply: StopOT]; rewrite//= NN P.
+    + by move=> sX X; apply: StopMT;rewrite //=NS.
+    + case: r rB IH => [|s2|s2 A'] rB.
+      - case: b1 rB => rB IH.
+          rewrite orbT => sX X.
+          case: (incomplete_exp_cut pA eA) => /= ?; subst =>/=;
+          by apply: StepT' (IH _ _); rewrite//=?(rew_pa,eA)//=.
+        rewrite orbF.
+        case: (incomplete_exp_cut pA eA) => /= ?; subst => /=sX X.
+          apply: StepT' => /=; rewrite?eA//=; cycle 1.
+          by apply: (IH _ _ Zero); apply: FailT.
+          by [].
+        move=> X' n1 fv2 H; apply: StepT'; rewrite/=?eA//=.
+          by [].
+        apply: IH H.
+      - move=> IH sX X; apply: StepT'; rewrite/=?eA//; first by destruct st.
+        rewrite/is_cb eq_sym; case: eqP => cb; subst => //=.
+        by have:= IH _ KO => //=; rewrite if_same//.
+      move=> IH sX X; apply: StepT'; rewrite/=?eA//; first by destruct st.
+      rewrite/is_cb eq_sym; case: eqP => cb; subst => //=.
+      by have:= IH _ KO => //=; rewrite if_same//.      
+    + case: r rB IH => [|s2|s2 A'] rB.
+      - case: n rB => /=rB IH sX X => [|X' n1 fv2 H]; apply: BackT; rewrite/=?nA//.
+        by apply: IH H.
+      - by move=> H sX X; apply: BackT; rewrite/=?nA//.
+      - by move=> H sX X; apply: BackT; rewrite/=?nA//.
     + move=> sX X X' n1 fv' H.
       have fB := prune_None nA.
       inversion H; subst; clear H.
       + apply: BackT => //=; first rewrite nA failedF_prune//.
           by rewrite success_failed.
-        by apply: StopT; rewrite//=success_or_None.
+        by apply: StopOT; rewrite//=(rew_pa,H2).
+      + apply: BackT => //=; first rewrite nA failedF_prune//.
+          by rewrite success_failed.
+        by apply: StopMT; rewrite//=(rew_pa,H2).
       + apply: BackT => //=; first rewrite nA failedF_prune//.
           by rewrite incomplete_failed.
-        apply: StepT; rewrite/= ?(rew_pa,H1)//; first destruct tg => //.
-        by apply/run_ko_left2; eexists; eauto.
+        apply: StepT'; rewrite/= ?(rew_pa,H1)//; first destruct tg => //.
+        by apply: runT_Nor_intro H2.
       + apply: BackT => //=; first by rewrite H1 nA.
-        by apply/run_ko_left2; exists n1.
+        by apply: runT_Nor_intro H2.
       + by apply: FailT; rewrite /= nA H0.
   Qed.
 
@@ -195,132 +217,122 @@ Section s.
     or_succ_build_res s1 b KO A' r -> or_succ_build_res s1 true D A' r.
   Proof. by case: r => [[]|]//[t|]//= s t1 [->]; case: ifP => // _ []//. Qed.
 
-  Lemma run_or_fail_L1 p b fv1 s1 Cx fv3 fn sx:
-    runT p fv1 s1 Cx None b fv3 ->
-    runT p fv1 s1 (Or (Some Cx) sx KO) None false fn ->
+  Lemma run_or_fail_L1 p b b1 fv1 s1 Cx fv3 fn sx:
+    runT p fv1 s1 Cx Zero b fv3 ->
+    runT p fv1 s1 (Or (Some Cx) sx KO) Zero b1 fn ->
     fv3 = fn.
   Proof.
-    remember None as n1 eqn:H1.
-    remember (@None tree) as n2 eqn:H2 => H.
-    elim_run H H1 H2.
-    - inversion 1 => //; subst.
-        move: H1; rewrite/=eA/=if_same => -[???]; subst.
-        apply: IH => //.
-        destruct b => //; by rewrite orbT in H2.
-      - by rewrite rew_pa incomplete_failed in H0.
-      by move: H0 => /=; rewrite incomplete_prune_id.
-    - inversion 1 => //=; subst.
-        by rewrite rew_pa in H0; rewrite incomplete_failed in fA.
-      - apply: IH => //.
-        move: H1 => /=; case nA': prune => //= -[?]; subst.
-        by move: nA; rewrite nA' => -[?]; subst.
-      by move: H0 => /=; rewrite nA.
-    - have fA := prune_None nA.
-      inversion 1 => //; subst.
-        by rewrite rew_pa in H0; rewrite incomplete_failed in fA.
-      by move: H2 => /=; rewrite nA.
+    move=> H1 H2.
+    have:= run_or_correct_left H1.
+    destruct b.
+      by move=>/(_ sx KO) H; have [_[]] := runT_det H H2.
+    move=> H; have:= H sx KO Zero false fv3 => {}H.
+    have [|_[]//] := runT_det H2 (H _).
+    by apply: FailT.
   Qed.
 
-  Lemma run_or_complete p v0 v2 s0 sm t0 t1 X:
-    runT p v0 s0 (Or (Some t0) sm t1) X false v2 ->
-      if X is Some (s3, X) then
-        (exists t0' b, runT p v0 s0 t0 (Some (s3, t0')) b v2 /\ 
-          or_succ_build_res sm b t1 t0' X /\ 
-          (~~b -> X = None -> prune false t1 = None))
+  Lemma run_or_complete b p v0 v2 s0 sm t0 t1 X:
+    runT p v0 s0 (Or (Some t0) sm t1) X b v2 ->
+      match X with
+      | Zero =>
+          exists b, exists2 v1, runT p v0 s0 t0 Zero b v1 &
+            if b then  v1 = v2
+            else exists b1, runT p v1 sm t1 Zero b1 v2
+      | One s3 =>
+        (* TODO: legare t1 con la soluzione *)
+        (exists2 b, runT p v0 s0 t0 (One s3) b v2 & (~~b -> prune false t1 = None))
         \/
-        (exists v1, runT p v0 s0 t0 None false v1 /\ 
-          (if X is Some (Or (Some _ ) _ _) then false else true) /\
-          exists b, runT p v1 sm t1 (Some (s3, (if X is Some (Or _ _ t1') then Some t1' else None))) b v2)
-      else
-        X = None /\
-        exists b v1, runT p v0 s0 t0 None b v1 /\ 
-          if b then  v1 = v2
-          else exists b1, runT p v1 sm t1 None b1 v2.
+        (exists2 v1, runT p v0 s0 t0 Zero false v1 & exists b, runT p v1 sm t1 (One s3) b v2)
+      | Many s3 X =>
+        (exists Ax, exists2 b, 
+          runT p v0 s0 t0 (if Ax is Some Ax then Many s3 Ax else One s3) b v2 &
+          exists2 Bx, 
+            X = Or Ax sm Bx &
+            (if b then Bx = KO
+            else if Ax is Some Ax then Bx = t1
+            else Some Bx = prune false t1)) \/
+        (exists2 v1, runT p v0 s0 t0 Zero false v1 &
+          match X with
+          | Or None _ t1' => exists b, runT p v1 sm t1 (Many s3 t1') b v2
+          | _ => false
+          end)
+      end.
   Proof.
     remember (Or (Some t0) _ _) as o1 eqn:Ho1.
-    remember false as z eqn:Hz.
     move=> H.
-    elim_run H sm t0 t1 Ho1 Hz => //.
-    + rewrite rew_pa in sA; rewrite/=.
-      left; case nA: prune => [A3|]/=.
-        by repeat eexists; first apply: StopT => //=.
-      repeat eexists; first apply: StopT => //=.
-      move=> /=; case nB: prune => [B1'|]//=.
-      case: prune => //=.
+    elim_run H sm t0 t1 Ho1 => //.
+    + move: NN; rewrite/=; case Pt0 : prune => //=.
+      case Pt1: prune => //= _.
+      left; eexists => //.
+      by apply: StopOT.
+    + move: NS; rewrite/=; case Pt0 : prune => [t0'|]//=.
+        move=> [<-{B}]; rewrite rew_pa in sA; left.
+        exists (Some t0'), false.
+          by apply: StopMT.
+        by repeat eexists.
+      case Pt1: prune => [t1'|]//=[<-{B}].
+      left; exists None, false; repeat eexists.
+      by apply: StopOT.
     + move: eA pA; rewrite rew_pa/=.
-      rewrite !push; case eC: step => [[fvx rx] Cx]/=[???] PL; subst.
-      have/= rxP:= incomplete_exp_cut PL eC.
-      have ? : b1 = false by case: rxP => ?; subst.
-      subst.
-      have {IH} := IH _ _ _ erefl erefl.
-      rewrite orbF in Hz *.
-      case: r rB => [[s2 X]|] rB.
-        move=> [[A'[b [rC [HS NR]]]]|[fv3[H1[H2[b HS]]]]].
-          left; case: rxP => /=?; subst; repeat eexists.
-            by apply: StepT eC erefl rC.
-            by apply: or_succ_build_resP1 HS.
-            by [].
-            by apply: StepT eC erefl rC.
-            by apply: HS.
-          move=> /= H1 H2/=.
-          by apply: NR.
-        right; case: rxP => ?; subst; simpl  in HS.
-          by inversion HS.
-        repeat eexists.
-          by apply: StepT eC erefl H1.
-          by destruct X => //=.
-        by apply: HS.
-      move=> [?[b[fv3[H1]]]] H2; subst; split => //.
-      destruct b; subst.
-        exists true, v2; split => //=.
-        by case: rxP => ?; subst; apply: StepT eC erefl H1.
-      case: H2 => [b1 H2].
-      case: rxP => ?; subst.
-        repeat eexists.
-          by apply: StepT eC _ H1.
-        move=> //=.
-        simpl in *.
-        by rewrite (run_or_fail_L1 H1 rB).
-      exists false.
-      repeat eexists.
-        by apply: StepT eC _ H1.
-      apply: H2.
+      case eA: step => [[? tg] t0'][???] I; subst.
+      have {IH} := IH _ _ _ erefl.
+      case: r rB => [|s|s t] rB.
+      - move=> [[][fv' H]].
+          by case: (incomplete_exp_cut I eA) => /=??; 
+          subst; (repeat eexists; first apply: StepT eA H).
+        move=> [b Hx]; case: (incomplete_exp_cut I eA) => /=?; 
+        subst; (repeat eexists; first apply: StepT eA H) => //=.
+          by inversion Hx.
+        by eauto.
+      - move=> [[b R H]|[v H1 [b H2]]].
+          by case: (incomplete_exp_cut I eA) => /=?; subst;left; 
+          (repeat eexists; first apply: StepT eA R).
+        case: (incomplete_exp_cut I eA) => /=?; subst;right.
+          by inversion H2 => //.
+        repeat eexists; first apply: StepT eA H1 => //.
+        apply: H2.
+      move=> [].
+        move=> [t'[b H [Bx ? Hx]]]; subst.
+        case: (incomplete_exp_cut I eA) => /=?; subst; left; 
+        (repeat eexists; first apply: StepT eA H) => //=.
+        by destruct b, t' => //.
+      move=> [f2 H1].
+      destruct t => //; destruct o => //-[b].
+      case: ifP => CB H3; first by inversion H3; subst; destruct t.
+      right; eexists.
+        by destruct tg => //; apply: StepT eA H1.
+      by eauto.
     + move: fA nA; rewrite rew_pa/= => fA.
       case nC: prune => [C'|]//=.
         move=> [?]; subst.
-        have {IH} := IH _ _ _ erefl erefl.
-        case: r rB => [[s2 X]|] rB/=; last first.
-          move=> [?[b[fv2[H1 H2]]]]; subst; split => //; exists b, fv2; split => //.
-          by apply: BackT H1.
-        move=> [[A' [b [rA' [H HR]]]]|[fv2[rC' [H1 [b H]]]]].
-          by left; repeat eexists; first by apply: BackT rA'.
-        right; repeat eexists; last by apply H.
-          by apply: BackT rC'.
-        by destruct X => //.
-      case nD: prune => //[D'][?]; subst.
-      case: r rB IH => [[s2 r]|] rB IH.
-        have /= := run_same_structure rB.
-        case: r rB IH => [r|] rB IH/=.
-          case: r rB IH => // l s3' D2 rB IH /andP[/eqP?/eqP?]; subst.
-          have [b1 H] := proj2 (run_ko_left2 p v0 v1 s3' D' (Some (s2, Some D2)) s1) rB.
-          destruct s2.
-          right; repeat eexists.
-            by apply: FailT.
-          by apply: prune_run nD H.
-        move=> _.
-        have [b H] := proj2 (run_ko_left2 p v0 v1 sm D' (Some (s2, None)) s1) rB.
-        destruct s2.
-          right; repeat eexists; first by apply: FailT.
-          apply: prune_run nD H.
-      repeat eexists.
-        by apply: FailT.
-      have [b H] := proj2 (run_ko_left2 p v0 v1 sm D' None s1) rB.
-      by eexists; apply: prune_run nD H.
-    move: nA => /=.
-    case nA: prune => //=; case nB: prune => //= _.
-    repeat eexists; first by apply: FailT.
-    move=> /=; repeat eexists.
-    by apply: FailT nB.
+        have {IH} := IH _ _ _ erefl.
+        case: r rB => [|s|s r] rB.
+        - by move=> [b[fv H1 H2]]; repeat eexists; first by apply: BackT H1.
+        - by move=> [[b H1 H2]|[f H1 [x H2]]]; [left|right]; (repeat eexists; first apply: BackT H1); eauto.
+        move=> [].
+          move=> [t[b H[Bx Hx]]]; subst; left.
+          by repeat eexists; first apply: BackT H => //.
+        move=> [fv H1 H2].
+        by right; repeat eexists; first (by apply: BackT H1); eauto.
+      case Pt1: prune => [t1'|]//=[?]; subst.
+      have [b] := runT_Nor_elim rB.
+      case: r {IH rB} => [|s|s t].
+      - move=> H; repeat eexists; first apply: FailT => //.
+        case: (boolP (failed t1)) => ft.
+          by repeat eexists; apply: BackT H => //.
+        by have:= failedF_prune (negbTE ft); rewrite Pt1 => -[<-]; eauto.
+      - move=> H; right; eexists; first by apply: FailT.
+        case: (boolP (failed t1)) => ft; first by eexists; apply: BackT H.
+        have:= failedF_prune (negbTE ft); rewrite Pt1 => -[<-]; eauto.
+      move=> [B' ? H]; subst; right.
+      eexists; first by apply: FailT.
+      case: (boolP (failed t1)) => ft; first by eexists; apply: BackT H.
+      have:= failedF_prune (negbTE ft); rewrite Pt1 => -[<-]; eauto.
+    + move: nA => /=.
+      case nA: prune => //=; case nB: prune => //= _.
+      repeat eexists; first by apply: FailT.
+      move=> /=; repeat eexists.
+      by apply: FailT nB.
   Qed.
 
   Notation  "A ∨ B" := (A \/ B) (at level 20).
@@ -329,91 +341,106 @@ Section s.
 
   (*SNIPT: runSST_or *)
   Lemma runSST_or: 
-    forall p v v' s s' A A' s1 B, runT p v s A (Some (s', Some A')) true v' ->
-      runT p v s ((Some A) \/ B -sub(s1)) (Some (s', Some((Some A') \/ KO -sub(s1)))) false v'.
+    forall p v v' s s' A A' s1 B, runT p v s A (Many s' A') true v' ->
+      runT p v s ((Some A) \/ B -sub(s1)) (Many s' ((Some A') \/ KO -sub(s1))) false v'.
   (*ENDSNIPT: run_orSST *)
   Proof. move=> > /run_or_correct_left H; auto. Qed.
 
   (*SNIP: runSSF_or *)
   Lemma runSSF_or: forall p v0 v1 s0 s1 t0 t0' sm t1,
-    runT p v0 s0 t0 (Some (s1, (Some t0'))) false v1 ->
-      let sR := Some (Or (Some t0') sm t1) in
-      runT p v0 s0 (Or (Some t0) sm t1) (Some (s1, sR)) false v1.
+    runT p v0 s0 t0 (Many s1 t0') false v1 ->
+      runT p v0 s0 (Or (Some t0) sm t1) (Many s1 ((Some t0') \/ t1 -sub(sm))) false v1.
   (*ENDSNIP: run_orSSF *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
   (*SNIP: runSNF_or *)
   Lemma runSNF_or: forall p v0 v1 s0 t0 s1 sm t1,
-    runT p v0 s0 t0 (Some (s1, None)) false v1 ->
-      let nB := (prune false t1) in
-      let sR := (omap (Or None sm) nB) in
-      runT p v0 s0 (Or (Some t0) sm t1) (Some (s1, sR)) false v1.
+    runT p v0 s0 t0 (One s1) false v1 ->
+      runT p v0 s0 ((Some t0) \/ t1 -sub(sm))
+        match (prune false t1) with
+        | None =>  (One s1)
+        | Some t => (Many s1 (None \/ t -sub(sm)))
+        end
+      false v1.
   (*ENDSNIP: run_orSNF *)
   Proof . move=>> /run_or_correct_left; auto. Qed.
 
   (*SNIP: runSNT_or *)
   Lemma runSNT_or: forall p v0 v1 s0 t0 s1 sm t1,
-    runT p v0 s0 t0 (Some (s1, None)) true v1 ->
-      runT p v0 s0 (Or (Some t0) sm t1) (Some (s1, None)) false v1.
+    runT p v0 s0 t0 (One s1) true v1 ->
+      runT p v0 s0 ((Some t0) \/ t1 -sub(sm)) (One s1) false v1.
   (*ENDSNIP: run_orSNT *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
   (*SNIPT: runNT_or *)
   Lemma runNT_or: 
-    forall p v v' s A s1 B, runT p v s A None true v' -> 
-      runT p v s ((Some A) \/ B -sub(s1)) None false v'.
+    forall p v v' s A s1 B, runT p v s A Zero true v' -> 
+      runT p v s ((Some A) \/ B -sub(s1)) Zero false v'.
   (*ENDSNIPT: run_orNT *)
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
-  (*SNIPT: runNF_or' *)
+  (*SNIPT: runNF_orx *)
   Lemma runNF_or': 
     forall p v0 v1 v2 s l s1 r r' b,
-    runT p v0 s l None false v1 -> runT p v1 s1 r r' b v2 ->
-      let sR := (omap (fun '(x, b) => (x, omap (fun x => None \/ x -sub(s1)) b)) r') in
-      runT p v0 s ((Some l) \/ r -sub(s1)) sR false v2.
-  (*ENDSNIPT: runNF_or' *)
+    runT p v0 s l Zero false v1 -> runT p v1 s1 r r' b v2 ->
+      runT p v0 s ((Some l) \/ r -sub(s1)) 
+      (map_many (fun x => None \/ x -sub(s1)) r') false v2.
+  (*ENDSNIPT: runNF_orx *)
   Proof. by move=>> /run_or_correct_left; eauto. Qed.
 
 
   (*SNIPT: runNF_or *)
   Lemma runNF_or: 
+    forall p v0 v1 v2 s A s1 s2 B b,
+    runT p v0 s A Zero false v1 -> runT p v1 s1 B (One s2) b v2 ->
+      runT p v0 s ((Some A) \/ B -sub(s1)) (One s2) false v2.
+  (*ENDSNIPT: run_orNF *)
+  Proof. move=> ???????? []> H1 H2/=; have:= run_or_correct_left H1 _ _ _ _ _ H2 => //=. Qed.
+  
+  (*SNIPT: runNF_or1 *)
+  Lemma runNF_or1: 
     forall p v0 v1 v2 s A s1 s2 B B' b,
-    runT p v0 s A None false v1 -> runT p v1 s1 B (Some (s2, B')) b v2 ->
-      let sR := omap (fun x => None \/ x -sub(s1)) B' in
-      runT p v0 s ((Some A) \/ B -sub(s1)) (Some (s2,sR)) false v2.
+    runT p v0 s A Zero false v1 -> runT p v1 s1 B (Many s2 B') b v2 ->
+      runT p v0 s ((Some A) \/ B -sub(s1)) (Many s2 (None \/ B' -sub(s1))) false v2.
   (*ENDSNIPT: run_orNF *)
   Proof. move=> ???????? []> H1 H2/=; have:= run_or_correct_left H1 _ _ _ _ _ H2 => //=. Qed.
 
   (*SNIPT: run_orSST *)
   Lemma run_orSST:
     forall p v v' s s' s1 A A' B B', 
-    runT p v s ((Some A) \/ B -sub(s1)) (Some (s', Some ((Some A') \/ B' -sub(s1)))) false v' ->
-      exists b, runT p v s A (Some (s', Some A')) b v' /\ B' = if b then KO else B.
+    runT p v s ((Some A) \/ B -sub(s1)) (Many s' ((Some A') \/ B' -sub(s1))) false v' ->
+      exists b, runT p v s A (Many s' A') b v' /\ B' = if b then KO else B.
   (*ENDSNIPT: run_orSST *)
   Proof.
-    move=> > /run_or_complete.
-    move=> [[t0''[b[H[[?[? Ht1]] H3]]]]|[t0''[H[b H1]]]]//; subst.
-    exists b; split => //.
-    by destruct b.
+    move=> > /run_or_complete[[Ax[b H1 [Bx [??] H]]]|[??]]//; subst.
+    eexists; split; destruct b; eauto.
+  Qed.
+
+  (*SNIPT: run_orSNT1 *)
+  Lemma run_orSNT1:
+    forall p v v' s s' s1 A B B', 
+    runT p v s ((Some A) \/ B -sub(s1)) (Many s' (None \/ B' -sub(s1))) false v' ->
+      (exists b, runT p v s A (One s') b v' /\ if b then B' = KO else prune false B = Some B') ∨
+      (exists v2 b, runT p v s A Zero false v2 /\ runT p v2 s1 B (Many s' B') b v').
+  (*ENDSNIPT: run_orSNT1 *)
+  Proof.
+    move=> >/run_or_complete[[Ax[b H1 [T [??] H2]]]|[vf H1 [b H2]]]; subst.
+      left; exists b => //; destruct b => //.
+    by right; exists vf, b.
   Qed.
 
   (*SNIPT: run_orSNT *)
   Lemma run_orSNT:
     forall p v v' s s' s1 A B B', 
-    runT p v s ((Some A) \/ B -sub(s1)) (Some (s', Some (None \/ B' -sub(s1)))) false v' ->
-      (exists b, runT p v s A (Some (s', None)) b v' /\ if b then B' = KO else prune false B = Some B') ∨
-      (exists v2 b, runT p v s A None false v2 /\ runT p v2 s1 B (Some (s', Some B')) b v').
+    runT p v s ((Some A) \/ B -sub(s1)) (Many s' (None \/ B' -sub(s1))) false v' ->
+      (exists b, runT p v s A (One s') b v' /\ (b = true -> B' = KO)) ∨
+      (exists v2 b, runT p v s A Zero false v2 /\ runT p v2 s1 B (Many s' B') b v').
   (*ENDSNIPT: run_orSNT *)
   Proof.
-    move=> p v v' s s' s1 l r r' H1.
-    have /=[] := run_or_complete H1.
-      move=> [x[b[H2 [[H3 [H4 H5 H6]]]]]]; subst.
+    move=> >/run_or_complete[[Ax[b H1 [T [??] H2]]]|[vf H1 [b H2]]]; subst.
       left; exists b => //; destruct b => //.
-    move=> [v1[H2[_ [b H]]]].
-    by right; exists v1, b.
+    by right; exists vf, b.
   Qed.
-
-
 
   Fixpoint not_bt A B :=
     match A, B with

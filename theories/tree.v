@@ -90,7 +90,10 @@ Section tree_op.
   (*ENDSNIP: failed_path*)
   (*SNIP: incomplete*)
   Definition incomplete t := 
-      if next_tree t is TA _ then true else false.
+    match next_tree t with
+    | TA _ => true
+    | _ => false
+    end.
   (*ENDSNIP: incomplete*)
   (*ENDSNIP: next_aux *)
 
@@ -279,25 +282,20 @@ Section main.
 
   Goal (prune false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
 
-  (* Definition optT := option tree.
-  Definition optC t : optT := Some t.
-  Coercion optC : tree >-> optT.
-
-  Definition ST : Type := (Sigma * optT).
-  Definition optST := option ST.
-  Definition opt_ST ST : optST := Some ST.
-  Coercion opt_ST: ST >-> optST. *)
-
   Notation "tg == CutBrothers" := (is_cb tg).
+
+  Inductive sol := Zero | One of Sigma | Many of Sigma & tree.
+
   (*prooftree: runbp*)
   (*SNIP: run_sig *)
   Inductive runT (p : program): fvS -> Sigma -> tree 
-            -> option (Sigma * option tree) -> bool -> fvS -> Prop :=
+            -> sol -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig *)
-    | StopT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = t' -> runT v s t (Some (s', t')) false v
-    | StepT s r t t' b b' v v' v'' tg: incomplete t -> step p v s t = (v', tg, t') -> b' = (tg == CutBrothers) || b -> runT v' s t' r b v'' -> runT v s t r b' v''
+    | StopOT s s' t v              : success t -> next_subst s t = s' -> prune true t = None -> runT v s t (One s') false v
+    | StopMT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = Some t' -> runT v s t (Many s' t') false v
+    | StepT s r t t' b v v' v'' tg: incomplete t -> step p v s t = (v', tg, t') -> runT v' s t' r b v'' -> runT v s t r ((tg == CutBrothers) || b) v''
     | BackT s t t' r n v v'          : failed t -> prune false t = Some t' -> runT v s t' r n v' -> runT v s t r n v'
-    | FailT s t v                   : prune false t = None -> runT v s t None false v.
+    | FailT s t v                   : prune false t = None -> runT v s t Zero false v.
   (*endprooftree: runbp*)
 
   Fixpoint vars_tree t : fvS :=
@@ -311,9 +309,24 @@ Section main.
 
 End main.
 
+
+Lemma StepT' u p s r t t' b b' v v' v'' tg: 
+  b' = (tg == CutBrothers) || b ->
+  incomplete t -> step u p v s t = (v', tg, t') -> runT u p v' s t' r b v'' -> 
+  runT u p v s t r b' v''.
+Proof. by move=> ->; apply: StepT. Qed.
+
+
+Definition get_tree t r :=
+  match r with
+  | Zero | One _ => t
+  | Many _ t => t
+  end.
+
 Ltac elim_run T X := revert X; elim: T; clear; 
-  [ move=> s1 s2 A B v0 sA ?? |
-    move=> s1 r A B b1 b2 v0 v1 v2 st pA eA ? rB IH|
+  [ move=> s1 s2 A v0 sA ? NN |
+    move=> s1 s2 A B v0 sA ? NS |
+    move=> s1 r A B b1 v0 v1 v2 st pA eA rB IH|
     move=> s1 A B r n v0 v1 fA nA rB IH |
     move=> s1 A v0 nA ]; intros X; subst => //; auto.
 Tactic Notation "elim_run" hyp(T) hyp_list(X) := elim_run T X.

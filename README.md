@@ -39,3 +39,8 @@ eval $(opam env --root=./_opam)
 rocq makefile -f _CoqProject -o Makefile
 make
 ```
+
+## Disclaimer
+
+The file finmap.v was taken from https://github.com/math-comp/finmap .
+The file zify_ssreflect.v was taken from https://github.com/math-comp/mczify .

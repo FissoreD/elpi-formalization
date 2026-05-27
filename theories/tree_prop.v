@@ -7,13 +7,9 @@ Ltac case_step_tag X A := let fv := fresh "_fv" in case X : step => [[fv []] A].
 Tactic Notation "case_step_tag" ident(X) ident(A) := case_step_tag X A.
 
 Section RunP.
-  (* Variable u: Unif.
-  Variable p : program.
-  Notation step := (step u p).
-  Notation runT := (runT u p). *)
 
   (********************************************************************)
-  (* EXPAND PROPERTIES                                                *)
+  (* STEP PROPERTIES                                                  *)
   (********************************************************************)
 
   Variable u : Unif.
@@ -46,6 +42,15 @@ Section RunP.
     failed_or_None, failed_or_Some, failed_and,
     next_subst_or_None, next_subst_or_Some, next_subst_and
   ).
+
+  Lemma cut_success_failed A: success (cutl A) \/ failed (cutl A).
+  Proof.
+    elim_tree A; rewrite /=.
+      rewrite !rew_pa//.
+    case: ifP; auto; rewrite rew_pa; rewrite -success_cut => sA.
+    by rewrite rew_pa success_failed// sA//.
+  Qed.
+
 
   Lemma failed_big_and t: failed (big_and t) = false.
   Proof. case: t => /=[|x []]//. Qed.
@@ -123,7 +128,7 @@ Section RunP.
 
   (*SNIPT: naNfail*)
   Lemma prune_None: 
-    forall t, prune false t = None -> failed t.
+    forall t, prune false t = None -> failed t = true.
   (*ENDSNIPT: naNfail*)
   Proof.
     move=> A; elim_tree A => /=.
@@ -135,9 +140,6 @@ Section RunP.
         by case: (prune _ B) => //=; auto.
       by case: ifP.
   Qed.
-
-  (* Lemma is_dead_prune {A} b: is_dead A -> prune b A = None.
-  Proof. move=>/is_dead_is_ko/is_ko_prune//. Qed. *)
 
   Lemma prune_cutl_success {A}:
     success A -> prune true (cutl A) = None.
@@ -219,9 +221,6 @@ Section RunP.
       by case nA: prune => //=-[<-]; rewrite rew_pa (HA _ _ nA) failed_big_and andbF.
   Qed.
 
-  (* Lemma failed_big_or u p fv s t: failed (backchain u p fv s t).2.
-  Proof. rewrite/backchain; case: bc => // ? -[|[]]//. Qed. *)
-
   Section same_structure.
     Definition same_structure A B :=
       match A with
@@ -270,13 +269,12 @@ Section RunP.
         by move => [<-].
     Qed.
 
-    Lemma run_same_structure p fv1 fv2 s A x n:
-      runT u p fv1 s A (Some x) n fv2 -> same_structure A (odflt A x.2).
+    Lemma run_same_structure p fv1 fv2 s A s' A' n:
+      runT u p fv1 s A (Many s' A') n fv2 -> same_structure A A'.
     Proof.
-      case: x => //= + []//= => s' A'.
-      remember (Some _) as sx eqn:Hx => H.
+      remember (Many _ _) as sx eqn:Hx => H.
       elim_run H s' A' Hx => //=.
-      - by move: Hx => [?]; subst => /=; apply/prune_same_structure.
+      - by move: Hx => [??]; subst => /=; apply/prune_same_structure/NS.
       - apply: same_structure_trans (step_same_structure eA) (IH _ _ erefl).
       - apply: same_structure_trans (prune_same_structure nA) (IH _ _ erefl).
     Qed.
@@ -374,10 +372,10 @@ Section RunP.
       apply: HA eA.
   Qed.
 
-  (*SNIPT: incomplete_prune_id*)
-  Lemma incomplete_prune_id: 
+  (*SNIPT: incpl_prune*)
+  Lemma incpl_prune: 
     forall b t, incomplete t -> prune b t = Some t.
-  (*ENDSNIPT: incomplete_prune_id*)
+  (*ENDSNIPT: incpl_prune*)
   Proof.
     move=> b A; elim_tree A b => /=; rewrite ?rew_pa.
     - move=> /HA->//.

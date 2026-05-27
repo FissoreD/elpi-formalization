@@ -32,17 +32,18 @@ with add_ca_deep_goals bt (gl : goals) : goals :=
 
 Notation add_ca_deep_g := (add_ca_deep_g' add_ca_deep).
 
-Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
+(* adds the list of goals l at the end of each alterntive which is in the current scope *)
+Fixpoint add_deep (bt: nat) (l: goals) (A : alts) : alts :=
   match A with
   | [::] => [::]
   | [:: (s,hd) & tl ] => [:: (s,add_deepG bt l hd) & add_deep bt l tl]
   end
-  with add_deepG (bt: alts) (l: goals) (A : goals) : goals :=
+  with add_deepG (bt: nat) (l: goals) (A : goals) : goals :=
   match A with
   | [::]%G => [::]%G 
   | [:: (a, ca) & tl ]%G =>
-      let s := size ca - size bt in
-      let xx := (add_deep bt l (ca)) in
+      let s := size ca - bt in
+      let xx := add_deep bt l ca in
       let ca := map (catr l) (take s xx) ++ drop s ca in
       [:: (a, ca) & add_deepG bt l tl]%G
   end.
@@ -62,25 +63,25 @@ Fixpoint add_deep (bt: alts) (l: goals) (A : alts) : alts :=
   *)
 (*SNIP: t2l*)
 (*SNIP: t2l_min*)
-Fixpoint t2l t0 s0 (cp: alts) : alts :=
+Fixpoint tree_to_stack t0 s0 (cp: alts) : alts :=
   match t0 with
   | OK           => [:: (s0, [::])]
   | KO           => [::]
   | TA a         => [:: (s0, [:: (a, [::]) ])]
 (*ENDSNIP: t2l_min*)
-  | Or None s1 B => add_ca_deep cp (t2l B s1 [::])
+  | Or None s1 B => add_ca_deep cp (tree_to_stack B s1 [::])
   | Or (Some A) s1 B    =>
-      let lB := t2l B s1 [::] in
-      let lA := t2l A s0 lB in
+      let lB := tree_to_stack B s1 [::] in
+      let lA := tree_to_stack A s0 lB in
       add_ca_deep cp (lA ++ lB)
   | And A B0 B   =>
-      let lA  := t2l A s0 cp in
+      let lA  := tree_to_stack A s0 cp in
       let lB0 := a2g B0 in
-      let lA  := add_deep cp lB0 lA in
+      let lA  := add_deep (size cp) lB0 lA in
       if lA is [:: (s0, gs) & al] then 
         let al := map (catr lB0) al in
         (* al are alternatives that should be added in the deep cuts in B *)
-        let lB := t2l B s0 (al ++ cp) in
+        let lB := tree_to_stack B s0 (al ++ cp) in
         (* lB are alternatives, each of them have gs has head *)
         map (catl gs) lB ++ al
       else [::]
@@ -95,8 +96,8 @@ Section test.
   Variable p1 : program.
 
   Goal forall s3 l, 
-    t2l (And (Or (Some OK) s1 (TA cut)) ([:: cut]) KO) s3 l = 
-      t2l (And (Or None s1 (TA cut)) ([:: cut]) (TA cut)) s3 l.
+    tree_to_stack (And (Or (Some OK) s1 (TA cut)) ([:: cut]) KO) s3 l = 
+      tree_to_stack (And (Or None s1 (TA cut)) ([:: cut]) (TA cut)) s3 l.
   Proof.
     move=>s3 l/=.
     rewrite /=!cat0s ?cat0s subnn.

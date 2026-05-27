@@ -72,6 +72,8 @@ End B.
 
 Notation spec_base_or := B.spec_base_or.
 
+Notation base_or := B.base_or.
+
 (*BEGIN*)
 Section valid_tree.
   Variable u : Unif.
@@ -83,7 +85,7 @@ Section valid_tree.
     | TA _ | OK | KO => true
     | Or None _ B => valid_tree B
     | Or (Some A) _ B => valid_tree A && 
-          ((B == KO) || B.base_or B)
+          ((B == KO) || base_or B)
     | And A B0 B => valid_tree A &&
         if success A then valid_tree B 
         else B == big_and B0
@@ -154,14 +156,13 @@ Section valid_tree.
       by move=> [<-]/=; rewrite (HA _ false)//= eqxx valid_tree_big_and !if_same.
     Qed.
 
-  Lemma valid_tree_run s1 fv A x b fv':
-    valid_tree A -> runT u p fv s1 A (Some x) b fv' -> valid_tree (odflt A x.2).
+  Lemma valid_tree_run s1 fv A b fv' s R:
+    valid_tree A -> runT u p fv s1 A (Many s R) b fv' -> valid_tree R.
   Proof.
-    case: x => //= s []//= R.
-    remember (Some _) as S eqn:HS.
+    remember (Many _ _) as S eqn:HS.
     move=> + H.
     elim_run H s R HS => vA.
-    + by move: HS => [_]; apply: valid_tree_prune.
+    + by move: HS => [??]; subst; apply: valid_tree_prune NS.
     + by apply: IH (valid_tree_step vA eA).
     + by apply: IH (valid_tree_prune vA nA).
   Qed.

@@ -3,6 +3,7 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From det Require Import tree tree_prop fresh.
 
+Module Private.
 Section vars_tree.
   Variable (u : Unif).
   Variable (p : program).
@@ -42,7 +43,7 @@ Section vars_tree.
     move => H1 H2.
     rewrite/bc/=.
     case: ifP => //= _.
-    case X: get_tm_hd => [c'|]//=.
+    case X: get_tm_hd => //[pred].
     case: fndP => /=hp; last by move=> [<-].
     rewrite !push.
     case FR: fresh_rules => [fF RF]/=.
@@ -149,4 +150,7 @@ Section vars_tree.
     
 
 End vars_tree.
+End Private.
 
+Definition vars_tree_prune_sub_flow := Private.vars_tree_prune_sub_flow.
+Definition vars_tree_step_sub_flow := Private.vars_tree_step_sub_flow.
