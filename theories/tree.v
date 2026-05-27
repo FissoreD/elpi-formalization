@@ -66,22 +66,19 @@ Section tree_op.
     | TA _ | KO | OK => (s, t)
     | Or None s' B => next s' B
     | Or (Some A) _ _ => next s A
-    | And A _ B => 
-      let (s', pA) := next s A in
-      if pA == OK then next s' B
-      else (s', pA)
+    | And A _ B => let (s', pA) := next s A in
+                   if pA == OK then next s' B else (s', pA)
     end.
   (*ENDSNIP: next*)
 
 
   (*SNIP: next_aux *)
   (*SNIP: next_subst*)
-  Definition next_subst s t := (next s t).1.
+  Definition next_subst s t := fst (next s t).
   (*ENDSNIP: next_subst*)
   (*SNIP: next_tree*)
-  Definition next_tree t := (next empty t).2.
+  Definition next_tree t := snd (next empty t).
   (*ENDSNIP: next_tree*)
-
   (*SNIP: succ_path*)
   Definition success t := next_tree t == OK.
   (*ENDSNIP: succ_path*)
@@ -89,11 +86,8 @@ Section tree_op.
   Definition failed t := next_tree t == KO.
   (*ENDSNIP: failed_path*)
   (*SNIP: incomplete*)
-  Definition incomplete t := 
-    match next_tree t with
-    | TA _ => true
-    | _ => false
-    end.
+  Definition incomplete t :=
+    match next_tree t with TA _ => true | _ => false end.
   (*ENDSNIP: incomplete*)
   (*ENDSNIP: next_aux *)
 
