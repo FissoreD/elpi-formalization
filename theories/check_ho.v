@@ -1,6 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import tree tree_prop ctx tree_vars unif mut_excl fresh sig_lattice compat_sig.
+From det Require Import tree tree_prop ctx tree_vars unif mut_excl fresh sig_lattice sig_compat.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
