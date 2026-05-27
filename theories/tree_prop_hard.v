@@ -92,7 +92,7 @@ Section s.
     runT p fv sIgn (Or None s2 B) R b fv' ->
       exists b1,
       match R with
-      | Many sk l => exists B', l = Or None s2 B' /\ runT p fv s2 B (Many sk B') b1 fv'
+      | Many sk l => exists2 B', l = Or None s2 B' & runT p fv s2 B (Many sk B') b1 fv'
       | Zero => runT p fv s2 B Zero b1 fv'
       | One s => runT p fv s2 B (One s) b1 fv'
       end.
@@ -111,12 +111,12 @@ Section s.
     + move: pA eA; rewrite rew_pa/= => pC.
       case eB: step => [[fvx rx] B2][???]; subst.
       have {IH}[b] := IH _ _ erefl.
-      case: r {rB} => [|s|??[z[?]]] IH; subst;
+      case: r {rB} => [|s|??[z ?]] IH; subst;
       by repeat eexists; apply: StepT eB erefl IH.
     + move: fA nA; rewrite rew_pa/= => fC.
       case nB: prune => //[B2][?]; subst.
       have [b {IH}] := IH _ _ erefl.
-      case: r {rB} => [|s|??[z[?]]] IH; subst;
+      case: r {rB} => [|s|??[z ?]] IH; subst;
       by repeat eexists; apply: BackT IH.
     + eexists; apply: FailT => //.
       by move: nA => /=; case: prune.
@@ -322,7 +322,7 @@ Section s.
       - move=> H; right; eexists; first by apply: FailT.
         case: (boolP (failed t1)) => ft; first by eexists; apply: BackT H.
         have:= failedF_prune (negbTE ft); rewrite Pt1 => -[<-]; eauto.
-      move=> [B'[? H]]; subst; right.
+      move=> [B' ? H]; subst; right.
       eexists; first by apply: FailT.
       case: (boolP (failed t1)) => ft; first by eexists; apply: BackT H.
       have:= failedF_prune (negbTE ft); rewrite Pt1 => -[<-]; eauto.

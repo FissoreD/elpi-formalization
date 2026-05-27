@@ -5,6 +5,27 @@ From det Require Import tree_prop_hard tree_vars mut_excl unif fresh.
 
 From det Require Import check_fo.
 
+Lemma runT_cutl u p fv s t r b fv':
+  runT u p fv s (cutl t) r b fv' ->
+    [/\ 
+      fv' = fv, b = false &
+      if success t then
+        r = One (next_subst s (cutl t))
+      else r = Zero].
+Proof.
+  remember (cutl _) as t' eqn:Ht => H.
+  elim_run H t Ht.
+  - rewrite -success_cut sA//.
+  - by rewrite prune_cutl in NS.
+  - have [] := cut_success_failed t.
+      by move=> /success_incomplete; rewrite pA.
+    by rewrite (incomplete_failed pA).
+  - by rewrite prune_cutl_failed in nA.
+  - case: ifP => // sT.
+    rewrite failedF_prune// in nA.
+    by rewrite failed_success_cut success_cut sT.
+Qed.
+
 Lemma is_det_tail_cut p s fv l:
   is_det p s fv (And l [::cut] (TA cut)).
 Proof.
@@ -12,16 +33,15 @@ Proof.
   remember (And _ _ _) as t' eqn:Ht'.
   elim_run H l Ht'.
   - by move: sA; rewrite rew_pa => /andP[]//.
+  - by move: sA; rewrite rew_pa => /andP[]//.
   - move: pA eA; rewrite rew_pa/= !push.
     case: ifP => sl pA [???]; subst.
     rewrite -success_cut in sl.
     inversion rB; subst; simpl in *; eauto.
-    - rewrite sl prune_cutl//.
-    - rewrite/=; eauto.
-    - move: H0; rewrite/=sl => -[???]; subst.
-      by move: H; rewrite rew_pa sl.
-    - move: H0; rewrite sl => -[?]; subst.
-      by move: H; rewrite rew_pa success_failed//=sl.
+    - move: H1; rewrite sl prune_cutl//.
+    - by move: H; rewrite rew_pa sl.
+    - move: H0; rewrite/=sl => -[?]; subst.
+      by move: H; rewrite rew_pa sl success_failed//.
   - by apply: IH erefl.
   - move: fA nA; rewrite rew_pa/=.
     move=> /orP[fl|/andP[]]//.
@@ -46,21 +66,23 @@ Lemma is_det_tail_cut1 p s fv t r r':
 Proof.
   move=> H1 + [b'[c' H2]][+[]].
   elim_run H2 H1 => dA b c.
-    { inversion 1; subst.
-      by move: H; rewrite rew_pa sA//.
-      move: H0 => /=; rewrite sA => -[???]; subst.
-      inversion H3; subst => //=.
-        by rewrite rew_pa success_cut sA ges_subst_cutl//= prune_cutl//= (det_check_prune_succ dA)//.
-        by move: H0; rewrite rew_pa success_cut sA.
-        by move: H0; rewrite rew_pa success_failed//?success_cut sA//.
-        by move: H0; rewrite/=success_cut sA.
-      by move: H; rewrite rew_pa success_failed sA//.
-      by move: H; rewrite /=sA.
+    {
+      inversion 1; subst; only 1,2: by move: H; rewrite rew_pa sA.
+      - move: H0 => /=; rewrite sA => -[???]; subst.
+        replace (And _ _ _) with (cutl (And A [::cut] OK)) in H3; last by rewrite/=sA.
+        by have [??]:= runT_cutl H3; rewrite rew_pa sA// ges_subst_cutl/=rew_pa sA//.
+      - move: H0; rewrite/= sA => -[?]; subst.
+        by move: H; rewrite rew_pa success_failed sA//.
+      - by move: H; rewrite /=sA//.
+    }
+    {
+      by have:= det_check_prune_succ dA sA; rewrite NS.
     }
     {
       have/= DB := det_check_step H1 dA eA.
       have {}IH := IH H1 DB.
       inversion 1; subst => //=.
+        by move: H; rewrite rew_pa => /andP[].
         by move: H; rewrite rew_pa => /andP[].
         move: H0 => /=.
         case: ifP => sA; first by rewrite success_incomplete in pA.
@@ -74,6 +96,7 @@ Proof.
       have {}IH := IH H1 DB.
       inversion 1; subst => //=.
         by move: H; rewrite rew_pa => /andP[].
+        by move: H; rewrite rew_pa => /andP[].
         move: H; rewrite rew_pa//= failed_success// => IA.
         by rewrite incomplete_failed in fA.
         move: H0 => /=; rewrite failed_success//=fA nA/= => -[?]; subst.
@@ -83,6 +106,7 @@ Proof.
     {
       have fA:= prune_None nA.
       inversion 1 => //=; subst.
+        by move: H; rewrite rew_pa failed_success.
         by move: H; rewrite rew_pa failed_success.
         by move: H; rewrite rew_pa failed_success// => IA; rewrite incomplete_failed in fA.
       by move: H0; rewrite/= failed_success fA// nA.
@@ -179,17 +203,13 @@ Section once.
     case M: obind => [s'|][???]; subst; last by inversion H3 => //; auto.
     set Y := _ `|` _ in H3.
     rewrite ffunE/= in H3.
-    have ? := run_or0 H3; subst.
-    case: r' H3 => r'; auto => H3.
-    have /= := run_same_structure H3.
-    case: r' H3 => //=sx []//=; last eauto.
-    move=> []// L sR R H3/andP[/eqP?/eqP?]; subst.
-    have:= run_ko_ONK H3.
-    move=> /(_ (Some (sx, Some R)) erefl) [b'] Hz.
+    have [b'] := runT_Nor_elim H3.
+    destruct r'; eauto.
+    move=> [B' ? Hz]; subst.
     set P := {| rules := _; sig := _|} in Hz.
     set T := TA _ in Hz.
-    have {}Hz : runT' P Y sR (And T [:: cut] (TA cut)) (Some (sx, Some R)).
+    have {}Hz : runT' P Y s' (And T [:: cut] (TA cut)) (Many s0 B').
       do 2 eexists; apply: Hz.
-    by have [//|[s'[]]] := is_det_tail_cut Hz.
+    by have [//|[]] := is_det_tail_cut Hz.
   Qed.
 End once.

@@ -168,7 +168,7 @@ Definition runT' p v s t r :=
 (*ENDSNIPT: runt1 *)
 
 (*SNIPT: tree_to_elpi *)
-Theorem tree_to_stack:
+Theorem runT_to_runS:
   forall p t s r, let v := vars_tree t `|` vars_sigma s in
     valid_tree t -> runT' p v s t r -> 
       let r' := match r with
@@ -185,7 +185,7 @@ Proof.
 Qed.
 
 (*SNIPT: elpi_to_tree *)
-Theorem stack_to_tree:
+Theorem runS_to_runT:
   forall p v a r, runS p v a r -> 
     forall s t, valid_tree t -> t2l t s [::] = a ->
       match r with
@@ -203,6 +203,6 @@ Proof.
 Qed.
 
 
-Print Assumptions stack_to_tree.
-Print Assumptions tree_to_stack.
+Print Assumptions runS_to_runT.
+Print Assumptions runT_to_runS.
 End NurEqiv.

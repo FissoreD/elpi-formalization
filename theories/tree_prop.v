@@ -43,6 +43,15 @@ Section RunP.
     next_subst_or_None, next_subst_or_Some, next_subst_and
   ).
 
+  Lemma cut_success_failed A: success (cutl A) \/ failed (cutl A).
+  Proof.
+    elim_tree A; rewrite /=.
+      rewrite !rew_pa//.
+    case: ifP; auto; rewrite rew_pa; rewrite -success_cut => sA.
+    by rewrite rew_pa success_failed// sA//.
+  Qed.
+
+
   Lemma failed_big_and t: failed (big_and t) = false.
   Proof. case: t => /=[|x []]//. Qed.
 
