@@ -284,12 +284,12 @@ Section main.
 
   Notation "tg == CutBrothers" := (is_cb tg).
 
-  Inductive sol_nb := Zero | One of Sigma | Many of Sigma & tree.
+  Inductive sol := Zero | One of Sigma | Many of Sigma & tree.
 
   (*prooftree: runbp*)
   (*SNIP: run_sig *)
   Inductive runT (p : program): fvS -> Sigma -> tree 
-            -> sol_nb -> bool -> fvS -> Prop :=
+            -> sol -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig *)
     | StopOT s s' t v              : success t -> next_subst s t = s' -> prune true t = None -> runT v s t (One s') false v
     | StopT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = Some t' -> runT v s t (Many s' t') false v
