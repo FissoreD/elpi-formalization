@@ -292,7 +292,7 @@ Section main.
             -> sol -> bool -> fvS -> Prop :=
   (*ENDSNIP: run_sig *)
     | StopOT s s' t v              : success t -> next_subst s t = s' -> prune true t = None -> runT v s t (One s') false v
-    | StopT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = Some t' -> runT v s t (Many s' t') false v
+    | StopMT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = Some t' -> runT v s t (Many s' t') false v
     | StepT s r t t' b v v' v'' tg: incomplete t -> step p v s t = (v', tg, t') -> runT v' s t' r b v'' -> runT v s t r ((tg == CutBrothers) || b) v''
     | BackT s t t' r n v v'          : failed t -> prune false t = Some t' -> runT v s t' r n v' -> runT v s t r n v'
     | FailT s t v                   : prune false t = None -> runT v s t Zero false v.

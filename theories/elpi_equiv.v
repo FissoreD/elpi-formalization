@@ -123,7 +123,7 @@ Proof.
     have:=@s2l_prune_tl _ s1 nilA vA' skA; rewrite H1 behead_cons => ?; subst.
     case P: prune => [A''|]/=; last by repeat eexists; apply: StopOT.
     have [sz[k[ks Hk]]]/= := failed_t2l (valid_tree_prune vA' P) (prune_Some P) s1 [::].
-    by rewrite Hk; repeat eexists; first apply: StopT P => //.
+    by rewrite Hk; repeat eexists; first apply: StopMT P => //.
   - move=> s1 a ca r gl fv ELPI IH s A vA H.
     have H1 := elpi_to_tree_no_op _ _ (CutS _ _) vA H.
     apply: H1; auto => {}A fA _ {}vA {}H.

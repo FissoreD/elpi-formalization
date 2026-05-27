@@ -225,7 +225,7 @@ Section Test2.
   Qed.
 
   Goal runT unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Many empty (Or None empty (Or (Some OK) empty OK))) false fset0.
-  Proof. apply: StopT => //=. Qed.
+  Proof. apply: StopMT => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
   Goal step unif emptyp fset0 empty (Or (Some (Or None empty (CutS))) empty OK) = (fset0, Expanded, (Or (Some (Or None empty OK)) empty OK)).

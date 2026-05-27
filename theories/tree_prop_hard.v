@@ -107,7 +107,7 @@ Section s.
       by move: NN => /=; case: prune.
     + move: sA; rewrite rew_pa/= => sC.
       move: NS => /=; case P: prune => //[C']/=[<-{B}].
-      by repeat eexists; apply: StopT => //.
+      by repeat eexists; apply: StopMT => //.
     + move: pA eA; rewrite rew_pa/= => pC.
       case eB: step => [[fvx rx] B2][???]; subst.
       have {IH}[b] := IH _ _ erefl.
@@ -128,7 +128,7 @@ Section s.
   Proof.
     move=> HB; elim_run HB sIgn.
     + by apply: StopOT; rewrite //=(rew_pa,NN).
-    + by apply: StopT; rewrite//=(rew_pa,NS).
+    + by apply: StopMT; rewrite//=(rew_pa,NS).
     + by apply: StepT' (IH _); rewrite/= ?(rew_pa,eA)//; destruct st.
     + by apply: BackT; rewrite//=(failed_or_None,nA).
     + by apply: FailT; rewrite//= nA.
@@ -155,8 +155,8 @@ Section s.
       end.
   Proof.
     move=> H; elim_run H.
-    + by move=> sX X; case P: prune => [X'|]/=; [apply: StopT|apply: StopOT]; rewrite//= NN P.
-    + by move=> sX X; apply: StopT;rewrite //=NS.
+    + by move=> sX X; case P: prune => [X'|]/=; [apply: StopMT|apply: StopOT]; rewrite//= NN P.
+    + by move=> sX X; apply: StopMT;rewrite //=NS.
     + case: r rB IH => [|s2|s2 A'] rB.
       - case: b1 rB => rB IH.
           rewrite orbT => sX X.
@@ -189,7 +189,7 @@ Section s.
         by apply: StopOT; rewrite//=(rew_pa,H2).
       + apply: BackT => //=; first rewrite nA failedF_prune//.
           by rewrite success_failed.
-        by apply: StopT; rewrite//=(rew_pa,H2).
+        by apply: StopMT; rewrite//=(rew_pa,H2).
       + apply: BackT => //=; first rewrite nA failedF_prune//.
           by rewrite incomplete_failed.
         apply: StepT'; rewrite/= ?(rew_pa,H1)//; first destruct tg => //.
@@ -268,7 +268,7 @@ Section s.
     + move: NS; rewrite/=; case Pt0 : prune => [t0'|]//=.
         move=> [<-{B}]; rewrite rew_pa in sA; left.
         exists (Some t0'), false.
-          by apply: StopT.
+          by apply: StopMT.
         by repeat eexists.
       case Pt1: prune => [t1'|]//=[<-{B}].
       left; exists None, false; repeat eexists.
