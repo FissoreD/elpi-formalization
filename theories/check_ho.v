@@ -645,10 +645,8 @@ Section check.
       by have:= succF_failF_paF SA fA pA.
   Qed.
 
-  (*SNIPT: is_det *)
   Definition is_det p s v t := 
     forall r, runT' p v s t r -> r = None \/ exists s, r = (Some (s, None)).
-  (*ENDSNIPT: is_det *)
 
   Lemma acyclic_sigmaT_big_and B0: acyclic_sigmaT (big_and B0).
   Proof. rewrite/big_and; case: B0 => //= + l; elim: l => //=. Qed.
@@ -751,10 +749,8 @@ Section check.
     rewrite HA//.
   Qed.
 
-  (*SNIPT: det_check_tree *)
   Lemma det_check_tree: 
     forall s v p t fv, check_program p -> det_tree p.(sig) fv t -> is_det p s v t.
-  (*ENDSNIPT: det_check_tree *)
   Proof.
     rewrite/is_det.
     move=> s v p t sV H1 H2 r [b[v' R]].
@@ -764,20 +760,16 @@ Section check.
     by apply: det_check_step eA.
   Qed.
 
-  (*SNIPT: det_check_call *)
   Theorem det_check_call:
     forall p s t v fv, 
       check_program p -> call_is_det p.(sig) fv t -> is_det p s v (TA (call t)).
-  (*ENDSNIPT: det_check_call *)
   Proof.
     move=> /= p t s v fv cp td r H.
     apply/det_check_tree/H => //=; eauto.
   Qed.
 
-  (*SNIPT: det_check_calls *)
   Theorem det_check_calls:
     forall p t v fv, check_program p -> call_is_det p.(sig) fv t -> is_det p empty v (TA (call t)).
-  (*ENDSNIPT: det_check_calls *)
   Proof.
     move=> /= p t v cp fv td r H.
     apply/det_check_tree/H => //; eauto.
