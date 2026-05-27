@@ -416,11 +416,24 @@ Section s.
     eexists; split; destruct b; eauto.
   Qed.
 
+  (*SNIPT: run_orSNT1 *)
+  Lemma run_orSNT1:
+    forall p v v' s s' s1 A B B', 
+    runT p v s ((Some A) \/ B -sub(s1)) (Many s' (None \/ B' -sub(s1))) false v' ->
+      (exists b, runT p v s A (One s') b v' /\ if b then B' = KO else prune false B = Some B') ∨
+      (exists v2 b, runT p v s A Zero false v2 /\ runT p v2 s1 B (Many s' B') b v').
+  (*ENDSNIPT: run_orSNT1 *)
+  Proof.
+    move=> >/run_or_complete[[Ax[b H1 [T [??] H2]]]|[vf H1 [b H2]]]; subst.
+      left; exists b => //; destruct b => //.
+    by right; exists vf, b.
+  Qed.
+
   (*SNIPT: run_orSNT *)
   Lemma run_orSNT:
     forall p v v' s s' s1 A B B', 
     runT p v s ((Some A) \/ B -sub(s1)) (Many s' (None \/ B' -sub(s1))) false v' ->
-      (exists b, runT p v s A (One s') b v' /\ if b then B' = KO else prune false B = Some B') ∨
+      (exists b, runT p v s A (One s') b v' /\ (b = true -> B' = KO)) ∨
       (exists v2 b, runT p v s A Zero false v2 /\ runT p v2 s1 B (Many s' B') b v').
   (*ENDSNIPT: run_orSNT *)
   Proof.
