@@ -1447,7 +1447,7 @@ Qed.
 
 Definition matching_sing p q s := matching (vars_tm (deref s q)) p q s.
 
-Lemma unif_match_sing h1 h2 q: 
+Lemma matching_unify_transP h1 h2 q: 
   [disjoint vars h1 & vars h2] -> [disjoint vars h1 & vars q] -> [disjoint vars h2 & vars q] -> 
   matching_sing h1 q fmap0 -> matching_sing h2 q fmap0 -> unify h1 h2 fmap0.
 Proof.
