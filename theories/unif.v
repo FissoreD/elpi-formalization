@@ -1447,9 +1447,11 @@ Qed.
 
 Definition matching_sing p q s := matching (vars_tm (deref s q)) p q s.
 
+(*SNIPT: matching_unify_transP*)
 Lemma matching_unify_transP h1 h2 q: 
   [disjoint vars h1 & vars h2] -> [disjoint vars h1 & vars q] -> [disjoint vars h2 & vars q] -> 
   matching_sing h1 q fmap0 -> matching_sing h2 q fmap0 -> unify h1 h2 fmap0.
+(*ENDSNIPT: matching_unify_transP*)
 Proof.
   move=> D0 D1 D2 M1 M2.
   have A := acyclic_sigma0.
@@ -1650,7 +1652,7 @@ Lemma deref_all_deref s r t:
   deref (ren_deref2k t r (groundify s)) t = deref_all (deref s (ren r t)).
 Proof. move=> H; by apply: deref_all_deref_aux. Qed.
 
-(*SNIPT: unif_ren *)  
+(*SNIPT: unif_ren *)
 Lemma unif_ren_ac: 
   forall t1 t2 t1' t2',
   alpha_equiv t1 t1' -> alpha_equiv t2 t2' -> 
