@@ -135,13 +135,13 @@ Proof.
     case: r ELPI => [[s' a']|] ELPI.
       case: a' ELPI => [|x xs] ELPI; last first.
         move=> [t1[IH Z]].
-        have S := StepT IA _ erefl IH.
+        have S := StepT IA _ IH.
         move: H2; case: ifP => H2 ST;
         by eexists _, _, t1; split => //; apply: S ST.
       move: H2; case: ifP => CB H2 Hx;
-      by eexists; eexists; apply: StepT H2 erefl Hx.
+      by eexists; eexists; apply: StepT H2 Hx.
     move: H2; case: ifP => //= CB ST IH; subst; repeat eexists;
-    apply: StepT erefl IH; eauto.
+    apply: StepT IH; eauto.
   - move=> s1 a g bs r t ca fv fv' ST ELPI IH s3 A vA H.
     have H1 := elpi_to_tree_no_op _ _ (CallS _ ST _) vA H.
     apply: H1; auto => {}A fA _ {}vA {}H.
@@ -154,11 +154,11 @@ Proof.
     rewrite H2/=.
     case: r ELPI => [[s' a']|] ELPI.
       case: a' ELPI => [|x xs] ELPI.
-        by move=> Hx; repeat eexists; apply: StepT H2 erefl Hx.
+        by move=> Hx; repeat eexists; apply: StepT H2 Hx.
       move=> [t'[IH Z]]; subst.
-      repeat eexists; [|eassumption]; by apply: StepT H2 erefl IH.
+      repeat eexists; [|eassumption]; by apply: StepT H2 IH.
     move=> IH.
-    by repeat eexists; apply: StepT H2 erefl IH.
+    by repeat eexists; apply: StepT H2 IH.
   + by move=> > vT H; repeat eexists; apply/FailT/t2l_nil_na/H.
 Qed.
 

@@ -40,7 +40,7 @@ Section s.
       - by rewrite success_incomplete in pA.
       - by rewrite success_incomplete in pA.
       - move: H0; rewrite eA => -[???]; subst.
-        by case: (IH _ _ H3) => ???; subst.
+        by case: (IH _ _ H2) => ???; subst.
       - by rewrite incomplete_failed in H.
       - by rewrite incpl_prune in H.
     + inversion H1; clear H1; try congruence; subst.
@@ -112,7 +112,7 @@ Section s.
       case eB: step => [[fvx rx] B2][???]; subst.
       have {IH}[b] := IH _ _ erefl.
       case: r {rB} => [|s|??[z ?]] IH; subst;
-      by repeat eexists; apply: StepT eB erefl IH.
+      by repeat eexists; apply: StepT eB IH.
     + move: fA nA; rewrite rew_pa/= => fC.
       case nB: prune => //[B2][?]; subst.
       have [b {IH}] := IH _ _ erefl.
@@ -129,7 +129,7 @@ Section s.
     move=> HB; elim_run HB sIgn.
     + by apply: StopOT; rewrite //=(rew_pa,NN).
     + by apply: StopT; rewrite//=(rew_pa,NS).
-    + by apply: StepT (IH _); rewrite/= ?(rew_pa,eA)//; destruct st.
+    + by apply: StepT' (IH _); rewrite/= ?(rew_pa,eA)//; destruct st.
     + by apply: BackT; rewrite//=(failed_or_None,nA).
     + by apply: FailT; rewrite//= nA.
   Qed.
@@ -160,18 +160,20 @@ Section s.
     + case: r rB IH => [|s2|s2 A'] rB.
       - case: b1 rB => rB IH.
           rewrite orbT => sX X.
-          by case: (incomplete_exp_cut pA eA) => /= ?; subst =>/=;
-          apply: StepT (IH _ _); rewrite//=?(rew_pa,eA).
+          case: (incomplete_exp_cut pA eA) => /= ?; subst =>/=;
+          by apply: StepT' (IH _ _); rewrite//=?(rew_pa,eA)//=.
         rewrite orbF.
         case: (incomplete_exp_cut pA eA) => /= ?; subst => /=sX X.
-          apply: StepT => /=; rewrite?eA//=.
+          apply: StepT' => /=; rewrite?eA//=; cycle 1.
           by apply: (IH _ _ Zero); apply: FailT.
-        move=> X' n1 fv2 H; apply: StepT; rewrite/=?eA//=.
+          by [].
+        move=> X' n1 fv2 H; apply: StepT'; rewrite/=?eA//=.
+          by [].
         apply: IH H.
-      - move=> IH sX X; apply: StepT; rewrite/=?eA//; first by destruct st.
+      - move=> IH sX X; apply: StepT'; rewrite/=?eA//; first by destruct st.
         rewrite/is_cb eq_sym; case: eqP => cb; subst => //=.
         by have:= IH _ KO => //=; rewrite if_same//.
-      move=> IH sX X; apply: StepT; rewrite/=?eA//; first by destruct st.
+      move=> IH sX X; apply: StepT'; rewrite/=?eA//; first by destruct st.
       rewrite/is_cb eq_sym; case: eqP => cb; subst => //=.
       by have:= IH _ KO => //=; rewrite if_same//.      
     + case: r rB IH => [|s2|s2 A'] rB.
@@ -190,8 +192,8 @@ Section s.
         by apply: StopT; rewrite//=(rew_pa,H2).
       + apply: BackT => //=; first rewrite nA failedF_prune//.
           by rewrite incomplete_failed.
-        apply: StepT; rewrite/= ?(rew_pa,H1)//; first destruct tg => //.
-        by apply: runT_Nor_intro H3.
+        apply: StepT'; rewrite/= ?(rew_pa,H1)//; first destruct tg => //.
+        by apply: runT_Nor_intro H2.
       + apply: BackT => //=; first by rewrite H1 nA.
         by apply: runT_Nor_intro H2.
       + by apply: FailT; rewrite /= nA H0.
@@ -277,28 +279,28 @@ Section s.
       case: r rB => [|s|s t] rB.
       - move=> [[][fv' H]].
           by case: (incomplete_exp_cut I eA) => /=??; 
-          subst; (repeat eexists; first apply: StepT eA erefl H).
+          subst; (repeat eexists; first apply: StepT eA H).
         move=> [b Hx]; case: (incomplete_exp_cut I eA) => /=?; 
-        subst; (repeat eexists; first apply: StepT eA erefl H) => //=.
+        subst; (repeat eexists; first apply: StepT eA H) => //=.
           by inversion Hx.
         by eauto.
       - move=> [[b R H]|[v H1 [b H2]]].
           by case: (incomplete_exp_cut I eA) => /=?; subst;left; 
-          (repeat eexists; first apply: StepT eA erefl R).
+          (repeat eexists; first apply: StepT eA R).
         case: (incomplete_exp_cut I eA) => /=?; subst;right.
           by inversion H2 => //.
-        repeat eexists; first apply: StepT eA _ H1 => //.
+        repeat eexists; first apply: StepT eA H1 => //.
         apply: H2.
       move=> [].
         move=> [t'[b H [Bx ? Hx]]]; subst.
         case: (incomplete_exp_cut I eA) => /=?; subst; left; 
-        (repeat eexists; first apply: StepT eA erefl H) => //=.
+        (repeat eexists; first apply: StepT eA H) => //=.
         by destruct b, t' => //.
       move=> [f2 H1].
       destruct t => //; destruct o => //-[b].
       case: ifP => CB H3; first by inversion H3; subst; destruct t.
       right; eexists.
-        by apply: StepT eA _ H1 => //=; destruct tg.
+        by destruct tg => //; apply: StepT eA H1.
       by eauto.
     + move: fA nA; rewrite rew_pa/= => fA.
       case nC: prune => [C'|]//=.

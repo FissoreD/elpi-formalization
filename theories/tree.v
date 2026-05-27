@@ -293,7 +293,7 @@ Section main.
   (*ENDSNIP: run_sig *)
     | StopOT s s' t v              : success t -> next_subst s t = s' -> prune true t = None -> runT v s t (One s') false v
     | StopT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = Some t' -> runT v s t (Many s' t') false v
-    | StepT s r t t' b b' v v' v'' tg: incomplete t -> step p v s t = (v', tg, t') -> b' = (tg == CutBrothers) || b -> runT v' s t' r b v'' -> runT v s t r b' v''
+    | StepT s r t t' b v v' v'' tg: incomplete t -> step p v s t = (v', tg, t') -> runT v' s t' r b v'' -> runT v s t r ((tg == CutBrothers) || b) v''
     | BackT s t t' r n v v'          : failed t -> prune false t = Some t' -> runT v s t' r n v' -> runT v s t r n v'
     | FailT s t v                   : prune false t = None -> runT v s t Zero false v.
   (*endprooftree: runbp*)
@@ -309,6 +309,14 @@ Section main.
 
 End main.
 
+
+Lemma StepT' u p s r t t' b b' v v' v'' tg: 
+  b' = (tg == CutBrothers) || b ->
+  incomplete t -> step u p v s t = (v', tg, t') -> runT u p v' s t' r b v'' -> 
+  runT u p v s t r b' v''.
+Proof. by move=> ->; apply: StepT. Qed.
+
+
 Definition get_tree t r :=
   match r with
   | Zero | One _ => t
@@ -318,7 +326,7 @@ Definition get_tree t r :=
 Ltac elim_run T X := revert X; elim: T; clear; 
   [ move=> s1 s2 A v0 sA ? NN |
     move=> s1 s2 A B v0 sA ? NS |
-    move=> s1 r A B b1 b2 v0 v1 v2 st pA eA ? rB IH|
+    move=> s1 r A B b1 v0 v1 v2 st pA eA rB IH|
     move=> s1 A B r n v0 v1 fA nA rB IH |
     move=> s1 A v0 nA ]; intros X; subst => //; auto.
 Tactic Notation "elim_run" hyp(T) hyp_list(X) := elim_run T X.

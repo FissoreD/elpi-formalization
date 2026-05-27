@@ -79,7 +79,7 @@ Section Test1.
   Proof.
     repeat eexists.
     set X := [fset IV 0; fresh [fset IV 0]].
-    apply: StepT => //=.
+    apply: StepT' => //=; cycle 1.
       rewrite/bc [get_tm_hd _]/=.
       cbn iota.
       rewrite deref_App [vars_tm _]/= !simpl_set.
@@ -93,7 +93,6 @@ Section Test1.
       rewrite/rename/= !simpl_set/= => H; rewrite !inE/=.
       rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
       by rewrite in_fnd/= ffunE//=.
-    by [].
     set Z := (_ `|` _).
     set K := (fresh _).
     apply: StepT => //=.
@@ -104,7 +103,6 @@ Section Test1.
       rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
       rewrite /= !simpl_set /rename/= !simpl_set !inE /=.
       by rewrite !unify_V_0r//=.
-    by [].
     set R := (_ `|` _).
     apply: StepT => //.
       rewrite/step/=.
@@ -117,7 +115,6 @@ Section Test1.
       rewrite /=in_fnd/=?inE// => KK.
       rewrite ffunE/= eqxx.
       rewrite unify_ground//.
-    by [].
     rewrite !simpl_set fsetUC.
     set T := (_ `|` _).
     apply: BackT => //=.
@@ -128,9 +125,9 @@ Section Test1.
       rewrite/= /fresh_rule/= !simpl_set.
       rewrite /rename/= !simpl_set in_fset1/=.
       rewrite eqxx/= unify_ground//.
-    by [].
     rewrite !simpl_set/=.
     apply: StopOT => //=.
+    by [].
   Qed.
 End Test1.
 
@@ -146,7 +143,7 @@ Section Test5.
   Goal exists v, runT unif p_test1 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false))))) (One s1) false v.
   Proof.
     repeat eexists.
-    apply: StepT => //=.
+    apply: StepT' => //=; cycle 1.
       rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
       rewrite !simpl_set in_fnd; first by rewrite/= !inE eqxx orbT.
@@ -156,16 +153,15 @@ Section Test5.
       rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
       rewrite /= !FmapE.fmapE/= !inE/= in_fnd/=?inE// => Hx.
       rewrite ffunE//=.
-    by [].
     set X := _ `|` _.
     apply: StepT => //=.
       rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE/= not_fnd//= unify_V_0r//=.
       rewrite unify_V_0r//= acyclic_sigma0//=.
-    by [].
     apply/StepT => //=.
     apply/StopOT => //=.
+    by [].
   Qed.
 End Test5.
 
@@ -182,19 +178,17 @@ Section Test6.
   Goal exists r, runT unif p_test2 fset0 empty (TA (call (Tm_App (Tm_P p) (Tm_D (ID false)))) ) (One s1) false r.
   Proof.
     repeat eexists.
-    apply: StepT => //.
+    apply: StepT' => //; cycle 1.
       rewrite/=/bc [flatten_term _]/= [get_tm_hd _]/=.
       cbn iota.
       rewrite !FmapE.fmapE eqxx/= !simpl_set.
       rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
       rewrite !FmapE.fmapE/= inE/= in_fnd?inE//= => H.
       by rewrite ffunE//.
-    by [].
     set X:= (_ `|` _).
     apply: StepT => //=.
       rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
       rewrite acyclic_sigma0/= !FmapE.fmapE/= not_fnd//= !unify_V_0r//=.
-    by [].
     rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
     set Y := _ `|` _.
     apply/StepT => //=.
@@ -202,10 +196,10 @@ Section Test6.
       rewrite/bc [flatten_term _]/= [get_tm_hd _]/= !simpl_set.
       rewrite acyclic_sigma_set_D//=.
       by rewrite !FmapE.fmapE.
-    by [].
     rewrite !simpl_set.
     apply: StepT => //=.
     apply: StopOT => //=.
+    by [].
   Qed.
 End Test6.
 
@@ -217,15 +211,17 @@ Section Test2.
   Goal step unif emptyp fset0 empty (Or (Some OK) empty OK) = (fset0, Success, Or (Some OK) empty OK). by []. Qed.
 
   Goal runT unif emptyp fset0 empty (Or (Some CutS) empty OK) (One empty) false fset0.
-    apply: StepT => //=.
+    apply: StepT' => //=; cycle 1.
     apply: StopOT => //.
+    by [].
   Qed.
 
   Goal forall r, 
     runT unif emptyp fset0 empty (Or (Some CutS) empty r) (One empty) false fset0.
     move=> r.
-    apply: StepT => //.
+    apply: StepT' => //; cycle 1.
     apply: StopOT => //=.
+    by [].
   Qed.
 
   Goal runT unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Many empty (Or None empty (Or (Some OK) empty OK))) false fset0.

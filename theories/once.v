@@ -69,8 +69,8 @@ Proof.
     {
       inversion 1; subst; only 1,2: by move: H; rewrite rew_pa sA.
       - move: H0 => /=; rewrite sA => -[???]; subst.
-        replace (And _ _ _) with (cutl (And A [::cut] OK)) in H3; last by rewrite/=sA.
-        by have [??]:= runT_cutl H3; rewrite rew_pa sA// ges_subst_cutl/=rew_pa sA//.
+        replace (And _ _ _) with (cutl (And A [::cut] OK)) in H2; last by rewrite/=sA.
+        by have [??]:= runT_cutl H2; rewrite rew_pa sA// ges_subst_cutl/=rew_pa sA//.
       - move: H0; rewrite/= sA => -[?]; subst.
         by move: H; rewrite rew_pa success_failed sA//.
       - by move: H; rewrite /=sA//.
@@ -87,7 +87,7 @@ Proof.
         move: H0 => /=.
         case: ifP => sA; first by rewrite success_incomplete in pA.
         rewrite eA => -[???]; subst.
-        by apply: IH H3.
+        by apply: IH H2.
         by move: H; rewrite rew_pa incomplete_failed//= => /andP[].
       by move: H; rewrite/=incomplete_failed//if_same.
     }
@@ -191,7 +191,7 @@ Section once.
     inversion Hx; clear Hx; subst => //.
     move: H1; rewrite/=/bc [get_tm_hd _]/=.
     case (boolP (acyclic_sigma s)) => AS; last first => //=.
-      by move=> [???]; subst; inversion H3; auto.
+      by move=> [???]; subst; inversion H2; auto.
     rewrite !FmapE.fmapE !inE eqxx/=.
     case X: fresh_rules => [fvx' rs'].
     rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
@@ -200,10 +200,10 @@ Section once.
       move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
       by apply: no_once_fresh.
     rewrite eqxx/=.
-    case M: obind => [s'|][???]; subst; last by inversion H3 => //; auto.
-    set Y := _ `|` _ in H3.
-    rewrite ffunE/= in H3.
-    have [b'] := runT_Nor_elim H3.
+    case M: obind => [s'|][???]; subst; last by inversion H2 => //; auto.
+    set Y := _ `|` _ in H2.
+    rewrite ffunE/= in H2.
+    have [b'] := runT_Nor_elim H2.
     destruct r'; eauto.
     move=> [B' ? Hz]; subst.
     set P := {| rules := _; sig := _|} in Hz.
