@@ -59,7 +59,7 @@ Definition same_sub {T1 T2:eqType} (s1 s2: option (T1*T2)) :=
 
 Lemma is_det_tail_cut1 p s fv t r r':
   check_program p ->
-  det_tree p.(sig) t ->
+  det_tree p t ->
   runT' p fv s t r -> 
   runT' p fv s (And t [::cut] (TA cut)) r' -> 
   r = r'.
