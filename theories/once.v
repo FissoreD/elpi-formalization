@@ -79,7 +79,7 @@ Proof.
       by have:= det_check_prune_succ dA sA; rewrite NS.
     }
     {
-      have/= DB := det_check_step H1 dA eA.
+      have/= DB := det_tree_step H1 dA eA.
       have {}IH := IH H1 DB.
       inversion 1; subst => //=.
         by move: H; rewrite rew_pa => /andP[].
@@ -92,7 +92,7 @@ Proof.
       by move: H; rewrite/=incomplete_failed//if_same.
     }
     {
-      have/= DB := det_check_prune dA nA.
+      have/= DB := det_tree_prune dA nA.
       have {}IH := IH H1 DB.
       inversion 1; subst => //=.
         by move: H; rewrite rew_pa => /andP[].
