@@ -11,7 +11,7 @@ Section checker.
     end. 
 
   (* There is cut and after the cut there are only call to Det preds *)
-  Fixpoint check_atoms (sP :sigT) (s: seq Atom) :=
+  Fixpoint check_atoms (sP : program) (s: seq Atom) :=
     match s with
     | [::] => true
     | cut :: xs => all (check_atom sP) xs || check_atoms sP xs
@@ -23,7 +23,7 @@ Section checker.
       check_atoms sP prems.
 
   Definition check_rules p :=
-    all (fun x => check_rule p.(sig) x.(head) x.(premises)) p.(rules).
+    all (fun x => check_rule p x.(head) x.(premises)) p.(rules).
 End checker.
 
 Lemma is_det_rename sP fv hd m:
@@ -99,22 +99,22 @@ Section check.
     "((A, A') ; KO) , C" is det
     "(A ; B)" for any A and B is not det since nothing prevents the execution of B if A fails
   *)
-  Fixpoint det_tree (sP:sigT) A :=
+  Fixpoint det_tree p A :=
     match A with
-    | TA a => check_atom sP a
+    | TA a => check_atom p a
     | KO | OK => true
     | And A B0 B =>
-        det_tree sP B && 
+        det_tree p B && 
         if nilA A
-        then det_tree sP A || has_cut B
+        then det_tree p A || has_cut B
         else
           (* alternatives are mutually exclusive (only 1 alt can succeed) || B/B0 cuts them *)
-          (det_tree sP A || (has_cut B && has_cut_seq B0)) && (* has_cut B -> has_cut B0 in a valid tree ++ *)
-          det_tree_seq sP B0 (* if we backtrack in A, B0 must be det *)
-    | Or None _ B => det_tree sP B
+          (det_tree p A || (has_cut B && has_cut_seq B0)) && (* has_cut B -> has_cut B0 in a valid tree ++ *)
+          det_tree_seq p B0 (* if we backtrack in A, B0 must be det *)
+    | Or None _ B => det_tree p B
     | Or (Some A) _ B =>
-        det_tree sP A && 
-        if has_cut A then det_tree sP B 
+        det_tree p A && 
+        if has_cut A then det_tree p B 
         else (B == KO) 
     end.
 
@@ -174,8 +174,8 @@ Section check.
 
   Lemma check_rulesP p c fv s1:
     check_rules p ->
-    tm_is_det p.(sig) c ->
-    all (fun x => check_atoms p.(sig) x.2) (bc u p fv c s1).2.
+    tm_is_det p c ->
+    all (fun x => check_atoms p x.2) (bc u p fv c s1).2.
   Proof.
     case: p => [rs s].
     rewrite/bc/=/check_rules/= => CR TD.
@@ -184,10 +184,10 @@ Section check.
     case DR: get_tm_hd => //=[p].
     case: fndP => //= pP.
     rewrite !push/=.
-    move: (flatten_mode _).
-    elim: rs s s1 fv c CR TD p DR pP => //= -[hd bo] xs IH sig s fv c/=.
-    move=> /andP[c1 c2] TD p C pP m.
-    have {}IH := IH _ _ _ _ c2 TD _ C pP.
+    move: (flatten_mode _) CR; generalize rs at 1 3.
+    elim: rs s s1 fv c TD p DR pP => //= -[hd bo] xs IH sig s fv c/=.
+    move=> TD p C pP rs' m /andP[c1 c2].
+    have /={}IH := IH _ _ _ _ TD _ C pP _ _ c2.
     rewrite !push/= head_fresh_rule/=.
     rewrite eq_sym callable_rename1.
     case:eqP => //= /esym tH.
@@ -333,9 +333,9 @@ Section check.
   Qed.
   
   Lemma det_check_big_or pr c fv fv' r0 rs s1:
-    check_program pr -> tm_is_det (sig pr) c -> 
+    check_program pr -> tm_is_det pr c -> 
     bc u pr fv c s1 = (fv', r0 :: rs) ->
-    det_tree (sig pr) (big_or r0.2 rs).
+    det_tree pr (big_or r0.2 rs).
   Proof.
     rewrite /bc/check_program.
     case: pr => rules s/= => /andP[].
@@ -375,9 +375,9 @@ Section check.
   Qed.
 
   Lemma det_check_step pr sv s1 A r: 
-    check_program pr -> det_tree pr.(sig) A -> 
+    check_program pr -> det_tree pr A -> 
       step u pr sv s1 A = r ->
-        det_tree pr.(sig) r.2.
+        det_tree pr r.2.
   Proof.
     move=> H + <-; clear r.
     elim_tree A s1.
@@ -393,7 +393,7 @@ Section check.
       rewrite step_and/=.
       set sB:= step _ _ _ _ B.
       set sA:= step _ _ _ _ A.
-      rewrite (fun_if (det_tree (sig pr))).
+      rewrite (fun_if (det_tree pr)).
       case SA: success.
         case : (ifP (is_cb _)) => /=; rewrite {}HB//=.
           by rewrite det_tree_cutl//no_alt_cutl//= andbT.
@@ -516,7 +516,7 @@ Section check.
 
   (*SNIPT: det_check_tree *)
   Lemma det_check_tree: 
-    forall s v p t, check_program p -> det_tree p.(sig) t -> is_det p s v t.
+    forall s v p t, check_program p -> det_tree p t -> is_det p s v t.
   (*ENDSNIPT: det_check_tree *)
   Proof.
     rewrite/is_det.
@@ -530,7 +530,7 @@ Section check.
 
   (*SNIPT: det_check_call *)
   Theorem det_check_call:
-    forall p s t v, check_program p -> tm_is_det p.(sig) t -> is_det p s v (TA (call t)).
+    forall p s t v, check_program p -> tm_is_det p t -> is_det p s v (TA (call t)).
   (*ENDSNIPT: det_check_call *)
   Proof.
     move=> /= p t s v cp td r H.
@@ -539,7 +539,7 @@ Section check.
 
   (*SNIPT: det_check_calls *)
   Theorem det_check_calls:
-    forall p t v, check_program p -> tm_is_det p.(sig) t -> is_det p empty v (TA (call t)).
+    forall p t v, check_program p -> tm_is_det p t -> is_det p empty v (TA (call t)).
   (*ENDSNIPT: det_check_calls *)
   Proof.
     move=> /= p t v cp td r H.
