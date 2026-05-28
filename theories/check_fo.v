@@ -282,10 +282,12 @@ Section check.
   Lemma prune_no_alt b A A' : prune b A  = Some A' -> success A = b -> nilA A = false.
   Proof. by rewrite /nilA=> + -> => ->. Qed.
 
-  Lemma det_check_prune {sP A R b}:
-    det_tree sP A -> prune b A = Some R -> det_tree sP R.
+  (*SNIPT: det_tree_prune *)
+  Lemma det_tree_prune:
+    forall p A B b, det_tree p A -> prune b A = Some B -> det_tree p B.
+  (*ENDSNIPT: det_tree_prune *)
   Proof.
-    elim_tree A R b => /=.
+    move=> p A R b; elim_tree A R b => /=.
     - by case: b => // _ [<-].
     - by move=> _ [<-]//.
     - move=>/andP[fA].
@@ -374,12 +376,13 @@ Section check.
     move=> /andP[AA AB]; case: ifP; auto.
   Qed.
 
-  Lemma det_check_step pr sv s1 A r: 
-    check_program pr -> det_tree pr A -> 
-      step u pr sv s1 A = r ->
-        det_tree pr r.2.
+  (*SNIPT: det_tree_step *)
+  Lemma det_tree_step:
+    forall pr v s1 A r, check_program pr -> det_tree pr A -> 
+      step u pr v s1 A = r -> det_tree pr r.2.
+  (*ENDSNIPT: det_tree_step *)
   Proof.
-    move=> H + <-; clear r.
+    move=> pr sv s1 A r H + <-; clear r.
     elim_tree A s1.
     - case: t => [|c]//=; rewrite !push/=.
       case bc: bc => //=[fv'[|[s0 r0]rs]]//= H1.
@@ -524,8 +527,8 @@ Section check.
     elim_run R H1 H2.
     - eauto.
     - by move: NS; rewrite (det_check_prune_succ H2 sA).
-    - by apply: IH (det_check_step _ _ eA).
-    - by apply: IH (det_check_prune _ nA).
+    - by apply: IH (det_tree_step _ _ eA).
+    - by apply: IH (det_tree_prune _ nA).
   Qed.
 
   (*SNIPT: det_check_call *)
