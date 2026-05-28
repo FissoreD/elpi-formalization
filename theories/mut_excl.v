@@ -79,8 +79,8 @@ Section mut_excl.
   Lemma is_det_cder s s1 c: tm_is_det s c -> get_tm_hd (deref s1 c) = get_tm_hd c.
   Proof. elim: c s => //=[p|f Hf a Ha] s; rewrite ?deref_P//. Qed.
 
-  Lemma is_det_lookup p c s (pP: p \in domf s):
-    get_tm_hd c = inl p -> tm_is_det s c -> is_det_sig s.[pP].
+  Lemma is_det_lookup p c s r (pP: p \in domf s):
+    get_tm_hd c = inl p -> tm_is_det {|rules := r; sig := s|} c -> is_det_sig s.[pP].
   Proof. by elim: c p s pP => //=p1 p2 s pP [->]; rewrite/tm_is_det/=in_fnd//. Qed.
 
   Lemma count_tm_ag_deref s c p: 
@@ -439,7 +439,7 @@ Lemma build_and (a b: bool): a -> b -> a && b. by move=> ??; apply/andP. Qed.
 
 Lemma mut_exclP p fv c s1:
   mut_excl u p -> 
-    tm_is_det p.(sig) c ->
+    tm_is_det p c ->
       all_but_last (fun x => has_cut_seq x.2) (bc u p fv c s1).2.
 Proof.
   rewrite/bc.
@@ -467,7 +467,7 @@ Proof.
   set FC1:= lang.rename _ _ _.
   move=> H/= /esym/callable_rename B.
   rewrite {1}/FC1 (proj2 (callable_rename _ hd p empty))//.
-  rewrite in_fnd (is_det_lookup _ DF)//=.
+  rewrite in_fnd (is_det_lookup _ DF TD)//=.
   have: good_mode (flatten_mode s.[pP]).
     move: GM; rewrite /good_modes/flatten_mode.
     by move=> /forallP /(_ [` pP]); rewrite valPE.

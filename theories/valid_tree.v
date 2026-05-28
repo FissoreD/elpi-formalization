@@ -109,10 +109,12 @@ Section valid_tree.
     rewrite success_cut sA HA//HB//=.
   Qed.
 
-  Lemma valid_tree_step s sv A r:
-    valid_tree A -> step u p sv s A = r -> valid_tree r.2.
+  (*SNIPT: valid_tree_step *)
+  Lemma valid_tree_step: 
+    forall s v A r, valid_tree A -> step u p v s A = r -> valid_tree r.2.
+  (*ENDSNIPT: valid_tree_step *)
   Proof.
-    move=>+<-; clear r.
+    move=>s sv A r +<-; clear r.
     elim_tree A s sv => /=.
     + by case: t => [|t]//=; rewrite push/=; case: bc => [_ []]//=-[]//= _ >; rewrite valid_tree_big_or.
     + move=> /andP[vA bB]; rewrite !push/= HA//=; case: ifP => //.
@@ -130,10 +132,12 @@ Section valid_tree.
       congruence.
   Qed.
 
-  Lemma valid_tree_prune A R b: 
-    valid_tree A -> prune b A = Some R -> valid_tree R.
+  (*SNIPT: valid_tree_prune *)
+  Lemma valid_tree_prune:
+    forall A B b, valid_tree A -> prune b A = Some B -> valid_tree B.
+  (*ENDSNIPT: valid_tree_prune *)
   Proof.
-    elim_tree A R b => /=.
+    move=> A R b; elim_tree A R b => /=.
     + by case: R => //=; case: b => //.
     + by case: t => [|c]//= _ [<-]//.
     + move=> /andP[vA bB]; case nA: prune => [A'|]//=.
@@ -154,12 +158,15 @@ Section valid_tree.
       by move=> [<-]/=; rewrite (HA _ false)//= eqxx valid_tree_big_and !if_same.
     Qed.
 
-  Lemma valid_tree_run s1 fv A b fv' s R:
-    valid_tree A -> runT u p fv s1 A (Many s R) b fv' -> valid_tree R.
+  (*SNIPT: valid_tree_run *)
+  Theorem valid_tree_run:
+    forall b s s' v v' A B, valid_tree A -> runT u p v s A (Many s' B) b v' -> valid_tree B.
+  (*ENDSNIPT: valid_tree_run *)
   Proof.
+    move=> b s s' v v' A R.
     remember (Many _ _) as S eqn:HS.
     move=> + H.
-    elim_run H s R HS => vA.
+    elim_run H s' R HS => vA.
     + by move: HS => [??]; subst; apply: valid_tree_prune NS.
     + by apply: IH (valid_tree_step vA eA).
     + by apply: IH (valid_tree_prune vA nA).
