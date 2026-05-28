@@ -287,7 +287,7 @@ Section check.
     forall p A B b, det_tree p A -> prune b A = Some B -> det_tree p B.
   (*ENDSNIPT: det_tree_prune *)
   Proof.
-    move=> p A R b; elim_tree A R b => /=.
+    move=> sP A R b; elim_tree A R b => /=.
     - by case: b => // _ [<-].
     - by move=> _ [<-]//.
     - move=>/andP[fA].
