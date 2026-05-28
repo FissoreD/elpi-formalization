@@ -343,7 +343,7 @@ Section s.
    (at level 50, s at level 0).
 
   (*SNIPT: runSST_or *)
-  Lemma runSST_or: 
+  Lemma or_intro_left: 
     forall p v v' s s' A A' s1 B, runT p v s A (Many s' A') true v' ->
       runT p v s (A \/ B -sub(s1)) (Many s' (A' \/ KO -sub(s1))) false v'.
   (*ENDSNIPT: run_orSST *)
@@ -376,7 +376,7 @@ Section s.
   Proof. move=>> /run_or_correct_left; auto. Qed.
 
   (*SNIPT: runNT_or *)
-  Lemma runNT_or: 
+  Lemma or_intro_right: 
     forall p v v' s A s1 B, runT p v s A Zero true v' -> 
       runT p v s (A \/ B -sub(s1)) Zero false v'.
   (*ENDSNIPT: run_orNT *)
@@ -393,7 +393,7 @@ Section s.
 
 
   (*SNIPT: runNF_or *)
-  Lemma runNF_or: 
+  Lemma or_intro_right2: 
     forall p v0 v1 v2 s A s1 s2 B b,
     runT p v0 s A Zero false v1 -> runT p v1 s1 B (One s2) b v2 ->
       runT p v0 s (A \/ B -sub(s1)) (One s2) false v2.
@@ -409,7 +409,7 @@ Section s.
   Proof. move=> ???????? []> H1 H2/=; have:= run_or_correct_left H1 _ _ _ _ _ H2 => //=. Qed.
 
   (*SNIPT: run_orSST *)
-  Lemma run_orSST:
+  Lemma or_elim1:
     forall p v v' s s' s1 A A' B B', 
     runT p v s (A \/ B -sub(s1)) (Many s' (A' \/ B' -sub(s1))) false v' ->
       exists b, runT p v s A (Many s' A') b v' /\ B' = if b then KO else B.
@@ -433,7 +433,7 @@ Section s.
   Qed.
 
   (*SNIPT: run_orSNT *)
-  Lemma run_orSNT:
+  Lemma or_elim2:
     forall p v v' s s' s1 A B B', 
     runT p v s (A \/ B -sub(s1)) (Many s' (\square\/ B' -sub(s1))) false v' ->
       (exists b, runT p v s A (One s') b v' /\ (b = true -> B' = KO)) ∨
