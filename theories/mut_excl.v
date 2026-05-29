@@ -126,32 +126,6 @@ Proof. by move=> H; apply/fdisjointWr/fdisjoint_ftl/H/vars_tms_flatten_term. Qed
 
 Definition u := mk_Unif unify matching.
 
-(* Lemma disjointH m f f1 s1 s1': 
-  all_out m ->
-  [disjoint (vars_tms f) & domf s1] ->
-  [disjoint (vars_tms f) & vars_tms f1] ->
-    H u m f f1 s1 = Some s1' ->
-      exists x, domf s1' = domf s1 `|` x /\ x `<=` vars_tms f1.
-Proof.
-  elim: m f f1 s1 s1' => //=.
-    move=> []//= []// f1 s1 s1' _ _ [<-].
-    by exists fset0; rewrite fsetU0.
-  move=> [] ms IH f f1 s1 s1'//=.
-  case: f => //=; case: f1 => //=.
-  move=> x xs y ys AI.
-  rewrite !vars_tms_cons.
-  rewrite fdisjointUX => /andP[D1 D2].
-  rewrite fdisjointXU !fdisjointUX.
-  move=> /andP[/andP[D6 D7] /andP[D8 D9]].
-  case H: H => //=[s1''] M.
-  have [w {IH}[H1 H2]] := IH _ _ _ _ AI D2 D9 H.
-  (* have [| k [H3 H4]] := matching_disj _ D6 M.
-    rewrite H1 fdisjointXU D1 (fdisjointWr H2)//.
-  rewrite H3 H1; exists (w `|` k).
-  rewrite !fsetUA fsetUC fsetUA fsetUC fsetUA; split => //.
-  by rewrite fsubUset !fsubsetU//(H2,H4)//orbT. *)
-Admitted. *)
-
 Lemma not_in_deref_L s l:
   domf s # vars_tms l -> map (deref s) l = l.
 Proof.
