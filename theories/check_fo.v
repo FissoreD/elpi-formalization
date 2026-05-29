@@ -105,12 +105,10 @@ Section check.
     | KO | OK => true
     | And A B0 B =>
         det_tree p B && 
-        if nilA A
-        then true
-        else
+        (nilA A ||
           (* alternatives are mutually exclusive (only 1 alt can succeed) || B/B0 cuts them *)
-          (det_tree p A || (has_cut B && has_cut_seq B0)) && (* has_cut B -> has_cut B0 in a valid tree ++ *)
-          det_tree_seq p B0 (* if we backtrack in A, B0 must be det *)
+          ((det_tree p A || (has_cut B && has_cut_seq B0)) && (* has_cut B -> has_cut B0 in a valid tree ++ *)
+          det_tree_seq p B0)) (* if we backtrack in A, B0 must be det *)
     | Or None _ B => det_tree p B
     | Or (Some A) _ B =>
         det_tree p A && 
@@ -307,8 +305,8 @@ Section check.
         case nB: prune => [B'|] => [+ [<-/=]|].
           rewrite (HB B' b)//=.
           case cB: (has_cut B); first by rewrite (has_cut_prune cB nB).
-          case cB': (has_cut B'); rewrite /= orbC //= ?orbT.
-          by case: ifP => nA// => /andP[-> //].
+          case cB': (has_cut B') => //.
+          by case n: nilA => //=; rewrite orbF => /andP[-> //].
         case nA: prune => [A'|] //= + [<-{R}/=].
         rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (prune_no_alt nA)//.
         rewrite/nilA andbb=> /andP[+ ->]/=.
@@ -318,7 +316,8 @@ Section check.
       case nA: prune => [A'|] => [+ [<-/=]|//].
       rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (prune_no_alt nA)//.
       rewrite andbb=> /andP[+ ->]/=.
-      by case: ifP => //= nA' /orP[/HA/(_ nA)->//|/andP[_ ->]]; rewrite orbT.
+      case n: nilA => //=.
+      by move=> /orP[/HA/(_ nA)->//|/andP[_ ->]]; rewrite orbT.
   Qed.
 
   (*SNIP: check_program *)
@@ -403,7 +402,7 @@ Section check.
       case SA: success.
         case : (ifP (is_cb _)) => /=; rewrite {}HB//=.
           by rewrite det_tree_cutl//no_alt_cutl//= andbT.
-        case: ifP => nA => // is_cb.
+        case n: nilA => // is_cb.
         case hcB: (has_cut B); case hcsB: (has_cut sB.2) => //=; last by rewrite orbC /= => /andP[-> ->].
         by rewrite (step_keep_cut hcB) in hcsB.
       rewrite /= dB /=.
