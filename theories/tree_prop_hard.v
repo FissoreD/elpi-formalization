@@ -248,7 +248,7 @@ Section s.
           runT p v0 s0 t0 (if Ax is Some Ax then Many s3 Ax else One s3) b v2 &
           exists2 Bx, 
             X = Or Ax sm Bx &
-            (if b then Bx = KO
+            (if b then Ax <> None /\ Bx = KO
             else if Ax is Some Ax then Bx = t1
             else Some Bx = prune false t1)) \/
         (exists2 v1, runT p v0 s0 t0 Zero false v1 &
@@ -415,20 +415,22 @@ Section s.
       exists b, runT p v s A (Many s' A') b v' /\ B' = if b then KO else B.
   (*ENDSNIPT: run_orSST *)
   Proof.
-    move=> > /run_or_complete[[Ax[b H1 [Bx [??] H]]]|[??]]//; subst.
+    move=> p v v' s s' s1 A A' B B' /run_or_complete[[Ax[b H1[Bx [??] H3]]]|[//]]; subst.
     eexists; split; destruct b; eauto.
+    by destruct H3.
   Qed.
 
   (*SNIPT: run_orSNT1 *)
   Lemma run_orSNT1:
     forall p v v' s s' s1 A B B', 
     runT p v s (A \/ B -sub(s1)) (Many s' (\square\/ B' -sub(s1))) false v' ->
-      (exists b, runT p v s A (One s') b v' /\ if b then B' = KO else prune false B = Some B') ∨
+      (runT p v s A (One s') false v') ∨
       (exists v2 b, runT p v s A Zero false v2 /\ runT p v2 s1 B (Many s' B') b v').
   (*ENDSNIPT: run_orSNT1 *)
   Proof.
-    move=> >/run_or_complete[[Ax[b H1 [T [??] H2]]]|[vf H1 [b H2]]]; subst.
-      left; exists b => //; destruct b => //.
+    move=> p v v' s s' s1 A B B' /run_or_complete[[Ax[b H1 [T [??] H2]]]|[vf H1 [b H2]]]; subst.
+      move: H2; destruct b => [[]|]//= H.
+      by left => //.
     by right; exists vf, b.
   Qed.
 
@@ -436,13 +438,24 @@ Section s.
   Lemma or_elim2:
     forall p v v' s s' s1 A B B', 
     runT p v s (A \/ B -sub(s1)) (Many s' (\square\/ B' -sub(s1))) false v' ->
-      (exists b, runT p v s A (One s') b v' /\ (b = true -> B' = KO)) ∨
+      (runT p v s A (One s') false v') ∨
       (exists v2 b, runT p v s A Zero false v2 /\ runT p v2 s1 B (Many s' B') b v').
   (*ENDSNIPT: run_orSNT *)
   Proof.
-    move=> >/run_or_complete[[Ax[b H1 [T [??] H2]]]|[vf H1 [b H2]]]; subst.
-      left; exists b => //; destruct b => //.
+    move=> p v v' s s' s1 A B B' /run_or_complete[[Ax[b H1 [T [??] H2]]]|[vf H1 [b H2]]]; subst.
+      by move: H2; destruct b => [[]|]//; auto.
     by right; exists vf, b.
+  Qed.
+
+  Lemma or_elim3:
+    forall p v v' s s' s1 A B B', 
+    runT p v s (A \/ B -sub(s1)) (Many s' (\square\/ B' -sub(s1))) false v' ->
+      (exists bx vx sx lx, runT p v s A (Many sx lx) bx vx) -> False.
+  Proof.
+    move=> p v v' s s' s1 A B B' H1.
+    move=> [bx[vx[sx[lx H]]]]; move: H1.
+    move=> >/run_or_complete[[Ax[b H1 [T [??] H2]]]|[vf H1 [b H2]]]; subst;
+    by have [] := runT_det H1 H.
   Qed.
 
   Fixpoint not_bt A B :=
