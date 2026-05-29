@@ -400,6 +400,13 @@ Section s.
   (*ENDSNIPT: run_orNF *)
   Proof. move=> ???????? []> H1 H2/=; have:= run_or_correct_left H1 _ _ _ _ _ H2 => //=. Qed.
   
+  Lemma or_intro_right3: 
+    forall p v0 v1 v2 s A s1 B b,
+    runT p v0 s A Zero false v1 -> runT p v1 s1 B Zero b v2 ->
+      runT p v0 s (A \/ B -sub(s1)) Zero false v2.
+  Proof. move=> ???????? []> H1 H2/=; have:= run_or_correct_left H1 _ _ _ _ _ H2 => //=. Qed.
+
+
   (*SNIPT: runNF_or1 *)
   Lemma runNF_or1: 
     forall p v0 v1 v2 s A s1 s2 B B' b,
