@@ -106,7 +106,7 @@ Section check.
     | And A B0 B =>
         det_tree p B && 
         if nilA A
-        then det_tree p A || has_cut B
+        then true
         else
           (* alternatives are mutually exclusive (only 1 alt can succeed) || B/B0 cuts them *)
           (det_tree p A || (has_cut B && has_cut_seq B0)) && (* has_cut B -> has_cut B0 in a valid tree ++ *)
@@ -249,8 +249,10 @@ Section check.
     - move=> A HA B0 B HB /[!success_and]. 
       move=> /andP[dB +] /andP[sA sB].
       rewrite sA HB// success_has_cut// orbF.
-      rewrite -{1}[det_tree sP A]andbT -fun_if => /andP[? _].
-      by rewrite HA.
+      rewrite/nilA sA.
+      case: eqP => pA.
+        by rewrite pA//.
+      by move => /andP[? db]; rewrite HA//.
   Qed.
 
   Lemma has_cut_prune {A R b}: 
@@ -306,16 +308,17 @@ Section check.
           rewrite (HB B' b)//=.
           case cB: (has_cut B); first by rewrite (has_cut_prune cB nB).
           case cB': (has_cut B'); rewrite /= orbC //= ?orbT.
-          by rewrite -{1}[det_tree sP A]andbT -fun_if => /andP[-> //].
-        case nA: prune => [A'|] //= + [<-/=].
+          by case: ifP => nA// => /andP[-> //].
+        case nA: prune => [A'|] //= + [<-{R}/=].
         rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (prune_no_alt nA)//.
-        rewrite andbb=> /andP[+ ->]; rewrite andbT if_same /=.
-        by case/orP=> [/HA/(_ nA)->//|/andP[? ->]]; rewrite orbT.
+        rewrite/nilA andbb=> /andP[+ ->]/=.
+        case: eqP => pA//=.
+        by case/orP=> [/HA/(_ nA)->//|/andP[? ->]] => //=; rewrite orbT.
       case fA : (failed A) => [|] => [|+ [<-/=]]; last by rewrite dB.
       case nA: prune => [A'|] => [+ [<-/=]|//].
       rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (prune_no_alt nA)//.
-      rewrite andbb=> /andP[+ ->]; rewrite andbT if_same /=.
-      by case/orP=> [/HA/(_ nA)->//|/andP[? ->]]; rewrite orbT.
+      rewrite andbb=> /andP[+ ->]/=.
+      by case: ifP => //= nA' /orP[/HA/(_ nA)->//|/andP[_ ->]]; rewrite orbT.
   Qed.
 
   (*SNIP: check_program *)
@@ -400,7 +403,7 @@ Section check.
       case SA: success.
         case : (ifP (is_cb _)) => /=; rewrite {}HB//=.
           by rewrite det_tree_cutl//no_alt_cutl//= andbT.
-        case: ifP => //= _ is_cb; first by case/orP=> [->//|/step_keep_cut->]; rewrite // orbT.
+        case: ifP => nA => // is_cb.
         case hcB: (has_cut B); case hcsB: (has_cut sB.2) => //=; last by rewrite orbC /= => /andP[-> ->].
         by rewrite (step_keep_cut hcB) in hcsB.
       rewrite /= dB /=.
