@@ -434,6 +434,20 @@ Section s.
     by right; exists vf, b.
   Qed.
 
+  Lemma or_elim2':
+    forall p v v' s s' s1 A B B', 
+    (runT p v s A (One s') false v' /\ Some B' = prune false B) ∨
+      (exists v2 b, runT p v s A Zero false v2 /\ runT p v2 s1 B (Many s' B') b v') ->
+    runT p v s (A \/ B -sub(s1)) (Many s' (\square\/ B' -sub(s1))) false v' .
+  Proof.
+    move=> p v v' s s' s1 A B B'.
+    move=> [].
+      move=> [R H].
+      by have := run_or_correct_left R s1 B; rewrite -H.
+    move=> [v2 [b[H1 H2]]].
+    by have:= run_or_correct_left H1 _ _ _ _ _ H2.
+  Qed.
+
   (*SNIPT: run_orSNT *)
   Lemma or_elim2:
     forall p v v' s s' s1 A B B', 
