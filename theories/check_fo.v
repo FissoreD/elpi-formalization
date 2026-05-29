@@ -251,6 +251,10 @@ Section check.
       case: eqP => pA.
         by rewrite pA//.
       by move => /andP[? db]; rewrite HA//.
+      rewrite/nilA sA.
+      case: eqP => pA.
+        by rewrite pA//.
+      by move => /andP[? db]; rewrite HA//.
   Qed.
 
   Lemma has_cut_prune {A R b}: 
@@ -309,6 +313,9 @@ Section check.
           by case n: nilA => //=; rewrite orbF => /andP[-> //].
         case nA: prune => [A'|] //= + [<-{R}/=].
         rewrite  has_cut_seq_has_cut_big_and det_tree_big_and (prune_no_alt nA)//.
+        rewrite/nilA andbb=> /andP[+ ->]/=.
+        case: eqP => pA//=.
+        by case/orP=> [/HA/(_ nA)->//|/andP[? ->]] => //=; rewrite orbT.
         rewrite/nilA andbb=> /andP[+ ->]/=.
         case: eqP => pA//=.
         by case/orP=> [/HA/(_ nA)->//|/andP[? ->]] => //=; rewrite orbT.
