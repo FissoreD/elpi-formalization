@@ -341,23 +341,10 @@ Section check.
     bc u pr fv c s1 = (fv', r0 :: rs) ->
     det_tree pr (big_or r0.2 rs).
   Proof.
-    rewrite /bc/check_program.
-    case: pr => rules s/= => /andP[].
-    case: ifP => ///negbFE AS.
-    case X: get_tm_hd => //=[p].
-    case: fndP => //= kP.
-    move=> ++ H.
-    have [q'[qp' [+ H2]]] := is_det_der s1 H.
-    rewrite X => -[?]; subst.
-    move=> ME CR.
-    have := mut_exclP fv s1 ME H.
-    have := check_rulesP fv s1 CR H.
-    rewrite/bc X/= in_fnd.
-    rewrite !push/= => /= ++[?]; subst.
-    rewrite (bool_irrelevance kP qp') => ++ S.
-    rewrite S.
-    rewrite AS/=.
-    by apply/det_check_big_or_help.
+    move=> /andP[ME CR] T B.
+    apply/det_check_big_or_help.
+      by have:= check_rulesP fv s1 CR T; rewrite B//.
+    have:= mut_exclP fv s1 ME T; rewrite B//.
   Qed.
 
   Fixpoint acyclic_sigmaT T :=
