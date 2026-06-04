@@ -123,7 +123,6 @@ Module check_atoms1.
     rewrite yy//.
   Qed.
 End check_atoms1.
-
   
 Definition check_rule (sP:sigT) head prems :=
   match get_tm_hd head with

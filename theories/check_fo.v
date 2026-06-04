@@ -11,7 +11,7 @@ Section checker.
     end. 
 
   (* There is cut and after the cut there are only call to Det preds *)
-  Fixpoint check_atoms (sP : program) (s: seq Atom) :=
+  Fixpoint check_atoms sP (s: seq Atom) :=
     match s with
     | [::] => true
     | cut :: xs => all (check_atom sP) xs || check_atoms sP xs
@@ -22,7 +22,7 @@ Section checker.
     (tm_is_det sP head == false) || 
       check_atoms sP prems.
 
-  Definition check_rules p :=
+  Definition check_rules (p:program) :=
     all (fun x => check_rule p x.(head) x.(premises)) p.(rules).
 End checker.
 
@@ -182,10 +182,10 @@ Section check.
     case DR: get_tm_hd => //=[p].
     case: fndP => //= pP.
     rewrite !push/=.
-    move: (flatten_mode _) CR; generalize rs at 1 3.
+    move: (flatten_mode _) CR.
     elim: rs s s1 fv c TD p DR pP => //= -[hd bo] xs IH sig s fv c/=.
-    move=> TD p C pP rs' m /andP[c1 c2].
-    have /={}IH := IH _ _ _ _ TD _ C pP _ _ c2.
+    move=> TD p C pP m /andP[c1 c2].
+    have /={}IH := IH _ _ _ _ TD _ C pP _ c2.
     rewrite !push/= head_fresh_rule/=.
     rewrite eq_sym callable_rename1.
     case:eqP => //= /esym tH.
@@ -193,7 +193,7 @@ Section check.
     rewrite !push/= IH andbT.
     rewrite premises_fresh_rule/=.
     rewrite check_atoms_fresh.
-    by move: TD c1; rewrite/check_rule/tm_is_det -tH C in_fnd => ->.
+    move: TD c1; rewrite/check_rule/tm_is_det -tH C in_fnd => ->//.
   Qed.
 
   Lemma deref_empty t:
