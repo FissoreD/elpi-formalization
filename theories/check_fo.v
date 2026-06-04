@@ -172,12 +172,11 @@ Section check.
 
   Lemma check_rulesP p c fv s1:
     check_rules p ->
-    tm_is_det p c ->
+    tm_is_det p (deref s1 c) ->
     all (fun x => check_atoms p x.2) (bc u p fv c s1).2.
   Proof.
     case: p => [rs s].
     rewrite/bc/=/check_rules/= => CR TD.
-    rewrite (is_det_cder _ TD).
     case: ifP => // _.
     case DR: get_tm_hd => //=[p].
     case: fndP => //= pP.
@@ -337,14 +336,14 @@ Section check.
   Qed.
   
   Lemma det_check_big_or pr c fv fv' r0 rs s1:
-    check_program pr -> tm_is_det pr c -> 
+    check_program pr -> tm_is_det pr (deref s1 c) -> 
     bc u pr fv c s1 = (fv', r0 :: rs) ->
     det_tree pr (big_or r0.2 rs).
   Proof.
     move=> /andP[ME CR] T B.
     apply/det_check_big_or_help.
-      by have:= check_rulesP fv s1 CR T; rewrite B//.
-    have:= mut_exclP fv s1 ME T; rewrite B//.
+      by have:= check_rulesP fv CR T; rewrite B//.
+    have:= mut_exclP fv ME T; rewrite B//.
   Qed.
 
   Fixpoint acyclic_sigmaT T :=
@@ -375,7 +374,8 @@ Section check.
     elim_tree A s1.
     - case: t => [|c]//=; rewrite !push/=.
       case bc: bc => //=[fv'[|[s0 r0]rs]]//= H1.
-      by apply: det_check_big_or bc.
+      apply: det_check_big_or bc => //.
+      by apply: is_det_cder.
     - rewrite/= => /andP[fA]; rewrite !push/= HA//=.
       case: ifP => //= cA; last by move=> /eqP->; rewrite !if_same.
       rewrite !fun_if => /[dup] Hx ->; do 2 case: ifP => //=.
