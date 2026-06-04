@@ -148,7 +148,7 @@ Elpi derive.eqbOK.register_axiomx sigT is_sigT is_sigT_inhab sigT_eqb sigT_eqb_c
 HB.instance Definition _ : hasDecEq sigT := Equality.copy sigT _.
 
 (*SNIP: program_type*)
-Record program := { rules : seq R; sig : sigT }.
+Record program := { rules : seq R; sig :> sigT }.
 (*ENDSNIP: program_type*)
 derive program.
 HB.instance Definition _ : hasDecEq program := hasDecEq.Build program program_eqb_OK.
@@ -773,9 +773,9 @@ Fixpoint is_det_sig (sig:S) : bool :=
 
 Definition has_cut_seq:= (has (fun x => cut == x)).
 
-Definition tm_is_det (sP: program) (t : Tm) : bool :=
+Definition tm_is_det (sP: sigT) (t : Tm) : bool :=
   match get_tm_hd t with
-  | inl P => if sP.(sig).[?P] is Some s then is_det_sig s else false
+  | inl P => if sP.[?P] is Some s then is_det_sig s else false
   | _ => false
   end.
 
@@ -809,8 +809,8 @@ Lemma callabe_some_deref s1 c p:
 Proof. elim: c p => //=[x p [<-]|f Hf a Ha p]; rewrite (deref_P,deref_App)//=; auto. Qed.
 
 Lemma is_det_der s s1 c : tm_is_det s c ->
-  exists q (kP: q \in domf s.(sig)), 
-    get_tm_hd (deref s1 c) = inl q /\ is_det_sig s.(sig).[kP].
+  exists q (kP: q \in domf s), 
+    get_tm_hd (deref s1 c) = inl q /\ is_det_sig s.[kP].
 Proof.
   rewrite/tm_is_det/=.
   case X: get_tm_hd => //=[p].

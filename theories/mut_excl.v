@@ -79,8 +79,8 @@ Section mut_excl.
   Lemma is_det_cder s s1 c: tm_is_det s c -> get_tm_hd (deref s1 c) = get_tm_hd c.
   Proof. elim: c s => //=[p|f Hf a Ha] s; rewrite ?deref_P//. Qed.
 
-  Lemma is_det_lookup p c s r (pP: p \in domf s):
-    get_tm_hd c = inl p -> tm_is_det {|rules := r; sig := s|} c -> is_det_sig s.[pP].
+  Lemma is_det_lookup p c s (pP: p \in domf s):
+    get_tm_hd c = inl p -> tm_is_det s c -> is_det_sig s.[pP].
   Proof. by elim: c p s pP => //=p1 p2 s pP [->]; rewrite/tm_is_det/=in_fnd//. Qed.
 
   Lemma count_tm_ag_deref s c p: 
