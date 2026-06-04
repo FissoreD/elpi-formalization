@@ -76,7 +76,7 @@ Section mut_excl.
   Lemma callable_rename fv hd p mp: get_tm_hd (rename fv hd mp).2 = inl p <-> get_tm_hd hd = inl p.
   Proof. by rewrite/rename!push/= => /=; split => /callable_ren. Qed.
 
-  Lemma is_det_cder s s1 c: tm_is_det s c -> get_tm_hd (deref s1 c) = get_tm_hd c.
+  Lemma is_det_cder s s1 c: tm_is_det s c -> tm_is_det s (deref s1 c).
   Proof. elim: c s => //=[p|f Hf a Ha] s; rewrite ?deref_P//. Qed.
 
   Lemma is_det_lookup p c s (pP: p \in domf s):
@@ -413,12 +413,11 @@ Lemma build_and (a b: bool): a -> b -> a && b. by move=> ??; apply/andP. Qed.
 
 Lemma mut_exclP p fv c s1:
   mut_excl u p -> 
-    tm_is_det p c ->
+    tm_is_det p (deref s1 c) ->
       all_but_last (fun x => has_cut_seq x.2) (bc u p fv c s1).2.
 Proof.
   rewrite/bc.
   case: p => [rs s]/=+TD.
-  rewrite (is_det_cder _ TD).
   case: ifP => //= /negbFE AS.
   case DR: get_tm_hd => //=[p].
   case: fndP => //= pP.
