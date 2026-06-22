@@ -1,7 +1,9 @@
 From mathcomp Require Import all_ssreflect.
-From det Require Import finmap ctx lang tree unif.
+From det Require Import finmap ctx lang tree unif fresh.
 
 Definition prop := b (d Pred).
+Definition func := b (d Func).
+Definition exp := b Exp.
 Definition build_arr := arr output prop prop.
 
 Definition build_progr l := {|
@@ -41,7 +43,7 @@ Definition s3 : Sigma := empty.[fresh
                 |}
               `|` varsU_rule
                     {|
-                      head := Tm_App test.p (Tm_D (ID 0));
+                      head := Tm_App (Tm_P p) (Tm_D (ID 0));
                       premises :=
                         [:: call (Tm_App (Tm_P (IP 0)) v_X); cut]
                     |})) <- Tm_D (ID 1)].
@@ -55,7 +57,7 @@ Definition s4 := empty.[fresh
                 |}
               `|` varsU_rule
                     {|
-                      head := Tm_App test.p (Tm_D (ID 0));
+                      head := Tm_App (Tm_P p) (Tm_D (ID 0));
                       premises :=
                         [:: call (Tm_App (Tm_P (IP 0)) v_X);
                             call (Tm_P pred_true); cut]|})) <- Tm_D (ID 1)].
@@ -233,3 +235,177 @@ Section Test2.
     move=>//=.
   Qed.
 End Test2.
+
+Section map.
+  Definition map := IP 0.
+  Definition cons := ID 0.
+  Definition nil := ID 1.
+  Definition one := ID 2.
+  Definition two := ID 3.
+  Definition four := ID 5.
+  Definition double := IP 4.
+
+  Coercion Tm_P : P >-> Tm. 
+  Coercion Tm_D : D >-> Tm. 
+  Coercion Tm_V : V >-> Tm. 
+
+  Definition mapS := arr input (arr input exp (arr output exp func)) (arr input exp (arr output exp func)).
+  Definition consS := arr output exp exp.
+  Definition nilS := exp.
+  Definition oneS := exp.
+  Definition twoS := exp.
+  Definition fourS := exp.
+  Definition doubleS := arr input exp func.
+
+  Definition X := IV 1.
+  Definition X' := IV 10.
+  Definition Y := IV 2.
+  Definition Y' := IV 20.
+  Definition F := IV 3.
+
+
+  Definition p' := {|
+    sig := [fmap].[map <- mapS].[double <- doubleS];
+    rules := 
+      mkR (Tm_App (Tm_App (Tm_App map F) nil) nil) [::] ::
+      mkR (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons X) Y)) (Tm_App (Tm_App cons X') Y') ) 
+        [:: call (Tm_App (Tm_App F X) X'); call (Tm_App (Tm_App map Y) Y')] ::
+      mkR (Tm_App (Tm_App double one) two) [::]
+      :: [::]
+  |}.
+
+  Definition list12 := Tm_App (Tm_App cons one) nil.
+  Definition list24 := Tm_App (Tm_App cons two) nil.
+
+  Definition map12d := Tm_App (Tm_App (Tm_App map double) list12) X.
+
+  Goal exists f s, runT u p' fset0 fmap0 (TA (call map12d)) (One s) false f /\ deref s X = list24.
+  Proof.
+    do 2 eexists.
+    split.
+      apply: StepT'=> //=; cycle 1.
+      rewrite/bc ifF ?acyclic_sigma0//.
+      rewrite !FmapE.fmapE.
+      set s0 := (_ `|` _).
+      rewrite not_fnd//.
+      case X : fresh_rules => [f rs]/=.
+      rewrite not_fnd//=.
+      case: rs X => [|r0 rs]; first by rewrite /=push.
+
+      (* matching r0 *)
+      rewrite[select _ _ _ _ _]/= !fset0U => H.
+      rewrite ifF; last by move: H; rewrite/= !push//= => -[?<-?].
+      case ft: flatten_term => [|hd args].
+        by move: H ft; rewrite/= !push//= => -[?<-?]//.
+      rewrite {2}/matching/montanari_deref/montanari_pair montanari_equation/=.
+      rewrite deref_empty ifF; last first.
+        move: H ft; rewrite/= !push//= => -[?<-?]//=.
+        rewrite !FmapE.fmapE/= !inE/= => -[<-?]; subst.
+        by rewrite in_fnd ?inE//=.
+      have: hd = fresh
+        (F |` (fresh_rule s0
+        {| head := Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons X) Y)) (Tm_App (Tm_App cons X') Y');
+           premises := [:: call (Tm_App (Tm_App F X) X'); call (Tm_App (Tm_App map Y) Y')] |}).1).
+        move: H ft; rewrite/= !push/= => -[???]; subst => /=-[<-]/=?; subst.
+        rewrite !FmapE.fmapE/= inE/= in_fnd?inE//= => ?; rewrite ffunE/=.
+        rewrite !simpl_set//=.
+      move=> ?; subst => /=.
+      rewrite montanari_equation/=.
+      case: args ft => [|a0 an] ft.
+        exfalso; move: H ft; rewrite/=!push/= => -[???]; subst.
+        by rewrite !FmapE.fmapE/= inE/= => -[??]; subst => //=.
+      rewrite {1}/matching/montanari_deref/montanari_pair.
+      rewrite !deref_App/=.
+      have ?: a0 = nil; subst.
+        move: H ft; rewrite/=!push/= => -[???]; subst.
+        by rewrite !FmapE.fmapE/= inE/= => -[??]; subst => //=.
+      rewrite /= montanari_equation/=.
+
+      (* matchin r1 *)
+      case: rs H => [|r1 rs] H/=.
+        exfalso; by move:H; rewrite/=!push => -[???]; subst => //.
+      rewrite/= ifF; last first.
+        move: H ft; rewrite /= !push => -[????]; subst => //=.
+        rewrite !FmapE.fmapE inE/= => -[+?]//=; subst => /= H.
+        by rewrite head_fresh_rule/= /rename push/=.
+      rewrite !simpl_set.
+      case ft1: flatten_term => [|hd args].
+        exfalso; clear ft.
+        move: H ft1; rewrite/= !push//= => -[????]//; subst.
+        by rewrite head_fresh_rule/= /rename push ren_app//.
+      rewrite {2}/matching/montanari_deref/montanari_pair montanari_equation/=.
+      rewrite deref_empty.
+      set X := fresh_tm (F |` [fset X; Y] `|` [fset X'; Y'] `|` s0) [fmap]
+        (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons X) Y)) (Tm_App (Tm_App cons X') Y')).
+      have FX : F \in (X.2) by rewrite/X (fsubsetP (fresh_tm_sub1 _ _ _) _ _)//= !inE.
+      have XX : map.X \in (X.2) by rewrite/X (fsubsetP (fresh_tm_sub1 _ _ _) _ _)//= !inE.
+      have YX : Y \in (X.2) by rewrite/X (fsubsetP (fresh_tm_sub1 _ _ _) _ _)//= !inE.
+      have Y'X : Y' \in (X.2) by rewrite/X (fsubsetP (fresh_tm_sub1 _ _ _) _ _)//= !inE.
+      have X'X : X' \in (X.2) by rewrite/X (fsubsetP (fresh_tm_sub1 _ _ _) _ _)//= !inE.
+      have [??] : Tm_V (X.2 [` FX]) = hd /\ [:: Tm_App (Tm_App cons (X.2 [` XX])) (X.2 [` YX]);
+        Tm_App (Tm_App cons (X.2 [` X'X])) (X.2 [` Y'X])] = args; subst.
+        move: H ft1 {ft}; rewrite/= !push//= => -[????]//; subst.
+        rewrite !simpl_set head_fresh_rule/=.
+        rewrite /rename [vars _]/= !simpl_set.
+        rewrite-/X.
+        rewrite !push/= => -[<-<-].
+        by rewrite !in_fnd/=.
+      rewrite /=deref_sigma0.
+      rewrite montanari_equation/=.
+      rewrite/matching/montanari_deref/montanari_pair.
+      rewrite montanari_equation/=.
+      rewrite !simpl_set/= ifF; last first.
+        apply/eqP => -[].
+        rewrite not_fnd//=.
+        rewrite !inE; apply/eqP => Hx.
+        have:= fresh_tm_inj (F |` [fset map.X; Y] `|` [fset X'; Y'] `|` s0) (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons map.X) Y)) (Tm_App (Tm_App cons X') Y')) injectiveb0.
+        rewrite-/X.
+        by move=> /injectiveP /(_ [`XX] [`FX] Hx).
+      rewrite montanari_equation/=.
+      rewrite ifF; last first.
+        apply/eqP => -[].
+        rewrite not_fnd//=.
+        rewrite !inE; apply/eqP => Hx.
+        have:= fresh_tm_inj (F |` [fset map.X; Y] `|` [fset X'; Y'] `|` s0) (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons map.X) Y)) (Tm_App (Tm_App cons X') Y')) injectiveb0.
+        rewrite-/X.
+        by move=> /injectiveP /(_ [`XX] [`FX] Hx).
+      rewrite montanari_equation//=.
+      rewrite montanari_equation//=.
+      rewrite ifF;last first.
+        apply/eqP => -[].
+        rewrite not_fnd//=.
+        rewrite !inE; apply/eqP => Hx.
+        have:= fresh_tm_inj (F |` [fset map.X; Y] `|` [fset X'; Y'] `|` s0) (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons map.X) Y)) (Tm_App (Tm_App cons X') Y')) injectiveb0.
+        rewrite-/X.
+        by move=> /injectiveP /(_ [`XX] [`FX] Hx).
+      rewrite not_fnd; last first.
+        rewrite !inE; apply/eqP => Hx.
+        have:= fresh_tm_inj (F |` [fset map.X; Y] `|` [fset X'; Y'] `|` s0) (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons map.X) Y)) (Tm_App (Tm_App cons X') Y')) injectiveb0.
+        rewrite-/X.
+        by move=> /injectiveP /(_ [`XX] [`FX] Hx).
+      rewrite/=montanari_equation/=.
+      rewrite ifF/=; last first.
+        apply/eqP => -[].
+        rewrite/derefkv/=.
+        rewrite not_fnd//=.
+          rewrite not_fnd//=.
+          rewrite !inE//= orbF;apply/eqP => Hx.
+          have:= fresh_tm_inj (F |` [fset map.X; Y] `|` [fset X'; Y'] `|` s0) (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons map.X) Y)) (Tm_App (Tm_App cons X') Y')) injectiveb0.
+          rewrite-/X.
+          by move=> /injectiveP /(_ _ _ Hx).
+        rewrite !inE;apply/eqP => Hx.
+          have:= fresh_tm_inj (F |` [fset map.X; Y] `|` [fset X'; Y'] `|` s0) (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons map.X) Y)) (Tm_App (Tm_App cons X') Y')) injectiveb0.
+          rewrite-/X.
+          by move=> /injectiveP /(_ _ _ Hx).
+      rewrite not_fnd/=; last first.
+        rewrite !inE;apply/eqP => Hx.
+        have:= fresh_tm_inj (F |` [fset map.X; Y] `|` [fset X'; Y'] `|` s0) (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons map.X) Y)) (Tm_App (Tm_App cons X') Y')) injectiveb0.
+        rewrite-/X.
+        by move=> /injectiveP /(_ _ _ Hx).
+      rewrite/derefkv/=.
+      rewrite not_fnd/=; last first.
+        rewrite !inE orbF; apply/eqP => Hx.
+        have:= fresh_tm_inj (F |` [fset map.X; Y] `|` [fset X'; Y'] `|` s0) (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons map.X) Y)) (Tm_App (Tm_App cons X') Y')) injectiveb0.
+        rewrite-/X.
+        by move=> /injectiveP /(_ _ _ Hx).
+      rewrite montanari_equation/=.
