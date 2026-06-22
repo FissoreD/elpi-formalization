@@ -147,6 +147,14 @@ Qed.
 Definition deref_list v t l := map (map_prod (derefkv v t)) l.
 Definition deref_sigma v t (s:Sigma) := [fmap x : domf s => derefkv v t s.[valP x]].[v <- t].
 
+Lemma deref_sigma0 v t: deref_sigma v t [fmap] = [fmap].[v <- t].
+Proof.
+  rewrite/deref_sigma/=.
+  apply/fmapP => k.
+  rewrite !fnd_set; case: eqP => //=.
+  rewrite !not_fnd//.
+Qed.
+
 Lemma deref_list_in x v t l:
   x \in varsL (deref_list v t l) -> (x \in vars t) || (x \in varsL l).
 Proof.
@@ -356,7 +364,7 @@ Definition montanari_deref b t1 t2 s := montanari_pair s b (deref s t1) (deref s
 Definition matching := montanari_deref.
 Definition unify := montanari_deref fset0.
 
-Check (mk_Unif unify matching : Unif).
+Definition u := mk_Unif unify matching : Unif.
 
 
 Lemma acyclic_deref v s (vP: v \in domf s):

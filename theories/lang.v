@@ -199,19 +199,19 @@ Fixpoint get_tm_hd tm :=
 
 
 Module test.
-  Notation p := (Tm_P (IP 1)).
-  Notation one := (Tm_P (IP 2)).
+  Local Notation p := (Tm_P (IP 1)).
+  Local Notation one := (Tm_P (IP 2)).
   Notation two := (Tm_P (IP 3)).
-  Notation int := Exp.
+  Local Notation int := Exp.
 
   (* t is the atom `p 1 2` *)
-  Definition t := (Tm_App (Tm_App p one) two).
+  Local Definition t := (Tm_App (Tm_App p one) two).
   (* ty is the type of p := pred p int -> int *)
-  Definition ty := arr input (b Exp) (arr output (b Exp) (b (d Pred))).
+  Local Definition ty := arr input (b Exp) (arr output (b Exp) (b (d Pred))).
 
-  Goal flatten_mode ty = [::input; output]. by []. Qed.
-  Goal flatten_term t =  [::one  ; two   ]. by []. Qed.
-  Goal get_tm_hd    t = inl (IP 1). by []. Qed. 
+  Local Goal flatten_mode ty = [::input; output]. by []. Qed.
+  Local Goal flatten_term t =  [::one  ; two   ]. by []. Qed.
+  Local Goal get_tm_hd    t = inl (IP 1). by []. Qed. 
 End test.
 
 Open Scope fset_scope.
