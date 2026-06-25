@@ -279,14 +279,251 @@ Section map.
 
   Definition map12d := Tm_App (Tm_App (Tm_App map double) list12) X.
 
+  Lemma get_frozen_vars_ground m T:
+    all ground T -> get_frozen_vars m T = fset0.
+  Proof.
+    elim: m T => //[x xs IH] []//= X XS /andP[G1 G2].
+    by rewrite IH// ground_vars_tm// fset0U if_same.
+  Qed.
+
+  Lemma p'map: (sig p').[? map] = Some mapS.
+  Proof. by rewrite !FmapE.fmapE. Qed.
+
+  Lemma fresh_rules_cons s r0 rs:
+    fresh_rules s (r0 :: rs) =
+    ((fresh_rule (fresh_rules s rs).1 r0).1,
+      (fresh_rule (fresh_rules s rs).1 r0).2 :: (fresh_rules s rs).2).
+  Proof. by rewrite/=!push//. Qed.
+
+  Lemma fstS T1 T2 (a:T1) (b:T2): (a,b).1 = a. by []. Qed.
+  Lemma sndS T1 T2 (a:T1) (b:T2): (a,b).2 = b. by []. Qed.
+
+  Lemma select_cons m ft md x xs s: select u m ft md (x::xs) s = 
+    (if inl m != get_tm_hd (head x)
+      then select u m ft md xs s
+      else
+      match H u (get_frozen_vars md ft) md ft (flatten_term (head x)) s with
+      | Some sigma1 =>
+      let
+      '(fv, rs) := select u m ft md xs s in
+      (vars_sigma sigma1 `|` varsU_rule x `|` fv, (sigma1, premises x) :: rs)
+      | None => select u m ft md xs s
+      end).
+  Proof. by []. Qed.
+
+  Lemma select_consF m ft md x xs s:
+    inl m = get_tm_hd (head x) ->
+    select u m ft md (x::xs) s = 
+    match H u (get_frozen_vars md ft) md ft (flatten_term (head x)) s with
+    | Some sigma1 =>
+      let '(fv, rs) := select u m ft md xs s in
+      (vars_sigma sigma1 `|` varsU_rule x `|` fv, (sigma1, premises x) :: rs)
+    | None => select u m ft md xs s
+    end.
+  Proof. by move=> /=->; rewrite eqxx. Qed.
+
+
+  Lemma inl_map_get_tm_hdmap:
+    inl map == get_tm_hd map.
+  Proof. by []. Qed.
+
+  Lemma ifTS T (a b:T) : (if true then a else b) = a. by []. Qed.
+  Lemma ifFS T (a b:T) : (if false then a else b) = b. by []. Qed.
+  Lemma fmapIn e (S: {fset V}) (f: V) (H : e \in S):
+    [ffun x : S => f].[? e] = Some f.
+  Proof. by rewrite in_fnd/= ffunE/=. Qed.
+
+  Lemma fresh_tm_app s m f a: fresh_tm s m (Tm_App f a) = 
+    ((fresh_tm (fresh_tm s m f).1 (fresh_tm s m f).2 a)).
+  Proof. by rewrite/=!push -surjective_pairing. Qed.
+
+  Lemma fresh_tm_P s r p: fresh_tm s r (Tm_P p) = (s, r). by []. Qed.
+  Lemma fresh_tm_D s r p: fresh_tm s r (Tm_D p) = (s, r). by []. Qed.
+  Lemma getfmap12d: (get_frozen_vars [:: input;  input;  output] (flatten_term map12d)) = fset0.
+  Proof. by rewrite/= !simpl_set. Qed.
+
+    (* Print fresh_tm. *)
+
   Goal exists f s, runT u p' fset0 fmap0 (TA (call map12d)) (One s) false f /\ deref s X = list24.
   Proof.
     do 2 eexists.
     split.
       apply: StepT'=> //=; cycle 1.
       rewrite/bc ifF ?acyclic_sigma0//.
-      rewrite !FmapE.fmapE.
+      rewrite p'map.
       set s0 := (_ `|` _).
+      rewrite !fresh_rules_cons !fstS !sndS.
+      rewrite !simpl_set.
+      set F0 := (_ `|` _).
+      set F1 := (_ `|` _).
+      set F2 := (_ `|` _).
+      rewrite select_consF// [head _]/=.
+      rewrite [flatten_term (Tm_App _ _)]/= [flatten_mode _]/=.
+      rewrite fmapIn; last by rewrite !inE.
+      rewrite [odflt _ _]/=.
+      replace (H _ _ _ _ _ _) with (@None Sigma); last first.
+        rewrite/= !simpl_set /matching/montanari_deref deref_empty/=.
+        rewrite{2}/montanari_pair montanari_equation/=.
+        rewrite montanari_equation/=/montanari_pair.
+        by rewrite montanari_equation/=.
+      rewrite select_consF//head_fresh_rule [head _]/= /rename (push (fresh_tm _ _ _)) sndS; last by [].
+      set F3 := (_ `|` _).
+
+      rewrite/fresh_tm !simpl_set.
+      rewrite !inE.
+      set F4 := _ `|` _.
+      set F5 := _ `|` _.
+      set F6 := _ `|` _..
+      set L := (let
+'(fv, m) :=
+let
+'(fv, m) :=
+let
+'(fv, m) :=
+let
+'(fv, m) :=
+if X == F
+then (F4, [fmap=> fresh F3])
+else (F5, [fmap=> fresh F3] + [fmap=> fresh F6]) in
+(fv, m) in
+let
+'(fv0, m0) :=
+if Y  \in domf m
+then (fv, m)
+else
+(fresh
+(fv
+`|` codomf (K:=lang_V__canonical__choice_Choice)
+(V:=lang_V__canonical__choice_Choice) m)
+|` fv,
+m +
+[fmap=> fresh
+(fv
+`|` codomf
+(K:=lang_V__canonical__choice_Choice)
+(V:=lang_V__canonical__choice_Choice)
+m)]) in (fv0, m0) in (fv, m) in
+let
+'(fv0, m0) :=
+let
+'(fv0, m0) :=
+let
+'(fv0, m0) :=
+if X'  \in domf m
+then (fv, m)
+else
+(fresh
+(fv
+`|` codomf (K:=lang_V__canonical__choice_Choice)
+(V:=lang_V__canonical__choice_Choice) m)
+|` fv,
+m +
+[fmap=> fresh
+(fv
+`|` codomf
+(K:=lang_V__canonical__choice_Choice)
+(V:=lang_V__canonical__choice_Choice)
+m)]) in (fv0, m0) in
+let
+'(fv1, m1) :=
+if Y'  \in domf m0
+then (fv0, m0)
+else
+(fresh
+(fv0
+`|` codomf (K:=lang_V__canonical__choice_Choice)
+(V:=lang_V__canonical__choice_Choice) m0)
+|` fv0,
+m0 +
+[fmap=> fresh
+(fv0
+`|` codomf
+(K:=lang_V__canonical__choice_Choice)
+(V:=lang_V__canonical__choice_Choice)
+m0)]) in (fv1, m1) in (fv0, m0)).2 F)).
+      set K := let _ := _ in _.
+      Eval cbv zeta in let _ := _ in _.
+      cbn zeta.
+      simpl.
+      rewrite inE.
+      set F7 := _ `|` _.
+      cbn zeta.
+      Print fresh.
+
+      set X := fresh_tm _ _ _.
+      rewrite !ren_app [flatten_term (Tm_App _ _)]/= getfmap12d.
+      rewrite [flatten_term _]/=.
+
+      rewrite [H _ _ _ _ _ _]/=.
+      rewrite {2}/matching/montanari_deref/montanari_pair montanari_equation.
+      rewrite !deref_empty.
+      rewrite montanari_equation/=.
+      rewrite montanari_equation/=.
+      rewrite {1}/matching/montanari_deref/montanari_pair montanari_equation.
+      rewrite deref_sigma0.
+      do 5 (rewrite in_fnd; [admit|]).
+      move=> HY HX HF HY' HX'.
+      rewrite ![odflt _ _]/=.
+      rewrite ifF; last first.
+        admit.
+      rewrite montanari_equation ifF; last first.
+        admit.
+      rewrite montanari_equation eqxx.
+      rewrite montanari_equation ifF; last first.
+        admit.
+      rewrite in_fnd.
+        admit.
+      move=> XX.
+      rewrite in_fnd.
+        admit.
+      move=> YY.
+      rewrite in_fnd.
+        admit.
+      move=> ZZ.
+      rewrite in_fnd.
+        admit.
+      move=> KK.
+      rewrite ![odflt _ _]/=.
+      rewrite ffunE valPE.
+      rewrite in_fnd.
+      rewrite/=.
+        admit.
+        rewrite !deref_App; apply/eqP.
+        rewrite in_fnd.
+          rewrite/X.
+        rewrite in_fnd//=/X?inE//.
+        apply/eqP => -[]/=.
+        rewrite/=.
+      rewrite deref_App.
+      rewrite/
+
+      rewrite ifF; last first.
+      rewrite not_in_deref_V.
+      Search deref (_ \notin _).
+      set 
+
+      rewrite sndS.
+      rewrite [fresh_tm _ _]/=.
+      rewrite fresh_tm.
+        rewrite//.
+        by rewrite head_fresh_rule/= /rename push/=.
+      rewrite head_fresh_rule.
+        rewrite/=.
+
+      Search ([fmap => _].[? _]).
+      Print fresh.
+      rewrite in_fnd; first (by rewrite !inE).
+      move=> FF.
+      rewrite [flatten_term _]/=.
+
+
+
+
+      rewrite [fst (_, _)]/= !simpl_set.
+      set F0 := fresh_rule s0 _.
+      set F1 := fresh_rule s0 _.
+      set X := fret
+
       rewrite not_fnd//.
       case X : fresh_rules => [f rs]/=.
       rewrite not_fnd//=.
@@ -409,3 +646,4 @@ Section map.
         rewrite-/X.
         by move=> /injectiveP /(_ _ _ Hx).
       rewrite montanari_equation/=.
+      
