@@ -986,7 +986,14 @@ Section check.
     by rewrite /rename !push/= fresh_has_cut call_is_det_tm_ren0.
   Qed.
 
+  Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
+    [forall x : domf sV,
+      (* TODO: change check_tmM so that it does not check for deterministic signature of the pred *)
+      if s.[? val x] is Some t then check_tmM sP sV t
+      else false ].
+
   Lemma check_atoms_fresh sP hd bo modes v s (r : {fmap V -> V}):
+    (* TODO: instead of empty, I need sV and (compose r sV) *)
     check_atoms sP (assume_tm sP empty (map (ren r) hd) modes s) (fresh_atoms v bo r).2 =
       check_atoms sP (assume_tm sP empty hd modes s) bo.
   Proof.
@@ -1003,9 +1010,8 @@ Section check.
     case: s => [|s sx]; first by rewrite check_atoms_fresh0.
     case: h => //v'; rewrite ren_V !(@not_fnd _ _ fmap0)//.
     case: fndP => v'r/=.
+      (* suffices -> : (empty.[v'<-s] = fmap0). *)
       admit.
-    replace (empty.[v' <- s]) with (@fmap0 V S).
-      by apply: IH.
   Admitted.
 
   Lemma check_atoms_fresh_rename sP hd bo modes v s:
@@ -1064,6 +1070,7 @@ Section check.
     all (fun x => fdisjoint (vars x) (domf s)) hd ->
     good_mode modes ->
     check_tm sP empty q modes sig ->
+    (* TODO: instead of empty, I need sV which is related to s *)
     check_atoms sP (assume_tm sP empty hd modes sig) bo ->
     H u froz modes q hd s = Some s' -> check_atoms sP empty [seq deref_atom s' i  | i <- bo].
   Proof.
@@ -1105,22 +1112,36 @@ Section check.
     apply: IH => //.
   Admitted.
 
+  Lemma all_disjoint_flatten_term s l:
+    vars l # s -> all (fun x : Tm => vars x # s) (flatten_term l).
+  Proof. by elim: l => //=f Hf a Ha; rewrite fdisjointUX all_rcons => /andP[/Hf->->]. Qed.
+
+  Lemma get_frozen_vars_sub m l: get_frozen_vars m (flatten_term l) `<=` vars l.
+  Proof.
+    apply/fsubset_trans/vars_tms_flatten_term; rewrite/vars_tms.
+    move: (flatten_term _) m; elim => {l}[|l ls IH]//=[|m ms]//=.
+    case: m => /=.
+      by rewrite fsetUS//=.
+    by rewrite fsubsetU//IH orbT.
+  Qed.
+
   Lemma det_check_bc pr c fv r s:
     check_program pr -> call_is_det pr.(sig) fmap0 (deref s c) -> 
     bc u pr fv c s = r ->
     big_or_det pr.(sig) r.2.
   Proof.
     rewrite/big_or_det => /andP[ME CR] CT <-{r}.
-    rewrite mut_exclP//={ME}; last first.
+    rewrite mut_exclP//=; last first.
       by apply: call_is_det_tm_is_det.
     rewrite/bc; set QUERY := deref s c in CT *.
     case AS: acyclic_sigma => //=.
     case TH: get_tm_hd => [p|]//=.
     case: fndP => //= ppr.
     rewrite !push/=.
-    case: pr CR CT ppr => /= rs sig; rewrite/check_rules/= => CR CD ppr.
+    case: pr ME CR CT ppr => /= rs sig; rewrite/check_rules/= => ME CR CD ppr.
     move: CD; rewrite/call_is_det/check_tmM TH/= in_fnd.
     move=> /andP[].
+    move: ME; rewrite/mut_excl push/= => /andP[GM _].
     elim: rs CR => //= -[hd bo] rs IH /= /andP[H1 H2] H3 H4.
     rewrite !push/=.
     case: ifP => //= Hh; first by apply: IH.
@@ -1147,11 +1168,13 @@ Section check.
     set Q := flatten_term _.
     set H' := flatten_term _ => H H1 Hx.
     apply: det_check_H H1 Hx H => //; last first.
-      admit.
-      rewrite/H'/RT/R.
-      admit.
-    admit.
-  Admitted.
+      by move: (forallP GM [`ppr]); rewrite valPE//.
+      apply/all_disjoint_flatten_term/fdisjointWr/vars_tm_rename_disjoint.
+      by apply/fsubset_trans/fresh_rules_sub; rewrite/vars_sigma -!fsetUA fsubsetUl.
+    apply/all_disjoint_flatten_term/fdisjointWr/vars_tm_rename_disjoint.
+    apply/fsubset_trans/fresh_rules_sub;rewrite/Q.
+    by rewrite fsubsetU//= fsubsetU//= get_frozen_vars_sub orbT.
+  Qed.
 
 
   
