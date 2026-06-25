@@ -1003,6 +1003,9 @@ Section check.
     case: s => [|s sx]; first by rewrite check_atoms_fresh0.
     case: h => //v'; rewrite ren_V !(@not_fnd _ _ fmap0)//.
     case: fndP => v'r/=.
+      admit.
+    replace (empty.[v' <- s]) with (@fmap0 V S).
+      by apply: IH.
   Admitted.
 
   Lemma check_atoms_fresh_rename sP hd bo modes v s:
@@ -1015,7 +1018,50 @@ Section check.
     by rewrite check_atoms_fresh.
   Qed.
 
+  Lemma flatten_term_deref t p s: 
+    get_tm_hd t = inl p ->
+    flatten_term (deref s t) = map (deref s) (flatten_term t).
+  Proof. by elim: t p => //=f Hf a Ha p H; rewrite map_rcons (Hf _ H). Qed.
+
+  Lemma has_cut_deref_atom  s xs:
+    has_cut_seq xs -> has_cut_seq [seq deref_atom s i  | i <- xs].
+  Proof. by elim: xs => //= -[]//. Qed.
+
+  Lemma call_is_det_deref sP s t:
+    call_is_det sP empty t -> call_is_det sP empty (deref s t).
+  Proof.
+    rewrite/call_is_det/check_tmM.
+    rewrite/get_sig.
+    case Ht: get_tm_hd => //=[p|[d|v]]/=; last first.
+      by rewrite not_fnd.
+      by rewrite andbF.
+    case: fndP => //=pp.
+    rewrite (callabe_some_deref _ Ht)/= in_fnd => /andP[+->]; rewrite andbT.
+    rewrite (flatten_term_deref _ Ht).
+    move: (flatten_term _) (flatten_mode _) (flatten_sig _) .
+    clear.
+    elim => //= t0 tl IH [//|[|//] ms] [//|s0 ss] /andP[+/IH->]; rewrite andbT.
+    by rewrite/get_sig; case: t0 => //= v; rewrite (@not_fnd _ _ fmap0)//.
+  Qed.
+
+  Lemma check_atoms_deref_all sP xs s:
+    all (check_atom sP empty) xs ->
+      all (check_atom sP empty) [seq deref_atom s i  | i <- xs].
+  Proof. by elim: xs => [|[|t] xs IH]//= /andP[+{}/IH->]; rewrite andbT; apply: call_is_det_deref. Qed.
+
+  Lemma check_atoms_deref sP s bo:
+    check_atoms sP empty bo ->
+    check_atoms sP empty [seq deref_atom s i  | i <- bo].
+  Proof.
+    elim: bo => //= -[|t]//= xs IH.
+      by move=> /orP[/check_atoms_deref_all->|/IH->]; rewrite// orbT.
+    move=> /andP[+/IH->]; rewrite andbT.
+    by move=> /orP[/call_is_det_deref->|/has_cut_deref_atom->]//; rewrite orbT.
+  Qed.
+
   Lemma det_check_H sP modes q hd sig bo s s' froz:
+    all (fun x => fdisjoint (vars x) froz) hd ->
+    all (fun x => fdisjoint (vars x) (domf s)) hd ->
     good_mode modes ->
     check_tm sP empty q modes sig ->
     check_atoms sP (assume_tm sP empty hd modes sig) bo ->
@@ -1024,12 +1070,39 @@ Section check.
     elim: hd modes sig bo s s' q => //=[|h hs IH] modes sig bo s s' q.
       set X:= (match modes with | [::] | _ => _ end).
       replace X with (@fmap0 V S); last by rewrite{}/X; case: modes => [|[] ms]; case: sig.
-      clear X; case: modes; case: q => //=; case: sig => //= _ _ c [<-].
-      admit.
+      clear X; case: modes; case: q => //=; case: sig => //= _ _ _ _ c [<-].
+      by apply/check_atoms_deref.
     case: modes => //=; case: q => //=q0 qs m ms.
     case: m => //=; case: sig => //=[sx ss]; last first.
-      move=> AO _ C; case U: unif.unify => //=[s''].
+      move=> A _ _ _ C; case U: unif.unify => //=[s''].
+      by rewrite check_atoms_deref//.
+    move=> /andP[D1 D2] /andP[D3 D4]; rewrite/get_sig. 
+    case: q0 => //= [p|d|v] GM; last by rewrite not_fnd.
+      case: fndP => //pp /andP[CI CT].
+      case vh: (is_var h).
+        case: h vh D1 D3 => //= v' _; rewrite !fdisjoint1X => D1 D3.
+        rewrite not_fnd//=.
+        rewrite/matching/montanari_deref/montanari_pair montanari_equation/=.
+        rewrite not_fnd//= (negbTE D1) montanari_equation/=.
+        admit.
+      set X := match h with | Tm_V _ => _ | _ => empty end.
+      replace X with (@fmap0 V S); last by rewrite/X; destruct h => //.
+      rewrite/matching/montanari_deref/montanari_pair montanari_equation/= {X}.
+      case: h vh D1 D3 => //= p'; case: eqP => //= -[]?; subst.
+      rewrite montanari_equation/= => _ _ _.
+      by apply: IH => //.
+    case vh: (is_var h).
+      case: h vh D1 D3 => //= v' _; rewrite !fdisjoint1X => D1 D3.
+      rewrite not_fnd//=.
+      rewrite/matching/montanari_deref/montanari_pair montanari_equation/=.
+      rewrite not_fnd//= (negbTE D1) montanari_equation/=.
       admit.
+    set X := match h with | Tm_V _ => _ | _ => empty end.
+    replace X with (@fmap0 V S); last by rewrite/X; destruct h => //.
+    rewrite/matching/montanari_deref/montanari_pair montanari_equation/= {X}.
+    case: h vh D1 D3 => //= p'; case: eqP => //= -[]?; subst.
+    rewrite montanari_equation/= => _ _ _ /andP[??].
+    apply: IH => //.
   Admitted.
 
   Lemma det_check_bc pr c fv r s:
@@ -1058,22 +1131,26 @@ Section check.
     rewrite !push/= IH// andbT.
     rewrite/deref_pair/=/fresh_rule!push/= -/R.
     move: Hh; rewrite head_fresh_rule/= -/FR-/R eq_sym => /eqP Hh {IH}.
-    have: vars QUERY `<=` FR.1.
-      by apply/fsubset_trans/fresh_rules_sub; rewrite fsubsetU//fsubsetUr.
-    move: FR @R H Hh => [v /= _] H Hh S {rs H2}.
-    move: (get_frozen_vars _ _) H => /= froz.
+    (* have: vars QUERY `<=` FR.1. *)
+      (* by apply/fsubset_trans/fresh_rules_sub; rewrite fsubsetU//fsubsetUr. *)
+    (* move: FR @R H Hh => [v /= _] H Hh S {rs H2}. *)
     move: H1; rewrite/check_rule.
     have {}Hh := (proj1 (callable_rename _ _ _ _) Hh).
     rewrite Hh in_fnd /tm_is_det Hh in_fnd H4/=.
     move: H3.
     set modes := flatten_mode _.
     set sigF := flatten_sig _.
-    move=> + /(check_atoms_fresh_rename v).
+    move=> + /(check_atoms_fresh_rename FR.1).
+    move: H.
     set RT := rename _ _ _.
     set FA := fresh_atoms _ _ _.
     set Q := flatten_term _.
-    set H := flatten_term _.
-    apply: det_check_H.
+    set H' := flatten_term _ => H H1 Hx.
+    apply: det_check_H H1 Hx H => //; last first.
+      admit.
+      rewrite/H'/RT/R.
+      admit.
+    admit.
   Admitted.
 
 
