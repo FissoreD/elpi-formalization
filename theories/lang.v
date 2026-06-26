@@ -169,12 +169,6 @@ Fixpoint flatten_mode m :=
   | b _ => [::]
   end.
 
-Fixpoint flatten_sig m :=
-  match m with
-  | arr _ l r => l :: flatten_sig r
-  | b _ => [::]
-  end.
-
 Fixpoint count_tm_ag t := 
   match t with
   | Tm_App L _ => 1 + count_tm_ag L

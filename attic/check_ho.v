@@ -39,6 +39,12 @@ Proof.
   by case: compat_type => //=; rewrite andbF.
 Qed.
 
+Fixpoint flatten_sig m :=
+  match m with
+  | arr m l r => l :: flatten_sig r
+  | b _ => [::]
+  end.
+
 Lemma size_fs_fm a : size (flatten_sig a) = size (flatten_mode a).
 Proof. by elim: a => //= _ _ _ ? ->. Qed.
 
