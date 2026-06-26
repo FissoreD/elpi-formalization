@@ -914,10 +914,13 @@ Section check.
     by move=> /orP[/call_is_det_deref->|/has_cut_deref_atom->]//; rewrite orbT.
   Qed.
 
+  Lemma relSS0 sP s: relSS sP s empty.
+  Proof. by apply/forallP => //=-[]//. Qed.
+
   Lemma det_check_H sP modes q hd sig bo s s' froz (*sV*):
     (* relSS sP s sV -> *) true ->
-    all (fun x => fdisjoint (vars x) froz) hd ->
-    all (fun x => fdisjoint (vars x) (vars_sigma s)) hd ->
+    (* all (fun x => fdisjoint (vars x) froz) hd -> *) true ->
+    (* all (fun x => fdisjoint (vars x) (vars_sigma s)) hd -> *) true ->
     good_mode modes ->
     check_tm sP empty q modes sig ->
     (* TODO: instead of empty, I need sV which is related to s *)
@@ -929,52 +932,64 @@ Section check.
       replace X with (@fmap0 V S); last by rewrite{}/X; case: modes => [|[] ms]; case: sig.
       clear X; case: modes; case: q => //=; case: sig => //= _ _ _ _ c.
         move=> [<-]; apply: check_atoms_deref c.
-        admit.
+        try by apply: relSS0.
       move=> _ + [<-]; apply: check_atoms_deref.
-      admit.
+      try by apply: relSS0.
     case: modes => //=; case: q => //=q0 qs m ms.
-    move=> /andP[D1 D2] /andP[D3 D4].
+    (* move=> /andP[D1 D2] /andP[D3 D4]. *)
+    move=> _ _.
     case: m => //=; case: sig => //=[sx ss] GM; last first.
       move=> C; case U: unif.unify => //=[s''] H1 H2.
       apply: check_atoms_deref H1.
-      admit.
+      try by apply: relSS0.
     rewrite/get_sig.
     case: ifP => //= + CT.
     case: q0 => //= [p|d|v]; last by rewrite not_fnd.
       case: fndP => //pp CI.
       case vh: (is_var h).
-        case: h vh D1 D3 => //= v' _; rewrite !fdisjoint1X => D1 D3.
+        case: h vh => //= v' _.
         rewrite not_fnd//=.
         rewrite/matching/montanari_deref/montanari_pair montanari_equation/=.
         rewrite montanari_equation/=.
-        rewrite not_fnd//=; last first.
-          by move: D3; rewrite /vars_sigma finmap.inE => /norP[].
-        rewrite (negbTE D1) montanari_equation/= => H.
-        apply: IH CT _ => //.
+        case: fndP => //=; last first.
+          rewrite montanari_equation; case: ifP => //= H1 H2 H3.
+          apply: IH CT _ => //.
           admit.
+        move=> v's; case svs: s.[v's] => //=[p'|vk].
+          case: eqP => //=-[?]; subst => H.
+          apply: IH CT _ => //.
+          admit.
+        rewrite montanari_equation; case: ifP => //= H1 H2.
+        apply: IH CT _ => //.
         admit.
       set X := match h with | Tm_V _ => _ | _ => empty end.
       replace X with (@fmap0 V S); last by rewrite/X; destruct h => //.
       rewrite/matching/montanari_deref/montanari_pair montanari_equation/= {X}.
-      case: h vh D1 D3 => //= p'; case: eqP => //= -[]?; subst.
-      rewrite montanari_equation/= => _ _ _.
-      by apply: IH => //.
+      case: h vh => //= p'; case: eqP => //= -[]?; subst.
+      rewrite montanari_equation/= => _.
+      apply: IH => //.
     move=> CI.
     case vh: (is_var h).
-      case: h vh D1 D3 => //= v' _; rewrite !fdisjoint1X => D1 D3.
+      case: h vh => //= v' _.
       rewrite not_fnd//=.
       rewrite/matching/montanari_deref/montanari_pair montanari_equation/=.
-      rewrite not_fnd//=; last first.
-        by move: D3; rewrite /vars_sigma finmap.inE => /norP[].
-      rewrite (negbTE D1) montanari_equation/= => H.
-      apply: IH CT _ => //.
+      rewrite montanari_equation/=.
+      case: fndP => //=; last first.
+        rewrite montanari_equation; case: ifP => //= H1 H2 H3.
+        apply: IH CT _ => //.
         admit.
+      move=> v's; case svs: s.[v's] => //=[p'|vk].
+        case: eqP => //=-[?]; subst => H.
+        apply: IH CT _ => //.
+        admit.
+      rewrite montanari_equation; case: ifP => //= H1 H2.
+      apply: IH CT _ => //.
       admit.
     set X := match h with | Tm_V _ => _ | _ => empty end.
     replace X with (@fmap0 V S); last by rewrite/X; destruct h => //.
     rewrite/matching/montanari_deref/montanari_pair montanari_equation/= {X}.
-    case: h vh D1 D3 => //= p'; case: eqP => //= -[]?; subst.
-    rewrite montanari_equation/= => _ _ _.
+    case: h vh => //= p'; case: eqP => //= -[]?; subst.
+    rewrite montanari_equation/= => _.
     apply: IH => //.
   Admitted.
 
