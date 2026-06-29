@@ -1845,6 +1845,43 @@ Proof.
   apply/fdisjointP/kg/H.
 Qed.
 
+Lemma acyclic_sigma_H m fv t hd s1 s2:
+  acyclic_sigma s1 ->
+    H u fv m t hd s1 = Some s2 ->
+      acyclic_sigma s2.
+Proof.
+  elim: m t hd s1 s2 => /=[|m tl IH] t hd s1 s2.
+    by case: t => //=; case: hd => //= + [<-].
+  move=> AS; case: t; case: hd => //=.
+  move=> f1 a1 f2 a2.
+  case M: (_ f1 f2 s1) => [sx|]//=.
+  apply: IH.
+  by move: M; case: m => /=; [apply/matching_acyclic|apply/unif_acyclic].
+Qed.
+
+Lemma acyclic_sigma_select p pred m t s1 e:
+  acyclic_sigma s1 ->
+    e \in (select u pred t m p s1).2 ->
+      acyclic_sigma e.1.
+Proof.
+  elim: p m t s1 e => //=-[hd bo] rs IH m t s1 e AS/=.
+  case:eqP => //= [|_/IH -/(_ AS)]// X.
+  case H: H => [s2|]; last by apply: IH.
+  rewrite !push/= in_cons => /orP[/eqP?|]; subst; last by apply: IH.
+  by apply/acyclic_sigma_H/H.
+Qed.
+
+Lemma acyclic_sigma_bc s1 p v0 t:
+  acyclic_sigma s1 ->
+    forall x, x \in (bc u p v0 t s1).2 ->
+      acyclic_sigma x.1.
+Proof.
+  rewrite/bc/= => H1 -[s2 b]/=.
+  case: ifP => ///negbFE AS.
+  case: get_tm_hd => //= x; case: fndP => //= kP.
+  by rewrite !push/=; apply/acyclic_sigma_select.
+Qed.
+
 Module mgu.
 Definition mgum base general s :=  mp base general ->
     acyclic_sigma general -> domf s = domf general -> mp general s -> s = general.
