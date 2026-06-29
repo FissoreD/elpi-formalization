@@ -375,3 +375,4 @@ Section map.
       set F5 := _ `|` _.
       set F6 := _ `|` _.
   Abort.
+End map.
