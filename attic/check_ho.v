@@ -1045,20 +1045,6 @@ Section check.
     by case E: eat_ty.
   Qed.
 
-  (* Lemma matchinVl froz (v:v) t (s:sigma):
-    v \notin domf s ->
-    matching froz (tm_v v) t s =
-      some (if v \in froz then s
-      else deref_sigma v t s).
-  proof.
-    rewrite/matching/montanari_deref/montanari_pair 2!montanari_equation.
-    move=> vs; rewrite not_in_deref//=; last by rewrite fdisjointx1.
-    case: eqp => //.
-      admit.
-    
-    search (deref _ ?a =?a).
-    rewrite/=. *)
-
   Lemma det_check_H sP q hd sig bo s s' froz sV:
     (* get_frozen_vars modes q `<=` froz -> *)
     acyclic_sigma s ->
@@ -1066,7 +1052,6 @@ Section check.
     relSS sP s sV ->
     good_mode modes ->
     check_tm sP empty q sig ->
-    (* TODO: instead of empty, I need sV which is related to s *)
     check_atoms sP (assume_tm sP sV hd sig) bo ->
     H u froz modes q hd s = Some s' -> check_atoms sP empty [seq deref_atom s' i  | i <- bo].
   Proof.
@@ -1088,7 +1073,16 @@ Section check.
       case C: get_sig => //[sx].
       case: ifP => //CT; case: ifP => I//=.
       by case: eat_ty => //.
-    admit.
+    suffices R' : relSS sP s'' sV.
+      (* case: h M => //=v.
+      case: fndP => //vV.
+        case: ifP => //.
+        have /={REL} := forallP REL [`vV].
+        case: fndP => //vs.
+        admit.
+      
+
+      admit. *)
   Admitted.
 
   Lemma all_disjoint_flatten_term s l:
