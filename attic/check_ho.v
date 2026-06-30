@@ -1221,7 +1221,7 @@ Section check.
       apply/forallP => [[x xP]]; rewrite valPE ffunE/=.
       rewrite/= !finmap.inE in xP.
       have vs: v \in domf s by have:= forallP REL [`vV]; rewrite valPE; case: fndP.
-      have [|sm D1 D2] := montanari_extP A _ M; subst.
+      have [|sm [Asm D1] D2] := montanari_extP A _ M; subst.
         by rewrite !disjoint_L_cons !acyclic_deref_disjoint// disjoint_L0.
       rewrite fnd_cat.
       have xs: x \in domf s.
@@ -1232,10 +1232,14 @@ Section check.
       rewrite derefxx; last first.
         apply/forallP => -[y yP]; rewrite valPE [val _]/=.
         rewrite fnd_cat (in_fnd yP) ifF//=; last first.
+          move: D1; rewrite fdisjointXU => /andP[D1 D2].
           by have /negbTE := fdisjointP_sym D1 _ yP.
-        (* should be ok by adding in montanari_extP that vars sm not in ...  *)
-        admit.
-      (* should be ok *)
+        rewrite not_in_deref// domf_cat fdisjointUX/=.
+        move: D1; rewrite fdisjointXU => /andP[D1 D2].
+        have:= acyclic_deref_disjoint (Tm_V y) Asm.
+        rewrite /=in_fnd// => ->.
+        apply/fdisjointWr/D2.
+        by apply/fsubsetP => z zP; apply/codom_varsP; do 2 eexists => //; eauto.
       replace (deref _ _) with (deref sm s.[xs]) by admit.
       move: xP; case: eqP => //xv; subst; rewrite (orTb,orFb).
         move=> _.
@@ -1257,7 +1261,6 @@ Section check.
             case: ifP => //=C'/eqP W.
             (* should improve lemma check_tm_deref to consider DetErr case *)
             admit.
-          have Asm : acyclic_sigma sm by admit.
           have := check_tm_deref Asm (relSS0 _ _) (isOkP Ch).
           case Ch': check_tm => //= [sig'] _.
           (* should import check_tm_deref to relate the input and output sig *)
@@ -1280,7 +1283,6 @@ Section check.
           case: ifP => //=C'/eqP W.
           (* should improve lemma check_tm_deref to consider DetErr case *)
           admit.
-        have Asm : acyclic_sigma sm by admit.
         have := check_tm_deref Asm (relSS0 _ _) (isOkP Ch).
         case Ch': check_tm => //= [sig'] _.
         (* should import check_tm_deref to relate the input and output sig *)
