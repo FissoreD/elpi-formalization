@@ -1229,18 +1229,14 @@ Section check.
         have:= forallP REL [`vV]; rewrite valPE; case: fndP.
       rewrite xs in_fnd.
       rewrite/deref_sig2 ffunE valPE.
-      rewrite derefxx; last first.
-        apply/forallP => -[y yP]; rewrite valPE [val _]/=.
-        rewrite fnd_cat (in_fnd yP) ifF//=; last first.
-          move: D1; rewrite fdisjointXU => /andP[D1 D2].
-          by have /negbTE := fdisjointP_sym D1 _ yP.
-        rewrite not_in_deref// domf_cat fdisjointUX/=.
-        move: D1; rewrite fdisjointXU => /andP[D1 D2].
-        have:= acyclic_deref_disjoint (Tm_V y) Asm.
-        rewrite /=in_fnd// => ->.
-        apply/fdisjointWr/D2.
-        by apply/fsubsetP => z zP; apply/codom_varsP; do 2 eexists => //; eauto.
-      replace (deref _ _) with (deref sm s.[xs]) by admit.
+      rewrite not_in_deref; last first.
+        rewrite domf_cat fdisjointUX/=.
+        rewrite acyclic_deref_disjoint//.
+        apply/fdisjointWr.
+          apply: vars_tm_deref_sub.
+        rewrite fdisjointXU.
+        move: D1; rewrite fdisjointXU => /andP[D1 D2]; rewrite D2/=.
+        by have:= acyclic_deref_disjoint (Tm_V x) A; rewrite/=in_fnd.
       move: xP; case: eqP => //xv; subst; rewrite (orTb,orFb).
         move=> _.
         have:= forallP REL [`vV]; rewrite valPE in_fnd/=.
