@@ -96,19 +96,19 @@ Proof. by []. Qed.
 Lemma get_sig_P sp sv p: get_sig sp sv (Tm_P p) = sp.[?p].
 Proof. by []. Qed.
 
-Inductive ch := TyErr | DetErr of S | Ok of S.
+Inductive ch := TyErr | Ok of S.
 
 Definition is_ch (x : ch) := unit.
 Lemma is_ch_inhab : forall x, is_ch x. Proof. exact (fun x => tt). Qed.
 Definition ch_eqb (x y : ch) := 
   match x, y with
   | TyErr, TyErr => true
-  | DetErr t1, DetErr t2 | Ok t1, Ok t2 => t1 == t2
+  | Ok t1, Ok t2 => t1 == t2
   | _, _ => false
   end.
 Lemma ch_eqb_correct : forall x, eqb_correct_on ch_eqb x. Proof.
-  by case => //=[|s|s][|s'|s']//=/eqP->. Qed.
-Lemma ch_eqb_refl : forall x, eqb_refl_on ch_eqb x. Proof. by case => [|?|?]//=; rewrite/eqb_refl_on//=. Qed.
+  by case => //=[|s][|s']//=/eqP->. Qed.
+Lemma ch_eqb_refl : forall x, eqb_refl_on ch_eqb x. Proof. by case => [|?]//=; rewrite/eqb_refl_on//=. Qed.
 Elpi derive.eqbOK.register_axiomx ch is_ch is_ch_inhab ch_eqb ch_eqb_correct ch_eqb_refl.
 (* HB.instance Definition _ : hasDecEq ch := Equality.copy ch _. *)
 
@@ -172,12 +172,7 @@ check_tm sP sV (t :: ts) (arr input tyf tya) :=
       | Ok tyf =>
           if compat_type tyf tyf' then
             if incl tyf tyf' then check_tm sP sV ts tya
-            else apply_ch (fun x => DetErr (weak x)) (eat_ty (size ts) tya)
-          else TyErr
-      | DetErr tyf' =>
-          if compat_type tyf tyf' then
-            apply_ch (fun x => DetErr (weak x))
-                    (eat_ty (size ts) tya)
+            else apply_ch (fun x => Ok (weak x)) (eat_ty (size ts) tya)
           else TyErr
       | TyErr => TyErr
       end
@@ -856,9 +851,9 @@ Section check.
     - by move=> _ _ _ [->].
     - move=> sP sV t ts tyf tya H1 H2.
       case: eqP => // IE; case S: get_sig => //=[sig].
-      case C: check_tm => [|sig'|sig']//.
-        by case: ifP => //; case: eat_ty.
-      by case: ifP => //CT; case: ifP => //; case eat_ty.
+      case C: check_tm => [|sig']//.
+      case: ifP => //CT; case: ifP => //; case eat_ty => //.
+      by move=> s I/=; case: s => [[]|[]]//.
     - move=> _ _ _ ts tyf tya; case E: eat_ty => //=-[?]; subst.
       by apply: is_det_sig_eat_ty E.
   Qed.
@@ -873,10 +868,10 @@ Section check.
       by apply: is_det_sig_eat_ty E.
     case: eqP => /= _; first by apply: IH.
     case H: get_sig => //[s'].
-    case C: check_tm => //[sig|sig].
-      by case: ifP => //=; case: eat_ty.
-    case: ifP => //CT; case I: incl; last by case: eat_ty.
-    by apply: IH.
+    case C: check_tm => //[sig].
+    case: ifP => //CT; case I: incl; first by apply: IH.
+    case E: eat_ty => //=[sig'][?]; subst.
+    by rewrite is_det_sig_weak in dk.
   Qed.
 
   Lemma call_is_det_tm_is_det pr t: call_is_det pr fmap0 t -> tm_is_det pr t.
@@ -998,9 +993,6 @@ Section check.
       if s.[? val x] is Some t then 
         match check_tmM sP empty (deref s t) with
         | Ok sig' => cincl sig' sig
-        | DetErr sig' =>
-          if compat_type sig' sig then sig == weak sig
-          else TyErr
         | TyErr => false
         end
       else false].
@@ -1068,235 +1060,108 @@ Section check.
       by simpl in F; case: sV.[vV] => //[[]]// _;eexists => //.
     - case: fndP => //=pP H.
       eexists => //.
-      move: H; case C: check_tm => //[sig'|sig'].
-        case: ifP => // CT /eqP W; rewrite W.
-        admit.
+      move: H; case C: check_tm => //[sig'].
       admit.
   Admitted.
+
+  Lemma cincl_weakr A B : cincl A B -> cincl A (weak B).
+  Proof. by move=> /andP[C I]; rewrite/cincl incl_weakr// compat_type_weak C. Qed.
+
+  (* Definition good_modeT s :=
+    match s with
+    | arr input l r => good_modeT l && good_mode r
+    | arr output l r => good_mode l && all_out (flatten_mode r) &&  *)
 
   (* TODO: the premise check_tm sP sV t sig should be
      r = DetErr t | Ok t
      and
      the output should be more_precise then r
   *)
-  Lemma check_tm_deref sP sV s t sig:
+  Lemma check_tm_deref sP sV s t sig r1 r2:
     acyclic_sigma s ->
     relSS sP s sV ->
-    let r1 := check_tm sP sV t sig in
-    let r2 := check_tm sP empty [seq deref s i  | i <- t] sig in
-    r1 <> TyErr -> r2 <> TyErr ->
-    match r1 with
-    | TyErr => false
-    | DetErr sig1 => 
-      match r2 with
-      | DetErr sig2 => compat_type sig1 sig2
-      | Ok sig2 => cincl sig2 sig1
-      | _ => false
-      end
-    | Ok sig1 =>
-      match r2 with
-      | Ok sig2 => cincl sig2 sig1
-      | _ => false
-      end
-    end.
+    check_tm sP sV t sig = Ok r1 ->
+    check_tm sP empty [seq deref s i  | i <- t] sig = Ok r2 ->
+    cincl r2 r1.
   Proof.
-    move=> A.
+    move=> A; move: r1 r2.
     pattern sP, sV, t, sig, (check_tm sP sV t sig).
-    apply: check_tm_elim => //; clear -A; cycle 2.
-    - move=> sP sV t ts ty tys R/=; case E: eat_ty => //=[s'] _.
-      by rewrite check_tm_simpl size_map E//=; rewrite cincl_refl.
-    - by move=> /= sP sV sx; rewrite !check_tm_simpl cincl_refl.
-    move=> sP sV t ts ty tys H1 H2 R.
+    eapply check_tm_elim => //; clear -A; cycle 2.
+    - move=> sP sV t ts ty tys r1 r2 R/=; case E: eat_ty => //=[s'] [?]; subst.
+      by rewrite check_tm_simpl size_map E//= => -[<-]; rewrite cincl_refl.
+    - by move=> /= sP sV sx r1 r2 R [<-]; rewrite !check_tm_simpl => -[<-]; rewrite cincl_refl.
+    move=> sP sV t ts ty tys H1 H2 r1 r2 /= R.
     rewrite [map _ _]/= check_tm_simpl.
     case: eqP => // IE; subst; first by auto.
     have:= get_tm_hd_deref s t.
     rewrite/get_sig.
+    rewrite size_map.
     case G: get_tm_hd => [p|[d|v]]->//.
     - case: fndP => //pP.
       rewrite (flatten_term_deref_map _ G)/=.
-      case C: check_tm => //=[sig|sig]; case: ifP => // CS1.
-        case C1: check_tm => //=[sig1|sig1]; case: ifP => // CS2.
-          by rewrite size_map; case E: eat_ty => //=.
-        rewrite size_map; case E: eat_ty => //=[sig2] _.
-        case: ifP => SU//.
-        case C3: check_tm => //[sig3|sig3] _.
-          admit.
-        admit.
-      rewrite size_map.
-      case: ifP => //I.
+      case C: check_tm => //=[sig]; case: ifP => // CS1.
+      have {}H2 := H2 ty _ _ R C.
+      case: ifP => I.
         move=> C1.
-        case C2: check_tm => //[sig1|sig1]; case: ifP => //CT.
-          case E: eat_ty => //=[ty'] _.
-          have {H2}/= := H2 ty R; rewrite C C2.
-          by case.
-        case: ifP => I1.
-          case C3: check_tm => //[sig2|sig2] _.
-            have X: DetErr sig2 <> TyErr by [].
-            have Y: Ok sig <> TyErr  by [].
-            have Z: Ok sig1 <> TyErr  by [].
-            have {H2}/= := H2 ty R; rewrite C C2 => /(_ Y Z) I2.
-            by have {H1}/= := H1 R C1; rewrite C3 => /(_ X).
-          have X: Ok sig2 <> TyErr by [].
-          have Y: Ok sig <> TyErr  by [].
-          have Z: Ok sig1 <> TyErr  by [].
-          have {H2}/= := H2 ty R; rewrite C C2 => /(_ Y Z) I2.
-          by have {H1}/= := H1 R C1; rewrite C3 => /(_ X).
-        case E: eat_ty => //=[sig'] _.
-        have Y: Ok sig <> TyErr  by [].
-        have Z: Ok sig1 <> TyErr  by [].
-        have {H2} := H2 ty R; rewrite C C2/= => /(_ Y Z) I2.
-        move: C1; case C3: check_tm => //[sig2|sig2].
-          admit. (*should use c3 and E*)
-        admit. (*this is weird/wrong*)
-      case E: eat_ty => //=[sig'] _.
-      case C1: check_tm => //[sig2|sig2]; case: ifP => CS2//.
-      case: ifP => //I2.
-      case C2: check_tm => //[sig3|sig3] _.
-        admit.
+        case C2: check_tm => //=[sig2].
+        have /andP[_ I2] := H2 _ C2.
+        rewrite (incl_trans I2 I).
+        case: ifP => // CT.
+        by apply: H1.
+      case E: eat_ty => //=[sig1] [?]; subst.
+      case C1: check_tm => //=[sig2].
+      have /andP[CT I1]:= H2 _ C1.
+      case: ifP => // CT1.
+      case: ifP => // I2; last by move=> [->]; rewrite cincl_refl.
+      move=> C2.
+      have {}H1 := H1 _ _ R _ C2.
+      (* should be: 
+        exists r, check_tm sP sV ts tys = Ok r
+        then I can prove that compat_type r and sig1
+        and finally the weak condition
+      *)
       admit.
     - rewrite (flatten_term_deref_mapD _ G)/=.
-      case C: check_tm => //=[sig|sig]; case: ifP => // CS1.
-        case C1: check_tm => //=[sig1|sig1]; case: ifP => // CS2.
-          by rewrite size_map; case E: eat_ty => //=.
-        rewrite size_map; case E: eat_ty => //=[sig2] _.
-        case: ifP => SU//.
-        case C3: check_tm => //[sig3|sig3] _.
-          admit.
-        admit.
-      rewrite size_map.
-      case: ifP => //I.
+      case C: check_tm => //=[sig]; case: ifP => // CS1.
+      have {}H2 := H2 ty _ _ R C.
+      case: ifP => I.
         move=> C1.
-        case C2: check_tm => //[sig1|sig1]; case: ifP => //CT.
-          case E: eat_ty => //=[ty'] _.
-          have {H2}/= := H2 ty R; rewrite C C2.
-          by case.
-        case: ifP => I1.
-          case C3: check_tm => //[sig2|sig2] _.
-            have X: DetErr sig2 <> TyErr by [].
-            have Y: Ok sig <> TyErr  by [].
-            have Z: Ok sig1 <> TyErr  by [].
-            have {H2}/= := H2 ty R; rewrite C C2 => /(_ Y Z) I2.
-            by have {H1}/= := H1 R C1; rewrite C3 => /(_ X).
-          have X: Ok sig2 <> TyErr by [].
-          have Y: Ok sig <> TyErr  by [].
-          have Z: Ok sig1 <> TyErr  by [].
-          have {H2}/= := H2 ty R; rewrite C C2 => /(_ Y Z) I2.
-          by have {H1}/= := H1 R C1; rewrite C3 => /(_ X).
-        case E: eat_ty => //=[sig'] _.
-        have Y: Ok sig <> TyErr  by [].
-        have Z: Ok sig1 <> TyErr  by [].
-        have {H2} := H2 ty R; rewrite C C2/= => /(_ Y Z) I2.
-        move: C1; case C3: check_tm => //[sig2|sig2].
-          admit. (*should use c3 and E*)
-        admit. (*this is weird/wrong*)
-      case E: eat_ty => //=[sig'] _.
-      case C1: check_tm => //[sig2|sig2]; case: ifP => CS2//.
-      case: ifP => //I2.
-      case C2: check_tm => //[sig3|sig3] _.
-        admit.
-      admit.
-    - case: fndP => //vV.
-      rewrite size_map.
-      have:= forallP R [`vV].
-      rewrite valPE [val _]/=; case: fndP => //=vs; rewrite/check_tmM.
-      rewrite not_in_deref; last first.
-        by apply: fdisjointWr (codom_vars_sub_vt _) A.
-      rewrite/get_sig.
-      case X: get_tm_hd => //[p|[d|v']]; last first.
-      - by rewrite not_fnd.
-      - case F: flatten_term => //=.
-        rewrite check_tm_simpl/=; case S: sV.[vV] => [[]|[]]// _.
-        case C: check_tm => //=[sig|sig]; case: ifP => // CS1.
-          case E: eat_ty => //=[sig'] _.
-          case C1: check_tm => //=[sig1|sig1]; case: ifP => // CS2.
-          case: ifP => // I.
-          case C3: check_tm => //[sig3|sig3] _.
-            admit.
-          admit.
-        case: sig C CS1 => [[]|[]]// CS1 _.
-        rewrite incl_refl => Cx.
-        case C2: check_tm => //[sig1|sig1]; case: ifP => //CT.
-          case E: eat_ty => //=[ty'] _.
-(*           
-          have {H2}/= := H2 ty R; rewrite C C2.
-          by case.
-        case: ifP => I1.
-          case C3: check_tm => //[sig2|sig2] _.
-            have X: DetErr sig2 <> TyErr by [].
-            have Y: Ok sig <> TyErr  by [].
-            have Z: Ok sig1 <> TyErr  by [].
-            have {H2}/= := H2 ty R; rewrite C C2 => /(_ Y Z) I2.
-            by have {H1}/= := H1 R C1; rewrite C3 => /(_ X).
-          have X: Ok sig2 <> TyErr by [].
-          have Y: Ok sig <> TyErr  by [].
-          have Z: Ok sig1 <> TyErr  by [].
-          have {H2}/= := H2 ty R; rewrite C C2 => /(_ Y Z) I2.
-          by have {H1}/= := H1 R C1; rewrite C3 => /(_ X).
-        case E: eat_ty => //=[sig'] _.
-        have Y: Ok sig <> TyErr  by [].
-        have Z: Ok sig1 <> TyErr  by [].
-        have {H2} := H2 ty R; rewrite C C2/= => /(_ Y Z) I2.
-        move: C1; case C3: check_tm => //[sig2|sig2].
-          admit. (*should use c3 and E*)
-        admit. (*this is weird/wrong*)
-      case E: eat_ty => //=[sig'] _.
-      case C1: check_tm => //[sig2|sig2]; case: ifP => CS2//.
-      case: ifP => //I2.
-      case C2: check_tm => //[sig3|sig3] _.
-        admit.
-      admit.
-
-
-        
-      
-
-
-
-        admit.
-      
-      by move=> *; rewrite/= check_tm_simpl size_map//.
-    move=> sP sV t ts tyf tya IH1 IH2 R.
-    rewrite /=!check_tm_simpl.
-    case: eqP => //IE/=; subst; first by auto.
-    case G: get_sig => //=[sig].
-    have [sig' G' I] := @get_sig_deref sP s sV t sig A R G.
-    rewrite G'/=; rewrite size_map.
-    case C: check_tm => //[sig''|sig''].
-      by case: ifP => //CS; case e: eat_ty.
-    have:= IH2 sig R (isOkP C).
-    move=> C'.
+        case C2: check_tm => //=[sig2].
+        have /andP[_ I2] := H2 _ C2.
+        rewrite (incl_trans I2 I).
+        case: ifP => // CT.
+        by apply: H1.
+      case E: eat_ty => //=[sig1] [?]; subst.
+      case C1: check_tm => //=[[[]|[]]]//=.
+      have {H2} := H2 _ C1.
+      by case: sig I C CS1 => [[]|]//.
+    case: fndP => //vV.
+    have:= forallP R [`vV].
+    rewrite valPE [val _]/=; case: fndP => //=vs; rewrite/check_tmM.
+    rewrite not_in_deref; last first.
+      by apply: fdisjointWr (codom_vars_sub_vt _) A.
+    rewrite/get_sig.
+    case X: get_tm_hd => //[p|[d|v']]; last first.
+      by rewrite not_fnd.
+    - case F: flatten_term => //=.
+      rewrite check_tm_simpl/=; case S: sV.[vV] => [[]|[]]// _.
+      case C: check_tm => //=[sig]; case: ifP => // CS1.
+      case: sig C CS1 => [[]|[]]// CS1 _.
+      rewrite incl_refl => Cx.
+      case C1: check_tm => //[sig1]; case: ifP => //.
+      case: sig1 C1 => [[]|[]]//= C1 C2 C3.
+      by have:= H1 _ _ R Cx C3.
+    case: fndP => //pP.
+    case C1: check_tm => //[sig1] CI.
+    case C2: check_tm => //[sig2].
     case: ifP => // CT.
-    case: ifP; last by case: eat_ty.
-    move=> I' C2.
-    have C2':= IH1 R C2.
-    move: G G';rewrite/get_sig.
-    have:= get_tm_hd_deref s t.
-    case G: get_tm_hd => [p|[d|v]]->//.
-    - case: fndP => //pP; move=> -[?][?]; subst.
-      rewrite (flatten_term_deref_map _ G).
-      move: C'; case C': check_tm => //[sig] _.
-      move: C2'; case C2': check_tm => //[sigx] _.
+    case C3: (check_tm _ empty) => //[sig3].
+    case: (ifP (compat_type _ _)) => // CT1.
+    case: ifP => // I; last case E: eat_ty => //=[sig][?]; subst.
+      case: ifP => //I1 C; last case E': eat_ty => //[sig'][?]; subst; first by apply: H1.
       admit.
-    - move=> [?][?]; subst.
-      rewrite (flatten_term_deref_mapD _ G).
-      move: C'; case C': check_tm => //[sig] _.
-      move: C2'; case C2': check_tm => //[sigx] _.
-      case: sig'' C I' CT => [[]|[]]//=.
-      admit.
-    case: fndP => //vV[?]; subst.
-    have:= forallP R [`vV]; rewrite valPE [val _]/=.
-    case: fndP => // vs; cbn zeta.
-    have:= (deref2 (Tm_V v) A); rewrite deref_V in_fnd => ->.
-    rewrite/check_tmM/get_sig [odflt _ _]/=.
-    case X: get_tm_hd => [p|[d|v']]; last first.
-    - by rewrite not_fnd.
-    - case F: flatten_term => //; rewrite check_tm_simpl.
-      case VV: sV.[vV] => [[]|[]]//= _ [?]; subst.
-      have:= IH2 sig'' R (isOkP C).
-      admit.
-    - case: fndP => //=pP.
-      case Cx: check_tm => //=[sig|sig]. *)
-
+    case: ifP => // I1; last by move => [<-]; rewrite cincl_refl.
+    admit.
   Admitted.
 
   Lemma call_is_det_deref sP sV s t:
@@ -1306,9 +1171,11 @@ Section check.
   Proof.
     rewrite/call_is_det/check_tmM => A R /ch_eqb_correct.
     case X: get_sig => //[s']; move: X => G Ch.
-    (* have Ch' := check_tm_deref A R (isOkP Ch). *)
     have [sig' G' CI] := get_sig_deref A R G.
     rewrite G'.
+    (* have /= := @check_tm_deref sP sV s (flatten_term t) s' A R.
+    rewrite Ch.
+    (* have Ch' := check_tm_deref A R (isOkP Ch). *)
     rewrite/ch_eqb.
     (* case C: check_tm => //=. *)
     (* apply: ch_eqb_refl. *)
@@ -1324,7 +1191,7 @@ Section check.
     case G': get_tm_hd => //[p|[d|v']]//=; last by rewrite not_fnd.
       case: fndP => //pP + [?]; subst. admit.
     move=> + [?]; subst.
-    admit.
+    admit. *)
   Admitted.
 
   Lemma check_atoms_deref_all sP sV xs s:
@@ -1365,40 +1232,32 @@ Section check.
     let modes := flatten_mode sig in
     get_input_vars modes q `<=` froz ->
     fdisjoint (domf s) (get_input_vars modes q) ->
-    (* [forall x : (get_input_vars modes hd), if s.[?val x] is Some t then vars_tm t `<=` froz else true] -> *)
-    (* get_input_vars modes q `<=` froz -> *)
-    relSS sP s sV ->
     good_mode modes ->
     check_tm sP empty q sig ->
     check_atoms sP (assume_tm sP sV hd sig) bo ->
+    relSS sP s sV ->
     H u froz modes q hd s = Some s' -> check_atoms sP empty [seq deref_atom s' i  | i <- bo].
   Proof.
-    elim: hd sig bo s s' q sV => //=[|h hs IH] sig bo s s' q sV D0 A FV D REL.
+    elim: hd sig bo s s' q sV => //=[|h hs IH] sig bo s s' q sV D0 A FV D.
       set X:= (match sig with | b _ | _ => _ end).
       move=> {FV D}.
-      replace X with sV; last by rewrite{}/X; case: sig REL => [|[] ms].
+      replace X with sV; last by rewrite{}/X; case: sig => [|[] ms].
       clear X; case: sig => //=[b|m tf ta]; case: q {D0} => //=.
-      by move=> _ _ + [<-]; apply: check_atoms_deref.
+      by move=> _ ??? [<-]; apply: check_atoms_deref; eassumption.
     case: sig FV D => [b|m tf ta]/=; case: q D0 => //=q0 qs.
     rewrite !vars_tms_cons !fdisjointUX !fdisjointXU -!andbA => /and4P[dqh dqhs dqsh dqshs].
     case: m => //=; last first.
       move=> D1 D2 GM Ch Ca.
     (* move=> /andP[dsq dsqs]; case: m => //=; last first. *)
-      case U: unif.unify => //=[sm] H.
+      case U: unif.unify => //=[sm] R H.
       apply: check_atoms_deref Ca.
         by apply: acyclic_sigma_H (unif_acyclic A U) H.
       (* should prove transitivity of relSS over unify and H *)
       admit.
     rewrite fsubUset fdisjointXU => /andP[S1 S2] /andP[dsq dsqs] GM Ch.
-    have Ch' : check_tm sP empty qs ta.
-      move: Ch; rewrite check_tm_simpl; case: eqP => // IE.
-      case G: get_sig => //[sx].
-      case C: check_tm => //[sig|sig].
-        by case: ifP => //; case: eat_ty.
-      by case: ifP => //CT; case: ifP => I//; case: eat_ty.
-    case M: matching => //=[sm] Ca.
+    case M: matching => //=[sm] Ca R.
     have A' := (matching_acyclic A M).
-    apply: IH Ca => //.
+    apply: IH Ca _ => //.
       apply: fdisjointWl (matching_ext1 M) _.
       apply/fdisjointP => //= x.
       rewrite !finmap.inE.
@@ -1406,32 +1265,12 @@ Section check.
         by move=> _; apply/fdisjointP/xs.
       move=> /andP[xf _]. 
       by apply: contraNN (fsubsetP _ _) xf.
-    (* - apply/forallP => [[x xP]]/=; case: fndP => // xsm.
-      have xP' : x  \in vars h `|` get_input_vars (flatten_mode ta) hs.
-        by rewrite finmap.inE xP orbT.
-
-      (* apply/forallP => [[x xP]]; rewrite [val _]/= fnd_cat [domf _]/=. *)
-      have {FL} := forallP FL [`xP']; rewrite [val _]/=.
-      have:= montanari_extP A (disjoint_L_deref _ _ A) M.
-      move => [sm' [Asm D] ?]; subst.
-      rewrite fnd_cat.
-
-      case: fndP => //xs Hx.
-        rewrite (@in_fnd _ _ (deref_sig2 _ _))/= ffunE valPE not_in_deref//.
-        apply/fdisjointP => k ksm.
-        have ksm' : k  \in domf (sm' + deref_sig2 sm' s) by rewrite domf_cat finmap.inE ksm.
-        have := fdisjointP A' _ ksm'.
-        apply: contraNN => Hz.
-        apply/codom_varsP; eexists _, ksm'; rewrite getf_catl.
-        Search ((_ + _) [` _]).
-        rewrite codom_vars_ca
-        move: H; rewrite fdisjointXU => /andP[H1 H2].
-        rewrite fdisjoint_sym.
-        apply: fdisjointWl H1.
-
-        admit.
-      case: fndP => // xsm'.
-      admit. *)
+    - move: Ch; rewrite check_tm_simpl; case: eqP => // IE.
+      case G: get_sig => //[sx].
+      case C: check_tm => //[sig].
+      case: ifP => // CT; case: ifP => // I.
+      case E: eat_ty => //= _.
+      admit.
     have R' : relSS sP sm sV.
       (* same proof as above *)
       admit.
@@ -1501,7 +1340,7 @@ Section check.
     case: pr ME CR CT ppr => /= rs sig; rewrite/check_rules/= => ME CR CD ppr.
     move: CD; rewrite/call_is_det/check_tmM/get_sig TH/= in_fnd.
     move=> /ch_eqb_correct.
-    case C: check_tm => [||[[|[]]|]]//= _.
+    case C: check_tm => [|[[|[]]|]]//= _.
     move: ME; rewrite/mut_excl push/= => /andP[GM _].
     elim: rs CR => //= -[hd bo] rs IH /= /andP[H1 H2].
     rewrite !push/=.
@@ -1525,7 +1364,7 @@ Section check.
     set FA := fresh_atoms _ _ _.
     set Q := flatten_term _.
     set H' := flatten_term _ => H H1 Hx.
-    apply: det_check_H Hx H => //.
+    apply: det_check_H Hx _ H => //.
     - apply: fdisjointWr (vars_tms_flatten_term _) (fdisjointWl (vars_tms_flatten_term _) _).
       apply: fdisjointWl; last first.
         rewrite fdisjoint_sym; apply vars_tm_rename_disjoint.
@@ -1534,8 +1373,8 @@ Section check.
     (* - apply/forallP => [[x xP]]; case: fndP => //= xs. *)
       (* should be false: x can't be both in H' and s: H' is a renaming *)
       (* admit. *)
-    - by apply: relSS0.
     - by rewrite C.
+    - by apply: relSS0.
   Qed.
   
   (* Lemma det_check_big_or sV pr c fv fv' r0 rs s1:
