@@ -1184,28 +1184,36 @@ Section check.
   Lemma relSS0 sP s: relSS sP s empty.
   Proof. by apply/forallP => //=-[]//. Qed.
 
+  Lemma domf_vars_tms_cons s q0 qs: s # vars_tms (q0 :: qs) -> 
+    fdisjoint s (vars q0) /\ fdisjoint s (vars_tms qs).
+  Proof. by rewrite vars_tms_cons fdisjointXU => /andP[]. Qed.
+
   Lemma det_check_H sP q hd sig bo s s' froz sV:
     acyclic_sigma s ->
     let modes := flatten_mode sig in
+    get_input_vars modes q `<=` froz ->
+    fdisjoint (domf s) (vars_tms q) ->
+    (* get_input_vars modes q `<=` froz -> *)
     relSS sP s sV ->
     good_mode modes ->
     check_tm sP empty q sig ->
     check_atoms sP (assume_tm sP sV hd sig) bo ->
     H u froz modes q hd s = Some s' -> check_atoms sP empty [seq deref_atom s' i  | i <- bo].
   Proof.
-    elim: hd sig bo s s' q sV => //=[|h hs IH] sig bo s s' q sV A REL.
+    elim: hd sig bo s s' q sV => //=[|h hs IH] sig bo s s' q sV A FV D REL.
       set X:= (match sig with | b _ | _ => _ end).
-      replace X with sV; last by rewrite{}/X; case: sig REL => [|[] ms].
-      clear X; case: sig => //=[b|m tf ta]; case: q => //=.
+      replace X with sV; last by rewrite{}/X; case: sig REL {FV} => [|[] ms].
+      clear X; case: sig {FV} => //=[b|m tf ta]; case: q {D} => //=.
       by move=> _ _ + [<-]; apply: check_atoms_deref.
-    case: sig => [b|[] tf ta]/=; case: q => //=q0 qs GM; last first.
+    case: sig FV => [b|[] tf ta]/=; case: q D => //=q0 qs /domf_vars_tms_cons[D1 D2] FV GM; last first.
       move=> TR C; case U: unif.unify => //=[s''] H.
       apply: check_atoms_deref C.
         by apply: acyclic_sigma_H (unif_acyclic A U) H.
       (* should prove transitivity of relSS over unify and H *)
       admit.
-    case M: matching => //=[s''] TR Ch  H.
+    case M: matching => //=[s''] TR Ch H.
     have A' := (matching_acyclic A M).
+    move: FV; rewrite fsubUset => /andP[FV1 FV2].
     apply: IH Ch H => //; last first.
       move: TR; rewrite check_tm_simpl; case: eqP => // IE.
       case G: get_sig => //[sx].
@@ -1215,7 +1223,32 @@ Section check.
     have R' : relSS sP s'' sV.
       (* same proof as above *)
       admit.
-    case: h M => //v M.
+    case: h M => //v.
+    rewrite /matching/montanari_deref/montanari_pair 2!montanari_equation/=.
+    case: fndP => //= ks.
+      case: eqP.
+    rewrite not_fnd//=.
+    rewrite not_in_deref.
+    case: eqP => IV; subst.
+      move: TR; rewrite check_tm_simpl /get_sig/= (@not_fnd _ _ empty)//=.
+      case: eqP => //? Ch; subst.
+      move=> /esym [?]; subst.
+      suffices H : relSS sP s sV.[v <- b Exp].
+        case: fndP => vV//.
+        case: ifP; last by move=> *; assumption.
+        case: sV.[vV] => [[|d/=]|[]//]; last by clear.
+        by rewrite min_refl.
+      admit.
+    case: ifP => // vq.
+    case: ifP => vf.
+      case: q0 TR FV1 IV vq => // v'; rewrite [vars _]/= fsub1set.
+      by move=> + ->//.
+    rewrite montanari_equation => -[?]; subst.
+    admit.
+    (* rewrite/deref_sigma.
+    
+      
+
     case: fndP => //=vV.
       case: ifP => // C.
       apply/forallP => [[x xP]]; rewrite valPE ffunE/=.
@@ -1259,7 +1292,7 @@ Section check.
             admit.
           have := check_tm_deref Asm (relSS0 _ _) (isOkP Ch).
           case Ch': check_tm => //= [sig'] _.
-          (* should import check_tm_deref to relate the input and output sig *)
+          (* should improve check_tm_deref to relate the input and output sig *)
           admit.
       move=> xV.
       have:= forallP REL [`xV]; rewrite valPE/= in_fnd.
@@ -1283,14 +1316,22 @@ Section check.
         case Ch': check_tm => //= [sig'] _.
         (* should import check_tm_deref to relate the input and output sig *)
         admit.
-    admit.
+        (* Print H. *)
+    move: TR M.
+    (* Print select. *)
+    rewrite check_tm_simpl /matching/montanari_deref/montanari_pair montanari_equation/=.
+    case: eqP => IE; subst.
+      admit.
+    case: eqP.
+    rewrite/=/get_sig.
+    admit. *) *)
   Admitted.
 
   Lemma all_disjoint_flatten_term s l:
     vars l # s -> all (fun x : Tm => vars x # s) (flatten_term l).
   Proof. by elim: l => //=f Hf a Ha; rewrite fdisjointUX all_rcons => /andP[/Hf->->]. Qed.
 
-  Lemma get_frozen_vars_sub m l: get_frozen_vars m (flatten_term l) `<=` vars l.
+  Lemma get_input_vars_sub m l: get_input_vars m (flatten_term l) `<=` vars l.
   Proof.
     apply/fsubset_trans/vars_tms_flatten_term; rewrite/vars_tms.
     move: (flatten_term _) m; elim => {l}[|l ls IH]//=[|m ms]//=.
@@ -1340,6 +1381,18 @@ Section check.
     set Q := flatten_term _.
     set H' := flatten_term _ => H H1 Hx.
     apply: det_check_H Hx H => //.
+      by apply: fdisjointWr (vars_tms_flatten_term _) (acyclic_deref_disjoint _ _).
+      apply: fdisjointWr (vars_tms_flatten_term _) _.
+      apply: fdisjointWl; last first.
+        rewrite fdisjoint_sym; apply: vars_tm_rename_disjoint.
+        apply/fsubset_trans/fresh_rule_sub.
+        rewrite/FR.
+        Search fresh_rule fsubset fst.
+
+
+       (* (vars_tm_rename_disjoint _ _) _. *)
+      Search fsubset snd rename.
+      acyclic_deref_disjoint
       by apply/forallP => -[]//.
     rewrite C//.
   Qed.

@@ -254,8 +254,8 @@ Proof. by elim: m => //=-[]. Qed.
 Lemma all_out_size_input m: all_out m -> size_input m = 0.
 Proof. by elim: m => //=-[]. Qed.
 
-Lemma get_frozen_vars_sub m t : good_mode m ->
-  vars_tms (take (size_input m) t) = get_frozen_vars m t.
+Lemma get_input_vars_sub m t : good_mode m ->
+  vars_tms (take (size_input m) t) = get_input_vars m t.
 Proof.
   elim: m t => //=[|m ms IH] t; first by rewrite take0.
   case: m; case: t => //= x xs; last first.
@@ -276,7 +276,7 @@ Lemma HSH m hd pr s1 c pred: good_mode m -> acyclic_sigma s1 ->
   [disjoint vars_tms c & vars_tms hd] ->
   [disjoint vars_sigma s1 & v_prog pr] ->
   [disjoint vars_sigma s1 & vars_tms hd] ->
-  H u (get_frozen_vars m c) m c hd s1 ->
+  H u (get_input_vars m c) m c hd s1 ->
   select_head u pred hd m pr = [::] ->
   (select u pred c m pr s1).2 = [::].
 Proof.
@@ -302,8 +302,8 @@ Proof.
   - by apply: disjoint_take2; apply: fdisjoint_ftr _.
   - by apply/disjoint_taker.
   - by apply/disjoint_taker.
-  - by rewrite get_frozen_vars_sub.
-  - by rewrite get_frozen_vars_sub.
+  - by rewrite get_input_vars_sub.
+  - by rewrite get_input_vars_sub.
 Qed.
 
 Lemma flatten_term_ren z q:
