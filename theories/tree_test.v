@@ -279,8 +279,8 @@ Section map.
 
   Definition map12d := Tm_App (Tm_App (Tm_App map double) list12) X.
 
-  Lemma get_frozen_vars_ground m T:
-    all ground T -> get_frozen_vars m T = fset0.
+  Lemma get_input_vars_ground m T:
+    all ground T -> get_input_vars m T = fset0.
   Proof.
     elim: m T => //[x xs IH] []//= X XS /andP[G1 G2].
     by rewrite IH// ground_vars_tm// fset0U if_same.
@@ -302,7 +302,7 @@ Section map.
     (if inl m != get_tm_hd (head x)
       then select u m ft md xs s
       else
-      match H u (get_frozen_vars md ft) md ft (flatten_term (head x)) s with
+      match H u (get_input_vars md ft) md ft (flatten_term (head x)) s with
       | Some sigma1 =>
       let
       '(fv, rs) := select u m ft md xs s in
@@ -314,7 +314,7 @@ Section map.
   Lemma select_consF m ft md x xs s:
     inl m = get_tm_hd (head x) ->
     select u m ft md (x::xs) s = 
-    match H u (get_frozen_vars md ft) md ft (flatten_term (head x)) s with
+    match H u (get_input_vars md ft) md ft (flatten_term (head x)) s with
     | Some sigma1 =>
       let '(fv, rs) := select u m ft md xs s in
       (vars_sigma sigma1 `|` varsU_rule x `|` fv, (sigma1, premises x) :: rs)
@@ -339,7 +339,7 @@ Section map.
 
   Lemma fresh_tm_P s r p: fresh_tm s r (Tm_P p) = (s, r). by []. Qed.
   Lemma fresh_tm_D s r p: fresh_tm s r (Tm_D p) = (s, r). by []. Qed.
-  Lemma getfmap12d: (get_frozen_vars [:: input;  input;  output] (flatten_term map12d)) = fset0.
+  Lemma getfmap12d: (get_input_vars [:: input;  input;  output] (flatten_term map12d)) = fset0.
   Proof. by rewrite/= !simpl_set. Qed.
 
     (* Print fresh_tm. *)

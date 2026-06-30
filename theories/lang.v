@@ -705,15 +705,15 @@ Fixpoint H u fv (md: seq mode) (q : list Tm) (h: list Tm) s : option Sigma :=
   | _, _, _ => None
   end.
 
-Fixpoint get_frozen_vars ms qargs :=
+Fixpoint get_input_vars ms qargs :=
   match ms with
   | [::] => fset0
   | m :: ms =>
     match qargs with
     | [::] => fset0
     | x :: xs => 
-      if m == input then vars_tm x `|` get_frozen_vars ms xs
-      else get_frozen_vars ms xs
+      if m == input then vars_tm x `|` get_input_vars ms xs
+      else get_input_vars ms xs
     end
   end.
 
@@ -725,7 +725,7 @@ Fixpoint select u (hd:P) args md (rules: list R) sigma : (fvS * seq (Sigma * seq
     let args' := flatten_term rule.(head) in
     if inl hd != hd' then select u hd args md rules sigma
     else
-    match H u (get_frozen_vars md args) md args args' sigma with
+    match H u (get_input_vars md args) md args args' sigma with
     | None => select u hd args md rules sigma
     | Some (sigma1) => 
       let: (fv, rs) := select u hd args md rules sigma in
