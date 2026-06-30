@@ -1046,6 +1046,8 @@ Section check.
   Proof. by elim: t => //=[_[->]|f Hf a Ha /Hf]; rewrite finmap.inE// => ->. Qed.
 
   Lemma get_sig_deref sP s sV t sig:
+    (* there is something suspicious in this lemma. it
+       is signature and applied terms *)
     acyclic_sigma s ->
     relSS sP s sV ->
     get_sig sP sV t = Some sig -> 
@@ -1095,6 +1097,39 @@ Section check.
     case C: check_tm => //[sig''|sig''].
       by case: ifP => //CS; case e: eat_ty.
     have:= IH2 sig R (isOkP C).
+    move=> C'.
+    case: ifP => // CT.
+    case: ifP; last by case: eat_ty.
+    move=> I' C2.
+    have C2':= IH1 R C2.
+    move: G G';rewrite/get_sig.
+    have:= get_tm_hd_deref s t.
+    case G: get_tm_hd => [p|[d|v]]->//.
+    - case: fndP => //pP; move=> -[?][?]; subst.
+      rewrite (flatten_term_deref_map _ G).
+      move: C'; case C': check_tm => //[sig] _.
+      move: C2'; case C2': check_tm => //[sigx] _.
+      admit.
+    - move=> [?][?]; subst.
+      rewrite (flatten_term_deref_mapD _ G).
+      move: C'; case C': check_tm => //[sig] _.
+      move: C2'; case C2': check_tm => //[sigx] _.
+      case: sig'' C I' CT => [[]|[]]//=.
+      admit.
+    case: fndP => //vV[?]; subst.
+    have:= forallP R [`vV]; rewrite valPE [val _]/=.
+    case: fndP => // vs; cbn zeta.
+    have:= (deref2 (Tm_V v) A); rewrite deref_V in_fnd => ->.
+    rewrite/check_tmM/get_sig [odflt _ _]/=.
+    case X: get_tm_hd => [p|[d|v']]; last first.
+    - by rewrite not_fnd.
+    - case F: flatten_term => //; rewrite check_tm_simpl.
+      case VV: sV.[vV] => [[]|[]]//= _ [?]; subst.
+      have:= IH2 sig'' R (isOkP C).
+      admit.
+    - case: fndP => //=pP.
+      case Cx: check_tm => //=[sig|sig].
+
   Admitted.
 
   Lemma call_is_det_deref sP sV s t:
@@ -1150,7 +1185,6 @@ Section check.
   Proof. by apply/forallP => //=-[]//. Qed.
 
   Lemma det_check_H sP q hd sig bo s s' froz sV:
-    (* get_frozen_vars modes q `<=` froz -> *)
     acyclic_sigma s ->
     let modes := flatten_mode sig in
     relSS sP s sV ->
@@ -1186,9 +1220,9 @@ Section check.
       case: ifP => // C.
       apply/forallP => [[x xP]]; rewrite valPE ffunE/=.
       rewrite/= !finmap.inE in xP.
+      have vs: v \in domf s by have:= forallP REL [`vV]; rewrite valPE; case: fndP.
       have [|sm D1 D2] := montanari_extP A _ M; subst.
-        (* should be OK *)
-        admit.
+        by rewrite !disjoint_L_cons !acyclic_deref_disjoint// disjoint_L0.
       rewrite fnd_cat.
       have xs: x \in domf s.
         by move: xP; case: eqP =>//=[?|? {C}vV]; subst;
@@ -1301,8 +1335,6 @@ Section check.
     have {}GM := forallP GM [`ppr]; rewrite valPE// in GM.
     rewrite (is_det_sig_check_tm C)//=.
     move: H2.
-    (* set modes := flatten_mode _. *)
-    (* set sigF := flatten_sig _. *)
     move=> + /(check_atoms_fresh_rename FR.1).
     move: H.
     set RT := rename _ _ _.
@@ -1314,7 +1346,7 @@ Section check.
     rewrite C//.
   Qed.
   
-  Lemma det_check_big_or sV pr c fv fv' r0 rs s1:
+  (* Lemma det_check_big_or sV pr c fv fv' r0 rs s1:
     sPsV s1 (sig pr) sV ->
     check_program pr -> call_is_det pr.(sig) sV (deref s1 c) -> 
     bc u pr fv c s1 = (fv', r0 :: rs) ->
@@ -1328,7 +1360,7 @@ Section check.
       by apply: call_is_det_tm0 h T.
     Search bc.
     have: r0.1 \in pr.
-  Admitted.
+  AAdmitted.
 
   Lemma det_check_step pr fv s1 A r sV: 
     sPsV s1 (sig pr) sV ->
@@ -1348,7 +1380,7 @@ Section check.
       by move=> H1; rewrite (step_keep_cut _ H1).
     - rewrite/= !push/=.
       apply: HB => //=.
-      admit.
+      aadmit.
     (* by rewrite /=!push/=; apply/HB. *)
     - move=> /=/andP[dB].
       rewrite step_and/=.
@@ -1356,7 +1388,7 @@ Section check.
       set sA:= step _ _ _ _ A.
       rewrite (fun_if (det_tree (sig pr) sV)).
       case SA: success => /=.
-        have X' : sPsV (next_subst s1 A) pr sV by admit.
+        have X' : sPsV (next_subst s1 A) pr sV by aadmit.
         case : (ifP (is_cb _)) => /=; rewrite {}HB//=.
           by rewrite det_tree_cutl//no_alt_cutl//= andbT.
         case: ifP => //= _ is_cb.
@@ -1370,7 +1402,7 @@ Section check.
         rewrite/nilA incpl_prune//= => /andP[+ ->]/=.
         by case/orP=> [/HA->/= | /[dup]/andP[-> ?] ->]; rewrite ?andbT ?orbT ?if_same.
       by have:= succF_failF_paF SA fA pA.
-  Admitted.
+  AAdmitted.
 
   Definition is_det p s v t := 
     forall r, runT' p v s t r -> r = Zero \/ exists s, r = (One s).
@@ -1479,5 +1511,5 @@ Section check.
       destruct x; rewrite (orbT,andbT)//.
       by move=> /last_has_cut[]->; rewrite !orbT.
     Qed.
-  End tail_cut.
+  End tail_cut. *)
 End check.
