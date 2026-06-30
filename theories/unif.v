@@ -598,10 +598,10 @@ Qed.
 Lemma montanari_extP s s' b l:
   acyclic_sigma s -> disjoint_L s l -> montanari s b l = Some s' ->
   exists2 sm : Sigma, 
-    fdisjoint (domf s) (vars_sigma sm) & s' = sm + deref_sig2 sm s.
+    acyclic_sigma sm /\ fdisjoint (domf s) (vars_sigma sm) & s' = sm + deref_sig2 sm s.
 Proof.
   move: s'; montanari_ind s b l => s' A //.
-  - by move=> _ [<-]; exists empty; rewrite !(cat0f, vars_sigma0, fdisjointX0)// deref_sig20L. 
+  - by move=> _ [<-]; exists empty; rewrite !(cat0f, vars_sigma0, fdisjointX0,acyclic_sigma0,deref_sig20L). 
   - by rewrite disjoint_L_cons/= => /and3P[D1 _ D2] M; have:= IH _ A D2 M.
   - rewrite !disjoint_L_cons/= !fdisjointXU -!andbA => /and5P[D1 D2 D3 D4 D] M.
     by have:= IH _ A _ M; rewrite !disjoint_L_cons D1 D2 D3 D4/= D => /(_ isT).
@@ -609,8 +609,17 @@ Proof.
     have vt' : v' \notin vars (Tm_V v) by rewrite /=!inE in vt *; rewrite eq_sym.
     have D' : [disjoint  domf s  & vars (Tm_V v)] by rewrite fdisjointX1//.
     have /= := IH _ (acyclic_sigma_deref_sigma vt' D' A) (disjoint_L_set vt' D' D) M.
-    move=> [x + ? {M}]; subst; rewrite !fdisjointUX/= fdisjoint1X => /andP[v'x D1].
+    move=> [x [Ax +] ? {M}]; subst; rewrite !fdisjointUX/= fdisjoint1X => /andP[v'x D1].
     exists x.[v' <- deref x (Tm_V v)].
+      split.
+        rewrite acyclic_sigma_set acyclic_sigma_rem//acyclic_deref_disjoint// andbT andTb.
+        apply/andP; split => //; apply/negP => H.
+          have:= fsubsetP (vars_tm_deref_sub x (Tm_V v)) _ H.
+          move: v'x; rewrite !inE => /norP[_ /negbTE->].
+          by rewrite eq_sym (negbTE EQ).
+        move/negP: v'x => v'x; apply: v'x.
+        have:= fsubsetP (codom_vars_sub x v') _ H.
+        by rewrite inE => ->; rewrite orbT.
       apply: disjoint_vars_sigma => //.
       apply: disjoint_vars_deref => //.
       by move: D1; rewrite fdisjointXU => /andP[].
@@ -631,8 +640,17 @@ Proof.
     by rewrite deref_empty_set//.
   - rewrite disjoint_L_cons/= !fdisjointX1 => /and3P[vs D0 D] M.
     have /= := IH _ (acyclic_sigma_deref_sigma vt D0 A) (disjoint_L_set vt D0 D) M.
-    move=> [x + ? {M}]; subst; rewrite fdisjointUX fdisjoint1X => /andP[v'x D1].
+    move=> [x [Ax +] ? {M}]; subst; rewrite !fdisjointUX/= fdisjoint1X => /andP[v'x D1].
     exists x.[v <- deref x t].
+      split.
+        rewrite acyclic_sigma_set acyclic_sigma_rem//acyclic_deref_disjoint// andbT andTb.
+        apply/andP; split => //; apply/negP => H.
+          have:= fsubsetP (vars_tm_deref_sub x t) _ H.
+          move: v'x; rewrite !inE => /norP[_ /negbTE->].
+          by rewrite (negbTE vt).
+        move/negP: v'x => v'x; apply: v'x.
+        have:= fsubsetP (codom_vars_sub x v) _ H.
+        by rewrite inE => ->; rewrite orbT.
       apply: disjoint_vars_sigma => //.
       apply: disjoint_vars_deref => //.
       by move: D1; rewrite fdisjointXU => /andP[].
