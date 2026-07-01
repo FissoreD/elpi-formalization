@@ -1091,61 +1091,6 @@ Section check.
   Lemma deref_in (s:Sigma) (v:V) (vs : v \in s): acyclic_sigma s -> deref s s.[vs] = s.[vs].
   Proof. by move=> A; have:= deref2 (Tm_V v) A; rewrite/=in_fnd. Qed.
 
-  (* Lemma get_sig_deref sP s sV t sig:
-    (* there is something suspicious in this lemma. it
-       is signature and applied terms *)
-    acyclic_sigma s ->
-    relSS sP s sV ->
-    get_sig sP sV t = Some sig -> 
-    exists2 sig', get_sig sP empty (deref s t) = Some sig' & cincl sig' sig.
-  Proof.
-    rewrite/get_sig.
-    move=> A R; elim: t sig => [p|d|v|f Hf a Ha]//=sig.
-      by case: fndP => //pP[<-]; eexists => //; apply: cincl_refl.
-      by move=> [<-]; eexists; split => //; apply: cincl_refl.
-    case: fndP => //vV[<-].
-    have:= forallP R [`vV] => /=; rewrite valPE.
-    case: fndP => //= vs.
-    rewrite deref_in//.
-    case C: check_tm => //[sig'] CI.
-    
-    rewrite/get_sig.
-    have:= deref2 (Tm_V v) A; rewrite deref_V in_fnd => ->.
-    rewrite [get_tm_hd _]/=; case G: get_tm_hd => [p|[d|v']]//; last first.
-    - rewrite not_fnd//.
-    - case F: flatten_term; rewrite check_tm_simpl => //.
-      by simpl in F; case: sV.[vV] => //[[]]// _;eexists => //.
-    - case: fndP => //=pP H.
-      eexists => //.
-      move: H; case C: check_tm => //[sig'].
-      admit.
-  Admitted. *)
-
-  (* Lemma compat_type_check_term sP sV ts tys sig1 sig2:
-    eat_ty (size ts) tys = Some sig2 ->
-    check_tm sP sV ts tys = Ok sig1 ->
-    compat_type sig1 sig2.
-  Proof.
-    move: sig1 sig2.
-    pattern sP, sV, ts, tys, (check_tm sP sV ts tys).
-    eapply check_tm_elim => //; cycle -1; clear.
-      by move=> _ _ t ts s tys s1 s2/= ->/=[->]//.
-      by move=> _ _ sig s1 s2/=[->][->].
-    move=> sP sV t ts ty tys H1 H2 s1 s2/= E.
-    case: eqP => //= IE; subst; first by apply:H1.
-    case G: get_sig => //[sig].
-    case C: check_tm => //=[sig1].
-    case: ifP => //ct.
-    case: ifP => I; first by apply: H1.
-    by rewrite E => -[<-]; rewrite compat_type_weak.
-  Qed. *)
-
-  (* TODO: the premise check_tm sP sV t sig should be
-     r = DetErr t | Ok t
-     and
-     the output should be more_precise then r
-  *)
-
   Lemma call_is_det_deref sP sV s t:
     check_tm sP empty (deref s t) ->
     acyclic_sigma s ->
@@ -1357,30 +1302,50 @@ Section check.
       admit.
     case Cq0: check_tm => [sig|]//= _.
     clear qs dqshs S2 dsqs vqs.
+    (* I think that if v is in s, then s[v] contains frozen variables.
+       therefore, the unification suceeds only if s[v] == q0
+
+       Otherwise, the mathcing succeeds returning s.[v <- q0]
+    *)
     (* have [sm' [Asm' H] ? ] := montanari_extP A (disjoint_L_deref _ _ A) M; subst. *)
-    rewrite /matching/montanari_deref/montanari_pair 2!montanari_equation/=.
-    rewrite (not_in_deref dsq).
-    case: eqP => qd; subst.
-      move=> /esym [?]; subst.
-      move: vq; case: fndP => /=vs; last by rewrite finmap.inE eqxx.
-      move=> vvs.
-      (* head  = f X ... X
-         query = g t ... t
-         workind of the last X = t
-      *)
-      rewrite in_fnd/= in dqhs dsq S1 Cq0.
+
+    move=> M.
+    have: if v \in domf s then s.[?v] = Some q0 /\ sm = s else (sm = s.[v <- q0]).
+      (* from M + some hyp to be added on the fact that input variables in the head point to 
+         frozen terms (either ground, or with frozen variables) *)
+      admit.
+    case: ifP => // vs.
+      move=> []; rewrite in_fnd => -[??]; subst.
       case: fndP => // vV; first case: ifP => //.
+        have:= forallP R [`vV]; rewrite/=in_fnd deref_in// valPE.
+        case C: check_tm => [sig'|]//=.
+        move=> I CT.
+        (* have vV' : v \in domf sV.[v <- min tf sV.[vV]] by rewrite !finmap.inE eqxx. *)
+        apply/forallP => -[x xP]/=; rewrite valPE ffunE/=.
+        move: xP; rewrite !finmap.inE; case: eqP => xv/= xV; subst.
+          rewrite in_fnd deref_in// C.
+          admit.
+        have:= forallP R [`xV]; rewrite valPE/=.
+        by case: fndP => //= xs; rewrite deref_in// in_fnd.
+      apply/forallP => -[x xP]/=; rewrite valPE ffunE/=.
+      move: xP; rewrite !finmap.inE; case: eqP => xv/= xV; subst.
+        rewrite in_fnd deref_in//=.
+        admit. (*TODO: add an hyp saying that all terms in s typecheck*)
+      have:= forallP R [`xV]; rewrite valPE/=.
+      by case: fndP => //= xs; rewrite deref_in// in_fnd.
+    move=> ?; subst.
+    case: fndP => vV.
+      by have:= forallP R [`vV]; rewrite valPE not_fnd//=vs.
+    apply/forallP => -[x xP]; rewrite valPE ffunE [val _]/=.
+    move: xP; rewrite !finmap.inE fnd_set; case: eqP => //=xv xV; subst.
+      rewrite not_in_deref//=.
+        rewrite Cq0//.
         admit.
-      admit.
-    move: qd; case: fndP => //=vs qd; last first.
-      rewrite (negbTE vq) montanari_equation.
-      case: ifP => vf.
-        case: q0 qd vq dqhs S1 dsq Cq0 => //= x.
-        by rewrite (@not_fnd _ _ empty).
-      move=> [?]; subst.
-      admit.
-    have vV: v \in (vars (Tm_V v) `|` get_input_vars (flatten_mode ta) hs) by rewrite/= !finmap.inE eqxx.
-    (* seems difficult *)
+      by rewrite fdisjointUX fdisjoint1X vq.
+    have:= forallP R [`xV]; rewrite valPE/=.
+    case: fndP => //= xs; rewrite deref_in// in_fnd not_in_deref//=.
+    rewrite fdisjointUX fdisjoint1X .
+    (* TODO: should be ok *)
     admit.
   Admitted.
 
