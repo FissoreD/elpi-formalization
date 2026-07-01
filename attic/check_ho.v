@@ -1064,13 +1064,27 @@ Section check.
       admit.
   Admitted.
 
-  Lemma cincl_weakr A B : cincl A B -> cincl A (weak B).
-  Proof. by move=> /andP[C I]; rewrite/cincl incl_weakr// compat_type_weak C. Qed.
+  Lemma cincl_weakr A B : compat_type A B -> cincl A (weak B).
+  Proof. by move=> C; rewrite/cincl compat_type_incl_weak //compat_type_weak C. Qed.
 
-  (* Definition good_modeT s :=
-    match s with
-    | arr input l r => good_modeT l && good_mode r
-    | arr output l r => good_mode l && all_out (flatten_mode r) &&  *)
+  Lemma compat_type_check_term sP sV ts tys sig1 sig2:
+    eat_ty (size ts) tys = Some sig2 ->
+    check_tm sP sV ts tys = Ok sig1 ->
+    compat_type sig1 sig2.
+  Proof.
+    move: sig1 sig2.
+    pattern sP, sV, ts, tys, (check_tm sP sV ts tys).
+    eapply check_tm_elim => //; cycle -1; clear.
+      by move=> _ _ t ts s tys s1 s2/= ->/=[->]//.
+      by move=> _ _ sig s1 s2/=[->][->].
+    move=> sP sV t ts ty tys H1 H2 s1 s2/= E.
+    case: eqP => //= IE; subst; first by apply:H1.
+    case G: get_sig => //[sig].
+    case C: check_tm => //=[sig1].
+    case: ifP => //ct.
+    case: ifP => I; first by apply: H1.
+    by rewrite E => -[<-]; rewrite compat_type_weak.
+  Qed.
 
   (* TODO: the premise check_tm sP sV t sig should be
      r = DetErr t | Ok t
@@ -1115,6 +1129,9 @@ Section check.
       case: ifP => // I2; last by move=> [->]; rewrite cincl_refl.
       move=> C2.
       have {}H1 := H1 _ _ R _ C2.
+      apply: cincl_weakr.
+      (* PB1 *)
+      (* apply: compat_type_check_term E _. *)
       (* should be: 
         exists r, check_tm sP sV ts tys = Ok r
         then I can prove that compat_type r and sig1
@@ -1136,6 +1153,8 @@ Section check.
       have {H2} := H2 _ C1.
       by case: sig I C CS1 => [[]|]//.
     case: fndP => //vV.
+    case C: check_tm => //[sig].
+    case: ifP => //= CT.
     have:= forallP R [`vV].
     rewrite valPE [val _]/=; case: fndP => //=vs; rewrite/check_tmM.
     rewrite not_in_deref; last first.
@@ -1145,22 +1164,21 @@ Section check.
       by rewrite not_fnd.
     - case F: flatten_term => //=.
       rewrite check_tm_simpl/=; case S: sV.[vV] => [[]|[]]// _.
-      case C: check_tm => //=[sig]; case: ifP => // CS1.
-      case: sig C CS1 => [[]|[]]// CS1 _.
-      rewrite incl_refl => Cx.
-      case C1: check_tm => //[sig1]; case: ifP => //.
-      case: sig1 C1 => [[]|[]]//= C1 C2 C3.
-      by have:= H1 _ _ R Cx C3.
+      rewrite S in CT.
+      case: sig C CT => [[]|[]]// C _; rewrite incl_refl.
+      move=> C1.
+      case C2: check_tm => [|[[]|[]]]//; rewrite compat_type_refl incl_refl.
+      by apply: H1.
     case: fndP => //pP.
     case C1: check_tm => //[sig1] CI.
-    case C2: check_tm => //[sig2].
-    case: ifP => // CT.
     case C3: (check_tm _ empty) => //[sig3].
     case: (ifP (compat_type _ _)) => // CT1.
-    case: ifP => // I; last case E: eat_ty => //=[sig][?]; subst.
-      case: ifP => //I1 C; last case E': eat_ty => //[sig'][?]; subst; first by apply: H1.
+    case: ifP => // I; last case E: eat_ty => //[sig'][?]; subst.
+      case: ifP => //I1 C2 C4 => //; first by apply: H1.
       admit.
     case: ifP => // I1; last by move => [<-]; rewrite cincl_refl.
+    move=> Cx; apply: cincl_weakr.
+    (* SAME AS PB1 *)
     admit.
   Admitted.
 
@@ -1173,25 +1191,8 @@ Section check.
     case X: get_sig => //[s']; move: X => G Ch.
     have [sig' G' CI] := get_sig_deref A R G.
     rewrite G'.
-    (* have /= := @check_tm_deref sP sV s (flatten_term t) s' A R.
-    rewrite Ch.
-    (* have Ch' := check_tm_deref A R (isOkP Ch). *)
-    rewrite/ch_eqb.
-    (* case C: check_tm => //=. *)
-    (* apply: ch_eqb_refl. *)
-    move: G G'; rewrite/get_sig.
-    have:= get_tm_hd_deref s t.
-    case H: get_tm_hd => [p|[d|v]]->//.
-      case: fndP => //= pP [?][?]; subst. admit.
-      move=> [?][?]; subst. admit.
-    case: fndP => //=vV [?]; subst.
-    have:= forallP R [`vV]; case: fndP => //=vS; rewrite/check_tmM/get_sig.
-    rewrite valPE.
-    have:= deref2 (Tm_V v) A; rewrite deref_V in_fnd/= => ->.
-    case G': get_tm_hd => //[p|[d|v']]//=; last by rewrite not_fnd.
-      case: fndP => //pP + [?]; subst. admit.
-    move=> + [?]; subst.
-    admit. *)
+    (* TODO: should be solved using auxiliary lemma talkin about flatten_term + deref *)
+    admit.
   Admitted.
 
   Lemma check_atoms_deref_all sP sV xs s:
@@ -1248,11 +1249,10 @@ Section check.
     rewrite !vars_tms_cons !fdisjointUX !fdisjointXU -!andbA => /and4P[dqh dqhs dqsh dqshs].
     case: m => //=; last first.
       move=> D1 D2 GM Ch Ca.
-    (* move=> /andP[dsq dsqs]; case: m => //=; last first. *)
       case U: unif.unify => //=[sm] R H.
       apply: check_atoms_deref Ca.
         by apply: acyclic_sigma_H (unif_acyclic A U) H.
-      (* should prove transitivity of relSS over unify and H *)
+      (* P2: should prove transitivity of relSS over unify and H *)
       admit.
     rewrite fsubUset fdisjointXU => /andP[S1 S2] /andP[dsq dsqs] GM Ch.
     case M: matching => //=[sm] Ca R.
@@ -1270,9 +1270,10 @@ Section check.
       case C: check_tm => //[sig].
       case: ifP => // CT; case: ifP => // I.
       case E: eat_ty => //= _.
+      (* TYPING INVARIANT: checking terms should always return Ok *)
       admit.
     have R' : relSS sP sm sV.
-      (* same proof as above *)
+      (* same proof as above P2 *)
       admit.
     case: h dqh dqsh M => //v.
     rewrite !fdisjointX1 => vq vqs.
@@ -1300,15 +1301,8 @@ Section check.
       move=> [?]; subst.
       admit.
     have vV: v \in (vars (Tm_V v) `|` get_input_vars (flatten_mode ta) hs) by rewrite/= !finmap.inE eqxx.
-    (* have:= forallP FL [`vV]; rewrite in_fnd => F. *)
-    (* case X: s.[vs] => [p|d|x|f a]/=.
-      by case: q0 vq dqhs S1 Ch dsq qd => //= x; rewrite montanari_equation/= fsub1set => _ _ ->.
-      by case: q0 vq dqhs S1 Ch dsq qd => //= x; rewrite montanari_equation/= fsub1set => _ _ ->.
-      case: ifP => // xq0.
-      admit.
-    case: q0 qd vq dqhs S1 dsq Ch => //=[x|x xs].
-      by rewrite montanari_equation/= fsub1set; case: ifP => // _ _ _ _ ->.
-    rewrite montanari_equation. *)    
+    (* seems difficult *)
+    admit.
   Admitted.
 
   Lemma all_disjoint_flatten_term s l:
@@ -1370,9 +1364,6 @@ Section check.
         rewrite fdisjoint_sym; apply vars_tm_rename_disjoint.
       by apply/fsubset_trans/fresh_rules_sub; rewrite fsubsetU// fsubsetUr.
     - by apply: fdisjointWr (get_input_vars_sub _ _) (acyclic_deref_disjoint _ _).
-    (* - apply/forallP => [[x xP]]; case: fndP => //= xs. *)
-      (* should be false: x can't be both in H' and s: H' is a renaming *)
-      (* admit. *)
     - by rewrite C.
     - by apply: relSS0.
   Qed.
