@@ -1960,28 +1960,28 @@ Proof.
   apply/fdisjointP/kg/H.
 Qed.
 
-Lemma acyclic_sigma_H m fv t hd s1 s2:
+Lemma acyclic_sigma_H sP fv q hd s1 s2 ty fv':
   acyclic_sigma s1 ->
-    H u fv m t hd s1 = Some s2 ->
+    H u sP fv q hd s1 = Some (ty, s2, fv') ->
       acyclic_sigma s2.
 Proof.
-  elim: m t hd s1 s2 => /=[|m tl IH] t hd s1 s2.
-    by case: t => //=; case: hd => //= + [<-].
-  move=> AS; case: t; case: hd => //=.
-  move=> f1 a1 f2 a2.
-  case M: (_ f1 f2 s1) => [sx|]//=.
-  apply: IH.
-  by move: M; case: m => /=; [apply/matching_acyclic|apply/unif_acyclic].
+  elim: q fv hd s1 s2 ty fv' => //=[p|f Hf a Ha] fv [p'|//|//|f' a']// s1 s2 ty fv'.
+    by case: eqP => //= _ A; case: fndP => //=pP [_<-].
+  move=> A.
+  case H: H => [[[[|[] tyl tyr] s1'] fv'']|]//=.
+    case M: matching => //= [s1''][???]; subst.
+    by apply: matching_acyclic M; apply: Hf H.
+  case M: unify => //= [s1''][???]; subst.
+  by apply: unif_acyclic M; apply: Hf H.
 Qed.
 
-Lemma acyclic_sigma_select p pred m t s1 e:
+Lemma acyclic_sigma_select sP query rules s1 e:
   acyclic_sigma s1 ->
-    e \in (select u pred t m p s1).2 ->
+    e \in (select u sP query rules s1).2 ->
       acyclic_sigma e.1.
 Proof.
-  elim: p m t s1 e => //=-[hd bo] rs IH m t s1 e AS/=.
-  case:eqP => //= [|_/IH -/(_ AS)]// X.
-  case H: H => [s2|]; last by apply: IH.
+  elim: rules query s1 e => //= -[hd bo] rs IH query s1 e AS/=.
+  case H: H => [[[ty s1' fv]]|]; last by apply: IH.
   rewrite !push/= in_cons => /orP[/eqP?|]; subst; last by apply: IH.
   by apply/acyclic_sigma_H/H.
 Qed.
@@ -1993,8 +1993,7 @@ Lemma acyclic_sigma_bc s1 p v0 t:
 Proof.
   rewrite/bc/= => H1 -[s2 b]/=.
   case: ifP => ///negbFE AS.
-  case: get_tm_hd => //= x; case: fndP => //= kP.
-  by rewrite !push/=; apply/acyclic_sigma_select.
+  by rewrite !push; apply/acyclic_sigma_select.
 Qed.
 
 Module mgu.

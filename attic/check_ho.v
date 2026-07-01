@@ -1139,6 +1139,16 @@ Section check.
     disjoint_L s [:: (deref s h, deref s q0)].
   Proof. by move=> A; rewrite disjoint_L_cons/= !acyclic_deref_disjoint// disjoint_L0. Qed.
 
+  Fixpoint is_exp s :=
+    match s with
+    | b Exp => true
+    | b _ => false
+    | arr _ _ r => is_exp r
+    end.
+
+  Lemma is_exp_weak t: is_exp (weak t) = is_exp t.
+  Proof. elim: t => // [[]|[]]//. Qed.
+
   Fixpoint check_args sP sV args type :=
     match args, type with
     | [::], _ => Some type
@@ -1168,7 +1178,8 @@ Section check.
   Proof.
     elim: ys sig => //=x xs IH [[]|[] tl tr]//=; last by rewrite eat_ty_weak.
     rewrite !IH strong_exp.
-    case: eqP => IE => //.
+    (* case: ifP => //= IEx; first by rewrite eat_ty_weak. *)
+    case: eqP => IE => //; subst.
     case C: check_tm => //[sig]; case: ifP => // IC; rewrite !IH.
       by rewrite weak2 if_same.
     rewrite weak2 ifF//; move: IC; apply: contraFF => /andP[].
@@ -1196,6 +1207,34 @@ Section check.
   Lemma eat_ty_add xs ys tr: eat_ty (xs + ys) tr = obind (eat_ty ys) (eat_ty xs tr).
   Proof. elim: xs ys tr => //=n IH ys []//. Qed.
 
+  Lemma is_exp_eat tr xs sig:
+    is_exp tr -> eat_ty xs tr = Some sig -> is_exp sig.
+  Proof.
+    elim: tr xs sig => [[] [|x xs] ? _ |m f Hf a Ha x xs]//=; first by move=>[<-].
+    case: x => //=; first by move=> E [<-]/=.
+    by move=> n; apply: Ha.
+  Qed.
+
+  (* Lemma tt sP sV t r:
+    get_sig sP sV t = Some r -> is_exp r ->
+    check_tm sP sV t.
+  Proof.
+    rewrite/get_sig.
+    elim: t r => [p|d|v|f Hf a Ha]//=r; only 1, 2: by move=>->.
+    move=> H E.
+    have:= Hf _ H E.
+    case C: check_tm => //= [sig] _.
+    case: 
+      move=> ->.
+      case: fndP => // *)
+
+
+  (* Lemma is_exp_check_args sP sV t s:
+    is_exp s -> check_args sP sV t s.
+  Proof.
+    elim: t s => //= x xs IH [[]|]//=. *)
+
+
   Lemma check_args_cat sP sV xs ys type :
     check_args sP sV (xs ++ ys) type = 
       if check_args sP sV xs type is Some type' then
@@ -1203,7 +1242,7 @@ Section check.
         else check_args sP sV ys type'
       else None.
   Proof.
-    elim: xs ys type => // x xs IH ys [|[] tl tr]//=; last by rewrite size_cat eat_ty_add.
+    elim: xs ys type => //= x xs IH ys [|[] tl tr]//=; last by rewrite size_cat eat_ty_add.
     rewrite !check_args_weak !IH.
     case: eqP => // E.
     case C: check_tm => //[sig].
@@ -1236,6 +1275,7 @@ Section check.
     move=> LE.
     case: eqP => RE; subst.
       move => +[?]; subst; rewrite/=.
+      case: ifP => // HO C1 C2; case C3: check_tm; first by rewrite if_same.
       (* should add a case for this in check_args *)
       admit.
     move=> C + CA.
@@ -1246,7 +1286,7 @@ Section check.
   Admitted.
 
   Lemma det_check_H sP q hd bo s s' sig froz sV:
-    (* all (check_atom sP empty) [seq deref_atom s' i  | i <- bo] -> *)
+    all (check_atom sP empty) [seq deref_atom s' i  | i <- bo] ->
     (* get_sig sP sV q = Some sig -> *)
     fdisjoint (vars_tms q) (vars_tms hd) ->
     acyclic_sigma s ->
@@ -1259,20 +1299,18 @@ Section check.
     relSS sP s sV ->
     H u froz modes q hd s = Some s' -> check_atoms sP empty [seq deref_atom s' i  | i <- bo].
   Proof.
-    elim: hd sig bo s s' q sV => //=[|h hs IH] sig bo s s' q sV D0 A FV D.
+    elim: hd sig bo s s' q sV => //=[|h hs IH] sig bo s s' q sV AL D0 A FV D.
       set X:= (match sig with | b _ | _ => _ end).
       move=> {FV D}.
       replace X with sV; last by rewrite{}/X; case: sig => [|[] ms].
-      case q; case FM: flatten_mode => //= _ _ Ch R [<-].
+      case q; case FM: flatten_mode => //= _ _ Ch R [?]; subst.
       apply: check_atoms_deref Ch => //.
-      admit.
     case: sig FV D => [b|m tf ta]//=; case: q D0 => //=q0 qs.
     rewrite !vars_tms_cons !fdisjointUX !fdisjointXU -!andbA => /and4P[dqh dqhs dqsh dqshs].
     case: m => //=; last first.
       move=> G D1 D2 GM Ch R.
       case U: unif.unify => //=[sm] H'.
       apply: check_atoms_deref Ch => //.
-        admit.
         by apply: acyclic_sigma_H (unif_acyclic A U) H'.
       (* P2: should prove transitivity of relSS over unify and H *)
       admit.
@@ -1298,6 +1336,7 @@ Section check.
     case: eqP => TE; subst.
       case: fndP => //=vV; first case: ifP => //.
         case V: sV.[vV] => [[]|[]]//= _; rewrite min_refl.
+        move=> C M.
         admit.
       admit.
     case Cq0: check_tm => [sig|]//= _.
@@ -1414,6 +1453,7 @@ Section check.
     set Q := flatten_term _.
     set H' := flatten_term _ => H H1 Hx.
     apply: det_check_H Hx (relSS0 _ _) H => //.
+    - admit. 
     - apply: fdisjointWr (vars_tms_flatten_term _) (fdisjointWl (vars_tms_flatten_term _) _).
       apply: fdisjointWl; last first.
         rewrite fdisjoint_sym; apply vars_tm_rename_disjoint.

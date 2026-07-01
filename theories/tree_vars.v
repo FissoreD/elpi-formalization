@@ -43,9 +43,8 @@ Section vars_tree.
     move => H1 H2.
     rewrite/bc/=.
     case: ifP => //= _.
-    case X: get_tm_hd => //[pred].
-    case: fndP => /=hp; last by move=> [<-].
-    rewrite !push.
+    rewrite !push/=.
+    (* rewrite !push. *)
     case FR: fresh_rules => [fF RF]/=.
     case S: select => [fv1 rs1]/=[<-]{fvx}?; subst.
     have:= select_sub_rules S => /=.
