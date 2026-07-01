@@ -82,50 +82,46 @@ Section Test1.
     repeat eexists.
     set X := [fset IV 0; fresh [fset IV 0]].
     apply: StepT' => //=; cycle 1.
-      rewrite/bc [get_tm_hd _]/=.
-      cbn iota.
+      rewrite/bc.
       rewrite deref_App [vars_tm _]/= !simpl_set.
-      rewrite in_fnd.
-        by rewrite /p_test/= !inE eqxx orbT.
-      move=> qs.
-      replace (flatten_mode _) with [::output]; last by rewrite/= ffunE !FmapE.fmapE.
       rewrite/= !simpl_set.
-      rewrite/fresh_rule /varsU_rule/varsU_rhead/varsU_rprem/= !simpl_set/=.
-      rewrite !FmapE.fmapE/= !inE/= in_fnd/=?inE//=.
-      rewrite/rename/= !simpl_set/= => H; rewrite !inE/=.
-      rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
-      by rewrite in_fnd/= ffunE//=.
+      rewrite/fresh_rule /varsU_rule/varsU_rhead/varsU_rprem/=.
+      rewrite !simpl_set FmapE.fmapE/= !inE/=.
+      rewrite/rename/= !inE/= !FmapE.fmapE/=.
+      rewrite in_fnd?inE//= => H.
+      by rewrite ffunE unify_refl/= !simpl_set//.
     set Z := (_ `|` _).
     set K := (fresh _).
     apply: StepT => //=.
-      rewrite /bc deref_App get_tm_hd_app !simpl_set [get_tm_hd _]/=.
-      cbn iota.
-      replace (_.[? _]) with (Some build_arr); last by rewrite !FmapE.fmapE.
+      rewrite/bc deref_App !simpl_set.
       rewrite [fresh_rules _ _]/= /fresh_rule !simpl_set.
       rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
       rewrite /= !simpl_set /rename/= !simpl_set !inE /=.
-      by rewrite !unify_V_0r//=.
+      rewrite !FmapE.fmapE/=.
+      by rewrite !unify_V_0r.
     set R := (_ `|` _).
     apply: StepT => //.
       rewrite/step/=.
       rewrite/bc /next_subst [next _ _]/= acyclic_sigma_set_D//.
-      rewrite deref_App deref_P get_tm_hd_app/get_tm_hd.
-      rewrite 2!FmapE.fmapE/= !simpl_set.
+      rewrite deref_App deref_P /get_tm_hd.
+      rewrite/= !simpl_set.
       rewrite /fresh_rule/= !simpl_set.
       rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
-      rewrite !inE/= !simpl_set.
-      rewrite /=in_fnd/=?inE// => KK.
+      rewrite !inE/= !simpl_set !FmapE.fmapE/=.
+      rewrite !simpl_set/=.
+      rewrite in_fnd/=?inE// => JK.
       rewrite ffunE/= eqxx.
-      rewrite unify_ground//.
+      rewrite unify_ground//=.
     rewrite !simpl_set fsetUC.
     set T := (_ `|` _).
     apply: BackT => //=.
     apply: StepT => //=.
-      rewrite /bc [flatten_term _]/= [get_tm_hd _]/=.
+      rewrite /bc.
       rewrite/next_subst/= acyclic_sigma_set_D//=.
       rewrite !FmapE.fmapE/= !simpl_set.
       rewrite/= /fresh_rule/= !simpl_set.
       rewrite /rename/= !simpl_set in_fset1/=.
+      rewrite !FmapE.fmapE/= not_fnd//=.
       rewrite eqxx/= unify_ground//.
     rewrite !simpl_set/=.
     apply: StopOT => //=.
@@ -146,20 +142,16 @@ Section Test5.
   Proof.
     repeat eexists.
     apply: StepT' => //=; cycle 1.
-      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
-      cbn iota.
-      rewrite !simpl_set in_fnd; first by rewrite/= !inE eqxx orbT.
-      move=> H.
-      rewrite[fresh_rules _ _]/= !simpl_set/= !ffunE/= FmapE.fmapE/=.
-      rewrite FmapE.fmapE/= !simpl_set/=.
-      rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
-      rewrite /= !FmapE.fmapE/= !inE/= in_fnd/=?inE// => Hx.
-      rewrite ffunE//=.
+      rewrite/bc.
+      rewrite !simpl_set.
+      rewrite[fresh_rules _ _]/= !simpl_set/= !FmapE.fmapE/=.
+      rewrite !inE/=.
+      by rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
     set X := _ `|` _.
     apply: StepT => //=.
-      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
-      cbn iota.
-      rewrite !FmapE.fmapE/= not_fnd//= unify_V_0r//=.
+      rewrite/bc/=.
+      rewrite !FmapE.fmapE/= in_fnd//=?inE//= => H.
+      rewrite ffunE/= not_fnd//= unify_V_0r//=.
       rewrite unify_V_0r//= acyclic_sigma0//=.
     apply/StepT => //=.
     apply/StopOT => //=.
@@ -181,21 +173,18 @@ Section Test6.
   Proof.
     repeat eexists.
     apply: StepT' => //; cycle 1.
-      rewrite/=/bc [flatten_term _]/= [get_tm_hd _]/=.
-      cbn iota.
-      rewrite !FmapE.fmapE eqxx/= !simpl_set.
-      rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
-      rewrite !FmapE.fmapE/= inE/= in_fnd?inE//= => H.
-      by rewrite ffunE//.
+      rewrite/=/bc/=.
+      rewrite !FmapE.fmapE not_fnd//= !simpl_set/=.
+      rewrite in_fnd//=?inE// => H; rewrite !inE/= ffunE//=.
     set X:= (_ `|` _).
     apply: StepT => //=.
-      rewrite/bc [flatten_term _]/= [get_tm_hd _]/=.
-      rewrite acyclic_sigma0/= !FmapE.fmapE/= not_fnd//= !unify_V_0r//=.
+      rewrite/bc/=.
+      by rewrite acyclic_sigma0/= !FmapE.fmapE/= not_fnd//= !unify_V_0r//=.
     rewrite /varsU_rule/varsU_rhead/varsU_rprem/=/vars_atoms/= !simpl_set/=.
     set Y := _ `|` _.
     apply/StepT => //=.
       rewrite/next_subst/=.
-      rewrite/bc [flatten_term _]/= [get_tm_hd _]/= !simpl_set.
+      rewrite/bc /=!simpl_set/=.
       rewrite acyclic_sigma_set_D//=.
       by rewrite !FmapE.fmapE.
     rewrite !simpl_set.
@@ -279,12 +268,12 @@ Section map.
 
   Definition map12d := Tm_App (Tm_App (Tm_App map double) list12) X.
 
-  Lemma get_input_vars_ground m T:
+  (* Lemma get_input_vars_ground m T:
     all ground T -> get_input_vars m T = fset0.
   Proof.
     elim: m T => //[x xs IH] []//= X XS /andP[G1 G2].
     by rewrite IH// ground_vars_tm// fset0U if_same.
-  Qed.
+  Qed. *)
 
   Lemma p'map: (sig p').[? map] = Some mapS.
   Proof. by rewrite !FmapE.fmapE. Qed.

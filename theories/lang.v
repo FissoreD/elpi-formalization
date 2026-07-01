@@ -696,39 +696,26 @@ Definition fresh_rules fv rules :=
     step 1: X = W ===> W -> X, the list of unif problems becoes : X = 3 
     step 2: since X is frozen, this unification fails
 *)
-Fixpoint H u fv (md: seq mode) (q : list Tm) (h: list Tm) s : option Sigma :=
-  match md,q,h with
-  | [::], [::], [::] => Some s
-  | md :: tl, x :: xs, y :: ys => 
-    let f := if md == input then u.(matching) fv else u.(unify) in
-    obind (H u fv tl xs ys) (f y x s)
-  | _, _, _ => None
+Fixpoint H u (sP:sigT) fv (q : Tm) (h: Tm) s : option (S * Sigma * fvS) :=
+  match q,h with
+  | Tm_P p, Tm_P p' => if p == p' then omap (fun x => (x, s, fv)) sP.[?p] else None
+  | Tm_App f a, Tm_App f' a' =>
+    if H u sP fv f f' s is Some (arr m _ r, s, fv) then
+      let fv := fv `|` if m == input then vars_tm f else fset0 in
+      let f := if m == input then u.(matching) fv else u.(unify) in
+      omap (fun x => (r, x, fv)) (f a' a s)
+    else None
+  | _, _ => None
   end.
 
-Fixpoint get_input_vars ms qargs :=
-  match ms with
-  | [::] => fset0
-  | m :: ms =>
-    match qargs with
-    | [::] => fset0
-    | x :: xs => 
-      if m == input then vars_tm x `|` get_input_vars ms xs
-      else get_input_vars ms xs
-    end
-  end.
-
-Fixpoint select u (hd:P) args md (rules: list R) sigma : (fvS * seq (Sigma * seq Atom)) :=
+Fixpoint select u (sP:sigT) (q: Tm) (rules: list R) sigma : (fvS * seq (Sigma * seq Atom)) :=
   match rules with
   | [::] => (fset0, [::])
   | rule :: rules =>
-    let hd' := get_tm_hd rule.(head) in
-    let args' := flatten_term rule.(head) in
-    if inl hd != hd' then select u hd args md rules sigma
-    else
-    match H u (get_input_vars md args) md args args' sigma with
-    | None => select u hd args md rules sigma
-    | Some (sigma1) => 
-      let: (fv, rs) := select u hd args md rules sigma in
+    match H u sP fset0 q rule.(head) sigma with
+    | None => select u sP q rules sigma
+    | Some (_, sigma1, _) => 
+      let: (fv, rs) := select u sP q rules sigma in
       (vars_sigma sigma1 `|` varsU_rule rule `|` fv, (sigma1, rule.(premises)) :: rs)
     end
   end.
@@ -743,18 +730,9 @@ Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq Atom) :=
   if ~~ acyclic_sigma s then (fv, [::])
   else
   let query := deref s query in
-  match get_tm_hd query with
-    | inl kP =>  
-      match pr.(sig).[? kP] with 
-        | Some sig => 
-          let args := flatten_term query in
-          let: (fv, rules) := fresh_rules (vars_sigma s `|` vars_tm query `|` fv) (pr.(rules)) in
-          let: (fv', rules) := select u kP args (flatten_mode sig) rules s
-          in (fv `|` fv', rules)
-        | None => (fv, [::])
-        end
-    | _ => (fv, [::]) (*this is a call with flex head or head being a data, in elpi it is an error! *)
-    end.
+  let: (fv, rules) := fresh_rules (vars_sigma s `|` vars_tm query `|` fv) (pr.(rules)) in
+  let: (fv', rules) := select u pr.(sig) query rules s in 
+  (fv `|` fv', rules).
 End s.
 
 Fixpoint is_det_sig (sig:S) : bool :=

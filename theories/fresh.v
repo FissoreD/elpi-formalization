@@ -272,28 +272,25 @@ Proof.
   apply/fsubset_trans/fresh_rule_sub/IH.
 Qed.
 
-Lemma select_sub_rules u p args r0 rn fv' md s:
-  select u p args md r0 s = (fv', rn) ->
+Lemma select_sub_rules u sP query rules rn fv' s:
+  select u sP query rules s = (fv', rn) ->
     varsU (seq.map (fun x => vars_sigma x.1 `|` vars_atoms x.2) rn) `<=` fv'.
 Proof.
-  elim: r0 rn fv' md p args s => [|x xs IH] rn fv' md p args s/=; first by move=> [<-<-]//.
-  case: eqP => isP/=; last by apply: IH.
-  case H: H; last by apply: IH.
+  elim: rules fv' rn => [|x xs IH] fv' rn/=; first by move=> [<-<-]//.
+  case H: H => [[[t s' fv]]|]; last by apply: IH.
   case Y: select => [fv2 rs][??]; subst => /=.
   rewrite -!fsetUA/= !fsetUS//.
-  case: x isP H; rewrite/=/varsU_rhead/varsU_rprem/= => hd pm isP H.
-  rewrite fsubsetU// fsetUS//=; first by rewrite orbT.
-  by apply: IH Y.
+  have {}IH := IH _ _ Y.
+  rewrite fsubUset/varsU_rprem fsubsetU//=.
+    by rewrite !fsubsetU ?IH// orbT.
+  by rewrite fsubsetUl orbT.
 Qed.
 
 Lemma bc_sub u p c fv s:
   fv `<=` (bc u p fv c s).1.
 Proof.
   rewrite/bc.
-  case: ifP => //= _.
-  case X: get_tm_hd => //[k].
-  case: fndP => cP//.
-  rewrite !push/= fsubsetU//.
+  case: ifP => //= _; rewrite !push/= fsubsetU//=.
   apply/orP; left.
   by apply/fsubset_trans/fresh_rules_sub/fsubsetUr.
 Qed.
