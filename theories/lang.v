@@ -701,7 +701,7 @@ Fixpoint H u (sP:sigT) fv (q : Tm) (h: Tm) s : option (S * Sigma * fvS) :=
   | Tm_P p, Tm_P p' => if p == p' then omap (fun x => (x, s, fv)) sP.[?p] else None
   | Tm_App f a, Tm_App f' a' =>
     if H u sP fv f f' s is Some (arr m _ r, s, fv) then
-      let fv := fv `|` if m == input then vars_tm f else fset0 in
+      let fv := fv `|` if m == input then vars_tm a else fset0 in
       let f := if m == input then u.(matching) fv else u.(unify) in
       omap (fun x => (r, x, fv)) (f a' a s)
     else None
