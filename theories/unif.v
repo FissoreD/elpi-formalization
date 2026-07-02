@@ -1925,15 +1925,6 @@ Lemma unify_derefr s t1 t2: acyclic_sigma s ->
   unify t1 t2 s = unify t1 (deref s t2) s.
 Proof. move=> A; rewrite /unify/montanari_deref deref2//. Qed.
 
-Lemma isSomeP T x (P : option T) : P = Some x -> P.
-Proof. by move=> ->. Qed.
-
-Lemma isNoneP T (P : option T) : P = None -> ~~ P.
-Proof. by move=> ->. Qed.
-
-Lemma isNoneP1 T (P : option T) : ~~ P -> P = None.
-Proof. case: P => //. Qed.
-
 Lemma add_eq0 a b: ((addn a b) == 0) = (a == 0) && (b == 0).
 Proof. case: a => //. Qed.
 
