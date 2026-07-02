@@ -1987,6 +1987,55 @@ Proof.
   by rewrite !push; apply/acyclic_sigma_select.
 Qed.
 
+Lemma montanari_extend_froz f g l s:
+  acyclic_sigma s -> disjoint_L s l ->
+  fdisjoint g (varsL l) ->
+  montanari s (f `|` g) l = montanari s f l.
+Proof.
+  move: g.
+  montanari_ind s f l => //=g A.
+  - rewrite !montanari_equation//.
+  - rewrite disjoint_L_cons /= varsL_cons/= fdisjointXU.
+    move => /and3P[D1 D2 D3] /andP[D4 D5].
+    rewrite montanari_equation eqxx IH//.
+  - rewrite disjoint_L_cons varsL_cons/= /map_prod1/= !fdisjointXU -!andbA.
+    move => /and5P[sf1 sa1 sf2 sa2] gf /and5P[gf1 ga1 gf2 ga2 gl].
+    rewrite montanari_equation EQ. 
+    by rewrite !IH//!(disjoint_L_cons,varsL_cons,sf1,sf2,sa2,sa1,fdisjointXU,gf1, ga1, gf2, ga2, gl).
+  - by rewrite montanari_equation EQ vt//.
+  - rewrite montanari_equation /= !inE (negbTE EQ) vf v'f.
+    by case: eqP; first by move => -[?]; subst; rewrite eqxx in EQ.
+  - rewrite disjoint_L_cons varsL_cons/= /map_prod1/= !fdisjointXU -!andbA.
+    rewrite !fdisjointX1 => /and3P[vs v's sl] /and3P[vg v'g gl].
+    rewrite montanari_equation !inE (negbTE EQ) vf v'f/= (negbTE v'g).
+    case: eqP; first by move=> [?]; subst; rewrite eqxx in EQ.
+    move=> _; apply: IH.
+      by apply: acyclic_sigma_deref_sigma; rewrite//(inE,fdisjointX1)//eq_sym.
+      by rewrite disjoint_L_set////(inE,fdisjointX1)//eq_sym//.
+    apply/fdisjointP_sym => x /deref_list_in; rewrite !inE.
+    case: eqP => //=xv xl; subst => //.
+    by apply: fdisjointP_sym gl _ xl.
+  - by rewrite montanari_equation EQ (negbTE vt) inE vf/=; destruct t.
+  - rewrite !disjoint_L_cons/= varsL_cons /map_prod1/= !fdisjointXU !fdisjointX1 -andbA.
+    move=> /and3P[vs st sl] /and3P[vg gt gl].
+    rewrite montanari_equation EQ (negbTE vt) inE (negbTE vf)/=(negbTE vg) IH//.
+      by apply: acyclic_sigma_deref_sigma; rewrite//(inE,fdisjointX1)//eq_sym.
+      by rewrite disjoint_L_set////(inE,fdisjointX1)//eq_sym//.
+    apply/fdisjointP_sym => x /deref_list_in.
+    move=> /orP[].
+      by apply: fdisjointP; rewrite fdisjoint_sym.
+    by apply: fdisjointP; rewrite fdisjoint_sym.
+  - rewrite disjoint_L_cons varsL_cons/= /map_prod1/= !fdisjointXU -andbA.
+    rewrite !fdisjointX1 => /and3P[st vs sl] /and3P[gt vg gl].
+    rewrite montanari_equation EQ.
+    suffices -> : montanari s (f `|` g) ((Tm_V v, t) :: l) = montanari s f ((Tm_V v, t) :: l).
+      by destruct t.
+    apply: IH => //; rewrite (disjoint_L_cons, varsL_cons)/map_prod1 !(fdisjointX1, fdisjointXU, andbA) -!andbA;
+    apply/and3P => //.
+  - rewrite montanari_equation/= EQ.
+    case: t1 H {EQ}; case: t2 => //=.
+Qed.
+
 Module mgu.
   Definition mgum base general s :=  mp base general ->
       acyclic_sigma general -> domf s = domf general -> mp general s -> s = general.
