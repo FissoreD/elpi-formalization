@@ -287,6 +287,7 @@ Section map.
   Lemma fstS T1 T2 (a:T1) (b:T2): (a,b).1 = a. by []. Qed.
   Lemma sndS T1 T2 (a:T1) (b:T2): (a,b).2 = b. by []. Qed.
 
+  (*
   Lemma select_cons m ft md x xs s: select u m ft md (x::xs) s = 
     (if inl m != get_tm_hd (head x)
       then select u m ft md xs s
@@ -363,5 +364,5 @@ Section map.
       set F4 := _ `|` _.
       set F5 := _ `|` _.
       set F6 := _ `|` _.
-  Abort.
+  Abort. *)
 End map.

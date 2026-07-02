@@ -814,3 +814,61 @@ Proof.
     by rewrite ground_V.
   by rewrite ground_app => /=/andP[/Hf->/Ha->].
 Qed.
+
+Lemma isSomeP T x (P : option T) : P = Some x -> P.
+Proof. by move=> ->. Qed.
+
+Lemma isNoneP T (P : option T) : P = None -> ~~ P.
+Proof. by move=> ->. Qed.
+
+Lemma isNoneP1 T (P : option T) : ~~ P -> P = None.
+Proof. case: P => //. Qed.
+
+Fixpoint term_arg t :=
+  match t with
+  | Tm_App t _ => (term_arg t).+1
+  | _ => 0
+  end.
+
+Fixpoint eat_ty n sig :=
+  match n with
+  | 0 => Some sig
+  | n.+1 => match sig with arr _ _ r => eat_ty n r | _ => None end
+  end.
+
+Lemma eat_ty_arr n md tf ta m tl tr:
+  eat_ty n (arr md tf ta) = Some (arr m tl tr) -> eat_ty n ta = Some tr.
+Proof.
+  elim: n md tf ta m tl tr => [|n IH] md tf ta m tl tr/=; first by move=>[_ _ <-].
+  by case: ta => [|>]; [case n|apply: IH].
+Qed.
+
+Lemma HP u sP fv t1 t2 s r: H u sP fv t1 t2 s = Some r -> 
+  [/\ get_tm_hd t1 = get_tm_hd t2, term_arg t1 = term_arg t2 &
+    exists p, exists2 pP : p \in sP, get_tm_hd t1 = inl p & eat_ty (term_arg t1) sP.[pP] = Some r.1.1]
+  .
+Proof.
+  elim: t1 t2 fv s r => //=[p|f Hf a Ha] [p'|d|v|f' a']//= fv s r.
+    case: eqP => //<-; case: fndP => //=pP[<-]; split => //.
+    by exists p, pP.
+  case H: H => //[[[[|m tl tr] s'] fv']]//=.
+  case : (_ s') => //= sz [?]; subst => /=.
+  have /=[Hx Hy [p [pP H1 H2]]] := Hf _ _ _ _ H.
+  split => //; first by rewrite Hy.
+  eexists p, pP => //=.
+  move: H2; case: sP.[pP] => //=; first by case: term_arg.
+  by clear => md tf ta; apply: eat_ty_arr.
+Qed.
+
+
+Lemma H_same_ty u sP fv1 fv2 f f1 f2 s1 s2 r1 r2:
+  H u sP fv1 f f1 s1 = Some r1 ->
+  H u sP fv2 f f2 s2 = Some r2 ->
+  r1.1.1 = r2.1.1.
+Proof.
+  move=> H1 H2.
+  have[Ha1 Hb1 [z1[P1]]]:= HP H1.
+  have[Ha2 Hb2 [z2[P2]]]:= HP H2.
+  move=> -> + [?]; subst.
+  by rewrite (bool_irrelevance P1 P2) => ->[].
+Qed.
