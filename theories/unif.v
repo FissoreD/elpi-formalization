@@ -2036,6 +2036,26 @@ Proof.
     case: t1 H {EQ}; case: t2 => //=.
 Qed.
 
+Lemma disjoint_L_deref s h q0: acyclic_sigma s ->
+  disjoint_L s [:: (deref s h, deref s q0)].
+Proof. by move=> A; rewrite disjoint_L_cons/= !acyclic_deref_disjoint// disjoint_L0. Qed.
+
+Lemma matching_extend_froz f g s t1 t2: acyclic_sigma s -> 
+  fdisjoint g (vars_tm (deref s t1)) -> fdisjoint g (vars_tm (deref s t2)) ->
+  matching (f `|` g) t1 t2 s = matching f t1 t2 s.
+Proof.
+  rewrite/matching/montanari_deref/montanari_pair => A d1 d2.
+  apply: montanari_extend_froz => //.
+    by apply: disjoint_L_deref.
+  by rewrite !varsL_cons varsL0 fsetU0/map_prod1 fdisjointXU/=d1.
+Qed.
+
+Lemma matching_refl v a s: matching v a a s = Some s.
+Proof.
+  rewrite/matching/montanari_deref/montanari_pair.
+  by rewrite 2!montanari_equation eqxx.
+Qed.
+
 Module mgu.
   Definition mgum base general s :=  mp base general ->
       acyclic_sigma general -> domf s = domf general -> mp general s -> s = general.
