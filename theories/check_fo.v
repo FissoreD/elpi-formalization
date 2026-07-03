@@ -178,21 +178,27 @@ Section check.
     case: p => [rs s].
     rewrite/bc/=/check_rules/= => CR TD.
     case: ifP => // _.
-    case DR: get_tm_hd => //=[p].
-    case: fndP => //= pP.
+    (* case DR: get_tm_hd => //=[p]. *)
+    (* case: fndP => //= pP. *)
     rewrite !push/=.
-    move: (flatten_mode _) CR.
-    elim: rs s s1 fv c TD p DR pP => //= -[hd bo] xs IH sig s fv c/=.
-    move=> TD p C pP m /andP[c1 c2].
-    have /={}IH := IH _ _ _ _ TD _ C pP _ c2.
+    (* move: (flatten_mode _) CR. *)
+    elim: rs s s1 fv c TD CR => //= -[hd bo] xs IH sig s fv c/= .
+    move=> TD /andP[cbo cxs].
+    have {}IH := IH _ _ _ _ TD cxs.
     rewrite !push/= head_fresh_rule/=.
-    rewrite eq_sym callable_rename1.
-    case:eqP => //= /esym tH.
+    (* rewrite IH. *)
+    (* case:eqP => //= /esym tH. *)
     case H: H => //=[s'].
     rewrite !push/= IH andbT.
     rewrite premises_fresh_rule/=.
     rewrite check_atoms_fresh.
-    move: TD c1; rewrite/check_rule/tm_is_det -tH C in_fnd => ->//.
+    move: TD cbo; rewrite /check_rule /tm_is_det.
+    have [HE HE' [p[pP Hp E]]] := HP H.
+    set X := fresh_rules _ _ in HE HE'.
+    rewrite Hp in_fnd.
+    have:= proj1 (callable_rename X.1 hd p empty) .
+    rewrite -HE Hp => /(_ erefl) ->.
+    by rewrite in_fnd => ->.
   Qed.
 
   Lemma deref_empty t:
