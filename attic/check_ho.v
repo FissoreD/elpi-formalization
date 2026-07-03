@@ -56,29 +56,23 @@ Proof.
   case: m => -[|[]]//f' a'; rewrite cincl_arr/= => /andP[] _ /Ha; auto.
 Qed.
 
-(* takes a tm and a signature and updates variable signatures
-    updates are performed only on variables in input positions *)
-(* Invariant: length s = length t *)
-Fixpoint assume_tm (sP:sigT) (sV:sigV) (tm : seq Tm) (s : S): sigV :=
-  match s, tm with
-  | _, [::] => sV
-  | arr output _ _, _ :: _ => sV
-  | arr input ty tys, t :: ts =>
-    let sV := match t with
-    | Tm_V v =>
-      match sV.[? v] with
-      | None => sV.[v <- ty]
-      | Some oldv =>
-        if compat_type oldv ty then add v (min ty oldv) sV else sV
+Fixpoint assume_tm (sP : sigT) (sV : sigV) (tm : Tm) : (sigV * option S) :=
+match tm with
+| Tm_V v => (sV, sV.[?v])
+| Tm_P p => (sV, sP.[?p])
+| Tm_D _ => (sV, Some (b Exp))
+| Tm_App h bo =>
+  let: (sV, ty) := assume_tm sP sV h in
+    match ty with
+    | Some (arr output _ r) => (sV, Some r)
+    | Some (arr input l r) =>
+      match bo with
+      | Tm_V v => (add v (min l (odflt l sV.[?v])) sV, Some r)
+      | _ => (sV, Some r)
       end
-    | _ => sV end in  (*TODO: complete this pattern*)
-    assume_tm sP sV ts tys
-  | b _, _ :: _ => sV (*should be a type error*)
-  end.
-
-Lemma assume_tm_all_out sP sV hs ss:
-  all_out (flatten_mode ss) -> assume_tm sP sV hs ss = sV.
-Proof. case: hs => //=; case: ss => //[[]]//. Qed.
+    | _ => (sV, None)
+  end
+end.
 
 Definition get_sig (sP:sigT) (sV:sigV) t :=
   match get_tm_hd t with
@@ -340,15 +334,8 @@ Fixpoint check_atoms (sP :sigT) sV (s: seq Atom) :=
 End check_atoms1. *)
   
 Definition check_rule (sP:sigT) head prems :=
-  match get_tm_hd head with
-  | inl pred =>
-    if sP.[? pred] is Some sig then
-      let sV := assume_tm sP empty (flatten_term head) sig in
-      (tm_is_det sP head == false) || 
-        (check_atoms sP sV prems)
-    else true
-  | _ => true
-  end.
+  let: (sV, _) := assume_tm sP empty head in
+  (tm_is_det sP head == false) || (check_atoms sP sV prems).
 
 Definition check_rules p :=
   all (fun x => check_rule p.(sig) x.(head) x.(premises)) p.(rules).
@@ -371,11 +358,9 @@ Module Test.
     Goal check_rules (mkP onceSym onceSig onceI).
     Proof.
       rewrite/check_rules/=andbT/check_rule.
-      rewrite [get_tm_hd _]/=.
-      cbn match.
-      rewrite !FmapE.fmapE//=.
-      rewrite/tm_is_det /get_tm_hd FmapE.fmapE/=.
-      by rewrite not_fnd//= andbT orbT.
+      rewrite /assume_tm !FmapE.fmapE/=.
+      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
+      by rewrite orbT.
     Qed.
   End Once.
   
@@ -387,10 +372,9 @@ Module Test.
     Goal check_rules (mkP doSym doSig doI).
     Proof.
       rewrite/check_rules/=andbT/check_rule.
-      rewrite [get_tm_hd _]/=.
-      cbn match.
-      rewrite FmapE.fmapE/= not_fnd//= andbT orbF.
-      by rewrite /check_tmF /check_tm FmapE.fmapE/= orbT.
+      rewrite /assume_tm !FmapE.fmapE/=.
+      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
+      rewrite/check_tmF/check_tm !FmapE.fmapE/= not_fnd//.
     Qed.
   End Do.
   
@@ -402,20 +386,10 @@ Module Test.
 
     Goal check_rules (mkP applySym applySig applyI).
     Proof.
-      rewrite/check_rules/= andbT/check_rule.
-      rewrite [get_tm_hd _]/=.
-      cbn match.
-      rewrite !FmapE.fmapE eqxx.
-      rewrite/tm_is_det/get_tm_hd FmapE.fmapE orFb.
-      rewrite/check_atoms andbT orbF.
-      rewrite/check_tmF/check_tm.
-      (* rewrite/get_sig/get_tm_hd. *)
-      rewrite [flatten_term _]/=.
-      rewrite/assume_tm (@not_fnd _ _ empty F)//.
-      rewrite/applySig/f.
-      rewrite  FmapE.fmapE (@not_fnd _ _ empty)//.
-      rewrite !FmapE.fmapE/=.
-      by [].
+      rewrite/check_rules/=andbT/check_rule.
+      rewrite /assume_tm !FmapE.fmapE/=.
+      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
+      rewrite/check_tmF/check_tm !FmapE.fmapE/= not_fnd//.
     Qed.
   End Apply.
   
@@ -427,20 +401,12 @@ Module Test.
 
     Goal ~~ check_rules (mkP applySym applySig applyI).
     Proof.
-      rewrite/check_rules/= andbT/check_rule.
-      rewrite [get_tm_hd _]/=.
-      cbn match.
-      rewrite !FmapE.fmapE eqxx .
-      rewrite [flatten_term _]/=.
-      rewrite/tm_is_det/get_tm_hd FmapE.fmapE.
-      rewrite orFb.
-      (* assume head *)
-      rewrite/assume_tm (@not_fnd _ _ _ (IV 2))//.
-      rewrite/applySig/f.
-      rewrite !FmapE.fmapE not_fnd//=.
-      rewrite andbT orbF.
-      rewrite/check_tmF/check_tm.
-      by rewrite !FmapE.fmapE /=/get_sig/get_tm_hd.
+      rewrite/check_rules/=andbT/check_rule.
+      rewrite /assume_tm !FmapE.fmapE.
+      rewrite eqxx /applySig /tm_is_det !get_tm_hd_app/get_tm_hd.
+      rewrite !FmapE.fmapE eqxx !not_fnd///=.
+      rewrite min_refl.
+      by rewrite/check_tmF/check_tm !FmapE.fmapE/=.
     Qed.
   End WrongApply.
 
@@ -483,23 +449,17 @@ Module Test.
 
     Local Goal check_rules p'.
     Proof.
-      rewrite/check_rules/= andbT; apply/andP; split.
-        rewrite/check_rule !get_tm_hd_app gthm FmapE.fmapE eqxx.
-        rewrite /tm_is_det !get_tm_hd_app gthm FmapE.fmapE eqxx.
-        rewrite orFb.
-        rewrite [flatten_term _]/=.
-        by rewrite/assume_tm not_fnd//.
-      rewrite/check_rule !get_tm_hd_app gthm FmapE.fmapE eqxx.
-      rewrite /tm_is_det !get_tm_hd_app gthm FmapE.fmapE eqxx.
-      rewrite orFb.
-      rewrite [flatten_term _]/=.
-      rewrite/assume_tm not_fnd///mapS.
-      rewrite/check_atoms !orbF andbT.
-      apply/andP; split.
-        by rewrite/check_tmF/check_tm !FmapE.fmapE eqxx/=.
-      by rewrite/check_tmF/check_tm !FmapE.fmapE eqxx/=.
+      rewrite/check_rules/= andbT/check_rule; apply/andP; split.
+        rewrite /assume_tm !FmapE.fmapE.
+        rewrite eqxx /tm_is_det !get_tm_hd_app/get_tm_hd/mapS.
+        by rewrite !FmapE.fmapE eqxx !not_fnd///=.
+      rewrite /assume_tm !FmapE.fmapE.
+      rewrite eqxx /mapS /tm_is_det !get_tm_hd_app/get_tm_hd.
+      rewrite !FmapE.fmapE eqxx !not_fnd///=.
+      rewrite min_refl.
+      by rewrite/check_tmF/check_tm !FmapE.fmapE.
     Qed.
-  End map.
+  End map. 
 End Test.
 
 
@@ -957,21 +917,24 @@ Section check.
     by rewrite is_det_sig_weak in dk.
   Qed. *)
 
-  Lemma call_is_det_tm_is_det pr t p: 
-    get_tm_hd t = inl p -> check_tmF pr fmap0 t -> tm_is_det pr t.
+  Lemma call_is_det_tm_is_det pr t: 
+    check_tmF pr fmap0 t -> tm_is_det pr t.
   Proof.
-    rewrite/check_tmF/get_sig/tm_is_det/is_func => G /eqP H.
+    move=> /eqP CT.
     suffices : forall v, check_tm pr empty t = Some v -> is_det_sig v -> tm_is_det pr t.
-      by rewrite H => /(_ _ erefl isT); rewrite/tm_is_det.
+      by move=> /(_ _ CT isT).
     rewrite/tm_is_det.
-    elim: t p G {H} => //=[p|f Hf a Ha] p'.
-      by move=> [] H v; case: fndP => //= pP [<-].
-    move=> G v + D; have:= Hf _ G.
-    case C: check_tm => [[|[] l r]|]//= /(_ _ erefl)/=; last by move=> +[?]; subst; auto.
-    case: ifP => /= IE; first by move=> + [?]; subst; auto.
-    case C1: check_tm => [sig|]// + [?]; subst.
-    move: D; case: ifP => //; last by rewrite is_det_sig_weak.
-    by move=> CI D /(_ D).
+    elim: t {CT} => [p|d|v'|f Hf a _] v/=.
+      by case: fndP => //=pP[<-].
+      by move=> [<-].
+      by rewrite not_fnd.
+    case C: check_tm => //=[[|[] tl tr]]//=; last first.
+      by move=> [<-] H; apply: Hf C _.
+    case: ifP => //.
+      by move=> _ [<-] H; apply: Hf C _.
+    move=> _; case Ca: check_tm => //[ta][?]; subst.
+    case: ifP; last by rewrite is_det_sig_weak.
+    by move=> CI D; apply: Hf C _.
   Qed.
 
   Lemma flatten_term_ren_map s t:
@@ -1049,28 +1012,24 @@ Section check.
   (* Definition isOkP t r: t = Ok r -> isOk t.
   Proof. by move=>->. Qed. *)
 
-  Lemma check_atoms_fresh sP hd bo v s (r : {fmap V -> V}):
+  Lemma check_atoms_fresh sP hd bo v (r : {fmap V -> V}):
     (* TODO: instead of empty, I need sV and (compose r sV) *)
-    check_atoms sP (assume_tm sP empty (map (ren r) hd) s) (fresh_atoms v bo r).2 =
-      check_atoms sP (assume_tm sP empty hd s) bo.
+    check_atoms sP (assume_tm sP empty (ren r hd)).1 (fresh_atoms v bo r).2 =
+      check_atoms sP (assume_tm sP empty hd).1 bo.
   Proof.
-    elim: hd s bo => //=[|h hs IH] s bo.
-      set X := match s with | b _ | _ => _ end.
-      replace X with (@fmap0 V S); last by rewrite{}/X; case: s => [|[]].
-      (* by rewrite check_atoms_fresh0. *)
-    (* case: s => //[b|[] tl tr]; only 1,3: by rewrite check_atoms_fresh0. *)
-    (* case: h => [p|d|v'|f a]/=; only 1, 2, 4: by rewrite IH. *)
-    (* rewrite !(@not_fnd _ _ fmap0)//. *)
-    (* TODO: should have a weaker IH *)
+    elim: bo hd => //=[a l IH] hd; rewrite !push/=.
+    rewrite !IH.
+    case: a => //=[|t]; rewrite?push/=?fresh_has_cut; f_equal.
+      admit.
+    f_equal.
   Admitted.
 
-  Lemma check_atoms_fresh_rename sP hd bo v s:
-    check_atoms sP (assume_tm sP empty (flatten_term hd) s) bo ->
-      check_atoms sP (assume_tm sP empty (flatten_term (rename v hd empty).2) s) 
+  Lemma check_atoms_fresh_rename sP hd bo v:
+    check_atoms sP (assume_tm sP empty hd).1 bo ->
+      check_atoms sP (assume_tm sP empty (rename v hd empty).2).1
         (fresh_atoms (rename v hd empty).1.1 bo (rename v hd empty).1.2).2.
   Proof.
     rewrite/rename !push/=; move: (_ `|` _) => fv.
-    rewrite flatten_term_ren_map.
     by rewrite check_atoms_fresh.
   Qed.
 
@@ -1134,10 +1093,6 @@ Section check.
   Lemma domf_vars_tms_cons s q0 qs: s # vars_tms (q0 :: qs) -> 
     fdisjoint s (vars q0) /\ fdisjoint s (vars_tms qs).
   Proof. by rewrite vars_tms_cons fdisjointXU => /andP[]. Qed.
-
-  Lemma disjoint_L_deref s h q0: acyclic_sigma s ->
-    disjoint_L s [:: (deref s h, deref s q0)].
-  Proof. by move=> A; rewrite disjoint_L_cons/= !acyclic_deref_disjoint// disjoint_L0. Qed.
 
   Fixpoint is_exp s :=
     match s with
@@ -1285,125 +1240,58 @@ Section check.
     admit.
   Admitted.
 
-  Lemma det_check_H sP q hd bo s s' sig froz sV:
-    all (check_atom sP empty) [seq deref_atom s' i  | i <- bo] ->
+  Lemma det_check_H sP q hd bo s (s':(S * Sigma * fvS)) froz sV:
+    all (check_atom sP empty) [seq deref_atom s'.1.2 i  | i <- bo] ->
     (* get_sig sP sV q = Some sig -> *)
-    fdisjoint (vars_tms q) (vars_tms hd) ->
+    fdisjoint (vars_tm q) (vars_tm hd) ->
     acyclic_sigma s ->
-    let modes := flatten_mode sig in
-    get_input_vars modes q `<=` froz ->
-    fdisjoint (domf s) (get_input_vars modes q) ->
-    good_mode modes ->
-    check_args sP empty q sig ->
-    check_atoms sP (assume_tm sP sV hd sig) bo ->
+    (* let modes := flatten_mode sig in *)
+    (* get_input_vars modes q `<=` froz -> *)
+    (* fdisjoint (domf s) (get_input_vars modes q) -> *)
+    (* good_mode modes -> *)
+    good_modes sP ->
+    check_tm sP empty q ->
+    check_atoms sP (assume_tm sP sV hd).1 bo ->
     relSS sP s sV ->
-    H u froz modes q hd s = Some s' -> check_atoms sP empty [seq deref_atom s' i  | i <- bo].
+    H u sP froz q hd s = Some s' -> check_atoms sP empty [seq deref_atom s'.1.2 i  | i <- bo].
   Proof.
-    elim: hd sig bo s s' q sV => //=[|h hs IH] sig bo s s' q sV AL D0 A FV D.
-      set X:= (match sig with | b _ | _ => _ end).
-      move=> {FV D}.
-      replace X with sV; last by rewrite{}/X; case: sig => [|[] ms].
-      case q; case FM: flatten_mode => //= _ _ Ch R [?]; subst.
-      apply: check_atoms_deref Ch => //.
-    case: sig FV D => [b|m tf ta]//=; case: q D0 => //=q0 qs.
-    rewrite !vars_tms_cons !fdisjointUX !fdisjointXU -!andbA => /and4P[dqh dqhs dqsh dqshs].
-    case: m => //=; last first.
-      move=> G D1 D2 GM Ch R.
-      case U: unif.unify => //=[sm] H'.
-      apply: check_atoms_deref Ch => //.
-        by apply: acyclic_sigma_H (unif_acyclic A U) H'.
-      (* P2: should prove transitivity of relSS over unify and H *)
+    elim: bo hd s s' q sV => [|p0 ps IH]//= hd s s' q sV /andP[cp0 cps].
+    move=> qh A GM cq + R H.
+    have {} IH:= IH _ _ _ _ _ cps.
+    have A' := acyclic_sigma_H A H.
+    have R': relSS sP s'.1.2 (assume_tm sP sV hd).1.
       admit.
-    rewrite fsubUset fdisjointXU => /andP[S1 S2] /andP[dsq dsqs] GM.
-    case M: matching => //=[sm].
-    have A' := (matching_acyclic A M).
-    move=> Ct Ca R.
-    apply: IH Ca _ => //.
-      apply: fdisjointWl (matching_ext1 M) _.
-      apply/fdisjointP => //= x.
-      rewrite !finmap.inE.
-      case: (boolP (_ \in _)) => //=xs.
-        by move=> _; apply/fdisjointP/xs.
-      move=> /andP[xf _]. 
-      by apply: contraNN (fsubsetP _ _) xf.
-    - by move: Ct; case: eqP => //; case: check_tm => //?;case: ifP => //; case: check_args.
-    have R' : relSS sP sm sV.
-      (* same proof as above P2 *)
+    case: p0 cp0 => //=[_|t ct].
+      move=> /orP[|/check_atoms_deref->]//; last by rewrite orbT.
       admit.
-    case: h dqh dqsh M => //v.
-    rewrite !fdisjointX1 => vq vqs.
-    move: Ct.
-    case: eqP => TE; subst.
-      case: fndP => //=vV; first case: ifP => //.
-        case V: sV.[vV] => [[]|[]]//= _; rewrite min_refl.
-        move=> C M.
-        admit.
-      admit.
-    case Cq0: check_tm => [sig|]//= _.
-    clear qs dqshs S2 dsqs vqs.
-    (* I think that if v is in s, then s[v] contains frozen variables.
-       therefore, the unification suceeds only if s[v] == q0
-
-       Otherwise, the mathcing succeeds returning s.[v <- q0]
-    *)
-    (* have [sm' [Asm' H] ? ] := montanari_extP A (disjoint_L_deref _ _ A) M; subst. *)
-
-    move=> M.
-    have: if v \in domf s then s.[?v] = Some q0 /\ sm = s else (sm = s.[v <- q0]).
-      (* from M + some hyp to be added on the fact that input variables in the head point to 
-         frozen terms (either ground, or with frozen variables) *)
-      admit.
-    case: ifP => // vs.
-      move=> []; rewrite in_fnd => -[??]; subst.
-      case: fndP => // vV; first case: ifP => //.
-        have:= forallP R [`vV]; rewrite/=in_fnd deref_in// valPE.
-        case C: check_tm => [sig'|]//=.
-        move=> I CT.
-        (* have vV' : v \in domf sV.[v <- min tf sV.[vV]] by rewrite !finmap.inE eqxx. *)
-        apply/forallP => -[x xP]/=; rewrite valPE ffunE/=.
-        move: xP; rewrite !finmap.inE; case: eqP => xv/= xV; subst.
-          rewrite in_fnd deref_in// C.
-          admit.
-        have:= forallP R [`xV]; rewrite valPE/=.
-        by case: fndP => //= xs; rewrite deref_in// in_fnd.
-      apply/forallP => -[x xP]/=; rewrite valPE ffunE/=.
-      move: xP; rewrite !finmap.inE; case: eqP => xv/= xV; subst.
-        rewrite in_fnd deref_in//=.
-        admit. (*TODO: add an hyp saying that all terms in s typecheck*)
-      have:= forallP R [`xV]; rewrite valPE/=.
-      by case: fndP => //= xs; rewrite deref_in// in_fnd.
-    move=> ?; subst.
-    case: fndP => vV.
-      by have:= forallP R [`vV]; rewrite valPE not_fnd//=vs.
-    apply/forallP => -[x xP]; rewrite valPE ffunE [val _]/=.
-    move: xP; rewrite !finmap.inE fnd_set; case: eqP => //=xv xV; subst.
-      rewrite not_in_deref//=.
-        rewrite Cq0//.
-        admit.
-      by rewrite fdisjointUX fdisjoint1X vq.
-    have:= forallP R [`xV]; rewrite valPE/=.
-    case: fndP => //= xs; rewrite deref_in// in_fnd not_in_deref//=.
-    rewrite fdisjointUX fdisjoint1X .
-    (* TODO: should be ok *)
-    admit.
+    move=> /andP[Ht Hps].
+    rewrite (IH _ _ _ _ _ _ _ _ Hps _ H)// andbT.
+    move: Ht => /orP[|/has_cut_deref_atom->]; last by rewrite orbT.
+    by move=> /(call_is_det_deref ct A' R')->.
   Admitted.
 
   Lemma all_disjoint_flatten_term s l:
     vars l # s -> all (fun x : Tm => vars x # s) (flatten_term l).
   Proof. by elim: l => //=f Hf a Ha; rewrite fdisjointUX all_rcons => /andP[/Hf->->]. Qed.
 
-  Lemma get_input_vars_sub m l: get_input_vars m (flatten_term l) `<=` vars l.
+  (* Lemma get_input_vars_sub m l: get_input_vars m (flatten_term l) `<=` vars l.
   Proof.
     apply/fsubset_trans/vars_tms_flatten_term; rewrite/vars_tms.
     move: (flatten_term _) m; elim => {l}[|l ls IH]//=[|m ms]//=.
     case: m => /=.
       by rewrite fsetUS//=.
     by rewrite fsubsetU//IH orbT.
-  Qed.
+  Qed. *)
 
   Lemma bc_is_p pr fv c s fv' x xs:
     bc u pr fv c s = (fv', x::xs) -> exists p, get_tm_hd (deref s c) = inl p.
-  Proof. by rewrite/bc; case: ifP => //= A; case K: get_tm_hd => //[p]; eauto. Qed.
+  Proof. 
+    rewrite/bc; case: ifP => //= A.
+    case : fresh_rules => //= fc r.
+    case S: select => -[??]; subst.
+    have [p pP H] := selectP S.
+    by exists p.
+  Qed.
 
   Lemma check_tmFP sig s q: check_tm sig s q = Some (b (d Func)) -> is_func (check_tm sig s q).
   Proof. by move=> ->. Qed.
@@ -1419,48 +1307,62 @@ Section check.
       case X: bc => [fv' [//|x xs]].
       rewrite-X mut_exclP//.
       have [p H] :=bc_is_p X.
-      apply: call_is_det_tm_is_det H CT.
+      by apply: call_is_det_tm_is_det.
     rewrite/bc; set QUERY := deref s c in CT *.
     case AS: acyclic_sigma => //=.
-    case TH: get_tm_hd => [p|]//=.
-    case: fndP => //= ppr.
     rewrite !push/=.
-    case: pr ME CR CT ppr => /= rs sig; rewrite/check_rules/= => ME CR CD ppr.
+    (* case TH: get_tm_hd => [p|]//=. *)
+    (* case: fndP => //= ppr. *)
+    (* rewrite !push/=. *)
+    case: pr ME CR CT => /= rs sig; rewrite/check_rules/= => ME CR CD.
     move: CD; rewrite/check_tmF/is_func.
     case C: check_tm => [[[|[]]|]|]//= _.
     move: ME; rewrite/mut_excl push/= => /andP[GM _].
     elim: rs CR => //= -[hd bo] rs IH /= /andP[H1 H2].
     rewrite !push/=.
-    case: ifP => //= Hh; first by apply: IH.
+    (* case: ifP => //= Hh; first by apply: IH. *)
     rewrite !head_fresh_rule/=.
     set FR := fresh_rules _ _ in IH *.
     set R := rename FR.1 _ _.
     case H: H => [s'|]; last by apply: IH.
-    rewrite !push/= IH// andbT.
+    rewrite !push/= {}IH// andbT.
     rewrite/deref_pair/=/fresh_rule!push/= -/R.
-    move: Hh; rewrite head_fresh_rule/= -/FR-/R eq_sym => /eqP Hh {IH}.
-    move: H1; rewrite/check_rule.
-    have {}Hh := (proj1 (callable_rename _ _ _ _) Hh).
-    rewrite Hh in_fnd /tm_is_det Hh in_fnd /=.
-    have {}GM := forallP GM [`ppr]; rewrite valPE// in GM.
-    have:= call_is_det_tm_is_det TH (check_tmFP C).
-    rewrite/tm_is_det TH in_fnd => ->/=.
-    move: H2.
-    move=> + /(check_atoms_fresh_rename FR.1).
+    move: H1; rewrite/check_rule push.
+
+    (* move: Hh; rewrite head_fresh_rule/= -/FR-/R eq_sym => /eqP Hh. *)
+    (* move: H1; rewrite/check_rule. *)
+    (* have {}Hh := (proj1 (callable_rename _ _ _ _) Hh). *)
+    (* rewrite Hh in_fnd /tm_is_det Hh in_fnd /=. *)
+    (* have {}GM := forallP GM [`ppr]; rewrite valPE// in GM. *)
+    have [/esym QR _ [p[pP Qp E]]] := HP H.
+    have:= call_is_det_tm_is_det (check_tmFP C).
+    rewrite/tm_is_det Qp in_fnd => Dq.
+    rewrite Qp in QR.
+    rewrite (proj1 (callable_rename _ _ _ _) QR) in_fnd Dq/=.
+
+    (* move=> /(_ FR.1 empty); rewrite -/R. -QR.
+    havecallable_rename.
+    Search get_tm_hd rename.
+    (* rewrite/tm_is_det TH in_fnd => ->/=. *)
+    (* move: H2. *)
+    move:  *)
+    move=> /(check_atoms_fresh_rename FR.1).
     move: H.
     set RT := rename _ _ _.
     set FA := fresh_atoms _ _ _.
-    set Q := flatten_term _.
-    set H' := flatten_term _ => H H1 Hx.
-    apply: det_check_H Hx (relSS0 _ _) H => //.
+    move=> H CA.
+    apply: det_check_H CA _ H => //.
     - admit. 
-    - apply: fdisjointWr (vars_tms_flatten_term _) (fdisjointWl (vars_tms_flatten_term _) _).
+    - admit.
+    - by rewrite C.
+    - by rewrite relSS0.
+    (* - apply: fdisjointWr (vars_tms_flatten_term _) (fdisjointWl (vars_tms_flatten_term _) _).
       apply: fdisjointWl; last first.
         rewrite fdisjoint_sym; apply vars_tm_rename_disjoint.
       by apply/fsubset_trans/fresh_rules_sub; rewrite// fsubsetU// fsubsetUr.
     - by apply: fdisjointWr (get_input_vars_sub _ _) (acyclic_deref_disjoint _ _).
-    - by rewrite (check_tm_check_args _ _ C).
-  Qed.
+    - by rewrite (check_tm_check_args _ _ C). *)
+  Admitted.
 
   Print Assumptions det_check_bc.
   
