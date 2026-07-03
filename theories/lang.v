@@ -860,6 +860,15 @@ Proof.
   by clear => md tf ta; apply: eat_ty_arr.
 Qed.
 
+Lemma selectP u sP t1 s rs fv x xs: select u sP t1 rs s = (fv, (x::xs)) -> 
+  exists2 p, p \in sP & get_tm_hd t1 = inl p.
+Proof.
+  elim: rs fv x xs => //=r rs IH fv x xs.
+  case H: H => [[[ty s'] fv']|]//; last by apply: IH.
+  case S: select => [fv'' [|y ys]][???]; subst; last apply: IH S.
+  have [_ _ [p[pP {}H _]]] := HP H.
+  by exists p => //.
+Qed.
 
 Lemma H_same_ty u sP fv1 fv2 f f1 f2 s1 s2 r1 r2:
   H u sP fv1 f f1 s1 = Some r1 ->
