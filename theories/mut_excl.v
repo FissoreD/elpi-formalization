@@ -64,6 +64,8 @@ Section mut_excl.
   Definition all_out := all_mode output.
   Definition all_inp := all_mode input.
 
+  Definition arri t := if t is _ --i--> _ then true else false.
+
   Fixpoint good_mode m :=
     match m with
     | b _ => true
@@ -155,31 +157,33 @@ Proof.
   by rewrite not_in_deref//.
 Qed.
 
-Lemma eat_ty_inp n t m t1 t2 t3:
+Lemma eat_ty_inp n t m t1 t2:
+  eat_ty n t = Some (arr m t1 t2) ->
   good_mode t ->
-  eat_ty n t = Some (arr m t1 (arr input t2 t3)) ->
+  arri t2 ->
   m = input.
 Proof.
-  elim: n t m t1 t2 t3 => [[//|]|n IH]//=.
-    by move=> m ?? m' > + [???]; subst; case: m' => //.
-  by move=> [|[]]//= _ s m t1 t2 t3 /all_out_good_mode; apply: IH.
+  elim: n t m t1 t2 => [[//|]|n IH]//=.
+    by move=> ??? m ? t [???]; subst; case: m => //=; case: t => //=[[]]//.
+  by move=> [|[]]//= _ s m t1 t2 + /all_out_good_mode ; apply: IH.
 Qed.
 
-Lemma H_all_inp_v2 sP v1 t1 t2 tf tr s1 s2 v2:
+Lemma H_all_inp_v2 sP v1 t1 t2 s1 r:
   good_modes sP ->
-  H u sP v1 t1 t2 s1 = Some (tf --i--> tr, s2, v2) -> v2 = v1 `|` vars_tm t1.
+  H u sP v1 t1 t2 s1 = Some r ->
+  arri r.1.1 -> r.2 = v1 `|` vars_tm t1.
 Proof.
   move=> GM.
-  elim: t1 t2 s1 s2 v1 v2 tf tr => [p|//|//|f Hf a _] [p'|//|//|f' a']//= s1 s2 v1 v2 tf tr.
-    case: eqP => //=; case: fndP => //=pP _ [H ??]; subst.
+  elim: t1 t2 s1 v1 r => [p|//|//|f Hf a _] [p'|//|//|f' a']//= s1 v1 r.
+    case: eqP => //=; case: fndP => //=pP _ [<-]//=.
     by rewrite fsetU0.
   case H: H => [[[[|m tf' tr'] s1' v1']]|]//=.
-  case I:  (_ s1') => //= -[???]; subst.
+  case I:  (_ s1') => //=[r'][<-]{r}/= AI.
   have /=[hff' aff' [p[pP H1 E]]] := HP H.
   have := forallP GM [`pP]; rewrite valPE => {}GM.
-  have ? := eat_ty_inp GM E; subst => /=.
+  have ? := eat_ty_inp E GM AI; subst => /=.
   simpl in I.
-  have ? := Hf _ _ _ _ _ _ _ H; subst.
+  have /=? := Hf _ _ _ _ H isT; subst.
   by rewrite fsetUA.
 Qed.
 
@@ -187,39 +191,82 @@ Lemma fdisjoint_rem (K: choiceType) (qa qf:{fset K}) :
   (qa `\` qf) # qf.
 Proof. by apply/fdisjointP => k; rewrite !inE => /andP[]. Qed.
 
-Lemma H_all_inp sP v1 query head tf tr s1 s2 v2:
+Lemma H_deref_eq sP fv q hd s1 r:
+  acyclic_sigma s1 ->
+    H u sP fv q hd s1 = Some r ->
+      deref r.1.2 (deref s1 q) = deref r.1.2 (deref s1 hd).
+Proof.
+  elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|//|f' a']// s1 r.
+    by case: eqP => //-> A; case: fndP => //.
+  move=> A.
+  case H: H => [[[[|m tl tr] s1'] fv']|]//=.
+  have /={}Hf := (Hf _ _ _ _ A H).
+  case X: (_ s1') => //= [sx][?]; subst => /=.
+  have /= A' := acyclic_sigma_H A H.
+  f_equal; last first.
+    admit.
+  admit.
+Admitted.
+
+Lemma xx sP fv t1 t2 s r:
+  good_modes sP ->
+  fdisjoint (domf s) (vars_tm t1) ->
+  fdisjoint (vars_tm t1) (vars_tm t2) ->
+  H u sP fv t1 t2 s = Some r ->
+  arri r.1.1 ->
+  domf r.1.2 `<=` domf s `|` (vars (deref s t2) `\` r.2).
+Proof.
+  move=> GM.
+  elim: t1 t2 s r => //[p|f Hf a _] [p'|//|//|f' a']//= s r.
+    by case: eqP => //-> _ _; case: fndP => //=pP[<-]//=; rewrite fset0D fsetU0.
+  rewrite fdisjointXU => /andP[sf sa].
+  case H: H => [[[[|m tf' tr'] sm] fv']|]//=.
+  rewrite fdisjointXU !fdisjointUX -!andbA => /and4P[ff af fa aa].
+  case I: (_ sm) => //=[r'][?]; subst.
+  have /=[hff haa [p'[pP hp E]]] := HP H.
+  move=> AI.
+  have ? := eat_ty_inp E (good_modes_in pP GM) AI; subst.
+  rewrite/= in I *.
+  have /=? := H_all_inp_v2 GM H isT; subst.
+  have /={}Hf := Hf _ _ _ sf ff H isT.
+  have Ha := matching_ext1 I.
+  apply: fsubset_trans Ha _.
+  rewrite fsubUset; apply/andP; split.
+    apply: fsubset_trans Hf _.
+    rewrite fsubUset fsubsetUl/=.
+    apply/fsubsetP => x; rewrite !inE => /andP[/norP[xv xf] xd].
+    rewrite (negbTE xf)/= xd/= andbT orbF.
+    case: (boolP (_ \in _)) => //= NS.
+    rewrite (negbTE xv)/=.
+    admit.
+  admit.
+Admitted.
+
+Lemma H_all_inp sP v1 query head s1 r:
   acyclic_sigma s1 ->
   good_modes sP ->
+  fdisjoint (domf s1) v1 ->
   fdisjoint (domf s1) (vars_tm query) ->
   fdisjoint (vars_tm query) (vars_tm head) ->
-  H u sP v1 query head s1 = Some (tf --i--> tr, s2, v2) ->
-  matching (v1 `|` v2) head query s1 = Some s2.
+  (* fdisjoint (vars_sigma s1) (vars_tm head) -> *)
+  H u sP v1 query head s1 = Some r -> arri r.1.1 ->
+  matching r.2 head query s1.
 Proof.
-  move=> + GM.
-  elim: query head s1 s2 v1 v2 tf tr => [p|//|//|qf Hf qa _] [p'|//|//|hf ha]//= s1 s2 v1 v2 tf tr Ac.
-    by case: eqP => //<- _ _; case: fndP => //= pP [_ <- _]; rewrite matching_refl.
-  case H: H => [[[[|m tf' ta'] s1'] v1']|]//=.
-  rewrite !fdisjointUX !fdisjointXU -!andbA.
-  move=> /andP[s1f s1a].
-  move=> /and4P[ff' fa' af' aa'].
-  case I: (_ s1') => [r|]//= [???]; subst.
-  have [Hh Ha [p[pP fp A]]] := HP H.
-  have:= forallP GM [`pP]; rewrite valPE => GM'.
-  have ?:= eat_ty_inp GM' A; subst.
-  have {Hf} M1 := Hf _ _ _ _ _ _ _ Ac s1f ff' H.
-  rewrite/= in I *.
-  have ? := H_all_inp_v2 GM H; subst.
-  rewrite !fsetUA fsetUid in M1 *.
-  case: (boolP (hf == qf)) => /eqP hfqf; subst.
-    rewrite /matching/montanari_deref/montanari_pair in I.
-    move: M1; rewrite matching_refl => -[?]; subst.
-    rewrite /matching/montanari_deref/montanari_pair 2!montanari_equation/=.
-    rewrite montanari_equation eqxx I.
-    case: eqP => //=-[D].
-    by move: I; rewrite 2!montanari_equation/= D eqxx.
-  
-  have:= matching_ext1 M1.
-Admitted.
+  move=> A GM sv sq qh H AI.
+  rewrite/matching/montanari_deref/montanari_pair.
+  apply: exists_montanari => //.
+    by rewrite disjoint_L_deref.
+  exists r.1.2; split => //.
+    by apply: acyclic_sigma_H H.
+    by rewrite/= andbT; apply/eqP/esym/(H_deref_eq _ H).
+  (* rewrite fsetUA fsetUid. *)
+  have Hx := xx GM sq qh H AI.
+  apply: fdisjointWl Hx _.
+  rewrite fdisjointUX fdisjoint_rem andbT.
+  have R2 := H_all_inp_v2 GM H AI.
+  by rewrite R2 fdisjointXU sv.
+  (* rewrite !fdisjointUX ?fdisjoint_rem andbT !fdisjointXU sq. *)
+Qed.
 
 (* Definition get_sigP f sP t :=
   get_tm_hd  *)
@@ -232,6 +279,8 @@ Admitted.
 Lemma SHS sP fv1 fv2 query hd2 hd1 (s1 s2:Sigma):
   good_modes sP ->
   acyclic_sigma s1 -> acyclic_sigma s2 ->
+  domf s2 # fv2 ->
+  domf s1 # fv1 ->
   [disjoint vars_sigma s1 & vars_tm hd2] -> 
   [disjoint vars_sigma s2 & vars_tm hd1] -> 
   [disjoint vars_tm hd1 & vars_tm hd2] ->
@@ -246,7 +295,8 @@ Proof.
   move=> GM.
   elim: query fv1 fv2 hd1 hd2 s1 s2 => //=[p|f Hf a _];
   move=> fv1 fv2 [p1|d1|v1|f1 a1]//[p2|d2|v2|f2 a2]//=  s1 s2 A1 A2.
-    by move=> _ _ _ _ _ _ _; case: eqP => //<-; case: eqP =>//; case: fndP.
+    move=> _ _ _ _ _ _ _ _ _; case: eqP => // <-; case: eqP => //->; case: fndP => //=.
+  move=> d2f2 s1f1.
   rewrite 2!fdisjointXU => /andP[V1 V2] /andP[V3 V4].
   rewrite ?fdisjointUX !fdisjointXU.
   move=> /andP[/andP[f1f2 f1a2] /andP[a1f2 a1a2]].
@@ -257,7 +307,7 @@ Proof.
   move=> /andP[s2f s2a] .
   case H1 : H => //=[[[[//|m1 tf1 ta1] s1' fv1']]].
   case H2 : H => //=[[[[//|m2 tf2 ta2] s2' fv2']]].
-  have {Hf} := Hf _ _ _ _ _ _ A1 A2 V1 V3 f1f2 ff1 ff2 s1f s2f (isSomeP H1) (isSomeP H2).
+  have {Hf} := Hf _ _ _ _ _ _ A1 A2 d2f2 s1f1 V1 V3 f1f2 ff1 ff2 s1f s2f (isSomeP H1) (isSomeP H2).
   case HH: H_head => //=[ty'] _.
   have [hh1 ha1 [p[pP hf1 he]]] := HP H1.
   have:= HP H2.
@@ -271,16 +321,19 @@ Proof.
   rewrite -ha1 (bool_irrelevance pP' pP) he => -[?]; subst.
   rewrite ifT => //.
   case: m2 I1 I2 H1 H2 he HH => //= _ _ H1 H2 he HH.
-  have ->// : unify f1 f2 empty.
   have:= forallP GM [`pP]; rewrite valPE => GM'.
+  have /= := H_all_inp A2 GM d2f2 s2f ff2 H2 isT.
+  have /= := H_all_inp A1 GM s1f1 s1f ff1 H1 isT.
+  apply: matching_unify_trans => //.
+  (* Search (?A # ?B = ?B # ?A). *)
   (* have: codom_vars s1 # vars_tm f1. *)
-  have:= isSomeP (H_all_inp A2 GM s2f ff2 H2).
-  have:= isSomeP (H_all_inp A1 GM s1f ff1 H1).
-  apply: matching_unify_trans => //=.
+  (* have:= H_all_inp A2 GM s2f _ (isSomeP H2). *)
+  (* have:= H_all_inp fset0 A1 GM s1f ff1 (isSomeP H1). *)
+  (* apply: matching_unify_trans A1 A2 f1f2 s1f s2f V1 V3 _ _ _ _ _ _. *)
     by rewrite fdisjoint_sym.
     by rewrite fdisjoint_sym.
-    by have ? := H_all_inp_v2 GM H1; subst; rewrite fsubsetU// fsubsetUr orbT.
-  by have ? := H_all_inp_v2 GM H2; subst; rewrite fsubsetU// fsubsetUr orbT.
+    by have /=? := H_all_inp_v2 GM H1 isT; subst; rewrite fsubsetUr.
+  by have /=? := H_all_inp_v2 GM H2 isT; subst; rewrite /= fsubsetUr.
 Qed.
 
 Lemma vars_tm_take_sub n a: vars_tms (take n a) `<=` vars_tms a.
@@ -318,6 +371,7 @@ Proof. by []. Qed.
 Lemma HSH sP fv rules hd query s: 
   good_modes sP ->
   acyclic_sigma s ->
+  domf s # fv ->
   [disjoint domf s & vars_tm query] ->
   [disjoint vars_tm hd & v_prog rules] ->
   [disjoint vars_tm query & v_prog rules] ->
@@ -329,18 +383,18 @@ Lemma HSH sP fv rules hd query s:
   (select u sP query rules s).2 = [::].
 Proof.
   move=> GM.
-  elim: rules query s hd fv => //=-[hd bo] rs IH/= query s h' fv AS D.
+  elim: rules query s hd fv => //=-[hd bo] rs IH/= query s h' fv AS sv D.
   rewrite !v_prog_cons /varsU_rhead /varsU_rprem/=.
   rewrite !fdisjointXU -!andbA => /and3P[hh' hb' hr'] /and3P[ch cb cr] ch' ++ H1.
   move=> /and3P[Dh Db Dr] Dh'.
   (* case:eqP => //=; last by move=> _; apply:IH. *)
   (* move=> /esym Hd. *)
   case HH: H_head => //= S1.
-  have {S1} IH := IH _ _ _ _ AS D hr' cr ch' Dr Dh' H1 S1.
+  have {S1} IH := IH _ _ _ _ AS sv D hr' cr ch' Dr Dh' H1 S1.
   case H2: H => [[[ty s' fv']]|]//{IH}.
   have {}HH := isNoneP HH.
-  exfalso; apply: negP HH; rewrite negbK.
-  by apply: SHS H1 (isSomeP H2).
+  exfalso; apply: negP HH; rewrite negbK. 
+  by apply: SHS H1 (isSomeP H2); rewrite//fdisjointX0.
 Qed.
 
 Lemma flatten_term_ren z q:
@@ -512,6 +566,7 @@ Proof.
   have /(_  (vars_sigma s1 `|` vars_tm (deref s1 c) `|` fv)) := select_head_ren (fsubset_refl _) (fsubset_refl _) S.
   rewrite -/FRS2-/FC2 => HS.
   apply: HSH (isSomeP H) HS => //=.
+  - by rewrite fdisjointX0.
   - by apply: acyclic_deref_disjoint.
   - by apply: disjoint_varsU.
   - by apply/fdisjointWl/disjoint_varsU1; rewrite fsubsetU// fsubsetUr.
