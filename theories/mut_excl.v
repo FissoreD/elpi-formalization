@@ -73,6 +73,10 @@ Section mut_excl.
 
   Definition good_modes (s: sigT) := [forall x : domf s, good_mode s.[valP x]].
 
+  Lemma good_modes_in p sP (pP: p  \in domf sP):
+    good_modes sP -> good_mode sP.[pP].
+  Proof. by move=> GM; have:= forallP GM [`pP]; rewrite valPE. Qed.
+
   Definition mut_excl pr :=
     let: (fv, rules) := fresh_rules fset0 pr.(rules) in
     good_modes pr.(sig) && mut_excl_aux pr.(sig) rules.
@@ -179,26 +183,42 @@ Proof.
   by rewrite fsetUA.
 Qed.
 
-Lemma H_all_inp sP v1 t1 t2 tf tr s1 s2 v2:
-  fdisjoint (vars_tm t1) (vars_tm t2) ->
+Lemma fdisjoint_rem (K: choiceType) (qa qf:{fset K}) :
+  (qa `\` qf) # qf.
+Proof. by apply/fdisjointP => k; rewrite !inE => /andP[]. Qed.
+
+Lemma H_all_inp sP v1 query head tf tr s1 s2 v2:
+  acyclic_sigma s1 ->
   good_modes sP ->
-  H u sP v1 t1 t2 s1 = Some (tf --i--> tr, s2, v2) ->
-  matching (v1 `|` v2) t2 t1 s1 = Some s2.
+  fdisjoint (domf s1) (vars_tm query) ->
+  fdisjoint (vars_tm query) (vars_tm head) ->
+  H u sP v1 query head s1 = Some (tf --i--> tr, s2, v2) ->
+  matching (v1 `|` v2) head query s1 = Some s2.
 Proof.
   move=> + GM.
-  elim: t1 t2 s1 s2 v1 v2 tf tr => [p|//|//|f Hf a _] [p'|//|//|f' a']//= s1 s2 v1 v2 tf tr.
-    case: eqP => //<- _; case: fndP => //= pP [_ <- _].
-    admit.
+  elim: query head s1 s2 v1 v2 tf tr => [p|//|//|qf Hf qa _] [p'|//|//|hf ha]//= s1 s2 v1 v2 tf tr Ac.
+    by case: eqP => //<- _ _; case: fndP => //= pP [_ <- _]; rewrite matching_refl.
   case H: H => [[[[|m tf' ta'] s1'] v1']|]//=.
-  rewrite fdisjointUX !fdisjointXU -!andbA => /and4P[ff' fa' af' aa'].
+  rewrite !fdisjointUX !fdisjointXU -!andbA.
+  move=> /andP[s1f s1a].
+  move=> /and4P[ff' fa' af' aa'].
   case I: (_ s1') => [r|]//= [???]; subst.
   have [Hh Ha [p[pP fp A]]] := HP H.
   have:= forallP GM [`pP]; rewrite valPE => GM'.
   have ?:= eat_ty_inp GM' A; subst.
-  have {Hf} M1 := Hf _ _ _ _ _ _ _ ff' H.
+  have {Hf} M1 := Hf _ _ _ _ _ _ _ Ac s1f ff' H.
   rewrite/= in I *.
   have ? := H_all_inp_v2 GM H; subst.
   rewrite !fsetUA fsetUid in M1 *.
+  case: (boolP (hf == qf)) => /eqP hfqf; subst.
+    rewrite /matching/montanari_deref/montanari_pair in I.
+    move: M1; rewrite matching_refl => -[?]; subst.
+    rewrite /matching/montanari_deref/montanari_pair 2!montanari_equation/=.
+    rewrite montanari_equation eqxx I.
+    case: eqP => //=-[D].
+    by move: I; rewrite 2!montanari_equation/= D eqxx.
+  
+  have:= matching_ext1 M1.
 Admitted.
 
 (* Definition get_sigP f sP t :=
@@ -212,8 +232,6 @@ Admitted.
 Lemma SHS sP fv1 fv2 query hd2 hd1 (s1 s2:Sigma):
   good_modes sP ->
   acyclic_sigma s1 -> acyclic_sigma s2 ->
-  (* TODO: aggiungere ipotesi sui modi: la testa ha solo input *)
-  (* all (eq_op input) m -> *)
   [disjoint vars_sigma s1 & vars_tm hd2] -> 
   [disjoint vars_sigma s2 & vars_tm hd1] -> 
   [disjoint vars_tm hd1 & vars_tm hd2] ->
@@ -221,8 +239,6 @@ Lemma SHS sP fv1 fv2 query hd2 hd1 (s1 s2:Sigma):
   [disjoint vars_tm query & vars_tm hd2] ->
   [disjoint domf s1 & vars_tm query] ->
   [disjoint domf s2 & vars_tm query] ->
-  (* vars_tm query `<=` fv1 -> *)
-  (* vars_tm query `<=` fv2 -> *)
   H u sP fv1 query hd1 s1 ->
   H u sP fv2 query hd2 s2 ->
   H_head u sP hd1 hd2.
@@ -257,42 +273,15 @@ Proof.
   case: m2 I1 I2 H1 H2 he HH => //= _ _ H1 H2 he HH.
   have ->// : unify f1 f2 empty.
   have:= forallP GM [`pP]; rewrite valPE => GM'.
-  have:= isSomeP (H_all_inp ff2 GM H2).
-  have:= isSomeP (H_all_inp ff1 GM H1).
+  (* have: codom_vars s1 # vars_tm f1. *)
+  have:= isSomeP (H_all_inp A2 GM s2f ff2 H2).
+  have:= isSomeP (H_all_inp A1 GM s1f ff1 H1).
   apply: matching_unify_trans => //=.
     by rewrite fdisjoint_sym.
     by rewrite fdisjoint_sym.
     by have ? := H_all_inp_v2 GM H1; subst; rewrite fsubsetU// fsubsetUr orbT.
   by have ? := H_all_inp_v2 GM H2; subst; rewrite fsubsetU// fsubsetUr orbT.
 Qed.
-
-Fixpoint size_input m :=
-  match m with
-  | input :: m => (size_input m).+1
-  | _ => 0
-  end.
-
-Definition tk_input T m := @take T (size_input m).
-
-(* Lemma H_sublist fv n m q h s: H u fv m q h s -> H u fv (take n m) (take n q) (take n h) s.
-Proof.
-  elim: n m q h s => [|n IH] m q h s; first by rewrite !take0.
-  case: m => [|m ms]; case: q => [|q qs]; case: h => [|h hs]//=.
-  case: m => //=.
-    case M: matching => //=[s']; auto.
-  case U: unify => //=[s']; auto.
-Qed. *)
-
-(* Lemma H_head_all_out u m q h: all_out m -> H_head u m q h.
-Proof. elim: m q h => //=-[]//=m IH [//|_ l] [//|_ l']; apply: IH. Qed. *)
-
-(* Lemma H_head_sublist m q h: good_mode m -> 
-  H_head u (tk_input m m) (tk_input m q) (tk_input m h) -> H_head u m q h.
-Proof.
-  elim: m q h => // -[] ms IH q h/=; last first.
-    by move=> /H_head_all_out; case: q => //; case: h => // _ l1 _ l2 _.
-  by case: q => //= q qs; case: h => //= h hs gm/andP[-> /IH ->]//.
-Qed. *)
 
 Lemma vars_tm_take_sub n a: vars_tms (take n a) `<=` vars_tms a.
 Proof.  
@@ -319,15 +308,6 @@ Proof.
   elim: n b {H} => [|n IH] b; first by rewrite take0.
   by case: b => //=x xs; rewrite !vars_tms_cons; apply/fsetUS/IH.
 Qed.
-
-(* Lemma get_input_vars_sub m t : good_mode m ->
-  vars_tms (take (size_input m) t) = get_input_vars m t.
-Proof.
-  elim: m t => //=[|m ms IH] t; first by rewrite take0.
-  case: m; case: t => //= x xs; last first.
-    by move=> /[dup] /all_out_good_mode/IH<-/all_out_size_input->; rewrite take0.
-  rewrite vars_tms_cons => /IH ->//.
-Qed. *)
 
 Definition v_prog pr := varsU (map varsU_rule pr).
 
@@ -357,24 +337,10 @@ Proof.
   (* move=> /esym Hd. *)
   case HH: H_head => //= S1.
   have {S1} IH := IH _ _ _ _ AS D hr' cr ch' Dr Dh' H1 S1.
-  case H2: H => [[[ty s' fv']]|]//{IH}; apply isSomeP in H2.
+  case H2: H => [[[ty s' fv']]|]//{IH}.
   have {}HH := isNoneP HH.
   exfalso; apply: negP HH; rewrite negbK.
-  by apply: SHS H1 H2.
-  (* apply: H_head_sublist (GM) _.
-  have H1' := H_sublist (size_input m) H1.
-  have H2' := H_sublist (size_input m) H2.
-  apply: SHS H1' H2' => //.
-  - by apply/good_mode_take_inp.
-  - by apply: disjoint_taker; apply: fdisjoint_ftr _.
-  - by apply: disjoint_taker.
-  - by apply: disjoint_take2; apply: fdisjoint_ftr.
-  - by apply: disjoint_take2.
-  - by apply: disjoint_take2; apply: fdisjoint_ftr _.
-  - by apply/disjoint_taker.
-  - by apply/disjoint_taker.
-  - by rewrite get_input_vars_sub.
-  - by rewrite get_input_vars_sub. *)
+  by apply: SHS H1 (isSomeP H2).
 Qed.
 
 Lemma flatten_term_ren z q:
@@ -566,14 +532,13 @@ Definition all_cut p :=  all_rs_cut (rules p).
 Lemma all_all_but_last {T} P (L: seq T) : all P L -> all_but_last P L.
 Proof. by elim: L => //= x xs IH /andP[->/IH->]; case: xs {IH}. Qed.
 
-Lemma all_cut_select_head p t m rs fv:
+Lemma all_cut_select_head sP t rs fv:
   all_rs_cut rs ->
-  all_rs_cut (select_head u p t m (fresh_rules fv rs).2).
+  all_rs_cut (select_head u sP t (fresh_rules fv rs).2).
 Proof.
-  elim: rs m fv p t => //=[[hd bo]]/= rs IH m fv p t /andP[H1 H2].
-  rewrite !push/= head_fresh_rule; case:eqP => //=; last by eauto.
-  case:ifP => //=; eauto.
-  rewrite premises_fresh_rule/= has_cut_seq_fresh H1; eauto.
+  elim: rs fv t => //=[[hd bo]]/= rs IH fv t /andP[H1 H2].
+  rewrite !push/= head_fresh_rule/=; case: ifP; last by eauto.
+  by rewrite/= premises_fresh_rule IH//has_cut_seq_fresh /= H1.
 Qed.
 
 Lemma all_cut_mut_excl p: good_modes p.(sig) -> all_cut p -> mut_excl u p.
@@ -583,14 +548,11 @@ Proof.
   elim => //= [[hd bo]] rs/= IH; rewrite !push/=.
   move=> /andP[HBO] H; rewrite IH// andbT.
   rewrite/fresh_rule !push/=/mut_excl_head/=.
-  case tm: get_tm_hd => //=[p]; case: fndP => //= kp.
-  (* rewrite push. *)
-  case: ifP => // ds.
+  case X: tm_is_det => //=.
   set R1 := lang.rename _ _ _.
   case S: select_head => //=[r' rs'].
   rewrite has_cut_seq_fresh HBO/=.
-  set X := lang.rename (fresh_rules fset0 rs).1 hd empty.
-  have:= all_cut_select_head p (flatten_term R1.2) (flatten_mode s.[kp]) fset0 H.
+  have:= all_cut_select_head s R1.2 fset0 H.
   by rewrite S/= => /andP[->/all_all_but_last->]; destruct rs'.
 Qed.
 
