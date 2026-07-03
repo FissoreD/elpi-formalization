@@ -259,23 +259,13 @@ Proof.
   exists r.1.2; split => //.
     by apply: acyclic_sigma_H H.
     by rewrite/= andbT; apply/eqP/esym/(H_deref_eq _ H).
-  (* rewrite fsetUA fsetUid. *)
   have Hx := xx GM sq qh H AI.
   apply: fdisjointWl Hx _.
   rewrite fdisjointUX fdisjoint_rem andbT.
   have R2 := H_all_inp_v2 GM H AI.
   by rewrite R2 fdisjointXU sv.
-  (* rewrite !fdisjointUX ?fdisjoint_rem andbT !fdisjointXU sq. *)
 Qed.
 
-(* Definition get_sigP f sP t :=
-  get_tm_hd  *)
-
-(* TODO: refactor this lemma: 
-   prove an auxiliary lemma saying that H a b -> H a c -> H b c
-   under some conditions of about disjointness
-   then prove that H a b -> H_head a b
-*)
 Lemma SHS sP fv1 fv2 query hd2 hd1 (s1 s2:Sigma):
   good_modes sP ->
   acyclic_sigma s1 -> acyclic_sigma s2 ->
@@ -325,11 +315,6 @@ Proof.
   have /= := H_all_inp A2 GM d2f2 s2f ff2 H2 isT.
   have /= := H_all_inp A1 GM s1f1 s1f ff1 H1 isT.
   apply: matching_unify_trans => //.
-  (* Search (?A # ?B = ?B # ?A). *)
-  (* have: codom_vars s1 # vars_tm f1. *)
-  (* have:= H_all_inp A2 GM s2f _ (isSomeP H2). *)
-  (* have:= H_all_inp fset0 A1 GM s1f ff1 (isSomeP H1). *)
-  (* apply: matching_unify_trans A1 A2 f1f2 s1f s2f V1 V3 _ _ _ _ _ _. *)
     by rewrite fdisjoint_sym.
     by rewrite fdisjoint_sym.
     by have /=? := H_all_inp_v2 GM H1 isT; subst; rewrite fsubsetUr.
