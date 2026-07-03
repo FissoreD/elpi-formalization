@@ -451,6 +451,13 @@ Lemma disjoint_L_cons s x xs:
     & disjoint_L s xs].
 Proof. by case: x => [t1 t2]; rewrite/disjoint_L/= !fdisjointXU andbA. Qed.
 
+Lemma disjoint_L0 s: disjoint_L s [::].
+Proof. by rewrite/disjoint_L/= fdisjointX0. Qed.
+
+Lemma disjoint_L_deref s h q0: acyclic_sigma s ->
+  disjoint_L s [:: (deref s h, deref s q0)].
+Proof. by move=> A; rewrite disjoint_L_cons/= !acyclic_deref_disjoint// disjoint_L0. Qed.
+
 Lemma disjoint_L_set s v t l: v \notin vars t ->
   [disjoint domf s & vars t] -> disjoint_L s l ->
   disjoint_L (deref_sigma v t s) (deref_list v t l).
@@ -672,6 +679,15 @@ Proof.
     by have:= IH _ A _ M; rewrite disjoint_L_cons/= D2 D1 => /(_ D3).
 Qed.
 
+Lemma matching_extP s s' b t1 t2:
+  acyclic_sigma s -> matching b t1 t2 s = Some s' ->
+  exists2 sm : Sigma, 
+    acyclic_sigma sm /\ fdisjoint (domf s) (vars_sigma sm) & s' = sm + deref_sig2 sm s.
+Proof.
+  move=> A; rewrite/matching/montanari_deref/montanari_pair.
+  by move=> /(montanari_extP A (disjoint_L_deref _ _ A)).
+Qed.
+
 Lemma montanari_ext b l s s': montanari s b l = Some s' -> domf s `<=` domf s'.
 Proof.
   move: s'; montanari_ind s b l => s'//; try by apply: IH.
@@ -761,9 +777,6 @@ Proof. by move=> /montanari_ext1; rewrite varsL_cons varsL0 fsetU0 //. Qed.
 Lemma matching_ext1 fv t1 t2 s s' : 
   matching fv t1 t2 s = Some s' -> domf s' `<=` domf s `|` ((vars (deref s t1)  `|` vars (deref s t2) ) `\` fv).
 Proof. apply/montanari_deref_ext1. Qed.
-
-Lemma disjoint_L0 s: disjoint_L s [::].
-Proof. by rewrite/disjoint_L/= fdisjointX0. Qed.
 
 Lemma matching_ext3 fv t1 t2 s s' : acyclic_sigma s ->
   matching fv t1 t2 s = Some s' -> vars_sigma s' `<=` vars_sigma s `|` vars_tm t1 `|` vars_tm t2.
@@ -1971,18 +1984,18 @@ Proof.
   apply/fdisjointP/kg/H.
 Qed.
 
-Lemma acyclic_sigma_H sP fv q hd s1 s2 ty fv':
+Lemma acyclic_sigma_H sP fv q hd s1 r:
   acyclic_sigma s1 ->
-    H u sP fv q hd s1 = Some (ty, s2, fv') ->
-      acyclic_sigma s2.
+    H u sP fv q hd s1 = Some r ->
+      acyclic_sigma r.1.2.
 Proof.
-  elim: q fv hd s1 s2 ty fv' => //=[p|f Hf a Ha] fv [p'|//|//|f' a']// s1 s2 ty fv'.
-    by case: eqP => //= _ A; case: fndP => //=pP [_<-].
+  elim: q fv hd s1 r => //=[p|f Hf a Ha] fv [p'|//|//|f' a']// s1 r.
+    by case: eqP => //= _ A; case: fndP => //=pP[<-].
   move=> A.
   case H: H => [[[[|[] tyl tyr] s1'] fv'']|]//=.
-    case M: matching => //= [s1''][???]; subst.
+    case M: matching => //= [s1''][?]; subst.
     by apply: matching_acyclic M; apply: Hf H.
-  case M: unify => //= [s1''][???]; subst.
+  case M: unify => //= [s1''][?]; subst.
   by apply: unif_acyclic M; apply: Hf H.
 Qed.
 
@@ -1994,7 +2007,7 @@ Proof.
   elim: rules query s1 e => //= -[hd bo] rs IH query s1 e AS/=.
   case H: H => [[[ty s1' fv]]|]; last by apply: IH.
   rewrite !push/= in_cons => /orP[/eqP?|]; subst; last by apply: IH.
-  by apply/acyclic_sigma_H/H.
+  by have := acyclic_sigma_H AS H.
 Qed.
 
 Lemma acyclic_sigma_bc s1 p v0 t:
@@ -2055,10 +2068,6 @@ Proof.
   - rewrite montanari_equation/= EQ.
     case: t1 H {EQ}; case: t2 => //=.
 Qed.
-
-Lemma disjoint_L_deref s h q0: acyclic_sigma s ->
-  disjoint_L s [:: (deref s h, deref s q0)].
-Proof. by move=> A; rewrite disjoint_L_cons/= !acyclic_deref_disjoint// disjoint_L0. Qed.
 
 Lemma matching_extend_froz f g s t1 t2: acyclic_sigma s -> 
   fdisjoint g (vars_tm (deref s t1)) -> fdisjoint g (vars_tm (deref s t2)) ->
