@@ -2056,6 +2056,49 @@ Proof.
   by rewrite 2!montanari_equation eqxx.
 Qed.
 
+Lemma eqV v v': Tm_V v == Tm_V v' = (v == v').
+Proof. do 2 case: eqP; congruence. Qed.
+
+Lemma montanari_less_frozen v1 v2 s l:
+  acyclic_sigma s -> disjoint_L s l ->
+  v1 `<=` v2 -> montanari s v2 l -> montanari s v1 l.
+Proof.
+  move: v2; montanari_ind s v1 l => fr' A + S.
+  - by rewrite montanari_equation.
+  - rewrite disjoint_L_cons montanari_equation eqxx => /and3P[st _ sl].
+    by apply: IH.
+  - rewrite !disjoint_L_cons/= !fdisjointXU -!andbA montanari_equation EQ.
+    move=> /and5P[sf1 sa1 sf2 sa2 sl]; apply: IH => //.
+    by rewrite !disjoint_L_cons/= sf1 sf2 sa1 sa2.
+  - by rewrite montanari_equation EQ vt.
+  - rewrite montanari_equation inE eqV (negbTE EQ).
+    by rewrite (fsubsetP S _ vf) (fsubsetP S _ v'f).
+  - rewrite disjoint_L_cons montanari_equation inE eqV (negbTE EQ).
+    rewrite (fsubsetP S _ vf); case: ifP => //= v'f' /and3P[sv sv' sl].
+    rewrite eq_sym in EQ.
+    apply: IH => //=.
+      by apply: acyclic_sigma_deref_sigma; rewrite//inE.
+    by apply: disjoint_L_set; rewrite//inE.
+  - rewrite montanari_equation EQ (negbTE vt) (fsubsetP S _ vf).
+    by destruct t.
+  - rewrite disjoint_L_cons montanari_equation EQ (negbTE vt)/=.
+    move=> /and3P[sv st sl].
+      case: ifP => //vf'; last first.
+        apply: IH => //.
+        by apply: acyclic_sigma_deref_sigma; rewrite//inE.
+      by apply: disjoint_L_set; rewrite//inE.
+    destruct t => //.
+    case: ifP => //; simpl in *.
+    admit.
+  - rewrite disjoint_L_cons montanari_equation EQ /= => /and3P[st sv sl].
+    suffices: montanari s fr' ((Tm_V v, t) :: l) -> montanari s v1 ((Tm_V v, t) :: l).
+      destruct t; auto.
+    by apply IH; rewrite // disjoint_L_cons sv st.
+  - rewrite montanari_equation EQ.
+    by destruct t1, t2.
+Abort.
+
+
 Module mgu.
   Definition mgum base general s :=  mp base general ->
       acyclic_sigma general -> domf s = domf general -> mp general s -> s = general.
