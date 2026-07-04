@@ -2,6 +2,27 @@ From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import tree tree_prop ctx tree_vars fresh unif.
 
+Section good_mode.
+  Fixpoint all_mode dfl m :=
+    match m with b _ => true | arr m _ r => (m == dfl) && all_mode dfl r end.
+
+  Definition all_out := all_mode output.
+  Definition all_inp := all_mode input.
+
+  Fixpoint good_mode m :=
+    match m with
+    | b _ => true
+    | arr input _ r => good_mode r
+    | arr output _ r => all_out r
+    end.
+
+  Definition good_modes (s: sigT) := [forall x : domf s, good_mode s.[valP x]].
+
+  Lemma good_modes_in p sP (pP: p  \in domf sP):
+    good_modes sP -> good_mode sP.[pP].
+  Proof. by move=> GM; have:= forallP GM [`pP]; rewrite valPE. Qed.
+End good_mode.
+
 Definition arri t := if t is _ --i--> _ then true else false.
 Definition arro t := if t is _ --o--> _ then true else false.
 
@@ -89,9 +110,7 @@ Section mut_excl.
   (* outputs are neutral for this function *)
   Fixpoint H_head (sP:sigT) (q : Tm) (h: Tm) : option S :=
   match q,h with
-  | Tm_P p, Tm_P p' => 
-    if p == p' then sP.[?p] 
-    else None
+  | Tm_P p, Tm_P p' => if p == p' then sP.[?p] else None
   | Tm_App f a, Tm_App f' a' =>
     if H_head sP f f' is Some (arr m _ r) then
       if (m == output) || lang.unify u f f' fmap0 then Some r
@@ -99,6 +118,30 @@ Section mut_excl.
     else None
   | _, _ => None
   end.
+
+  Fixpoint H_inp (sP:sigT) fv (q : Tm) (h: Tm) s : option (S * Sigma * fvS) :=
+    match q,h with
+    | Tm_P p, Tm_P p' => if p == p' then omap (fun x => (x, s, fv)) sP.[?p] else None
+    | Tm_App f a, Tm_App f' a' =>
+      if H_inp sP fv f f' s is Some (arr m _ r, s, fv) then
+        if m == input then
+          let fv := fv `|` vars_tm a in
+          omap (fun x => (r, x, fv)) (lang.matching u fv a' a s)
+        else Some (r, s, fv)
+      else None
+    | _, _ => None
+    end.
+
+  (* Lemma HH_inp sP fv q h s:
+    good_modes sP ->
+    H u sP fv q h s = Some r ->   
+    exists r', [/\ H_inp sP fv q h s = Some r' & exists n, eat_ty n r' = Some r.1.1].
+  Proof.
+    elim: q h fv s => //f Hf a _ [|||f' a']//= fv s.
+    case H: H => //=[[[[|m tl tr] s'] fv']]//=.
+    have := Hf _ _ _ (isSomeP H).
+    case H': H_inp =>//= [[[ty s''] fv'']] _.
+    case X: (_ s') => //=[sx] _. *)
 
   Lemma H_headP sP t1 t2 r: H_head sP t1 t2 = Some r -> 
     [/\ get_tm_hd t1 = get_tm_hd t2, term_arg t1 = term_arg t2 &
@@ -136,25 +179,6 @@ Section mut_excl.
     | [::] => true
     | x :: xs => mut_excl_head sig x xs && mut_excl_aux sig xs
     end.
-
-  Fixpoint all_mode dfl m :=
-    match m with b _ => true | arr m _ r => (m == dfl) && all_mode dfl r end.
-
-  Definition all_out := all_mode output.
-  Definition all_inp := all_mode input.
-
-  Fixpoint good_mode m :=
-    match m with
-    | b _ => true
-    | arr input _ r => good_mode r
-    | arr output _ r => all_out r
-    end.
-
-  Definition good_modes (s: sigT) := [forall x : domf s, good_mode s.[valP x]].
-
-  Lemma good_modes_in p sP (pP: p  \in domf sP):
-    good_modes sP -> good_mode sP.[pP].
-  Proof. by move=> GM; have:= forallP GM [`pP]; rewrite valPE. Qed.
 
   Definition mut_excl pr :=
     let: (fv, rules) := fresh_rules fset0 pr.(rules) in
