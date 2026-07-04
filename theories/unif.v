@@ -11,6 +11,8 @@ Require Import Recdef.
 Require Import Stdlib.Structures.OrdersEx.
 Require Import Stdlib.Wellfounded.Lexicographic_Product .
 
+Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
+
 Lemma codom_varsP v (s:Sigma):
   reflect (exists k (H: k \in domf s), v \in vars_tm s.[H]) (v \in codom_vars s).
 Proof.
@@ -602,13 +604,66 @@ Proof.
   by rewrite fdisjointXU D1.
 Qed.
 
-Lemma montanari_extP s s' b l:
-  acyclic_sigma s -> disjoint_L s l -> montanari s b l = Some s' ->
-  exists2 sm : Sigma, 
-    acyclic_sigma sm /\ fdisjoint (domf s) (vars_sigma sm) & s' = sm + deref_sig2 sm s.
+Definition ext_sig (sm sold: Sigma) := 
+  sm + deref_sig2 sm sold.
+
+Definition ext_sigP (froz: {fset V}) (sm sold:Sigma) :=
+  [&& acyclic_sigma sm, froz # domf sm & fdisjoint (domf sold) (vars_sigma sm)].
+
+Lemma ext_sigP0 f s: ext_sigP f empty s.
+Proof. by rewrite/ext_sigP vars_sigma0 !fdisjointX0 acyclic_sigma0. Qed.
+
+Lemma ext_sig0 s: ext_sig empty s = s.
+Proof. by rewrite/ext_sig deref_sig20L cat0f. Qed.
+
+Lemma ext_sig_deref_sigma_set x (s:Sigma) v t:
+  v \notin domf s ->
+  ext_sig x (deref_sigma v t s) =
+  ext_sig x.[v <- deref x t] s.
 Proof.
-  move: s'; montanari_ind s b l => s' A //.
-  - by move=> _ [<-]; exists empty; rewrite !(cat0f, vars_sigma0, fdisjointX0,acyclic_sigma0,deref_sig20L). 
+  move=> v's.
+  apply/fmapP => k; rewrite !FmapE.fmapE !inE [domf _]/=.
+  rewrite [domf (deref_sig2 _ s)]/=.
+  case: eqP => kv'; subst.
+    rewrite (negbTE v's) in_fnd; first by rewrite !inE eqxx.
+    by move=> v'H; rewrite/deref_sig2 ffunE valPE/deref_sigma ffunE eqxx/= .
+  rewrite orFb.
+  case: ifP => ks//.
+  rewrite in_fnd; first by rewrite !inE ks orbT.
+  move=> kv's.
+  rewrite/deref_sig2 ffunE valPE.
+  rewrite (@in_fnd _ _ [fmap _ => _] k) !(ffunE, in_fnd, valPE)/=.
+  rewrite ifF; last by case: eqP.
+  by rewrite deref_empty_set//.
+Qed.
+
+Lemma ext_sigP_deref_sigma_set froz v t (s:Sigma) x: v  \notin domf s ->
+  [disjoint  domf s  & vars t] -> v \notin froz ->
+  v \notin vars t -> ext_sigP froz x (deref_sigma v t s) ->
+  ext_sigP froz x.[v <- deref x t] s.
+Proof.
+  rewrite/ext_sigP/= fdisjointUX 2!fdisjointXU -!andbA !fdisjoint1X.
+  move => vs st fv vt /and5P[Ax fx vx vcx sx].
+  apply/and4P; split => //.
+    rewrite acyclic_sigma_set acyclic_sigma_rem//acyclic_deref_disjoint// andbT andTb.
+    apply/andP; split => //; apply/negP => H.
+      have:= fsubsetP (vars_tm_deref_sub x t) _ H.
+      by rewrite inE (negbTE vcx) (negbTE vt).
+    apply: negP vx; rewrite negbK.
+    have:= fsubsetP (codom_vars_sub x v) _ H.
+    by rewrite (negbTE vcx).
+    by rewrite fdisjointX1.
+  apply: disjoint_vars_sigma => //.
+  apply: disjoint_vars_deref => //.
+  by apply: fdisjointWr sx; rewrite fsubsetUr.
+Qed.
+
+Lemma montanari_extP s s' froz l:
+  acyclic_sigma s -> disjoint_L s l -> montanari s froz l = Some s' ->
+  exists2 sm : Sigma, s' = ext_sig sm s & ext_sigP froz sm s.
+Proof.
+  move: s'; montanari_ind s froz l => s' A //.
+  - by move=> _ [<-]; exists empty; rewrite ?(ext_sig0,ext_sigP0).
   - by rewrite disjoint_L_cons/= => /and3P[D1 _ D2] M; have:= IH _ A D2 M.
   - rewrite !disjoint_L_cons/= !fdisjointXU -!andbA => /and5P[D1 D2 D3 D4 D] M.
     by have:= IH _ A _ M; rewrite !disjoint_L_cons D1 D2 D3 D4/= D => /(_ isT).
@@ -616,73 +671,23 @@ Proof.
     have vt' : v' \notin vars (Tm_V v) by rewrite /=!inE in vt *; rewrite eq_sym.
     have D' : [disjoint  domf s  & vars (Tm_V v)] by rewrite fdisjointX1//.
     have /= := IH _ (acyclic_sigma_deref_sigma vt' D' A) (disjoint_L_set vt' D' D) M.
-    move=> [x [Ax +] ? {M}]; subst; rewrite !fdisjointUX/= fdisjoint1X => /andP[v'x D1].
+    move=> [x ? extP]; subst.
     exists x.[v' <- deref x (Tm_V v)].
-      split.
-        rewrite acyclic_sigma_set acyclic_sigma_rem//acyclic_deref_disjoint// andbT andTb.
-        apply/andP; split => //; apply/negP => H.
-          have:= fsubsetP (vars_tm_deref_sub x (Tm_V v)) _ H.
-          move: v'x; rewrite !inE => /norP[_ /negbTE->].
-          by rewrite eq_sym (negbTE EQ).
-        move/negP: v'x => v'x; apply: v'x.
-        have:= fsubsetP (codom_vars_sub x v') _ H.
-        by rewrite inE => ->; rewrite orbT.
-      apply: disjoint_vars_sigma => //.
-      apply: disjoint_vars_deref => //.
-      by move: D1; rewrite fdisjointXU => /andP[].
-    apply/fmapP => k; rewrite !FmapE.fmapE !inE [domf _]/=.
-    rewrite [domf (deref_sig2 _ s)]/=.
-    case: eqP => kv'; subst.
-      rewrite (negbTE v's) in_fnd; first by rewrite !inE eqxx.
-      by move=> v'H; rewrite/deref_sig2 ffunE valPE/deref_sigma ffunE eqxx/= .
-    rewrite orFb.
-    case: ifP => ks//.
-    rewrite in_fnd; first by rewrite !inE ks orbT.
-    move=> kv's.
-    rewrite/deref_sig2 ffunE valPE.
-    rewrite deref_V.
-    rewrite (@in_fnd _ _ [fmap _ => _] k) ffunE.
-    rewrite ffunE valPE/= ifF; last by case: eqP.
-    rewrite (@in_fnd _ _ [ffun _ => _] k) ffunE valPE//=.
-    by rewrite deref_empty_set//.
+      by apply: ext_sig_deref_sigma_set.
+    by apply: ext_sigP_deref_sigma_set; rewrite//v'f.
   - rewrite disjoint_L_cons/= !fdisjointX1 => /and3P[vs D0 D] M.
     have /= := IH _ (acyclic_sigma_deref_sigma vt D0 A) (disjoint_L_set vt D0 D) M.
-    move=> [x [Ax +] ? {M}]; subst; rewrite !fdisjointUX/= fdisjoint1X => /andP[v'x D1].
+    move=> [x ? extP]; subst.
     exists x.[v <- deref x t].
-      split.
-        rewrite acyclic_sigma_set acyclic_sigma_rem//acyclic_deref_disjoint// andbT andTb.
-        apply/andP; split => //; apply/negP => H.
-          have:= fsubsetP (vars_tm_deref_sub x t) _ H.
-          move: v'x; rewrite !inE => /norP[_ /negbTE->].
-          by rewrite (negbTE vt).
-        move/negP: v'x => v'x; apply: v'x.
-        have:= fsubsetP (codom_vars_sub x v) _ H.
-        by rewrite inE => ->; rewrite orbT.
-      apply: disjoint_vars_sigma => //.
-      apply: disjoint_vars_deref => //.
-      by move: D1; rewrite fdisjointXU => /andP[].
-    apply/fmapP => k; rewrite !FmapE.fmapE !inE [domf _]/=.
-    rewrite [domf (deref_sig2 _ s)]/=.
-    case: eqP => kv'; subst.
-      rewrite (negbTE vs) in_fnd; first by rewrite !inE eqxx.
-      by move=> v'H; rewrite/deref_sig2 ffunE valPE/deref_sigma ffunE eqxx/= .
-    rewrite orFb.
-    case: ifP => ks//.
-    rewrite in_fnd; first by rewrite !inE ks orbT.
-    move=> kv's.
-    rewrite/deref_sig2 ffunE valPE.
-    rewrite (@in_fnd _ _ [fmap _ => _] k) ffunE.
-    rewrite ffunE valPE/= ifF; last by case: eqP.
-    rewrite (@in_fnd _ _ [ffun _ => _] k) ffunE valPE//=.
-    by rewrite deref_empty_set.
+      by apply: ext_sig_deref_sigma_set.
+    by apply: ext_sigP_deref_sigma_set.
   - rewrite disjoint_L_cons/= => /and3P[D1 D2 D3] M.
     by have:= IH _ A _ M; rewrite disjoint_L_cons/= D2 D1 => /(_ D3).
 Qed.
 
 Lemma matching_extP s s' b t1 t2:
   acyclic_sigma s -> matching b t1 t2 s = Some s' ->
-  exists2 sm : Sigma, 
-    acyclic_sigma sm /\ fdisjoint (domf s) (vars_sigma sm) & s' = sm + deref_sig2 sm s.
+  exists2 sm : Sigma, s' = ext_sig sm s & ext_sigP b sm s.
 Proof.
   move=> A; rewrite/matching/montanari_deref/montanari_pair.
   by move=> /(montanari_extP A (disjoint_L_deref _ _ A)).
@@ -1600,8 +1605,6 @@ Qed.
 Notation injective := (@injectiveb _ V).
 Notation "A ∧ B" := (A && B) (at level 15).
 
-Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
-
 Definition refresh_for x t := [&& (vars t `<=` domf x) & injective x].
   
 Lemma vars_tm_ren_sub w t1: vars_tm t1 `<=` domf w -> vars (ren w t1) `<=` codomf w.
@@ -1987,12 +1990,12 @@ Qed.
 Lemma acyclic_sigma_H sP fv q hd s1 r:
   acyclic_sigma s1 ->
     H u sP fv q hd s1 = Some r ->
-      acyclic_sigma r.1.2.
+      acyclic_sigma r.2.
 Proof.
   elim: q fv hd s1 r => //=[p|f Hf a Ha] fv [p'|//|//|f' a']// s1 r.
     by case: eqP => //= _ A; case: fndP => //=pP[<-].
   move=> A.
-  case H: H => [[[[|[] tyl tyr] s1'] fv'']|]//=.
+  case H: H => [[[|[] tyl tyr] s1']|]//=.
     case M: matching => //= [s1''][?]; subst.
     by apply: matching_acyclic M; apply: Hf H.
   case M: unify => //= [s1''][?]; subst.
@@ -2005,7 +2008,7 @@ Lemma acyclic_sigma_select sP query rules s1 e:
       acyclic_sigma e.1.
 Proof.
   elim: rules query s1 e => //= -[hd bo] rs IH query s1 e AS/=.
-  case H: H => [[[ty s1' fv]]|]; last by apply: IH.
+  case H: H => [[ty s1']|]; last by apply: IH.
   rewrite !push/= in_cons => /orP[/eqP?|]; subst; last by apply: IH.
   by have := acyclic_sigma_H AS H.
 Qed.
