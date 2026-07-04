@@ -2,6 +2,85 @@ From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import tree tree_prop ctx tree_vars fresh unif.
 
+Definition arri t := if t is _ --i--> _ then true else false.
+Definition arro t := if t is _ --o--> _ then true else false.
+
+(* sub input term: return a subterm of t where all output have been removed *)
+Fixpoint subit (sP:sigT) t : Tm * option (S) :=
+  match t with
+  | Tm_P p => (t, sP.[?p])
+  | Tm_App f a =>
+    let (f, ty) := subit sP f in
+    match ty with
+    | Some (arr m tl tr as ty) =>
+      ((if m == input then Tm_App f a else f), Some (if m == input then tr else ty))
+    | _ => (f, None)
+    end
+  | _ => (t, None)
+  end.
+
+Lemma subitP sP t t' r: subit sP t = (t', Some r) -> 
+  exists p, exists pP : p \in sP, 
+    [/\ get_tm_hd t = inl p, get_tm_hd t' = inl p & eat_ty (term_arg t') sP.[pP] = Some r]
+  .
+Proof.
+  elim: t t' r => //=[p|f Hf a Ha] t' r.
+    by case: fndP => pP//[<-<-]/=; eexists _, pP.
+  case H: subit => //[t2 [[//|m tl tr]|//]] H'.
+  have [p[pP [fp f'p E]]]:= Hf _ _ H.
+  exists p, pP.
+  move: H'; case: m E {H} => //= E [<-<-]//; split => //=.
+  case: sP.[pP] E => //=; first by case: t2 f'p.
+  by move=> m tl' tr';apply: eat_ty_arr.
+Qed.
+
+Lemma subit_inp sP t t' r:
+  subit sP t = (t', Some r) -> arri r ->
+  t = t'.
+Proof.
+  elim: t t' r => //=[p|f Hf a _] t' r; first by move=> [<-].
+  case X: subit => [t [[//|[] tr tl]|//]]/=[??]; subst => //=.
+  by have <-:= Hf _ _ X isT.
+Qed.
+
+Lemma H_sub u sP fv q h s:
+  H u sP fv q h s ->
+  let x := subit sP q in
+  let y := subit sP h in
+  [/\ x.2 = y.2 & H u sP fv x.1 y.1 s].
+Proof.
+  elim: q h fv s => //[p|f Hf a _] [p'|//|//|f' a']//=fv s.
+    by case: ifP => ///eqP->; case: fndP => //=pP[<-]/=.
+  case H: H => [[[[|m tl tr] s'] fv']|]//=.
+  have {Hf}[H2 H1] := Hf _ _ _ (isSomeP H).
+  rewrite !push/=.
+  case su1: subit H1 H2 => //=[t1 os1] H1 H2.
+  case su2: subit H1 H2 => //=[t2 os2] H1 H2; subst.
+  case I: (_ s') => [r'|]//= _; subst => /=.
+  case: os2 su1 su2 => //=[[|m' t1' t2']]//= su1 su2.
+  split => //=.
+  destruct m' => //=.
+  move: H1; case Hs: lang.H => //= [[[ty sx] fx]]//= _.
+  have [p[pP [fp t1p Et2]]] := subitP su1.
+  have [] := HP Hs.
+  rewrite t1p => /esym t2p at1t2 [p'[p'P [?]]]; subst.
+  rewrite (bool_irrelevance p'P pP) Et2 => -[?]; subst.
+  rewrite/=.
+  have ?:= subit_inp su1 isT; subst.
+  have ?:= subit_inp su2 isT; subst.
+  move: Hs; rewrite H => -[?????]; subst.
+  move: I => /=->//.
+Qed.
+
+Section test.
+  Local Notation D := (Tm_D (ID 1)).
+  Local Notation p := (IP 2).
+  Local Goal subit 
+    fmap0.[p <- arr input (b Exp) (arr input (b Exp) (arr output (b Exp) (arr output (b Exp) (b (d Pred)))))]
+    (Tm_App (Tm_App (Tm_App (Tm_P p) D) D) D) = ((Tm_App (Tm_App (Tm_P p) D) D), Some ((arr output (b Exp) (arr output (b Exp) (b (d Pred)))))).
+  Proof. by rewrite/subit !FmapE.fmapE/=. Qed.
+End test.
+
 Section mut_excl.
   Variable u : Unif.
 
@@ -63,8 +142,6 @@ Section mut_excl.
 
   Definition all_out := all_mode output.
   Definition all_inp := all_mode input.
-
-  Definition arri t := if t is _ --i--> _ then true else false.
 
   Fixpoint good_mode m :=
     match m with
