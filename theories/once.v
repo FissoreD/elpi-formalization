@@ -134,8 +134,13 @@ Section once.
       if get_tm_hd (head x) is inl hd then hd <> once_sym
       else true.
 
-  Lemma no_once_cons x xs: no_once (x :: xs) -> no_once xs.
-  Proof. by rewrite/no_once/= => H r H1; apply/H; rewrite in_cons H1 orbT. Qed.
+  Lemma no_once_cons x xs: no_once (x :: xs) -> get_tm_hd (head x) <> inl once_sym /\ no_once xs.
+  Proof. 
+    rewrite/no_once/= => H; split; last first.
+      by move=> r H1; apply/H; rewrite in_cons H1 orbT.
+    have:= H x; rewrite in_cons eqxx => /(_ isT).
+    by destruct get_tm_hd => //; congruence.
+  Qed.
 
   Definition prog_once p :=
     (p.(sig) = p.(sig) + once_sigS) /\ forall r, 
@@ -151,17 +156,15 @@ Section once.
     get_modes (Tm_App (Tm_P once_sym) t) once_sig = sig_flat.
   Proof. by []. Qed. *)
 
-  Lemma no_once_select u l rs s:
+  Lemma no_once_select u sig rs s T:
     no_once rs ->
-    select u once_sym l sig_flat rs s = (fset0, [::]).
+    select u (sig + once_sigS) (Tm_App (Tm_P once_sym) T) rs s = (fset0, [::]).
   Proof.
-    elim: rs l s => //= -[hd bo] xs IH t s/= H1.
-    have {}IH := IH _ _ (no_once_cons H1).
-    rewrite {}IH/=.
-    case: eqP => //= Hx.
-    move: H1; rewrite /no_once/=.
-    set P := {|head := _; premises := _|}.
-    by move=> /(_ P); rewrite in_cons eqxx => /(_ isT)/=; rewrite-Hx.
+    elim: rs T s => // -[hd bo] xs IH t s /no_once_cons[+ H].
+    case: hd => //=[p|d|v|f a]; only 1-3: by move=> _; apply: IH.
+    case: f => //=[p|d|v|f' a'] NO; only 2-4: by apply: IH.
+    case: eqP => ?; subst => //=.
+    by apply: IH.
   Qed.
 
   Lemma no_once_fresh fv rs: no_once rs -> no_once (fresh_rules fv rs).2.
@@ -189,26 +192,33 @@ Section once.
     move=> /(_ rs) [[?] H]; subst.
     rewrite/is_det HS => r' [b'[fv' Hx]].
     inversion Hx; clear Hx; subst => //.
-    move: H1; rewrite/=/bc [get_tm_hd _]/=.
+    move: H1; rewrite/=/bc.
     case (boolP (acyclic_sigma s)) => AS; last first => //=.
       by move=> [???]; subst; inversion H2; auto.
-    rewrite !FmapE.fmapE !inE eqxx/=.
+    rewrite !fset0U.
+    set S1 := _ `|` _.
+    (* rewrite !FmapE.fmapE !inE eqxx/=. *)
     case X: fresh_rules => [fvx' rs'].
-    rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
-    rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
-    rewrite no_once_select; last first.
-      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
-      by apply: no_once_fresh.
-    rewrite eqxx/=.
-    case M: obind => [s'|][???]; subst; last by inversion H2 => //; auto.
-    set Y := _ `|` _ in H2.
-    rewrite ffunE/= in H2.
+    rewrite/fresh_rule/rename [head _]/= /fresh_tm !inE.
+    rewrite [vars _]/= !fset0U !cat0f [premises _]/=.
+    set F := fresh _.
+    set S2 := _ `|` _.
+    rewrite/=/rename/= inE eqxx.
+    rewrite in_fnd; first by rewrite inE.
+    move=> I; rewrite ffunE {I}.
+    rewrite/= eqxx !FmapE.fmapE/= !inE eqxx/= !fset0U/=.
+    have /(_ S1 s (deref s t)) {}H := (no_once_select u (sig) _ _ (no_once_fresh H)).
+    rewrite X in H.
+    case M: matching => [sx|]; last first.
+      by rewrite H/= => -[???]; inversion H2; subst; eauto.
+    rewrite/= H => -[???]; subst.
+    set S4 := _ `|` _ in H2.
     have [b'] := runT_Nor_elim H2.
     destruct r'; eauto.
     move=> [B' ? Hz]; subst.
     set P := {| rules := _; sig := _|} in Hz.
     set T := TA _ in Hz.
-    have {}Hz : runT' P Y s' (And T [:: cut] (TA cut)) (Many s0 B').
+    have {}Hz : runT' P S4 sx (And T [:: cut] (TA cut)) (Many s0 B').
       do 2 eexists; apply: Hz.
     by have [//|[]] := is_det_tail_cut Hz.
   Qed.
