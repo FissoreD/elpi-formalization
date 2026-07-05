@@ -356,6 +356,29 @@ Lemma fdisjoint_rem (K: choiceType) (qa qf:{fset K}) :
   (qa `\` qf) # qf.
 Proof. by apply/fdisjointP => k; rewrite !inE => /andP[]. Qed.
 
+Lemma mp_trans: transitive mp.
+Proof.
+  move=> b a c M1 M2; apply/forallP => -[x xa].
+  have:= forallP M1 [`xa]; rewrite !valPE/=.
+  case: fndP => //= xb/eqP[]; have:= forallP M2 [`xb].
+  rewrite valPE/=; case: fndP => //xc/eqP[<-] <-.
+  by rewrite derefxx//.
+Qed.
+
+Lemma H_mp sP fv q hd s1 r: acyclic_sigma s1 ->
+  H u sP fv q hd s1 = Some r -> mp s1 r.2.
+Proof.
+  elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|//|f' a']// s1 r.
+    by case: eqP => //->; case: fndP => //= ? A[<-]; apply: mp_id.
+  move=> A; case H: H => [[[|m tl tr] s']|]//=.
+  case M: (_ s') => //=[{}r][<-]/=.
+  have {}Hf := Hf _ _ _ _ A H.
+  have A' := acyclic_sigma_H A H.
+  have: mp s' r.
+    by move: M; destruct m => /=/(montanari_mp A' (disjoint_L_deref _ _ A')) ->//.
+  by apply: mp_trans.
+Qed.
+
 Lemma H_deref_eq sP fv q hd s1 r:
   acyclic_sigma s1 ->
     H u sP fv q hd s1 = Some r ->
@@ -365,13 +388,18 @@ Proof.
     by case: eqP => //-> A; case: fndP => //.
   move=> A.
   case H: H => [[[|m tl tr] s1']|]//=.
-  have /={}Hf := (Hf _ _ _ _ A H).
   case X: (_ s1') => //= [sx][?]; subst => /=.
   have /= A' := acyclic_sigma_H A H.
-  f_equal; last first.
-    admit.
-  admit.
-Admitted.
+  have s1s1' := H_mp A H.
+  have s1'sx: mp s1' sx.
+    have M := montanari_mp A' (disjoint_L_deref _ _ A').
+    by move: X; destruct m => /= /M.
+  have MP := mp_trans s1s1' s1'sx.
+  have /={Hf} := Hf _ _ _ _ A H.
+  rewrite !derefxx//= => Hf.
+  rewrite -(@derefxx s1')// Hf derefxx//.
+  move: X; destruct m => /matchingP->//.
+Qed.
 
 (* Lemma get_input_vars_inp f p sP t (pP: p \in sP):
   good_modes sP -> get_tm_hd f = inl p ->
@@ -390,65 +418,42 @@ Proof.
 
 Lemma xx sP froz t1 t2 s r:
   good_modes sP ->
-  vars_tm t1 `<=` froz ->
   fdisjoint (domf s) froz ->
-  fdisjoint (vars_tm t1) (vars_tm t2) ->
   H u sP froz t1 t2 s = Some r ->
   arri r.1 ->
-  [/\ (domf r.2) # froz, vars_tm (deref r.2 t2) `<=` froz (*, vars (deref s t2) # froz*)  &
-  domf r.2 `<=` domf s `|` (vars (deref s t2))].
+  (domf r.2) # froz.
 Proof.
   move=> GM.
   elim: t1 t2 s r => //[p|f Hf a _] [p'|//|//|f' a']//= s r.
-    case: eqP => //-> _ H _; case: fndP => //=pP[<-]//=; rewrite /=?fdisjoint0X fsetU0//=.
-  (* rewrite fdisjointXU => /andP[sf sa]. *)
+    case: eqP => //-> H; case: fndP => //=pP[<-]//=; rewrite /=?fdisjoint0X fsetU0//=.
   case H: H => [[[|m tf' tr'] sm]|]//=.
-  rewrite fsubUset => /andP[ffroz afroz] sfroz.
-  (* rewrite fdisjointXU => /andP[sf sa]. *)
-  rewrite fdisjointXU !fdisjointUX -!andbA => /and4P[ff af fa aa].
+  move=> sfroz.
   case I: (_ sm) => //=[r'][?] AI; subst; simpl in *.
   have /=[hff haa [p'[pP hp E]]] := HP H.
   have ? := eat_ty_inp E (good_modes_in pP GM) AI; subst.
   rewrite/= in I *.
-  have /={Hf} := Hf _ _ _ ffroz sfroz ff H isT.
-  move=> [smf ffrsub (*ffrozd*) {}Hf].
+  have /={Hf} := Hf _ _ _ sfroz H isT.
+  move=> {}Hf.
   have Ha := matching_ext1 I.
-  split.
-  - by apply/(fdisjointWl Ha); rewrite fdisjointUX smf/= fdisjoint_rem.
-  - rewrite fsubUset. admit.
-  (* - rewrite ffrozd. admit. *)
-  - apply: fsubset_trans Ha _.
-    rewrite fsubUset; apply/andP; split.
-      apply: fsubset_trans Hf _.
-      rewrite fsubUset fsubsetUl/=.
-      apply/fsubsetP => x; rewrite !inE => ->; rewrite !orbT//.
-    apply/fsubsetP => x; rewrite !inE => /andP[xfroz].
-    case: (boolP (x \in domf s)) => xs//=.
-    move=> /orP[xa'|xa].
-  admit.
-Admitted.
+  by apply/(fdisjointWl Ha); rewrite fdisjointUX Hf/= fdisjoint_rem.
+Qed.
 
 Lemma H_all_inp sP v1 query head s1 r:
   acyclic_sigma s1 ->
   good_modes sP ->
   fdisjoint (domf s1) v1 ->
-  vars_tm query `<=` v1 ->
-  (* fdisjoint (domf s1) (vars_tm head) -> *)
-  fdisjoint (vars_tm query) (vars_tm head) ->
-  (* fdisjoint (vars_sigma s1) (vars_tm head) -> *)
   H u sP v1 query head s1 = Some r -> arri r.1 ->
   matching v1 head query s1.
 Proof.
-  move=> A GM sv qv qh H AI.
+  move=> A GM sq H AI.
   rewrite/matching/montanari_deref/montanari_pair.
   apply: exists_montanari => //.
     by rewrite disjoint_L_deref.
   exists r.2; split => //.
     by apply: acyclic_sigma_H H.
-    by rewrite/= andbT; apply/eqP/esym/(H_deref_eq _ H).
-  have [Hk Hy (*Hx*) Hz] := xx GM qv sv qh H AI.
-  apply: fdisjointWl Hz _.
-  rewrite fdisjointUX sv//= .
+    have:= H_deref_eq A H.
+    by rewrite/unifier/unif_pair/map_prod1/= andbT => ->.
+  by apply: xx H _.
 Qed.
 
 (* Lemma Hmatching u sP fv f f1 s1:
@@ -536,14 +541,13 @@ Proof.
   rewrite -ha1 (bool_irrelevance pP' pP) he => -[?]; subst.
   destruct m2 => //=.
   rewrite ifT => //.
-  (* case: m2 H1 H2 he HH => //= _ _ H1 H2 he HH. *)
   have:= forallP GM [`pP]; rewrite valPE => GM'.
-  have /= Hr := H_all_inp A2 GM S2 _ ff2 H2 isT.
-  have /= Hs := H_all_inp A1 GM S1 _ ff1 H1 isT.
+  have /= Hs := H_all_inp A1 GM S1 H1 isT.
+  have /= Hr := H_all_inp A2 GM S2 H2 isT.
   rewrite !(fdisjoint_sym (vars_tm f)) in ff1, ff2.
   have ivf1 := get_input_vars_vars_tm GM H1 isT.
   rewrite ivf1 in fv1sub, fv2sub.
-  apply: matching_unify_trans (Hs _) (Hr _) => //.
+  apply: matching_unify_trans Hs Hr => //.
 Qed.
 
 Lemma vars_tm_take_sub n a: vars_tms (take n a) `<=` vars_tms a.
