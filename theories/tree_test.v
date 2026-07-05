@@ -108,7 +108,7 @@ Section Test1.
       rewrite /fresh_rule/= !simpl_set.
       rewrite/rename [fresh_tm _ _ _]/= !simpl_set.
       rewrite !inE/= !simpl_set !FmapE.fmapE/=.
-      rewrite !simpl_set/=.
+      (* rewrite !simpl_set/=. *)
       rewrite in_fnd/=?inE// => JK.
       rewrite ffunE/= eqxx.
       rewrite unify_ground//=.

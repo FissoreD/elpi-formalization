@@ -277,7 +277,7 @@ Lemma select_sub_rules u sP query rules rn fv' s:
     varsU (seq.map (fun x => vars_sigma x.1 `|` vars_atoms x.2) rn) `<=` fv'.
 Proof.
   elim: rules fv' rn => [|x xs IH] fv' rn/=; first by move=> [<-<-]//.
-  case H: H => [[[t s' fv]]|]; last by apply: IH.
+  case H: H => [[t s']|]; last by apply: IH.
   case Y: select => [fv2 rs][??]; subst => /=.
   rewrite -!fsetUA/= !fsetUS//.
   have {}IH := IH _ _ Y.

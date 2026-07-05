@@ -681,6 +681,18 @@ Proof. by rewrite/vars_sigma domf0 codom_vars0 fsetU0. Qed.
 Definition fresh_rules fv rules :=
   foldr (fun x '(fv,xs) => let: (fv, x) := fresh_rule fv x in (fv,x::xs)) (fv,[::]) rules.
 
+Fixpoint get_input_vars (sP:sigT) t : {fset V} * option S :=
+  match t with
+  | Tm_P p => (fset0, sP.[?p])
+  | Tm_V _ | Tm_D _ => (fset0, None)
+  | Tm_App f a =>
+    let: (fv, ty) := get_input_vars sP f in
+    match ty with
+    | Some (arr m _ r) => (fv `|` if m == input then vars_tm a else fset0, Some r)
+    | _ => (fv, None)
+    end
+  end.
+
 (* Unification between query and rule-head *)
 (* mv is the set of "frozen" variables appearing in input position in the query
    the are not touched when unified with the matching procedure (input mode)
@@ -696,14 +708,13 @@ Definition fresh_rules fv rules :=
     step 1: X = W ===> W -> X, the list of unif problems becoes : X = 3 
     step 2: since X is frozen, this unification fails
 *)
-Fixpoint H u (sP:sigT) fv (q : Tm) (h: Tm) s : option (S * Sigma * fvS) :=
+Fixpoint H u (sP:sigT) fv (q : Tm) (h: Tm) s : option (S * Sigma) :=
   match q,h with
-  | Tm_P p, Tm_P p' => if p == p' then omap (fun x => (x, s, fv)) sP.[?p] else None
+  | Tm_P p, Tm_P p' => if p == p' then omap (fun x => (x, s)) sP.[?p] else None
   | Tm_App f a, Tm_App f' a' =>
-    if H u sP fv f f' s is Some (arr m _ r, s, fv) then
-      let fv := fv `|` if m == input then vars_tm a else fset0 in
+    if H u sP fv f f' s is Some (arr m _ r, s) then
       let f := if m == input then u.(matching) fv else u.(unify) in
-      omap (fun x => (r, x, fv)) (f a' a s)
+      omap (fun x => (r, x)) (f a' a s)
     else None
   | _, _ => None
   end.
@@ -712,9 +723,9 @@ Fixpoint select u (sP:sigT) (q: Tm) (rules: list R) sigma : (fvS * seq (Sigma * 
   match rules with
   | [::] => (fset0, [::])
   | rule :: rules =>
-    match H u sP fset0 q rule.(head) sigma with
+    match H u sP (get_input_vars sP q).1 q rule.(head) sigma with
     | None => select u sP q rules sigma
-    | Some (_, sigma1, _) => 
+    | Some (_, sigma1) => 
       let: (fv, rs) := select u sP q rules sigma in
       (vars_sigma sigma1 `|` varsU_rule rule `|` fv, (sigma1, rule.(premises)) :: rs)
     end
@@ -845,13 +856,13 @@ Qed.
 
 Lemma HP u sP fv t1 t2 s r: H u sP fv t1 t2 s = Some r -> 
   [/\ get_tm_hd t1 = get_tm_hd t2, term_arg t1 = term_arg t2 &
-    exists p, exists2 pP : p \in sP, get_tm_hd t1 = inl p & eat_ty (term_arg t1) sP.[pP] = Some r.1.1]
+    exists p, exists2 pP : p \in sP, get_tm_hd t1 = inl p & eat_ty (term_arg t1) sP.[pP] = Some r.1]
   .
 Proof.
   elim: t1 t2 fv s r => //=[p|f Hf a Ha] [p'|d|v|f' a']//= fv s r.
     case: eqP => //<-; case: fndP => //=pP[<-]; split => //.
     by exists p, pP.
-  case H: H => //[[[[|m tl tr] s'] fv']]//=.
+  case H: H => //[[[|m tl tr] s']]//=.
   case : (_ s') => //= sz [?]; subst => /=.
   have /=[Hx Hy [p [pP H1 H2]]] := Hf _ _ _ _ H.
   split => //; first by rewrite Hy.
@@ -864,7 +875,7 @@ Lemma selectP u sP t1 s rs fv x xs: select u sP t1 rs s = (fv, (x::xs)) ->
   exists2 p, p \in sP & get_tm_hd t1 = inl p.
 Proof.
   elim: rs fv x xs => //=r rs IH fv x xs.
-  case H: H => [[[ty s'] fv']|]//; last by apply: IH.
+  case H: H => [[ty s']|]//; last by apply: IH.
   case S: select => [fv'' [|y ys]][???]; subst; last apply: IH S.
   have [_ _ [p[pP {}H _]]] := HP H.
   by exists p => //.
@@ -873,7 +884,7 @@ Qed.
 Lemma H_same_ty u sP fv1 fv2 f f1 f2 s1 s2 r1 r2:
   H u sP fv1 f f1 s1 = Some r1 ->
   H u sP fv2 f f2 s2 = Some r2 ->
-  r1.1.1 = r2.1.1.
+  r1.1 = r2.1.
 Proof.
   move=> H1 H2.
   have[Ha1 Hb1 [z1[P1]]]:= HP H1.
