@@ -3,6 +3,8 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import tree tree_prop ctx tree_vars fresh unif.
 
 Section good_mode.
+  Definition arri t := if t is _ --i--> _ then true else false.
+
   Fixpoint all_mode dfl m :=
     match m with b _ => true | arr m _ r => (m == dfl) && all_mode dfl r end.
 
@@ -31,9 +33,23 @@ Section good_mode.
     elim: n m r => //=[|n IH] m r; first by move=> + [<-].
     by case: m => //=m tl tr; case: m => [|/all_mode_good_mode]; apply: IH.
   Qed.
-End good_mode.
 
-Definition arri t := if t is _ --i--> _ then true else false.
+  Lemma good_modes_arri_H sP b f f' s m tf ta s': good_modes sP ->
+    H u sP b f f' s = Some (arr m tf ta, s') ->
+    arri ta -> m = input.
+  Proof.
+    move=> GM; elim: f f' m tf ta s' => //[p|f Hf a _][p'|//|//|f' a']//=m tf ta s'.
+      case: eqP => //->; case: fndP => //pP[H _].
+      have := good_modes_in pP GM; rewrite {}H.
+      by case: ta => [|[]]//=; case: m => //.
+    case H1: H => //[[[//|m' tf' ta'] s'']]; case: (_ s'') => //s'''[??] AI; subst.
+    have /= := Hf _ _ _ _ _ H1.
+    destruct m => //= _.
+    have [_ _ [p[pP fp E]]] := HP H1.
+    have /= := eat_ty_good_mode (good_modes_in pP GM) E.
+    by destruct m' => //=; case: ta H1 AI E => //=[[]]//.
+  Qed.
+End good_mode.
 
 Section mut_excl.
   Variable u : Unif.
