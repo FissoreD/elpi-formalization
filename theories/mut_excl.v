@@ -24,6 +24,13 @@ Section good_mode.
   Lemma good_modes_in p sP (pP: p  \in domf sP):
     good_modes sP -> good_mode sP.[pP].
   Proof. by move=> GM; have:= forallP GM [`pP]; rewrite valPE. Qed.
+
+  Lemma eat_ty_good_mode n m r:
+    good_mode m -> eat_ty n m = Some r -> good_mode r.
+  Proof.
+    elim: n m r => //=[|n IH] m r; first by move=> + [<-].
+    by case: m => //=m tl tr; case: m => [|/all_mode_good_mode]; apply: IH.
+  Qed.
 End good_mode.
 
 Definition arri t := if t is _ --i--> _ then true else false.
