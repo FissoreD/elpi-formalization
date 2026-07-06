@@ -163,26 +163,6 @@ Record Unif := mk_Unif {
 }.  
 (*ENDSNIP: unif_type*)
 
-Fixpoint flatten_mode m :=
-  match m with
-  | arr m _ l => m :: flatten_mode l
-  | b _ => [::]
-  end.
-
-Fixpoint count_tm_ag t := 
-  match t with
-  | Tm_App L _ => 1 + count_tm_ag L
-  | _ => 0
-  end.
-
-Fixpoint flatten_term tm :=
-  match tm with
-  | Tm_App f a => rcons (flatten_term f) a
-  | Tm_P K => [::]
-  | Tm_D K => [::]
-  | Tm_V V => [::]
-  end.
-
 Fixpoint get_tm_hd tm :=
   match tm with
   | Tm_App f a => get_tm_hd f
@@ -190,7 +170,6 @@ Fixpoint get_tm_hd tm :=
   | Tm_D K => inr (inl K)
   | Tm_V V => inr (inr V)
   end.
-
 
 Module test.
   Local Notation p := (Tm_P (IP 1)).
@@ -203,8 +182,6 @@ Module test.
   (* ty is the type of p := pred p int -> int *)
   Local Definition ty := arr input (b Exp) (arr output (b Exp) (b (d Pred))).
 
-  Local Goal flatten_mode ty = [::input; output]. by []. Qed.
-  Local Goal flatten_term t =  [::one  ; two   ]. by []. Qed.
   Local Goal get_tm_hd    t = inl (IP 1). by []. Qed. 
 End test.
 
@@ -216,14 +193,6 @@ Fixpoint vars_tm t : fvS :=
   | Tm_P _ => fset0
   | Tm_V v => fset1 v
   | Tm_App l r => vars_tm l `|` vars_tm r
-  end.
-
-Fixpoint vars_tmL t : list V :=
-  match t with
-  | Tm_D _ => [::]
-  | Tm_P _ => [::]
-  | Tm_V v => [::v]
-  | Tm_App l r => vars_tmL l ++ vars_tmL r
   end.
 
 Definition vars_atom A : fvS :=
@@ -270,25 +239,6 @@ Fixpoint deref (s: Sigma) (tm:Tm) :=
   end.
 
 Definition derefkv k v (tm:Tm) := deref [fmap].[k<-v] tm.
-
-(* Fixpoint deref1 (s: Sigma) (tm:Tm) :=
-  match tm with
-  | Tm_V V => Option.default tm (lookup V s)
-  | Tm_P _ | Tm_D _ => tm
-  | Tm_App h ag => Tm_App (deref1 s h) (deref1 s ag)
-  end.
-
-Fixpoint deref_aux n (s: Sigma) (tm:Tm) :=
-  match n with 
-  | 0 => tm
-  | n.+1 => deref_aux n s (deref1 s tm)
-  end.
-
-Definition deref (s:Sigma) (tm:Tm) := deref_aux #|` domf s | s tm. *)
-
-(* Lemma deref_aux_App n s f a: 
-  deref_aux n s (Tm_App f a) = Tm_App (deref_aux n s f) (deref_aux n s a).
-Proof. elim: n f a => //=. Qed. *)
 
 Lemma deref_App s f a: deref s (Tm_App f a) = Tm_App (deref s f) (deref s a).
 Proof. by []. Qed.
@@ -337,10 +287,6 @@ Proof.
 Qed.
 
 Definition acyclic_sigma (s: Sigma) := [disjoint domf s & codom_vars s].
-
-(* Definition acyclic_sigma (s: Sigma) :=
-  [forall x : domf s, val x \notin deref_vars #|` domf s | s (Tm_V (val x))]. *)
-  (* [forall x : domf s, val x \notin vars_tm (deref s (Tm_V (val x)))]. *)
 
 Lemma add_some T (x z: T): Some x = Some z -> x = z. by move=> []. Qed.
 
