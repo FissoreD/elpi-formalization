@@ -61,15 +61,28 @@ match tm with
 | Tm_App h bo =>
   let: (sV, ty) := assume_tm sP sV h in
     match ty with
-    | Some (arr output _ r) => (sV, Some r)
-    | Some (arr input l r) =>
-      match bo with
-      | Tm_V v => (add v (min l (odflt l sV.[?v])) sV, Some r)
-      | _ => (sV, Some r)
-      end
+    | Some (arr m l r) =>
+      (if m == input then match bo with
+        | Tm_V v => add v (min l (odflt l sV.[?v])) sV
+        | _ => sV
+        end else sV, Some r)
     | _ => (sV, None)
   end
 end.
+
+Lemma H_assume_tm_ty sP sV ty froz f f' s r sv:
+  H u sP froz f f' s = Some r ->
+  assume_tm sP sV f' = (sv, ty) ->
+  ty = Some r.1.
+Proof.
+  elim: f f' s r ty sV sv => //[p|f Hf a _] [p'|//|//|f' a']//= s r ty sV sv.
+    by case: eqP => //<-; case: fndP => //pP[<-][].
+  case H1 : H => [[ty' s']|]//=.
+  case A1 : assume_tm => [sV' ty'']//=.
+  have {Hf H1 A1}/=? := Hf _ _ _ _ _ _ H1 A1; subst.
+  case: ty' => [|m tl tr]//=.
+  by case M: (_ s') => //[r'][<-]{r}/=[_ <-].
+Qed.
 
 Definition get_sig (sP:sigT) (sV:sigV) t :=
   match get_tm_hd t with
@@ -1017,6 +1030,7 @@ Section check.
     have /={Hf} := Hf _ _ _ R sf H1.
     case X: assume_tm => //=[sv sig].
     move=> smsv.
+    have:= H_assume_tm_ty H1
     have sxsv: relSS sP sx sv.
       by case: m M {H1}; apply: relSS_matching smsv.
     case: sig X => [[|[] tl' tr']|]//=.
