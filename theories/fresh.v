@@ -572,13 +572,6 @@ Proof.
   apply: fsubsetUr.
 Qed.
 
-Lemma count_tm_ag_rename fs hd mp:
-  count_tm_ag (rename fs hd mp).2  = count_tm_ag hd.
-Proof.
-  rewrite/rename !push/=; move: (fresh_tm _ _ _).2.
-  elim: hd => [p|d|v|a Ha f Hf]//= ?; rewrite Ha//.
-Qed.
-
 Lemma has_cut_seq_fresh fv1 bo mp:  
   has_cut_seq (fresh_atoms fv1 bo mp).2 = has_cut_seq bo.
 Proof.
