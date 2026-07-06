@@ -924,20 +924,6 @@ Section check.
     all (check_atom sP empty) (fresh_atoms v bo r).2 = all (check_atom sP empty) bo.
   Proof. by elim: bo => //= x xs IH; rewrite !push/= check_atom_fresh0 IH. Qed.
 
-  (* Lemma check_atoms_fresh0 sP v bo r:
-    check_atoms sP empty (fresh_atoms v bo r).2 = check_atoms sP empty bo.
-  Proof.
-    elim: bo => //=-[|t] xs I; rewrite !push/=.
-      rewrite check_atom_fresh0_all.
-    by rewrite /rename !push/= fresh_has_cut call_is_det_tm_ren0.
-  Qed. *)
-
-  (* Definition isOk t := match t with Ok _ => true | _ => false end.
-  Coercion isOk : ch >-> bool. *)
-
-  (* Definition isOkP t r: t = Ok r -> isOk t.
-  Proof. by move=>->. Qed. *)
-
   Lemma check_atoms_fresh sP hd bo v (r : {fmap V -> V}):
     (* TODO: instead of empty, I need sV and (compose r sV) *)
     check_atoms sP (assume_tm sP empty (ren r hd)).1 (fresh_atoms v bo r).2 =
@@ -1016,29 +1002,42 @@ Section check.
   Admitted.
 
   Lemma relSS_assume sP sV froz q hd s s':
-    (* q \notin domf s -> *)
     relSS sP s sV ->
-    domf s # vars q ->
+    (get_input_vars sP q).1 `<=` froz ->
     H u sP froz q hd s = Some s' ->
     relSS sP s'.2 (assume_tm sP sV hd).1.
   Proof.
     elim: q hd s s' => //[p|f Hf a _][p'|//|//|f' a']//= s s' R.
       by case: eqP => //->; case: fndP => //pP _ [<-]//.
-    rewrite fdisjointXU => /andP[sf sa].
+    move=> GI.
+    have GI' : (get_input_vars sP f).1 `<=` froz.
+      move: GI; case: get_input_vars => //= fv' [[//|]|//]/= m _ _.
+      by rewrite fsubUset => /andP[].
     case H1: H => [[[|m tl tr] sm]|]//=.
     case M: (_ sm) => [sx|//][<-/={s'}].
-    have /={Hf} := Hf _ _ _ R sf H1.
-    case X: assume_tm => //=[sv sig].
+    have /={Hf} := Hf _ _ _ R GI' H1.
+    case G: get_input_vars GI GI' => [ff os]/= GI GI'.
+    case A1: assume_tm => //=[sv sig].
     move=> smsv.
-    have:= H_assume_tm_ty H1
+    have:= get_input_vars2 H1; rewrite G => /=[?]; subst.
+    have {H1 A1}? := H_assume_tm_ty H1 A1; subst.
     have sxsv: relSS sP sx sv.
-      by case: m M {H1}; apply: relSS_matching smsv.
-    case: sig X => [[|[] tl' tr']|]//=.
+      by case: m M {G GI}; apply: relSS_matching smsv.
+    rewrite/=.
+    case: m M G GI => //= M GI; rewrite fsubUset => /andP[_ af].
     case: a' M => //=v.
-    case: m in H1 * => /=.
-      admit.
-    rewrite/unif.unify/montanari_deref/montanari_pair 2!montanari_equation.
-
+    rewrite/matching/montanari_deref/montanari_pair.
+    rewrite deref_V; case: fndP => //= vsm; last first.
+      rewrite montanari_equation.
+      case: eqP => //=.
+        admit.
+      move=> H.
+      case: ifP => // vI.
+      case: ifP => //=vf.
+        case D: deref => //=[v'].
+        case: ifP => //v'f.
+        rewrite montanari_equation => -[?]; subst.
+  Admitted.
 
 
   Lemma det_check_H sP q hd bo s s' froz sV:
@@ -1057,12 +1056,13 @@ Section check.
     have {} IH:= IH _ _ _ _ _ cps.
     have A' := acyclic_sigma_H A H.
     have R': relSS sP s'.2 (assume_tm sP sV hd).1.
+      apply: relSS_assume H => //.
       admit.
     case: p0 cp0 => //=[_|t ct].
       move=> /orP[|/(check_atoms_deref R')->]//; last by rewrite orbT.
       admit.
     move=> /andP[Ht Hps].
-    rewrite (IH _ _ _ _ _ _ _ _ Hps _ H)// andbT.
+    rewrite (IH _ _ _ _ _ _ _ _ _ Hps _ H)// andbT.
     move: Ht => /orP[|/has_cut_deref_atom->]; last by rewrite orbT.
     by move=> /(call_is_det_deref ct A' R')->.
   Admitted.
