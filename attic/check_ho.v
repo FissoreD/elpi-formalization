@@ -1060,48 +1060,55 @@ Section check.
   Qed.
 
   Lemma relSS_assume sP sV froz q hd s s': acyclic_sigma s ->
-    good_modes sP -> relSS sP s sV ->
+    good_modes sP -> relSS sP s sV -> domf s # vars q -> vars q # vars hd ->
     (get_input_vars sP q).1 `<=` froz ->
     H u sP froz q hd s = Some s' -> (*arri s'.1 ->*)
     relSS sP s'.2 (assume_tm sP sV hd).1.
   Proof.
-    elim: q hd s s' => //[p|f Hf a _][p'|//|//|f' a']//= s s' A GM R.
-      by case: eqP => //->; case: fndP => //pP _ [<-]//.
+    elim: q hd s s' => //[p|f Hf a _][p'|//|//|f' a']//= s s' As GM Rs.
+      by case: eqP => //->; case: fndP => //pP _ _ _ [<-]//.
+    rewrite fdisjointXU => /andP[sf sa].
+    rewrite fdisjointXU !fdisjointUX -!andbA => /and4P[ff' af' fa' aa'].
     move=> GI.
     have GI' : (get_input_vars sP f).1 `<=` froz.
       move: GI; case: get_input_vars => //= fv' [[//|]|//]/= m _ _.
       by rewrite fsubUset => /andP[].
     case H1: H => [[[|m tl tr] sm]|]//=.
     case M: (_ sm) => [sx|//][<-/={s'}].
-    have /={Hf} := Hf _ _ _ A GM R GI' H1.
+    have /={Hf} := Hf _ _ _ As GM Rs sf ff' GI' H1.
     case G: get_input_vars GI GI' => [ff os]/= GI GI'.
     case A1: assume_tm => //=[sv sig].
-    move=> smsv.
+    move=> Rsm.
     have:= get_input_vars2 H1; rewrite G => /=[?]; subst.
-    have /= A' := acyclic_sigma_H A H1.
+    have /= Asm := acyclic_sigma_H As H1.
     have ? := H_assume_tm_ty H1 A1; subst.
-    have sxsv: relSS sP sx sv.
-      by case: m M {G GI H1 A1}; apply: relSS_matching smsv.
-    rewrite/=.
+    have Rsx: relSS sP sx sv.
+      by case: m M {G GI H1 A1}; apply: relSS_matching Rsm.
     case: m M G GI H1 A1 => //= M GI; rewrite fsubUset => /andP[_ af].
-    case: a' M => //=v M H1 A1.
-    have:= 
-    rewrite/matching/montanari_deref/montanari_pair.
-    case: fndP => //=vsv.
-      have:= forallP smsv [`vsv].
-      rewrite valPE/=; case: fndP => //vsm.
-      rewrite deref_in//=.
-      admit. *)
-    (* rewrite deref_V; case: fndP => //= vsm; last first.
-      rewrite montanari_equation.
-      case: eqP => //=.
-        admit.
-      move=> H.
-      case: ifP => // vI.
-      case: ifP => //=vf.
-        case D: deref => //=[v'].
-        case: ifP => //v'f.
-        rewrite montanari_equation => -[?]; subst. *)
+    case: a' M aa' fa' => //=v M; rewrite !fdisjointX1 => va vf.
+    move=> H1 A1.
+    have [sz ? /and3P[Asz fsz smsz]] := matching_extP Asm M; subst.
+    have:= matchingP Asm M; rewrite deref_V.
+    have [sk KK /and3P[Ask fsk ssk]] := H_extP GM As H1 isT.
+    rewrite/=in KK; subst.
+    rewrite not_in_deref; last first.
+      rewrite !domf_cat/= !fdisjointUX sa andbT.
+      apply/andP; split; rewrite fdisjoint_sym.
+        by apply/fdisjointWl/fsz.
+      by apply/fdisjointWl/fsk.
+    case: fndP; last first.
+      rewrite domf_cat/= => + ?; subst.
+      by rewrite finmap.inE eqxx in va.
+    move=> vP.
+    move: (vP).
+    rewrite domf_cat !finmap.inE/= in vP.
+    move: vP; case vs: (_ \in domf s); rewrite !(orbT,orbF).
+      move=> _ vP.
+      rewrite getf_catr//; first by rewrite domf_cat !finmap.inE/= vs orbT.
+      move=> {}vP; rewrite ffunE valPE.
+      rewrite getf_catr ffunE valPE/= => ?; subst.
+      rewrite !domf_cat /= finmap.inE in vP.
+      
   Admitted.
 
 
@@ -1120,8 +1127,8 @@ Section check.
     move=> qh sq A GM cq + R H.
     have {} IH:= IH _ _ (ty,s') _ _ cps.
     have A' := acyclic_sigma_H A H.
-    have R': relSS sP s' (assume_tm sP sV hd).1.
-      apply: relSS_assume H _ => //.
+    have R': relSS sP s' (assume_tm sP sV hd).1 .
+      apply: relSS_assume H => //.
       (* admit.
     case: p0 cp0 => //=[_|t ct].
       move=> /orP[|/(check_atoms_deref R')->]//; last by rewrite orbT.
