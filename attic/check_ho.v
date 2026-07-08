@@ -5,6 +5,23 @@ From det Require Import tree tree_prop ctx tree_vars unif mut_excl fresh sig_lat
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
+Lemma fsetDUI (X: choiceType) (s sx: {fset X}):  sx `\` s `|` s = sx `|` s.
+Proof. by apply/fsetP => x; rewrite !finmap.inE; case R: (_ \in _); rewrite//!orbT. Qed.
+
+Lemma fsetDRL (X: choiceType) T s (r sx: {fmap X -> T}): s `<=` domf r -> sx.[\ s] + r = sx + r.
+Proof.
+  move=> sr; apply/fmapP => x; rewrite !fnd_cat fnd_rem; case: fndP => //xs.
+  by rewrite ifF//; apply: contraNF xs; apply/fsubsetP.
+Qed.
+
+Lemma rem_valP (K: choiceType) T k (s1: {fmap K -> T}) s2 (p1 : k \in domf s1.[\ s2]) (p2 : k \in s1):
+  s1.[\ s2] [` p1] = s1.[p2].
+Proof.
+  apply add_some.
+  rewrite -in_fnd fnd_rem in_fnd ifF//.
+  by move: p1; rewrite domf_rem finmap.inE p2 andbT => /negbTE.
+Qed.
+
 Definition sigV := {fmap V -> S}.
 
 Definition is_sigV (x : sigV) := unit.
@@ -117,12 +134,6 @@ Elpi derive.eqbOK.register_axiomx ch is_ch is_ch_inhab ch_eqb ch_eqb_correct ch_
 (* HB.instance Definition _ : hasDecEq ch := Equality.copy ch _. *)
 
 (* Compute (TyErr == TyErr). *)
-
-Fixpoint eat_ty n sig :=
-  match n with
-  | 0 => Some sig
-  | n.+1 => match sig with arr _ _ r => eat_ty n r | _ => None end
-  end.
 
 Definition apply_ch f (s:option S) :=
   match s with
@@ -772,13 +783,263 @@ Section check.
   Proof.
   Admitted.
 
-  Lemma relSS_assume sP sV froz q hd s s':
+  Lemma deref_deref_sig2 sm sx t:
+    deref sm (deref sx t) = deref (sm + deref_sig2 sm sx) t.
+  Proof.
+    elim: t => //[v|f Hf a Ha].
+      rewrite !deref_V fnd_cat [domf (deref_sig2 _ _)]/=.
+      case: fndP => //vsx.
+      by rewrite (@in_fnd _ _ (deref_sig2 _ _))//= ffunE valPE.
+    by rewrite/= Hf Ha.
+  Qed.
+
+  Lemma exist_sigA sm sx s:
+    ext_sig sm (ext_sig sx s) = ext_sig (ext_sig sm sx) s.
+  Proof.
+    apply/fmapP => k; rewrite/ext_sig.
+    rewrite !fnd_cat ![domf _]/= !finmap.inE.
+    rewrite [domf (deref_sig2 (sm + deref_sig2 sm sx) s)]/=.
+    case: (boolP (_ \in _)) => ks.
+      rewrite andFb orbT.
+      rewrite in_fnd//.
+        by rewrite/=!finmap.inE ks orbT.
+      move=> kP.
+      rewrite (@in_fnd _ _ (deref_sig2 _ _)).
+      rewrite ffunE !valPE.
+      by rewrite getf_catr !ffunE !valPE deref_deref_sig2.
+    rewrite orbF andTb [domf (deref_sig2 _ _)]/=.
+    case: ifP => // ksx.
+    rewrite in_fnd.
+      by rewrite/= !finmap.inE ksx (negbTE ks)/=.
+    move=> kP.
+    rewrite (@in_fnd _ _ (deref_sig2 _ _)) ffunE valPE.
+    rewrite getf_catl//.
+    rewrite /=!finmap.inE ksx (negbTE ks)/= in kP.
+    by rewrite/deref_sig2 ffunE valPE.
+  Qed.
+
+  Lemma codom_vars_deref_sig2 sm sx:
+    codom_vars (deref_sig2 sm sx) `<=` codom_vars sm `|` codom_vars sx.
+  Proof.
+    apply/fsubsetP => x/codom_varsP[y[/=yP]].
+    rewrite ffunE valPE.
+    move=> /(fsubsetP (vars_tm_deref_sub _ _)); rewrite !finmap.inE.
+    move=>/orP[->| H]//.
+    apply/orP; right.
+    apply/fsubsetP/H/codom_vars_sub_vt.
+  Qed.
+
+  Lemma acyclic_sigma_deref_sig2 sm sx:
+    acyclic_sigma sx -> domf sx # codom_vars sm ->
+    acyclic_sigma (deref_sig2 sm sx).
+  Proof.
+    move=> asx sxsm.
+    apply/fdisjointP => x/= xsx.
+    apply/codom_varsP => -[y[/=yP]].
+    rewrite ffunE valPE.
+    move=> /(fsubsetP (vars_tm_deref_sub _ _)); rewrite !finmap.inE.
+    rewrite (negbTE (fdisjointP sxsm _ xsx))/=.
+    move=> H.
+    have xcsx:= fsubsetP (codom_vars_sub_vt _) _ H.
+    have:= fdisjointP_sym asx _ xcsx.
+    by rewrite xsx.
+  Qed.
+
+  Lemma codom_vars_cat sm sx:
+    codom_vars (sm + sx) `<=` codom_vars sm `|` codom_vars sx.
+  Proof.
+    apply/fsubsetP => x /codom_varsP[k [kP]].
+    case: (boolP (k \in domf sx)) => ksx.
+      rewrite getf_catr// finmap.inE.
+      by move=> /(fsubsetP (codom_vars_sub_vt _))->; rewrite orbT.
+    rewrite finmap.inE getf_catl//=.
+      by move: kP; rewrite !finmap.inE (negbTE ksx); rewrite orbF.
+    by move=> ksm/(fsubsetP (codom_vars_sub_vt _))->.
+  Qed.
+
+  Lemma codom_vars_catD s1 s2: domf s1 # domf s2 ->
+    codom_vars (s1 + s2) = codom_vars s1 `|` codom_vars s2.
+  Proof.
+    move=> H.
+    apply/fsetP => x; rewrite finmap.inE.
+    case xs1s2: (_ \in _).
+      apply/esym.
+      move: xs1s2 => /codom_varsP[k [kP]].
+      case ks2: (k \in domf s2).
+        rewrite getf_catr.
+        by move=> /(fsubsetP (codom_vars_sub_vt _ ))->; rewrite orbT.
+      rewrite getf_catl?ks2//.
+        by move: kP; rewrite domf_cat finmap.inE ks2 orbF.
+      move=> ks1.
+      by move=> /(fsubsetP (codom_vars_sub_vt _ ))->.
+    case O: (orb _ _); rewrite// -xs1s2; apply/codom_varsP.
+    case xs2: (_ \in codom_vars s2) in O; rewrite (orbT,orbF) in O.
+      move/codom_varsP: xs2 => [v[vs2 H1]].
+      have vs1s2: v \in domf (s1 + s2) by rewrite finmap.inE vs2 orbT.
+      by exists v, vs1s2; rewrite getf_catr.
+    move/codom_varsP: O => [v[vs1 H1]].
+    have vs1s2: v \in domf (s1 + s2) by rewrite finmap.inE vs1.
+    exists v, vs1s2; rewrite getf_catl//.
+    by apply: fdisjointP H _ _.
+  Qed.
+
+  Lemma fdisjoint_codom_vars_cat a b c: 
+    a # codom_vars b -> a # codom_vars c ->
+    a # codom_vars (b + c).
+  Proof.
+    move=> ab ac; apply:fdisjointWr (codom_vars_cat _ _) _.
+    by rewrite fdisjointXU ab.
+  Qed.
+
+  Lemma acyclic_sigma_cat (a b: Sigma):
+    acyclic_sigma a ->  domf b # codom_vars a -> acyclic_sigma b ->
+    domf a # codom_vars b -> acyclic_sigma (a + b).
+  Proof.
+    move=> Aa Ab ab ba.
+    rewrite/acyclic_sigma /= fsetDUI fdisjointUX.
+    rewrite !fdisjoint_codom_vars_cat//.
+  Qed.
+
+  Lemma deref_rem s t s1:
+    s # vars_tm t ->
+    deref s1.[\ s] t = deref s1 t.
+  Proof.
+    elim: t => //[v|f Hf a Ha/=].
+      by rewrite fdisjointX1 !deref_V fnd_rem => /negbTE->//.
+    rewrite fdisjointXU => /andP[sf sa].
+    by rewrite Ha//Hf.
+  Qed.
+
+  Lemma deref_sig2_rem (s1 s: Sigma):
+    acyclic_sigma s ->
+    deref_sig2 s1.[\ domf s] s = deref_sig2 s1 s.
+  Proof.
+    move=> A; apply/fmapP => k.
+    case: fndP => //ks; last by rewrite not_fnd.
+    by rewrite in_fnd//=!ffunE !valPE deref_rem//= acyclic_deref'.
+  Qed.
+
+  Lemma ext_sig_rem s1 s: acyclic_sigma s ->
+    ext_sig s1.[\ domf s] s = ext_sig s1 s.
+  Proof. move=> A; rewrite/ext_sig deref_sig2_rem//=; by apply fsetDRL. Qed.
+
+  Lemma ext_sigR s: acyclic_sigma s -> ext_sig s s = s.
+  Proof.
+    move=> As; apply/fmapP => x; rewrite fnd_cat.
+    by case: fndP => //= xs; rewrite in_fnd ffunE valPE deref_in.
+  Qed.
+
+  Lemma deref_rem2 s1 s2 s3 k:  
+    k \notin s3 ->
+    (deref_sig2 s1 s2.[\ s3]).[? k] = (deref_sig2 s1 s2).[? k].
+  Proof.
+    move=> H.
+    apply/esym; case: fndP => ks2; last first.
+      by rewrite not_fnd// !finmap.inE H (negbTE ks2).
+    rewrite in_fnd.
+      by rewrite /deref_sig2 !finmap.inE/= H ks2.
+    move=> H1; rewrite/deref_sig2 ffunE valPE.
+    by rewrite ffunE valPE rem_valP.
+  Qed.
+
+  Lemma deref_sig2_remR (s1 s2: Sigma) s3:
+    (deref_sig2 s1 s2).[\s3] = deref_sig2 s1 s2.[\s3].
+  Proof.
+    apply/fmapP => k.
+    rewrite fnd_rem; case ks3: (k \in s3).
+      by rewrite not_fnd//!finmap.inE/= ks3/= andbF.
+    by rewrite deref_rem2//ks3.
+  Qed.
+
+  Lemma ext_sig_remR s1 s2 s3: s3 # codom_vars s2 ->
+    (ext_sig s1 s2).[\ s3] = ext_sig s1.[\s3] s2.[\s3].
+  Proof.
+    move=> H.
+    rewrite/ext_sig remf_cat deref_sig2_remR.
+    f_equal.
+    apply/fmapP => k; case: fndP => //ks; last by rewrite not_fnd.
+    rewrite in_fnd ffunE valPE.
+    apply/esym.
+    rewrite ffunE valPE deref_rem//.
+    rewrite rem_valP/=.
+      by move: ks; rewrite !finmap.inE/= => /and3P[].
+    move=> x; apply/fdisjointWr/H/codom_vars_sub_vt.
+  Qed.
+
+  Lemma H_extP sP s r b t1 t2:
+    good_modes sP ->
+    acyclic_sigma s -> H u sP b t1 t2 s = Some r -> arri r.1 ->
+    exists2 sm : Sigma, r.2 = ext_sig sm s & ext_sigP b sm s.
+  Proof.
+    move=> GM A; elim: t1 t2 r => //[p|f Hf a _][p'|//|//|f' a']//= r.
+      by case: eqP => //->; case: fndP => //=pP [<-]; exists fmap0; rewrite/=(ext_sig0,ext_sigP0).
+    case H1: H => [[[//|m tf ta] s']|//].
+    case M: (_ s') => //=[s''][<-{r}]/= IA.
+    have /= A' := acyclic_sigma_H A H1.
+    have ?:= good_modes_arri_H GM H1 IA; subst.
+    have {Hf}/=[sx ? EP] := Hf _ _ H1 isT; subst.
+    simpl in M.
+    have /=[sm ? EP'] := matching_extP A' M; subst.
+    exists (ext_sig sm (ext_sig sx s)).[\ domf s].
+      by rewrite ext_sig_rem// -!exist_sigA ext_sigR.
+    have A2 := matching_acyclic A' M.
+    move: EP EP'.
+    move=> /and3P[asx bsx ssx].
+    move=> /and3P[].
+    move => asm bsm; rewrite[domf _]/= fsetDUI fdisjointUX => /andP[sxsm ssm].
+    have D: domf s # codom_vars (ext_sig sx s).
+      apply/fdisjointP => k kP; apply/negP.
+      move=> /(fsubsetP (codom_vars_cat _ _)).
+      rewrite finmap.inE.
+      have := (negbTE (fdisjointP ssx _ kP)); rewrite !finmap.inE.
+      move=> /norP[kd /negbTE kcs]/=.
+      rewrite kcs.
+      move=> /(fsubsetP (codom_vars_deref_sig2 _ _)); rewrite finmap.inE kcs.
+      by rewrite (negbTE (fdisjointP A _ kP)).
+    apply/and3P; split => //; last first.
+    - rewrite ext_sig_remR//.
+      rewrite/vars_sigma fdisjointXU; apply/andP; split.
+        rewrite domf_cat fdisjointXU domf_rem fdisjoint_sym fdisjoint_rem.
+        by rewrite domf_rem fdisjoint_sym fdisjoint_rem.
+      rewrite ext_sig_remR// remf_all ext_sig0R.
+      apply/fdisjointWr.
+        apply: codom_vars_cat.
+      rewrite fdisjointXU; apply/andP; split.
+        by apply/fdisjointWr/ssm; rewrite fsubsetU// codom_vars_sub orbT.
+      apply: fdisjointWr (codom_vars_deref_sig2 _ _) _.
+      rewrite fdisjointXU; apply/andP; split; apply: fdisjointWr (codom_vars_sub _ _) _ => //.
+        by apply: fdisjointWr ssm; rewrite fsubsetUr.
+      by apply: fdisjointWr ssx; rewrite fsubsetUr.
+    - rewrite domf_rem !domf_cat fsetUA !fsetDUl !fdisjointXU/= fsetDv fdisjointX0 andbT.
+      by apply/andP; split; apply: fdisjointWr (fsubsetDl _ _) _.
+    - rewrite !ext_sig_remR// remf_all ext_sig0R.
+      have scsm:= fdisjointWr (fsubsetUr _ _) ssm.
+      have sxcsm:= fdisjointWr (fsubsetUr _ _) sxsm.
+      apply: acyclic_sigma_cat.
+        by apply: acyclic_sigma_rem.
+        by rewrite domf_rem; apply: fdisjointWl (fsubsetDl _ _) (fdisjointWr (codom_vars_sub _ _) sxcsm).
+        by apply: acyclic_sigma_deref_sig2 (acyclic_sigma_rem _ asx) (fdisjointWr (codom_vars_sub _ _) _); rewrite domf_rem; apply: fdisjointWl (fsubsetDl _ _) sxcsm.
+      apply/fdisjointP => x; rewrite domf_rem finmap.inE => /andP[+ xsm].
+      apply: contraNN => /codom_varsP -[k[/[dup] kP]].
+      rewrite domf_rem finmap.inE in kP; move /andP: kP => [ks ksx] kP.
+      rewrite ffunE valPE rem_valP.
+      have: x \in domf sm.[\domf s].
+        rewrite domf_rem finmap.inE xsm andbT .
+        by apply: fdisjointP_sym ssm _ _; rewrite !finmap.inE xsm.
+      move=> H.
+      have A2':= acyclic_sigma_rem (domf s) asm.
+      by have -> := negbTE (fdisjointP (acyclic_deref_disjoint sx.[ksx] A2') _ H).
+  Qed.
+
+  Lemma relSS_assume sP sV froz q hd s s': acyclic_sigma s ->
     relSS sP s sV ->
     (get_input_vars sP q).1 `<=` froz ->
     H u sP froz q hd s = Some s' ->
     relSS sP s'.2 (assume_tm sP sV hd).1.
   Proof.
-    elim: q hd s s' => //[p|f Hf a _][p'|//|//|f' a']//= s s' R.
+    move=> As R GF H.
+
+    elim: q hd s s' => //[p|f Hf a _][p'|//|//|f' a']//= s s' A R.
       by case: eqP => //->; case: fndP => //pP _ [<-]//.
     move=> GI.
     have GI' : (get_input_vars sP f).1 `<=` froz.
@@ -786,19 +1047,25 @@ Section check.
       by rewrite fsubUset => /andP[].
     case H1: H => [[[|m tl tr] sm]|]//=.
     case M: (_ sm) => [sx|//][<-/={s'}].
-    have /={Hf} := Hf _ _ _ R GI' H1.
+    have /={Hf} := Hf _ _ _ A R GI' H1.
     case G: get_input_vars GI GI' => [ff os]/= GI GI'.
     case A1: assume_tm => //=[sv sig].
     move=> smsv.
     have:= get_input_vars2 H1; rewrite G => /=[?]; subst.
-    have {H1 A1}? := H_assume_tm_ty H1 A1; subst.
+    have /= A' := acyclic_sigma_H A H1.
+    have ? := H_assume_tm_ty H1 A1; subst.
     have sxsv: relSS sP sx sv.
-      by case: m M {G GI}; apply: relSS_matching smsv.
+      by case: m M {G GI H1 A1}; apply: relSS_matching smsv.
     rewrite/=.
-    case: m M G GI => //= M GI; rewrite fsubUset => /andP[_ af].
-    case: a' M => //=v.
+    case: m M G GI H1 A1 => //= M GI; rewrite fsubUset => /andP[_ af].
+    case: a' M => //=v M H1 A1.
     rewrite/matching/montanari_deref/montanari_pair.
-    rewrite deref_V; case: fndP => //= vsm; last first.
+    case: fndP => //=vsv.
+      have:= forallP smsv [`vsv].
+      rewrite valPE/=; case: fndP => //vsm.
+      rewrite deref_in//=.
+      admit.
+    (* rewrite deref_V; case: fndP => //= vsm; last first.
       rewrite montanari_equation.
       case: eqP => //=.
         admit.
@@ -807,7 +1074,7 @@ Section check.
       case: ifP => //=vf.
         case D: deref => //=[v'].
         case: ifP => //v'f.
-        rewrite montanari_equation => -[?]; subst.
+        rewrite montanari_equation => -[?]; subst. *)
   Admitted.
 
 
