@@ -575,6 +575,9 @@ Proof.
   by rewrite not_fnd.
 Qed.
 
+Lemma deref_sig20R s: deref_sig2 s empty = empty.
+Proof. by apply/fmapP => [v]; rewrite !not_fnd//. Qed.
+
 Lemma deref_empty_set x v t k:
   deref x (deref ctx.empty.[v <- k] t) = deref x.[v <- deref x k] t.
 Proof.
@@ -616,6 +619,9 @@ Proof. by rewrite/ext_sigP vars_sigma0 !fdisjointX0 acyclic_sigma0. Qed.
 Lemma ext_sig0 s: ext_sig empty s = s.
 Proof. by rewrite/ext_sig deref_sig20L cat0f. Qed.
 
+Lemma ext_sig0R s: ext_sig s empty = s.
+Proof. by rewrite/ext_sig deref_sig20R catf0. Qed.
+
 Lemma ext_sig_deref_sigma_set x (s:Sigma) v t:
   v \notin domf s ->
   ext_sig x (deref_sigma v t s) =
@@ -650,7 +656,7 @@ Proof.
       have:= fsubsetP (vars_tm_deref_sub x t) _ H.
       by rewrite inE (negbTE vcx) (negbTE vt).
     apply: negP vx; rewrite negbK.
-    have:= fsubsetP (codom_vars_sub x v) _ H.
+    have:= fsubsetP (codom_vars_sub _ _) _ H.
     by rewrite (negbTE vcx).
     by rewrite fdisjointX1.
   apply: disjoint_vars_sigma => //.
