@@ -271,7 +271,7 @@ Proof.
   by apply/map_f/codomP; eexists.
 Qed.
 
-Lemma codom_vars_sub s k: codom_vars s.[~k] `<=` codom_vars s.
+Lemma codom_vars_sub s k: codom_vars s.[\ k] `<=` codom_vars s.
 Proof.
   rewrite{1}/codom_vars.
   apply/fsubsetP => x /varUP[y [yP xP]].
@@ -281,9 +281,9 @@ Proof.
   have {ts} [[y yP] H] := codomP ts; subst.
   have ys : y \in domf s by move: yP {xP}; rewrite domf_rem inE => /andP[].
   exists y, ys.
-  suffices [->//] : Some s.[ys] = Some (s.[~ k] [` yP]).
+  suffices [->//] : Some s.[ys] = Some (s.[\ k] [` yP]).
   rewrite -!in_fnd !FmapE.fmapE !inE; move: yP {xP}; rewrite domf_rem !inE.
-  by case: eqP => //= _ ->.
+  by move=> /andP[yk ts]; rewrite in_fnd yk ts.
 Qed.
 
 Definition acyclic_sigma (s: Sigma) := [disjoint domf s & codom_vars s].
@@ -356,7 +356,7 @@ Proof.
   by rewrite xsk in ks.
 Qed.
 
-Lemma acyclic_sigma_rem s k: acyclic_sigma s -> acyclic_sigma s.[~ k].
+Lemma acyclic_sigma_rem s k: acyclic_sigma s -> acyclic_sigma s.[\ k].
 Proof.
   move=> H; apply/fdisjointWr/fdisjointWl/H.
     by rewrite codom_vars_sub.
