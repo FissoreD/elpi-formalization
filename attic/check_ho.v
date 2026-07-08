@@ -805,9 +805,11 @@ Section check.
       by move/and3P: smP => [_ _ /fdisjointP/(_ _ xs)]; rewrite !finmap.inE => /norP[].
     move=> xsm; rewrite getf_catr ffunE valPE.
     case C: check_tm => //=[ty] CI.
-    Search check_tm_deref
-    Print ext_sigP.
-  Admitted.
+    move/and3P: smP => [asm fP ssm].
+    have [r' CT CI'] := check_tm_derefE asm (relSS0 _ _) C.
+    rewrite CT.
+    by apply: cincl_trans CI.
+  Qed.
 
   Lemma deref_deref_sig2 sm sx t:
     deref sm (deref sx t) = deref (sm + deref_sig2 sm sx) t.
