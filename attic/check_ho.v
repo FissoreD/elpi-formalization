@@ -22,6 +22,9 @@ Proof.
   by move: p1; rewrite domf_rem finmap.inE p2 andbT => /negbTE.
 Qed.
 
+Lemma deref_in (s:Sigma) (v:V) (vs : v \in s): acyclic_sigma s -> deref s s.[vs] = s.[vs].
+Proof. by move=> A; have:= deref2 (Tm_V v) A; rewrite/=in_fnd. Qed.
+
 Definition sigV := {fmap V -> S}.
 
 Definition is_sigV (x : sigV) := unit.
@@ -46,12 +49,11 @@ Proof. by move=> x y z /andP[C1 I1] /andP[C2 I2]; rewrite /cincl (incl_trans I1 
 Lemma cincl_refl: reflexive cincl.
 Proof. by rewrite /cincl/reflexive => x; rewrite compat_type_refl incl_refl. Qed.
 
-Lemma cincl_arr m a b a' b':
-  cincl (arr m a b) (arr m a' b') =
-    (if m == input then cincl a' a else cincl a a') && cincl b b'.
+Lemma cincl_arr m m' a b a' b':
+  cincl (arr m a b) (arr m' a' b') =
+    [&& m' == m, (if m == input then cincl a' a else cincl a a') & cincl b b'].
 Proof.
-  rewrite/cincl/= incl_arr.
-  case: m => //=; rewrite -!andbA//; f_equal.
+  rewrite/cincl/=; case: m; case: m' => //; rewrite incl_arr/= -!andbA; f_equal.
     by apply: compat_type_comm.
     by case: compat_type => //; rewrite andbF.
   by case: compat_type => //=; rewrite andbF.
@@ -198,6 +200,51 @@ Proof. by rewrite/cincl => /andP[C1 I1]; rewrite compat_type_weak incl_weakr//C1
 Lemma cincl_weakeq t1 t2: cincl t1 t2 -> (weak t1) = (weak t2).
 Proof. by move=> /andP[/compat_type_weak_eq]. Qed.
 
+Lemma check_tm_derefE sP sV s t r1:
+  acyclic_sigma s ->
+  relSS sP s sV ->
+  check_tm sP sV (t) = Some r1 ->
+  exists2 r2, check_tm sP empty ((deref s t)) = Some r2 &
+    cincl r2 r1.
+Proof.
+  move=> A R.
+  elim: t r1 => //[p|d|v|f Hf a Ha] r1.
+  - by move=> /=; case: fndP =>//pP [<-]; eexists; rewrite// cincl_refl.
+  - by move=> /= [<-]; eexists; rewrite// cincl_refl.
+  - rewrite/=; case: fndP => // vV[<-].
+    have /= := forallP R [`vV].
+    case: fndP => //=vs; rewrite deref_in//valPE.
+    case C: check_tm => //[ty] CI.
+    by eexists => //.
+  - move: Hf => /=.
+    case C1: check_tm => [[|m tyf tya]|]///(_ _ erefl) [r2 CT CI].
+    rewrite {}CT.
+    case: r2 CI => [[]|]//m' tyf' tya'; rewrite cincl_arr => /and3P[/eqP?]; subst.
+    case: m' C1 => /= C1 CF CA; last first.
+      by move=> [<-{r1}]; eexists.
+    case: eqP => tyfE; subst => /=.
+      move=> [?]; subst.
+      by case: tyf' CF => [[]|]//= _; eexists => //.
+    case: eqP => tyaE; subst => //=.
+      move=> [<-{r1}]; case: tya' CA => [[]|[]]// _.
+      by rewrite eqxx orbT; eexists.
+    case C2: check_tm => //[ty'][<-{r1}].
+    have [r2 {}Ha CI] := Ha _ C2.
+    rewrite Ha; case: eqP => tyf'E; subst => /=.
+      eexists => //=; apply: cincl_trans CA _.
+      by case: ifP; rewrite !(cincl_refl, cincl_weakr)//.
+    case: eqP => tya'E; subst => /=.
+      eexists => //=; apply: cincl_trans CA _.
+      by case: ifP; rewrite !(cincl_refl, cincl_weakr)//.
+    eexists => //=.
+    case: ifP => C.
+      by case: ifP; rewrite //!(cincl_refl, cincl_weakr).
+    rewrite ifF.
+      by rewrite (cincl_weakeq CA) cincl_refl.
+    apply: contraFF C => H.
+    by apply: cincl_trans CI (cincl_trans H _).
+Qed.
+
 Lemma check_tm_deref sP sV s t r1 r2:
   acyclic_sigma s ->
   relSS sP s sV ->
@@ -205,42 +252,9 @@ Lemma check_tm_deref sP sV s t r1 r2:
   check_tm sP empty ((deref s t)) = Some r2 ->
   cincl r2 r1.
 Proof.
-  move=> A R.
-  elim: t r1 r2 => //[p|d|v|f Hf a Ha] r1 r2.
-  - by move=> /=; case: fndP =>//pP [<-][<-]; rewrite cincl_refl.
-  - by move=> /= [<-][<-]; rewrite cincl_refl.
-  - rewrite/=; case: fndP => // vV[<-].
-    case: fndP => //=vs; last by rewrite not_fnd.
-    move=> H.
-    have /= := forallP R [`vV].
-    rewrite in_fnd/= not_in_deref.
-      by rewrite H valPE//.
-    have:= @acyclic_deref_disjoint s (Tm_V v) A.
-    by rewrite/= in_fnd.
-  - move: Hf Ha => /=.
-    case C1: check_tm => [[|m tyf tya]|]///(_ _ _ erefl).
-    case C2: check_tm => [[|m' tysf tysa]|]///(_ _ erefl) I.
-    have ?: m' = m by case: m' I {C1 C2}; case: m => //.
-    subst.
-    case: m I C1 C2 => //=; rewrite !cincl_arr/= => /andP[If Ia] C1 C2; last first.
-      by move=> _ [?][?]; subst.
-    case: eqP => IE/=; subst.
-      move=> + [?]; subst.
-      by case: tysf If C2 => [[]|[]]//= _ _ _ [<-].
-    case: eqP => IE'/=; subst.
-      move=> + [?]; subst.
-      by case: tysa Ia C2 => [[]|[]]//=; rewrite orbT => _ _ _ [<-].
-    case C3: check_tm => [tya'|]// /(_ _ _ erefl) + [?]; subst.
-    case: eqP => //= IEf; subst.
-      by case: tyf If IE {C1} => [[]|[]].
-    case: eqP => //= IEa; subst.
-      by case: tya Ia IE' {C1} => [[]|[]].
-    case C4: check_tm => [tysa'|]// /(_ _ erefl) I.
-    move=> [?]; subst.
-    case: ifP => //I1; case: ifP => //I2.
-      by rewrite cincl_weakr.
-      by have:= cincl_trans I (cincl_trans I2 If); rewrite I1.
-    by rewrite (cincl_weakeq Ia) cincl_refl.
+  move=> A R C1 C2.
+  have:= check_tm_derefE A R C1; rewrite C2.
+  by move=> [_ [<-]].
 Qed.
 
 (* Equations check_tm
@@ -736,9 +750,6 @@ Section check.
       v \in vars t.
   Proof. by elim: t => //=[_[->]|f Hf a Ha /Hf]; rewrite finmap.inE// => ->. Qed.
 
-  Lemma deref_in (s:Sigma) (v:V) (vs : v \in s): acyclic_sigma s -> deref s s.[vs] = s.[vs].
-  Proof. by move=> A; have:= deref2 (Tm_V v) A; rewrite/=in_fnd. Qed.
-
   Lemma call_is_det_deref sP sV s t:
     check_tm sP empty (deref s t) ->
     acyclic_sigma s ->
@@ -778,9 +789,24 @@ Section check.
   Lemma relSS0 sP s: relSS sP s empty.
   Proof. by apply/forallP => //=-[]//. Qed.
 
-  Lemma relSS_matching sP sm sv sx froz t1 t2:
-    relSS sP sm sv -> matching froz t1 t2 sm = Some sx -> relSS sP sx sv.
+  Lemma relSS_matching sP s sv s' froz t1 t2: acyclic_sigma s ->
+    relSS sP s sv -> matching froz t1 t2 s = Some s' -> relSS sP s' sv.
   Proof.
+    move=> A R M.
+    have [sm ? smP] := matching_extP A M; subst.
+    apply/forallP => -[x xv]; rewrite valPE [val _]/=.
+    have:= forallP R [`xv]; rewrite valPE [val _]/=.
+    have A' := matching_acyclic A M.
+    case: fndP => // xs.
+    rewrite in_fnd; first by rewrite domf_cat finmap.inE xs orbT.
+    move=> xss; cbn zeta.
+    rewrite !deref_in//.
+    have: x \notin domf sm.
+      by move/and3P: smP => [_ _ /fdisjointP/(_ _ xs)]; rewrite !finmap.inE => /norP[].
+    move=> xsm; rewrite getf_catr ffunE valPE.
+    case C: check_tm => //=[ty] CI.
+    Search check_tm_deref
+    Print ext_sigP.
   Admitted.
 
   Lemma deref_deref_sig2 sm sx t:
@@ -1032,14 +1058,12 @@ Section check.
   Qed.
 
   Lemma relSS_assume sP sV froz q hd s s': acyclic_sigma s ->
-    relSS sP s sV ->
+    good_modes sP -> relSS sP s sV ->
     (get_input_vars sP q).1 `<=` froz ->
-    H u sP froz q hd s = Some s' ->
+    H u sP froz q hd s = Some s' -> (*arri s'.1 ->*)
     relSS sP s'.2 (assume_tm sP sV hd).1.
   Proof.
-    move=> As R GF H.
-
-    elim: q hd s s' => //[p|f Hf a _][p'|//|//|f' a']//= s s' A R.
+    elim: q hd s s' => //[p|f Hf a _][p'|//|//|f' a']//= s s' A GM R.
       by case: eqP => //->; case: fndP => //pP _ [<-]//.
     move=> GI.
     have GI' : (get_input_vars sP f).1 `<=` froz.
@@ -1047,7 +1071,7 @@ Section check.
       by rewrite fsubUset => /andP[].
     case H1: H => [[[|m tl tr] sm]|]//=.
     case M: (_ sm) => [sx|//][<-/={s'}].
-    have /={Hf} := Hf _ _ _ A R GI' H1.
+    have /={Hf} := Hf _ _ _ A GM R GI' H1.
     case G: get_input_vars GI GI' => [ff os]/= GI GI'.
     case A1: assume_tm => //=[sv sig].
     move=> smsv.
@@ -1059,12 +1083,13 @@ Section check.
     rewrite/=.
     case: m M G GI H1 A1 => //= M GI; rewrite fsubUset => /andP[_ af].
     case: a' M => //=v M H1 A1.
+    have:= 
     rewrite/matching/montanari_deref/montanari_pair.
     case: fndP => //=vsv.
       have:= forallP smsv [`vsv].
       rewrite valPE/=; case: fndP => //vsm.
       rewrite deref_in//=.
-      admit.
+      admit. *)
     (* rewrite deref_V; case: fndP => //= vsm; last first.
       rewrite montanari_equation.
       case: eqP => //=.
@@ -1089,20 +1114,20 @@ Section check.
     relSS sP s sV ->
     H u sP froz q hd s = Some s' -> check_atoms sP empty [seq deref_atom s'.2 i  | i <- bo].
   Proof.
-    elim: bo hd s s' q sV => [|p0 ps IH]//= hd s s' q sV /andP[cp0 cps].
+    elim: bo hd s s' q sV => [|p0 ps IH]//= hd s [ty s']/= q sV /andP[cp0 cps].
     move=> qh sq A GM cq + R H.
-    have {} IH:= IH _ _ _ _ _ cps.
+    have {} IH:= IH _ _ (ty,s') _ _ cps.
     have A' := acyclic_sigma_H A H.
-    have R': relSS sP s'.2 (assume_tm sP sV hd).1.
-      apply: relSS_assume H => //.
-      admit.
+    have R': relSS sP s' (assume_tm sP sV hd).1.
+      apply: relSS_assume H _ => //.
+      (* admit.
     case: p0 cp0 => //=[_|t ct].
       move=> /orP[|/(check_atoms_deref R')->]//; last by rewrite orbT.
       admit.
     move=> /andP[Ht Hps].
     rewrite (IH _ _ _ _ _ _ _ _ _ Hps _ H)// andbT.
     move: Ht => /orP[|/has_cut_deref_atom->]; last by rewrite orbT.
-    by move=> /(call_is_det_deref ct A' R')->.
+    by move=> /(call_is_det_deref ct A' R')->. *)
   Admitted.
 
   Lemma bc_is_p pr fv c s fv' x xs:
