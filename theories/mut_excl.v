@@ -159,7 +159,7 @@ Qed.
 Lemma H_deref_eq sP fv q hd s1 r:
   acyclic_sigma s1 ->
     H u sP fv q hd s1 = Some r ->
-      deref r.2 (deref s1 q) = deref r.2 (deref s1 hd).
+      deref r.2 q = deref r.2 hd.
 Proof.
   elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|//|f' a']// s1 r.
     by case: eqP => //-> A; case: fndP => //.
@@ -172,8 +172,7 @@ Proof.
     have M := montanari_mp A' (disjoint_L_deref _ _ A').
     by move: X; destruct m => /= /M.
   have MP := mp_trans s1s1' s1'sx.
-  have /={Hf} := Hf _ _ _ _ A H.
-  rewrite !derefxx//= => Hf.
+  have /={}Hf := Hf _ _ _ _ A H.
   rewrite -(@derefxx s1')// Hf derefxx//.
   move: X; destruct m => /matchingP->//.
 Qed.
@@ -210,8 +209,10 @@ Proof.
     by rewrite disjoint_L_deref.
   exists r.2; split => //.
     by apply: acyclic_sigma_H H.
+    have mp := H_mp A H.
     have:= H_deref_eq A H.
-    by rewrite/unifier/unif_pair/map_prod1/= andbT => ->.
+    rewrite/unifier/unif_pair/map_prod1/= => Hx.
+    by rewrite !derefxx//=Hx eqxx.
   by apply: H_ext1 H _.
 Qed.
 
