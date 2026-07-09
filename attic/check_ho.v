@@ -22,6 +22,14 @@ Proof.
   by move: p1; rewrite domf_rem finmap.inE p2 andbT => /negbTE.
 Qed.
 
+Definition cincl s1 s2 := compat_type s1 s2 && incl s1 s2.
+
+Lemma cincl_weakr t1 t2: cincl t1 t2 -> cincl t1 (weak t2).
+Proof. by rewrite/cincl => /andP[C1 I1]; rewrite compat_type_weak incl_weakr//C1. Qed.
+
+Lemma cincl_weakeq t1 t2: cincl t1 t2 -> (weak t1) = (weak t2).
+Proof. by move=> /andP[/compat_type_weak_eq]. Qed.
+
 Lemma deref_in (s:Sigma) (v:V) (vs : v \in s): acyclic_sigma s -> deref s s.[vs] = s.[vs].
 Proof. by move=> A; have:= deref2 (Tm_V v) A; rewrite/=in_fnd. Qed.
 
@@ -41,13 +49,13 @@ Definition odflt1 {T} (ab : T * bool) x :=
 
 Definition flex_head T := if get_tm_hd T is inr (inr _) then true else false.
 
-Definition cincl s1 s2 := compat_type s1 s2 && incl s1 s2.
-
 Lemma cincl_trans : transitive cincl.
 Proof. by move=> x y z /andP[C1 I1] /andP[C2 I2]; rewrite /cincl (incl_trans I1 I2) (compat_type_trans C1 C2). Qed.
 
 Lemma cincl_refl: reflexive cincl.
 Proof. by rewrite /cincl/reflexive => x; rewrite compat_type_refl incl_refl. Qed.
+
+Hint Resolve cincl_refl : core.
 
 Lemma cincl_arr m m' a b a' b':
   cincl (arr m a b) (arr m' a' b') =
@@ -183,22 +191,50 @@ match tm with
   end
 end.
 
+Lemma eat_ty_match n t m tf tr:
+eat_ty n t = Some (arr m tf tr) ->
+  match t with
+  | b _ => None
+  | arr _ _ r => eat_ty n r
+  end = Some tr.
+Proof.
+  elim: n t m tf tr => //=[|n IH] t m tr tl; first by move=> [->].
+  by case: t => // _ _ tr'; apply: IH.
+Qed.
+
+Lemma check_tmP sP sV t r: check_tm sP sV t = Some r -> 
+  match get_tm_hd t with
+    | inl p => exists2 r', obind (eat_ty (term_arg t)) sP.[?p] = Some r' & cincl r' r
+    | inr (inl _) => r = b Exp
+    | inr (inr v) => exists2 r', obind (eat_ty (term_arg t)) sV.[?v] = Some r' & cincl r' r
+  end.
+Proof.
+  elim: t r => /=[p r ->|d r [->]|v r ->|f Hf a Ha r]//; only 1-2: by eexists.
+  case CF: check_tm => [[|m tf tr]|]//.
+  have {Hf CF} := Hf _ CF.
+  case: m; last first.
+    by move=> + [<-{r}]; case GH: get_tm_hd => [p|[d|v]]//=; case: fndP => //= I[t]//;
+    case: t => [[]|]//>/eat_ty_match ->; rewrite cincl_arr => /and3P[*]; eexists.
+  case: ifP => ISE.
+    by move=> + [<-{r}]; case GH: get_tm_hd => [p|[d|v]]//=; case: fndP => //= I[t]//;
+    case: t => [[]|]//> /eat_ty_match ->; rewrite cincl_arr => /and3P[*]; eexists.
+  case CA: check_tm => [tya|]//= + [?]; subst.
+  have {CA ISE}Ha := Ha _ CA.
+  by case GH: get_tm_hd => [p|[d|v]]//=; case: fndP => //=I[]//t;
+  case: t => [[]|]//> /eat_ty_match ->; rewrite cincl_arr => /and3P[/eqP? H1 H2]; subst;
+  eexists => //; case: ifP => //; subst => _; apply: cincl_weakr.
+Qed.
+
+
 Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
   [forall x : domf sV,
     let sig := sV.[valP x] in
-    (* TODO: change check_tmM so that it does not check for deterministic signature of the pred *)
     if s.[? val x] is Some t then 
       match check_tm sP empty (deref s t) with
       | Some sig' => cincl sig' sig
       | None => false
       end
     else false].
-
-Lemma cincl_weakr t1 t2: cincl t1 t2 -> cincl t1 (weak t2).
-Proof. by rewrite/cincl => /andP[C1 I1]; rewrite compat_type_weak incl_weakr//C1. Qed.
-
-Lemma cincl_weakeq t1 t2: cincl t1 t2 -> (weak t1) = (weak t2).
-Proof. by move=> /andP[/compat_type_weak_eq]. Qed.
 
 Lemma check_tm_derefE sP sV s t r1:
   acyclic_sigma s ->
@@ -1059,22 +1095,35 @@ Section check.
       by have -> := negbTE (fdisjointP (acyclic_deref_disjoint sx.[ksx] A2') _ H).
   Qed.
 
+  Lemma domf_deref_sig2 s1 s2: domf (deref_sig2 s1 s2) = domf s2.
+  Proof. by []. Qed.
+
+  Lemma deref_sig2_fnd s1 s2 v:
+    (deref_sig2 s1 s2).[? v] = omap (deref s1) s2.[?v].
+  Proof.
+    case: fndP => vs2; last by rewrite not_fnd.
+    by rewrite in_fnd// ffunE valPE.
+  Qed.
+
   Lemma relSS_assume sP sV froz q hd s s': acyclic_sigma s ->
     good_modes sP -> relSS sP s sV -> domf s # vars q -> vars q # vars hd ->
     (get_input_vars sP q).1 `<=` froz ->
+    check_tm sP empty q ->
     H u sP froz q hd s = Some s' -> (*arri s'.1 ->*)
     relSS sP s'.2 (assume_tm sP sV hd).1.
   Proof.
     elim: q hd s s' => //[p|f Hf a _][p'|//|//|f' a']//= s s' As GM Rs.
-      by case: eqP => //->; case: fndP => //pP _ _ _ [<-]//.
+      by case: eqP => //->; case: fndP => //pP _ _ _ _ [<-]//.
     rewrite fdisjointXU => /andP[sf sa].
     rewrite fdisjointXU !fdisjointUX -!andbA => /and4P[ff' af' fa' aa'].
     move=> GI.
     have GI' : (get_input_vars sP f).1 `<=` froz.
       move: GI; case: get_input_vars => //= fv' [[//|]|//]/= m _ _.
       by rewrite fsubUset => /andP[].
+    move=> CT.
     case H1: H => [[[|m tl tr] sm]|]//=.
     case M: (_ sm) => [sx|//][<-/={s'}].
+    Search H check_tm.
     have /={Hf} := Hf _ _ _ As GM Rs sf ff' GI' H1.
     case G: get_input_vars GI GI' => [ff os]/= GI GI'.
     case A1: assume_tm => //=[sv sig].
@@ -1100,14 +1149,18 @@ Section check.
       rewrite domf_cat/= => + ?; subst.
       by rewrite finmap.inE eqxx in va.
     move=> vP.
-    move: (vP).
-    rewrite domf_cat !finmap.inE/= in vP.
-    move: vP; case vs: (_ \in domf s); rewrite !(orbT,orbF).
-      move=> _ vP.
-      rewrite getf_catr//; first by rewrite domf_cat !finmap.inE/= vs orbT.
-      move=> {}vP; rewrite ffunE valPE.
-      rewrite getf_catr ffunE valPE/= => ?; subst.
-      rewrite !domf_cat /= finmap.inE in vP.
+    rewrite -in_fnd fnd_cat {1}domf_deref_sig2 domf_cat domf_deref_sig2 deref_sig2_fnd fnd_cat.
+    rewrite {1}domf_deref_sig2 deref_sig2_fnd finmap.inE.
+    move: vP; rewrite domf_cat domf_deref_sig2 domf_cat domf_deref_sig2 !finmap.inE.
+    move: smsz; rewrite domf_cat fdisjointUX domf_deref_sig2 => /andP[sksz ssz].
+    case vsz: (_ \in domf sz) => //=.
+      rewrite (in_fnd vsz) ifF; last first.
+        rewrite (negbTE (fdisjointP_sym ssz _ _)); last by rewrite finmap.inE vsz.
+        by rewrite (negbTE (fdisjointP_sym sksz _ _))// finmap.inE vsz.
+      move=> _ /=?; subst.
+
+      rewrite
+      rewrite vsz.
       
   Admitted.
 
