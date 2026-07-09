@@ -22,6 +22,15 @@ Proof.
   by move: p1; rewrite domf_rem finmap.inE p2 andbT => /negbTE.
 Qed.
 
+Lemma andb1 a b: a && b -> a.
+Proof. by move=>/andP[]. Qed.
+
+Lemma andb2 a b: a && b -> b.
+Proof. by move=>/andP[]. Qed.
+
+Lemma andB (a b: bool): a -> b -> a && b.
+Proof. by move=> ->->. Qed.
+
 Definition cincl s1 s2 := compat_type s1 s2 && incl s1 s2.
 
 Lemma cincl_weakr t1 t2: cincl t1 t2 -> cincl t1 (weak t2).
