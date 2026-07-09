@@ -94,7 +94,7 @@ with compat_type_incl_strong {A B}: compat_type B A -> max B  (strong A) == B.
 Proof.
   all: rewrite/incl/min/max in compat_type_incl_weak compat_type_incl_strong *.
   - case: A => /=[[|[]]|[]s1 s2]//;
-    case: B => /=[[|[]]|[]s3 s4]// => /andP[C1 C2]; apply/eqP; f_equal; apply/eqP; auto.
+    case: B => /=[[|[]]|[]s3 s4]// => /andP[C1 C2]; apply/eqP; f_equal; apply/eqP => /=; auto.
   - case: A => /=[[|[]]|[]s1 s2]//;
     case: B => /=[[|[]]|[]s3 s4]// => /andP[C1 C2]; apply/eqP; f_equal; apply/eqP; auto.
 Qed.
@@ -104,9 +104,9 @@ with compat_type_strong_eq {A B}: compat_type A B -> strong A = strong B.
 Proof.
   all: rewrite/incl/min/max in compat_type_weak_eq compat_type_strong_eq *.
   - case: A => /=[[|[]]|[]s1 s2]//;
-    case: B => /=[[|[]]|[]s3 s4]// => /andP[C1 C2]; f_equal; auto.
+    case: B => /=[[|[]]|[]s3 s4]// => /andP[C1 C2]; f_equal => /=; auto.
   - case: A => /=[[|[]]|[]s1 s2]//;
-    case: B => /=[[|[]]|[]s3 s4]// => /andP[C1 C2]; f_equal; auto.
+    case: B => /=[[|[]]|[]s3 s4]// => /andP[C1 C2]; f_equal => /=; auto.
 Qed.
 
 Global Hint Resolve compat_type_refl : core.
