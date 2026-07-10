@@ -818,6 +818,22 @@ Section check.
       v \in vars t.
   Proof. by elim: t => //=[_[->]|f Hf a Ha /Hf]; rewrite finmap.inE// => ->. Qed.
 
+  Lemma is_func_well_call sP sV t wc b:
+    check_tm sP sV t = Some (wc, b) -> is_det_sig b -> wc = true.
+  Proof.
+    elim: t wc b => [p|d|v|f Hf a _] wc b/=.
+      by case: fndP => //pP[].
+      by move => [].
+      by case: fndP => //pP[].
+    case Cf: check_tm => [[wcf [|m tf tr]]|]//=.
+    have {Cf Hf} := Hf _ _ Cf.
+    case: m => //=; last by move=> +[<-<-].
+    case: ifP => IE; first by move=> + [<-<-].
+    case cA: check_tm => //[[wca tya]]; case: ifP => //CT.
+    case: ifP => I +[<-<-]//.
+    by rewrite is_det_sig_weak.
+  Qed.
+
   Lemma call_is_det_deref sP sV s t:
     check_tm sP empty (deref s t) ->
     acyclic_sigma s ->
@@ -827,9 +843,9 @@ Section check.
     move => + A R /eqP H.
     case C: check_tm => //[[wc sig]] _.
     rewrite/check_tmF C. apply/eqP.
-    have:= check_tm_deref A R H C; case: sig C => [[|[]]|[]]//.
-    (* TODO: add lemma sayng that if check_tm.2 == Func then wc is true  *)
-  Admitted.
+    have:= check_tm_deref A R H C; case: sig C => [[|[]]|[]]//=.
+    by move=> /is_func_well_call->//.
+  Qed.
 
   Lemma check_atoms_deref_all sP sV xs s:
     all (check_atom sP empty) [seq deref_atom s i  | i <- xs] ->
