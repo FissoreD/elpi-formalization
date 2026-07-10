@@ -85,12 +85,6 @@ Proof.
   by case: compat_type => //=; rewrite andbF.
 Qed.
 
-Fixpoint flatten_sig m :=
-  match m with
-  | arr m l r => l :: flatten_sig r
-  | b _ => [::]
-  end.
-
 Lemma cincl_is_det_sig a b: cincl a b ->  is_det_sig b ->  is_det_sig a.
 Proof.
   elim: a b => //=[|m f Hf a Ha]//=.
@@ -109,25 +103,11 @@ match tm with
     | Some (arr m l r) =>
       (if m == input then match bo with
         | Tm_V v => add v (min l (odflt l sV.[?v])) sV
-        | _ => sV
+        | _ => sV (*(assume_tm sP sV bo).1*)
         end else sV, Some r)
     | _ => (sV, None)
   end
 end.
-
-Lemma H_assume_tm_ty sP sV ty froz f f' s r sv:
-  H u sP froz f f' s = Some r ->
-  assume_tm sP sV f' = (sv, ty) ->
-  ty = Some r.1.
-Proof.
-  elim: f f' s r ty sV sv => //[p|f Hf a _] [p'|//|//|f' a']//= s r ty sV sv.
-    by case: eqP => //<-; case: fndP => //pP[<-][].
-  case H1 : H => [[ty' s']|]//=.
-  case A1 : assume_tm => [sV' ty'']//=.
-  have {Hf H1 A1}/=? := Hf _ _ _ _ _ _ H1 A1; subst.
-  case: ty' => [|m tl tr]//=.
-  by case M: (_ s') => //[r'][<-]{r}/=[_ <-].
-Qed.
 
 Definition get_sig (sP:sigT) (sV:sigV) t :=
   match get_tm_hd t with
@@ -136,56 +116,13 @@ Definition get_sig (sP:sigT) (sV:sigV) t :=
   | inr (inr v) => sV.[? v]
   end.
 
-Lemma get_sig_app s v f a: get_sig s v (Tm_App f a) = get_sig s v f.
-Proof. by rewrite/get_sig get_tm_hd_app. Qed.
-
-Lemma get_sig_V sp sv v: get_sig sp sv (Tm_V v) = sv.[?v].
-Proof. by []. Qed.
-
-Lemma get_sig_P sp sv p: get_sig sp sv (Tm_P p) = sp.[?p].
-Proof. by []. Qed.
-
-Inductive ch := TyErr | Ok of S.
-
-Definition is_ch (x : ch) := unit.
-Lemma is_ch_inhab : forall x, is_ch x. Proof. exact (fun x => tt). Qed.
-Definition ch_eqb (x y : ch) := 
-  match x, y with
-  | TyErr, TyErr => true
-  | Ok t1, Ok t2 => t1 == t2
-  | _, _ => false
-  end.
-Lemma ch_eqb_correct : forall x, eqb_correct_on ch_eqb x. Proof.
-  by case => //=[|s][|s']//=/eqP->. Qed.
-Lemma ch_eqb_refl : forall x, eqb_refl_on ch_eqb x. Proof. by case => [|?]//=; rewrite/eqb_refl_on//=. Qed.
-Elpi derive.eqbOK.register_axiomx ch is_ch is_ch_inhab ch_eqb ch_eqb_correct ch_eqb_refl.
-(* HB.instance Definition _ : hasDecEq ch := Equality.copy ch _. *)
-
-(* Compute (TyErr == TyErr). *)
-
-Definition apply_ch f (s:option S) :=
-  match s with
-  | None => TyErr
-  | Some x => f x
-  end.
-
-Fixpoint size_tm t : nat :=
+Fixpoint check_all_exp (sV:sigV) t :=
   match t with
-  | Tm_App l r => 1 + size_tm l + size_tm r
-  | _ => 1
+  | Tm_D _ => true
+  | Tm_V v => sV.[?v] == Some (b Exp)
+  | Tm_App f a => check_all_exp sV f && check_all_exp sV a
+  | Tm_P _ => false
   end.
-
-Definition size_tms t := foldr addn 0 (map size_tm t).
-Definition size_tmsP t1 t2 : Prop := (size_tms t1) < (size_tms t2).
-
-Lemma size_tmsP_cons t ts: size_tmsP ts (t :: ts).
-Proof.
-  rewrite/size_tmsP/size_tms/=; set X:= foldr _ _ _.
-  case: t => //=t1 t2.
-  rewrite addnC !addnA.
-  do 2 apply: ltn_addr.
-  by rewrite addnC.
-Qed.
 
 (* in the current implementation data (like lists, nat) and so on
    are not typechecked, therefore, they do not influence determinacy
@@ -213,6 +150,179 @@ match tm with
   | _ => None
   end
 end.
+
+Definition check_atom sP sV (a: Atom) :=
+  match a with
+  | cut => Some (true, b (d Func))
+  | call t => check_tm sP sV t
+  end.
+
+Definition is_func f := f == Some (true, b (d Func)).
+
+Definition check_atomF sP sV a := is_func (check_atom sP sV a).
+Definition check_tmF sP sV t := is_func (check_tm sP sV t).
+
+(* There is cut and after the cut there are only call to Det preds *)
+Fixpoint check_atoms (sP :sigT) sV (s: seq Atom) :=
+  match s with
+  | [::] => true
+  | cut :: xs => all (check_atomF sP sV) xs || check_atoms sP sV xs
+  | call c :: xs => (check_tmF sP sV c || has_cut_seq xs) && check_atoms sP sV xs
+  end.
+
+Definition check_rule (sP:sigT) head prems :=
+  let: (sV, _) := assume_tm sP empty head in
+  (tm_is_det sP head == false) || (check_atoms sP sV prems).
+
+Definition check_rules p :=
+  all (fun x => check_rule p.(sig) x.(head) x.(premises)) p.(rules).
+
+Module Test.
+  Definition p := b (d Pred).
+  Definition f := b (d Func).
+  Definition e := b Exp.
+  Notation V1 := (IV 0).
+  Notation V2 := (IV 1).
+  Notation F := (IV 2).
+  
+  Definition mkP sym sig r := {| sig := [fmap].[sym <- sig]; rules := [::r] |}.
+
+  Module Once.
+    Notation onceSym := (IP 1).
+    Definition onceI   := mkR (Tm_App (Tm_P onceSym) (Tm_V V1)) [::call (Tm_V V1); cut].
+    Definition onceSig := arr input p f.
+
+    Goal check_rules (mkP onceSym onceSig onceI).
+    Proof.
+      rewrite/check_rules/=andbT/check_rule.
+      rewrite /assume_tm !FmapE.fmapE/=.
+      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
+      by rewrite orbT.
+    Qed.
+  End Once.
+  
+  Module Do.
+    Notation doSym := (IP 2).
+    Definition doI   := mkR (Tm_App (Tm_P doSym) (Tm_V V1)) [::call (Tm_V V1)].
+    Definition doSig := arr input f f.
+
+    Goal check_rules (mkP doSym doSig doI).
+    Proof.
+      rewrite/check_rules/=andbT/check_rule.
+      rewrite /assume_tm !FmapE.fmapE/=.
+      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
+      rewrite/check_tmF/check_tm !FmapE.fmapE/= not_fnd//.
+    Qed.
+  End Do.
+  
+  (* apply F X :- F X. *)
+  Module Apply.
+    Notation applySym := (IP 3).
+    Definition applyI   := mkR (Tm_App (Tm_App (Tm_P applySym) (Tm_V F)) (Tm_V V1)) [::call (Tm_App (Tm_V F) (Tm_V V1))].
+    Definition applySig := arr input (arr input e f) (arr input e f).
+
+    Goal check_rules (mkP applySym applySig applyI).
+    Proof.
+      rewrite/check_rules/=andbT/check_rule.
+      rewrite /assume_tm !FmapE.fmapE/=.
+      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
+      by rewrite/check_tmF/check_tm !FmapE.fmapE/=/=not_fnd//=FmapE.fmapE/=.
+    Qed.
+  End Apply.
+  
+  (* apply F X :- F X. *)
+  Module WrongApply.
+    Notation applySym := (IP 3).
+    Definition applyI   := mkR (Tm_App (Tm_App (Tm_P applySym) (Tm_V F)) (Tm_V V1)) [::call (Tm_App (Tm_V F) (Tm_V V1))].
+    Definition applySig := arr input (arr input e p) (arr input e f).
+
+    Goal ~~ check_rules (mkP applySym applySig applyI).
+    Proof.
+      rewrite/check_rules/=andbT/check_rule.
+      rewrite /assume_tm !FmapE.fmapE.
+      rewrite eqxx /applySig /tm_is_det !get_tm_hd_app/get_tm_hd.
+      rewrite !FmapE.fmapE eqxx !not_fnd///=.
+      rewrite min_refl/=.
+      by rewrite/check_tmF/check_tm !FmapE.fmapE//=.
+    Qed.
+  End WrongApply.
+
+  Module map.
+    Local Definition map := IP 0.
+    Local Definition cons := ID 0.
+    Local Definition nil := ID 1.
+    Local Definition one := ID 2.
+    Local Definition two := ID 3.
+    Local Definition four := ID 5.
+
+    Coercion Tm_P : P >-> Tm. 
+    Coercion Tm_D : D >-> Tm. 
+    Coercion Tm_V : V >-> Tm. 
+
+    Local Definition prop := b (d Pred).
+    Local Definition func := b (d Func).
+    Definition exp := b Exp.
+
+    Definition mapS := arr input (arr input exp (arr output exp func)) (arr input exp (arr output exp func)).
+    Definition consS := arr input exp exp.
+    Definition nilS := exp.
+
+    Local Definition X := IV 1.
+    Local Definition X' := IV 10.
+    Local Definition Y := IV 2.
+    Local Definition Y' := IV 20.
+    Local Definition F := IV 3.
+
+    Local Definition p' := {|
+      sig := [fmap].[map <- mapS];
+      rules := 
+        mkR (Tm_App (Tm_App (Tm_App map F) nil) nil) [::] ::
+        mkR (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons X) Y)) (Tm_App (Tm_App cons X') Y') ) 
+          [:: call (Tm_App (Tm_App F X) X'); call (Tm_App (Tm_App (Tm_App map F) Y) Y')] :: [::]
+    |}.
+
+    Local Lemma gthm : get_tm_hd map = inl map.
+    Proof. by []. Qed.
+
+    Local Goal check_rules p'.
+    Proof.
+      rewrite/check_rules/= andbT/check_rule; apply/andP; split.
+        rewrite /assume_tm !FmapE.fmapE.
+        rewrite eqxx /tm_is_det !get_tm_hd_app/get_tm_hd/mapS.
+        by rewrite !FmapE.fmapE eqxx !not_fnd///=.
+      rewrite /assume_tm !FmapE.fmapE.
+      rewrite eqxx /mapS /tm_is_det !get_tm_hd_app/get_tm_hd.
+      rewrite !FmapE.fmapE eqxx !not_fnd///=.
+      rewrite min_refl.
+      by rewrite/check_tmF/check_tm !FmapE.fmapE//=.
+    Qed.
+  End map. 
+End Test.
+
+Lemma H_assume_tm_ty sP sV ty froz f f' s r sv:
+  H u sP froz f f' s = Some r ->
+  assume_tm sP sV f' = (sv, ty) ->
+  ty = Some r.1.
+Proof.
+  elim: f f' s r ty sV sv => //[p|f Hf a _] [p'|//|//|f' a']//= s r ty sV sv.
+    by case: eqP => //<-; case: fndP => //pP[<-][].
+  case H1 : H => [[ty' s']|]//=.
+  case A1 : assume_tm => [sV' ty'']//=.
+  have {Hf H1 A1}/=? := Hf _ _ _ _ _ _ H1 A1; subst.
+  case: ty' => [|m tl tr]//=.
+  (* case: (ifP (_ || _)) => //= H; *)
+  by case M: (_ s') => //[r'][<-]{r}/=[_ <-].
+Qed.
+
+Lemma get_sig_app s v f a: get_sig s v (Tm_App f a) = get_sig s v f.
+Proof. by rewrite/get_sig get_tm_hd_app. Qed.
+
+Lemma get_sig_V sp sv v: get_sig sp sv (Tm_V v) = sv.[?v].
+Proof. by []. Qed.
+
+Lemma get_sig_P sp sv p: get_sig sp sv (Tm_P p) = sp.[?p].
+Proof. by []. Qed.
+
 
 Lemma eat_ty_match n t m tf tr:
 eat_ty n t = Some (arr m tf tr) ->
@@ -283,6 +393,7 @@ Proof.
 Qed.
 
 
+
 Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
   [forall x : domf sV,
     let sig := sV.[valP x] in
@@ -292,6 +403,15 @@ Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
       | None => false
       end
     else false].
+
+(* Lemma check_all_exp_check_tm sP sV a:
+  check_all_exp sV a -> check_tm sP sV a = Some (true, b Exp).
+Proof.
+  elim: a => //=[v|f Hf a Ha].
+    by case: fndP => //vV/eqP[->].
+  move=> /andP[/Hf].
+  case 
+    rewrite in_fnd. *)
 
 Lemma check_tm_derefE sP sV s t r1:
   acyclic_sigma s ->
@@ -388,154 +508,6 @@ Next Obligation. by apply/ltP; apply: size_tmsP_cons. Qed. *)
 
 (* returns the determinacy of the term t *)
 (* Definition call_is_det sP sV t := (check_tm sP sV t). *)
-
-Definition check_atom sP sV (a: Atom) :=
-  match a with
-  | cut => Some (true, b (d Func))
-  | call t => check_tm sP sV t
-  end.
-
-Definition is_func f := f == Some (true, b (d Func)).
-
-Definition check_atomF sP sV a := is_func (check_atom sP sV a).
-Definition check_tmF sP sV t := is_func (check_tm sP sV t).
-
-(* There is cut and after the cut there are only call to Det preds *)
-Fixpoint check_atoms (sP :sigT) sV (s: seq Atom) :=
-  match s with
-  | [::] => true
-  | cut :: xs => all (check_atomF sP sV) xs || check_atoms sP sV xs
-  | call c :: xs => (check_tmF sP sV c || has_cut_seq xs) && check_atoms sP sV xs
-  end.
-
-Definition check_rule (sP:sigT) head prems :=
-  let: (sV, _) := assume_tm sP empty head in
-  (tm_is_det sP head == false) || (check_atoms sP sV prems).
-
-Definition check_rules p :=
-  all (fun x => check_rule p.(sig) x.(head) x.(premises)) p.(rules).
-
-Module Test.
-  Definition p := b (d Pred).
-  Definition f := b (d Func).
-  Definition e := b Exp.
-  Notation V1 := (IV 0).
-  Notation V2 := (IV 1).
-  Notation F := (IV 2).
-  
-  Definition mkP sym sig r := {| sig := [fmap].[sym <- sig]; rules := [::r] |}.
-
-  Module Once.
-    Notation onceSym := (IP 1).
-    Definition onceI   := mkR (Tm_App (Tm_P onceSym) (Tm_V V1)) [::call (Tm_V V1); cut].
-    Definition onceSig := arr input p f.
-
-    Goal check_rules (mkP onceSym onceSig onceI).
-    Proof.
-      rewrite/check_rules/=andbT/check_rule.
-      rewrite /assume_tm !FmapE.fmapE/=.
-      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
-      by rewrite orbT.
-    Qed.
-  End Once.
-  
-  Module Do.
-    Notation doSym := (IP 2).
-    Definition doI   := mkR (Tm_App (Tm_P doSym) (Tm_V V1)) [::call (Tm_V V1)].
-    Definition doSig := arr input f f.
-
-    Goal check_rules (mkP doSym doSig doI).
-    Proof.
-      rewrite/check_rules/=andbT/check_rule.
-      rewrite /assume_tm !FmapE.fmapE/=.
-      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
-      rewrite/check_tmF/check_tm !FmapE.fmapE/= not_fnd//.
-    Qed.
-  End Do.
-  
-  (* apply F X :- F X. *)
-  Module Apply.
-    Notation applySym := (IP 3).
-    Definition applyI   := mkR (Tm_App (Tm_App (Tm_P applySym) (Tm_V F)) (Tm_V V1)) [::call (Tm_App (Tm_V F) (Tm_V V1))].
-    Definition applySig := arr input (arr input e f) (arr input e f).
-
-    Goal check_rules (mkP applySym applySig applyI).
-    Proof.
-      rewrite/check_rules/=andbT/check_rule.
-      rewrite /assume_tm !FmapE.fmapE/=.
-      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
-      rewrite/check_tmF/check_tm !FmapE.fmapE/= not_fnd//.
-    Qed.
-  End Apply.
-  
-  (* apply F X :- F X. *)
-  Module WrongApply.
-    Notation applySym := (IP 3).
-    Definition applyI   := mkR (Tm_App (Tm_App (Tm_P applySym) (Tm_V F)) (Tm_V V1)) [::call (Tm_App (Tm_V F) (Tm_V V1))].
-    Definition applySig := arr input (arr input e p) (arr input e f).
-
-    Goal ~~ check_rules (mkP applySym applySig applyI).
-    Proof.
-      rewrite/check_rules/=andbT/check_rule.
-      rewrite /assume_tm !FmapE.fmapE.
-      rewrite eqxx /applySig /tm_is_det !get_tm_hd_app/get_tm_hd.
-      rewrite !FmapE.fmapE eqxx !not_fnd///=.
-      rewrite min_refl.
-      by rewrite/check_tmF/check_tm !FmapE.fmapE/=.
-    Qed.
-  End WrongApply.
-
-  Module map.
-    Local Definition map := IP 0.
-    Local Definition cons := ID 0.
-    Local Definition nil := ID 1.
-    Local Definition one := ID 2.
-    Local Definition two := ID 3.
-    Local Definition four := ID 5.
-
-    Coercion Tm_P : P >-> Tm. 
-    Coercion Tm_D : D >-> Tm. 
-    Coercion Tm_V : V >-> Tm. 
-
-    Local Definition prop := b (d Pred).
-    Local Definition func := b (d Func).
-    Definition exp := b Exp.
-
-    Definition mapS := arr input (arr input exp (arr output exp func)) (arr input exp (arr output exp func)).
-    Definition consS := arr input exp exp.
-    Definition nilS := exp.
-
-    Local Definition X := IV 1.
-    Local Definition X' := IV 10.
-    Local Definition Y := IV 2.
-    Local Definition Y' := IV 20.
-    Local Definition F := IV 3.
-
-    Local Definition p' := {|
-      sig := [fmap].[map <- mapS];
-      rules := 
-        mkR (Tm_App (Tm_App (Tm_App map F) nil) nil) [::] ::
-        mkR (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons X) Y)) (Tm_App (Tm_App cons X') Y') ) 
-          [:: call (Tm_App (Tm_App F X) X'); call (Tm_App (Tm_App (Tm_App map F) Y) Y')] :: [::]
-    |}.
-
-    Local Lemma gthm : get_tm_hd map = inl map.
-    Proof. by []. Qed.
-
-    Local Goal check_rules p'.
-    Proof.
-      rewrite/check_rules/= andbT/check_rule; apply/andP; split.
-        rewrite /assume_tm !FmapE.fmapE.
-        rewrite eqxx /tm_is_det !get_tm_hd_app/get_tm_hd/mapS.
-        by rewrite !FmapE.fmapE eqxx !not_fnd///=.
-      rewrite /assume_tm !FmapE.fmapE.
-      rewrite eqxx /mapS /tm_is_det !get_tm_hd_app/get_tm_hd.
-      rewrite !FmapE.fmapE eqxx !not_fnd///=.
-      rewrite min_refl.
-      by rewrite/check_tmF/check_tm !FmapE.fmapE.
-    Qed.
-  End map. 
-End Test.
 
 
 Lemma is_det_rename sP fv hd m:
@@ -1182,30 +1154,20 @@ Section check.
     case: fndP=> // xs; rewrite in_fnd//.
   Qed.
 
-  Fixpoint last_sig s :=
-    match s with
-    | b B => B
-    | arr _ _ r => last_sig r
-    end.
-
-  Lemma last_sig_eat_ty n s r: eat_ty n s = Some r -> last_sig s = last_sig r.
+  (* Lemma last_sig_eat_ty n s r: eat_ty n s = Some r -> last_sig s = last_sig r.
   Proof.
     elim: n s r => [|n IH] s r; first by move=> [<-].
     by case: s => //= _ _ r' /IH.
-  Qed.
+  Qed. *)
 
   Definition good_call sP sV q :=
     match check_tm sP sV q with Some (wc,_) => wc | _ => false end.
 
-  (* TODO: add the hypothesis that q is a well called term,
-     I need a boolean telling this piece of information, otherwise
-     I cannot distinguish betwen a predicate whose signature is equal to a
-     weakened one. *)
   Lemma relSS_assume sP sV froz q hd s s': acyclic_sigma s ->
     good_modes sP -> relSS sP s sV -> domf s # vars q -> vars q # vars hd ->
     (get_input_vars sP q).1 `<=` froz ->
     good_call sP empty q ->
-    H u sP froz q hd s = Some s' -> (*arri s'.1 ->*)
+    H u sP froz q hd s = Some s' ->
     relSS sP s'.2 (assume_tm sP sV hd).1.
   Proof.
     rewrite/good_call; case Cq: check_tm  => [[[] ty]|]// ++++++ _.
@@ -1265,6 +1227,12 @@ Section check.
     rewrite H.
     move: CT.
     case: ifP => IE.
+      move=> [?]; subst.
+      (* TODO: we should change check_tm: in case of Exp, we still have to 
+         recursively check that the argument returns an Expression *)
+      (* the recursive call should always return that it is a good call and no TC error *)
+      (* also note that we always return Exp for data, therefore there is no arrow in
+         the case of cons 3 1, i.e. this is a type-error, but we should ignore it *)
       (* TODO: we have Exp, i.e. we should change relSS *)
       admit.
     case C: check_tm => //[[wc tya]].
@@ -1280,30 +1248,30 @@ Section check.
 
 
   Lemma det_check_H sP q hd bo s s' froz sV:
+    (get_input_vars sP q).1 `<=` froz ->
     all (check_atom sP empty) [seq deref_atom s'.2 i  | i <- bo] ->
     (vars_tm q) # (vars_tm hd) ->
     (domf s) # (vars_tm q) ->
     acyclic_sigma s ->
     good_modes sP ->
-    check_tm sP empty q ->
+    good_call sP empty q ->
     check_atoms sP (assume_tm sP sV hd).1 bo ->
     relSS sP s sV ->
     H u sP froz q hd s = Some s' -> check_atoms sP empty [seq deref_atom s'.2 i  | i <- bo].
   Proof.
-    elim: bo hd s s' q sV => [|p0 ps IH]//= hd s [ty s']/= q sV /andP[cp0 cps].
+    elim: bo hd s s' q sV => [|p0 ps IH]//= hd s [ty s']/= q sV GI /andP[cp0 cps].
     move=> qh sq A GM cq + R H.
-    have {} IH:= IH _ _ (ty,s') _ _ cps.
+    have {} IH:= IH _ _ (ty,s') _ _ GI cps qh sq A GM cq _ R H.
     have A' := acyclic_sigma_H A H.
     have R': relSS sP s' (assume_tm sP sV hd).1 .
       apply: relSS_assume H => //.
-      (* admit.
     case: p0 cp0 => //=[_|t ct].
       move=> /orP[|/(check_atoms_deref R')->]//; last by rewrite orbT.
       admit.
     move=> /andP[Ht Hps].
-    rewrite (IH _ _ _ _ _ _ _ _ _ Hps _ H)// andbT.
+    rewrite IH// andbT.
     move: Ht => /orP[|/has_cut_deref_atom->]; last by rewrite orbT.
-    by move=> /(call_is_det_deref ct A' R')->. *)
+    by move=> /(call_is_det_deref ct A' R')->.
   Admitted.
 
   Lemma bc_is_p pr fv c s fv' x xs:
@@ -1316,7 +1284,7 @@ Section check.
     by exists p.
   Qed.
 
-  Lemma check_tmFP sig s q: check_tm sig s q = Some (b (d Func)) -> is_func (check_tm sig s q).
+  Lemma check_tmFP sig s q: check_tm sig s q = Some (true, b (d Func)) -> is_func (check_tm sig s q).
   Proof. by move=> ->. Qed.
 
   Lemma det_check_bc pr c fv r s:
@@ -1336,7 +1304,7 @@ Section check.
     rewrite !push/=.
     case: pr ME CR CT => /= rs sig; rewrite/check_rules/= => ME CR CD.
     move: CD; rewrite/check_tmF/is_func.
-    case C: check_tm => [[[|[]]|]|]//= _.
+    case C: check_tm => [[wc [[|[]]|]]|]//=/eqP//[?]; subst.
     move: ME; rewrite/mut_excl push/= => /andP[GM _].
     elim: rs CR => //= -[hd bo] rs IH /= /andP[H1 H2].
     rewrite !push/=.
@@ -1363,7 +1331,7 @@ Section check.
       apply: fdisjointWr (vars_tm_rename_disjoint _ _).
       by apply/fsubset_trans/fresh_rules_sub; rewrite// fsubsetU// fsubsetUr.
     - by rewrite acyclic_deref_disjoint//.
-    - by rewrite C.
+    - by rewrite /good_call C.
     - by rewrite relSS0.
   Admitted.
 
