@@ -1349,24 +1349,20 @@ Section check.
     check_tm sig s q = Some (wc, b (d Func)) -> is_func (check_tm_prop sig s q).
   Proof. by rewrite/check_tm_prop; move=> ->. Qed.
 
-  (* Lemma check_atoms_all_deref1 sP sV xs:
-    all (check_atomF sP sV) xs -> check_atoms sP sV xs.
-  Proof.
-    elim: xs => //=[[|t] xs IH]/andP[+ /IH->]; rewrite (andbT,orbT)//.
-    by rewrite/check_atomF/=/check_tmF => ->.
-  Qed. *)
-
-  (* Lemma check_atoms_all_deref sP s sV ps:
+  Lemma check_atoms_all_deref sP s sV ps r q:
+    acyclic_sigma s ->
     relSS sP s sV ->
-    check_atoms sP sV ps ->
-    all (fun a : Atom => check_atom sP empty a) [seq deref_atom s i  | i <- ps].
+    check_atoms sP sV ps r ->
+    all (fun a : Atom => check_atom sP empty q a) [seq deref_atom s i  | i <- ps].
   Proof.
-    move=> R; elim: ps => //= [[|t] xs IH]//=.
-      move=> /orP[/check_atoms_all_deref1|/IH->]//.
-    move=> /andP[+ H]; rewrite IH// andbT.
-  Admitted. *)
-
-
+    move=> A R; elim: ps r q => //= [[|t] xs IH]//= r q; first by apply: IH.
+    case Cx: check_tm_prop => //=[d] Cxs.
+    rewrite (IH _ _ Cxs) andbT {IH Cxs}.
+    move: Cx; rewrite/check_tm_prop; case Ct: check_tm => [[wc [[|det]|]]|]//=[?]; subst.
+    have:= check_tm_derefE A R Ct.
+    move=> [[wc' [[|dx]|[]]]]//=.
+    by move=> ->.
+  Qed.
 
   Lemma det_check_bc pr c fv r s:
     (* all (fun a : Atom => check_atom sig empty a) [seq deref_atom s' i  | i <- FA.2] -> *)
@@ -1408,22 +1404,23 @@ Section check.
     set FA := fresh_atoms _ _ _.
     move=> H /eqP {}CA.
     apply: det_check_H (CA) _ (H) => //.
-    (* - apply: check_atoms_all_deref CA.
+    - case CA : check_atoms CA => ///eqP[?]; subst.
+      apply: check_atoms_all_deref (isSomeP CA).
+        by apply: acyclic_sigma_H H.
       apply: relSS_assume H => //.
           by rewrite relSS0.
           by rewrite acyclic_deref_disjoint//.
           rewrite fdisjoint_sym.
           apply: fdisjointWr (vars_tm_rename_disjoint _ _).
           by apply/fsubset_trans/fresh_rules_sub; rewrite// fsubsetU// fsubsetUr.
-        by rewrite/good_call C. *)
-      admit.
+        by have ? := is_func_well_call C isT; subst; rewrite /good_call C.
     - rewrite fdisjoint_sym.
       apply: fdisjointWr (vars_tm_rename_disjoint _ _).
       by apply/fsubset_trans/fresh_rules_sub; rewrite// fsubsetU// fsubsetUr.
     - by rewrite acyclic_deref_disjoint//.
     - by have ? := is_func_well_call C isT; subst; rewrite /good_call C.
     - by rewrite relSS0.
-  Admitted.
+  Qed.
 
   Print Assumptions det_check_bc.
   
