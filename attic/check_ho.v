@@ -1262,6 +1262,17 @@ Section check.
     by rewrite C => CI'.
   Admitted.
 
+  Lemma all_check_deref sP sV s ps: acyclic_sigma s ->
+    relSS sP s sV ->
+    all (check_atom sP empty) (map (deref_atom s) ps) ->
+    all (check_atomF sP sV) ps ->
+    all (check_atomF sP empty) [seq deref_atom s i  | i <- ps] .
+  Proof.
+    move=> A R; elim: ps => //= x xs IH /andP[Cx Cxs]/andP[H1 H2].
+    rewrite {}IH//andbT {H2 Cxs}.
+    case: x Cx H1 => //=t Cx H1.
+    by apply: call_is_det_deref H1.
+  Qed.
 
   Lemma det_check_H sP q hd bo s s' froz sV:
     (get_input_vars sP q).1 `<=` froz ->
@@ -1283,12 +1294,12 @@ Section check.
       apply: relSS_assume H => //.
     case: p0 cp0 => //=[_|t ct].
       move=> /orP[|/(check_atoms_deref R')->]//; last by rewrite orbT.
-      admit.
+      by move=> /all_check_deref->//.
     move=> /andP[Ht Hps].
     rewrite IH// andbT.
     move: Ht => /orP[|/has_cut_deref_atom->]; last by rewrite orbT.
     by move=> /(call_is_det_deref ct A' R')->.
-  Admitted.
+  Qed.
 
   Lemma bc_is_p pr fv c s fv' x xs:
     bc u pr fv c s = (fv', x::xs) -> exists p, get_tm_hd (deref s c) = inl p.
