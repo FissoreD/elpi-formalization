@@ -161,8 +161,8 @@ Section once.
     select u (sig + once_sigS) (Tm_App (Tm_P once_sym) T) rs s = (fset0, [::]).
   Proof.
     elim: rs T s => // -[hd bo] xs IH t s /no_once_cons[+ H].
-    case: hd => //=[p|d|v|f a]; only 1-3: by move=> _; apply: IH.
-    case: f => //=[p|d|v|f' a'] NO; only 2-4: by apply: IH.
+    case: hd => //=[p|v|f a]; only 1-2: by move=> _; apply: IH.
+    case: f => //=[p|v|f' a'] NO; only 2-3: by apply: IH.
     case: eqP => ?; subst => //=.
     by apply: IH.
   Qed.

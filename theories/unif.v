@@ -74,7 +74,7 @@ Definition sumL := foldr addn 0.
 Fixpoint count_vars (k:V) t :=
   match t with
   | Tm_V v => v == k
-  | Tm_P _ | Tm_D _ => 0
+  | Tm_P _ => 0
   | Tm_App f a => addn (count_vars k f) (count_vars k a)
   end.
 
@@ -121,7 +121,7 @@ Fixpoint app_nb t :=
   match t with
   | Tm_App f a => (app_nb f + app_nb a).+1
   | Tm_V _ => 0
-  | Tm_D _ | Tm_P _ => 1
+  | Tm_P _ => 1
   end.
 
 Definition nlhs (l:seqT) := sumL (map app_nb (map fst l)).
@@ -213,8 +213,8 @@ Qed.
 Lemma b2 tl p' v: lex_seqT ((Tm_V v, Tm_P p') :: tl) ((Tm_P p', Tm_V v) :: tl).
 Proof. rewrite/lex_seqT/measure/=nvar_comm; by constructor 1; constructor 2 => //=. Qed.
 
-Lemma b3 v d tl: lex_seqT ((Tm_V v, Tm_D d) :: tl) ((Tm_D d, Tm_V v) :: tl).
-Proof. rewrite/lex_seqT/measure/=nvar_comm; by constructor 1; constructor 2 => //=. Qed.
+(* Lemma b3 v d tl: lex_seqT ((Tm_V v, Tm_D d) :: tl) ((Tm_D d, Tm_V v) :: tl).
+Proof. rewrite/lex_seqT/measure/=nvar_comm; by constructor 1; constructor 2 => //=. Qed. *)
 
 Lemma nvar_cons x xs: nvar (x :: xs) = #|` map_prod1 fsetU vars_tm x `|` varsL xs |.
 Proof. by []. Qed.
@@ -318,7 +318,6 @@ Function montanari s (frozen : fvS) (l: seqT) {wf lex_seqT l} : option Sigma :=
 Proof.
   - move=> s b l p tl t1 t2 ??; subst; apply: b1.
   - move=> s m l p tl t1 t2 p' ? v ??? /eqP// _; subst; apply/b2.
-  - move=> s m l p tl t1 t2 d ? v ??? /eqP// _; subst; apply/b3.
   - move=> s f l p tl _ _ v _ vf v' _ _ _ _ H _; apply/b4'.
     by move: H; rewrite !inE eq_sym.
   - move=> s f l p t t1 t2 v ???? + _; subst; apply/b4.
@@ -1299,7 +1298,7 @@ Qed.
 
 Fixpoint tsize t :=
   match t with
-  | Tm_P _ | Tm_D _ | Tm_V _ => 1
+  | Tm_P _ | Tm_V _ => 1
   | Tm_App l r => (tsize l + tsize r).+1
   end.
 
@@ -1566,7 +1565,7 @@ Definition good_set (s1 s2: Sigma) h1 h2 :=
   [fmap x : (vars_tm h1 `|` vars_tm h2) `&` (domf s1 `|` domf s2) => 
     if s1.[?val x] is Some v then v
     else if s2.[?val x] is Some v then v
-    else Tm_D (ID 0)
+    else Tm_P (IP 0)
   ].
 
 Lemma deref_in_sub y s t (ys1 : y \in domf s):
@@ -1778,9 +1777,9 @@ Qed.
 
 Fixpoint deref_all t :=
   match t with
-  | Tm_D _ | Tm_P _ => t
+  | Tm_P _ => t
   | Tm_App l r => Tm_App (deref_all l) (deref_all r)
-  | Tm_V _ => Tm_D (ID 0)
+  | Tm_V _ => Tm_P (IP 0)
   end.
 
 Lemma ground_deref_all t: ground (deref_all t).
@@ -1834,8 +1833,8 @@ Definition ren_deref2k t (r:{fmap V -> V}) (s : Sigma) : Sigma :=
   [fmap x : vars_tm t => 
     if r.[? val x] is Some v then
       if s.[? v] is Some t then t
-      else Tm_D (ID 0)
-    else Tm_D (ID 0)
+      else Tm_P (IP 0)
+    else Tm_P (IP 0)
   ].
 
 Lemma codom_vars_ren_deref2k z w x y sx:
@@ -1921,8 +1920,8 @@ Lemma deref_all_deref_aux s r t k:
   deref [fmap x : k => 
     if r.[? val x] is Some v then
       if (groundify s).[? v] is Some t then t
-      else Tm_D (ID 0)
-    else Tm_D (ID 0)
+      else Tm_P (IP 0)
+    else Tm_P (IP 0)
   ] t = deref_all (deref s (ren r t)).
 Proof.
   move=> ++ S.
@@ -2125,7 +2124,7 @@ Lemma acyclic_sigma_H sP fv q hd s1 r:
     H u sP fv q hd s1 = Some r ->
       acyclic_sigma r.2.
 Proof.
-  elim: q fv hd s1 r => //=[p|f Hf a Ha] fv [p'|//|//|f' a']// s1 r.
+  elim: q fv hd s1 r => //=[p|f Hf a Ha] fv [p'|//|f' a']// s1 r.
     by case: eqP => //= _ A; case: fndP => //=pP[<-].
   move=> A.
   case H: H => [[[|[] tyl tyr] s1']|]//=.

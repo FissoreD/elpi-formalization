@@ -41,7 +41,7 @@ Goal b Exp == b Exp. by []. Qed.
 
 (* Leave the one line code for the extracted code *)
 (*SNIP: base_type*)
-Inductive P := IP of nat. Inductive D := ID of nat. Inductive V := IV of nat.
+Inductive P := IP of nat. Inductive V := IV of nat.
 (*ENDSNIP: base_type*)
 
 derive P.
@@ -51,9 +51,6 @@ Definition nat_of_Kp x := match x with IP x => x end.
 Lemma Kp_is_nat : cancel nat_of_Kp Kp_of_nat.
 Proof. by case. Qed.
 HB.instance Definition _ := Countable.copy P (can_type Kp_is_nat).
-
-derive D.
-HB.instance Definition _ := hasDecEq.Build D D_eqb_OK.
 
 derive mode.
 HB.instance Definition _ := hasDecEq.Build mode mode_eqb_OK.
@@ -68,7 +65,7 @@ HB.instance Definition _ := Countable.copy V (can_type V_is_nat).
 
 (*SNIP: tm_type*)
 Inductive Tm := 
-  | Tm_P of P     | Tm_D    of D
+  | Tm_P of P
   | Tm_V of V     | Tm_App  of Tm & Tm.
 (*ENDSNIP: tm_type*)
 
@@ -167,8 +164,7 @@ Fixpoint get_tm_hd tm :=
   match tm with
   | Tm_App f a => get_tm_hd f
   | Tm_P K => inl K
-  | Tm_D K => inr (inl K)
-  | Tm_V V => inr (inr V)
+  | Tm_V V => inr V
   end.
 
 Module test.
@@ -189,7 +185,6 @@ Open Scope fset_scope.
 
 Fixpoint vars_tm t : fvS :=
   match t with
-  | Tm_D _ => fset0
   | Tm_P _ => fset0
   | Tm_V v => fset1 v
   | Tm_App l r => vars_tm l `|` vars_tm r
@@ -220,7 +215,6 @@ Proof. by apply: negbTE (xchooseP (freshV fv)). Qed.
 
 Fixpoint fresh_tm fv m t : {fset V} * {fmap V -> V} :=
   match t with
-  | Tm_D _ => (fv, m)
   | Tm_P _ => (fv, m)
   | Tm_V v =>
        if v \in domf m then (fv, m)
@@ -234,7 +228,7 @@ Fixpoint fresh_tm fv m t : {fset V} * {fmap V -> V} :=
 Fixpoint deref (s: Sigma) (tm:Tm) :=
   match tm with
   | Tm_V V => Option.default tm (lookup V s)
-  | Tm_P _ | Tm_D _ => tm
+  | Tm_P _ => tm
   | Tm_App h ag => Tm_App (deref s h) (deref s ag)
   end.
 
@@ -381,7 +375,7 @@ Proof. by rewrite acyclic_sigma_set empty_rem acyclic_sigma0 codom_vars0 fdisjoi
 Goal ~ (acyclic_sigma [fmap].[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)]).
 Proof. by rewrite acyclic_sigma_set !inE remf1_id ?inE// codom_vars_set !inE/= eqxx orbT/= andbF. Qed.
 
-Goal ~ (acyclic_sigma [fmap].[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)].[IV 2 <- Tm_D (ID 0)]).
+Goal ~ (acyclic_sigma [fmap].[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)].[IV 2 <- Tm_P (IP 1)]).
 Proof.
   rewrite acyclic_sigma_set remf1_id?inE// acyclic_sigma_set inE.
   by rewrite remf1_id?inE//= fdisjointX0 andbT codom_vars_set !inE/= eqxx orbT/= andbF.
@@ -410,7 +404,7 @@ Qed.
 Fixpoint ren (s: {fmap V -> V}) tm :=
   match tm with
   | Tm_V V => Tm_V (odflt V (lookup V s))
-  | Tm_P _ | Tm_D _ => tm
+  | Tm_P _ => tm
   | Tm_App h ag => Tm_App (ren s h) (ren s ag)
   end.
 
@@ -549,7 +543,7 @@ Qed.
 Lemma acyclic_deref_disjoint s t:
   acyclic_sigma s -> [disjoint domf s & vars_tm (deref s t)].
 Proof.
-  move=> A; elim: t => //=; only 1, 2: by rewrite fdisjointX0.
+  move=> A; elim: t => //=; only 1: by rewrite fdisjointX0.
     move=> v; case: fndP => //=vs.
       by apply/fdisjointWr/A/codom_vars_sub_vt.
     by rewrite fdisjointX1.
@@ -578,10 +572,6 @@ Lemma deref_P s v: deref s (Tm_P v) = Tm_P v. by []. Qed.
 
 Lemma ren_P b p: ren b (Tm_P p) = Tm_P p. by []. Qed.
 
-Lemma deref_D s v: deref s (Tm_D v) = Tm_D v. by []. Qed.
-
-Lemma ren_D b p: ren b (Tm_D p) = Tm_D p. by []. Qed.
-
 (* Lemma deref_ren_V b v: acyclic_ren b ->
   deref [fmap x => Tm_V b.[valP x]] (Tm_V v) = Tm_V (odflt v b.[? v]).
 Proof. by move=> H; rewrite/deref/=deref_aux_ren_V. Qed. *)
@@ -592,17 +582,17 @@ Lemma not_in_deref_V s v: v \notin domf s -> deref s (Tm_V v) = Tm_V v.
 Proof. move=> H; rewrite/= not_fnd//. Qed.
 
 Lemma ren_isP b tm p: ren b tm = Tm_P p -> exists p', tm = Tm_P p'.
-Proof. by case: tm => [p'|d|v|f a]//; eexists. Qed.
+Proof. by case: tm => [p'|v|f a]//; eexists. Qed.
 
 Lemma ren_isApp b hd f2 a2: ren b hd = Tm_App f2 a2 -> exists f1 a1, hd = Tm_App f1 a1.
-Proof. case: hd => [p|d|v|f1 a1]//=; eauto. Qed.
+Proof. case: hd => [p|v|f1 a1]//=; eauto. Qed.
 
 Lemma rename_isApp fv hd fv' f2 a2 m:
   rename fv hd m = (fv', Tm_App f2 a2) ->
   exists f1 a1, hd = Tm_App f1 a1.
 Proof.
   rewrite/rename !push => -[?+]; subst.
-  case: hd => [p|d|v|f1 a1]//=; eauto.
+  case: hd => [p|v|f1 a1]//=; eauto.
 Qed.
 
 Definition fresh_atom fv a m :=
@@ -630,7 +620,7 @@ Definition fresh_rules fv rules :=
 Fixpoint get_input_vars (sP:sigT) t : {fset V} * option S :=
   match t with
   | Tm_P p => (fset0, sP.[?p])
-  | Tm_V _ | Tm_D _ => (fset0, None)
+  | Tm_V _  => (fset0, None)
   | Tm_App f a =>
     let: (fv, ty) := get_input_vars sP f in
     match ty with
@@ -805,7 +795,7 @@ Lemma HP u sP fv t1 t2 s r: H u sP fv t1 t2 s = Some r ->
     exists p, exists2 pP : p \in sP, get_tm_hd t1 = inl p & eat_ty (term_arg t1) sP.[pP] = Some r.1]
   .
 Proof.
-  elim: t1 t2 fv s r => //=[p|f Hf a Ha] [p'|d|v|f' a']//= fv s r.
+  elim: t1 t2 fv s r => //=[p|f Hf a Ha] [p'|v|f' a']//= fv s r.
     case: eqP => //<-; case: fndP => //=pP[<-]; split => //.
     by exists p, pP.
   case H: H => //[[[|m tl tr] s']]//=.
