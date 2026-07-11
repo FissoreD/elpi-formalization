@@ -91,7 +91,7 @@ Qed.
 Lemma fresh_tm_codom_fv fv (m : {fmap V -> V}) t : 
   codomf m `<=` fv -> codomf (fresh_tm fv m t).2 `<=` (fresh_tm fv m t).1.
 Proof.
-elim: t m fv => [? m fv|? m fv|v m fv S|l Hl r Hr m fv S];
+elim: t m fv => [? m fv|v m fv S|l Hl r Hr m fv S];
   rewrite ?fsetDv ?fsetU0 ?(fsubUset fv) ?fsubset_refl ?andbT//; last first.
 - rewrite fresh_Tm_App /=.
   move: (Hl m fv S).
@@ -113,7 +113,7 @@ Qed.
 Lemma fresh_tm_inj fv (m : {fmap V -> V}) t : 
   injectiveb m -> injectiveb (fresh_tm fv m t).2.
 Proof.
-elim: t m fv => [? m fv|? m fv|v m fv I|l Hl r Hr m fv I] /=;
+elim: t m fv => [? m fv|v m fv I|l Hl r Hr m fv I] /=;
   rewrite ?fsetDv ?fsetU0 ?(fsubUset fv) ?fsubset_refl ?andbT//; last first.
 - move: (Hl m fv I).
   case: fresh_tm => [fv' m'] I'.
@@ -151,7 +151,7 @@ Qed.
 Lemma fresh_tm_codom2 fv (m : {fmap V -> V}) t : 
   codomf (fresh_tm fv m t).2 `<=` codomf m `|` (fresh_tm fv m t).1.
 Proof. 
-elim: t m fv => [? m fv|? m fv|v m fv|l Hl r Hr m fv]; rewrite ?fsubsetUl //.
+elim: t m fv => [? m fv|v m fv|l Hl r Hr m fv]; rewrite ?fsubsetUl //.
 - simpl; have [//=|nvm] := fndP; rewrite ?fsubsetUl //=.
   set w := fresh (fv `|` codomf m).
   by rewrite codomf_cat codomf1/= remf1_id//= fsetUC fsetUSS// fsub1set !inE eqxx.
@@ -167,7 +167,7 @@ Lemma fresh_tm_dom fv (m : {fmap V -> V}) t :
   vars_tm t `<=` fv ->
   domf m `<=` fv -> domf (fresh_tm fv m t).2 `<=` (fresh_tm fv m t).1.
 Proof. 
-elim: t m fv => [? m fv|? m fv|v m fv /=|l Hl r Hr m fv] // H S.
+elim: t m fv => [? m fv|v m fv /=|l Hl r Hr m fv] // H S.
 - by case: fndP => //= nv; rewrite mem_fsetD1 // fsetUC !fsubsetU//= !fsubUset//= H S orbT.
 - move:H; rewrite /= fsubUset => /andP[Hf Ha]; rewrite !push/=.
   by apply/Hr/Hl => //; apply/fsubset_trans/fresh_tm_sub.
@@ -191,7 +191,7 @@ Lemma fresh_tm_def fv (m : {fmap V -> V}) t :
   injectiveb m ->
   exists e, [/\ (fresh_tm fv m t).2 = m + e, adesive m e, injectiveb e & [disjoint codomf e & fv]%fset].
 Proof.
-elim: t fv m => //; only 1, 2: by move=>*; exists fmap0; rewrite ?catf0 ?injectiveb0 ?adesive0 ?codomf0 ?fdisjoint0X.
+elim: t fv m => //; first by move=>*; exists fmap0; rewrite ?catf0 ?injectiveb0 ?adesive0 ?codomf0 ?fdisjoint0X.
 - move=> v fv m /=; case: ifP; first by exists fmap0; rewrite ?catf0 ?injectiveb0 ?adesive0 ?codomf0 ?fdisjoint0X.
   exists [fmap x: fset1 v => fresh (fv `|` codomf m)]; rewrite ?injectiveb1 ?adesive1 ?n ?codomf1 //.
     by rewrite (fdisjointWr (fsubsetUl _ (codomf m))) ?disjoint_fresh //=.
@@ -218,7 +218,7 @@ Lemma fresh_tm_def2 fv (m : {fmap V -> V}) t :
   vars_tm t `<=` fv ->
   exists e, [/\ (fresh_tm fv m t).2 = m + e, adesive m e & [disjoint codomf e & fv]%fset].
 Proof.
-elim: t fv m => //; only 1, 2: by move=>*; exists fmap0; rewrite ?catf0 ?injectiveb0 ?adesive0 ?codomf0 ?fdisjoint0X.
+elim: t fv m => //; only 1: by move=>*; exists fmap0; rewrite ?catf0 ?injectiveb0 ?adesive0 ?codomf0 ?fdisjoint0X.
 - move=> v fv m /=; case: ifP; first by exists fmap0; rewrite ?catf0 ?injectiveb0 ?adesive0 ?codomf0 ?fdisjoint0X.
   exists [fmap x: fset1 v => fresh (fv `|` codomf m)]; rewrite ?injectiveb1 ?adesive1 ?n ?codomf1 //.
     by rewrite (fdisjointWr (fsubsetUl _ (codomf m))) ?disjoint_fresh //=.
@@ -400,7 +400,7 @@ Proof.
   rewrite !fsubsetU ?(H1,H2,orbT)// => /(_ isT isT) [].
   rewrite-/ft.
   move: ft => -[]/=; clear.
-  elim: t => [p|d|v|f Hf a Ha]// fs m D1 D2/=.
+  elim: t => [p|v|f Hf a Ha]// fs m D1 D2/=.
     rewrite !fsub1set => H; rewrite in_fnd//=.
     apply: fsubsetP D2 _ _.
     apply: in_codomf.
@@ -500,7 +500,7 @@ Proof. by apply/fresh_good_codom_aux => //. Qed.
 
 Lemma ren_mp m t: vars_tm t `<=` domf m -> vars_tm (ren m t) `<=` codomf m.
 Proof.
-  elim: t => [p|d|v|f Hf a Ha]//.
+  elim: t => [p|v|f Hf a Ha]//.
     rewrite fsub1set => vm.
     rewrite ren_V//= in_fnd/= fsub1set; apply/codomfP.
     by exists v; rewrite in_fnd.
@@ -530,7 +530,7 @@ Lemma fresh_tm_acyclic vt t m:
 Proof.
   rewrite/acyclic_ren.
   (* elim: t m vt => /= [p|d|v|f Hf a Ha] m vt Hd Dd Dt//=; last first. *)
-  elim: t m vt => /= [p|d|v|f Hf a Ha] m vt Hv Hd Dd Dt//=; last first.
+  elim: t m vt => /= [p|v|f Hf a Ha] m vt Hv Hd Dd Dt//=; last first.
     move: Hv; rewrite/= fsubUset => /andP[H1 H2].
     move: Dt; rewrite/= fdisjointUX => /andP[Df Da].
     rewrite !push/= Ha//=.
@@ -692,7 +692,7 @@ Lemma domf_rename_eq fv t m:
 Proof.
   rewrite/rename !push/=.
   move: (_ `|` _) => {}fv.
-  elim: t m fv => [p|d|v|f Hf a Ha] m fv/=; (try by rewrite?fsetU0); last by rewrite !push/= Ha Hf fsetUA.
+  elim: t m fv => [p|v|f Hf a Ha] m fv/=; (try by rewrite?fsetU0); last by rewrite !push/= Ha Hf fsetUA.
   case: fndP => //= vm.
     apply/fsetP => x; rewrite !inE.
     by case: fndP => //= H; case: eqP => //?; subst; rewrite vm in H.

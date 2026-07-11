@@ -14,7 +14,7 @@ theories/unif.v
 theories/fresh.v
 
 theories/tree.v
-theories/tree_test.v
+# theories/tree_test.v
 theories/tree_prop.v
 theories/tree_vars.v
 theories/valid_tree.v

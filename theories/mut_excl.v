@@ -38,7 +38,7 @@ Section good_mode.
     H u sP b f f' s = Some (arr m tf ta, s') ->
     arri ta -> m = input.
   Proof.
-    move=> GM; elim: f f' m tf ta s' => //[p|f Hf a _][p'|//|//|f' a']//=m tf ta s'.
+    move=> GM; elim: f f' m tf ta s' => //[p|f Hf a _][p'|//|f' a']//=m tf ta s'.
       case: eqP => //->; case: fndP => //pP[H _].
       have := good_modes_in pP GM; rewrite {}H.
       by case: ta => [|[]]//=; case: m => //.
@@ -73,7 +73,7 @@ Section mut_excl.
       exists p, exists2 pP : p \in sP, get_tm_hd t1 = inl p & eat_ty (term_arg t1) sP.[pP] = Some r]
     .
   Proof.
-    elim: t1 t2 r => //=[p|f Hf a _] [p'|d|v|f' a']//=r.
+    elim: t1 t2 r => //=[p|f Hf a _] [p'|v|f' a']//=r.
       case: eqP => //<-; case: fndP => //=pP[<-]; split => //.
       by exists p, pP.
     case H: H_head => [[|m tl tr]|]//=.
@@ -145,7 +145,7 @@ Qed.
 Lemma H_mp sP fv q hd s1 r: acyclic_sigma s1 ->
   H u sP fv q hd s1 = Some r -> mp s1 r.2.
 Proof.
-  elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|//|f' a']// s1 r.
+  elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|f' a']// s1 r.
     by case: eqP => //->; case: fndP => //= ? A[<-]; apply: mp_id.
   move=> A; case H: H => [[[|m tl tr] s']|]//=.
   case M: (_ s') => //=[{}r][<-]/=.
@@ -161,7 +161,7 @@ Lemma H_deref_eq sP fv q hd s1 r:
     H u sP fv q hd s1 = Some r ->
       deref r.2 q = deref r.2 hd.
 Proof.
-  elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|//|f' a']// s1 r.
+  elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|f' a']// s1 r.
     by case: eqP => //-> A; case: fndP => //.
   move=> A.
   case H: H => [[[|m tl tr] s1']|]//=.
@@ -182,7 +182,7 @@ Lemma H_ext1 sP froz t1 t2 s r: good_modes sP ->
   arri r.1 -> (domf r.2) # froz.
 Proof.
   move=> GM.
-  elim: t1 t2 s r => //[p|f Hf a _] [p'|//|//|f' a']//= s r.
+  elim: t1 t2 s r => //[p|f Hf a _] [p'|//|f' a']//= s r.
     case: eqP => //-> H; case: fndP => //=pP[<-]//=; rewrite /=?fdisjoint0X fsetU0//=.
   case H: H => [[[|m tf' tr'] sm]|]//=.
   move=> sfroz.
@@ -219,7 +219,7 @@ Qed.
 Lemma get_input_vars2 sP fv q h s x:
   H u sP fv q h s = Some x -> (get_input_vars sP q).2 = Some x.1.
 Proof.
-  elim: q h s x => //=[p|f Hf a _][p'|||f' a']//=s [ty s'].
+  elim: q h s x => //=[p|f Hf a _][p'||f' a']//=s [ty s'].
     by case: eqP => //=->; case: fndP => //= ? [<-].
   case H: H => [[[|m tl tr] s'']|]//=.
   case M: (_ s'') => //=[r][??]; subst.
@@ -232,7 +232,7 @@ Lemma get_input_vars_vars_tm sP fv q h s r:
   H u sP fv q h s = Some r -> arri r.1 ->
   (get_input_vars sP q).1 = vars_tm q.
 Proof.
-  move=> GM; elim: q h s r => [p|||f Hf a _]//=[p'|||f' a']//= s r.
+  move=> GM; elim: q h s r => [p||f Hf a _]//=[p'||f' a']//= s r.
   case H: H => //=[[[|m tl tr] s']]//=.
   case X: (_ s') => //=[s''][?]; subst.
   case: tr H => //[[] tl' tr']//= H' _.
@@ -263,7 +263,7 @@ Lemma SHS sP fv1 fv2 query hd2 hd1 (s1 s2:Sigma):
 Proof.
   move=> GM.
   elim: query fv1 fv2 hd1 hd2 s1 s2 => //=[p|f Hf a _];
-  move=> fv1 fv2 [p1|d1|v1|f1 a1]//[p2|d2|v2|f2 a2]//=  s1 s2 A1 A2.
+  move=> fv1 fv2 [p1|v1|f1 a1]//[p2|v2|f2 a2]//=  s1 s2 A1 A2.
     move=> _ _ _ _ _ _ _ _ _; case: eqP => // <-; case: eqP => //->; case: fndP => //=.
   move=> S1 S2 d2f2 s1f1.
   rewrite 2!fdisjointXU => /andP[V1 V2] /andP[V3 V4].
@@ -350,7 +350,7 @@ Lemma H_head_ren_aux sP hd q x y z w:
   (H_head u sP (ren z q) (ren x hd)) = H_head u sP (ren w q) (ren y hd).
 Proof.
   move=> ++++ D2 D3.
-  elim: q hd => //=[p|f Hf a _] [p'|//|//|f' a']//=.
+  elim: q hd => //=[p|f Hf a _] [p'|//|f' a']//=.
   rewrite/refresh_for/= !fsubUset -!andbA.
   move => /and3P[f'y a'y iy] /and3P[f'x a'x ix] /and3P[fz az iz] /and3P[fw aw iw].
   have {Hf} := Hf f'.
