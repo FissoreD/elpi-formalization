@@ -217,7 +217,7 @@ Module Test.
       rewrite/check_rules/=andbT/check_rule.
       rewrite /assume_tm !FmapE.fmapE/=.
       rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
-      by rewrite/check_tm_prop/check_tm !FmapE.fmapE/=/=not_fnd//=FmapE.fmapE/=.
+      by rewrite/check_tm_prop/check_tm !FmapE.fmapE/=/=!not_fnd//=.
     Qed.
   End Apply.
   
@@ -245,6 +245,7 @@ Module Test.
     Local Definition one := IP 12.
     Local Definition two := IP 13.
     Local Definition four := IP 15.
+    Local Notation app := Tm_App.
 
     Coercion Tm_P : P >-> Tm. 
     Coercion Tm_V : V >-> Tm. 
@@ -254,7 +255,7 @@ Module Test.
     Definition exp := b Exp.
 
     Definition mapS := arr input (arr input exp (arr output exp func)) (arr input exp (arr output exp func)).
-    Definition consS := arr input exp exp.
+    Definition consS := arr input exp (arr input exp exp).
     Definition nilS := exp.
 
     Local Definition X := IV 1.
@@ -264,11 +265,11 @@ Module Test.
     Local Definition F := IV 3.
 
     Local Definition p' := {|
-      sig := [fmap].[map <- mapS];
+      sig := [fmap].[map <- mapS].[cons <- consS].[nil <- nilS];
       rules := 
-        mkR (Tm_App (Tm_App (Tm_App map F) nil) nil) [::] ::
-        mkR (Tm_App (Tm_App (Tm_App map F) (Tm_App (Tm_App cons X) Y)) (Tm_App (Tm_App cons X') Y') ) 
-          [:: call (Tm_App (Tm_App F X) X'); call (Tm_App (Tm_App (Tm_App map F) Y) Y')] :: [::]
+        mkR (app (app (app map F) nil) nil) [::] ::
+        mkR (app (app (app map F) (app (app cons X) Y)) (app (app cons X') Y') ) 
+          [:: call (app (app F X) X'); call (app (app (app map F) Y) Y')] :: [::]
     |}.
 
     Local Lemma gthm : get_tm_hd map = inl map.
@@ -280,11 +281,23 @@ Module Test.
         rewrite /assume_tm !FmapE.fmapE.
         rewrite eqxx /tm_is_det !get_tm_hd_app/get_tm_hd/mapS.
         by rewrite !FmapE.fmapE eqxx !not_fnd///=.
-      rewrite /assume_tm !FmapE.fmapE.
-      rewrite eqxx /mapS /tm_is_det !get_tm_hd_app/get_tm_hd.
-      rewrite !FmapE.fmapE eqxx !not_fnd///=.
-      rewrite min_refl.
-      by rewrite/check_tm_prop/check_tm !FmapE.fmapE//=.
+      rewrite /assume_tm !FmapE.fmapE !eqxx.
+      rewrite/mapS/consS.
+      repeat case: eqP => //= _.
+      (* rewrite !FmapE.fmapE. *)
+      repeat case: eqP => // _.
+      rewrite !not_fnd//=.
+      set S := _.[_ <- _].
+      set A := _.[_ <- _].
+      rewrite/check_tm_prop/check_tm.
+      rewrite !FmapE.fmapE.
+      repeat case: eqP => // _.
+      rewrite[omap _ _]/=.
+      cbn match.
+      rewrite[omap _ _]/=.
+      cbn match.
+      rewrite ifF; last by rewrite/tm_is_det/= !FmapE.fmapE/=.
+      by rewrite//.
     Qed.
   End map. 
 End Test.
@@ -405,7 +418,8 @@ Proof.
     case C2: check_tm => //[[wc'' ty']].
     case: ifP => CT => //-[<-{r1}].
     have [[wc2 r2] {}Ha CI] := Ha _ C2.
-    rewrite Ha; case: eqP => tyf'E; subst => /=.
+    rewrite Ha.
+     case: eqP => tyf'E; subst => /=.
       eexists => //=; apply: cincl_trans CA _.
       by case: ifP; rewrite !(cincl_refl, cincl_weakr)//.
     case: eqP => tya'E; subst => /=.
@@ -951,7 +965,7 @@ Section check.
     relSS sP s'.2 (assume_tm sP sV hd).1.
   Proof.
     rewrite/good_call; case Cq: check_tm  => [[[] ty]|]// ++++++ _.
-    elim: q hd s s' ty Cq => //[p|f Hf a _][p'|//|f' a']//= s s' ty + As GM Rs.
+    elim: q hd s s' ty Cq => //[p|f Hf a Ha][p'|//|f' a']//= s s' ty + As GM Rs.
       by case: fndP => //pP/=[->]; case: eqP => //= ???? [<-].
     move=> Cq.
     rewrite fdisjointXU => /andP[sf sa].
@@ -984,46 +998,53 @@ Section check.
       by destruct m; apply: relSS_matching M.
     destruct m; simpl in * => //.
     move: GI; rewrite fsubUset => /andP[fff af].
-    case: a' fa' aa' M => //= v; rewrite !fdisjointX1 => vf va M.
-    have [sz ? /and3P[Asz fsz smsz]] := matching_extP Asm M; subst.
-    have:= matchingP Asm M; rewrite deref_V.
-    have [sk KK /and3P[Ask fsk ssk]] := H_extP GM As H1 isT.
-    rewrite/=in KK; subst.
-    rewrite not_in_deref; last first.
-      rewrite !domf_cat/= !fdisjointUX sa andbT.
-      apply/andP; split; rewrite fdisjoint_sym.
-        by apply/fdisjointWl/fsz.
-      by apply/fdisjointWl/fsk.
-    case: fndP; last first.
-      rewrite domf_cat/= => + ?; subst.
-      by rewrite finmap.inE eqxx in va.
-    move=> vP.
-    have A' := acyclic_sigma_H As H1.
-    have A2 := matching_acyclic A' M.
-    move: smsz; rewrite domf_cat domf_deref_sig2 fdisjointUX => /andP[sksz ssz] H.
-    apply: relSS_set => //.
-    rewrite deref_in//.
-    rewrite odflt_Some in H.
-    rewrite H.
     move: CT.
-    case: ifP => IE.
-      move=> [?]; subst.
-      (* TODO: we should change check_tm: in case of Exp, we still have to 
-         recursively check that the argument returns an Expression *)
-      (* the recursive call should always return that it is a good call and no TC error *)
-      (* also note that we always return Exp for data, therefore there is no arrow in
-         the case of cons 3 1, i.e. this is a type-error, but we should ignore it *)
-      (* TODO: we have Exp, i.e. we should change relSS *)
-      admit.
-    case C: check_tm => //[[wc tya]].
-    case: ifP => CT//[].
-    case: ifP => I//[?]; subst => /=.
-    have ctatf : cincl tya tf by rewrite/cincl CT.
-    apply: cinclR_min => //.
-    case: fndP => vsv//=.
-    have:= forallP Rsx [`vsv]; rewrite valPE [val _]/=; cbn zeta.
-    rewrite in_fnd deref_in//; subst.
-    by rewrite C => CI'.
+    case Ca: check_tm => //[[wc' ta]].
+    case: ifP => // CT []; case: ifP => // I /esym [?]; subst.
+
+    case: a' fa' aa' M => //= [v|fx ax].
+      rewrite !fdisjointX1 => vf va M.
+      have [sz ? /and3P[Asz fsz smsz]] := matching_extP Asm M; subst.
+      have:= matchingP Asm M; rewrite deref_V.
+      have [sk KK /and3P[Ask fsk ssk]] := H_extP GM As H1 isT.
+      rewrite/=in KK; subst.
+      rewrite not_in_deref; last first.
+        rewrite !domf_cat/= !fdisjointUX sa andbT.
+        apply/andP; split; rewrite fdisjoint_sym.
+          by apply/fdisjointWl/fsz.
+        by apply/fdisjointWl/fsk.
+      case: fndP; last first.
+        rewrite domf_cat/= => + ?; subst.
+        by rewrite finmap.inE eqxx in va.
+      move=> vP.
+      have A' := acyclic_sigma_H As H1.
+      have A2 := matching_acyclic A' M.
+      move: smsz; rewrite domf_cat domf_deref_sig2 fdisjointUX => /andP[sksz ssz] H.
+      apply: relSS_set => //.
+      rewrite deref_in//.
+      rewrite odflt_Some in H.
+      rewrite H.
+      move: CT.
+      (* case: ifP => IE. *)
+        (* move=> [?]; subst. *)
+        (* TODO: we should change check_tm: in case of Exp, we still have to 
+          recursively check that the argument returns an Expression *)
+        (* the recursive call should always return that it is a good call and no TC error *)
+        (* also note that we always return Exp for data, therefore there is no arrow in
+          the case of cons 3 1, i.e. this is a type-error, but we should ignore it *)
+        (* TODO: we have Exp, i.e. we should change relSS *)
+        (* admit. *)
+      case C: check_tm => //[[wc tya]].
+      case: ifP => CT//[].
+      case: ifP => I//[?]; subst => /=.
+      have ctatf : cincl tya tf by rewrite/cincl CT.
+      apply: cinclR_min => //.
+      case: fndP => vsv//=.
+      have:= forallP Rsx [`vsv]; rewrite valPE [val _]/=; cbn zeta.
+      rewrite in_fnd deref_in//; subst.
+      by rewrite C => CI'.
+    
+    move=> t.
   Admitted.
 
   Lemma check_atoms_min sP sV ps:
