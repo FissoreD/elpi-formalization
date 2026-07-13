@@ -102,7 +102,8 @@ match tm with
     | Some (arr m l r) =>
       ((match bo with
         | Tm_V v =>
-          if m == input then add v (min l (odflt l sV.[?v])) sV else sV
+          let l := if m == input then l else weak l in
+          add v (min l (odflt l sV.[?v])) sV
         | _ => (assume_tm sP sV bo).1
         end), Some r)
     | _ => (sV, None)
@@ -971,7 +972,7 @@ Section check.
       by apply: fsubset_trans Hf.
     case: a Ha Hf Ha' => //= [v].
     move=> Ha Hf Ha'.
-    case: eqP => ?; subst => //.
+    (* case: eqP => ?; subst => //. *)
     by rewrite fsubUset Hf andbT fsub1set !finmap.inE eqxx !orbT.
   Qed.
 
@@ -1048,7 +1049,6 @@ Section check.
     case A1: assume_tm => //=[sV' tyf'].
     have ? := H_assume_tm_ty H1 A1; subst => /=.
     move=> Rsm.
-    (* rewrite (surjective_pairing (get_input_vars sP f')) (get_input_vars2R H1)/=. *)
     have/= Asm:= acyclic_sigma_H As H1.
     have Ra' : relSS sP sx (assume_tm sP sV' a').1.
       case: m' H1 M A1 GIa => //= H1 M A1 GI;
@@ -1069,7 +1069,6 @@ Section check.
     move=> sma.
     have:= matchingP_deref Asm _ M.
     rewrite not_in_deref//af => /(_ isT)?; subst.
-    (* rewrite restrictf_set !finmap.inE eqxx orbT. *)
     apply: relSS_set => //.
       by move: va => /=; case: fndP; rewrite//=finmap.inE eqxx.
     move=> vsx.
@@ -1078,11 +1077,18 @@ Section check.
       by apply: cincl_trans (andB Caf OI) _ => //.
     apply: cinclR_min => //=.
     case: fndP => //=vsv.
-    (* have vsvR: v \in sV'.[& (get_input_vars sP f').1 `|` [fset v]].
-      by rewrite finmap.inE domf_restrict !finmap.inE eqxx orbT. *)
     have:= forallP Rsx [`vsv].
     by rewrite valPE /=in_fnd;rewrite//= deref_in// H// ffunE valPE.
-  Qed.
+    apply/forallP => [[x xP]]; rewrite valPE ffunE/=.
+    move: xP; rewrite /= !finmap.inE.
+    case: eqP => //=xv xsv; subst.
+      
+      admit.
+    have:= forallP Rsx [`xsv]; rewrite valPE /=.
+    case: fndP => //= xsx; rewrite deref_in//=.
+    case C: check_tm => [[wcx tyx]|]//= H.
+    rewrite (in_fnd xsv)//=.
+  Admitted.
   Print Assumptions relSS_assume.
 
   Lemma check_atoms_min sP sV ps:
@@ -1194,7 +1200,6 @@ Section check.
     rewrite-/R.
     set FA := fresh_atoms _ _ _.
     move=> H /eqP {}CA.
-    Search check_tm H.
     apply: det_check_H (CA) _ (H) => //.
     - case CA : check_atoms CA => ///eqP[?]; subst.
       apply: check_atoms_all_deref (isSomeP CA).
@@ -1216,7 +1221,7 @@ Section check.
 
   Print Assumptions det_check_bc.
 
-  .
+  (*.
   
   Notation u := mut_excl.u.
   Notation runT := (runT u).
@@ -1617,5 +1622,5 @@ Section check.
       destruct x; rewrite (orbT,andbT)//.
       by move=> /last_has_cut[]->; rewrite !orbT.
     Qed.
-  End tail_cut. *)
+  End tail_cut. *)*)
 End check.
