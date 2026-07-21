@@ -164,11 +164,10 @@ Fixpoint check_atoms (sP :sigT) sV (s: seq Atom) d : option Det :=
   end.
 
 Definition check_rule (sP:sigT) head prems :=
-  let: (sV, _) := assume_tm sP empty head in
-  match check_atoms sP sV prems Func with
-  | None => false
-  | Some f => (~~ tm_is_det sP head || (f == Func))
-  end.
+  ~~ tm_is_det sP head || 
+    let: (sV, _) := assume_tm sP empty head in
+    (is_func (check_atoms sP sV prems Func) &&
+    is_func (check_tm_prop sP sV head)).
 
 Definition check_rules p :=
   all (fun x => check_rule p.(sig) x.(head) x.(premises)) p.(rules).
@@ -285,8 +284,9 @@ Module Test.
     Proof.
       rewrite/check_rules/= andbT/check_rule; apply/andP; split.
         rewrite /assume_tm !FmapE.fmapE.
-        rewrite eqxx /tm_is_det !get_tm_hd_app/get_tm_hd/mapS.
-        by rewrite !FmapE.fmapE eqxx !not_fnd///=.
+        rewrite eqxx /tm_is_det !get_tm_hd_app/get_tm_hd/mapS/=.
+        rewrite !FmapE.fmapE//=/check_tm_prop.
+        by rewrite not_fnd//= !FmapE.fmapE//=.
       rewrite /assume_tm !FmapE.fmapE !eqxx.
       rewrite/mapS/consS.
       repeat case: eqP => // _.
@@ -302,8 +302,7 @@ Module Test.
       cbn match.
       rewrite[omap _ _]/=.
       cbn match.
-      rewrite ifF; last by rewrite/tm_is_det/= !FmapE.fmapE/=.
-      by rewrite//.
+      by rewrite/tm_is_det//= !FmapE.fmapE//=.
     Qed.
   End map. 
 End Test.
@@ -607,22 +606,37 @@ Section check.
   Lemma call_is_det_tm_rename0 sP v t r: check_tm sP empty (rename v t r).2 = check_tm sP empty t.
   Proof. by rewrite/rename !push/= check_tm_ren0. Qed.
 
+  Lemma check_tm_prop_fresh fv t sP r hd:
+  (* TODO: There should be a relation between r and fv, I think that 
+     fv is an extension of r, ie: exists k, fv = k + r *)
+    check_tm_prop sP (assume_tm sP empty (ren r hd)).1
+      (ren fv t) =
+        check_tm_prop sP (assume_tm sP empty hd).1 t.
+  Proof.
+  Admitted.
+
+  Lemma check_tm_prop_fresh_rename fv t sP hd:
+    check_tm_prop sP (assume_tm sP empty (rename fv hd empty).2).1
+      (rename fv t empty).2 =
+        check_tm_prop sP (assume_tm sP empty hd).1 t.
+  Proof. by rewrite/rename !push/= check_tm_prop_fresh. Qed.
+
   Lemma check_atoms_fresh sP hd bo v (r : {fmap V -> V}) f:
-    (* TODO: instead of empty, I need sV and (compose r sV) *)
     check_atoms sP (assume_tm sP empty (ren r hd)).1 (fresh_atoms v bo r).2 f =
       check_atoms sP (assume_tm sP empty hd).1 bo f.
   Proof.
-    elim: bo hd f => //=[[|t] l IH] hd f; rewrite !push//=.
-    rewrite !push/=.
-    case C: check_atom => //=.
-  Admitted.
+    elim: bo hd f => //=[[|t] l IH] hd f; rewrite /= /rename !push//=.
+    set fr := fresh_tm _ _ _.
+    by rewrite check_tm_prop_fresh; case: omap => /=.
+  Qed.
 
-  Lemma check_atoms_fresh_rename sP hd bo v d r:
-    check_atoms sP (assume_tm sP empty hd).1 bo d = r ->
-      check_atoms sP (assume_tm sP empty (rename v hd empty).2).1
-        (fresh_atoms (rename v hd empty).1.1 bo (rename v hd empty).1.2).2 d = r.
+  Lemma check_atoms_fresh_rename sP hd bo v d:
+    check_atoms sP (assume_tm sP empty (rename v hd empty).2).1
+      (fresh_atoms (rename v hd empty).1.1 bo (rename v hd empty).1.2).2 d =
+      check_atoms sP (assume_tm sP empty hd).1 bo d.
   Proof.
     rewrite/rename !push/=; move: (_ `|` _) => fv.
+    set f := (fresh_tm _ _ _).
     by rewrite check_atoms_fresh.
   Qed.
 
@@ -1135,30 +1149,30 @@ Section check.
     case C: check_tm_prop => //=[[]]//.
   Qed.
 
-  (* Lemma check_atom_assume_input:
-    is_func (check_atoms sP () ps d) ->
-    is_func (check_atoms sP x ps d). *)
-
   Lemma det_check_H sP q hd bo s s' froz sV r:
     (get_input_vars sP q).1 `<=` froz ->
-    all (check_atom sP empty Func) [seq deref_atom s'.2 i  | i <- bo] ->
+    (* all (check_atom sP empty Func) [seq deref_atom s'.2 i  | i <- bo] -> *)
     (vars_tm q) # (vars_tm hd) ->
     (domf s) # (vars_tm q) ->
     acyclic_sigma s ->
     good_modes sP ->
     good_call sP empty q ->
     is_func (check_atoms sP (assume_tm sP sV hd).1 bo r) ->
+    is_func (check_tm_prop sP (assume_tm sP empty hd).1 hd) ->
     relSS sP s sV ->
     H u sP froz q hd s = Some s' -> 
     is_func (check_atoms sP empty [seq deref_atom s'.2 i  | i <- bo] r).
   Proof.
-    elim: bo hd s s' q sV r => [|p0 ps IH]//= hd s [ty s']/= q sV r GI /andP[cp0 cps].
-    move=> qh sq A GM cq + R H.
-    have {} IH:= IH _ _ (ty,s') _ _ _ GI cps qh sq A GM cq _ R H.
+    elim: bo hd s s' q sV r => [|p0 ps IH]//= hd s [ty s']/= q sV r GI.
+     (* /andP[cp0 cps]. *)
+    move=> qh sq A GM cq + Ch R H.
+    have {} IH:= IH _ _ (ty,s') _ _ _ GI qh sq A GM cq _ Ch R H.
     have A' := acyclic_sigma_H A H.
-    case: p0 cp0 => //=[|t] cp0; first by apply: IH.
+    case: p0 (*cp0*) => //=[|t] (*cp0*); first by apply: IH.
     case Ct: check_tm_prop => //=[ch] Cps.
-    move: (cp0); rewrite/check_tm_prop; case X: check_tm => //=[[wc [[|d]|]]]//= _.
+    have: check_tm_prop sP empty (deref s' t).
+      admit.
+    rewrite/check_tm_prop; case X: check_tm => [[wc [[|d]|]]|]//= _.
     apply: IH => //=.
     destruct r => //=; simpl in *.
     have R': relSS sP s' (assume_tm sP sV hd).1 .
@@ -1167,7 +1181,7 @@ Section check.
     rewrite /check_tm_prop X => /(_ _ erefl).
     destruct d, ch => // _.
     by apply: check_atoms_min.
-  Qed.
+  Admitted.
 
   Lemma bc_is_p pr fv c s fv' x xs:
     bc u pr fv c s = (fv', x::xs) -> exists p, get_tm_hd (deref s c) = inl p.
@@ -1183,21 +1197,6 @@ Section check.
     check_tm sig s q = Some (wc, b (d Func)) -> is_func (check_tm_prop sig s q).
   Proof. by rewrite/check_tm_prop; move=> ->. Qed.
 
-  Lemma check_atoms_all_deref sP s sV ps r q:
-    acyclic_sigma s ->
-    relSS sP s sV ->
-    check_atoms sP sV ps r ->
-    all (fun a : Atom => check_atom sP empty q a) [seq deref_atom s i  | i <- ps].
-  Proof.
-    move=> A R; elim: ps r q => //= [[|t] xs IH]//= r q; first by apply: IH.
-    case Cx: check_tm_prop => //=[d] Cxs.
-    rewrite (IH _ _ Cxs) andbT {IH Cxs}.
-    move: Cx; rewrite/check_tm_prop; case Ct: check_tm => [[wc [[|det]|]]|]//=[?]; subst.
-    have:= check_tm_deref A R Ct.
-    (* move=> [[wc' [[|dx]|[]]]]//=. *)
-    (* by move=> ->. *)
-  Admitted.
-
   Lemma det_check_bc pr c fv r s:
     check_program pr -> is_func (check_tm_prop pr.(sig) fmap0 (deref s c)) -> 
     bc u pr fv c s = r ->
@@ -1212,7 +1211,7 @@ Section check.
     rewrite/bc; set QUERY := deref s c in CT *.
     case AS: acyclic_sigma => //=.
     rewrite !push/=.
-    case: pr ME CR CT => /= rs sig; rewrite/check_rules/= => ME CR CD.
+    case: pr ME CR CT => /= rs sP; rewrite/check_rules/= => ME CR CD.
     move: CD; rewrite/check_tm_prop/is_func.
     case C: check_tm => [[wc [[|[]]|]]|]//= _.
     move: ME; rewrite/mut_excl push/= => /andP[GM _].
@@ -1224,25 +1223,22 @@ Section check.
     case H: H => [s'|]; last by apply: IH.
     rewrite !push/= {}IH// andbT.
     rewrite/deref_pair/=/fresh_rule!push/= -/R.
+    set FA := fresh_atoms _ _ _.
     move: H1; rewrite/check_rule push.
     have [/esym QR _ [p[pP Qp E]]] := HP H.
     have:= call_is_det_tm_is_det (check_tmFP C).
     rewrite/tm_is_det Qp in_fnd => Dq.
     rewrite Qp in QR.
     rewrite (proj1 (callable_rename _ _ _ _) QR) in_fnd Dq/=.
-    case CA: check_atoms => ///eqP?; subst.
-    have:= check_atoms_fresh_rename FR.1 CA.
-    move: H.
-    rewrite-/R.
-    set FA := fresh_atoms _ _ _.
-    move=> H /eqP {}CA.
-    apply: det_check_H (CA) _ (H) => //.
-    - admit.
+    rewrite -(check_atoms_fresh_rename _ _ _ FR.1) -/R -/FA.
+    move=> /andP[Cb Ch].
+    apply: det_check_H Cb _ _ H => //.
     - rewrite fdisjoint_sym.
       apply: fdisjointWr (vars_tm_rename_disjoint _ _).
       by apply/fsubset_trans/fresh_rules_sub; rewrite// fsubsetU// fsubsetUr.
     - by rewrite acyclic_deref_disjoint//.
     - by have ? := is_func_well_call C isT; subst; rewrite /good_call C.
+    - by rewrite check_tm_prop_fresh_rename.
     - by rewrite relSS0.
   Qed.
 
