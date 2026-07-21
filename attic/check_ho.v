@@ -318,7 +318,6 @@ Proof.
   case A1 : assume_tm => [sV' ty'']//=.
   have {Hf H1 A1}/=? := Hf _ _ _ _ _ _ H1 A1; subst.
   case: ty' => [|m tl tr]//=.
-  (* case: (ifP (_ || _)) => //= H; *)
   by case M: (_ s') => //[r'][<-]{r}/=[_ <-].
 Qed.
 
@@ -385,17 +384,6 @@ Proof.
   by rewrite/sigSW; case: sv {C} => /eqP->//; rewrite cincl_weakr.
 Qed.
 
-Lemma get_sig_app s v f a: get_sig s v (Tm_App f a) = get_sig s v f.
-Proof. by rewrite/get_sig get_tm_hd_app. Qed.
-
-Lemma get_sig_V sp sv v: get_sig sp sv (Tm_V v) = sv.[?v].
-Proof. by []. Qed.
-
-Lemma get_sig_P sp sv p: get_sig sp sv (Tm_P p) = sp.[?p].
-Proof. by []. Qed.
-
-(* signature is same or weak *)
-
 Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
   [forall x : domf sV,
     let sig := sV.[valP x] in
@@ -406,15 +394,11 @@ Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
       end
     else true].
 
-Lemma if_cincl b t1 t2 :
-  (if b then cincl t1 t2 else cincl t2 t1) -> compat_type t1 t2.
-Proof. by case: b => /andP[]//; rewrite compat_type_comm. Qed.
-
 Lemma check_tm_deref sP sV s t r1 r2:
   acyclic_sigma s ->
   relSS sP s sV ->
-  check_tm sP sV (t) = Some r1 ->
-  check_tm sP empty ((deref s t)) = Some r2 ->
+  check_tm sP sV t = Some r1 ->
+  check_tm sP empty (deref s t) = Some r2 ->
     cincl r2.2 r1.2.
 Proof.
   move=> A R.
@@ -458,28 +442,6 @@ Proof.
   by move=> [_ [<-]].
 Qed. *)
 
-Lemma is_det_rename sP fv hd m:
-  tm_is_det sP (rename fv hd m).2 =
-    tm_is_det sP hd.
-Proof.
-  rewrite/rename!push/=.
-  move: (fresh_tm _ _ _) => -[]/= _.
-  elim: hd => //= v b; rewrite ren_V//.
-Qed.
-
-Lemma is_det_deref sig fv c :
-  tm_is_det sig c ->
-  tm_is_det sig (deref fv c).
-Proof. by elim: c => //. Qed.
-
-Lemma tm_is_det_comb sP f a:
-  tm_is_det sP (Tm_App f a) = tm_is_det sP f.
-Proof. by rewrite/tm_is_det/=. Qed.
-
-Lemma fresh_has_cut sv xs m:
-  has_cut_seq (fresh_atoms sv xs m).2 = has_cut_seq xs.
-Proof. by elim: xs sv => //= -[|c] xs IH sv; rewrite!push//=IH !push//. Qed.
-
 Definition mpV (o n: sigV) :=
   [forall x : domf o, 
     match n.[? val x] with
@@ -502,17 +464,6 @@ Definition deref_pair p := map (deref_atom p.1) p.2.
 
 Definition big_or_det sP rs :=
   all_but_last (fun x => has_cut_seq x.2) rs && all (fun x => is_func (check_atoms sP fmap0 (deref_pair x) Func)) rs.
-
-Lemma all_but_last_map T f g l:
-  @all_but_last T f (map g l) = @all_but_last T (fun x => f (g x)) l.
-Proof. by elim: l => //= x0 [|x1 xs]//= ->//. Qed.
-
-Lemma is_det_sig_eat_ty k ts sa:
-  is_det_sig k -> eat_ty ts sa = Some k -> is_det_sig sa.
-Proof.
-  elim: ts k sa => [|ts IH] k sa//=; first by move=> +[->].
-  by move=> dk; case: sa => //m sf sa; apply: IH.
-Qed.
 
 Lemma is_det_sig_weak s: is_det_sig (weak s) = false.
 Proof. by elim: s => [[]//|[]]//. Qed.
