@@ -518,9 +518,22 @@ Proof. by elim: t => //=[v|f -> a ->]//; rewrite !(@not_fnd _ _ empty). Qed.
 Lemma call_is_det_tm_rename0 sP v t r: check_tm sP empty (rename v t r).2 = check_tm sP empty t.
 Proof. by rewrite/rename !push/= check_tm_ren0. Qed.
 
-Lemma check_tm_prop_fresh fv t sP r hd:
+(* Lemma check_tm_prop_fresh fv e t sP r hd:
 (* TODO: There should be a relation between r and fv, I think that 
     fv is an extension of r, ie: exists k, fv = k + r *)
+  adesive r e -> fv = r + e ->
+  check_tm_prop sP (assume_tm sP empty (ren r hd)).1
+    (ren fv t) =
+      check_tm_prop sP (assume_tm sP empty hd).1 t.
+Proof.
+Admitted.
+Print adesive.
+About fresh_tm_def. *)
+
+Lemma check_tm_prop_fresh fv t sP r hd:
+(* TODO: There should be a relation between r and fv, I think that 
+    fv is an extension of r, ie: exists k, fv = k + r,
+    look comment above *)
   check_tm_prop sP (assume_tm sP empty (ren r hd)).1
     (ren fv t) =
       check_tm_prop sP (assume_tm sP empty hd).1 t.
@@ -539,6 +552,7 @@ Lemma check_atoms_fresh sP hd bo v (r : {fmap V -> V}) f:
 Proof.
   elim: bo hd f => //=[[|t] l IH] hd f; rewrite /= /rename !push//=.
   set fr := fresh_tm _ _ _.
+  Search fresh_tm snd.
   by rewrite check_tm_prop_fresh; case: omap => /=.
 Qed.
 
