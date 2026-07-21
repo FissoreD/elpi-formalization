@@ -480,22 +480,6 @@ Lemma fresh_has_cut sv xs m:
   has_cut_seq (fresh_atoms sv xs m).2 = has_cut_seq xs.
 Proof. by elim: xs sv => //= -[|c] xs IH sv; rewrite!push//=IH !push//. Qed.
 
-Section check.
-
-  Lemma fresh_rules_cons fv r rs : fresh_rules fv (r :: rs) =
-    ((fresh_rule (fresh_rules fv rs).1 r).1, (fresh_rule (fresh_rules fv rs).1 r).2 :: (fresh_rules fv rs).2).
-  by simpl; rewrite !push.
-  Qed.
-
-  Definition filter_opt K (s : {fmap V -> option K}) : {fmap V -> option K} :=
-    filterf s (fun x => match s.[?x] with Some r => r | _ => false end).
-
-  Definition keep_some K (s:{fmap V -> option K}) dft : {fmap V -> K} := [fmap x: domf s =>
-      match s.[valP x] with
-      | None => dft
-      | Some x => x
-      end].
-
   Definition mpV (o n: sigV) :=
     [forall x : domf o, 
       match n.[? val x] with
@@ -503,29 +487,6 @@ Section check.
       | _ => false  
       end
     ].
-
-  Fixpoint cond_inp T (ms :seq mode) (f : T -> bool) (l : list T) :=
-    match ms with
-    | [::] | (output :: _) => true
-    | input :: ms => 
-      match l with
-      | [::] => true
-      | x :: xs => f x && cond_inp ms f xs
-      end
-    end.
-
-  Fixpoint cond_inp2 T Q (ms :seq mode) (f : T -> Q -> bool) (l1 : list T) (l2 : list Q) :=
-    match ms with
-    | [::] | (output :: _) => true
-    | input :: ms => 
-      match l1, l2 with
-      | [::], _ | _, [::] => true
-      | x :: xs, y::ys => f x y && cond_inp2 ms f xs ys
-      end
-    end.
-
-  Lemma cond_inp2_refl T l (f: T -> T -> bool) s: reflexive f -> cond_inp2 l f s s.
-  Proof. by elim: l s => //= -[]//=ms IH []//=x xs /[dup]/IH->->. Qed.
 
   (*SNIP: check_program *)
   Definition check_program pr := mut_excl u pr && check_rules pr.
@@ -673,44 +634,8 @@ Section check.
     by destruct r', r => //.
   Qed.
 
-  (* Print Assumptions call_is_det_deref. *)
-
   Lemma relSS0 sP s: relSS sP s empty.
   Proof. by apply/forallP => //=-[]//. Qed.
-
-  (* Lemma relSS_matching sP s sv s' froz t1 t2: acyclic_sigma s ->
-    relSS sP s sv -> matching froz t1 t2 s = Some s' -> relSS sP s' sv.
-  Proof.
-    move=> A R M.
-    have [sm ? smP] := matching_extP A M; subst.
-    apply/forallP => -[x xv]; rewrite valPE [val _]/=.
-    have:= forallP R [`xv]; rewrite valPE [val _]/=.
-    have A' := matching_acyclic A M.
-    case: fndP => // xs.
-      rewrite in_fnd; first by rewrite domf_cat finmap.inE xs orbT.
-      move=> xss; cbn zeta.
-      rewrite !deref_in//.
-      have: x \notin domf sm.
-        by move/and3P: smP => [_ _ /fdisjointP/(_ _ xs)]; rewrite !finmap.inE => /norP[].
-      move=> xsm; rewrite getf_catr ffunE valPE.
-      case C: check_tm => //=[ty] CI.
-      move/and3P: smP => [asm fP ssm].
-      have [r' CT CI'] := check_tm_derefE asm (relSS0 _ _) C.
-      rewrite CT.
-      by apply: cincl_trans CI.
-    move=> _; case: fndP => //xsm.
-    rewrite deref_in//.
-    cbn zeta.
-    rewrite getf_catl//.
-      by move: xsm; rewrite domf_cat finmap.inE (negbTE xs) orbF.
-    move=> {}xsm.
-    have:= 
-    rewrite fnd_cat {1}domf_deref_sig2 (negbTE xs)/= => _.
-    case: fndP => //=xsm.
-
-    rewrite 
-    rewrite/=.
-  Qed. *)
 
   Lemma deref_deref_sig2 sm sx t:
     deref sm (deref sx t) = deref (sm + deref_sig2 sm sx) t.
@@ -1243,4 +1168,3 @@ Section check.
   Qed.
 
   Print Assumptions det_check_bc.
-End check.
