@@ -205,4 +205,80 @@ Qed.
 
 Print Assumptions runS_to_runT.
 Print Assumptions runT_to_runS.
+
+(*SNIPT: tree_to_elpi_call *)
+Theorem runT_to_runSC:
+  forall p t s r, let v := vars_tm t `|` vars_sigma s in
+    runT' p v s (TA (call t)) r -> 
+      let r' := match r with
+      | Zero => None
+      | One s' => Some (s', [::])
+      | Many s' t' => Some (s', tree_to_stack t' s [::]) 
+      end in
+        runS p v ((s, consG (call t, [::]) [::]) :: [::]) r'.
+(*ENDSNIPT: tree_to_elpi_call *)
+Proof.
+  move=> /= p t s r R'.
+  by have /= := @runT_to_runS p (TA (call t)) s r isT R'.
+Qed.
+
+(*SNIPT: elpi_to_tree_call *)
+Theorem runS_to_runTC:
+  forall p t s r v, runS p v ((s, consG (call t, [::]) [::]) :: [::]) r -> 
+      match r with
+      | None => runT' p v s (TA (call t)) Zero
+      | Some (s', [::]) => runT' p v s (TA (call t)) (One s')
+      | Some (s', a') => 
+        exists t', runT' p v s (TA (call t)) (Many s' t') /\ tree_to_stack t' s [::] = a'
+      end.
+(*ENDSNIPT: elpi_to_tree_call *)
+Proof.
+  move=> p t s r v R.
+  have:= runS_to_runT R.
+  move=> /(_ s (TA (call t)) isT erefl).
+  rewrite//.
+Qed.
+
+Theorem runS_to_runTCZero:
+  forall p t s, let v := vars_tm t `|` vars_sigma s in
+    runS p v ((s, consG (call t, [::]) [::]) :: [::]) None <-> 
+    runT' p v s (TA (call t)) Zero.
+Proof.
+  move=> /= p t s; split => R.
+    have:= runS_to_runT R.
+    by move=> /(_ s (TA (call t)) isT erefl).
+  by apply : runT_to_runSC R.
+Qed.
+
+Theorem runS_to_runTCOne:
+  forall p t s s', let v := vars_tm t `|` vars_sigma s in
+    runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', [::])) <-> 
+    runT' p v s (TA (call t)) (One s').
+Proof.
+  move=> /= p t s s'; split => R.
+    have:= runS_to_runT R.
+    by move=> /(_ s (TA (call t)) isT erefl).
+  by apply : runT_to_runSC R.
+Qed.
+
+Theorem runS_to_runTCMany1:
+  forall p t s s' x xs, let v := vars_tm t `|` vars_sigma s in
+    runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', x :: xs)) -> 
+    exists t', runT' p v s (TA (call t)) (Many s' t') /\ tree_to_stack t' s [::] = x :: xs.
+Proof.
+  move=> /= p t s s' x xs R.
+  have:= runS_to_runT R.
+  by move=> /(_ s (TA (call t)) isT erefl)/=.
+Qed.
+
+Theorem runS_to_runTCMany2:
+  forall p t s s' t', let v := vars_tm t `|` vars_sigma s in
+    runT' p v s (TA (call t)) (Many s' t') ->
+    runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', tree_to_stack t' s [::])).
+Proof.
+  move=> /= p t s s' t' R.
+  by have /= := runT_to_runSC R.
+Qed.
+
+
 End NurEqiv.
