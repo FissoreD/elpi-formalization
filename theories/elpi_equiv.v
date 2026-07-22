@@ -239,4 +239,46 @@ Proof.
   rewrite//.
 Qed.
 
+Theorem runS_to_runTCNone:
+  forall p t s, let v := vars_tm t `|` vars_sigma s in
+    runS p v ((s, consG (call t, [::]) [::]) :: [::]) None <-> 
+    runT' p v s (TA (call t)) Zero.
+Proof.
+  move=> /= p t s; split => R.
+    have:= runS_to_runT R.
+    by move=> /(_ s (TA (call t)) isT erefl).
+  by apply : runT_to_runSC R.
+Qed.
+
+Theorem runS_to_runTCOne:
+  forall p t s s', let v := vars_tm t `|` vars_sigma s in
+    runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', [::])) <-> 
+    runT' p v s (TA (call t)) (One s').
+Proof.
+  move=> /= p t s s'; split => R.
+    have:= runS_to_runT R.
+    by move=> /(_ s (TA (call t)) isT erefl).
+  by apply : runT_to_runSC R.
+Qed.
+
+Theorem runS_to_runTCMany1:
+  forall p t s s' x xs, let v := vars_tm t `|` vars_sigma s in
+    runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', x :: xs)) -> 
+    exists t', runT' p v s (TA (call t)) (Many s' t') /\ tree_to_stack t' s [::] = x :: xs.
+Proof.
+  move=> /= p t s s' x xs R.
+  have:= runS_to_runT R.
+  by move=> /(_ s (TA (call t)) isT erefl)/=.
+Qed.
+
+Theorem runS_to_runTCMany2:
+  forall p t s s' t', let v := vars_tm t `|` vars_sigma s in
+    runT' p v s (TA (call t)) (Many s' t') ->
+    runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', tree_to_stack t' s [::])).
+Proof.
+  move=> /= p t s s' t' R.
+  by have /= := runT_to_runSC R.
+Qed.
+
+
 End NurEqiv.
