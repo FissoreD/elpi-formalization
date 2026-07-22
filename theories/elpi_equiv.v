@@ -239,7 +239,7 @@ Proof.
   rewrite//.
 Qed.
 
-Theorem runS_to_runTCNone:
+Theorem runS_to_runTCZero:
   forall p t s, let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) None <-> 
     runT' p v s (TA (call t)) Zero.
