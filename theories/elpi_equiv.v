@@ -74,8 +74,8 @@ Section NurEqiv.
 (* USED TO SKIP NO-OP IN TREE SEMANTICS *)
 Lemma elpi_to_tree_no_op v0 p a r s0:
   size a != 0 ->
+  runS p v0 a r ->
   let P t0 := 
-    runS p v0 a r -> 
     valid_tree t0 -> tree_to_stack t0 s0 [::] = a ->  
     exists b v1,
     if r is Some (s1, a') then 
@@ -88,14 +88,14 @@ Lemma elpi_to_tree_no_op v0 p a r s0:
   (forall A, failed A = false -> P A) -> forall a, P a.
 Proof.
   simpl.
-  move=> sA P A R vA H.
+  move=> sA R P A vA H.
   case fA: (failed A); last by auto.
   case nA: (prune false A) => [A'|]; last first.
     by rewrite (failed_prune_none_tree_to_stack vA fA nA) in H; subst.
   have /= fA' := prune_Some nA.
   have /= vA' := (valid_tree_prune vA nA).
   rewrite (pruneF_tree_to_stack vA fA nA) in H.
-  have [b[v1 {}P]] := P A' fA' R vA' H.
+  have [b[v1 {}P]] := P A' fA' vA' H.
   case: r P R => [[s1 a0]|H1 H2]; subst.
     case: a0.
       by repeat eexists; apply: BackT P.
@@ -117,16 +117,16 @@ Lemma elpi_to_tree_aux p v0 a r :
 Proof.
   elim; clear.
   - move=> s a fv s1 A vA /= H.
-    have H1 := elpi_to_tree_no_op _ _ (StopS _ _ _ _ _) vA H.
-    apply: H1; auto => A' fA' Hr vA' H1.
+    have H1 := elpi_to_tree_no_op _ (StopS _ _ _ _ _) _ vA H.
+    apply: H1; auto => A' fA' vA' H1.
     have [skA ?]:= s2l_empty_hd_success vA' fA' H1; subst.    
     have:=@s2l_prune_tl _ s1 nilA vA' skA; rewrite H1 behead_cons => ?; subst.
     case P: prune => [A''|]/=; last by repeat eexists; apply: StopOT.
     have [sz[k[ks Hk]]]/= := failed_tree_to_stack (valid_tree_prune vA' P) (prune_Some P) s1 [::].
     by rewrite Hk; repeat eexists; first apply: StopMT P => //.
   - move=> s1 a ca r gl fv ELPI IH s A vA H.
-    have H1 := elpi_to_tree_no_op _ _ (CutS _ _) vA H.
-    apply: H1; auto => {}A fA _ {}vA {}H.
+    have H1 := elpi_to_tree_no_op _ (CutS _ _) _ vA H.
+    apply: H1; auto => {}A fA {}vA {}H.
     case X: (step u p fv s A) => [[fv' r'] A'].
     have:= next_cut_s2l u p fv fA vA H => /=.
     move => -[H1 H2].
@@ -143,8 +143,8 @@ Proof.
     move: H2; case: ifP => //= CB ST IH; subst; repeat eexists;
     apply: StepT IH; eauto.
   - move=> s1 a g bs r t ca fv fv' ST ELPI IH s3 A vA H.
-    have H1 := elpi_to_tree_no_op _ _ (CallS _ ST _) vA H.
-    apply: H1; auto => {}A fA _ {}vA {}H.
+    have H1 := elpi_to_tree_no_op _ (CallS _ ST _) _ vA H.
+    apply: H1; auto => {}A fA {}vA {}H.
     move: ST; rewrite/stepE; case B: bc => [fv2 rules] [??]; subst.
     have [] := next_callS_s2l u p fv fA vA H.
     rewrite B/= => H1.
@@ -223,7 +223,7 @@ Proof.
 Qed.
 
 (*SNIPT: elpi_to_tree_call *)
-Theorem runS_to_runT:
+Theorem runS_to_runTC:
   forall p t s r v, runS p v ((s, consG (call t, [::]) [::]) :: [::]) r -> 
       match r with
       | None => runT' p v s (TA (call t)) Zero
@@ -240,7 +240,7 @@ Proof.
 Qed.
 
 (*SNIPT: runS_to_runTCZero *)
-Theorem runS_to_runTZ:
+Theorem equiv_zero:
   forall p t s, let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) None <-> 
     runT' p v s (TA (call t)) Zero.
@@ -253,7 +253,7 @@ Proof.
 Qed.
 
 (*SNIPT: runS_to_runTCOne *)
-Theorem runS_to_runTO:
+Theorem equiv_one:
   forall p t s s', let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', [::])) <-> 
     runT' p v s (TA (call t)) (One s').
@@ -266,7 +266,7 @@ Proof.
 Qed.
 
 (*SNIPT: runS_to_runTCMany2 *)
-Theorem runS_to_runTM2:
+Theorem sound_many:
   forall p t s s' x xs, let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', x :: xs)) -> 
     exists t', runT' p v s (TA (call t)) (Many s' t') /\ tree_to_stack t' s [::] = x :: xs.
@@ -278,7 +278,7 @@ Proof.
 Qed.
 
 (*SNIPT: runS_to_runTCMany1 *)
-Theorem runS_to_runTM1:
+Theorem complete_many:
   forall p t s s' t', let v := vars_tm t `|` vars_sigma s in
     runT' p v s (TA (call t)) (Many s' t') ->
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', tree_to_stack t' s [::])).
