@@ -27,7 +27,7 @@ Proof.
 Qed.
 
 Lemma is_det_tail_cut p s fv l:
-  is_det p s fv (And l [::cut] (TA cut)).
+  is_det p s fv (And l [::cut] (Unexplored cut)).
 Proof.
   move=> r [s'[r' H]].
   remember (And _ _ _) as t' eqn:Ht'.
@@ -61,7 +61,7 @@ Lemma is_det_tail_cut1 p s fv t r r':
   check_program p ->
   det_tree p t ->
   runT' p fv s t r -> 
-  runT' p fv s (And t [::cut] (TA cut)) r' -> 
+  runT' p fv s (And t [::cut] (Unexplored cut)) r' -> 
   r = r'.
 Proof.
   move=> H1 + [b'[c' H2]][+[]].
@@ -183,7 +183,7 @@ Section once.
 
   Lemma id_det_once p s t fv:
     prog_once p ->
-    is_det p s fv (TA (call (Tm_App (Tm_P once_sym) t))).
+    is_det p s fv (Unexplored (call (Tm_App (Tm_P once_sym) t))).
   Proof.
     case: p => -[|r rs] sig []//= HS; first by move=> /(_ [::]) [].
     move=> /(_ rs) [[?] H]; subst.
@@ -207,8 +207,8 @@ Section once.
     destruct r'; eauto.
     move=> [B' ? Hz]; subst.
     set P := {| rules := _; sig := _|} in Hz.
-    set T := TA _ in Hz.
-    have {}Hz : runT' P Y s' (And T [:: cut] (TA cut)) (Many s0 B').
+    set T := Unexplored _ in Hz.
+    have {}Hz : runT' P Y s' (And T [:: cut] (Unexplored cut)) (Many s0 B').
       do 2 eexists; apply: Hz.
     by have [//|[]] := is_det_tail_cut Hz.
   Qed.

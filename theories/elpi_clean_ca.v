@@ -416,7 +416,7 @@ Section clean_ca.
   Qed.
 
   Lemma step_call fv s1 q:
-    step u p fv s1 (TA (call q)) = let: (fv, l) := bc u p fv q s1 in
+    step u p fv s1 (Unexplored (call q)) = let: (fv, l) := bc u p fv q s1 in
       (fv, Expanded, if l is ((s, r) :: xs)%list then (Or None s (big_or r xs))
                      else KO).
   Proof. by []. Qed.

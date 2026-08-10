@@ -298,8 +298,8 @@ Section check.
 
   Fixpoint has_cut A :=
     match A with
-    | TA cut => true
-    | TA (call _) => false
+    | Unexplored cut => true
+    | Unexplored (call _) => false
     | KO => true
     | OK => false
     | And A B0 B => has_cut A || (has_cut_seq B0 && has_cut B)
@@ -328,7 +328,7 @@ Section check.
   *)
   Fixpoint det_tree (sP:sigT) sV A :=
     match A with
-    | TA a => check_atom sP sV a
+    | Unexplored a => check_atom sP sV a
     | KO | OK => true
     | And A B0 B =>
         det_tree sP sV B && 
@@ -599,7 +599,7 @@ Section check.
     | And A _ B => acyclic_sigmaT A && acyclic_sigmaT B
     | Or None sm B => acyclic_sigma sm && acyclic_sigmaT B
     | Or (Some A) sm B => [&& acyclic_sigma sm, acyclic_sigmaT A & acyclic_sigmaT B]
-    | TA _ | OK | KO => true
+    | Unexplored _ | OK | KO => true
     end.
 
   Lemma acyclic_sigma_next_subst s A:
@@ -696,14 +696,14 @@ Section check.
 
   Theorem det_check_call:
     forall p s t v fv, 
-      check_program p -> call_is_det p.(sig) fv t -> is_det p s v (TA (call t)).
+      check_program p -> call_is_det p.(sig) fv t -> is_det p s v (Unexplored (call t)).
   Proof.
     move=> /= p t s v fv cp td r H.
     apply/det_check_tree/H => //=; eauto.
   Qed.
 
   Theorem det_check_calls:
-    forall p t v fv, check_program p -> call_is_det p.(sig) fv t -> is_det p empty v (TA (call t)).
+    forall p t v fv, check_program p -> call_is_det p.(sig) fv t -> is_det p empty v (Unexplored (call t)).
   Proof.
     move=> /= p t v cp fv td r H.
     apply/det_check_tree/H => //; eauto.
