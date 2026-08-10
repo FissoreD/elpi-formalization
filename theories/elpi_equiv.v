@@ -265,24 +265,24 @@ Proof.
   by apply : runT_to_runSC R.
 Qed.
 
-(*SNIPT: runS_to_runTCMany1 *)
-Theorem runS_to_runTM1:
+(*SNIPT: runS_to_runTCMany2 *)
+Theorem runS_to_runTM2:
   forall p t s s' x xs, let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', x :: xs)) -> 
     exists t', runT' p v s (TA (call t)) (Many s' t') /\ tree_to_stack t' s [::] = x :: xs.
-(*ENDSNIPT: runS_to_runTCMany1 *)
+(*ENDSNIPT: runS_to_runTCMany2 *)
 Proof.
   move=> /= p t s s' x xs R.
   have:= runS_to_runT R.
   by move=> /(_ s (TA (call t)) isT erefl)/=.
 Qed.
 
-(*SNIPT: runS_to_runTCMany2 *)
-Theorem runS_to_runTM2:
+(*SNIPT: runS_to_runTCMany1 *)
+Theorem runS_to_runTM1:
   forall p t s s' t', let v := vars_tm t `|` vars_sigma s in
     runT' p v s (TA (call t)) (Many s' t') ->
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', tree_to_stack t' s [::])).
-(*ENDSNIPT: runS_to_runTCMany2 *)
+(*ENDSNIPT: runS_to_runTCMany1 *)
 Proof.
   move=> /= p t s s' t' R.
   by have /= := runT_to_runSC R.
