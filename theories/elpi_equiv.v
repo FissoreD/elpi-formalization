@@ -10,7 +10,7 @@ Section NurEqiv.
 
   Lemma tree_to_elpi_aux p fv A s1 b fv' r:
     vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
-    valid_tree A ->
+    sld_tree A ->
       runT p fv s1 A r b fv' -> 
         let xs := tree_to_stack A s1 [::] in
         match r with
@@ -76,7 +76,7 @@ Lemma elpi_to_tree_no_op v0 p a r s0:
   size a != 0 ->
   runS p v0 a r ->
   let P t0 := 
-    valid_tree t0 -> tree_to_stack t0 s0 [::] = a ->  
+    sld_tree t0 -> tree_to_stack t0 s0 [::] = a ->  
     exists b v1,
     if r is Some (s1, a') then 
       match a' with
@@ -107,7 +107,7 @@ Qed.
 
 Lemma elpi_to_tree_aux p v0 a r : 
   runS p v0 a r -> 
-  forall s0 t0, valid_tree t0 -> tree_to_stack t0 s0 [::] = a ->  
+  forall s0 t0, sld_tree t0 -> tree_to_stack t0 s0 [::] = a ->  
   exists b v1,
   match r with
   | None => runT p v0 s0 t0 Zero b v1
@@ -170,7 +170,7 @@ Definition runT' p v s t r :=
 (*SNIPT: tree_to_elpi *)
 Theorem runT_to_runS:
   forall p t s r, let v := vars_tree t `|` vars_sigma s in
-    valid_tree t -> runT' p v s t r -> 
+    sld_tree t -> runT' p v s t r -> 
       let r' := match r with
       | Zero => None
       | One s' => Some (s', [::])
@@ -187,7 +187,7 @@ Qed.
 (*SNIPT: elpi_to_tree *)
 Theorem runS_to_runT:
   forall p v a r, runS p v a r -> 
-    forall s t, valid_tree t -> tree_to_stack t s [::] = a ->
+    forall s t, sld_tree t -> tree_to_stack t s [::] = a ->
       match r with
       | None => runT' p v s t Zero
       | Some (s', [::]) => runT' p v s t (One s')
