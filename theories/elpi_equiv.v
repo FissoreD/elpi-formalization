@@ -266,12 +266,12 @@ Qed.
 Theorem equiv_zero:
   forall p t s, let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) None <-> 
-    runT' p v s (TA (call t)) Zero.
+    runT' p v s (Unexplored (call t)) Zero.
 (*ENDSNIPT: runS_to_runTCZero *)
 Proof.
   move=> /= p t s; split => R.
     have:= runS_to_runT R.
-    by move=> /(_ s (TA (call t)) isT erefl).
+    by move=> /(_ s (Unexplored (call t)) isT erefl).
   by apply : runT_to_runSC R.
 Qed.
 
@@ -279,12 +279,12 @@ Qed.
 Theorem equiv_one:
   forall p t s s', let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', [::])) <-> 
-    runT' p v s (TA (call t)) (One s').
+    runT' p v s (Unexplored (call t)) (One s').
 (*ENDSNIPT: runS_to_runTCOne *)
 Proof.
   move=> /= p t s s'; split => R.
     have:= runS_to_runT R.
-    by move=> /(_ s (TA (call t)) isT erefl).
+    by move=> /(_ s (Unexplored (call t)) isT erefl).
   by apply : runT_to_runSC R.
 Qed.
 
@@ -292,18 +292,18 @@ Qed.
 Theorem sound_many:
   forall p t s s' x xs, let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', x :: xs)) -> 
-    exists t', runT' p v s (TA (call t)) (Many s' t') /\ tree_to_stack t' s [::] = x :: xs.
+    exists t', runT' p v s (Unexplored (call t)) (Many s' t') /\ tree_to_stack t' s [::] = x :: xs.
 (*ENDSNIPT: runS_to_runTCMany2 *)
 Proof.
   move=> /= p t s s' x xs R.
   have:= runS_to_runT R.
-  by move=> /(_ s (TA (call t)) isT erefl)/=.
+  by move=> /(_ s (Unexplored (call t)) isT erefl)/=.
 Qed.
 
 (*SNIPT: runS_to_runTCMany1 *)
 Theorem complete_many:
   forall p t s s' t', let v := vars_tm t `|` vars_sigma s in
-    runT' p v s (TA (call t)) (Many s' t') ->
+    runT' p v s (Unexplored (call t)) (Many s' t') ->
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', tree_to_stack t' s [::])).
 (*ENDSNIPT: runS_to_runTCMany1 *)
 Proof.
