@@ -229,7 +229,7 @@ Section clean_ca.
   Proof. by elim: l => //= -[|c] xs IH; rewrite IH//=. Qed.
 
   Lemma clean_ca_s2l_prune {A x bt s R}:
-    valid_tree A ->
+    sld_tree A ->
     success A ->
     prune true A = Some R ->
     clean_ca bt (tree_to_stack R s (x ++ bt)) =
@@ -277,7 +277,7 @@ Section clean_ca.
   Qed.
 
   Lemma clean_ca_s2l {s x bt A}:
-    valid_tree A -> clean_ca bt (tree_to_stack A s (x ++ bt)) = tree_to_stack A s (clean_ca bt x).
+    sld_tree A -> clean_ca bt (tree_to_stack A s (x ++ bt)) = tree_to_stack A s (clean_ca bt x).
   Proof.
    elim_tree A s x bt => /=.
     - set X:= (tree_to_stack _ _ _ ++ _); by rewrite clean_ca_add_ca.
@@ -305,7 +305,7 @@ Section clean_ca.
   Qed.
 
   Lemma clean_ca_bt2 {A s bt}:
-    valid_tree A -> clean_ca bt (tree_to_stack A s bt) = tree_to_stack A s [::].
+    sld_tree A -> clean_ca bt (tree_to_stack A s bt) = tree_to_stack A s [::].
   Proof.
     move=> vA.
     have:= [elaborate @clean_ca_s2l s [::] bt _ vA].
@@ -316,7 +316,7 @@ Section clean_ca.
 
   Lemma next_cut_s2l fv A s bt s1 ca gl a:
     let r := step u p fv s A in
-    failed A = false -> valid_tree A ->
+    failed A = false -> sld_tree A ->
       clean_ca bt (tree_to_stack A s bt) = (s1, (cut, ca) :: gl) :: a ->
         clean_ca bt (tree_to_stack r.2 s bt) = (s1, gl) :: ca /\
         if is_cb r.1.2 then r = (fv, CutBrothers, r.2)
@@ -432,7 +432,7 @@ Section clean_ca.
   Lemma next_callS_s2l fv A s3 s1 bt q gl a ign:
     let X := step u p fv s3 A in
     let F := bc u p fv q s1 in
-    failed A = false -> valid_tree A ->
+    failed A = false -> sld_tree A ->
       clean_ca bt (tree_to_stack A s3 bt) = (s1, (call q, ign) :: gl) :: a ->
         [/\
         clean_ca bt (tree_to_stack X.2 s3 bt) = 
@@ -440,7 +440,7 @@ Section clean_ca.
         X.1 = (F.1, Expanded)].
   Proof.
     elim_tree A s3 bt s1 q gl a ign fv;
-    rewrite [step _ _ _ _ _]/= ?rew_pa [valid_tree _]/=.
+    rewrite [step _ _ _ _ _]/= ?rew_pa [sld_tree _]/=.
     - case: t => [|c]//.
       case B: bc => [fv' [|[sx x] xs]]/= _ _ [?????]; subst; rewrite cats0 {}B//=.
       rewrite clean_ca_add_ca1 tree_to_stack_big_or//.
@@ -526,7 +526,7 @@ End M.
 
 Lemma next_cut_s2l u p fv A s s1 ca gl a:
   let r := step u p fv s A in
-  failed A = false -> valid_tree A ->
+  failed A = false -> sld_tree A ->
     tree_to_stack A s [::] = (s1, (cut, ca) :: gl) :: a ->
       tree_to_stack r.2 s [::] = (s1, gl) :: ca /\
       if is_cb r.1.2 then r = (fv, CutBrothers, r.2)
@@ -541,7 +541,7 @@ Qed.
 Lemma next_callS_s2l u p fv A s3 s1 q gl a ign:
   let r := step u p fv s3 A in
   let b := bc u p fv q s1 in
-  failed A = false -> valid_tree A ->
+  failed A = false -> sld_tree A ->
     tree_to_stack A s3 [::] = (s1, (call q, ign) :: gl) :: a ->
       [/\ tree_to_stack r.2 s3 [::] = (save_as a gl b.2 ++ a) & r.1 = (b.1, Expanded)].
 Proof.

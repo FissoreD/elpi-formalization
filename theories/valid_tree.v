@@ -75,33 +75,33 @@ Notation spec_base_or := B.spec_base_or.
 Notation base_or := B.base_or.
 
 (*BEGIN*)
-Section valid_tree.
+Section sld_tree.
   Variable u : Unif.
   Variable p : program.
 
-(*SNIP: valid_tree*)
-  Fixpoint valid_tree A :=
+(*SNIP: sld_tree*)
+  Fixpoint sld_tree A :=
     match A with
     | Unexplored _ | OK | KO => true
-    | Or None _ B => valid_tree B
+    | Or None _ B => sld_tree B
     | Or (Some A) _ B =>
-        valid_tree A && ((B == KO) || base_or B)
+        sld_tree A && ((B == KO) || base_or B)
     | And A B0 B => 
-        valid_tree A && if success A then valid_tree B 
+        sld_tree A && if success A then sld_tree B 
                                      else B == big_and B0
     end.
-(*ENDSNIP: valid_tree*)
+(*ENDSNIP: sld_tree*)
 
-  Lemma valid_tree_big_and l : valid_tree (big_and l).
+  Lemma valid_tree_big_and l : sld_tree (big_and l).
   Proof. case: l => //= + l; case: l => //=. Qed.
 
-  Lemma valid_tree_big_or s l : valid_tree (big_or s l).
+  Lemma valid_tree_big_or s l : sld_tree (big_or s l).
   Proof.
     case: l => //=; first by apply/valid_tree_big_and.
     by move=> [/=_ b] x; rewrite valid_tree_big_and B.base_or_big_or orbT.
   Qed.
 
-  Lemma valid_tree_cut {A}: success A -> valid_tree A -> valid_tree (cutl A).
+  Lemma valid_tree_cut {A}: success A -> sld_tree A -> sld_tree (cutl A).
   Proof.
     elim_tree A.
       move=> /=sA /andP[vA bB]; rewrite HA//.
@@ -113,7 +113,7 @@ Section valid_tree.
 
   (*SNIPT: valid_tree_step *)
   Lemma valid_tree_step: 
-    forall s v A r, valid_tree A -> step u p v s A = r -> valid_tree r.2.
+    forall s v A r, sld_tree A -> step u p v s A = r -> sld_tree r.2.
   (*ENDSNIPT: valid_tree_step *)
   Proof.
     move=>s sv A r +<-; clear r.
@@ -136,7 +136,7 @@ Section valid_tree.
 
   (*SNIPT: valid_tree_prune *)
   Lemma valid_tree_prune:
-    forall A B b, valid_tree A -> prune b A = Some B -> valid_tree B.
+    forall A B b, sld_tree A -> prune b A = Some B -> sld_tree B.
   (*ENDSNIPT: valid_tree_prune *)
   Proof.
     move=> A R b; elim_tree A R b => /=.
@@ -162,7 +162,7 @@ Section valid_tree.
 
   (*SNIPT: valid_tree_run *)
   Theorem valid_tree_run:
-    forall b s s' v v' A B, valid_tree A -> runT u p v s A (Many s' B) b v' -> valid_tree B.
+    forall b s s' v v' A B, sld_tree A -> runT u p v s A (Many s' B) b v' -> sld_tree B.
   (*ENDSNIPT: valid_tree_run *)
   Proof.
     move=> b s s' v v' A R.
@@ -175,4 +175,4 @@ Section valid_tree.
   Qed.
 (*END*)
 
-End valid_tree.
+End sld_tree.
