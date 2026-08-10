@@ -263,7 +263,7 @@ Proof.
 Qed.
 
 (*SNIPT: runS_to_runTCZero *)
-Theorem runS_to_runTCZero:
+Theorem runS_to_runTZ:
   forall p t s, let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) None <-> 
     runT' p v s (TA (call t)) Zero.
@@ -276,7 +276,7 @@ Proof.
 Qed.
 
 (*SNIPT: runS_to_runTCOne *)
-Theorem runS_to_runTCOne:
+Theorem runS_to_runTO:
   forall p t s s', let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', [::])) <-> 
     runT' p v s (TA (call t)) (One s').
@@ -289,7 +289,7 @@ Proof.
 Qed.
 
 (*SNIPT: runS_to_runTCMany1 *)
-Theorem runS_to_runTCMany1:
+Theorem runS_to_runTM1:
   forall p t s s' x xs, let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', x :: xs)) -> 
     exists t', runT' p v s (TA (call t)) (Many s' t') /\ tree_to_stack t' s [::] = x :: xs.
@@ -301,7 +301,7 @@ Proof.
 Qed.
 
 (*SNIPT: runS_to_runTCMany2 *)
-Theorem runS_to_runTCMany2:
+Theorem runS_to_runTM2:
   forall p t s s' t', let v := vars_tm t `|` vars_sigma s in
     runT' p v s (TA (call t)) (Many s' t') ->
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', tree_to_stack t' s [::])).
