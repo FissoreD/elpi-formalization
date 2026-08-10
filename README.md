@@ -31,11 +31,12 @@ https://github.com/LPCIC/elpi
 The mechanization requires Rocq 9.0 and mathcomp 2.4.0.
 Using opam:
 ```
-opam init --root ./_opam --bare
-opam switch create default --packages=rocq-core.9.0.0
+export OPAMROOT=$PWD/_opam
+opam init --bare --disable-shell-hook -n
+opam switch create default --packages=rocq-core.9.0.0 -y
+eval $(opam env)
 opam repo add --all rocq https://rocq-prover.org/opam/released
-opam install rocq-mathcomp-ssreflect.2.4.0 rocq-stdlib
-eval $(opam env --root=./_opam)
+opam install rocq-mathcomp-ssreflect.2.4.0 rocq-stdlib -y
 rocq makefile -f _CoqProject -o Makefile
 make
 ```
