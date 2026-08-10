@@ -133,7 +133,7 @@ Section NurProp.
   Qed.
 
   Lemma success_tree_to_stack {A s m} s1:
-    valid_tree A -> (*we need valid tree since in s2l we assume B0 to have length <= 1*)
+    sld_tree A -> (*we need valid tree since in s2l we assume B0 to have length <= 1*)
     success A ->
       tree_to_stack A s m = (next_subst s A, nilC) :: (tree_to_stack (odflt KO (prune true A)) s1 m).
   Proof.
@@ -194,7 +194,7 @@ Section NurProp.
   End shape.
 
   Lemma failed_tree_to_stack {A}:
-    valid_tree A -> failed A = false -> tree_to_stack_cons A.
+    sld_tree A -> failed A = false -> tree_to_stack_cons A.
   Proof.
     rewrite/tree_to_stack_cons.
     elim_tree A; try by repeat eexists.
@@ -220,12 +220,12 @@ Section NurProp.
   Qed.
 
   Lemma step_tree_to_stack_cons fv s A r:
-    valid_tree A -> step u p fv s A = r -> ~ (is_fl r.1.2) -> tree_to_stack_cons A.
+    sld_tree A -> step u p fv s A = r -> ~ (is_fl r.1.2) -> tree_to_stack_cons A.
   Proof. case: r => [[?[]]B]//vA H/= _; apply: failed_tree_to_stack vA (step_not_failed H notF). Qed.
 
 
   Lemma step_failure_prune_none_empty A fv fv' s1 s3 E l b:
-    valid_tree A ->
+    sld_tree A ->
       step u p fv s1 A = (fv', Failed, E) ->
         prune b E = None ->
           tree_to_stack A s3 l = nilC.
@@ -317,7 +317,7 @@ Section NurProp.
   Qed.
 
   Lemma failed_prune_none_tree_to_stack {s A b}:
-    valid_tree A -> failed A -> prune b A = None -> 
+    sld_tree A -> failed A -> prune b A = None -> 
       forall l, tree_to_stack A s l = nilC.
   Proof.
     elim_tree A s b => /=.
@@ -346,7 +346,7 @@ Section NurProp.
 
   (*SNIPT: pruneF_tree_to_stack *)
   Lemma pruneF_tree_to_stack: 
-    forall t t' b, valid_tree t -> failed t -> prune b t = Some t' -> 
+    forall t t' b, sld_tree t -> failed t -> prune b t = Some t' -> 
       forall l s, tree_to_stack t s l = tree_to_stack t' s l.
   (*ENDSNIPT: pruneF_tree_to_stack *)
   Proof.
@@ -441,7 +441,7 @@ Section NurProp.
 
 
   Lemma step_cb_same_subst1 fv fv' A R s1:
-    valid_tree A -> step u p fv s1 A = (fv', CutBrothers, R) -> ((next_subst s1 A = next_subst s1 R)).
+    sld_tree A -> step u p fv s1 A = (fv', CutBrothers, R) -> ((next_subst s1 A = next_subst s1 R)).
   Proof.
     elim_tree A R s1 fv fv' => /=.
     - case: t => [|c] _//=; first (by move=> [_ <-]); case: bc => //.
@@ -458,7 +458,7 @@ Section NurProp.
   Qed.
 
   Lemma tree_to_stack_cutl {A s l}:
-    valid_tree A -> success A -> tree_to_stack (cutl A) s l = (next_subst s A, nilC) :: nilC.
+    sld_tree A -> success A -> tree_to_stack (cutl A) s l = (next_subst s A, nilC) :: nilC.
   Proof.
     elim_tree A s l => /=.
     - by move=> /andP[vA bB] sA; rewrite cats0 HA//.
@@ -469,7 +469,7 @@ Section NurProp.
   Qed.
 
   Lemma s2l_CutBrothers fv fv' s1 A R sA l1:
-    valid_tree A -> step u p fv s1 A = (fv', CutBrothers, R) -> 
+    sld_tree A -> step u p fv s1 A = (fv', CutBrothers, R) -> 
       exists x tl, 
         ((tree_to_stack A sA l1 = (next_subst sA A, (cut, [::]) :: x) :: tl) /\
           (forall l sB, (tree_to_stack R sB l = (next_subst sB R, x) :: nilC)) /\ 
@@ -504,7 +504,7 @@ Section NurProp.
   Qed.
 
   Lemma s2l_empty_hdF {A s bt s2 xs}:
-    valid_tree A ->
+    sld_tree A ->
     success A = false -> failed A = false -> tree_to_stack A s bt = (s2, nilC) :: xs -> False.
   Proof.
     elim_tree A s bt s2 xs => /=.
@@ -533,7 +533,7 @@ Section NurProp.
   Qed.
 
   Lemma step_cb_failedF fv fv' s1 A R:
-    valid_tree A ->
+    sld_tree A ->
     step u p fv s1 A = (fv', CutBrothers, R) -> failed R = false.
   Proof.
     elim_tree A R s1 fv fv' => /=.
@@ -551,7 +551,7 @@ Section NurProp.
   Qed.
 
   Lemma s2l_empty_hd_success {A s bt s2 xs}:
-    valid_tree A -> failed A = false ->
+    sld_tree A -> failed A = false ->
     tree_to_stack A s bt = (s2, nilC) :: xs -> success A /\ (s2 = next_subst s A).
   Proof.
     elim_tree A s bt s2 xs => /=.
@@ -581,7 +581,7 @@ Section NurProp.
   Qed.
 
   Lemma xxx fv A l ca tl alts r s1 s2 l1:
-    valid_tree A ->
+    sld_tree A ->
     tree_to_stack A s1 l = ((s2, ((cut, ca) :: tl)) :: alts) ->
       step u p fv s1 A = r -> size(tree_to_stack r.2 s1 l1) <> 0.
   Proof.
@@ -590,7 +590,7 @@ Section NurProp.
     elim_tree A => l l1 ca tl alts s1 s2 fv/=.
     - by case: t.
     - rewrite !push => /andP[vA bB]/=.
-      have vB: valid_tree B.
+      have vB: sld_tree B.
         by move/orP: bB => [/eqP->//|/spec_base_or[?[?<-]]]; apply: valid_tree_big_or.
       have:= HB [::] _ _ _ _ _ _ fv vB.
       set SB := tree_to_stack B _ _.
@@ -664,7 +664,7 @@ Section NurProp.
   Qed.
 
   Lemma s2l_Expanded_cut fv fv' A R s0 s3 ca x tl l1:
-    valid_tree A -> step u p fv s0 A = (fv', Expanded, R) ->
+    sld_tree A -> step u p fv s0 A = (fv', Expanded, R) ->
       tree_to_stack A s0 l1 = (s3, ((cut, ca) :: x)) :: tl ->
       ((fv = fv') * (next_subst s0 A = next_subst s0 R) * (failed R = false) * 
         ( (tree_to_stack R s0 l1 ++ l1 = (s3, x) :: ca))%type )%type.
@@ -768,7 +768,7 @@ Section NurProp.
   Qed.
 
   Lemma s2l_Expanded_call fv fv' s s3 A R l q gs xs ca:
-    valid_tree A ->
+    sld_tree A ->
     step u p fv s A = (fv', Expanded, R) -> 
     tree_to_stack A s l = (s3, (call q, ca) :: gs) :: xs ->
     let bcr := bc u p fv q (next_subst s A) in
@@ -860,7 +860,7 @@ Section NurProp.
   Qed.
 
   Lemma s2l_prune_tl {A s1 bt}:
-    valid_tree A ->
+    sld_tree A ->
     success A -> 
       tree_to_stack (odflt KO (prune true A)) s1 bt = behead (tree_to_stack A s1 bt).
   Proof.
@@ -904,7 +904,7 @@ Section NurProp.
   Qed.
 
   Lemma tree_to_stack_nil_na t s a: 
-    valid_tree t -> tree_to_stack t s a = [::] -> prune false t = None.
+    sld_tree t -> tree_to_stack t s a = [::] -> prune false t = None.
   Proof.
     elim_tree t s a => /=.
     - move=> /andP[vA /orP[/eqP->|/spec_base_or[r[rs ?]]]]//=; subst.

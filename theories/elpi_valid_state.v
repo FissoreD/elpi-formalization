@@ -430,7 +430,7 @@ Section NurValidState.
   (********************************************************************)
   Lemma valid_tree_valid_ca_help {A s0 r l}:
     tree_to_stack A s0 l = r ->
-    valid_tree A ->
+    sld_tree A ->
       valid_caA r r l.
   Proof.
     move=> <-; clear r.
@@ -485,7 +485,7 @@ Section NurValidState.
   Qed.
 
   Lemma valid_tree_valid_ca A s r:
-    valid_tree A -> tree_to_stack A s nilC = r -> valid_ca r.
+    sld_tree A -> tree_to_stack A s nilC = r -> valid_ca r.
   Proof.
     rewrite/valid_ca => H1 H2.
     have:= valid_tree_valid_ca_help H2 H1.
