@@ -87,37 +87,34 @@ Proof.
 Qed.
 
 (*SNIPT: is_detT *)
-Definition is_detT p s v t := 
-  forall r, runT' p v s t r -> r = Zero \/ exists s, r = One s.
+Definition is_detT p s t := 
+  forall r, runT' p (vars_atom t `|` vars_sigma s) s t r -> r = Zero \/ exists s, r = One s.
 (*ENDSNIPT: is_detT *)
 
 (*SNIPT: det_check_callT *)
 Theorem det_check_callT:
-  forall p s t v, check_program p -> tm_is_det p t -> is_detT p s v (call t).
+  forall p s t, check_program p -> tm_is_det p t -> is_detT p s (call t).
 (*ENDSNIPT: det_check_callT *)
 Proof.
-  move=> /= p t s v cp td r [b[v' R]].
+  move=> /= p t s cp td r [b[v' R]].
   by apply/det_check_tree/R => //.
 Qed.
 
 (*SNIPT: is_detS *)
-Definition is_detS p s v t := 
-  forall r, runS p v (consA (s, consG (t, [::]) [::]) [::]) r -> r = None \/ exists s, r = Some (s, [::]).
+Definition is_detS p s t := 
+  forall r, runS p (vars_atom t `|` vars_sigma s) (consA (s, consG (t, [::]) [::]) [::]) r -> r = None \/ exists s, r = Some (s, [::]).
 (*ENDSNIPT: is_detS *)
 
 (*SNIPT: det_check_callS *)
 Theorem det_check_callS:
-  forall p s t v, check_program p -> tm_is_det p t -> is_detS p s v (call t).
+  forall p s t, check_program p -> tm_is_det p t -> is_detS p s (call t).
 (*ENDSNIPT: det_check_callS *)
 Proof.
-  move=> /= p s t v cp td r H.
-  have := runS2T H => /(_ s (Unexplored (call t)) isT erefl).
-  move=> [b[v']]; case: r {H}; last by left.
-  move=> [s' []]; first by eauto.
-  move=> [s'' gs a'][t'[R T2L]].
+  move=> /= p s t cp td [[s' [|x xs]]|] R; [by eauto| |by left].
+  have [t'[{}R T2L]] := sound_many R.
   have:= det_check_callT cp td.
   rewrite /is_detT/runT'.
-  by move=> /(_ s v (Many s' t'))[| |[sx]]; [eauto| inversion 1..].
+  move=> /(_ s (Many s' t'))[| |[sx]]; [eauto| inversion 1..].
 Qed.
 
 
