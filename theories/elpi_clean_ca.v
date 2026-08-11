@@ -334,7 +334,7 @@ Section clean_ca.
       have /={HA HB} := HA _ _ _ _ _ _ _ _ _ _ eA fA vA.
       move=> /(_ (tree_to_stack B sm [::])).
       rewrite H/= => /(_ _ _ _ _ erefl) [].
-      rewrite (clean_ca_bt2 (valid_tree_step vA eA))/=.
+      rewrite (clean_ca_bt2 (sld_tree_step vA eA))/=.
       case: ifP => cra/=.
         destruct ra => //= H1 [?]; subst; split => //.
         rewrite /= cats0 H1; move: H1.
@@ -405,8 +405,8 @@ Section clean_ca.
         rewrite drop0 take0/=H3/= cat0s cats0 tree_to_stack_big_and//=.
         by rewrite (step_cb_same_subst1 vA eA).
       have [[[? Hx] fA']] := s2l_Expanded_cut vA eA H; subst.
-      move: H2; rewrite (clean_ca_bt2 (valid_tree_step vA eA))/=.
-      have/= [s0[x[xs' Hy]]] := failed_tree_to_stack (valid_tree_step vA eA) fA' s bt.
+      move: H2; rewrite (clean_ca_bt2 (sld_tree_step vA eA))/=.
+      have/= [s0[x[xs' Hy]]] := failed_tree_to_stack (sld_tree_step vA eA) fA' s bt.
       rewrite Hy => H1 [???]; subst => /=.
       rewrite seq2alts_cat !seq2altsK !size_cat addnK add_deep_cat.
       rewrite take_size_cat; last by rewrite size_add_deep.
@@ -450,7 +450,7 @@ Section clean_ca.
       rewrite H cat_cons => -[???] ; subst.
       have {HA HB} := HA s3 (tree_to_stack B sm nilA) _ _ _ _ _ fv fA vA.
       rewrite H => /=/(_ _ _ _ _ _ erefl).
-      rewrite S/= (clean_ca_bt2 (valid_tree_step vA S))/=.
+      rewrite S/= (clean_ca_bt2 (sld_tree_step vA S))/=.
       move=> [H1 [??]]; subst => /=.
       split => //.
       move/orP: bB => [/eqP?|/spec_base_or[X[Y ?]]]; subst => /=.
@@ -463,16 +463,16 @@ Section clean_ca.
       rewrite clean_ca_add_ca1 => X.
       rewrite -(@clean_ca_nil (tree_to_stack B sm [::])) in X. 
       have [] := HB sm nilA _ _ _ _ _ fv fB vB X.
-      rewrite S clean_ca_add_ca1 (clean_ca_bt2 (valid_tree_step vB S))/=.
+      rewrite S clean_ca_add_ca1 (clean_ca_bt2 (sld_tree_step vB S))/=.
       by move=> H1 [??]; subst.
     - move=> A' bc + /andP[vA vB].
       rewrite !clean_ca_bt2; last first.
         by rewrite/=vA vB//.
         move: vB.
         rewrite /A'; case: ifP => [sA vB|sA /eqP->]; case S: step => [[fv' tg] B']/=.
-          have /= vB':= valid_tree_step vB S.
+          have /= vB':= sld_tree_step vB S.
           by case: ifP => Htg; rewrite (valid_tree_cut, vA)//=?success_cut sA.
-        by rewrite (valid_tree_step vA S) valid_tree_big_and eqxx if_same.
+        by rewrite (sld_tree_step vA S) valid_tree_big_and eqxx if_same.
       rewrite/= size_nil.
       case AD: add_deep => //=[[sx x] xs].
       rewrite cats0.
@@ -486,7 +486,7 @@ Section clean_ca.
         set ml:= map (catr _) _.
         have [s2'[x[xs H1]]] := [elaborate failed_tree_to_stack vB fB (next_subst s3 A) ml].
         have {HA HB} := HB (next_subst s3 A) ml _ _ _ _ _ fv fB vB.
-        rewrite H1 [clean_ca _ _]/= eB ![snd _]/= (clean_ca_bt2 (valid_tree_step vB eB)) [snd _]/= cat_cons.
+        rewrite H1 [clean_ca _ _]/= eB ![snd _]/= (clean_ca_bt2 (sld_tree_step vB eB)) [snd _]/= cat_cons.
         move=> + [???]; subst; rewrite [clean_ca_goals _ _]/=.
         move=> /(_ _ _ _ _ _ erefl) [HB [??]]; subst.
         split => //=.
@@ -505,7 +505,7 @@ Section clean_ca.
       rewrite take_size => -[???]; subst.
       have {HA HB} := HA s3 [::] _ _ _ _ _ fv fA vA.
       rewrite clean_ca_bt2// tree_to_stackA => /(_ _ _ _ _ _ erefl).
-      rewrite (clean_ca_bt2 (valid_tree_step vA erefl)) eA [snd _]/= -/bc.
+      rewrite (clean_ca_bt2 (sld_tree_step vA erefl)) eA [snd _]/= -/bc.
       move=> [HA [??]]; subst; split; rewrite//[snd _]/=.
       set X := map _ _.
       have [? _] := s2l_Expanded_call vA eA tree_to_stackA; subst.

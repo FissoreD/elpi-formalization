@@ -24,7 +24,7 @@ Section NurEqiv.
     + by rewrite (success_tree_to_stack s1)//= NN; apply: StopS.
     + by rewrite (success_tree_to_stack s1)//= NS; apply: StopS.
     + have [fvB fvs] := vars_tree_step_sub_flow vtA vts1 eA.
-      have /=vB:= (valid_tree_step vA eA). 
+      have /=vB:= (sld_tree_step vA eA). 
       have {IH}/=:= IH fvB fvs vB; subst.
       have /=[] := incomplete_exp_cut pA eA => ?; subst.
         have H5 := step_cb_same_subst1 vA eA; subst.
@@ -61,7 +61,7 @@ Section NurEqiv.
       have [[[? SS] H1]] := s2l_Expanded_cut vA eA H; subst.
       rewrite cats0 => ->.
       by case: r {rB} => >; apply: CutS.
-    + have vB := valid_tree_prune vA nA.
+    + have vB := sld_tree_prune vA nA.
       have {}fvP := vars_tree_prune_sub_flow vtA nA.
       have {IH} /= := IH fvP vts1 vB.
       by rewrite (pruneF_tree_to_stack vA fA nA).
@@ -93,7 +93,7 @@ Proof.
   case nA: (prune false A) => [A'|]; last first.
     by rewrite (failed_prune_none_tree_to_stack vA fA nA) in H; subst.
   have /= fA' := prune_Some nA.
-  have /= vA' := (valid_tree_prune vA nA).
+  have /= vA' := (sld_tree_prune vA nA).
   rewrite (pruneF_tree_to_stack vA fA nA) in H.
   have [b[v1 {}P]] := P A' fA' vA' H.
   case: r P R => [[s1 a0]|H1 H2]; subst.
@@ -122,7 +122,7 @@ Proof.
     have [skA ?]:= s2l_empty_hd_success vA' fA' H1; subst.    
     have:=@s2l_prune_tl _ s1 nilA vA' skA; rewrite H1 behead_cons => ?; subst.
     case P: prune => [A''|]/=; last by repeat eexists; apply: StopOT.
-    have [sz[k[ks Hk]]]/= := failed_tree_to_stack (valid_tree_prune vA' P) (prune_Some P) s1 [::].
+    have [sz[k[ks Hk]]]/= := failed_tree_to_stack (sld_tree_prune vA' P) (prune_Some P) s1 [::].
     by rewrite Hk; repeat eexists; first apply: StopMT P => //.
   - move=> s1 a ca r gl fv ELPI IH s A vA H.
     have H1 := elpi_to_tree_no_op _ (CutS _ _) _ vA H.
@@ -130,7 +130,7 @@ Proof.
     case X: (step u p fv s A) => [[fv' r'] A'].
     have:= next_cut_s2l u p fv fA vA H => /=.
     move => -[H1 H2].
-    have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
+    have /= {IH}[b[v1]] := IH _ _ (sld_tree_step vA erefl) H1; subst.
     have IA : incomplete A by move: H2; case: ifP => [_/incomplete_cut|_/incomplete_exp].
     case: r ELPI => [[s' a']|] ELPI.
       case: a' ELPI => [|x xs] ELPI; last first.
@@ -149,7 +149,7 @@ Proof.
     have [] := next_callS_s2l u p fv fA vA H.
     rewrite B/= => H1.
     case H2 : step => /=[fvt A']?; subst.
-    have /= {IH}[b[v1]] := IH _ _ (valid_tree_step vA erefl) H1; subst.
+    have /= {IH}[b[v1]] := IH _ _ (sld_tree_step vA erefl) H1; subst.
     have IA := incomplete_exp H2.
     rewrite H2/=.
     case: r ELPI => [[s' a']|] ELPI.
