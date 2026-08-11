@@ -1,12 +1,12 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import tree tree_prop ctx.
-From det Require Import tree_prop_hard tree_vars mut_excl unif fresh.
+From det Require Import tree_prop_hard tree_vars mut_excl unif fresh determinacy.
 
 From det Require Import check_fo.
 
-Lemma runT_cutl u p fv s t r b fv':
-  runT u p fv s (cutl t) r b fv' ->
+Lemma runT_cutl p fv s t r b fv':
+  runT p fv s (cutl t) r b fv' ->
     [/\ 
       fv' = fv, b = false &
       if success t then
@@ -26,10 +26,10 @@ Proof.
     by rewrite failed_success_cut success_cut sT.
 Qed.
 
-Lemma is_det_tail_cut p s fv l:
-  is_det p s fv (And l [::cut] (Unexplored cut)).
+Lemma is_det_tail_cut p s v l:
+  forall r b v', runT p v s (And l [::cut] (Unexplored cut)) r b v' -> r = Zero \/ exists s, r = (One s).
 Proof.
-  move=> r [s'[r' H]].
+  move=> r b v' H.
   remember (And _ _ _) as t' eqn:Ht'.
   elim_run H l Ht'.
   - by move: sA; rewrite rew_pa => /andP[]//.
@@ -60,8 +60,8 @@ Definition same_sub {T1 T2:eqType} (s1 s2: option (T1*T2)) :=
 Lemma is_det_tail_cut1 p s fv t r r':
   check_program p ->
   det_tree p t ->
-  runT' p fv s t r -> 
-  runT' p fv s (And t [::cut] (Unexplored cut)) r' -> 
+  (exists b v', runT p fv s t r b v') -> 
+  (exists b v', runT p fv s (And t [::cut] (Unexplored cut)) r' b v') -> 
   r = r'.
 Proof.
   move=> H1 + [b'[c' H2]][+[]].
@@ -183,11 +183,11 @@ Section once.
 
   Lemma id_det_once p s t fv:
     prog_once p ->
-    is_det p s fv (Unexplored (call (Tm_App (Tm_P once_sym) t))).
+    is_detT p s fv ((call (Tm_App (Tm_P once_sym) t))).
   Proof.
     case: p => -[|r rs] sig []//= HS; first by move=> /(_ [::]) [].
     move=> /(_ rs) [[?] H]; subst.
-    rewrite/is_det HS => r' [b'[fv' Hx]].
+    rewrite/is_detT HS => r' [b'[fv' Hx]].
     inversion Hx; clear Hx; subst => //.
     move: H1; rewrite/=/bc [get_tm_hd _]/=.
     case (boolP (acyclic s)) => AS; last first => //=.
@@ -208,8 +208,6 @@ Section once.
     move=> [B' ? Hz]; subst.
     set P := {| rules := _; sig := _|} in Hz.
     set T := Unexplored _ in Hz.
-    have {}Hz : runT' P Y s' (And T [:: cut] (Unexplored cut)) (Many s0 B').
-      do 2 eexists; apply: Hz.
-    by have [//|[]] := is_det_tail_cut Hz.
+    by have [|[x]] := is_det_tail_cut Hz; inversion 1.
   Qed.
 End once.
