@@ -166,7 +166,7 @@ Proof.
   case M1: matching => [s1'|]//=.
   case M2: matching => [s2'|]//=.
   move=> H1 H2; apply/andP; split.
-    apply: matching_unify_trans (isSomeP M2) (isSomeP M1); rewrite//?not_in_deref//.
+    apply: matching_unify_transP (isSomeP M2) (isSomeP M1); rewrite//?not_in_deref//.
     by rewrite fdisjoint_sym.
     by rewrite fdisjoint_sym.
     by rewrite fdisjoint_sym.
