@@ -19,7 +19,6 @@ theories/tree_prop.v
 theories/tree_vars.v
 theories/valid_tree.v
 theories/tree_prop_hard.v
-theories/mut_excl.v
 
 theories/elpi.v
 theories/elpi_clean_ca.v
@@ -34,7 +33,9 @@ theories/elpi_valid_state.v
 theories/sig_lattice.v
 theories/sig_compat.v
 
+theories/mut_excl.v
 theories/check_fo.v
+theories/determinacy.v
 
 theories/once.v
 

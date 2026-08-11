@@ -162,11 +162,6 @@ Proof.
   + by move=> > vT H; repeat eexists; apply/FailT/tree_to_stack_nil_na/H.
 Qed.
 
-(*SNIPT: runt1 *)
-Definition runT' p v s t r := 
-  exists b v', runT p v s (Unexplored t) r b v'.
-(*ENDSNIPT: runt1 *)
-
 (*SNIPT: tree_to_elpi *)
 Theorem runT2S:
   forall p t s r, let v := vars_tree t `|` vars_sigma s in
@@ -205,6 +200,11 @@ Qed.
 
 Print Assumptions runS2T.
 Print Assumptions runT2S.
+
+(*SNIPT: runt1 *)
+Definition runT' p v s t r := 
+  exists b v', runT p v s (Unexplored t) r b v'.
+(*ENDSNIPT: runt1 *)
 
 (*SNIPT: runS_to_runTCZero *)
 Theorem equiv_zero:
