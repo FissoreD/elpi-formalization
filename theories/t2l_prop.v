@@ -918,7 +918,7 @@ Section NurProp.
         case tB: tree_to_stack; rewrite//=(HB _ _ vB tB).
         case nA: prune => //=[A'].
         have fA' := prune_Some nA.
-        by have [?[?[?->]]] := failed_tree_to_stack (valid_tree_prune vA nA) fA' s a.
+        by have [?[?[?->]]] := failed_tree_to_stack (sld_tree_prune vA nA) fA' s a.
       case: ifP => fA; last first.
         by have [sx[x[xs H]]]/= := failed_tree_to_stack vA fA s a; rewrite H/= tree_to_stack_big_and//.
       case tA: tree_to_stack => //=[|[s0 h0]]; last by rewrite tree_to_stack_big_and.
