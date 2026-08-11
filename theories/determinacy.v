@@ -86,10 +86,10 @@ Proof.
   - by apply: IH (det_tree_prune _ nA).
 Qed.
 
-(*SNIPT: is_det *)
+(*SNIPT: is_detT *)
 Definition is_detT p s v t := 
   forall r, runT' p v s t r -> r = Zero \/ exists s, r = One s.
-(*ENDSNIPT: is_det *)
+(*ENDSNIPT: is_detT *)
 
 (*SNIPT: det_check_callT *)
 Theorem det_check_callT:
@@ -100,10 +100,10 @@ Proof.
   by apply/det_check_tree/R => //.
 Qed.
 
-(*SNIPT: is_det *)
+(*SNIPT: is_detS *)
 Definition is_detS p s v t := 
   forall r, runS p v (consA (s, consG (t, [::]) [::]) [::]) r -> r = None \/ exists s, r = Some (s, [::]).
-(*ENDSNIPT: is_det *)
+(*ENDSNIPT: is_detS *)
 
 (*SNIPT: det_check_callS *)
 Theorem det_check_callS:
