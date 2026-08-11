@@ -1,6 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import tree tree_prop ctx tree_vars mut_excl fresh unif.
+From det Require Import tree tree_prop ctx tree_vars fresh unif.
 
 Section checker.
 
@@ -325,10 +325,6 @@ Section check.
       by move=> /orP[/HA/(_ nA)->//|/andP[_ ->]]; rewrite orbT.
   Qed.
 
-  (*SNIP: check_program *)
-  Definition check_program pr := mut_excl u pr && check_rules pr.
-  (*ENDSNIP: check_program *)
-
   Lemma det_check_big_or_help s r0 rs:
     all (fun x => check_atoms s x.2) (r0 :: rs) ->
     all_but_last (fun x  => has_cut_seq x.2) (r0 :: rs) ->
@@ -340,7 +336,13 @@ Section check.
     rewrite has_cut_seq_has_cut_big_and cu1.
     by apply: IH.
   Qed.
-  
+
+  From det Require Import mut_excl.
+
+  (*SNIP: check_program *)
+  Definition check_program pr := mut_excl u pr && check_rules pr.
+  (*ENDSNIP: check_program *)
+
   Lemma det_check_big_or pr c fv fv' r0 rs s1:
     check_program pr -> tm_is_det pr (deref s1 c) -> 
     bc u pr fv c s1 = (fv', r0 :: rs) ->
@@ -350,24 +352,6 @@ Section check.
     apply/det_check_big_or_help.
       by have:= check_rulesP fv CR T; rewrite B//.
     have:= mut_exclP fv ME T; rewrite B//.
-  Qed.
-
-  Fixpoint acyclic_sigmaT T :=
-    match T with
-    | And A _ B => acyclic_sigmaT A && acyclic_sigmaT B
-    | Or None sm B => acyclic sm && acyclic_sigmaT B
-    | Or (Some A) sm B => [&& acyclic sm, acyclic_sigmaT A & acyclic_sigmaT B]
-    | Unexplored _ | OK | KO => true
-    end.
-
-  Lemma acyclic_sigma_next_subst s A:
-    acyclic s -> acyclic_sigmaT A ->
-    acyclic (next_subst s A).
-  Proof.
-    elim_tree A s => As/=; rewrite rew_pa.
-      by move=> /and3P[]; auto.
-      by move=> /andP[]; auto.
-    move=> /andP[AA AB]; case: ifP; auto.
   Qed.
 
   (*SNIPT: det_tree_step *)
@@ -407,72 +391,47 @@ Section check.
       by have:= succF_failF_paF SA fA pA.
   Qed.
 
+  Lemma acyclic_sigma_H m fv t hd s1 s2:
+    acyclic s1 ->
+      H u fv m t hd s1 = Some s2 ->
+        acyclic s2.
+  Proof.
+    elim: m t hd s1 s2 => /=[|m tl IH] t hd s1 s2.
+      by case: t => //=; case: hd => //= + [<-].
+    move=> AS; case: t; case: hd => //=.
+    move=> f1 a1 f2 a2.
+    case M: (_ f1 f2 s1) => [sx|]//=.
+    apply: IH.
+    by move: M; case: m => /=; [apply/matching_acyclic|apply/unif_acyclic].
+  Qed.
+
+  Lemma acyclic_sigma_select p pred m t s1 e:
+    acyclic s1 ->
+     e \in (select u pred t m p s1).2 ->
+        acyclic e.1.
+  Proof.
+    elim: p m t s1 e => //=-[hd bo] rs IH m t s1 e AS/=.
+    case:eqP => //= [|_/IH -/(_ AS)]// X.
+    case H: H => [s2|]; last by apply: IH.
+    rewrite !push/= in_cons => /orP[/eqP?|]; subst; last by apply: IH.
+    by apply/acyclic_sigma_H/H.
+  Qed.
+
+  Lemma acyclic_sigma_bc s1 p v0 t:
+    acyclic s1 ->
+      forall x, x \in (bc u p v0 t s1).2 ->
+        acyclic x.1.
+  Proof.
+    rewrite/bc/= => H1 -[s2 b]/=.
+    case: ifP => ///negbFE AS.
+    case: get_tm_hd => //= x; case: fndP => //= kP.
+    by rewrite !push/=; apply/acyclic_sigma_select.
+  Qed.
+
   (*SNIPT: is_det *)
   Definition is_det p s v t := 
     forall r, runT' p v s t r -> r = Zero \/ exists s, r = (One s).
   (*ENDSNIPT: is_det *)
-
-  Lemma acyclic_sigmaT_big_and B0: acyclic_sigmaT (big_and B0).
-  Proof. rewrite/big_and; case: B0 => //= + l; elim: l => //=. Qed.
-
-  Lemma acyclic_sigmaT_prune b A C:
-    acyclic_sigmaT A -> prune b A = Some C -> acyclic_sigmaT C.
-  Proof.
-    elim_tree A b C => //=.
-      by case: ifP => //= _ _ [<-].
-      by move=> _ [<-].
-      move=> /and3P[As AA AB]; case pA: prune => //=.
-        by move=> [<-]//=; apply/and3P; split => //; apply/HA/pA.
-      by case pB: prune => //-[<-]/=; apply/andP; split => //; apply/HB/pB.
-      move=> /andP[AA AB]; case pA: prune => //=-[<-]/=.
-      by apply/andP; split => //; apply/HB/pA.
-    move=> /andP[aA aB]; case: ifP => sA.
-      case pB: prune.
-        by move=> [<-]/=; rewrite aA; apply/HB/pB.
-      by case pA: prune => //=-[<-]/=; rewrite acyclic_sigmaT_big_and andbT; apply/HA/pA.
-    case: ifP.
-      by case pA: prune => //fA [<-]/=; rewrite acyclic_sigmaT_big_and andbT; apply/HA/pA.
-    by move=> _ [<-]/=; rewrite aA aB.
-  Qed.
-
-  Lemma acyclic_sigma_cut A : acyclic_sigmaT A ->
-    acyclic_sigmaT (cutl A).
-  Proof.
-    elim_tree A => /=.
-      by move=> /and3P[->/HA->]//.
-      by move=> /andP[->]//.
-    by move=> /andP[H1 H2]; case: ifP => //=; rewrite HA//HB.
-  Qed.
-  Lemma acyclic_big_or r0 rs:
-    (forall x, x \in rs -> acyclic x.1) ->
-    acyclic_sigmaT (big_or r0 rs).
-  Proof.
-    elim: rs r0 => //=; first by move=> *; rewrite acyclic_sigmaT_big_and.
-    move=> r rs IH r1 H/=.
-    rewrite push/=.
-    rewrite acyclic_sigmaT_big_and H//=; last by rewrite in_cons eqxx.
-    by apply/IH => x H1; apply/H; rewrite in_cons H1 orbT.
-  Qed.
-
-  Lemma acyclic_sigmaT_step p v0 s1 A:
-    acyclic s1 ->
-    acyclic_sigmaT A -> acyclic_sigmaT (step u p v0 s1 A).2.
-  Proof.
-    elim_tree A v0 s1 => /=AS.
-      case: t => //=t _.
-      rewrite !push/=.
-      have /= := @acyclic_sigma_bc s1 p v0 t AS.
-      case bc: bc => //=[fv' [|r0 rs]]//=.
-      rewrite !push/= => H; rewrite H/=; last by rewrite in_cons eqxx.
-      apply/acyclic_big_or => x H1.
-      by apply/H; rewrite in_cons H1 orbT.
-    - by move=> /and3P[As AA AB]; rewrite !push/= As HA//=; case: ifP => //.
-    - by move=> /andP[As AB]; rewrite !push/= As HB//.
-    move=> /andP[aA aB]; rewrite !push/=; case: ifP => /= sA.
-      rewrite HB//=; last by rewrite acyclic_sigma_next_subst.
-      by rewrite andbT; case: ifP; rewrite //=acyclic_sigma_cut.
-    rewrite HA//.
-  Qed.
 
   (*SNIPT: det_check_tree *)
   Lemma det_check_tree: 
