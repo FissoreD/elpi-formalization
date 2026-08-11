@@ -135,7 +135,7 @@ Qed.
 
 
 Lemma SHS fv1 fv2 m c hd2 hd1 (s1 s2:Sigma):
-  acyclic_sigma s1 -> acyclic_sigma s2 ->
+  acyclic s1 -> acyclic s2 ->
   all (eq_op input) m ->
   [disjoint vars_sigma s1 & vars_tms hd2] -> 
   [disjoint vars_sigma s2 & vars_tms hd1] -> 
@@ -269,7 +269,7 @@ Lemma v_prog_cons x xs: v_prog (x::xs) = varsU_rhead x `|` varsU_rprem x `|` v_p
 Proof. by []. Qed.
 
 
-Lemma HSH m hd pr s1 c pred: good_mode m -> acyclic_sigma s1 ->
+Lemma HSH m hd pr s1 c pred: good_mode m -> acyclic s1 ->
   [disjoint domf s1 & vars_tms c] ->
   [disjoint vars_tms hd & v_prog pr] ->
   [disjoint vars_tms c & v_prog pr] ->

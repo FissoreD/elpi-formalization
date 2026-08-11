@@ -363,14 +363,14 @@ Section check.
   Fixpoint acyclic_sigmaT T :=
     match T with
     | And A _ B => acyclic_sigmaT A && acyclic_sigmaT B
-    | Or None sm B => acyclic_sigma sm && acyclic_sigmaT B
-    | Or (Some A) sm B => [&& acyclic_sigma sm, acyclic_sigmaT A & acyclic_sigmaT B]
+    | Or None sm B => acyclic sm && acyclic_sigmaT B
+    | Or (Some A) sm B => [&& acyclic sm, acyclic_sigmaT A & acyclic_sigmaT B]
     | Unexplored _ | OK | KO => true
     end.
 
   Lemma acyclic_sigma_next_subst s A:
-    acyclic_sigma s -> acyclic_sigmaT A ->
-    acyclic_sigma (next_subst s A).
+    acyclic s -> acyclic_sigmaT A ->
+    acyclic (next_subst s A).
   Proof.
     elim_tree A s => As/=; rewrite rew_pa.
       by move=> /and3P[]; auto.
@@ -452,9 +452,9 @@ Section check.
   Qed.
 
   Lemma acyclic_sigma_H m fv t hd s1 s2:
-    acyclic_sigma s1 ->
+    acyclic s1 ->
       H u fv m t hd s1 = Some s2 ->
-        acyclic_sigma s2.
+        acyclic s2.
   Proof.
     elim: m t hd s1 s2 => /=[|m tl IH] t hd s1 s2.
       by case: t => //=; case: hd => //= + [<-].
@@ -466,9 +466,9 @@ Section check.
   Qed.
 
   Lemma acyclic_sigma_select p pred m t s1 e:
-    acyclic_sigma s1 ->
+    acyclic s1 ->
      e \in (select u pred t m p s1).2 ->
-        acyclic_sigma e.1.
+        acyclic e.1.
   Proof.
     elim: p m t s1 e => //=-[hd bo] rs IH m t s1 e AS/=.
     case:eqP => //= [|_/IH -/(_ AS)]// X.
@@ -478,9 +478,9 @@ Section check.
   Qed.
 
   Lemma acyclic_sigma_bc s1 p v0 t:
-    acyclic_sigma s1 ->
+    acyclic s1 ->
       forall x, x \in (bc u p v0 t s1).2 ->
-        acyclic_sigma x.1.
+        acyclic x.1.
   Proof.
     rewrite/bc/= => H1 -[s2 b]/=.
     case: ifP => ///negbFE AS.
@@ -489,7 +489,7 @@ Section check.
   Qed.
 
   Lemma acyclic_big_or r0 rs:
-    (forall x, x \in rs -> acyclic_sigma x.1) ->
+    (forall x, x \in rs -> acyclic x.1) ->
     acyclic_sigmaT (big_or r0 rs).
   Proof.
     elim: rs r0 => //=; first by move=> *; rewrite acyclic_sigmaT_big_and.
@@ -500,7 +500,7 @@ Section check.
   Qed.
 
   Lemma acyclic_sigmaT_step p v0 s1 A:
-    acyclic_sigma s1 ->
+    acyclic s1 ->
     acyclic_sigmaT A -> acyclic_sigmaT (step u p v0 s1 A).2.
   Proof.
     elim_tree A v0 s1 => /=AS.

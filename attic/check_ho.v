@@ -597,14 +597,14 @@ Section check.
   Fixpoint acyclic_sigmaT T :=
     match T with
     | And A _ B => acyclic_sigmaT A && acyclic_sigmaT B
-    | Or None sm B => acyclic_sigma sm && acyclic_sigmaT B
-    | Or (Some A) sm B => [&& acyclic_sigma sm, acyclic_sigmaT A & acyclic_sigmaT B]
+    | Or None sm B => acyclic sm && acyclic_sigmaT B
+    | Or (Some A) sm B => [&& acyclic sm, acyclic_sigmaT A & acyclic_sigmaT B]
     | Unexplored _ | OK | KO => true
     end.
 
   Lemma acyclic_sigma_next_subst s A:
-    acyclic_sigma s -> acyclic_sigmaT A ->
-    acyclic_sigma (next_subst s A).
+    acyclic s -> acyclic_sigmaT A ->
+    acyclic (next_subst s A).
   Proof.
     elim_tree A s => As/=; rewrite rew_pa.
       by move=> /and3P[]; auto.

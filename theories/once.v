@@ -190,7 +190,7 @@ Section once.
     rewrite/is_det HS => r' [b'[fv' Hx]].
     inversion Hx; clear Hx; subst => //.
     move: H1; rewrite/=/bc [get_tm_hd _]/=.
-    case (boolP (acyclic_sigma s)) => AS; last first => //=.
+    case (boolP (acyclic s)) => AS; last first => //=.
       by move=> [???]; subst; inversion H2; auto.
     rewrite !FmapE.fmapE !inE eqxx/=.
     case X: fresh_rules => [fvx' rs'].
