@@ -112,7 +112,7 @@ Section sld_tree.
   Qed.
 
   (*SNIPT: valid_tree_step *)
-  Lemma valid_tree_step: 
+  Lemma sld_tree_step: 
     forall s v A r, sld_tree A -> step u p v s A = r -> sld_tree r.2.
   (*ENDSNIPT: valid_tree_step *)
   Proof.
@@ -135,7 +135,7 @@ Section sld_tree.
   Qed.
 
   (*SNIPT: valid_tree_prune *)
-  Lemma valid_tree_prune:
+  Lemma sld_tree_prune:
     forall A B b, sld_tree A -> prune b A = Some B -> sld_tree B.
   (*ENDSNIPT: valid_tree_prune *)
   Proof.
@@ -161,7 +161,7 @@ Section sld_tree.
     Qed.
 
   (*SNIPT: valid_tree_run *)
-  Theorem valid_tree_run:
+  Theorem sld_tree_run:
     forall b s s' v v' A B, sld_tree A -> runT u p v s A (Many s' B) b v' -> sld_tree B.
   (*ENDSNIPT: valid_tree_run *)
   Proof.
@@ -169,9 +169,9 @@ Section sld_tree.
     remember (Many _ _) as S eqn:HS.
     move=> + H.
     elim_run H s' R HS => vA.
-    + by move: HS => [??]; subst; apply: valid_tree_prune NS.
-    + by apply: IH (valid_tree_step vA eA).
-    + by apply: IH (valid_tree_prune vA nA).
+    + by move: HS => [??]; subst; apply: sld_tree_prune NS.
+    + by apply: IH (sld_tree_step vA eA).
+    + by apply: IH (sld_tree_prune vA nA).
   Qed.
 (*END*)
 
