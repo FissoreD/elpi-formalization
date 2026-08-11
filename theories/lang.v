@@ -842,3 +842,29 @@ Proof.
     by rewrite ground_V.
   by rewrite ground_app => /=/andP[/Hf->/Ha->].
 Qed.
+
+Lemma callable_ren m hd p:
+  get_tm_hd (ren m hd) = inl p <-> get_tm_hd hd = inl p.
+Proof. by elim: hd => //= [q|d|v|f Hf a Ha]. Qed.
+
+Lemma callable_rename fv hd p mp: get_tm_hd (rename fv hd mp).2 = inl p <-> get_tm_hd hd = inl p.
+Proof. by rewrite/rename!push/= => /=; split => /callable_ren. Qed.
+
+Lemma is_det_cder s s1 c: tm_is_det s c -> get_tm_hd (deref s1 c) = get_tm_hd c.
+Proof. elim: c s => //=[p|f Hf a Ha] s; rewrite ?deref_P//. Qed.
+
+Lemma is_det_lookup p c s r (pP: p \in domf s):
+  get_tm_hd c = inl p -> tm_is_det {|rules := r; sig := s|} c -> is_det_sig s.[pP].
+Proof. by elim: c p s pP => //=p1 p2 s pP [->]; rewrite/tm_is_det/=in_fnd//. Qed.
+
+Lemma count_tm_ag_deref s c p: 
+  get_tm_hd c = inl p -> count_tm_ag (deref s c) = count_tm_ag c.
+Proof. elim: c p s => //f Hf a Ha q s/= H; rewrite (Hf _ _ H)//. Qed.
+
+Lemma callable_rename1 p fv1 hd mp: 
+  (get_tm_hd (lang.rename fv1 hd mp).2 == inl p) = (get_tm_hd hd == inl p).
+Proof.
+  case:eqP; case:eqP => //= H1 H2.
+    by move/callable_rename: H1 => /(_ _ _ H2).
+  by have:= H2 (proj2 (callable_rename _ _ _ _) _); auto.
+Qed.

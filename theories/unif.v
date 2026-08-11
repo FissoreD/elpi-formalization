@@ -1030,7 +1030,7 @@ Proof.
   by apply/mapP; eexists => //.
 Qed.
 
-Lemma matchingP_deref fv t1 t2 s s': acyclic s -> vars_tm (deref s t2) `<=` fv ->
+Lemma matching_disj fv t1 t2 s s': acyclic s -> vars_tm (deref s t2) `<=` fv ->
   matching fv t1 t2 s = Some s' -> deref s' t1 = deref s t2.
 Proof.
   move=> A H M; have:= montanari_matching A _ _ M.
@@ -1044,7 +1044,7 @@ Corollary mathingX fv t1 t2 s s' : acyclic s -> vars_tm (deref s t2) `<=` fv ->
   matching fv t1 t2 s = Some s' -> forall v,
     v \in vars_tm (deref s t2) -> s.[? v] = s'.[? v].
 Proof.
-  move=> A S M; have H:= matchingP_deref A S M.
+  move=> A S M; have H:= matching_disj A S M.
   move=> v vt.
   have D : disjoint_L s [:: (deref s t1, deref s t2)].
     rewrite disjoint_L_cons disjoint_L0/= !acyclic_deref_disjoint//.
@@ -1408,7 +1408,7 @@ Proof.
   by apply: unif_pair_good_set; subst.
 Qed.
 
-Lemma matching_unify_transP fv1 fv2 s1 s2 q h1 h2:
+Lemma matching_unify_transP fv s1 s2 q h1 h2:
   acyclic s1 -> acyclic s2 ->
   [disjoint vars h1 & vars h2] ->
   [disjoint domf s1 & vars_tm q] -> 
@@ -1417,20 +1417,19 @@ Lemma matching_unify_transP fv1 fv2 s1 s2 q h1 h2:
   [disjoint vars_sigma s2 & vars_tm h1] -> 
   [disjoint vars_tm h1 & vars_tm q] -> 
   [disjoint vars_tm h2 & vars_tm q] -> 
-  vars_tm q `<=` fv1 ->
-  vars_tm q `<=` fv2 ->
-  matching fv1 h1 q s1 ->
-  matching fv2 h2 q s2 ->
+  vars_tm q `<=` fv ->
+  matching fv h1 q s1 ->
+  matching fv h2 q s2 ->
   unify h1 h2 fmap0.
 Proof.
-  move=> A1 A2 Dx d1q d2q H1 H2 dh1q dh2q S1 S2.
+  move=> A1 A2 Dx d1q d2q H1 H2 dh1q dh2q /[dup] S1 S2.
   case M1: matching => [s1'|]//.
   case M2: matching => [s2'|]//.
   move=> _ _.
   rewrite -(not_in_deref d1q) in S1.
   rewrite -(not_in_deref d2q) in S2.
-  have D1 := matchingP_deref A1 S1 M1.
-  have D2 := matchingP_deref A2 S2 M2.
+  have D1 := matching_disj A1 S1 M1.
+  have D2 := matching_disj A2 S2 M2.
   rewrite !(@not_in_deref _ q)// in D1 D2.
   have /= := montanari_mp A1 _ M1; rewrite disjoint_L_cons/=!acyclic_deref_disjoint// disjoint_L0 => /(_ isT) => MP1.
   have /= := montanari_mp A2 _ M2; rewrite disjoint_L_cons/=!acyclic_deref_disjoint// disjoint_L0 => /(_ isT) => MP2.
@@ -1445,23 +1444,20 @@ Proof.
   by rewrite 2!fdisjointUX H2 fdisjoint_sym Dx fdisjoint_sym.
 Qed.
 
-Definition matching_sing p q s := matching (vars_tm (deref s q)) p q s.
-
-Lemma matching_disj t1 t2 s s': acyclic s ->
-  matching_sing t1 t2 s = Some s' -> deref s' t1 = deref s t2.
-Proof. by move=> A M; apply: matchingP_deref M. Qed.
-
 (*SNIPT: matching_unify_transP*)
-Lemma matching_unify_trans h1 h2 q: 
-  [disjoint vars h1 & vars h2] -> [disjoint vars h1 & vars q] -> [disjoint vars h2 & vars q] -> 
-  matching_sing h1 q fmap0 -> matching_sing h2 q fmap0 -> unify h1 h2 fmap0.
+Lemma matching_unify_trans fv h1 h2 q: 
+  [disjoint vars h1 & vars h2] ->
+  [disjoint vars_tm h1 & vars_tm q] -> 
+  [disjoint vars_tm h2 & vars_tm q] -> 
+  vars_tm q `<=` fv ->
+  matching fv h1 q empty ->
+  matching fv h2 q empty ->
+  unify h1 h2 fmap0.
 (*ENDSNIPT: matching_unify_transP*)
 Proof.
-  move=> D0 D1 D2 M1 M2.
-  have A := acyclic_sigma0.
-  have D := fdisjoint0X.
-  have Dx : forall x, [disjoint vars_sigma ctx.empty & x] by move=> ?; rewrite vars_sigma0.
-  by apply: matching_unify_transP M1 M2 => //; rewrite deref_empty.
+  move=> D0 D1 D2.
+  have H := matching_unify_transP acyclic_sigma0 acyclic_sigma0 D0 (fdisjoint0X _) (fdisjoint0X _) _ _ D1 D2.
+  by apply: H; rewrite vars_sigma0 fdisjoint0X.
 Qed.
 
 Notation injective := (@injectiveb _ V).

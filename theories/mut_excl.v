@@ -69,24 +69,6 @@ Section mut_excl.
     let: (fv, rules) := fresh_rules fset0 pr.(rules) in
     good_modes pr.(sig) && mut_excl_aux pr.(sig) rules.
 
-  Lemma callable_ren m hd p:
-    get_tm_hd (ren m hd) = inl p <-> get_tm_hd hd = inl p.
-  Proof. by elim: hd => //= [q|d|v|f Hf a Ha]. Qed.
-
-  Lemma callable_rename fv hd p mp: get_tm_hd (rename fv hd mp).2 = inl p <-> get_tm_hd hd = inl p.
-  Proof. by rewrite/rename!push/= => /=; split => /callable_ren. Qed.
-
-  Lemma is_det_cder s s1 c: tm_is_det s c -> get_tm_hd (deref s1 c) = get_tm_hd c.
-  Proof. elim: c s => //=[p|f Hf a Ha] s; rewrite ?deref_P//. Qed.
-
-  Lemma is_det_lookup p c s r (pP: p \in domf s):
-    get_tm_hd c = inl p -> tm_is_det {|rules := r; sig := s|} c -> is_det_sig s.[pP].
-  Proof. by elim: c p s pP => //=p1 p2 s pP [->]; rewrite/tm_is_det/=in_fnd//. Qed.
-
-  Lemma count_tm_ag_deref s c p: 
-    get_tm_hd c = inl p -> count_tm_ag (deref s c) = count_tm_ag c.
-  Proof. elim: c p s => //f Hf a Ha q s/= H; rewrite (Hf _ _ H)//. Qed.
-
   Lemma all_inp_cons x xs: all_out (x::xs) -> all_out xs.
   Proof. by move=> /andP[]. Qed.
 
@@ -134,7 +116,7 @@ Proof.
 Qed.
 
 
-Lemma SHS fv1 fv2 m c hd2 hd1 (s1 s2:Sigma):
+Lemma SHS fv m c hd2 hd1 (s1 s2:Sigma):
   acyclic s1 -> acyclic s2 ->
   all (eq_op input) m ->
   [disjoint vars_sigma s1 & vars_tms hd2] -> 
@@ -144,10 +126,9 @@ Lemma SHS fv1 fv2 m c hd2 hd1 (s1 s2:Sigma):
   [disjoint vars_tms c & vars_tms hd2] ->
   [disjoint domf s1 & vars_tms c] ->
   [disjoint domf s2 & vars_tms c] ->
-  vars_tms c `<=` fv1 ->
-  vars_tms c `<=` fv2 ->
-  H u fv1 m c hd1 s1 ->
-  H u fv2 m c hd2 s2 ->
+  vars_tms c `<=` fv ->
+  H u fv m c hd1 s1 ->
+  H u fv m c hd2 s2 ->
   H_head u m hd1 hd2.
 Proof.
   elim: m c hd1 hd2 s1 s2 => //=.
@@ -159,10 +140,9 @@ Proof.
   move=> /andP[/andP[D1 D2] /andP[D3 D4]].
   move=> /andP[/andP[D5 D6] /andP[D7 D8]].
   move=> /andP[/andP[D9 D10] /andP[D11 D12]].
-  (* move=> /andP[Da Db] /andP[Dc Dd]. *)
   move=> /andP[D13 D14] .
   move=> /andP[D15 D16] .
-  rewrite !fsubUset => /andP[S1 S2] /andP[S3 S4].
+  rewrite !fsubUset => /andP[S1 S2].
   case M1: matching => [s1'|]//=.
   case M2: matching => [s2'|]//=.
   move=> H1 H2; apply/andP; split.
@@ -303,7 +283,6 @@ Proof.
   - by apply/disjoint_taker.
   - by apply/disjoint_taker.
   - by rewrite get_frozen_vars_sub.
-  - by rewrite get_frozen_vars_sub.
 Qed.
 
 Lemma flatten_term_ren z q:
@@ -369,14 +348,6 @@ Proof.
   apply: fdisjointWr (disj_codom0R _ _).
   apply: fsubset_trans (fresh_tm_codom2 _ _ _) _.
   rewrite codomf0 fset0U//.
-Qed.
-
-Lemma callable_rename1 p fv1 hd mp: 
-  (get_tm_hd (lang.rename fv1 hd mp).2 == inl p) = (get_tm_hd hd == inl p).
-Proof.
-  case:eqP; case:eqP => //= H1 H2.
-    by move/callable_rename: H1 => /(_ _ _ H2).
-  by have:= H2 (proj2 (callable_rename _ _ _ _) _); auto.
 Qed.
 
 Lemma select_head_ren p rs fx fy fv1 fv2 m hd:
