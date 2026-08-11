@@ -1191,10 +1191,14 @@ Proof.
   by apply/mapP; eexists => //.
 Qed.
 
-Lemma matching_disj fv t1 t2 s s': acyclic s -> vars_tm (deref s t2) `<=` fv ->
+(*SNIPT: matching_disj *)
+Lemma matching_disj:
+  forall fv t1 t2 s s',
+  acyclic s -> vars_tm (deref s t2) `<=` fv ->
   matching fv t1 t2 s = Some s' -> deref s' t1 = deref s t2.
+(*ENDSNIPT: matching_disj *)
 Proof.
-  move=> A H M; have:= montanari_matching A _ _ M.
+  move=> fv t1 t2 s s' A H M; have:= montanari_matching A _ _ M.
   rewrite /= disjoint_L_cons/= fsetU0 H !acyclic_deref_disjoint// disjoint_L0.
   move=> /(_ isT isT _ (mem_head _ _))/=.
   rewrite derefxx//; apply/montanari_mp/M => //.
