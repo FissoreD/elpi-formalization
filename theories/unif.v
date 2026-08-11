@@ -1192,7 +1192,7 @@ Proof.
 Qed.
 
 Lemma matchingP_deref fv t1 t2 s s': acyclic s -> vars_tm (deref s t2) `<=` fv ->
-  matching fv t1 t2 s = Some s' -> deref s' t1 = (deref s t2).
+  matching fv t1 t2 s = Some s' -> deref s' t1 = deref s t2.
 Proof.
   move=> A H M; have:= montanari_matching A _ _ M.
   rewrite /= disjoint_L_cons/= fsetU0 H !acyclic_deref_disjoint// disjoint_L0.
@@ -1585,7 +1585,7 @@ Proof.
   by apply: unif_pair_good_set; subst.
 Qed.
 
-Lemma matching_unify_trans fv1 fv2 s1 s2 q h1 h2:
+Lemma matching_unify_transP fv1 fv2 s1 s2 q h1 h2:
   acyclic s1 -> acyclic s2 ->
   [disjoint vars h1 & vars h2] ->
   [disjoint domf s1 & vars_tm q] -> 
@@ -1624,8 +1624,12 @@ Qed.
 
 Definition matching_sing p q s := matching (vars_tm (deref s q)) p q s.
 
+Lemma matching_disj t1 t2 s s': acyclic s ->
+  matching_sing t1 t2 s = Some s' -> deref s' t1 = deref s t2.
+Proof. by move=> A M; apply: matchingP_deref M. Qed.
+
 (*SNIPT: matching_unify_transP*)
-Lemma matching_unify_transP h1 h2 q: 
+Lemma matching_unify_trans h1 h2 q: 
   [disjoint vars h1 & vars h2] -> [disjoint vars h1 & vars q] -> [disjoint vars h2 & vars q] -> 
   matching_sing h1 q fmap0 -> matching_sing h2 q fmap0 -> unify h1 h2 fmap0.
 (*ENDSNIPT: matching_unify_transP*)
@@ -1634,7 +1638,7 @@ Proof.
   have A := acyclic_sigma0.
   have D := fdisjoint0X.
   have Dx : forall x, [disjoint vars_sigma ctx.empty & x] by move=> ?; rewrite vars_sigma0.
-  by apply: matching_unify_trans M1 M2 => //; rewrite deref_empty.
+  by apply: matching_unify_transP M1 M2 => //; rewrite deref_empty.
 Qed.
 
 Notation injective := (@injectiveb _ V).
