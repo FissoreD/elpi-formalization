@@ -164,13 +164,13 @@ Qed.
 
 (*SNIPT: runt1 *)
 Definition runT' p v s t r := 
-  exists b v', runT p v s t r b v'.
+  exists b v', runT p v s (Unexplored t) r b v'.
 (*ENDSNIPT: runt1 *)
 
 (*SNIPT: tree_to_elpi *)
-Theorem runT_to_runS:
+Theorem runT2S:
   forall p t s r, let v := vars_tree t `|` vars_sigma s in
-    sld_tree t -> runT' p v s t r -> 
+    sld_tree t -> (exists b v', runT p v s t r b v') -> 
       let r' := match r with
       | Zero => None
       | One s' => Some (s', [::])
@@ -185,14 +185,14 @@ Proof.
 Qed.
 
 (*SNIPT: elpi_to_tree *)
-Theorem runS_to_runT:
+Theorem runS2T:
   forall p v a r, runS p v a r -> 
-    forall s t, sld_tree t -> tree_to_stack t s [::] = a ->
+    forall s t, sld_tree t -> tree_to_stack t s [::] = a -> exists b v',
       match r with
-      | None => runT' p v s t Zero
-      | Some (s', [::]) => runT' p v s t (One s')
+      | None => runT p v s t Zero b v'
+      | Some (s', [::]) => runT p v s t (One s') b v'
       | Some (s', a') => 
-        exists t', runT' p v s t (Many s' t') /\ tree_to_stack t' s [::] = a'
+        exists t', runT p v s t (Many s' t') b v' /\ tree_to_stack t' s [::] = a'
       end.
 (*ENDSNIPT: elpi_to_tree *)
 Proof.
@@ -203,90 +203,63 @@ Proof.
 Qed.
 
 
-Print Assumptions runS_to_runT.
-Print Assumptions runT_to_runS.
-
-(*SNIPT: tree_to_elpi_call *)
-Theorem runT_to_runSC:
-  forall p t s r, let v := vars_tm t `|` vars_sigma s in
-    runT' p v s (Unexplored (call t)) r -> 
-      let r' := match r with
-      | Zero => None
-      | One s' => Some (s', [::])
-      | Many s' t' => Some (s', tree_to_stack t' s [::]) 
-      end in
-        runS p v ((s, consG (call t, [::]) [::]) :: [::]) r'.
-(*ENDSNIPT: tree_to_elpi_call *)
-Proof.
-  move=> /= p t s r R'.
-  by have /= := @runT_to_runS p (Unexplored (call t)) s r isT R'.
-Qed.
-
-(*SNIPT: elpi_to_tree_call *)
-Theorem runS_to_runTC:
-  forall p t s r v, runS p v ((s, consG (call t, [::]) [::]) :: [::]) r -> 
-      match r with
-      | None => runT' p v s (Unexplored (call t)) Zero
-      | Some (s', [::]) => runT' p v s (Unexplored (call t)) (One s')
-      | Some (s', a') => 
-        exists t', runT' p v s (Unexplored (call t)) (Many s' t') /\ tree_to_stack t' s [::] = a'
-      end.
-(*ENDSNIPT: elpi_to_tree_call *)
-Proof.
-  move=> p t s r v R.
-  have:= runS_to_runT R.
-  move=> /(_ s (Unexplored (call t)) isT erefl).
-  rewrite//.
-Qed.
+Print Assumptions runS2T.
+Print Assumptions runT2S.
 
 (*SNIPT: runS_to_runTCZero *)
 Theorem equiv_zero:
   forall p t s, let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) None <-> 
-    runT' p v s (Unexplored (call t)) Zero.
+    runT' p v s (call t) Zero.
 (*ENDSNIPT: runS_to_runTCZero *)
 Proof.
   move=> /= p t s; split => R.
-    have:= runS_to_runT R.
+    have:= runS2T R.
     by move=> /(_ s (Unexplored (call t)) isT erefl).
-  by apply : runT_to_runSC R.
+  rewrite/runT' in R.
+  replace (vars_tm _) with (vars_tree (Unexplored (call t))) in R by reflexivity.
+  by apply: runT2S _ R.
 Qed.
 
 (*SNIPT: runS_to_runTCOne *)
 Theorem equiv_one:
   forall p t s s', let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', [::])) <-> 
-    runT' p v s (Unexplored (call t)) (One s').
+    runT' p v s (call t) (One s').
 (*ENDSNIPT: runS_to_runTCOne *)
 Proof.
   move=> /= p t s s'; split => R.
-    have:= runS_to_runT R.
+    have:= runS2T R.
     by move=> /(_ s (Unexplored (call t)) isT erefl).
-  by apply : runT_to_runSC R.
+  rewrite/runT' in R.
+  replace (vars_tm _) with (vars_tree (Unexplored (call t))) in R by reflexivity.
+  by apply: runT2S _ R.
 Qed.
 
 (*SNIPT: runS_to_runTCMany2 *)
 Theorem sound_many:
   forall p t s s' x xs, let v := vars_tm t `|` vars_sigma s in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', x :: xs)) -> 
-    exists t', runT' p v s (Unexplored (call t)) (Many s' t') /\ tree_to_stack t' s [::] = x :: xs.
+    exists t', runT' p v s (call t) (Many s' t') /\ tree_to_stack t' s [::] = x :: xs.
 (*ENDSNIPT: runS_to_runTCMany2 *)
 Proof.
   move=> /= p t s s' x xs R.
-  have:= runS_to_runT R.
-  by move=> /(_ s (Unexplored (call t)) isT erefl)/=.
+  rewrite/runT'.
+  replace (vars_tm _) with (vars_tree (Unexplored (call t))) in R by reflexivity.
+  have:= runS2T R.
+  by move=> /(_ s (Unexplored (call t)) isT erefl)/= [b [v' [t']]][]; repeat eexists; eauto.
 Qed.
 
 (*SNIPT: runS_to_runTCMany1 *)
 Theorem complete_many:
   forall p t s s' t', let v := vars_tm t `|` vars_sigma s in
-    runT' p v s (Unexplored (call t)) (Many s' t') ->
+    runT' p v s (call t) (Many s' t') ->
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', tree_to_stack t' s [::])).
 (*ENDSNIPT: runS_to_runTCMany1 *)
 Proof.
   move=> /= p t s s' t' R.
-  by have /= := runT_to_runSC R.
+  replace (vars_tm _) with (vars_tree (Unexplored (call t))) in R by reflexivity.
+  by apply : runT2S R.
 Qed.
-
 
 End NurEqiv.
