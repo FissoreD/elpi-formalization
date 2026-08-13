@@ -9,7 +9,6 @@ Section good_mode.
     match m with b _ => true | arr m _ r => (m == dfl) && all_mode dfl r end.
 
   Definition all_out := all_mode output.
-  Definition all_inp := all_mode input.
 
   Fixpoint good_mode m :=
     match m with
@@ -166,16 +165,6 @@ Proof.
   case H: H => [[ty s1']|]; last by apply: IH.
   rewrite !push/= in_cons => /orP[/eqP?|]; subst; last by apply: IH.
   by have := acyclic_sigma_H AS H.
-Qed.
-
-Lemma acyclic_sigma_bc s1 p v0 t:
-  acyclic s1 ->
-    forall x, x \in (bc u p v0 t s1).2 ->
-      acyclic x.1.
-Proof.
-  rewrite/bc/= => H1 -[s2 b]/=.
-  case: ifP => ///negbFE AS.
-  by rewrite !push; apply/acyclic_sigma_select.
 Qed.
 
 Lemma H_mp sP fv q hd s1 r: acyclic s1 ->
@@ -388,7 +377,7 @@ Proof.
   have {Hf} := Hf f' fx' fy' fz fw.
   case: H_head => [s'|]//=; case: H_head => [s|]//=[?]; subst.
   case: s => //=-[]//=_ s.
-  have ->// : isSome (unify (ren z f) (ren x f') empty) = isSome (unify (ren w f) (ren y f') empty).
+  have ->// : isSome (unify (ren z f) (ren x f') fmap0) = isSome (unify (ren w f) (ren y f') fmap0).
   have H: vars (ren z f) # vars (ren x f').
     apply: fdisjointWl (vars_tm_ren_sub fz) _.
     by apply: fdisjointWr (vars_tm_ren_sub _) _. 
@@ -402,9 +391,9 @@ Proof.
 Qed.
 
 Lemma good_ren_fresh s q: 
-  renaming_forP q (fresh_tm (vars q `|` s) empty q).2.
+  renaming_forP q (fresh_tm (vars q `|` s) fmap0 q).2.
 Proof.
-  have:= @fresh_tm_def (vars q `|` s) empty q.
+  have:= @fresh_tm_def (vars q `|` s) fmap0 q.
   rewrite/renaming_forP.
   rewrite /=fsub0set injectiveb0 => /(_ isT (fsubsetUl _ _) isT).
   move=> [x [H1 HH I1 D1]]; rewrite cat0f in H1; subst.
@@ -413,10 +402,10 @@ Proof.
 Qed.
 
 Lemma H_head_ren sP fv1 fv2 t xs fx fy q:
-  (lang.rename (fresh_rules fv1 xs).1 t empty).1.1 `<=` fx ->
-  (lang.rename (fresh_rules fv2 xs).1 t empty).1.1 `<=` fy ->
-  H_head u sP ((lang.rename fx q empty).2) ((lang.rename (fresh_rules fv1 xs).1 t empty).2) =
-  H_head u sP ((lang.rename fy q empty).2) ((lang.rename (fresh_rules fv2 xs).1 t empty).2).
+  (lang.rename (fresh_rules fv1 xs).1 t fmap0).1.1 `<=` fx ->
+  (lang.rename (fresh_rules fv2 xs).1 t fmap0).1.1 `<=` fy ->
+  H_head u sP ((lang.rename fx q fmap0).2) ((lang.rename (fresh_rules fv1 xs).1 t fmap0).2) =
+  H_head u sP ((lang.rename fy q fmap0).2) ((lang.rename (fresh_rules fv2 xs).1 t fmap0).2).
 Proof.
   rewrite/lang.rename!push/=.
   set X:= fresh_tm _ _ _.
@@ -450,8 +439,8 @@ Lemma select_head_ren sP rs fx fy fv1 fv2 hd:
   let FRS2 := fresh_rules fv2 rs in
   FRS1.1 `<=` fx ->
   FRS2.1 `<=` fy ->
-  select_head u sP ((lang.rename fx hd empty).2) FRS1.2 = [::] ->
-  select_head u sP ((lang.rename fy hd empty).2) FRS2.2 = [::].
+  select_head u sP ((lang.rename fx hd fmap0).2) FRS1.2 = [::] ->
+  select_head u sP ((lang.rename fy hd fmap0).2) FRS2.2 = [::].
 Proof.
   elim: rs fx fy fv1 fv2 hd => //= x xs IH fx fy fv1 fv2 hd; rewrite !push/=.
   move=> H2 H3.
@@ -467,8 +456,6 @@ Proof.
   by apply: fsubset_trans H3; apply: fsubset_trans (fresh_atoms_sub _ _ _).
   by apply: fsubset_trans H2; apply: fsubset_trans (fresh_atoms_sub _ _ _).
 Qed.
-
-Lemma build_and (a b: bool): a -> b -> a && b. by move=> ??; apply/andP. Qed.
 
 Lemma mut_exclP p fv c s1:
   mut_excl u p -> 
@@ -501,12 +488,12 @@ Proof.
   rewrite/FC1.
   move: TD; rewrite/tm_is_det.
   case X: get_tm_hd => [p|]//=; case: fndP => //pP DP.
-  rewrite (proj2 (callable_rename _ hd p empty))//; last first.
+  rewrite (proj2 (callable_rename _ hd p fmap0))//; last first.
     apply/eqP.
     have [Hx Hy [p' [pP']]] := HP H.
     rewrite X => -[?]; subst.
     rewrite (bool_irrelevance pP' pP) => HX.
-    rewrite -(callable_rename1 _ FRS2.1 _ empty) -Hx.
+    rewrite -(callable_rename1 _ FRS2.1 _ fmap0) -Hx.
     by apply/eqP.
   rewrite in_fnd//= DP/=.
   case S: select_head => //= _.

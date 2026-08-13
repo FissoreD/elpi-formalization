@@ -177,26 +177,6 @@ Proof. by elim => //=[|x xs IH] l2; rewrite (cat0s, cat_cons)//IH. Qed.
 Lemma seq2goals_cat : forall l1 l2,  seq2goals (l1 ++ l2) = (seq2goals l1 ++ seq2goals l2).
 Proof. by elim => //=[|x xs IH] l2; rewrite (cat0s, cat_cons)//IH. Qed.
 
-Lemma cat_right_same {l1 l2} (l3:alts): 
-  l1 ++ l3 = l2 ++ l3 -> l1 = l2.
-Proof.
-  elim: l1 l2 l3 => //.
-    move=>[]//x xs l3/=.
-    fConsA x xs; fNilA.
-    rewrite cat0s => H.
-    have:= f_equal size H.
-    move=> /(_ _ IsList_alts).
-    rewrite size_cons size_cat.
-    by rewrite addnC -addnS => /addSn_false.
-  move=> x xs IH [|y ys]//l3; fNilA.
-    fConsA x xs => H.
-    have:= f_equal size H.
-    move=> /(_ _ IsList_alts).
-    rewrite cat_cons size_cons !size_cat size_nil.
-    by rewrite addnC -addnS => /esym /addSn_false.
-  move=>[<-]/IH->//.
-Qed.
-
 Section cat.
   Variable A B T : Type.
   Definition catr {H : IsList A B} (suff: B) (e: T * B) := (e.1, e.2 ++ suff).
@@ -251,18 +231,8 @@ Inductive runS (p: program) : fvS -> alts -> option (Sigma * alts) -> Prop :=
 Lemma size_seq2alts l : size (seq2alts l) = seq.size l.
 Proof. by elim: l => //= x xs<-//. Qed.
 
-Lemma map_seq2alts f l : map f (seq2alts l) = seq2alts (seq.map f l).
-Proof. by elim: l => //= x xs<-//. Qed.
-
 Lemma map_seq2goals f l : map f (seq2goals l) = seq2goals (seq.map f l).
 Proof. by elim: l => //= x xs<-//. Qed.
-
-Lemma stepE_len p v t s a1 a2 gl:
-  size (stepE p v t s a1 gl).2 = size (stepE p v t s a2 gl).2.
-Proof.
-  rewrite/stepE; case: bc => //= _ b.
-  by rewrite/save_as !size_seq2alts !seq.size_map.
-Qed.
 
 Lemma nur_consistent p v A s1 s2 :
   runS p v A s1 -> runS p v A s2 -> s1 = s2.

@@ -107,7 +107,7 @@ match tm with
     | Some (arr m l r) =>
       ((match bo with
         | Tm_V v =>
-          if m == input then add v (min l (odflt l sV.[?v])) sV else sV
+          if m == input then sV.[v <- (min l (odflt l sV.[?v]))] else sV
         | _ => (assume_tm sP sV bo).1
         end), Some r)
     | _ => (sV, None)
@@ -164,7 +164,7 @@ Fixpoint check_atoms (sP :sigT) sV (s: seq Atom) d : option Det :=
 
 Definition check_rule (sP:sigT) head prems :=
   ~~ tm_is_det sP head || 
-    let: (sV, _) := assume_tm sP empty head in
+    let: (sV, _) := assume_tm sP fmap0 head in
     (is_func (check_atoms sP sV prems Func) &&
     is_func (check_tm_prop sP sV head)).
 
@@ -387,7 +387,7 @@ Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
   [forall x : domf sV,
     let sig := sV.[valP x] in
     if s.[? val x] is Some t then 
-      match check_tm sP empty (deref s t) with
+      match check_tm sP famp0 (deref s t) with
       | Some sig' => cincl sig'.2 sig
       | None => false
       end
@@ -397,7 +397,7 @@ Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
   acyclic_sigma s ->
   relSS sP s sV ->
   check_tm sP sV t = Some r1 ->
-  check_tm sP empty (deref s t) = Some r2 ->
+  check_tm sP fmap0 (deref s t) = Some r2 ->
     cincl r2.2 r1.2.
 Proof.
   move=> A R.
@@ -432,7 +432,7 @@ Lemma check_tm_deref sP sV s t r1:
   acyclic_sigma s ->
   relSS sP s sV ->
   check_tm sP sV t = Some r1 ->
-  exists2 r2, check_tm sP empty (deref s t) = Some r2 & cincl r2.2 r1.2.
+  exists2 r2, check_tm sP fmap0 (deref s t) = Some r2 & cincl r2.2 r1.2.
 Proof.
   move=> A R.
   elim: t r1 => //=[p|v|f Hf a Ha] r1.
@@ -470,7 +470,7 @@ Lemma check_atom_deref sP sV d s t r1:
   acyclic_sigma s ->
   relSS sP s sV ->
   check_atom sP sV d t = Some r1 ->
-  exists2 r2, check_atom sP empty d (deref_atom s t) = Some r2 & minD r2 r1 = r2.
+  exists2 r2, check_atom sP fmap0 d (deref_atom s t) = Some r2 & minD r2 r1 = r2.
 Proof.
   move=> A R.
   case: t => [|t]/=; first by eexists.
@@ -504,7 +504,7 @@ Lemma call_is_det_tm_is_det sP t:
   is_func (check_tm_prop sP fmap0 t) -> tm_is_det sP t.
 Proof.
   move=> /eqP CT.
-  suffices : forall v, check_tm sP empty t = Some v -> is_det_sig v.2 -> tm_is_det sP t.
+  suffices : forall v, check_tm sP fmap0 t = Some v -> is_det_sig v.2 -> tm_is_det sP t.
     move: CT; rewrite /check_tm_prop; case CT: check_tm => //[[wc [[]|]]]//[->].
     by move=> /(_ _ erefl)->.
   rewrite/tm_is_det.
@@ -540,23 +540,23 @@ Lemma get_tm_hd_deref s t:
   end.
 Proof. by elim: t => //= v; auto; case: (fndP s v). Qed.
 
-Lemma get_sig_ren0 sP s x: get_sig sP empty (ren s x)  = get_sig sP empty x.
+Lemma get_sig_ren0 sP s x: get_sig sP fmap0 (ren s x)  = get_sig sP fmap0 x.
 Proof. by rewrite/get_sig; have:= get_tm_hd_ren s x; case: get_tm_hd => [p|v[v']]->// _; rewrite !not_fnd. Qed.
 
 Lemma check_tm_ren0 sP s t: 
-  check_tm sP empty (ren s t) = check_tm sP empty t.
-Proof. by elim: t => //=[v|f -> a ->]//; rewrite !(@not_fnd _ _ empty). Qed.
+  check_tm sP fmap0 (ren s t) = check_tm sP fmap0 t.
+Proof. by elim: t => //=[v|f -> a ->]//; rewrite !(@not_fnd _ _ fmap0). Qed.
 
-Lemma call_is_det_tm_rename0 sP v t r: check_tm sP empty (rename v t r).2 = check_tm sP empty t.
+Lemma call_is_det_tm_rename0 sP v t r: check_tm sP fmap0 (rename v t r).2 = check_tm sP fmap0 t.
 Proof. by rewrite/rename !push/= check_tm_ren0. Qed.
 
 (* Lemma check_tm_prop_fresh fv e t sP r hd:
 (* TODO: There should be a relation between r and fv, I think that 
     fv is an extension of r, ie: exists k, fv = k + r *)
   adesive r e -> fv = r + e ->
-  check_tm_prop sP (assume_tm sP empty (ren r hd)).1
+  check_tm_prop sP (assume_tm sP fmap0 (ren r hd)).1
     (ren fv t) =
-      check_tm_prop sP (assume_tm sP empty hd).1 t.
+      check_tm_prop sP (assume_tm sP fmap0 hd).1 t.
 Proof.
 
 Print adesive.
@@ -566,21 +566,21 @@ Lemma check_tm_prop_fresh fv t sP r hd:
 (* TODO: There should be a relation between r and fv, I think that 
     fv is an extension of r, ie: exists k, fv = k + r,
     look comment above *)
-  check_tm_prop sP (assume_tm sP empty (ren r hd)).1
+  check_tm_prop sP (assume_tm sP fmap0 (ren r hd)).1
     (ren fv t) =
-      check_tm_prop sP (assume_tm sP empty hd).1 t.
+      check_tm_prop sP (assume_tm sP fmap0 hd).1 t.
 Proof.
 Admitted.
 
 Lemma check_tm_prop_fresh_rename fv t sP hd:
-  check_tm_prop sP (assume_tm sP empty (rename fv hd empty).2).1
-    (rename fv t empty).2 =
-      check_tm_prop sP (assume_tm sP empty hd).1 t.
+  check_tm_prop sP (assume_tm sP fmap0 (rename fv hd fmap0).2).1
+    (rename fv t fmap0).2 =
+      check_tm_prop sP (assume_tm sP fmap0 hd).1 t.
 Proof. by rewrite/rename !push/= check_tm_prop_fresh. Qed.
 
 Lemma check_atoms_fresh sP hd bo v (r : {fmap V -> V}) f:
-  check_atoms sP (assume_tm sP empty (ren r hd)).1 (fresh_atoms v bo r).2 f =
-    check_atoms sP (assume_tm sP empty hd).1 bo f.
+  check_atoms sP (assume_tm sP fmap0 (ren r hd)).1 (fresh_atoms v bo r).2 f =
+    check_atoms sP (assume_tm sP fmap0 hd).1 bo f.
 Proof.
   elim: bo hd f => //=[[|t] l IH] hd f; rewrite /= /rename !push//=.
   set fr := fresh_tm _ _ _.
@@ -589,9 +589,9 @@ Proof.
 Qed.
 
 Lemma check_atoms_fresh_rename sP hd bo v d:
-  check_atoms sP (assume_tm sP empty (rename v hd empty).2).1
-    (fresh_atoms (rename v hd empty).1.1 bo (rename v hd empty).1.2).2 d =
-    check_atoms sP (assume_tm sP empty hd).1 bo d.
+  check_atoms sP (assume_tm sP fmap0 (rename v hd fmap0).2).1
+    (fresh_atoms (rename v hd fmap0).1.1 bo (rename v hd fmap0).1.2).2 d =
+    check_atoms sP (assume_tm sP fmap0 hd).1 bo d.
 Proof.
   rewrite/rename !push/=; move: (_ `|` _) => fv.
   set f := (fresh_tm _ _ _).
@@ -619,11 +619,11 @@ Proof.
 Qed.
 
 (* Lemma call_is_det_deref sP sV s t r1:
-  (* check_tm sP empty (deref s t) -> *)
+  (* check_tm sP fmap0 (deref s t) -> *)
   acyclic_sigma s ->
   relSS sP s sV ->
   check_tm_prop sP sV t = Some r1 -> 
-  exists2 r2, check_tm_prop sP empty (deref s t) = Some r2 & minD r2 r1 = r2.
+  exists2 r2, check_tm_prop sP fmap0 (deref s t) = Some r2 & minD r2 r1 = r2.
 Proof.
   rewrite/check_tm_prop; case Ct: check_tm => //=[[wt [[|d]|]]]//=.
   move => A R [<-{r1}].
@@ -631,7 +631,7 @@ Proof.
   by eexists => //; destruct d', d.
 Qed. *)
 
-Lemma relSS0 sP s: relSS sP s empty.
+Lemma relSS0 sP s: relSS sP s fmap0.
 Proof. by apply/forallP => //=-[]//. Qed.
 
 Lemma deref_deref_sig2 sm sx t:
@@ -749,16 +749,6 @@ Proof.
   move=> Aa Ab ab ba.
   rewrite/acyclic_sigma /= fsetDUI fdisjointUX.
   rewrite !fdisjoint_codom_vars_cat//.
-Qed.
-
-Lemma deref_rem s t s1:
-  s # vars_tm t ->
-  deref s1.[\ s] t = deref s1 t.
-Proof.
-  elim: t => //[v|f Hf a Ha/=].
-    by rewrite fdisjointX1 !deref_V fnd_rem => /negbTE->//.
-  rewrite fdisjointXU => /andP[sf sa].
-  by rewrite Ha//Hf.
 Qed.
 
 Lemma deref_sig2_rem (s1 s: Sigma):
@@ -892,7 +882,7 @@ Qed.
 Lemma relSS_set sP s sV v sig (vs : v \in s):
   acyclic_sigma s ->
   relSS sP s sV -> 
-  match check_tm sP empty s.[vs] with
+  match check_tm sP fmap0 s.[vs] with
   | Some sig' => cincl sig'.2 sig
   | None => false
   end ->
@@ -955,7 +945,7 @@ Lemma relSS_assumeM sP sV froz q h s s': acyclic_sigma s ->
   (* domf s # vars q ->  *)
   vars q # vars h ->
   (* vars q `<=` froz -> *)
-  check_tm sP empty q ->
+  check_tm sP fmap0 q ->
   matching froz h q s = Some s' ->
   relSS sP s' (assume_tm sP sV h).1.
 Proof.
@@ -999,7 +989,7 @@ Qed.
 Lemma relSS_assume sP sV froz q hd s s': acyclic_sigma s ->
   good_modes sP -> relSS sP s sV -> domf s # vars q -> vars q # vars hd ->
   (get_input_vars sP q).1 `<=` froz ->
-  good_call sP empty q ->
+  good_call sP fmap0 q ->
   H u sP froz q hd s = Some s' ->
   (* this is true if I assume only the variables in input of hd *)
   relSS sP s'.2 ((assume_tm sP sV hd).1).
@@ -1064,9 +1054,9 @@ Qed.
 Lemma det_check_H sP hd bo s sV r:
   good_modes sP -> acyclic_sigma s ->
   is_func (check_atoms sP (assume_tm sP sV hd).1 bo r) ->
-  (* is_func (check_tm_prop sP (assume_tm sP empty hd).1 hd) -> *)
+  (* is_func (check_tm_prop sP (assume_tm sP fmap0 hd).1 hd) -> *)
   relSS sP s (assume_tm sP sV hd).1 ->
-  is_func (check_atoms sP empty [seq deref_atom s i  | i <- bo] r).
+  is_func (check_atoms sP fmap0 [seq deref_atom s i  | i <- bo] r).
 Proof.
   move=> GM A + RS; elim: bo r => [|p0 ps IH]//= r.
   case Cp0 : check_atom => //=[d'] Cps.

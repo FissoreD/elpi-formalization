@@ -21,9 +21,6 @@ Definition all_mp T sm (l: seq (_ * T)) := all (mp sm) (map fst l).
 Lemma all_mp_cons T s x xs: @all_mp T s (x :: xs) = mp s x.1 && all_mp s xs.
 Proof. by []. Qed.
 
-Lemma all_mp_nil T s: @all_mp T s [::].
-Proof. by []. Qed.
-
 Lemma vts_big_or s a l : all_mp s l -> vts s (big_or a l).
 Proof.
   elim: l a => //= [|[s' x] xs IH] a H; first by apply: vts_big_and.

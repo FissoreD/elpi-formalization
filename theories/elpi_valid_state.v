@@ -56,10 +56,6 @@ Section NurValidState.
   (* VALID CA PROPERTIES                                              *)
   (********************************************************************)
 
-  Lemma valid_ca_nil: valid_ca [::].
-  Proof. rewrite//. Qed.
-
-
   Goal forall s r1 r2 z, valid_ca ((s, (cut, r1) :: ((cut, r2) :: nilC)) :: z ++ r1) -> suffix r2 r1.
   Proof.
     move=> s r1 r2 z/=.
@@ -67,9 +63,6 @@ Section NurValidState.
     rewrite !subn0 take_size !cats0.
     move => /and4P[]//.
   Qed.
-
-  Lemma valid_cas_empty1 {l} bt: valid_caA [::] l bt.
-  Proof. move=>//. Qed.
 
   Lemma empty_ca_valid {hd l} bt:
     empty_ca hd -> valid_caA hd l bt
@@ -402,9 +395,6 @@ Section NurValidState.
     valid_caG (a2g x) l [::].
   Proof. by elim: x l => //a l H l0/=; rewrite suffix0s take0 H. Qed.
 
-  Lemma empty_caG_cat A B: empty_caG (A ++ B) = empty_caG A && empty_caG B.
-  Proof. by rewrite/empty_caG all_cat. Qed.
-
   Lemma empty_ca_big_or r rs s0:
     empty_ca (tree_to_stack (big_or r rs) s0 [::]).
   Proof.
@@ -460,7 +450,7 @@ Section NurValidState.
       have ? := empty_ca_atoms B0.
       case:ifP => /=[sA vB|sA /eqP?]; subst.
         move: HA.
-        have SA:= success_tree_to_stack empty vA sA; rewrite SA/=.
+        have SA:= success_tree_to_stack fmap0 vA sA; rewrite SA/=.
         rewrite catl0a behead_cons => H1.
         set M := map _ _.
         rewrite valid_ca_split.

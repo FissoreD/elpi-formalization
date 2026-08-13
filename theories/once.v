@@ -50,13 +50,6 @@ Proof.
     apply: IH erefl.
 Qed.
 
-Definition same_sub {T1 T2:eqType} (s1 s2: option (T1*T2)) := 
-  match s1, s2 with
-  | None, None  => true
-  | Some s1, Some s2 => s1.1 == s2.1
-  | _, _ => false
-  end.
-
 Lemma is_det_tail_cut1 p s fv t r r':
   check_program p ->
   det_tree p t ->

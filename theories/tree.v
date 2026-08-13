@@ -77,7 +77,7 @@ Section tree_op.
   Definition next_subst s t := fst (next s t).
   (*ENDSNIP: next_subst*)
   (*SNIP: next_tree*)
-  Definition next_tree t := snd (next empty t).
+  Definition next_tree t := snd (next fmap0 t).
   (*ENDSNIP: next_tree*)
   (*SNIP: succ_path*)
   Definition success t := next_tree t == OK.
@@ -265,16 +265,16 @@ Section main.
   end.
   (*ENDSNIP: prune_code *)
 
-  Goal forall r, prune false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
+  Goal forall r, prune false (And (Or (Some OK) fmap0 OK) r KO) = Some (And (Or None fmap0 OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, prune false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
+  Goal forall r, prune false (And (Or (Some OK) fmap0 OK) r KO) = Some (And (Or None fmap0 OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, prune true (And (Or (Some OK) empty OK) r OK) = Some (And (Or None empty OK) r (big_and r)).
+  Goal forall r, prune true (And (Or (Some OK) fmap0 OK) r OK) = Some (And (Or None fmap0 OK) r (big_and r)).
   Proof. move=> []//=. Qed.
 
-  Goal (prune false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
+  Goal (prune false (Or (Some KO) fmap0 OK)) = Some (Or None fmap0 OK). move=> //=. Qed.
 
   Notation "tg == CutBrothers" := (is_cb tg).
 

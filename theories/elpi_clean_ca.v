@@ -250,7 +250,7 @@ Section clean_ca.
       have H := empty_ca_atoms.
       case X: (prune _ B) => [B'|].
         move=> [<-]{R}/=.
-        rewrite !(success_tree_to_stack empty _ sA)//= !catl0a.
+        rewrite !(success_tree_to_stack fmap0 _ sA)//= !catl0a.
         rewrite !clean_ca_cat.
         set W := map _ _.
         set Z := map _ _.
@@ -285,7 +285,7 @@ Section clean_ca.
     - move=> /andP[vA].
       have H := empty_ca_atoms.
       case: ifP => /=[sA vB|sA /eqP-> {B HB}].
-        rewrite !(success_tree_to_stack empty _ sA)//=!catl0a.
+        rewrite !(success_tree_to_stack fmap0 _ sA)//=!catl0a.
         rewrite clean_ca_cat.
         rewrite catA HB//= clean_ca_cat.
         rewrite !clean_ca_mk_lb0//.
@@ -362,7 +362,7 @@ Section clean_ca.
     - rewrite !push failed_and.
       case fA: failed => //= ++ /andP[vA].
       case: ifP => [sA + fB vB|sA + _ /eqP?] => -[???]; subst.
-        rewrite (success_tree_to_stack empty)//= catl0a.
+        rewrite (success_tree_to_stack fmap0)//= catl0a.
         rewrite clean_ca_cat.
         set ml:= map _ _.
         have [s2[x[xs H1]]] := [elaborate failed_tree_to_stack vB fB (next_subst s A) (ml ++ bt)].
@@ -378,7 +378,7 @@ Section clean_ca.
           rewrite H => -[[????]][H1 H2]; subst.
           by rewrite !H1 take0/= => -[<-].
         move=> + [??]; subst.
-        rewrite (success_tree_to_stack empty _ sA)//=.
+        rewrite (success_tree_to_stack fmap0 _ sA)//=.
         rewrite -/ml catl0a clean_ca_cat.
         have [[[? Hx] fA']] := s2l_Expanded_cut vB eB H; subst.
         set X:= tree_to_stack _ _ _.
@@ -481,7 +481,7 @@ Section clean_ca.
       case: ifP => sA.
         cbn zeta; rewrite success_failed// [orb _ _]/= => vB fB.
         move: AD.
-        rewrite (success_tree_to_stack empty)// add_deep_cons => -[???]; subst.
+        rewrite (success_tree_to_stack fmap0)// add_deep_cons => -[???]; subst.
         rewrite catl0a.
         set ml:= map (catr _) _.
         have [s2'[x[xs H1]]] := [elaborate failed_tree_to_stack vB fB (next_subst s3 A) ml].
@@ -490,7 +490,7 @@ Section clean_ca.
         move=> + [???]; subst; rewrite [clean_ca_goals _ _]/=.
         move=> /(_ _ _ _ _ _ erefl) [HB [??]]; subst.
         split => //=.
-        rewrite (success_tree_to_stack empty)//= catl0a cats0 size_nil -/ml .
+        rewrite (success_tree_to_stack fmap0)//= catl0a cats0 size_nil -/ml .
         have [? _ ->] := s2l_Expanded_call vB eB H1; subst.
         rewrite -/bc.
         case: bc => //= _ [|??]//=; rewrite (save_as_cons, cat0s)//= !cat_cons//=catA//.
