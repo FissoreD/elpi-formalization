@@ -1113,10 +1113,10 @@ Proof.
     by rewrite unif_pair_sym.
 Qed.
 
-(*SNIPT: unif_correct *)
-Lemma unify_correct: 
+(*SNIPT: unify_P *)
+Lemma unify_P: 
   forall t1 t2 s s', acyclic s -> unify t1 t2 s = Some s' -> deref s' t1 = deref s' t2.
-(*ENDSNIPT: unif_correct *)
+(*ENDSNIPT: unify_P *)
 Proof.
   move=> t1 t2 s s' A M.
   have DL : disjoint_L s [:: (deref s t1, deref s t2)].
@@ -1401,21 +1401,6 @@ Proof.
   - move=> D [x[A'/=/andP[+ U]]].
     by destruct t1, t2 => //=; rewrite/unif_pair/map_prod1/= => /eqP[?]; 
     subst; rewrite ?eqxx in EQ.
-Qed.
-
-(*SNIPT: unify_complete *)
-Lemma unify_complete:
-  forall t1 t2 s, acyclic s -> (exists s', acyclic s' /\ deref s' (deref s t1) = deref s' (deref s t2)) -> exists s'', unify t1 t2 s = Some s''.
-(*ENDSNIPT: unify_complete *)
-Proof.
-  move=> t1 t2 s A [sx [H1 H2]].
-  rewrite /unify/montanari_deref/montanari_pair.
-  have D : disjoint_L s [:: (deref s t1, deref s t2)].
-    by rewrite disjoint_L_cons !acyclic_deref_disjoint//disjoint_L0.
-  have /(_ fset0) := exists_montanari A D (ex_intro _ sx _).
-  rewrite /unifier/= andbT /unif_pair/map_prod1 H1 H2 eqxx fdisjointX0 => /(_ (And3 isT isT isT)).
-  case M: montanari => [s'|]// _.
-  by eexists.
 Qed.
 
 Lemma acyclic_composition s1 s2:
@@ -2151,11 +2136,16 @@ Proof.
     by apply: mgu_help_deref_sigma IH; rewrite fdisjointX1 in D1.
 Qed.
 
+Record renaming := mk_ren {
+  ren_map :> {fmap V -> V};
+  ren_injective : injectiveb ren_map;
+  ren_disjoint : fdisjoint (domf ren_map) (codomf ren_map)
+}.
+
 Definition mgu m t1 t2 :=
   deref m t1 = deref m t2 /\ forall s, acyclic s -> deref s t1 = deref s t2 -> 
-    exists r : {fmap V -> V},
-      [/\ injectiveb r,  fdisjoint (domf r) (codomf r) &
-            forall t, ren r (deref s (deref m t)) = ren r (deref s t)].
+    exists r : renaming,
+      forall t, ren r (deref s (deref m t)) = ren r (deref s t).
 
 Lemma is_mgu0 s: is_mgu empty s.
 Proof.
@@ -2165,16 +2155,32 @@ Proof.
   by move=> t; rewrite !deref_empty.
 Qed.
 
-Lemma unify_mgu t1 t2 s:
+(*SNIPT: unif_correct *)
+Lemma unify_correct t1 t2 s:
   unify t1 t2 empty = Some s -> mgu s t1 t2.
+(*ENDSNIPT: unif_correct *)
 Proof.
   move=> U.
   have H := montanariPmgu acyclic_sigma0 (disjoint_Lempty _) U.
   rewrite !deref_empty in H; split.
-    by have:= unify_correct acyclic_sigma0 U.
+    by have:= unify_P acyclic_sigma0 U.
   move=> s' A D.
   have:= H s' A; rewrite/=/unif_pair/map_prod1 D eqxx.
-  by move=> /(_ isT (is_mgu0 _)).
+  move=> /(_ isT (is_mgu0 _)) [r[I DC M]].
+  by exists (mk_ren I DC).
 Qed.
 
-Print Assumptions montanariPmgu.
+(*SNIPT: unify_complete *)
+Lemma unify_complete:
+  forall t1 t2 s, acyclic s -> (exists s', acyclic s' /\ deref s' (deref s t1) = deref s' (deref s t2)) -> exists s'', unify t1 t2 s = Some s''.
+(*ENDSNIPT: unify_complete *)
+Proof.
+  move=> t1 t2 s A [sx [H1 H2]].
+  rewrite /unify/montanari_deref/montanari_pair.
+  have D : disjoint_L s [:: (deref s t1, deref s t2)].
+    by rewrite disjoint_L_cons !acyclic_deref_disjoint//disjoint_L0.
+  have:= exists_montanari A D (ex_intro _ sx _).
+  rewrite /unifier/= andbT /unif_pair/map_prod1 H1 H2 eqxx => /(_ (conj isT isT)).
+  case M: montanari => [s'|]// _.
+  by eexists.
+Qed.
