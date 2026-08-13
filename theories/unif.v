@@ -11,6 +11,9 @@ Require Import Recdef.
 Require Import Stdlib.Structures.OrdersEx.
 Require Import Stdlib.Wellfounded.Lexicographic_Product .
 
+Lemma eqV v v': Tm_V v == Tm_V v' = (v == v').
+Proof. do 2 case: eqP; congruence. Qed.
+
 Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
 
 Lemma codom_varsP v (s:Sigma):
@@ -455,7 +458,7 @@ Proof. by case: x => [t1 t2]; rewrite/disjoint_L/= !fdisjointXU andbA. Qed.
 Lemma disjoint_L0 s: disjoint_L s [::].
 Proof. by rewrite/disjoint_L/= fdisjointX0. Qed.
 
-Lemma disjoint_L_deref s h q0: acyclic_sigma s ->
+Lemma disjoint_L_deref s h q0: acyclic s ->
   disjoint_L s [:: (deref s h, deref s q0)].
 Proof. by move=> A; rewrite disjoint_L_cons/= !acyclic_deref_disjoint// disjoint_L0. Qed.
 
@@ -610,7 +613,7 @@ Definition ext_sig (sm sold: Sigma) :=
   sm + deref_sig2 sm sold.
 
 Definition ext_sigP (froz: {fset V}) (sm sold:Sigma) :=
-  [&& acyclic_sigma sm, froz # domf sm & fdisjoint (domf sold) (vars_sigma sm)].
+  [&& acyclic sm, froz # domf sm & fdisjoint (domf sold) (vars_sigma sm)].
 
 Lemma ext_sigP0 f s: ext_sigP f empty s.
 Proof. by rewrite/ext_sigP vars_sigma0 !fdisjointX0 acyclic_sigma0. Qed.
@@ -664,7 +667,7 @@ Proof.
 Qed.
 
 Lemma montanari_extP s s' froz l:
-  acyclic_sigma s -> disjoint_L s l -> montanari s froz l = Some s' ->
+  acyclic s -> disjoint_L s l -> montanari s froz l = Some s' ->
   exists2 sm : Sigma, s' = ext_sig sm s & ext_sigP froz sm s.
 Proof.
   move: s'; montanari_ind s froz l => s' A //.
@@ -691,7 +694,7 @@ Proof.
 Qed.
 
 Lemma matching_extP s s' b t1 t2:
-  acyclic_sigma s -> matching b t1 t2 s = Some s' ->
+  acyclic s -> matching b t1 t2 s = Some s' ->
   exists2 sm : Sigma, s' = ext_sig sm s & ext_sigP b sm s.
 Proof.
   move=> A; rewrite/matching/montanari_deref/montanari_pair.
@@ -787,9 +790,6 @@ Proof. by move=> /montanari_ext1; rewrite varsL_cons varsL0 fsetU0 //. Qed.
 Lemma matching_ext1 fv t1 t2 s s' : 
   matching fv t1 t2 s = Some s' -> domf s' `<=` domf s `|` ((vars (deref s t1)  `|` vars (deref s t2) ) `\` fv).
 Proof. apply/montanari_deref_ext1. Qed.
-
-Lemma disjoint_L0 s: disjoint_L s [::].
-Proof. by rewrite/disjoint_L/= fdisjointX0. Qed.
 
 Lemma matching_ext3 fv t1 t2 s s' : acyclic s ->
   matching fv t1 t2 s = Some s' -> vars_sigma s' `<=` vars_sigma s `|` vars_tm t1 `|` vars_tm t2.
@@ -1331,9 +1331,9 @@ Proof.
   rewrite deref_V in_fnd/=; lia.
 Qed.
 
-Lemma exists_montanari m l:
+Lemma exists_montanari f m l:
   acyclic m -> disjoint_L m l ->
-  (exists s, acyclic s /\ unifier s l) -> montanari m fset0 l.
+  (exists s, [/\ acyclic s, unifier s l & fdisjoint (domf s) f]) -> montanari m f l.
 Proof.
   montanari_ind m f l => // A; subst.
   - rewrite !disjoint_L_cons/= => /and3P[D1 _ D3] [s [A' /andP[_ U] D]].
@@ -2086,7 +2086,7 @@ Proof.
       apply/forallP => -[y yP]; rewrite valPE ffunE[val _]/=.
       by move: yP; rewrite !inE orbF => /eqP?; subst; rewrite eqxx/= -H in_fnd.
     by apply: is_mgu_deref_sigma.
-  destruct t as [| |v'|] => //.
+  destruct t as [|v'|] => //.
   simpl in *.
   case: fndP => vx/= H.
     apply: IH => //.
@@ -2180,7 +2180,8 @@ Proof.
   have D : disjoint_L s [:: (deref s t1, deref s t2)].
     by rewrite disjoint_L_cons !acyclic_deref_disjoint//disjoint_L0.
   have:= exists_montanari A D (ex_intro _ sx _).
-  rewrite /unifier/= andbT /unif_pair/map_prod1 H1 H2 eqxx => /(_ (conj isT isT)).
+  rewrite /unifier/= andbT /unif_pair/map_prod1 H1 H2 eqxx => /(_ fset0).
+  rewrite fdisjointX0 /= => /(_ (And3 isT isT isT)).
   case M: montanari => [s'|]// _.
   by eexists.
 Qed.
