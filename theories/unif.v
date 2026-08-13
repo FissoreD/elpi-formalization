@@ -2043,8 +2043,6 @@ Definition is_mgu (mgu s : Sigma) :=
 Definition mgu_help base mgu l :=
   forall s, acyclic s -> unifier s l -> is_mgu base s -> is_mgu mgu s.
 
-Definition mgu := mgu_help fmap0.
-
 Lemma mgu_help_refl b l: mgu_help b b l.
 Proof. by move=> *. Qed.
 
@@ -2152,3 +2150,30 @@ Proof.
     have {M}IH := IH _ (acyclic_sigma_deref_sigma vt D2 A) (disjoint_deref_sigma_deref_list A D2 vt D3) M.
     by apply: mgu_help_deref_sigma IH; rewrite fdisjointX1 in D1.
 Qed.
+
+Definition mgu m t1 t2 :=
+  forall s, acyclic s -> deref s t1 = deref s t2 -> 
+    exists r : {fmap V -> V},
+      [/\ injectiveb r,  fdisjoint (domf r) (codomf r) &
+            forall t, ren r (deref s (deref m t)) = ren r (deref s t)].
+
+Lemma is_mgu0 s: is_mgu empty s.
+Proof.
+  exists fmap0; split => //.
+    by apply/injectiveP => -[x xP].
+    by rewrite fdisjoint0X.
+  by move=> t; rewrite !deref_empty.
+Qed.
+
+Lemma unify_mgu t1 t2 s:
+  unify t1 t2 empty = Some s -> mgu s t1 t2.
+Proof.
+  move=> U.
+  have H := montanariPmgu acyclic_sigma0 (disjoint_Lempty _) U.
+  rewrite !deref_empty in H.
+  move=> s' A D.
+  have:= H s' A; rewrite/=/unif_pair/map_prod1 D eqxx.
+  by move=> /(_ isT (is_mgu0 _)).
+Qed.
+
+Print Assumptions montanariPmgu.
