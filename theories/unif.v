@@ -2152,7 +2152,7 @@ Proof.
 Qed.
 
 Definition mgu m t1 t2 :=
-  forall s, acyclic s -> deref s t1 = deref s t2 -> 
+  deref m t1 = deref m t2 /\ forall s, acyclic s -> deref s t1 = deref s t2 -> 
     exists r : {fmap V -> V},
       [/\ injectiveb r,  fdisjoint (domf r) (codomf r) &
             forall t, ren r (deref s (deref m t)) = ren r (deref s t)].
@@ -2170,7 +2170,8 @@ Lemma unify_mgu t1 t2 s:
 Proof.
   move=> U.
   have H := montanariPmgu acyclic_sigma0 (disjoint_Lempty _) U.
-  rewrite !deref_empty in H.
+  rewrite !deref_empty in H; split.
+    by have:= unify_correct acyclic_sigma0 U.
   move=> s' A D.
   have:= H s' A; rewrite/=/unif_pair/map_prod1 D eqxx.
   by move=> /(_ isT (is_mgu0 _)).
