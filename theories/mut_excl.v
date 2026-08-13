@@ -377,48 +377,39 @@ Proof.
 Qed.
 
 
-Lemma H_head_ren_aux sP hd q x y z w:
-  (refresh_for y) hd -> (refresh_for x) hd ->
-  (refresh_for z) q -> (refresh_for w) q ->
+Lemma H_head_ren_aux sP hd q (x y:renaming_for hd) (z w: renaming_for q):
   [disjoint codomf z & codomf x] ->
   [disjoint codomf w & codomf y] ->
   (H_head u sP (ren z q) (ren x hd)) = H_head u sP (ren w q) (ren y hd).
 Proof.
-  move=> ++++ D2 D3.
-  elim: q hd => //=[p|f Hf a _] [p'|//|f' a']//=.
-  rewrite/refresh_for/= !fsubUset -!andbA.
-  move => /and3P[f'y a'y iy] /and3P[f'x a'x ix] /and3P[fz az iz] /and3P[fw aw iw].
-  have {Hf} := Hf f'.
-  rewrite /refresh_for ?(f'y, iy, f'x, ix, fz, iz, fw, iw)// .
-  move=> /(_ isT isT isT isT) ->.
-  case HH: H_head => [[|[]]|]//=.
+  move: x y z w => [[x/= Ix Dx] Vx] [[y/= Iy Dy] Vy][[z/= Iz Dz] Vz][[w/= Iw Dw] Vw]/= D1 D2.
+  elim: q hd Vx Vy Vz Vw => //=[p|f Hf a Ha][p'|//|f' a']//=.
+  rewrite !fsubUset => /andP[fx' ax'] /andP[fy' ay'] /andP[fz az] /andP[fw aw].
+  have {Hf} := Hf f' fx' fy' fz fw.
+  case: H_head => [s'|]//=; case: H_head => [s|]//=[?]; subst.
+  case: s => //=-[]//=_ s.
   have ->// : isSome (unify (ren z f) (ren x f') empty) = isSome (unify (ren w f) (ren y f') empty).
-  have:= @unif_ren x y z w f f'.
-  rewrite/refresh_for ?(f'y, iy, f'x, ix, fz, iz, fw, iw).
   have H: vars (ren z f) # vars (ren x f').
     apply: fdisjointWl (vars_tm_ren_sub fz) _.
-    by apply: fdisjointWr (vars_tm_ren_sub f'x) _.
-  move=> /(_ isT isT isT isT H).
+    by apply: fdisjointWr (vars_tm_ren_sub _) _. 
+  have/=:= @unif_ren f f' (mk_renfA Ix Dx fx') (mk_renfA Iy Dy fy') (mk_renfA Iz Dz fz) (mk_renfA Iw Dw fw) H.
   case U1: unify => //=; first by move=> /(_ isT)->.
-  have:= @unif_ren y x  w z f f'.
-  rewrite/refresh_for ?(f'y, iy, f'x, ix, fz, iz, fw, iw).
   have H': vars (ren w f) # vars (ren y f').
     apply: fdisjointWl (vars_tm_ren_sub fw) _.
     by apply: fdisjointWr (vars_tm_ren_sub _) _.
-  move=> /(_ isT isT isT isT H').
-  by rewrite U1; case: unify => //= _ /(_ isT).
+  have/=:= @unif_ren f f' (mk_renfA Iy Dy fy') (mk_renfA Ix Dx fx') (mk_renfA Iw Dw fw) (mk_renfA Iz Dz fz) H'.
+  by rewrite U1; case: unify => // ?/(_ isT).
 Qed.
 
-Lemma good_ren_fresh s t q: 
-  vars_tm t `<=` vars_tm q -> vars_tm q `<=` s -> refresh_for (fresh_tm s empty q).2 t.
+Lemma good_ren_fresh s q: 
+  renaming_forP q (fresh_tm (vars q `|` s) empty q).2.
 Proof.
-  move=> Hx H.
-  have:= @fresh_tm_def s empty q.
-  rewrite/refresh_for.
-  rewrite /=fsub0set injectiveb0 => /(_ isT H isT).
+  have:= @fresh_tm_def (vars q `|` s) empty q.
+  rewrite/renaming_forP.
+  rewrite /=fsub0set injectiveb0 => /(_ isT (fsubsetUl _ _) isT).
   move=> [x [H1 HH I1 D1]]; rewrite cat0f in H1; subst.
-  apply/andP; split => //.
-  by apply/fsubset_trans/fresh_tm_sub1.
+  do 2 split => //; last by apply/fsubset_trans/fresh_tm_sub1.
+  by apply: fresh_tm_acyclic; rewrite//?(codomf0,acyclic_ren0,fdisjointX0,fsubsetUl). 
 Qed.
 
 Lemma H_head_ren sP fv1 fv2 t xs fx fy q:
@@ -433,7 +424,11 @@ Proof.
   set W:= fresh_tm _ _ _.
   set Z:= fresh_tm _ _ _.
   move=> H1 H2.
-  apply: H_head_ren_aux; only 1-4: by apply: good_ren_fresh; rewrite //fsubsetUl.
+  change W.2 with (ren_map (renaming_forPM (good_ren_fresh fx q))).
+  change X.2 with (ren_map (renaming_forPM (good_ren_fresh (fresh_rules fv1 xs).1 t))).
+  change Z.2 with (ren_map (renaming_forPM (good_ren_fresh fy q))).
+  change Y.2 with (ren_map (renaming_forPM (good_ren_fresh (fresh_rules fv2 xs).1 t))).
+  apply: H_head_ren_aux => //=.
   apply: fdisjointWr (disj_codom0R _ _).
   apply: fsubset_trans (fresh_tm_codom2 _ _ _) _.
   rewrite codomf0 fset0U//.
