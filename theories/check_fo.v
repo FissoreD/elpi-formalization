@@ -11,7 +11,7 @@ Section checker.
     end. 
 
   (* There is cut and after the cut there are only call to Det preds *)
-  Fixpoint check_atoms sP (s: seq Atom) :=
+  Fixpoint check_atoms (sP : program) (s: seq Atom) :=
     match s with
     | [::] => true
     | cut :: xs => all (check_atom sP) xs || check_atoms sP xs
@@ -22,7 +22,7 @@ Section checker.
     (tm_is_det sP head == false) || 
       check_atoms sP prems.
 
-  Definition check_rules (p:program) :=
+  Definition check_rules p :=
     all (fun x => check_rule p x.(head) x.(premises)) p.(rules).
 End checker.
 
