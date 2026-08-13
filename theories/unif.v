@@ -1599,8 +1599,27 @@ Qed.
 Notation injective := (@injectiveb _ V).
 Notation "A ∧ B" := (A && B) (at level 15).
 
-Definition refresh_for x t := [&& (vars t `<=` domf x) & injective x].
-  
+
+Definition renaming_forP t (m:{fmap V -> V}) :=
+  injectiveb m /\ fdisjoint (domf m) (codomf m) /\ vars t `<=` domf m.
+
+Record renaming := mk_ren {
+  ren_map :> {fmap V -> V};
+  ren_injective : injectiveb ren_map;
+  ren_disjoint : fdisjoint (domf ren_map) (codomf ren_map)
+}.
+
+Record renaming_for (t: Tm) := mk_renf {
+  renf_map :> renaming;
+  renf_sub : vars t `<=` domf (ren_map renf_map)
+}.
+
+Definition mk_renfA t (m:{fmap V -> V}) (H: injectiveb m) 
+  (D:fdisjoint (domf m) (codomf m)) (S: vars t `<=` domf m) :=
+   @mk_renf _ (mk_ren H D) S.
+
+Definition renaming_forPM t m (H : renaming_forP t m) := mk_renfA (proj1 H) (proj1 (proj2 H)) (proj2 (proj2 H)).
+
 Lemma vars_tm_ren_sub w t1: vars_tm t1 `<=` domf w -> vars (ren w t1) `<=` codomf w.
 Proof.
   elim: t1 => //=[v|f Hf a Ha].
@@ -1670,7 +1689,6 @@ Proof.
   move/codomfP: vP => [x].
   case: fndP => //kf [<-]; exists [`kf].
   by rewrite valPE.
-  (* case: fndP => // kf [?]; subst; exists x, kf; done. *)
 Qed.
 
 Definition choose_in (s:{fmap V -> V}) (v:V) (vP: v \in codomf s)  := 
@@ -1787,16 +1805,13 @@ Lemma deref_all_deref_aux s r t k:
   ] t = deref_all (deref s (ren r t)).
 Proof.
   move=> ++ S.
-  elim: t => //=[v|f Hf a Ha].
-    rewrite !fsub1set => vr vk.
-    set X := [ffun _ => _].
-    rewrite in_fnd/= (@in_fnd _ _ X)/= ffunE/= in_fnd; clear X.
-    set X := [ffun _ => _].
-    case: fndP => ks.
-      by rewrite (@in_fnd _ _ X)/= ffunE valPE.
-    by rewrite (@not_fnd _ _ X)//=.
-  rewrite /= !fsubUset => /andP[H1 H2] /andP[H3 H4].
-  rewrite -Hf//-Ha//; f_equal.
+  elim: t => //[v|f Hf a Ha]; last first.
+    rewrite /= !fsubUset => /andP[H1 H2] /andP[H3 H4].
+    rewrite -Hf//-Ha//; f_equal.
+  rewrite !fsub1set => vr vk.
+  rewrite ren_V !deref_V 2!in_fnd ffunE in_fnd.
+  case: fndP => H; [rewrite in_fnd|by rewrite not_fnd].
+  by rewrite ffunE valPE/=.
 Qed.
 
 Lemma deref_all_deref s r t:
@@ -1886,16 +1901,17 @@ Qed.
 
 (*SNIPT: unif_ren1 *)
 Lemma unif_ren:
-  forall x y z w t1 t2,
-  refresh_for w t1 -> refresh_for y t2 -> refresh_for z t1 -> refresh_for x t2 ->
+  forall t1 t2 (x y: renaming_for t2) (z w: renaming_for t1),
   [disjoint vars_tm (ren z t1) & vars_tm (ren x t2)] ->
   unify (ren w t1) (ren y t2) empty -> unify (ren z t1) (ren x t2) empty.
 (*ENDSNIPT: unif_ren1 *)  
 Proof.
-  move=> x y z w t1 t2 /andP[R1 I1] /andP[R2 I2] /andP[R3 I3] /andP[R4 I4] C1.
-  apply: unif_ren_ac => //; apply: alpha_equiv_renR => //.
-    exists w; split => //.
-  exists y; split => //.
+  move=> t1 t2 x y z w.
+  apply: unif_ren_ac.
+    apply: alpha_equiv_renR; rewrite ?(ren_injective,renf_sub)//.
+    exists w; split; rewrite ?(ren_injective,renf_sub)//.
+  apply: alpha_equiv_renR; rewrite ?(ren_injective,renf_sub)//.
+  exists y; split; rewrite ?(ren_injective,renf_sub)//.
 Qed.
 
 Lemma eq_app f1 a1 f2 a2:
@@ -1957,10 +1973,6 @@ Proof. move=> A; rewrite /unify/montanari_deref deref2//. Qed.
 
 Lemma add_eq0 a b: ((addn a b) == 0) = (a == 0) && (b == 0).
 Proof. case: a => //. Qed.
-
-Lemma good_ren_app x f a: refresh_for x (Tm_App f a) = refresh_for x f && refresh_for x a.
-Proof. by rewrite/refresh_for/= fsubUset !andbA -!(andbC (injective x)) !andbA andbb. Qed.
-
 
 Lemma mp_composition b s:
   mp b s -> exists x : Sigma, s = composition b x.
@@ -2133,14 +2145,8 @@ Proof.
     by apply: mgu_help_deref_sigma IH; rewrite//=inE eq_sym.
   - rewrite disjoint_L_cons/= => /and3P[D1 D2 D3] M.
     have {M}IH := IH _ (acyclic_sigma_deref_sigma vt D2 A) (disjoint_deref_sigma_deref_list A D2 vt D3) M.
-    by apply: mgu_help_deref_sigma IH; rewrite fdisjointX1 in D1.
+    by apply: mgu_help_deref_sigma IH; rewrite fdisjointX1 in D1. 
 Qed.
-
-Record renaming := mk_ren {
-  ren_map :> {fmap V -> V};
-  ren_injective : injectiveb ren_map;
-  ren_disjoint : fdisjoint (domf ren_map) (codomf ren_map)
-}.
 
 Definition mgu m t1 t2 :=
   deref m t1 = deref m t2 /\ forall s, acyclic s -> deref s t1 = deref s t2 -> 
