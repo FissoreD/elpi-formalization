@@ -2,22 +2,6 @@ From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 
 Section aux.
-  Lemma ltn_leq_trans m n p :
-    m < n -> n <= p -> m < p.
-  Proof.
-    move=> Hmn Hnp.
-    apply: leq_trans Hmn Hnp.
-  Qed.
-
-  Lemma add_succ {x}: x = x.+1 -> False.
-  Proof. elim: x => // n H; inversion 1; auto. Qed.
-
-  Lemma flatten_empty {T R : Type} {l: list T}:
-    @flatten R [seq [::] | _ <- l] = [::].
-  Proof. elim: l => //. Qed.
-
-  Lemma size_list {T : Type} {l1 l2: list T}: l1 = l2 -> size l1 = size l2.
-  Proof. move=>->//. Qed.
 
   Lemma cat_nil {T: Type} {l1 l2: list T}: l2 = l1 ++ l2 -> l1 = [::].
   Proof.
@@ -27,41 +11,6 @@ Section aux.
     rewrite (catA _ [::x])=>/IH.
     case: ys => //.
   Qed.
-
-  Lemma cat_nil1 {T: Type} {l1 l2: list T}: l2 = l2 ++ l1 -> l1 = [::].
-  Proof.
-    elim: l2 l1 => [|x xs IH] l1.
-      case: l1 =>//.
-    rewrite cat_cons=>-[].
-    apply: IH.
-  Qed.
-
-  Lemma map_cats0 {T R : Type} (F : list T -> list R) (g:list (list T)): map (fun x => F x ++ [::]) g = map F g.
-  Proof. elim: g => //=x xs->; rewrite cats0//. Qed.
-
-  Lemma map_map_cats0 {T R : Type} (F: list T -> list R) g: map (map (fun x => F x ++ [::])) g = map (map F) g.
-  Proof. elim: g => //= x xs->; rewrite map_cats0//. Qed.
-
-  Lemma map_cats_same {T : Type} (X Y:list (list T)) hd: 
-    X = Y -> [seq x ++ hd | x <- X] = [seq x ++ hd | x <- Y].
-  Proof.
-    move=>->//.
-  Qed.
-
-  Lemma map_cats_same1 {T R : Type} (P F: list T -> list R) X Y hd: 
-    map P X = map F Y -> [seq P x ++ hd | x <- X] = [seq F x ++ hd | x <- Y].
-  Proof.
-    elim: X Y => //=.
-      move=>[]//.
-    move=> x xs IH []//=y ys [H1 H2].
-    rewrite (IH ys)// H1//.
-  Qed.
-
-  Lemma cons_false {T: Type} {x:T} {xs}: x :: xs = xs -> False.
-  Proof. elim: xs x => //x xs IH y[_/IH]//. Qed.
-
-  Lemma addSn_false {a b}: a = a + b.+1 -> False.
-  Proof. elim: a b => // n H n1 []/H//. Qed.
 
   Lemma cat_same_tl {T : Type} {l1 l2 l3: list T}: l1 ++ l3 = l2 ++ l3 -> l1 = l2.
   Proof. 
@@ -74,24 +23,6 @@ Section aux.
     move=>[<-]/IH->//.
   Qed.
 
-  Lemma split_list_size {T : Type} (x y : nat) (z : seq T) :
-    x + y <= size z ->
-    exists r s : seq T, size r = x /\ r ++ s = z.
-  Proof.
-    move=> Hle.
-    exists (take x z), (drop x z).
-    split; last first.
-    - rewrite cat_take_drop//.
-    - rewrite size_take.
-      have {}Hle: x <= size z.
-        apply: leq_trans (leq_addr _ _) Hle.
-      case: (@eqVneq _ x (size z)).
-        move=>->; rewrite if_same//.
-      move=> H.
-      have:= ltn_neqAle x (size z).
-      rewrite Hle H =>->//.
-  Qed.
-
   Lemma cat_cat_size {T:Type} {A B C D : list T}:
     size A = size C -> A ++ B = C ++ D -> ((A = C) * (B = D))%type.
   Proof.
@@ -99,32 +30,6 @@ Section aux.
     have {}IH := IH _ _ _ H1 H3.
     rewrite !IH//.
   Qed.
-    Lemma size_exists {T:Type} (xs : seq T) n :
-    size xs <= n -> exists t, t + size xs = n.
-  Proof.
-    move=> H.
-    exists (n - size xs).
-    rewrite addnC.
-    apply: subnKC H.
-  Qed.
-
-  Lemma size_exists2 {T : Type} (lA lB : seq T) n :
-    size lB + size lA <= n -> exists t, size lA + t = n.
-  Proof.
-    move=> H.
-    have Hle: size lA <= n.
-      by apply: leq_trans H; rewrite leq_addl.
-    exists (n - size lA).
-    apply: subnKC Hle.
-  Qed.
-
-  Lemma leq_exists a b:
-    a <= b -> exists x, a + x = b.
-  Proof.
-    move=> H; exists (b - a).
-    rewrite addnC subnK//.
-  Qed.
-
 
   Lemma suffix_consL {T:eqType} (x:T) l1 l2:
     suffix l1 (x::l2) -> l1 = (x::l2) \/ suffix l1 l2.

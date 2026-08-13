@@ -4,10 +4,6 @@ From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 From det Require Import finmap ctx.
 
-Lemma orPT b1 b2 : (b1 || b2) -> (b1 + b2)%type.
-by case: b1; case: b2; constructor.
-Qed.
-
 Notation "[subst]" := ltac:(subst).
 Notation "[subst1]" := ltac:(move=> ?;subst).
 Notation "[subst2]" := ltac:(move=> ??;subst).
@@ -121,8 +117,6 @@ Elpi Export derive.eqbOK.register_axiomx.
 Definition Sigma := {fmap V -> Tm}.
 (*ENDSNIP: sigma_type*)
 
-Definition empty : Sigma := empty.
-
 Definition is_Sigma (x : Sigma) := unit.
 Lemma is_Sigma_inhab : forall x, is_Sigma x. Proof. exact (fun x => tt). Qed.
 Definition Sigma_eqb (x y : Sigma) := x == y.
@@ -132,7 +126,6 @@ Elpi derive.eqbOK.register_axiomx Sigma is_Sigma is_Sigma_inhab Sigma_eqb Sigma_
 HB.instance Definition _ : hasDecEq Sigma := Equality.copy Sigma _.
 
 Definition sigT := {fmap P -> S}.
-Definition empty_sig : sigT := [fmap].
 
 Notation fvS := {fset V}.
 
@@ -227,7 +220,7 @@ Fixpoint fresh_tm fv m t : {fset V} * {fmap V -> V} :=
 
 Fixpoint deref (s: Sigma) (tm:Tm) :=
   match tm with
-  | Tm_V V => Option.default tm (lookup V s)
+  | Tm_V V => odflt tm (s.[?V])
   | Tm_P _ => tm
   | Tm_App h ag => Tm_App (deref s h) (deref s ag)
   end.
@@ -237,7 +230,7 @@ Definition derefkv k v (tm:Tm) := deref [fmap].[k<-v] tm.
 Lemma deref_App s f a: deref s (Tm_App f a) = Tm_App (deref s f) (deref s a).
 Proof. by []. Qed.
 
-Lemma deref_empty t: deref empty t = t.
+Lemma deref_empty t: deref fmap0 t = t.
 Proof. elim: t => //=[v|f -> a ->]//; rewrite not_fnd//. Qed.
 
 Definition codom_vars (s:Sigma) := 
@@ -319,7 +312,7 @@ Proof.
   by exists [`ksk]; apply/add_some; rewrite -!in_fnd fnd_cat yP.
 Qed.
 
-Lemma codom0_set v s: codom empty.[v <- s] = [::s].
+Lemma codom0_set (T:choiceType) (K:Type) (v:T) (s:K): codom fmap0.[v <- s] = [::s].
 Proof. by rewrite/= codomE/= fsetU0 enum_fset1/= ffunE//=eqxx. Qed.
 
 Lemma codom_vars_set s k v:
@@ -357,16 +350,16 @@ Proof.
   by rewrite domf_rem; apply/fsubsetP => x; rewrite inE => /andP[_ ->].
 Qed.
 
-Lemma empty_rem k: empty.[~k] = empty.
+Lemma empty_rem {T:choiceType} K k: (fmap0 : {fmap T -> K}).[~k] = (fmap0 : {fmap T -> K}).
 Proof. by apply/fmapP => p;rewrite fnd_rem1 not_fnd//if_same. Qed.
 
-Lemma acyclic_sigma0: acyclic empty.
+Lemma acyclic_sigma0: acyclic fmap0.
 Proof. by rewrite/acyclic fdisjoint0X. Qed.
 
-Lemma codom0: codom empty = [::].
-Proof. by rewrite /empty codomE/= enum_fset0. Qed.
+Lemma codom0 (T:choiceType) K: codom (fmap0 : {fmap T -> K}) = [::].
+Proof. by rewrite /fmap0 codomE/= enum_fset0. Qed.
 
-Lemma codom_vars0: codom_vars empty = fset0.
+Lemma codom_vars0: codom_vars fmap0 = fset0.
 Proof. by rewrite/codom_vars codom0. Qed.
 
 Goal ~ (acyclic [fmap].[IV 0 <- Tm_V (IV 0)]).
@@ -390,7 +383,7 @@ Definition acyclic_ren (m: {fmap V -> V}) :=
   (* acyclic [fmap s => Tm_V m.[valP s]]. *)
   [disjoint domf m & codomf m].
 
-Lemma acyclic_ren0: acyclic_ren ctx.empty.
+Lemma acyclic_ren0: acyclic_ren ctx.fmap0.
 Proof. rewrite/acyclic_ren fdisjoint0X//. Qed.
 
 Lemma fresh_Tm_App fv m l r :
@@ -403,13 +396,10 @@ Qed.
 
 Fixpoint ren (s: {fmap V -> V}) tm :=
   match tm with
-  | Tm_V V => Tm_V (odflt V (lookup V s))
+  | Tm_V V => Tm_V (odflt V (s.[?V]))
   | Tm_P _ => tm
   | Tm_App h ag => Tm_App (ren s h) (ren s ag)
   end.
-
-Lemma ren_empty t: ren fmap0 t = t.
-Proof. elim: t => //=[v|f -> a ->]//; rewrite not_fnd//. Qed.
 
 Lemma injectiveb0 : injectiveb (fmap0 : {fmap V -> V}).
 by apply/injectiveP=> -[].
@@ -435,7 +425,7 @@ Lemma set0IN (T: choiceType) (s: {fset T}): s = fset0 \/ exists k, k \in s.
 Proof. have:= fset_0Vmem s => -[->|]; auto => -[x H]; right; exists x; auto. Qed.
 
 (* Lemma deref1_singl k s t t':
-  s = ctx.empty.[k <- t'] -> vars_tm t `<=` vars_tm t' ->
+  s = ctx.fmap0.[k <- t'] -> vars_tm t `<=` vars_tm t' ->
   k \in vars_tm t -> k \in vars_tm (deref1 s t).
 Proof.
   move=> ->; elim: t t' => [p|d|v|f Hf a Ha] t'//; try by rewrite/= fsubset0 => /eqP->.
@@ -511,25 +501,14 @@ Proof.
   by rewrite !inE => /orP[/Hf|/Ha]/orP[]->; rewrite //!orbT.
 Qed.
 
-Lemma deref_succ_id1 k s: 
-  k \in domf s -> k \notin codom_vars s ->
-    forall t, k \notin vars_tm (deref s t).
+Lemma deref_rem s t s1:
+  fdisjoint s (vars_tm t) ->
+  deref s1.[\ s] t = deref s1 t.
 Proof.
-  move=> D C.
-  elim => //=[v|f Hf a Ha]; last by rewrite inE (negbTE Hf)//.
-  case: fndP => vs/=.
-    move: C; apply: contra => H.
-    apply/fsubsetP/H/codom_vars_sub_vt.
-  rewrite inE; case: eqP => ?//; subst.
-  by rewrite D in vs.
-Qed.
-
-Lemma deref_rem s k t:
-  k \notin vars_tm t -> deref s.[~ k] t = deref s t.
-Proof.
-  elim: t => //= [v|f Hf a Ha].
-    by rewrite/deref; rewrite inE fnd_rem1 eq_sym => ->.
-  by rewrite inE => /norP[/Hf->/Ha->].
+  elim: t => //[v|f Hf a Ha/=].
+    by rewrite fdisjointX1 !deref_V fnd_rem => /negbTE->//.
+  rewrite fdisjointXU => /andP[sf sa].
+  by rewrite Ha//Hf.
 Qed.
 
 Lemma deref_codom k s t:
@@ -578,23 +557,6 @@ Proof. by move=> H; rewrite/deref/=deref_aux_ren_V. Qed. *)
 
 Lemma ren_V b v: ren b (Tm_V v) = Tm_V (odflt v b.[?v]). by []. Qed.
 
-Lemma not_in_deref_V s v: v \notin domf s -> deref s (Tm_V v) = Tm_V v.
-Proof. move=> H; rewrite/= not_fnd//. Qed.
-
-Lemma ren_isP b tm p: ren b tm = Tm_P p -> exists p', tm = Tm_P p'.
-Proof. by case: tm => [p'|v|f a]//; eexists. Qed.
-
-Lemma ren_isApp b hd f2 a2: ren b hd = Tm_App f2 a2 -> exists f1 a1, hd = Tm_App f1 a1.
-Proof. case: hd => [p|v|f1 a1]//=; eauto. Qed.
-
-Lemma rename_isApp fv hd fv' f2 a2 m:
-  rename fv hd m = (fv', Tm_App f2 a2) ->
-  exists f1 a1, hd = Tm_App f1 a1.
-Proof.
-  rewrite/rename !push => -[?+]; subst.
-  case: hd => [p|v|f1 a1]//=; eauto.
-Qed.
-
 Definition fresh_atom fv a m :=
   match a with
   | cut => (fv, m, cut)
@@ -611,7 +573,7 @@ Definition fresh_rule fv r :=
 
 Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
 
-Lemma vars_sigma0: vars_sigma empty = fset0.
+Lemma vars_sigma0: vars_sigma fmap0 = fset0.
 Proof. by rewrite/vars_sigma domf0 codom_vars0 fsetU0. Qed.
 
 Definition fresh_rules fv rules :=
@@ -738,9 +700,6 @@ Proof.
   by apply: callabe_some_deref; rewrite X.
 Qed.
 
-Lemma varsU_empty: codom empty = [::].
-Proof. apply/eqP; by rewrite -size_eq0 size_map enum_fset0. Qed.
-
 Definition ground t := vars_tm t == fset0.
 
 Lemma ground_V v: ground (Tm_V v) = false.
@@ -749,7 +708,7 @@ Proof. by rewrite/ground/=; apply:contraFF erefl => /eqP/fsetP /(_ v); rewrite !
 Lemma ground_app f a: ground (Tm_App f a) = ground f && ground a.
 Proof. by rewrite /ground/= fsetU_eq0. Qed.
 
-Lemma acyclic_sigma_set_D k t: ground t -> acyclic empty.[k <- t].
+Lemma acyclic_sigma_set_D k t: ground t -> acyclic fmap0.[k <- t].
 Proof.
   rewrite acyclic_sigma_set empty_rem fdisjoint0X acyclic_sigma0 codom_vars0.
   by rewrite /ground => /eqP->//.
@@ -767,9 +726,6 @@ Proof. by move=> ->. Qed.
 
 Lemma isNoneP T (P : option T) : P = None -> ~~ P.
 Proof. by move=> ->. Qed.
-
-Lemma isNoneP1 T (P : option T) : ~~ P -> P = None.
-Proof. case: P => //. Qed.
 
 Fixpoint term_arg t :=
   match t with

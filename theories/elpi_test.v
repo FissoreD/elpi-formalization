@@ -15,7 +15,7 @@ Fixpoint of_goals l :=
 Fixpoint of_alt l :=
   match l with
   | [::]%SEQ => [::]%A
-  | [:: x & xs]%SEQ => (empty, of_goals x) :: (of_alt xs)
+  | [:: x & xs]%SEQ => (fmap0, of_goals x) :: (of_alt xs)
   end.
 
 Definition clean_ca_G f (g : Atom * alts) :=
@@ -36,13 +36,13 @@ with clean_ca (ats: alts) : alts :=
   end.
 
 Definition tester l r :=
-  clean_ca (tree_to_stack l empty nilC) = r.
+  clean_ca (tree_to_stack l fmap0 nilC) = r.
 
 Goal forall B B0,
 let f x := (Unexplored (call x)) in
 let g x := ([:: (call x) ]%SEQ) in
-  tester (And (Or (Some OK) empty (f B)) (g B0) KO) 
-    ((empty, (call B,[::]) :: ((call B0,[::]) :: nilC)) :: nilC).
+  tester (And (Or (Some OK) fmap0 (f B)) (g B0) KO) 
+    ((fmap0, (call B,[::]) :: ((call B0,[::]) :: nilC)) :: nilC).
 Proof.
   by move=> //.
 Qed.
@@ -54,7 +54,7 @@ Goal forall A B D0 D,
   let f x := (Unexplored (call x)) in
   let g x := ([::call x]%SEQ) in
   tester 
-    (And (Or ((Some (Or (Some (Unexplored cut)) empty (f A)))) empty (f B)) (g D0) (f D)) 
+    (And (Or ((Some (Or (Some (Unexplored cut)) fmap0 (f A)))) fmap0 (f B)) (g D0) (f D)) 
     (of_alt [:: 
       [:: (cut, of_alt [:: [:: (callN B); (callN D0)]%SEQ]); (callN D)];
       [:: (callN A); (callN D0)]; 
@@ -68,9 +68,9 @@ Qed.
 Goal forall B C D E F,
   let f x := (Unexplored (call x)) in
   let g x := ([::call x]%SEQ) in
-  (* (A \/_{empty} B) /\_C ((! \/_{empty} D) /\_{E} F) *)
+  (* (A \/_{fmap0} B) /\_C ((! \/_{fmap0} D) /\_{E} F) *)
   tester 
-    (And (Or (Some OK) empty (f B)) (g C) (And (Or (Some (Unexplored cut)) empty (f D)) (g E) (f F)))
+    (And (Or (Some OK) fmap0 (f B)) (g C) (And (Or (Some (Unexplored cut)) fmap0 (f D)) (g E) (f F)))
     (of_alt [:: 
       [:: (cut, (of_alt [:: [:: callN B; callN C]])); callN F];
       [:: callN D; callN E]; 
@@ -86,7 +86,7 @@ Definition g x := ([::call x]%SEQ).
   let f x := (Unexplored (call x)) in
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   tester 
-    (And (Or ((Or (Unexplored cut) empty (f A))) empty (f B)) KO (Or (Unexplored cut) empty (f C))) 
+    (And (Or ((Or (Unexplored cut) fmap0 (f A))) fmap0 (f B)) KO (Or (Unexplored cut) fmap0 (f C))) 
     (of_alt [:: 
       [::cut nilC ; cut nilC ];
       [::cut nilC ; call p C]]%SEQ).
@@ -100,7 +100,7 @@ Goal forall A B C0 C,
   let g x := ([::call x]%SEQ) in
   (* (((! \/ A) \/ B)) /\ (! \/ C)*)
   tester 
-    (And (Or ((Some (Or (Some (Unexplored cut)) empty (f A)))) empty (f B)) (g C0) (Or (Some (Unexplored cut)) empty (f C)))
+    (And (Or ((Some (Or (Some (Unexplored cut)) fmap0 (f A)))) fmap0 (f B)) (g C0) (Or (Some (Unexplored cut)) fmap0 (f C)))
     (of_alt[:: 
       [::(cut, (of_alt [:: [:: callN B; callN C0]])); (cut, (of_alt [::[:: callN A; callN C0]; [:: callN B; callN C0]]))];
       [::(cut, (of_alt [:: [:: callN B; callN C0]])); callN C];
@@ -116,7 +116,7 @@ Goal forall A B0,
     (* (OK \/ A) /\_B0 OK *)
   let f x := (Unexplored (call x)) in
   let g x := ([::call x]%SEQ) in
-  tester (And (Or (Some OK) empty (f A)) (g B0) OK) (of_alt [::[::]; [::callN A; callN B0]]%SEQ).
+  tester (And (Or (Some OK) fmap0 (f A)) (g B0) OK) (of_alt [::[::]; [::callN A; callN B0]]%SEQ).
 Proof.
   move=> A B0 p.
   rewrite/tree_to_stack//=.
@@ -126,7 +126,7 @@ Goal forall A B0,
   (* (KO \/ B) /\_b0 B0  *)
   let f x := (Unexplored (call x)) in
   let g x := ([::call x]%SEQ) in
-  tester (And (Or (Some KO) empty (f A)) (g B0) (f B0))
+  tester (And (Or (Some KO) fmap0 (f A)) (g B0) (f B0))
   (of_alt [::[::callN A; callN B0]]%SEQ).
 Proof.
   move=> A B0 p.
@@ -138,8 +138,8 @@ Goal forall x y z w a,
   let g x := ([::call x]%SEQ) in
   tester (
     And 
-      (Or (Some (f x)) empty (f y)) (g a) 
-      (Or (Some (f z)) empty (f w))) 
+      (Or (Some (f x)) fmap0 (f y)) (g a) 
+      (Or (Some (f z)) fmap0 (f w))) 
     (of_alt [:: [:: callN x; callN z];
     [:: callN x; callN w];
     [:: callN y; callN a]]%SEQ).
@@ -152,8 +152,8 @@ Goal forall z w a,
   let f x := (Unexplored (call x)) in
   tester (
     And 
-      (Or (Some OK) empty KO) (g a) 
-      (Or (Some (f z)) empty (f w))) 
+      (Or (Some OK) fmap0 KO) (g a) 
+      (Or (Some (f z)) fmap0 (f w))) 
     (of_alt [:: [:: callN z]; [:: callN w]]%SEQ).
 Proof.
   move=>p z w a.
@@ -166,8 +166,8 @@ Goal forall a b c d,
   let f x := (Unexplored (call x)) in
   tester (
     And 
-      (Or (Some KO) empty (f a)) (g b) 
-      (Or (Some (f c)) empty (f d))) 
+      (Or (Some KO) fmap0 (f a)) (g b) 
+      (Or (Some (f c)) fmap0 (f d))) 
     (* [:: [:: callN a; call b] ]. *)
     (of_alt [:: [:: callN a; callN c]; [::callN a; callN d] ]%SEQ).
 Proof.
@@ -179,7 +179,7 @@ Goal forall a b,
 (* (! \/ a) \/ b *)
   tester (
     Or 
-      (Some (Or (Some (Unexplored cut)) empty (Unexplored (call a)))) empty
+      (Some (Or (Some (Unexplored cut)) fmap0 (Unexplored (call a)))) fmap0
       (Unexplored (call b)))
   (of_alt [:: [:: (cut, (of_alt[:: [:: callN b]]))]; [:: callN a]; [:: callN b]]%SEQ).
 Proof.
@@ -198,7 +198,7 @@ Qed. *)
 
 (* Goal forall A B C,
   let f x := (Unexplored (call x)) in
-  tester (And (Or (f A) empty (f B)) (KO) (f C))
+  tester (And (Or (f A) fmap0 (f B)) (KO) (f C))
   (of_alt[:: [:: callN A; call p C]]%SEQ).
 Proof.
   move=> s A B C p.
@@ -208,7 +208,7 @@ Qed. *)
 
 Goal forall A1 A2 B0 C0 B,
   let f x := (Unexplored (call x)) in
-  tester (And (Or (Some (f A1)) empty (f A2)) (g B0) (And KO (g C0) (f B)))
+  tester (And (Or (Some (f A1)) fmap0 (f A2)) (g B0) (And KO (g C0) (f B)))
   (of_alt [:: [:: callN A2 ; callN B0 ]]%SEQ).
 Proof.
   move=> * /=.
@@ -218,7 +218,7 @@ Qed.
 Goal forall b0 a b c, 
   tester (
     Or 
-      (Some (Or (Some (And (Unexplored (call c)) (g b0) (Unexplored cut))) empty (Unexplored (call a)))) empty
+      (Some (Or (Some (And (Unexplored (call c)) (g b0) (Unexplored cut))) fmap0 (Unexplored (call a)))) fmap0
       (Unexplored (call b)))
   (of_alt[:: [:: callN c; (cut, (of_alt[:: [:: callN b]]))]; [:: callN a]; [:: callN b]]%SEQ).
 Proof.
@@ -230,7 +230,7 @@ Qed.
 Goal forall B C Res,
   let f x := (Unexplored (call x)) in
   (* (OK \/ B) /\ (! \/ C) -> [cut_[B,Reset]; C; (B, Reset)] *)
-  tester (And (Or (Some OK) empty (f B)) (g Res) (Or (Some (Unexplored cut)) empty (f C))) 
+  tester (And (Or (Some OK) fmap0 (f B)) (g Res) (Or (Some (Unexplored cut)) fmap0 (f C))) 
     (of_alt[::[::(cut, (of_alt[::[:: callN B; callN Res]]))]; [::callN C]; [:: callN B; callN Res]]%SEQ).
 Proof.
   move=> B C Res p.
@@ -241,7 +241,7 @@ Qed.
 Goal forall B C Res Reempty,
   let f x := (Unexplored (call x)) in
   (* (OK \/ B) /\ (! /\ C) -> [cut_[]; C; (B, Reset)] *)
-  tester (And (Or (Some OK) empty (f B)) (g Res) (And (Unexplored cut) (g Reempty) (f C))) 
+  tester (And (Or (Some OK) fmap0 (f B)) (g Res) (And (Unexplored cut) (g Reempty) (f C))) 
     (of_alt[::[::(cut, nilC); callN C]; [:: callN B; callN Res]]%SEQ).
 Proof.
   move=> B C Res Reempty p/=.
@@ -252,7 +252,7 @@ Qed.
 Goal forall A B C C0,
   let f x := (Unexplored (call x)) in
   (* (A /\ ((! \/ B) \/ C) *)
-  tester (And (f A) (g C0) (Or (Some (Or (Some (Unexplored cut)) empty (f B))) empty (f C))) 
+  tester (And (f A) (g C0) (Or (Some (Or (Some (Unexplored cut)) fmap0 (f B))) fmap0 (f C))) 
   (of_alt [:: 
     [:: callN A; (cut, (of_alt[:: [:: callN C]]))]; 
     [:: callN A; callN B]; 
@@ -265,9 +265,9 @@ Qed.
 
 Goal forall A B C D E,
   let f x := (Unexplored (call x)) in
-  (* (A \/_{empty} B) /\_C ((! \/_{empty} D) \/_{empty} E) *)
+  (* (A \/_{fmap0} B) /\_C ((! \/_{fmap0} D) \/_{fmap0} E) *)
   tester 
-    (And (Or (Some (f A)) empty (f B)) (g C) (Or (Some (Or (Some (Unexplored cut)) empty (f D))) empty (f E))) 
+    (And (Or (Some (f A)) fmap0 (f B)) (g C) (Or (Some (Or (Some (Unexplored cut)) fmap0 (f D))) fmap0 (f E))) 
     (of_alt[:: 
     [:: callN A; (cut, (of_alt [:: [:: callN E]; [:: callN B; callN C]]))];
     [:: callN A; callN D]; [:: callN A; callN E];
@@ -286,9 +286,9 @@ Qed.
 *)
 Goal forall B C D E,
   let f x := (Unexplored (call x)) in
-  (* (OK \/_{empty} B) /\_C ((! \/_{empty} D) /\_{E} !) *)
+  (* (OK \/_{fmap0} B) /\_C ((! \/_{fmap0} D) /\_{E} !) *)
   tester 
-    (And (Or (Some OK) empty (f B)) (g C) (And (Or (Some (Unexplored cut)) empty (f D)) (g E) (Unexplored cut))) 
+    (And (Or (Some OK) fmap0 (f B)) (g C) (And (Or (Some (Unexplored cut)) fmap0 (f D)) (g E) (Unexplored cut))) 
     (of_alt [:: 
       [:: (cut, (of_alt[:: [:: callN B; callN C]])); (cut, nilC) ];
       [:: callN D; callN E]; 
@@ -303,7 +303,7 @@ Goal forall A B C,
   let f x := (Unexplored (call x)) in
   (* ((! \/ ! \/ A) \/ B) \/ C *)
   tester
-    (Or (Some (Or (Some (Or (Some (Unexplored cut)) empty ((Or (Some (Unexplored cut)) empty (f A))))) empty (f B))) empty (f C))
+    (Or (Some (Or (Some (Or (Some (Unexplored cut)) fmap0 ((Or (Some (Unexplored cut)) fmap0 (f A))))) fmap0 (f B))) fmap0 (f C))
     (of_alt[:: 
       [::(cut, (of_alt[:: [:: callN B]; [::callN C]]))];
       [::(cut, (of_alt[:: [:: callN B]; [::callN C]]))];
@@ -320,7 +320,7 @@ Goal forall A B C,
   let f x := (Unexplored (call x)) in
   (* ((! \/ ! \/ A) \/ B) \/ C *)
   tester 
-    (Or (Some (Or (Some (Or (Some (And (Unexplored cut) ([::]) OK)) empty ((Or (Some (Unexplored cut)) empty (f A))))) empty (f B))) empty (f C)) 
+    (Or (Some (Or (Some (Or (Some (And (Unexplored cut) ([::]) OK)) fmap0 ((Or (Some (Unexplored cut)) fmap0 (f A))))) fmap0 (f B))) fmap0 (f C)) 
     (of_alt[:: 
       [::(cut, (of_alt[:: [:: callN B]; [::callN C]]))];
       [::(cut, (of_alt[:: [:: callN B]; [::callN C]]))];
@@ -338,7 +338,7 @@ Goal forall A B C D0 D,
   let f x := (Unexplored (call x)) in
   (* (((! \/ ! \/ A) \/ B) \/ C) /\ D*)
   tester
-    (And (Or (Some (Or (Some (Or (Some (Unexplored cut)) empty ((Or (Some (Unexplored cut)) empty (f A))))) empty (f B))) empty (f C)) (g D0) (f D))
+    (And (Or (Some (Or (Some (Or (Some (Unexplored cut)) fmap0 ((Or (Some (Unexplored cut)) fmap0 (f A))))) fmap0 (f B))) fmap0 (f C)) (g D0) (f D))
     (of_alt[:: 
       [::(cut, (of_alt [:: [:: callN B; callN D0]; [::callN C; callN D0]])); callN D];
       [::(cut, (of_alt [:: [:: callN B; callN D0]; [::callN C; callN D0]])); callN D0];
@@ -355,7 +355,7 @@ Goal forall X A B C D0 D,
   let f x := (Unexplored (call x)) in
   (* ((X \/ ((! \/ ! \/ A) \/ B) \/ C)) /\ D*)
   tester 
-    (And (Or (Some (f X)) empty (Or (Some (Or (Some (Or (Some (Unexplored cut)) empty ((Or (Some (Unexplored cut)) empty (f A))))) empty (f B))) empty (f C))) (g D0) (f D))
+    (And (Or (Some (f X)) fmap0 (Or (Some (Or (Some (Or (Some (Unexplored cut)) fmap0 ((Or (Some (Unexplored cut)) fmap0 (f A))))) fmap0 (f B))) fmap0 (f C))) (g D0) (f D))
     (of_alt[:: 
       [:: callN X; callN D];
       [::(cut, (of_alt[:: [:: callN B; callN D0]; [::callN C; callN D0]])); callN D0];
@@ -373,7 +373,7 @@ Goal forall B0 A B C D,
   let f x := (Unexplored (call x)) in
   (* (((A /\ (! \/ B)) \/ C \/ D)) *)
   tester 
-    (Or (Some (Or (Some (f C)) empty (And (f A) (g B0) (Or (Some (Unexplored cut)) empty (f B))))) empty (f D))
+    (Or (Some (Or (Some (f C)) fmap0 (And (f A) (g B0) (Or (Some (Unexplored cut)) fmap0 (f B))))) fmap0 (f D))
     (of_alt[:: 
       [:: callN C]; 
       [:: callN A; (cut, (of_alt[:: [:: callN D]]))]; 
@@ -388,7 +388,7 @@ Goal forall A B C,
   let f x := (Unexplored (call x)) in
   (* (((! \/ A) \/ !) \/ B) \/ C *)
   tester 
-    (Or (Some (Or (Some (Or (Some (Or (Some (Unexplored cut)) empty (f A))) empty (Unexplored cut))) empty (f B))) empty (f C))
+    (Or (Some (Or (Some (Or (Some (Or (Some (Unexplored cut)) fmap0 (f A))) fmap0 (Unexplored cut))) fmap0 (f B))) fmap0 (f C))
     (of_alt[:: 
       [::(cut, (of_alt[::[::(cut, (of_alt[::[::callN B]; [::callN C]]))]; [::callN B]; [::callN C]]))];
       [::callN A];
@@ -402,10 +402,10 @@ Proof.
   rewrite//.
 Qed.
 Goal forall p l,
-  let s := ((Or (Some (Or None empty (Unexplored cut))) empty OK)) in
+  let s := ((Or (Some (Or None fmap0 (Unexplored cut))) fmap0 OK)) in
   let bt := of_alt([::]%SEQ :: l) in
-  tree_to_stack s empty (of_alt l) = of_alt[:: [:: (cut, bt)]; [::]]%SEQ /\ 
-    tree_to_stack (odflt KO (prune true (step u p fset0 empty s).2)) empty (of_alt l) ++ (of_alt l) = bt.
+  tree_to_stack s fmap0 (of_alt l) = of_alt[:: [:: (cut, bt)]; [::]]%SEQ /\ 
+    tree_to_stack (odflt KO (prune true (step u p fset0 fmap0 s).2)) fmap0 (of_alt l) ++ (of_alt l) = bt.
 Proof.
   move=>//= _ l.
   rewrite cat_cons cat0s//.

@@ -35,20 +35,6 @@ Proof.
   by elim: hd.
 Qed.
 
-(* Lemma is_det_deref sig fv c :
-  tm_is_det sig c ->
-  tm_is_det sig (deref fv c).
-Proof. by elim: c => //. Qed. *)
-
-
-Lemma tm_is_det_comb sP f a:
-  tm_is_det sP (Tm_App f a) = tm_is_det sP f.
-Proof. by rewrite/tm_is_det/=. Qed.
-
-Lemma fresh_has_cut sv xs m:
-  has_cut_seq (fresh_atoms sv xs m).2 = has_cut_seq xs.
-Proof. by elim: xs sv => //= -[|c] xs IH sv; rewrite!push//=IH !push//. Qed.
-
 Lemma check_atom_fresh sP x sv m:
   check_atom sP (fresh_atom sv x m).2 = check_atom sP x.
 Proof. by destruct x; rewrite //= !push/= is_det_rename. Qed.
@@ -114,16 +100,6 @@ Section check.
         if has_cut A then det_tree p B 
         else (B == KO) 
     end.
-
-  Lemma has_cut_cutl {A}: has_cut A -> has_cut (cutl A).
-  Proof.
-    elim_tree A => /=.
-    rewrite fun_if/=.
-    case:ifP => // sA.
-    move=> /orP[].
-      by move=>/HA->.
-    move=>/andP[->/HB->]; rewrite orbT//.
-  Qed.
 
   Lemma has_cut_big_and x xs:
     has_cut (big_andA x xs) = has_cut_seq (x::xs).
@@ -202,13 +178,13 @@ Section check.
     have [HE HE' [p[pP Hp E]]] := HP H.
     set X := fresh_rules _ _ in HE HE'.
     rewrite Hp in_fnd.
-    have:= proj1 (callable_rename X.1 hd p empty) .
+    have:= proj1 (callable_rename X.1 hd p fmap0) .
     rewrite -HE Hp => /(_ erefl) ->.
     by rewrite in_fnd => ->.
   Qed.
 
   Lemma deref_empty t:
-    deref empty t = t.
+    deref fmap0 t = t.
   Proof. by elim: t => //= [v|f -> a ->//]; case: fndP => //=. Qed.
 
   Lemma has_cut_success {A}:

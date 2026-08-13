@@ -20,15 +20,6 @@ Definition build_progr l := {|
   rules := l;
 |}.
 
-(* Definition unifyF    (t1 t2 : Tm) (s : Sigma) :=
-  match t1, t2 with
-  | Tm_V X, _ => match lookup X s with None => Some (add X t2 s) | Some t => if t == t2 then Some s else None end
-  | _, Tm_V X => match lookup X s with None => Some (add X t2 s) | Some t => if t == t1 then Some s else None end
-  | _, _ => if t1 == t2 then Some s else None
-  end.
-
-Definition matchingF (t1 t2 : Tm) (s : Sigma) := if t1 == t2 then Some s else None. *)
-
 Definition unif : Unif := mk_Unif unify matching.
 
 
@@ -41,7 +32,7 @@ Coercion Tm_P : P >-> Tm.
 Definition s1 : Sigma := [fmap].[fresh [fset IV 0] <- Tm_P tt].
 Definition s2 : Sigma := [fmap].[fresh [fset IV 0] <- Tm_P ff].
 
-Lemma vars_sigma_set v s: vars_sigma empty.[v <- s] = v |` vars_tm s.
+Lemma vars_sigma_set v s: vars_sigma fmap0.[v <- s] = v |` vars_tm s.
 Proof. by rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0. Qed.
 
 Definition simpl_set:= (fsetU0, fset0U, codomf0, cat0f, vars_sigma0, fsetUid, acyclic_sigma0, deref_P, ren_P, ren_app, deref_empty, vars_sigma_set, unify_refl, cardfs1).
@@ -55,7 +46,7 @@ Section Test1.
       mkR (app q tt) [:: call (app p v0) ; call (app r v0) ] 
     ].
 
-  Goal exists v, runT unif p_test fset0 empty (Unexplored (call (app q tt))) (One s2) false v.
+  Goal exists v, runT unif p_test fset0 fmap0 (Unexplored (call (app q tt))) (One s2) false v.
   Proof.
     repeat eexists.
     set X := [fset IV 0; fresh [fset IV 0]].
@@ -114,7 +105,7 @@ Section Test5.
       mkR (app q ff) [::] 
     ].
 
-  Goal exists v, runT unif p_test1 fset0 empty (Unexplored (call (app p ff))) (One s1) false v.
+  Goal exists v, runT unif p_test1 fset0 fmap0 (Unexplored (call (app p ff))) (One s1) false v.
   Proof.
     repeat eexists.
     apply: StepT' => //=; cycle 1.
@@ -144,7 +135,7 @@ Section Test6.
       mkR (app q ff) [::] 
   ].
 
-  Goal exists r, runT unif p_test2 fset0 empty (Unexplored (call (app p tt)) ) (One s1) false r.
+  Goal exists r, runT unif p_test2 fset0 fmap0 (Unexplored (call (app p tt)) ) (One s1) false r.
   Proof.
     repeat eexists.
     apply: StepT' => //; cycle 1.
@@ -174,27 +165,27 @@ Definition emptyp := (build_progr [::]).
 Definition CutS := Unexplored cut.
 
 Section Test2.
-  Goal step unif emptyp fset0 empty (Or (Some OK) empty OK) = (fset0, Success, Or (Some OK) empty OK). by []. Qed.
+  Goal step unif emptyp fset0 fmap0 (Or (Some OK) fmap0 OK) = (fset0, Success, Or (Some OK) fmap0 OK). by []. Qed.
 
-  Goal runT unif emptyp fset0 empty (Or (Some CutS) empty OK) (One empty) false fset0.
+  Goal runT unif emptyp fset0 fmap0 (Or (Some CutS) fmap0 OK) (One fmap0) false fset0.
     apply: StepT' => //=; cycle 1.
     apply: StopOT => //.
     by [].
   Qed.
 
   Goal forall r, 
-    runT unif emptyp fset0 empty (Or (Some CutS) empty r) (One empty) false fset0.
+    runT unif emptyp fset0 fmap0 (Or (Some CutS) fmap0 r) (One fmap0) false fset0.
     move=> r.
     apply: StepT' => //; cycle 1.
     apply: StopOT => //=.
     by [].
   Qed.
 
-  Goal runT unif emptyp fset0 empty (Or (Some OK) empty (Or (Some OK) empty OK)) (Many empty (Or None empty (Or (Some OK) empty OK))) false fset0.
+  Goal runT unif emptyp fset0 fmap0 (Or (Some OK) fmap0 (Or (Some OK) fmap0 OK)) (Many fmap0 (Or None fmap0 (Or (Some OK) fmap0 OK))) false fset0.
   Proof. apply: StopMT => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
-  Goal step unif emptyp fset0 empty (Or (Some (Or None empty (CutS))) empty OK) = (fset0, Expanded, (Or (Some (Or None empty OK)) empty OK)).
+  Goal step unif emptyp fset0 fmap0 (Or (Some (Or None fmap0 (CutS))) fmap0 OK) = (fset0, Expanded, (Or (Some (Or None fmap0 OK)) fmap0 OK)).
   Proof.
     move=>//=.
   Qed.

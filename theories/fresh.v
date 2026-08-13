@@ -301,17 +301,6 @@ Proof. by []. Qed.
 Lemma vars_atoms1 a: vars_atoms [:: a] = vars_atom a.
 Proof. by rewrite/vars_atoms/=fsetU0. Qed.
 
-Lemma fsetUE0 {T: choiceType} (A B:{fset T}):
-  A `|` B = fset0 -> A = fset0 /\ B = fset0.
-Proof.
-  move=> /fsetP H; split; apply/fsetP => x;
-  have := H x; rewrite in_fsetU; case xA: (_ \in A) => //=.
-Qed.
-
-Lemma fsetU0E {T: choiceType} (A B:{fset T}):
-  A = fset0 -> B = fset0 -> A `|` B = fset0.
-Proof. by move=> ->->; rewrite fsetU0. Qed.
-
 Lemma varsUP x l:
   forall t, x \in vars_tm t -> t \in l -> x \in varsU [seq vars_tm e | e <- l].
 Proof.
@@ -546,18 +535,18 @@ Proof.
   rewrite fsubsetU//!fsubUset Hd//= Hv//.
 Qed.
 
-Lemma fresh_tm_acyclic0 vt t: vars_tm t `<=` vt -> acyclic_ren (fresh_tm vt ctx.empty t).2.
+Lemma fresh_tm_acyclic0 vt t: vars_tm t `<=` vt -> acyclic_ren (fresh_tm vt ctx.fmap0 t).2.
 Proof. by move=> H; apply/fresh_tm_acyclic; rewrite /acyclic_ren// codomf0 fdisjointX0. Qed.
 
 Lemma vars_tm_rename_disjoint fv t:
-  [disjoint vars_tm (rename fv t ctx.empty).2 & fv].
+  [disjoint vars_tm (rename fv t ctx.fmap0).2 & fv].
 Proof.
   rewrite/rename push/=.
-  have[]/=:= @fresh_tm_sub_all (vars_tm t `|` fv) t ctx.empty => //=.
+  have[]/=:= @fresh_tm_sub_all (vars_tm t `|` fv) t ctx.fmap0 => //=.
     by rewrite fsubsetUl.
     by rewrite codomf0 fsub0set.
   set vt := vars_tm _ `|` _.
-  have /= := @fresh_good_codom vt t ctx.empty.
+  have /= := @fresh_good_codom vt t ctx.fmap0.
   rewrite codomf0.
   move=> /(_ (fdisjointX0 _)).
   set ft := fresh_tm vt _ _.

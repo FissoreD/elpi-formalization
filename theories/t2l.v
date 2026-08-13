@@ -5,9 +5,6 @@ From det Require Import tree elpi.
 
 (*BEGIN*)
 
-Lemma catl0 (l: goals): map (catl (nilC)) l = l.
-Proof. elim: l => //=[[s g]gs] H; rewrite map_cons/=H/catl cat0s//. Qed.
-
 Lemma catl0a (l: alts): map (catl (nilC)) l = l.
 Proof. elim: l => //=[[s g]gs] H; rewrite map_cons/=H/catl cat0s//. Qed.
 
