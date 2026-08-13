@@ -142,7 +142,43 @@ Proof.
   by rewrite derefxx//.
 Qed.
 
-Lemma H_mp sP fv q hd s1 r: acyclic_sigma s1 ->
+Lemma acyclic_sigma_H sP fv q hd s1 r:
+  acyclic s1 ->
+    H u sP fv q hd s1 = Some r ->
+      acyclic r.2.
+Proof.
+  elim: q fv hd s1 r => //=[p|f Hf a Ha] fv [p'|//|f' a']// s1 r.
+    by case: eqP => //= _ A; case: fndP => //=pP[<-].
+  move=> A.
+  case H: H => [[[|[] tyl tyr] s1']|]//=.
+    case M: matching => //= [s1''][?]; subst.
+    by apply: matching_acyclic M; apply: Hf H.
+  case M: unify => //= [s1''][?]; subst.
+  by apply: unif_acyclic M; apply: Hf H.
+Qed.
+
+Lemma acyclic_sigma_select sP query rules s1 e:
+  acyclic s1 ->
+    e \in (select u sP query rules s1).2 ->
+      acyclic e.1.
+Proof.
+  elim: rules query s1 e => //= -[hd bo] rs IH query s1 e AS/=.
+  case H: H => [[ty s1']|]; last by apply: IH.
+  rewrite !push/= in_cons => /orP[/eqP?|]; subst; last by apply: IH.
+  by have := acyclic_sigma_H AS H.
+Qed.
+
+Lemma acyclic_sigma_bc s1 p v0 t:
+  acyclic s1 ->
+    forall x, x \in (bc u p v0 t s1).2 ->
+      acyclic x.1.
+Proof.
+  rewrite/bc/= => H1 -[s2 b]/=.
+  case: ifP => ///negbFE AS.
+  by rewrite !push; apply/acyclic_sigma_select.
+Qed.
+
+Lemma H_mp sP fv q hd s1 r: acyclic s1 ->
   H u sP fv q hd s1 = Some r -> mp s1 r.2.
 Proof.
   elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|f' a']// s1 r.
@@ -157,7 +193,7 @@ Proof.
 Qed.
 
 Lemma H_deref_eq sP fv q hd s1 r:
-  acyclic_sigma s1 ->
+  acyclic s1 ->
     H u sP fv q hd s1 = Some r ->
       deref r.2 q = deref r.2 hd.
 Proof.
@@ -197,7 +233,7 @@ Proof.
 Qed.
 
 Lemma H_matchingI sP v1 query head s1 r:
-  acyclic_sigma s1 ->
+  acyclic s1 ->
   good_modes sP ->
   fdisjoint (domf s1) v1 ->
   H u sP v1 query head s1 = Some r -> arri r.1 ->
@@ -243,29 +279,38 @@ Proof.
   by have:= get_input_vars2 H'; rewrite IV => /=?; subst.
 Qed.
 
-Lemma SHS sP fv1 fv2 query hd2 hd1 (s1 s2:Sigma):
+Lemma get_input_vars_sub sP query:
+  (get_input_vars sP query).1 `<=` vars query.
+Proof.
+  elim: query => //= f + a _.
+  case: get_input_vars => fv s/= H.
+  have {}H:= fsubset_trans H (fsubsetUl _ (vars a)).
+  by case: s => [[|[]]|]//= _ _; rewrite fsubUset//= H//=fsubsetUr.
+Qed.
+
+Lemma SHS sP fv query hd2 hd1 (s1 s2:Sigma):
   good_modes sP ->
-  acyclic_sigma s1 -> acyclic_sigma s2 ->
-  fdisjoint (domf s1) fv1 ->
-  fdisjoint (domf s2) fv2 ->
-  (get_input_vars sP query).1 `<=` fv1 ->
-  (get_input_vars sP query).1 `<=` fv2 ->
-  [disjoint vars_sigma s1 & vars_tm hd2] -> 
-  [disjoint vars_sigma s2 & vars_tm hd1] -> 
-  [disjoint vars_tm hd1 & vars_tm hd2] ->
-  [disjoint vars_tm query & vars_tm hd1] ->
-  [disjoint vars_tm query & vars_tm hd2] ->
-  [disjoint domf s1 & vars_tm query] ->
-  [disjoint domf s2 & vars_tm query] ->
-  H u sP fv1 query hd1 s1 ->
-  H u sP fv2 query hd2 s2 ->
+  acyclic s1 -> acyclic s2 ->
+  fdisjoint (domf s1) fv ->
+  fdisjoint (domf s2) fv ->
+  (get_input_vars sP query).1 `<=` fv ->
+  [disjoint vars_sigma s1 & vars hd2] -> 
+  [disjoint vars_sigma s2 & vars hd1] -> 
+  [disjoint vars hd1 & vars hd2] ->
+  [disjoint vars query & vars hd1] ->
+  [disjoint vars query & vars hd2] ->
+  [disjoint domf s1 & vars query] ->
+  [disjoint domf s2 & vars query] ->
+  H u sP fv query hd1 s1 ->
+  H u sP fv query hd2 s2 ->
   H_head u sP hd1 hd2.
 Proof.
-  move=> GM.
-  elim: query fv1 fv2 hd1 hd2 s1 s2 => //=[p|f Hf a _];
-  move=> fv1 fv2 [p1|v1|f1 a1]//[p2|v2|f2 a2]//=  s1 s2 A1 A2.
-    move=> _ _ _ _ _ _ _ _ _; case: eqP => // <-; case: eqP => //->; case: fndP => //=.
-  move=> S1 S2 d2f2 s1f1.
+  move=> GM A1 A2  s1fv s2fv.
+  elim: query hd1 hd2 => //=[p|f Hf a _];
+  move=> [p1|v1|f1 a1]//[p2|v2|f2 a2]//=.
+    move=> _ _ _ _ _ _ _ _; case: eqP => // <-; case: eqP => //->; case: fndP => //=.
+  (* move=> S1 S2 d2f2 s1f1. *)
+  move=> IF.
   rewrite 2!fdisjointXU => /andP[V1 V2] /andP[V3 V4].
   rewrite ?fdisjointUX !fdisjointXU.
   move=> /andP[/andP[f1f2 f1a2] /andP[a1f2 a1a2]].
@@ -280,11 +325,9 @@ Proof.
   rewrite hh1 ha1 => -[hh2 ha2 [p'[pP']]].
   rewrite -hh1 hf1 => /esym [?]; subst.
   rewrite (bool_irrelevance pP' pP) -ha1 he => -[???]; subst.
-  have fv2sub : (get_input_vars sP f).1 `<=` fv2.
-    by move: s1f1; apply: fsubset_trans => //=; case: get_input_vars => //= ? [[|[]]|]//=; rewrite fsubsetUl.
-  have fv1sub : (get_input_vars sP f).1 `<=` fv1.
-    by move: d2f2; apply: fsubset_trans => //=; case: get_input_vars => //= ? [[|[]]|]//=; rewrite fsubsetUl.
-  have {Hf} := Hf _ _ _ _ _ _ A1 A2 S1 S2 fv1sub fv2sub V1 V3 f1f2 ff1 ff2 s1f s2f (isSomeP H1) (isSomeP H2).
+  have fv2sub : (get_input_vars sP f).1 `<=` fv.
+    by move: IF; apply: fsubset_trans => //=; case: get_input_vars => //= ? [[|[]]|]//=; rewrite fsubsetUl.
+  have {Hf} := Hf _ _ fv2sub V1 V3 f1f2 ff1 ff2 s1f s2f (isSomeP H1) (isSomeP H2).
   case HH: H_head => //=[ty'] _.
   have [Hx Hy [p'[{}pP']]] := H_headP HH.
   rewrite -hh1 hf1 => -[?]; subst.
@@ -292,12 +335,12 @@ Proof.
   destruct m2 => //=.
   rewrite ifT => //.
   have:= forallP GM [`pP]; rewrite valPE => GM'.
-  have /= Hs := H_matchingI A1 GM S1 H1 isT.
-  have /= Hr := H_matchingI A2 GM S2 H2 isT.
+  have /= Hs := H_matchingI A1 GM s1fv H1 isT.
+  have /= Hr := H_matchingI A2 GM s2fv H2 isT.
   rewrite !(fdisjoint_sym (vars_tm f)) in ff1, ff2.
   have ivf1 := get_input_vars_vars_tm GM H1 isT.
-  rewrite ivf1 in fv1sub, fv2sub.
-  apply: matching_unify_trans Hs Hr => //.
+  rewrite ivf1 in fv2sub.
+  by apply: matching_unify_transP Hs Hr => //.
 Qed.
 
 Definition v_prog pr := varsU (map varsU_rule pr).
@@ -305,18 +348,9 @@ Definition v_prog pr := varsU (map varsU_rule pr).
 Lemma v_prog_cons x xs: v_prog (x::xs) = varsU_rhead x `|` varsU_rprem x `|` v_prog xs.
 Proof. by []. Qed.
 
-Lemma get_input_vars_sub sP query:
-  (get_input_vars sP query).1 `<=` vars query.
-Proof.
-  elim: query => //= f + a _.
-  case: get_input_vars => fv s/= H.
-  have {}H:= fsubset_trans H (fsubsetUl _ (vars a)).
-  by case: s => [[|[]]|]//= _ _; rewrite fsubUset//= H//=fsubsetUr.
-Qed.
-
 Lemma HSH sP rules hd query s: 
   good_modes sP ->
-  acyclic_sigma s ->
+  acyclic s ->
   [disjoint domf s & vars_tm query] ->
   [disjoint vars_tm hd & v_prog rules] ->
   [disjoint vars_tm query & v_prog rules] ->
@@ -342,6 +376,7 @@ Proof.
   apply: SHS H1 (isSomeP H2) => //=.
 Qed.
 
+
 Lemma H_head_ren_aux sP hd q x y z w:
   (refresh_for y) hd -> (refresh_for x) hd ->
   (refresh_for z) q -> (refresh_for w) q ->
@@ -365,7 +400,7 @@ Proof.
     by apply: fdisjointWr (vars_tm_ren_sub f'x) _.
   move=> /(_ isT isT isT isT H).
   case U1: unify => //=; first by move=> /(_ isT)->.
-  have:= @unif_ren y x w z f f'.
+  have:= @unif_ren y x  w z f f'.
   rewrite/refresh_for ?(f'y, iy, f'x, ix, fz, iz, fw, iw).
   have H': vars (ren w f) # vars (ren y f').
     apply: fdisjointWl (vars_tm_ren_sub fw) _.

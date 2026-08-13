@@ -7,27 +7,14 @@ Definition check_program pr := mut_excl u pr && check_rules pr.
 (*ENDSNIP: check_program *)
 
 Lemma det_check_big_or pr c fv fv' r0 rs s1:
-  check_program pr -> tm_is_det pr c -> 
+  check_program pr -> tm_is_det pr (deref s1 c) -> 
   bc u pr fv c s1 = (fv', r0 :: rs) ->
   det_tree pr (big_or r0.2 rs).
 Proof.
-  rewrite /bc/check_program.
-  case: pr => rules s/= => /andP[].
-  case: ifP => ///negbFE AS.
-  case X: get_tm_hd => //=[p].
-  case: fndP => //= kP.
-  move=> ++ H.
-  have [q'[qp' [+ H2]]] := is_det_der s1 H.
-  rewrite X => -[?]; subst.
-  move=> ME CR.
-  have := mut_exclP fv s1 ME H.
-  have := check_rulesP fv s1 CR H.
-  rewrite/bc X/= in_fnd.
-  rewrite !push/= => /= ++[?]; subst.
-  rewrite (bool_irrelevance kP qp') => ++ S.
-  rewrite S.
-  rewrite AS/=.
-  by apply/det_check_big_or_help.
+  move=> /andP[ME CR] T B.
+  apply/det_check_big_or_help.
+    by have:= check_rulesP fv CR T; rewrite B//.
+  have:= mut_exclP fv ME T; rewrite B//.
 Qed.
 
 (*SNIPT: det_tree_step *)
@@ -40,7 +27,8 @@ Proof.
   elim_tree A s1.
   - case: t => [|c]//=; rewrite !push/=.
     case bc: bc => //=[fv'[|[s0 r0]rs]]//= H1.
-    by apply: det_check_big_or bc.
+    apply: det_check_big_or bc => //.
+    by apply: is_det_cder.
   - rewrite/= => /andP[fA]; rewrite !push/= HA//=.
     case: ifP => //= cA; last by move=> /eqP->; rewrite !if_same.
     rewrite !fun_if => /[dup] Hx ->; do 2 case: ifP => //=.

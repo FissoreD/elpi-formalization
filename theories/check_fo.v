@@ -169,6 +169,13 @@ Section check.
   by simpl; rewrite !push.
   Qed.
 
+  Lemma callable_ren m hd p:
+    get_tm_hd (ren m hd) = inl p <-> get_tm_hd hd = inl p.
+  Proof. by elim: hd => //= [q|d|v|f Hf a Ha]. Qed.
+
+  Lemma callable_rename fv hd p mp: get_tm_hd (rename fv hd mp).2 = inl p <-> get_tm_hd hd = inl p.
+  Proof. by rewrite/rename!push/= => /=; split => /callable_ren. Qed.
+
   Lemma check_rulesP p c fv s1:
     check_rules p ->
     tm_is_det p (deref s1 c) ->
