@@ -6,8 +6,8 @@ From det Require Import tree tree_prop.
 Module B.
   Fixpoint base_andA s :=
     match s with
-    | And (TA _) (x::xs) r1 => (big_andA x xs == r1) && base_andA r1
-    | TA _ => true
+    | And (Unexplored _) (x::xs) r1 => (big_andA x xs == r1) && base_andA r1
+    | Unexplored _ => true
     | _ => false
     end.
 
@@ -82,11 +82,13 @@ Section valid_tree.
 (*SNIP: valid_tree*)
   Fixpoint valid_tree A :=
     match A with
-    | TA _ | OK | KO => true
+    | Unexplored _ | OK | KO => true
     | Or None _ B => valid_tree B
-    | Or (Some A) _ B => valid_tree A && ((B == KO) || base_or B)
-    | And A B0 B => valid_tree A && if success A then valid_tree B 
-                                    else B == big_and B0
+    | Or (Some A) _ B =>
+        valid_tree A && ((B == KO) || base_or B)
+    | And A B0 B => 
+        valid_tree A && if success A then valid_tree B 
+                                     else B == big_and B0
     end.
 (*ENDSNIP: valid_tree*)
 

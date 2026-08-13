@@ -484,7 +484,7 @@ Section s.
     | Or None _ A, Or None _ B => not_bt A B
     | Or (Some A) _ _, Or (Some B) _ _ => not_bt A B
     | And Ax _ Ay, And Bx _ By => not_bt Ax Bx && not_bt Ay By
-    | TA _, _ => B != KO
+    | Unexplored _, _ => B != KO
     | OK, OK => true
     | KO, KO => true
     | (KO|OK|Or _ _ _|And _ _ _), _ => false

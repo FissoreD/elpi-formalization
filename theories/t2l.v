@@ -67,7 +67,7 @@ Fixpoint tree_to_stack t0 s0 (cp: alts) : alts :=
   match t0 with
   | OK           => [:: (s0, [::])]
   | KO           => [::]
-  | TA a         => [:: (s0, [:: (a, [::]) ])]
+  | Unexplored a         => [:: (s0, [:: (a, [::]) ])]
 (*ENDSNIP: t2l_min*)
   | Or None s1 B => add_ca_deep cp (tree_to_stack B s1 [::])
   | Or (Some A) s1 B    =>
@@ -96,8 +96,8 @@ Section test.
   Variable p1 : program.
 
   Goal forall s3 l, 
-    tree_to_stack (And (Or (Some OK) s1 (TA cut)) ([:: cut]) KO) s3 l = 
-      tree_to_stack (And (Or None s1 (TA cut)) ([:: cut]) (TA cut)) s3 l.
+    tree_to_stack (And (Or (Some OK) s1 (Unexplored cut)) ([:: cut]) KO) s3 l = 
+      tree_to_stack (And (Or None s1 (Unexplored cut)) ([:: cut]) (Unexplored cut)) s3 l.
   Proof.
     move=>s3 l/=.
     rewrite /=!cat0s ?cat0s subnn.
