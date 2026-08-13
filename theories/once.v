@@ -183,10 +183,9 @@ Section once.
     have:= H (mkR hd bo); rewrite/= in_cons H1 eqxx; auto.
   Qed.
 
-
-  Lemma id_det_once p s t fv:
+  Lemma id_det_once p s t:
     prog_once p ->
-    is_detT p s fv ((call (Tm_App (Tm_P once_sym) t))).
+    is_detT p s ((call (Tm_App (Tm_P once_sym) t))).
   Proof.
     case: p => -[|r rs] sig []//= HS; first by move=> /(_ [::]) [].
     move=> /(_ rs) [[?] H]; subst.
