@@ -55,7 +55,7 @@ Section Test1.
       mkR (app q tt) [:: call (app p v0) ; call (app r v0) ] 
     ].
 
-  Goal exists v, runT unif p_test fset0 empty (TA (call (app q tt))) (One s2) false v.
+  Goal exists v, runT unif p_test fset0 empty (Unexplored (call (app q tt))) (One s2) false v.
   Proof.
     repeat eexists.
     set X := [fset IV 0; fresh [fset IV 0]].
@@ -114,7 +114,7 @@ Section Test5.
       mkR (app q ff) [::] 
     ].
 
-  Goal exists v, runT unif p_test1 fset0 empty (TA (call (app p ff))) (One s1) false v.
+  Goal exists v, runT unif p_test1 fset0 empty (Unexplored (call (app p ff))) (One s1) false v.
   Proof.
     repeat eexists.
     apply: StepT' => //=; cycle 1.
@@ -144,7 +144,7 @@ Section Test6.
       mkR (app q ff) [::] 
   ].
 
-  Goal exists r, runT unif p_test2 fset0 empty (TA (call (app p tt)) ) (One s1) false r.
+  Goal exists r, runT unif p_test2 fset0 empty (Unexplored (call (app p tt)) ) (One s1) false r.
   Proof.
     repeat eexists.
     apply: StepT' => //; cycle 1.
@@ -171,7 +171,7 @@ End Test6.
 
 Definition emptyp := (build_progr [::]).
 
-Definition CutS := TA cut.
+Definition CutS := Unexplored cut.
 
 Section Test2.
   Goal step unif emptyp fset0 empty (Or (Some OK) empty OK) = (fset0, Success, Or (Some OK) empty OK). by []. Qed.
