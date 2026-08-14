@@ -1480,6 +1480,7 @@ Notation "A ∧ B" := (A && B) (at level 15).
 Definition renaming_forP t (m:{fmap V -> V}) :=
   injectiveb m /\ fdisjoint (domf m) (codomf m) /\ vars t `<=` domf m.
 
+
 Record renaming := mk_ren {
   ren_map :> {fmap V -> V};
   ren_injective : injectiveb ren_map;
@@ -1908,10 +1909,28 @@ Qed.
 (* Definition mgu_help base s l := *)
   (* forall s', acyclic s' -> mp base s' -> unifier s' l ->  *)
     (* exists x, s' = composition s x. *)
+Definition invm (m: {fmap V -> V}) :=
+  [forall x: domf m, (m.[? m.[valP x]] == Some (val x))].
+ 
+Lemma invm_injective m: invm m -> injectiveb m.
+Proof.
+  move=> I; apply/injectiveP => -[x xP] [y yP] H.
+  have:= forallP I [`xP]; rewrite valPE/= {}H; case: fndP => //ypm /eqP[yx].
+  have:= forallP I [`yP]; rewrite valPE/= in_fnd yx => /eqP[?]; subst.
+  by apply: val_inj => /=.
+Qed.
+
+Lemma invm0: invm fmap0. by apply/forallP => -[]. Qed.
+
+Record ren_mgu := mk_renm {
+  renm_map :> {fmap V -> V};
+  renm_inv : invm renm_map
+}.
+
+
 Definition is_mgu (mgu s : Sigma) :=
-  exists r : {fmap V -> V},
-    [/\ injectiveb r,  fdisjoint (domf r) (codomf r) &
-      forall t, ren r (deref s (deref mgu t)) = ren r (deref s t)].
+  exists r : ren_mgu,
+      forall t, ren r (deref s (deref mgu t)) = deref s t.
 
 
 Definition mgu_help base mgu l :=
@@ -2027,15 +2046,16 @@ Qed.
 
 Definition mgu m t1 t2 :=
   deref m t1 = deref m t2 /\ forall s, acyclic s -> deref s t1 = deref s t2 -> 
-    exists r : renaming,
-      forall t, ren r (deref s (deref m t)) = ren r (deref s t).
+    exists r : ren_mgu,
+      forall t, ren r (deref s (deref m t)) = (deref s t).
+
+Lemma ren_empty t: ren fmap0 t = t.
+Proof. elim: t => //=[v|f -> a ->]//; rewrite not_fnd//. Qed.
 
 Lemma is_mgu0 s: is_mgu fmap0 s.
 Proof.
-  exists fmap0; split => //.
-    by apply/injectiveP => -[x xP].
-    by rewrite fdisjoint0X.
-  by move=> t; rewrite !deref_empty.
+  exists (mk_renm invm0) => t/=.
+  by rewrite ren_empty deref_empty.
 Qed.
 
 (*SNIPT: unif_correct *)
@@ -2049,8 +2069,8 @@ Proof.
     by have:= unify_P acyclic_sigma0 U.
   move=> s' A D.
   have:= H s' A; rewrite/=/unif_pair/map_prod1 D eqxx.
-  move=> /(_ isT (is_mgu0 _)) [r[I DC M]].
-  by exists (mk_ren I DC).
+  move=> /(_ isT (is_mgu0 _)) [r].
+  by exists r.
 Qed.
 
 (*SNIPT: unify_complete *)
