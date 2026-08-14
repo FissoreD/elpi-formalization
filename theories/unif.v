@@ -2045,19 +2045,19 @@ Proof.
 Qed.
 
 Definition mgux m t1 t2 :=
-  deref m t1 = deref m t2 /\ forall s, acyclic s -> deref s t1 = deref s t2 -> 
+  acyclic m /\ deref m t1 = deref m t2 /\ forall s, acyclic s -> deref s t1 = deref s t2 -> 
     exists r : ren_mgu,
       forall t, ren r (deref s (deref m t)) = (deref s t).
 
 Definition mgu m t1 t2 :=
-  deref m t1 = deref m t2 /\ forall s, acyclic s -> deref s t1 = deref s t2 -> 
+  acyclic m /\ deref m t1 = deref m t2 /\ forall s, acyclic s -> deref s t1 = deref s t2 -> 
     exists s',
       forall t, deref s' (deref m t) = (deref s t).
       
 Lemma mmgu: forall m t1 t2, mgux m t1 t2 -> mgu m t1 t2.
 Proof.
-  move=> m t1 t2 [D H].
-  split => //s As Ds.
+  move=> m t1 t2 [A[D H]].
+  repeat split => //; move=> s As Ds.
   have [[r M]/= F] := H _ As Ds.
   exists ([fmap x : domf r => Tm_V (r.[valP x])] + [fmap x : domf s => ren r s.[valP x]]).
   move=> t; rewrite -(F t).
@@ -2094,7 +2094,8 @@ Proof.
   move=> U.
   have H := montanariPmgu acyclic_sigma0 (disjoint_Lempty _) U.
   apply: mmgu.
-  rewrite !deref_empty in H; split.
+  rewrite !deref_empty in H; repeat split.
+    apply: unif_acyclic acyclic_sigma0 U.
     by have:= unify_P acyclic_sigma0 U.
   move=> s' A D.
   have:= H s' A; rewrite/=/unif_pair/map_prod1 D eqxx.
