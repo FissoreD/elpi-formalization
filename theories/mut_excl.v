@@ -488,14 +488,11 @@ Proof.
   rewrite/FC1.
   move: TD; rewrite/tm_is_det.
   case X: get_tm_hd => [p|]//=; case: fndP => //pP DP.
-  rewrite (proj2 (callable_rename _ hd p fmap0))//; last first.
+  rewrite (proj2 (callable_rename _ hd p _))//; last first.
     apply/eqP.
     have [Hx Hy [p' [pP']]] := HP H.
-    rewrite X => -[?]; subst.
-    rewrite (bool_irrelevance pP' pP) => HX.
-    rewrite -(callable_rename1 _ FRS2.1 _ fmap0) -Hx.
-    by apply/eqP.
-  rewrite in_fnd//= DP/=.
+    by move /eqP: Hx; rewrite X eq_sym callable_rename1.
+  rewrite in_fnd DP/=.
   case S: select_head => //= _.
   have ->// : (select u sP (deref s1 c) FRS2.2 s1).2 = [::].
   have /(_  (vars_sigma s1 `|` vars_tm (deref s1 c) `|` fv)) := select_head_ren (fsubset_refl _) (fsubset_refl _) S.
