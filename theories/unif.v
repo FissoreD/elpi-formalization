@@ -2055,16 +2055,15 @@ Qed.
 
 (*SNIPT: unify_complete *)
 Lemma unify_complete:
-  forall t1 t2 s, acyclic s -> (exists s', acyclic s' /\ deref s' (deref s t1) = deref s' (deref s t2)) -> exists s'', unify t1 t2 s = Some s''.
+  forall t1 t2, (exists s, acyclic s /\ deref s t1 = deref s t2) -> exists s', unify t1 t2 fmap0 = Some s'.
 (*ENDSNIPT: unify_complete *)
 Proof.
-  move=> t1 t2 s A [sx [H1 H2]].
+  move=> t1 t2 [sx [H1 H2]].
   rewrite /unify/montanari_deref/montanari_pair.
-  have D : disjoint_L s [:: (deref s t1, deref s t2)].
-    by rewrite disjoint_L_cons !acyclic_deref_disjoint//disjoint_L0.
-  have:= exists_montanari A D (ex_intro _ sx _).
-  rewrite /unifier/= andbT /unif_pair/map_prod1 H1 H2 eqxx => /(_ fset0).
-  rewrite fdisjointX0 /= => /(_ (And3 isT isT isT)).
+  have:= exists_montanari acyclic_sigma0 (disjoint_Lempty _) (ex_intro _ sx _).
+  move=> /(_ fset0 [::(deref fmap0 t1, deref fmap0 t2)] ).
+  rewrite H1/= /unif_pair/map_prod1/= !deref_empty H2 eqxx fdisjointX0.
+  move=> /(_ (And3 isT isT isT)).
   case M: montanari => [s'|]// _.
   by eexists.
 Qed.
