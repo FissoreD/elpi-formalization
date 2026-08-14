@@ -1963,8 +1963,8 @@ Lemma is_mgu_deref_sigma v t mgu s (vs': v \in domf s):
   s.[vs'] = deref s t -> v \notin domf mgu ->
   is_mgu mgu s -> is_mgu (deref_sigma v t mgu) s.
 Proof.
-  move=> Am As vt H vm [r [I D C]].
-  exists r; split => // q.
+  move=> Am As vt H vm [r C].
+  exists r => q.
   rewrite -(C q); f_equal.
   elim: q => //[v'|f/= -> a ->//].
   rewrite !deref_V FmapE.fmapE.
@@ -2007,8 +2007,8 @@ Proof.
   move=> H.
   apply: IH => //.
     by apply: unifier_deref_list_not_in.
-  move: M => [r[I D M]].
-  exists r; split => //t.
+  move: M => [r M].
+  exists r => //t.
   have {M} := M t.
   elim: t => //[v2|/=f Hf a Ha[H1 H2]]; last by rewrite Hf// Ha.
   rewrite !deref_V FmapE.fmapE.
@@ -2044,10 +2044,38 @@ Proof.
     by apply: mgu_help_deref_sigma IH; rewrite fdisjointX1 in D1. 
 Qed.
 
-Definition mgu m t1 t2 :=
+Definition mgux m t1 t2 :=
   deref m t1 = deref m t2 /\ forall s, acyclic s -> deref s t1 = deref s t2 -> 
     exists r : ren_mgu,
       forall t, ren r (deref s (deref m t)) = (deref s t).
+
+Definition mgu m t1 t2 :=
+  deref m t1 = deref m t2 /\ forall s, acyclic s -> deref s t1 = deref s t2 -> 
+    exists s',
+      forall t, deref s' (deref m t) = (deref s t).
+      
+Lemma mmgu: forall m t1 t2, mgux m t1 t2 -> mgu m t1 t2.
+Proof.
+  move=> m t1 t2 [D H].
+  split => //s As Ds.
+  have [[r M]/= F] := H _ As Ds.
+  exists ([fmap x : domf r => Tm_V (r.[valP x])] + [fmap x : domf s => ren r s.[valP x]]).
+  move=> t; rewrite -(F t).
+  elim: t {F} => //[v|/=f -> a ->//].
+  rewrite !deref_V.
+  case: fndP => vm.
+    move: (m.[vm]) => t; elim: t => //[v'|/=f -> a ->//]; last first.
+    rewrite !deref_V; rewrite FmapE.fmapE [domf _]/=.
+    case: (fndP s) => vs'//.
+      by rewrite (@in_fnd _ _ [fmap _ => _])/= ffunE valPE//.
+    rewrite ren_V; case: fndP => //=vr; [rewrite in_fnd|rewrite not_fnd] => //.
+    by rewrite ffunE valPE//=.
+  rewrite !deref_V.
+  rewrite fnd_cat [domf _]/=; case: (fndP s) => vs.
+    by rewrite (@in_fnd _ _ [fmap _ => _]) ffunE valPE.
+  rewrite ren_V; case: fndP => //=vr; [rewrite in_fnd|rewrite not_fnd] => //.
+  rewrite ffunE valPE//.
+Qed.
 
 Lemma ren_empty t: ren fmap0 t = t.
 Proof. elim: t => //=[v|f -> a ->]//; rewrite not_fnd//. Qed.
@@ -2065,6 +2093,7 @@ Lemma unify_correct t1 t2 s:
 Proof.
   move=> U.
   have H := montanariPmgu acyclic_sigma0 (disjoint_Lempty _) U.
+  apply: mmgu.
   rewrite !deref_empty in H; split.
     by have:= unify_P acyclic_sigma0 U.
   move=> s' A D.
