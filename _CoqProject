@@ -11,6 +11,7 @@ theories/finmap.v
 theories/ctx.v
 theories/lang.v
 theories/unif.v
+theories/mgu.v
 theories/fresh.v
 
 theories/tree.v
