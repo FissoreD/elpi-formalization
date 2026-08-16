@@ -53,6 +53,7 @@ The file zify_ssreflect.v was taken from https://github.com/math-comp/mczify .
 - **valid_tree.v**: Definition of valid trees (SLD_tree)
 - **elpi_equiv.v**: Equivalence proof between the two semantics
 - **unif.v**: Formalization of Elpi unification (up to matching)
+- **mgu.v**: Formalization of mgu + proof for correctness and soundess of unify
 - **mut_excl.v**: Formalization of mutual exclusion checker
 - **check_fo.v**: Formalization of rule checking for determinacy
 - **determinacy.v**: Determinacy proof  
