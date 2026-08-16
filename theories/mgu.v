@@ -58,11 +58,6 @@ Lemma buildr_in s t x (xs: x \in domf s) (xI: x \in domf s `&` vars t):
   (build_r s t) [`xI] = s.[xs].
 Proof. apply: buildrV_in. Qed.
 
-(* Lemma mapI_v T (S:choiceType) (s1 s2: {fset S}) (x:S) (xP : x \in s1 `&` s2) (F: _ -> T):
-  [fmap x : s1 `&` s2 => F x] [`xP] = 
-  F [`xP].
-Admitted. *)
-
 Lemma in_vars x r t: acyclic r -> x \in domf r -> x \in vars (deref r t) = false.
 Proof.
   move=> A xr.
