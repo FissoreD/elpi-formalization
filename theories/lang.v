@@ -195,16 +195,12 @@ Definition varsU_rprem r : fvS := vars_atoms r.(premises).
 Definition varsU_rhead (r: R) : fvS := vars_tm r.(head).
 Definition varsU_rule r : fvS := varsU_rhead r `|` varsU_rprem r.
 
-Lemma freshV (fv : fvS) :  exists v : V, v \notin fv.
-Proof.
-exists (IV (\sum_(i <- fv) let: (IV n) := i in n ).+1)%N.
-case: in_fsetP => // -[[x] xP] /= [] /eq_leq.
-by rewrite (big_fsetD1 _ xP) /= -ltn_subRL subnn ltn0.
-Qed.
-
-Definition fresh  (fv : fvS) : V := xchoose (freshV fv).
+Definition fresh  (fv : fvS) : V := IV (\max_(i <- fv) let: (IV n) := i in n ).+1.
 Definition freshP (fv : fvS) : (fresh fv) \in fv = false.
-Proof. by apply: negbTE (xchooseP (freshV fv)). Qed.
+Proof.
+  rewrite/fresh; case: in_fsetP => // -[[x] xP] /= []/eq_leq.
+  by rewrite (big_fsetD1 _ xP) /= ltnNge => /negbTE<-; rewrite leq_maxl.
+Qed.
 
 Fixpoint fresh_tm fv m t : {fset V} * {fmap V -> V} :=
   match t with
@@ -424,40 +420,6 @@ Require Import Lia.
 Lemma set0IN (T: choiceType) (s: {fset T}): s = fset0 \/ exists k, k \in s.
 Proof. have:= fset_0Vmem s => -[->|]; auto => -[x H]; right; exists x; auto. Qed.
 
-(* Lemma deref1_singl k s t t':
-  s = ctx.fmap0.[k <- t'] -> vars_tm t `<=` vars_tm t' ->
-  k \in vars_tm t -> k \in vars_tm (deref1 s t).
-Proof.
-  move=> ->; elim: t t' => [p|d|v|f Hf a Ha] t'//; try by rewrite/= fsubset0 => /eqP->.
-    rewrite/deref1 fnd_set not_fnd//; case: eqP => //= H.
-    by rewrite fsub1set !inE => + /eqP->.
-  rewrite/= !inE fsubUset => /andP[H1 H2] /orP[] H; [rewrite Hf|rewrite Ha] => //.
-  by rewrite orbT.
-Qed. *)
-
-(* Lemma varsU_subset_rem (s:Sigma) k:
-  varsU (map vars_tm (codom s)) `<=` 
-    varsU (map vars_tm (codom s.[~ k])).
-Proof.
-  rewrite/codom.
-  Search codom *)
-
-(* Lemma wip cand (s:Sigma) (cs : cand \in s):
-  cand \notin deref_vars #|` domf s| s s.[cs] -> cand \notin codom_vars s.
-Proof.
-  apply:contra.
-  remember #|` domf s| as n eqn:Hn; elim: n s cs Hn => //[|n IH] s cs Hn.
-    by have /fmap_nil H := cardfs0_eq (esym Hn); rewrite {1}H/= codom_vars0.
-  have [] := set0IN (domf s).
-    by move : Hn => + /fmap_nil X; rewrite {1}X cardfs0.
-  move=> /=[k ks]; rewrite inE => H.
-    
-  Search (~~ (_ || _)).
-  rewrite (cardfsD1 k (domf s)) ks add1n in Hn; case: Hn.
-  rewrite fset_sub_rem => Hn.
-  move:
-  have := IH (s.[~ k]) _ Hn. *)
-
 Lemma not_in_deref s t:
   [disjoint domf s & vars_tm t] ->
   deref s t = t.
@@ -532,28 +494,9 @@ Qed.
 Lemma ren_app m l r : ren m (Tm_App l r) = Tm_App (ren m l) (ren m r).
 Proof. by []. Qed.
 
-(* Lemma deref_aux_ren_V b v:
-  deref_aux #|` domf b| [fmap x => Tm_V b.[valP x]] (Tm_V v) =
-  Tm_V (odflt v b.[? v]).
-Proof.
-  case: fndP => vb/=; last first.
-    by move: #|` _ |; elim => //= n IH; rewrite not_fnd.
-  rewrite (cardfsD1 v) vb /= in_fnd/= ffunE valPE.
-  move: #|` _ |; elim => [// | n IH]/=.
-  case: fndP => //= bb; rewrite ffunE valPE.
-  have:= fdisjointP H _ bb.
-  move=> /codomfP/= Hx; exfalso; apply:Hx.
-  by exists v; rewrite in_fnd.
-Qed. *)
-
-
 Lemma deref_P s v: deref s (Tm_P v) = Tm_P v. by []. Qed.
 
 Lemma ren_P b p: ren b (Tm_P p) = Tm_P p. by []. Qed.
-
-(* Lemma deref_ren_V b v: acyclic_ren b ->
-  deref [fmap x => Tm_V b.[valP x]] (Tm_V v) = Tm_V (odflt v b.[? v]).
-Proof. by move=> H; rewrite/deref/=deref_aux_ren_V. Qed. *)
 
 Lemma ren_V b v: ren b (Tm_V v) = Tm_V (odflt v b.[?v]). by []. Qed.
 
