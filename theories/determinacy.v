@@ -76,7 +76,7 @@ Qed.
 
 (*SNIPT: is_detT *)
 Definition is_detT p s t := 
-  forall r, runT' p (vars_atom t `|` vars_sigma s) s t r -> r = Zero \/ exists s, r = One s.
+  forall r, runT' p (fresh (vars_atom t `|` vars_sigma s)) s t r -> r = Zero \/ exists s, r = One s.
 (*ENDSNIPT: is_detT *)
 
 (*SNIPT: det_check_callT *)
@@ -90,7 +90,7 @@ Qed.
 
 (*SNIPT: is_detS *)
 Definition is_detS p s t := 
-  forall r, runS p (vars_atom t `|` vars_sigma s) (consA (s, consG (t, [::]) [::]) [::]) r -> r = None \/ exists s, r = Some (s, [::]).
+  forall r, runS p (fresh (vars_atom t `|` vars_sigma s)) (consA (s, consG (t, [::]) [::]) [::]) r -> r = None \/ exists s, r = Some (s, [::]).
 (*ENDSNIPT: is_detS *)
 
 (*SNIPT: det_check_callS *)

@@ -197,7 +197,7 @@ Section main.
   Variable u: Unif.
 
   (*SNIP: step_sig*)
-  Definition step : program -> fvS -> Sigma -> tree -> (fvS * tag * tree) := 
+  Definition step : program -> nat -> Sigma -> tree -> (nat * tag * tree) := 
   (*ENDSNIP: step_sig*)
     fix step pr fv s A :=
     let step := step pr in
@@ -282,8 +282,8 @@ Section main.
 
   (*prooftree: runbp*)
   (*SNIP: run_sig *)
-  Inductive runT (p : program): fvS -> Sigma -> tree 
-            -> sol -> bool -> fvS -> Prop :=
+  Inductive runT (p : program): nat -> Sigma -> tree 
+            -> sol -> bool -> nat -> Prop :=
   (*ENDSNIP: run_sig *)
     | StopOT s s' t v              : success t -> next_subst s t = s' -> prune true t = None -> runT v s t (One s') false v
     | StopMT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = Some t' -> runT v s t (Many s' t') false v

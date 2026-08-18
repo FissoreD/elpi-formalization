@@ -27,24 +27,24 @@ Section checker.
 End checker.
 
 Lemma is_det_rename sP fv hd m:
-  tm_is_det sP (rename fv hd m).2 =
+  tm_is_det sP (rename fv m hd).2 =
     tm_is_det sP hd.
 Proof.
-  rewrite/rename!push/=.
+  rewrite/rename.
   move: (fresh_tm _ _ _) => -[]/= _.
   by elim: hd.
 Qed.
 
 Lemma check_atom_fresh sP x sv m:
-  check_atom sP (fresh_atom sv x m).2 = check_atom sP x.
+  check_atom sP (fresh_atom sv m x).2 = check_atom sP x.
 Proof. by destruct x; rewrite //= !push/= is_det_rename. Qed.
 
 Lemma all_check_atom_fresh sP xs sv m:
-  all (check_atom sP) (fresh_atoms sv xs m).2 = all (check_atom sP) xs.
+  all (check_atom sP) (fresh_atoms sv m xs).2 = all (check_atom sP) xs.
 Proof. by elim: xs sv => //=x xs IH sv; rewrite !push/= IH check_atom_fresh. Qed.
 
 Lemma check_atoms_fresh sP sv bo m:
-  check_atoms sP (fresh_atoms sv bo m).2 = check_atoms sP bo.
+  check_atoms sP (fresh_atoms sv m bo).2 = check_atoms sP bo.
 Proof.
   elim: bo sv => //= -[|c] xs IH sv; rewrite !push//=IH//all_check_atom_fresh//.
   rewrite !push/= is_det_rename has_cut_seq_fresh//.
@@ -149,8 +149,8 @@ Section check.
     get_tm_hd (ren m hd) = inl p <-> get_tm_hd hd = inl p.
   Proof. by elim: hd => //= [q|d|v|f Hf a Ha]. Qed.
 
-  Lemma callable_rename fv hd p mp: get_tm_hd (rename fv hd mp).2 = inl p <-> get_tm_hd hd = inl p.
-  Proof. by rewrite/rename!push/= => /=; split => /callable_ren. Qed.
+  Lemma callable_rename fv hd p mp: get_tm_hd (rename fv mp hd).2 = inl p <-> get_tm_hd hd = inl p.
+  Proof. by rewrite/rename/= => /=; split => /callable_ren. Qed.
 
   Lemma check_rulesP p c fv s1:
     check_rules p ->
@@ -163,16 +163,17 @@ Section check.
     (* case DR: get_tm_hd => //=[p]. *)
     (* case: fndP => //= pP. *)
     rewrite !push/=.
+    move: (fresh _).
     (* move: (flatten_mode _) CR. *)
-    elim: rs s s1 fv c TD CR => //= -[hd bo] xs IH sig s fv c/= .
+    elim: rs s s1 c TD CR => //= -[hd bo] xs IH sig s c/= ++f.
     move=> TD /andP[cbo cxs].
-    have {}IH := IH _ _ _ _ TD cxs.
+    have {}IH := IH _ _ _ TD cxs.
     rewrite !push/= head_fresh_rule/=.
     (* rewrite IH. *)
     (* case:eqP => //= /esym tH. *)
     case H: H => //=[s'].
     rewrite !push/= IH andbT.
-    rewrite premises_fresh_rule/=.
+    rewrite/fresh_rule !push/=.
     rewrite check_atoms_fresh.
     move: TD cbo; rewrite /check_rule /tm_is_det.
     have [HE HE' [p[pP Hp E]]] := HP H.
