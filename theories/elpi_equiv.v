@@ -7,9 +7,9 @@ Section NurEqiv.
   Variable (u : Unif).
   Notation runT := (runT u).
   Notation runS := (runS u).
-
+  
   Lemma tree_to_elpi_aux p fv A s1 b fv' r:
-    vars_tree A `<=` fv -> vars_sigma s1 `<=` fv ->
+    fresh (vars_tree A) <= fv -> fresh (vars_sigma s1) <= fv ->
     sld_tree A ->
       runT p fv s1 A r b fv' -> 
         let xs := tree_to_stack A s1 [::] in
@@ -164,7 +164,7 @@ Qed.
 
 (*SNIPT: tree_to_elpi *)
 Theorem runT2S:
-  forall p t s r, let v := vars_tree t `|` vars_sigma s in
+  forall p t s r, let v := fresh (vars_tree t `|` vars_sigma s) in
     sld_tree t -> (exists b v', runT p v s t r b v') -> 
       let r' := match r with
       | Zero => None
@@ -175,7 +175,7 @@ Theorem runT2S:
 (*ENDSNIPT: tree_to_elpi *)
 Proof. 
   move=> /= p t0 s0 r/= vt [b [fv H1]].
-  have /= := tree_to_elpi_aux (fsubsetUl _ _) (fsubsetUr _ _) vt H1.
+  have /= := tree_to_elpi_aux (fresh.freshPwl _ _) (fresh.freshPwr _ _) vt H1.
   by destruct r.
 Qed.
 
@@ -208,7 +208,7 @@ Definition runT' p v s t r :=
 
 (*SNIPT: runS_to_runTCZero *)
 Theorem equiv_zero:
-  forall p t s, let v := vars_tm t `|` vars_sigma s in
+  forall p t s, let v := fresh (vars_tm t `|` vars_sigma s) in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) None <-> 
     runT' p v s (call t) Zero.
 (*ENDSNIPT: runS_to_runTCZero *)
@@ -223,7 +223,7 @@ Qed.
 
 (*SNIPT: runS_to_runTCOne *)
 Theorem equiv_one:
-  forall p t s s', let v := vars_tm t `|` vars_sigma s in
+  forall p t s s', let v := fresh (vars_tm t `|` vars_sigma s) in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', [::])) <-> 
     runT' p v s (call t) (One s').
 (*ENDSNIPT: runS_to_runTCOne *)
@@ -238,7 +238,7 @@ Qed.
 
 (*SNIPT: runS_to_runTCMany2 *)
 Theorem sound_many:
-  forall p t s s' x xs, let v := vars_tm t `|` vars_sigma s in
+  forall p t s s' x xs, let v := fresh (vars_tm t `|` vars_sigma s) in
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', x :: xs)) -> 
     exists t', runT' p v s (call t) (Many s' t') /\ tree_to_stack t' s [::] = x :: xs.
 (*ENDSNIPT: runS_to_runTCMany2 *)
@@ -252,7 +252,7 @@ Qed.
 
 (*SNIPT: runS_to_runTCMany1 *)
 Theorem complete_many:
-  forall p t s s' t', let v := vars_tm t `|` vars_sigma s in
+  forall p t s s' t', let v := fresh (vars_tm t `|` vars_sigma s) in
     runT' p v s (call t) (Many s' t') ->
     runS p v ((s, consG (call t, [::]) [::]) :: [::]) (Some (s', tree_to_stack t' s [::])).
 (*ENDSNIPT: runS_to_runTCMany1 *)

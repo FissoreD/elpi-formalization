@@ -151,7 +151,7 @@ Section once.
 
   Lemma no_once_select u sig rs s T:
     no_once rs ->
-    select u (sig + once_sigS) (Tm_App (Tm_P once_sym) T) rs s = (fset0, [::]).
+    select u (sig + once_sigS) (Tm_App (Tm_P once_sym) T) rs s = [::].
   Proof.
     elim: rs T s => // -[hd bo] xs IH t s /no_once_cons[+ H].
     case: hd => //=[p|v|f a]; only 1-2: by move=> _; apply: IH.
@@ -169,7 +169,7 @@ Section once.
       by rewrite in_cons H2 orbT.
     rewrite/fresh_rule!push/=.
     case: x H => /= hd bo H.
-    rewrite/rename !push/=.
+    rewrite/rename.
     set X := fresh_tm _ _ _.
     case Y: get_tm_hd => //=[p].
     have:= callable_ren X.2 hd p; rewrite Y => /proj1/(_ erefl) H1.
@@ -189,22 +189,26 @@ Section once.
       by move=> [???]; subst; inversion H2; auto.
     rewrite !fset0U.
     set S1 := _ `|` _.
-    (* rewrite !FmapE.fmapE !inE eqxx/=. *)
     case X: fresh_rules => [fvx' rs'].
-    rewrite/fresh_rule/rename [head _]/= /fresh_tm !inE.
-    rewrite [vars _]/= !fset0U !cat0f [premises _]/=.
-    set F := fresh _.
-    set S2 := _ `|` _.
-    rewrite/=/rename/= inE eqxx.
-    rewrite in_fnd; first by rewrite inE.
-    move=> I; rewrite ffunE {I}.
-    rewrite/= eqxx !FmapE.fmapE/= !inE eqxx/= !fset0U/=.
-    have /(_ S1 s (deref s t)) {}H := (no_once_select u (sig) _ _ (no_once_fresh H)).
-    rewrite X in H.
-    case M: matching => [sx|]; last first.
-      by rewrite H/= => -[???]; inversion H2; subst; eauto.
-    rewrite/= H => -[???]; subst.
-    set S4 := _ `|` _ in H2.
+    rewrite 2!push.
+    set MS := max_sigmas _ _.
+    simpl fst. simpl snd.
+    move=> [??]; subst.
+    rewrite/fresh_rule.
+    rewrite [rename _ _ _]/=.
+    rewrite/rename [fresh_tm _ _ _]/=.
+    cbn iota.
+    simpl fresh_atoms.
+    rewrite !inE eqxx orbF.
+    have NO : no_once rs'.
+      move: X; rewrite (surjective_pairing (fresh_rules _ _)) => -[_<-].
+      by apply: no_once_fresh.
+    rewrite select_cons no_once_select//.
+    rewrite{1}/ren FmapE.fmapE eqxx.
+    rewrite [head _]/=[premises _]/=/get_input_vars fnd_cat !inE eqxx orbF FmapE.fmapE eqxx/once_sig eqxx.
+    rewrite fset0U [fst _]/=/lang.H eqxx fnd_cat !inE eqxx orbF FmapE.fmapE eqxx [omap _ _]/=.
+    rewrite/once_sig eqxx.
+    case M: lang.matching => /=?; subst; inversion H2; subst => //;[|left] => //.
     have [b'] := runT_Nor_elim H2.
     destruct r'; eauto.
     move=> [B' ? Hz]; subst.

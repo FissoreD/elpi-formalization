@@ -216,7 +216,7 @@ Notation " x :: y" := (consC x y)(at level 60).
 (*prooftree: nurbp*)
 (*SNIP: runS *)
 (*SNIP: nur_type*)
-Inductive runS (p: program) : fvS -> alts -> option (Sigma * alts) -> Prop :=
+Inductive runS (p: program) : nat -> alts -> option (Sigma * alts) -> Prop :=
 (*ENDSNIP: nur_type*)
 | StopS s a v : runS v ((s, [::]%G) :: a) (Some (s, a))
 | CutS s _a ca r g v : runS v ((s, g) :: ca) r -> runS v ((s, (cut, ca) :: g) :: _a) r

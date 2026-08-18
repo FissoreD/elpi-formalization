@@ -405,7 +405,7 @@ Goal forall p l,
   let s := ((Or (Some (Or None fmap0 (Unexplored cut))) fmap0 OK)) in
   let bt := of_alt([::]%SEQ :: l) in
   tree_to_stack s fmap0 (of_alt l) = of_alt[:: [:: (cut, bt)]; [::]]%SEQ /\ 
-    tree_to_stack (odflt KO (prune true (step u p fset0 fmap0 s).2)) fmap0 (of_alt l) ++ (of_alt l) = bt.
+    tree_to_stack (odflt KO (prune true (step u p 0 fmap0 s).2)) fmap0 (of_alt l) ++ (of_alt l) = bt.
 Proof.
   move=>//= _ l.
   rewrite cat_cons cat0s//.

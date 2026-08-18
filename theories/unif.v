@@ -493,17 +493,34 @@ Qed.
 
 Definition is_var t := match t with Tm_V _ => true | _ => false end.
 
+Lemma deref_sigma_not_in v s t: v \notin codom_vars s ->
+  deref_sigma v t s = s.[v <- t].
+Proof.
+  move=> H.
+  apply/fmapP => x; rewrite !fnd_set; case: eqP => //xv.
+  case: fndP => //=xs; [rewrite in_fnd|rewrite not_fnd//].
+  rewrite ffunE valPE/derefkv not_in_deref//= fsetU0 fdisjoint1X.
+  by apply/contra/H => {}H; apply/codom_varsP; eexists _,xs.
+Qed.
+
+Lemma unify_Vr v t m: v \notin vars_tm t -> v \notin codom_vars m -> v \notin domf m -> ~~ is_var t ->
+  unify t (Tm_V v) m = Some m.[v <- deref m t].
+Proof.
+  rewrite/unify/montanari_deref/montanari_pair => vt vc vd iv.
+  rewrite montanari_equation deref_V not_fnd//=.
+  rewrite !(montanari_equation m)/= eq_sym.
+  rewrite !montanari_equation/=.
+  have vdt : v \in vars (deref m t) = false.
+    move: (conj vc vt) => /norP; apply: contraNF.
+    by move=> /fsubsetP-/(_ _ (vars_tm_deref_sub _ _)); rewrite inE.
+  case: eqP => Hx; first by rewrite -Hx/=inE eqxx in vdt.
+  rewrite vdt deref_sigma_not_in//.
+  by destruct t => //.
+Qed.
+
 Lemma unify_V_0r v t: v \notin vars_tm t -> ~~ is_var t ->
   unify t (Tm_V v) fmap0 = Some fmap0.[v <- t].
-Proof.
-  rewrite/unify/montanari_deref/montanari_pair.
-  rewrite !deref_empty montanari_equation.
-  case: eqP => [->|]; first by rewrite inE eqxx.
-  move=> H1 vt => H.
-  suffices : montanari fmap0 fset0 [:: (Tm_V v, t)] = Some fmap0.[v <- t].
-    move=> ->; destruct t => //.
-  by apply/montanari_var0l.
-Qed.
+Proof. by move=> H1 H2; rewrite unify_Vr//=(codom_vars0,deref_empty). Qed.
 
 Lemma unifier_help_refl s b t: montanari_pair s b t t = Some s.
 Proof. rewrite/montanari_pair montanari_equation eqxx montanari_equation//. Qed.
@@ -513,6 +530,28 @@ Proof. by rewrite /montanari_deref unifier_help_refl. Qed.
 
 Lemma unify_refl t s: unify t t s = Some s.
 Proof. apply/unifier_help_refl1. Qed.
+
+Lemma matching_refl f t s: matching f t t s = Some s.
+Proof. apply/unifier_help_refl1. Qed.
+
+Lemma deref_sigma_set k v k' v' m: k != k' ->
+  deref_sigma k v m.[k' <- v'] =
+    (deref_sigma k v m).[k' <- derefkv k v v'].
+Proof.
+  move=> kk.
+  apply/fmapP => x; rewrite !fnd_set.
+  case: eqP => //xk.
+    by case: eqP => xk'; subst; rewrite//eqxx in kk.
+  case: eqP => xk'; subst.
+    rewrite in_fnd; first by rewrite !inE/= eqxx.
+    by move=> kP; rewrite ffunE valPE ffunE [val _]/= eqxx.
+  case: fndP => // xP.
+    rewrite ffunE valPE ffunE [val _]/=.
+    move: xP; rewrite !inE; case: eqP => // _ xm.
+    by rewrite !in_fnd// ffunE valPE//.
+  rewrite not_fnd//; move: xP; rewrite/= !inE.
+  by case: eqP => //.
+Qed.
 
 Definition deref_sig2 (sm s: Sigma) := [fmap x : domf s => deref sm s.[valP x]].
 

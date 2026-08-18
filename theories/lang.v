@@ -195,22 +195,20 @@ Definition varsU_rprem r : fvS := vars_atoms r.(premises).
 Definition varsU_rhead (r: R) : fvS := vars_tm r.(head).
 Definition varsU_rule r : fvS := varsU_rhead r `|` varsU_rprem r.
 
-Definition fresh  (fv : fvS) : V := IV (\max_(i <- fv) let: (IV n) := i in n ).+1.
-Definition freshP (fv : fvS) : (fresh fv) \in fv = false.
+Definition fresh  (fv : fvS) : nat := (\max_(i <- fv) let: (IV n) := i in n ).+1.
+Definition freshP (fv : fvS) : IV (fresh fv) \in fv = false.
 Proof.
   rewrite/fresh; case: in_fsetP => // -[[x] xP] /= []/eq_leq.
   by rewrite (big_fsetD1 _ xP) /= ltnNge => /negbTE<-; rewrite leq_maxl.
 Qed.
 
-Fixpoint fresh_tm fv m t : {fset V} * {fmap V -> V} :=
+Fixpoint fresh_tm (n: nat)  (m:{fmap V -> V}) t : nat * {fmap V -> V} :=
   match t with
-  | Tm_P _ => (fv, m)
+  | Tm_P _ => (n,m)
   | Tm_V v =>
-       if v \in domf m then (fv, m)
-       else let v' := fresh (fv `|` codomf m) in (v' |` fv,  m + [fmap v : fset1 v => v'])
-  | Tm_App l r => 
-      let: (fv, m) := fresh_tm fv m l in 
-      let: (fv, m) := fresh_tm fv m r in (fv, m)
+       if v \in domf m then (n,m)
+       else (n.+1, m.[v <- IV n])
+  | Tm_App l r => let '(n, m) := fresh_tm n m l in fresh_tm n m r
   end.
 
 
@@ -382,14 +380,6 @@ Definition acyclic_ren (m: {fmap V -> V}) :=
 Lemma acyclic_ren0: acyclic_ren ctx.fmap0.
 Proof. rewrite/acyclic_ren fdisjoint0X//. Qed.
 
-Lemma fresh_Tm_App fv m l r :
-  fresh_tm fv m (Tm_App l r) =
-    let rl := fresh_tm fv m l in
-    fresh_tm rl.1 rl.2 r.
-Proof.
-by rewrite /= [fresh_tm _ _ l]surjective_pairing [fresh_tm _ _ r]surjective_pairing /=.
-Qed.
-
 Fixpoint ren (s: {fmap V -> V}) tm :=
   match tm with
   | Tm_V V => Tm_V (odflt V (s.[?V]))
@@ -411,11 +401,11 @@ Lemma push T1 T2 T3 (t : T1 * T2) (F : _ -> _ -> T3) : (let: (a, bx) := t in F a
   by case: t => /=.
 Qed.
 
-Definition rename fv tm m :=
-  let: (fv', m) := fresh_tm (vars_tm tm `|` fv) m tm in
-  ((fv', m), ren m tm).
+Definition sum_mt n m t := fresh (IV n |` domf m `|` codomf m `|` vars_tm t).
 
-Require Import Lia.
+Definition rename n (m : {fmap V -> V}) t :=
+  let: nm := fresh_tm n m t in
+  (nm, ren nm.2 t).
 
 Lemma set0IN (T: choiceType) (s: {fset T}): s = fset0 \/ exists k, k \in s.
 Proof. have:= fset_0Vmem s => -[->|]; auto => -[x H]; right; exists x; auto. Qed.
@@ -500,18 +490,18 @@ Lemma ren_P b p: ren b (Tm_P p) = Tm_P p. by []. Qed.
 
 Lemma ren_V b v: ren b (Tm_V v) = Tm_V (odflt v b.[?v]). by []. Qed.
 
-Definition fresh_atom fv a m :=
+Definition fresh_atom n m a :=
   match a with
-  | cut => (fv, m, cut)
-  | call t => let: (fv, m, t) := rename fv t m in (fv, m, call t)
+  | cut => (n, m, cut)
+  | call t => let: (n, m, t) := rename n m t in (n, m, call t)
   end.
 
-Definition fresh_atoms fv a m :=
-  foldr (fun x '(fv,m,xs) => let: (fv,m, x) := fresh_atom fv x m in (fv,m,x::xs)) (fv,m,[::]) a.
+Definition fresh_atoms fv m a :=
+  foldr (fun x '(fv,m,xs) => let: (fv,m, x) := fresh_atom fv m x in (fv,m,x::xs)) (fv,m,[::]) a.
 
 Definition fresh_rule fv r :=
-  let: (fv, m, head) := rename fv r.(head) fmap0 in
-  let: (fv, m, premises) := fresh_atoms fv r.(premises) m in
+  let: (fv, m, head) := rename fv fmap0 r.(head) in
+  let: (fv, m, premises) := fresh_atoms fv m r.(premises) in
   (fv, mkR head premises ).
 
 Definition vars_sigma (s: Sigma) := domf s `|` codom_vars s.
@@ -560,31 +550,37 @@ Fixpoint H u (sP:sigT) fv (q : Tm) (h: Tm) s : option (S * Sigma) :=
   | _, _ => None
   end.
 
-Fixpoint select u (sP:sigT) (q: Tm) (rules: list R) sigma : (fvS * seq (Sigma * seq Atom)) :=
+Fixpoint select u (sP:sigT) (q: Tm) (rules: list R) sigma : seq (Sigma * seq Atom) :=
   match rules with
-  | [::] => (fset0, [::])
+  | [::] => [::]
   | rule :: rules =>
     match H u sP (get_input_vars sP q).1 q rule.(head) sigma with
     | None => select u sP q rules sigma
-    | Some (_, sigma1) => 
-      let: (fv, rs) := select u sP q rules sigma in
-      (vars_sigma sigma1 `|` varsU_rule rule `|` fv, (sigma1, rule.(premises)) :: rs)
+    | Some (_, sigma1) => (sigma1, rule.(premises)) :: select u sP q rules sigma
     end
   end.
 
 Section s.
 Variable u : Unif.
 
+Definition v_prog pr := varsU (map varsU_rule pr).
+
+Lemma v_prog_cons x xs: v_prog (x::xs) = varsU_rhead x `|` varsU_rprem x `|` v_prog xs.
+Proof. by []. Qed.
+
+Definition max_sigmas n (s: seq (Sigma * seq Atom)) : nat :=
+  foldr (fun e n => maxn n (maxn (fresh (vars_atoms e.2)) (fresh (vars_sigma e.1)))) n s.
+
 (*SNIP: bc_type*)
-Definition bc : program -> fvS -> Tm -> Sigma -> fvS * seq (Sigma * seq Atom) :=
+Definition bc : program -> nat -> Tm -> Sigma -> nat * seq (Sigma * seq Atom) :=
 (*ENDSNIP: bc_type*)
   fun pr fv (query:Tm) s =>
   if ~~ acyclic s then (fv, [::])
   else
   let query := deref s query in
-  let: (fv, rules) := fresh_rules (vars_sigma s `|` vars_tm query `|` fv) (pr.(rules)) in
-  let: (fv', rules) := select u pr.(sig) query rules s in 
-  (fv `|` fv', rules).
+  let: (fv, rules) := fresh_rules (fresh (IV fv |` vars_sigma s `|` vars_tm query `|` v_prog pr.(rules))) (pr.(rules)) in
+  let: rules := select u pr.(sig) query rules s in 
+  (max_sigmas fv rules, rules).
 End s.
 
 Fixpoint is_det_sig (sig:S) : bool :=
@@ -706,12 +702,12 @@ Proof.
   by clear => md tf ta; apply: eat_ty_arr.
 Qed.
 
-Lemma selectP u sP t1 s rs fv x xs: select u sP t1 rs s = (fv, (x::xs)) -> 
+Lemma selectP u sP t1 s rs x xs: select u sP t1 rs s = (x::xs) -> 
   exists2 p, p \in sP & get_tm_hd t1 = inl p.
 Proof.
-  elim: rs fv x xs => //=r rs IH fv x xs.
+  elim: rs x xs => //=r rs IH x xs.
   case H: H => [[ty s']|]//; last by apply: IH.
-  case S: select => [fv'' [|y ys]][???]; subst; last apply: IH S.
+  case S: select => [|y ys][??]; subst; last apply: IH S.
   have [_ _ [p[pP {}H _]]] := HP H.
   by exists p => //.
 Qed.
@@ -727,3 +723,11 @@ Proof.
   move=> -> + [?]; subst.
   by rewrite (bool_irrelevance P1 P2) => ->[].
 Qed.
+
+Lemma select_cons u sP q r rs s:
+  select u sP q (r :: rs) s =
+    match lang.H u sP (get_input_vars sP q).1 q (head r) s with
+    | Some (_, s1) => (s1, premises r) :: select u sP q rs s
+    | None => select u sP q rs s
+    end.
+Proof. by []. Qed.

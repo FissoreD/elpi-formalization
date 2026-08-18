@@ -103,15 +103,15 @@ Section mut_excl.
     end.
 
   Definition mut_excl pr :=
-    let: (fv, rules) := fresh_rules fset0 pr.(rules) in
+    let: (fv, rules) := fresh_rules (fresh (v_prog pr.(rules))) pr.(rules) in
     good_modes pr.(sig) && mut_excl_aux pr.(sig) rules.
 
   Lemma callable_ren m hd p:
     get_tm_hd (ren m hd) = inl p <-> get_tm_hd hd = inl p.
   Proof. by elim: hd => //= [q|d|v|f Hf a Ha]. Qed.
 
-  Lemma callable_rename fv hd p mp: get_tm_hd (rename fv hd mp).2 = inl p <-> get_tm_hd hd = inl p.
-  Proof. by rewrite/rename!push/= => /=; split => /callable_ren. Qed.
+  Lemma callable_rename fv hd p mp: get_tm_hd (rename fv mp hd).2 = inl p <-> get_tm_hd hd = inl p.
+  Proof. by rewrite/rename => /=; split => /callable_ren. Qed.
 
   Lemma is_det_cder s s1 c: tm_is_det s c -> tm_is_det s (deref s1 c).
   Proof. elim: c s => //=[p|f Hf a Ha] s; rewrite ?deref_P//. Qed.
@@ -158,12 +158,12 @@ Qed.
 
 Lemma acyclic_sigma_select sP query rules s1 e:
   acyclic s1 ->
-    e \in (select u sP query rules s1).2 ->
+    e \in (select u sP query rules s1) ->
       acyclic e.1.
 Proof.
   elim: rules query s1 e => //= -[hd bo] rs IH query s1 e AS/=.
   case H: H => [[ty s1']|]; last by apply: IH.
-  rewrite !push/= in_cons => /orP[/eqP?|]; subst; last by apply: IH.
+  rewrite in_cons => /orP[/eqP?|]; subst; last by apply: IH.
   by have := acyclic_sigma_H AS H.
 Qed.
 
@@ -332,11 +332,6 @@ Proof.
   by apply: matching_unify_transP Hs Hr => //.
 Qed.
 
-Definition v_prog pr := varsU (map varsU_rule pr).
-
-Lemma v_prog_cons x xs: v_prog (x::xs) = varsU_rhead x `|` varsU_rprem x `|` v_prog xs.
-Proof. by []. Qed.
-
 Lemma HSH sP rules hd query s: 
   good_modes sP ->
   acyclic s ->
@@ -348,7 +343,7 @@ Lemma HSH sP rules hd query s:
   [disjoint vars_sigma s & vars_tm hd] ->
   H u sP (get_input_vars sP query).1 query hd s ->
   select_head u sP hd rules = [::] ->
-  (select u sP query rules s).2 = [::].
+  select u sP query rules s = [::].
 Proof.
   move=> GM.
   elim: rules query s hd => //=-[hd bo] rs IH/= query s h' AS sq.
@@ -364,7 +359,6 @@ Proof.
   have sq' := fdisjointWr (get_input_vars_sub sP _) sq.
   apply: SHS H1 (isSomeP H2) => //=.
 Qed.
-
 
 Lemma H_head_ren_aux sP hd q (x y:renaming_for hd) (z w: renaming_for q):
   [disjoint codomf z & codomf x] ->
@@ -390,71 +384,250 @@ Proof.
   by rewrite U1; case: unify => // ?/(_ isT).
 Qed.
 
-Lemma good_ren_fresh s q: 
-  renaming_forP q (fresh_tm (vars q `|` s) fmap0 q).2.
+Lemma fresh_tm_inj_ fv (m:{fmap V -> V}) t:
+  fresh (codomf m) <= fv ->
+   injectiveb m -> injectiveb (fresh_tm fv m t).2.
 Proof.
-  have:= @fresh_tm_def (vars q `|` s) fmap0 q.
-  rewrite/renaming_forP.
-  rewrite /=fsub0set injectiveb0 => /(_ isT (fsubsetUl _ _) isT).
-  move=> [x [H1 HH I1 D1]]; rewrite cat0f in H1; subst.
-  do 2 split => //; last by apply/fsubset_trans/fresh_tm_sub1.
-  by apply: fresh_tm_acyclic; rewrite//?(codomf0,acyclic_ren0,fdisjointX0,fsubsetUl). 
+  elim : t m fv => //=[v|f Hf a Ha] m fv F I; last first.
+    rewrite push; apply/Ha/Hf => //.
+    apply/fresh_subc => //.
+  case: ifP => vm//; apply/injectiveP => -[x xP]-[y yP].
+  rewrite !ffunE ![val _]/= => H1; apply/val_inj => /=.
+  move: xP yP H1; rewrite !inE.
+  case: eqP => xv/= xm; case: eqP => yv/= ym; subst => //.
+    by rewrite in_fnd => H; have:= fresh_sub_notin F => /codomfP[]; exists y; rewrite in_fnd H.
+    by rewrite in_fnd => H; have:= fresh_sub_notin F => /codomfP[]; exists x; rewrite in_fnd-H.
+  by rewrite !in_fnd// => /(injectiveP _ I)[].
+Qed.
+
+Lemma fresh_tm_inj0 n t: injectiveb (fresh_tm n.+1 fmap0 t).2.
+Proof. by apply/fresh_tm_inj_; rewrite (injectiveb0,codomf0)//freshP0. Qed.
+
+Lemma good_ren_fresh n q: fresh (vars q) <= n -> renaming_forP q (fresh_tm n fmap0 q).2.
+Proof.
+  move=> H.
+  rewrite/renaming_forP; split.
+    by rewrite fresh_tm_inj_//(injectiveb0,codomf0)//freshP0; destruct n.
+  rewrite (fsubset_trans _ (fresh_tm_sub1 _ _ _))//.
+  split => //.
+  apply: (@fresh_tm_acyclic 0); rewrite//?(codomf0,acyclic_ren0,fdisjointX0,fsubsetUl)//.
+  by rewrite/sum_mt domf0 codomf0 !fsetU0 !freshPU freshP1 H andbT; destruct n.
+Qed.
+
+Definition min_maxS (s:{fset V}) m M :=
+  forall x, IV x \in s -> m <= x < M.
+
+Lemma min_max_fresh_tm r m M q:
+  m <= M ->
+  min_maxS (codomf r) m M ->
+  let x := fresh_tm M r q in
+  min_maxS (codomf x.2) m x.1.
+Proof.
+  elim: q M r => /=[p|v|f Hf a Ha] M r// mm MM; last by (rewrite push; apply/Ha/Hf; rewrite//(leq_trans mm)//fresh_sub).
+  case: fndP => vr//=; rewrite codomf_setN//.
+  move=> x; rewrite 2!inE; case: eqP => [[->]|]; first by rewrite mm/=.
+  by move=> xm H; have /andP[->/leq_trans->]:= MM x H.
+Qed.
+
+Lemma min_max_fresh_atom r m M q:
+  m <= M ->
+  min_maxS (codomf r) m M ->
+  let x := fresh_atom M r q in
+  min_maxS (codomf x.1.2) m x.1.1.
+Proof. by case: q => //=t mm MM; rewrite !push/=; apply: min_max_fresh_tm. Qed.
+
+Lemma min_max_fresh_atoms r m M q:
+  m <= M ->
+  min_maxS (codomf r) m M ->
+  let x := fresh_atoms M r q in
+  min_maxS (codomf x.1.2) m x.1.1.
+Proof.
+  elim: q M r => //=[x xs IH] M r// mm MM; rewrite !push/=.
+  by apply/min_max_fresh_atom/IH/MM/mm/leq_trans/fresh_atoms_sub.
+Qed.
+
+Lemma min_maxP s:
+  min_maxS s 0 (fresh s).
+Proof.
+  move=> x xs; rewrite leq0n/=; case: (boolP (_ < _)) => //=.
+  by rewrite -leqNgt => /fresh_sub_notin; rewrite xs.
+Qed.
+
+Lemma min_max_fresh_tm0 fv q:
+  let x := fresh_tm fv fmap0 q in
+  min_maxS (codomf x.2) fv x.1.
+Proof.
+  move=> H/=.
+  have MM : min_maxS (codomf fmap0) fv fv by move=> x; rewrite /= codomf0.
+  by have := @min_max_fresh_tm fmap0 fv fv q (leqnn _) (MM _).
+Qed.
+
+Lemma min_maxU a b m M:
+  min_maxS a m M -> min_maxS b m M -> min_maxS (a `|` b) m M.
+Proof. by move=> M1 M2 x; rewrite inE => /orP[/M1|/M2]. Qed.
+
+Lemma min_max_fresh_rules fv r:
+  let x := fresh_rules fv r in
+  min_maxS (v_prog x.2) fv x.1.
+Proof.
+  elim: r fv => //=r rs IH m; rewrite !push/= v_prog_cons.
+  apply: min_maxU; last first.
+    move=> x H; have /andP[->/= Hx] := IH m x H.
+    by apply/leq_trans/fresh_rule_sub.
+  set X:= (fresh_rules _ _).1.
+  rewrite/fresh_rule; case: r => h b; rewrite /varsU_rhead/varsU_rprem !push/=.
+  set Y:= fresh_tm _ _ _.
+  apply: min_maxU .
+    have/= H:= @min_max_fresh_tm0 X h.
+    rewrite -/Y in H.
+    move=> x y.
+    have:= vars_tm_ren_sub (fresh_tm_sub1 X fmap0 h).
+    rewrite-/Y => Hx.
+    have /andP[Hl Hr] := H _ (fsubsetP Hx _ y).
+    apply/andP; split; last first.
+      by apply/leq_trans/fresh_atoms_sub.
+    apply/leq_trans/Hl/fresh_rules_sub.
+  elim: b => //-[|t]/= xs {}IH; rewrite !push/=vars_atoms_cons/=.
+    by rewrite fset0U.
+  apply: min_maxU; last first.
+    move=> x H.
+    have/andP[-> {}IH]/=:= IH x H.
+    apply: leq_trans IH _.
+    by apply/leq_trans/fresh_sub.
+  clear IH.
+  set F := fresh_atoms _ _ _.
+  set Z := fresh_tm _ _ _.
+  have xx: m <= F.1.1.
+    apply/leq_trans/fresh_atoms_sub/leq_trans/fresh_sub/fresh_rules_sub.
+  have yy: min_maxS (codomf F.1.2) m F.1.1.
+    have kk : m <= Y.1 by apply/leq_trans/fresh_sub/fresh_rules_sub.
+    have zz : min_maxS (codomf Y.2) m Y.1.
+      apply/min_max_fresh_tm; first by apply/fresh_rules_sub.
+      by rewrite codomf0//.
+    have/= H := @min_max_fresh_atoms Y.2 m Y.1 xs kk zz.
+    rewrite -/F in H.
+    by move=> x Hx; have /andP[->{}H] := H x Hx.
+  have/= H:= @min_max_fresh_tm F.1.2 m F.1.1 t xx yy.
+  rewrite-/Z/= in H.
+  move=> x y.
+  have:= vars_tm_ren_sub (fresh_tm_sub1 F.1.1 F.1.2 t).
+  rewrite-/Z => Hx.
+  by have/andP[->/=->] := H _ (fsubsetP Hx _ y).
+Qed.
+
+Lemma min_max_S_disj s1 s2 m1 m2 M1 M2:
+  M1 <= m2 ->
+  min_maxS s1 m1 M1 ->
+  min_maxS s2 m2 M2 ->
+  s1 # s2.
+Proof.
+  move=> mm H1 H2; apply/fdisjointP => -[x] xs1.
+  case: (boolP (_ \in _)) => //xs2.
+  have /andP[m1x xM1] := H1 _ xs1.
+  have /andP[m2x xM2] := H2 _ xs2.
+  have {xM1} xm2 := leq_trans xM1 mm.
+  have:= leq_trans xm2 m2x.
+  by rewrite ltnn.
 Qed.
 
 Lemma H_head_ren sP fv1 fv2 t xs fx fy q:
-  (lang.rename (fresh_rules fv1 xs).1 t fmap0).1.1 `<=` fx ->
-  (lang.rename (fresh_rules fv2 xs).1 t fmap0).1.1 `<=` fy ->
-  H_head u sP ((lang.rename fx q fmap0).2) ((lang.rename (fresh_rules fv1 xs).1 t fmap0).2) =
-  H_head u sP ((lang.rename fy q fmap0).2) ((lang.rename (fresh_rules fv2 xs).1 t fmap0).2).
+  fresh (vars q) <= fx -> fresh (vars q) <= fy ->
+  fresh (vars t) <= (fresh_rules fv1 xs).1 ->
+  fresh (vars t) <= (fresh_rules fv2 xs).1 ->
+  (lang.rename (fresh_rules fv1 xs).1 fmap0 t).1.1 <= fx ->
+  (lang.rename (fresh_rules fv2 xs).1 fmap0 t).1.1 <= fy ->
+  H_head u sP ((lang.rename fx fmap0 q).2) ((lang.rename (fresh_rules fv1 xs).1 fmap0 t).2) =
+  H_head u sP ((lang.rename fy fmap0 q).2) ((lang.rename (fresh_rules fv2 xs).1 fmap0 t).2).
 Proof.
-  rewrite/lang.rename!push/=.
+  move=> qx qy tr1 tr2.
+  rewrite/lang.rename/=.
   set X:= fresh_tm _ _ _.
   set Y:= fresh_tm _ _ _.
   set W:= fresh_tm _ _ _.
   set Z:= fresh_tm _ _ _.
-  move=> H1 H2.
-  change W.2 with (ren_map (renaming_forPM (good_ren_fresh fx q))).
-  change X.2 with (ren_map (renaming_forPM (good_ren_fresh (fresh_rules fv1 xs).1 t))).
-  change Z.2 with (ren_map (renaming_forPM (good_ren_fresh fy q))).
-  change Y.2 with (ren_map (renaming_forPM (good_ren_fresh (fresh_rules fv2 xs).1 t))).
-  apply: H_head_ren_aux => //=.
-  apply: fdisjointWr (disj_codom0R _ _).
-  apply: fsubset_trans (fresh_tm_codom2 _ _ _) _.
-  rewrite codomf0 fset0U//.
-  apply: fdisjointWr (disj_codom0R _ _).
-  apply: fsubset_trans (fresh_tm_codom2 _ _ _) _.
-  rewrite codomf0 fset0U//.
+  move=> H1 H2/=.
+  replace W.2 with (ren_map (renaming_forPM (good_ren_fresh qx))) => //.
+  replace Z.2 with (ren_map (renaming_forPM (good_ren_fresh qy))) => //.
+  replace X.2 with (ren_map (renaming_forPM (good_ren_fresh tr1))) => //.
+  replace Y.2 with (ren_map (renaming_forPM (good_ren_fresh tr2))) => //.
+  apply: H_head_ren_aux; rewrite//=-/X-/W-/Y-/Z.
+    have /= := @min_max_fresh_tm0 fx q.
+    have /= := @min_max_fresh_tm0 (fresh_rules fv1 xs).1 t.
+    rewrite -/X-/W fdisjoint_sym.
+    by apply/min_max_S_disj.
+  have /= := @min_max_fresh_tm0 fy q.
+  have /= := @min_max_fresh_tm0  (fresh_rules fv2 xs).1 t.
+  rewrite -/Y-/Z fdisjoint_sym.
+  by apply/min_max_S_disj.
 Qed.
 
 Lemma callable_rename1 p fv1 hd mp: 
-  (get_tm_hd (lang.rename fv1 hd mp).2 == inl p) = (get_tm_hd hd == inl p).
+  (get_tm_hd (lang.rename fv1 mp hd).2 == inl p) = (get_tm_hd hd == inl p).
 Proof.
   case:eqP; case:eqP => //= H1 H2.
     by move/callable_rename: H1 => /(_ _ _ H2).
   by have:= H2 (proj2 (callable_rename _ _ _ _) _); auto.
 Qed.
 
+Lemma fresh_tm_acyclic0' vt t:
+  fresh (vars t) <= vt -> acyclic_ren (fresh_tm vt fmap0 t).2.
+Proof. by move=> H; rewrite (@fresh_tm_acyclic0 0)///sum_mt domf0 codomf0 !fsetU0 freshPU H andbT freshP1; destruct vt. Qed.
+
 Lemma select_head_ren sP rs fx fy fv1 fv2 hd:
   let FRS1 := fresh_rules fv1 rs in
   let FRS2 := fresh_rules fv2 rs in
-  FRS1.1 `<=` fx ->
-  FRS2.1 `<=` fy ->
-  select_head u sP ((lang.rename fx hd fmap0).2) FRS1.2 = [::] ->
-  select_head u sP ((lang.rename fy hd fmap0).2) FRS2.2 = [::].
+  fresh (v_prog rs) <= fv1 -> fresh (v_prog rs) <= fv2 ->
+  fresh (vars hd) <= fv1 ->  fresh (vars hd) <= fv2 ->
+  FRS1.1 <= fx ->  FRS2.1 <= fy ->
+  select_head u sP ((lang.rename fx fmap0 hd).2) FRS1.2 = [::] ->
+  select_head u sP ((lang.rename fy fmap0 hd).2) FRS2.2 = [::].
 Proof.
-  elim: rs fx fy fv1 fv2 hd => //= x xs IH fx fy fv1 fv2 hd; rewrite !push/=.
-  move=> H2 H3.
-  rewrite !(head_fresh_rule).
-  case H: H_head => //=.
-  rewrite /fresh_rule!push/= in H2 H3.
-  have {}H2' := fsubset_trans (fresh_atoms_sub _ _ _) H2.
-  have {}H3' := fsubset_trans (fresh_atoms_sub _ _ _) H3.
-  have {}H2' := fsubset_trans (vars_tm_rename _ _) H2'.
-  have {}H3' := fsubset_trans (vars_tm_rename _ _) H3'.
-  rewrite (@H_head_ren _ _ fv1 _ _ _ fx)//=.
-    by rewrite H//=; apply: IH; (apply:fsubset_trans; first apply: fresh_rule_sub); rewrite/fresh_rule?push//=.
-  by apply: fsubset_trans H3; apply: fsubset_trans (fresh_atoms_sub _ _ _).
-  by apply: fsubset_trans H2; apply: fsubset_trans (fresh_atoms_sub _ _ _).
+  rewrite/=.
+  elim: rs fv1 fv2 => //= x xs IH fv1 fv2.
+  rewrite !push !v_prog_cons !freshPU -!andbA/=.
+  move => /and3P[h1 b1 r1] /and3P[h2 b2 r2] v1 v2/= F1 F2.
+  rewrite !head_fresh_rule.
+  case H: H_head => //= S.
+  rewrite (IH fv1)//; only 2,3: by apply: (leq_trans (fresh_rule_sub _ _)); eassumption.
+  replace (H_head _ _ _ _) with (@None (lang.S)) => //.
+  rewrite-H.
+  have Fx: fresh (vars hd) <= fx.
+    by apply/leq_trans/F1/leq_trans/fresh_rule_sub/leq_trans/fresh_rules_sub.
+  have Fy: fresh (vars hd) <= fy.
+    by apply/leq_trans/F2/leq_trans/fresh_rule_sub/leq_trans/fresh_rules_sub.
+  have renx : renaming_forP hd (fresh_tm fx fmap0 hd).2.
+    repeat split.
+      by apply: fresh_tm_inj_ injectiveb0; rewrite codomf0 freshP0; destruct fx.
+      by apply: fresh_tm_acyclic0'.
+    by apply: fresh_tm_sub1.
+  have renz : renaming_forP (head x) (fresh_tm (fresh_rules fv1 xs).1 fmap0 (head x)).2.
+    repeat split.
+      by apply: fresh_tm_inj_ injectiveb0; rewrite codomf0 freshP0; apply/leq_trans/fresh_rules_sub; destruct fv1.
+      by apply/fresh_tm_acyclic0'/leq_trans/fresh_rules_sub.
+    by apply/fsubset_trans/fresh_tm_sub1.
+  have reny : renaming_forP hd (fresh_tm fy fmap0 hd).2.
+    repeat split.
+      by apply: fresh_tm_inj_ injectiveb0; rewrite codomf0 freshP0; destruct fy.
+      by apply: fresh_tm_acyclic0'.
+    by apply: fresh_tm_sub1.
+  have renw : renaming_forP (head x) (fresh_tm (fresh_rules fv2 xs).1 fmap0 (head x)).2.
+    repeat split.
+      by apply: fresh_tm_inj_ injectiveb0; rewrite codomf0 freshP0; apply/leq_trans/fresh_rules_sub; destruct fv2.
+      by apply/fresh_tm_acyclic0'/leq_trans/fresh_rules_sub.
+    by apply/fsubset_trans/fresh_tm_sub1.
+  have ->//= := @H_head_ren_aux sP (head x) hd (renaming_forPM renz) (renaming_forPM renw) (renaming_forPM renx) (renaming_forPM reny).
+    have /= := @min_max_fresh_tm0 fx hd.
+    have /= := @min_max_fresh_tm0 (fresh_rules fv1 xs).1 (head x).
+    rewrite fdisjoint_sym.
+    apply/min_max_S_disj.
+    apply/leq_trans/F1; destruct x; rewrite/fresh_rule !push/=.
+    by apply/leq_trans/fresh_atoms_sub.
+  have /= := @min_max_fresh_tm0 fy hd.
+  have /= := @min_max_fresh_tm0 (fresh_rules fv2 xs).1 (head x).
+  rewrite fdisjoint_sym.
+  apply/min_max_S_disj.
+  apply/leq_trans/F2; destruct x; rewrite/fresh_rule !push/=.
+  by apply/leq_trans/fresh_atoms_sub.
 Qed.
 
 Lemma mut_exclP p fv c s1:
@@ -467,45 +640,68 @@ Proof.
   case: ifP => //= /negbFE AS.
   rewrite/mut_excl !push/=.
   move=> /andP[GM].
-  elim: rs c s1 fv TD AS => [|[hd bo] rs IH]//= c s1 fv TD AS.
-  rewrite !push/=.
+  set vp := fresh (v_prog rs).
+  have:= leqnn vp; rewrite{1}/vp.
+  set va := fresh (_ `|` _).
+  have:= leqnn va; rewrite{1}/va.
+  move: va vp.
+  elim: rs => [|[hd bo] rs IH]//= va vp.
+  rewrite !push !v_prog_cons/= (fsetUC _ (v_prog _)) fsetUA freshPU /varsU_rhead/varsU_rprem/= (freshPU (vars _)) => /and3P[S1 Sh Sb].
+  rewrite !freshPU => /and3P[S2 Sh' Sb'].
   move=> /andP[+ ME].
-  have:= IH _ _ _ TD AS ME.
-  set FRS1 := fresh_rules _ _.
-  set FRS2 := fresh_rules _ _.
-  set FS1 := fresh_rule _ _.
-  set FS2 := fresh_rule _ _.
-  move=> {}IH.
-  case H: H => [s2|]//=; rewrite?push/={}IH//=andbT.
-  move: H; rewrite/FS2.
-  rewrite/FS1 head_fresh_rule/=/fresh_rule/=!push/=.
-  rewrite/mut_excl_head/=.
-  set FC2:= lang.rename _ _ _.
-  set FC1:= lang.rename _ _ _.
-  move=> H/=.
-  rewrite !has_cut_seq_fresh.
-  case CS: has_cut_seq; first by case: select => [?[|[]]].
-  rewrite/FC1.
+  have {}IH := IH _ _ S1 S2 ME.
+  rewrite/mut_excl_head/fresh_rule !push/= !has_cut_seq_fresh/=.
+(*   set FRS1 := fresh_rules _ _. *)
+(*   set FRS2 := fresh_rules _ _. *)
+(*   set FS1 := fresh_rule _ _. *)
+(*   set FS2 := fresh_rule _ _. *)
+  case H: H => [s2|]//=; rewrite !push/= {}IH andbT/=.
   move: TD; rewrite/tm_is_det.
   case X: get_tm_hd => [p|]//=; case: fndP => //pP DP.
   rewrite (proj2 (callable_rename _ hd p _))//; last first.
     apply/eqP.
     have [Hx Hy [p' [pP']]] := HP H.
     by move /eqP: Hx; rewrite X eq_sym callable_rename1.
-  rewrite in_fnd DP/=.
-  case S: select_head => //= _.
-  have ->// : (select u sP (deref s1 c) FRS2.2 s1).2 = [::].
-  have /(_  (vars_sigma s1 `|` vars_tm (deref s1 c) `|` fv)) := select_head_ren (fsubset_refl _) (fsubset_refl _) S.
-  rewrite -/FRS2-/FC2 => HS.
-  apply: HSH (isSomeP H) HS => //.
+  rewrite in_fnd DP/= has_cut_seq_fresh.
+  case has_cut_seq; first by case select.
+  case S: select_head => //=.
+  have ->// : (select u sP (deref s1 c) (fresh_rules va rs).2 s1) = [::].
+(*   have {}S := select_head_ren (leqnn _) (leqnn _) (leq_trans Sh' (fresh_rules_sub _ _)) (leq_trans Sh (fresh_rules_sub _ _)) S. *)
+  apply: HSH (isSomeP H) _ => //; cycle -1.
+    move: S.
+    set n := fst _; set m := fst _.
+    apply: select_head_ren => //.
+    by move: S1; rewrite !freshPU -!andbA => /and5P[]//.
   - by apply: acyclic_deref_disjoint.
-  - by apply: disjoint_varsU.
-  - by apply/fdisjointWl/disjoint_varsU1; rewrite fsubsetU// fsubsetUr.
-  - rewrite fdisjoint_sym; apply/fdisjointWr/vars_tm_rename_disjoint.
-    by apply/fsubset_trans/fresh_rules_sub; rewrite fsubsetU// fsubsetUr.
-  - by apply: fdisjointWl (disjoint_varsU1 _ _); rewrite -fsetUA fsubsetUl.
-  - rewrite fdisjoint_sym; apply: fdisjointWr (vars_tm_rename_disjoint _ _).
-    by apply: fsubset_trans (fresh_rules_sub _ _); rewrite -fsetUA fsubsetUl.
+  (* c + s1 <= FRS2 <= VT *)
+  - apply: fdisjointWl (ren_mp (fresh_tm_sub1 _ _ _)) _.
+    rewrite fdisjoint_sym.
+    apply: min_max_S_disj; cycle -2.
+      apply: min_max_fresh_rules.
+      apply : @min_max_fresh_tm0 _ hd.
+    by [].
+  - apply: min_max_S_disj; last first.
+      apply: min_max_fresh_rules.
+      apply: min_maxP.
+    apply/leq_trans/S1.
+    by rewrite !freshUU !leq_max leqnn orbT.
+  - apply: fdisjointWr (ren_mp (fresh_tm_sub1 _ _ _)) _.
+    apply: min_max_S_disj; cycle -2.
+      apply: min_maxP.
+      apply: min_max_fresh_tm0.
+    apply/leq_trans/fresh_rules_sub/leq_trans/S1.
+    by rewrite !freshUU !leq_max leqnn orbT.
+  - apply: min_max_S_disj; cycle -2.
+      apply: min_maxP.
+      apply: min_max_fresh_rules.
+    apply/leq_trans/S1.
+    by rewrite -2!fsetUA 2!freshUU !leq_max leqnn orbT.
+  - apply: fdisjointWr (ren_mp (fresh_tm_sub1 _ _ _)) _.
+    apply: min_max_S_disj; cycle 1.
+      apply: min_maxP.
+      apply: min_max_fresh_tm0.
+    apply/leq_trans/fresh_rules_sub/leq_trans/S1.
+    by rewrite -fsetUA 2!freshUU !leq_max leqnn orbT.
 Qed.
 
 Print  Assumptions  mut_exclP.
@@ -524,21 +720,22 @@ Lemma all_cut_select_head sP t rs fv:
 Proof.
   elim: rs fv t => //=[[hd bo]]/= rs IH fv t /andP[H1 H2].
   rewrite !push/= head_fresh_rule/=; case: ifP; last by eauto.
-  by rewrite/= premises_fresh_rule IH//has_cut_seq_fresh /= H1.
+  by rewrite/=/fresh_rule !push/= IH//has_cut_seq_fresh /= H1.
 Qed.
 
 Lemma all_cut_mut_excl p: good_modes p.(sig) -> all_cut p -> mut_excl u p.
 Proof.
   rewrite/all_cut/mut_excl push/= => ->/=.
-  case: p => /= + s.
-  elim => //= [[hd bo]] rs/= IH; rewrite !push/=.
-  move=> /andP[HBO] H; rewrite IH// andbT.
-  rewrite/fresh_rule !push/=/mut_excl_head/=.
+  case: p => /= r s.
+  set n := fresh _; have:= leqnn n; rewrite {1}/n; move: n.
+  elim r => //= [[hd bo]] rs/= IH n; rewrite !push/= v_prog_cons/=/varsU_rhead/varsU_rprem/=.
+  rewrite !freshPU -andbA => /and3P[hn bn rn] /andP[cb cr].
+  rewrite IH//andbT/fresh_rule/mut_excl_head !push/=.
+  set R := ren _ _.
   case X: tm_is_det => //=.
-  set R1 := lang.rename _ _ _.
-  case S: select_head => //=[r' rs'].
-  rewrite has_cut_seq_fresh HBO/=.
-  have:= all_cut_select_head s R1.2 fset0 H.
+  case S: select_head => //= [r' rs'].
+  rewrite has_cut_seq_fresh /=cb.
+  have:= all_cut_select_head s R n cr.
   by rewrite S/= => /andP[->/all_all_but_last->]; destruct rs'.
 Qed.
 
