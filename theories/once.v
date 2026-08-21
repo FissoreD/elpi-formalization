@@ -145,10 +145,6 @@ Section once.
     (sig + once_sigS).[? once_sym] = Some once_sig.
   Proof. by rewrite/once_sigS !FmapE.fmapE eqxx/= fsetU0 in_fset1 eqxx. Qed.
 
-  (* Lemma get_modes_rev_once_sym t:
-    get_modes (Tm_App (Tm_P once_sym) t) once_sig = sig_flat.
-  Proof. by []. Qed. *)
-
   Lemma no_once_select u sig rs s T:
     no_once rs ->
     select u (sig + once_sigS) (Tm_App (Tm_P once_sym) T) rs s = [::].

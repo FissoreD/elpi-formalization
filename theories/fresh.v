@@ -472,7 +472,6 @@ Lemma fresh_tm_acyclic n vt t m:
   acyclic_ren m -> acyclic_ren (fresh_tm vt m t).2.
 Proof.
   rewrite/acyclic_ren.
-  (* elim: t m vt => /= [p|d|v|f Hf a Ha] m vt Hd Dd Dt//=; last first. *)
   elim: t m vt => //= [v|f Hf a Ha] m vt; last first.
     move=>/sum_mt_app[sf sa]; rewrite fdisjointUX push => /andP[Df Da] D.
     apply/Ha/Hf => //.

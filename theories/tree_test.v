@@ -48,20 +48,6 @@ Section Test1.
       mkR (app q tt) [:: call (app p v0) ; call (app r v0) ] 
     ].
 
-(*   Lemma varsU_set (m: Sigma) k t:
-    k \notin domf m ->
-    codom m.[k <- t] = t :: codom m.
-  Proof.
-    move=> H.
-    rewrite codomE [domf _]/=.
-    rewrite/=.
-    Search (enum (_ `|` _)).
-    Search enum 
-    Search (domf (_ `|` _)).
-    
-    Search codom (_.[_ <- _]).
-    rewrite/=. *)
-
   Goal exists v, runT unif p_test 0 fmap0 (Unexplored (call (app q tt))) (One s2) false v.
   Proof.
     repeat eexists.
@@ -290,23 +276,10 @@ Section map.
   Lemma fstS T1 T2 (a:T1) (b:T2): (a,b).1 = a. by []. Qed.
   Lemma sndS T1 T2 (a:T1) (b:T2): (a,b).2 = b. by []. Qed.
 
-(*   Lemma select_consF sP ft x xs s:
-    (* inl m = get_tm_hd (head x) -> *)
-    select u sP ft (x::xs) s = 
-    match H u sP (get_input_vars sP ft).1 ft (head x) s with
-    | Some (_, sigma1) =>
-      let '(fv, rs) := select u sP ft xs s in
-      (vars_sigma sigma1 `|` varsU_rule x `|` fv, ((sigma1, premises x) :: rs))
-    | None => select u sP ft xs s
-    end.
-  Proof. by rewrite//=. Qed. *)
-
   Lemma inl_map_get_tm_hdmap:
     inl map == get_tm_hd map.
   Proof. by []. Qed.
 
-  (* Lemma ifTS T (a b:T) : (if true then a else b) = a. by []. Qed.
-  Lemma ifFS T (a b:T) : (if false then a else b) = b. by []. Qed. *)
   Lemma fmapIn e (S: {fset V}) (f: V) (H : e \in S):
     [ffun x : S => f].[? e] = Some f.
   Proof. by rewrite in_fnd/= ffunE/=. Qed.
@@ -316,10 +289,6 @@ Section map.
   Proof. by rewrite/=!push. Qed.
 
   Lemma fresh_tm_P s r p: fresh_tm s r (Tm_P p) = (s, r). by []. Qed.
-  (* Lemma getfmap12d: (get_input_vars [:: input;  input;  output] (flatten_term map12d)) = fset0.
-  Proof. by rewrite/= !simpl_set. Qed. *)
-
-    (* Print fresh_tm. *)
 
   Lemma get_input_vars_map12d:
     (get_input_vars p' map12d).1 = fset0.
@@ -328,17 +297,6 @@ Section map.
     by rewrite !eqxx/= !fsetU0.
   Qed.
 
-(*   Lemma rename_app fv f a v:
-    (rename fv v (Tm_App f a)).2 = 
-    app
-      (ren
-      (fresh_tm (fresh_tm (vars f `|` vars a `|` fv) v f).1
-      (fresh_tm (vars f `|` vars a `|` fv) v f).2 a).2 f)
-      (ren
-      (fresh_tm (fresh_tm (vars f `|` vars a `|` fv) v f).1
-      (fresh_tm (vars f `|` vars a `|` fv) v f).2 a).2 a).
-  Proof. by rewrite/rename/= !push/=. Qed. *)
-  
   Lemma sum_pop x (S: {fset V}): IV x \notin S ->
     (\max_(i <- (IV x |` S : {fset V})) (let 'IV n := i in n)) = (maxn x 
       (\max_(i <- S) (let 'IV n := i in n)))%nat.
@@ -382,33 +340,19 @@ Section map.
            |};
            {| head := app (app double one) two; premises := [::] |}]).
   Proof.
+    set r1 := {| head := _; premises := _ |}.
+    set r2 := {| head := _; premises := _ |}.
+    set r3 := {| head := _; premises := _ |}.
     rewrite/p' fresh_rules_cons.
     set X := fresh_rules _ _.
     rewrite /=FmapE.fmapE eqxx/=.
-    have: X = (addn 5 n,
-       [:: {|
-             head :=
-               app (app (app map (IV n)) (app (app cons (IV n.+1)) (IV (2+n))))
-                 (app (app cons (IV (3+n))) (IV (4+n)));
-             premises :=
-               [:: call (app (app (IV n) (IV n.+1)) (IV (3+n)));
-                   call (app (app (app map (IV n)) (IV (2+n))) (IV (4+n)))]
-           |};
-           {| head := app (app double one) two; premises := [::] |}]).
+    have: X = (addn 5 n, [:: r2; r3]).
       rewrite{}/X fresh_rules_cons.
       set X := fresh_rules _ _.
-      have: X = (n,[:: {| head := app (app double one) two; premises := [::] |}]) by [].
-      move=> ->{X}.
+      have: X = (n,[:: r3]) by [].
+      move=> ->{X}//=.
       set RF := fresh_rule _ _.
-      have: RF = (addn 5 n,
-           {|
-             head :=
-               app (app (app map (IV n)) (app (app cons (IV n.+1)) (IV (2+n))))
-                 (app (app cons (IV (3+n))) (IV (4+n)));
-             premises :=
-               [:: call (app (app (IV n) (IV n.+1)) (IV (3+n)));
-                   call (app (app (app map (IV n)) (IV (2+n))) (IV (4+n)))]
-           |}).
+      have: RF = (addn 5 n, r2).
         rewrite{}/RF/fresh_rule [premises _]/=[head _]/=.
         rewrite [rename _ _ _]/=/rename [fresh_tm _ _ _]/=.
         rewrite !inE orbF.
@@ -424,7 +368,6 @@ Section map.
         rewrite fresh_atoms_cons.
         set FR := fresh_atoms _ _ _.
         have: FR = (addn 5 n, [fmap].[F <- IV n].[X <- IV n.+1].[Y <- IV (2+n)].[X' <- IV (3+n)].[Y' <- IV (4+n)], [:: call (app (app (app map (IV n)) (IV (2+n))) (IV (4+n)))]).
-(*         have: FR = (addn 5 n, [fmap].[F <- IV n].[X <- IV n.+1].[Y <- IV (2+n))].[X' <- IV 16].[Y' <- IV 17], [:: call (app (app (app map (IV n)) (IV (2+n))) (IV 17))]). *)
           rewrite{}/FR fresh_atoms_cons.
           set FR := fresh_atoms _ _ _.
           have: FR = (addn 5 n, [fmap].[F <- IV n].[X <- IV n.+1].[Y <- IV (2+n)].[X' <- IV (3+n)].[Y' <- IV (4+n)], [::]).
