@@ -298,7 +298,6 @@ Proof.
   elim: query hd1 hd2 => //=[p|f Hf a _];
   move=> [p1|v1|f1 a1]//[p2|v2|f2 a2]//=.
     move=> _ _ _ _ _ _ _ _; case: eqP => // <-; case: eqP => //->; case: fndP => //=.
-  (* move=> S1 S2 d2f2 s1f1. *)
   move=> IF.
   rewrite 2!fdisjointXU => /andP[V1 V2] /andP[V3 V4].
   rewrite ?fdisjointUX !fdisjointXU.
@@ -651,10 +650,6 @@ Proof.
   move=> /andP[+ ME].
   have {}IH := IH _ _ S1 S2 ME.
   rewrite/mut_excl_head/fresh_rule !push/= !has_cut_seq_fresh/=.
-(*   set FRS1 := fresh_rules _ _. *)
-(*   set FRS2 := fresh_rules _ _. *)
-(*   set FS1 := fresh_rule _ _. *)
-(*   set FS2 := fresh_rule _ _. *)
   case H: H => [s2|]//=; rewrite !push/= {}IH andbT/=.
   move: TD; rewrite/tm_is_det.
   case X: get_tm_hd => [p|]//=; case: fndP => //pP DP.
@@ -666,14 +661,12 @@ Proof.
   case has_cut_seq; first by case select.
   case S: select_head => //=.
   have ->// : (select u sP (deref s1 c) (fresh_rules va rs).2 s1) = [::].
-(*   have {}S := select_head_ren (leqnn _) (leqnn _) (leq_trans Sh' (fresh_rules_sub _ _)) (leq_trans Sh (fresh_rules_sub _ _)) S. *)
   apply: HSH (isSomeP H) _ => //; cycle -1.
     move: S.
     set n := fst _; set m := fst _.
     apply: select_head_ren => //.
     by move: S1; rewrite !freshPU -!andbA => /and5P[]//.
   - by apply: acyclic_deref_disjoint.
-  (* c + s1 <= FRS2 <= VT *)
   - apply: fdisjointWl (ren_mp (fresh_tm_sub1 _ _ _)) _.
     rewrite fdisjoint_sym.
     apply: min_max_S_disj; cycle -2.

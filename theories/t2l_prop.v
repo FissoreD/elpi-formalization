@@ -831,8 +831,6 @@ Section NurProp.
         case FF: bc => [? [|r rs]]/=[??  H1]; subst => //=.
         by rewrite H1 !catA//.
       have /=fA := step_not_failed H notF.
-      (* rewrite (step_not_solved H)//. *)
-      (* move=>/eqP->{B HB} [?<-]/=; subst. *)
       have [s5 [y[ys sA]]]:= failed_tree_to_stack vA fA s l.
       rewrite sA/= !tree_to_stack_big_and.
       rewrite map_cons cat_cons cat0s.
@@ -849,7 +847,6 @@ Section NurProp.
       rewrite H0/=.
       rewrite tree_to_stack_big_and map_cons/= cat_cons cat0s /catl/=.
       rewrite add_deep_cat map_cat.
-      (* set hd := (a2g B0). *)
       rewrite -!cat_cons; f_equal.
       rewrite add_deep_goalsP//?empty_ca_atoms//.
       by rewrite add_deep_altsP// empty_ca_atoms.

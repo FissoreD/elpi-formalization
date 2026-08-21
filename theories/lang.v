@@ -525,7 +525,7 @@ Fixpoint get_input_vars (sP:sigT) t : {fset V} * option S :=
   end.
 
 (* Unification between query and rule-head *)
-(* mv is the set of "frozen" variables appearing in input position in the query
+(* fv is the set of "frozen" variables appearing in input position in the query
    the are not touched when unified with the matching procedure (input mode)
 
    An example (using montanari algorithm) that can assign input variables
@@ -608,17 +608,6 @@ Fixpoint all_but_last {T : Type} P (l : seq T) :=
 Lemma tm_is_det_app sP f1 a1:
   tm_is_det sP (Tm_App f1 a1) = tm_is_det sP f1.
 Proof. by []. Qed.
-
-(* Lemma is_detH u sP md s s' t t':
-  H u md t t' s = Some s' ->
-    tm_is_det sP t' = tm_is_det sP t.
-Proof.
-  elim: md s s' t t' => //=.
-    by move=> s s' []//= p t'; case: eqP => //=?; subst.
-  move=> [m _] tl Hl s1 s2 []//=f1 a1 []//= f2 a2.
-  case H: H => //= _.
-  rewrite !tm_is_det_app; apply: Hl H.
-Qed. *)
 
 Lemma get_tm_hd_app t t0:
   (get_tm_hd (Tm_App t t0)) = (get_tm_hd t).

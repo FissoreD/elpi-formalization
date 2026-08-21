@@ -160,17 +160,12 @@ Section check.
     case: p => [rs s].
     rewrite/bc/=/check_rules/= => CR TD.
     case: ifP => // _.
-    (* case DR: get_tm_hd => //=[p]. *)
-    (* case: fndP => //= pP. *)
     rewrite !push/=.
     move: (fresh _).
-    (* move: (flatten_mode _) CR. *)
     elim: rs s s1 c TD CR => //= -[hd bo] xs IH sig s c/= ++f.
     move=> TD /andP[cbo cxs].
     have {}IH := IH _ _ _ TD cxs.
     rewrite !push/= head_fresh_rule/=.
-    (* rewrite IH. *)
-    (* case:eqP => //= /esym tH. *)
     case H: H => //=[s'].
     rewrite !push/= IH andbT.
     rewrite/fresh_rule !push/=.
