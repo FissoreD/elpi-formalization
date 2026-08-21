@@ -219,8 +219,6 @@ Fixpoint deref (s: Sigma) (tm:Tm) :=
   | Tm_App h ag => Tm_App (deref s h) (deref s ag)
   end.
 
-Definition derefkv k v (tm:Tm) := deref [fmap].[k<-v] tm.
-
 Lemma deref_App s f a: deref s (Tm_App f a) = Tm_App (deref s f) (deref s a).
 Proof. by []. Qed.
 
