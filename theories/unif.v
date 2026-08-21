@@ -98,6 +98,8 @@ Definition neqn (l:seqT) := size l.
 
 Definition measure l := (nvar l, nlhs l, neqn l).
 
+Definition derefkv k v (tm:Tm) := deref [fmap].[k<-v] tm.
+
 Lemma derefkv_in v t k:
   v \in vars (derefkv v t k) -> (v \in vars t).
 Proof.
@@ -503,36 +505,36 @@ Proof.
   by apply/contra/H => {}H; apply/codom_varsP; eexists _,xs.
 Qed.
 
-Lemma unify_Vr v t m: v \notin vars_tm t -> v \notin codom_vars m -> v \notin domf m -> ~~ is_var t ->
-  unify t (Tm_V v) m = Some m.[v <- deref m t].
+Lemma unify_VR v t m: 
+  v  \notin vars (deref m t) -> v \notin domf m -> ~~ is_var t ->
+  unify t (Tm_V v) m = Some (deref_sigma v (deref m t) m).
 Proof.
-  rewrite/unify/montanari_deref/montanari_pair => vt vc vd iv.
+  rewrite/unify/montanari_deref/montanari_pair => vt vd iv.
   rewrite montanari_equation deref_V not_fnd//=.
   rewrite !(montanari_equation m)/= eq_sym.
   rewrite !montanari_equation/=.
-  have vdt : v \in vars (deref m t) = false.
-    move: (conj vc vt) => /norP; apply: contraNF.
-    by move=> /fsubsetP-/(_ _ (vars_tm_deref_sub _ _)); rewrite inE.
-  case: eqP => Hx; first by rewrite -Hx/=inE eqxx in vdt.
-  rewrite vdt deref_sigma_not_in//.
-  by destruct t => //.
+  rewrite ifF; last by destruct t.
+  have -> : (Tm_V v == deref m t) = false.
+    by destruct t => //.
+  rewrite (negbTE vt).
+  destruct t => //.
 Qed.
 
-Lemma unify_V_0r v t: v \notin vars_tm t -> ~~ is_var t ->
-  unify t (Tm_V v) fmap0 = Some fmap0.[v <- t].
-Proof. by move=> H1 H2; rewrite unify_Vr//=(codom_vars0,deref_empty). Qed.
-
-Lemma unifier_help_refl s b t: montanari_pair s b t t = Some s.
-Proof. rewrite/montanari_pair montanari_equation eqxx montanari_equation//. Qed.
-
-Lemma unifier_help_refl1 b t s: montanari_deref b t t s = Some s.
-Proof. by rewrite /montanari_deref unifier_help_refl. Qed.
-
-Lemma unify_refl t s: unify t t s = Some s.
-Proof. apply/unifier_help_refl1. Qed.
-
-Lemma matching_refl f t s: matching f t t s = Some s.
-Proof. apply/unifier_help_refl1. Qed.
+Lemma unify_Vr v t m: 
+  v \notin vars_tm t -> v \notin codom_vars m -> v \notin domf m -> ~~ is_var t ->
+  unify t (Tm_V v) m = Some m.[v <- deref m t].
+Proof.
+  move=> vt vc vd iv.
+  have vdt : v \notin vars (deref m t).
+    move: (conj vc vt) => /norP; apply: contra.
+    by move=> /fsubsetP-/(_ _ (vars_tm_deref_sub _ _)); rewrite inE.
+  rewrite unify_VR//=.
+  rewrite/deref_sigma; f_equal; f_equal.
+  apply/fmapP => k.
+  case: fndP => //=km; [rewrite in_fnd ffunE valPE|rewrite not_fnd//].
+  rewrite /derefkv not_in_deref//= fsetU0 fdisjoint1X.
+  by apply: contra vc => vc; apply/codom_varsP; exists k, km.
+Qed.
 
 Lemma deref_sigma_set k v k' v' m: k != k' ->
   deref_sigma k v m.[k' <- v'] =
@@ -1936,3 +1938,120 @@ Proof.
   apply/eqP => /=.
   by rewrite !derefkv_not_in//.
 Qed.
+
+Lemma montanari_refl s f t tl: (montanari s f ((t, t) :: tl)) = montanari s f tl.
+Proof. by rewrite montanari_equation eqxx. Qed.
+
+Lemma montanari_nil s f: (montanari s f [::]) = Some s.
+Proof. by rewrite montanari_equation. Qed.
+
+Lemma montanari_app s1 fv x1 x2 b1 b2 xs:
+  montanari s1 fv ((Tm_App x1 b1, Tm_App x2 b2) :: xs) =
+  montanari s1 fv ((x1,x2) :: (b1, b2) :: xs).
+Proof.
+  rewrite montanari_equation; case: eqP => //.
+  by move=> [->->]; rewrite !montanari_refl.
+Qed.
+
+Definition simpl_montanari:= (montanari_refl, montanari_nil, montanari_app).
+
+Definition deref_lists s l := map (map_prod (deref s)) l.
+
+Lemma deref_list_cat v k xs ys:
+  deref_list v k (xs ++ ys) = deref_list v k xs ++ deref_list v k ys.
+Proof. by elim: xs ys => //=-[t1 t2 xs IH] ys; rewrite IH; f_equal. Qed.
+
+Lemma deref_lists_disjoint s ys:
+  disjoint_L s ys -> deref_lists s ys = ys.
+Proof.
+  elim: ys => //=-[t1 t2 xs IH]; rewrite disjoint_L_cons => /and3P[s1 s2 sx].
+  by rewrite IH///map_prod !not_in_deref//.
+Qed.
+
+Lemma deref_list_deref_lists v t s s' ys: mp (deref_sigma v t s) s' ->
+  deref_lists s' (deref_list v t ys) = deref_lists s' ys.
+Proof.
+  elim: ys => //=-[t1 t2 xs IH] H.
+  suffices ?: mp fmap0.[v <- t] s'.
+    by rewrite IH//=/map_prod/= /derefkv !derefxx//.
+  apply/forallP => [[x xP]]; rewrite valPE ffunE [val _]/=.
+  move: xP; rewrite !inE; case: eqP => //->{x} _.
+  have vd: v \in deref_sigma v t s by rewrite !inE eqxx.
+  by have:= forallP H [`vd]; rewrite valPE ffunE/= eqxx.
+Qed.
+
+Lemma montanari_cat s f xs ys: acyclic s ->
+  disjoint_L s xs -> disjoint_L s ys ->
+  montanari s f (xs ++ ys) = obind (fun x => montanari x f (deref_lists x ys)) (montanari s f xs).
+Proof.
+  move: ys; montanari_ind s f xs => ys A + Dys//=.
+  - by rewrite deref_lists_disjoint//.
+  - by rewrite disjoint_L_cons => /and3P[D1 _ Dl]; rewrite simpl_montanari IH//.
+  - rewrite disjoint_L_cons/= !fdisjointXU -!andbA => /and5P[d1 d2 d3 d4 d5].
+    by rewrite simpl_montanari -2!cat_cons -IH//!disjoint_L_cons/=d1 d2 d3 d4.
+  - by rewrite montanari_equation EQ vt.
+  - by rewrite montanari_equation eqV (negbTE EQ) (negbTE vt) vf v'f.
+  - rewrite disjoint_L_cons/= => /and3P[H1 H2 H3].
+    rewrite montanari_equation eqV !inE (negbTE EQ)/= vf v'f.
+    have vv: v'  \notin vars (Tm_V v) by rewrite inE eq_sym.
+    have AD : acyclic (deref_sigma v' (Tm_V v) s).
+      by apply/acyclic_sigma_deref_sigma.
+    have DL: disjoint_L (deref_sigma v' (Tm_V v) s) (deref_list v' (Tm_V v) xs) by
+      apply: disjoint_deref_sigma_deref_list.
+    rewrite deref_list_cat IH//=; last by apply: disjoint_deref_sigma_deref_list.
+    case X: montanari => //=[s'].
+    have MP := montanari_mp AD DL X.
+    by rewrite (deref_list_deref_lists _ MP).
+  - by rewrite montanari_equation EQ vf (negbTE vt); destruct t.
+  - rewrite disjoint_L_cons/= => /and3P[H1 H2 H3].
+    rewrite montanari_equation EQ (negbTE vf) (negbTE vt).
+    have AD : acyclic (deref_sigma v t s) by apply/acyclic_sigma_deref_sigma.
+    have DL: disjoint_L (deref_sigma v t s) (deref_list v t xs).
+      by apply: disjoint_deref_sigma_deref_list.
+    rewrite deref_list_cat IH//=; only 2: by apply: disjoint_deref_sigma_deref_list.
+    case X: montanari => //=[s'].
+    have MP := montanari_mp AD DL X.
+    by rewrite (deref_list_deref_lists _ MP).
+  - rewrite disjoint_L_cons => /and3P[d1 d2 d3]; rewrite montanari_equation EQ.
+    by destruct t => //=; rewrite-IH//disjoint_L_cons d3/=?d1?d2.
+  - by rewrite montanari_equation EQ; destruct t1 => //; destruct t2 => //.
+Qed.
+
+Lemma montanari_cons s f x xs: acyclic s ->
+  domf s # vars x.1 ->  domf s # vars x.2 -> disjoint_L s xs ->
+  montanari s f (x :: xs) = obind (fun x => montanari x f (deref_lists x xs)) (montanari s f [::x]).
+Proof. by move=> A D1 D2 DL; rewrite -montanari_cat// disjoint_L_cons disjoint_L0 D1 D2. Qed.
+
+Lemma unify_V_0r v t: v \notin vars_tm t -> ~~ is_var t ->
+  unify t (Tm_V v) fmap0 = Some fmap0.[v <- t].
+Proof. by move=> H1 H2; rewrite unify_Vr//=(codom_vars0,deref_empty). Qed.
+
+Lemma unifier_help_refl s b t: montanari_pair s b t t = Some s.
+Proof. by rewrite/montanari_pair !simpl_montanari. Qed.
+
+Lemma unifier_help_refl1 b t s: montanari_deref b t t s = Some s.
+Proof. by rewrite /montanari_deref unifier_help_refl. Qed.
+
+Lemma unify_refl t s: unify t t s = Some s.
+Proof. apply/unifier_help_refl1. Qed.
+
+Lemma matching_refl f t s: matching f t t s = Some s.
+Proof. apply/unifier_help_refl1. Qed.
+
+Lemma matching_app fv x1 x2 b1 b2 s1: acyclic s1 ->
+  matching fv (Tm_App x1 b1) (Tm_App x2 b2) s1 = 
+    obind (matching fv b1 b2) (matching fv x1 x2 s1).
+Proof.
+  move=> A.
+  rewrite/matching/montanari_deref/montanari_pair !deref_App !simpl_montanari.
+  rewrite montanari_cons//=?acyclic_deref_disjoint// ?disjoint_L_deref//.
+  case M: montanari => //=[s'].
+  have MP : mp s1 s'.
+    by have ->:= montanari_mp A (disjoint_L_deref _ _ _) M.
+  rewrite/map_prod/=!derefxx//.
+Qed.
+
+Lemma unify_app x1 x2 b1 b2 s1: acyclic s1 ->
+  unify (Tm_App x1 b1) (Tm_App x2 b2) s1 = 
+    obind (unify b1 b2) (unify x1 x2 s1).
+Proof. by apply: matching_app. Qed.

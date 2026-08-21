@@ -354,30 +354,23 @@ Section map.
       set RF := fresh_rule _ _.
       have: RF = (addn 5 n, r2).
         rewrite{}/RF/fresh_rule [premises _]/=[head _]/=.
-        rewrite [rename _ _ _]/=/rename [fresh_tm _ _ _]/=.
-        rewrite !inE orbF.
-        case: eqP => // _.
-        rewrite !inE.
-        do 2 case: eqP => // _.
-        rewrite orbF !inE.
-        do 3 case: eqP => // _.
-        sif.
-        rewrite !inE.
-        do 4 case: eqP => // _.
-        sif.
+        rewrite /rename [fresh_tm _ _ _]/=.
+        repeat (rewrite ?orbF!inE; repeat case: eqP => // _); sif.
         rewrite fresh_atoms_cons.
         set FR := fresh_atoms _ _ _.
-        have: FR = (addn 5 n, [fmap].[F <- IV n].[X <- IV n.+1].[Y <- IV (2+n)].[X' <- IV (3+n)].[Y' <- IV (4+n)], [:: call (app (app (app map (IV n)) (IV (2+n))) (IV (4+n)))]).
+        set sigma := [fmap].[F <- IV n].[X <- IV n.+1].[Y <- IV (2+n)].[X' <- IV (3+n)].[Y' <- IV (4+n)].
+        set bo := call (app (app (app map (IV n)) (IV (2+n))) (IV (4+n))).
+        have: FR = (addn 5 n, sigma, [:: bo]).
           rewrite{}/FR fresh_atoms_cons.
           set FR := fresh_atoms _ _ _.
-          have: FR = (addn 5 n, [fmap].[F <- IV n].[X <- IV n.+1].[Y <- IV (2+n)].[X' <- IV (3+n)].[Y' <- IV (4+n)], [::]).
+          have: FR = (addn 5 n, sigma, [::]).
             by [].
           move=> ->{FR}; cbn zeta.
           set FR := fresh_atom _ _ _.
-          have: FR = (addn 5 n, [fmap].[F <- IV n].[X <- IV n.+1].[Y <- IV (2+n)].[X' <- IV (3+n)].[Y' <- IV (4+n)], call (app (app (app map (IV n)) (IV (2+n))) (IV (4+n)))).
+          have: FR = (addn 5 n, sigma, bo).
             rewrite{}/FR/fresh_atom/rename.
             set FR := fresh_tm _ _ _.
-            have: FR = (addn 5 n, [fmap].[F <- IV n].[X <- IV n.+1].[Y <- IV (2+n)].[X' <- IV (3+n)].[Y' <- IV (4+n)]).
+            have: FR = (addn 5 n, sigma).
               rewrite{}/FR/= !inE eqxx orbT.
               by rewrite !inE eqxx orbT !inE eqxx/=.
             move=>->; rewrite !ren_app !ren_V !FmapE.fmapE.
@@ -385,11 +378,10 @@ Section map.
           by move=> /=->.
         move=>->{FR}; cbn zeta.
         set FR := fresh_atom _ _ _.
-        have: FR = (addn 5 n, [fmap].[F <- IV n].[X <- IV n.+1].[Y <- IV (2+n)].[X' <- 
-   IV (3+n)].[Y' <- IV (4+n)], call (app (app (IV n) (IV n.+1)) (IV (3+n)))).
+        have: FR = (addn 5 n, sigma, call (app (app (IV n) (IV n.+1)) (IV (3+n)))).
           rewrite{}/FR /fresh_atom/rename.
           set FR := fresh_tm _ _ _.
-          have: FR = (addn 5 n, [fmap].[F <- IV n].[X <- IV n.+1].[Y <- IV (2+n)].[X' <- IV (3+n)].[Y' <- IV (4+n)]).
+          have: FR = (addn 5 n, sigma).
             by rewrite{}/FR/= !inE eqxx orbT !inE orbT !inE orbT.
           by move=> ->{FR}; rewrite !ren_app !ren_V !FmapE.fmapE eqxx/=.
         move=> ->{FR}.
@@ -425,6 +417,11 @@ Section map.
     by apply/contra/vc => H; apply/codom_varsP; eexists _,ks.
   Qed.
   
+  Ltac simpl_acyclic_set:=
+    rewrite !acyclic_sigma_set !inE !remf1_set empty_rem/=;
+    repeat rewrite codom_vars_set ?remf1_set empty_rem/=;
+    rewrite codom_vars0 !fsetU0 inE ?fdisjointXU fdisjointX0 ?fdisjointX1 ?inE !andbT.
+
   Goal exists f s, runT u p' 0 fmap0 (Unexplored (call map12d)) (One s) false f /\ deref s X = list24.
   Proof.
     do 2 eexists.
@@ -460,21 +457,15 @@ Section map.
         move=> ->{X}.
         rewrite/H/= !FmapE.fmapE/=.
         rewrite matching_Vd?vars_sigma0//=.
-        rewrite /matching/montanari_deref/montanari_pair/= montanari_equation/=.
-        rewrite !FmapE.fmapE/=.
-        rewrite !not_fnd//=.
-        rewrite /matching/montanari_deref/montanari_pair/= montanari_equation/=.
-        rewrite /matching/montanari_deref/montanari_pair/= montanari_equation/=.
-        rewrite /matching/montanari_deref/montanari_pair/= montanari_equation/=.
-        rewrite deref_sigma_not_in; last by rewrite/= !codom_vars_set !inE empty_rem codom_vars0 inE.
-        rewrite/derefkv/map_prod !deref_V !FmapE.fmapE/= not_fnd//=.
-        rewrite montanari_equation/=montanari_equation/=.
-        rewrite deref_sigma_not_in; last first.
-          rewrite codom_vars_set remf1_set empty_rem/= codom_vars_set empty_rem codom_vars0 !inE//.
-        (rewrite unify_Vr//; try by rewrite !inE); last first.
-          do 2 rewrite codom_vars_set !remf1_set empty_rem/=.
-          by rewrite codom_vars_set empty_rem codom_vars0 !fsetU0.
-        rewrite !deref_App !deref_V !FmapE.fmapE/= !not_fnd//=.
+        rewrite !matching_app?acyclic_sigma_set_D//.
+        rewrite !matching_refl/= matching_Vd//; last first.
+          by rewrite vars_sigma_set !inE.
+        rewrite /= matching_Vd//=; last first.
+          rewrite /vars_sigma/=.
+          by repeat rewrite !codom_vars_set ?remf1_set/= ?(empty_rem, codom_vars0,inE).
+        rewrite unify_Vr//; (only 2,4: by rewrite !inE); last first.
+          by repeat rewrite !codom_vars_set ?remf1_set/= ?(empty_rem, codom_vars0,inE).
+        rewrite !deref_App !deref_P !deref_V !FmapE.fmapE/= !not_fnd//.
       }
       move=> ->{FR}.
       rewrite/max_sigmas/=/vars_atoms/=/vars_sigma codom_vars_set !remf1_set empty_rem/=.
@@ -498,8 +489,8 @@ Section map.
       rewrite simpl_p.
       rewrite/addn ![Nat.add _ _]/=.
       set FR := select _ _ _ _ _.
-      have : FR =  [:: ([fmap].[IV 16 <- Tm_P two].[IV 13 <- double].[IV 14 <- one].[
-        IV 15 <- nil].[X <- app (app cons two) (IV 17)], [::])].
+      have : FR =  [:: ([fmap].[IV 16 <- Tm_P two].[IV 13 <- double].[IV 14 <- one].[IV 15 <- nil].[X <- app
+                      (app cons two) (IV 17)], [::])].
         { rewrite{}/FR select_cons [head _]/=[premises _]/=.
           set FR := deref _ _.
           have: FR = app (app double one) (IV 16).
@@ -522,14 +513,10 @@ Section map.
           move=> ->{FR}.
           rewrite/H eqxx !FmapE.fmapE eqxx [omap _ _]/=/doubleS eqxx.
           rewrite [lang.matching _]/= matching_refl [omap _ _]/=/=.
-          rewrite /unify/montanari_deref/montanari_pair.
-          rewrite deref_P deref_V not_fnd//?inE//.
-          rewrite !montanari_equation/=.
-          rewrite !montanari_equation/=.
-          rewrite !deref_sigma_set; only 2-5: by [].
-          rewrite /=/derefkv !deref_App.
-          rewrite !deref_P !deref_V !FmapE.fmapE/=.
-          by rewrite !not_fnd ?deref_sigma0//=.
+          rewrite unify_VR//; last by rewrite !inE.
+          rewrite deref_P !deref_sigma_set; only 2-5: by [].
+          rewrite deref_sigma0/derefkv !deref_App !deref_P !deref_V.
+          rewrite !FmapE.fmapE/= !not_fnd// deref_sigma0/=.
         }
       move=> ->{FR}.
       rewrite/max_sigmas/=/vars_sigma/vars_atoms/=.
@@ -537,16 +524,7 @@ Section map.
       rewrite codom_vars0 !simpl_set.
       by rewrite/maxn/=.
     apply/negbF.
-    rewrite !acyclic_sigma_set !inE !remf1_set empty_rem/=.
-    repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
-    rewrite codom_vars0 !fsetU0 inE.
-    rewrite !fdisjointXU fdisjointX0 !fdisjointX1 !inE/= andbT.
-    rewrite !acyclic_sigma_set !inE !remf1_set empty_rem/=.
-    repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
-    rewrite codom_vars0 !fsetU0 inE fdisjointX0 !andbT.
-    rewrite !acyclic_sigma_set !inE !remf1_set empty_rem/=.
-    repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
-    rewrite codom_vars0 !fsetU0 inE fdisjointX0 !andbT.
+    repeat simpl_acyclic_set.
     by rewrite !acyclic_sigma_set !inE empty_rem acyclic_sigma0 codom_vars0/= fdisjointX0.
     }
     apply: StepT => //=.
@@ -589,8 +567,7 @@ Section map.
             repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
             by rewrite codom_vars0 !simpl_set !inE.
           rewrite/=matching_refl/=.
-          rewrite/unify/montanari_deref deref_P deref_V !FmapE.fmapE/=not_fnd//=.
-          rewrite /montanari_pair/= montanari_equation/=!montanari_equation/=.
+          rewrite unify_VR; only 2-4: by rewrite //!inE//.
           rewrite !deref_sigma_set; only 2-7: by [].
           rewrite deref_sigma0/derefkv !deref_App !deref_P !deref_V.
           by rewrite !FmapE.fmapE/=.
@@ -609,25 +586,8 @@ Section map.
         }
       move=> ->{FR}//.
       apply:negbF.
-      rewrite /next_subst[next _ _]/=.
-      rewrite !acyclic_sigma_set !inE !remf1_set empty_rem/=.
-      repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
-      rewrite codom_vars0 !fsetU0 inE fdisjointXU fdisjointX0 !fdisjointX1 !inE/= !andbT.
-      
-      rewrite !acyclic_sigma_set !inE !remf1_set empty_rem/=.
-      repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
-      rewrite codom_vars0 !fsetU0 inE fdisjointX0 !andbT.
-      
-      rewrite !acyclic_sigma_set !inE !remf1_set empty_rem/=.
-      repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
-      rewrite codom_vars0 !fsetU0 inE fdisjointX0 !andbT.
-      
-      rewrite !acyclic_sigma_set !inE !remf1_set empty_rem/=.
-      repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
-      rewrite codom_vars0 !fsetU0 inE fdisjointX0 !andbT.
-      
+      repeat simpl_acyclic_set.
       by rewrite !acyclic_sigma_set !inE empty_rem acyclic_sigma0 codom_vars0 fdisjointX0 inE.
-      
       }
       apply: StopOT => //=.
       by [].
