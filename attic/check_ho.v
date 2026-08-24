@@ -1,4 +1,3 @@
-From Equations Require Import Equations.
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import tree tree_prop ctx tree_vars unif mut_excl fresh sig_lattice sig_compat.
@@ -45,7 +44,7 @@ Proof. by rewrite/cincl => C1; rewrite compat_type_weak C1 compat_type_incl_weak
 Lemma cincl_weakeq t1 t2: cincl t1 t2 -> (weak t1) = (weak t2).
 Proof. by move=> /andP[/compat_type_weak_eq]. Qed.
 
-Lemma deref_in (s:Sigma) (v:V) (vs : v \in s): acyclic_sigma s -> deref s s.[vs] = s.[vs].
+Lemma deref_in (s:Sigma) (v:V) (vs : v \in s): acyclic s -> deref s s.[vs] = s.[vs].
 Proof. by move=> A; have:= deref2 (Tm_V v) A; rewrite/=in_fnd. Qed.
 
 Lemma cinclR_min C A B: cincl C A -> cincl C B -> cincl C (min A B) .
@@ -387,14 +386,14 @@ Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
   [forall x : domf sV,
     let sig := sV.[valP x] in
     if s.[? val x] is Some t then 
-      match check_tm sP famp0 (deref s t) with
+      match check_tm sP [fmap] (deref s t) with
       | Some sig' => cincl sig'.2 sig
       | None => false
       end
     else false].
 
 (* Lemma check_tm_deref sP sV s t r1 r2:
-  acyclic_sigma s ->
+  acyclic s ->
   relSS sP s sV ->
   check_tm sP sV t = Some r1 ->
   check_tm sP fmap0 (deref s t) = Some r2 ->
@@ -429,7 +428,7 @@ Proof.
 Qed. *)
 
 Lemma check_tm_deref sP sV s t r1:
-  acyclic_sigma s ->
+  acyclic s ->
   relSS sP s sV ->
   check_tm sP sV t = Some r1 ->
   exists2 r2, check_tm sP fmap0 (deref s t) = Some r2 & cincl r2.2 r1.2.
@@ -467,7 +466,7 @@ Definition deref_atom s a :=
   end.
 
 Lemma check_atom_deref sP sV d s t r1:
-  acyclic_sigma s ->
+  acyclic s ->
   relSS sP s sV ->
   check_atom sP sV d t = Some r1 ->
   exists2 r2, check_atom sP fmap0 d (deref_atom s t) = Some r2 & minD r2 r1 = r2.
@@ -547,8 +546,8 @@ Lemma check_tm_ren0 sP s t:
   check_tm sP fmap0 (ren s t) = check_tm sP fmap0 t.
 Proof. by elim: t => //=[v|f -> a ->]//; rewrite !(@not_fnd _ _ fmap0). Qed.
 
-Lemma call_is_det_tm_rename0 sP v t r: check_tm sP fmap0 (rename v t r).2 = check_tm sP fmap0 t.
-Proof. by rewrite/rename !push/= check_tm_ren0. Qed.
+Lemma call_is_det_tm_rename0 sP v t r: check_tm sP fmap0 (rename v r t).2 = check_tm sP fmap0 t.
+Proof. by rewrite/= check_tm_ren0. Qed.
 
 (* Lemma check_tm_prop_fresh fv e t sP r hd:
 (* TODO: There should be a relation between r and fv, I think that 
@@ -573,27 +572,26 @@ Proof.
 Admitted.
 
 Lemma check_tm_prop_fresh_rename fv t sP hd:
-  check_tm_prop sP (assume_tm sP fmap0 (rename fv hd fmap0).2).1
-    (rename fv t fmap0).2 =
+  check_tm_prop sP (assume_tm sP fmap0 (rename fv fmap0 hd).2).1
+    (rename fv fmap0 t).2 =
       check_tm_prop sP (assume_tm sP fmap0 hd).1 t.
-Proof. by rewrite/rename !push/= check_tm_prop_fresh. Qed.
+Proof. by rewrite/rename/= check_tm_prop_fresh. Qed.
 
 Lemma check_atoms_fresh sP hd bo v (r : {fmap V -> V}) f:
-  check_atoms sP (assume_tm sP fmap0 (ren r hd)).1 (fresh_atoms v bo r).2 f =
+  check_atoms sP (assume_tm sP fmap0 (ren r hd)).1 (fresh_atoms v r bo).2 f =
     check_atoms sP (assume_tm sP fmap0 hd).1 bo f.
 Proof.
   elim: bo hd f => //=[[|t] l IH] hd f; rewrite /= /rename !push//=.
   set fr := fresh_tm _ _ _.
-  Search fresh_tm snd.
   by rewrite check_tm_prop_fresh; case: omap => /=.
 Qed.
 
 Lemma check_atoms_fresh_rename sP hd bo v d:
-  check_atoms sP (assume_tm sP fmap0 (rename v hd fmap0).2).1
-    (fresh_atoms (rename v hd fmap0).1.1 bo (rename v hd fmap0).1.2).2 d =
+  check_atoms sP (assume_tm sP fmap0 (rename v fmap0 hd).2).1
+    (fresh_atoms (rename v fmap0 hd).1.1 (rename v fmap0 hd).1.2 bo).2 d =
     check_atoms sP (assume_tm sP fmap0 hd).1 bo d.
 Proof.
-  rewrite/rename !push/=; move: (_ `|` _) => fv.
+  rewrite/rename.
   set f := (fresh_tm _ _ _).
   by rewrite check_atoms_fresh.
 Qed.
@@ -620,7 +618,7 @@ Qed.
 
 (* Lemma call_is_det_deref sP sV s t r1:
   (* check_tm sP fmap0 (deref s t) -> *)
-  acyclic_sigma s ->
+  acyclic s ->
   relSS sP s sV ->
   check_tm_prop sP sV t = Some r1 -> 
   exists2 r2, check_tm_prop sP fmap0 (deref s t) = Some r2 & minD r2 r1 = r2.
@@ -680,9 +678,9 @@ Proof.
   apply/fsubsetP/H/codom_vars_sub_vt.
 Qed.
 
-Lemma acyclic_sigma_deref_sig2 sm sx:
-  acyclic_sigma sx -> domf sx # codom_vars sm ->
-  acyclic_sigma (deref_sig2 sm sx).
+Lemma acyclic_deref_sig2 sm sx:
+  acyclic sx -> domf sx # codom_vars sm ->
+  acyclic (deref_sig2 sm sx).
 Proof.
   move=> asx sxsm.
   apply/fdisjointP => x/= xsx.
@@ -742,17 +740,17 @@ Proof.
   by rewrite fdisjointXU ab.
 Qed.
 
-Lemma acyclic_sigma_cat (a b: Sigma):
-  acyclic_sigma a ->  domf b # codom_vars a -> acyclic_sigma b ->
-  domf a # codom_vars b -> acyclic_sigma (a + b).
+Lemma acyclic_cat (a b: Sigma):
+  acyclic a ->  domf b # codom_vars a -> acyclic b ->
+  domf a # codom_vars b -> acyclic (a + b).
 Proof.
   move=> Aa Ab ab ba.
-  rewrite/acyclic_sigma /= fsetDUI fdisjointUX.
+  rewrite/acyclic /= fsetDUI fdisjointUX.
   rewrite !fdisjoint_codom_vars_cat//.
 Qed.
 
 Lemma deref_sig2_rem (s1 s: Sigma):
-  acyclic_sigma s ->
+  acyclic s ->
   deref_sig2 s1.[\ domf s] s = deref_sig2 s1 s.
 Proof.
   move=> A; apply/fmapP => k.
@@ -760,11 +758,11 @@ Proof.
   by rewrite in_fnd//=!ffunE !valPE deref_rem//= acyclic_deref'.
 Qed.
 
-Lemma ext_sig_rem s1 s: acyclic_sigma s ->
+Lemma ext_sig_rem s1 s: acyclic s ->
   ext_sig s1.[\ domf s] s = ext_sig s1 s.
 Proof. move=> A; rewrite/ext_sig deref_sig2_rem//=; by apply fsetDRL. Qed.
 
-Lemma ext_sigR s: acyclic_sigma s -> ext_sig s s = s.
+Lemma ext_sigR s: acyclic s -> ext_sig s s = s.
 Proof.
   move=> As; apply/fmapP => x; rewrite fnd_cat.
   by case: fndP => //= xs; rewrite in_fnd ffunE valPE deref_in.
@@ -809,7 +807,7 @@ Qed.
 
 Lemma H_extP sP s r b t1 t2:
   good_modes sP ->
-  acyclic_sigma s -> H u sP b t1 t2 s = Some r -> arri r.1 ->
+  acyclic s -> H u sP b t1 t2 s = Some r -> arri r.1 ->
   exists2 sm : Sigma, r.2 = ext_sig sm s & ext_sigP b sm s.
 Proof.
   move=> GM A; elim: t1 t2 r => //[p|f Hf a _][p'|//|f' a']//= r.
@@ -856,10 +854,10 @@ Proof.
   - rewrite !ext_sig_remR// remf_all ext_sig0R.
     have scsm:= fdisjointWr (fsubsetUr _ _) ssm.
     have sxcsm:= fdisjointWr (fsubsetUr _ _) sxsm.
-    apply: acyclic_sigma_cat.
+    apply: acyclic_cat.
       by apply: acyclic_sigma_rem.
       by rewrite domf_rem; apply: fdisjointWl (fsubsetDl _ _) (fdisjointWr (codom_vars_sub _ _) sxcsm).
-      by apply: acyclic_sigma_deref_sig2 (acyclic_sigma_rem _ asx) (fdisjointWr (codom_vars_sub _ _) _); rewrite domf_rem; apply: fdisjointWl (fsubsetDl _ _) sxcsm.
+      by apply: acyclic_deref_sig2 (acyclic_sigma_rem _ asx) (fdisjointWr (codom_vars_sub _ _) _); rewrite domf_rem; apply: fdisjointWl (fsubsetDl _ _) sxcsm.
     apply/fdisjointP => x; rewrite domf_rem finmap.inE => /andP[+ xsm].
     apply: contraNN => /codom_varsP -[k[/[dup] kP]].
     rewrite domf_rem finmap.inE in kP; move /andP: kP => [ks ksx] kP.
@@ -880,7 +878,7 @@ Proof.
 Qed.
 
 Lemma relSS_set sP s sV v sig (vs : v \in s):
-  acyclic_sigma s ->
+  acyclic s ->
   relSS sP s sV -> 
   match check_tm sP fmap0 s.[vs] with
   | Some sig' => cincl sig'.2 sig
@@ -940,7 +938,7 @@ Proof.
   by move=> /orP[/Hf|/Ha]//->//; rewrite (Cf,Ca)//.
 Qed.
 
-Lemma relSS_assumeM sP sV froz q h s s': acyclic_sigma s ->
+Lemma relSS_assumeM sP sV froz q h s s': acyclic s ->
   good_modes sP -> relSS sP s sV -> 
   (* domf s # vars q ->  *)
   vars q # vars h ->
@@ -956,6 +954,9 @@ Proof.
   have:= fsubsetP DA _ xP; rewrite !finmap.inE.
   have [sm ? /and3P[Asm Fsm ssm]] := matching_extP A M; subst => H.
   have xs: x \in domf (ext_sig sm s).
+    rewrite/ext_sig domf_cat in_fsetU/=.
+    Print relSS.
+    Check inE.
     admit.
   rewrite in_fnd deref_in//.
   move: xs (xs).
@@ -986,7 +987,7 @@ Proof.
   by case X: get_input_vars => //=?; subst => /=.
 Qed.
 
-Lemma relSS_assume sP sV froz q hd s s': acyclic_sigma s ->
+Lemma relSS_assume sP sV froz q hd s s': acyclic s ->
   good_modes sP -> relSS sP s sV -> domf s # vars q -> vars q # vars hd ->
   (get_input_vars sP q).1 `<=` froz ->
   good_call sP fmap0 q ->
@@ -1016,7 +1017,7 @@ Proof.
     apply: relSS_assumeM M; rewrite//?Ca//.
   case: a' fa' aa' M Ra' => //= v.
   rewrite !fdisjointX1 => vf va M/= Rsx.
-  have Asx : acyclic_sigma sx.
+  have Asx : acyclic sx.
     by move: M; destruct m'; apply: matching_acyclic.
   have := H_check_tm_ty H1 Cf.
   rewrite cincl_arr => /and3P[/eqP/esym? Cff Crr]; subst.
@@ -1028,7 +1029,7 @@ Proof.
     rewrite domf_cat domf_deref_sig2 fdisjointUX sa andbT fdisjoint_sym.
     by apply: fdisjointWl af _.
   move=> sma.
-  have:= matchingP_deref Asm _ M.
+  have:= matching_disj Asm _ M.
   rewrite not_in_deref//af => /(_ isT)?; subst.
   have vsx : v \in sx.
     by move: sa va; rewrite/=; case: fndP; rewrite//= fdisjointX1 finmap.inE eqxx.
@@ -1052,7 +1053,7 @@ Proof.
 Qed.
 
 Lemma det_check_H sP hd bo s sV r:
-  good_modes sP -> acyclic_sigma s ->
+  good_modes sP -> acyclic s ->
   is_func (check_atoms sP (assume_tm sP sV hd).1 bo r) ->
   (* is_func (check_tm_prop sP (assume_tm sP fmap0 hd).1 hd) -> *)
   relSS sP s (assume_tm sP sV hd).1 ->
@@ -1070,7 +1071,7 @@ Lemma bc_is_p pr fv c s fv' x xs:
 Proof. 
   rewrite/bc; case: ifP => //= A.
   case : fresh_rules => //= fc r.
-  case S: select => -[??]; subst.
+  case S: select => -[??]//?; subst.
   have [p pP H] := selectP S.
   by exists p.
 Qed.
@@ -1091,17 +1092,20 @@ Proof.
     have [p H] :=bc_is_p X.
     by apply: call_is_det_tm_is_det.
   rewrite/bc; set QUERY := deref s c in CT *.
-  case AS: acyclic_sigma => //=.
+  case AS: acyclic => //=.
   rewrite !push/=.
   case: pr ME CR CT => /= rs sP; rewrite/check_rules/= => ME CR CD.
   move: CD; rewrite/check_tm_prop/is_func.
   case C: check_tm => [[wc [[|[]]|]]|]//= _.
   move: ME; rewrite/mut_excl push/= => /andP[GM _].
-  elim: rs CR => //= -[hd bo] rs IH /= /andP[H1 H2].
-  rewrite !push/=.
-  rewrite !head_fresh_rule/=.
+  set n := fresh _.
+  have:= leqnn n; rewrite{1}/n; move: n.
+  elim: rs CR => //= -[hd bo] rs IH /= /andP[H1 H2] n.
+  rewrite v_prog_cons -fsetUA (fsetUC _ (v_prog _)) 2!fsetUA freshPU.
+  move=> /andP[F1 F2].
+  have{}IH:= IH H2 _ F1.
+  rewrite !push/= !head_fresh_rule/=.
   set FR := fresh_rules _ _ in IH *.
-  set R := rename FR.1 _ _.
   case H: H => [s'|]; last by apply: IH.
   rewrite !push/= {}IH// andbT.
   rewrite/deref_pair/=/fresh_rule!push/= -/R.
@@ -1118,9 +1122,12 @@ Proof.
   apply: relSS_assume H => //.
   - by rewrite relSS0.
   - by apply: acyclic_deref_disjoint.
-  - rewrite fdisjoint_sym.
-    apply: fdisjointWr (vars_tm_rename_disjoint _ _).
-    by apply/fsubset_trans/fresh_rules_sub; rewrite// fsubsetU// fsubsetUr.
+  - apply: fdisjointWr (vars_tm_ren_sub (fresh_tm_sub1 _ _ _)) _.
+    apply: min_max_S_disj; last first.
+      apply: min_max_fresh_tm0.
+      apply: min_maxP.
+    apply/leq_trans/fresh_rules_sub/leq_trans/F1.
+    by rewrite !freshUU !leq_max leqnn !orbT.
   - by have ? := is_func_well_call C isT; subst; rewrite /good_call C.
 Qed.
 
