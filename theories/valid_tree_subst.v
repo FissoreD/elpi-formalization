@@ -1,7 +1,7 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang ctx.
-From det Require Import tree tree_prop unif.
+From det Require Import tree tree_prop unif fresh.
 
 (* valid_tree_subst *)
 Fixpoint vts_aux s A :=
@@ -16,8 +16,8 @@ Fixpoint vts_aux s A :=
 Fixpoint vts s A :=
   match A with
   | Unexplored _ | OK | KO => true
-  | Or None sm B => vts sm B
-  | Or (Some A) sm B => [&& vts_aux s A, vts s A & vts sm B]
+  | Or None sm B => [&& idempotent sm & vts sm B]
+  | Or (Some A) sm B => [&& idempotent sm, vts_aux s A, vts s A & vts sm B]
   | And A B0 B => [&& vts_aux s A, vts_aux s B, vts s A & vts s B]
   end.
 
@@ -31,8 +31,12 @@ Lemma vts_big_and s l : vts s (big_and l).
 Proof. by case: l => //= x xs; elim: xs x => //=x xs ->; rewrite vts_aux_big_andA. Qed.
 
 Definition all_mp T sm (l: seq (_ * T)) := all (mp sm) (map fst l).
+Definition all_idemp T (l: seq (_ * T)) := all idempotent (map fst l).
 
 Lemma all_mp_cons T s x xs: @all_mp T s (x :: xs) = mp s x.1 && all_mp s xs.
+Proof. by []. Qed.
+
+Lemma all_idemp_cons T x xs: @all_idemp T (x :: xs) = idempotent x.1 && all_idemp xs.
 Proof. by []. Qed.
 
 Lemma mp_trans: transitive mp.
@@ -55,7 +59,7 @@ Qed.
 Lemma mp_vts o n t: mp o n -> vts n t -> vts o t.
 Proof.
   move=> MP; elim_tree t => //=.
-    by move=> /and3P[/mp_vts_aux->///HA->->].
+    by move=> /and4P[->/mp_vts_aux->///HA->->].
   by move=> /and4P[/mp_vts_aux->///mp_vts_aux->///HA->/HB->].
 Qed.
 
@@ -69,10 +73,12 @@ Proof.
 Qed.
 
 
-Lemma vts_big_or o a l : vts o (big_or a l).
+Lemma vts_big_or o a l : all_idemp l -> vts o (big_or a l).
 Proof.
   elim: l o a => //= [|[n x] xs IH] o a; first by rewrite vts_big_and.
-  rewrite //=vts_big_and vts_aux_big_and/= IH//.
+  rewrite all_idemp_cons/=.
+  move=> /andP[->/IH->].
+  by rewrite //=vts_big_and vts_aux_big_and/=.
 Qed.
 
 Lemma vt_aux_cut {A} s: vts_aux s A -> vts_aux s (cutl A).
@@ -86,8 +92,8 @@ Qed.
 Lemma vt_cut {A} s: vts s A -> vts s (cutl A).
 Proof.
   elim_tree A s => //=.
-    by move=> /and3P[H1 H2 H3]; rewrite HA//vt_aux_cut.
-    by apply: HB.
+    by move=> /and4P[-> H1 H2 H3]; rewrite HA//vt_aux_cut.
+    by move=> /andP[->/HB].
   by move=> /and4P[H1 H2 H3 H4]; case: ifP; rewrite//=!vt_aux_cut//HA//HB.
 Qed.
 
@@ -173,23 +179,48 @@ Proof.
     by rewrite HB//mp_next_subst.
 Qed.
 
-Lemma vts_step p o n sv A: mp o n ->
+Lemma idempotent_bc p n t s: all_idemp (bc u p n t s).2.
+Proof.
+  rewrite/bc; case: ifP => // /negbFE I.
+  rewrite !push/=; case: p => //= rs sig.
+  set fr := fresh _.
+  have:= leqnn fr; rewrite{1}/fr; move: fr => fr.
+  elim: rs => //=x xs IH le; rewrite !push/=.
+  have /IH: fresh (IV n |` vars_sigma s `|` vars (deref s t) `|` v_prog xs) <= fr.
+    by move: le; rewrite v_prog_cons (fsetUC _ (v_prog _)) fsetUA freshPU => /andP[].
+  move=> {}IH.
+  case M : lang.H => [[sig' s']|]//=.
+  by rewrite all_idemp_cons IH//= (idempotent_H _ M)//.
+Qed.
+
+Lemma idemp_next_subst o n t:
+  idempotent n -> vts o t -> idempotent (next_subst n t).
+Proof.
+  elim_tree t o n => I/=; rewrite rew_pa.
+    by move=>/and4P[I' va va' vb]; rewrite (HA _ _ _ va').
+    by move=> /andP[]; apply: HB.
+  by move=> /and4P[va' vb' va vb]; case: ifP => _; [apply: HB vb|]; apply: HA va.
+Qed.
+
+Lemma vts_step p o n sv A: idempotent n -> mp o n ->
   vts o A -> vts o (step u p sv n A).2.
 Proof.
-  elim_tree A o n sv => /=mon.
+  elim_tree A o n sv => /=I mon.
   + case: t => [|t]//= _; rewrite push/=.
     case B : bc => [sv' [|[x sx] xs]]//=.
+    have:= idempotent_bc p sv t n; rewrite B all_idemp_cons.
+    move=> /andP[-> H].
     by rewrite vts_big_or.
-  + move=> /and3P[H vA vB]; set S:= step _ _ _ _ _.
+  + move=> /and4P[I' H vA vB]; set S:= step _ _ _ _ _.
     have Hx : vts sm (if is_cb S.1.2 then KO else B) by case: ifP.
-    by rewrite !push/= HA//= Hx vts_aux_step//.
-  + move=> mp; rewrite !push/= HB//.
-    admit.
+    by rewrite !push/= I' HA//= Hx vts_aux_step//.
+  + by move=> /andP[I' mp]; rewrite !push/= I' HB// mp_id.
   + move=> /and4P[va vb van vbn].
     rewrite !fun_if !push/= vbn vb HA//!(HB,vts_aux_step)// ?(mp_id,mp_next_subst)//.
     rewrite !fun_if/= !vt_cut//!vt_aux_cut//= va van.
     repeat case: ifP => //.
-Admitted.
+    rewrite (idemp_next_subst _ van)//.
+Qed.
 
 Lemma vts_aux_prune o A R b: 
   vts_aux o A -> prune b A = Some R -> vts_aux o R.
@@ -219,10 +250,10 @@ Proof.
   elim_tree A R o b => /=.
   + by case: R => //=; case: b => //.
   + by case: t => [|c]//= _ [<-]//.
-  + move=> /and3P[mp vA bB]; case nA: prune => [A'|]//=.
-      by move=> [<-]/=; rewrite (HA _ _ _ _ nA)//=bB andbT (vts_aux_prune _ nA).
-    by case nB: prune => [B'|]//[<-]/=; rewrite (HB _ _ _ _ nB)// mp.
-  + by move=> vb; case nB: prune => [B'|]//=[<-]/=; apply: HB nB.
+  + move=> /and4P[I mp vA bB]; case nA: prune => [A'|]//=.
+      by move=> [<-]/=; rewrite I (HA _ _ _ _ nA)//=bB andbT (vts_aux_prune _ nA).
+    by case nB: prune => [B'|]//[<-]/=; rewrite I (HB _ _ _ _ nB)// mp.
+  + by move=> /andP[I vb]; case nB: prune => [B'|]//=[<-]/=; rewrite I; apply: HB nB.
   + move=>/and4P[vAa vBa vA vB].
     case: ifP => /= _.
       case X: prune => [D|].
@@ -244,6 +275,6 @@ Proof.
   + by move: HS => [??]; subst; apply: vts_prune NS.
   + move: eA; rewrite (surjective_pairing (step _ _ _ _ _)) => -[].
     rewrite (surjective_pairing (step _ _ _ _ _).1) => -[???]; subst.  
-    apply: IH (vts_step _ _ _ _); rewrite// mp_id//.
+    apply: IH (vts_step _ _ _ _ _); rewrite// mp_id//.
   + by apply: IH (vts_prune vA nA).
 Qed.
