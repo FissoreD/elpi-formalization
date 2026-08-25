@@ -181,7 +181,7 @@ Section once.
     rewrite/is_detT HS => r' [b'[fv' Hx]].
     inversion Hx; clear Hx; subst => //.
     move: H1; rewrite/=/bc.
-    case (boolP (acyclic s)) => AS; last first => //=.
+    case (boolP (idempotent s)) => AS; last first => //=.
       by move=> [???]; subst; inversion H2; auto.
     rewrite !fset0U.
     set S1 := _ `|` _.

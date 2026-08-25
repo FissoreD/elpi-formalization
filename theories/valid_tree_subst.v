@@ -94,34 +94,34 @@ Qed.
 Definition u := mk_Unif unify matching.
 
 (* TODO: already in mut_excl *)
-Lemma acyclic_sigma_H sP fv q hd s1 r:
-  acyclic s1 -> H u sP fv q hd s1 = Some r -> acyclic r.2.
+Lemma idempotent_H sP fv q hd s1 r:
+  idempotent s1 -> H u sP fv q hd s1 = Some r -> idempotent r.2.
 Proof.
   elim: q fv hd s1 r => //=[p|f Hf a Ha] fv [p'|//|f' a']// s1 r.
     by case: eqP => //= _ A; case: fndP => //=pP[<-].
   move=> A.
   case H: H => [[[|[] tyl tyr] s1']|]//=.
     case M: matching => //= [s1''][?]; subst.
-    by apply: matching_acyclic M; apply: Hf H.
+    by apply: matching_idempotent M; apply: Hf H.
   case M: unify => //= [s1''][?]; subst.
-  by apply: unif_acyclic M; apply: Hf H.
+  by apply: unif_idempotent M; apply: Hf H.
 Qed.
 
 
 Lemma mp_H froz m l1 l2 s s':
-  acyclic s -> H u froz m l1 l2 s = Some s' -> mp s s'.2.
+  idempotent s -> H u froz m l1 l2 s = Some s' -> mp s s'.2.
 Proof.
   move=>As; elim: l1 s' l2 => //=[p|f Hf a Ha] s' [p'|v'|f' a']//=.
     by case: eqP => //->; case: fndP => //= pf [<-]//=; rewrite mp_id.
   case H: H => //[[[//|md tl tr] s'']].
   case X: (_ a') => //=[sx][<-{s'}]/=.
   apply: mp_trans (Hf _ _ H) _.
-  have /=As'' := acyclic_sigma_H As H.
+  have /=As'' := idempotent_H As H.
   have Hx := disjoint_L_deref _ _ As''.
   case: md X {H} => //=; apply: montanari_mp => //=.
 Qed.
 
-Lemma all_mp_select sig t rules s: acyclic s ->
+Lemma all_mp_select sig t rules s: idempotent s ->
   all_mp s (select u sig t rules s).
 Proof.
   move=> A; elim: rules => //= r0 rs IH.
@@ -133,7 +133,7 @@ Lemma all_mp_bc p sv t s r:
   (bc u p sv t s) = r -> all_mp s r.2.
 Proof.
   move=> <-; rewrite/bc.
-  case (boolP (acyclic s)) => A//=.
+  case (boolP (idempotent s)) => A//=.
   by rewrite !push/=; apply: all_mp_select.
 Qed.
 
@@ -235,7 +235,7 @@ Proof.
     by move=> [<-]/=; rewrite (HA _ _ false)//= vts_aux_big_and (vts_aux_prune _ X)//vts_big_and.
   Qed.
 
-Lemma valid_tree_run p s1 fv A b fv' s R: acyclic s1 ->
+Lemma valid_tree_run p s1 fv A b fv' s R: idempotent s1 ->
   vts s1 A -> runT u p fv s1 A (Many s R) b fv' -> vts s1 R.
 Proof.
   remember (Many _ _) as S eqn:HS.

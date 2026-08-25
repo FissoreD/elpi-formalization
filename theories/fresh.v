@@ -466,12 +466,12 @@ Proof.
 Qed.
 
 (* THIS IS CALLED WITH m = EMPTY *)
-Lemma fresh_tm_acyclic n vt t m:
+Lemma fresh_tm_idempotent n vt t m:
   sum_mt n m t <= vt ->
   [disjoint vars_tm t & codomf m] ->
-  acyclic_ren m -> acyclic_ren (fresh_tm vt m t).2.
+  idempotent_ren m -> idempotent_ren (fresh_tm vt m t).2.
 Proof.
-  rewrite/acyclic_ren.
+  rewrite/idempotent_ren.
   elim: t m vt => //= [v|f Hf a Ha] m vt; last first.
     move=>/sum_mt_app[sf sa]; rewrite fdisjointUX push => /andP[Df Da] D.
     apply/Ha/Hf => //.
@@ -487,8 +487,8 @@ Proof.
 Qed.
 
 
-Lemma fresh_tm_acyclic0 n vt t: sum_mt n fmap0 t <= vt -> acyclic_ren (fresh_tm vt fmap0 t).2.
-Proof. by move=> H; apply/(fresh_tm_acyclic H); rewrite/acyclic_ren codomf0 fdisjointX0. Qed.
+Lemma fresh_tm_idempotent0 n vt t: sum_mt n fmap0 t <= vt -> idempotent_ren (fresh_tm vt fmap0 t).2.
+Proof. by move=> H; apply/(fresh_tm_idempotent H); rewrite/idempotent_ren codomf0 fdisjointX0. Qed.
 
 Lemma has_cut_seq_fresh fv1 bo mp:  
   has_cut_seq (fresh_atoms fv1 mp bo).2 = has_cut_seq bo.

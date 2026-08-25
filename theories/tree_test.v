@@ -35,7 +35,7 @@ Definition s2 : Sigma := [fmap].[IV 1 <- Tm_P ff].
 Lemma vars_sigma_set v s: vars_sigma fmap0.[v <- s] = v |` vars_tm s.
 Proof. by rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0. Qed.
 
-Definition simpl_set:= (fsetU0, fset0U, codomf0, cat0f, vars_sigma0, fsetUid, acyclic_sigma0, deref_P, ren_P, ren_app, deref_empty, vars_sigma_set, unify_refl, cardfs1, freshUU, freshP0, freshP1).
+Definition simpl_set:= (fsetU0, fset0U, codomf0, cat0f, vars_sigma0, fsetUid, idempotent_0, deref_P, ren_P, ren_app, deref_empty, vars_sigma_set, unify_refl, cardfs1, freshUU, freshP0, freshP1).
 
 Ltac sif := simpl (if _ then _ else _); cbn match.
 
@@ -103,7 +103,7 @@ Section Test1.
       rewrite/vars_sigma/codom_vars/vars_atoms freshP0 !codom0_set/= !simpl_set.
       by rewrite/maxn/=.
     apply: StepT => //.
-      rewrite/=/bc/next_subst [next _ _]/= acyclic_sigma_set_D//.
+      rewrite/=/bc/next_subst [next _ _]/= idempotent_set_D//.
       rewrite deref_App PV deref_V FmapE.fmapE eqxx [vars _]/=.
       rewrite vars_sigma_set !simpl_set /maxn; sif.
       rewrite /fresh_rule/= !inE eqxx !FmapE.fmapE eqxx orbF.
@@ -112,7 +112,7 @@ Section Test1.
       by move=> ->{X}/=.
     apply: BackT => //=.
     apply: StepT => //.
-      rewrite/=/bc/next_subst [next _ _]/= acyclic_sigma_set_D//.
+      rewrite/=/bc/next_subst [next _ _]/= idempotent_set_D//.
       rewrite deref_App PV deref_V FmapE.fmapE eqxx [vars _]/=.
       rewrite vars_sigma_set !simpl_set /maxn; sif.
       rewrite /fresh_rule/= !inE eqxx !FmapE.fmapE eqxx orbF.
@@ -182,7 +182,7 @@ Section Test6.
       rewrite/next_subst[next _ _]/=.
       rewrite/=/bc.
       rewrite !simpl_set !maxnn.
-      rewrite[fresh_rules _ _]/= !simpl_set/= !FmapE.fmapE/= simpl_set acyclic_sigma_set_D ?[negb _]/=; last by [].
+      rewrite[fresh_rules _ _]/= !simpl_set/= !FmapE.fmapE/= simpl_set idempotent_set_D ?[negb _]/=; last by [].
       by sif; rewrite !simpl_set /maxn//=.
     apply: StepT => //=.
     apply: StopOT => //=.
@@ -417,8 +417,8 @@ Section map.
     by apply/contra/vc => H; apply/codom_varsP; eexists _,ks.
   Qed.
   
-  Ltac simpl_acyclic_set:=
-    rewrite !acyclic_sigma_set !inE !remf1_set empty_rem/=;
+  Ltac simpl_idempotent_set:=
+    rewrite !idempotent_set !inE !remf1_set empty_rem/=;
     repeat rewrite codom_vars_set ?remf1_set empty_rem/=;
     rewrite codom_vars0 !fsetU0 inE ?fdisjointXU fdisjointX0 ?fdisjointX1 ?inE !andbT.
 
@@ -428,7 +428,7 @@ Section map.
     rewrite/u.
     split.
       apply: StepT'=> //=; cycle 1.
-      { rewrite/bc ifF ?acyclic_sigma0//.
+      { rewrite/bc ifF ?idempotent_0//.
       rewrite !simpl_set !maxnn /maxn simpl_p; sif.
       set FR := select _ _ _ _ _.
       have : FR = [:: ([fmap].[IV 13 <- Tm_P double].[IV 14 <- one].[IV 15 <- nil].[X <- 
@@ -457,7 +457,7 @@ Section map.
         move=> ->{X}.
         rewrite/H/= !FmapE.fmapE/=.
         rewrite matching_Vd?vars_sigma0//=.
-        rewrite !matching_app?acyclic_sigma_set_D//.
+        rewrite !matching_app?idempotent_set_D//.
         rewrite !matching_refl/= matching_Vd//; last first.
           by rewrite vars_sigma_set !inE.
         rewrite /= matching_Vd//=; last first.
@@ -474,7 +474,7 @@ Section map.
       }
       apply: StepT => //=.
       {
-      rewrite/bc ifF ?acyclic_sigma0//.
+      rewrite/bc ifF ?idempotent_0//.
       set X := fresh _.
       have: X = 20.
         rewrite{}/X deref_App !deref_V !FmapE.fmapE not_fnd//.
@@ -524,12 +524,12 @@ Section map.
       rewrite codom_vars0 !simpl_set.
       by rewrite/maxn/=.
     apply/negbF.
-    repeat simpl_acyclic_set.
-    by rewrite !acyclic_sigma_set !inE empty_rem acyclic_sigma0 codom_vars0/= fdisjointX0.
+    repeat simpl_idempotent_set.
+    by rewrite !idempotent_set !inE empty_rem idempotent_0 codom_vars0/= fdisjointX0.
     }
     apply: StepT => //=.
     {
-      rewrite/bc ifF ?acyclic_sigma0//.
+      rewrite/bc ifF ?idempotent_0//.
       rewrite/next_subst[next _ _]/=.
       set X := fresh _.
       have: X = 27.
@@ -586,8 +586,8 @@ Section map.
         }
       move=> ->{FR}//.
       apply:negbF.
-      repeat simpl_acyclic_set.
-      by rewrite !acyclic_sigma_set !inE empty_rem acyclic_sigma0 codom_vars0 fdisjointX0 inE.
+      repeat simpl_idempotent_set.
+      by rewrite !idempotent_set !inE empty_rem idempotent_0 codom_vars0 fdisjointX0 inE.
       }
       apply: StopOT => //=.
       by [].

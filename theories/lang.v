@@ -265,7 +265,7 @@ Proof.
   by move=> /andP[yk ts]; rewrite in_fnd yk ts.
 Qed.
 
-Definition acyclic (s: Sigma) := [disjoint domf s & codom_vars s].
+Definition idempotent (s: Sigma) := [disjoint domf s & codom_vars s].
 
 Lemma add_some T (x z: T): Some x = Some z -> x = z. by move=> []. Qed.
 
@@ -316,12 +316,12 @@ Proof.
   by rewrite/codom_vars codom0_set//= fsetU0.
 Qed.
 
-Lemma acyclic_sigma_set s k v:
-  acyclic s.[k <- v] = 
-    [&& acyclic s.[~k], (k \notin vars_tm v), (k \notin codom_vars s.[~k]) &
+Lemma idempotent_set s k v:
+  idempotent s.[k <- v] = 
+    [&& idempotent s.[~k], (k \notin vars_tm v), (k \notin codom_vars s.[~k]) &
       fdisjoint (domf s) (vars_tm v)].
 Proof.
-  rewrite /acyclic dom_setf fdisjointUX fdisjoint1X !codom_vars_set.
+  rewrite /idempotent dom_setf fdisjointUX fdisjoint1X !codom_vars_set.
   rewrite !fdisjointXU; rewrite !inE; case: (boolP (_ \in _)); rewrite ?(andbF,andbT)// => ks.
   rewrite domf_rem orFb; case: (boolP (_ \in _)); rewrite ?(andbF,andbT)// => ksf.
   rewrite andTb.
@@ -335,7 +335,7 @@ Proof.
   by rewrite xsk in ks.
 Qed.
 
-Lemma acyclic_sigma_rem s k: acyclic s -> acyclic s.[\ k].
+Lemma idempotent_rem s k: idempotent s -> idempotent s.[\ k].
 Proof.
   move=> H; apply/fdisjointWr/fdisjointWl/H.
     by rewrite codom_vars_sub.
@@ -345,8 +345,8 @@ Qed.
 Lemma empty_rem {T:choiceType} K k: (fmap0 : {fmap T -> K}).[~k] = (fmap0 : {fmap T -> K}).
 Proof. by apply/fmapP => p;rewrite fnd_rem1 not_fnd//if_same. Qed.
 
-Lemma acyclic_sigma0: acyclic fmap0.
-Proof. by rewrite/acyclic fdisjoint0X. Qed.
+Lemma idempotent_0: idempotent fmap0.
+Proof. by rewrite/idempotent fdisjoint0X. Qed.
 
 Lemma codom0 (T:choiceType) K: codom (fmap0 : {fmap T -> K}) = [::].
 Proof. by rewrite /fmap0 codomE/= enum_fset0. Qed.
@@ -354,29 +354,29 @@ Proof. by rewrite /fmap0 codomE/= enum_fset0. Qed.
 Lemma codom_vars0: codom_vars fmap0 = fset0.
 Proof. by rewrite/codom_vars codom0. Qed.
 
-Goal ~ (acyclic [fmap].[IV 0 <- Tm_V (IV 0)]).
-Proof. by rewrite acyclic_sigma_set empty_rem acyclic_sigma0 codom_vars0 fdisjoint0X/= !inE. Qed.
+Goal ~ (idempotent [fmap].[IV 0 <- Tm_V (IV 0)]).
+Proof. by rewrite idempotent_set empty_rem idempotent_0 codom_vars0 fdisjoint0X/= !inE. Qed.
 
-Goal ~ (acyclic [fmap].[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)]).
-Proof. by rewrite acyclic_sigma_set !inE remf1_id ?inE// codom_vars_set !inE/= eqxx orbT/= andbF. Qed.
+Goal ~ (idempotent [fmap].[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)]).
+Proof. by rewrite idempotent_set !inE remf1_id ?inE// codom_vars_set !inE/= eqxx orbT/= andbF. Qed.
 
-Goal ~ (acyclic [fmap].[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)].[IV 2 <- Tm_P (IP 1)]).
+Goal ~ (idempotent [fmap].[IV 0 <- Tm_V (IV 1)].[IV 1 <- Tm_V (IV 0)].[IV 2 <- Tm_P (IP 1)]).
 Proof.
-  rewrite acyclic_sigma_set remf1_id?inE// acyclic_sigma_set inE.
+  rewrite idempotent_set remf1_id?inE// idempotent_set inE.
   by rewrite remf1_id?inE//= fdisjointX0 andbT codom_vars_set !inE/= eqxx orbT/= andbF.
 Qed.
 
-Goal (acyclic [fmap].[IV 0 <- Tm_V (IV 1)]).
+Goal (idempotent [fmap].[IV 0 <- Tm_V (IV 1)]).
 Proof.
-  by rewrite acyclic_sigma_set empty_rem acyclic_sigma0 codom_vars0 !inE fdisjoint0X.
+  by rewrite idempotent_set empty_rem idempotent_0 codom_vars0 !inE fdisjoint0X.
 Qed.
 
-Definition acyclic_ren (m: {fmap V -> V}) := 
-  (* acyclic [fmap s => Tm_V m.[valP s]]. *)
+Definition idempotent_ren (m: {fmap V -> V}) := 
+  (* idempotent [fmap s => Tm_V m.[valP s]]. *)
   [disjoint domf m & codomf m].
 
-Lemma acyclic_ren0: acyclic_ren ctx.fmap0.
-Proof. rewrite/acyclic_ren fdisjoint0X//. Qed.
+Lemma idempotent_ren0: idempotent_ren ctx.fmap0.
+Proof. rewrite/idempotent_ren fdisjoint0X//. Qed.
 
 Fixpoint ren (s: {fmap V -> V}) tm :=
   match tm with
@@ -421,7 +421,7 @@ Lemma deref_V s v: deref s (Tm_V v) = odflt (Tm_V v) (s.[?v]).
 Proof. by []. Qed.
 
 Lemma deref2' s e t:
-  acyclic (s+e) -> deref (s+e) (deref e t) = deref (s+e) t.
+  idempotent (s+e) -> deref (s+e) (deref e t) = deref (s+e) t.
 Proof.
   move=> A; elim: t => //[v|/=f->a->//].
   rewrite !deref_V fnd_cat.
@@ -437,7 +437,7 @@ Lemma catf2 (K:choiceType) V (s: {fmap K -> V}): s + s = s.
 Proof. by apply/fmapP => x; rewrite fnd_cat if_same. Qed.
 
 Lemma deref2 s t:
-  (acyclic s) -> deref s (deref s t) = deref s t.
+  (idempotent s) -> deref s (deref s t) = deref s t.
 Proof. by have:= @deref2' s s t; rewrite catf2. Qed.
 
 Lemma vars_tm_deref_sub s t:
@@ -469,8 +469,8 @@ Proof.
   case: (boolP (_ \in _)) => // H /(_ isT)/orP[]->//.
 Qed.
 
-Lemma acyclic_deref_disjoint s t:
-  acyclic s -> [disjoint domf s & vars_tm (deref s t)].
+Lemma idempotent_deref_disjoint s t:
+  idempotent s -> [disjoint domf s & vars_tm (deref s t)].
 Proof.
   move=> A; elim: t => //=; only 1: by rewrite fdisjointX0.
     move=> v; case: fndP => //=vs.
@@ -573,7 +573,7 @@ Definition max_sigmas n (s: seq (Sigma * seq Atom)) : nat :=
 Definition bc : program -> nat -> Tm -> Sigma -> nat * seq (Sigma * seq Atom) :=
 (*ENDSNIP: bc_type*)
   fun pr fv (query:Tm) s =>
-  if ~~ acyclic s then (fv, [::])
+  if ~~ idempotent s then (fv, [::])
   else
   let query := deref s query in
   let: (fv, rules) := fresh_rules (fresh (IV fv |` vars_sigma s `|` vars_tm query `|` v_prog pr.(rules))) (pr.(rules)) in
@@ -634,9 +634,9 @@ Proof. by rewrite/ground/=; apply:contraFF erefl => /eqP/fsetP /(_ v); rewrite !
 Lemma ground_app f a: ground (Tm_App f a) = ground f && ground a.
 Proof. by rewrite /ground/= fsetU_eq0. Qed.
 
-Lemma acyclic_sigma_set_D k t: ground t -> acyclic fmap0.[k <- t].
+Lemma idempotent_set_D k t: ground t -> idempotent fmap0.[k <- t].
 Proof.
-  rewrite acyclic_sigma_set empty_rem fdisjoint0X acyclic_sigma0 codom_vars0.
+  rewrite idempotent_set empty_rem fdisjoint0X idempotent_0 codom_vars0.
   by rewrite /ground => /eqP->//.
 Qed.
 
