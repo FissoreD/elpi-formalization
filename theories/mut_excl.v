@@ -141,33 +141,33 @@ Proof.
   by rewrite derefxx//.
 Qed.
 
-Lemma acyclic_sigma_H sP fv q hd s1 r:
-  acyclic s1 ->
+Lemma idempotent_H sP fv q hd s1 r:
+  idempotent s1 ->
     H u sP fv q hd s1 = Some r ->
-      acyclic r.2.
+      idempotent r.2.
 Proof.
   elim: q fv hd s1 r => //=[p|f Hf a Ha] fv [p'|//|f' a']// s1 r.
     by case: eqP => //= _ A; case: fndP => //=pP[<-].
   move=> A.
   case H: H => [[[|[] tyl tyr] s1']|]//=.
     case M: matching => //= [s1''][?]; subst.
-    by apply: matching_acyclic M; apply: Hf H.
+    by apply: matching_idempotent M; apply: Hf H.
   case M: unify => //= [s1''][?]; subst.
-  by apply: unif_acyclic M; apply: Hf H.
+  by apply: unif_idempotent M; apply: Hf H.
 Qed.
 
-Lemma acyclic_sigma_select sP query rules s1 e:
-  acyclic s1 ->
+Lemma idempotent_select sP query rules s1 e:
+  idempotent s1 ->
     e \in (select u sP query rules s1) ->
-      acyclic e.1.
+      idempotent e.1.
 Proof.
   elim: rules query s1 e => //= -[hd bo] rs IH query s1 e AS/=.
   case H: H => [[ty s1']|]; last by apply: IH.
   rewrite in_cons => /orP[/eqP?|]; subst; last by apply: IH.
-  by have := acyclic_sigma_H AS H.
+  by have := idempotent_H AS H.
 Qed.
 
-Lemma H_mp sP fv q hd s1 r: acyclic s1 ->
+Lemma H_mp sP fv q hd s1 r: idempotent s1 ->
   H u sP fv q hd s1 = Some r -> mp s1 r.2.
 Proof.
   elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|f' a']// s1 r.
@@ -175,14 +175,14 @@ Proof.
   move=> A; case H: H => [[[|m tl tr] s']|]//=.
   case M: (_ s') => //=[{}r][<-]/=.
   have {}Hf := Hf _ _ _ _ A H.
-  have A' := acyclic_sigma_H A H.
+  have A' := idempotent_H A H.
   have: mp s' r.
     by move: M; destruct m => /=/(montanari_mp A' (disjoint_L_deref _ _ A')) ->//.
   by apply: mp_trans.
 Qed.
 
 Lemma H_deref_eq sP fv q hd s1 r:
-  acyclic s1 ->
+  idempotent s1 ->
     H u sP fv q hd s1 = Some r ->
       deref r.2 q = deref r.2 hd.
 Proof.
@@ -191,7 +191,7 @@ Proof.
   move=> A.
   case H: H => [[[|m tl tr] s1']|]//=.
   case X: (_ s1') => //= [sx][?]; subst => /=.
-  have /= A' := acyclic_sigma_H A H.
+  have /= A' := idempotent_H A H.
   have s1s1' := H_mp A H.
   have s1'sx: mp s1' sx.
     have M := montanari_mp A' (disjoint_L_deref _ _ A').
@@ -222,7 +222,7 @@ Proof.
 Qed.
 
 Lemma H_matchingI sP v1 query head s1 r:
-  acyclic s1 ->
+  idempotent s1 ->
   good_modes sP ->
   fdisjoint (domf s1) v1 ->
   H u sP v1 query head s1 = Some r -> arri r.1 ->
@@ -233,7 +233,7 @@ Proof.
   apply: exists_montanari => //.
     by rewrite disjoint_L_deref.
   exists r.2; split => //.
-    by apply: acyclic_sigma_H H.
+    by apply: idempotent_H H.
     have mp := H_mp A H.
     have:= H_deref_eq A H.
     rewrite/unifier/unif_pair/map_prod1/= => Hx.
@@ -279,7 +279,7 @@ Qed.
 
 Lemma SHS sP fv query hd2 hd1 (s1 s2:Sigma):
   good_modes sP ->
-  acyclic s1 -> acyclic s2 ->
+  idempotent s1 -> idempotent s2 ->
   fdisjoint (domf s1) fv ->
   fdisjoint (domf s2) fv ->
   (get_input_vars sP query).1 `<=` fv ->
@@ -333,7 +333,7 @@ Qed.
 
 Lemma HSH sP rules hd query s: 
   good_modes sP ->
-  acyclic s ->
+  idempotent s ->
   [disjoint domf s & vars_tm query] ->
   [disjoint vars_tm hd & v_prog rules] ->
   [disjoint vars_tm query & v_prog rules] ->
@@ -409,7 +409,7 @@ Proof.
     by rewrite fresh_tm_inj_//(injectiveb0,codomf0)//freshP0; destruct n.
   rewrite (fsubset_trans _ (fresh_tm_sub1 _ _ _))//.
   split => //.
-  apply: (@fresh_tm_acyclic 0); rewrite//?(codomf0,acyclic_ren0,fdisjointX0,fsubsetUl)//.
+  apply: (@fresh_tm_idempotent 0); rewrite//?(codomf0,idempotent_ren0,fdisjointX0,fsubsetUl)//.
   by rewrite/sum_mt domf0 codomf0 !fsetU0 !freshPU freshP1 H andbT; destruct n.
 Qed.
 
@@ -568,9 +568,9 @@ Proof.
   by have:= H2 (proj2 (callable_rename _ _ _ _) _); auto.
 Qed.
 
-Lemma fresh_tm_acyclic0' vt t:
-  fresh (vars t) <= vt -> acyclic_ren (fresh_tm vt fmap0 t).2.
-Proof. by move=> H; rewrite (@fresh_tm_acyclic0 0)///sum_mt domf0 codomf0 !fsetU0 freshPU H andbT freshP1; destruct vt. Qed.
+Lemma fresh_tm_idempotent0' vt t:
+  fresh (vars t) <= vt -> idempotent_ren (fresh_tm vt fmap0 t).2.
+Proof. by move=> H; rewrite (@fresh_tm_idempotent0 0)///sum_mt domf0 codomf0 !fsetU0 freshPU H andbT freshP1; destruct vt. Qed.
 
 Lemma select_head_ren sP rs fx fy fv1 fv2 hd:
   let FRS1 := fresh_rules fv1 rs in
@@ -597,22 +597,22 @@ Proof.
   have renx : renaming_forP hd (fresh_tm fx fmap0 hd).2.
     repeat split.
       by apply: fresh_tm_inj_ injectiveb0; rewrite codomf0 freshP0; destruct fx.
-      by apply: fresh_tm_acyclic0'.
+      by apply: fresh_tm_idempotent0'.
     by apply: fresh_tm_sub1.
   have renz : renaming_forP (head x) (fresh_tm (fresh_rules fv1 xs).1 fmap0 (head x)).2.
     repeat split.
       by apply: fresh_tm_inj_ injectiveb0; rewrite codomf0 freshP0; apply/leq_trans/fresh_rules_sub; destruct fv1.
-      by apply/fresh_tm_acyclic0'/leq_trans/fresh_rules_sub.
+      by apply/fresh_tm_idempotent0'/leq_trans/fresh_rules_sub.
     by apply/fsubset_trans/fresh_tm_sub1.
   have reny : renaming_forP hd (fresh_tm fy fmap0 hd).2.
     repeat split.
       by apply: fresh_tm_inj_ injectiveb0; rewrite codomf0 freshP0; destruct fy.
-      by apply: fresh_tm_acyclic0'.
+      by apply: fresh_tm_idempotent0'.
     by apply: fresh_tm_sub1.
   have renw : renaming_forP (head x) (fresh_tm (fresh_rules fv2 xs).1 fmap0 (head x)).2.
     repeat split.
       by apply: fresh_tm_inj_ injectiveb0; rewrite codomf0 freshP0; apply/leq_trans/fresh_rules_sub; destruct fv2.
-      by apply/fresh_tm_acyclic0'/leq_trans/fresh_rules_sub.
+      by apply/fresh_tm_idempotent0'/leq_trans/fresh_rules_sub.
     by apply/fsubset_trans/fresh_tm_sub1.
   have ->//= := @H_head_ren_aux sP (head x) hd (renaming_forPM renz) (renaming_forPM renw) (renaming_forPM renx) (renaming_forPM reny).
     have /= := @min_max_fresh_tm0 fx hd.
@@ -666,7 +666,7 @@ Proof.
     set n := fst _; set m := fst _.
     apply: select_head_ren => //.
     by move: S1; rewrite !freshPU -!andbA => /and5P[]//.
-  - by apply: acyclic_deref_disjoint.
+  - by apply: idempotent_deref_disjoint.
   - apply: fdisjointWl (ren_mp (fresh_tm_sub1 _ _ _)) _.
     rewrite fdisjoint_sym.
     apply: min_max_S_disj; cycle -2.
