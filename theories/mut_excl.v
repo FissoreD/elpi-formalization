@@ -229,7 +229,6 @@ Lemma H_matchingI sP v1 query head s1 r:
   matching v1 head query s1.
 Proof.
   move=> A GM sq H AI.
-  rewrite/matching/montanari_deref/montanari_pair.
   apply: exists_montanari => //.
     by rewrite disjoint_L_deref.
   exists r.2; split => //.

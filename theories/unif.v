@@ -309,25 +309,10 @@ Ltac montanari_ind s b l :=
   ]; subst.
 
 
-Definition montanari_pair s b t1 t2 := montanari s b [::(t1,t2)].
-
-(* Goal montanari_pair s false (Tm_D (ID 1)) (Tm_V (IV 1)) =
-   Some ctx.fmap0.[IV 1 <- Tm_D (ID 1)].
-Proof. by rewrite /montanari_pair !montanari_equation/=. Qed.
-
-Goal ~ montanari_pair true (Tm_D (ID 1)) (Tm_V (IV 1)).
-Proof. by rewrite /montanari_pair !montanari_equation/=. Qed.
-
-Goal forall b, montanari_pair b (Tm_V (IV 1)) (Tm_D (ID 1)).
-Proof. by move=> b; rewrite/montanari_pair !montanari_equation/=. Qed. *)
-
-Definition montanari_deref b t1 t2 s := montanari_pair s b (deref s t1) (deref s t2).
-
-Definition matching := montanari_deref.
-Definition unify := montanari_deref fset0.
+Definition matching b t1 t2 s := montanari s b [::(deref s t1, deref s t2)].
+Definition unify := matching fset0.
 
 Definition u := mk_Unif unify matching : Unif.
-
 
 Lemma idempotent_deref v s (vP: v \in domf s):
   idempotent s -> v \notin vars_tm (s [` vP]).
@@ -443,7 +428,7 @@ Proof.
 Qed.
 
 
-Lemma montanari_idempotent_aux l s b s':
+Lemma montanari_idempotent l s b s':
   idempotent s -> disjoint_L s l ->
     montanari s b l = Some s' -> idempotent s'.
 Proof.
@@ -466,32 +451,13 @@ Proof.
   - by [].
 Qed.
 
-Lemma montanari_idempotent b t1 t2 s s':
-  idempotent s -> montanari_deref b t1 t2 s = Some s' -> idempotent s'.
-Proof. move=> A M; apply: montanari_idempotent_aux M; rewrite//= /disjoint_L/= fsetU0/map_prod1/= fdisjointXU !idempotent_deref_disjoint//. Qed.
+Lemma matching_idempotent fv t1 t2 s s':
+  idempotent s -> matching fv t1 t2 s = Some s' -> idempotent s'.
+Proof. by move=> I; apply/montanari_idempotent/disjoint_L_deref. Qed.
 
 Lemma unif_idempotent t1 t2 s s':
   idempotent s -> unify t1 t2 s = Some s' -> idempotent s'.
-Proof. apply/montanari_idempotent. Qed.
-
-Lemma matching_idempotent fv t1 t2 s s':
-  idempotent s -> matching fv t1 t2 s = Some s' -> idempotent s'.
-Proof. by apply/montanari_idempotent. Qed.
-
-Lemma montanari_varl s b v t: v \notin vars_tm t -> v \notin b ->
-  montanari_pair s b (Tm_V v) t = Some (deref_sigma v t s).
-Proof.
-  move=> vt vb; rewrite /montanari_pair montanari_equation/= (negbTE vt) (negbTE vb).
-  rewrite 2!montanari_equation/=; case: eqP => //?; subst.
-  by rewrite inE eqxx in vt.
-Qed.
-
-Lemma montanari_var0l b v t: v \notin vars_tm t -> v \notin b ->
-  montanari_pair fmap0 b (Tm_V v) t = Some fmap0.[v <- t].
-Proof.
-  move=> vt vb ; have:= montanari_varl fmap0 vt vb => ->.
-  by f_equal; rewrite/deref_sigma; apply/fmapP => k; rewrite !fnd_set !not_fnd//.
-Qed.
+Proof. apply/matching_idempotent. Qed.
 
 Definition is_var t := match t with Tm_V _ => true | _ => false end.
 
@@ -509,7 +475,7 @@ Lemma unify_VR v t m:
   v  \notin vars (deref m t) -> v \notin domf m -> ~~ is_var t ->
   unify t (Tm_V v) m = Some (deref_sigma v (deref m t) m).
 Proof.
-  rewrite/unify/montanari_deref/montanari_pair => vt vd iv.
+  rewrite/unify/matching => vt vd iv.
   rewrite montanari_equation deref_V not_fnd//=.
   rewrite !(montanari_equation m)/= eq_sym.
   rewrite !montanari_equation/=.
@@ -684,7 +650,7 @@ Lemma matching_extP s s' b t1 t2:
   idempotent s -> matching b t1 t2 s = Some s' ->
   exists2 sm : Sigma, s' = ext_sig sm s & ext_sigP b sm s.
 Proof.
-  move=> A; rewrite/matching/montanari_deref/montanari_pair.
+  move=> A; rewrite/matching.
   by move=> /(montanari_extP A (disjoint_L_deref _ _ A)).
 Qed.
 
@@ -770,18 +736,14 @@ Proof.
     by have:= H x xs; rewrite !varsL_cons map_prod1_comm//; apply/fsetUC.
 Qed.
 
-Lemma montanari_deref_ext1 t1 t2 v s s':
-  montanari_deref v t1 t2 s = Some s' -> domf s' `<=` domf s `|` ((vars (deref s t1)  `|` vars (deref s t2) ) `\` v).
-Proof. by move=> /montanari_ext1; rewrite varsL_cons varsL0 fsetU0 //. Qed.
-
 Lemma matching_ext1 fv t1 t2 s s' : 
   matching fv t1 t2 s = Some s' -> domf s' `<=` domf s `|` ((vars (deref s t1)  `|` vars (deref s t2) ) `\` fv).
-Proof. apply/montanari_deref_ext1. Qed.
+Proof. move=> /montanari_ext1; rewrite varsL_cons varsL0 fsetU0 //. Qed.
 
 Lemma matching_ext2 fv t1 t2 s s' : 
   matching fv t1 t2 s = Some s' -> domf s' `<=` vars_sigma s `|` vars_tm t1 `|` vars_tm t2.
 Proof.
-  move=> /montanari_deref_ext1 H; apply: fsubset_trans H _.
+  move=> /matching_ext1 H; apply: fsubset_trans H _.
   rewrite fsetDUl !fsubUset; apply/and3P; split.
     by rewrite/vars_sigma -!fsetUA fsubsetUl//.
     rewrite/vars_sigma.
@@ -1871,24 +1833,21 @@ Lemma montanari_ground s b l:
   montanari s b l = if all (fun '(x, y) => x == y) l then Some s else None.
 Proof. by move=> /all_ground_varsL H; apply: montanari_all_forzen; rewrite H. Qed.
 
-Lemma montanari_pair_ground s b t1 t2: 
-  ground t1 -> ground t2 -> montanari_pair s b t1 t2 = if t1 == t2 then Some s else None.
-Proof.
-  move=> G1 G2; have:= @montanari_ground s b [::(t1,t2)].
-  by rewrite /map_prod1/= G1 G2 !andbT => /(_ isT).
-Qed.
+Lemma matching_ground b s t1 t2: 
+  ground t1 -> ground t2 -> matching b t1 t2 s = if t1 == t2 then Some s else None.
+Proof. by move=> G1 G2; rewrite/matching montanari_ground//=/map_prod1/=!ground_deref?G1//?G2//andbT. Qed.
 
 Lemma unify_ground s t1 t2: 
   ground t1 -> ground t2 -> unify t1 t2 s = if t1 == t2 then Some s else None.
-Proof. move=> G1 G2; rewrite/unify/montanari_deref !ground_deref//montanari_pair_ground//. Qed.
+Proof. apply: matching_ground. Qed.
 
 Lemma unify_derefl s t1 t2: idempotent s ->
   unify t1 t2 s = unify (deref s t1) t2 s.
-Proof. move=> A; rewrite /unify/montanari_deref deref2//. Qed.
+Proof. move=> A; rewrite /unify/matching deref2//. Qed.
 
 Lemma unify_derefr s t1 t2: idempotent s ->
   unify t1 t2 s = unify t1 (deref s t2) s.
-Proof. move=> A; rewrite /unify/montanari_deref deref2//. Qed.
+Proof. move=> A; rewrite /unify/matching deref2//. Qed.
 
 Lemma add_eq0 a b: ((addn a b) == 0) = (a == 0) && (b == 0).
 Proof. case: a => //. Qed.
@@ -2026,24 +1985,18 @@ Lemma unify_V_0r v t: v \notin vars_tm t -> ~~ is_var t ->
   unify t (Tm_V v) fmap0 = Some fmap0.[v <- t].
 Proof. by move=> H1 H2; rewrite unify_Vr//=(codom_vars0,deref_empty). Qed.
 
-Lemma unifier_help_refl s b t: montanari_pair s b t t = Some s.
-Proof. by rewrite/montanari_pair !simpl_montanari. Qed.
-
-Lemma unifier_help_refl1 b t s: montanari_deref b t t s = Some s.
-Proof. by rewrite /montanari_deref unifier_help_refl. Qed.
-
-Lemma unify_refl t s: unify t t s = Some s.
-Proof. apply/unifier_help_refl1. Qed.
-
 Lemma matching_refl f t s: matching f t t s = Some s.
-Proof. apply/unifier_help_refl1. Qed.
+Proof. by rewrite/matching !simpl_montanari. Qed.
+ 
+Lemma unify_refl t s: unify t t s = Some s.
+Proof. apply: matching_refl. Qed.
 
 Lemma matching_app fv x1 x2 b1 b2 s1: idempotent s1 ->
   matching fv (Tm_App x1 b1) (Tm_App x2 b2) s1 = 
     obind (matching fv b1 b2) (matching fv x1 x2 s1).
 Proof.
   move=> A.
-  rewrite/matching/montanari_deref/montanari_pair !deref_App !simpl_montanari.
+  rewrite/matching !deref_App !simpl_montanari.
   rewrite montanari_cons//=?idempotent_deref_disjoint// ?disjoint_L_deref//.
   case M: montanari => //=[s'].
   have MP : mp s1 s'.

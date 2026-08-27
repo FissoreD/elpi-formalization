@@ -396,7 +396,7 @@ Section map.
     v \notin (vars t) -> matching f (Tm_V v) t s = Some s.[v <- deref s t].
   Proof.
     move=> /[dup]; rewrite {1}inE => /norP[vd vc] vs vf vt.
-    rewrite/matching/montanari_deref/montanari_pair.
+    rewrite/matching.
     rewrite not_in_deref/=; last rewrite fdisjointX1//.
     rewrite montanari_equation (negbTE vf).
     rewrite ifF; last first.
@@ -445,7 +445,7 @@ Section map.
         rewrite eqxx.
         set W := matching _ _ _ _.
         have : W = None.
-          by rewrite/W/matching/montanari_deref/montanari_pair/= montanari_equation.
+          by rewrite/W/matching/= montanari_equation.
         move=> ->{W}; rewrite [omap _ _]/=.
         cbn match; rewrite select_cons.
         set X:= select _ _ _ _ _.
@@ -580,8 +580,8 @@ Section map.
             repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
             by rewrite codom_vars0 !simpl_set !inE.
           rewrite/=.
-          rewrite/matching/montanari_deref !deref_App !deref_P !deref_V !FmapE.fmapE/=!not_fnd//=.
-          by rewrite /montanari_pair montanari_equation/=.
+          rewrite/matching !deref_App !deref_P !deref_V !FmapE.fmapE/=!not_fnd//=.
+          by rewrite montanari_equation/=.
         by move=> ->/=.
         }
       move=> ->{FR}//.
