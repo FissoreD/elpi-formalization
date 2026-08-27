@@ -1485,8 +1485,8 @@ Proof.
   have D1 := matching_disj A1 S1 M1.
   have D2 := matching_disj A2 S2 M2.
   rewrite !(@not_in_deref _ q)// in D1 D2.
-  have /= := montanari_mp A1 _ M1; rewrite disjoint_L_cons/=!idempotent_deref_disjoint// disjoint_L0 => /(_ isT) => MP1.
-  have /= := montanari_mp A2 _ M2; rewrite disjoint_L_cons/=!idempotent_deref_disjoint// disjoint_L0 => /(_ isT) => MP2.
+  have /= MP1 := montanari_mp A1 (disjoint_L_deref _ _ A1) M1.
+  have /= MP2 := montanari_mp A2 (disjoint_L_deref _ _ A2) M2.
   have A1' := matching_idempotent A1 M1.
   have A2' := matching_idempotent A2 M2.
   apply: ddu D1 D2 => //.
