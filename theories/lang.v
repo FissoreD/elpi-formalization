@@ -528,13 +528,13 @@ Fixpoint get_input_vars (sP:sigT) t : {fset V} * option S :=
 
    An example (using montanari algorithm) that can assign input variables
    is the following:
-    let f be a predicate with 3 inputs
-    query := f X 3
+    let f be a predicate with 2 inputs
     rule  := f W W
+    query := f X 3
     =================
     frozen variables X
     unification problems : W = X, W = 3
-    step 1: X = W ===> W -> X, the list of unif problems becoes : X = 3 
+    step 1: X = W ===> W -> X, the list of unif problems becomes : X = 3 
     step 2: since X is frozen, this unification fails
 *)
 Fixpoint H u (sP:sigT) fv (q : Tm) (h: Tm) s : option (S * Sigma) :=
