@@ -338,7 +338,7 @@ Lemma unify_complete:
 (*ENDSNIPT: unify_complete *)
 Proof.
   move=> t1 t2 [sx [H1 H2]].
-  rewrite /unify/montanari_deref/montanari_pair.
+  rewrite /unify/matching.
   have:= exists_montanari idempotent_0 (disjoint_Lempty _) (ex_intro _ sx _).
   move=> /(_ fset0 [::(deref fmap0 t1, deref fmap0 t2)] ).
   rewrite H1/= /unif_pair/map_prod1/= !deref_empty H2 eqxx fdisjointX0.
