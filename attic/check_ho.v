@@ -44,7 +44,7 @@ Proof. by rewrite/cincl => C1; rewrite compat_type_weak C1 compat_type_incl_weak
 Lemma cincl_weakeq t1 t2: cincl t1 t2 -> (weak t1) = (weak t2).
 Proof. by move=> /andP[/compat_type_weak_eq]. Qed.
 
-Lemma deref_in (s:Sigma) (v:V) (vs : v \in s): acyclic s -> deref s s.[vs] = s.[vs].
+Lemma deref_in (s:Sigma) (v:V) (vs : v \in s): idempotent s -> deref s s.[vs] = s.[vs].
 Proof. by move=> A; have:= deref2 (Tm_V v) A; rewrite/=in_fnd. Qed.
 
 Lemma cinclR_min C A B: cincl C A -> cincl C B -> cincl C (min A B) .
@@ -393,7 +393,7 @@ Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
     else false].
 
 (* Lemma check_tm_deref sP sV s t r1 r2:
-  acyclic s ->
+  idempotent s ->
   relSS sP s sV ->
   check_tm sP sV t = Some r1 ->
   check_tm sP fmap0 (deref s t) = Some r2 ->
@@ -428,7 +428,7 @@ Proof.
 Qed. *)
 
 Lemma check_tm_deref sP sV s t r1:
-  acyclic s ->
+  idempotent s ->
   relSS sP s sV ->
   check_tm sP sV t = Some r1 ->
   exists2 r2, check_tm sP fmap0 (deref s t) = Some r2 & cincl r2.2 r1.2.
@@ -466,7 +466,7 @@ Definition deref_atom s a :=
   end.
 
 Lemma check_atom_deref sP sV d s t r1:
-  acyclic s ->
+  idempotent s ->
   relSS sP s sV ->
   check_atom sP sV d t = Some r1 ->
   exists2 r2, check_atom sP fmap0 d (deref_atom s t) = Some r2 & minD r2 r1 = r2.
@@ -618,7 +618,7 @@ Qed.
 
 (* Lemma call_is_det_deref sP sV s t r1:
   (* check_tm sP fmap0 (deref s t) -> *)
-  acyclic s ->
+  idempotent s ->
   relSS sP s sV ->
   check_tm_prop sP sV t = Some r1 -> 
   exists2 r2, check_tm_prop sP fmap0 (deref s t) = Some r2 & minD r2 r1 = r2.
@@ -679,8 +679,8 @@ Proof.
 Qed.
 
 Lemma acyclic_deref_sig2 sm sx:
-  acyclic sx -> domf sx # codom_vars sm ->
-  acyclic (deref_sig2 sm sx).
+  idempotent sx -> domf sx # codom_vars sm ->
+  idempotent (deref_sig2 sm sx).
 Proof.
   move=> asx sxsm.
   apply/fdisjointP => x/= xsx.
@@ -741,28 +741,28 @@ Proof.
 Qed.
 
 Lemma acyclic_cat (a b: Sigma):
-  acyclic a ->  domf b # codom_vars a -> acyclic b ->
-  domf a # codom_vars b -> acyclic (a + b).
+  idempotent a ->  domf b # codom_vars a -> idempotent b ->
+  domf a # codom_vars b -> idempotent (a + b).
 Proof.
   move=> Aa Ab ab ba.
-  rewrite/acyclic /= fsetDUI fdisjointUX.
+  rewrite/idempotent /= fsetDUI fdisjointUX.
   rewrite !fdisjoint_codom_vars_cat//.
 Qed.
 
 Lemma deref_sig2_rem (s1 s: Sigma):
-  acyclic s ->
+  idempotent s ->
   deref_sig2 s1.[\ domf s] s = deref_sig2 s1 s.
 Proof.
   move=> A; apply/fmapP => k.
   case: fndP => //ks; last by rewrite not_fnd.
-  by rewrite in_fnd//=!ffunE !valPE deref_rem//= acyclic_deref'.
+  by rewrite in_fnd//=!ffunE !valPE deref_rem//= idempotent_deref'.
 Qed.
 
-Lemma ext_sig_rem s1 s: acyclic s ->
+Lemma ext_sig_rem s1 s: idempotent s ->
   ext_sig s1.[\ domf s] s = ext_sig s1 s.
 Proof. move=> A; rewrite/ext_sig deref_sig2_rem//=; by apply fsetDRL. Qed.
 
-Lemma ext_sigR s: acyclic s -> ext_sig s s = s.
+Lemma ext_sigR s: idempotent s -> ext_sig s s = s.
 Proof.
   move=> As; apply/fmapP => x; rewrite fnd_cat.
   by case: fndP => //= xs; rewrite in_fnd ffunE valPE deref_in.
@@ -807,21 +807,21 @@ Qed.
 
 Lemma H_extP sP s r b t1 t2:
   good_modes sP ->
-  acyclic s -> H u sP b t1 t2 s = Some r -> arri r.1 ->
+  idempotent s -> H u sP b t1 t2 s = Some r -> arri r.1 ->
   exists2 sm : Sigma, r.2 = ext_sig sm s & ext_sigP b sm s.
 Proof.
   move=> GM A; elim: t1 t2 r => //[p|f Hf a _][p'|//|f' a']//= r.
     by case: eqP => //->; case: fndP => //=pP [<-]; exists fmap0; rewrite/=(ext_sig0,ext_sigP0).
   case H1: H => [[[//|m tf ta] s']|//].
   case M: (_ s') => //=[s''][<-{r}]/= IA.
-  have /= A' := acyclic_sigma_H A H1.
+  have /= A' := idempotent_H A H1.
   have ?:= good_modes_arri_H GM H1 IA; subst.
   have {Hf}/=[sx ? EP] := Hf _ _ H1 isT; subst.
   simpl in M.
   have /=[sm ? EP'] := matching_extP A' M; subst.
   exists (ext_sig sm (ext_sig sx s)).[\ domf s].
     by rewrite ext_sig_rem// -!exist_sigA ext_sigR.
-  have A2 := matching_acyclic A' M.
+  have A2 := matching_idempotent A' M.
   move: EP EP'.
   move=> /and3P[asx bsx ssx].
   move=> /and3P[].
@@ -855,9 +855,9 @@ Proof.
     have scsm:= fdisjointWr (fsubsetUr _ _) ssm.
     have sxcsm:= fdisjointWr (fsubsetUr _ _) sxsm.
     apply: acyclic_cat.
-      by apply: acyclic_sigma_rem.
+      by apply: idempotent_rem.
       by rewrite domf_rem; apply: fdisjointWl (fsubsetDl _ _) (fdisjointWr (codom_vars_sub _ _) sxcsm).
-      by apply: acyclic_deref_sig2 (acyclic_sigma_rem _ asx) (fdisjointWr (codom_vars_sub _ _) _); rewrite domf_rem; apply: fdisjointWl (fsubsetDl _ _) sxcsm.
+      by apply: acyclic_deref_sig2 (idempotent_rem _ asx) (fdisjointWr (codom_vars_sub _ _) _); rewrite domf_rem; apply: fdisjointWl (fsubsetDl _ _) sxcsm.
     apply/fdisjointP => x; rewrite domf_rem finmap.inE => /andP[+ xsm].
     apply: contraNN => /codom_varsP -[k[/[dup] kP]].
     rewrite domf_rem finmap.inE in kP; move /andP: kP => [ks ksx] kP.
@@ -866,8 +866,8 @@ Proof.
       rewrite domf_rem finmap.inE xsm andbT .
       by apply: fdisjointP_sym ssm _ _; rewrite !finmap.inE xsm.
     move=> H.
-    have A2':= acyclic_sigma_rem (domf s) asm.
-    by have -> := negbTE (fdisjointP (acyclic_deref_disjoint sx.[ksx] A2') _ H).
+    have A2':= idempotent_rem (domf s) asm.
+    by have -> := negbTE (fdisjointP (idempotent_deref_disjoint sx.[ksx] A2') _ H).
 Qed.
 
 Lemma deref_sig2_fnd s1 s2 v:
@@ -878,7 +878,7 @@ Proof.
 Qed.
 
 Lemma relSS_set sP s sV v sig (vs : v \in s):
-  acyclic s ->
+  idempotent s ->
   relSS sP s sV -> 
   match check_tm sP fmap0 s.[vs] with
   | Some sig' => cincl sig'.2 sig
@@ -938,7 +938,7 @@ Proof.
   by move=> /orP[/Hf|/Ha]//->//; rewrite (Cf,Ca)//.
 Qed.
 
-Lemma relSS_assumeM sP sV froz q h s s': acyclic s ->
+Lemma relSS_assumeM sP sV froz q h s s': idempotent s ->
   good_modes sP -> relSS sP s sV -> 
   (* domf s # vars q ->  *)
   vars q # vars h ->
@@ -950,7 +950,7 @@ Proof.
   move=> A GM R qh Cq M.
   have DA := assume_tm_domf sP sV h.
   apply/forallP => [[x xP]]; rewrite !valPE [val _]/=.
-  have A':= matching_acyclic A M; cbn zeta.
+  have A':= matching_idempotent A M; cbn zeta.
   have:= fsubsetP DA _ xP; rewrite !finmap.inE.
   have [sm ? /and3P[Asm Fsm ssm]] := matching_extP A M; subst => H.
   have xs: x \in domf (ext_sig sm s).
@@ -987,7 +987,7 @@ Proof.
   by case X: get_input_vars => //=?; subst => /=.
 Qed.
 
-Lemma relSS_assume sP sV froz q hd s s': acyclic s ->
+Lemma relSS_assume sP sV froz q hd s s': idempotent s ->
   good_modes sP -> relSS sP s sV -> domf s # vars q -> vars q # vars hd ->
   (get_input_vars sP q).1 `<=` froz ->
   good_call sP fmap0 q ->
@@ -1011,14 +1011,14 @@ Proof.
   case A1: assume_tm => //=[sV' tyf'].
   have ? := H_assume_tm_ty H1 A1; subst => /=.
   move=> Rsm.
-  have/= Asm:= acyclic_sigma_H As H1.
+  have/= Asm:= idempotent_H As H1.
   have Ra' : relSS sP sx (assume_tm sP sV' a').1.
     case: m' H1 M A1 GIa => //= H1 M A1 GI;
     apply: relSS_assumeM M; rewrite//?Ca//.
   case: a' fa' aa' M Ra' => //= v.
   rewrite !fdisjointX1 => vf va M/= Rsx.
-  have Asx : acyclic sx.
-    by move: M; destruct m'; apply: matching_acyclic.
+  have Asx : idempotent sx.
+    by move: M; destruct m'; apply: matching_idempotent.
   have := H_check_tm_ty H1 Cf.
   rewrite cincl_arr => /and3P[/eqP/esym? Cff Crr]; subst.
   case: m H1 A1 M Cf OI GIa Cff Rsx => /= H1 A1 M Cf OI af Cff Rsx//.
@@ -1053,7 +1053,7 @@ Proof.
 Qed.
 
 Lemma det_check_H sP hd bo s sV r:
-  good_modes sP -> acyclic s ->
+  good_modes sP -> idempotent s ->
   is_func (check_atoms sP (assume_tm sP sV hd).1 bo r) ->
   (* is_func (check_tm_prop sP (assume_tm sP fmap0 hd).1 hd) -> *)
   relSS sP s (assume_tm sP sV hd).1 ->
@@ -1092,7 +1092,7 @@ Proof.
     have [p H] :=bc_is_p X.
     by apply: call_is_det_tm_is_det.
   rewrite/bc; set QUERY := deref s c in CT *.
-  case AS: acyclic => //=.
+  case AS: idempotent => //=.
   rewrite !push/=.
   case: pr ME CR CT => /= rs sP; rewrite/check_rules/= => ME CR CD.
   move: CD; rewrite/check_tm_prop/is_func.
@@ -1118,10 +1118,10 @@ Proof.
   rewrite (proj1 (callable_rename _ _ _ _) QR) in_fnd Dq/=.
   rewrite -(check_atoms_fresh_rename _ _ _ FR.1) -/R -/FA.
   move=> /andP[Cb Ch].
-  apply: det_check_H Cb _ => //; first by apply: acyclic_sigma_H H.
+  apply: det_check_H Cb _ => //; first by apply: idempotent_H H.
   apply: relSS_assume H => //.
   - by rewrite relSS0.
-  - by apply: acyclic_deref_disjoint.
+  - by apply: idempotent_deref_disjoint.
   - apply: fdisjointWr (vars_tm_ren_sub (fresh_tm_sub1 _ _ _)) _.
     apply: min_max_S_disj; last first.
       apply: min_max_fresh_tm0.
