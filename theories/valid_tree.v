@@ -6,8 +6,8 @@ From det Require Import tree tree_prop.
 Module B.
   Fixpoint base_andA s :=
     match s with
-    | And (TA _) (x::xs) r1 => (big_andA x xs == r1) && base_andA r1
-    | TA _ => true
+    | And (Unexplored _) (x::xs) r1 => (big_andA x xs == r1) && base_andA r1
+    | Unexplored _ => true
     | _ => false
     end.
 
@@ -75,31 +75,33 @@ Notation spec_base_or := B.spec_base_or.
 Notation base_or := B.base_or.
 
 (*BEGIN*)
-Section valid_tree.
+Section sld_tree.
   Variable u : Unif.
   Variable p : program.
 
-(*SNIP: valid_tree*)
-  Fixpoint valid_tree A :=
+(*SNIP: sld_tree*)
+  Fixpoint sld_tree A :=
     match A with
-    | TA _ | OK | KO => true
-    | Or None _ B => valid_tree B
-    | Or (Some A) _ B => valid_tree A && ((B == KO) || base_or B)
-    | And A B0 B => valid_tree A && if success A then valid_tree B 
-                                    else B == big_and B0
+    | Unexplored _ | OK | KO => true
+    | Or None _ B => sld_tree B
+    | Or (Some A) _ B =>
+        sld_tree A && ((B == KO) || base_or B)
+    | And A B0 B => 
+        sld_tree A && if success A then sld_tree B 
+                                     else B == big_and B0
     end.
-(*ENDSNIP: valid_tree*)
+(*ENDSNIP: sld_tree*)
 
-  Lemma valid_tree_big_and l : valid_tree (big_and l).
+  Lemma valid_tree_big_and l : sld_tree (big_and l).
   Proof. case: l => //= + l; case: l => //=. Qed.
 
-  Lemma valid_tree_big_or s l : valid_tree (big_or s l).
+  Lemma valid_tree_big_or s l : sld_tree (big_or s l).
   Proof.
     case: l => //=; first by apply/valid_tree_big_and.
     by move=> [/=_ b] x; rewrite valid_tree_big_and B.base_or_big_or orbT.
   Qed.
 
-  Lemma valid_tree_cut {A}: success A -> valid_tree A -> valid_tree (cutl A).
+  Lemma valid_tree_cut {A}: success A -> sld_tree A -> sld_tree (cutl A).
   Proof.
     elim_tree A.
       move=> /=sA /andP[vA bB]; rewrite HA//.
@@ -109,10 +111,12 @@ Section valid_tree.
     rewrite success_cut sA HA//HB//=.
   Qed.
 
-  Lemma valid_tree_step s sv A r:
-    valid_tree A -> step u p sv s A = r -> valid_tree r.2.
+  (*SNIPT: valid_tree_step *)
+  Lemma sld_tree_step: 
+    forall s v A r, sld_tree A -> step u p v s A = r -> sld_tree r.2.
+  (*ENDSNIPT: valid_tree_step *)
   Proof.
-    move=>+<-; clear r.
+    move=>s sv A r +<-; clear r.
     elim_tree A s sv => /=.
     + by case: t => [|t]//=; rewrite push/=; case: bc => [_ []]//=-[]//= _ >; rewrite valid_tree_big_or.
     + move=> /andP[vA bB]; rewrite !push/= HA//=; case: ifP => //.
@@ -130,10 +134,12 @@ Section valid_tree.
       congruence.
   Qed.
 
-  Lemma valid_tree_prune A R b: 
-    valid_tree A -> prune b A = Some R -> valid_tree R.
+  (*SNIPT: valid_tree_prune *)
+  Lemma sld_tree_prune:
+    forall A B b, sld_tree A -> prune b A = Some B -> sld_tree B.
+  (*ENDSNIPT: valid_tree_prune *)
   Proof.
-    elim_tree A R b => /=.
+    move=> A R b; elim_tree A R b => /=.
     + by case: R => //=; case: b => //.
     + by case: t => [|c]//= _ [<-]//.
     + move=> /andP[vA bB]; case nA: prune => [A'|]//=.
@@ -154,16 +160,19 @@ Section valid_tree.
       by move=> [<-]/=; rewrite (HA _ false)//= eqxx valid_tree_big_and !if_same.
     Qed.
 
-  Lemma valid_tree_run s1 fv A b fv' s R:
-    valid_tree A -> runT u p fv s1 A (Many s R) b fv' -> valid_tree R.
+  (*SNIPT: valid_tree_run *)
+  Theorem sld_tree_run:
+    forall b s s' v v' A B, sld_tree A -> runT u p v s A (Many s' B) b v' -> sld_tree B.
+  (*ENDSNIPT: valid_tree_run *)
   Proof.
+    move=> b s s' v v' A R.
     remember (Many _ _) as S eqn:HS.
     move=> + H.
-    elim_run H s R HS => vA.
-    + by move: HS => [??]; subst; apply: valid_tree_prune NS.
-    + by apply: IH (valid_tree_step vA eA).
-    + by apply: IH (valid_tree_prune vA nA).
+    elim_run H s' R HS => vA.
+    + by move: HS => [??]; subst; apply: sld_tree_prune NS.
+    + by apply: IH (sld_tree_step vA eA).
+    + by apply: IH (sld_tree_prune vA nA).
   Qed.
 (*END*)
 
-End valid_tree.
+End sld_tree.

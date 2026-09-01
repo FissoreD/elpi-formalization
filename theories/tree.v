@@ -9,7 +9,7 @@ Unset Elimination Schemes.
 (*BEGIN*)
 (*SNIP: tree_def*)
 Inductive tree :=
-  | KO | OK | TA of Atom
+  | KO | OK | Unexplored of Atom
   (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
   | Or  of option tree & Sigma & tree 
   (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
@@ -22,7 +22,7 @@ Set Elimination Schemes.
 Lemma tree_ind : forall P,
   P KO ->
   P OK ->
-  (forall a : Atom, P (TA a)) ->
+  (forall a : Atom, P (Unexplored a)) ->
   (forall (l : tree), P l -> forall (s : Sigma) (t : tree), P t -> P (Or (Some l) s t)) ->
   (forall (s : Sigma) (t : tree),
     P t -> P (Or None s t)) ->
@@ -63,7 +63,7 @@ Section tree_op.
   (*SNIP: next*)
   Fixpoint next s t : Sigma * tree :=
     match t with
-    | TA _ | KO | OK => (s, t)
+    | Unexplored _ | KO | OK => (s, t)
     | Or None s' B => next s' B
     | Or (Some A) _ _ => next s A
     | And A _ B => let (s', pA) := next s A in
@@ -77,7 +77,7 @@ Section tree_op.
   Definition next_subst s t := fst (next s t).
   (*ENDSNIP: next_subst*)
   (*SNIP: next_tree*)
-  Definition next_tree t := snd (next empty t).
+  Definition next_tree t := snd (next fmap0 t).
   (*ENDSNIP: next_tree*)
   (*SNIP: succ_path*)
   Definition success t := next_tree t == OK.
@@ -86,15 +86,15 @@ Section tree_op.
   Definition failed t := next_tree t == KO.
   (*ENDSNIP: failed_path*)
   (*SNIP: incomplete*)
-  Definition incomplete t :=
-    match next_tree t with TA _ => true | _ => false end.
+  Definition incomplete t := match next_tree t with
+    | Unexplored _ => true | _ => false end.
   (*ENDSNIP: incomplete*)
   (*ENDSNIP: next_aux *)
 
   (* This cuts away everything except for the only path with success *)
   Fixpoint cutl A :=
     match A with
-    | TA _ | KO => KO
+    | Unexplored _ | KO => KO
     | OK => A
     | And A B0 B =>
       if success A then And (cutl A) B0 (cutl B)
@@ -177,8 +177,8 @@ Definition step_res := (tag * tree)%type.
 
 Fixpoint big_andA x xs : tree :=
   match xs with
-  | [::] => TA x
-  | y :: ys => And (TA x) xs (big_andA y ys)
+  | [::] => Unexplored x
+  | y :: ys => And (Unexplored x) xs (big_andA y ys)
   end.
 
 Definition big_and (a : list Atom) : tree :=
@@ -197,7 +197,7 @@ Section main.
   Variable u: Unif.
 
   (*SNIP: step_sig*)
-  Definition step : program -> fvS -> Sigma -> tree -> (fvS * tag * tree) := 
+  Definition step : program -> nat -> Sigma -> tree -> (nat * tag * tree) := 
   (*ENDSNIP: step_sig*)
     fix step pr fv s A :=
     let step := step pr in
@@ -207,8 +207,8 @@ Section main.
     | KO             => (fv, Failed, A)
     
     (* lang *)
-    | TA cut       => (fv, CutBrothers, OK)
-    | TA (call t)  => 
+    | Unexplored cut       => (fv, CutBrothers, OK)
+    | Unexplored (call t)  => 
       let: (fv, l) := bc u pr fv t s in
       (fv, Expanded, if l is ((s, r) :: xs) then (Or None s (big_or r xs))
                      else KO)
@@ -246,7 +246,7 @@ Section main.
     match A with
     | KO => None
     | OK => if b then None else Some OK
-    | TA _ => Some A
+    | Unexplored _ => Some A
     | And A B0 B =>
       let build_B0 A := And A B0 (big_and B0) in
       if success A then
@@ -265,16 +265,16 @@ Section main.
   end.
   (*ENDSNIP: prune_code *)
 
-  Goal forall r, prune false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
+  Goal forall r, prune false (And (Or (Some OK) fmap0 OK) r KO) = Some (And (Or None fmap0 OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, prune false (And (Or (Some OK) empty OK) r KO) = Some (And (Or None empty OK) r (big_and r)).
+  Goal forall r, prune false (And (Or (Some OK) fmap0 OK) r KO) = Some (And (Or None fmap0 OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, prune true (And (Or (Some OK) empty OK) r OK) = Some (And (Or None empty OK) r (big_and r)).
+  Goal forall r, prune true (And (Or (Some OK) fmap0 OK) r OK) = Some (And (Or None fmap0 OK) r (big_and r)).
   Proof. move=> []//=. Qed.
 
-  Goal (prune false (Or (Some KO) empty OK)) = Some (Or None empty OK). move=> //=. Qed.
+  Goal (prune false (Or (Some KO) fmap0 OK)) = Some (Or None fmap0 OK). move=> //=. Qed.
 
   Notation "tg == CutBrothers" := (is_cb tg).
 
@@ -282,8 +282,8 @@ Section main.
 
   (*prooftree: runbp*)
   (*SNIP: run_sig *)
-  Inductive runT (p : program): fvS -> Sigma -> tree 
-            -> sol -> bool -> fvS -> Prop :=
+  Inductive runT (p : program): nat -> Sigma -> tree 
+            -> sol -> bool -> nat -> Prop :=
   (*ENDSNIP: run_sig *)
     | StopOT s s' t v              : success t -> next_subst s t = s' -> prune true t = None -> runT v s t (One s') false v
     | StopMT s s' t t' v              : success t -> next_subst s t = s' -> prune true t = Some t' -> runT v s t (Many s' t') false v
@@ -294,8 +294,8 @@ Section main.
 
   Fixpoint vars_tree t : fvS :=
   match t with
-  | TA cut | KO | OK => fset0
-  | TA (call t) => vars_tm t
+  | Unexplored cut | KO | OK => fset0
+  | Unexplored (call t) => vars_tm t
   | And A B0 B => vars_tree A `|` vars_tree B `|` vars_atoms B0
   | Or None s B => vars_tree B `|` vars_sigma s
   | Or (Some A) s B => vars_tree A `|` vars_tree B `|` vars_sigma s

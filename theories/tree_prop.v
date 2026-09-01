@@ -397,7 +397,7 @@ Section RunP.
 
   Lemma succF_failF_paF A: success A = false -> failed A = false -> incomplete A = false -> False.
   Proof.
-    rewrite/success/failed/incomplete/next_tree; move: empty => s.
+    rewrite/success/failed/incomplete/next_tree; move: fmap0 => s.
     case E: next => [s' A']//=.
     elim_tree A s s' A' E; move: E => /=; (only 1-3: by case: A'); eauto.
     rewrite !push; case eqP => H1 H2; eauto.

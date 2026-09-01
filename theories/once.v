@@ -1,12 +1,12 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import tree tree_prop ctx.
-From det Require Import tree_prop_hard tree_vars mut_excl unif fresh.
+From det Require Import tree_prop_hard tree_vars mut_excl unif fresh determinacy.
 
 From det Require Import check_fo.
 
-Lemma runT_cutl u p fv s t r b fv':
-  runT u p fv s (cutl t) r b fv' ->
+Lemma runT_cutl p fv s t r b fv':
+  runT p fv s (cutl t) r b fv' ->
     [/\ 
       fv' = fv, b = false &
       if success t then
@@ -26,10 +26,10 @@ Proof.
     by rewrite failed_success_cut success_cut sT.
 Qed.
 
-Lemma is_det_tail_cut p s fv l:
-  is_det p s fv (And l [::cut] (TA cut)).
+Lemma is_det_tail_cut p s v l:
+  forall r b v', runT p v s (And l [::cut] (Unexplored cut)) r b v' -> r = Zero \/ exists s, r = (One s).
 Proof.
-  move=> r [s'[r' H]].
+  move=> r b v' H.
   remember (And _ _ _) as t' eqn:Ht'.
   elim_run H l Ht'.
   - by move: sA; rewrite rew_pa => /andP[]//.
@@ -50,18 +50,11 @@ Proof.
     apply: IH erefl.
 Qed.
 
-Definition same_sub {T1 T2:eqType} (s1 s2: option (T1*T2)) := 
-  match s1, s2 with
-  | None, None  => true
-  | Some s1, Some s2 => s1.1 == s2.1
-  | _, _ => false
-  end.
-
 Lemma is_det_tail_cut1 p s fv t r r':
   check_program p ->
-  det_tree p.(sig) t ->
-  runT' p fv s t r -> 
-  runT' p fv s (And t [::cut] (TA cut)) r' -> 
+  det_tree p t ->
+  (exists b v', runT p fv s t r b v') -> 
+  (exists b v', runT p fv s (And t [::cut] (Unexplored cut)) r' b v') -> 
   r = r'.
 Proof.
   move=> H1 + [b'[c' H2]][+[]].
@@ -79,7 +72,7 @@ Proof.
       by have:= det_check_prune_succ dA sA; rewrite NS.
     }
     {
-      have/= DB := det_check_step H1 dA eA.
+      have/= DB := det_tree_step H1 dA eA.
       have {}IH := IH H1 DB.
       inversion 1; subst => //=.
         by move: H; rewrite rew_pa => /andP[].
@@ -92,7 +85,7 @@ Proof.
       by move: H; rewrite/=incomplete_failed//if_same.
     }
     {
-      have/= DB := det_check_prune dA nA.
+      have/= DB := det_tree_prune dA nA.
       have {}IH := IH H1 DB.
       inversion 1; subst => //=.
         by move: H; rewrite rew_pa => /andP[].
@@ -134,8 +127,13 @@ Section once.
       if get_tm_hd (head x) is inl hd then hd <> once_sym
       else true.
 
-  Lemma no_once_cons x xs: no_once (x :: xs) -> no_once xs.
-  Proof. by rewrite/no_once/= => H r H1; apply/H; rewrite in_cons H1 orbT. Qed.
+  Lemma no_once_cons x xs: no_once (x :: xs) -> get_tm_hd (head x) <> inl once_sym /\ no_once xs.
+  Proof. 
+    rewrite/no_once/= => H; split; last first.
+      by move=> r H1; apply/H; rewrite in_cons H1 orbT.
+    have:= H x; rewrite in_cons eqxx => /(_ isT).
+    by destruct get_tm_hd => //; congruence.
+  Qed.
 
   Definition prog_once p :=
     (p.(sig) = p.(sig) + once_sigS) /\ forall r, 
@@ -147,21 +145,15 @@ Section once.
     (sig + once_sigS).[? once_sym] = Some once_sig.
   Proof. by rewrite/once_sigS !FmapE.fmapE eqxx/= fsetU0 in_fset1 eqxx. Qed.
 
-  (* Lemma get_modes_rev_once_sym t:
-    get_modes (Tm_App (Tm_P once_sym) t) once_sig = sig_flat.
-  Proof. by []. Qed. *)
-
-  Lemma no_once_select u l rs s:
+  Lemma no_once_select u sig rs s T:
     no_once rs ->
-    select u once_sym l sig_flat rs s = (fset0, [::]).
+    select u (sig + once_sigS) (Tm_App (Tm_P once_sym) T) rs s = [::].
   Proof.
-    elim: rs l s => //= -[hd bo] xs IH t s/= H1.
-    have {}IH := IH _ _ (no_once_cons H1).
-    rewrite {}IH/=.
-    case: eqP => //= Hx.
-    move: H1; rewrite /no_once/=.
-    set P := {|head := _; premises := _|}.
-    by move=> /(_ P); rewrite in_cons eqxx => /(_ isT)/=; rewrite-Hx.
+    elim: rs T s => // -[hd bo] xs IH t s /no_once_cons[+ H].
+    case: hd => //=[p|v|f a]; only 1-2: by move=> _; apply: IH.
+    case: f => //=[p|v|f' a'] NO; only 2-3: by apply: IH.
+    case: eqP => ?; subst => //=.
+    by apply: IH.
   Qed.
 
   Lemma no_once_fresh fv rs: no_once rs -> no_once (fresh_rules fv rs).2.
@@ -173,43 +165,51 @@ Section once.
       by rewrite in_cons H2 orbT.
     rewrite/fresh_rule!push/=.
     case: x H => /= hd bo H.
-    rewrite/rename !push/=.
+    rewrite/rename.
     set X := fresh_tm _ _ _.
     case Y: get_tm_hd => //=[p].
     have:= callable_ren X.2 hd p; rewrite Y => /proj1/(_ erefl) H1.
     have:= H (mkR hd bo); rewrite/= in_cons H1 eqxx; auto.
   Qed.
 
-
-  Lemma id_det_once p s t fv:
+  Lemma id_det_once p s t:
     prog_once p ->
-    is_det p s fv (TA (call (Tm_App (Tm_P once_sym) t))).
+    is_detT p s ((call (Tm_App (Tm_P once_sym) t))).
   Proof.
     case: p => -[|r rs] sig []//= HS; first by move=> /(_ [::]) [].
     move=> /(_ rs) [[?] H]; subst.
-    rewrite/is_det HS => r' [b'[fv' Hx]].
+    rewrite/is_detT HS => r' [b'[fv' Hx]].
     inversion Hx; clear Hx; subst => //.
-    move: H1; rewrite/=/bc [get_tm_hd _]/=.
-    case (boolP (acyclic_sigma s)) => AS; last first => //=.
+    move: H1; rewrite/=/bc.
+    case (boolP (idempotent s)) => AS; last first => //=.
       by move=> [???]; subst; inversion H2; auto.
-    rewrite !FmapE.fmapE !inE eqxx/=.
+    rewrite !fset0U.
+    set S1 := _ `|` _.
     case X: fresh_rules => [fvx' rs'].
-    rewrite/fresh_rule/= fset0U codomf0/= fsetU0/rename cat0f.
-    rewrite /= !(inE,FmapE.fmapE)/= in_fnd/=?inE// => Hx.
-    rewrite no_once_select; last first.
-      move: X; rewrite [fresh_rules _ _]surjective_pairing => -[_ <-].
+    rewrite 2!push.
+    set MS := max_sigmas _ _.
+    simpl fst. simpl snd.
+    move=> [??]; subst.
+    rewrite/fresh_rule.
+    rewrite [rename _ _ _]/=.
+    rewrite/rename [fresh_tm _ _ _]/=.
+    cbn iota.
+    simpl fresh_atoms.
+    rewrite !inE eqxx orbF.
+    have NO : no_once rs'.
+      move: X; rewrite (surjective_pairing (fresh_rules _ _)) => -[_<-].
       by apply: no_once_fresh.
-    rewrite eqxx/=.
-    case M: obind => [s'|][???]; subst; last by inversion H2 => //; auto.
-    set Y := _ `|` _ in H2.
-    rewrite ffunE/= in H2.
+    rewrite select_cons no_once_select//.
+    rewrite{1}/ren FmapE.fmapE eqxx.
+    rewrite [head _]/=[premises _]/=/get_input_vars fnd_cat !inE eqxx orbF FmapE.fmapE eqxx/once_sig eqxx.
+    rewrite fset0U [fst _]/=/lang.H eqxx fnd_cat !inE eqxx orbF FmapE.fmapE eqxx [omap _ _]/=.
+    rewrite/once_sig eqxx.
+    case M: lang.matching => /=?; subst; inversion H2; subst => //;[|left] => //.
     have [b'] := runT_Nor_elim H2.
     destruct r'; eauto.
     move=> [B' ? Hz]; subst.
     set P := {| rules := _; sig := _|} in Hz.
-    set T := TA _ in Hz.
-    have {}Hz : runT' P Y s' (And T [:: cut] (TA cut)) (Many s0 B').
-      do 2 eexists; apply: Hz.
-    by have [//|[]] := is_det_tail_cut Hz.
+    set T := Unexplored _ in Hz.
+    by have [|[x]] := is_det_tail_cut Hz; inversion 1.
   Qed.
 End once.

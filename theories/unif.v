@@ -11,44 +11,27 @@ Require Import Recdef.
 Require Import Stdlib.Structures.OrdersEx.
 Require Import Stdlib.Wellfounded.Lexicographic_Product .
 
+Lemma eqV v v': Tm_V v == Tm_V v' = (v == v').
+Proof. do 2 case: eqP; congruence. Qed.
+
+Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
+
+Lemma codom_varsP v (s:Sigma):
+  reflect (exists k (H: k \in domf s), v \in vars_tm s.[H]) (v \in codom_vars s).
+Proof.
+  case (boolP (v \in codom_vars s)) => vs; constructor.
+    move/varUP: vs => [x[/mapP[t + ->{x} vt]]].
+    move=> /codomP[[y yP ?]]; subst.
+    by exists y, yP.
+  apply: contraNnot vs => -[y[yP H]].
+  apply/varUP; eexists; split; last by apply: H.
+  by apply/mapP; eexists => //; apply/codomP; eexists.
+Qed.
+
 Notation vars := vars_tm.
 
 Lemma remf_all (K:choiceType) V (s : {fmap K -> V}): s.[\ domf s] = fmap0.
 Proof. apply/fmapP => k; rewrite fnd_rem; case: (boolP (_ \in _)) => ks; rewrite !not_fnd//. Qed.
-
-Lemma disjoint_same (T: choiceType) (a: {fset T}): [disjoint a & a] = (a == fset0).
-Proof.
-  case: eqP => [->|]; first by rewrite fdisjoint0X.
-  by move=> /eqP/fset0Pn[x xa]; apply/fdisjointP => /(_ x xa); rewrite xa.
-Qed.
-
-Lemma catf_subl (K: choiceType) (V : Type) (a b: {fmap K -> V}): 
-  domf a `<=` domf b -> a + b = b.
-Proof.
-  move=> H; apply/fmapP => x; rewrite FmapE.fmapE; case: fndP => //xb.
-  by rewrite not_fnd//; move: xb; apply/contra/fsubsetP.
-Qed.
-
-
-Definition compare_var '(IV v1) '(IV v2) := 
-  if v1 <= v2 then (IV v1, IV v2) else (IV v2, IV v1).
-
-Lemma compare_var_sym v1 v2: compare_var v1 v2 = compare_var v2 v1.
-Proof. 
-  case: v1 => v1; case: v2 => v2/=; rewrite leq_eqVlt.
-  rewrite eq_sym; case: eqP => //=[->|v21]//; first by rewrite if_same.
-  case: leqP => //=.
-Qed.
-
-Definition unify_var (s:Sigma) (v:V) arg := 
-  if v \in vars_tm arg then None
-  else 
-    match arg with
-    | Tm_V v' =>
-      let: (v1, v2) := compare_var v v' in Some s.[v1 <- Tm_V v2]
-    | _ => Some s.[v <- arg]
-    end.
-    (* Some s.[v <- arg]. *)
 
 Definition map_prod (T Q : Type) f (x: T * T) : (Q * Q) := (f x.1, f x.2).
 Definition map_prod1 (T Q R : Type) (g: R -> _ -> Q) f (x: T * T) := g (f x.1) (f x.2).
@@ -60,7 +43,7 @@ Definition sumL := foldr addn 0.
 Fixpoint count_vars (k:V) t :=
   match t with
   | Tm_V v => v == k
-  | Tm_P _ | Tm_D _ => 0
+  | Tm_P _ => 0
   | Tm_App f a => addn (count_vars k f) (count_vars k a)
   end.
 
@@ -73,7 +56,7 @@ Definition nvar l := #|` varsL l |.
 Lemma varsL_cons x xs: varsL (x :: xs) = map_prod1 fsetU vars_tm x `|` varsL xs.
 Proof. by []. Qed.
 
-Lemma map_prod1_comm T S (Q:choiceType) (R: _ -> _ -> S) (F: T -> Q) x y: 
+Lemma map_prod1_comm T S (Q:eqType) (R: _ -> _ -> S) (F: T -> Q) x y: 
   commutative R -> map_prod1 R F (x,y) = map_prod1 R F (y,x).
 Proof. by move=> H; rewrite/map_prod1//. Qed.
 
@@ -85,7 +68,6 @@ Lemma nvar_comm x1 x2 xs: nvar ((x1,x2) :: xs) = nvar ((x2, x1) :: xs).
 Proof.
   rewrite /nvar; f_equal; apply/eqP/fset_eqP => i.
   rewrite !varsL_cons map_prod1_comm//; apply/fsetUC.
-  (* rewrite !count_varsL_cons map_prod1_comm//; apply/addnC. *)
 Qed.
 
 Lemma nvar_sub h l : nvar l <= nvar (h :: l).
@@ -107,7 +89,7 @@ Fixpoint app_nb t :=
   match t with
   | Tm_App f a => (app_nb f + app_nb a).+1
   | Tm_V _ => 0
-  | Tm_D _ | Tm_P _ => 1
+  | Tm_P _ => 1
   end.
 
 Definition nlhs (l:seqT) := sumL (map app_nb (map fst l)).
@@ -115,6 +97,8 @@ Definition nlhs (l:seqT) := sumL (map app_nb (map fst l)).
 Definition neqn (l:seqT) := size l.
 
 Definition measure l := (nvar l, nlhs l, neqn l).
+
+Definition derefkv k v (tm:Tm) := deref [fmap].[k<-v] tm.
 
 Lemma derefkv_in v t k:
   v \in vars (derefkv v t k) -> (v \in vars t).
@@ -134,6 +118,14 @@ Qed.
 
 Definition deref_list v t l := map (map_prod (derefkv v t)) l.
 Definition deref_sigma v t (s:Sigma) := [fmap x : domf s => derefkv v t s.[valP x]].[v <- t].
+
+Lemma deref_sigma0 v t: deref_sigma v t [fmap] = [fmap].[v <- t].
+Proof.
+  rewrite/deref_sigma/=.
+  apply/fmapP => k.
+  rewrite !fnd_set; case: eqP => //=.
+  rewrite !not_fnd//.
+Qed.
 
 Lemma deref_list_in x v t l:
   x \in varsL (deref_list v t l) -> (x \in vars t) || (x \in varsL l).
@@ -191,8 +183,8 @@ Qed.
 Lemma b2 tl p' v: lex_seqT ((Tm_V v, Tm_P p') :: tl) ((Tm_P p', Tm_V v) :: tl).
 Proof. rewrite/lex_seqT/measure/=nvar_comm; by constructor 1; constructor 2 => //=. Qed.
 
-Lemma b3 v d tl: lex_seqT ((Tm_V v, Tm_D d) :: tl) ((Tm_D d, Tm_V v) :: tl).
-Proof. rewrite/lex_seqT/measure/=nvar_comm; by constructor 1; constructor 2 => //=. Qed.
+(* Lemma b3 v d tl: lex_seqT ((Tm_V v, Tm_D d) :: tl) ((Tm_D d, Tm_V v) :: tl).
+Proof. rewrite/lex_seqT/measure/=nvar_comm; by constructor 1; constructor 2 => //=. Qed. *)
 
 Lemma nvar_cons x xs: nvar (x :: xs) = #|` map_prod1 fsetU vars_tm x `|` varsL xs |.
 Proof. by []. Qed.
@@ -262,14 +254,7 @@ Lemma measure_commV v1 v2 m:
   measure ((Tm_V v1, Tm_V v2) :: m) = measure ((Tm_V v2, Tm_V v1) :: m).
 Proof. by rewrite/measure nvar_comm/=. Qed.
 
-Lemma lex_seqT_commV l v1 v2 m: 
-  lex_seqT l ((Tm_V v1, Tm_V v2) :: m) ->
-    lex_seqT l ((Tm_V v2, Tm_V v1) :: m).
-Proof. rewrite/lex_seqT measure_commV//. Qed.
-
 Opaque measure.
-
-Definition is_frozen (f:fvS) t := match t with Tm_V v => v \in f | _ => false end.
 
 Function montanari s (frozen : fvS) (l: seqT) {wf lex_seqT l} : option Sigma :=
   match l with
@@ -296,7 +281,6 @@ Function montanari s (frozen : fvS) (l: seqT) {wf lex_seqT l} : option Sigma :=
 Proof.
   - move=> s b l p tl t1 t2 ??; subst; apply: b1.
   - move=> s m l p tl t1 t2 p' ? v ??? /eqP// _; subst; apply/b2.
-  - move=> s m l p tl t1 t2 d ? v ??? /eqP// _; subst; apply/b3.
   - move=> s f l p tl _ _ v _ vf v' _ _ _ _ H _; apply/b4'.
     by move: H; rewrite !inE eq_sym.
   - move=> s f l p t t1 t2 v ???? + _; subst; apply/b4.
@@ -325,72 +309,55 @@ Ltac montanari_ind s b l :=
   ]; subst.
 
 
-Definition montanari_pair s b t1 t2 := montanari s b [::(t1,t2)].
+Definition matching b t1 t2 s := montanari s b [::(deref s t1, deref s t2)].
+Definition unify := matching fset0.
 
-(* Goal montanari_pair s false (Tm_D (ID 1)) (Tm_V (IV 1)) =
-   Some ctx.empty.[IV 1 <- Tm_D (ID 1)].
-Proof. by rewrite /montanari_pair !montanari_equation/=. Qed.
+Definition u := mk_Unif unify matching : Unif.
 
-Goal ~ montanari_pair true (Tm_D (ID 1)) (Tm_V (IV 1)).
-Proof. by rewrite /montanari_pair !montanari_equation/=. Qed.
-
-Goal forall b, montanari_pair b (Tm_V (IV 1)) (Tm_D (ID 1)).
-Proof. by move=> b; rewrite/montanari_pair !montanari_equation/=. Qed. *)
-
-Definition add_ (s:Sigma) r := omap (fun x => x + s) r.
-
-Definition montanari_deref b t1 t2 s := montanari_pair s b (deref s t1) (deref s t2).
-
-Definition matching := montanari_deref.
-Definition unify := montanari_deref fset0.
-
-Check (mk_Unif unify matching : Unif).
-
-
-Lemma acyclic_deref v s (vP: v \in domf s):
-  acyclic_sigma s -> v \notin vars_tm (s [` vP]).
+Lemma idempotent_deref v s (vP: v \in domf s):
+  idempotent s -> v \notin vars_tm (s [` vP]).
 Proof.
   move=> /fdisjointP/(_ _ vP).
   apply/contra/fsubsetP/codom_vars_sub_vt.
 Qed.
 
-Lemma acyclic_deref' v s (vP: v \in domf s):
-  acyclic_sigma s -> [disjoint domf s & vars_tm (s [` vP])].
+Lemma idempotent_deref' v s (vP: v \in domf s):
+  idempotent s -> [disjoint domf s & vars_tm (s [` vP])].
 Proof. by move=> A; apply/fdisjointWr/A/codom_vars_sub_vt. Qed.
 
 (* Lemma deref2 s e t:  *)
-  (* acyclic_sigma (s + e) -> deref s (deref (s + e) t) = deref (s + e) t. *)
+  (* idempotent (s + e) -> deref s (deref (s + e) t) = deref (s + e) t. *)
 (* Proof. *)
 
 Lemma codom_vars_derefkv s v t:
   codom_vars  [fmap x : domf s => derefkv v t s.[valP x]] `<=` codom_vars s `|` vars_tm t.
 Proof.
   rewrite/derefkv.
-  apply/fsubsetP => x/varUP[fv[/mapP[t' /codomP[[z zP ?] ?]xfv]]]; subst.
-  rewrite ffunE valPE in xfv.
+  apply/fsubsetP => x/ codom_varsP[k[kP]].
+  rewrite ffunE valPE => xfv.
   have:= fsubsetP (vars_tm_deref_sub _ _) _ xfv.
   rewrite inE codom_vars_set empty_rem inE codom_vars0 !inE/=.
   move=> /orP[->|]; first by rewrite orbT.
   move=> H; apply/orP; left; apply/fsubsetP/H/codom_vars_sub_vt.
 Qed.
 
-Lemma acyclic_sigma_derefkv s t v:
+Lemma idempotent_derefkv s t v:
   v \notin vars_tm t -> [disjoint domf s & vars t] ->
-  acyclic_sigma s -> acyclic_sigma [fmap x => derefkv v t s.[valP x]].
+  idempotent s -> idempotent [fmap x => derefkv v t s.[valP x]].
 Proof.
-  move=> vt; rewrite /acyclic_sigma/derefkv => df D/=.
+  move=> vt; rewrite /idempotent/derefkv => df D/=.
   apply: fdisjointWr.
     apply: codom_vars_derefkv.
   by rewrite fdisjointXU D.
 Qed.
 
-Lemma acyclic_sigma_deref_sigma s t v:
+Lemma idempotent_deref_sigma s t v:
   v \notin vars_tm t -> [disjoint domf s & vars t] ->
-  acyclic_sigma s -> acyclic_sigma (deref_sigma v t s).
+  idempotent s -> idempotent (deref_sigma v t s).
 Proof.
-  rewrite acyclic_sigma_set => vt D A.
-  have:= acyclic_sigma_derefkv vt D A.
-  move=> /acyclic_sigma_rem->; rewrite vt D andbT !andTb.
+  rewrite idempotent_set => vt D A.
+  have:= idempotent_derefkv vt D A.
+  move=> /idempotent_rem->; rewrite vt D andbT !andTb.
   move: vt; apply/contra.
   move=> /varUP[w [/mapP[tm + ?]vw]]; subst.
   move=> /codomP[[x xP] ?]; subst.
@@ -401,7 +368,7 @@ Proof.
   by rewrite ffunE valPE => /derefkv_in.
 Qed.
 
-Lemma disjoint_deref_sigma_deref_list v t s l: acyclic_sigma s ->
+Lemma disjoint_deref_sigma_deref_list v t s l: idempotent s ->
   [disjoint domf s & vars_tm t] -> v \notin vars_tm t ->
   [disjoint domf s & varsU (map (map_prod1 fsetU vars) l)] ->
   [disjoint domf (deref_sigma v t s)
@@ -431,6 +398,13 @@ Lemma disjoint_L_cons s x xs:
     & disjoint_L s xs].
 Proof. by case: x => [t1 t2]; rewrite/disjoint_L/= !fdisjointXU andbA. Qed.
 
+Lemma disjoint_L0 s: disjoint_L s [::].
+Proof. by rewrite/disjoint_L/= fdisjointX0. Qed.
+
+Lemma disjoint_L_deref s h q0: idempotent s ->
+  disjoint_L s [:: (deref s h, deref s q0)].
+Proof. by move=> A; rewrite disjoint_L_cons/= !idempotent_deref_disjoint// disjoint_L0. Qed.
+
 Lemma disjoint_L_set s v t l: v \notin vars t ->
   [disjoint domf s & vars t] -> disjoint_L s l ->
   disjoint_L (deref_sigma v t s) (deref_list v t l).
@@ -454,9 +428,9 @@ Proof.
 Qed.
 
 
-Lemma montanari_acyclic_aux l s b s':
-  acyclic_sigma s -> disjoint_L s l ->
-    montanari s b l = Some s' -> acyclic_sigma s'.
+Lemma montanari_idempotent l s b s':
+  idempotent s -> disjoint_L s l ->
+    montanari s b l = Some s' -> idempotent s'.
 Proof.
   move: s'; montanari_ind s b l => s'/= A.
   - by move=> _ [<-].
@@ -468,74 +442,217 @@ Proof.
   - rewrite disjoint_L_cons => /and3P[d1 d2 D]; apply: IH; last first.
       apply: disjoint_deref_sigma_deref_list; rewrite//.
       by rewrite inE eq_sym.
-    by apply/acyclic_sigma_deref_sigma; rewrite//inE; case: eqP => //?; subst; rewrite eqxx in EQ.
+    by apply/idempotent_deref_sigma; rewrite//inE; case: eqP => //?; subst; rewrite eqxx in EQ.
   - by []. 
   - rewrite disjoint_L_cons => /and3P[d1 d2 D]; apply: IH; last first.
       apply: disjoint_deref_sigma_deref_list; rewrite//.
-    by apply/acyclic_sigma_deref_sigma.
+    by apply/idempotent_deref_sigma.
   - by rewrite disjoint_L_cons => /and3P[d1 d2 D]; apply: IH A _; rewrite disjoint_L_cons d1 d2.
   - by [].
 Qed.
 
-Lemma montanari_acyclic b t1 t2 s s':
-  acyclic_sigma s -> montanari_deref b t1 t2 s = Some s' -> acyclic_sigma s'.
-Proof. move=> A M; apply: montanari_acyclic_aux M; rewrite//= /disjoint_L/= fsetU0/map_prod1/= fdisjointXU !acyclic_deref_disjoint//. Qed.
+Lemma matching_idempotent fv t1 t2 s s':
+  idempotent s -> matching fv t1 t2 s = Some s' -> idempotent s'.
+Proof. by move=> I; apply/montanari_idempotent/disjoint_L_deref. Qed.
 
-Lemma unif_acyclic t1 t2 s s':
-  acyclic_sigma s -> unify t1 t2 s = Some s' -> acyclic_sigma s'.
-Proof. apply/montanari_acyclic. Qed.
-
-Lemma matching_acyclic fv t1 t2 s s':
-  acyclic_sigma s -> matching fv t1 t2 s = Some s' -> acyclic_sigma s'.
-Proof. by apply/montanari_acyclic. Qed.
-
-Lemma omap_catf0 t: omap [eta catf empty] t = t.
-Proof. by case: t => //=?; rewrite cat0f. Qed.
-
-Lemma omap_catf_refl (t:Sigma): omap [eta catf t] (Some t) = Some t.
-Proof. by rewrite/=; f_equal; apply/fmapP => k; rewrite fnd_cat if_same. Qed.
-
-Lemma montanari_varl s b v t: v \notin vars_tm t -> v \notin b ->
-  montanari_pair s b (Tm_V v) t = Some (deref_sigma v t s).
-Proof.
-  move=> vt vb; rewrite /montanari_pair montanari_equation/= (negbTE vt) (negbTE vb).
-  rewrite 2!montanari_equation/=; case: eqP => //?; subst.
-  by rewrite inE eqxx in vt.
-Qed.
-
-Lemma montanari_var0l b v t: v \notin vars_tm t -> v \notin b ->
-  montanari_pair empty b (Tm_V v) t = Some empty.[v <- t].
-Proof.
-  move=> vt vb ; have:= montanari_varl empty vt vb => ->.
-  by f_equal; rewrite/deref_sigma; apply/fmapP => k; rewrite !fnd_set !not_fnd//.
-Qed.
-
-Lemma unify_V_0l v t: v \notin vars_tm t -> 
-  unify (Tm_V v) t empty = Some empty.[v <- t].
-Proof. by rewrite/unify/montanari_deref !deref_empty => H; apply: montanari_var0l. Qed.
+Lemma unif_idempotent t1 t2 s s':
+  idempotent s -> unify t1 t2 s = Some s' -> idempotent s'.
+Proof. apply/matching_idempotent. Qed.
 
 Definition is_var t := match t with Tm_V _ => true | _ => false end.
 
-Lemma unify_V_0r v t: v \notin vars_tm t -> ~~ is_var t ->
-  unify t (Tm_V v) empty = Some empty.[v <- t].
+Lemma deref_sigma_not_in v s t: v \notin codom_vars s ->
+  deref_sigma v t s = s.[v <- t].
 Proof.
-  rewrite/unify/montanari_deref/montanari_pair.
-  rewrite !deref_empty montanari_equation.
-  case: eqP => [->|]; first by rewrite inE eqxx.
-  move=> H1 vt => H.
-  suffices : montanari empty fset0 [:: (Tm_V v, t)] = Some empty.[v <- t].
-    move=> ->; destruct t => //.
-  by apply/montanari_var0l.
+  move=> H.
+  apply/fmapP => x; rewrite !fnd_set; case: eqP => //xv.
+  case: fndP => //=xs; [rewrite in_fnd|rewrite not_fnd//].
+  rewrite ffunE valPE/derefkv not_in_deref//= fsetU0 fdisjoint1X.
+  by apply/contra/H => {}H; apply/codom_varsP; eexists _,xs.
 Qed.
 
-Lemma unifier_help_refl s b t: montanari_pair s b t t = Some s.
-Proof. rewrite/montanari_pair montanari_equation eqxx montanari_equation//. Qed.
+Lemma unify_VR v t m: 
+  v  \notin vars (deref m t) -> v \notin domf m -> ~~ is_var t ->
+  unify t (Tm_V v) m = Some (deref_sigma v (deref m t) m).
+Proof.
+  rewrite/unify/matching => vt vd iv.
+  rewrite montanari_equation deref_V not_fnd//=.
+  rewrite !(montanari_equation m)/= eq_sym.
+  rewrite !montanari_equation/=.
+  rewrite ifF; last by destruct t.
+  have -> : (Tm_V v == deref m t) = false.
+    by destruct t => //.
+  rewrite (negbTE vt).
+  destruct t => //.
+Qed.
 
-Lemma unifier_help_refl1 b t s: montanari_deref b t t s = Some s.
-Proof. by rewrite /montanari_deref unifier_help_refl. Qed.
+Lemma unify_Vr v t m: 
+  v \notin vars_tm t -> v \notin codom_vars m -> v \notin domf m -> ~~ is_var t ->
+  unify t (Tm_V v) m = Some m.[v <- deref m t].
+Proof.
+  move=> vt vc vd iv.
+  have vdt : v \notin vars (deref m t).
+    move: (conj vc vt) => /norP; apply: contra.
+    by move=> /fsubsetP-/(_ _ (vars_tm_deref_sub _ _)); rewrite inE.
+  rewrite unify_VR//=.
+  rewrite/deref_sigma; f_equal; f_equal.
+  apply/fmapP => k.
+  case: fndP => //=km; [rewrite in_fnd ffunE valPE|rewrite not_fnd//].
+  rewrite /derefkv not_in_deref//= fsetU0 fdisjoint1X.
+  by apply: contra vc => vc; apply/codom_varsP; exists k, km.
+Qed.
 
-Lemma unify_refl t s: unify t t s = Some s.
-Proof. apply/unifier_help_refl1. Qed.
+Lemma deref_sigma_set k v k' v' m: k != k' ->
+  deref_sigma k v m.[k' <- v'] =
+    (deref_sigma k v m).[k' <- derefkv k v v'].
+Proof.
+  move=> kk.
+  apply/fmapP => x; rewrite !fnd_set.
+  case: eqP => //xk.
+    by case: eqP => xk'; subst; rewrite//eqxx in kk.
+  case: eqP => xk'; subst.
+    rewrite in_fnd; first by rewrite !inE/= eqxx.
+    by move=> kP; rewrite ffunE valPE ffunE [val _]/= eqxx.
+  case: fndP => // xP.
+    rewrite ffunE valPE ffunE [val _]/=.
+    move: xP; rewrite !inE; case: eqP => // _ xm.
+    by rewrite !in_fnd// ffunE valPE//.
+  rewrite not_fnd//; move: xP; rewrite/= !inE.
+  by case: eqP => //.
+Qed.
+
+Definition deref_sig2 (sm s: Sigma) := [fmap x : domf s => deref sm s.[valP x]].
+
+Lemma deref_sig20L s: deref_sig2 fmap0 s = s.
+Proof. 
+  apply/fmapP => k; rewrite/deref_sig2; case: fndP => //= ks.
+    by rewrite ffunE in_fnd valPE deref_empty.
+  by rewrite not_fnd.
+Qed.
+
+Lemma deref_sig20R s: deref_sig2 s fmap0 = fmap0.
+Proof. by apply/fmapP => [v]; rewrite !not_fnd//. Qed.
+
+Lemma deref_empty_set x v t k:
+  deref x (deref ctx.fmap0.[v <- k] t) = deref x.[v <- deref x k] t.
+Proof.
+  elim: t => //[v''|f Hf a Ha]; rewrite !(deref_V,deref_App).
+    rewrite !FmapE.fmapE; case: eqP => v''v//=; subst.
+    by rewrite (@not_fnd _ _ fmap0)//.
+  by rewrite Hf//Ha.
+Qed.
+
+Lemma disjoint_vars_sigma s x v t:
+  v \notin s -> fdisjoint s (vars t) ->
+  fdisjoint s (vars_sigma x) ->
+    fdisjoint s (vars_sigma x.[v <- t]).
+Proof.
+  rewrite/vars_sigma/= !fdisjointXU !fdisjointX1.
+  move=> vs dst /andP[dsx dsx'].
+  rewrite vs dsx/= codom_vars_set fdisjointXU dst andbT.
+  apply/fdisjointWr/dsx'/codom_vars_sub.
+Qed.
+
+Lemma disjoint_vars_deref s x t:
+  fdisjoint s (codom_vars x) -> fdisjoint s (vars t) ->
+    fdisjoint s (vars (deref x t)).
+Proof.
+  move=> D1 D2.
+  apply: fdisjointWr (vars_tm_deref_sub _ _) _.
+  by rewrite fdisjointXU D1.
+Qed.
+
+Definition ext_sig (sm sold: Sigma) := 
+  sm + deref_sig2 sm sold.
+
+Definition ext_sigP (froz: {fset V}) (sm sold:Sigma) :=
+  [&& idempotent sm, froz # domf sm & fdisjoint (domf sold) (vars_sigma sm)].
+
+Lemma ext_sigP0 f s: ext_sigP f fmap0 s.
+Proof. by rewrite/ext_sigP vars_sigma0 !fdisjointX0 idempotent_0. Qed.
+
+Lemma ext_sig0 s: ext_sig fmap0 s = s.
+Proof. by rewrite/ext_sig deref_sig20L cat0f. Qed.
+
+Lemma ext_sig0R s: ext_sig s fmap0 = s.
+Proof. by rewrite/ext_sig deref_sig20R catf0. Qed.
+
+Lemma ext_sig_deref_sigma_set x (s:Sigma) v t:
+  v \notin domf s ->
+  ext_sig x (deref_sigma v t s) =
+  ext_sig x.[v <- deref x t] s.
+Proof.
+  move=> v's.
+  apply/fmapP => k; rewrite !FmapE.fmapE !inE [domf _]/=.
+  rewrite [domf (deref_sig2 _ s)]/=.
+  case: eqP => kv'; subst.
+    rewrite (negbTE v's) in_fnd; first by rewrite !inE eqxx.
+    by move=> v'H; rewrite/deref_sig2 ffunE valPE/deref_sigma ffunE eqxx/= .
+  rewrite orFb.
+  case: ifP => ks//.
+  rewrite in_fnd; first by rewrite !inE ks orbT.
+  move=> kv's.
+  rewrite/deref_sig2 ffunE valPE.
+  rewrite (@in_fnd _ _ [fmap _ => _] k) !(ffunE, in_fnd, valPE)/=.
+  rewrite ifF; last by case: eqP.
+  by rewrite deref_empty_set//.
+Qed.
+
+Lemma ext_sigP_deref_sigma_set froz v t (s:Sigma) x: v  \notin domf s ->
+  [disjoint  domf s  & vars t] -> v \notin froz ->
+  v \notin vars t -> ext_sigP froz x (deref_sigma v t s) ->
+  ext_sigP froz x.[v <- deref x t] s.
+Proof.
+  rewrite/ext_sigP/= fdisjointUX 2!fdisjointXU -!andbA !fdisjoint1X.
+  move => vs st fv vt /and5P[Ax fx vx vcx sx].
+  apply/and4P; split => //.
+    rewrite idempotent_set idempotent_rem//idempotent_deref_disjoint// andbT andTb.
+    apply/andP; split => //; apply/negP => H.
+      have:= fsubsetP (vars_tm_deref_sub x t) _ H.
+      by rewrite inE (negbTE vcx) (negbTE vt).
+    apply: negP vx; rewrite negbK.
+    have:= fsubsetP (codom_vars_sub _ _) _ H.
+    by rewrite (negbTE vcx).
+    by rewrite fdisjointX1.
+  apply: disjoint_vars_sigma => //.
+  apply: disjoint_vars_deref => //.
+  by apply: fdisjointWr sx; rewrite fsubsetUr.
+Qed.
+
+Lemma montanari_extP s s' froz l:
+  idempotent s -> disjoint_L s l -> montanari s froz l = Some s' ->
+  exists2 sm : Sigma, s' = ext_sig sm s & ext_sigP froz sm s.
+Proof.
+  move: s'; montanari_ind s froz l => s' A //.
+  - by move=> _ [<-]; exists fmap0; rewrite ?(ext_sig0,ext_sigP0).
+  - by rewrite disjoint_L_cons/= => /and3P[D1 _ D2] M; have:= IH _ A D2 M.
+  - rewrite !disjoint_L_cons/= !fdisjointXU -!andbA => /and5P[D1 D2 D3 D4 D] M.
+    by have:= IH _ A _ M; rewrite !disjoint_L_cons D1 D2 D3 D4/= D => /(_ isT).
+  - rewrite disjoint_L_cons/= !fdisjointX1 => /and3P[vs v's D] M.
+    have vt' : v' \notin vars (Tm_V v) by rewrite /=!inE in vt *; rewrite eq_sym.
+    have D' : [disjoint  domf s  & vars (Tm_V v)] by rewrite fdisjointX1//.
+    have /= := IH _ (idempotent_deref_sigma vt' D' A) (disjoint_L_set vt' D' D) M.
+    move=> [x ? extP]; subst.
+    exists x.[v' <- deref x (Tm_V v)].
+      by apply: ext_sig_deref_sigma_set.
+    by apply: ext_sigP_deref_sigma_set; rewrite//v'f.
+  - rewrite disjoint_L_cons/= !fdisjointX1 => /and3P[vs D0 D] M.
+    have /= := IH _ (idempotent_deref_sigma vt D0 A) (disjoint_L_set vt D0 D) M.
+    move=> [x ? extP]; subst.
+    exists x.[v <- deref x t].
+      by apply: ext_sig_deref_sigma_set.
+    by apply: ext_sigP_deref_sigma_set.
+  - rewrite disjoint_L_cons/= => /and3P[D1 D2 D3] M.
+    by have:= IH _ A _ M; rewrite disjoint_L_cons/= D2 D1 => /(_ D3).
+Qed.
+
+Lemma matching_extP s s' b t1 t2:
+  idempotent s -> matching b t1 t2 s = Some s' ->
+  exists2 sm : Sigma, s' = ext_sig sm s & ext_sigP b sm s.
+Proof.
+  move=> A; rewrite/matching.
+  by move=> /(montanari_extP A (disjoint_L_deref _ _ A)).
+Qed.
 
 Lemma montanari_ext b l s s': montanari s b l = Some s' -> domf s `<=` domf s'.
 Proof.
@@ -549,7 +666,7 @@ Qed.
 
 Lemma varsL0: varsL [::] = fset0. Proof. by []. Qed.
 
-Lemma montanari_codom b l s s': acyclic_sigma s -> disjoint_L s l ->
+Lemma montanari_codom b l s s': idempotent s -> disjoint_L s l ->
   montanari s b l = Some s' -> codom_vars s' `<=` vars_sigma s `|` varsL l.
 Proof.
   move: s'; montanari_ind s b l => s' A//.
@@ -564,7 +681,7 @@ Proof.
     by rewrite !inE -!orbA => /or4P[|||/or4P[]]->//; rewrite !orbT.
   - rewrite disjoint_L_cons [fst _]/= [snd _]/= => /and3P[D1 D2 D] M.
     have v'v: v' \notin vars (Tm_V v) by rewrite inE eq_sym.
-    have:= IH _ (acyclic_sigma_deref_sigma v'v D1 A) (disjoint_L_set v'v D1 D) M.
+    have:= IH _ (idempotent_deref_sigma v'v D1 A) (disjoint_L_set v'v D1 D) M.
     move=> H; apply: fsubset_trans H _; rewrite varsL_cons fsetUA /map_prod1/= !fsetUA.
     rewrite fsubUset; apply/andP; split; last first.
       by apply/fsubsetP => x /deref_list_in; rewrite !inE; move=> /orP[]->; rewrite orbT.
@@ -578,7 +695,7 @@ Proof.
     by apply/fsubsetP => x; rewrite !inE => /orP[]->; rewrite orbT.
   (* TODO: same proof (modulo commutativity) as previous case: externalize in a dedicate lemma *)
   - rewrite disjoint_L_cons [fst _]/= [snd _]/= => /and3P[D1 D2 D] M.
-    have:= IH _ (acyclic_sigma_deref_sigma vt D2 A) (disjoint_L_set vt D2 D) M.
+    have:= IH _ (idempotent_deref_sigma vt D2 A) (disjoint_L_set vt D2 D) M.
     move=> H; apply: fsubset_trans H _; rewrite varsL_cons fsetUA /map_prod1/= !fsetUA.
     rewrite fsubUset; apply/andP; split; last first.
       by apply/fsubsetP => x /deref_list_in; rewrite !inE; move=> /orP[]->; rewrite orbT.
@@ -619,51 +736,14 @@ Proof.
     by have:= H x xs; rewrite !varsL_cons map_prod1_comm//; apply/fsetUC.
 Qed.
 
-Lemma montanari_deref_ext1 t1 t2 v s s':
-  montanari_deref v t1 t2 s = Some s' -> domf s' `<=` domf s `|` ((vars (deref s t1)  `|` vars (deref s t2) ) `\` v).
-Proof. by move=> /montanari_ext1; rewrite varsL_cons varsL0 fsetU0 //. Qed.
-
 Lemma matching_ext1 fv t1 t2 s s' : 
   matching fv t1 t2 s = Some s' -> domf s' `<=` domf s `|` ((vars (deref s t1)  `|` vars (deref s t2) ) `\` fv).
-Proof. apply/montanari_deref_ext1. Qed.
-
-Lemma disjoint_L0 s: disjoint_L s [::].
-Proof. by rewrite/disjoint_L/= fdisjointX0. Qed.
-
-Lemma matching_ext3 fv t1 t2 s s' : acyclic_sigma s ->
-  matching fv t1 t2 s = Some s' -> vars_sigma s' `<=` vars_sigma s `|` vars_tm t1 `|` vars_tm t2.
-Proof.
-  move=> A M.
-  have := montanari_codom A _ M; rewrite disjoint_L_cons/= !acyclic_deref_disjoint//disjoint_L0.
-  move=> /(_ isT) H1.
-  have H2 := montanari_deref_ext1 M.
-  rewrite fsubUset; apply/andP; split.
-    apply: fsubset_trans H2 _.
-    rewrite fsetDUl !fsubUset; apply/and3P; split.
-      by rewrite/vars_sigma -!fsetUA fsubsetUl//.
-      rewrite/vars_sigma.
-      apply: fsubset_trans (fsubsetDl _ _) _.
-      apply: fsubset_trans (vars_tm_deref_sub _ _) _.
-      rewrite fsubUset fsubsetU/=.
-        by rewrite fsubsetU//fsubsetU// fsubset_refl orbT.
-      by rewrite fsubsetU//fsubsetU//fsubset_refl orbT.
-    rewrite/vars_sigma.
-    apply: fsubset_trans (fsubsetDl _ _) _.
-    apply: fsubset_trans (vars_tm_deref_sub _ _) _.
-    rewrite fsubUset fsubsetU/=.
-      by rewrite fsubsetU// fsubset_refl orbT.
-    by rewrite fsubsetU//fsubsetU//fsubset_refl orbT.
-  apply: fsubset_trans H1 _.
-  rewrite !varsL_cons varsL0 fsetU0/= /map_prod1/= 2!fsubUset; apply/and3P; split.
-    by rewrite -fsetUA fsubsetUl.
-    by apply: fsubset_trans (vars_tm_deref_sub _ _) _; apply/fsubsetP => x; rewrite !inE => /orP[]->; rewrite orbT.
-  by apply: fsubset_trans (vars_tm_deref_sub _ _) _; apply/fsubsetP => x; rewrite !inE => /orP[]->; rewrite orbT.
-Qed.
+Proof. move=> /montanari_ext1; rewrite varsL_cons varsL0 fsetU0 //. Qed.
 
 Lemma matching_ext2 fv t1 t2 s s' : 
   matching fv t1 t2 s = Some s' -> domf s' `<=` vars_sigma s `|` vars_tm t1 `|` vars_tm t2.
 Proof.
-  move=> /montanari_deref_ext1 H; apply: fsubset_trans H _.
+  move=> /matching_ext1 H; apply: fsubset_trans H _.
   rewrite fsetDUl !fsubUset; apply/and3P; split.
     by rewrite/vars_sigma -!fsetUA fsubsetUl//.
     rewrite/vars_sigma.
@@ -727,7 +807,7 @@ Proof.
   by case: eqP => vv.
 Qed.
 
-Lemma montanari_ext2 b l s s': acyclic_sigma s -> disjoint_L s l -> 
+Lemma montanari_ext2 b l s s': idempotent s -> disjoint_L s l -> 
   montanari s b l = Some s' -> exists (e:Sigma), [/\ [disjoint domf s & domf e] & s' = composition s e].
 Proof.
   move: s'; montanari_ind s b l => s' A//.
@@ -738,7 +818,7 @@ Proof.
   - set t := Tm_V v.
     rewrite disjoint_L_cons/= => /and3P[d1 d2 D] M.
     have Hx : v' \notin vars t by rewrite inE eq_sym.
-    have:= IH _ (acyclic_sigma_deref_sigma Hx d1 A) (disjoint_L_set Hx d1 D) M.
+    have:= IH _ (idempotent_deref_sigma Hx d1 A) (disjoint_L_set Hx d1 D) M.
     rewrite-/t.
     move=> [e[+ ?]]; subst.
     rewrite !fdisjointUX/= => /andP[H1 H2]. (*/andP[H3 H4].*)
@@ -747,7 +827,7 @@ Proof.
     rewrite fdisjoint1X in H1.
     by apply: composition_deref_sigma.
   - rewrite disjoint_L_cons/= => /and3P[d1 d2 D] M.
-    have:= IH _ (acyclic_sigma_deref_sigma vt d2 A) (disjoint_L_set vt d2 D) M.
+    have:= IH _ (idempotent_deref_sigma vt d2 A) (disjoint_L_set vt d2 D) M.
     move=> [e[+ ?]]; subst.
     rewrite !fdisjointUX/= => /andP[H1 H2]. (*/andP[H3 H4].*)
     exists (e.[v <- deref e t]); split.
@@ -769,22 +849,10 @@ Proof.
   have:= forallP A [`vo]; rewrite valPE/= => /eqP<-//.
 Qed.
 
-Lemma mp_id s: acyclic_sigma s -> mp s s.
+Lemma mp_id s: idempotent s -> mp s s.
 Proof. 
   move=> A; apply/forallP => -[x xs]/=; rewrite valPE/= in_fnd not_in_deref//.
   by apply/fdisjointWr/A/codom_vars_sub_vt.
-Qed.
-
-Lemma mp_set s s' v t: v \notin vars_tm t -> v \notin domf s ->
-  [disjoint domf s & vars t] -> mp s.[v <- t] s' -> mp s s'.
-Proof.
-  move=> vt vs D H; apply/forallP => -[/= x xs]; rewrite valPE.
-  move /forallP: H.
-  have H: x \in (domf s.[v <- t]) by rewrite !inE/= xs orbT.
-  move=> /(_ [`H]); rewrite ffunE valPE/= => /eqP.
-  rewrite in_fnd/=; case: eqP => //=; last move=> _ <-//.
-  move=> ?; subst; case: fndP => //= s'v[]; clear H.
-  by rewrite xs in vs.
 Qed.
 
 Lemma mp_cat x sub s' t:
@@ -822,7 +890,7 @@ Proof.
   apply/eqP/didi/H.
 Qed.
 
-Lemma montanari_mp b l s s': acyclic_sigma s ->
+Lemma montanari_mp b l s s': idempotent s ->
   disjoint_L s l -> montanari s b l = Some s' -> mp s s'.
 Proof.
   move: s'; montanari_ind s b l => // s' A.
@@ -835,16 +903,16 @@ Proof.
     have ? : [disjoint domf s & vars (Tm_V v)] by rewrite fdisjointX1.
     have ? : v' \notin vars (Tm_V v) by rewrite inE; case: eqP => ?; subst => //; rewrite eqxx in EQ.
     apply/mp_derefkv/IH/M/disjoint_L_set => //.
-    apply/acyclic_sigma_deref_sigma => //.
+    apply/idempotent_deref_sigma => //.
   - rewrite disjoint_L_cons/=fdisjointX1 => /and3P[vs D H] M.
-    have {}IH := IH _ (acyclic_sigma_deref_sigma vt D A) (disjoint_L_set vt D H) M.
+    have {}IH := IH _ (idempotent_deref_sigma vt D A) (disjoint_L_set vt D H) M.
     apply/mp_derefkv/IH => //.
   - rewrite disjoint_L_cons/= => /and3P[D1 D2 H]; apply: IH => //.
     by rewrite disjoint_L_cons/= D2 D1.
 Qed.
 
 Lemma montanari_set_deref' b s s' l x sub t: 
-  acyclic_sigma s -> disjoint_L s l -> x + sub = s ->
+  idempotent s -> disjoint_L s l -> x + sub = s ->
   montanari s b l = Some s' -> deref s' (deref sub t) = (deref s' t).
 Proof.
   move=> A D ? M; subst.
@@ -853,7 +921,7 @@ Proof.
 Qed.
 
 Lemma montanari_set_deref v b s s' l (vs : v \in domf s) (vs': v \in domf s'): 
-  acyclic_sigma s -> disjoint_L s l ->
+  idempotent s -> disjoint_L s l ->
   montanari s b l = Some s' -> (deref s' s.[vs]) = s'.[vs'].
 Proof.
   move=> A D M; subst.
@@ -883,7 +951,7 @@ Proof. by rewrite/unif_pair/map_prod1 eq_sym. Qed.
 
 Definition unifier s l := all (unif_pair s) l.
 
-Lemma montanariP b l s s': acyclic_sigma s -> disjoint_L s l ->
+Lemma montanariP b l s s': idempotent s -> disjoint_L s l ->
   montanari s b l = Some s' -> unifier s' l.
 Proof.
   move: s'; montanari_ind s b l => s' A//.
@@ -894,8 +962,8 @@ Proof.
     by move=> /andP[->/andP[->]].
   - set t := (Tm_V v).
     rewrite disjoint_L_cons/= => /and3P[D1 D2 D3] M.
-    have A': acyclic_sigma (deref_sigma v' t s).
-      by apply/acyclic_sigma_deref_sigma; rewrite//inE eq_sym.
+    have A': idempotent (deref_sigma v' t s).
+      by apply/idempotent_deref_sigma; rewrite//inE eq_sym.
     have D : disjoint_L (deref_sigma v' t s) (deref_list v' t l).
       by apply/disjoint_L_set => //; rewrite inE eq_sym.
     have {IH} := IH _ A' D M.
@@ -916,8 +984,8 @@ Proof.
     rewrite catf_setr catf0 => /(_ _ erefl) Hq.
     by rewrite/unif_pair/map_prod1/= !Hq//.
   - rewrite disjoint_L_cons/= => /and3P[D1 D2 D3] M.
-    have A': acyclic_sigma [fmap x => derefkv v t s.[valP x]].[v <- t].
-      rewrite acyclic_sigma_set vt acyclic_sigma_rem.
+    have A': idempotent [fmap x => derefkv v t s.[valP x]].[v <- t].
+      rewrite idempotent_set vt idempotent_rem.
         rewrite !andTb; apply/andP; split => //.
         have:= vt; apply/contra.
         move=> /varUP[z[/mapP[?/codomP[[t' t'P] ??]]]]; subst.
@@ -926,7 +994,7 @@ Proof.
         have -> : [fmap x => derefkv v t s.[valP x]].[~ v] [` t'P] = ([fmap x => derefkv v t s.[valP x]] [` H2]).
           by apply/add_some; rewrite -!in_fnd !fnd_rem inE (negbTE H1).
         by rewrite ffunE valPE; apply/derefkv_in.
-      by apply: acyclic_sigma_derefkv => //; rewrite vt.
+      by apply: idempotent_derefkv => //; rewrite vt.
     have D : disjoint_L [fmap x => derefkv v t s.[valP x]].[v <- t]
       [seq map_prod (derefkv v t) i | i <- l].
       by apply/disjoint_L_set => //; rewrite vt.
@@ -952,59 +1020,29 @@ Proof.
     by rewrite unif_pair_sym.
 Qed.
 
-(*SNIPT: unif_correct *)
-Lemma unify_correct: 
-  forall t1 t2 s s', acyclic_sigma s -> unify t1 t2 s = Some s' -> deref s' t1 = deref s' t2.
-(*ENDSNIPT: unif_correct *)
+(*SNIPT: unify_P *)
+Lemma unify_P: 
+  forall t1 t2 s s', idempotent s -> unify t1 t2 s = Some s' -> deref s' t1 = deref s' t2.
+(*ENDSNIPT: unify_P *)
 Proof.
   move=> t1 t2 s s' A M.
   have DL : disjoint_L s [:: (deref s t1, deref s t2)].
-    by rewrite /disjoint_L/= fsetU0/map_prod1/= fdisjointXU !acyclic_deref_disjoint//.
+    by rewrite /disjoint_L/= fsetU0/map_prod1/= fdisjointXU !idempotent_deref_disjoint//.
   have:= montanariP A DL M; rewrite /= andbT /map_prod1/=.
   by rewrite /unif_pair /map_prod1 !(montanari_set_deref' _ A DL (catf2 _) M) => /eqP.
 Qed.
 
-Lemma matchingP fv t1 t2 s s': acyclic_sigma s ->
+Lemma matchingP fv t1 t2 s s': idempotent s ->
   matching fv t1 t2 s = Some s' -> deref s' t1 = deref s' t2.
 Proof.
   move=> A M.
   have DL : disjoint_L s [:: (deref s t1, deref s t2)].
-    by rewrite /disjoint_L/= fsetU0/map_prod1/= fdisjointXU !acyclic_deref_disjoint//.
+    by rewrite /disjoint_L/= fsetU0/map_prod1/= fdisjointXU !idempotent_deref_disjoint//.
   have:= montanariP A DL M; rewrite /= andbT /map_prod1/=.
   by rewrite /unif_pair /map_prod1 !(montanari_set_deref' _ A DL (catf2 _) M) => /eqP.
 Qed.
 
-Definition mgu_help base s l :=
-  forall s', acyclic_sigma s' -> mp base s' -> unifier s' l -> 
-    exists x, s' = composition s x.
-
-Definition mgu := mgu_help fmap0.
-
-Lemma mp_composition b s:
-  mp b s -> exists x : Sigma, s = composition b x.
-Proof.
-  move=> H; exists s.
-  apply/fmapP => k; rewrite/composition fnd_cat.
-  case: fndP => //ks.
-  case: fndP => //= kb; exfalso.
-  by have:= forallP H [`kb]; rewrite valPE/=not_fnd.
-Qed.
-
-Lemma mgu_help_refl b l: mgu_help b b l.
-Proof. by move=> s _ + _; apply/mp_composition. Qed.
-
-Lemma mgu_help_tt b s t l: mgu_help b s l -> mgu_help b s ((t, t) :: l).
-Proof. by move=> + s'/= A MP /andP[_ M] => /(_ s' A MP M). Qed.
-
-Lemma mgu_help_app b s f1 f2 a1 a2 l:
-  mgu_help b s [:: (f1, f2), (a1, a2) & l] ->
-  mgu_help b s ((Tm_App f1 a1, Tm_App f2 a2) :: l).
-Proof.
-  move=> + s'; rewrite/= unif_pair_app -andbA => + M A /and3P[U1 U2 U].
-  by move=> /(_ s')/=; rewrite U1 U2 U; auto.
-Qed.
-
-Lemma montanari_matching s f l s': acyclic_sigma s ->
+Lemma montanari_matching s f l s': idempotent s ->
   varsU (map vars_tm (map snd l)) `<=` f -> disjoint_L s l ->
   montanari s f l = Some s' -> forall x, x \in l -> deref s' x.1 = x.2.
 Proof.
@@ -1030,32 +1068,36 @@ Proof.
   by apply/mapP; eexists => //.
 Qed.
 
-Lemma matchingP_deref fv t1 t2 s s': acyclic_sigma s -> vars_tm (deref s t2) `<=` fv ->
-  matching fv t1 t2 s = Some s' -> deref s' t1 = (deref s t2).
+(*SNIPT: matching_disj *)
+Lemma matching_disj:
+  forall fv t1 t2 s s',
+  idempotent s -> vars_tm (deref s t2) `<=` fv ->
+  matching fv t1 t2 s = Some s' -> deref s' t1 = deref s t2.
+(*ENDSNIPT: matching_disj *)
 Proof.
-  move=> A H M; have:= montanari_matching A _ _ M.
-  rewrite /= disjoint_L_cons/= fsetU0 H !acyclic_deref_disjoint// disjoint_L0.
+  move=> fv t1 t2 s s' A H M; have:= montanari_matching A _ _ M.
+  rewrite /= disjoint_L_cons/= fsetU0 H !idempotent_deref_disjoint// disjoint_L0.
   move=> /(_ isT isT _ (mem_head _ _))/=.
   rewrite derefxx//; apply/montanari_mp/M => //.
-  by rewrite disjoint_L_cons/= !acyclic_deref_disjoint//disjoint_L0.
+  by rewrite disjoint_L_cons/= !idempotent_deref_disjoint//disjoint_L0.
 Qed.
 
-Corollary mathingX fv t1 t2 s s' : acyclic_sigma s -> vars_tm (deref s t2) `<=` fv ->
+Corollary mathingX fv t1 t2 s s' : idempotent s -> vars_tm (deref s t2) `<=` fv ->
   matching fv t1 t2 s = Some s' -> forall v,
     v \in vars_tm (deref s t2) -> s.[? v] = s'.[? v].
 Proof.
-  move=> A S M; have H:= matchingP_deref A S M.
+  move=> A S M; have H:= matching_disj A S M.
   move=> v vt.
   have D : disjoint_L s [:: (deref s t1, deref s t2)].
-    rewrite disjoint_L_cons disjoint_L0/= !acyclic_deref_disjoint//.
+    rewrite disjoint_L_cons disjoint_L0/= !idempotent_deref_disjoint//.
   have vs : v \notin s.
-    by have:= fdisjointP_sym (acyclic_deref_disjoint t2 A) _ vt.
+    by have:= fdisjointP_sym (idempotent_deref_disjoint t2 A) _ vt.
   rewrite not_fnd//.
   move: vt; rewrite -H => Hx.
   rewrite not_fnd//.
   apply: fdisjointP Hx; rewrite fdisjoint_sym.
-  rewrite acyclic_deref_disjoint//.
-  by apply: matching_acyclic M.
+  rewrite idempotent_deref_disjoint//.
+  by apply: matching_idempotent M.
 Qed.
 
 Lemma deref_vars_in v x t (vx : v \in domf x): v \in vars_tm x.[vx] -> v \in vars t -> v \in vars (deref x t).
@@ -1087,7 +1129,7 @@ Proof.
   by rewrite !in_fnd/= ffunE valPE derefkv_same.
 Qed.
 
-Lemma deref_sigma_in v s (vs : v \in s): acyclic_sigma s ->
+Lemma deref_sigma_in v s (vs : v \in s): idempotent s ->
   deref_sigma v s.[vs] s = s.
 Proof.
   move=> A; apply/fmapP => k; case: fndP => kf.
@@ -1099,7 +1141,7 @@ Proof.
   by move: kf; rewrite inE => /norP => -[H1 H2]; rewrite not_fnd.
 Qed.
 
-Lemma unifier_deref_list s v t l: mp ctx.empty.[v <- t] s ->
+Lemma unifier_deref_list s v t l: mp ctx.fmap0.[v <- t] s ->
   unifier s l -> unifier s (deref_list v t l).
 Proof.
   move=> MP U; apply/allP => xl /mapP[tx lx]?; subst.
@@ -1109,29 +1151,14 @@ Proof.
 Qed.
 
 Lemma mp_0set v s t (vs : v \in domf s):
-  s.[vs] = deref s t -> mp ctx.empty.[v <- t] s.
+  s.[vs] = deref s t -> mp ctx.fmap0.[v <- t] s.
 Proof.
   move=> H; apply/forallP => [[z zP]]; rewrite valPE ffunE/=.
   by move: zP; rewrite !inE orbF => /eqP->{z}; rewrite eqxx in_fnd H.
 Qed.
 
-Lemma mp_deref_sigma3 v t s s' (vs': v \in domf s'):
-  acyclic_sigma s -> acyclic_sigma s' -> v \notin vars t ->
-  s'.[vs'] = deref s' t ->
-  mp s s' -> mp (deref_sigma v t s) s'.
-Proof.
-  move=> A1 A2 vt H MP.
-  apply/forallP => [[x xs]]; rewrite valPE !ffunE [val _]/=.
-  move: xs; rewrite !inE; case: eqP => [->|].
-    by rewrite in_fnd H.
-  move=> xv xs; rewrite in_fnd ffunE valPE.
-  have:= forallP MP [` xs]; rewrite valPE /= => /eqP.
-  case: fndP => //= xs' H1; rewrite derefxx ?H1//.
-  by apply: mp_0set.
-Qed.
-
 Lemma mp_deref_sigma4 v t s s': v \notin domf s' ->
-  acyclic_sigma s -> acyclic_sigma s' -> v \notin vars t ->
+  idempotent s -> idempotent s' -> v \notin vars t ->
   Tm_V v = deref s' t  ->
   mp s s' -> mp (deref_sigma v t s) s'.[v <- Tm_V v].
 Proof.
@@ -1152,7 +1179,7 @@ Proof.
   rewrite !FmapE.fmapE; case: eqP => [->{v'}|]//=; rewrite not_fnd//.
 Qed.
 
-Lemma unifier_x s v' v t1 (v's: v' \in domf s): acyclic_sigma s -> v \notin domf s -> s.[v's] = Tm_V v ->
+Lemma unifier_x s v' v t1 (v's: v' \in domf s): idempotent s -> v \notin domf s -> s.[v's] = Tm_V v ->
   deref (deref_sigma v' (Tm_V v) s) (derefkv v (Tm_V v') t1) = deref s t1 .
 Proof.
   move=> A vs E; elim: t1 => //[z|/=f -> a ->//]; rewrite /derefkv deref_V !FmapE.fmapE.
@@ -1170,7 +1197,7 @@ Qed.
 
 Fixpoint tsize t :=
   match t with
-  | Tm_P _ | Tm_D _ | Tm_V _ => 1
+  | Tm_P _ | Tm_V _ => 1
   | Tm_App l r => (tsize l + tsize r).+1
   end.
 
@@ -1196,38 +1223,54 @@ Proof.
   rewrite deref_V in_fnd/=; lia.
 Qed.
 
-Lemma exists_montanari m l:
-  acyclic_sigma m -> disjoint_L m l ->
-  (exists s, acyclic_sigma s /\ unifier s l) -> montanari m fset0 l.
+Lemma exists_montanari f m l:
+  idempotent m -> disjoint_L m l ->
+  (exists s, [/\ idempotent s, unifier s l & fdisjoint (domf s) f]) -> montanari m f l.
 Proof.
-  remember fset0 as f eqn:Hf; move: Hf.
-  montanari_ind m f l => // ? A; subst.
-  - rewrite !disjoint_L_cons => /and3P[D1 _ D3] [s [A' /= /andP[_ U]]].
+  montanari_ind m f l => // A; subst.
+  - rewrite !disjoint_L_cons/= => /and3P[D1 _ D3] [s [A' /andP[_ U] D]].
     by apply: IH => //; exists s.
-  - rewrite disjoint_L_cons /=!fdisjointXU -!andbA => /and5P[d1 d2 d3 d4 D].
-    move=> [s' [A' /= /andP[+ U]]].
+  - rewrite disjoint_L_cons /=!fdisjointXU -!andbA => /and5P[d1 d2 d3 d4 ml].
+    move=> [s' [A' /= /andP[+ U] s'fr]].
     rewrite unif_pair_app => /andP[U1 U2].
     apply: IH => //.
       by rewrite !disjoint_L_cons/= d1 d2 d3 d4.
     exists s'; repeat split => //=.
-      by rewrite U1 U2.
+    by rewrite U1 U2.
   - rewrite !disjoint_L_cons/= => /and3P[d1 d2 d3].
-    move=> [s' [A' /andP[+ U]]].
+    move=> [s' [A' /andP[+ U] s'f]].
     rewrite unif_pair_v1 => /eqP H.
     move: H; case: fndP => //= vs' H.
       have {}A := fdisjointP A' _ vs'.
       by have:= deref_size_gt vs' vt EQ; rewrite H ltnn.
     case: t EQ vt d2 H => // v' H; rewrite !inE/= !fdisjointX1.
     by move=> /eqP? v'm v's'; subst; rewrite eqxx in H.
-  - by [].
-  - rewrite !disjoint_L_cons/= => /and3P[D1 D2 D].
-    move=> [s' [A' /= /andP[+ U]]]; rewrite unif_pair_v2 => U1.
-    by apply: IH => //.
-  - by [].
-  - rewrite !disjoint_L_cons/= => /and3P[D1 D2 D].
-    move=> [s' [A' /= /andP[+ U]]]; rewrite unif_pair_v1 => U1.
+  - rewrite disjoint_L_cons/= => /and3P[mv mv' ml] [s [A' /andP[+ U] sf]].
+    rewrite unif_pair_v1 deref_V.
+    have vs := fdisjointP_sym sf _ vf.
+    have v's := fdisjointP_sym sf _ v'f.
+    by rewrite !not_fnd//= eqV (negbTE EQ).
+  - rewrite !disjoint_L_cons/= => /and3P[D1 D2 ml].
+    move=> [s [A' /= /andP[+ U] sf]]; rewrite unif_pair_v2.
+    have vs := fdisjointP_sym sf _ vf.
+    rewrite deref_V not_fnd//=.
+    case: fndP => v's/=; last by rewrite /=eqV (negbTE EQ).
+    move=> /eqP H.
+    rewrite eq_sym in EQ.
     apply: IH => //.
-      by apply/acyclic_sigma_deref_sigma => //.
+      by apply: idempotent_deref_sigma; rewrite//inE.
+      by apply: disjoint_L_set; rewrite//inE.
+    exists s; split => //.
+    apply: unifier_deref_list => //.
+    by apply: mp_0set; rewrite deref_V not_fnd//=.
+  - move=> _ [s[A' /andP[+U]sf]].
+    have vs := fdisjointP_sym sf _ vf.
+    rewrite unif_pair_v1 not_fnd//=.
+    destruct t => //.
+  - rewrite !disjoint_L_cons/= => /and3P[D1 D2 D].
+    move=> [s' [A' /= /andP[+ U] sf]]; rewrite unif_pair_v1 => U1.
+    apply: IH => //.
+      by apply/idempotent_deref_sigma => //.
       by apply: disjoint_L_set.
     move: U1; case: fndP => vs' /eqP/= H.
       exists s'; split => //.
@@ -1237,61 +1280,34 @@ Proof.
     case: fndP => v's'; last by move=> [?]; subst; rewrite eqxx in vv'.
     move=> /= H.
     exists (deref_sigma v' (Tm_V v) s'); split => //.
-      by apply/acyclic_sigma_deref_sigma => //; rewrite (inE,fdisjointX1)//eq_sym.
-    move: U; elim: l {D} => //=[[t1 t2] l] IH /andP[+ {}/IH->]; rewrite andbT.
-    rewrite/unif_pair/map_prod1/= => /eqP LL; apply/eqP; move: LL.
-    by rewrite !unifier_x//.
+      by apply/idempotent_deref_sigma => //; rewrite (inE,fdisjointX1)//eq_sym.
+      move: U; elim: l {D} => //=[[t1 t2] l] IH /andP[+ {}/IH->]; rewrite andbT.
+      by rewrite/unif_pair/map_prod1/= => /eqP LL; apply/eqP; rewrite !unifier_x// in LL *.
+    rewrite/= fdisjointUX sf fdisjoint1X andbT.
+    by apply: fdisjointP sf _ _.
   - rewrite disjoint_L_cons/= => /and3P[d1 d2 d3].
-    move=> [s' [A' /= /andP[U1 U]]].
+    move=> [s' [A' /= /andP[U1 U] sf]].
     apply: IH => //.
       by rewrite disjoint_L_cons/= d1 d2.
-    exists s'; repeat split => //=.
-    by rewrite unif_pair_sym U1.
+    by exists s'; repeat split; rewrite//= unif_pair_sym U1.
   - move=> D [x[A'/=/andP[+ U]]].
     by destruct t1, t2 => //=; rewrite/unif_pair/map_prod1/= => /eqP[?]; 
     subst; rewrite ?eqxx in EQ.
 Qed.
 
-(*SNIPT: unify_complete *)
-Lemma unify_complete:
-  forall t1 t2 s, acyclic_sigma s -> (exists s', acyclic_sigma s' /\ deref s' (deref s t1) = deref s' (deref s t2)) -> exists s'', unify t1 t2 s = Some s''.
-(*ENDSNIPT: unify_complete *)
-Proof.
-  move=> t1 t2 s A [sx [H1 H2]].
-  rewrite /unify/montanari_deref/montanari_pair.
-  have D : disjoint_L s [:: (deref s t1, deref s t2)].
-    by rewrite disjoint_L_cons !acyclic_deref_disjoint//disjoint_L0.
-  have:= exists_montanari A D (ex_intro _ sx _).
-  rewrite /unifier/= andbT /unif_pair/map_prod1 H1 H2 eqxx => /(_ (conj isT isT)).
-  case M: montanari => [s'|]// _.
-  by eexists.
-Qed.
-
-Lemma acyclic_composition s1 s2:
-  acyclic_sigma s1 -> acyclic_sigma s2 -> acyclic_sigma (composition s1 s2).
+Lemma idempotent_composition s1 s2:
+  idempotent s1 -> idempotent s2 -> idempotent (composition s1 s2).
 Proof.
   move=> A1 A2.
   apply/fdisjointP => x/=; rewrite !inE.
   move=> /orP[/andP[xs1 xs2]|xs2].
 Abort.
 
-Definition goodkey k v (s:Sigma) :=
-  if s.[?k] is Some v' then v == v'
-  else k \notin codom_vars s.
-
-Definition goodkey1 k (s1 s2:Sigma) :=
-  if s1.[?k] is Some v then goodkey k v s2
-  else true.
-
-Definition good_sets (s1 s2 : Sigma) :=
-  forall k, goodkey1 k s1 s2 && goodkey1 k s2 s1.
-
-
 Definition good_set (s1 s2: Sigma) h1 h2 := 
   [fmap x : (vars_tm h1 `|` vars_tm h2) `&` (domf s1 `|` domf s2) => 
     if s1.[?val x] is Some v then v
     else if s2.[?val x] is Some v then v
-    else Tm_D (ID 0)
+    else Tm_P (IP 0)
   ].
 
 Lemma deref_in_sub y s t (ys1 : y \in domf s):
@@ -1329,14 +1345,14 @@ Proof.
   by rewrite -H; apply/fsubsetP/H1/deref_in_sub.
 Qed.
 
-Lemma acyclic_sigma_good_set h1 h2 s1 s2 q:
+Lemma idempotent_good_set h1 h2 s1 s2 q:
   [disjoint vars_tm h1 & vars_tm q] ->
   [disjoint vars_tm h2 & vars_tm q] ->
   codom_vars (good_set s1 s2 h1 h2) `<=` vars q ->
-  acyclic_sigma (good_set s1 s2 h1 h2).
+  idempotent (good_set s1 s2 h1 h2).
 Proof.
   move=> D1 D2 C.
-  rewrite /acyclic_sigma/=; apply: fdisjointWr C _.
+  rewrite /idempotent/=; apply: fdisjointWr C _.
   apply/fdisjointP => x; rewrite !inE => /andP[+ H2].
   by move=> /orP[]; apply/fdisjointP.
 Qed.
@@ -1386,7 +1402,7 @@ Qed.
 
 (* deref_deref_unif *)
 Lemma ddu s1 h1 s2 h2 q:
-  acyclic_sigma s1 -> acyclic_sigma s2 ->
+  idempotent s1 -> idempotent s2 ->
   [disjoint vars_tm h1 & vars_tm q] ->
   [disjoint vars_tm h2 & vars_tm q] ->
   [disjoint domf s1 & vars_tm h2] ->
@@ -1397,19 +1413,19 @@ Lemma ddu s1 h1 s2 h2 q:
 Proof.
   move=> A1 A2 d1q d2q D1 D2 F1 F2.
   apply: exists_montanari.
-    by apply/acyclic_sigma0.
+    by apply/idempotent_0.
     by rewrite disjoint_L_cons/= !fdisjoint0X disjoint_L0.
   rewrite !deref_empty/=.
   pose X := good_set s1 s2 h1 h2.
   have GSC := good_set_codom D1 D2 F1 F2.
   exists (good_set s1 s2 h1 h2).
-  rewrite andbT; repeat split.
-    by apply: acyclic_sigma_good_set d1q d2q GSC.
+  rewrite fdisjointX0 andbT; repeat split.
+    by apply: idempotent_good_set d1q d2q GSC.
   by apply: unif_pair_good_set; subst.
 Qed.
 
-Lemma matching_unify_trans fv1 fv2 s1 s2 q h1 h2:
-  acyclic_sigma s1 -> acyclic_sigma s2 ->
+Lemma matching_unify_transP fv s1 s2 q h1 h2:
+  idempotent s1 -> idempotent s2 ->
   [disjoint vars h1 & vars h2] ->
   [disjoint domf s1 & vars_tm q] -> 
   [disjoint domf s2 & vars_tm q] -> 
@@ -1417,25 +1433,24 @@ Lemma matching_unify_trans fv1 fv2 s1 s2 q h1 h2:
   [disjoint vars_sigma s2 & vars_tm h1] -> 
   [disjoint vars_tm h1 & vars_tm q] -> 
   [disjoint vars_tm h2 & vars_tm q] -> 
-  vars_tm q `<=` fv1 ->
-  vars_tm q `<=` fv2 ->
-  matching fv1 h1 q s1 ->
-  matching fv2 h2 q s2 ->
+  vars_tm q `<=` fv ->
+  matching fv h1 q s1 ->
+  matching fv h2 q s2 ->
   unify h1 h2 fmap0.
 Proof.
-  move=> A1 A2 Dx d1q d2q H1 H2 dh1q dh2q S1 S2.
+  move=> A1 A2 Dx d1q d2q H1 H2 dh1q dh2q /[dup] S1 S2.
   case M1: matching => [s1'|]//.
   case M2: matching => [s2'|]//.
   move=> _ _.
   rewrite -(not_in_deref d1q) in S1.
   rewrite -(not_in_deref d2q) in S2.
-  have D1 := matchingP_deref A1 S1 M1.
-  have D2 := matchingP_deref A2 S2 M2.
+  have D1 := matching_disj A1 S1 M1.
+  have D2 := matching_disj A2 S2 M2.
   rewrite !(@not_in_deref _ q)// in D1 D2.
-  have /= := montanari_mp A1 _ M1; rewrite disjoint_L_cons/=!acyclic_deref_disjoint// disjoint_L0 => /(_ isT) => MP1.
-  have /= := montanari_mp A2 _ M2; rewrite disjoint_L_cons/=!acyclic_deref_disjoint// disjoint_L0 => /(_ isT) => MP2.
-  have A1' := matching_acyclic A1 M1.
-  have A2' := matching_acyclic A2 M2.
+  have /= MP1 := montanari_mp A1 (disjoint_L_deref _ _ A1) M1.
+  have /= MP2 := montanari_mp A2 (disjoint_L_deref _ _ A2) M2.
+  have A1' := matching_idempotent A1 M1.
+  have A2' := matching_idempotent A2 M2.
   apply: ddu D1 D2 => //.
     apply: fdisjointWl.
       apply: matching_ext2 M1.
@@ -1445,28 +1460,47 @@ Proof.
   by rewrite 2!fdisjointUX H2 fdisjoint_sym Dx fdisjoint_sym.
 Qed.
 
-Definition matching_sing p q s := matching (vars_tm (deref s q)) p q s.
-
 (*SNIPT: matching_unify_transP*)
-Lemma matching_unify_transP h1 h2 q: 
-  [disjoint vars h1 & vars h2] -> [disjoint vars h1 & vars q] -> [disjoint vars h2 & vars q] -> 
-  matching_sing h1 q fmap0 -> matching_sing h2 q fmap0 -> unify h1 h2 fmap0.
+Lemma matching_unify_trans fv h1 h2 q: 
+  [disjoint vars h1 & vars h2] ->
+  [disjoint vars_tm h1 & vars_tm q] -> 
+  [disjoint vars_tm h2 & vars_tm q] -> 
+  vars_tm q `<=` fv ->
+  matching fv h1 q fmap0 ->
+  matching fv h2 q fmap0 ->
+  unify h1 h2 fmap0.
 (*ENDSNIPT: matching_unify_transP*)
 Proof.
-  move=> D0 D1 D2 M1 M2.
-  have A := acyclic_sigma0.
-  have D := fdisjoint0X.
-  have Dx : forall x, [disjoint vars_sigma ctx.empty & x] by move=> ?; rewrite vars_sigma0.
-  by apply: matching_unify_trans M1 M2 => //; rewrite deref_empty.
+  move=> D0 D1 D2.
+  have H := matching_unify_transP idempotent_0 idempotent_0 D0 (fdisjoint0X _) (fdisjoint0X _) _ _ D1 D2.
+  by apply: H; rewrite vars_sigma0 fdisjoint0X.
 Qed.
 
 Notation injective := (@injectiveb _ V).
 Notation "A ∧ B" := (A && B) (at level 15).
 
-Notation "t1 # t2" := [disjoint t1 & t2] (at level 20).
 
-Definition refresh_for x t := [&& (vars t `<=` domf x) & injective x].
-  
+Definition renaming_forP t (m:{fmap V -> V}) :=
+  injectiveb m /\ fdisjoint (domf m) (codomf m) /\ vars t `<=` domf m.
+
+
+Record renaming := mk_ren {
+  ren_map :> {fmap V -> V};
+  ren_injective : injectiveb ren_map;
+  ren_disjoint : fdisjoint (domf ren_map) (codomf ren_map)
+}.
+
+Record renaming_for (t: Tm) := mk_renf {
+  renf_map :> renaming;
+  renf_sub : vars t `<=` domf (ren_map renf_map)
+}.
+
+Definition mk_renfA t (m:{fmap V -> V}) (H: injectiveb m) 
+  (D:fdisjoint (domf m) (codomf m)) (S: vars t `<=` domf m) :=
+   @mk_renf _ (mk_ren H D) S.
+
+Definition renaming_forPM t m (H : renaming_forP t m) := mk_renfA (proj1 H) (proj1 (proj2 H)) (proj2 (proj2 H)).
+
 Lemma vars_tm_ren_sub w t1: vars_tm t1 `<=` domf w -> vars (ren w t1) `<=` codomf w.
 Proof.
   elim: t1 => //=[v|f Hf a Ha].
@@ -1505,9 +1539,9 @@ Qed.
 
 Fixpoint deref_all t :=
   match t with
-  | Tm_D _ | Tm_P _ => t
+  | Tm_P _ => t
   | Tm_App l r => Tm_App (deref_all l) (deref_all r)
-  | Tm_V _ => Tm_D (ID 0)
+  | Tm_V _ => Tm_P (IP 0)
   end.
 
 Lemma ground_deref_all t: ground (deref_all t).
@@ -1536,7 +1570,6 @@ Proof.
   move/codomfP: vP => [x].
   case: fndP => //kf [<-]; exists [`kf].
   by rewrite valPE.
-  (* case: fndP => // kf [?]; subst; exists x, kf; done. *)
 Qed.
 
 Definition choose_in (s:{fmap V -> V}) (v:V) (vP: v \in codomf s)  := 
@@ -1561,8 +1594,8 @@ Definition ren_deref2k t (r:{fmap V -> V}) (s : Sigma) : Sigma :=
   [fmap x : vars_tm t => 
     if r.[? val x] is Some v then
       if s.[? v] is Some t then t
-      else Tm_D (ID 0)
-    else Tm_D (ID 0)
+      else Tm_P (IP 0)
+    else Tm_P (IP 0)
   ].
 
 Lemma codom_vars_ren_deref2k z w x y sx:
@@ -1620,7 +1653,25 @@ Proof. by []. Qed.
 Definition alpha_equiv t1 t2 := 
   exists (r: {fmap V -> V}), [/\ injective r, t1 = ren r t2 & vars_tm t2 `<=` domf r].
 
-Lemma disjoint_Lempty l: disjoint_L empty l.
+Definition map_id (T: choiceType) (s: {fset T}) := [fmap x : s => val x].
+
+Lemma injective_map_id (T:choiceType) S : injectiveb (@map_id T S).
+Proof. by apply/injectiveP => -[x xP][y yP]; rewrite !ffunE; apply: val_inj. Qed.
+
+Lemma ren_vars_id_aux s t: vars_tm t `<=` s -> ren (map_id s) t = t.
+Proof.
+  elim: t => //=[v|f Hf a Ha]; rewrite (fsub1set,fsubUset).
+    by move=> H; rewrite in_fnd ffunE.
+  by move=> /andP[/Hf->/Ha->].
+Qed.
+
+Lemma ren_vars_id t: ren (map_id (vars_tm t)) t = t.
+Proof. by apply: ren_vars_id_aux. Qed.
+
+Lemma alpha_equiv_refl s: alpha_equiv s s.
+Proof. by exists (map_id (vars_tm s)); rewrite injective_map_id/=ren_vars_id. Qed.
+
+Lemma disjoint_Lempty l: disjoint_L fmap0 l.
 Proof. by rewrite/disjoint_L fdisjoint0X. Qed.
 
 Lemma deref_all_deref_aux s r t k:
@@ -1630,21 +1681,18 @@ Lemma deref_all_deref_aux s r t k:
   deref [fmap x : k => 
     if r.[? val x] is Some v then
       if (groundify s).[? v] is Some t then t
-      else Tm_D (ID 0)
-    else Tm_D (ID 0)
+      else Tm_P (IP 0)
+    else Tm_P (IP 0)
   ] t = deref_all (deref s (ren r t)).
 Proof.
   move=> ++ S.
-  elim: t => //=[v|f Hf a Ha].
-    rewrite !fsub1set => vr vk.
-    set X := [ffun _ => _].
-    rewrite in_fnd/= (@in_fnd _ _ X)/= ffunE/= in_fnd; clear X.
-    set X := [ffun _ => _].
-    case: fndP => ks.
-      by rewrite (@in_fnd _ _ X)/= ffunE valPE.
-    by rewrite (@not_fnd _ _ X)//=.
-  rewrite /= !fsubUset => /andP[H1 H2] /andP[H3 H4].
-  rewrite -Hf//-Ha//; f_equal.
+  elim: t => //[v|f Hf a Ha]; last first.
+    rewrite /= !fsubUset => /andP[H1 H2] /andP[H3 H4].
+    rewrite -Hf//-Ha//; f_equal.
+  rewrite !fsub1set => vr vk.
+  rewrite ren_V !deref_V 2!in_fnd ffunE in_fnd.
+  case: fndP => H; [rewrite in_fnd|by rewrite not_fnd].
+  by rewrite ffunE valPE/=.
 Qed.
 
 Lemma deref_all_deref s r t:
@@ -1657,21 +1705,22 @@ Lemma unif_ren_ac:
   forall t1 t2 t1' t2',
   alpha_equiv t1 t1' -> alpha_equiv t2 t2' -> 
   [disjoint vars_tm t1' & vars_tm t2'] ->
-  unify t1 t2 empty -> unify t1' t2' empty.
+  unify t1 t2 fmap0 -> unify t1' t2' fmap0.
 (*ENDSNIPT: unif_ren *)  
 Proof.
   move=> t1 t2 t1' t2' [w[Iw -> tw]] [r[Ir -> tr]] {t1 t2}; case U: unify => [s|]// D3 _.
-  have /= /andP[/eqP/= D _] := montanariP acyclic_sigma0 (disjoint_Lempty _) U.
-  apply: exists_montanari acyclic_sigma0 (disjoint_Lempty _) _.
+  have /= /andP[/eqP/= D _] := montanariP idempotent_0 (disjoint_Lempty _) U.
+  apply: exists_montanari idempotent_0 (disjoint_Lempty _) _.
   rewrite !deref_empty in D *.
   exists (ren_deref2k t1' w (groundify s) + ren_deref2k t2' r (groundify s)); split.
-    rewrite {1}/acyclic_sigma/=.
+    rewrite {1}/idempotent/=.
     apply: fdisjointWr (codom_vars_ren_deref2k _ _ _ _ _) _.
     by rewrite codom_vars_groundify fdisjointX0.
   rewrite/=andbT; apply/eqP => /=.
   rewrite deref_catl; last by rewrite fdisjoint_sym.
   rewrite deref_catr; last by [].
   by rewrite !deref_all_deref// D.
+  by rewrite fdisjointX0.
 Qed.
 
 Definition build (w r : {fmap V -> V}): {fmap V -> V}:=
@@ -1733,16 +1782,17 @@ Qed.
 
 (*SNIPT: unif_ren1 *)
 Lemma unif_ren:
-  forall x y z w t1 t2,
-  refresh_for w t1 -> refresh_for y t2 -> refresh_for z t1 -> refresh_for x t2 ->
+  forall t1 t2 (x y: renaming_for t2) (z w: renaming_for t1),
   [disjoint vars_tm (ren z t1) & vars_tm (ren x t2)] ->
-  unify (ren w t1) (ren y t2) empty -> unify (ren z t1) (ren x t2) empty.
+  unify (ren w t1) (ren y t2) fmap0 -> unify (ren z t1) (ren x t2) fmap0.
 (*ENDSNIPT: unif_ren1 *)  
 Proof.
-  move=> x y z w t1 t2 /andP[R1 I1] /andP[R2 I2] /andP[R3 I3] /andP[R4 I4] C1.
-  apply: unif_ren_ac => //; apply: alpha_equiv_renR => //.
-    exists w; split => //.
-  exists y; split => //.
+  move=> t1 t2 x y z w.
+  apply: unif_ren_ac.
+    apply: alpha_equiv_renR; rewrite ?(ren_injective,renf_sub)//.
+    exists w; split; rewrite ?(ren_injective,renf_sub)//.
+  apply: alpha_equiv_renR; rewrite ?(ren_injective,renf_sub)//.
+  exists y; split; rewrite ?(ren_injective,renf_sub)//.
 Qed.
 
 Lemma eq_app f1 a1 f2 a2:
@@ -1783,36 +1833,178 @@ Lemma montanari_ground s b l:
   montanari s b l = if all (fun '(x, y) => x == y) l then Some s else None.
 Proof. by move=> /all_ground_varsL H; apply: montanari_all_forzen; rewrite H. Qed.
 
-Lemma montanari_pair_ground s b t1 t2: 
-  ground t1 -> ground t2 -> montanari_pair s b t1 t2 = if t1 == t2 then Some s else None.
-Proof.
-  move=> G1 G2; have:= @montanari_ground s b [::(t1,t2)].
-  by rewrite /map_prod1/= G1 G2 !andbT => /(_ isT).
-Qed.
+Lemma matching_ground b s t1 t2: 
+  ground t1 -> ground t2 -> matching b t1 t2 s = if t1 == t2 then Some s else None.
+Proof. by move=> G1 G2; rewrite/matching montanari_ground//=/map_prod1/=!ground_deref?G1//?G2//andbT. Qed.
 
 Lemma unify_ground s t1 t2: 
   ground t1 -> ground t2 -> unify t1 t2 s = if t1 == t2 then Some s else None.
-Proof. move=> G1 G2; rewrite/unify/montanari_deref !ground_deref//montanari_pair_ground//. Qed.
+Proof. apply: matching_ground. Qed.
 
-Lemma unify_derefl s t1 t2: acyclic_sigma s ->
+Lemma unify_derefl s t1 t2: idempotent s ->
   unify t1 t2 s = unify (deref s t1) t2 s.
-Proof. move=> A; rewrite /unify/montanari_deref deref2//. Qed.
+Proof. move=> A; rewrite /unify/matching deref2//. Qed.
 
-Lemma unify_derefr s t1 t2: acyclic_sigma s ->
+Lemma unify_derefr s t1 t2: idempotent s ->
   unify t1 t2 s = unify t1 (deref s t2) s.
-Proof. move=> A; rewrite /unify/montanari_deref deref2//. Qed.
-
-Lemma isSomeP T x (P : option T) : P = Some x -> P.
-Proof. by move=> ->. Qed.
-
-Lemma isNoneP T (P : option T) : P = None -> ~~ P.
-Proof. by move=> ->. Qed.
-
-Lemma isNoneP1 T (P : option T) : ~~ P -> P = None.
-Proof. case: P => //. Qed.
+Proof. move=> A; rewrite /unify/matching deref2//. Qed.
 
 Lemma add_eq0 a b: ((addn a b) == 0) = (a == 0) && (b == 0).
 Proof. case: a => //. Qed.
 
-Lemma good_ren_app x f a: refresh_for x (Tm_App f a) = refresh_for x f && refresh_for x a.
-Proof. by rewrite/refresh_for/= fsubUset !andbA -!(andbC (injective x)) !andbA andbb. Qed.
+Lemma mp_composition b s:
+  mp b s -> exists x : Sigma, s = composition b x.
+Proof.
+  move=> H; exists s.
+  apply/fmapP => k; rewrite/composition fnd_cat.
+  case: fndP => //ks.
+  case: fndP => //= kb; exfalso.
+  by have:= forallP H [`kb]; rewrite valPE/=not_fnd.
+Qed.
+
+Lemma mp_deref_unifer v t s xs l:
+  mp (deref_sigma v t s) xs -> unifier xs l ->
+  unifier xs (deref_list v t l).
+Proof.
+  move=> MP U.
+  apply: unifier_deref_list U.
+  apply/forallP => -[x xP].
+  rewrite !valPE !ffunE [val _]/=.
+  have ? : x = v by move: xP; rewrite !inE; case: eqP.
+  subst; rewrite eqxx.
+  have vts: v \in deref_sigma v t s by rewrite !inE eqxx.
+  by have:= forallP MP [`vts]; rewrite valPE ffunE/= eqxx.
+Qed.
+
+
+Lemma derefkv_not_in v v' x t (vx' : v'  \in domf x):
+  v  \notin domf x -> Tm_V v = x.[vx'] ->
+  deref x (derefkv v (Tm_V v') t) = deref x t.
+Proof.
+  move=> vx E; elim: t => //[v2|f Hf a Ha].
+    rewrite /derefkv !deref_V FmapE.fmapE (@not_fnd _ _ fmap0)//.
+    by case: eqP => //=->{v2}; rewrite in_fnd//=not_fnd.
+  by rewrite/=Hf Ha.
+Qed.
+
+Lemma unifier_deref_list_not_in v v' x l (vx' : v'  \in domf x):
+  idempotent x ->
+  v  \notin domf x -> Tm_V v = x.[vx'] -> unifier x l ->
+  unifier x (deref_list v (Tm_V v') l).
+Proof.
+  move=> A vx H.
+  elim: l => //=-[t1 t2 l IH] /andP[/eqP/= Uh Ul]; rewrite IH//andbT.
+  apply/eqP => /=.
+  by rewrite !derefkv_not_in//.
+Qed.
+
+Lemma montanari_refl s f t tl: (montanari s f ((t, t) :: tl)) = montanari s f tl.
+Proof. by rewrite montanari_equation eqxx. Qed.
+
+Lemma montanari_nil s f: (montanari s f [::]) = Some s.
+Proof. by rewrite montanari_equation. Qed.
+
+Lemma montanari_app s1 fv x1 x2 b1 b2 xs:
+  montanari s1 fv ((Tm_App x1 b1, Tm_App x2 b2) :: xs) =
+  montanari s1 fv ((x1,x2) :: (b1, b2) :: xs).
+Proof.
+  rewrite montanari_equation; case: eqP => //.
+  by move=> [->->]; rewrite !montanari_refl.
+Qed.
+
+Definition simpl_montanari:= (montanari_refl, montanari_nil, montanari_app).
+
+Definition deref_lists s l := map (map_prod (deref s)) l.
+
+Lemma deref_list_cat v k xs ys:
+  deref_list v k (xs ++ ys) = deref_list v k xs ++ deref_list v k ys.
+Proof. by elim: xs ys => //=-[t1 t2 xs IH] ys; rewrite IH; f_equal. Qed.
+
+Lemma deref_lists_disjoint s ys:
+  disjoint_L s ys -> deref_lists s ys = ys.
+Proof.
+  elim: ys => //=-[t1 t2 xs IH]; rewrite disjoint_L_cons => /and3P[s1 s2 sx].
+  by rewrite IH///map_prod !not_in_deref//.
+Qed.
+
+Lemma deref_list_deref_lists v t s s' ys: mp (deref_sigma v t s) s' ->
+  deref_lists s' (deref_list v t ys) = deref_lists s' ys.
+Proof.
+  elim: ys => //=-[t1 t2 xs IH] H.
+  suffices ?: mp fmap0.[v <- t] s'.
+    by rewrite IH//=/map_prod/= /derefkv !derefxx//.
+  apply/forallP => [[x xP]]; rewrite valPE ffunE [val _]/=.
+  move: xP; rewrite !inE; case: eqP => //->{x} _.
+  have vd: v \in deref_sigma v t s by rewrite !inE eqxx.
+  by have:= forallP H [`vd]; rewrite valPE ffunE/= eqxx.
+Qed.
+
+Lemma montanari_cat s f xs ys: idempotent s ->
+  disjoint_L s xs -> disjoint_L s ys ->
+  montanari s f (xs ++ ys) = obind (fun x => montanari x f (deref_lists x ys)) (montanari s f xs).
+Proof.
+  move: ys; montanari_ind s f xs => ys A + Dys//=.
+  - by rewrite deref_lists_disjoint//.
+  - by rewrite disjoint_L_cons => /and3P[D1 _ Dl]; rewrite simpl_montanari IH//.
+  - rewrite disjoint_L_cons/= !fdisjointXU -!andbA => /and5P[d1 d2 d3 d4 d5].
+    by rewrite simpl_montanari -2!cat_cons -IH//!disjoint_L_cons/=d1 d2 d3 d4.
+  - by rewrite montanari_equation EQ vt.
+  - by rewrite montanari_equation eqV (negbTE EQ) (negbTE vt) vf v'f.
+  - rewrite disjoint_L_cons/= => /and3P[H1 H2 H3].
+    rewrite montanari_equation eqV !inE (negbTE EQ)/= vf v'f.
+    have vv: v'  \notin vars (Tm_V v) by rewrite inE eq_sym.
+    have AD : idempotent (deref_sigma v' (Tm_V v) s).
+      by apply/idempotent_deref_sigma.
+    have DL: disjoint_L (deref_sigma v' (Tm_V v) s) (deref_list v' (Tm_V v) xs) by
+      apply: disjoint_deref_sigma_deref_list.
+    rewrite deref_list_cat IH//=; last by apply: disjoint_deref_sigma_deref_list.
+    case X: montanari => //=[s'].
+    have MP := montanari_mp AD DL X.
+    by rewrite (deref_list_deref_lists _ MP).
+  - by rewrite montanari_equation EQ vf (negbTE vt); destruct t.
+  - rewrite disjoint_L_cons/= => /and3P[H1 H2 H3].
+    rewrite montanari_equation EQ (negbTE vf) (negbTE vt).
+    have AD : idempotent (deref_sigma v t s) by apply/idempotent_deref_sigma.
+    have DL: disjoint_L (deref_sigma v t s) (deref_list v t xs).
+      by apply: disjoint_deref_sigma_deref_list.
+    rewrite deref_list_cat IH//=; only 2: by apply: disjoint_deref_sigma_deref_list.
+    case X: montanari => //=[s'].
+    have MP := montanari_mp AD DL X.
+    by rewrite (deref_list_deref_lists _ MP).
+  - rewrite disjoint_L_cons => /and3P[d1 d2 d3]; rewrite montanari_equation EQ.
+    by destruct t => //=; rewrite-IH//disjoint_L_cons d3/=?d1?d2.
+  - by rewrite montanari_equation EQ; destruct t1 => //; destruct t2 => //.
+Qed.
+
+Lemma montanari_cons s f x xs: idempotent s ->
+  domf s # vars x.1 ->  domf s # vars x.2 -> disjoint_L s xs ->
+  montanari s f (x :: xs) = obind (fun x => montanari x f (deref_lists x xs)) (montanari s f [::x]).
+Proof. by move=> A D1 D2 DL; rewrite -montanari_cat// disjoint_L_cons disjoint_L0 D1 D2. Qed.
+
+Lemma unify_V_0r v t: v \notin vars_tm t -> ~~ is_var t ->
+  unify t (Tm_V v) fmap0 = Some fmap0.[v <- t].
+Proof. by move=> H1 H2; rewrite unify_Vr//=(codom_vars0,deref_empty). Qed.
+
+Lemma matching_refl f t s: matching f t t s = Some s.
+Proof. by rewrite/matching !simpl_montanari. Qed.
+ 
+Lemma unify_refl t s: unify t t s = Some s.
+Proof. apply: matching_refl. Qed.
+
+Lemma matching_app fv x1 x2 b1 b2 s1: idempotent s1 ->
+  matching fv (Tm_App x1 b1) (Tm_App x2 b2) s1 = 
+    obind (matching fv b1 b2) (matching fv x1 x2 s1).
+Proof.
+  move=> A.
+  rewrite/matching !deref_App !simpl_montanari.
+  rewrite montanari_cons//=?idempotent_deref_disjoint// ?disjoint_L_deref//.
+  case M: montanari => //=[s'].
+  have MP : mp s1 s'.
+    by have ->:= montanari_mp A (disjoint_L_deref _ _ _) M.
+  rewrite/map_prod/=!derefxx//.
+Qed.
+
+Lemma unify_app x1 x2 b1 b2 s1: idempotent s1 ->
+  unify (Tm_App x1 b1) (Tm_App x2 b2) s1 = 
+    obind (unify b1 b2) (unify x1 x2 s1).
+Proof. by apply: matching_app. Qed.

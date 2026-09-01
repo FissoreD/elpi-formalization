@@ -167,15 +167,13 @@ Fixpoint strong s :=
   match s with
   | b Exp => b Exp
   | b(d _) => b(d Func)
-  | arr input l r => arr input (weak l) (strong r)
-  | arr output l r => arr output (strong l) (strong r)
+  | arr m l r => arr m (if m == input then weak l else strong l) (strong r)
   end
 with weak s :=
   match s with
   | b Exp => b Exp
   | b(d _) => b(d Pred) 
-  | arr input l r => arr input (strong l) (weak r)
-  | arr output l r => arr output (weak l) (weak r)
+  | arr m l r => arr m (if m == input then strong l else weak l) (weak r)
   end.
 
 Section test.
