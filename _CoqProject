@@ -40,4 +40,4 @@ theories/determinacy.v
 
 theories/once.v
 
-# attic/check_ho.v
+attic/check_ho.v
