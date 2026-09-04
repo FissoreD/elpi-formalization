@@ -6,12 +6,23 @@ From det Require Export finmap lang.
 
 Unset Elimination Schemes.
 
+Definition Env := {fmap V -> S}.
+
+Definition is_Env (x : Env) := unit.
+Lemma is_Env_inhab : forall x, is_Env x. Proof. exact (fun x => tt). Qed.
+Definition Env_eqb (x y : Env) := x == y.
+Lemma Env_eqb_correct : forall x, eqb_correct_on Env_eqb x. Proof. by move=>??/eqP. Qed.
+Lemma Env_eqb_refl : forall x, eqb_refl_on Env_eqb x. Proof. by move=>?; exact: eqxx. Qed.
+Elpi derive.eqbOK.register_axiomx Env is_Env is_Env_inhab Env_eqb Env_eqb_correct Env_eqb_refl.
+HB.instance Definition _ : hasDecEq Env := Equality.copy Env _.
+
+
 (*BEGIN*)
 (*SNIP: tree_def*)
 Inductive tree :=
   | KO | OK | Unexplored of Atom
   (* Or A s B := A is lhs, B is rhs, s is the subst from which launch B *)
-  | Or  of option tree & Sigma & tree 
+  | Or  of option tree & (Sigma * Env) & tree 
   (* And A B0 B := A is lhs, B is rhs, B0 to reset B for backtracking *)
   | And of tree & seq Atom & tree.
 (*ENDSNIP: tree_def*)
@@ -23,8 +34,8 @@ Lemma tree_ind : forall P,
   P KO ->
   P OK ->
   (forall a : Atom, P (Unexplored a)) ->
-  (forall (l : tree), P l -> forall (s : Sigma) (t : tree), P t -> P (Or (Some l) s t)) ->
-  (forall (s : Sigma) (t : tree),
+  (forall (l : tree), P l -> forall s (t : tree), P t -> P (Or (Some l) s t)) ->
+  (forall s (t : tree),
     P t -> P (Or None s t)) ->
   (forall t : tree,
   P t -> forall (l : seq Atom) (t0 : tree), P t0 -> P (And t l t0)) ->
@@ -61,7 +72,7 @@ Section tree_op.
 
 
   (*SNIP: next*)
-  Fixpoint next s t : Sigma * tree :=
+  Fixpoint next s t : (Sigma*Env) * tree :=
     match t with
     | Unexplored _ | KO | OK => (s, t)
     | Or None s' B => next s' B
@@ -77,7 +88,7 @@ Section tree_op.
   Definition next_subst s t := fst (next s t).
   (*ENDSNIP: next_subst*)
   (*SNIP: next_tree*)
-  Definition next_tree t := snd (next fmap0 t).
+  Definition next_tree t := snd (next (fmap0,fmap0) t).
   (*ENDSNIP: next_tree*)
   (*SNIP: succ_path*)
   Definition success t := next_tree t == OK.
@@ -187,7 +198,7 @@ Definition big_and (a : list Atom) : tree :=
   | x :: xs => big_andA  x xs
   end.
 
-Fixpoint big_or (r : list Atom) (l : seq (Sigma * seq Atom)) : tree :=
+Fixpoint big_or (r : list Atom) (l : seq ((Sigma * Env) * seq Atom)) : tree :=
   match l with 
   | [::] => big_and r
   | (s,r1) :: xs => Or (Some (big_and r)) s (big_or r1 xs)
@@ -195,9 +206,10 @@ Fixpoint big_or (r : list Atom) (l : seq (Sigma * seq Atom)) : tree :=
 
 Section main.
   Variable u: Unif.
+  Variable bc: Unif -> program -> nat -> Tm -> (Sigma * Env) -> nat * seq ((Sigma * Env) * seq Atom).
 
   (*SNIP: step_sig*)
-  Definition step : program -> nat -> Sigma -> tree -> (nat * tag * tree) := 
+  Definition step : program -> nat -> (Sigma * Env) -> tree -> (nat * tag * tree) := 
   (*ENDSNIP: step_sig*)
     fix step pr fv s A :=
     let step := step pr in
@@ -265,24 +277,24 @@ Section main.
   end.
   (*ENDSNIP: prune_code *)
 
-  Goal forall r, prune false (And (Or (Some OK) fmap0 OK) r KO) = Some (And (Or None fmap0 OK) r (big_and r)).
+  Goal forall r, prune false (And (Or (Some OK) (fmap0,fmap0) OK) r KO) = Some (And (Or None (fmap0,fmap0) OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, prune false (And (Or (Some OK) fmap0 OK) r KO) = Some (And (Or None fmap0 OK) r (big_and r)).
+  Goal forall r, prune false (And (Or (Some OK) (fmap0,fmap0) OK) r KO) = Some (And (Or None (fmap0,fmap0) OK) r (big_and r)).
   Proof. move=> [] //=. Qed.
 
-  Goal forall r, prune true (And (Or (Some OK) fmap0 OK) r OK) = Some (And (Or None fmap0 OK) r (big_and r)).
+  Goal forall r, prune true (And (Or (Some OK) (fmap0,fmap0) OK) r OK) = Some (And (Or None (fmap0,fmap0) OK) r (big_and r)).
   Proof. move=> []//=. Qed.
 
-  Goal (prune false (Or (Some KO) fmap0 OK)) = Some (Or None fmap0 OK). move=> //=. Qed.
+  Goal (prune false (Or (Some KO) (fmap0,fmap0) OK)) = Some (Or None (fmap0,fmap0) OK). move=> //=. Qed.
 
   Notation "tg == CutBrothers" := (is_cb tg).
 
-  Inductive sol := Zero | One of Sigma | Many of Sigma & tree.
+  Inductive sol := Zero | One of Sigma * Env | Many of (Sigma * Env) & tree.
 
   (*prooftree: runbp*)
   (*SNIP: run_sig *)
-  Inductive runT (p : program): nat -> Sigma -> tree 
+  Inductive runT (p : program): nat -> (Sigma * Env) -> tree 
             -> sol -> bool -> nat -> Prop :=
   (*ENDSNIP: run_sig *)
     | StopOT s s' t v              : success t -> next_subst s t = s' -> prune true t = None -> runT v s t (One s') false v
@@ -297,17 +309,14 @@ Section main.
   | Unexplored cut | KO | OK => fset0
   | Unexplored (call t) => vars_tm t
   | And A B0 B => vars_tree A `|` vars_tree B `|` vars_atoms B0
-  | Or None s B => vars_tree B `|` vars_sigma s
-  | Or (Some A) s B => vars_tree A `|` vars_tree B `|` vars_sigma s
+  | Or None s B => vars_tree B `|` vars_sigma s.1
+  | Or (Some A) s B => vars_tree A `|` vars_tree B `|` vars_sigma s.1
   end.
 
-End main.
-
-
-Lemma StepT' u p s r t t' b b' v v' v'' tg: 
+Lemma StepT' p s r t t' b b' v v' v'' tg: 
   b' = (tg == CutBrothers) || b ->
-  incomplete t -> step u p v s t = (v', tg, t') -> runT u p v' s t' r b v'' -> 
-  runT u p v s t r b' v''.
+  incomplete t -> step p v s t = (v', tg, t') -> runT p v' s t' r b v'' -> 
+  runT p v s t r b' v''.
 Proof. by move=> ->; apply: StepT. Qed.
 
 
@@ -317,6 +326,14 @@ Definition get_tree t r :=
   | Many _ t => t
   end.
 
+End main.
+(*END*)
+
+Definition bc_run : Unif -> program -> nat -> Tm -> (Sigma * Env) -> nat * seq ((Sigma * Env) * seq Atom) :=
+  fun u p n t s =>
+    let: (n, l) := (bc u p n t s.1) in
+    (n, map (fun '(s,p) => ((s,fmap0), p)) l).
+
 Ltac elim_run T X := revert X; elim: T; clear; 
   [ move=> s1 s2 A v0 sA ? NN |
     move=> s1 s2 A B v0 sA ? NS |
@@ -324,5 +341,3 @@ Ltac elim_run T X := revert X; elim: T; clear;
     move=> s1 A B r n v0 v1 fA nA rB IH |
     move=> s1 A v0 nA ]; intros X; subst => //; auto.
 Tactic Notation "elim_run" hyp(T) hyp_list(X) := elim_run T X.
-
-(*END*)

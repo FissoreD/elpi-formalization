@@ -55,17 +55,17 @@ Section RunP.
   Lemma failed_big_and t: failed (big_and t) = false.
   Proof. case: t => /=[|x []]//. Qed.
 
-  Lemma success_step: forall p fv s A, success A -> step p fv s A = (fv, Success, A).
+  Lemma success_step: forall bc p fv s A, success A -> step bc p fv s A = (fv, Success, A).
   Proof.
-    move=> p fv s A.
+    move=> bc p fv s A.
     elim: A s => //; try by do 2 eexists.
     + move=> A HA s1 B HB s /= sA; rewrite HA//.
     + move=> s B HB/= _ /[!success_or_None] sB; rewrite HB//.
     + move=> A HA B0 B HB s /=/[!success_and]/andP[sA sB]; rewrite sA HB//.
   Qed.
 
-  Lemma step_success p fv fv' {s1 A B}: 
-    step p fv s1 A = (fv', Success, B) -> ((fv' = fv) * (B = A) * (success A))%type.
+  Lemma step_success bc p fv fv' {s1 A B}: 
+    step bc p fv s1 A = (fv', Success, B) -> ((fv' = fv) * (B = A) * (success A))%type.
   Proof.
     elim: A fv fv' s1 B => //.
     + by move=> /= ???? [? <-].
@@ -81,15 +81,15 @@ Section RunP.
   Qed.
 
   (*SNIPT: success_step*)
-  Lemma succ_step_iff: 
-    forall p v s t, success t <-> step p v s t = (v, Success, t).
+  Lemma succ_step_iff bc: 
+    forall p v s t, success t <-> step bc p v s t = (v, Success, t).
   (*ENDSNIPT: success_step*)
   Proof. by split; [move=> /success_step->|move=>/step_success->]. Qed.
 
   Ltac push := rewrite !push.
 
-  Lemma step_failed p fv fv' s1 A B:
-    step p fv s1 A = (fv', Failed, B) -> ((fv = fv') * (B = A) * failed A)%type.
+  Lemma step_failed bc p fv fv' s1 A B:
+    step bc p fv s1 A = (fv', Failed, B) -> ((fv = fv') * (B = A) * failed A)%type.
   Proof.
     elim: A fv fv' s1 B => //.
     + move=> ?? s1 B[<-]//.
@@ -107,7 +107,7 @@ Section RunP.
       by move=> -[??]; subst; rewrite !(HA _ _ _ _ X).
   Qed.
 
-  Lemma failed_step p fv s1 A: failed A -> step p fv  s1 A = (fv, Failed, A).
+  Lemma failed_step bc p fv s1 A: failed A -> step bc p fv  s1 A = (fv, Failed, A).
   Proof.
     elim: A s1; clear => //; try by move=> ? [] //.
     + move=> A HA s1 B HB s2/=fA; rewrite HA//.
@@ -121,7 +121,7 @@ Section RunP.
 
   (*SNIPT: failed_step*)
   Lemma fail_step_iff: 
-    forall p v s t, failed t <-> step p v s t = (v, Failed, t).
+    forall bc p v s t, failed t <-> step bc p v s t = (v, Failed, t).
   (*ENDSNIPT: failed_step*)
   Proof. by split; [move=> /failed_step->|move=>/step_failed->]. Qed.
 
@@ -178,12 +178,12 @@ Section RunP.
       by rewrite success_cut sA HB HA //.
   Qed.
 
-  Lemma step_not_solved p fv  s1 A r:
-    step p fv s1 A = r -> ~ (is_sc r.1.2) -> success A = false.
-  Proof. by case: r => -[?[]]//=b; case X: success; rewrite // (success_step _ _ s1 X). Qed.
+  Lemma step_not_solved bc p fv  s1 A r:
+    step bc p fv s1 A = r -> ~ (is_sc r.1.2) -> success A = false.
+  Proof. by case: r => -[?[]]//=b; case X: success; rewrite // (success_step _ _ _ s1 X). Qed.
 
-  Lemma step_not_failed p fv s1 A r:
-    step p fv s1 A = r -> ~ (is_fl r.1.2) -> failed A = false.
+  Lemma step_not_failed bc p fv s1 A r:
+    step bc p fv s1 A = r -> ~ (is_fl r.1.2) -> failed A = false.
   Proof.
     move=><-; clear r.
     elim: A s1; try by move=> // s1 <-//=.
@@ -250,8 +250,8 @@ Section RunP.
       by move=> []//.
     Qed.
 
-    Lemma step_same_structure p fv s A r: 
-      step p fv s A = r -> same_structure A r.2.
+    Lemma step_same_structure bc p fv s A r: 
+      step bc p fv s A = r -> same_structure A r.2.
     Proof.
       move=><-{r}; case: A=> //=[[]|]>; rewrite !push//=?eqxx//.
       by case: ifP => //.
@@ -269,8 +269,8 @@ Section RunP.
         by move => [<-].
     Qed.
 
-    Lemma run_same_structure p fv1 fv2 s A s' A' n:
-      runT u p fv1 s A (Many s' A') n fv2 -> same_structure A A'.
+    Lemma run_same_structure p bc fv1 fv2 s A s' A' n:
+      runT u bc p fv1 s A (Many s' A') n fv2 -> same_structure A A'.
     Proof.
       remember (Many _ _) as sx eqn:Hx => H.
       elim_run H s' A' Hx => //=.
@@ -319,8 +319,8 @@ Section RunP.
   Lemma next_subst_and_big_and s1 A B C: next_subst s1 (And A B (big_and C)) = next_subst s1 A.
   Proof. by rewrite next_subst_and next_substS_big_and if_same. Qed.
 
-  Lemma tree_fv_step_cut p A R fv fv' s:
-    step p fv s A = (fv', CutBrothers, R) -> fv' = fv.
+  Lemma tree_fv_step_cut p bc A R fv fv' s:
+    step p bc fv s A = (fv', CutBrothers, R) -> fv' = fv.
   Proof.
     elim_tree A R fv fv' s => /=.
       by case: t => [|c]/=; [congruence|rewrite push].
@@ -331,8 +331,8 @@ Section RunP.
     case_step_tag eA A' => //= _ _; apply: HA eA.
   Qed.
 
-  Lemma incomplete_exp_cut p A fv s r:
-    incomplete A -> step p fv s A = r -> r.1.2 = CutBrothers \/ r.1.2 = Expanded.
+  Lemma incomplete_exp_cut p bc A fv s r:
+    incomplete A -> step p bc fv s A = r -> r.1.2 = CutBrothers \/ r.1.2 = Expanded.
   Proof.
     move=> + <-{r}.
     elim_tree A fv s => //=.
@@ -346,8 +346,8 @@ Section RunP.
       by apply: HA.
   Qed.
 
-  Lemma incomplete_cut p A fv s fv' A':
-    step p fv s A = (fv', CutBrothers, A') -> incomplete A.
+  Lemma incomplete_cut p bc A fv s fv' A':
+    step p bc fv s A = (fv', CutBrothers, A') -> incomplete A.
   Proof.
     elim_tree A fv s fv' A' => /=; rewrite !push.
     - by case_step_tag eA A2 => //=.
@@ -357,8 +357,8 @@ Section RunP.
       apply: HA eA.
   Qed.
 
-  Lemma incomplete_exp p A fv s fv' A':
-    step p fv s A = (fv', Expanded, A') -> incomplete A.
+  Lemma incomplete_exp p bc A fv s fv' A':
+    step p bc fv s A = (fv', Expanded, A') -> incomplete A.
   Proof.
     elim_tree A fv s fv' A' => /=; rewrite !push.
     - case_step_tag eA A2 => //=-[??]; subst; rewrite incomplete_or_Some.
@@ -383,10 +383,10 @@ Section RunP.
     - case: ifP => [sA /HB->|]// sA /incomplete_failed->//.
   Qed.
 
-  Lemma prune_run p fv fv' A B C s b1:
+  Lemma prune_run p bc fv fv' A B C s b1:
     prune false A = B ->
-      runT u p fv s (odflt A B) C b1 fv' ->
-        runT u p fv s A C b1 fv'.
+      runT u bc p fv s (odflt A B) C b1 fv' ->
+        runT u bc p fv s A C b1 fv'.
   Proof.
     move=> <-{B}.
     case fA: (failed A).
@@ -397,11 +397,12 @@ Section RunP.
 
   Lemma succF_failF_paF A: success A = false -> failed A = false -> incomplete A = false -> False.
   Proof.
-    rewrite/success/failed/incomplete/next_tree; move: fmap0 => s.
+    rewrite/success/failed/incomplete/next_tree; move: (fmap0, _) => s1.
     case E: next => [s' A']//=.
-    elim_tree A s s' A' E; move: E => /=; (only 1-3: by case: A'); eauto.
+    elim_tree A s1 A' E; move: E => /=; (only 1-3: by case: A'); eauto.
     rewrite !push; case eqP => H1 H2; eauto.
     move: H2 => [??]; subst.
-    by case gA: next => /=; eauto.
+    case gA: next => /=; eauto.
+    by apply: HA; rewrite gA/=-gA.
   Qed.
 End RunP.

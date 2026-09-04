@@ -15,11 +15,13 @@ Section vars_tree.
   Proof. by apply/fresh_subP/vars_tree_cutl. Qed.
 
   Lemma vars_tree_step_sub A fv s:
-    fv <= (step u p fv s A).1.1.
+    fv <= (step u bc_run p fv s A).1.1.
   Proof.
-    elim_tree A fv s => //=; rewrite ?push//=.
-      by case: t => [|c]//=; by rewrite push/=bc_sub.
-    case: ifP => sA//=.
+    rewrite/bc_run.
+    elim_tree A fv s => //=; rewrite ?push//=; last by case: ifP => /=.
+    case: t => [|c]//=; rewrite /bc!push/=; case: ifP => //=.
+    rewrite (leq_trans _ (max_sigmas_sub _ _))//(leq_trans _ (fresh_rules_sub _ _))//.
+    by rewrite -!fsetUA freshUU freshP1 leq_max leqnSn.
   Qed.
 
   Lemma vars_tree_big_and r0:
@@ -30,10 +32,10 @@ Section vars_tree.
   Qed.
 
   Lemma vars_tree_big_or r0 rs:
-    vars_tree (big_or r0 rs) = vars_atoms r0 `|` varsU [seq vars_sigma x.1 `|` vars_atoms x.2 | x <- rs].
+    vars_tree (big_or r0 rs) = vars_atoms r0 `|` varsU [seq vars_sigma x.1.1 `|` vars_atoms x.2 | x <- rs].
   Proof.
     elim: rs r0 => //=[|[s0 r0] rs IH] l/=; rewrite vars_tree_big_and ?fsetU0 => //.
-    rewrite -fsetUA (fsetUC _ (vars_sigma s0)).
+    rewrite -fsetUA (fsetUC _ (vars_sigma s0.1)).
     by rewrite IH//= !fsetUA//.
   Qed.
   
@@ -148,31 +150,40 @@ Section vars_tree.
       by apply: fresh_subd; rewrite//domf0 freshP0; destruct m.
     by apply/fresh_subc; rewrite//codomf0 freshP0; destruct m.
   Qed.
+  
+  Lemma simpl_map_env xs:
+      [seq vars_sigma x.1.1 `|` vars_atoms x.2
+            | x <- [seq (s0, [fmap]%fmap : Env, p0) | '(s0, p0) <- xs]] =
+      [seq vars_sigma x.1 `|` vars_atoms x.2
+            | x <- xs].
+  Proof. by elim: xs => //=-[s a xs]/=->. Qed.
 
   Lemma vars_tm_bc_sub n c fv fvx s s0 r0 rs:
-    sum_mt n fmap0 c  <= fv-> fresh (vars_sigma s) <= fv -> 
-    bc u p fv c s = (fvx, (s0, r0) :: rs) ->
-    fresh (vars_tree (big_or r0 rs)) <= fvx  /\ fresh (vars_sigma s0) <= fvx.
+    sum_mt n fmap0 c  <= fv-> fresh (vars_sigma s.1) <= fv -> 
+    bc_run u p fv c s = (fvx, (s0, r0) :: rs) ->
+    fresh (vars_tree (big_or r0 rs)) <= fvx  /\ fresh (vars_sigma s0.1) <= fvx.
   Proof.
-    move => H1 H2; rewrite/bc/=; case: ifP => //= _; rewrite !push/=.
+    case: s => s e.
+    move => H1 H2; rewrite/bc_run/bc/=; case: ifP => //= _; rewrite !push/=.
     set X := fresh _.
-    case FR: fresh_rules => [fF RF]/=[? S]; subst.
-    rewrite S/= !leq_max !leqnn !orbT; split => //.
+    case FR: fresh_rules => [fF RF]/=[?]; subst.
+    case S: select => //=[[s' e'] xs]/=[???]; subst => /=.
+    rewrite !leq_max !leqnn !orbT; split => //.
     rewrite vars_tree_big_or !freshPU !leqnn/=.
     have := fresh_rules_sub (rules p) X; rewrite FR/= => f0.
     have {}f0: 0 < fF by apply: ltn_leq_trans f0.
-    rewrite fresh_varsU// andbT.
+    rewrite simpl_map_env fresh_varsU// andbT.
     apply/orP; left.
     apply/leq_trans/max_sigmas_sub.
-    have /(_ (s0,r0)):= select_in S.
+    have /(_ (s',r0)):= select_in S.
     rewrite inE eqxx => /(_ isT)/=/mapP[r rR ?]; subst.
     apply: fresh_rules_vars FR _ rR.
     by rewrite/X freshUU leq_max leqnn orbT.
   Qed.
 
   Lemma vars_sigma_next_subst s fvA A:
-    fresh (vars_tree A) <= fvA -> fresh (vars_sigma s) <= fvA -> 
-    fresh (vars_sigma (next_subst s A)) <= fvA.
+    fresh (vars_tree A) <= fvA -> fresh (vars_sigma s.1) <= fvA -> 
+    fresh (vars_sigma (next_subst s A).1) <= fvA.
   Proof.
     elim_tree A s fvA => /=.
       by rewrite 2!freshPU -andbA => /and3P[vA vB vsm] vs; apply/HA.
@@ -180,18 +191,24 @@ Section vars_tree.
     rewrite 2!freshPU -andbA next_subst_and => /and3P[vA vB vsm] vs.
     by case: ifP => dA; auto.
   Qed.
+  
+  Check bc_sub.
+  
+  Lemma bc_run_sub fv c s:
+    fv <= (bc_run u p fv c s).1.
+  Proof. by rewrite/bc_run!push/=bc_sub. Qed.
 
   Lemma vars_tree_step_sub_flow A R fv fv' s r:
-    fresh (vars_tree A) <= fv -> fresh (vars_sigma s) <= fv ->
-    step u p fv s A = (fv', r, R) -> ((fresh (vars_tree R) <= fv') * (fresh (vars_sigma s) <= fv')).
+    fresh (vars_tree A) <= fv -> fresh (vars_sigma s.1) <= fv ->
+    step u bc_run p fv s A = (fv', r, R) -> ((fresh (vars_tree R) <= fv') * (fresh (vars_sigma s.1) <= fv')).
   Proof.
     elim_tree A R fv fv' r s => /=; only 1,2: by move=> ?? [<-_<-].
       case: t => [|c]; first by move=> ?? [<- _ <-]//=.
       rewrite !push/= => H1 H2 [???]; subst => /=.
-      split; last by apply: leq_trans H2 (bc_sub _ _ _ _ _).
-      case X: bc => [fvx [|[s0 r0] rs]]//=.
+      split; last apply: leq_trans H2 (bc_run_sub _ _ _).
+      case X: bc_run => [fvx [|[s0 r0] rs]]//=.
         rewrite freshP0.
-        move: X; rewrite/bc; case: ifP => //= _.
+        move: X; rewrite/bc_run/bc; case: ifP => //= _.
           by move=> [<-]; destruct fv.
         rewrite !push/= => -[<- _].
         apply/leq_trans/max_sigmas_sub.
@@ -260,7 +277,7 @@ Section vars_tree.
   Qed.
 
   Lemma vars_tree_step_cut A B fv fv' s:
-    step u p fv s A = (fv', CutBrothers, B) -> vars_tree B `<=` vars_tree A.
+    step u bc_run p fv s A = (fv', CutBrothers, B) -> vars_tree B `<=` vars_tree A.
   Proof.
     elim: A B fv fv' s => //=.
       by move=> [|?]????; [move=> [_ <-]|rewrite push].

@@ -39,6 +39,8 @@ Definition simpl_set:= (fsetU0, fset0U, codomf0, cat0f, vars_sigma0, fsetUid, id
 
 Ltac sif := simpl (if _ then _ else _); cbn match.
 
+Definition runT p n s := runT unif bc_run p n (s, fmap0).
+
 Section Test1.
 
   Definition p_test : program := build_progr [:: 
@@ -48,14 +50,14 @@ Section Test1.
       mkR (app q tt) [:: call (app p v0) ; call (app r v0) ] 
     ].
 
-  Goal exists v, runT unif p_test 0 fmap0 (Unexplored (call (app q tt))) (One s2) false v.
+  Goal exists v k, runT p_test 0 fmap0 (Unexplored (call (app q tt))) (One (s2, k)) false v.
   Proof.
     repeat eexists.
     have PV : v_prog (rules p_test) = [fset IV 0].
       by rewrite/v_prog/=/varsU_rule/varsU_rhead/varsU_rprem/vars_atoms/=!simpl_set.
 
     apply: StepT' => //=; cycle 1.
-      rewrite/bc; rewrite PV.
+      rewrite/bc_run/bc; rewrite PV.
       rewrite vars_sigma0 !simpl_set /maxn; sif.
       rewrite/fresh_rule/= !FmapE.fmapE !inE eqxx orbF.
       rewrite !FmapE.fmapE eqxx [odflt _ _]/=.
@@ -90,7 +92,8 @@ Section Test1.
       rewrite/maxn//=.
 
     apply: StepT => //=.
-      rewrite/bc vars_sigma0 PV !simpl_set /maxn; sif.
+      rewrite/bc_run/bc vars_sigma0 PV !simpl_set not_fnd//[fresh _]/= /maxn.
+      rewrite simpl_set; repeat sif.
       rewrite /fresh_rule/= !FmapE.fmapE !inE eqxx orbF.
       set X := select _ _ _ _ _.
       have : X = [:: ([fmap].[IV 1 <- Tm_P tt], [::]); ([fmap].[IV 1 <- Tm_P ff], [::])] .
@@ -103,16 +106,17 @@ Section Test1.
       rewrite/vars_sigma/codom_vars/vars_atoms freshP0 !codom0_set/= !simpl_set.
       by rewrite/maxn/=.
     apply: StepT => //.
-      rewrite/=/bc/next_subst [next _ _]/= idempotent_set_D//.
+      rewrite/=/bc_run/bc/next_subst [next _ _]/= idempotent_set_D//.
       rewrite deref_App PV deref_V FmapE.fmapE eqxx [vars _]/=.
       rewrite vars_sigma_set !simpl_set /maxn; sif.
       rewrite /fresh_rule/= !inE eqxx !FmapE.fmapE eqxx orbF.
       set X := select _ _ _ _ _.
-      have : X = [::] by rewrite/X/= !simpl_set !FmapE.fmapE/=unify_ground.
+      have : X = [::].
+        rewrite/X/= !simpl_set !FmapE.fmapE/=unify_ground//=.
       by move=> ->{X}/=.
     apply: BackT => //=.
     apply: StepT => //.
-      rewrite/=/bc/next_subst [next _ _]/= idempotent_set_D//.
+      rewrite/=/bc_run/bc/next_subst [next _ _]/= idempotent_set_D//.
       rewrite deref_App PV deref_V FmapE.fmapE eqxx [vars _]/=.
       rewrite vars_sigma_set !simpl_set /maxn; sif.
       rewrite /fresh_rule/= !inE eqxx !FmapE.fmapE eqxx orbF.
@@ -133,17 +137,17 @@ Section Test5.
       mkR (app q ff) [::] 
     ].
 
-  Goal exists v, runT unif p_test1 0 fmap0 (Unexplored (call (app p ff))) (One s1) false v.
+  Goal exists v ign, runT p_test1 0 fmap0 (Unexplored (call (app p ff))) (One (s1,ign)) false v.
   Proof.
     repeat eexists.
     apply: StepT' => //=; cycle 1.
-      rewrite/bc.
+      rewrite/bc_run/bc [fst _]/=.
       rewrite !simpl_set !maxnn.
       rewrite[fresh_rules _ _]/= !simpl_set/= !FmapE.fmapE/=simpl_set [omap _ _]/=; sif.
       rewrite in_fnd?inE//= => H.
       rewrite ffunE [val _]/={H} eqxx/vars_atoms/= !simpl_set/maxn//=.
     apply: StepT => //=.
-      rewrite/bc.
+      rewrite/bc_run/bc [fst _]/=.
       rewrite !simpl_set !maxnn.
       rewrite[fresh_rules _ _]/= !simpl_set/= !FmapE.fmapE/= [omap _ _]/=; sif.
       rewrite !unify_V_0r/=/vars_atoms/=; only 2-5: by [].
@@ -163,24 +167,24 @@ Section Test6.
       mkR (app q ff) [::] 
   ].
 
-  Goal exists r, runT unif p_test2 0 fmap0 (Unexplored (call (app p tt)) ) (One s1) false r.
+  Goal exists r ign, runT p_test2 0 fmap0 (Unexplored (call (app p tt)) ) (One (s1, ign)) false r.
   Proof.
     repeat eexists.
     apply: StepT' => //; cycle 1.
-      rewrite/=/bc.
+      rewrite/=/bc_run/bc [fst _]/=.
       rewrite !simpl_set !maxnn.
       rewrite[fresh_rules _ _]/= !simpl_set/= !FmapE.fmapE/=simpl_set [omap _ _]/=; sif.
       rewrite in_fnd?inE//= => H.
       rewrite ffunE [val _]/={H} eqxx/vars_atoms/= !simpl_set/maxn//=.
     apply: StepT => //=.
-      rewrite/bc.
+      rewrite/bc_run/bc [fst _]/=.
       rewrite !simpl_set !maxnn.
       rewrite[fresh_rules _ _]/= !simpl_set/= !FmapE.fmapE/= !unify_V_0r; only 2-5: by [].
       
       by rewrite/=/vars_atoms !simpl_set/maxn//=.
     apply/StepT => //=.
       rewrite/next_subst[next _ _]/=.
-      rewrite/=/bc.
+      rewrite/=/bc_run/bc [fst _]/=.
       rewrite !simpl_set !maxnn.
       rewrite[fresh_rules _ _]/= !simpl_set/= !FmapE.fmapE/= simpl_set idempotent_set_D ?[negb _]/=; last by [].
       by sif; rewrite !simpl_set /maxn//=.
@@ -194,28 +198,30 @@ Definition emptyp := (build_progr [::]).
 
 Definition CutS := Unexplored cut.
 
-Section Test2.
-  Goal step unif emptyp 0 fmap0 (Or (Some OK) fmap0 OK) = (0, Success, Or (Some OK) fmap0 OK). by []. Qed.
+Definition step p n m := step unif bc_run p n (m, fmap0).
 
-  Goal runT unif emptyp 0 fmap0 (Or (Some CutS) fmap0 OK) (One fmap0) false 0.
+Section Test2.
+  Goal step emptyp 0 fmap0 (Or (Some OK) (fmap0, fmap0) OK) = (0, Success, Or (Some OK) (fmap0,fmap0) OK). by []. Qed.
+
+  Goal runT emptyp 0 fmap0 (Or (Some CutS) (fmap0,fmap0) OK) (One (fmap0,fmap0)) false 0.
     apply: StepT' => //=; cycle 1.
     apply: StopOT => //.
     by [].
   Qed.
 
   Goal forall r, 
-    runT unif emptyp 0 fmap0 (Or (Some CutS) fmap0 r) (One fmap0) false 0.
+    runT emptyp 0 fmap0 (Or (Some CutS) (fmap0,fmap0) r) (One (fmap0, fmap0)) false 0.
     move=> r.
     apply: StepT' => //; cycle 1.
     apply: StopOT => //=.
     by [].
   Qed.
 
-  Goal runT unif emptyp 0 fmap0 (Or (Some OK) fmap0 (Or (Some OK) fmap0 OK)) (Many fmap0 (Or None fmap0 (Or (Some OK) fmap0 OK))) false 0.
+  Goal runT emptyp 0 fmap0 (Or (Some OK) (fmap0,fmap0) (Or (Some OK) (fmap0,fmap0) OK)) (Many (fmap0,fmap0) (Or None (fmap0,fmap0) (Or (Some OK) (fmap0,fmap0) OK))) false 0.
   Proof. apply: StopMT => //=. Qed.
 
   (* (Dead \/ !) \/ C *)
-  Goal step unif emptyp 0 fmap0 (Or (Some (Or None fmap0 (CutS))) fmap0 OK) = (0, Expanded, (Or (Some (Or None fmap0 OK)) fmap0 OK)).
+  Goal step emptyp 0 fmap0 (Or (Some (Or None (fmap0,fmap0) (CutS))) (fmap0,fmap0) OK) = (0, Expanded, (Or (Some (Or None (fmap0,fmap0) OK)) (fmap0,fmap0) OK)).
   Proof.
     move=>//=.
   Qed.
@@ -422,13 +428,13 @@ Section map.
     repeat rewrite codom_vars_set ?remf1_set empty_rem/=;
     rewrite codom_vars0 !fsetU0 inE ?fdisjointXU fdisjointX0 ?fdisjointX1 ?inE !andbT.
 
-  Goal exists f s, runT u p' 0 fmap0 (Unexplored (call map12d)) (One s) false f /\ deref s X = list24.
+  Goal exists f s, runT p' 0 fmap0 (Unexplored (call map12d)) (One s) false f /\ deref s.1 X = list24.
   Proof.
     do 2 eexists.
     rewrite/u.
     split.
       apply: StepT'=> //=; cycle 1.
-      { rewrite/bc ifF ?idempotent_0//.
+      { rewrite/bc_run/bc[fst _]/= ifF ?idempotent_0//.
       rewrite !simpl_set !maxnn /maxn simpl_p; sif.
       set FR := select _ _ _ _ _.
       have : FR = [:: ([fmap].[IV 13 <- Tm_P double].[IV 14 <- one].[IV 15 <- nil].[X <- 
@@ -474,7 +480,7 @@ Section map.
       }
       apply: StepT => //=.
       {
-      rewrite/bc ifF ?idempotent_0//.
+      rewrite/bc_run/bc [fst _]/= ifF ?idempotent_0//.
       set X := fresh _.
       have: X = 20.
         rewrite{}/X deref_App !deref_V !FmapE.fmapE not_fnd//.
@@ -529,8 +535,8 @@ Section map.
     }
     apply: StepT => //=.
     {
-      rewrite/bc ifF ?idempotent_0//.
-      rewrite/next_subst[next _ _]/=.
+      rewrite/bc_run/bc ![fst _]/= ifF ?idempotent_0//.
+
       set X := fresh _.
       have: X = 27.
         rewrite{}/X deref_App !deref_V !FmapE.fmapE not_fnd//.
