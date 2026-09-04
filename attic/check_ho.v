@@ -1,6 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import tree tree_prop ctx tree_vars unif mut_excl fresh sig_lattice sig_compat.
+From det Require Import tree tree_prop ctx tree_vars unif mut_excl fresh sig_lattice sig_compat typechecker.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
@@ -55,6 +55,15 @@ Proof.
   by apply/compat_type_trans/ccb; rewrite compat_type_comm.
 Qed.
 
+Lemma cinclL_min C A B: compat_type A B -> (cincl B C || cincl A C) -> cincl (min A B) C.
+Proof.
+  move=> cab /orP[]/andP[C1 I1]; rewrite /cincl; apply/andP; split.
+    by rewrite compat_type_comm min_comm; apply/compat_type_trans/compat_type_minR; rewrite compat_type_comm.
+    by rewrite min_comm inclL_min.
+    by rewrite compat_type_comm; apply/compat_type_trans/compat_type_minR; rewrite//compat_type_comm.
+  by rewrite inclL_min.
+Qed.
+
 Definition sigV := {fmap V -> S}.
 
 Definition is_sigV (x : sigV) := unit.
@@ -96,22 +105,164 @@ Proof.
   case: m => -[|[]]//f' a'; rewrite cincl_arr/= => /andP[] _ /Ha; auto.
 Qed.
 
-Fixpoint assume_tm (sP : sigT) (sV : sigV) (tm : Tm) : (sigV * option S) :=
+Fixpoint assume_tm (sP : sigT) (sV : sigV) (tm : Tm) : sigV * S :=
+let def_sig := b Exp in
+let map_def := odflt def_sig in
 match tm with
-| Tm_V v => (sV, sV.[?v])
-| Tm_P p => (sV, sP.[?p])
+| Tm_V v => (sV, map_def sV.[?v])
+| Tm_P p => (sV, map_def sP.[?p])
 | Tm_App h bo =>
   let: (sV, ty) := assume_tm sP sV h in
-    match ty with
-    | Some (arr m l r) =>
-      ((match bo with
-        | Tm_V v =>
-          if m == input then sV.[v <- (min l (odflt l sV.[?v]))] else sV
-        | _ => (assume_tm sP sV bo).1
-        end), Some r)
-    | _ => (sV, None)
-  end
+  match ty with
+  | arr m l r =>
+    (match bo with
+      | Tm_V v => if m == input then sV.[v <- min l (map_def sV.[?v])] else sV
+      | _ => (assume_tm sP sV bo).1
+    end, r)
+  | _ => (sV, def_sig)
+  end 
 end.
+
+Lemma assume_tm_app sP sV h bo:
+  let def_sig := b Exp in
+  let map_def := odflt def_sig in
+  assume_tm sP sV (Tm_App h bo) =
+  let: (sV, ty) := assume_tm sP sV h in
+  match ty with
+  | arr m l r =>
+    (match bo with
+      | Tm_V v => if m == input then sV.[v <- min l (map_def sV.[?v])] else sV
+      | _ => (assume_tm sP sV bo).1
+    end, r)
+  | _ => (sV, def_sig)
+  end.
+Proof. by []. Qed.
+
+Lemma assume_tm_V sP sV v:
+    assume_tm sP sV (Tm_V v) = (sV, odflt (b Exp) sV.[?v]).
+Proof. by []. Qed.
+
+Lemma assume_tm_P sP sV p:
+    assume_tm sP sV (Tm_P p) = (sV, odflt (b Exp) sP.[?p]).
+Proof. by []. Qed.
+
+Definition simpl_assume_tm := (assume_tm_app, assume_tm_V, assume_tm_P).
+
+Definition same_sV_incl (new old: sigV) :=
+  (domf old == domf new) &&
+      [forall x : domf new, 
+        match old.[? val x] with 
+        | None => false
+        | Some t' => cincl new.[valP x] t' end].
+
+Lemma same_sV_incl_refl sv: same_sV_incl sv sv.
+Proof. rewrite /same_sV_incl eqxx; apply/forallP => -[x xP]; rewrite in_fnd valPE//. Qed.
+
+Global Hint Resolve same_sV_incl_refl : core.
+
+Lemma same_sV_incl_trans: transitive same_sV_incl.
+Proof.
+  move=> B A C /andP[/eqP D1 H1] /andP[/eqP D2 H2].
+  rewrite /same_sV_incl {1}D2 D1 eqxx/=.
+  apply/forallP => -[x xP]; rewrite valPE/=.
+  have:= forallP H1 [`xP]; rewrite valPE/=; case: fndP => // xB I.
+  have:= forallP H2 [`xB]; rewrite valPE/=; case: fndP => // xC.
+  by apply/cincl_trans.
+Qed.
+
+Lemma same_sV_incl_fnd v sV sV' (vV : v \in sV): same_sV_incl sV' sV -> 
+  exists (vV':v \in sV'), cincl sV'.[vV'] sV.[vV].
+Proof.
+  move=> /andP[/eqP/fsetP/(_ v) sD] H.
+  have vV' : v \in domf sV' by rewrite -sD.
+  by exists vV'; have:= forallP H [`vV']; rewrite/= in_fnd valPE.
+Qed.
+
+Lemma same_sV_incl_fnd1 v sV sV' (vV' : v \in sV'): same_sV_incl sV' sV -> 
+  exists (vV:v \in sV), cincl sV'.[vV'] sV.[vV].
+Proof. 
+  move=> /andP[/eqP/fsetP/(_ v) sD] H.
+  have vV : v \in domf sV by rewrite sD.
+  by exists vV; have:= forallP H [`vV']; rewrite/= in_fnd valPE.
+Qed.
+
+Lemma same_sV_incl_set2 sV' sV v t1 t2:
+  cincl t1 t2 ->
+  same_sV_incl sV' sV -> same_sV_incl sV'.[v<-t1] sV.[v<-t2].
+Proof.
+  move=> I /[dup] H /andP[/eqP D S].
+  rewrite/same_sV_incl {1}dom_setf {1}D eqxx.
+  apply/forallP => -[x xP]; rewrite ffunE valPE [val _]/=.
+  rewrite fnd_set; move: xP; rewrite/= in_fsetU in_fset1; case: eqP => //= xvd xv'.
+  by have [vv {}H] := same_sV_incl_fnd1 xv' H; rewrite !in_fnd.
+Qed.
+
+Lemma assume_tm_incl sV sV' t sP:
+  same_sV_incl sV' sV ->
+    let sx := assume_tm sP sV t in
+    let sy := assume_tm sP sV' t in
+    cincl sy.2 sx.2 /\ same_sV_incl sy.1 sx.1.
+Proof.
+  move=> /=; elim: t sV sV' => [p|v|f Hf a Ha]//=sV sV' H.
+    case: (fndP sV) => /=vV.
+      by have [vV' I]:= same_sV_incl_fnd vV H; rewrite in_fnd.
+    by rewrite not_fnd//; move/andP: H => [/eqP/fsetP/(_ v)]; rewrite (negbTE vV) => <-.
+  have {Hf} := Hf sV sV' H.
+  case Af': assume_tm => [sVf' t']/=[].
+  case Af: assume_tm => [sVf t]/=.
+  case: t Af => [[|k]|m tf ta]; case: t' Af' => [[|k']|m' tf' ta']//; try by destruct m'.
+  move=> Af' Af; rewrite cincl_arr => /and3P[/eqP? I1 I2]; subst => /=.
+  case Va: (is_var a); last first.
+    move=> Hx; split => //=.
+    by have {Ha}[] := Ha _ _ Hx; case: assume_tm; case: assume_tm => >/=; destruct a.
+  case: a {Ha} Va => //= v _.
+  case: m' Af Af' I1 => //= Af Af' CI S; split => //.
+Abort.
+
+Lemma typechecks_compat sP sV sV' a k:
+  same_sV_incl sV' sV ->
+  typechecks sP sV a = Some k ->
+  exists2 x, typechecks sP sV' a = Some x & cincl x k.
+Proof.
+  move=> H; elim: a k => [p|v|f Hf a Ha]/= k; first by eauto.
+    by case: fndP => //vV[<-]{k}/=; have [vV' I] := same_sV_incl_fnd vV H; rewrite in_fnd; eexists.
+  case Tf: typechecks => [[|m tf ta]|]//.
+  case Ta: typechecks => //[tb]; case: ifP => //C[<-{k}].
+  have [[[|k]|m' tf' ta'] ->] := Hf _ Tf => //.
+  rewrite cincl_arr => /and3P[/eqP<-{m'} C1 C2].
+  have [tb' -> /andP[H1 H2]] := Ha _ Ta.
+  rewrite (compat_type_trans H1 (compat_type_trans C _)); first by eexists.
+  by move: C1; case: ifP => _ /andP[]//; rewrite compat_type_comm.
+Qed.
+
+Lemma tc_assume_tm sP sV t s:
+  typechecks sP sV t = Some s ->
+  exists2 sV', assume_tm sP sV t = (sV', s) & same_sV_incl sV' sV.
+Proof.
+  elim: t s sV => [p|v|f Hf a Ha] s sV/=; only 1, 2: by case:fndP => //=?[<-]; eauto.
+  case Tf: typechecks => //[[//|m tl tr]].
+  case Ta: typechecks => //[tb]; case: ifP => // c [<-{s}].
+  have {Hf}[sVf -> Sf]/= := Hf _ _ Tf.
+  have {Ta}[svx Ta' CI] := typechecks_compat Sf Ta.
+  have {Ha}[sVa -> Sa]/= := Ha _ _ Ta'.
+  have H := same_sV_incl_trans Sa Sf.
+  case VA: (is_var a); last by (exists sVa; first destruct a).
+  case: a VA Ta' => //v _; case: ifP ; last by eexists.
+  move=> /eqP?/=; subst.
+  case: fndP => //= vVf[?]; subst; eexists => //.
+  move: CI; rewrite/cincl min_comm => /andP[CT S].
+  rewrite/same_sV_incl {1}dom_setf.
+  move/andP: Sf => [/eqP D Sf].
+  rewrite {1}D; apply/andP; split.
+    by apply/eqP/fsetP => x; rewrite in_fsetU in_fset1; case: eqP => ?; subst.
+  apply/forallP => -[x xP]; rewrite ffunE valPE [val _]/=.
+  have C:= compat_type_trans CT c.
+  move: xP; rewrite /= in_fsetU in_fset1; case: eqP => xv; subst => /=.
+    have:= forallP Sf [`vVf]; rewrite valPE//=; case: fndP => //vK{}Sf.
+    by rewrite cinclL_min//Sf orbT.
+  move=> xF; have:= forallP Sf [`xF]; rewrite valPE//=; case: fndP => //vK{}Sf.
+  rewrite in_fnd//=.
+Qed.
 
 Definition get_sig (sP:sigT) (sV:sigV) t :=
   match get_tm_hd t with
@@ -121,64 +272,131 @@ Definition get_sig (sP:sigT) (sV:sigV) t :=
 
 (* in the current implementation data (like lists, nat) and so on
    are not typechecked, therefore, they do not influence determinacy *)
-Fixpoint check_tm (sP : sigT) (sV : sigV) (tm : Tm) : option (bool * S) :=
+Fixpoint check_tm (sP : sigT) (sV : sigV) (tm : Tm) : (bool * S) :=
+let def_sig := b Exp in
+let map_def := odflt def_sig in
 match tm with
-| Tm_V v => omap (pair true) sV.[?v]
-| Tm_P p => omap (pair true) sP.[?p]
+| Tm_V v => (true, map_def sV.[?v])
+| Tm_P p => (true, map_def sP.[?p])
 | Tm_App h bo =>
-  let: tyh := check_tm sP sV h in
+  let: (wc, tyh) := check_tm sP sV h in
   match tyh with
-  | None => None
-  | Some (wc, arr m l r) =>
-    (* if (l == b Exp) || (r == b Exp) then Some (wc, r)
-    else *)
-    let tyb := check_tm sP sV bo in
-    match tyb with
-    | None => None
-    | Some (_, tyb) => 
-      if compat_type tyb l then Some (if (m == output) || incl tyb l then (wc, r) else (false, weak r))
-      else None
-    end
-  | _ => None
+  | arr m l r =>
+    let (_, tyb) := check_tm sP sV bo in
+    if (m == output) || incl tyb l then (wc, r) else (false, weak r)
+  | _ => (false, def_sig)
   end
 end.
 
-Definition check_tm_prop sP sV t :=
-  match check_tm sP sV t with Some (_, b (d R)) => Some R | _ => None end.
+Lemma check_tm_V sP sV v:
+  check_tm sP sV (Tm_V v) = (true, odflt (b Exp) sV.[?v]).
+Proof. by []. Qed.
 
-Definition check_atom sP sV d (a: Atom) : option Det :=
+Lemma check_tm_P sP sV p:
+  check_tm sP sV (Tm_P p) = (true, odflt (b Exp) sP.[?p]).
+Proof. by []. Qed.
+
+Lemma check_tm_app sP sV h bo:
+  let def_sig := b Exp in
+  let map_def := odflt def_sig in
+  check_tm sP sV (Tm_App h bo) = let: (wc, tyh) := check_tm sP sV h in
+  match tyh with
+  | arr m l r =>
+    let (_, tyb) := check_tm sP sV bo in
+    if (m == output) || incl tyb l then (wc, r) else (false, weak r)
+  | _ => (false, def_sig)
+  end.
+Proof. by []. Qed.
+
+Definition simpl_check_tm := (check_tm_V, check_tm_P, check_tm_app).
+
+Lemma typechecks_check_tm sP sV t s:
+  typechecks sP sV t = Some s ->
+  cincl s (check_tm sP sV t).2.
+Proof.
+  elim: t s => [p|v|f Hf a Ha] s/=; only 1,2: by case: fndP => //?[<-].
+  case TF: typechecks => [[|m tf ta]|]//.
+  case TA: typechecks => [tb|]//; case: ifP => //CT[<-{s}].
+  have {Hf}:= Hf _ TF.
+  case C: check_tm => [wcf [[]|m' tf' ta']]//; only 1,2: by destruct m.
+  rewrite cincl_arr => /and3P[/eqP? HI HO]; subst.
+  have:= Ha _ TA; case: check_tm => /= _ s' CI.
+  by case: ifP => //=; rewrite (cincl_trans HO)//cincl_weakr.
+Qed.
+
+Definition check_atom sP sV det (a: Atom) : Det :=
   match a with
-  | cut => Some (Func)
-  | call t => omap (maxD d) (check_tm_prop sP sV t)
+  | cut => Func
+  | call t => maxD det (if (check_tm sP sV t).2 == (b (d Func)) then Func else Pred)
   end.
 
-Definition is_func f := f == Some Func.
+Definition is_func f := f == Func.
 
 (* There is cut and after the cut there are only call to Det preds *)
-Fixpoint check_atoms (sP :sigT) sV (s: seq Atom) d : option Det :=
+Fixpoint check_atoms (sP :sigT) sV (s: seq Atom) d : Det :=
   match s with
-  | [::] => Some d
-  | x :: xs => obind (check_atoms sP sV xs) (check_atom sP sV d x)
+  | [::] => d
+  | x :: xs => (check_atoms sP sV xs) (check_atom sP sV d x)
   end.
+  
+Lemma check_atoms_cons sP sV x xs d :
+  check_atoms sP sV (x :: xs) d = (check_atoms sP sV xs) (check_atom sP sV d x).
+Proof. by []. Qed.
 
-Definition check_rule (sP:sigT) head prems :=
+Lemma check_atoms_nil sP sV d :
+  check_atoms sP sV [::] d = d.
+Proof. by []. Qed.
+
+Definition simpl_check_atoms := (check_atoms_cons, check_atoms_nil).
+
+Definition check_rule sV (sP:sigT) head prems :=
   ~~ tm_is_det sP head || 
-    let: (sV, _) := assume_tm sP fmap0 head in
-    (is_func (check_atoms sP sV prems Func) &&
-    is_func (check_tm_prop sP sV head)).
+    let: (sV, t) := assume_tm sP sV head in
+    (is_func (check_atoms sP sV prems Func)).
+
+Definition is_weak x := x == weak x.
+Definition is_strong x := x == strong x.
+
+Definition is_weak_arr m l r:
+  is_weak (arr m l r) = (if m == input then is_strong l else is_weak l) && is_weak r.
+Proof.
+  rewrite/is_weak/is_strong/=.
+  case: eqP.
+    by move=> [-><-]; case: m => //=; rewrite (strong2, weak2) !eqxx.
+  by case: m => //=; case: eqP => //<-; case: eqP => //<-.
+Qed.
+
+Definition all_weak (s: sigV) := [forall x : domf s, is_weak s.[valP x]].
+
+Lemma all_weak0: all_weak fmap0.
+Proof. by apply/forallP => -[]. Qed.
 
 Definition check_rules p :=
-  all (fun x => check_rule p.(sig) x.(head) x.(premises)) p.(rules).
+  forall x, x \in p.(rules) ->
+    exists sv, [/\ all_weak sv, typechecks_rule p.(sig) sv x & check_rule sv p.(sig) x.(head) x.(premises)].
+
+Lemma all_weak_set s k v: is_weak v -> all_weak s -> all_weak s.[k<-v].
+Proof.
+  move=> H W; apply/forallP => -[x xP]; rewrite ffunE valPE/=.
+  move: xP; rewrite in_fsetU in_fset1; case: eqP => xw; subst => //= xs.
+  by rewrite in_fnd//=; have:= forallP W [`xs]; rewrite valPE.
+Qed.
+
+Lemma all_cons (T : eqType) p (x:T) xs: all p (x :: xs) = p x && all p xs.
+Proof. by []. Qed.
+
+Lemma all_nil (T : eqType) (p : T -> bool): all p [::] = true.
+Proof. by []. Qed.
 
 Module Test.
-  Definition p := b (d Pred).
-  Definition f := b (d Func).
-  Definition e := b Exp.
-  Notation V1 := (IV 0).
-  Notation V2 := (IV 1).
-  Notation F := (IV 2).
-  
-  Definition mkP sym sig r := {| sig := [fmap].[sym <- sig]; rules := [::r] |}.
+  Local Notation p := (b (d Pred)).
+  Local Notation f := (b (d Func)).
+  Local Notation e := (b Exp).
+  Local Notation V1 := (IV 0).
+  Local Notation V2 := (IV 1).
+  Local Notation F := (IV 2).
+
+  Local Definition mkP sym sig r := {| sig := [fmap].[sym <- sig]; rules := [::r] |}.
 
   Module Once.
     Notation onceSym := (IP 1).
@@ -187,11 +405,15 @@ Module Test.
 
     Goal check_rules (mkP onceSym onceSig onceI).
     Proof.
-      rewrite/check_rules/=andbT/check_rule.
-      rewrite /assume_tm !FmapE.fmapE/=.
-      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
-      rewrite/check_tm_prop/=.
-      rewrite !FmapE.fmapE/= not_fnd //=.
+      move=> r; rewrite in_cons in_nil orbF => /eqP->.
+      exists [fmap].[V1 <- b(d Pred)]; split.
+        by rewrite all_weak_set//all_weak0.
+        rewrite/onceI/typechecks_rule [head _]/=[premises _]/=.
+        rewrite /typechecks_atoms !all_cons all_nil/typechecks_atom.
+        by rewrite !simpl_typechecks !FmapE.fmapE eqxx.
+      rewrite/check_rule /onceI [head _]/=[premises _]/=.
+      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE eqxx orFb.
+      by rewrite 2!simpl_assume_tm !FmapE.fmapE eqxx/onceSig [odflt _ _]/= !eqxx.
     Qed.
   End Once.
   
@@ -202,10 +424,16 @@ Module Test.
 
     Goal check_rules (mkP doSym doSig doI).
     Proof.
-      rewrite/check_rules/=andbT/check_rule.
-      rewrite /assume_tm !FmapE.fmapE/=.
-      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
-      rewrite/check_tm_prop/check_tm !FmapE.fmapE/= not_fnd//.
+      move=> r; rewrite in_cons in_nil orbF => /eqP->.
+      exists [fmap].[V1 <- b(d Pred)]; split.
+        by rewrite all_weak_set//all_weak0.
+        rewrite/doI/typechecks_rule [head _]/=[premises _]/=.
+        rewrite /typechecks_atoms !all_cons all_nil/typechecks_atom.
+        by rewrite !simpl_typechecks !FmapE.fmapE eqxx.
+      rewrite/check_rule /doI [head _]/=[premises _]/=.
+      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE eqxx orFb.
+      rewrite 2!simpl_assume_tm !FmapE.fmapE eqxx/doSig [odflt _ _]/= !eqxx.
+      by rewrite !simpl_check_atoms/check_atom !simpl_check_tm !FmapE.fmapE eqxx.
     Qed.
   End Do.
   
@@ -217,10 +445,17 @@ Module Test.
 
     Goal check_rules (mkP applySym applySig applyI).
     Proof.
-      rewrite/check_rules/=andbT/check_rule.
-      rewrite /assume_tm !FmapE.fmapE/=.
-      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE/=.
-      by rewrite/check_tm_prop/check_tm !FmapE.fmapE/=/=!not_fnd//=.
+      move=> r; rewrite in_cons in_nil orbF => /eqP->.
+      exists [fmap].[F <- (arr input e p)].[V1 <- e]; split.
+        by rewrite !all_weak_set//all_weak0.
+        rewrite/applyI/typechecks_rule [head _]/=[premises _]/=.
+        rewrite /typechecks_atoms !all_cons all_nil/typechecks_atom.
+        by rewrite !simpl_typechecks !FmapE.fmapE eqxx.
+      rewrite/check_rule /applyI [head _]/=[premises _]/=.
+      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE eqxx orFb.
+      rewrite 3!simpl_assume_tm !FmapE.fmapE !eqxx/applySig [odflt _ _]/=.
+      cbn match.
+      by rewrite eqxx !simpl_check_atoms/check_atom !simpl_check_tm !FmapE.fmapE eqxx.
     Qed.
   End Apply.
   
@@ -230,14 +465,27 @@ Module Test.
     Definition applyI   := mkR (Tm_App (Tm_App (Tm_P applySym) (Tm_V F)) (Tm_V V1)) [::call (Tm_App (Tm_V F) (Tm_V V1))].
     Definition applySig := arr input (arr input e p) (arr input e f).
 
-    Goal ~~ check_rules (mkP applySym applySig applyI).
+    Goal ~ check_rules (mkP applySym applySig applyI).
     Proof.
-      rewrite/check_rules/=andbT/check_rule.
-      rewrite /assume_tm !FmapE.fmapE.
-      rewrite eqxx /applySig /tm_is_det !get_tm_hd_app/get_tm_hd.
-      rewrite !FmapE.fmapE eqxx !not_fnd///=.
-      rewrite min_refl/=.
-      by rewrite/check_tm_prop/check_tm !FmapE.fmapE//=.
+      have rP : applyI \in rules (mkP applySym applySig applyI).
+        by rewrite in_cons eqxx.
+      move=> /(_ _ rP)[] sV [wS].
+      rewrite{1}/applyI /typechecks_rule [head _]/=[premises _]/=.
+      rewrite /typechecks_atoms !all_cons all_nil/typechecks_atom.
+      rewrite !simpl_typechecks !FmapE.fmapE eqxx{1}/applySig.
+      case: fndP => //fS; case: ifP => C//.
+      case: fndP => //=vS; case: ifP => C1//.
+      case H: sV.[fS] => //[m tf [[|det]|]]; case: ifP => //=C3 _.
+      have:= forallP wS [`fS]; rewrite valPE H .
+      rewrite is_weak_arr => /andP[]; case: det H => // H H' _.
+      rewrite/check_rule !simpl_assume_tm !FmapE.fmapE eqxx /applySig [odflt _ _]/=.
+      cbn match; rewrite !eqxx !simpl_check_atoms/check_atom !simpl_check_tm.
+      rewrite !FmapE.fmapE !eqxx/= in_fnd/=/tm_is_det [get_tm_hd _]/=.
+      cbn match; rewrite !FmapE.fmapE eqxx/= in_fnd//=.
+      case: ifP => //; case: eqP => //.
+      have:= forallP wS [`vS]; rewrite valPE H/=.
+      case X: sV.[fS] C => [[]|[] s1 s2]//; case: m H H' => //= H H'.
+      case: ifP => //.
     Qed.
   End WrongApply.
 
@@ -280,35 +528,60 @@ Module Test.
 
     Local Goal check_rules p'.
     Proof.
-      rewrite/check_rules/= andbT/check_rule; apply/andP; split.
-        rewrite /assume_tm !FmapE.fmapE.
-        rewrite eqxx /tm_is_det !get_tm_hd_app/get_tm_hd/mapS/=.
-        rewrite !FmapE.fmapE//=/check_tm_prop.
-        by rewrite not_fnd//= !FmapE.fmapE//=.
-      rewrite /assume_tm !FmapE.fmapE !eqxx.
-      rewrite/mapS/consS.
-      repeat case: eqP => // _.
-      rewrite !FmapE.fmapE.
-      repeat case: eqP => // _.
-      rewrite !not_fnd//=.
-      set S := _.[_ <- _].
-      set A := _.[_ <- _].
-      rewrite/check_tm_prop/check_tm.
-      rewrite !FmapE.fmapE.
-      repeat case: eqP => // _.
-      rewrite[omap _ _]/=.
-      cbn match.
-      rewrite[omap _ _]/=.
-      cbn match.
-      by rewrite/tm_is_det//= !FmapE.fmapE//=.
+      move=> r; rewrite !in_cons in_nil orbF => /orP[]/eqP->{r}.
+        exists fmap0.[F <- (arr input exp (arr output exp p))]; split.
+          by rewrite !all_weak_set//=all_weak0.
+          rewrite /typechecks_rule [head _]/=[premises _]/= andbT.
+          by rewrite !simpl_typechecks /p' !FmapE.fmapE !eqxx.
+        rewrite [head _]/=[premises _]/=/check_rule.
+        rewrite !simpl_assume_tm/p' !FmapE.fmapE/=.
+        by rewrite/tm_is_det [get_tm_hd _]/=/map !FmapE.fmapE//.
+      exists [fmap].[F <- (arr input e (arr output e p))].[X <- e].[Y <- e].[X' <- e].[Y' <- e].
+      set M := _.[_ <- _].
+      have MF : M.[?F] = Some (arr input e (arr output e p)) by rewrite !FmapE.fmapE.
+      have MX : M.[?X] = Some e by rewrite !FmapE.fmapE.
+      have MY : M.[?Y] = Some e by rewrite !FmapE.fmapE.
+      have MX' : M.[?X'] = Some e by rewrite !FmapE.fmapE.
+      have MY' : M.[?Y'] = Some e by rewrite !FmapE.fmapE.
+      have PM : p'.(sig).[? map] = Some mapS by rewrite !FmapE.fmapE.
+      have PC : p'.(sig).[? cons] = Some consS by rewrite !FmapE.fmapE.
+      split.
+        by rewrite !all_weak_set//all_weak0.
+        rewrite/typechecks_rule [head _]/=[premises _]/=.
+        rewrite /typechecks_atoms !all_cons all_nil/typechecks_atom.
+        by rewrite// !simpl_typechecks ?(MF,MX,MY,MX',MY',PM,PC)//.
+      rewrite [head _]/=[premises _]/= /check_rule.
+      rewrite/tm_is_det [get_tm_hd _]/=; cbn match.
+      rewrite PM orFb !simpl_assume_tm PM [odflt _ _]/=/mapS eqxx.
+      rewrite MF [odflt _ _]/=.
+      rewrite min_arr eqxx /max/min![min_aux _ _ _ _]/=.
+      set M' := _.[_ <- _].
+      have M'F : M'.[?F] = Some (arr input e (arr output e f)) by rewrite !FmapE.fmapE.
+      have M'X : M'.[?X] = Some e by rewrite !FmapE.fmapE.
+      have M'Y : M'.[?Y] = Some e by rewrite !FmapE.fmapE.
+      have M'X' : M'.[?X'] = Some e by rewrite !FmapE.fmapE.
+      have M'Y' : M'.[?Y'] = Some e by rewrite !FmapE.fmapE.
+      rewrite !(assume_tm_app _ M') assume_tm_P PC [odflt _ _]/=/consS eqxx M'X.
+      replace (_.[_<-_]) with M'; last first.
+        rewrite !FmapE.fmapE/=; apply/fmapP => [k].
+        rewrite fnd_set; case: eqP => ?; subst; first by rewrite M'Y.
+        rewrite fnd_set; case: eqP => ?; subst; first by rewrite M'X.
+        by [].
+      rewrite !(assume_tm_app _ M') assume_tm_P PC [odflt _ _]/=/consS eqxx M'X'.
+      replace (_.[_<-_]) with M'; last first.
+        rewrite !FmapE.fmapE/=; apply/fmapP => [k].
+        rewrite fnd_set; case: eqP => ?; subst; first by [].
+        rewrite fnd_set; case: eqP => ?; subst; first by [].
+        by [].
+      rewrite !simpl_check_atoms/check_atom.
+      by rewrite !simpl_check_tm M'F M'X M'X' M'Y M'Y' PM ![odflt _ _]/=/mapS eqxx.
     Qed.
   End map. 
 End Test.
 
-Lemma H_assume_tm_ty sP sV ty froz f f' s r sv:
+(* Lemma H_assume_tm_ty sP sV ty froz f f' s r:
   H u sP froz f f' s = Some r ->
-  assume_tm sP sV f' = (sv, ty) ->
-  ty = Some r.1.
+  ty = (assume_tm sP sV f').1.
 Proof.
   elim: f f' s r ty sV sv => //[p|f Hf a _] [p'|//|f' a']//= s r ty sV sv.
     by case: eqP => //<-; case: fndP => //pP[<-][].
@@ -317,7 +590,7 @@ Proof.
   have {Hf H1 A1}/=? := Hf _ _ _ _ _ _ H1 A1; subst.
   case: ty' => [|m tl tr]//=.
   by case M: (_ s') => //[r'][<-]{r}/=[_ <-].
-Qed.
+Qed. *)
 
 Definition sigSW wc sig sw := if wc then (sig == sw) else (sig == weak sw).
 
@@ -383,9 +656,9 @@ Proof.
 Qed.
 
 Definition relSS (sP:sigT) (s:Sigma) (sV:sigV) :=
-  [forall x : domf sV,
-    let sig := sV.[valP x] in
-    if s.[? val x] is Some t then 
+  [forall x : domf s,
+    let t := s.[valP x] in
+    if sV.[? val x] is Some sig then 
       match check_tm sP [fmap] (deref s t) with
       | Some sig' => cincl sig'.2 sig
       | None => false
@@ -427,7 +700,7 @@ Proof.
     by apply: incl_trans (andb2 Cda) (incl_trans I (andb2 CI)).
 Qed. *)
 
-Lemma check_tm_deref sP sV s t r1:
+(* Lemma check_tm_deref sP sV s t r1:
   idempotent s ->
   relSS sP s sV ->
   check_tm sP sV t = Some r1 ->
@@ -437,7 +710,7 @@ Proof.
   elim: t r1 => //=[p|v|f Hf a Ha] r1.
   - by case: fndP =>//=pP[<-]; eexists.
   - case: fndP => // vV[<-].
-    have /= := forallP R [`vV].
+(*     have /= := forallP R [`vV]. *)
     case: fndP => //=vs.
     rewrite deref_in//valPE.
     by case: check_tm => //; eexists.
@@ -457,7 +730,7 @@ Proof.
       apply: incl_trans (andb2 Ca) (incl_trans Iaf (andb2 Iff)).
     apply: compat_type_trans (andb1 Ca) (compat_type_trans Cta _).
     by move: Iff; case: m => /andP[]//; rewrite compat_type_comm.
-Qed.
+Qed. *)
 
 Definition deref_atom s a :=
   match a with
@@ -465,7 +738,7 @@ Definition deref_atom s a :=
   | call t => call (deref s t)
   end.
 
-Lemma check_atom_deref sP sV d s t r1:
+(* Lemma check_atom_deref sP sV d s t r1:
   idempotent s ->
   relSS sP s sV ->
   check_atom sP sV d t = Some r1 ->
@@ -477,7 +750,7 @@ Proof.
   case C: check_tm => [[wc [[|d']|]]|]//=[<-{r1}].
   have [[wc' [[|d'']|[]]]// ->] := check_tm_deref A R C.
   by eexists => //; destruct d => //; destruct d'' => //=; destruct d'.
-Qed.
+Qed. *)
 
 Definition mpV (o n: sigV) :=
   [forall x : domf o, 
@@ -629,8 +902,8 @@ Proof.
   by eexists => //; destruct d', d.
 Qed. *)
 
-Lemma relSS0 sP s: relSS sP s fmap0.
-Proof. by apply/forallP => //=-[]//. Qed.
+(* Lemma relSS0 sP s: relSS sP s fmap0. *)
+(* Proof. apply/forallP => //=-[]//. Qed. *)
 
 Lemma deref_deref_sig2 sm sx t:
   deref sm (deref sx t) = deref (sm + deref_sig2 sm sx) t.
@@ -877,7 +1150,7 @@ Proof.
   by rewrite in_fnd// ffunE valPE.
 Qed.
 
-Lemma relSS_set sP s sV v sig (vs : v \in s):
+(* Lemma relSS_set sP s sV v sig (vs : v \in s):
   idempotent s ->
   relSS sP s sV -> 
   match check_tm sP fmap0 s.[vs] with
@@ -895,7 +1168,7 @@ Proof.
   have:= forallP H1 [`xsv]; rewrite valPE/=.
   case: fndP => // xs.
   case: check_tm => //=d; rewrite in_fnd//.
-Qed.
+Qed. *)
 
 Definition good_call sP sV q :=
   match check_tm sP sV q with Some (wc,_) => wc | _ => false end.
@@ -938,7 +1211,7 @@ Proof.
   by move=> /orP[/Hf|/Ha]//->//; rewrite (Cf,Ca)//.
 Qed.
 
-Lemma relSS_assumeM sP sV froz q h s s': idempotent s ->
+(* Lemma relSS_assumeM sP sV froz q h s s': idempotent s ->
   good_modes sP -> relSS sP s sV -> 
   (* domf s # vars q ->  *)
   vars q # vars h ->
@@ -974,7 +1247,7 @@ Proof.
   move: H; case: fndP => /=xsv xh.
     by have:= forallP R [`xsv]; rewrite valPE not_fnd//=.
   admit.
-Admitted.
+Admitted. *)
 
 Lemma get_input_vars2R sP fv q h s x:
   H u sP fv q h s = Some x -> (get_input_vars sP h).2 = Some x.1.

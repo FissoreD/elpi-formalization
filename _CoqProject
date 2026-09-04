@@ -40,4 +40,6 @@ theories/determinacy.v
 
 theories/once.v
 
+
+theories/typechecker.v
 attic/check_ho.v
