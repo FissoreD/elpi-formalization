@@ -19,6 +19,18 @@ Proof.
   by rewrite !vars_atoms_cons !IH !vars_atoms_cons/= -fsetUA fsetUid.
 Qed.
 
+Lemma vars_tree_atom_big_or x0 xs:
+  vars_tree_atom (big_or x0 xs) = vars_atoms x0 `|` varsU (map (fun x => vars_atoms x.2) xs).
+Proof. by elim: xs x0 => //=[|[s0 x0 xs] IH]/=r; rewrite ?fsetU0 vars_atoms_big_and//IH. Qed.
+
+Lemma vars_tree_atom_cutl t: vars_tree_atom (cutl t) `<=` vars_tree_atom t.
+Proof.
+  elim_tree t => /=.
+    by rewrite fsetU0 (fsubset_trans HA)//fsubsetUl.
+  case: ifP; rewrite//=fsetSU//fsubUset (fsubset_trans HA (fsubsetUl _ _)).
+  by rewrite (fsubset_trans HB (fsubsetUr _ _)).
+Qed.
+
 Fixpoint disj_tree t :=
   match t with
   | KO | OK | Unexplored _ => true
@@ -29,11 +41,6 @@ Fixpoint disj_tree t :=
 
 Lemma disj_tree_big_and B: disj_tree (big_and B).
 Proof. by case: B => //=+l; elim: l => //=. Qed.
-
-Lemma vars_tree_atom_big_or x0 xs:
-  vars_tree_atom (big_or x0 xs) = vars_atoms x0 `|` varsU (map (fun x => vars_atoms x.2) xs).
-Proof. by elim: xs x0 => //=[|[s0 x0 xs] IH]/=r; rewrite ?fsetU0 vars_atoms_big_and//IH. Qed.
-
 
 Lemma disj_tree_big_or x0 xs:
   disj_tree (big_or x0 xs) = fdisjoint (vars_atoms x0) (varsU (map (fun x => vars_atoms x.2) xs)) &&
@@ -103,70 +110,6 @@ Proof.
   by rewrite fsubsetU// IH orbT.
 Qed.
 
-Definition leq_codomf m (r: {fmap V -> V}) := 
-  [forall x : codomf r, let: IV x := val x in m <= x].
-
-Lemma leq_codomf_fresh_tm:
-  forall q m r h, m <= q ->
-  let x := fresh_tm q r h in
-  leq_codomf m r ->
-  leq_codomf m x.2.
-Proof.
-  move=> /=q m r t; elim: t m q r => //[v|f Hf a Ha] m q r mq.
-    rewrite/=; case: ifP => //=vr.
-    rewrite/leq_codomf/= codomf_setN?vr//.
-    move=> /forallP H; apply/forallP => -[[x]]/=.
-    rewrite in_fsetU in_fset1/=; case: eqP; first by move=> [->].
-    by move=> /= _ yr; apply: H [`yr].
-  move=> mr/=; rewrite !push.
-  by apply/Ha/Hf/mr/mq/leq_trans/fresh_sub.
-Qed.
-
-Lemma leq_codomf_vars_atoms:
-  forall q m r h, m <= q ->
-  let x := fresh_atoms q r h in
-  leq_codomf m r ->
-  leq_codomf m x.1.2.
-Proof.
-  move=> /=q m r t; elim: t m q r => [|x xs IH] m q r mq l//=.
-  rewrite !push/=; case: x => [|t]; first by apply: IH.
-  rewrite/=!push/=.
-  apply/leq_codomf_fresh_tm/IH/l/mq.
-  by apply/leq_trans/fresh_atoms_sub.
-Qed.
-
-Lemma leq_codomf_ren v t m B:
-  vars t `<=` domf B ->
-  leq_codomf m B ->
-  IV v  \in vars (ren B t) ->
-  m <= v.
-Proof.
-  elim: t v m B => [p|v|f Hf a Ha]//=v' m B; rewrite (fsub1set,fsubUset) (in_fsetU, in_fset1).
-    move=> vB; rewrite in_fnd//==> H /eqP H1.
-    have v'B : IV v' \in codomf B by apply/codomfP; exists v; rewrite in_fnd H1.
-    by have:= forallP H [`v'B].
-  by move=> /andP[fB aB] l/orP[/Hf|/Ha]->//.
-Qed.
-
-Lemma leq_codomf_vars_atoms_in m A B v b:
-  m <= A -> leq_codomf m B ->
-  IV v  \in vars_atoms (fresh_atoms A B b).2 ->
-  m <= v.
-Proof.
-  elim: b A B v => //=x xs IH A B v.
-  rewrite !push/= vars_atoms_cons in_fsetU.
-  case: x => //=[|t]; first by apply: IH.
-  rewrite !push/=.
-  set Fxs := fresh_atoms _ _ _.
-  set Ft := fresh_tm _ _ _.
-  case VT: (_ \in _) => //= VX; last by apply: IH VX.
-  move=> lmb _.
-  apply: leq_codomf_ren VT.
-    apply: fresh_tm_sub1.
-  apply/leq_codomf_fresh_tm/leq_codomf_vars_atoms/lmb/VX.
-  by apply/leq_trans/fresh_atoms_sub.
-Qed.
-
 Lemma disj_tree_bc p n s t:
   disj_tree match (bc u p n t s).2 with
   | [::] => KO
@@ -200,8 +143,8 @@ Proof.
     have ->// := @fresh_sub_notin (vars_atoms (premises k)) v; rewrite leqNgt.
     by [].
   apply/forallP => -[[v]vP]/=; apply/andP; split.
-    apply: leq_trans (leq_codomf_vars_atoms_in _ _ vP); last first.
-      apply leq_codomf_fresh_tm.
+    apply: leq_trans (all_min_vars_atoms_in _ _ vP); last first.
+      apply all_min_fresh_tm.
         by apply: leqnn.
         by apply/forallP => -[]; rewrite codomf0.
       apply/leq_trans/fresh_sub => //.
@@ -216,37 +159,188 @@ Proof.
   by rewrite vP/= leqNgt; case: leq => ///(_ isT).
 Qed.
 
-Lemma disj_tree_step p n s t:
+Lemma vars_tree_atom_vars_tree_sub t:
+  vars_tree_atom t `<=` vars_tree t.
+Proof.
+  elim_tree t; rewrite/=?fsubUset.
+    rewrite (fsubset_trans HA)//=; last by rewrite -fsetUA fsubsetUl.
+    by rewrite fsubsetU//(fsubset_trans HB)//fsubsetUr.
+    by rewrite (fsubset_trans HB)//fsubsetUl.
+  rewrite fsubsetUr andbT (fsubset_trans HA);last by rewrite -fsetUA fsubsetUl.
+  by rewrite fsubsetU//(fsubset_trans HB)//fsubsetUr.
+Qed.
+
+Lemma all_min_fset0 n: all_min n fset0.
+Proof. by apply/forallP => -[]. Qed.
+
+Lemma vars_atoms_bc prog n t s:
+  fresh (vars_sigma s) <= n ->
+  fresh (vars t) <= n ->
+    exists v' e : fvS,
+    [/\ all_min n e,
+      vars_tree_atom
+      match (bc u prog n t s).2 with
+      | [::] => KO
+      | (s0, r) :: xs => Or None s0 (big_or r xs)
+      end = v' `|` e
+      & v' `<=` vars t].
+Proof.
+  have ? : forall x, exists v' e : fvS, [/\ all_min n e,  fset0 = v' `|` e  & v' `<=` x].
+    by exists fset0,fset0; rewrite fsetU0//all_min_fset0.
+  rewrite/bc; case: ifP => //= I fsn ft.
+  rewrite !push/=.
+  set X := fresh _.
+  have:= leqnn X; rewrite{1}/X.
+  rewrite 3!freshPU -!andbA => /and4P[Xn Xs Xdt].
+  clearbody X; case: prog => rs sig/=.
+  elim: rs => //=-[h b] rs IH; rewrite v_prog_cons/varsU_rhead/varsU_rprem/=.
+  rewrite !freshPU -andbA => /and3P[fh fb frs].
+  have [v'[e[H1 H2 H3{IH}]]] := IH frs.
+  rewrite /=/fresh_rule/=!push/=.
+  case H: H => [[ty s']|]//=; last by exists v', e.
+  rewrite !vars_tree_atom_big_or.
+  replace (varsU _) with (v' `|` e); last first.
+    by move: H2; case: select => //-[]/=? bx l; rewrite vars_tree_atom_big_or.
+  clear H2.
+  set FA := fresh_atoms _ _ _.
+  exists  v', (e `|` vars_atoms FA.2).
+  split => //=; last first.
+    by rewrite fsetUA (fsetUC e) fsetUA (fsetUC v').
+  apply/forallP => -[[x]/=]; rewrite in_fsetU => /orP[]xP.
+    by have:= forallP H1 [`xP].
+  move: Xn; rewrite freshP1 => Xn.
+  apply: all_min_vars_atoms_in xP.
+    by apply/leq_trans/fresh_sub/leq_trans/fresh_rules_sub/ltnW.
+  apply: all_min_fresh_tm.
+    by apply/leq_trans/fresh_rules_sub/ltnW.
+  by rewrite codomf0; apply/forallP => -[].
+Qed.
+
+Lemma vars_atoms_step p n s t: 
+  fresh (vars_sigma s) <= n -> fresh (vars_tree t) <= n ->
+  let vs := vars_tree_atom (step u p n s t).2 in
+  exists v' e, [/\ all_min n e, vs = v' `|` e & v' `<=` vars_tree_atom t].
+Proof.
+  have H : forall x, exists v' e : fvS, [/\ all_min n e,  fset0 = v' `|` e  & v' `<=` x].
+    by exists fset0,fset0; rewrite fsetU0//all_min_fset0.
+  rewrite/=; elim_tree t s => vsn; rewrite //=?push/=.
+  - case: t => [|t]; rewrite//=!push/=.
+    by apply: vars_atoms_bc.
+  - rewrite 2!freshPU -andbA => /and3P[vA vB vs].
+    have [v'[e[H1 H2 H3]]] := HA s vsn vA.
+    case: ifP => //=cA.
+      rewrite fsetU0; exists v', e; split => //.
+      by rewrite (fsubset_trans H3)//fsubsetUl.
+    exists (v'`|` vars_tree_atom B), e; split => //.
+      by rewrite -fsetUA (fsetUC _ e) fsetUA H2.
+    by rewrite fsetSU//.
+  - by rewrite freshPU => /andP[vB vs]; apply: HB.
+  - rewrite !freshPU -andbA/= => /and3P[vA vB vB0]/=.
+    have [v'[e[H1 H2 H3]]] := HA s vsn vA.
+    case: ifP => //=sA; last first.
+      exists (v'`|` vars_tree_atom B `|` vars_atoms B0), e; split => //.
+        rewrite H2 -!fsetUA (fsetUC _ e) !fsetUA; f_equal.
+        by rewrite -!fsetUA; f_equal; rewrite fsetUC.
+      by rewrite !fsetSU.
+    have [vx[ex[H1' H2' H3']]] := HB (next_subst s A) (vars_sigma_next_subst vA vsn) vB.
+    case: ifP => K; rewrite H2'.
+      exists (vars_tree_atom (cutl A) `|` vx `|` vars_atoms B0), ex; split => //.
+        by rewrite -!fsetUA; do 2 f_equal; apply: fsetUC.
+      rewrite fsetSU//fsubUset (fsubset_trans H3' (fsubsetUr _ _)) andbT.
+      by rewrite (fsubset_trans (vars_tree_atom_cutl _))//fsubsetUl.
+    exists (vars_tree_atom A `|` vx `|` vars_atoms B0), ex; split => //.
+      by rewrite -!fsetUA; do 2 f_equal; apply: fsetUC.
+    rewrite fsetSU//fsubUset (fsubset_trans H3' (fsubsetUr _ _)) andbT.
+    by rewrite fsubsetUl.
+Qed.
+
+Lemma disj_tree_step p n s t: fresh (vars_sigma s) <= n -> fresh (vars_tree t) <= n ->
   disj_tree t -> disj_tree (step u p n s t).2.
 Proof.
-  elim_tree t s => /=.
-  - move=> _; case: t => //t; rewrite !push/=.
+  elim_tree t s => /=vsn. 
+  - move=> _ _; case: t => //t; rewrite !push/=.
     apply: disj_tree_bc.
-  - move=> /and3P[dAB vA vB]; rewrite !push/=.
+  - rewrite 2!freshPU -andbA.
+    move=> /and3P[vrA vrB vrs] /and3P[dAB vA vB]; rewrite !push/=.
     rewrite HA//; case: ifP => //=; first by rewrite fdisjointX0.
     rewrite vB andbT.
-    (* TODO: prove that vars_tree_atom on step produces A' `|` E where A' <= A and E is > n *)
-    (* I need the Hyp that n contains all vars in t *)
-    admit.
-  - by move=> vB; rewrite !push/=HB.
-  - move=> /andP[dA dB].
-    case: ifP => sA; rewrite !push/=?HA//HB//andbT.
-    by case: ifP; rewrite//=disj_tree_cutl.
-Admitted.
+    move=> _.
+    have /=[v'[e[AM VT VS]]] := vars_atoms_step p vsn vrA.
+    rewrite VT fdisjointUX (fdisjointWl VS)//=.
+    apply: fdisjointWr (vars_tree_atom_vars_tree_sub _) _.
+    rewrite fdisjoint_sym.
+    apply: min_max_S_disj 0 (n) (n) (fresh e) _ _ _ => //.
+      apply/forallP => //=-[[x]xP]/=.
+      apply/leq_trans/vrB.
+      rewrite leqNgt; apply/contraTN/xP => H.
+      by have:= fresh_sub_notin H.
+    apply/forallP => -[[x]xP]/=.
+    have/=->:= forallP AM [`xP].
+    rewrite leqNgt; apply/contraTN/xP => H.
+    by have:= fresh_sub_notin H.
+  - by rewrite freshPU => /andP[vrB vsm]; move=> vB; rewrite !push/=HB.
+  - rewrite !freshPU -andbA => /and3P[vrA vrB vrB0] /andP[dA dB].
+    case: ifP => sA; rewrite !push/=?HA//.
+    apply/andP; split.
+      by case: ifP; rewrite//=disj_tree_cutl.
+    by apply/HB/dB/vrB/vars_sigma_next_subst.
+Qed.
+
+Lemma fresh_vars_tree_sub p v0 s1 A: fresh (vars_sigma s1) <= v0 -> fresh (vars_tree A) <= v0 ->
+  fresh (vars_tree (step u p v0 s1 A).2) <= (step u p v0 s1 A).1.1.
+Proof.
+  elim_tree A v0 s1 => //=vs; rewrite ?push/=?freshPU-?andbA.
+  - case: t => [|t]// H.
+    have b0: 0 < v0 by destruct v0.
+    rewrite !push/=.
+    case X: bc => //=[n'[|[s0 r0]rs]]//=; first rewrite freshP0.
+      by have:= bc_sub u p t v0 s1; rewrite X; destruct v0, n'.
+    have ST : sum_mt 0 fmap0 t <= v0.
+      by rewrite/sum_mt !freshPU/= codomf0 freshP0 freshP1 /= b0.
+    rewrite freshPU.
+    by have [->] := vars_tm_bc_sub ST vs X.
+  - move=> /and4P[vrA vrB vrd vrc].
+    have H:= vars_tree_step_sub u p A v0 s1.
+    rewrite HA//=(leq_trans vrc H).
+    rewrite (leq_trans vrd H) !andbT.
+    case: ifP => //=; last by rewrite (leq_trans vrB H).
+    rewrite (leq_trans _ H)//freshP0.
+    by destruct v0.
+  - move=> /and3P[vB vrd vrc].
+    have H:= vars_tree_step_sub u p B v0 sm.
+    by rewrite (leq_trans vrc H)(leq_trans vrd H) !andbT HB//= freshPU vrd.
+  - move=> /and3P[vrA vrB vrB0].
+    have H:= vars_tree_step_sub u p A v0 s1.
+    have {}HA := HA _ _ vs vrA.
+    case: ifP => /=sA; rewrite !freshPU/=; last first.
+      by rewrite HA !(leq_trans _ H).
+    have FS := vars_sigma_next_subst vrA vs.
+    have {}HB := HB v0 (next_subst s1 A) FS vrB.
+    have H':= vars_tree_step_sub u p B v0 (next_subst s1 A).
+    rewrite (leq_trans vrB0)// HB !andbT.
+    suffices HH: fresh (vars_tree A) <= (step u p v0 (next_subst s1 A) B).1.1.
+      by case: ifP; rewrite//(leq_trans (vars_tree_cutlF _)).
+    rewrite (leq_trans vrA)//.
+Qed.
 
 Lemma disj_tree_run p n t t' s s':
+  fresh (vars_tree t) <= n ->
+  fresh (vars_sigma s) <= n ->
   disj_tree t ->
   (exists b n', runT u p n s t (Many s' t') b n') ->
   disj_tree t'.
 Proof.
-  move=> + [b[n' R]].
+  move=> +++ [b[n' R]].
   remember (Many _ _) as r eqn:H.
-  elim_run R s' t' H => D.
+  elim_run R s' t' H => Lt Ls D.
     by move: H => [_<-]; apply: disj_tree_prune NS.
-    apply: IH => //.
-    move: eA; rewrite (surjective_pairing (step _ _ _ _ _)) => -[_ <-].
-    by apply: disj_tree_step.
-  by apply/IH/disj_tree_prune/nA.
+    move: eA; rewrite (surjective_pairing (step _ _ _ _ _)) => -[+ ?]; subst.
+    rewrite (surjective_pairing (fst _)) => -[??]; subst.
+    apply/IH/disj_tree_step => //.
+    by apply: fresh_vars_tree_sub.
+    by rewrite (leq_trans Ls)//vars_tree_step_sub.
+  apply/IH/disj_tree_prune/nA => //.
+  by apply: vars_tree_prune_sub_flow nA.
 Qed.
 
 Print Assumptions disj_tree_run.

@@ -3,8 +3,75 @@ From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From det Require Import tree tree_prop fresh.
 
+Definition all_min m (r: {fset V}) := 
+  [forall x : r, let: IV x := val x in m <= x].
+
+Definition all_max M (r: {fset V}) := 
+  [forall x : r, let: IV x := val x in x <= M].
+
 Definition min_maxS (s:{fset V}) m M :=
   [forall x : s, let: IV x := val x in m <= x < M].
+
+Lemma all_min_fresh_tm:
+  forall q m r h, m <= q ->
+  let x := fresh_tm q r h in
+  all_min m (codomf r) ->
+  all_min m (codomf x.2).
+Proof.
+  move=> /=q m r t; elim: t m q r => //[v|f Hf a Ha] m q r mq.
+    rewrite/=; case: ifP => //=vr.
+    rewrite/all_min/= codomf_setN?vr//.
+    move=> /forallP H; apply/forallP => -[[x]]/=.
+    rewrite in_fsetU in_fset1/=; case: eqP; first by move=> [->].
+    by move=> /= _ yr; apply: H [`yr].
+  move=> mr/=; rewrite !push.
+  by apply/Ha/Hf/mr/mq/leq_trans/fresh_sub.
+Qed.
+
+Lemma all_min_vars_atoms:
+  forall q m r h, m <= q ->
+  let x := fresh_atoms q r h in
+  all_min m (codomf r) ->
+  all_min m (codomf x.1.2).
+Proof.
+  move=> /=q m r t; elim: t m q r => [|x xs IH] m q r mq l//=.
+  rewrite !push/=; case: x => [|t]; first by apply: IH.
+  rewrite/=!push/=.
+  apply/all_min_fresh_tm/IH/l/mq.
+  by apply/leq_trans/fresh_atoms_sub.
+Qed.
+
+Lemma all_min_ren v t m B:
+  vars_tm t `<=` domf B ->
+  all_min m (codomf B) ->
+  IV v  \in vars_tm (ren B t) ->
+  m <= v.
+Proof.
+  elim: t v m B => [p|v|f Hf a Ha]//=v' m B; rewrite (fsub1set,fsubUset) (in_fsetU, in_fset1).
+    move=> vB; rewrite in_fnd//==> H /eqP H1.
+    have v'B : IV v' \in codomf B by apply/codomfP; exists v; rewrite in_fnd H1.
+    by have:= forallP H [`v'B].
+  by move=> /andP[fB aB] l/orP[/Hf|/Ha]->//.
+Qed.
+
+Lemma all_min_vars_atoms_in m A B v b:
+  m <= A -> all_min m (codomf B) ->
+  IV v  \in vars_atoms (fresh_atoms A B b).2 ->
+  m <= v.
+Proof.
+  elim: b A B v => //=x xs IH A B v.
+  rewrite !push/= vars_atoms_cons in_fsetU.
+  case: x => //=[|t]; first by apply: IH.
+  rewrite !push/=.
+  set Fxs := fresh_atoms _ _ _.
+  set Ft := fresh_tm _ _ _.
+  case VT: (_ \in _) => //= VX; last by apply: IH VX.
+  move=> lmb _.
+  apply: all_min_ren VT.
+    apply: fresh_tm_sub1.
+  apply/all_min_fresh_tm/all_min_vars_atoms/lmb/VX.
+  by apply/leq_trans/fresh_atoms_sub.
+Qed.
 
 Lemma min_max_fresh_tm r m M q:
   m <= M ->
