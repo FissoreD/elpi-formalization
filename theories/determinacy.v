@@ -1,6 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import lang mut_excl check_fo tree tree_prop.
+From det Require Import lang mut_excl check_fo tree tree_prop min_max_disj.
 
 (*SNIP: check_program *)
 Definition check_program pr := mut_excl u pr && check_rules pr.

@@ -18,6 +18,8 @@ theories/tree.v
 theories/tree_test.v
 theories/tree_prop.v
 theories/tree_vars.v
+theories/disj_tree.v
+theories/min_max_disj.v
 theories/valid_tree.v
 theories/tree_prop_hard.v
 

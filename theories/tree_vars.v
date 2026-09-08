@@ -2,8 +2,7 @@ From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
 From det Require Import lang.
 From det Require Import tree tree_prop fresh.
-  
-Module Private.
+
 Section vars_tree.
   Variable (u : Unif).
   Variable (p : program).
@@ -275,10 +274,5 @@ Section vars_tree.
       by rewrite fsubsetU//vars_tree_cutl.
     by rewrite !fsetSU//; apply: HA X.
   Qed.
-    
 
 End vars_tree.
-End Private.
-
-Definition vars_tree_prune_sub_flow := Private.vars_tree_prune_sub_flow.
-Definition vars_tree_step_sub_flow := Private.vars_tree_step_sub_flow.
