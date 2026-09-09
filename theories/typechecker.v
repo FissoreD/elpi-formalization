@@ -426,6 +426,7 @@ Definition valid_merge_types (e1 e2 : sigV) :=
 
 Lemma valid_merge_refl: reflexive valid_merge_types.
 Proof. by move=> x; apply/forallP. Qed.
+Global Hint Resolve valid_merge_refl : core.
 
 Definition merge_valid t1 t2 :=
   obind (fun x => obind (fun y => if valid_merge_types x y then Some (x + y) else None) t2) t1.
@@ -453,39 +454,45 @@ Lemma typechecks_tree_big_and sP env s B0 tail:
   (typechecks_atoms sP env (map (deref_atom s) (B0 ++ tail))).
 Proof. by case: B0 => //= + xs; case: xs env => //. Qed.
 
-Lemma tc_bc p n t s g0 r tail:
+Lemma typecheck_atoms_cat sig env x y:
+  typechecks_atoms sig env (x ++ y) = 
+    obind (fun env' => typechecks_atoms sig env' y) (typechecks_atoms sig env x).
+Proof. by elim: x y env => [|[|t] xs IH] y env//=; case X: typechecks => [[env' [[|ty]|]]|]//=. Qed.
+
+Lemma tc_bc p n t s env r tail env':
   typechecks_prog p ->
-  typechecks p.(sig) g0 (deref s t) = Some r ->
+  typechecks p.(sig) env (deref s t) = Some r ->
+  typechecks_atoms p r.1 [seq deref_atom s i  | i <- tail] = Some env' ->
   is_prop (Some r) ->
-  typechecks_tree p g0 s
+  exists2 env'', typechecks_tree p env s
   match (bc u p n t s).2 with
   | [::] => KO
   | (s0, r) :: xs => Or None s0 (big_or r xs)
-  end tail.
+  end tail = Some env'' & valid_merge_types env' env''.
 Proof.
-  case: p => rs sig/=; case: r => gt [[|prop]|]// ++ _.
-  rewrite /typechecks_prog/=/bc.
-  case: ifP => // /negbFE Is; rewrite !push/=.
+  case: p => rs sig/=; case: r => gt [[|prop]|]//.
+  rewrite /typechecks_prog/=/bc => Tr Tt Ta _.
+  have VEE: valid_merge_types env' env.
+    admit.
+  case: ifP => //=; first by eexists.
+  move=> /negbFE Is; rewrite !push/=.
   have:= idempotent_deref_disjoint t Is.
-  set dt := (deref _ _).
+  move: Tr; set dt := (deref _ _) => Tr.
   set X := fresh _; have:= leqnn X; rewrite{1}/X.
   rewrite 3!freshPU freshP1 -!andbA => /and4P[Sn Ss St Sp].
-  clearbody X => DH + TC.
-  elim: rs Sp => //= -[h b] rs.
-  rewrite !push/= v_prog_cons !freshPU -!andbA /varsU_rhead/varsU_rprem/=.
-  move=> IH /and3P[Sh Sb Srs] /andP[Tr Trs].
-  have{}IH := IH Srs Trs.
+  clearbody X => DH.
+  elim: rs Sp Tr => //= [|[h b] rs IH]; first by eexists.
+  rewrite !push/= v_prog_cons !freshPU -!andbA /varsU_rhead/varsU_rprem/=/typechecks_rule/=.
+  case Th: typechecks => //[[envh [[|tyh]|]]]//=.
+  move=> /and3P[Sh Sb Srs] /andP[Tr Trs].
+  have [env''{}IH VEE'] := IH Srs Trs.
   rewrite/fresh_rule !push/=.
   set F := fresh_tm _ _ _.
-  case H: lang.H => [[ty s']|]//=.
-  suffices Hx: (typechecks_atoms sig g0 [seq deref_atom s' i  | i <- (fresh_atoms F.1 F.2 b).2 ++ tail]).
-    move: IH; case S: select => //=[|[s0 r0] rs']/=; rewrite typechecks_tree_big_and//.
-    case Trs': typechecks_tree => [tyr|]//= _.
-    move: Hx; case: typechecks_atoms => [tr|]//= _.
-    rewrite ifT//=.
+  case H: lang.H => [[ty s']|]//=; last by exists env''.
+  move: IH; case sel: select => [|[s0 x0] xs]/=.
+    move=> [?]; subst; rewrite typechecks_tree_big_and/= map_cat typecheck_atoms_cat.
     admit.
-  move: Tr; rewrite/typechecks_rule/=.
-  case TH: typechecks => //[[e' [[|th]|]]]//=.
+  move=> IH; rewrite IH typechecks_tree_big_and/= map_cat typecheck_atoms_cat.
   (* TODO: aggiungere typechecking nella sostituzione:
            tutte le variabili in s sono in env e i termini in s
            hanno lo stesso tipo del risultato del typechecker, qui
@@ -493,130 +500,148 @@ Proof.
   (* e' gives the type for the variable in h *)
   (* by H, ty should be the same of typechecks *)
   (* should be true by using Tr *)
-
+  admit.
 Admitted.
   
 Lemma merge_valid_id a: merge_valid a a = a.
 Proof. by case: a => //= ?; rewrite valid_merge_refl catf2. Qed.
 
-Lemma typechecks_tree_step p n env s t t'  tail:
+Lemma typechecks_tree_step p n env s t t'  tail env':
   sld_tree t ->
   typechecks_prog p ->
-  typechecks_tree p.(sig) env s t tail ->
+  typechecks_tree p.(sig) env s t tail = Some env' ->
   step u p n s t = t' ->
-  typechecks_tree p.(sig) env s t'.2 tail.
+  exists2 env'', typechecks_tree p.(sig) env s t'.2 tail = Some env'' & valid_merge_types env' env''.
 Proof.
   move=> + TP.
   move=> ++<-{t'}.
-  elim_tree t s env tail => /=.
-  - case: t => //=t _.
-    rewrite !push/=; case T: typechecks => [[ty [[|eA]|]]|]//=.
-    move=> TA; by apply: tc_bc T _.
+  elim_tree t s env env' tail => /=.
+  - by move=> _[<-]; exists env.
+  - by move=> _ ->; eexists.  
+  - case: t => //=t.
+      by move=> ->; eexists.
+    rewrite !push/=; case T: typechecks => [[ty [[|eA]|]]|]//= _.
+    move=> TA; have H:= tc_bc _ TP T TA.
+    by apply: H.
   - move=> /andP[vA vB]; rewrite !push.
     case TA: typechecks_tree => [tA|]//=.
     case TB: typechecks_tree => [tB|]//=.
-    case: ifP => vm// _.
-    have:= HA _ _ _ vA (isSomeP TA).
-    case TA': typechecks_tree => //[eA'] _.
-    have v1 : valid_merge_types eA' env.
+    case: ifP => vm// [?]; subst.
+    have [env'{}HA v0] := HA _ _ _ _ vA TA.
+    rewrite HA/=.
+    have v1 : valid_merge_types env' env.
       admit.
-    move: vB => /orP[/eqP->{B HB TB}|]/=; first by rewrite if_same /=ifT.
+    have v2 : valid_merge_types (tA + tB) (env' + env).
+      admit.
+    have v3 : valid_merge_types env' tB.
+      admit.
+    have v4: valid_merge_types (tA + tB) (env' + tB).
+      admit.
+    case: ifP => //=cA; first by rewrite v1; eexists.
+    move: vB => /orP[/eqP->{B HB TB}|]/=; first by rewrite v1; eexists.
     move=> /B.spec_base_or[x[y?]]; subst.
-    case: ifP => /=; first by rewrite ifT.
-    case TB: typechecks_tree TB => [eB'|]//=[?]; subst.
-    rewrite ifT//.
-    admit.
+    by rewrite TB/= v3; eexists => //.
   - by rewrite !push/=; apply: HB.
   move=> /andP[vA]; rewrite !push/=.
   case: ifP => //sA; last first.
     move=> /eqP->{B HB}/= TA.
-    have:= HA _ _ _ vA TA.
-    case TA': typechecks_tree => //[eA'] _.
-    case: ifP => // S.
-    (* rewrite typechecks_tree_big_and. *)
+    have [env''{}HA v0]:= HA _ _ _ _ vA TA.
+    rewrite HA.
+    case: ifP => // S; last by eexists.
     admit.
   move=> vB.
   case TB: typechecks_tree => //=[eB].
   case TA: typechecks_tree => [eA|]//=.
-  case: ifP => //= VM _.
+  case: ifP => //= v0 [?]; subst.
   rewrite ifT; last by case: ifP; rewrite//success_cut.
-  have:= HB _ _ _ vB (isSomeP TB).
-  case TB': typechecks_tree => [eB'|]//= _.
-  case: (ifP (is_cb _)) => //= CB.
-    rewrite ges_subst_cutl//=TB'.
+  have [env'{}HB v1] := HB _ _ _ _ vB TB.
+  have v2: valid_merge_types env' eA.
     admit.
-  rewrite TB' TA/= ifT => //.
+  case: (ifP (is_cb _)) => //= CB.
+    rewrite ges_subst_cutl//= HB.
+    admit.
+  rewrite HB TA/= v2; eexists => //.
   admit.
 Admitted.
 
-Lemma typechecks_tree_prune sP env s t t' b  tail:
+Lemma typechecks_tree_prune sP env env' s t t' b  tail:
   sld_tree t ->
-  typechecks_tree sP env s t tail ->
+  typechecks_tree sP env s t tail = Some env' ->
   prune b t = Some t' ->
-  typechecks_tree sP env s t' tail.
+  exists2 env'', typechecks_tree sP env s t' tail = Some env'' & valid_merge_types env' env''.
 Proof.
-  elim_tree t b s env t' tail => /=.
-  - by case: b => // _ H [<-]//=; case: k => //.
-  - by move=> /= _ H [<-]; rewrite /=H.
+  elim_tree t b s env env' t' tail => /=.
+  - by move=> _; case: b => //= T [<-]/=; exists env' => //.
+  - by move=> /= _ H [<-]; rewrite /=H; eexists.
   - move=> /andP[]vA vB.
     case TA: typechecks_tree => [tA|]//=.
     case TB: typechecks_tree => [tB|]//=.
-    case: ifP => vm// _.
+    case: ifP => vm// [?]; subst.
     case PA: prune => [A'|]//=.
       move=> [<-]/=; rewrite TB/=.
-      have /= := HA _ _ _ _ _ vA (isSomeP TA) PA.
-      case TA': typechecks_tree => //= [tA'] _.
-      rewrite ifT//=.
+      have /=[env'' {}HA v0] := HA _ _ _ _ _ _ vA TA PA.
+      have v1: valid_merge_types env'' tB.
+        by admit.
+      rewrite HA/=v1; eexists => //=.
       (* If I add the hyp that disj_tree, then tA' = env + x && x # domf tB,then valid_merge is satisfied *)
       admit.
     move: vB => /orP[/eqP->//|/B.spec_base_or[x[y ?]]]; subst.
     rewrite prune_big_or/= => -[<-]{t'}/=.
-    have := HB _ _ _ _ _ _ (isSomeP TB) (prune_big_or _ _).
-    by rewrite valid_tree_big_or => ->//.
+    have [env'' {}HB v1] := HB _ _ _ _ _ _ (valid_tree_big_or _ _) TB (prune_big_or _ _).
+    rewrite HB; eexists => //.
+    admit.
   - by case PB: prune => //=vB T [<-]/=; apply: HB PB.
   move=> /andP[vA].
   case: ifP => //sA; last first.
     move=> /eqP->{B HB}/=.
     case: ifP => //fA TA.
       case PA: prune => [A'|]//=[<-{t'}]/=.
-      have {HA} := HA _ _ _ _ _ vA TA PA.
-      case TA': typechecks_tree => //[eA']; case: ifP => //= SA' _.
+      have [env''{}HA v0] := HA _ _ _ _ _ _ vA TA PA.
+      rewrite HA; case: ifP => //sA'; last by eexists.
       admit.
     move=> [<-]/=; rewrite sA/=.
     by apply: HA vA TA (failedF_prune _).
   case TB: typechecks_tree => //=[eA].
   case TA: typechecks_tree => [eB|]//=.
-  case: ifP => //= VM vB _.
+  case: ifP => //= VM vB [?]; subst.
   case PB: prune => //[B'|].
     move=> [<-]/=; rewrite sA/= TA.
-    have /= := HB _ _ _ _ _ vB (isSomeP TB) PB.
-    case TB': typechecks_tree => //=[eB']; rewrite ifT//.
+    have /=[env''{}HB v0] := HB _ _ _ _ _ _ vB TB PB.
+    have v1: valid_merge_types env'' eB.
+      admit.
+    rewrite HB/=v1; eexists => //.
     admit.
   case PA: prune => [A'|]//=[<-]/=.
-  have /= {HA} := HA _ _ _ _ _ vA (isSomeP TA) PA.
-  case TA': typechecks_tree => //=[eA'].
-  case: ifP => //=sA' _.
+  have /= [env'' {}HA v0] := HA _ _ _ _ _ _ vA TA PA.
+  rewrite HA/=; case: ifP => sA'; last eexists => //.
+    admit.
   admit.
 Admitted.
 
-Lemma tc_run p n s tree res env tail:
+Lemma tc_run p n s tree res env env' tail:
   typechecks_prog p ->
    sld_tree tree ->
-  typechecks_tree p.(sig) env s tree tail ->
+  typechecks_tree p.(sig) env s tree tail = Some env' ->
   (exists b n', runT u p n s tree res b n') ->
   match res with
-  | Zero => true
-  | One s => true
-  | Many s t => typechecks_tree p.(sig) env s t tail
+  | Zero => True
+  | One s => True
+  | Many s t => exists2 env'', typechecks_tree p.(sig) env s t tail = Some env'' & valid_merge_types env' env''
   end.
 Proof.
   move=> +++[b [n' H]].
-  elim_run H env tail => TP VT TA; only 2,3: apply: IH => //=.
+  elim_run H env env' tail => TP VT TA.
   - admit.
-  - by apply: sld_tree_step VT eA.
-  - by apply: typechecks_tree_step eA.
-  - by apply: sld_tree_prune nA.
-  - by apply: typechecks_tree_prune nA.
+  - have [env'' TB v0'] := typechecks_tree_step VT TP TA eA.
+    have {IH} := IH _ _ _ TP (sld_tree_step VT eA) TB.
+    case: r rB => // s t rB [env''' Tt v3]; rewrite Tt.
+    eexists => //.
+    admit.
+  - have [env'' TB v2] := typechecks_tree_prune VT TA nA.
+    have {IH} := IH _ _ _ TP (sld_tree_prune VT nA) TB.
+    case: r rB => //s t rB [env''' Tt v3]; rewrite Tt.
+    eexists => //.
+    admit.
 Abort.
 
 
