@@ -552,6 +552,17 @@ Lemma typechecks_tree_big_and sP env s B0 tail:
   (typechecks_atoms sP env (map (deref_atom s) (B0 ++ tail))).
 Proof. by case: B0 => //= + xs; case: xs env => //. Qed.
 
+Lemma typechecks_tree_big_or z sP env s x xs tail:
+  typechecks_tree sP env s (big_or x xs) tail =
+  merge_valid (typechecks_atoms sP env (map (deref_atom s) (x++tail))) 
+    (typechecks_tree sP env z (match xs with [::] => KO | (s0,r0) :: xs => Or None s0 (big_or r0 xs) end) tail).
+Proof.
+  case: xs => [|[s0 r]rs]/=; rewrite typechecks_tree_big_and//=.
+  case T: typechecks_atoms => //=[env']/=.
+  have [e?] := typecheck_atoms_ext T; subst.
+  by rewrite -catfA catf2 valid_merge_types_catL//valid_merge_types_remLA.
+Qed.
+
 Lemma typecheck_atoms_cat sig env x y:
   typechecks_atoms sig env (x ++ y) = 
     obind (fun env' => typechecks_atoms sig env' y) (typechecks_atoms sig env x).
@@ -570,8 +581,11 @@ Lemma tc_bc p n t s env r tail env':
 Proof.
   case: p => rs sig/=; case: r => gt [[|prop]|]//.
   rewrite /typechecks_prog/=/bc => Tr Tt Ta _.
-  have VEE: valid_merge_types env' env.
-    admit.
+  have /=[e1?] := typechecks_ext Tt; subst.
+  have /=[e2?] := typecheck_atoms_ext Ta; subst.
+  rewrite catfA in Ta *.
+  have VEE: valid_merge_types (e2 + e1 + env) env.
+    by rewrite valid_merge_types_catL//valid_merge_types_remLA.
   case: ifP => //=; first by eexists.
   move=> /negbFE Is; rewrite !push/=.
   have:= idempotent_deref_disjoint t Is.
@@ -587,6 +601,10 @@ Proof.
   rewrite/fresh_rule !push/=.
   set F := fresh_tm _ _ _.
   case H: lang.H => [[ty s']|]//=; last by exists env''.
+  rewrite (typechecks_tree_big_or s) IH.
+  rewrite map_cat typecheck_atoms_cat.
+  
+  
   move: IH; case sel: select => [|[s0 x0] xs]/=.
     move=> [?]; subst; rewrite typechecks_tree_big_and/= map_cat typecheck_atoms_cat.
     admit.
