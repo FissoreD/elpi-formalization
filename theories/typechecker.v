@@ -420,28 +420,6 @@ Definition deref_atom s a :=
   | call t => call (deref s t)
   end.
 
-Lemma tc_bc p n t s g0 r:
-  typechecks_prog p ->
-  typechecks p.(sig) g0 (deref s t) = Some r ->
-  is_prop (Some r) ->
-  all (fun x => typechecks_atoms p.(sig) r.1 (map (deref_atom x.1) x.2)) (bc u p n t s).2.
-Proof.
-  case: p => rs sig/=; case: r => gt [[|prop]|]// ++ _.
-  rewrite /typechecks_prog/=/bc.
-  case: ifP => // /negbFE Is; rewrite !push/=.
-  have:= idempotent_deref_disjoint t Is.
-  set dt := (deref _ _).
-  set X := fresh _; have:= leqnn X; rewrite{1}/X.
-  rewrite !freshPU freshP1 -!andbA => /and5P[Sn Sd Sc St Sp].
-  clearbody X => H + TC.
-  elim: rs Sp => //= -[h b] rs.
-  rewrite !push/= v_prog_cons !freshPU -!andbA /varsU_rhead/varsU_rprem/=.
-  move=> IH /and3P[Sh Sb Srs] /andP[Tr Trs].
-  case HH: lang.H => [[ty s']|]/=; rewrite {}IH// andbT.
-  move: HH; rewrite/fresh_rule !push/=.
-  set F := fresh_tm _ _ _.
-Admitted.
-
 Definition valid_merge_types (e1 e2 : sigV) := 
   [forall x : domf e1 `&` domf e2,
     e1.[?val x] == e2.[?val x]].
@@ -451,9 +429,7 @@ Proof. by move=> x; apply/forallP. Qed.
 
 Definition merge_valid t1 t2 :=
   obind (fun x => obind (fun y => if valid_merge_types x y then Some (x + y) else None) t2) t1.
-  
-Lemma merge_valid_id a: merge_valid a a = a.
-Proof. by case: a => //= ?; rewrite valid_merge_refl catf2. Qed.
+
 
 (*HYP: t is a valid tree*)
 Fixpoint typechecks_tree sP e s t tail :=
@@ -472,17 +448,56 @@ match t with
   merge_valid (typechecks_tree sP e s A tail) (typechecks_tree sP e sm B tail)
 end.
 
-(* Lemma typechecks_cutl p env s A tail: success A ->
-  typechecks_tree p env s (cutl A) tail = typechecks_atoms p env (map (deref_atom (next_subst s A)) tail).
+Lemma typechecks_tree_big_and sP env s B0 tail:
+  (typechecks_tree sP env s (big_and B0) tail) =
+  (typechecks_atoms sP env (map (deref_atom s) (B0 ++ tail))).
+Proof. by case: B0 => //= + xs; case: xs env => //. Qed.
+
+Lemma tc_bc p n t s g0 r tail:
+  typechecks_prog p ->
+  typechecks p.(sig) g0 (deref s t) = Some r ->
+  is_prop (Some r) ->
+  typechecks_tree p g0 s
+  match (bc u p n t s).2 with
+  | [::] => KO
+  | (s0, r) :: xs => Or None s0 (big_or r xs)
+  end tail.
 Proof.
-  elim_tree A s tail; rewrite rew_pa/=.
-  - move=> sA; rewrite HA//=/merge_valid.
-    case T: typechecks_atoms => [eA|]//=.
+  case: p => rs sig/=; case: r => gt [[|prop]|]// ++ _.
+  rewrite /typechecks_prog/=/bc.
+  case: ifP => // /negbFE Is; rewrite !push/=.
+  have:= idempotent_deref_disjoint t Is.
+  set dt := (deref _ _).
+  set X := fresh _; have:= leqnn X; rewrite{1}/X.
+  rewrite 3!freshPU freshP1 -!andbA => /and4P[Sn Ss St Sp].
+  clearbody X => DH + TC.
+  elim: rs Sp => //= -[h b] rs.
+  rewrite !push/= v_prog_cons !freshPU -!andbA /varsU_rhead/varsU_rprem/=.
+  move=> IH /and3P[Sh Sb Srs] /andP[Tr Trs].
+  have{}IH := IH Srs Trs.
+  rewrite/fresh_rule !push/=.
+  set F := fresh_tm _ _ _.
+  case H: lang.H => [[ty s']|]//=.
+  suffices Hx: (typechecks_atoms sig g0 [seq deref_atom s' i  | i <- (fresh_atoms F.1 F.2 b).2 ++ tail]).
+    move: IH; case S: select => //=[|[s0 r0] rs']/=; rewrite typechecks_tree_big_and//.
+    case Trs': typechecks_tree => [tyr|]//= _.
+    move: Hx; case: typechecks_atoms => [tr|]//= _.
+    rewrite ifT//=.
     admit.
-  - by apply: HB.
-  - move=> /andP[sA sB]; rewrite sA/=success_cut sA/= ges_subst_cutl//=.
-    rewrite HA//HB//=rew_pa sA.
-    case TA: typechecks_atoms => //=[eA]. *)
+  move: Tr; rewrite/typechecks_rule/=.
+  case TH: typechecks => //[[e' [[|th]|]]]//=.
+  (* TODO: aggiungere typechecking nella sostituzione:
+           tutte le variabili in s sono in env e i termini in s
+           hanno lo stesso tipo del risultato del typechecker, qui
+           non mi serve fare inferenza. *)
+  (* e' gives the type for the variable in h *)
+  (* by H, ty should be the same of typechecks *)
+  (* should be true by using Tr *)
+
+Admitted.
+  
+Lemma merge_valid_id a: merge_valid a a = a.
+Proof. by case: a => //= ?; rewrite valid_merge_refl catf2. Qed.
 
 Lemma typechecks_tree_step p n env s t t'  tail:
   sld_tree t ->
@@ -496,11 +511,7 @@ Proof.
   elim_tree t s env tail => /=.
   - case: t => //=t _.
     rewrite !push/=; case T: typechecks => [[ty [[|eA]|]]|]//=.
-    move=> TA.
-    have:= tc_bc n TP T isT.
-    case B: bc => [n' [|[s0 r0] rs']]//=.
-    move=> /andP[Tr0 Trs].
-    admit.
+    move=> TA; by apply: tc_bc T _.
   - move=> /andP[vA vB]; rewrite !push.
     case TA: typechecks_tree => [tA|]//=.
     case TB: typechecks_tree => [tB|]//=.
@@ -522,6 +533,7 @@ Proof.
     have:= HA _ _ _ vA TA.
     case TA': typechecks_tree => //[eA'] _.
     case: ifP => // S.
+    (* rewrite typechecks_tree_big_and. *)
     admit.
   move=> vB.
   case TB: typechecks_tree => //=[eB].
