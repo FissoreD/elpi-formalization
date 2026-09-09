@@ -37,7 +37,14 @@ Proof.
   by move=> >; apply: H6.
 Qed.
 
-Ltac elim_tree T X := revert X; elim: T => [||t|A HA sm B HB|sm B HB|A HA B0 B HB]; intros X => //; auto.
+Ltac elim_tree T X := revert X; elim: T;
+  [   have tree_ko := tt 
+    | have tree_ok := tt 
+    | have tree_unexp := tt; move=> t
+    | have tree_orsome := tt; move=> A HA sm B HB 
+    | have tree_ornone := tt; move=> sm B HB
+    | have tree_and := tt; move=> A HA B0 B HB]; 
+  intros X => //; auto.
 Tactic Notation "elim_tree" hyp(T) hyp_list(X) := elim_tree T X.
 
 #[only(eqbOK)] derive tree.
@@ -318,11 +325,11 @@ Definition get_tree t r :=
   end.
 
 Ltac elim_run T X := revert X; elim: T; clear; 
-  [ move=> s1 s2 A v0 sA ? NN |
-    move=> s1 s2 A B v0 sA ? NS |
-    move=> s1 r A B b1 v0 v1 v2 st pA eA rB IH|
-    move=> s1 A B r n v0 v1 fA nA rB IH |
-    move=> s1 A v0 nA ]; intros X; subst => //; auto.
+  [ have run_stopOne := tt; move=> s1 s2 A v0 sA ? NN 
+  | have run_stopMany := tt; move=> s1 s2 A B v0 sA ? NS 
+  | have run_step := tt; move=> s1 r A B b1 v0 v1 v2 st pA eA rB IH
+  | have run_back := tt; move=> s1 A B r n v0 v1 fA nA rB IH 
+  | have run_fail := tt; move=> s1 A v0 nA ]; intros X; subst => //; auto.
 Tactic Notation "elim_run" hyp(T) hyp_list(X) := elim_run T X.
 
 (*END*)
