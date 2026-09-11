@@ -202,7 +202,7 @@ Section once.
     rewrite select_cons no_once_select//.
     rewrite{1}/ren FmapE.fmapE eqxx.
     rewrite [head _]/=[premises _]/=/get_input_vars fnd_cat !inE eqxx orbF FmapE.fmapE eqxx/once_sig eqxx.
-    rewrite fset0U [fst _]/=/lang.H eqxx fnd_cat !inE eqxx orbF FmapE.fmapE eqxx [omap _ _]/=.
+    rewrite fset0U [fst _]/=/query_head eqxx fnd_cat !inE eqxx orbF FmapE.fmapE eqxx [omap _ _]/=.
     rewrite/once_sig eqxx.
     case M: lang.matching => /=?; subst; inversion H2; subst => //;[|left] => //.
     have [b'] := runT_Nor_elim H2.

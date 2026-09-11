@@ -63,21 +63,21 @@ Section Test1.
       have : [:: ([fmap], [:: call (app p (Tm_V (IV 1))); call (app r (Tm_V (IV 1)))])]  = X.
         rewrite/X select_cons/get_input_vars !FmapE.fmapE eqxx.
         do 2 case: eqP => // _.
-        rewrite/build_arr/H [head _]/=.
+        rewrite/build_arr/query_head [head _]/=.
         cbn match.
         case: eqP => // _.
         rewrite select_cons/get_input_vars !FmapE.fmapE eqxx.
         do 2 case: eqP => // _.
-        rewrite simpl_set/build_arr/H [head _]/=.
+        rewrite simpl_set/build_arr/query_head [head _]/=.
         cbn match.
         case: eqP => // _.
         rewrite select_cons/get_input_vars !FmapE.fmapE eqxx.
         do 2 case: eqP => // _.
-        rewrite/build_arr/H [head _]/=.
+        rewrite/build_arr/query_head [head _]/=.
         cbn match.
         case: eqP => // _.
         rewrite select_cons/get_input_vars !FmapE.fmapE eqxx.
-        rewrite/build_arr/H [head _]/=.
+        rewrite/build_arr/query_head [head _]/=.
         cbn match.
         case: eqP => // _.
         rewrite !FmapE.fmapE eqxx.
@@ -438,7 +438,7 @@ Section map.
         { rewrite{}/FR select_cons [head _]/=[premises _]/= get_input_vars_map12d.
         rewrite/addn ![Nat.add _ _]/=.
         rewrite/map12d/list12.
-        rewrite/H eqxx !FmapE.fmapE eqxx /mapS.
+        rewrite/query_head eqxx !FmapE.fmapE eqxx /mapS.
         rewrite[omap _ _]/=; cbn match.
         rewrite eqxx [lang.matching _]/= matching_Vd//?vars_sigma0//.
         rewrite [omap _ _]/=; cbn match.
@@ -455,7 +455,7 @@ Section map.
         have: X.1 = fset0.
           by rewrite/X/get_input_vars !FmapE.fmapE/= !simpl_set.
         move=> ->{X}.
-        rewrite/H/= !FmapE.fmapE/=.
+        rewrite/query_head/= !FmapE.fmapE/=.
         rewrite matching_Vd?vars_sigma0//=.
         rewrite !matching_app?idempotent_set_D//.
         rewrite !matching_refl/= matching_Vd//; last first.
@@ -500,18 +500,18 @@ Section map.
           have: FR = (fset0, Some func).
             by rewrite/FR/get_input_vars !FmapE.fmapE/= !simpl_set.
           move=> ->{FR}.
-          rewrite/H select_cons [head _]/=[premises _]/=.
+          rewrite/query_head select_cons [head _]/=[premises _]/=.
           set FR := (get_input_vars _ _).1.
           have: FR = fset0.
             by rewrite/FR/get_input_vars !FmapE.fmapE/= !simpl_set.
           move=> ->{FR}.
-          rewrite/H.
+          rewrite/query_head.
           rewrite select_cons [select _ _ _ _ _]/= [head _]/=.
           set FR := (get_input_vars _ _).1.
           have: FR = fset0.
             by rewrite/FR/get_input_vars !FmapE.fmapE/= !simpl_set.
           move=> ->{FR}.
-          rewrite/H eqxx !FmapE.fmapE eqxx [omap _ _]/=/doubleS eqxx.
+          rewrite/query_head eqxx !FmapE.fmapE eqxx [omap _ _]/=/doubleS eqxx.
           rewrite [lang.matching _]/= matching_refl [omap _ _]/=/=.
           rewrite unify_VR//; last by rewrite !inE.
           rewrite deref_P !deref_sigma_set; only 2-5: by [].
@@ -556,13 +556,13 @@ Section map.
           by rewrite/FR/get_input_vars !FmapE.fmapE/= !simpl_set.
         move=> ->{FR}.
         rewrite/addn ![Nat.add _ _]/=.
-        set FR := H _ _ _ _ _ _.
+        set FR := query_head _ _ _ _ _ _.
         have: FR = Some
           (func,
            [fmap].[IV 17 <- Tm_P nil].[IV 16 <- two].[IV 13 <- double].[
            IV 14 <- one].[IV 15 <- nil].[X <- app (app cons two) nil].[
            IV 32 <- double]).
-          rewrite{}/FR/H/= !FmapE.fmapE/= matching_Vd//; last first.
+          rewrite{}/FR/query_head/= !FmapE.fmapE/= matching_Vd//; last first.
             rewrite/vars_sigma/=.
             repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
             by rewrite codom_vars0 !simpl_set !inE.
@@ -573,9 +573,9 @@ Section map.
           by rewrite !FmapE.fmapE/=.
         move=> ->{FR}.
         rewrite select_cons [head _]/=[premises _]/=.
-        set FR := H _ _ _ _ _ _.
+        set FR := query_head _ _ _ _ _ _.
         have: FR = None.
-          rewrite{}/FR/H/=!FmapE.fmapE/= !simpl_set matching_Vd//; last first.
+          rewrite{}/FR/query_head/=!FmapE.fmapE/= !simpl_set matching_Vd//; last first.
             rewrite/vars_sigma/=.
             repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
             by rewrite codom_vars0 !simpl_set !inE.

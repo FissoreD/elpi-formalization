@@ -33,15 +33,15 @@ Section good_mode.
     by case: m => //=m tl tr; case: m => [|/all_mode_good_mode]; apply: IH.
   Qed.
 
-  Lemma good_modes_arri_H sP b f f' s m tf ta s': good_modes sP ->
-    H u sP b f f' s = Some (arr m tf ta, s') ->
+  Lemma good_modes_arri_query_head sP b f f' s m tf ta s': good_modes sP ->
+    query_head u sP b f f' s = Some (arr m tf ta, s') ->
     arri ta -> m = input.
   Proof.
     move=> GM; elim: f f' m tf ta s' => //[p|f Hf a _][p'|//|f' a']//=m tf ta s'.
       case: eqP => //->; case: fndP => //pP[H _].
       have := good_modes_in pP GM; rewrite {}H.
       by case: ta => [|[]]//=; case: m => //.
-    case H1: H => //[[[//|m' tf' ta'] s'']]; case: (_ s'') => //s'''[??] AI; subst.
+    case H1: query_head => //[[[//|m' tf' ta'] s'']]; case: (_ s'') => //s'''[??] AI; subst.
     have /= := Hf _ _ _ _ _ H1.
     destruct m => //= _.
     have [_ _ [p[pP fp E]]] := HP H1.
@@ -141,15 +141,15 @@ Proof.
   by rewrite derefxx//.
 Qed.
 
-Lemma idempotent_H sP fv q hd s1 r:
+Lemma idempotent_query_head sP fv q hd s1 r:
   idempotent s1 ->
-    H u sP fv q hd s1 = Some r ->
+    query_head u sP fv q hd s1 = Some r ->
       idempotent r.2.
 Proof.
   elim: q fv hd s1 r => //=[p|f Hf a Ha] fv [p'|//|f' a']// s1 r.
     by case: eqP => //= _ A; case: fndP => //=pP[<-].
   move=> A.
-  case H: H => [[[|[] tyl tyr] s1']|]//=.
+  case H: query_head => [[[|[] tyl tyr] s1']|]//=.
     case M: matching => //= [s1''][?]; subst.
     by apply: matching_idempotent M; apply: Hf H.
   case M: unify => //= [s1''][?]; subst.
@@ -162,37 +162,37 @@ Lemma idempotent_select sP query rules s1 e:
       idempotent e.1.
 Proof.
   elim: rules query s1 e => //= -[hd bo] rs IH query s1 e AS/=.
-  case H: H => [[ty s1']|]; last by apply: IH.
+  case H: query_head => [[ty s1']|]; last by apply: IH.
   rewrite in_cons => /orP[/eqP?|]; subst; last by apply: IH.
-  by have := idempotent_H AS H.
+  by have := idempotent_query_head AS H.
 Qed.
 
-Lemma H_mp sP fv q hd s1 r: idempotent s1 ->
-  H u sP fv q hd s1 = Some r -> mp s1 r.2.
+Lemma query_head_mp sP fv q hd s1 r: idempotent s1 ->
+  query_head u sP fv q hd s1 = Some r -> mp s1 r.2.
 Proof.
   elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|f' a']// s1 r.
     by case: eqP => //->; case: fndP => //= ? A[<-]; apply: mp_id.
-  move=> A; case H: H => [[[|m tl tr] s']|]//=.
+  move=> A; case H: query_head => [[[|m tl tr] s']|]//=.
   case M: (_ s') => //=[{}r][<-]/=.
   have {}Hf := Hf _ _ _ _ A H.
-  have A' := idempotent_H A H.
+  have A' := idempotent_query_head A H.
   have: mp s' r.
     by move: M; destruct m => /=/(montanari_mp A' (disjoint_L_deref _ _ A')) ->//.
   by apply: mp_trans.
 Qed.
 
-Lemma H_deref_eq sP fv q hd s1 r:
+Lemma query_head_deref_eq sP fv q hd s1 r:
   idempotent s1 ->
-    H u sP fv q hd s1 = Some r ->
+    query_head u sP fv q hd s1 = Some r ->
       deref r.2 q = deref r.2 hd.
 Proof.
   elim: q fv hd s1 r => //=[p|f Hf a _] fv [p'|//|f' a']// s1 r.
     by case: eqP => //-> A; case: fndP => //.
   move=> A.
-  case H: H => [[[|m tl tr] s1']|]//=.
+  case H: query_head => [[[|m tl tr] s1']|]//=.
   case X: (_ s1') => //= [sx][?]; subst => /=.
-  have /= A' := idempotent_H A H.
-  have s1s1' := H_mp A H.
+  have /= A' := idempotent_query_head A H.
+  have s1s1' := query_head_mp A H.
   have s1'sx: mp s1' sx.
     have M := montanari_mp A' (disjoint_L_deref _ _ A').
     by move: X; destruct m => /= /M.
@@ -202,14 +202,14 @@ Proof.
   move: X; destruct m => /matchingP->//.
 Qed.
 
-Lemma H_ext1 sP froz t1 t2 s r: good_modes sP ->
-  (domf s) # froz -> H u sP froz t1 t2 s = Some r ->
+Lemma query_head_ext1 sP froz t1 t2 s r: good_modes sP ->
+  (domf s) # froz -> query_head u sP froz t1 t2 s = Some r ->
   arri r.1 -> (domf r.2) # froz.
 Proof.
   move=> GM.
   elim: t1 t2 s r => //[p|f Hf a _] [p'|//|f' a']//= s r.
     case: eqP => //-> H; case: fndP => //=pP[<-]//=; rewrite /=?fdisjoint0X fsetU0//=.
-  case H: H => [[[|m tf' tr'] sm]|]//=.
+  case H: query_head => [[[|m tf' tr'] sm]|]//=.
   move=> sfroz.
   case I: (_ sm) => //=[r'][?] AI; subst; simpl in *.
   have /=[hff haa [p'[pP hp E]]] := HP H.
@@ -221,31 +221,31 @@ Proof.
   by apply/(fdisjointWl Ha); rewrite fdisjointUX Hf/= fdisjoint_rem.
 Qed.
 
-Lemma H_matchingI sP v1 query head s1 r:
+Lemma query_head_matchingI sP v1 query head s1 r:
   idempotent s1 ->
   good_modes sP ->
   fdisjoint (domf s1) v1 ->
-  H u sP v1 query head s1 = Some r -> arri r.1 ->
+  query_head u sP v1 query head s1 = Some r -> arri r.1 ->
   matching v1 head query s1.
 Proof.
   move=> A GM sq H AI.
   apply: exists_montanari => //.
     by rewrite disjoint_L_deref.
   exists r.2; split => //.
-    by apply: idempotent_H H.
-    have mp := H_mp A H.
-    have:= H_deref_eq A H.
+    by apply: idempotent_query_head H.
+    have mp := query_head_mp A H.
+    have:= query_head_deref_eq A H.
     rewrite/unifier/unif_pair/map_prod1/= => Hx.
     by rewrite !derefxx//=Hx eqxx.
-  by apply: H_ext1 H _.
+  by apply: query_head_ext1 H _.
 Qed.
 
 Lemma get_input_vars2 sP fv q h s x:
-  H u sP fv q h s = Some x -> (get_input_vars sP q).2 = Some x.1.
+  query_head u sP fv q h s = Some x -> (get_input_vars sP q).2 = Some x.1.
 Proof.
   elim: q h s x => //=[p|f Hf a _][p'||f' a']//=s [ty s'].
     by case: eqP => //=->; case: fndP => //= ? [<-].
-  case H: H => [[[|m tl tr] s'']|]//=.
+  case H: query_head => [[[|m tl tr] s'']|]//=.
   case M: (_ s'') => //=[r][??]; subst.
   have:= Hf _ _ _ H.
   by case X: get_input_vars => //=?; subst => /=.
@@ -253,11 +253,11 @@ Qed.
 
 Lemma get_input_vars_vars_tm sP fv q h s r:
   good_modes sP ->
-  H u sP fv q h s = Some r -> arri r.1 ->
+  query_head u sP fv q h s = Some r -> arri r.1 ->
   (get_input_vars sP q).1 = vars_tm q.
 Proof.
   move=> GM; elim: q h s r => [p||f Hf a _]//=[p'||f' a']//= s r.
-  case H: H => //=[[[|m tl tr] s']]//=.
+  case H: query_head => //=[[[|m tl tr] s']]//=.
   case X: (_ s') => //=[s''][?]; subst.
   case: tr H => //[[] tl' tr']//= H' _.
   have [_ _ [p [pP G E]]] := HP H'.
@@ -289,8 +289,8 @@ Lemma SHS sP fv query hd2 hd1 (s1 s2:Sigma):
   [disjoint vars query & vars hd2] ->
   [disjoint domf s1 & vars query] ->
   [disjoint domf s2 & vars query] ->
-  H u sP fv query hd1 s1 ->
-  H u sP fv query hd2 s2 ->
+  query_head u sP fv query hd1 s1 ->
+  query_head u sP fv query hd2 s2 ->
   H_head u sP hd1 hd2.
 Proof.
   move=> GM A1 A2  s1fv s2fv.
@@ -305,8 +305,8 @@ Proof.
   move=> /andP[/andP[ff2 fa2] /andP[af2 aa2]].
   move=> /andP[s1f s1a] .
   move=> /andP[s2f s2a] .
-  case H1 : H => //=[[[//|m1 tf1 ta1] s1']].
-  case H2 : H => //=[[[//|m2 tf2 ta2] s2']].
+  case H1 : query_head => //=[[[//|m1 tf1 ta1] s1']].
+  case H2 : query_head => //=[[[//|m2 tf2 ta2] s2']].
   have [hh1 ha1 [p[pP hf1 he]]] := HP H1.
   have:= HP H2.
   rewrite hh1 ha1 => -[hh2 ha2 [p'[pP']]].
@@ -322,8 +322,8 @@ Proof.
   destruct m2 => //=.
   rewrite ifT => //.
   have:= forallP GM [`pP]; rewrite valPE => GM'.
-  have /= Hs := H_matchingI A1 GM s1fv H1 isT.
-  have /= Hr := H_matchingI A2 GM s2fv H2 isT.
+  have /= Hs := query_head_matchingI A1 GM s1fv H1 isT.
+  have /= Hr := query_head_matchingI A2 GM s2fv H2 isT.
   rewrite !(fdisjoint_sym (vars_tm f)) in ff1, ff2.
   have ivf1 := get_input_vars_vars_tm GM H1 isT.
   rewrite ivf1 in fv2sub.
@@ -339,7 +339,7 @@ Lemma HSH sP rules hd query s:
   [disjoint vars_tm query & vars_tm hd] ->
   [disjoint vars_sigma s & v_prog rules] ->
   [disjoint vars_sigma s & vars_tm hd] ->
-  H u sP (get_input_vars sP query).1 query hd s ->
+  query_head u sP (get_input_vars sP query).1 query hd s ->
   select_head u sP hd rules = [::] ->
   select u sP query rules s = [::].
 Proof.
@@ -351,7 +351,7 @@ Proof.
   case HH: H_head => //= S1.
   have {IH} := IH _ _ _ AS sq h'r qr qh' sr sh' H1 S1.
   case S: select => //=?; subst.
-  case H2: H => [[ty s']|]//=.
+  case H2: query_head => [[ty s']|]//=.
   have {}HH := isNoneP HH.
   exfalso; apply: negP HH; rewrite negbK.
   have sq' := fdisjointWr (get_input_vars_sub sP _) sq.
@@ -533,7 +533,7 @@ Proof.
   move=> /andP[+ ME].
   have {}IH := IH _ _ S1 S2 ME.
   rewrite/mut_excl_head/fresh_rule !push/= !has_cut_seq_fresh/=.
-  case H: H => [s2|]//=; rewrite !push/= {}IH andbT/=.
+  case H: query_head => [s2|]//=; rewrite !push/= {}IH andbT/=.
   move: TD; rewrite/tm_is_det.
   case X: get_tm_hd => [p|]//=; case: fndP => //pP DP.
   rewrite (proj2 (callable_rename _ hd p _))//; last first.

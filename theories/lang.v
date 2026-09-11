@@ -537,11 +537,11 @@ Fixpoint get_input_vars (sP:sigT) t : {fset V} * option S :=
     step 1: X = W ===> W -> X, the list of unif problems becomes : X = 3 
     step 2: since X is frozen, this unification fails
 *)
-Fixpoint H u (sP:sigT) fv (q : Tm) (h: Tm) s : option (S * Sigma) :=
+Fixpoint query_head u (sP:sigT) fv (q : Tm) (h: Tm) s : option (S * Sigma) :=
   match q,h with
   | Tm_P p, Tm_P p' => if p == p' then omap (fun x => (x, s)) sP.[?p] else None
   | Tm_App f a, Tm_App f' a' =>
-    if H u sP fv f f' s is Some (arr m _ r, s) then
+    if query_head u sP fv f f' s is Some (arr m _ r, s) then
       let f := if m == input then u.(matching) fv else u.(unify) in
       omap (fun x => (r, x)) (f a' a s)
     else None
@@ -552,7 +552,7 @@ Fixpoint select u (sP:sigT) (q: Tm) (rules: list R) sigma : seq (Sigma * seq Ato
   match rules with
   | [::] => [::]
   | rule :: rules =>
-    match H u sP (get_input_vars sP q).1 q rule.(head) sigma with
+    match query_head u sP (get_input_vars sP q).1 q rule.(head) sigma with
     | None => select u sP q rules sigma
     | Some (_, sigma1) => (sigma1, rule.(premises)) :: select u sP q rules sigma
     end
@@ -672,7 +672,7 @@ Proof.
   by case: ta => [|>]; [case n|apply: IH].
 Qed.
 
-Lemma HP u sP fv t1 t2 s r: H u sP fv t1 t2 s = Some r -> 
+Lemma HP u sP fv t1 t2 s r: query_head u sP fv t1 t2 s = Some r -> 
   [/\ get_tm_hd t1 = get_tm_hd t2, term_arg t1 = term_arg t2 &
     exists p, exists2 pP : p \in sP, get_tm_hd t1 = inl p & eat_ty (term_arg t1) sP.[pP] = Some r.1]
   .
@@ -680,7 +680,7 @@ Proof.
   elim: t1 t2 fv s r => //=[p|f Hf a Ha] [p'|v|f' a']//= fv s r.
     case: eqP => //<-; case: fndP => //=pP[<-]; split => //.
     by exists p, pP.
-  case H: H => //[[[|m tl tr] s']]//=.
+  case H: query_head => //[[[|m tl tr] s']]//=.
   case : (_ s') => //= sz [?]; subst => /=.
   have /=[Hx Hy [p [pP H1 H2]]] := Hf _ _ _ _ H.
   split => //; first by rewrite Hy.
@@ -693,15 +693,15 @@ Lemma selectP u sP t1 s rs x xs: select u sP t1 rs s = (x::xs) ->
   exists2 p, p \in sP & get_tm_hd t1 = inl p.
 Proof.
   elim: rs x xs => //=r rs IH x xs.
-  case H: H => [[ty s']|]//; last by apply: IH.
+  case H: query_head => [[ty s']|]//; last by apply: IH.
   case S: select => [|y ys][??]; subst; last apply: IH S.
   have [_ _ [p[pP {}H _]]] := HP H.
   by exists p => //.
 Qed.
 
 Lemma H_same_ty u sP fv1 fv2 f f1 f2 s1 s2 r1 r2:
-  H u sP fv1 f f1 s1 = Some r1 ->
-  H u sP fv2 f f2 s2 = Some r2 ->
+  query_head u sP fv1 f f1 s1 = Some r1 ->
+  query_head u sP fv2 f f2 s2 = Some r2 ->
   r1.1 = r2.1.
 Proof.
   move=> H1 H2.
@@ -713,7 +713,7 @@ Qed.
 
 Lemma select_cons u sP q r rs s:
   select u sP q (r :: rs) s =
-    match lang.H u sP (get_input_vars sP q).1 q (head r) s with
+    match query_head u sP (get_input_vars sP q).1 q (head r) s with
     | Some (_, s1) => (s1, premises r) :: select u sP q rs s
     | None => select u sP q rs s
     end.

@@ -106,7 +106,7 @@ Lemma vars_atoms_select_sub sig t rs s:
   varsU [seq vars_atoms x.2 | x <- sel] `<=` varsU [seq vars_atoms x.(premises) | x <- rs].
 Proof.
   move=> /=; elim: rs => [|[h b] rs IH]/=; first by rewrite fsubset_refl.
-  case H: H => [[sig' s']|]/=; first by rewrite fsetUS//.
+  case H: query_head => [[sig' s']|]/=; first by rewrite fsetUS//.
   by rewrite fsubsetU// IH orbT.
 Qed.
 
@@ -124,7 +124,7 @@ Proof.
   elim: r => //=-[h b] rs IH; rewrite v_prog_cons/=!freshPU -!andbA /varsU_rhead/varsU_rprem.
   rewrite/= !push/= head_fresh_rule/= => /and3P[Fh Fb Fr].
   case F: fresh_rules IH => [N' rs'] IH.
-  case H: H => [[ty n']|]//=; last by apply: IH.
+  case H: query_head => [[ty n']|]//=; last by apply: IH.
   move: (IH Fr); rewrite-/F; set sel := select _ _ _ _ _ => {}IH.
   rewrite disj_tree_big_or IH andbT /fresh_rule !push/=.
   apply: fdisjointWr (vars_atoms_select_sub _ _ _ _) _.
@@ -197,7 +197,7 @@ Proof.
   rewrite !freshPU -andbA => /and3P[fh fb frs].
   have [v'[e[H1 H2 H3{IH}]]] := IH frs.
   rewrite /=/fresh_rule/=!push/=.
-  case H: H => [[ty s']|]//=; last by exists v', e.
+  case H: query_head => [[ty s']|]//=; last by exists v', e.
   rewrite !vars_tree_atom_big_or.
   replace (varsU _) with (v' `|` e); last first.
     by move: H2; case: select => //-[]/=? bx l; rewrite vars_tree_atom_big_or.

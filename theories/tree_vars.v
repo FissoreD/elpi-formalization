@@ -52,7 +52,7 @@ Section vars_tree.
       forall (x: Sigma * seq Atom), x \in k -> x.2 \in map premises r.
   Proof.
     move=> <-; elim: r => //[r rs IH]r'/=.
-    rewrite in_cons; case H => [[_ s']|]; last by move=> /IH->; rewrite orbT.
+    rewrite in_cons; case query_head => [[_ s']|]; last by move=> /IH->; rewrite orbT.
     by rewrite in_cons => /orP[/eqP->|/IH->]; rewrite (eqxx,orbT).
   Qed.
   

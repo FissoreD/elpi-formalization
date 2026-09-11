@@ -1087,7 +1087,7 @@ Proof.
     by case: eqP => //->; case: fndP => //=pP [<-]; exists fmap0; rewrite/=(ext_sig0,ext_sigP0).
   case H1: H => [[[//|m tf ta] s']|//].
   case M: (_ s') => //=[s''][<-{r}]/= IA.
-  have /= A' := idempotent_H A H1.
+  have /= A' := idempotent_query_head A H1.
   have ?:= good_modes_arri_H GM H1 IA; subst.
   have {Hf}/=[sx ? EP] := Hf _ _ H1 isT; subst.
   simpl in M.
@@ -1284,7 +1284,7 @@ Proof.
   case A1: assume_tm => //=[sV' tyf'].
   have ? := H_assume_tm_ty H1 A1; subst => /=.
   move=> Rsm.
-  have/= Asm:= idempotent_H As H1.
+  have/= Asm:= idempotent_query_head As H1.
   have Ra' : relSS sP sx (assume_tm sP sV' a').1.
     case: m' H1 M A1 GIa => //= H1 M A1 GI;
     apply: relSS_assumeM M; rewrite//?Ca//.
@@ -1391,7 +1391,7 @@ Proof.
   rewrite (proj1 (callable_rename _ _ _ _) QR) in_fnd Dq/=.
   rewrite -(check_atoms_fresh_rename _ _ _ FR.1) -/R -/FA.
   move=> /andP[Cb Ch].
-  apply: det_check_H Cb _ => //; first by apply: idempotent_H H.
+  apply: det_check_H Cb _ => //; first by apply: idempotent_query_head H.
   apply: relSS_assume H => //.
   - by rewrite relSS0.
   - by apply: idempotent_deref_disjoint.

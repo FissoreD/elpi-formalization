@@ -166,7 +166,7 @@ Section check.
     move=> TD /andP[cbo cxs].
     have {}IH := IH _ _ _ TD cxs.
     rewrite !push/= head_fresh_rule/=.
-    case H: H => //=[s'].
+    case H: query_head => //=[s'].
     rewrite !push/= IH andbT.
     rewrite/fresh_rule !push/=.
     rewrite check_atoms_fresh.

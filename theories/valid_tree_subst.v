@@ -100,7 +100,7 @@ Qed.
 Definition u := mk_Unif unify matching.
 
 (* TODO: already in mut_excl *)
-Lemma idempotent_H sP fv q hd s1 r:
+Lemma idempotent_query_head sP fv q hd s1 r:
   idempotent s1 -> H u sP fv q hd s1 = Some r -> idempotent r.2.
 Proof.
   elim: q fv hd s1 r => //=[p|f Hf a Ha] fv [p'|//|f' a']// s1 r.
@@ -122,7 +122,7 @@ Proof.
   case H: H => //[[[//|md tl tr] s'']].
   case X: (_ a') => //=[sx][<-{s'}]/=.
   apply: mp_trans (Hf _ _ H) _.
-  have /=As'' := idempotent_H As H.
+  have /=As'' := idempotent_query_head As H.
   have Hx := disjoint_L_deref _ _ As''.
   case: md X {H} => //=; apply: montanari_mp => //=.
 Qed.
@@ -190,7 +190,7 @@ Proof.
     by move: le; rewrite v_prog_cons (fsetUC _ (v_prog _)) fsetUA freshPU => /andP[].
   move=> {}IH.
   case M : lang.H => [[sig' s']|]//=.
-  by rewrite all_idemp_cons IH//= (idempotent_H _ M)//.
+  by rewrite all_idemp_cons IH//= (idempotent_query_head _ M)//.
 Qed.
 
 Lemma idemp_next_subst o n t:

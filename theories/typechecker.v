@@ -539,7 +539,7 @@ Proof.
   by apply: fsubset_trans K (fsubsetUl _ _).
 Qed.
 
-Lemma typecheck_tree_ext p s env env' t tail :
+(* Lemma typecheck_tree_ext p s env env' t tail :
   typechecks_tree p env s t tail = Some env' ->
   exists2 k, env' = k + env & domf k `<=` vars_tree t `|` vars_atoms tail.
 Proof.
@@ -569,7 +569,7 @@ Proof.
   have:= typechecks_atom_ext ta => -[e'-> K]; rewrite catfA; eexists => //.
   rewrite vars_atoms_cons domf_cat fsubUset (fsubset_trans J (fsubsetUr _ _))//.
   by apply: fsubset_trans K (fsubsetUl _ _).
-Qed.
+Qed. *)
 
 Lemma typechecks_tree_valid_merge p env env' s t tail:
   typechecks_tree p env s t tail = Some env' ->
@@ -639,7 +639,7 @@ Proof.
   move: Tr; set dt := (deref _ _) => Tr.
   set X := fresh _; have:= leqnn X; rewrite{1}/X.
   rewrite 3!freshPU freshP1 -!andbA => /and4P[Sn Ss St Sp].
-  clearbody X => DH.
+  clearbody X => DH H1 H2.
   elim: rs Sp Tr => //= [|[h b] rs IH]; first by eexists.
   rewrite !push/= v_prog_cons !freshPU -!andbA /varsU_rhead/varsU_rprem/=/typechecks_rule/=.
   case Th: typechecks => //[[envh [[|tyh]|]]]//=.
@@ -650,6 +650,7 @@ Proof.
   case H: lang.H => [[ty s']|]//=; last by exists env''.
   rewrite (typechecks_tree_big_or s) IH.
   rewrite map_cat typecheck_atoms_cat.
+  Search lang.H catf.
   (* TODO: aggiungere typechecking nella sostituzione:
            tutte le variabili in s sono in env e i termini in s
            hanno lo stesso tipo del risultato del typechecker, qui
