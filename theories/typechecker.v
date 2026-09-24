@@ -827,54 +827,36 @@ Proof.
     have [e E [Se De]] := ext_env_ext sm env; rewrite E.
     case:ifP => // Cm.
     case TA: typechecks_tree => [tA|]//=.
-    have [k?[Sk Dk]] := typecheck_tree_ext C TA; subst.
     case TB: typechecks_tree => [tB|]//; rewrite /Option.bind/oapp/is_prop.
-    have [m?[Sm +]] := typecheck_tree_ext Cm TB; subst.
-    rewrite !domf_cat fdisjointXU => /andP[Dme Dmen].
-    rewrite valid_merge_types_catLR domf_cat !remf_id//; last by rewrite fdisjointXU Dme.
-    rewrite !valid_merge_types_catR remf_id// -andbA valid_merge_refl andbT.
-    case: ifP => ///and5P[vkm vem vke vkenv vee][?]; subst.
+    case: ifP => //cm[?]; subst.
     have [env'{}HA] := HA _ _ _ _ C vA da TA.
-    have [q?[Sq Dq]] := typecheck_tree_ext C HA; subst.
-    rewrite valid_merge_types_catLR !remf_id// valid_merge_refl vkenv !andbT.
-    move => /andP[vkq veq].
     rewrite HA E Cm.
-    set X := _.[& _].
-    replace X with (k.[\ (domf m `|` (domf e `|` domf env))]); last first.
-      apply/fmapP => x; rewrite fnd_rem/X !in_fsetU !fnd_restrict fnd_cat !FinmapInE.inE.
-      case: ifP => //=/norP[xm/norP[xe/negbTE H]]; rewrite H orbF.
-      by case: fndP => //.
-    clear X.
-    case: ifP => vm//.
+    move=> VM.
+    case: ifP => cb//.
       rewrite/typechecks_tree/merge_valid/Option.bind/oapp !domf_cat.
-      set X := (_.[&_]).
-      replace X with (q.[\domf e `|` domf env]); last first.
-        apply/fmapP => x; rewrite /X !fnd_restrict fnd_cat !FinmapInE.inE.
-        by case: (fndP env x) => xe; rewrite !(orbT,orbF)//=.
-      clear X.
-      rewrite valid_merge_types_catLR remf_id//remf_id// vee valid_merge_refl.
-      rewrite (valid_merge_typesC q env) veq !andbT.
+      rewrite valid_merge_types_catR remf_id// .
       rewrite /=ifT; last first.
+        have [k?[S D]] := typecheck_tree_ext C HA; subst.
+        rewrite !valid_merge_types_catL (valid_merge_types_remLA _ (fsubset_refl _)) valid_merge_refl !andbT.
+        rewrite valid_merge_types_remL//=; first by rewrite valid_merge_disj//fdisjoint_sym.
         admit.
-      eexists; rewrite// catfA valid_merge_types_catLRid.
-      rewrite remf_comp !remf_cat remf_comp domf_cat -fsetUA !fsetUid.
-      rewrite valid_merge_types_catL !valid_merge_types_remL//!valid_merge_types_remR//.
+      eexists => //=.
+      have [k?[S]] := typecheck_tree_ext Cm TB; subst.
+      rewrite domf_cat fdisjointXU => /andP[dke dkenv].
+      rewrite catfA valid_merge_types_catLRid !remf_cat domf_cat.
+      rewrite !remf_comp -fsetUA fsetUid domf_cat fsetUid.
+      rewrite valid_merge_types_catL !valid_merge_types_remL// !valid_merge_types_remR//.
+      have [q?[Sq Dq]] := typecheck_tree_ext C HA; subst.
+      rewrite valid_merge_types_catR  (valid_merge_disj dkenv) andbT.
+      rewrite valid_merge_types_remR//=.
       admit.
     rewrite TB/merge_valid/Option.bind/oapp.
-    rewrite valid_merge_types_catLR remf_id//domf_cat remf_id; last by rewrite fdisjointXU Dme.
-    rewrite !valid_merge_types_catR remf_id//vem (valid_merge_typesC q env) veq.
-    rewrite valid_merge_refl vee !andbT andTb !domf_cat.
-    set X := (_.[&_]).
-    replace X with (q.[\domf m `|` domf e `|` domf env]); last first.
-      apply/fmapP => x; rewrite /X !fnd_restrict fnd_cat !FinmapInE.inE.
-      by case: (fndP env x) => xe; rewrite !(orbT,orbF)//=.
-    clear X.
     rewrite ifT; last first.
       admit.
     eexists => //.
     rewrite valid_merge_types_catLRid.
-    rewrite !domf_cat !remf_comp !fsetUid fsetUA fsetUid.
-    by rewrite valid_merge_types_remL//valid_merge_types_remR//.
+    (* rewrite !domf_cat !remf_comp !fsetUid fsetUA fsetUid. *)
+    rewrite !valid_merge_types_remL//!valid_merge_types_remR//.
   - move=> sb db; case: ifP => // CS TB.
     have [k TB' V] := HB _ _ _ _ CS sb db TB.
     by rewrite !push/= CS TB'; eexists.
@@ -895,8 +877,7 @@ Proof.
     case: ifP => //vm[?]; subst.
     have {HB}[k TB' Vb] := HB _ _ _ _ CA vB dB TB.
     have {HA}[q TA' Va] := HA _ _ _ _ C vA dA TA.
-    rewrite ifT; last first.
-      by case: ifP; rewrite// success_cut.
+    rewrite ifT; last by case: ifP; rewrite// success_cut.
     rewrite ifT; last first.
       admit.
     case: ifP => cb.
