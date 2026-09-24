@@ -1,6 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import tree tree_prop ctx tree_vars unif fresh sig_lattice sig_compat valid_tree min_max_disj.
+From det Require Import tree tree_prop ctx tree_vars unif fresh sig_lattice sig_compat valid_tree min_max_disj disj_tree.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
@@ -98,17 +98,18 @@ match tm with
 end.
 
 Lemma typechecks_ext sP g t r:
-  typechecks sP g t = Some r -> exists2 x : sigV, r.1 = x + g & domf x `<=` vars t.
+  typechecks sP g t = Some r -> exists2 x : sigV, r.1 = x + g & domf x `<=` vars t /\ domf x # domf g.
 Proof.
-  elim: t g r => [p|v|f Hf a Ha] g r/=; only 1, 2: by case: fndP => //pP[<-]; exists fmap0; rewrite// cat0f.
+  elim: t g r => [p|v|f Hf a Ha] g r/=; only 1, 2: by (case: fndP => //pP[<-]; exists fmap0; rewrite//= ?cat0f// fdisjoint0X).
   case TF: typechecks => [[gf [|m tf ta]]|]//.
-  have /=[xf {}Hf DS] := Hf _ _ TF; subst.
+  have /=[xf {}Hf [DS Df]] := Hf _ _ TF; subst.
   case TA: typechecks => [[ga tb]|].
     case: ifP => //CT[<-{r}].
-    have /=[xa {}Ha DS'] := Ha _ _ TA; subst.
+    have [xa {}Ha [DS']] := Ha _ _ TA; simpl in Ha; subst.
+    rewrite domf_cat fdisjointXU => /andP[Daf Dag].
     exists (xa + xf); first by rewrite catfA.
     rewrite domf_cat fsubUset (fsubset_trans DS' (fsubsetUr _ _)).
-    by apply: fsubset_trans DS (fsubsetUl _ _).
+    by rewrite (fsubset_trans DS (fsubsetUl _ _))fdisjointUX Dag//.
   case: a TA {Ha} => //v.
   rewrite/typechecks fnd_cat/=; case: fndP => vg//=.
   case: fndP => //=vx _ [<-{r}]/=. 
@@ -116,7 +117,7 @@ Proof.
     rewrite setf_catl; f_equal.
     apply/fmapP => k; rewrite fnd_rem in_fset1; case: eqP => ?//; subst.
     by rewrite not_fnd.
-  by rewrite /= fsetUC fsetSU//.
+  by rewrite /= fsetUC fsetSU// fdisjointUX Df fdisjoint1X.
 Qed.
 
 Lemma typechecks_covers sP g g' t s:
@@ -435,6 +436,14 @@ Proof.
   by rewrite fsetIC eq_sym => xP; apply: H [`xP].
 Qed.
 
+Lemma valid_merge_disj (e f:sigV):
+  domf e # domf f -> valid_merge_types e f.
+Proof.
+  move=> H; apply/forallP => -[x xP]/=.
+  move: xP; rewrite FinmapInE.inE => /andP[xe xf].
+  by have:= fdisjointP H _ xe; rewrite xf.
+Qed.
+
 Lemma valid_merge_types_catL e1 e2 e3:
   valid_merge_types (e1 + e2) e3 =
   valid_merge_types e1.[\domf e2] e3 && valid_merge_types e2 e3.
@@ -467,6 +476,10 @@ Lemma valid_merge_types_catLR e1 e2 e3 e4:
         valid_merge_types e1.[\domf e2] e4 & valid_merge_types e2 e4].
 Proof. by rewrite !valid_merge_types_catR !valid_merge_types_catL// -andbA//. Qed.
 
+Lemma valid_merge_refl: reflexive valid_merge_types.
+Proof. by move=> x; apply/forallP. Qed.
+Global Hint Resolve valid_merge_refl : core.
+
 Lemma valid_merge_types_remR e1 e2 s: valid_merge_types e1 e2 -> valid_merge_types e1 e2.[\ s].
 Proof.
   move=> H; apply/forallP => -[x xP]; rewrite fnd_rem/=.
@@ -491,15 +504,35 @@ Lemma valid_merge_types_remLA e1 e2 s:
   domf e2 `<=` s -> valid_merge_types e1.[\s] e2.
 Proof. by move=> H; rewrite valid_merge_typesC valid_merge_types_remRA. Qed.
 
-Lemma valid_merge_refl: reflexive valid_merge_types.
-Proof. by move=> x; apply/forallP. Qed.
-Global Hint Resolve valid_merge_refl : core.
+Lemma valid_merge_types_catLRid e1 e2 e:
+  valid_merge_types (e1 + e) (e2 + e) =
+    valid_merge_types e1.[\domf e] e2.[\domf e].
+Proof.
+  rewrite valid_merge_types_catLR valid_merge_refl (valid_merge_types_remLA _ (fsubset_refl _)).
+  by rewrite (valid_merge_types_remRA _ (fsubset_refl _)) !andbT.
+Qed.
+
 
 Definition merge_valid t1 t2 :=
-  obind (fun x => obind (fun y => if valid_merge_types x y then Some (x + y) else None) t2) t1.
+  obind (fun x => obind (fun y => if valid_merge_types x y then Some (x.[\ domf y] + y) else None) t2) t1.
 
 Lemma merge_valid_id a: merge_valid a a = a.
-Proof. by case: a => //= ?; rewrite valid_merge_refl catf2. Qed.
+Proof. by case: a => //= ?; rewrite valid_merge_refl remf_all cat0f. Qed.
+
+Definition ext_env (s: Sigma) (e:sigV) := 
+  let f := filterf s 
+    (fun (x:V) => (x \notin domf e) && if s.[?x] is Some (Tm_V v') then v' \in domf e else false) in
+  [fmap x : domf f => if f.[valP x] is Tm_V v' then odflt (b Exp) e.[?v'] else b Exp] + e.
+
+Definition check_subst sP (s:Sigma) (e:sigV) :=
+  [forall kp : domf s,
+    let v := val kp in
+    let t := s.[valP kp] in
+    if e.[? v] is Some ty then
+      if typechecks sP e t is Some (s',ty') then compat_type ty ty'
+      else false
+    else false
+  ].
 
 (*HYP: t is a valid tree*)
 Fixpoint typechecks_tree sP e s t tail :=
@@ -509,89 +542,196 @@ match t with
 | Unexplored atom => (typechecks_atoms sP e (map (deref_atom s) (atom::tail)))
 | And A B0 B =>
   if success A then 
-    merge_valid (typechecks_tree sP e (next_subst s A) B tail)
-    (typechecks_tree sP e s A (B0 ++ tail))
+    let sm := (next_subst s A) in
+    let: e' := ext_env sm e in
+    if check_subst sP sm e' then
+      merge_valid (typechecks_tree sP e' sm  B tail)
+      (typechecks_tree sP e s A (B0 ++ tail))
+    else None
   else (*B0 = B*)
     typechecks_tree sP e s A (B0 ++ tail)
-| Or None sm B => typechecks_tree sP e sm B tail
+| Or None sm B =>
+    let: e := ext_env sm e in
+    if check_subst sP sm e then typechecks_tree sP e sm B tail
+    else None
 | Or (Some A) sm B =>
-  merge_valid (typechecks_tree sP e s A tail) (typechecks_tree sP e sm B tail)
+  let: e' := ext_env sm e in
+  if check_subst sP sm e' then
+  merge_valid (typechecks_tree sP e s A tail) (typechecks_tree sP e' sm B tail)
+  else None
 end.
 
 Lemma typechecks_atom_ext p env env' l:
   typechecks_atom p env l = Some env' ->
-  exists2 k, env' = k + env & domf k `<=` vars_atom l.
+  exists2 k, env' = k + env & domf k `<=` vars_atom l /\ domf k # domf env.
 Proof.
-  case: l => //=[|t]; first by move=> [<-]; exists fmap0; rewrite ?cat0f.
+  case: l => //=[|t]; first by (move=> [<-]; exists fmap0; rewrite ?cat0f//=fdisjoint0X).
   case T: typechecks => [[e[[|ty]|]]|]//= [<-].
   apply: typechecks_ext T.
 Qed.
 
 Lemma typechecks_atoms_ext p env env' l :
   typechecks_atoms p env l = Some env' ->
-  exists2 k, env' = k + env & domf k `<=` vars_atoms l.
+  exists2 k, env' = k + env & domf k `<=` vars_atoms l /\ domf k # domf env.
 Proof.
   elim: l env env' => //=[|x xs IH] env env'.
-    by move=> [<-]; exists fmap0; rewrite ?cat0f.
-  case ta: typechecks_atom => [envt|]//=/IH[e->{env'} J].
-  have:= typechecks_atom_ext ta => -[e'-> K]; rewrite catfA; eexists => //.
-  rewrite vars_atoms_cons domf_cat fsubUset (fsubset_trans J (fsubsetUr _ _))//.
-  by apply: fsubset_trans K (fsubsetUl _ _).
+    by move=> [<-]; exists fmap0; rewrite ?cat0f//fdisjoint0X.
+  case ta: typechecks_atom => [envt|]//=.
+  have [e->{envt ta}[Se De]] := typechecks_atom_ext ta.
+  move=> {}/IH[k->{env'}[]Sk Dk]; rewrite catfA; eexists; rewrite//domf_cat.
+  rewrite vars_atoms_cons fdisjointUX De fsubUset (fsubset_trans Sk (fsubsetUr _ _))/=.
+  by rewrite (fsubset_trans Se (fsubsetUl _ _)) (fdisjointWr _ Dk)//domf_cat fsubsetUr.
 Qed.
 
-(* Lemma typecheck_tree_ext p s env env' t tail :
-  typechecks_tree p env s t tail = Some env' ->
-  exists2 k, env' = k + env & domf k `<=` vars_tree t `|` vars_atoms tail.
+Lemma vars_atoms_cat A B:
+  vars_atoms (A ++ B) = vars_atoms A `|` vars_atoms B.
 Proof.
-  elim_tree t s env env' tail => //=.
-  - by move=> [<-]; exists fmap0; rewrite//cat0f.
-  - move=> /typechecks_atoms_ext[e->] H; exists e; rewrite//fset0U.
-    apply/leq_trans/H.
-  - case TA: typechecks_atom => [envt|]//=/typechecks_atoms_ext[e->] H.
-    have [e'-> H'] := typechecks_atom_ext TA; rewrite catfA.
-    exists (e + e'); rewrite//domf_cat; rewrite fsubUset (fsubset_trans H (fsubsetUr _ _))//=.
-    rewrite (fsubset_trans H')//; destruct t => //=.
-    admit. (*TODO: add hyp telling that all terms in s are well typed in env*)
-  - case TA: typechecks_tree => [envA|]//.
+  elim: A B => //=[|x xs IH] B.
+    by rewrite fset0U.
+  by rewrite !vars_atoms_cons IH fsetUA.
+Qed.
+
+Lemma ext_env_ext s env:
+  exists2 k, ext_env s env = k + env & domf k `<=` domf s /\ domf k # domf env.
+Proof. 
+  eexists => //=; split.
+    by apply/fsubsetP => x; rewrite !FSetInE.inE/= => /and3P[xs xe].
+  by apply/fdisjointP => x; rewrite !FSetInE.inE/= => /and3P[xs xe].
+Qed.
+
+Lemma check_subst_sub p s env:
+  check_subst p s env -> domf s `<=` domf env.
+Proof.
+  move=> H; apply/fsubsetP => x xP.
+  by have:= forallP H [`xP]; rewrite/=; case: fndP.
+Qed.
+
+Lemma vars_atoms_deref s tail:
+  vars_atoms [seq deref_atom s i  | i <- tail] `<=`
+  codom_vars s `|` vars_atoms tail.
+Proof.
+  elim: tail => //=x xs IH.
+  rewrite !vars_atoms_cons fsubUset fsetUA (fsubset_trans IH); last first.
+    by rewrite fsetSU//fsubsetUl.
+  rewrite andbT; case: x => //=t.
+  rewrite (fsubset_trans (vars_tm_deref_sub _ _))//=fsubUset -fsetUA fsubsetUl/=.
+  by rewrite fsetUC -fsetUA fsubsetUl.
+Qed.
+
+Lemma domf_next_subst_sub s A:
+  domf (next_subst s A) `<=` domf s `|` vars_tree A.
+Proof.
+  rewrite/next_subst.
+  elim_tree A s => /=; only 1-3: by rewrite fsubsetUl.
+    by rewrite (fsubset_trans (HA _))//fsetUS//-!fsetUA fsubsetUl.
+    by rewrite (fsubset_trans (HB _))//= fsetUC fsubsetU// fsetUS (orbT,fsubsetUl).
+  rewrite !push/=; case: ifP => //= H; last first.
+    by rewrite (fsubset_trans (HA _))//fsetUS//-fsetUA fsubsetUl.
+  rewrite (fsubset_trans (HB _))//fsubUset (fsubset_trans (HA _))/=.
+    by rewrite fsubsetU//fsubsetU(orbT,fsubsetUr).
+  by rewrite fsetUS//-fsetUA fsubsetUl.
+Qed.
+
+Lemma codom_vars_next_subst_sub s A:
+  codom_vars (next_subst s A) `<=` codom_vars s `|` vars_tree A.
+Proof.
+  rewrite/next_subst.
+  elim_tree A s => /=; only 1-3: by rewrite fsubsetUl.
+    by rewrite (fsubset_trans (HA _))//fsetUS//-!fsetUA fsubsetUl.
+    by rewrite (fsubset_trans (HB _))//= fsetUC fsubsetU// fsetUS (orbT,fsubsetUr).
+  rewrite !push/=; case: ifP => //= H; last first.
+    by rewrite (fsubset_trans (HA _))//fsetUS//-fsetUA fsubsetUl.
+  rewrite (fsubset_trans (HB _))//fsubUset (fsubset_trans (HA _))/=.
+    by rewrite fsubsetU//fsubsetU(orbT,fsubsetUr).
+  by rewrite fsetUS//-fsetUA fsubsetUl.
+Qed.
+
+Lemma typecheck_tree_ext p s env env' t tail :
+  check_subst p s env ->
+  typechecks_tree p env s t tail = Some env' ->
+  exists2 k, env' = k + env & domf k `<=` codom_vars s `|` vars_tree t `|` vars_atoms tail /\ domf k # domf env.
+Proof.
+  elim_tree t s env env' tail => //=C.
+  - by move=> [<-]; exists fmap0; rewrite//?cat0f//=fdisjoint0X.
+  - move=> /typechecks_atoms_ext[e->{env'}[Se De]]; eexists => //=.
+    by rewrite De (fsubset_trans Se)//(fsubset_trans (vars_atoms_deref _ _))//fsetU0.
+  - case TA: typechecks_atom => [envt|]//=.
+    have [k ->{envt TA}[Sk Dk]] := typechecks_atom_ext TA.
+    move=> /typechecks_atoms_ext[e ->{env'}] [Se]; rewrite catfA domf_cat fdisjointXU.
+    move=> /andP[Dek Dee].
+    eexists; rewrite// domf_cat fdisjointUX Dee Dk.
+    rewrite fsubUset (fsubset_trans Se)/=.
+      rewrite (fsubset_trans Sk)//=; case: t {Sk} => //=t.
+      by rewrite (fsubset_trans (vars_tm_deref_sub _ _))//=fsubsetUl.
+    rewrite (fsubset_trans (vars_atoms_deref _ _))//=fsubUset -fsetUA fsubsetUl/=.
+    by rewrite fsetUA fsubsetUr.
+  - have [k -> [H D]]:= ext_env_ext sm env.
+    case: ifP => // CS.
+    case TA: typechecks_tree => [envA|]//.
     case TB: typechecks_tree => [envB|]//=.
-    case: ifP => //=vm [<-{env'}].
-    have [e-> S] := HA _ _ _ _ TA.
-    have [e'-> S'] := HB _ _ _ _ TB.
-    rewrite catfA; eexists; rewrite// !domf_cat.
-    rewrite !fsubUset (fsubset_trans S); last first.
-      by rewrite fsetSU//-fsetUA fsubsetUl.
-    rewrite (fsubset_trans S'); last first.
-      rewrite fsubUset.
-      rewrite 
-    rewrite 
-    by move=> [<-]; exists fmap0; rewrite ?cat0f.
-  case ta: typechecks_atom => [envt|]//=/IH[e->{env'} J].
-  have:= typechecks_atom_ext ta => -[e'-> K]; rewrite catfA; eexists => //.
-  rewrite vars_atoms_cons domf_cat fsubUset (fsubset_trans J (fsubsetUr _ _))//.
-  by apply: fsubset_trans K (fsubsetUl _ _).
-Qed. *)
+    case: ifP => //= + [<-{env'}].
+    have {HA}[a-> {envA TA}[Sa Da]] := HA _ _ _ _ C TA.
+    have {HB}[b-> {envB TB}[Sb]] := HB _ _ _ _ CS TB.
+    rewrite domf_cat fdisjointXU => /andP[Dbk Dbe].
+    move=> VM.
+    rewrite !domf_cat !catfA; eexists; first by [].
+    rewrite !domf_cat; split.
+      apply/fsubsetP => x; rewrite !FinmapInE.inE.
+      move=> /orP[|/(fsubsetP H)->]; last by rewrite !orbT.
+      move=> /orP[|/(fsubsetP Sb)]; last by rewrite !in_fsetU -orbA => /or3P[]->; rewrite !orbT.
+      move=> /and3P[+ /norP[xb/norP[xk xe]]].
+      rewrite xe (negbTE xe) orbF /= => xa _.
+      by have:= fsubsetP Sa _ xa; rewrite !FinmapInE.inE -orbA => /or3P[]->; rewrite //!orbT.
+    rewrite !fdisjointUX Dbe D !andbT.
+    apply/fdisjointP => x .
+    by rewrite !FinmapInE.inE/= => /andP[+ /andP[/norP[xb/norP[xk xe]]]].
+  - have [k' -> [S D]] := ext_env_ext sm env.
+   case: ifP => // H CS.
+    have [k->{HB}[Sb]] := HB _ _ _ _ H CS.
+    rewrite domf_cat fdisjointXU => /andP[Dkk Dke].
+    rewrite catfA; eexists; rewrite //domf_cat/=fsubUset fdisjointUX Dke D andbT.
+    split => //; rewrite (fsubset_trans Sb)/=.
+      by rewrite (fsubset_trans S)//= fsubsetU//fsubsetU//fsubsetU//=?fsubsetUl orbT.
+    rewrite (fsetUC _ (vars_sigma sm)).
+    by rewrite -!fsetUA (fsetUA _ (domf sm)) fsubsetUr.
+  case: ifP => sA; last first.
+    move=> /HA-/(_ C)[k-> [S D]]; eexists; rewrite//=.
+    by rewrite (fsubset_trans S)// -!fsetUA !fsetUS// vars_atoms_cat fsubsetUr.
+  have [z->[D S]] := ext_env_ext (next_subst s A) env.
+  case: ifP => //CN.
+  case TB: typechecks_tree => [envB|]//.
+  case TA: typechecks_tree => [envA|]//=.
+  case: ifP => //=vm [<-{env'}].
+  have [e -> {envA HA TA vm}[Sa Da]] := HA _ _ _ _ C TA.
+  have [e'-> {envB HB TB}[Sb Db]] := HB _ _ _ _ CN TB.
+  rewrite catfA; eexists; rewrite//!domf_cat.
+  move: Sa; rewrite vars_atoms_cat fsetUA => Sa.
+  rewrite domf_restrict !domf_cat !fsetUA fsubUset fsetDUr !fsetDUl fsetDv fsetU0.
+  move: Db; rewrite !domf_cat !fdisjointUX fdisjointXU => /andP[Dez Dee].
+  have Sse := check_subst_sub C.
+  rewrite !fsubIset//=; last first.
+    rewrite !fsubUset; apply/orP; right; apply/andP; rewrite !fsubDset.
+    rewrite (fsubset_trans Sb).
+      rewrite (fsubset_trans D)//=(fsubset_trans (domf_next_subst_sub _ _))//.
+      rewrite fsubUset (fsubset_trans Sse)//=; last by rewrite fsubsetUl.
+      by rewrite -!fsetUA fsubsetU// fsubsetU ?fsubsetUl orbT.
+    rewrite fsubsetU//; apply/orP; right.
+    rewrite fsetSU// (fsetUC _ (vars_atoms B0)) !fsetUA fsetSU//.
+    by rewrite (fsubset_trans (codom_vars_next_subst_sub _ _))// -fsetUA fsubsetUr.
+  rewrite (fsubset_trans Sa); last by rewrite !fsetSU//fsubsetUl.
+  rewrite Da andbT; split => //.
+  apply/fdisjointP => x; rewrite !FinmapInE.inE -!andbA.
+  by move=> /and3P[/orP[/orP[]/andP[_ ->]/orP[]/andP[]//|/andP[_ ->]//]].
+Qed.
 
 Lemma typechecks_tree_valid_merge p env env' s t tail:
+  check_subst p s env ->
   typechecks_tree p env s t tail = Some env' ->
   valid_merge_types env env'.
 Proof.
-  elim_tree t s tail env env' => /=.
-  - by move=> [<-].
-  - by move=> /typechecks_atoms_ext[e->]; rewrite valid_merge_types_catR//valid_merge_types_remRA//=.
-  - case TA: typechecks_atom => //=[envx]/typechecks_atoms_ext[e->].
-    have [e'->] := typechecks_atom_ext TA; rewrite catfA.
-    by rewrite valid_merge_types_catR// valid_merge_types_remRA//=.
-  - case TA: typechecks_tree => [envA|]//.
-    case TB: typechecks_tree => [envB|]//=.
-    case: ifP => //=vm [<-{env'}].
-    rewrite valid_merge_types_catR//(HB _ _ _ _ TB) andbT.
-    by rewrite valid_merge_types_remR//=(HA _ _ _ _ TA).
-  - apply: HB.
-  - case: ifP => //sA; last by apply: HA.
-    case TB: typechecks_tree => [envB|]//.
-    case TA: typechecks_tree => [envA|]//=; case: ifP => //vm[<-{env'}].
-    rewrite valid_merge_types_catR(HA _ _ _ _ TA) andbT.
-    rewrite valid_merge_types_remR//=; apply: HB TB.
+  move=> C T.
+  have [k ->{env' T}[S D]] := typecheck_tree_ext C T.
+  by rewrite valid_merge_types_catR valid_merge_types_remRA/=.
 Qed.
 
 Lemma typechecks_tree_big_and sP env s B0 tail:
@@ -605,9 +745,11 @@ Lemma typechecks_tree_big_or z sP env s x xs tail:
     (typechecks_tree sP env z (match xs with [::] => KO | (s0,r0) :: xs => Or None s0 (big_or r0 xs) end) tail).
 Proof.
   case: xs => [|[s0 r]rs]/=; rewrite typechecks_tree_big_and//=.
-  case T: typechecks_atoms => //=[env']/=.
-  have [e?] := typechecks_atoms_ext T; subst.
-  by rewrite -catfA catf2 valid_merge_types_catL//valid_merge_types_remLA//=ifT.
+    case T: typechecks_atoms => //=[env']/=.
+    have [k->{env' T}[S D]] := typechecks_atoms_ext T.
+    rewrite valid_merge_types_catL valid_merge_types_remLA// valid_merge_refl.
+    by rewrite remf_cat remf_all catf0 -catfE.
+  by case: ifP => //; case T: typechecks_atoms.
 Qed.
 
 Lemma typecheck_atoms_cat sig env x y:
@@ -615,16 +757,18 @@ Lemma typecheck_atoms_cat sig env x y:
     obind (fun env' => typechecks_atoms sig env' y) (typechecks_atoms sig env x).
 Proof. by elim: x y env => [|[|t] xs IH] y env//=; case X: typechecks => [[env' [[|ty]|]]|]//=. Qed.
 
+From det Require Import mut_excl.
+
 Lemma tc_bc p n t s env r tail env':
   typechecks_prog p ->
   typechecks p.(sig) env (deref s t) = Some r ->
   typechecks_atoms p r.1 [seq deref_atom s i  | i <- tail] = Some env' ->
   is_prop (Some r) ->
   exists2 env'', typechecks_tree p env s
-  match (bc u p n t s).2 with
-  | [::] => KO
-  | (s0, r) :: xs => Or None s0 (big_or r xs)
-  end tail = Some env'' & valid_merge_types env' env''.
+    match (bc u p n t s).2 with
+    | [::] => KO
+    | (s0, r) :: xs => Or None s0 (big_or r xs)
+    end tail = Some env'' & valid_merge_types env' env''.
 Proof.
   case: p => rs sig/=; case: r => gt [[|prop]|]//.
   rewrite /typechecks_prog/=/bc => Tr Tt Ta _.
@@ -647,10 +791,10 @@ Proof.
   have [env''{}IH VEE'] := IH Srs Trs.
   rewrite/fresh_rule !push/=.
   set F := fresh_tm _ _ _.
-  case H: lang.H => [[ty s']|]//=; last by exists env''.
-  rewrite (typechecks_tree_big_or s) IH.
+  case H: query_head => [[ty s']|]//=; last by exists env''.
+  rewrite (typechecks_tree_big_or s).
+   (* IH. *)
   rewrite map_cat typecheck_atoms_cat.
-  Search lang.H catf.
   (* TODO: aggiungere typechecking nella sostituzione:
            tutte le variabili in s sono in env e i termini in s
            hanno lo stesso tipo del risultato del typechecker, qui
@@ -662,66 +806,107 @@ Proof.
 Admitted.
 
 
-
 Lemma typechecks_tree_step p n env s t t'  tail env':
-  sld_tree t ->
+  check_subst p.(sig) s env ->
+  sld_tree t -> disj_tree t ->
   typechecks_prog p ->
   typechecks_tree p.(sig) env s t tail = Some env' ->
   step u p n s t = t' ->
   exists2 env'', typechecks_tree p.(sig) env s t'.2 tail = Some env'' & valid_merge_types env' env''.
 Proof.
-  move=> + TP.
-  move=> ++<-{t'}.
-  elim_tree t s env env' tail => /=.
-  - by move=> _[<-]; exists env.
-  - by move=> _ ->; eexists.  
-  - case: t => //=t.
+  move=> +++ TP+<-{t'}.
+  elim_tree t s env env' tail => /= C.
+  - by move=> _ _[<-]; exists env.
+  - by move=> _ _ ->; eexists.  
+  - move=> _ _; case: t => //=[|t].
       by move=> ->; eexists.
-    rewrite !push/=; case T: typechecks => [[ty [[|eA]|]]|]//= _.
+    rewrite !push/=; case T: typechecks => [[ty [[|eA]|]]|]//=.
     move=> TA; have H:= tc_bc _ TP T TA.
     by apply: H.
-  - move=> /andP[vA vB]; rewrite !push.
+  - move=> /andP[vA vB]/and3P[vab da db]; rewrite !push.
+    have [e E [Se De]] := ext_env_ext sm env; rewrite E.
+    case:ifP => // Cm.
     case TA: typechecks_tree => [tA|]//=.
-    case TB: typechecks_tree => [tB|]//=.
-    case: ifP => vm// [?]; subst.
-    have [env'{}HA v0] := HA _ _ _ _ vA TA.
-    rewrite HA/=.
-    have v1 : valid_merge_types env' env.
+    have [k?[Sk Dk]] := typecheck_tree_ext C TA; subst.
+    case TB: typechecks_tree => [tB|]//; rewrite /Option.bind/oapp/is_prop.
+    have [m?[Sm +]] := typecheck_tree_ext Cm TB; subst.
+    rewrite !domf_cat fdisjointXU => /andP[Dme Dmen].
+    rewrite valid_merge_types_catLR domf_cat !remf_id//; last by rewrite fdisjointXU Dme.
+    rewrite !valid_merge_types_catR remf_id// -andbA valid_merge_refl andbT.
+    case: ifP => ///and5P[vkm vem vke vkenv vee][?]; subst.
+    have [env'{}HA] := HA _ _ _ _ C vA da TA.
+    have [q?[Sq Dq]] := typecheck_tree_ext C HA; subst.
+    rewrite valid_merge_types_catLR !remf_id// valid_merge_refl vkenv !andbT.
+    move => /andP[vkq veq].
+    rewrite HA E Cm.
+    set X := _.[& _].
+    replace X with (k.[\ (domf m `|` (domf e `|` domf env))]); last first.
+      apply/fmapP => x; rewrite fnd_rem/X !in_fsetU !fnd_restrict fnd_cat !FinmapInE.inE.
+      case: ifP => //=/norP[xm/norP[xe/negbTE H]]; rewrite H orbF.
+      by case: fndP => //.
+    clear X.
+    case: ifP => vm//.
+      rewrite/typechecks_tree/merge_valid/Option.bind/oapp !domf_cat.
+      set X := (_.[&_]).
+      replace X with (q.[\domf e `|` domf env]); last first.
+        apply/fmapP => x; rewrite /X !fnd_restrict fnd_cat !FinmapInE.inE.
+        by case: (fndP env x) => xe; rewrite !(orbT,orbF)//=.
+      clear X.
+      rewrite valid_merge_types_catLR remf_id//remf_id// vee valid_merge_refl.
+      rewrite (valid_merge_typesC q env) veq !andbT.
+      rewrite /=ifT; last first.
+        admit.
+      eexists; rewrite// catfA valid_merge_types_catLRid.
+      rewrite remf_comp !remf_cat remf_comp domf_cat -fsetUA !fsetUid.
+      rewrite valid_merge_types_catL !valid_merge_types_remL//!valid_merge_types_remR//.
       admit.
-    have v2 : valid_merge_types env' tB.
+    rewrite TB/merge_valid/Option.bind/oapp.
+    rewrite valid_merge_types_catLR remf_id//domf_cat remf_id; last by rewrite fdisjointXU Dme.
+    rewrite !valid_merge_types_catR remf_id//vem (valid_merge_typesC q env) veq.
+    rewrite valid_merge_refl vee !andbT andTb !domf_cat.
+    set X := (_.[&_]).
+    replace X with (q.[\domf m `|` domf e `|` domf env]); last first.
+      apply/fmapP => x; rewrite /X !fnd_restrict fnd_cat !FinmapInE.inE.
+      by case: (fndP env x) => xe; rewrite !(orbT,orbF)//=.
+    clear X.
+    rewrite ifT; last first.
       admit.
-    have v3 : valid_merge_types (tA + tB) (env' + env).
-      rewrite valid_merge_types_catLR//.
-      Search typechecks_tree cat.
-      
+    eexists => //.
+    rewrite valid_merge_types_catLRid.
+    rewrite !domf_cat !remf_comp !fsetUid fsetUA fsetUid.
+    by rewrite valid_merge_types_remL//valid_merge_types_remR//.
+  - move=> sb db; case: ifP => // CS TB.
+    have [k TB' V] := HB _ _ _ _ CS sb db TB.
+    by rewrite !push/= CS TB'; eexists.
+  - move=> /andP[vA].
+    rewrite !push/=.
+    case: ifP => sA/=; last first.
+      move=> /eqP->{B HB} /andP[dA _] TA.
+      have {HA}[k TA' VM] := HA _ _ _ _ C vA dA TA.
+      rewrite TA' typechecks_tree_big_and.
+      case: ifP => sA'; last by eexists.
+      rewrite ifT.
+        admit.
       admit.
-    have v4: valid_merge_types (tA + tB) (env' + tB).
+    move=> vB /andP[dA dB].
+    case: ifP => //CA.
+    case TB: typechecks_tree => //=[tb].
+    case TA: typechecks_tree => //=[ta].
+    case: ifP => //vm[?]; subst.
+    have {HB}[k TB' Vb] := HB _ _ _ _ CA vB dB TB.
+    have {HA}[q TA' Va] := HA _ _ _ _ C vA dA TA.
+    rewrite ifT; last first.
+      by case: ifP; rewrite// success_cut.
+    rewrite ifT; last first.
       admit.
-    case: ifP => //=cA; first by rewrite v1; eexists.
-    move: vB => /orP[/eqP->{B HB TB}|]/=; first by rewrite v1; eexists.
-    move=> /B.spec_base_or[x[y?]]; subst.
-    by rewrite TB/= v2; eexists => //.
-  - by rewrite !push/=; apply: HB.
-  move=> /andP[vA]; rewrite !push/=.
-  case: ifP => //sA; last first.
-    move=> /eqP->{B HB}/= TA.
-    have [env''{}HA v0]:= HA _ _ _ _ vA TA.
-    rewrite HA.
-    case: ifP => // S; last by eexists.
-    admit.
-  move=> vB.
-  case TB: typechecks_tree => //=[eB].
-  case TA: typechecks_tree => [eA|]//=.
-  case: ifP => //= v0 [?]; subst.
-  rewrite ifT; last by case: ifP; rewrite//success_cut.
-  have [env'{}HB v1] := HB _ _ _ _ vB TB.
-  have v2: valid_merge_types env' eA.
-    admit.
-  case: (ifP (is_cb _)) => //= CB.
-    rewrite ges_subst_cutl//= HB.
-    admit.
-  rewrite HB TA/= v2; eexists => //.
-  admit.
+    case: ifP => cb.
+      rewrite ges_subst_cutl// TB'/=.
+      admit.
+    rewrite TB' TA/= ifT; last first.
+      admit.
+    eexists => //.
+    rewrite valid_merge_types_catLRid !remf_comp fsetUid.
+    by rewrite valid_merge_types_remL//valid_merge_types_remR.
 Admitted.
 
 Lemma typechecks_tree_prune sP env env' s t t' b  tail:
@@ -734,6 +919,7 @@ Proof.
   - by move=> _; case: b => //= T [<-]/=; exists env' => //.
   - by move=> /= _ H [<-]; rewrite /=H; eexists.
   - move=> /andP[]vA vB.
+    case: ifP => CS => //.
     case TA: typechecks_tree => [tA|]//=.
     case TB: typechecks_tree => [tB|]//=.
     case: ifP => vm// [?]; subst.
@@ -748,9 +934,12 @@ Proof.
     move: vB => /orP[/eqP->//|/B.spec_base_or[x[y ?]]]; subst.
     rewrite prune_big_or/= => -[<-]{t'}/=.
     have [env'' {}HB v1] := HB _ _ _ _ _ _ (valid_tree_big_or _ _) TB (prune_big_or _ _).
-    rewrite HB; eexists => //.
+    rewrite CS HB; eexists => //.
+    rewrite valid_merge_types_catL v1 andbT remf_comp fsetUid.
     admit.
-  - by case PB: prune => //=vB T [<-]/=; apply: HB PB.
+  - case PB: prune => //=vB.
+    case: ifP => //C T [<-]/=; rewrite C.
+    by apply: HB PB.
   move=> /andP[vA].
   case: ifP => //sA; last first.
     move=> /eqP->{B HB}/=.
@@ -761,9 +950,11 @@ Proof.
       admit.
     move=> [<-]/=; rewrite sA/=.
     by apply: HA vA TA (failedF_prune _).
+  move=> vB.
+  case: ifP => //C.
   case TB: typechecks_tree => //=[eA].
   case TA: typechecks_tree => [eB|]//=.
-  case: ifP => //= VM vB [?]; subst.
+  case: ifP => //= VM [?]; subst.
   case PB: prune => //[B'|].
     move=> [<-]/=; rewrite sA/= TA.
     have /=[env''{}HB v0] := HB _ _ _ _ _ _ vB TB PB.
@@ -779,6 +970,8 @@ Proof.
 Admitted.
 
 Lemma tc_run p n s tree res env env' tail:
+  check_subst p.(sig) s env ->
+  disj_tree tree ->
   typechecks_prog p ->
    sld_tree tree ->
   typechecks_tree p.(sig) env s tree tail = Some env' ->
@@ -789,16 +982,19 @@ Lemma tc_run p n s tree res env env' tail:
   | Many s t => exists2 env'', typechecks_tree p.(sig) env s t tail = Some env'' & valid_merge_types env' env''
   end.
 Proof.
-  move=> +++[b [n' H]].
-  elim_run H env env' tail => TP VT TA.
+  move=> +++++[b [n' H]].
+  elim_run H env env' tail => CS DT TP VT TA.
   - admit.
-  - have [env'' TB v0'] := typechecks_tree_step VT TP TA eA.
-    have {IH} := IH _ _ _ TP (sld_tree_step VT eA) TB.
-    case: r rB => // s t rB [env''' Tt v3]; rewrite Tt.
-    eexists => //.
+  - have [env'' TB v0'] := typechecks_tree_step CS VT DT TP TA eA.
+    have:= @disj_tree_step p v0 s1 _ _ _ DT; rewrite eA => D'.
+    have {}IH := IH _ _ _ CS (D' _ _) TP (sld_tree_step VT eA) TB.
+    case: r IH rB => //= s t [].
+      admit.
+      admit.
+    move=> x H V R; rewrite H; eexists => //=.
     admit.
   - have [env'' TB v2] := typechecks_tree_prune VT TA nA.
-    have {IH} := IH _ _ _ TP (sld_tree_prune VT nA) TB.
+    have {IH} := IH _ _ _ CS (disj_tree_prune DT nA) TP (sld_tree_prune VT nA) TB.
     case: r rB => //s t rB [env''' Tt v3]; rewrite Tt.
     eexists => //.
     admit.
