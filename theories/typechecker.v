@@ -805,7 +805,6 @@ Proof.
   admit.
 Admitted.
 
-
 Lemma typechecks_tree_step p n env s t t'  tail env':
   check_subst p.(sig) s env ->
   sld_tree t -> disj_tree t ->
@@ -830,33 +829,34 @@ Proof.
     case TB: typechecks_tree => [tB|]//; rewrite /Option.bind/oapp/is_prop.
     case: ifP => //cm[?]; subst.
     have [env'{}HA] := HA _ _ _ _ C vA da TA.
+    have vb': sld_tree B.
+      by move: vB => /orP[/eqP->//|/spec_base_or[x[y<-]]]; rewrite valid_tree_big_or.
     rewrite HA E Cm.
-    move=> VM.
-    case: ifP => cb//.
-      rewrite/typechecks_tree/merge_valid/Option.bind/oapp !domf_cat.
-      rewrite valid_merge_types_catR remf_id// .
-      rewrite /=ifT; last first.
-        have [k?[S D]] := typecheck_tree_ext C HA; subst.
-        rewrite !valid_merge_types_catL (valid_merge_types_remLA _ (fsubset_refl _)) valid_merge_refl !andbT.
-        rewrite valid_merge_types_remL//=; first by rewrite valid_merge_disj//fdisjoint_sym.
-        admit.
-      eexists => //=.
-      have [k?[S]] := typecheck_tree_ext Cm TB; subst.
-      rewrite domf_cat fdisjointXU => /andP[dke dkenv].
-      rewrite catfA valid_merge_types_catLRid !remf_cat domf_cat.
-      rewrite !remf_comp -fsetUA fsetUid domf_cat fsetUid.
-      rewrite valid_merge_types_catL !valid_merge_types_remL// !valid_merge_types_remR//.
-      have [q?[Sq Dq]] := typecheck_tree_ext C HA; subst.
-      rewrite valid_merge_types_catR  (valid_merge_disj dkenv) andbT.
-      rewrite valid_merge_types_remR//=.
+    move=> VM {HB}.
+    have VMx: valid_merge_types env' e.
       admit.
-    rewrite TB/merge_valid/Option.bind/oapp.
-    rewrite ifT; last first.
+    have VM': valid_merge_types env' tB.
+      have [k?[S D]] := typecheck_tree_ext C HA; subst.
+      have [q?[Sq Dq]] := typecheck_tree_ext Cm TB; subst.
+      rewrite catfA valid_merge_types_catLRid valid_merge_types_remL//.
+      rewrite valid_merge_types_remR// valid_merge_types_catR valid_merge_types_remR//=.
+        by move: VMx; rewrite valid_merge_types_catL remf_id// => /andP[].
       admit.
-    eexists => //.
-    rewrite valid_merge_types_catLRid.
-    (* rewrite !domf_cat !remf_comp !fsetUid fsetUA fsetUid. *)
-    rewrite !valid_merge_types_remL//!valid_merge_types_remR//.
+    case: ifP => cb//; last first.
+      rewrite TB/merge_valid/Option.bind/oapp VM'.
+      by eexists; rewrite// valid_merge_types_catLRid !valid_merge_types_remL//!valid_merge_types_remR.
+    rewrite/typechecks_tree/merge_valid/Option.bind/oapp !domf_cat.
+    rewrite valid_merge_types_catR remf_id// VMx.
+    rewrite /=ifT; last first.
+      have [k?[S D]] := typecheck_tree_ext C HA; subst.
+      by rewrite valid_merge_types_catL valid_merge_types_remLA//=.
+    eexists; rewrite//= valid_merge_types_catLR domf_cat !remf_comp !fsetUid.
+    rewrite !valid_merge_types_remL?valid_merge_types_remR//=.
+      by rewrite valid_merge_typesC (typechecks_tree_valid_merge Cm TB).
+      by rewrite valid_merge_typesC.
+    rewrite valid_merge_types_catR (valid_merge_typesC _ env) (typechecks_tree_valid_merge C TA).
+    rewrite valid_merge_types_remR//=.
+    admit.
   - move=> sb db; case: ifP => // CS TB.
     have [k TB' V] := HB _ _ _ _ CS sb db TB.
     by rewrite !push/= CS TB'; eexists.
@@ -878,15 +878,13 @@ Proof.
     have {HB}[k TB' Vb] := HB _ _ _ _ CA vB dB TB.
     have {HA}[q TA' Va] := HA _ _ _ _ C vA dA TA.
     rewrite ifT; last by case: ifP; rewrite// success_cut.
-    rewrite ifT; last first.
-      admit.
+    rewrite ifT; last by case: ifP => //= IC; rewrite ges_subst_cutl.
     case: ifP => cb.
       rewrite ges_subst_cutl// TB'/=.
       admit.
     rewrite TB' TA/= ifT; last first.
       admit.
-    eexists => //.
-    rewrite valid_merge_types_catLRid !remf_comp fsetUid.
+    eexists; rewrite// valid_merge_types_catLRid !remf_comp fsetUid.
     by rewrite valid_merge_types_remL//valid_merge_types_remR.
 Admitted.
 
