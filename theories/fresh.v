@@ -326,6 +326,9 @@ Lemma fresh_atoms_sub fv r m:
   fv <= (fresh_atoms fv m r).1.1.
 Proof. by elim: r => [|x xs IH]; rewrite//=!push/= (leq_trans IH)//fresh_atom_sub. Qed.
 
+(* NOTE: the opposite is false, 
+  example: fresh {1} <= fresh {2}, but {1} `<=` {2} is false
+*)
 Lemma fresh_subP A B: A `<=` B -> fresh A <= fresh B.
 Proof. move=> hsub; rewrite /fresh ltnS; exact: leq_bigmax_fsubset. Qed.
 
