@@ -924,67 +924,107 @@ Proof.
   by rewrite freshPU freshP1 vn.
 Qed.
 
+(* Lemma typechecks_atom_sub p e n A eA :
+  fresh (domf e) <= n ->
+  fresh (vars_atom A) <= n ->
+  typechecks_atom p e A = Some eA ->
+  fresh (domf eA) <= n.
+Proof.
+  case: A => [|t]/=en tn;first by move=> [<-].
+  case T: typechecks => [[et [[]|]]|]//=[<-{eA}].
+  by apply: typechecks_sub T.
+Qed.
+
+Lemma typechecks_atoms_sub p e n A eA :
+  fresh (domf e) <= n ->
+  fresh (vars_atoms A) <= n ->
+  typechecks_atoms p e A = Some eA ->
+  fresh (domf eA) <= n.
+Proof.
+  elim: A e n eA => //=[|x xs IH] e n eA en; first by move=> _ [<-].
+  rewrite vars_atoms_cons freshPU => /andP[xn xsn].
+  case TA: typechecks_atom => [ex|]//= exs; apply: IH exs => //.
+  by apply: typechecks_atom_sub TA.
+Qed. *)
+
 Lemma typechecks_tree_sub p e n A eA:
   fresh (domf e) <= n ->
   fresh (vars_tree A) <= n ->
   typechecks_tree p e A = Some eA ->
   fresh (domf eA) <= n .
 Proof.
-  elim_tree A e n eA => //=en; only 1,2: by move=> +[<-].
-    case: t => [+[<-]//|t]/=tn.
-    case Tt: typechecks => //=[[eA' [[|pr]|]]]//[<-{eA}].
-    by apply: typechecks_sub Tt.
-  - rewrite !freshPU -andbA.
+  move=> en an tA.
+  have [x?/and4P[H1 H2 H3 H4]] := coversE_tc_tree tA; subst.
+  by rewrite domf_cat freshPU en (leq_trans (fresh_subP H1) an).
+Qed.
 
-
-
-Lemma typechecks_tree_step p n e s t e':
+Lemma typechecks_tree_step ex k p n e s t e':
   typechecks_prog p ->
   fresh (domf e) <= n ->
+  fresh (domf k) <= n ->
   fresh (vars_tree t) <= n ->
   fresh (vars_sigma s) <= n ->
   (* check_subst p.(sig) s e -> *)
   (* sld_tree t -> disj_tree t -> *)
   disj_tree t ->
-  typechecks_tree p.(sig) e t = Some e' ->
-  exists2 e'', typechecks_tree p.(sig) e (step u p n s t).2 = Some e'' 
+  tc_subst p.(sig) e s = Some ex ->
+  typechecks_tree p.(sig) (k + ex) t = Some e' ->
+  exists2 e'', typechecks_tree p.(sig) (k+ex) (step u p n s t).2 = Some e'' 
                & mergeable_env e' e''.
 Proof.
   move=> TP.
-  elim_tree t s e e' => /= .
-  - move=> _ _ _ _ ->; eexists => //; exists fmap0; by rewrite cat0f.
-  - move=> _ _ _ _ ->; eexists => //; exists fmap0; by rewrite cat0f.
-  - case: t => //=[|t] fe _ Fsn  _.
-      by move=> ->; eexists => //; exists fmap0; by rewrite cat0f.
+  elim_tree t s e k ex e' => /= .
+  - move=>  _ _ _ _ _ _ [<-]; eexists;rewrite//mergeable_env_catL mergeable_env_remLA//=.
+  - move=>  _ _ _ _ _ _ [<-]; eexists;rewrite//mergeable_env_catL mergeable_env_remLA//=.
+  - case: t => //=[|t] en kn tn sn _ ts.
+      by move=> [<-]; eexists;rewrite //mergeable_env_catL mergeable_env_remLA//=.
     rewrite !push/=; case T: typechecks => [[ty' [[|eA]|]]|]//=[?]; subst.
     admit.
-  - rewrite 2!freshPU -andbA => fe /and3P[fa fb fsm] fs /and3P[dab da db].
+  - rewrite 2!freshPU -andbA => en kn /and3P[an bn smn] sn /and3P[dab da db] Ts{HB}.
     case T: tc_subst => [e1|]//=.
     case TA: typechecks_tree => [eA|]//.
     case TB: typechecks_tree => [eB|]//=.
     case: ifP => // ME [<-{e'}]; rewrite !push/= T.
-    have fe' := tc_subst_sub fsm fe T.
-    have {HB}HA := HA s _ _ fe' fa fs da TA.
+    have [j? C] := coversE_tc_subst T; subst.
+    rewrite catfA in T,TA,TB,C *.
+    have jkn : fresh (domf (j + k)) <= n .
+      by rewrite domf_cat freshPU kn; move/and4P: C => [/fresh_subP/leq_trans-/(_ _ smn)->].
+    have {}HA := HA s _ _ _ _ en jkn an sn da Ts TA.
+    set jkex := j + k + ex in T,TA,TB,C,HA *.
     case sA: step HA => //[[n' tg] A'].
     move=> [e''/= TA'] HA; rewrite TA' fun_if TB/=.
-    have Mee1: mergeable_env e'' e1.
+    have Mee1: mergeable_env e'' jkex.
       by have [x->_] := coversE_tc_tree TA'; rewrite mergeable_env_catL mergeable_env_remLA/=.
     have MeeB: mergeable_env e'' eB.
       suffices: mergeable_env (e'' + eA) eB.
         by rewrite mergable_env_catf ?(mergeable_envC _ eA)// mergeable_env_catL => /andP[].
+      (* have H := typechecks_tree_sub fe' fa TA. *)
       suffices : exists2 k : env, e'' + eA = k + eA & domf k # domf eB.
         by move=> [x->] H; rewrite mergeable_env_catL (mergeable_env_remL _ (mergable_disj H))/=.
+      exists e''.[\domf eB]; last by rewrite domf_rem fdisjoint_rem.
+      
+      (* have [l? Cl] := coversE_tc_tree TA'; subst.
+      have [q? Cq]:= coversE_tc_tree TB; subst.
+      have [x? Cx]:= coversE_tc_tree TA; subst.
+
+      
+      apply/fmapP => x; rewrite !fnd_cat fnd_rem.
+      case: fndP => //xA; case: ifP => //xeB; rewrite not_fnd//=.
+
+        Search (_`\`_) fdisjoint.
+      have [m? Cm] := coversE_tc_tree TA; subst.
+      exists *)
       admit.
     case: ifP => //= cb; rewrite /=ifT//; eexists; rewrite//= mergeable_env_catLR.
       rewrite (mergeable_env_remL _ (mergeable_env_remR _ HA)).
-      rewrite mergeable_envC (mergeable_env_remL _ MeeB) !(mergeable_envC _ e1).
-      by rewrite (mergable_tc_tree TB) mergeable_env_remR//(mergable_tc_tree TA).
+      rewrite mergeable_envC (mergeable_env_remL _ MeeB) !(mergeable_envC _ (_+_)).
+      by rewrite (mergable_tc_tree TB) mergeable_env_remR// (mergable_tc_tree TA).
     rewrite (mergeable_env_remL _ ME) (mergeable_envC eB) (mergeable_env_remL _ MeeB).
     by rewrite mergeable_env_remL//=mergeable_env_remR//.
-  - rewrite freshPU => en /andP[fb fsm fs] db.
+  - rewrite freshPU => en kn /andP[fb fsm fs] db.
     case T: tc_subst => [e1|]//=.
     case TB: typechecks_tree => [eB|]//=.
-    case: ifP => //= ME [<-{e'}]; rewrite !push/= T.
+    (* case: ifP => //= ME [<-{e'}]; rewrite !push/= T.
     have {}HB := HB sm _ _ (tc_subst_sub fsm en T) fb fsm db TB.
     case sA: step HB => //[[n' tg] B'].
     have [k? H] := coversE_tc_subst T; subst.
@@ -1001,16 +1041,16 @@ Proof.
     case: ifP => //MeeB[<-{e'}].
     case: ifP => sA; rewrite !push/=.
       have fn := vars_sigma_next_subst fa fs.
-      have {HA HB}:= HB (next_subst s A) _ _ _ fb fn db TB; case sB: step => [[n' tg] B']/=.
+      have {HA HB}:= HB (next_subst s A) _ _ (typechecks_tree_sub en fa TA) fb fn db TB; case sB: step => [[n' tg] B']/=.
       move=> [eB' TB' ME]; rewrite fun_if TA.
       case: ifP => /=C.
         admit.
       rewrite TB' TB0/= ifT.
         by eexists; rewrite //mergeable_env_catLRid mergeable_env_remR// mergeable_env_remL.
       admit.
-    have {HA}:= HA s _ _ fa fs da TA; case stA: step => [[n' tg] A']/=.
+    have {HA}:= HA s _ _ en fa fs da TA; case stA: step => [[n' tg] A']/=.
     move=> [eA' TA' ME]; rewrite TA'.
-    admit.
+    admit. *)
 Admitted.
 
 Lemma typechecks_tree_prune sP env env' t t' b :
@@ -1073,19 +1113,19 @@ Proof.
   admit. *)
 Admitted.
 
-Lemma tc_run p n s tree res env env':
+Lemma tc_run p n s tree res env k env' env'':
   fresh (vars_tree tree) <= n -> fresh (vars_sigma s) <= n ->
-  tc_subst p.(sig) env s ->
+  tc_subst p.(sig) env s = Some env' ->
   (* disj_tree tree -> *)
   typechecks_prog p ->
   (* sld_tree tree -> *)
-  typechecks_tree p.(sig) env tree = Some env' ->
+  typechecks_tree p.(sig) (k + env') tree = Some env'' ->
   (exists b n', runT u p n s tree res b n') ->
   match res with
   | Zero => True
   | One s => True
-  | Many s t => exists2 env'', 
-    typechecks_tree p.(sig) env t = Some env'' & mergeable_env env' env''
+  | Many s t => exists2 env3, 
+    typechecks_tree p.(sig) env t = Some env3 & mergeable_env env'' env3
   end.
 Proof.
   move=> +++++[b [n' H]].
@@ -1093,8 +1133,9 @@ Proof.
   - admit.
   - case: r IH rB => //s' B' IH rB.
     have [Bv1 s1v1] := vars_tree_step_sub_flow Av s1v eA.
-    have [env'' TB MA] := typechecks_tree_step v0 s1 (*VT*) (*DT*) TP TA.
-    rewrite eA/= in TB.
+    have  := typechecks_tree_step  (*VT*) (*DT*) TP _ _ _ _ _ CS TA.
+    move=> /(_ v0) [|||||r]; [admit|admit|admit| admit| admit|].
+    rewrite eA/= => TB M.
     have {IH} := IH _ _ Bv1 s1v1 CS (*D'*) TP (*(sld_tree_step VT eA)*) TB.
     move=> [envx TB' MB]; rewrite TB'; eexists => //.
     have [x ? Hx] := coversE_tc_tree TB'; subst.

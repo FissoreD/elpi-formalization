@@ -172,11 +172,17 @@ Qed.
 Lemma ltn_max a b n : (maxn a b < n) = (a < n) && (b < n).
 Proof. by rewrite ltnNge leq_max negb_or -!ltnNge. Qed.
 
+Lemma max_setUU x y: max_set (x `|` y) = maxn (max_set x) (max_set y).
+Proof. by rewrite/max_set bigmax_fsetU//. Qed.
+
 Lemma freshUU x y: fresh (x `|` y) = maxn (fresh x) (fresh y).
-Proof. by rewrite/fresh bigmax_fsetU maxnSS. Qed.
+Proof. by rewrite/fresh max_setUU maxnSS. Qed.
+
+Lemma max_setPU x y fv: max_set (x `|` y) <= fv = (max_set x <= fv) && (max_set y <= fv).
+Proof. by rewrite /max_set bigmax_fsetU geq_max. Qed.  
 
 Lemma freshPU x y fv: fresh (x `|` y) <= fv = (fresh x <= fv) && (fresh y <= fv).
-Proof. by rewrite /fresh bigmax_fsetU ltn_max. Qed.
+Proof. by rewrite /fresh/max_set bigmax_fsetU ltn_max. Qed.
 
 Lemma rem1 (S: choiceType) (x y: S): 
   [fset x] `\ y = if x == y then fset0 else [fset x].
@@ -188,11 +194,17 @@ Proof.
   case: eqP => ?; subst.
 Qed.
 
+Lemma max_setP0: max_set fset0 = 0.
+Proof. by rewrite/max_set/=big_nil. Qed.
+
 Lemma freshP0: fresh fset0 = 1.
-Proof. by rewrite/fresh/=big_nil. Qed.
+Proof. by rewrite/fresh/=max_setP0. Qed.
+
+Lemma max_setP1 x : max_set [fset IV x] = x.
+Proof. by rewrite/max_set (big_fsetD1 (IV x))?inE// rem1 eqxx big_nil/=maxn0. Qed.
 
 Lemma freshP1 x : fresh [fset IV x] = x.+1.
-Proof. by rewrite/fresh (big_fsetD1 (IV x))?inE//=rem1 eqxx big_nil maxn0. Qed.
+Proof. by rewrite/fresh max_setP1. Qed.
 
 Lemma sum_mt_app n m f a fv: sum_mt n m (Tm_App f a) <= fv ->
   sum_mt n m f <= fv /\ sum_mt n m a <= fv.

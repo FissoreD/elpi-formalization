@@ -195,12 +195,17 @@ Definition varsU_rprem r : fvS := vars_atoms r.(premises).
 Definition varsU_rhead (r: R) : fvS := vars_tm r.(head).
 Definition varsU_rule r : fvS := varsU_rhead r `|` varsU_rprem r.
 
-Definition fresh  (fv : fvS) : nat := (\max_(i <- fv) let: (IV n) := i in n ).+1.
+Definition getV '(IV v) := v.
+
+Definition max_set (fv : fvS) : nat := (\max_(i <- fv) getV i).
+
+Lemma max_setP (s:fvS): forall (x:V), x \in s -> getV x <= max_set s.
+Proof. by move=> x xs; rewrite/max_set; apply/leq_trans/leq_bigmax_seq/isT/xs. Qed.
+
+Definition fresh  (fv : fvS) : nat := (max_set fv).+1.
+
 Definition freshP (fv : fvS) : IV (fresh fv) \in fv = false.
-Proof.
-  rewrite/fresh; case: in_fsetP => // -[[x] xP] /= []/eq_leq.
-  by rewrite (big_fsetD1 _ xP) /= ltnNge => /negbTE<-; rewrite leq_maxl.
-Qed.
+Proof. by case: (boolP (_ \in _)) => ///max_setP; rewrite ltnn. Qed.
 
 Fixpoint fresh_tm (n: nat)  (m:{fmap V -> V}) t : nat * {fmap V -> V} :=
   match t with
