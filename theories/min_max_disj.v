@@ -4,13 +4,41 @@ From det Require Import lang.
 From det Require Import tree tree_prop fresh.
 
 Definition all_min m (r: {fset V}) := 
-  [forall x : r, let: IV x := val x in m <= x].
+  [forall x : r, m <= getV (val x)].
 
 Definition all_max M (r: {fset V}) := 
-  [forall x : r, let: IV x := val x in x <= M].
+  [forall x : r, getV (val x) <= M].
 
 Definition min_maxS (s:{fset V}) m M :=
-  [forall x : s, let: IV x := val x in m <= x < M].
+  [forall x : s, m <= getV (val x) < M].
+
+Lemma min_maxS_all s m M :
+  min_maxS s m M.+1 = all_min m s && all_max M s.
+Proof.
+apply/idP/andP => [/forallP H | [/forallP H1 /forallP H2]].
+- split; apply/forallP => x; move: (H x);
+    by case: (val x) => n /= /andP[].
+- apply/forallP => x; move: (H1 x) (H2 x); case: (val x) => n /= h1 h2.
+  by rewrite h1 ltnS h2.
+Qed.
+
+Lemma all_max_max_set s: all_max (max_set s) s.
+Proof. by apply/forallP => -[x/= xs]; apply/max_setP. Qed.
+
+Lemma min_max_leqr s m a b : a <= b -> (min_maxS s m a -> min_maxS s m b).
+Proof.
+  move=> leab/forallP /= H; apply/forallP => x /=.
+  move: (H x); case: (val x) => n /= /andP [-> ltna] /=.
+  by rewrite (leq_trans ltna leab).
+Qed.
+
+Lemma min_max_maxr s m M1 M2 :
+  min_maxS s m (maxn M1 M2) = min_maxS s m M1 || min_maxS s m M2.
+Proof.
+case: (leqP M1 M2) => [le12 | lt21].
+- by rewrite (orb_idl)//; apply: min_max_leqr.
+- by rewrite (orb_idr)//; apply/min_max_leqr/ltnW.
+Qed.
 
 Lemma all_min_fresh_tm:
   forall q m r h, m <= q ->
@@ -122,11 +150,17 @@ Proof.
 Qed.
 
 Lemma min_maxU a b m M:
-  min_maxS a m M -> min_maxS b m M -> min_maxS (a `|` b) m M.
-Proof. 
-  move=> M1 M2; apply/forallP => -[[x]xP]/=; move: xP; rewrite inE => /orP[]H.
-    by have:= forallP M1 [`H].
-  by have:= forallP M2 [`H].
+  min_maxS (a `|` b) m M = min_maxS a m M && min_maxS b m M.
+Proof.
+  have H s1 s2: s1 `<=` s2 -> min_maxS s2 m M -> min_maxS s1 m M.
+    move=> H1 /forallP H2; apply/forallP => -[x xs1].
+    by have /=xs2:= H2 [`fsubsetP H1 _ xs1].
+  case H1: min_maxS; apply/esym.
+    by rewrite (H _ (a `|` b) (fsubsetUl _ _))//(H _ (a `|` b))//fsubsetUr.
+  apply/contraFF/H1 => /andP[{}H1 H2].
+  apply/forallP => -[x]; rewrite /=in_fsetU => /orP[]{}H.
+    apply: forallP H1 [`H].
+  apply: forallP H2 [`H].
 Qed.
 
 Lemma vars_tm_ren_codom_sub w t1: vars_tm t1 `<=` domf w -> vars_tm (ren w t1) `<=` codomf w.
