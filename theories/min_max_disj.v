@@ -15,6 +15,10 @@ Definition min_maxS (s:{fset V}) m M :=
 Lemma min_maxS0 x y: min_maxS fset0 x y.
 Proof. by apply/forallP => -[]. Qed.
 
+Lemma min_maxS0L s n:
+  (fresh s <= n) -> min_maxS s 0 n.
+Proof. by move=> H; apply/forallP => -[x xP]/=; apply/leq_trans/H/max_setP. Qed.
+
 Hint Resolve min_maxS0 : core.
 
 Lemma min_maxS_all s m M :
