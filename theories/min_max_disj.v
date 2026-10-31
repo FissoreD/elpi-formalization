@@ -12,6 +12,11 @@ Definition all_max M (r: {fset V}) :=
 Definition min_maxS (s:{fset V}) m M :=
   [forall x : s, m <= getV (val x) < M].
 
+Lemma min_maxS0 x y: min_maxS fset0 x y.
+Proof. by apply/forallP => -[]. Qed.
+
+Hint Resolve min_maxS0 : core.
+
 Lemma min_maxS_all s m M :
   min_maxS s m M.+1 = all_min m s && all_max M s.
 Proof.

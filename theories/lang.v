@@ -347,8 +347,8 @@ Proof.
   by rewrite domf_rem; apply/fsubsetP => x; rewrite inE => /andP[_ ->].
 Qed.
 
-Lemma empty_rem {T:choiceType} K k: (fmap0 : {fmap T -> K}).[~k] = (fmap0 : {fmap T -> K}).
-Proof. by apply/fmapP => p;rewrite fnd_rem1 not_fnd//if_same. Qed.
+Lemma empty_rem {T:choiceType} K k: (fmap0 : {fmap T -> K}).[\k] = (fmap0 : {fmap T -> K}).
+Proof. by apply/fmapP => p; rewrite fnd_rem not_fnd// if_same. Qed.
 
 Lemma idempotent_0: idempotent fmap0.
 Proof. by rewrite/idempotent fdisjoint0X. Qed.
