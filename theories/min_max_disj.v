@@ -41,6 +41,16 @@ Proof.
   by rewrite (leq_trans ltna leab).
 Qed.
 
+Lemma min_max_leql s m a b : b <= a -> (min_maxS s a m -> min_maxS s b m).
+Proof.
+  move=> leab/forallP /= H; apply/forallP => x /=.
+  by move: (H x); case: (val x) => n /= /andP[/(leq_trans leab)]->->.
+Qed.
+
+Lemma min_max_sub s1 s2 v1 v2: s2 `<=` s1 ->
+  min_maxS s1 v1 v2 -> min_maxS s2 v1 v2.
+Proof. by move=> H M; apply/forallP=>[[key ks2]]; have:= forallP M [`fsubsetP H _ ks2]. Qed.
+
 Lemma min_max_maxr s m M1 M2 :
   min_maxS s m (maxn M1 M2) = min_maxS s m M1 || min_maxS s m M2.
 Proof.

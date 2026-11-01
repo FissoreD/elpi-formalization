@@ -275,4 +275,12 @@ Section vars_tree.
     by rewrite !fsetSU//; apply: HA X.
   Qed.
 
+  Lemma run_sub v1 s1 t r b1 v2:
+    runT u p v1 s1 t r b1 v2 -> v1 <= v2.
+  Proof.
+    move=> H; elim_run H.
+    apply: leq_trans (vars_tree_step_sub A v0 s1) _.
+    by rewrite eA.
+  Qed.
+
 End vars_tree.
