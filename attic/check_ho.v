@@ -610,11 +610,6 @@ Lemma sigSW_arr wc m1 l1 r1 t2 :
   t2 = arr m1 (if wc then l1 else if m1 == input then strong l1 else weak l1) (if wc then r1 else weak r1).
 Proof. rewrite/sigSW; case: ifP => wcP/eqP//. Qed.
 
-Lemma compat_type_arr m m' t1 t2 t1' t2':
-  compat_type (arr m t1 t2) (arr m' t1' t2') = 
-    [&& m == m', compat_type t1 t1' & compat_type t2 t2'].
-Proof. case: m; case: m' => //. Qed.
-
 Lemma eat_ty_match n t m tf tr:
 eat_ty n t = Some (arr m tf tr) ->
   match t with

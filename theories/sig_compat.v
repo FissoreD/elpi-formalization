@@ -11,6 +11,11 @@ Fixpoint compat_type x y :=
   | _, _ => false
   end.
 
+Lemma compat_type_arr m m' t1 t2 t1' t2':
+  compat_type (arr m t1 t2) (arr m' t1' t2') = 
+    [&& m == m', compat_type t1 t1' & compat_type t2 t2'].
+Proof. case: m; case: m' => //. Qed.
+
 Lemma compat_type_refl x: compat_type x x.
 Proof. elim: x => [[|[]]//|[]//= _ -> _ ->]//. Qed.
 
