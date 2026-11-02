@@ -28,21 +28,20 @@ Section vars_tree.
     by rewrite !vars_atoms_cons -fsetUA fsetUid.
   Qed.
 
-  Lemma vars_tree_big_or r0 rs:
-    vars_tree (big_or r0 rs) = vars_atoms r0 `|` varsU [seq vars_sigma x.1 `|` vars_atoms x.2 | x <- rs].
+  Lemma vars_tree_big_or r0 rs: 
+    vars_tree (big_or r0 rs) = vars_atoms r0 `|` vars_selected rs.
   Proof.
     elim: rs r0 => //=[|[s0 r0] rs IH] l/=; rewrite vars_tree_big_and ?fsetU0 => //.
-    rewrite -fsetUA (fsetUC _ (vars_sigma s0)).
-    by rewrite IH//= !fsetUA//.
+    by rewrite IH vars_selected_cons/= -fsetUA (fsetUC _ (vars_sigma s0)) !fsetUA.
   Qed.
-  
-  Lemma fresh_varsU fF rs: 0 < fF ->
+
+  (* Lemma fresh_varsU fF rs: 0 < fF ->
     fresh (varsU [seq vars_sigma x.1 `|` vars_atoms x.2 | x <- rs]) <= max_sigmas fF rs.
   Proof.
     elim: rs fF => //=[|r0 rs IH] f S.
       by rewrite/fresh/max_set/=big_nil.
     by rewrite !freshPU -!andbA !freshUU/= !leq_max IH//= !leqnn !orbT.
-  Qed.
+  Qed. *)
 
   Lemma ltn_leq_trans: forall [n m p : nat], m < n -> n <= p -> m < p.
   Proof. move=> n m q hmn hnp; exact: leq_trans hmn hnp. Qed.
@@ -139,7 +138,7 @@ Section vars_tree.
     move: (fresh_rules _ _).1 => m nm {IH srs}.
     have {}sh := leq_trans sh nm.
     have {}sb := leq_trans sb nm.
-    case: r sh sb => h b; rewrite /varsU_rhead /varsU_rprem /=/fresh_rule !push/=.
+    case: r sh sb => h b/=; rewrite/fresh_rule !push/=.
     move=> sh sb.
     set X := fresh_tm _ _ _.
     move=> *; apply: fresh_atoms_vars => //.
@@ -148,25 +147,14 @@ Section vars_tree.
     by apply/fresh_subc; rewrite//codomf0 freshP0; destruct m.
   Qed.
 
-  Lemma vars_tm_bc_sub n c fv fvx s s0 r0 rs:
+  Lemma vars_tm_bc_sub n c fv fvx s r:
     sum_mt n fmap0 c  <= fv-> fresh (vars_sigma s) <= fv -> 
-    bc u p fv c s = (fvx, (s0, r0) :: rs) ->
-    fresh (vars_tree (big_or r0 rs)) <= fvx  /\ fresh (vars_sigma s0) <= fvx.
+    bc u p fv c s = (fvx, r) -> r != [::] ->
+    fresh (vars_selected r) <= fvx.
   Proof.
-    move => H1 H2; rewrite/bc/=; case: ifP => //= _; rewrite !push/=.
-    set X := fresh _.
-    case FR: fresh_rules => [fF RF]/=[? S]; subst.
-    rewrite S/= !leq_max !leqnn !orbT; split => //.
-    rewrite vars_tree_big_or !freshPU !leqnn/=.
-    have := fresh_rules_sub (rules p) X; rewrite FR/= => f0.
-    have {}f0: 0 < fF by apply: ltn_leq_trans f0.
-    rewrite fresh_varsU// andbT.
-    apply/orP; left.
-    apply/leq_trans/max_sigmas_sub.
-    have /(_ (s0,r0)):= select_in S.
-    rewrite inE eqxx => /(_ isT)/=/mapP[r rR ?]; subst.
-    apply: fresh_rules_vars FR _ rR.
-    by rewrite/X freshUU leq_max leqnn orbT.
+    move => H1 H2; rewrite/bc/=; case: ifP => //= _; first by move=> [<-<-].
+    set X := fresh _; rewrite push => -[<-<-].
+    by rewrite leq_max leqnn orbT.
   Qed.
 
   Lemma vars_sigma_next_subst s fvA A:
@@ -193,13 +181,14 @@ Section vars_tree.
         move: X; rewrite/bc; case: ifP => //= _.
           by move=> [<-]; destruct fv.
         rewrite !push/= => -[<- _].
-        apply/leq_trans/max_sigmas_sub.
+        rewrite leq_max; apply/orP; left.
         apply/leq_trans/fresh_rules_sub.
         by rewrite !freshUU freshP1 !leq_max//.
-      rewrite freshUU geq_max.
+      rewrite vars_tree_big_or fsetUC fsetUA.
       have {}f0: 0 < fv by destruct fv.
-      apply/andP/vars_tm_bc_sub/X; rewrite//!freshPU freshP1/= codomf0/=H1 !freshP0 f0 !andbT.
-      apply/f0.
+      have H: sum_mt 0 [fmap]%fmap c <= fv.
+        by rewrite !freshPU/=H1 codomf0 freshP0 freshP1 f0.
+      by have:= vars_tm_bc_sub H H2 X isT; rewrite vars_selected_cons//=.
     - rewrite 2!freshPU -!andbA !push => /and3P[fa fb fs] f/=.
       have Hs := vars_tree_step_sub A fv s.
       move=> [???]; subst.

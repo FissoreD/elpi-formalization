@@ -121,7 +121,7 @@ Proof.
   set N := (fresh _); have := leqnn N; rewrite {1}/N; clearbody N.
   rewrite !freshPU -!andbA => /and5P[Fn Fd Fc Ft].
   case: p => r sig/=.
-  elim: r => //=-[h b] rs IH; rewrite v_prog_cons/=!freshPU -!andbA /varsU_rhead/varsU_rprem.
+  elim: r => //=-[h b] rs IH; rewrite v_prog_cons/=!freshPU -!andbA.
   rewrite/= !push/= head_fresh_rule/= => /and3P[Fh Fb Fr].
   case F: fresh_rules IH => [N' rs'] IH.
   case H: query_head => [[ty n']|]//=; last by apply: IH.
@@ -193,7 +193,7 @@ Proof.
   have:= leqnn X; rewrite{1}/X.
   rewrite 3!freshPU -!andbA => /and4P[Xn Xs Xdt].
   clearbody X; case: prog => rs sig/=.
-  elim: rs => //=-[h b] rs IH; rewrite v_prog_cons/varsU_rhead/varsU_rprem/=.
+  elim: rs => //=-[h b] rs IH; rewrite v_prog_cons/=.
   rewrite !freshPU -andbA => /and3P[fh fb frs].
   have [v'[e[H1 H2 H3{IH}]]] := IH frs.
   rewrite /=/fresh_rule/=!push/=.
@@ -297,8 +297,8 @@ Proof.
       by have:= bc_sub u p t v0 s1; rewrite X; destruct v0, n'.
     have ST : sum_mt 0 fmap0 t <= v0.
       by rewrite/sum_mt !freshPU/= codomf0 freshP0 freshP1 /= b0.
-    rewrite freshPU.
-    by have [->] := vars_tm_bc_sub ST vs X.
+    have:= vars_tm_bc_sub ST vs X isT.
+    by rewrite vars_selected_cons/=vars_tree_big_or (fsetUC _ (vars_sigma _)) fsetUA.
   - move=> /and4P[vrA vrB vrd vrc].
     have H:= vars_tree_step_sub u p A v0 s1.
     rewrite HA//=(leq_trans vrc H).

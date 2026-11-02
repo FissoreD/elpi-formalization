@@ -213,7 +213,7 @@ Proof.
     move=> /IH/andP[->]/= Hx.
     by apply/leq_trans/fresh_rule_sub.
   set X:= (fresh_rules _ _).1.
-  rewrite/fresh_rule; case: r => h b; rewrite /varsU_rhead/varsU_rprem !push/=.
+  rewrite/fresh_rule; case: r => h b/=; rewrite /=!push/=.
   set Y:= fresh_tm _ _ _.
   move=> /orP[].
     have/= H:= @min_max_fresh_tm0 X h.
@@ -225,7 +225,6 @@ Proof.
     apply/andP; split; last first.
       by apply/leq_trans/fresh_atoms_sub.
     apply/leq_trans/Hl/fresh_rules_sub.
-    Search fresh_atoms.
   elim: b => //-[|t]/= xs {}IH; rewrite !push/=vars_atoms_cons/=.
     by rewrite fset0U.
   rewrite inE => /orP[]; last first.

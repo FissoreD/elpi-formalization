@@ -380,16 +380,16 @@ Proof.
   apply/leq_trans /fresh_rule_sub/IH.
 Qed.
 
-Lemma max_sigmas_sub n l:
+(* Lemma max_sigmas_sub n l:
   n <= max_sigmas n l.
-Proof. by elim: l n => [//|[s a] xs IH] n/=; rewrite leq_max IH. Qed.
+Proof. by elim: l n => [//|[s a] xs IH] n/=; rewrite leq_max IH. Qed. *)
 
 Lemma bc_sub u p c fv s:
   fv <= (bc u p fv c s).1.
 Proof.
   rewrite/bc.
   case: ifP => //= _; rewrite !push/= .
-  apply/leq_trans/max_sigmas_sub.
+  rewrite leq_max; apply/orP; left.
   apply/leq_trans/fresh_rules_sub; rewrite-!fsetUA.
   by apply/leq_trans/freshPwl; rewrite freshP1.
 Qed.

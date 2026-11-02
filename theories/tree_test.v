@@ -35,7 +35,7 @@ Definition s2 : Sigma := [fmap].[IV 1 <- Tm_P ff].
 Lemma vars_sigma_set v s: vars_sigma fmap0.[v <- s] = v |` vars_tm s.
 Proof. by rewrite /vars_sigma/= /codom_vars codom0_set/= !fsetU0. Qed.
 
-Definition simpl_set:= (fsetU0, fset0U, codomf0, cat0f, vars_sigma0, fsetUid, idempotent_0, deref_P, ren_P, ren_app, deref_empty, vars_sigma_set, unify_refl, cardfs1, freshUU, freshP0, freshP1).
+Definition simpl_set:= (fsetU0, fset0U, codomf0, cat0f, vars_sigma0, fsetUid, idempotent_0, deref_P, ren_P, ren_app, deref_empty, vars_sigma_set, unify_refl, cardfs1, freshUU, freshP0, freshP1, max_setUU, max_setP0, max_setP1, vars_selected_cons,vars_selected_nil, codom_vars0).
 
 Ltac sif := simpl (if _ then _ else _); cbn match.
 
@@ -52,7 +52,7 @@ Section Test1.
   Proof.
     repeat eexists.
     have PV : v_prog (rules p_test) = [fset IV 0].
-      by rewrite/v_prog/=/varsU_rule/varsU_rhead/varsU_rprem/vars_atoms/=!simpl_set.
+      by rewrite/v_prog/=/varsU_rule/vars_atoms/=!simpl_set.
 
     apply: StepT' => //=; cycle 1.
       rewrite/bc; rewrite PV.
@@ -85,9 +85,8 @@ Section Test1.
         rewrite [omap _ _]/=; cbn match.
         rewrite fsetU0  ![omap _ _]/= unify_refl [omap _ _]/=.
         rewrite//=.
-      move=><-.
-      rewrite/=/vars_atoms/= !freshUU !freshP1 codom_vars0 freshP0/=.
-      rewrite/maxn//=.
+      move=><-; rewrite !vars_selected_cons/= vars_sigma0 fset0U !vars_atoms_cons/= !vars_selected_nil !fsetU0 fset0U.
+      rewrite !max_setUU max_setP1//=.
 
     apply: StepT => //=.
       rewrite/bc vars_sigma0 PV !simpl_set /maxn; sif.
@@ -100,8 +99,8 @@ Section Test1.
         rewrite unify_V_0r//.
         by rewrite/=unify_V_0r//=.
       move=> ->{X}/=.
-      rewrite/vars_sigma/codom_vars/vars_atoms freshP0 !codom0_set/= !simpl_set.
-      by rewrite/maxn/=.
+      rewrite !vars_selected_cons !vars_selected_nil/=.
+      by rewrite !vars_sigma_set !fsetU0  fsetUid max_setP1/=.
     apply: StepT => //.
       rewrite/=/bc/next_subst [next _ _]/= idempotent_set_D//.
       rewrite deref_App PV deref_V FmapE.fmapE eqxx [vars _]/=.
@@ -109,8 +108,9 @@ Section Test1.
       rewrite /fresh_rule/= !inE eqxx !FmapE.fmapE eqxx orbF.
       set X := select _ _ _ _ _.
       have : X = [::] by rewrite/X/= !simpl_set !FmapE.fmapE/=unify_ground.
-      by move=> ->{X}/=.
+      by move=> /=->{X}/=.
     apply: BackT => //=.
+    rewrite vars_selected_nil max_setP0/=.
     apply: StepT => //.
       rewrite/=/bc/next_subst [next _ _]/= idempotent_set_D//.
       rewrite deref_App PV deref_V FmapE.fmapE eqxx [vars _]/=.
@@ -147,7 +147,7 @@ Section Test5.
       rewrite !simpl_set !maxnn.
       rewrite[fresh_rules _ _]/= !simpl_set/= !FmapE.fmapE/= [omap _ _]/=; sif.
       rewrite !unify_V_0r/=/vars_atoms/=; only 2-5: by [].
-      by rewrite freshP0 vars_sigma_set !simpl_set /maxn//=.
+      rewrite !simpl_set !codom_vars_set empty_rem !simpl_set/maxn//=.
     apply/StepT => //=.
     apply/StopOT => //=.
     by [].
@@ -176,8 +176,7 @@ Section Test6.
       rewrite/bc.
       rewrite !simpl_set !maxnn.
       rewrite[fresh_rules _ _]/= !simpl_set/= !FmapE.fmapE/= !unify_V_0r; only 2-5: by [].
-      
-      by rewrite/=/vars_atoms !simpl_set/maxn//=.
+      rewrite !simpl_set !codom_vars_set !empty_rem !simpl_set/maxn//=.
     apply/StepT => //=.
       rewrite/next_subst[next _ _]/=.
       rewrite/=/bc.
@@ -314,9 +313,7 @@ Section map.
   Qed.
 
   Local Lemma v_progP: fresh (v_prog (rules p')) = 13.
-  Proof.
-    by rewrite /v_prog/=/varsU_rule/varsU_rhead/varsU_rprem/= !simpl_set/maxn/=.
-  Qed.
+  Proof. rewrite /v_prog/=/varsU_rule/=!simpl_set//=. Qed.
   
    Check fresh_atoms.
   
@@ -429,7 +426,7 @@ Section map.
     split.
       apply: StepT'=> //=; cycle 1.
       { rewrite/bc ifF ?idempotent_0//.
-      rewrite !simpl_set !maxnn /maxn simpl_p; sif.
+      rewrite !simpl_set !maxnn /maxn simpl_p.
       set FR := select _ _ _ _ _.
       have : FR = [:: ([fmap].[IV 13 <- Tm_P double].[IV 14 <- one].[IV 15 <- nil].[X <- 
        app (app cons (IV 16)) (IV 17)],
@@ -465,12 +462,12 @@ Section map.
           by repeat rewrite !codom_vars_set ?remf1_set/= ?(empty_rem, codom_vars0,inE).
         rewrite unify_Vr//; (only 2,4: by rewrite !inE); last first.
           by repeat rewrite !codom_vars_set ?remf1_set/= ?(empty_rem, codom_vars0,inE).
-        rewrite !deref_App !deref_P !deref_V !FmapE.fmapE/= !not_fnd//.
+        rewrite !deref_App !deref_P !deref_V !FmapE.fmapE !not_fnd//=.
       }
       move=> ->{FR}.
-      rewrite/max_sigmas/=/vars_atoms/=/vars_sigma codom_vars_set !remf1_set empty_rem/=.
-      do 3 rewrite codom_vars_set ?remf1_set empty_rem/=.
-      by rewrite codom_vars0 !simpl_set/maxn/=.
+      rewrite !vars_selected_cons !vars_atoms_cons !vars_selected_nil !simpl_set.
+      do 4 rewrite !codom_vars_set?remf1_set empty_rem/=.
+      by rewrite codom_vars0 !simpl_set//=.
       }
       apply: StepT => //=.
       {
@@ -519,10 +516,9 @@ Section map.
           rewrite !FmapE.fmapE/= !not_fnd// deref_sigma0/=.
         }
       move=> ->{FR}.
-      rewrite/max_sigmas/=/vars_sigma/vars_atoms/=.
+      rewrite !vars_selected_cons vars_selected_nil/vars_sigma.
       repeat rewrite codom_vars_set ?remf1_set empty_rem/=.
-      rewrite codom_vars0 !simpl_set.
-      by rewrite/maxn/=.
+      by rewrite codom_vars0 !simpl_set/maxn//=.
     apply/negbF.
     repeat simpl_idempotent_set.
     by rewrite !idempotent_set !inE empty_rem idempotent_0 codom_vars0/= fdisjointX0.

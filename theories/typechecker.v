@@ -1191,7 +1191,7 @@ Lemma typecheck_rule_fresh s n x:
   typechecks_rule s x ->
   typechecks_rule s (fresh_rule n x).2.
 Proof.
-  rewrite/fresh_rule/=freshPU/typechecks_rule/varsU_rhead/varsU_rprem !push/=.
+  rewrite/fresh_rule/=freshPU/typechecks_rule !push/=.
   case: x => /= h b /andP[hn bn].
   case Th: typechecks => //[[eh [[|th]|]]]//= Tb.
   have:= typechecks_ren ((fresh_tm n fmap0 h).2) Th.
@@ -1360,7 +1360,7 @@ Lemma typecheck_select rs t p k s n ign e0 e1 e2 e3 ty mm:
       | (s0, r) :: xs => Or None s0 (big_or r xs)
       end k = Some e2 &
     exists2 k0 : {fmap V -> S}, 
-      e2 = k0 + e3.[& domf e2] & min_maxS (domf k0) n (max_sigmas mm (select u p t rs s)).
+      e2 = k0 + e3.[& domf e2] & min_maxS (domf k0) n (maxn mm (max_set (vars_selected (select u p t rs s))).+1).
 Proof.
   move=> kn sn tn en ++ ts tt tk.
   elim: rs ign => //=[|[h b] rs IH] ign.
@@ -1369,12 +1369,13 @@ Proof.
     move=>/coversE_tc_subst[w ->{e1} Hw]/coversE_typechecks[/= z->{e2} Hz]/coversE_tc_atoms[y->{e3}Hy].
     eexists; rewrite//!catfA restrictf_cat restrictfT sub_cat; last by rewrite domf_restrict fsubsetIl.
     by exists fmap0; rewrite//cat0f.
-  rewrite v_prog_cons !all_minU -andbA/varsU_rprem/varsU_rhead => /andP[tr trs]/= /and3P[mh mb mrs].
+  rewrite v_prog_cons !all_minU -andbA => /andP[tr trs]/= /and3P[mh mb mrs].
   case Q: query_head => [[ty' s']|]/=; last by apply: IH.
   have {IH}[w H [z Hz Mz]] := IH s' trs mrs.
   rewrite/= tc_tree_big_or H tc_tree_big_and/=.
   move: tr; rewrite/typechecks_rule/=.
-  case Th: typechecks => //[[eh [[|pr]|]]]//= Tb.
+  case Th: typechecks => [[eh [[|pr]|]]|]//= Tb.
+  Print query_head.
   
 Admitted.
 
@@ -1424,7 +1425,7 @@ Proof.
     move=> [z->/andP[Hz _]][/=x->/andP[Hx _]][y->/andP[Hy _]].
     rewrite !domf_cat !freshPU en (leq_trans (fresh_subP _) kn)//.
     by rewrite (leq_trans (fresh_subP Hx))//(leq_trans (fresh_subP Hz)).
-  by rewrite Hw domf_cat fsetI_disj_popL// fsetI_domf_restr; eexists.
+  rewrite Hw domf_cat fsetI_disj_popL// fsetI_domf_restr; eexists => //.
 Qed.
 
 Lemma typechecks_tree_succ p t k s e0 e1: success t ->

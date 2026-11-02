@@ -345,7 +345,7 @@ Lemma HSH sP rules hd query s:
 Proof.
   move=> GM.
   elim: rules query s hd => //=-[hd bo] rs IH/= query s h' AS sq.
-  rewrite !v_prog_cons /varsU_rhead /varsU_rprem/=.
+  rewrite !v_prog_cons/=.
   rewrite !fdisjointXU -!andbA.
   move=> /and3P[h'h h'b h'r] /and3P[qh qb qr] qh' /and3P[sh sb sr sh'] H1.
   case HH: H_head => //= S1.
@@ -528,7 +528,7 @@ Proof.
   have:= leqnn va; rewrite{1}/va.
   move: va vp.
   elim: rs => [|[hd bo] rs IH]//= va vp.
-  rewrite !push !v_prog_cons/= (fsetUC _ (v_prog _)) fsetUA freshPU /varsU_rhead/varsU_rprem/= (freshPU (vars _)) => /and3P[S1 Sh Sb].
+  rewrite !push !v_prog_cons/= (fsetUC _ (v_prog _)) fsetUA freshPU/= (freshPU (vars _)) => /and3P[S1 Sh Sb].
   rewrite !freshPU => /and3P[S2 Sh' Sb'].
   move=> /andP[+ ME].
   have {}IH := IH _ _ S1 S2 ME.
@@ -604,7 +604,7 @@ Proof.
   rewrite/all_cut/mut_excl push/= => ->/=.
   case: p => /= r s.
   set n := fresh _; have:= leqnn n; rewrite {1}/n; move: n.
-  elim r => //= [[hd bo]] rs/= IH n; rewrite !push/= v_prog_cons/=/varsU_rhead/varsU_rprem/=.
+  elim r => //= [[hd bo]] rs/= IH n; rewrite !push/= v_prog_cons/=.
   rewrite !freshPU -andbA => /and3P[hn bn rn] /andP[cb cr].
   rewrite IH//andbT/fresh_rule/mut_excl_head !push/=.
   set R := ren _ _.

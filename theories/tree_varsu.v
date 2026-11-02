@@ -335,7 +335,7 @@ Qed.
 Lemma select_limits fv p q rs s:
   idempotent s ->
   max_set (vars q) < fv -> max_set (vars_sigma s) < fv ->
-  [forall x : (varsU [seq varsU_rule i  | i <- rs]), fv < getV (val x)] ->
+  [forall x : v_prog rs, fv < getV (val x)] ->
   let t := match select u p q rs s with
   | [::] => KO
   | (s0, r) :: xs => Or None s0 (big_or r xs)
@@ -402,7 +402,6 @@ Proof.
     rewrite -6!fsetUA; f_equal; rewrite -(vars_eq_subsll IH).
     rewrite !fsetUA.
     by apply/fsetP => z; rewrite !in_fsetU; do 6 case ?: (_\in _); rewrite//?(orbT,orbF,orbb)//=.
-  set X := varsU _ in H1 H3 *.
   rewrite/= vars_tree_big_and 3!fsetUA !(fsetUC _ (vars (head _))) 5!fsetUA -/hp.
   exists (z `|` hp).
     rewrite min_maxU// -!(fsetUA hp) (freshUU hp) (min_max_maxr hp) (min_maxS_all hp).
@@ -414,7 +413,7 @@ Proof.
   by rewrite (fsetUA (vars_sigma s)) fsetUid.
 Qed.
 
-Lemma max_set_max_sigmas n l:
+(* Lemma max_set_max_sigmas n l:
   max_set
   (vars_tree
     match l with
@@ -434,7 +433,7 @@ Proof.
     have {}IH := leq_ltn_trans IH H.
     by apply/ltnW/ltnW => //.
   by case: xs {IH} => //=[|[s' r']rs]/=; rewrite vars_tree_big_and (fsetUA,fsetU0)//.
-Qed.
+Qed. *)
 
 Lemma vars_tree_step_limits p A fv s:
   max_set (vars_tree A) < fv -> max_set (vars_sigma s) < fv ->
@@ -466,8 +465,11 @@ Proof.
     move=> [k].
     rewrite -fsetUA (fsetUC (vars _)) vars_deref_eq (fsetUC _ (vars t)) fsetUA.
     move=> H1 H3; right; exists k; last by [].
-    have H:= max_set_max_sigmas n (select u p (deref s t) rs s).
-    by rewrite -ltnS in H; rewrite (min_max_leqr H).
+    apply: min_max_leqr H1.
+    case: select {H3} => [|[sx x] xs]/=; first by rewrite freshP0//.
+    rewrite vars_tree_big_or vars_selected_cons/=.
+    rewrite -(fsetUA (vars_sigma _)) (fsetUC (vars_sigma _)).
+    by rewrite -maxnSS leq_max leqnSn orbT.
   - rewrite 2!freshPU -andbA/= => /and3P[fa fb fsm fs].
     case sA: step => [[fvA tA] A'][???]; subst.
     have /={HB}[{}HA|[{HA}k H1 H2]] := HA _ _ _ _ _ fa fs sA; [left|].

@@ -191,9 +191,7 @@ Definition varsU (l: seq fvS) :=
 
 Definition vars_atoms L := varsU (map vars_atom L).
 
-Definition varsU_rprem r : fvS := vars_atoms r.(premises).
-Definition varsU_rhead (r: R) : fvS := vars_tm r.(head).
-Definition varsU_rule r : fvS := varsU_rhead r `|` varsU_rprem r.
+Definition varsU_rule r : fvS := vars_tm r.(head) `|` vars_atoms r.(premises).
 
 Definition getV '(IV v) := v.
 
@@ -568,11 +566,20 @@ Variable u : Unif.
 
 Definition v_prog pr := varsU (map varsU_rule pr).
 
-Lemma v_prog_cons x xs: v_prog (x::xs) = varsU_rhead x `|` varsU_rprem x `|` v_prog xs.
+Lemma v_prog_cons x xs: v_prog (x::xs) = vars_tm x.(head) `|` vars_atoms x.(premises) `|` v_prog xs.
 Proof. by []. Qed.
 
-Definition max_sigmas n (s: seq (Sigma * seq Atom)) : nat :=
-  foldr (fun e n => maxn n (maxn (fresh (vars_atoms e.2)) (fresh (vars_sigma e.1)))) n s.
+Definition vars_selected (s: seq (Sigma * seq Atom)) : {fset V} :=
+  varsU (map vars_sigma (unzip1 s) ++ map vars_atoms (unzip2 s)).
+
+Lemma varsU_cat x y: varsU (x ++ y) = varsU x `|` varsU y.
+Proof. by elim: x => [|x xs IH]; rewrite (fset0U,cat_cons)//= IH fsetUA. Qed.
+
+Lemma vars_selected_cons x y:
+  vars_selected (x :: y) = vars_sigma x.1 `|` vars_atoms x.2 `|` vars_selected y.
+Proof. by rewrite/vars_selected/=!varsU_cat/= (fsetUA (varsU _)) (fsetUC (varsU _)) !fsetUA. Qed.
+
+Lemma vars_selected_nil: vars_selected [::] = fset0. Proof. by []. Qed.
 
 (*SNIP: bc_type*)
 Definition bc : program -> nat -> Tm -> Sigma -> nat * seq (Sigma * seq Atom) :=
@@ -583,7 +590,7 @@ Definition bc : program -> nat -> Tm -> Sigma -> nat * seq (Sigma * seq Atom) :=
   let query := deref s query in
   let: (fv, rules) := fresh_rules (fresh (IV fv |` vars_sigma s `|` vars_tm query `|` v_prog pr.(rules))) (pr.(rules)) in
   let: rules := select u pr.(sig) query rules s in 
-  (max_sigmas fv rules, rules).
+  (maxn fv (max_set (vars_selected rules)).+1, rules).
 End s.
 
 Fixpoint is_det_sig (sig:S) : bool :=

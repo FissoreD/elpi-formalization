@@ -187,7 +187,7 @@ Section once.
     set S1 := _ `|` _.
     case X: fresh_rules => [fvx' rs'].
     rewrite 2!push.
-    set MS := max_sigmas _ _.
+    set MS := vars_selected _.
     simpl fst. simpl snd.
     move=> [??]; subst.
     rewrite/fresh_rule.
