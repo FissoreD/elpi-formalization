@@ -35,14 +35,6 @@ Section vars_tree.
     by rewrite IH vars_selected_cons/= -fsetUA (fsetUC _ (vars_sigma s0)) !fsetUA.
   Qed.
 
-  (* Lemma fresh_varsU fF rs: 0 < fF ->
-    fresh (varsU [seq vars_sigma x.1 `|` vars_atoms x.2 | x <- rs]) <= max_sigmas fF rs.
-  Proof.
-    elim: rs fF => //=[|r0 rs IH] f S.
-      by rewrite/fresh/max_set/=big_nil.
-    by rewrite !freshPU -!andbA !freshUU/= !leq_max IH//= !leqnn !orbT.
-  Qed. *)
-
   Lemma ltn_leq_trans: forall [n m p : nat], m < n -> n <= p -> m < p.
   Proof. move=> n m q hmn hnp; exact: leq_trans hmn hnp. Qed.
 

@@ -1232,6 +1232,65 @@ Proof.
   by rewrite compat_type_weak compat_type_refl.
 Qed.
 
+Lemma typechecks_atomP prog q t e0 e1:
+  typechecks_atom prog e0 t = Some e1 -> 
+    typechecks_atom prog (q+e1) t = Some (q+e1).
+Proof.
+  case: t => //=t; case T: typechecks => [[e[[|ty]|]]|]//[<-].
+  by rewrite (typechecksP _ T).
+Qed.
+
+Lemma typechecks_atomsP prog q t e0 e1:
+  typechecks_atoms prog e0 t = Some e1 -> 
+    typechecks_atoms prog (q+e1) t = Some (q+e1).
+Proof.
+  elim: t q e0 e1 => //=x xs IH q e0 e1.
+  case T: typechecks_atom => [e|]//= T'.
+  have [w? _] := coversE_tc_atoms T'; subst.
+  by rewrite catfA (typechecks_atomP _ T)/=-catfA (IH _ e)//.
+Qed.
+
+Lemma typechecks_disj prog q t e0 e1 ty:
+  domf q # vars t ->
+  typechecks prog e0 t = Some (e1,ty) -> 
+    typechecks prog (q+e0) t = Some (q+e1,ty).
+Proof.
+  elim: t e1 ty q e0 => [p/=|v|f Hf a Ha/=] e1 ty q e0.
+    by case: fndP => //=kP _ [<-<-]//=.
+    rewrite fdisjointX1 /typechecks fnd_cat => vq.
+    by case: fndP => //=v0[<-<-].
+  rewrite fdisjointXU => /andP[qf qa].
+  case Tf: typechecks =>[[ef [|mode tl tr]]|]//.
+  rewrite (Hf ef (arr mode tl tr))//=.
+  case Ta: typechecks => [[ea ta]|]//.
+    by case: ifP => //cal[<-<-]/=; rewrite (Ha ea ta)//cal.
+  case: a qa Ta {Ha} => //v.
+  rewrite /typechecks fnd_cat fdisjointX1 => vq + [<-<-].
+  by case: fndP=> //fv; rewrite not_fnd//= setf_catr.
+Qed.
+
+Lemma typechecks_atom_disj prog q t e0 e1:
+  domf q # vars_atom t ->
+  typechecks_atom prog e0 t = Some e1 -> 
+    typechecks_atom prog (q+e0) t = Some (q+e1).
+Proof.
+  case: t => [_[<-]//|t/=].
+  case T: typechecks => [[e[[|ty]|]]|]//D[<-].
+  by rewrite (typechecks_disj D T).
+Qed.
+
+Lemma typechecks_atoms_disj prog q t e0 e1:
+  domf q # vars_atoms t ->
+  typechecks_atoms prog e0 t = Some e1 -> 
+    typechecks_atoms prog (q+e0) t = Some (q+e1).
+Proof.
+  elim: t q e0 e1 => [|x xs IH] q e0 e1.
+    by move=> _ [<-].
+  rewrite vars_atoms_cons fdisjointXU => /andP[qx qxs]/=.
+  case T: typechecks_atom => [e|]//= T'.
+  by rewrite (typechecks_atom_disj _ T)//=(IH _ _ _ _ T').
+Qed.
+
 Lemma typechecks_sub_id prog t e0 e1:
   vars t `<=` domf e0 ->
   typechecks prog e0 t = Some e1 -> e1.1 = e0.
@@ -1345,6 +1404,15 @@ Proof.
   by move: vef; rewrite !domf_cat !in_fsetU ve1 !orbT.
 Qed.
 
+Lemma typecheck_query_head s1 ty froz s0 p t h xt e1t e2t tt e1h e2h th:
+  vars t # vars h -> vars_sigma s0 # vars h -> domf e1h # domf e2h ->
+  tc_subst p xt s0 = Some e1t -> typechecks p e1t t = Some (e2t, tt) ->
+  typechecks p e1h h = Some (e2h, th) ->
+  query_head u p froz t h s0 = Some (ty, s1) ->
+  ((tc_subst p xt s1 = Some (e2t + e2h)) /\ (tt = ty) /\ (th = tt)).
+Proof.
+Admitted.
+
 Lemma typecheck_select rs t p k s n ign e0 e1 e2 e3 ty mm:
   fresh (vars_atoms k) <= n -> fresh (vars_sigma s) <= n ->
   fresh (vars t) <= n -> fresh (domf e0) <= n ->
@@ -1372,11 +1440,50 @@ Proof.
   rewrite v_prog_cons !all_minU -andbA => /andP[tr trs]/= /and3P[mh mb mrs].
   case Q: query_head => [[ty' s']|]/=; last by apply: IH.
   have {IH}[w H [z Hz Mz]] := IH s' trs mrs.
-  rewrite/= tc_tree_big_or H tc_tree_big_and/=.
+  rewrite/= tc_tree_big_or {}H tc_tree_big_and/=.
   move: tr; rewrite/typechecks_rule/=.
-  case Th: typechecks => [[eh [[|pr]|]]|]//= Tb.
-  Print query_head.
-  
+  case th: typechecks => [[eh [[|pr]|]]|]//=.
+  case tb: typechecks_atoms => [ea|]// _.
+  have:= typecheck_query_head _ _ (fdisjoint0X _) ts tt th Q.
+  move=> [].
+    admit.
+    admit.
+  move=> ts' [??]; subst.
+  have d2b: domf e2 # vars_atoms b.
+    admit.
+  have d2a: domf e2 # domf ea.
+    admit.
+  have dak: domf ea # vars_atoms k.
+    admit.
+  rewrite ts' typecheck_atoms_cat (typechecks_atoms_disj _ tb)//=.
+  rewrite disjoint_catfC// (typechecks_atoms_disj _ tk)//=.
+  have m3z: mergeable_env e3 z.
+    admit.
+  have maz: mergeable_env ea z.
+    admit.
+  have ma3w: mergeable_env (ea + e3) w.
+    rewrite Hz mergeable_env_catLR !mergeable_env_IR//=.
+      by rewrite mergeable_env_remLA.
+    by rewrite mergeable_env_remL.
+  rewrite ma3w/=; eexists => //.
+  rewrite {1}Hz (@mergeable_env_catC z e3.[& _]); last first.
+    by rewrite mergeable_env_IR// mergeable_envC.
+  rewrite -catfA (catfA e3) catxxI (mergeable_env_catC m3z) catfA.
+  rewrite fsetIsub; last by rewrite !domf_cat fsetUC fsetUA fsubsetUr.
+  eexists => //.
+  rewrite domf_cat min_maxU vars_selected_cons/=.
+  set W := vars_selected _ in Mz *.
+  set Z := maxn _ _ in Mz.
+  set X := maxn _ _.
+  have zx: Z <= X.
+    rewrite /X max_setUU.
+    rewrite-!maxnSS !leq_max !geq_max !leqnn/= andbT.
+    by case : leqP => ///leqW->; rewrite orbT.
+  rewrite (min_max_leqr zx Mz)//=andbT.
+  have /=[x? /and4P[xh _ hx _]] := coversE_typechecks th; subst.
+  have /=[y? /and4P[yb _ byy _]] := coversE_tc_atoms tb; subst.
+  rewrite catf0 in hx, byy *.
+  rewrite domf_cat min_maxU.
 Admitted.
 
 Lemma typechecks_bc p t k s n e0 e1 e2 ex ty:
