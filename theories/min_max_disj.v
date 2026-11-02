@@ -15,6 +15,20 @@ Definition min_maxS (s:{fset V}) m M :=
 Lemma min_maxS0 x y: min_maxS fset0 x y.
 Proof. by apply/forallP => -[]. Qed.
 
+Lemma all_min_sub m a b: b `<=` a -> all_min m a -> all_min m b.
+Proof. by move=> ab /forallP ma; apply/forallP => -[x xb]; have:= ma [`(fsubsetP ab _ xb)]. Qed.
+
+Lemma all_minU m x y: 
+  all_min m (x `|` y) = all_min m x && all_min m y.
+Proof.
+  case am: all_min; apply/esym.
+    by rewrite !(all_min_sub _ am)//(fsubsetUl,fsubsetUr).
+  apply/contraFF/am =>/andP[mx my]; apply/forallP => -[z/=].
+  rewrite in_fsetU => /orP[]H.
+    by have:= forallP mx [`H].
+  by have:= forallP my [`H].  
+Qed.
+
 Lemma min_maxS0L s n:
   (fresh s <= n) -> min_maxS s 0 n.
 Proof. by move=> H; apply/forallP => -[x xP]/=; apply/leq_trans/H/max_setP. Qed.
