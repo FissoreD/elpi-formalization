@@ -1,6 +1,6 @@
 From det Require Import prelude.
 From mathcomp Require Import all_ssreflect.
-From det Require Import tree tree_prop ctx tree_vars unif mut_excl fresh sig_lattice sig_compat.
+From det Require Import tree tree_prop ctx tree_vars unif mut_excl fresh sig_lattice sig_compat typechecker.
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
@@ -98,6 +98,22 @@ Proof.
   by case: compat_type => //=; rewrite andbF.
 Qed.
 
+Lemma cincl_arrP q m a' b':
+  reflect (exists a b, 
+    [/\ q = arr m a b,
+      (if m == input then cincl a' a else cincl a a') & cincl b b']) 
+  (cincl q (arr m a' b')).
+Proof.
+  case: q => [b|m' a b].
+    replace (cincl _ _) with false; last by (case: b => >; case: m).
+    by constructor => -[x[y[]]].
+  rewrite cincl_arr.
+  case B: (_ && _); constructor.
+    by move: B => /and3P[/eqP->H1 H2]; do 4 eexists => //.
+  apply/contraFnot/B => -[x[y[[???]]]]; subst.
+  by move=> ->; rewrite eqxx.
+Qed.
+
 Lemma cincl_is_det_sig a b: cincl a b ->  is_det_sig b ->  is_det_sig a.
 Proof.
   elim: a b => //=[|m f Hf a Ha]//=.
@@ -105,9 +121,10 @@ Proof.
   case: m => -[|[]]//f' a'; rewrite cincl_arr/= => /andP[] _ /Ha; auto.
 Qed.
 
+Definition def_sig := b Exp.
+Definition map_def := odflt def_sig.
+
 Fixpoint assume_tm (sP : sigT) (sV : sigV) (tm : Tm) : sigV * S :=
-let def_sig := b Exp in
-let map_def := odflt def_sig in
 match tm with
 | Tm_V v => (sV, map_def sV.[?v])
 | Tm_P p => (sV, map_def sP.[?p])
@@ -116,7 +133,7 @@ match tm with
   match ty with
   | arr m l r =>
     (match bo with
-      | Tm_V v => if m == input then sV.[v <- min l (map_def sV.[?v])] else sV
+      | Tm_V v => if m == input then sV.[v <- min l (odflt l sV.[?v])] else sV
       | _ => (assume_tm sP sV bo).1
     end, r)
   | _ => (sV, def_sig)
@@ -124,14 +141,12 @@ match tm with
 end.
 
 Lemma assume_tm_app sP sV h bo:
-  let def_sig := b Exp in
-  let map_def := odflt def_sig in
   assume_tm sP sV (Tm_App h bo) =
   let: (sV, ty) := assume_tm sP sV h in
   match ty with
   | arr m l r =>
     (match bo with
-      | Tm_V v => if m == input then sV.[v <- min l (map_def sV.[?v])] else sV
+      | Tm_V v => if m == input then sV.[v <- min l (odflt l sV.[?v])] else sV
       | _ => (assume_tm sP sV bo).1
     end, r)
   | _ => (sV, def_sig)
@@ -148,29 +163,42 @@ Proof. by []. Qed.
 
 Definition simpl_assume_tm := (assume_tm_app, assume_tm_V, assume_tm_P).
 
-Definition same_sV_incl (new old: sigV) :=
+Definition incl_env (new old: sigV) :=
   (domf old == domf new) &&
       [forall x : domf new, 
         match old.[? val x] with 
         | None => false
         | Some t' => cincl new.[valP x] t' end].
 
-Lemma same_sV_incl_refl sv: same_sV_incl sv sv.
-Proof. rewrite /same_sV_incl eqxx; apply/forallP => -[x xP]; rewrite in_fnd valPE//. Qed.
+Lemma incl_env_cat w n o:
+  incl_env n o -> incl_env (w + n) (w + o).
+Proof.
+  move=> /andP[/eqP don fnew]; apply/andP; split.
+    by rewrite !domf_cat don.
+  apply/forallP => -[x xP]; rewrite fnd_cat valPE.
+  move: xP (xP); rewrite {1}domf_cat in_fsetU orbC.
+  case: fndP => //xn xw xP.
+    rewrite getf_catr/= {1}don xn.
+    by have:= forallP fnew [`xn]; rewrite valPE/=.
+  by rewrite getf_catl//= {1}don (negbTE xn) in_fnd.
+Qed.
 
-Global Hint Resolve same_sV_incl_refl : core.
+Lemma incl_env_refl sv: incl_env sv sv.
+Proof. rewrite /incl_env eqxx; apply/forallP => -[x xP]; rewrite in_fnd valPE//. Qed.
 
-Lemma same_sV_incl_trans: transitive same_sV_incl.
+Global Hint Resolve incl_env_refl : core.
+
+Lemma incl_env_trans: transitive incl_env.
 Proof.
   move=> B A C /andP[/eqP D1 H1] /andP[/eqP D2 H2].
-  rewrite /same_sV_incl {1}D2 D1 eqxx/=.
+  rewrite /incl_env {1}D2 D1 eqxx/=.
   apply/forallP => -[x xP]; rewrite valPE/=.
   have:= forallP H1 [`xP]; rewrite valPE/=; case: fndP => // xB I.
   have:= forallP H2 [`xB]; rewrite valPE/=; case: fndP => // xC.
   by apply/cincl_trans.
 Qed.
 
-Lemma same_sV_incl_fnd v sV sV' (vV : v \in sV): same_sV_incl sV' sV -> 
+Lemma incl_env_fnd v sV sV' (vV : v \in sV): incl_env sV' sV -> 
   exists (vV':v \in sV'), cincl sV'.[vV'] sV.[vV].
 Proof.
   move=> /andP[/eqP/fsetP/(_ v) sD] H.
@@ -178,7 +206,7 @@ Proof.
   by exists vV'; have:= forallP H [`vV']; rewrite/= in_fnd valPE.
 Qed.
 
-Lemma same_sV_incl_fnd1 v sV sV' (vV' : v \in sV'): same_sV_incl sV' sV -> 
+Lemma incl_env_fnd1 v sV sV' (vV' : v \in sV'): incl_env sV' sV -> 
   exists (vV:v \in sV), cincl sV'.[vV'] sV.[vV].
 Proof. 
   move=> /andP[/eqP/fsetP/(_ v) sD] H.
@@ -186,83 +214,187 @@ Proof.
   by exists vV; have:= forallP H [`vV']; rewrite/= in_fnd valPE.
 Qed.
 
-Lemma same_sV_incl_set2 sV' sV v t1 t2:
+Lemma incl_env_set2 sV' sV v t1 t2:
   cincl t1 t2 ->
-  same_sV_incl sV' sV -> same_sV_incl sV'.[v<-t1] sV.[v<-t2].
+  incl_env sV' sV -> incl_env sV'.[v<-t1] sV.[v<-t2].
 Proof.
   move=> I /[dup] H /andP[/eqP D S].
-  rewrite/same_sV_incl {1}dom_setf {1}D eqxx.
+  rewrite/incl_env {1}dom_setf {1}D eqxx.
   apply/forallP => -[x xP]; rewrite ffunE valPE [val _]/=.
   rewrite fnd_set; move: xP; rewrite/= in_fsetU in_fset1; case: eqP => //= xvd xv'.
-  by have [vv {}H] := same_sV_incl_fnd1 xv' H; rewrite !in_fnd.
+  by have [vv {}H] := incl_env_fnd1 xv' H; rewrite !in_fnd.
 Qed.
 
-Lemma assume_tm_incl sV sV' t sP:
-  same_sV_incl sV' sV ->
-    let sx := assume_tm sP sV t in
-    let sy := assume_tm sP sV' t in
-    cincl sy.2 sx.2 /\ same_sV_incl sy.1 sx.1.
+Lemma incl_env_setl e v q (ve: v \in domf e):
+  compat_type q e.[ve] ->
+  incl_env e.[v <- min q e.[ve]] e.
 Proof.
-  move=> /=; elim: t sV sV' => [p|v|f Hf a Ha]//=sV sV' H.
-    case: (fndP sV) => /=vV.
-      by have [vV' I]:= same_sV_incl_fnd vV H; rewrite in_fnd.
+  move=> C.
+  rewrite/incl_env {1}dom_setf.
+  rewrite tree_varsu.vars_eq_subsll?fsub1set//eqxx.
+  apply/forallP => -[k kev]; rewrite [val _]/= valPE.
+  rewrite in_fnd.
+    by move: kev; rewrite dom_setf tree_varsu.vars_eq_subsll?fsub1set.
+  move=> ke.
+  rewrite setfNK; case: eqP => //?; subst.
+  by rewrite cinclL_min//= (bool_irrelevance ke ve) cincl_refl.
+Qed.
+
+Lemma assume_tm_sup sP e t:
+  domf (assume_tm sP e t).1 `<=` domf e `|` vars t.
+Proof.
+  elim: t e => [p|v|f Hf a Ha] e/=; rewrite (fsubsetUl,fsetUA)//.
+  have := Hf e; case A: assume_tm => //= [sv [d|m tl tr]]/= {}Hf.
+    by apply/fsubset_trans/fsubsetUl.
+  case Va: (is_var a).
+    destruct a => //; case: ifP => _/=.
+      by rewrite fsubUset fsubsetUr (fsubset_trans Hf (fsubsetUl _ _)).
+    by rewrite (fsubset_trans Hf)//fsubsetUl.
+  case: assume_tm (Ha sv) => sva/= _ {}Ha.
+  have {}Ha: domf sva `<=` domf e `|` vars f `|` vars a.
+    by rewrite (fsubset_trans Ha)//fsetSU//.
+  by destruct a.
+Qed.
+
+Lemma assume_tm_sub sP e t:
+  domf e `<=` domf (assume_tm sP e t).1.
+Proof.
+  elim: t e => [p|v|f Hf a Ha] e//=.
+  have := Hf e; case A: assume_tm => //= [sv [d|m tl tr]]//= {}Hf.
+  apply/(fsubset_trans Hf).
+  have:= Ha sv; destruct a => //=.
+  by case: ifP => //; rewrite dom_setf fsubsetUr.
+Qed.
+
+Lemma assume_tm_ine sP e t x: x \in e -> x \in domf (assume_tm sP e t).1.
+Proof. apply/fsubsetP/assume_tm_sub. Qed.
+
+Lemma typechecks_compat sP sV sV' a e ty:
+  incl_env sV' sV ->
+  typechecks sP sV a = Some (e,ty) ->
+  exists e' ty', [/\ typechecks sP sV' a = Some (e',ty'), cincl ty' ty & incl_env e' e].
+Proof.
+  move=> H; elim: a e ty sV sV' H => [p|v|f Hf a Ha]/= e ty sV sV' H.
+    by case: fndP => //pP[<-<-]/=; do 2 eexists.
+    by case: fndP => //=vV[<-<-]/=; have [vV' I] := incl_env_fnd vV H; rewrite in_fnd; do 2 eexists => //.
+  case Tf: typechecks => [[ef [|m tl tr]]|]//.
+  have {Hf}[ef'[[[|d]|m' tl' tr']] [Tf' + Sff]] := Hf _ _ _ _ H Tf; only 1, 2: by destruct m.
+  rewrite cincl_arr => /and3P[/eqP ? C1 C2]; subst.
+  rewrite Tf'.
+  have Cll: compat_type tl tl'.
+    by move: C1; case: eqP => _ /andbXx//; rewrite compat_type_comm.
+  case Ta: typechecks => [[ea ta]|].
+    case: ifP => //C[<-<-].
+    have [ea'[ta'[Ta' Caa Saa]]] := Ha _ _ _ _ Sff Ta.
+    rewrite Ta' (compat_type_trans (andbXx Caa) (compat_type_trans C Cll)).
+    by do 2 eexists => //.
+  case: a Ta {Ha} => //=v; case: fndP => vef//=.
+  move=> _ [<-<-]; rewrite not_fnd//=.
+    rewrite (compat_type_weak_eq Cll).
+    do 3 eexists => //=.
+    by rewrite incl_env_set2.
+  apply/contra/vef.
+  by have:= andbXx Sff => /eqP/fsetP => /(_ v)->.
+Qed.
+
+Lemma assume_tm_catf w sP t e e' ty:
+  vars t `<=` domf e ->
+  assume_tm sP e t = (e',ty) ->
+  assume_tm sP (w + e) t = (w+e',ty).
+Proof.
+  elim: t w e e' ty => [p/=|v|f Hf a Ha/=] w e e' ty.
+    by move=> _ [<-<-]//.
+    by rewrite fsub1set /assume_tm fnd_cat => ve[<-<-]; rewrite ve in_fnd.
+  rewrite fsubUset => /andP[fe ae].
+  have:= assume_tm_sub sP e f.
+  case af: assume_tm => [ef tf]/=; rewrite (Hf _ _ _ _ _ af)//.
+  case: tf {Hf af} => [b|m tl tr]eef[<-<-]//.
+  case Va: (is_var a).
+    case: a Va ae {Ha} => //v.
+    rewrite !fnd_cat fsub1set => _ ve/=.
+    have vf:= fsubsetP eef _ ve.
+    by rewrite vf in_fnd/=; case: eqP; rewrite// catf_setr.
+  case A: (assume_tm sP ef) => [ea ta].
+  by rewrite (Ha _ _ _ _ (fsubset_trans ae _) A)//; destruct a.
+Qed.
+
+Lemma assume_tm_incl e e' t sP:
+  vars t `<=` domf e ->
+  incl_env e' e ->
+    let sx := assume_tm sP e t in
+    let sy := assume_tm sP e' t in
+    cincl sy.2 sx.2 /\ incl_env sy.1 sx.1.
+Proof.
+  move=> /=; elim: t e e' => [p|v|f Hf a Ha]//=e e' S H.
+    case: (fndP e) => /=vV.
+      by have [vV' I]:= incl_env_fnd vV H; rewrite in_fnd.
     by rewrite not_fnd//; move/andP: H => [/eqP/fsetP/(_ v)]; rewrite (negbTE vV) => <-.
-  have {Hf} := Hf sV sV' H.
-  case Af': assume_tm => [sVf' t']/=[].
-  case Af: assume_tm => [sVf t]/=.
+  move: S; rewrite fsubUset => /andP[fe ae].
+  have {Hf} := Hf e e' fe H.
+  case Af': assume_tm => [ef' t']/=[].
+  case Af: assume_tm => [ef t]/=.
   case: t Af => [[|k]|m tf ta]; case: t' Af' => [[|k']|m' tf' ta']//; try by destruct m'.
-  move=> Af' Af; rewrite cincl_arr => /and3P[/eqP? I1 I2]; subst => /=.
+  move=> Af' Af; rewrite cincl_arr => /and3P[/eqP? I1 I2]; subst => /=Hff; split => //.
   case Va: (is_var a); last first.
-    move=> Hx; split => //=.
-    by have {Ha}[] := Ha _ _ Hx; case: assume_tm; case: assume_tm => >/=; destruct a.
-  case: a {Ha} Va => //= v _.
-  case: m' Af Af' I1 => //= Af Af' CI S; split => //.
+    have vaf: vars a `<=` domf ef.
+      apply/(fsubset_trans ae)/(fsubset_trans (assume_tm_sub sP _ f)).
+      by rewrite Af.
+    have[{}Ha Ha']:= Ha ef ef' vaf Hff.
+    by destruct a.
+  case: a Va ae {Ha} => //=v _.
+  rewrite fsub1set => ve.
+  case: eqP => //?; subst.
+  rewrite incl_env_set2//=; simpl in I1.
+  have:= assume_tm_ine sP f ve; rewrite Af => /=vf.
+  have [vf' Hf] := incl_env_fnd vf Hff; rewrite !in_fnd/=.
 Abort.
 
-Lemma typechecks_compat sP sV sV' a k:
-  same_sV_incl sV' sV ->
-  typechecks sP sV a = Some k ->
-  exists2 x, typechecks sP sV' a = Some x & cincl x k.
+Lemma tc_assume_tm sP e0 t e1 ty:
+  typechecks sP e0 t = Some (e1,ty) ->
+  exists e2 ty', [/\ assume_tm sP e1 t = (e2,ty'), cincl ty' ty & incl_env e2 e1].
 Proof.
-  move=> H; elim: a k => [p|v|f Hf a Ha]/= k; first by eauto.
-    by case: fndP => //vV[<-]{k}/=; have [vV' I] := same_sV_incl_fnd vV H; rewrite in_fnd; eexists.
-  case Tf: typechecks => [[|m tf ta]|]//.
-  case Ta: typechecks => //[tb]; case: ifP => //C[<-{k}].
-  have [[[|k]|m' tf' ta'] ->] := Hf _ Tf => //.
-  rewrite cincl_arr => /and3P[/eqP<-{m'} C1 C2].
-  have [tb' -> /andP[H1 H2]] := Ha _ Ta.
-  rewrite (compat_type_trans H1 (compat_type_trans C _)); first by eexists.
-  by move: C1; case: ifP => _ /andP[]//; rewrite compat_type_comm.
-Qed.
-
-Lemma tc_assume_tm sP sV t s:
-  typechecks sP sV t = Some s ->
-  exists2 sV', assume_tm sP sV t = (sV', s) & same_sV_incl sV' sV.
-Proof.
-  elim: t s sV => [p|v|f Hf a Ha] s sV/=; only 1, 2: by case:fndP => //=?[<-]; eauto.
-  case Tf: typechecks => //[[//|m tl tr]].
-  case Ta: typechecks => //[tb]; case: ifP => // c [<-{s}].
-  have {Hf}[sVf -> Sf]/= := Hf _ _ Tf.
-  have {Ta}[svx Ta' CI] := typechecks_compat Sf Ta.
-  have {Ha}[sVa -> Sa]/= := Ha _ _ Ta'.
-  have H := same_sV_incl_trans Sa Sf.
-  case VA: (is_var a); last by (exists sVa; first destruct a).
-  case: a VA Ta' => //v _; case: ifP ; last by eexists.
-  move=> /eqP?/=; subst.
-  case: fndP => //= vVf[?]; subst; eexists => //.
-  move: CI; rewrite/cincl min_comm => /andP[CT S].
-  rewrite/same_sV_incl {1}dom_setf.
-  move/andP: Sf => [/eqP D Sf].
-  rewrite {1}D; apply/andP; split.
-    by apply/eqP/fsetP => x; rewrite in_fsetU in_fset1; case: eqP => ?; subst.
-  apply/forallP => -[x xP]; rewrite ffunE valPE [val _]/=.
-  have C:= compat_type_trans CT c.
-  move: xP; rewrite /= in_fsetU in_fset1; case: eqP => xv; subst => /=.
-    have:= forallP Sf [`vVf]; rewrite valPE//=; case: fndP => //vK{}Sf.
-    by rewrite cinclL_min//Sf orbT.
-  move=> xF; have:= forallP Sf [`xF]; rewrite valPE//=; case: fndP => //vK{}Sf.
-  rewrite in_fnd//=.
-Qed.
+  elim: t e0 e1 ty => [p|v|f Hf a Ha] e0 e1 ty/=.
+  - by case: fndP => //pP [<-<-]/=; do 2 eexists => //=.
+  - by case: fndP => //pP [<-<-]/=; rewrite in_fnd//=; do 2 eexists => //=.
+  case Tf: typechecks => [[ef [|m tl tr]]|]//.
+  have {Hf}[ef'[tyf[Tf' /cincl_arrP[tl' [tr'[? Cl Cr]]] Iff]]] := Hf  _ _ _ Tf; subst.
+  have Cll: compat_type tl tl'.
+    by move: Cl; case: eqP => _ /andbXx//; rewrite compat_type_comm.
+  have Hff: vars f `<=` domf ef.
+    by have [/=z H /and4P[]] := coversE_typechecks Tf.
+  case Ta: typechecks => [[ea ta]|]; last first.
+    case: a Ta {Ha} => //=v + [<-<-{e1 ty}].
+    case: fndP => //=vef _.
+    rewrite notin_setC//=(assume_tm_catf _ _ Tf')//.
+    do 3 eexists => //.
+    rewrite fnd_cat fnd_set eqxx.
+    case: eqP Cl => MI; subst => C; last first.
+      rewrite incl_env_cat//.
+    rewrite -{1}(eqP (andbXx Iff)) (negbTE vef)/=.
+    rewrite (compat_type_weak_eq Cll) min_weak.
+    rewrite -catf_setr.
+    have vef': v \notin domf ef' by rewrite -(eqP (andbXx Iff)).
+    rewrite (notin_setC _ vef') catfA -cat_set_eq setfC eqxx.
+    admit.
+  case: ifP => Cx//[<-<-].
+  have {Ha}[ea'[tya[Ta' Ca Iaa]]] := Ha  _ _ _ Ta.
+  have /=[w? Hw] := coversE_typechecks Ta; subst.
+  rewrite (assume_tm_catf _ _ Tf')//.
+  do 3 eexists => //.
+  case Va: (is_var a).
+    case: a Va Ta Ta' Hw => //v _.
+    rewrite/assume_tm !fnd_cat/=; case: fndP => //vf[H?] [??] Hw; subst.
+    have [vf' Hx] := incl_env_fnd vf Iff.
+    rewrite vf' in_fnd/=.
+    case: ifP; rewrite//= -?catf_setr incl_env_cat//.
+    apply/incl_env_trans/Iff/incl_env_setl/compat_type_comm1.
+    by apply/compat_type_trans/Cll/compat_type_trans/Cx/andbXx/Hx.
+  suffices: incl_env (assume_tm sP (w + ef') a).1 (w + ef).
+    by destruct a.
+  apply/incl_env_trans/Iaa.
+  replace ea' with (ea', tya).1 by auto.
+  rewrite -Ta'.
+Abort.
 
 Definition get_sig (sP:sigT) (sV:sigV) t :=
   match get_tm_hd t with
@@ -273,8 +405,6 @@ Definition get_sig (sP:sigT) (sV:sigV) t :=
 (* in the current implementation data (like lists, nat) and so on
    are not typechecked, therefore, they do not influence determinacy *)
 Fixpoint check_tm (sP : sigT) (sV : sigV) (tm : Tm) : (bool * S) :=
-let def_sig := b Exp in
-let map_def := odflt def_sig in
 match tm with
 | Tm_V v => (true, map_def sV.[?v])
 | Tm_P p => (true, map_def sP.[?p])
@@ -297,8 +427,6 @@ Lemma check_tm_P sP sV p:
 Proof. by []. Qed.
 
 Lemma check_tm_app sP sV h bo:
-  let def_sig := b Exp in
-  let map_def := odflt def_sig in
   check_tm sP sV (Tm_App h bo) = let: (wc, tyh) := check_tm sP sV h in
   match tyh with
   | arr m l r =>
@@ -310,7 +438,7 @@ Proof. by []. Qed.
 
 Definition simpl_check_tm := (check_tm_V, check_tm_P, check_tm_app).
 
-Lemma typechecks_check_tm sP sV t s:
+(* Lemma typechecks_check_tm sP sV t s:
   typechecks sP sV t = Some s ->
   cincl s (check_tm sP sV t).2.
 Proof.
@@ -322,13 +450,21 @@ Proof.
   rewrite cincl_arr => /and3P[/eqP? HI HO]; subst.
   have:= Ha _ TA; case: check_tm => /= _ s' CI.
   by case: ifP => //=; rewrite (cincl_trans HO)//cincl_weakr.
-Qed.
+Qed. *)
 
 Definition check_atom sP sV det (a: Atom) : Det :=
   match a with
   | cut => Func
   | call t => maxD det (if (check_tm sP sV t).2 == (b (d Func)) then Func else Pred)
   end.
+
+Lemma check_atom_cut sP sV det: check_atom sP sV det cut = Func.
+Proof. by []. Qed.
+Lemma check_atom_call sP sV det a: 
+  check_atom sP sV det (call a) = maxD det (if (check_tm sP sV a).2 == (b (d Func)) then Func else Pred).
+Proof. by []. Qed.
+
+Definition simpl_check_atom:= (check_atom_cut,check_atom_call).
 
 Definition is_func f := f == Func.
 
@@ -349,10 +485,19 @@ Proof. by []. Qed.
 
 Definition simpl_check_atoms := (check_atoms_cons, check_atoms_nil).
 
-Definition check_rule sV (sP:sigT) head prems :=
-  ~~ tm_is_det sP head || 
-    let: (sV, t) := assume_tm sP sV head in
-    (is_func (check_atoms sP sV prems Func)).
+Definition check_rule (sP:sigT) r :=
+  if typechecks_rule sP r is Some sV then
+  ~~ tm_is_det sP r.(head) || 
+    let: (sV, t) := assume_tm sP sV r.(head) in
+    (is_func (check_atoms sP sV r.(premises) Func))
+  else false.
+
+Lemma simpl_check_rule sP r:
+  check_rule sP r = if typechecks_rule sP r is Some sV then
+  ~~ tm_is_det sP r.(head) || 
+    let: (sV, t) := assume_tm sP sV r.(head) in
+    (is_func (check_atoms sP sV r.(premises) Func))
+  else false. by []. Qed.
 
 Definition is_weak x := x == weak x.
 Definition is_strong x := x == strong x.
@@ -371,9 +516,12 @@ Definition all_weak (s: sigV) := [forall x : domf s, is_weak s.[valP x]].
 Lemma all_weak0: all_weak fmap0.
 Proof. by apply/forallP => -[]. Qed.
 
-Definition check_rules p :=
-  forall x, x \in p.(rules) ->
-    exists sv, [/\ all_weak sv, typechecks_rule p.(sig) sv x & check_rule sv p.(sig) x.(head) x.(premises)].
+Definition check_rules (p: program) :=
+  all (check_rule p) p.(rules).
+
+Definition simpl_check_rules := (all_cons, all_nil).
+
+Definition simpl_check := (simpl_check_rules,simpl_check_rule,simpl_check_atoms,simpl_check_atom,simpl_typechecks,simpl_assume_tm,simpl_check_tm,tm_is_det_app).
 
 Lemma all_weak_set s k v: is_weak v -> all_weak s -> all_weak s.[k<-v].
 Proof.
@@ -381,12 +529,6 @@ Proof.
   move: xP; rewrite in_fsetU in_fset1; case: eqP => xw; subst => //= xs.
   by rewrite in_fnd//=; have:= forallP W [`xs]; rewrite valPE.
 Qed.
-
-Lemma all_cons (T : eqType) p (x:T) xs: all p (x :: xs) = p x && all p xs.
-Proof. by []. Qed.
-
-Lemma all_nil (T : eqType) (p : T -> bool): all p [::] = true.
-Proof. by []. Qed.
 
 Module Test.
   Local Notation p := (b (d Pred)).
@@ -405,15 +547,17 @@ Module Test.
 
     Goal check_rules (mkP onceSym onceSig onceI).
     Proof.
-      move=> r; rewrite in_cons in_nil orbF => /eqP->.
-      exists [fmap].[V1 <- b(d Pred)]; split.
-        by rewrite all_weak_set//all_weak0.
-        rewrite/onceI/typechecks_rule [head _]/=[premises _]/=.
-        rewrite /typechecks_atoms !all_cons all_nil/typechecks_atom.
-        by rewrite !simpl_typechecks !FmapE.fmapE eqxx.
-      rewrite/check_rule /onceI [head _]/=[premises _]/=.
-      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE eqxx orFb.
-      by rewrite 2!simpl_assume_tm !FmapE.fmapE eqxx/onceSig [odflt _ _]/= !eqxx.
+      apply/allP => x.
+      rewrite in_cons in_nil orbF => /eqP->.
+      rewrite/check_rule/typechecks_rule typecheck_atoms_cons.
+      rewrite/typechecks_atom [head _]/=[premises _]/=.
+      rewrite !simpl_typechecks !fnd_set not_fnd// [omap _ _]/=.
+      rewrite ![is_prop _]/= not_fnd//.
+      cbn match; rewrite /Option.bind/oapp [is_prop _]/=.
+      cbn match; rewrite !typecheck_atoms_cons/typechecks_atom !simpl_typechecks.
+      rewrite fnd_set eqxx [obind _ _]/=.
+      cbn match; rewrite/tm_is_det[get_tm_hd _]/=; cbn match.
+      by rewrite !simpl_check !fnd_set eqxx/=.
     Qed.
   End Once.
   
@@ -424,16 +568,17 @@ Module Test.
 
     Goal check_rules (mkP doSym doSig doI).
     Proof.
-      move=> r; rewrite in_cons in_nil orbF => /eqP->.
-      exists [fmap].[V1 <- b(d Pred)]; split.
-        by rewrite all_weak_set//all_weak0.
-        rewrite/doI/typechecks_rule [head _]/=[premises _]/=.
-        rewrite /typechecks_atoms !all_cons all_nil/typechecks_atom.
-        by rewrite !simpl_typechecks !FmapE.fmapE eqxx.
-      rewrite/check_rule /doI [head _]/=[premises _]/=.
-      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE eqxx orFb.
-      rewrite 2!simpl_assume_tm !FmapE.fmapE eqxx/doSig [odflt _ _]/= !eqxx.
-      by rewrite !simpl_check_atoms/check_atom !simpl_check_tm !FmapE.fmapE eqxx.
+      apply/allP => r.
+      rewrite in_cons in_nil orbF => /eqP->.
+      rewrite/check_rule/typechecks_rule typecheck_atoms_cons.
+      rewrite/typechecks_atom [head _]/=[premises _]/=.
+      rewrite !simpl_typechecks !fnd_set not_fnd// [omap _ _]/=.
+      rewrite ![is_prop _]/= not_fnd//.
+      cbn match; rewrite /Option.bind/oapp [is_prop _]/=.
+      cbn match; rewrite !typecheck_atoms_cons/typechecks_atom !simpl_typechecks.
+      rewrite fnd_set eqxx [obind _ _]/=.
+      rewrite !simpl_check !fnd_set not_fnd//!eqxx/doSig [odflt _ _]/=.
+      by cbn match; rewrite eqxx !simpl_check !fnd_set eqxx/=/tm_is_det/get_tm_hd fnd_set eqxx.
     Qed.
   End Do.
   
@@ -445,47 +590,56 @@ Module Test.
 
     Goal check_rules (mkP applySym applySig applyI).
     Proof.
-      move=> r; rewrite in_cons in_nil orbF => /eqP->.
-      exists [fmap].[F <- (arr input e p)].[V1 <- e]; split.
-        by rewrite !all_weak_set//all_weak0.
-        rewrite/applyI/typechecks_rule [head _]/=[premises _]/=.
-        rewrite /typechecks_atoms !all_cons all_nil/typechecks_atom.
-        by rewrite !simpl_typechecks !FmapE.fmapE eqxx.
-      rewrite/check_rule /applyI [head _]/=[premises _]/=.
-      rewrite/tm_is_det get_tm_hd_app /get_tm_hd FmapE.fmapE eqxx orFb.
-      rewrite 3!simpl_assume_tm !FmapE.fmapE !eqxx/applySig [odflt _ _]/=.
-      cbn match.
-      by rewrite eqxx !simpl_check_atoms/check_atom !simpl_check_tm !FmapE.fmapE eqxx.
+      apply/allP => r.
+      rewrite in_cons in_nil orbF => /eqP->.
+      rewrite/check_rule/typechecks_rule !typecheck_atoms_cons.
+      rewrite/typechecks_atom [head _]/=[premises _]/=.
+      rewrite !simpl_typechecks !fnd_set not_fnd// [omap _ _]/=.
+      rewrite ![is_prop _]/= not_fnd//.
+      rewrite [omap _ _]/=; cbn match.
+      rewrite !fnd_set [omap _ _]/= not_fnd// [omap _ _]/=.
+      cbn match; rewrite /Option.bind/oapp [is_prop _]/=.
+      cbn match; rewrite !typecheck_atoms_cons/typechecks_atom.
+      rewrite !simpl_typechecks !fnd_set eqxx [omap _ _]/=.
+      cbn match; rewrite !simpl_typechecks fnd_set eqxx [omap _ _]/=.
+      cbn match; rewrite [is_prop _]/=/Option.bind/oapp.
+      rewrite [typechecks_atoms _ _ _]/=.
+      cbn match; rewrite/tm_is_det[get_tm_hd _]/=; cbn match.
+      rewrite !fnd_set eqxx [is_det_sig _]/= orFb.
+      rewrite !simpl_assume_tm !fnd_set eqxx/applySig[odflt _ _]/=.
+      cbn match; rewrite !eqxx !simpl_check_atoms /check_atom.
+      by rewrite !simpl_check_tm !fnd_set eqxx//.
     Qed.
   End Apply.
   
   (* apply F X :- F X. *)
   Module WrongApply.
     Notation applySym := (IP 3).
-    Definition applyI   := mkR (Tm_App (Tm_App (Tm_P applySym) (Tm_V F)) (Tm_V V1)) [::call (Tm_App (Tm_V F) (Tm_V V1))].
+    Definition applyI   := 
+      mkR (Tm_App (Tm_App (Tm_P applySym) (Tm_V F)) (Tm_V V1)) 
+        [::call (Tm_App (Tm_V F) (Tm_V V1))].
     Definition applySig := arr input (arr input e p) (arr input e f).
 
     Goal ~ check_rules (mkP applySym applySig applyI).
     Proof.
       have rP : applyI \in rules (mkP applySym applySig applyI).
         by rewrite in_cons eqxx.
-      move=> /(_ _ rP)[] sV [wS].
-      rewrite{1}/applyI /typechecks_rule [head _]/=[premises _]/=.
-      rewrite /typechecks_atoms !all_cons all_nil/typechecks_atom.
-      rewrite !simpl_typechecks !FmapE.fmapE eqxx{1}/applySig.
-      case: fndP => //fS; case: ifP => C//.
-      case: fndP => //=vS; case: ifP => C1//.
-      case H: sV.[fS] => //[m tf [[|det]|]]; case: ifP => //=C3 _.
-      have:= forallP wS [`fS]; rewrite valPE H .
-      rewrite is_weak_arr => /andP[]; case: det H => // H H' _.
-      rewrite/check_rule !simpl_assume_tm !FmapE.fmapE eqxx /applySig [odflt _ _]/=.
-      cbn match; rewrite !eqxx !simpl_check_atoms/check_atom !simpl_check_tm.
-      rewrite !FmapE.fmapE !eqxx/= in_fnd/=/tm_is_det [get_tm_hd _]/=.
-      cbn match; rewrite !FmapE.fmapE eqxx/= in_fnd//=.
-      case: ifP => //; case: eqP => //.
-      have:= forallP wS [`vS]; rewrite valPE H/=.
-      case X: sV.[fS] C => [[]|[] s1 s2]//; case: m H H' => //= H H'.
-      case: ifP => //.
+      move=> /allP-/(_ _ rP).
+      rewrite !simpl_check/typechecks_rule.
+      rewrite/typechecks_rule !typecheck_atoms_cons/typechecks_atom.
+      rewrite !simpl_typechecks !fnd_set eqxx [omap _ _]/=.
+      cbn match; rewrite{2}/applySig; rewrite !simpl_typechecks not_fnd//.
+      rewrite [omap _ _]/=; cbn match.
+      rewrite !simpl_typechecks !fnd_set not_fnd// [omap _ _]/=.
+      cbn match; rewrite[is_prop _]/=/Option.bind/oapp.
+      rewrite !typecheck_atoms_cons/typechecks_atom.
+      rewrite !simpl_typechecks !fnd_set eqxx [omap _ _]/=.
+      cbn match; rewrite !simpl_typechecks !fnd_set eqxx [omap _ _]/=.
+      cbn match; rewrite[is_prop _]/=/Option.bind/oapp//.
+      rewrite /typechecks_atoms//!simpl_check !fnd_set eqxx.
+      rewrite [odflt _ _]/=/applySig !simpl_check !eqxx !fnd_set.
+      rewrite !eqxx/=/tm_is_det.
+      by rewrite /get_tm_hd fnd_set eqxx.
     Qed.
   End WrongApply.
 
@@ -526,55 +680,60 @@ Module Test.
     Local Lemma gthm : get_tm_hd map = inl map.
     Proof. by []. Qed.
 
+    Lemma map_det: tm_is_det p' map = true.
+    Proof. by rewrite /tm_is_det/map/get_tm_hd !fnd_set/=. Qed.
+
     Local Goal check_rules p'.
     Proof.
-      move=> r; rewrite !in_cons in_nil orbF => /orP[]/eqP->{r}.
-        exists fmap0.[F <- (arr input exp (arr output exp p))]; split.
-          by rewrite !all_weak_set//=all_weak0.
-          rewrite /typechecks_rule [head _]/=[premises _]/= andbT.
-          by rewrite !simpl_typechecks /p' !FmapE.fmapE !eqxx.
-        rewrite [head _]/=[premises _]/=/check_rule.
-        rewrite !simpl_assume_tm/p' !FmapE.fmapE/=.
-        by rewrite/tm_is_det [get_tm_hd _]/=/map !FmapE.fmapE//.
-      exists [fmap].[F <- (arr input e (arr output e p))].[X <- e].[Y <- e].[X' <- e].[Y' <- e].
-      set M := _.[_ <- _].
-      have MF : M.[?F] = Some (arr input e (arr output e p)) by rewrite !FmapE.fmapE.
-      have MX : M.[?X] = Some e by rewrite !FmapE.fmapE.
-      have MY : M.[?Y] = Some e by rewrite !FmapE.fmapE.
-      have MX' : M.[?X'] = Some e by rewrite !FmapE.fmapE.
-      have MY' : M.[?Y'] = Some e by rewrite !FmapE.fmapE.
-      have PM : p'.(sig).[? map] = Some mapS by rewrite !FmapE.fmapE.
-      have PC : p'.(sig).[? cons] = Some consS by rewrite !FmapE.fmapE.
-      split.
-        by rewrite !all_weak_set//all_weak0.
-        rewrite/typechecks_rule [head _]/=[premises _]/=.
-        rewrite /typechecks_atoms !all_cons all_nil/typechecks_atom.
-        by rewrite// !simpl_typechecks ?(MF,MX,MY,MX',MY',PM,PC)//.
-      rewrite [head _]/=[premises _]/= /check_rule.
-      rewrite/tm_is_det [get_tm_hd _]/=; cbn match.
-      rewrite PM orFb !simpl_assume_tm PM [odflt _ _]/=/mapS eqxx.
-      rewrite MF [odflt _ _]/=.
-      rewrite min_arr eqxx /max/min![min_aux _ _ _ _]/=.
-      set M' := _.[_ <- _].
-      have M'F : M'.[?F] = Some (arr input e (arr output e f)) by rewrite !FmapE.fmapE.
-      have M'X : M'.[?X] = Some e by rewrite !FmapE.fmapE.
-      have M'Y : M'.[?Y] = Some e by rewrite !FmapE.fmapE.
-      have M'X' : M'.[?X'] = Some e by rewrite !FmapE.fmapE.
-      have M'Y' : M'.[?Y'] = Some e by rewrite !FmapE.fmapE.
-      rewrite !(assume_tm_app _ M') assume_tm_P PC [odflt _ _]/=/consS eqxx M'X.
-      replace (_.[_<-_]) with M'; last first.
-        rewrite !FmapE.fmapE/=; apply/fmapP => [k].
-        rewrite fnd_set; case: eqP => ?; subst; first by rewrite M'Y.
-        rewrite fnd_set; case: eqP => ?; subst; first by rewrite M'X.
-        by [].
-      rewrite !(assume_tm_app _ M') assume_tm_P PC [odflt _ _]/=/consS eqxx M'X'.
-      replace (_.[_<-_]) with M'; last first.
-        rewrite !FmapE.fmapE/=; apply/fmapP => [k].
-        rewrite fnd_set; case: eqP => ?; subst; first by [].
-        rewrite fnd_set; case: eqP => ?; subst; first by [].
-        by [].
-      rewrite !simpl_check_atoms/check_atom.
-      by rewrite !simpl_check_tm M'F M'X M'X' M'Y M'Y' PM ![odflt _ _]/=/mapS eqxx.
+      apply/allP => r.
+      rewrite !simpl_check !in_cons in_nil orbF.
+      move=> /orP[]/eqP->{r}.
+        rewrite !simpl_tc !fnd_set [omap _ _]/=/mapS.
+        rewrite !simpl_tc not_fnd// [omap _ _]/=.
+        cbn match.
+        rewrite !simpl_tc !fnd_set [omap _ _]/=/nilS compat_type_refl.
+        rewrite !simpl_tc !fnd_set [omap _ _]/=.
+        cbn match; rewrite compat_type_refl.
+        rewrite/obind/oapp [is_prop _]/=; cbn match.
+        rewrite !simpl_tc.
+        rewrite !simpl_check !fnd_set [odflt _ _]/=/mapS map_det orFb.
+        by rewrite !simpl_check.
+      rewrite !simpl_tc !fnd_set [omap _ _]/=/mapS.
+      rewrite !simpl_tc not_fnd// [omap _ _]/=.
+      cbn match.
+      rewrite !simpl_tc !fnd_set [omap _ _]/=/consS.
+      rewrite !simpl_tc !fnd_set [omap _ _]/=not_fnd//[omap _ _]/=.
+      cbn match; rewrite !simpl_check !fnd_set not_fnd//[omap _ _]/=.
+      cbn match; rewrite compat_type_refl !simpl_tc !fnd_set [omap _ _]/=/consS.
+      rewrite !simpl_tc !fnd_set not_fnd// [omap _ _]/=.
+      cbn match; rewrite !simpl_tc !fnd_set not_fnd//[omap _ _]/=.
+      cbn match; rewrite compat_type_refl.
+      rewrite/obind/oapp [is_prop _]/=; cbn match.
+      rewrite !simpl_tc !fnd_set !not_fnd//[omap _ _]/=.
+      cbn match; rewrite !simpl_tc !fnd_set not_fnd// [omap _ _]/=.
+      cbn match; rewrite compat_type_refl !simpl_tc !fnd_set not_fnd// [omap _ _]/=.
+      cbn match; rewrite compat_type_refl [is_prop _]/=.
+      rewrite/obind/oapp !simpl_tc !fnd_set !not_fnd// [omap _ _]/=/mapS.
+      rewrite !simpl_tc !fnd_set !not_fnd//[omap _ _]/=.
+      cbn match; rewrite [compat_type _ _]/=; cbn match.
+      rewrite !simpl_tc !fnd_set not_fnd//[omap _ _]/=.
+      cbn match; rewrite //compat_type_refl !simpl_tc !fnd_set not_fnd//[omap _ _]/=.
+      cbn match; rewrite compat_type_refl [is_prop _]/=.
+      rewrite/obind/oapp simpl_tc map_det orFb [head _]/= [premises _]/=.
+      rewrite 4!simpl_check !fnd_set [odflt _ _]/=/mapS not_fnd// eqxx.
+      rewrite [odflt _ _]/= !min_arr eqxx max_refl min_refl.
+      repeat case: eqP => // _.
+      rewrite/min [min_aux _ _ _ _]/=.
+      replace (_.[F <- _]) with (fmap0.[map.X <- e].[Y <- e].[X' <- e].[Y' <- e].[F <- exp --i--> (exp --o--> f)]); last first.
+        by apply/fmapP => key; rewrite !fnd_set not_fnd//=; case: eqP => //.
+      rewrite !simpl_assume_tm !fnd_set not_fnd// [odflt _ _]/=/consS.
+      rewrite !eqxx !fnd_set [odflt _ _]/= [fst _]/= min_refl.
+      replace (_.[Y' <- _]) with (
+        fmap0.[F <- exp --i--> (exp --o--> f)]
+          .[X <- e].[Y <- e].[X' <- e].[Y' <- e]); last first.
+        apply/fmapP => key; rewrite !fnd_set not_fnd//=.
+        repeat case: eqP => //=.
+      by rewrite !simpl_check !fnd_set !not_fnd//.
     Qed.
   End map. 
 End Test.

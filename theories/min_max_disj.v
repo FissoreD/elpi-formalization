@@ -265,3 +265,14 @@ Proof.
   have:= leq_trans xm2 m2x.
   by rewrite ltnn.
 Qed.
+
+Lemma min_max_SD s1 s2 n:
+  fresh s1 <= n ->
+  all_min n s2 ->
+  fdisjoint s1 s2.
+Proof.
+  move=> H1 H2.
+  suffices H3: min_maxS s2 n (fresh s2).
+    apply: (min_max_S_disj (leqnn _) (min_maxS0L H1) H3).
+  by rewrite min_maxS_all H2/= all_max_max_set.
+Qed.
