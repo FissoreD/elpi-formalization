@@ -4,6 +4,14 @@ From det Require Import tree tree_prop ctx tree_vars tree_varsu unif fresh sig_l
 From elpi.apps Require Import derive derive.std.
 From HB Require Import structures.
 
+Lemma cardf_in (K:choiceType) x (s:{fset K}): (x \in s) ->
+  #|` x |` s| = #|` s `\ x|.+1.
+Proof. by move=> xs; rewrite (cardfsD1 x) in_fsetU in_fset1 eqxx/= fsetDUl rem1 eqxx fset0U. Qed.
+
+Lemma setf_in (K:choiceType) T (m:{fmap K -> T}) v (vm: v \in domf m):
+  m.[v <- m.[vm]] = m.
+Proof. by apply/fmapP => k; rewrite fnd_set/=; case: eqP => //->; rewrite in_fnd. Qed.
+
 Lemma catxzx (K:choiceType) (T: Type) (z x: {fmap K -> T}):
   x + (z + x) = z + x.
 Proof.
@@ -776,7 +784,7 @@ Definition add_var_subst (e:env * S) (k:V)  :=
   let '(e,ty) := e in
   let ty := weak ty in
   if e.[?k] is Some ty' then
-    if ty == ty' then Some e
+    if compat_type ty ty' then Some e
     else None
   else Some e.[k <- ty].
 
@@ -793,6 +801,18 @@ Fixpoint tc_subst_aux n sP (e:env) (s:Sigma) : option env :=
       else None
     else None
   end.
+
+Lemma tc_subst_aux_succ n p e s:
+  tc_subst_aux n.+1 p e s = 
+    if s == [fmap] then Some e
+    else if [pick x : domf s | typechecks p e s.[valP x]] is Some k then
+      if typechecks p e s.[valP k] is Some xx then
+        if add_var_subst xx (val k) is Some e then
+          tc_subst_aux n p e s.[~val k]
+        else None
+      else None
+    else None.
+Proof. by []. Qed.
 
 Definition tc_subst sP e (s:Sigma) :=
   tc_subst_aux #|` domf s| sP e s.
@@ -873,7 +893,7 @@ Lemma tc_covers_add_var_subst s e1 e2 e3 x ty:
   tc_coversE (s `|` [fset x]) e1 e3.
 Proof.
   move=> H; rewrite/add_var_subst; case: fndP => xe2.
-    case: eqP => //W [<-{e3}].
+    case: ifP => //W[<-{e3}].
     by apply: tc_coversE_trans H (tc_coversE1 _).
   by move=> [<-{e3}]; apply: tc_covers_set.
 Qed.
@@ -883,7 +903,7 @@ Lemma add_var_subst_ext e2 e3 x ty:
   exists k, k + e2 = e3.
 Proof.
   rewrite/add_var_subst; case: fndP => xe2.
-    by case: eqP => //H[<-]; eexists fmap0; rewrite cat0f.
+    by case: ifP => //H[<-]; eexists fmap0; rewrite cat0f.
   by move=> -[<-]; rewrite notin_setC//; eexists.
 Qed.
 
@@ -1265,6 +1285,27 @@ Proof.
   by rewrite catfA (typechecks_atomP _ T)/=-catfA (IH _ e)//.
 Qed.
 
+(* Lemma typechecks_disj_rem prog q t e0 r k:
+  domf q # vars t ->
+  typechecks prog e0 t = Some r -> 
+    typechecks prog (q+r.1.[\k]+e0) t = Some (q+r.1,r.2).
+Proof.
+  elim: t r q e0 k => [p/=|v|f Hf a Ha/=] r q e0 k.
+    by case: fndP => //=kP _ [<-]//=;rewrite -catfA (@sub_cat _ _ _ e0)// domf_rem fsubDset fsubsetUr.
+    rewrite fdisjointX1 /typechecks fnd_cat => vq; case: fndP => //=v0[<-]/=.
+    by rewrite -catfA (@sub_cat _ _ _ e0)// domf_rem fsubDset fsubsetUr.
+  rewrite fdisjointXU => /andP[qf qa].
+  case Tf: typechecks =>[[ef [|mode tl tr]]|]//.
+  case Ta: typechecks => [ta|]//.
+    rewrite push.
+    case: ifP => //cal[<-]/=.
+    have:= Hf ta q e0 k qf.
+     rewrite (Ha (ea, ta))//cal.
+  case: a qa Ta {Ha} => //v.
+  rewrite /typechecks fnd_cat fdisjointX1 => vq + [<-].
+  by case: fndP=> //fv; rewrite not_fnd//= setf_catr.
+Qed. *)
+
 Lemma typechecks_disj prog q t e0 r:
   domf q # vars t ->
   typechecks prog e0 t = Some r -> 
@@ -1282,6 +1323,81 @@ Proof.
   case: a qa Ta {Ha} => //v.
   rewrite /typechecks fnd_cat fdisjointX1 => vq + [<-].
   by case: fndP=> //fv; rewrite not_fnd//= setf_catr.
+Qed.
+
+Lemma typechecks_cat prog q t e0 r1 r2:
+  all_weak q ->
+  typechecks prog e0 t = Some r1 -> 
+    typechecks prog (q+e0) t = Some r2 ->
+      (prod (r2.1 = q + r1.1) (r1.2 = r2.2)).
+Proof.
+  elim: t r1 r2 q e0 => [p/=|v|f Hf a Ha/=] r1 r2 q e0 wq.
+    by case: fndP => //=pP[<-][<-]//.
+    by rewrite/typechecks fnd_cat; case: fndP => //ve0[<-][<-]//.
+  case Tf: typechecks =>[[ef [|mode tl tr]]|]//.
+  case Tf': (typechecks _ _ f) =>[[ef' [|mode' tl' tr']]|]//.
+  have /=[?[???]] := Hf _ _ _ _ wq Tf Tf'; subst.
+  case Ta: typechecks =>[[ea ta]|]//; case Ta': (typechecks _ _ a) =>[[ea' ta']|]//=.
+  - (do 2 case: ifP => //); move=> C1 C2[<-][<-]//=.
+    by have /= [|??] := (Ha _ _ _ _ _ Ta Ta'); subst.
+  - case: ifP => //C[<-]; case: a Ta Ta' {Ha} => //v.
+    rewrite/typechecks fnd_cat; case: fndP => //.
+  - case: ifP => C //= + [<-]/=; case: a Ta Ta' {Ha} => //v.
+    rewrite/typechecks fnd_cat; case: fndP => //=vef.
+    case: fndP => //vq _ [??][?]; subst; rewrite//=.
+    rewrite -{1}(setf_in vq) catf_setl (negbTE vef) catf_setr.
+    have:= forallP wq [`vq]; rewrite valPE => /eqP->.
+    by rewrite (compat_type_weak_eq C).
+  - case: a Ta Ta' {Ha} => //v.
+    rewrite /typechecks fnd_cat => ++[<-][<-]/=.
+    case: fndP => //vef; case: fndP => //=vq _ _.
+    by rewrite setf_catr.
+Qed.
+
+Lemma typechecks_rem_aux prog q t e0 r:
+  typechecks prog e0 t = Some r -> 
+    typechecks prog (r.1.[\q]+e0) t = Some (r.1,r.2).
+Proof.
+  elim: t r q e0 => [p/=|v|f Hf a Ha/=] r q e0.
+    by case: fndP => //=kP [<-]//=; rewrite sub_cat//domf_rem fsubDset fsubsetUr.
+    rewrite/typechecks fnd_cat fnd_rem; case: fndP => //=ve0[<-]/=.
+    by rewrite sub_cat// domf_rem fsubDset fsubsetUr.
+  case Tf: typechecks =>[[ef [|mode tl tr]]|]//.
+  have/={}Hf := Hf _ q _ Tf.
+  case Ta: typechecks => [[ea ta]|]//=.
+    case: ifP => //C[<-{r}]/=.
+    have HH : domf (ea.[\vars f `|` q]) # vars f.
+      rewrite domf_rem .
+      apply/fdisjointWl/fdisjoint_rem/(domf ea)/fsubsetP => x.
+      by rewrite !in_fsetD in_fsetU => /andP[/norP[->]].
+    have/= := typechecks_disj HH Hf.
+    rewrite catfA -{1}remf_comp -remf_cat.
+    replace (_ + ef) with ea; last first.
+      have /=[w? /and4P[H1 _ H2 H3]] := coversE_typechecks Ta; subst.
+      rewrite remf_cat -catfA (@sub_cat _ _ (ef.[\ _])); last by rewrite domf_rem fsubDset fsubsetUr.
+      apply/fmapP => k; rewrite !fnd_cat fnd_rem.
+      case: fndP => //kef; case: ifP => //=kvf; rewrite not_fnd//.
+      have /=[z? /and4P[Hx _ Hy Hz]] := coversE_typechecks Tf; subst.
+      have:= fsubsetP Hy _ kvf.
+      by apply/fdisjointP_sym.
+    by move=> ->; have/= := Ha _ _ _ Ta; move=>->; rewrite C.
+  case: a Ta {Ha} => //=v; case: fndP => vf//= _[<-{r}].
+  rewrite/fst/snd.
+  have Hx : domf fmap0.[v <- weak tl].[\q] # vars f.
+    rewrite domf_rem dom_setf fsetU0.
+    apply/fdisjointP => x; rewrite in_fsetD in_fset1 => /andP[xq/eqP?]; subst.
+    apply/contra/vf/fsubsetP.
+    by have /=[z? /and4P[]] := coversE_typechecks Tf.
+  have := typechecks_disj Hx Hf.
+  rewrite/fst/snd catfA -remf_cat -notin_setC//.
+  move=> ->; rewrite fnd_cat fnd_rem (negbTE vf) fnd_set eqxx.
+  case: ifP => vq; rewrite/omap/obind/oapp.
+    do 2 f_equal.
+    apply/fmapP => key; rewrite !fnd_set !fnd_cat fnd_rem fnd_set.
+    case: fndP => //kef; rewrite not_fnd//.
+    by case: eqP => //=; rewrite if_same.
+  rewrite compat_type_weak compat_type_refl; do 3 f_equal.
+  rewrite remf_set vq empty_rem -notin_setC//.
 Qed.
 
 Lemma vars_sigma_rem_sub s x:
@@ -1368,13 +1484,128 @@ Proof.
   case: r T A => k ks T A.
   have [/=z? Hz]:= coversE_typechecks T; subst.
   move: A; rewrite/add_var_subst; case: fndP => xex//.
-    case: eqP => // W[?]; subst.
-    by rewrite xex in_fnd -W (typechecksP _ T) compat_type_weak.
+    case: ifP => // W[?]; subst.
+    rewrite xex in_fnd (typechecksP _ T) compat_type_comm.
+    by apply/compat_type_trans/W; rewrite compat_type_weak.
   move=> [?]; subst; rewrite fnd_set dom_setf in_fsetU in_fset1 eqxx/=.
   rewrite cat_set_eq .
   rewrite (@disjoint_catfC _ _ (z + e0)); last by rewrite dom_setf fsetU0 fdisjointX1.
   by rewrite catfA (typechecksP _ T) compat_type_weak.
 Qed.
+
+Lemma tc_subst_cat prog s1 s2 e0 e1:
+  domf s1 # domf s2 ->
+  tc_subst prog e0 (s1 + s2) = Some e1 ->
+  (forall e2, tc_subst prog e0 s1 = Some e2 ->
+  tc_subst prog e2 s2 = Some e1) /\
+  (forall e2, tc_subst prog e0 s2 = Some e2 ->
+  tc_subst prog e2 s1 = Some e1)
+  .
+Proof.
+  rewrite/tc_subst domf_cat.
+  have:= (leqnn #|` domf s1 `|` domf s2|).
+  set n := #|` _ |; rewrite {1}/n; clearbody n.
+  elim: n e0 e1 s1 s2 => [|n IH] e0 e1 s1 s2//.
+    rewrite leqn0 => /eqP/cardfs0_eq.
+    move=> H.
+    have: s1 = fmap0.
+      apply/fmapP => k.
+      move/fsetP: H => /(_ k); rewrite in_fsetU; case: fndP => //= _ _.
+      by rewrite not_fnd.
+    move=> ?; subst; move: H; rewrite fset0U => /fmap_nil->; rewrite cat0f.
+    by rewrite domf0 cardfs0/=; split => ?; congruence.
+  rewrite tc_subst_aux_succ.
+  move=> Hn; case: eqP.
+    move=> ++[?]; subst => Hx.
+    suffices: s1 = fmap0.
+      by move=> ?; subst; split; intros; rewrite cat0f in Hx; subst.
+    apply/fmapP => k.
+    move/fmapP: Hx => /(_ k); rewrite fnd_cat.
+    by case: fndP => //k2; rewrite not_fnd.
+  move=> NE.
+  case: pickP => //-[x xs]; rewrite valPE [val _]/=.
+  case T: typechecks => [r|]// _.
+  case A: add_var_subst => //[e3] D.
+  have ds: #|` domf s1.[~x] `|` domf s2.[~ x]| <= n.
+    rewrite -domf_cat -remf_cat.
+    rewrite domf_restrict fsetIDAC fsetIid cardfsD fsetI1 ifT// cardfs1 domf_cat.
+    by case: #|` _| Hn => [|[]]//.
+  rewrite remf_cat => T12.
+  have D12: domf s1.[~ x] # domf s2.[~ x].
+    by rewrite !domf_rem; apply/fdisjointWl/fdisjointWr/D; rewrite fsubsetDl.
+  have {IH NE Hn}[IH1 IH2] := IH _ _ _ _ ds D12 T12.
+  split; move=> e2; move: xs (xs) T; rewrite {1}domf_cat {1}in_fsetU orbC;
+  (case: fndP => xs; rewrite (orTb,orFb) => xs1 xs12; [rewrite getf_catr|rewrite getf_catl//]);
+  move=> T.
+    (* rewrite getf_catl// => H.
+    admit.
+    rewrite getf_catr => H.
+  move: xs (xs) T; rewrite {1}domf_cat in_fsetU orbC {NE Hn}.
+  case: fndP; rewrite (orFb,orTb) => xs2 xs1 x12; last first.
+    move: ds; rewrite getf_catl// remf_cat (remf1_id xs2) => ds Tsx1 TCat.
+    rewrite -{1}(setf_in xs1) dom_setf cardf_in// -domf_rem tc_subst_aux_succ.
+    case: ifP => [|_].
+      by move=> /eqP/fmapP/(_ x); rewrite in_fnd//not_fnd.
+    case: pickP => //-[w ws1]; rewrite valPE [val _]/=.
+    case Ts1w: typechecks => //[r'] _.
+    case AVw: add_var_subst => //[e0'].
+    have: ((#|` domf s1.[~ x]|) = (#|` domf s1.[~ w]|)).
+      apply/PeanoNat.Nat.succ_inj; rewrite !domf_rem -!cardf_in//.
+      by rewrite !cardfsU !(fsetIC _ (domf s1)) !fsetI1 xs1 ws1 !cardfs1.
+    move=> -> TC. *)
+Abort.
+
+Lemma tc_subst_rem1 prog s e0 e1 v (vs : v \in domf s) r2:
+  tc_subst prog e0 s = Some e1 ->
+  typechecks prog e0 s.[vs] = Some r2 ->
+  exists2 k, add_var_subst r2 v = Some k &
+    tc_subst prog k s.[~ v] = Some e1.
+Proof.
+Abort.
+  (* move=> H1 H2.
+  have:= forallP (tc_substP H1) [`vs]; rewrite/=valPE.
+  case: fndP => //=ve1.
+  case Tsv: typechecks => //=[[e' ty]] C.
+  suffices Hx: add_var_subst r2 v = Some r2.1.[v <- odflt (weak r2.2) (r2.1).[? v]].
+    have Hv: tc_subst prog e0 fmap0.[v <- s.[vs]] = Some (r2.1.[v <- odflt (weak r2.2) r2.1.[?v]]).
+      rewrite/tc_subst dom_setf fsetU0 cardfs1.
+      rewrite/tc_subst_aux.
+      case: ifP.
+        by move=> /eqP/fmapP/(_ v); rewrite fnd_set eqxx not_fnd.
+      move=> _; case: pickP; last first.
+        have vvs: v \in domf fmap0.[v <- s.[vs]] by rewrite dom_setf fsetU0 in_fset1.
+        by move=> /(_ [`vvs]); rewrite valPE ffunE eqxx H2.
+      move=> -[x xs]; rewrite valPE ffunE/=.
+      have xv: x = v by move: xs; rewrite dom_setf fsetU0 in_fset1 => /eqP.
+      by subst; rewrite eqxx H2/=Hx.
+    rewrite Hx; eexists => //.
+    have:= @tc_subst_cat prog (fmap0.[v <- s.[vs]]) s.[~v].
+    rewrite catfC remf_set domf_rem in_fsetD in_fset1 eqxx andFb empty_rem.
+    rewrite -cat_set_eq setf_rem1 setf_in.
+    move=> /(_ _ _ _ _ H1 Hv); rewrite dom_setf fsetU0 fdisjoint1X in_fsetD in_fset1 eqxx.
+    by move=> ->.
+  case: r2 H2 => e2 t2 H2/=.
+  case: fndP => //=ve2; rewrite setf_in.
+  rewrite ifT//.
+  have se1sub: vars s.[vs] `<=` domf e1 .
+    have [w?/and4P[_ _ H _]] := coversE_tc_subst H1.
+    by apply/fsubset_trans/H/fsubset_trans/fsubsetUr/codom_vars_sub_vt.
+  have /=? := typechecks_sub_id se1sub Tsv; subst.
+  have [w? /and4P[Hx Hw Hy Hz]] := coversE_tc_subst H1; subst.
+  have/=[H ?] := typechecks_cat Hw H2 Tsv; subst.
+  move: C; rewrite compat_type_weak compat_type_comm => C.
+  apply/(compat_type_trans C).
+  have [z HH /and4P[Ha Hb Hc Hd]]:= coversE_typechecks H2; subst.
+  simpl in HH; subst.
+  case: (boolP (v \in domf e0)) => ve0.
+    by rewrite !getf_catr.
+  rewrite !getf_catl//.
+    by move: ve1 {C}; rewrite domf_cat in_fsetU (negbTE ve0) orbF.
+    by move: ve2 {C}; rewrite domf_cat in_fsetU (negbTE ve0) orbF.
+  move=> vz vw.
+  move/fmapP: H => /(_ v); rewrite !fnd_cat domf_cat in_fsetU.
+  by rewrite vz (negbTE ve0)/= !in_fnd => -[<-].
+Qed. *)
 
 (* Lemma tc_subst_rem 
   prog s e0 w (ws : w \in domf s) r1 k e1:
@@ -1387,6 +1618,13 @@ Qed.
   exists2 k, add_var_subst r2 v = Some k &
     tc_subst prog k s.[~ v] = Some e1.
 Proof.
+  move=> H1 H2 H3 v vs r2 H.
+  suffices Hs: tc_subst prog e0 s = Some e1.
+    by have:= tc_subst_rem1 Hs H.
+  
+    
+
+  apply: tc_subst_rem1 H.
   rewrite/tc_subst.
   have:= (leqnn #|` domf s|).
   set n := #|` _ |; rewrite {1}/n; clearbody n.
@@ -1420,8 +1658,6 @@ Proof.
 
   move=> qs.
   have {}IH := IH _ _ _ _ ds (idempotent_rem _ I) TC (fdisjointWr (vars_sigma_rem_sub _ _) qs). *)
-
-
 
 (* Lemma tc_subst_disj prog q (s:Sigma) e0 e1:
   idempotent s ->
@@ -1465,6 +1701,7 @@ Proof.
     by apply/add_some; rewrite -!in_fnd fnd_rem in_fset1; case: eqP.
   case Te: typechecks => [[e' ty']|]//C.
   have Hz := typechecks_disj qvs T.
+  tc_subst_fuel
   
 
 Qed. *)
@@ -1534,9 +1771,6 @@ Proof.
   - case:eqP => //<-; case: fndP => //pP _ _ _ _ ++[??][??][??]; subst.
     move=> H1 H2; rewrite // !(@disjoint_catfC _ _ _ e2h)//.
       
-      rewrite ()
-    move=> 
-
 Admitted.
 
 Lemma typecheck_select rs t p k s n ign e0 e1 e2 e3 ty mm:
@@ -1570,11 +1804,14 @@ Proof.
   move: tr; rewrite/typechecks_rule/=.
   case th: typechecks => [[eh [[|pr]|]]|]//=.
   case tb: typechecks_atoms => [ea|]// _.
-  have:= typecheck_query_head _ _ (fdisjoint0X _) ts tt th Q.
+  have:= typecheck_query_head _ _ _ _ _ ts tt th Q.
   rewrite catf0.
   move=> [].
     by apply: min_max_SD tn _.
     by apply: min_max_SD sn _.
+    by apply/fdisjointX0.
+    by apply/fdisjointX0.
+    by apply/fdisjointX0.
   move=> ts' [??]; subst.
   have d2b: domf e2 # vars_atoms b.
     admit.
