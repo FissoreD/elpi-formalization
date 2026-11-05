@@ -1760,22 +1760,59 @@ Qed.
 Lemma typecheck_query_head prog froz t h s1 ty s0 xt e1t e2t tt e1h e2h th:
   vars t # vars h -> vars_sigma s0 # vars h -> 
   vars t # domf e1h -> vars_sigma s0 # domf e1h -> 
-  domf xt # domf e1h ->
+  vars t # domf s0 -> domf xt # domf e1h ->
   tc_subst prog xt s0 = Some e1t -> typechecks prog e1t t = Some (e2t, tt) ->
   typechecks prog e1h h = Some (e2h, th) ->
   query_head u prog froz t h s0 = Some (ty, s1) ->
-  ((tc_subst prog (xt + e1h) s1 = Some (e2t + e2h)) /\ (tt = ty) /\ (th = tt)).
+  [/\ (tc_subst prog (xt + e1h) s1 = Some (e2t + e2h)), (tt = ty) & (th = tt)].
 Proof.
   elim: t h s1 ty s0 xt e1t e2t tt e1h e2h th =>
     [p [p'|//|//]|v//|f Hf a Ha h] s1 ty s0 xt e1t e2t tt e1h e2h th/=.
-  - case:eqP => //<-; case: fndP => //pP _ _ _ _ ++[??][??][??]; subst.
+  - case:eqP => //<-; case: fndP => //pP _ _ _ D _ ++[??][??][??]; subst.
     move=> H1 H2; rewrite // !(@disjoint_catfC _ _ _ e2h)//.
-      
+    admit.
+    (* move: D; rewrite fdisjointUX => /andP[]. *)
+    have [x?/and4P[Hx _ Hy Hz]] := coversE_tc_subst H2; subst.
+    by rewrite domf_cat fdisjointUX (fdisjointWl Hx)//.
+  - case: h => //f' a' {Ha}.
+    rewrite 3!fdisjointUX/=3!fdisjointXU -!andbA.
+    move => /and4P[ff fa af aa] /andP[s0f s0a] /andP[f1h a1h] s01.
+    move=> /andP[fs0 as0] xth Ts0.
+    case Tf: typechecks => [[ef [|mf tlf trf]]|]//.
+    case Tf': (typechecks _ _ f') => [[ef' [|mf' tlf' trf']]|]//.
+    case Q: query_head => //=[[[|mx tfx trx] s0']]//=.
+    case IF: (_ a' a) => //=[s0''] ++ [??]; subst.
+    have [{}Hf [???][???]] := Hf _ _ _ _ _ _ _ _ _ _ _ ff s0f f1h s01 fs0 xth Ts0 Tf Tf' Q.
+    subst.
+    case Ta: typechecks => [[ea ta]|]//; case Ta': typechecks => [[ea' ta']|]//=.
+    - case: ifP => //=C1[??]; case: ifP => //=C2[??]; subst; split => //.
+      admit.
+    - case: ifP => Ct//[??]; subst.
+      case: a' fa aa s0a IF Ta' => //v.
+      rewrite !fdisjointX1 => vf va vs0 IF/=.
+      case: fndP => //vef' _ [??]; subst; split => //.
+      rewrite -(compat_type_weak_eq Ct){Ct}.
+      admit.
+    - case: ifP => //CT + [??]; subst.
+      case: a IF af aa a1h as0 Ta => //=v.
+      rewrite !fdisjoint1X => IF vf' va' v1h vs0.
+      case: fndP => //= vef _ [??]; subst; split => //.
+      rewrite -(compat_type_weak_eq CT){CT}.
+      admit.
+    - case: a IF af aa a1h as0 Ta => //=v.
+      case: a' fa s0a Ta' => //v'.
+      rewrite !fdisjointX1 !fdisjoint1X/=.
+      (do 2 case: fndP) => //=.
+      move=> vef v'f' v'f v's0 _ IF vf' + ve1h vs0 _ [??][??]; subst.
+      rewrite in_fset1 => vv.
+      split => //.
+      admit.
 Admitted.
 
 Lemma typecheck_select rs t p k s n ign e0 e1 e2 e3 ty mm:
   fresh (vars_atoms k) <= n -> fresh (vars_sigma s) <= n ->
   fresh (vars t) <= n -> fresh (domf e0) <= n ->
+  vars t # domf s ->
   typechecks_rules p rs ->
   all_min n (v_prog rs) ->
   tc_subst p e0 s = Some e1 ->
@@ -1790,7 +1827,7 @@ Lemma typecheck_select rs t p k s n ign e0 e1 e2 e3 ty mm:
     exists2 k0 : {fmap V -> S}, 
       e2 = k0 + e3.[& domf e2] & min_maxS (domf k0) n (maxn mm (max_set (vars_selected (select u p t rs s))).+1).
 Proof.
-  move=> kn sn tn en ++ ts tt tk.
+  move=> kn sn tn en vst ++ ts tt tk.
   elim: rs ign => //=[|[h b] rs IH] ign.
     move=> _ _.
     move: ts tt tk.
@@ -1804,15 +1841,16 @@ Proof.
   move: tr; rewrite/typechecks_rule/=.
   case th: typechecks => [[eh [[|pr]|]]|]//=.
   case tb: typechecks_atoms => [ea|]// _.
-  have:= typecheck_query_head _ _ _ _ _ ts tt th Q.
+  have:= typecheck_query_head _ _ _ _ _ _ ts tt th Q.
   rewrite catf0.
   move=> [].
     by apply: min_max_SD tn _.
     by apply: min_max_SD sn _.
     by apply/fdisjointX0.
     by apply/fdisjointX0.
+    by [].
     by apply/fdisjointX0.
-  move=> ts' [??]; subst.
+  move=> ts' ??; subst.
   have d2b: domf e2 # vars_atoms b.
     admit.
   have d2a: domf e2 # domf ea.
@@ -1888,7 +1926,9 @@ Proof.
     case FF: (fresh_rules _ _).1 => [|nn];last by rewrite min_maxS_all => /andP[H].
     move=> H; apply/forallP => xH.
     by have/andP[]:= forallP H xH.
-  have:= typecheck_select s (fresh_rules X (rules p)).1 kn sn stn en TP' Hn H1 H2' H3.
+  have D: vars (deref s t) # domf s .
+    by rewrite fdisjoint_sym idempotent_deref_disjoint.
+  have:= typecheck_select s (fresh_rules X (rules p)).1 kn sn stn en D TP' Hn H1 H2' H3.
   move=> [esel -> [w Hw Mw]]; eexists => //.
   have dew: domf ex # domf w.
     apply: min_max_S_disj (leqnn _) (min_maxS0L _) Mw.
