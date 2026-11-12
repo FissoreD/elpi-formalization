@@ -6,10 +6,7 @@ From HB Require Import structures.
 
 Lemma leqABBA a b:
   a <= b -> b <= a -> a = b.
-Proof.
-  do 2 case: maxn_idPl => //.
-  by rewrite maxnC => ->.
-Qed.
+Proof. by (do 2 case: maxn_idPl); rewrite// maxnC => ->. Qed.
 
 Lemma cat_eqr (C:choiceType) K (a b: {fmap C -> K}):
   a = b + a -> domf b # domf a -> b = fmap0.
@@ -1106,22 +1103,6 @@ Proof.
   case: eqP => //.
 Qed.
 
-Lemma tc_subst_inP x (s: Sigma) (xs: x \in domf s) p e (vs : v \in domf s) ->
-  tc_subst p e s = Some x ->
-  .
-Proof.
-  rewrite{1}/tc_subst.
-  rewrite (cardfsD1 x) xs tc_subst_aux_succ.
-  case: eqP => [?|_]; subst => //.
-  case: pick => //=[[y ys]].
-  case: typechecks => //=[[e' t']].
-  case: add_var_subst => // e''.
-  rewrite tc_subst_fuel//.
-  rewrite domf_rem (cardfsD1 x) (cardfsD1 y (domf s `\ x)).
-  rewrite !in_fsetD !in_fset1 eq_sym xs ys !fsetDDl fsetUC.
-  case: eqP => //.
-Qed.
-
 Lemma coversE_tc_subst prog s e er:
   tc_subst prog e s = Some er -> tc_coversE (vars_sigma s) e er.
 Proof.
@@ -1137,6 +1118,45 @@ Proof.
   case: fndP => //xex.
     by case: ifP => // _ [<-][<-].
   by move=> [<-][<-].
+Qed.
+
+Lemma tc_subst_inP prog e0 s e1:
+  tc_subst prog e0 s = Some e1 ->
+  forall x (xs : x \in domf s), 
+    if e1.[?x] is Some ty then
+      if typechecks prog e1 s.[xs] is Some (e1, ty') then
+        compat_type ty ty'
+      else false
+    else false.
+Proof.
+  elim_tc_subst prog e0 s e1 => + y ys.
+  rewrite (tc_subst_in xs) (pick_smallestP Pk (isSomeP T)) valPE T A [val _]/=.
+  move=> H.
+  case: (boolP (y == x)) => [/eqP?|/negbTE xy]; subst.
+    rewrite (bool_irrelevance ys xs){ys}.
+    have /=[w? _] := coversE_typechecks T; subst.
+    have [k? D] := add_var_subst_ext A; subst.
+    have [z? _] := coversE_tc_subst H; subst.
+    move: A; rewrite /add_var_subst (catfA z) (fnd_cat (z+k)).
+    case: fndP => //xwe.
+      case: ifP => // C Hz; rewrite (typechecksP _ T).
+      by rewrite compat_type_comm compat_type_weak in C.
+    move=> Hx.
+    have: k = fmap0.[x <- weak tx].
+      apply/fmapP => a; move/fmapP: (add_some Hx) => /(_ a).
+      rewrite (fnd_cat k) !fnd_set (@not_fnd _ _ fmap0)//.
+      case: eqP => //[->|]; first by rewrite (negbTE xwe).
+      case: fndP => //aw0.
+      have ?:= fdisjointP_sym D _ aw0.
+      by rewrite not_fnd.
+    move=> ?; subst.
+    rewrite fnd_cat fnd_set dom_setf fsetU0 in_fset1 eqxx.
+    by rewrite (typechecksP _ T)//compat_type_weak.
+  have ysx: y \in domf s.[~x] by rewrite domf_rem in_fsetD in_fset1 xy.
+  have {IH} := IH _ H _ ysx.
+  case: fndP => //ye1.
+  have->//: (s.[~x][`ysx] = s.[ys]).
+  by apply/add_some; rewrite -!in_fnd fnd_rem in_fset1 xy.
 Qed.
 
 Fixpoint typechecks_tree sP s e t k : option env :=
@@ -1418,82 +1438,6 @@ Lemma tc_subst_min_max p s n e0 e1:
 Proof.
   move=> sn en /coversE_tc_subst[?->/andP[H _]].
   by apply/min_maxS0L; rewrite domf_cat freshPU (leq_trans (fresh_subP _) sn).
-Qed.
-
-Axiom ren_sig : {fmap V -> V} -> env -> env.
-Axiom ren_sig0: forall x, ren_sig x fmap0 = fmap0.
-
-Lemma typechecks_ren s t m e1 e2 ty:
-  typechecks s e1 t = Some (e2, ty) ->
-  typechecks s (ren_sig m e1) (ren m t) = Some (ren_sig m e2, ty).
-Proof.
-  elim: t e1 e2 ty => //=[p|v|f Hf a Ha] e1 e2 ty.
-  - case: fndP => //=ps[<-<-]; eexists => //.
-  - case: fndP => //=ve1[<-<-]/=.
-    (* case: fndP => //=. *)
-    admit.
-  - case Tf: typechecks => //[[ef [|mode tl tr]]]//=.
-    rewrite (Hf _ _ _ Tf).
-    case Ta: typechecks => //[[ea ta]|].
-      by case: ifP => //=cal[<-<-{e2 ty}]; rewrite (Ha _ _ _ Ta) cal.
-    case: a {Ha} Ta => //=v.
-    case: fndP => //=vef _[<-<-].
-Admitted.
-
-Lemma typechecks_atom_ren q n m s e0 e1 b:
-  domf q = vars_atom b ->
-  typechecks_atom s e0 b = Some e1 ->
-  typechecks_atom s (ren_sig m e0) (fresh_atom n (q+m) b).2 = Some (ren_sig (fresh_atom n (q+m) b).1.2 e1).
-Proof.
-  case: b => //=[|t].
-    by move=> /fmap_nil->[<-]; rewrite cat0f.
-  move=> qt.
-  case T: typechecks => //[[ex [[|ty]|]]]//= [<-{e1}].
-  rewrite !push/=.
-  have:= (typechecks_ren _ T).
-  admit.
-Admitted.
-
-Lemma typechecks_atoms_ren q n m s e0 b:
-  typechecks_atoms s e0 b ->
-  typechecks_atoms s (ren_sig m e0)
-    (fresh_atoms n (q+m) b).2.
-Proof.
-  elim: b e0 n m => [|x xs IH] e0 n m//=.
-  rewrite !push/=.
-  set Y := fresh_atom _ _ _.
-  set X := fresh_atoms _ _ _.
-  case T: typechecks_atom => //=[ex] H.
-  have {}IH:= IH _ _ _ H.
-  case XX: typechecks_atom => //=.
-    
-Admitted.
-
-Lemma typecheck_rule_fresh s n x:
-  fresh (varsU_rule x) <= n ->
-  typechecks_rule s x ->
-  typechecks_rule s (fresh_rule n x).2.
-Proof.
-  rewrite/fresh_rule/=freshPU/typechecks_rule !push/=.
-  case: x => /= h b /andP[hn bn].
-  case Th: typechecks => //[[eh [[|th]|]]]//= Tb.
-  have:= typechecks_ren ((fresh_tm n fmap0 h).2) Th.
-  set FT:= fresh_tm _ _ _.
-  rewrite ren_sig0 => ->/=.
-  have:= typechecks_atoms_ren fmap0 _ FT.2 Tb.
-  by rewrite cat0f => ->.
-Qed.
-
-
-Lemma typecheck_rules_fresh s r n:
-  fresh (v_prog r) <= n ->
-  typechecks_rules s r ->
-  typechecks_rules s (fresh_rules n r).2.
-Proof.
-  elim: r n => //=x xs IH n.
-  rewrite v_prog_cons !freshPU -andbA !push/= => /and3P[hn bn rs]/andP[tr ts].
-  rewrite IH//andbT typecheck_rule_fresh// (leq_trans _ (fresh_rules_sub _ _))//.
-  by rewrite freshPU hn.
 Qed.
 
 Lemma typechecks_atomP prog q t e0 e1:
@@ -1980,9 +1924,9 @@ Proof.
   - rewrite deref_V; case: fndP => vs; last first.
       by move=> ->; eexists => //; destruct r.
     rewrite{1}/typechecks fnd_cat/=.
-    move: ts; rewrite (tc_subst_in vs).
-    have /= := forallP (tc_substP ts) [`vs].
-    case: fndP => //ve1; rewrite valPE/=.
+    (* move: ts; rewrite (tc_subst_in vs). *)
+    have /= := tc_subst_inP ts vs.
+    case: fndP => //ve1.
     case T: typechecks => //=[[esv ty]] C [<-].
     have S: vars s.[vs] `<=` domf e1 .
       have:= coversE_tc_subst ts => -[w H /and4P[_ _ + _]].
@@ -2003,8 +1947,8 @@ Proof.
     by eexists.
   case: a Ta {Ha} => //=v; case: fndP => //=vef _[<-]/=.
   case: fndP => //=vs; last by rewrite not_fnd//= (compat_type_weak_eq Cff) ; eexists.
-  have := forallP (tc_substP ts) [`vs].
-  case: fndP => //=ve1; rewrite valPE.
+  have := tc_subst_inP ts vs.
+  case: fndP => //=ve1.
   case T: typechecks => //=[[esv ty]] C.
   have S: vars s.[vs] `<=` domf e1 .
     have:= coversE_tc_subst ts => -[w H /and4P[_ _ + _]].
@@ -2015,7 +1959,169 @@ Proof.
   by move: vef; rewrite !domf_cat !in_fsetU ve1 !orbT.
 Qed.
 
+Definition merge_env_ty (e1 e2: option (env * S)) :=
+  match e1 with
+  | None => None
+  | Some (e1,t1) =>
+    match e2 with
+    | None => None
+    | Some (e2,t2) =>
+      if compat_type t1 t2 then merge_env (Some e1) (Some e2)
+      else None
+    end
+  end.
+
+Lemma merge_env_tyC: commutative merge_env_ty .
+Proof.
+  move=> x y.
+  case: x => [[ex tx]|]; case: y => [[ey ty]|] //=.
+  rewrite compat_type_comm mergeable_envC.
+  case: ifP => //; case: ifP => // M.
+  by rewrite (mergeable_env_catC M).
+Qed.
+
+Lemma merge_envC: commutative merge_env .
+Proof.
+  move=> x y.
+  case: x => [ex|]; case: y => [ey|] //=.
+  rewrite mergeable_envC.
+  case: ifP => // M.
+  by rewrite (mergeable_env_catC M).
+Qed.
+
+Definition merge_types prog :=
+  foldl (fun e '(t1, t2) => 
+    if e is Some e then
+      (merge_env_ty (typechecks prog e t1) (typechecks prog e t2))
+    else None
+  ).
+
+Lemma merge_types_cons prog s x xs:
+  merge_types prog (Some s) (x :: xs) =
+    merge_types prog (merge_env_ty (typechecks prog s x.1) (typechecks prog s x.2)) xs.
+Proof. case: x => >//=. Qed.
+
+Lemma merge_types_nil prog e:
+  merge_types prog e [::] = e.
+Proof. by []. Qed.
+
+Lemma merge_types_none prog xs : merge_types prog None xs = None.
+Proof. by elim: xs => //=[[t1 t2] xs IH]. Qed.
+
+Opaque merge_types.
+
+(* ATTENZIONE:
+  f : nat -> bool
+  f X = f Y, unifica, e per ipotesi, X : nat e Y : nat.
+  con montanari, mi ritrovo con:
+  [f = f, X = Y]: non è più possibile trovare il tipo di X e Y, la testa è state rimossa.
+
+  Altro problema: X Y = Z W hanno lo stesso tipo se X: nat -> bool e Z: str -> bool,
+  ma dopo l'unificazione, ho X \mapsto Z e le due variabili hanno tipo diverse in env
+ *)
+
+Lemma typechecks_montanari froz prog e0 e1 e2 s1 s2 l:
+  idempotent s1 -> disjoint_L s1 l ->
+  montanari s1 froz l = Some s2 ->
+  tc_subst prog e0 s1 = Some e1 ->
+  merge_types prog (Some e1) l = Some e2 ->
+  tc_subst prog e0 s2 = Some e2.
+Proof.
+  move: e0 e1 e2 s2.
+  montanari_ind s1 froz l => e0 e1 e2 s2//=.
+  - by move=> _ _ [<-] T [<-].
+  - rewrite disjoint_L_cons/= merge_types_cons => I /and3P[H _ D] MO T/=.
+    case T': typechecks => [[ex tx]|]//=; last by rewrite merge_types_none.
+    rewrite compat_type_refl mergeable_env_refl/= catf2 => Ml.
+    apply: IH I D MO (T) _.
+    admit.
+  - rewrite !disjoint_L_cons /= !fdisjointXU -!andbA => I /and5P[sf1 sa1 sf2 sa2 D] M.
+    rewrite !merge_types_cons/=.
+    case TF1: (typechecks _ e1) => [[ef1[|m1 tl1 tr1]]|]//=; only 1,3: by rewrite merge_types_none.
+    case TF2: (typechecks prog e1) => [[ef2 [|m2 tl2 tr2]]|]; only 1,3: by rewrite merge_env_tyC merge_types_none.
+    have D': disjoint_L s1 [:: (f1, f2),  (a1, a2)  & l].
+      by rewrite !disjoint_L_cons/=sf1 sf2 sa1 sa2.
+    move=> T H.
+    have {}IH := IH _ _ _ _ I D' M T.
+    apply: IH.
+    rewrite !merge_types_cons/= TF1 TF2 /=.
+    move: H.
+    { case TA1: typechecks => [[ea1 ta1]|]//=.
+      case: ifP => //=; last by rewrite merge_types_none.
+      case TA2: (typechecks _ ef2) => [[ea2 ta2]|]//=.
+        case: ifP => //=; last by rewrite merge_types_none.
+        move=> C2 C1.
+        case: ifP => //C12; last by rewrite merge_types_none.
+        case: ifP => //Ca12; last by rewrite merge_types_none.
+        move=> MT.
+        case: ifP; last first.
+          (* THIS IS FALSE, an example: X Y = Z W
+            where X = nat -> bool & Z = string -> bool
+            after the unification, X -> Z, and we are unifying objects
+            with different types
+          *)
+          admit.
+        move=> H.
+        have [? {}H]: m2 = m1 /\ compat_type tl1 tl2; subst.
+          by destruct m1, m2 => //; rewrite andbT in H.
+        case: ifP; last first.
+          (* THIS IS FALSE: same problem as above *)
+          admit.
+        move=> m12/=.
+        rewrite merge_types_cons/=.
+        admit. (*SHOULD BE OK*)
+      case: a2 TA2 EQ sa2 M D' => //=; only 1,3: by rewrite merge_types_none.
+      move=> v; case: fndP => //= vef2 _ EQ + M D'.
+      rewrite fdisjointX1 => vs1.
+      case: ifP => //C12; last by rewrite merge_types_none.
+      case: ifP => //Ca12; last by rewrite merge_types_none.
+      case: ifP; last first.
+        admit. (* SAME UNIF PROBLEM*)
+      move=> H Cta2 Ctl1.
+      have [? {}H]: m2 = m1 /\ compat_type tl1 tl2; subst.
+        by destruct m1, m2 => //; rewrite andbT in H.
+      rewrite ifT; last first.
+        have /=[w? _]:= coversE_typechecks TA1; subst.
+        move: Ca12.
+        by rewrite notin_setC// mergeable_env_catLR => /and4P[].
+      rewrite merge_types_cons/fst/snd mergeable_env_catC.
+      rewrite{2}/typechecks fnd_cat (not_fnd vef2).
+      case: fndP => //=. last rewrite merge_types_none.
+    
+Admitted.
+
+
+
+Lemma typechecks_matching prog froz s1 s2 e0 e1 e2 t1 t2:
+  idempotent s1 ->
+  tc_subst prog e0 s1 = Some e1 ->
+  merge_env_ty (typechecks prog e1 t1) (typechecks prog e1 t2) = Some e2 ->
+  matching froz t1 t2 s1 = Some s2 ->
+  tc_subst prog e0 s2 = Some e2.
+Proof.
+  move=> I Ts.
+  case T1 : typechecks => [[et1 tt1]|//].
+  case T2 : typechecks => [[et2 tt2]|//]/=.
+  case:ifP => c0//.
+  case: ifP => // Me[?]M; subst.
+  apply: typechecks_montanari I (disjoint_L_deref _ _ I) M (Ts) _.
+    (* rewrite/=.
+    have [x1->/= c1]:= tc_subst_deref Ts T1.
+    have [x2->/= c2]:= tc_subst_deref Ts T2.
+    by []. *)
+  rewrite !merge_types_cons/= merge_types_nil.
+  have [x1->/= c1]:= tc_subst_deref Ts T1.
+  have [x2->/= c2]:= tc_subst_deref Ts T2.
+  rewrite compat_type_comm in c1.
+  rewrite (compat_type_trans c1 (compat_type_trans c0 c2)) Me/=.
+  have /=[w? _] := coversE_typechecks T1.
+  have /=[z? _] := coversE_typechecks T2.
+  subst => //.
+Qed.
+
+
 Lemma typecheck_query_head prog froz t h s1 ty s0 xt e1t e2t tt e1h e2h th:
+  idempotent s0 ->
   vars t # vars h -> vars_sigma s0 # vars h -> 
   vars t # domf e1h -> vars_sigma s0 # domf e1h -> 
   vars t # domf s0 -> domf xt # domf e1h ->
@@ -2025,7 +2131,7 @@ Lemma typecheck_query_head prog froz t h s1 ty s0 xt e1t e2t tt e1h e2h th:
   [/\ (tc_subst prog (xt + e1h) s1 = Some (e2t + e2h)), (tt = ty) & (th = tt)].
 Proof.
   elim: t h s1 ty s0 xt e1t e2t tt e1h e2h th =>
-    [p [p'|//|//]|v//|f Hf a Ha h] s1 ty s0 xt e1t e2t tt e1h e2h th/=.
+    [p [p'|//|//]|v//|f Hf a Ha h] s1 ty s0 xt e1t e2t tt e1h e2h th/= I.
   - case:eqP => //<-; case: fndP => //pP _ _ _ D _ ++[??][??][??]; subst.
     move=> H1 H2; rewrite // !(@disjoint_catfC _ _ _ e2h)//; last first.
       have [x?/and4P[Hx _ Hy Hz]] := coversE_tc_subst H2; subst.
@@ -2039,11 +2145,16 @@ Proof.
     case Tf': (typechecks _ _ f') => [[ef' [|mf' tlf' trf']]|]//.
     case Q: query_head => //=[[[|mx tfx trx] s0']]//=.
     case IF: (_ a' a) => //=[s0''] ++ [??]; subst.
-    have [{}Hf [???][???]] := Hf _ _ _ _ _ _ _ _ _ _ _ ff s0f f1h s01 fs0 xth Ts0 Tf Tf' Q.
+    have [{}Hf [???][???]] := Hf _ _ _ _ _ _ _ _ _ _ _ I ff s0f f1h s01 fs0 xth Ts0 Tf Tf' Q.
     subst.
+    have/= I':= idempotent_query_head I Q.
     case Ta: typechecks => [[ea ta]|]//; case Ta': typechecks => [[ea' ta']|]//=.
     - case: ifP => //=C1[??]; case: ifP => //=C2[??]; subst; split => //.
-      admit.
+      (* have HH: merge_env_ty  *)
+        (* (typechecks prog (ef + ef') a') (typechecks prog (ef + ef') a) = *)
+        (* Some (e2t + e2h). *)
+        admit.
+      (* by case: eqP IF => M; apply: typechecks_matching I' (Hf) HH. *)
     - case: ifP => Ct//[??]; subst.
       case: a' fa aa s0a IF Ta' => //v.
       rewrite !fdisjointX1 => vf va vs0 IF/=.
@@ -2064,7 +2175,7 @@ Proof.
       rewrite in_fset1 => vv.
       split => //.
       admit.
-Admitted.
+Abort.
 
 Lemma typecheck_select rs t p k s n ign e0 e1 e2 e3 ty mm:
   fresh (vars_atoms k) <= n -> fresh (vars_sigma s) <= n ->
@@ -2098,7 +2209,7 @@ Proof.
   move: tr; rewrite/typechecks_rule/=.
   case th: typechecks => [[eh [[|pr]|]]|]//=.
   case tb: typechecks_atoms => [ea|]// _.
-  have:= typecheck_query_head _ _ _ _ _ _ ts tt th Q.
+  (* have:= typecheck_query_head _ _ _ _ _ _ ts tt th Q.
   rewrite catf0.
   move=> [].
     by apply: min_max_SD tn _.
@@ -2109,7 +2220,12 @@ Proof.
     by apply/fdisjointX0.
   move=> ts' ??; subst.
   have d2b: domf e2 # vars_atoms b.
-    admit.
+    have /=[a? /and4P[Ha _ Hb Hc]]:= coversE_tc_subst ts; subst.
+    have /=[x? /and4P[Hd _ He Hf]]:= coversE_typechecks tt; subst.
+    rewrite !domf_cat !fdisjointUX; apply/and3P; split.
+      by apply/fdisjointWl/min_max_SD/mb/tn.
+      by apply/fdisjointWl/min_max_SD/mb/sn.
+    by apply/min_max_SD/mb.
   have d2a: domf e2 # domf ea.
     admit.
   have dak: domf ea # vars_atoms k.
@@ -2142,8 +2258,84 @@ Proof.
   have /=[x? /and4P[xh _ hx _]] := coversE_typechecks th; subst.
   have /=[y? /and4P[yb _ byy _]] := coversE_tc_atoms tb; subst.
   rewrite catf0 in hx, byy *.
-  rewrite domf_cat min_maxU.
+  rewrite domf_cat min_maxU. *)
 Admitted.
+
+Axiom ren_sig : {fmap V -> V} -> env -> env.
+Axiom ren_sig0: forall x, ren_sig x fmap0 = fmap0.
+
+Lemma typechecks_ren s t m e1 e2 ty:
+  typechecks s e1 t = Some (e2, ty) ->
+  typechecks s (ren_sig m e1) (ren m t) = Some (ren_sig m e2, ty).
+Proof.
+  elim: t e1 e2 ty => //=[p|v|f Hf a Ha] e1 e2 ty.
+  - case: fndP => //=ps[<-<-]; eexists => //.
+  - case: fndP => //=ve1[<-<-]/=.
+    (* case: fndP => //=. *)
+    admit.
+  - case Tf: typechecks => //[[ef [|mode tl tr]]]//=.
+    rewrite (Hf _ _ _ Tf).
+    case Ta: typechecks => //[[ea ta]|].
+      by case: ifP => //=cal[<-<-{e2 ty}]; rewrite (Ha _ _ _ Ta) cal.
+    case: a {Ha} Ta => //=v.
+    case: fndP => //=vef _[<-<-].
+Admitted.
+
+Lemma typechecks_atom_ren q n m s e0 e1 b:
+  domf q = vars_atom b ->
+  typechecks_atom s e0 b = Some e1 ->
+  typechecks_atom s (ren_sig m e0) (fresh_atom n (q+m) b).2 = Some (ren_sig (fresh_atom n (q+m) b).1.2 e1).
+Proof.
+  case: b => //=[|t].
+    by move=> /fmap_nil->[<-]; rewrite cat0f.
+  move=> qt.
+  case T: typechecks => //[[ex [[|ty]|]]]//= [<-{e1}].
+  rewrite !push/=.
+  have:= (typechecks_ren _ T).
+  admit.
+Admitted.
+
+Lemma typechecks_atoms_ren q n m s e0 b:
+  typechecks_atoms s e0 b ->
+  typechecks_atoms s (ren_sig m e0)
+    (fresh_atoms n (q+m) b).2.
+Proof.
+  elim: b e0 n m => [|x xs IH] e0 n m//=.
+  rewrite !push/=.
+  set Y := fresh_atom _ _ _.
+  set X := fresh_atoms _ _ _.
+  case T: typechecks_atom => //=[ex] H.
+  have {}IH:= IH _ _ _ H.
+  case XX: typechecks_atom => //=.
+    
+Admitted.
+
+Lemma typecheck_rule_fresh s n x:
+  fresh (varsU_rule x) <= n ->
+  typechecks_rule s x ->
+  typechecks_rule s (fresh_rule n x).2.
+Proof.
+  rewrite/fresh_rule/=freshPU/typechecks_rule !push/=.
+  case: x => /= h b /andP[hn bn].
+  case Th: typechecks => //[[eh [[|th]|]]]//= Tb.
+  have:= typechecks_ren ((fresh_tm n fmap0 h).2) Th.
+  set FT:= fresh_tm _ _ _.
+  rewrite ren_sig0 => ->/=.
+  have:= typechecks_atoms_ren fmap0 _ FT.2 Tb.
+  by rewrite cat0f => ->.
+Qed.
+
+
+Lemma typecheck_rules_fresh s r n:
+  fresh (v_prog r) <= n ->
+  typechecks_rules s r ->
+  typechecks_rules s (fresh_rules n r).2.
+Proof.
+  elim: r n => //=x xs IH n.
+  rewrite v_prog_cons !freshPU -andbA !push/= => /and3P[hn bn rs]/andP[tr ts].
+  rewrite IH//andbT typecheck_rule_fresh// (leq_trans _ (fresh_rules_sub _ _))//.
+  by rewrite freshPU hn.
+Qed.
 
 Lemma typechecks_bc p t k s n e0 e1 e2 ex ty:
   typechecks_prog p ->
